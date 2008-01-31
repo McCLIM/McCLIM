@@ -21,6 +21,8 @@
 ** Specification compliance: The :inherit-menu keyword argument to
    DEFINE-COMMAND-TABLE and MAKE-COMMAND-TABLE is now implemented with
    CLIM 2.2 semantics. The :keystrokes value is not handled yet.
+** Specification compliance: :PRINTER functions for MENU-CHOOSE are
+   now called with the menu item, not the display object.
 
 * Changes in mcclim-0.9.5 relative to 0.9.4:
 ** Installation: the systems clim-listener, clim-examples,

@@ -1917,12 +1917,13 @@ a presentation"
                        :label label
                        :associated-window window
                        :printer #'(lambda (item stream)
-                                    (document-presentation-translator
-                                     (presentation-translator-menu-item-translator item)
-                                     (presentation-translator-menu-item-presentation item)
-                                     (presentation-translator-menu-item-context item)
-                                     frame nil window x y
-                                     :stream stream))
+                                    (let ((object (first item)))
+                                     (document-presentation-translator
+                                      (presentation-translator-menu-item-translator object)
+                                      (presentation-translator-menu-item-presentation object)
+                                      (presentation-translator-menu-item-context object)
+                                      frame nil window x y
+                                      :stream stream)))
                        :label label
                        :pointer-documentation *pointer-documentation-output*)
         (declare (ignore object))
