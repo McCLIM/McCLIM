@@ -571,10 +571,16 @@ if stuff is inserted after the insertion pointer."
       ;; we may need to do some stuff first.
       (unwind-protect
            (accepting-from-user (drei)
-             ;; We narrow the buffer to the input position, so the user won't
-             ;; be able to erase the original command (when entering command
-             ;; arguments) or stuff like argument prompts.
-             (drei-core:with-narrowed-buffer (drei (input-position stream) t t)
+             ;; We narrow the buffer to the last object before
+             ;; input-position, so the user will not be able to
+             ;; delete arguments prompts or other things.
+             (drei-core:with-narrowed-buffer (drei
+                                              (loop for index from (1- (input-position stream)) above 0
+                                                    when (typep (buffer-object (buffer (view drei)) index)
+                                                                'noise-string)
+                                                    return (1+ index)
+                                                    finally (return 0))
+                                              t t)
                (handler-case (process-gestures-or-command drei)
                  (unbound-gesture-sequence (c)
                    (display-message "~A is unbound" (gesture-name (gestures c))))
