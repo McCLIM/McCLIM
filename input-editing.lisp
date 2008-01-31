@@ -2,7 +2,7 @@
 
 ;;;  (c) copyright 2001 by 
 ;;;           Tim Moore (moore@bricoworks.com)
-;;;  (c) copyright 2006 by
+;;;  (c) copyright 2006-2008 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -219,18 +219,47 @@ buffer using `presentation-replace-input'."
 					   (stream-scan-pointer ,stream-var))))
        ,@body)))
 
+(defmacro with-input-editor-typeout ((&optional (stream t) &rest args
+                                                &key erase)
+                                     &body body)
+  "`Stream' is not evaluated and must be a symbol. If T (the
+default), `*standard-input*' will be used. `Stream' will be bound
+to an `extended-output-stream' while `body' is being evaluated."
+  (declare (ignore erase))
+  (check-type stream symbol)
+  (let ((stream (if (eq stream t) '*standard-output* stream)))
+    `(invoke-with-input-editor-typeout
+      ,stream
+      #'(lambda (,stream)
+          ,@body)
+      ,@args)))
+
+(defun clear-typeout (&optional (stream t))
+  "Blank out the input-editor typeout displayed on `stream',
+defaulting to T for `*standard-output*'."
+  (with-input-editor-typeout (stream :erase t)
+    (declare (ignore stream))))
+
 (defun input-editing-rescan-loop (editing-stream continuation)
   (let ((start-scan-pointer (stream-scan-pointer editing-stream)))
-    (loop
-     (block rescan
-       (handler-bind ((rescan-condition
-                       #'(lambda (c)
-                           (reset-scan-pointer editing-stream start-scan-pointer)
-                           ;; Input-editing contexts above may be interested...
-                           (signal c)
-                           (return-from rescan nil))))
-         (return-from input-editing-rescan-loop
-           (funcall continuation editing-stream)))))))
+    (loop (block rescan
+            (handler-bind ((rescan-condition
+                            #'(lambda (c)
+                                (reset-scan-pointer editing-stream start-scan-pointer)
+                                ;; Input-editing contexts above may be interested...
+                                (signal c)
+                                (return-from rescan nil))))
+              (return-from input-editing-rescan-loop
+                (funcall continuation editing-stream)))))))
+
+(defgeneric finalize (editing-stream input-sensitizer)
+  (:documentation "Do any cleanup on an editing stream that is no
+longer supposed to be used for editing, like turning off the
+cursor, etc."))
+
+(defmethod finalize ((stream input-editing-stream) input-sensitizer)
+  (clear-typeout stream)
+  (redraw-input-buffer stream))
 
 (defgeneric invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class)
@@ -253,6 +282,28 @@ the class of the input-editing stream to create, if necessary."))
                                     (second initial-contents)
                                     (stream-default-view stream))))
   (input-editing-rescan-loop stream continuation))
+
+(defmethod invoke-with-input-editing :around ((stream extended-output-stream)
+					      continuation
+					      input-sensitizer
+					      initial-contents
+					      class)
+  (declare (ignore continuation input-sensitizer initial-contents class))
+  (letf (((cursor-visibility (stream-text-cursor stream)) nil))
+    (call-next-method)))
+
+(defmethod invoke-with-input-editing :around (stream
+					      continuation
+					      input-sensitizer
+					      initial-contents
+					      class)
+  (declare (ignore continuation input-sensitizer initial-contents class))
+  (with-activation-gestures (*standard-activation-gestures*)
+    (call-next-method)))
+
+(defgeneric invoke-with-input-editor-typeout (stream continuation &key erase)
+  (:documentation "Call `continuation' with a single argument, a
+stream to do input-editor-typeout on."))
 
 (defgeneric input-editing-stream-bounding-rectangle (stream)
   (:documentation "Return the bounding rectangle of `stream' as

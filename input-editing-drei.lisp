@@ -100,12 +100,9 @@ activated with GESTURE"))
 (define-condition rescan-condition (condition)
   ())
 
-(defgeneric finalize (editing-stream input-sensitizer)
-  (:documentation "Do any cleanup on an editing stream, like turning off the
-  cursor, etc."))
-
 (defmethod finalize ((stream drei:drei-input-editing-mixin)
                      input-sensitizer)
+  (call-next-method)
   (setf (cursor-visibility stream) nil)
   (let ((real-stream (encapsulating-stream-stream stream))
 	(record (drei:drei-instance stream)))
@@ -123,24 +120,6 @@ activated with GESTURE"))
            (replay record real-stream) ))
     (setf (stream-cursor-position real-stream)
           (values 0 (nth-value 3 (input-editing-stream-bounding-rectangle stream))))))
-
-(defmethod invoke-with-input-editing :around ((stream extended-output-stream)
-					      continuation
-					      input-sensitizer
-					      initial-contents
-					      class)
-  (declare (ignore continuation input-sensitizer initial-contents class))
-  (letf (((cursor-visibility (stream-text-cursor stream)) nil))
-    (call-next-method)))
-
-(defmethod invoke-with-input-editing :around (stream
-					      continuation
-					      input-sensitizer
-					      initial-contents
-					      class)
-  (declare (ignore continuation input-sensitizer initial-contents class))
-  (with-activation-gestures (*standard-activation-gestures*)
-    (call-next-method)))
 
 ;; XXX: We are supposed to implement input editing for all
 ;; "interactive streams", but that's not really reasonable. We only

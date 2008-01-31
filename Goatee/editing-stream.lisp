@@ -211,6 +211,7 @@
 
 (defmethod climi::finalize ((stream goatee-input-editing-mixin)
 			    input-sensitizer)
+  (call-next-method)
   (setf (cursor-visibility (cursor (area stream))) nil)
   (let ((real-stream (encapsulating-stream-stream stream))
 	(record (area stream)))  
