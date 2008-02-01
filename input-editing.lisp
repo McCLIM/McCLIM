@@ -544,9 +544,30 @@ of `simple-parse-error'."))
   "A default function for printing a possibility. Suitable for
 used as value of `:possibility-printer' in calls to
 `complete-input'"
-  (destructuring-bind (string object) possibility
-    (with-output-as-presentation (stream object ptype)
-      (write-string string stream))))
+  (with-output-as-presentation (stream possibility ptype)
+    (write-string (first possibility) stream)))
+
+(defun print-possibilities (possibilities possibility-printer stream)
+  "Write `possibitilies' to `stream', using
+`possibility-printer'. `Possibilities' must be a list of
+input-completion possibilities. `Stream' must be an input-editing
+stream. Output will be done to its typeout."
+  (with-input-editor-typeout (stream :erase t)
+    (surrounding-output-with-border (stream :shape :drop-shadow :background +cornsilk1+)
+      (surrounding-output-with-border (stream :shape :rectangle)
+        (let* ((possibility-count (length possibilities))
+               (row-length (sqrt possibility-count))
+               (ptype `(completion ,possibilities)))
+          (formatting-table (stream)
+            (loop until (null possibilities)
+                  do (formatting-row (stream)
+                       (loop for cell-index from 0 below row-length
+                             until (null possibilities)
+                             do (formatting-cell (stream)
+                                  (funcall possibility-printer
+                                           (pop possibilities)
+                                           ptype
+                                           stream)))))))))))
 
 ;;; Helper returns gesture (or nil if gesture shouldn't be part of the input)
 ;;; and completion mode, if any.
@@ -631,23 +652,17 @@ used as value of `:possibility-printer' in calls to
                      (format *trace-output* "nmatches = ~A, mode = ~A~%"
                              nmatches mode))
                    (when (and (> nmatches 0) (eq mode :possibilities))
-                     (multiple-value-bind (menu-object item event)
-                         (menu-choose (possibilities-for-menu possibilities)
-                          :label "Possibilities"
-                          :n-columns 1
-                          :printer #'(lambda (possibility stream)
-                                       ;; We have to get a
-                                       ;; presentation type from
-                                       ;; somewhere...
-                                       (destructuring-bind (string &key value) possibility
-                                           (funcall possibility-printer
-                                                    (list string value)
-                                                    (presentation-type-of value)
-                                                    stream))))
-                       (declare (ignore event))
-                       (if item
+                     (print-possibilities possibilities possibility-printer stream)
+                     (let ((possibility
+                            (handler-case
+                                (with-input-context (`(completion ,possibilities) :override nil)
+                                    (object type event)
+                                    (prog1 nil (read-gesture :stream stream :peek-p t))
+                                  (t object))
+                              (abort-gesture () nil))))
+                       (if possibility
                            (setf (values input success object nmatches)
-                                 (values (car item) t menu-object 1))
+                                 (values (first possibility) t (second possibility) 1))
                            (setf success nil
                                  nmatches 0))))
                    (unless (and (eq mode :complete) (not success))
