@@ -641,11 +641,14 @@ dimensions of `line'."
         (setf (stroke-start-offset stroke) nil))))
 
 (defun draw-line-strokes (pane view initial-pump-state
-                          start-offset cursor-x cursor-y)
+                          start-offset cursor-x cursor-y
+                          view-width)
   "Pump strokes from `view', using `initial-pump-state' to begin
 with, and draw them on `pane'. The line is set to start at the
 buffer offset `start-offset', and will be drawn starting
-at (`cursor-x', `cursor-y')."
+at (`cursor-x', `cursor-y'). `View-width' is the width of the
+view in device units, as calculated by the previous output
+iteration."
   (let* ((line (line-information view (displayed-lines-count view)))
          (orig-x-offset cursor-x)
          (offset-change (- start-offset (line-start-offset line)))
@@ -687,7 +690,7 @@ at (`cursor-x', `cursor-y')."
                (maybe-clear last-clear-x (x1 stroke-dimensions))
                (setf last-clear-x (x2 stroke-dimensions)))
              ;; This clears from end of line to the end of the sheet.
-             finally (maybe-clear last-clear-x (bounding-rectangle-width pane))))
+             finally (maybe-clear last-clear-x (+ last-clear-x view-width))))
         ;; Now actually draw them in a way that makes sure they all
         ;; touch the bottom of the line.
         (loop for stroke-index below (line-stroke-count line)
@@ -699,12 +702,10 @@ at (`cursor-x', `cursor-y')."
                           (incf (displayed-lines-count view))
                           (return (values pump-state line-height))))))))
 
-(defun clear-stale-lines (pane view)
+(defun clear-stale-lines (pane view old-width old-height)
   "Clear from the last displayed line to the end of `pane' and
-mark undisplayed line objects as dirty."
-  (let ((line-dimensions (line-dimensions (last-displayed-line view))))
-    (clear-rectangle* pane (x1 line-dimensions) (y2 line-dimensions)
-                      (bounding-rectangle-width pane) (bounding-rectangle-height pane)))
+mark undisplayed line objects as dirty. `Old-width'/`old-height'
+are the old dimensions of the display of `view' in device units."
   ;; This way, strokes of lines that have at one point been left
   ;; undisplayed will always be considered modified when they are
   ;; filled again. The return is for optimisation, we know that an
@@ -714,7 +715,11 @@ mark undisplayed line objects as dirty."
     (do-undisplayed-line-strokes (stroke line)
       (if (null (stroke-start-offset stroke))
           (return)
-          (setf (stroke-start-offset stroke) nil)))))
+          (setf (stroke-start-offset stroke) nil))))
+  (with-bounding-rectangle* (x1 y1 x2 y2) view
+    (declare (ignore x2))
+    (when (> old-height (- y2 y1))
+      (clear-rectangle* pane x1 y2 (+ x1 old-width) (+ y1 old-height)))))
 
 (defvar *maximum-chunk-size* 100
   "The maximum amount of objects put into a stroke by a
@@ -798,25 +803,29 @@ function is the drawing function for the chunk."
         actual-end-offset)))
 
 (defmethod display-drei-view-contents ((pane basic-pane) (view drei-buffer-view))
-  (setf (displayed-lines-count view) 0
-        (max-line-width view) 0)
-  (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
-    (with-output-recording-options (pane :record nil :draw t)
-      (loop with start-offset = (offset (beginning-of-line (top view)))
-         with pump-state = (pump-state-for-offset view start-offset)
-         with pane-height = (bounding-rectangle-height (or (pane-viewport pane) pane))
-         for line = (line-information view (displayed-lines-count view))
-         do (multiple-value-bind (new-pump-state line-height)
-                (draw-line-strokes pane view pump-state start-offset cursor-x cursor-y)
-              (setf pump-state new-pump-state
-                    start-offset (1+ (line-end-offset line)))
-              (incf cursor-y (+ line-height (stream-vertical-spacing pane))))
-         when (or (and (not (extend-pane-bottom view))
-                       (>= (y2 (line-dimensions line)) pane-height))
-                  (= (line-end-offset line) (size (buffer view))))
-         return (progn
-                  (setf (offset (bot view)) (line-end-offset line))
-                  (clear-stale-lines pane view))))))
+  (with-bounding-rectangle* (x1 y1 x2 y2) view
+    (let ((old-width (- x2 x1))
+          (old-height (- y2 y1)))
+      (setf (displayed-lines-count view) 0
+            (max-line-width view) 0)
+      (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
+        (with-output-recording-options (pane :record nil :draw t)
+          (loop with start-offset = (offset (beginning-of-line (top view)))
+                with pump-state = (pump-state-for-offset view start-offset)
+                with pane-height = (bounding-rectangle-height (or (pane-viewport pane) pane))
+                for line = (line-information view (displayed-lines-count view))
+                do (multiple-value-bind (new-pump-state line-height)
+                       (draw-line-strokes pane view pump-state start-offset
+                                          cursor-x cursor-y old-width)
+                     (setf pump-state new-pump-state
+                           start-offset (1+ (line-end-offset line)))
+                     (incf cursor-y (+ line-height (stream-vertical-spacing pane))))
+                when (or (and (not (extend-pane-bottom view))
+                              (>= (y2 (line-dimensions line)) pane-height))
+                         (= (line-end-offset line) (size (buffer view))))
+                return (progn
+                         (setf (offset (bot view)) (line-end-offset line))
+                         (clear-stale-lines pane view old-width old-height))))))))
 
 (defun offset-in-stroke-position (stream view stroke offset)
   "Calculate the position in device units of `offset' in
@@ -947,7 +956,12 @@ the end of the buffer."))
                            ((coordinates-intersects-dimensions
                              (stroke-dimensions stroke) x1 y1 x2 y2)
                             (setf (stroke-dirty stroke) t)
-                            (setf (stroke-modified stroke) t))))))))))))
+                            (setf (stroke-modified stroke) t))))))))
+        (with-bounding-rectangle* (vx1 vy1 vx2 vy2) view
+          (declare (ignore vy1 vx2 vy2))
+          (setf (max-line-width view)
+                (max (max-line-width view)
+                     (- x2 vx1))))))))
 
 (defmethod display-drei-view-cursor ((stream extended-output-stream)
                                      (view drei-buffer-view)
@@ -982,20 +996,8 @@ the end of the buffer."))
 
 (defun drei-bounding-rectangle* (drei-instance)
   "Return the bounding rectangle of the visual appearance of
-`drei-instance' as four values, just as
-`bounding-rectangle*'. Takes the cursors of `drei-instance' into
-account."
-  (multiple-value-bind (x1 y1 x2 y2)
-      (bounding-rectangle* (view drei-instance))
-    (dolist (cursor (cursors drei-instance))
-      (multiple-value-bind (cursor-x1 cursor-y1 cursor-x2 cursor-y2)
-          (bounding-rectangle* cursor)
-        (unless (= cursor-x1 cursor-y1 cursor-x2 cursor-y2 0)
-          (setf x1 (min x1 cursor-x1)
-                y1 (min y1 cursor-y1)
-                x2 (max x2 cursor-x2)
-                y2 (max y2 cursor-y2)))))
-    (values x1 y1 x2 y2)))
+`drei-instance' as four values, just as `bounding-rectangle*'."
+  (bounding-rectangle* (view drei-instance)))
 
 (defun drei-bounding-rectangle-width (drei-instance)
   "Return the width of the bounding rectangle of `drei-instance',
