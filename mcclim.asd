@@ -219,15 +219,13 @@
   :components ((:file "text-formatting")
                (:file "defresource")
                (:file "presentations")
-               (:file "input-editing" :depends-on ("presentations"))
+               (:file "bordered-output" :depends-on ("presentations"))
+               (:file "table-formatting" :depends-on ("presentations"))
+               (:file "input-editing" :depends-on ("presentations" "bordered-output" "table-formatting"))
                (:file "pointer-tracking" :depends-on ("input-editing"))
                (:file "graph-formatting")
                (:file "frames" :depends-on ("commands" "presentations" "presentation-defs"
                                                        "pointer-tracking" "incremental-redisplay"))
-               (:file "table-formatting" :depends-on ("presentation-defs" "panes"
-                                                                          "presentations" "input-editing"))
-               (:file "bordered-output" :depends-on ("input-editing" "incremental-redisplay"
-                                                                     "presentation-defs" "panes"))
                (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay"
                                                                   "bordered-output" "presentation-defs"))
                (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
