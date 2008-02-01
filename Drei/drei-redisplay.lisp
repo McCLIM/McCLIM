@@ -486,7 +486,7 @@ the stroke, the parts of the stroke and the widths of the parts
 of the stroke."
   (loop with parts = (analyse-stroke-string stroke-string)
      with width = 0
-     with widths = (make-array 1 :adjustable t :fill-pointer t)
+     with widths = (make-array 1 :adjustable t :fill-pointer t :initial-element 0)
      with tab-width
      for (start end object) in parts
      do (cond ((eql object #\Tab)
