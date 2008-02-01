@@ -537,8 +537,7 @@ of `simple-parse-error'."))
   nil)
 
 (defun possibilities-for-menu (possibilities)
-  (loop for p in possibilities
-        for (display . object) = p
+  (loop for (display object) in possibilities
         collect `(,display :value ,object)))
 
 (defun possibility-printer (possibility ptype stream)
@@ -782,7 +781,7 @@ used as value of `:possibility-printer' in calls to
 			   (length initial-string))
 		       initial-len)
 	       (incf nmatches)
-	       (push (cons str obj) possibilities))))
+	       (push (list str obj) possibilities))))
       (funcall generator initial-string #'suggester)
       (if (and (eql nmatches 1)
 	       (string-equal initial-string (caar possibilities)))
@@ -798,7 +797,7 @@ used as value of `:possibility-printer' in calls to
 				    (action :complete)
 				    (predicate (constantly t))
 				    (name-key #'car)
-				    (value-key #'cadr))
+				    (value-key #'cadar))
   (flet ((generator (input-string suggester)
 	   (declare (ignore input-string))
 	   (do-sequence (possibility completions)
