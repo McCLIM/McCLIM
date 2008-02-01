@@ -27,6 +27,7 @@
 
 (defclass goatee-input-editing-stream (empty-input-mixin
                                        goatee:goatee-input-editing-mixin
+                                       standard-input-editing-mixin
                                        input-editing-stream
                                        standard-encapsulating-stream)
   ((buffer :reader stream-input-buffer
@@ -149,5 +150,5 @@
     (setf (rescan-queued stream) nil)
     (immediate-rescan stream)))
 
-(defmethod input-editing-stream-bounding-rectangle ((stream goatee-input-editing-stream))
-  (bounding-rectangle* (area  stream)))
+(defmethod input-editing-stream-output-record ((stream goatee-input-editing-stream))
+  (area stream))

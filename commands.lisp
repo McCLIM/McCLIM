@@ -1225,7 +1225,7 @@ examine the type of the command menu item to see if it is
 
 ;;; In order for this to work, the input-editing-stream must implement
 ;;; a method for the nonstandard function
-;;; `input-editing-stream-bounding-rectangle'.
+;;; `input-editing-stream-output-record'.
 (defun command-line-read-remaining-arguments-for-partial-command
     (command-table stream partial-command start-position)
   (declare (ignore start-position))
@@ -1233,8 +1233,7 @@ examine the type of the command menu item to see if it is
 						 *command-parser-table*))))
     (if (encapsulating-stream-p stream)
 	(let ((interactor (encapsulating-stream-stream stream)))
-	  (multiple-value-bind (x1 y1 x2 y2)
-	      (input-editing-stream-bounding-rectangle stream)
+	  (with-bounding-rectangle (x1 y1 x2 y2) (input-editing-stream-output-record stream)
 	    (declare (ignore y1 x2))
 	    ;; Start the dialog below the editor area
 	    (letf (((stream-cursor-position interactor) (values x1 y2)))

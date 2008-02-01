@@ -57,6 +57,16 @@ the elements in it may have dynamic extent.")
     (:method (stream)
       (cl:interactive-stream-p stream))))
 
+(defclass standard-input-editing-mixin ()
+  ((%typeout-record :accessor typeout-record
+                    :initform nil
+                    :documentation "The output record (if any)
+that is the typeout information for this
+input-editing-stream. `With-input-editor-typeout' manages this
+output record."))
+  (:documentation "A mixin implementing some useful standard
+behavior for input-editing streams."))
+
 ;;; These helper functions take the arguments of ACCEPT so that they
 ;;; can be used directly by ACCEPT.
 
@@ -167,6 +177,93 @@ gesture, otherwise returns false."
 	do (return t)
 	finally (return nil)))
 
+(defmacro with-input-editor-typeout ((&optional (stream t) &rest args
+                                                &key erase)
+                                     &body body)
+  "Clear space above the input-editing stream `stream' and
+evaluate `body', capturing output done to `stream'. Place will be
+obtained above the input-editing area and the output put
+there. Nothing will be displayed until `body' finishes. `Stream'
+is not evaluated and must be a symbol. If T (the default),
+`*standard-input*' will be used. `Stream' will be bound to an
+`extended-output-stream' while `body' is being evaluated."
+  (declare (ignore erase))
+  (check-type stream symbol)
+  (let ((stream (if (eq stream t) '*standard-output* stream)))
+    `(invoke-with-input-editor-typeout
+      ,stream
+      #'(lambda (,stream)
+          ,@body)
+      ,@args)))
+
+(defgeneric invoke-with-input-editor-typeout (stream continuation &key erase)
+  (:documentation "Call `continuation' with a single argument, a
+stream to do input-editor-typeout on."))
+
+(defun sheet-move-output-vertically (sheet y delta-y)
+  "Move the output records of `sheet', starting at vertical
+device unit offset `y' or below, down by `delta-y' device units,
+then repaint `sheet'."
+  (unless (zerop delta-y)
+    (with-bounding-rectangle* (sheet-x1 sheet-y1 sheet-x2 sheet-y2) sheet
+      (declare (ignore sheet-x1 sheet-y1))
+      (map-over-output-records-overlapping-region
+       #'(lambda (record)
+           (multiple-value-bind (record-x record-y) (output-record-position record)
+             (when (>= (+ record-y (bounding-rectangle-height record)) y)
+               (setf (output-record-position record)
+                     (values record-x (+ record-y delta-y))))))
+       (stream-output-history sheet)
+       (make-bounding-rectangle 0 y sheet-x2 sheet-y2))
+      ;; Only repaint within the visible region...
+      (with-bounding-rectangle* (viewport-x1 viewport-y1 viewport-x2 viewport-y2)
+          (or (pane-viewport-region sheet) sheet)
+        (declare (ignore viewport-y1))
+        (repaint-sheet sheet (make-bounding-rectangle viewport-x1 (- y (abs delta-y))
+                                                      viewport-x2 viewport-y2))))))
+
+(defmethod invoke-with-input-editor-typeout ((editing-stream standard-input-editing-mixin)
+                                             (continuation function) &key erase)
+  (declare (ignore erase))
+  (let* ((encapsulated-stream (encapsulating-stream-stream editing-stream))
+         (new-typeout-record (with-output-to-output-record (encapsulated-stream)
+                               (funcall continuation encapsulated-stream)))
+         (editor-record (input-editing-stream-output-record editing-stream)))
+    (with-accessors ((stream-typeout-record typeout-record)) editing-stream
+      (with-sheet-medium (medium encapsulated-stream)
+        (setf (output-record-position new-typeout-record)
+              (values 0 (bounding-rectangle-min-y (or stream-typeout-record editor-record))))
+        ;; Calculate the height difference between the old typeout and the new.
+        (let ((delta-y (- (bounding-rectangle-height new-typeout-record)
+                          (if stream-typeout-record
+                              (bounding-rectangle-height stream-typeout-record)
+                              0))))
+          (multiple-value-bind (typeout-x typeout-y)
+              (output-record-position new-typeout-record)
+            (declare (ignore typeout-x))
+            ;; Clear the old typeout.
+            (when stream-typeout-record
+              (clear-output-record stream-typeout-record))
+            (sheet-move-output-vertically encapsulated-stream typeout-y delta-y)
+            ;; Reuse the old stream-typeout-record, if any.
+            (cond (stream-typeout-record
+                   (add-output-record new-typeout-record stream-typeout-record))
+                  (t
+                   (stream-add-output-record encapsulated-stream new-typeout-record)
+                   (setf stream-typeout-record new-typeout-record)))
+            ;; Now, let there be light!
+            (with-bounding-rectangle* (x1 y1 x2 y2) stream-typeout-record
+              (declare (ignore x2))
+              (repaint-sheet encapsulated-stream
+                             (make-bounding-rectangle
+                              x1 y1 (bounding-rectangle-width encapsulated-stream) y2)))))))))
+
+(defun clear-typeout (&optional (stream t))
+  "Blank out the input-editor typeout displayed on `stream',
+defaulting to T for `*standard-output*'."
+  (with-input-editor-typeout (stream :erase t)
+    (declare (ignore stream))))
+
 (defmacro with-input-editing ((&optional (stream t)
 			       &rest args
 			       &key input-sensitizer (initial-contents "")
@@ -218,27 +315,6 @@ buffer using `presentation-replace-input'."
 	    (*current-input-position* (and *current-input-stream*
 					   (stream-scan-pointer ,stream-var))))
        ,@body)))
-
-(defmacro with-input-editor-typeout ((&optional (stream t) &rest args
-                                                &key erase)
-                                     &body body)
-  "`Stream' is not evaluated and must be a symbol. If T (the
-default), `*standard-input*' will be used. `Stream' will be bound
-to an `extended-output-stream' while `body' is being evaluated."
-  (declare (ignore erase))
-  (check-type stream symbol)
-  (let ((stream (if (eq stream t) '*standard-output* stream)))
-    `(invoke-with-input-editor-typeout
-      ,stream
-      #'(lambda (,stream)
-          ,@body)
-      ,@args)))
-
-(defun clear-typeout (&optional (stream t))
-  "Blank out the input-editor typeout displayed on `stream',
-defaulting to T for `*standard-output*'."
-  (with-input-editor-typeout (stream :erase t)
-    (declare (ignore stream))))
 
 (defun input-editing-rescan-loop (editing-stream continuation)
   (let ((start-scan-pointer (stream-scan-pointer editing-stream)))
@@ -301,14 +377,11 @@ the class of the input-editing stream to create, if necessary."))
   (with-activation-gestures (*standard-activation-gestures*)
     (call-next-method)))
 
-(defgeneric invoke-with-input-editor-typeout (stream continuation &key erase)
-  (:documentation "Call `continuation' with a single argument, a
-stream to do input-editor-typeout on."))
-
-(defgeneric input-editing-stream-bounding-rectangle (stream)
-  (:documentation "Return the bounding rectangle of `stream' as
-four values. This function does not appear in the spec but is
-used by the command processing code for layout."))
+(defgeneric input-editing-stream-output-record (stream)
+  (:documentation "Return the output record showing the display of the
+input-editing stream `stream' values. This function does not
+appear in the spec but is used by the command processing code for
+layout and to implement a general with-input-editor-typeout."))
 
 (defmethod input-editor-format ((stream t) format-string &rest format-args)
   (unless (and (typep stream '#.*string-input-stream-class*)

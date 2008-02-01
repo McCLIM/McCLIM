@@ -31,6 +31,7 @@
 
 (defclass standard-input-editing-stream (drei:drei-input-editing-mixin
 					 empty-input-mixin
+                                         standard-input-editing-mixin
 					 input-editing-stream
 					 standard-encapsulating-stream)
   ((scan-pointer :accessor stream-scan-pointer :initform 0)
@@ -119,7 +120,7 @@ activated with GESTURE"))
           ((stream-drawing-p real-stream)
            (replay record real-stream) ))
     (setf (stream-cursor-position real-stream)
-          (values 0 (nth-value 3 (input-editing-stream-bounding-rectangle stream))))))
+          (values 0 (bounding-rectangle-max-y (input-editing-stream-output-record stream))))))
 
 ;; XXX: We are supposed to implement input editing for all
 ;; "interactive streams", but that's not really reasonable. We only
@@ -152,8 +153,8 @@ activated with GESTURE"))
     (setf (rescan-queued stream) nil)
     (immediate-rescan stream)))
 
-(defmethod input-editing-stream-bounding-rectangle ((stream standard-input-editing-stream))
-  (bounding-rectangle* (view (drei:drei-instance stream))))
+(defmethod input-editing-stream-output-record ((stream standard-input-editing-stream))
+  (drei:drei-instance stream))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
