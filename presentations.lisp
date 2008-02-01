@@ -1979,3 +1979,119 @@ a presentation"
    (lambda (child)
      (highlight-output-record child stream state))
    record))
+
+;;; Context-dependent input
+;;; An input context is a cons of a presentation type and a continuation to
+;;; call to return a presentation to that input context.
+
+(defvar *input-context* nil)
+
+(defun input-context-type (context-entry)
+  (car context-entry))
+
+;;; Many presentation functions, internal and external, take an input
+;;; context as an argument, but they really only need to look at one
+;;; presentation type.
+(defun make-fake-input-context (ptype)
+  (list (cons (expand-presentation-type-abbreviation ptype)
+	      #'(lambda (object type event options)
+		  (declare (ignore event options))
+		  (error "Fake input context called with object ~S type ~S. ~
+                          This shouldn't happen!"
+			 object type)))))
+
+(defun input-context-wait-test (stream)
+  (let* ((queue (stream-input-buffer stream))
+	 (event (event-queue-peek queue)))
+    (when event
+      (let ((sheet (event-sheet event)))
+	(when (and (output-recording-stream-p sheet)
+		   (or (typep event 'pointer-event)
+		       (typep event 'keyboard-event))
+		   (not (gadgetp sheet)))
+	  (return-from input-context-wait-test t))))
+    nil))
+
+(defun highlight-applicable-presentation (frame stream input-context
+					  &optional (prefer-pointer-window t))
+  (let* ((queue (stream-input-buffer stream))
+	 (event (event-queue-peek queue)))
+    (when (and event
+	       (or (and (typep event 'pointer-event)
+			(or prefer-pointer-window 
+			    (eq stream (event-sheet event))))
+		   (typep event 'keyboard-event)))
+      ;; Stream only needs to see button press events.
+      ;; XXX Need to think about this more.  Should any pointer events be
+      ;; passed through?  If there's no presentation, maybe?
+      (unless (typep event 'keyboard-event)
+	(event-queue-read queue))
+      (progn
+	(frame-input-context-track-pointer frame
+					   input-context
+					   (event-sheet event)
+					   event)
+	(when (typep event 'pointer-button-press-event)
+	  (funcall *pointer-button-press-handler* stream event)))
+      #+nil
+      (if (and (typep event 'pointer-motion-event)
+	       (pointer-event-button event))
+	  (frame-drag frame input-context (event-sheet event) event)
+	  ))))
+
+(defun input-context-event-handler (stream)
+  (highlight-applicable-presentation *application-frame*
+				     stream
+				     *input-context*))
+
+(defun input-context-button-press-handler (stream button-event)
+  (declare (ignore stream))
+  (frame-input-context-button-press-handler *application-frame*
+					    (event-sheet button-event)
+					    button-event))
+
+(defun highlight-current-presentation (frame input-context)
+  (let ((event (synthesize-pointer-motion-event (port-pointer
+						 (port
+						  *application-frame*)))))
+    (when event
+      (frame-input-context-track-pointer frame
+                                         input-context
+                                         (event-sheet event)
+                                         event))))
+
+(defmacro with-input-context ((type &key override)
+			      (&optional (object-var (gensym))
+					 (type-var (gensym))
+					 event-var
+					 options-var)
+			      form
+			      &body pointer-cases)
+  (let ((vars `(,object-var
+		,type-var
+		,@(and event-var `(,event-var))
+		,@(and options-var `(,options-var))))
+	(return-block (gensym "RETURN-BLOCK"))
+	(context-block (gensym "CONTEXT-BLOCK")))
+    `(block ,return-block
+       (multiple-value-bind ,vars
+	   (block ,context-block
+	     (let ((*input-context*
+		    (cons (cons (expand-presentation-type-abbreviation ,type)
+                                #'(lambda (object type event options)
+				    (return-from ,context-block
+				      (values object type event options))))
+			  ,(if override nil '*input-context*)))
+		   (*pointer-button-press-handler*
+		    #'input-context-button-press-handler)
+		   (*input-wait-test* #'input-context-wait-test)
+		   (*input-wait-handler* #'input-context-event-handler))
+	       (return-from ,return-block ,form )))
+         (declare (ignorable ,@vars))
+	 (highlight-current-presentation *application-frame* *input-context*)
+	 (cond ,@(mapcar #'(lambda (pointer-case)
+			     (destructuring-bind (case-type &body case-body)
+				 pointer-case
+			       `((presentation-subtypep ,type-var ',case-type)
+				 ,@case-body)))
+			 pointer-cases))))))
