@@ -145,9 +145,18 @@
 (defun print-listener-prompt (stream frame)
   (declare (ignore frame))
   (with-text-face (stream :italic)
-    (with-output-as-presentation (stream *package* 'package :single-box t)
-      (print-package-name stream))
-    (princ "> " stream)))
+    (let* ((text-style-width (text-style-width (medium-default-text-style stream) stream))
+           (arrow-width (* 2 text-style-width))
+           (prompt-height
+            (bounding-rectangle-height
+             (with-output-as-presentation (stream *package* 'package :single-box t)
+               (print-package-name stream)))))
+      (multiple-value-bind (x y) (stream-cursor-position stream)
+        (draw-arrow* stream x (+ y (/ prompt-height 2))
+                     (+ x arrow-width) (+ y (/ prompt-height 2))
+                     :head-length (/ text-style-width 2)
+                     :head-width (floor (/ prompt-height 2))))
+      (stream-increment-cursor-position stream (+ arrow-width text-style-width) 0))))
 
 (defmethod frame-standard-output ((frame listener))
   (get-frame-pane frame 'interactor))
