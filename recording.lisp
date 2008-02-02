@@ -401,7 +401,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (with-bounding-rectangle* (min-x min-y max-x max-y) record
     (call-next-method)
     (let ((parent (output-record-parent record)))
-      (when (and parent (not (slot-value parent 'in-moving-p)))
+      (when (and parent (not (and (typep parent 'compound-output-record)
+                                  (slot-value parent 'in-moving-p)))) ; XXX
         (recompute-extent-for-changed-child parent record
                                             min-x min-y max-x max-y))))
   (values nx ny))
@@ -461,7 +462,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (gs-ink-mixin gs-clip-mixin gs-line-style-mixin gs-text-style-mixin)
   ())
 
-(defun replay (record stream &optional region)
+(defun replay (record stream &optional (region (or (pane-viewport-region stream)
+                                                   (sheet-region stream))))
   (if (typep stream 'encapsulating-stream)
       (replay record (encapsulating-stream-stream stream) region)
       (progn
