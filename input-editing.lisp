@@ -726,6 +726,7 @@ stream. Output will be done to its typeout."
                              nmatches mode))
                    (when (and (> nmatches 0) (eq mode :possibilities))
                      (print-possibilities possibilities possibility-printer stream)
+                     (redraw-input-buffer stream)
                      (let ((possibility
                             (handler-case
                                 (with-input-context (`(completion ,possibilities) :override nil)
