@@ -930,18 +930,18 @@ the end of the buffer."))
     (change-space-requirements pane
      :width (max (bounding-rectangle-max-x cursor)
                  (bounding-rectangle-max-x pane))
-     :width (max (if (extend-pane-bottom view)
-                     (bounding-rectangle-max-y cursor)
-                     0)
-                 (bounding-rectangle-max-y pane)))
+     :height (max (if (extend-pane-bottom view)
+                      (bounding-rectangle-max-y cursor)
+                      0)
+                  (bounding-rectangle-max-y pane)))
     ;; And draw the cursor again.
     (call-next-method)))
 
 (defmethod display-drei-view-cursor :around ((stream extended-output-stream)
                                              (view drei-buffer-view)
                                              (cursor drei-cursor))
+  (clear-output-record cursor)
   (when (visible-p cursor)
-    (clear-output-record cursor)
     (prog1 (call-next-method)
       (with-bounding-rectangle* (x1 y1 x2 y2) cursor
         (do-displayed-lines (line view)
@@ -1011,13 +1011,6 @@ calculated by `drei-bounding-rectangle*'."
 ;;;
 ;;; Drei area redisplay.
 
-(defmethod erase-output-record :after ((drei drei-area) (stream extended-output-stream)
-                                       &optional (errorp nil errorp-supplied))
-  (dolist (cursor (cursors drei))
-    (apply #'erase-output-record cursor stream
-           (when errorp-supplied
-             (list errorp)))))
-
 ;; XXX: Full redraw for every replay, should probably use the `region'
 ;; parameter to only invalidate some strokes.
 (defmethod replay-output-record ((drei drei-area) (stream extended-output-stream) &optional
@@ -1025,14 +1018,11 @@ calculated by `drei-bounding-rectangle*'."
   (declare (ignore x-offset y-offset region))
   (letf (((stream-cursor-position stream) (output-record-start-cursor-position drei)))
     (invalidate-all-strokes (view drei))
-    (display-drei-view-contents stream (view drei)))
-  (dolist (cursor (cursors drei))
-    (replay cursor stream)))
+    (display-drei-view-contents stream (view drei))))
 
 (defmethod replay-output-record ((cursor drei-cursor) stream &optional
                                  (x-offset 0) (y-offset 0) (region +everywhere+))
   (declare (ignore x-offset y-offset region))
-  (clear-output-record cursor)
   (with-output-recording-options (stream :record t :draw t)
     (display-drei-view-cursor stream (view cursor) cursor)))
 

@@ -56,11 +56,12 @@
 ;;; of what CLIM already provides. That seemed a bit (=a lot) hairy,
 ;;; though.
 
-;;; Cursors are output records. When a cursor is created, it adds
-;;; itself to its output stream. The owner of the cursor (a Drei
-;;; instance) is responsible for removing the cursor once it is done
-;;; with it. Cursors can be active/inactive and enabled/disabled and
-;;; have the same activity-status as their associated view.
+;;; Cursors are output records. After a cursor is created, The owning
+;;; Drei instance instnace should add it to the output stream. The
+;;; owner of the cursor (a Drei instance) is responsible for removing
+;;; the cursor once it is done with it. Cursors can be active/inactive
+;;; and enabled/disabled and have the same activity-status as their
+;;; associated view.
 (defclass drei-cursor (standard-sequence-output-record)
   ((%view :reader view
           :initarg :view
@@ -95,10 +96,6 @@ when it is inactive."))
   (:documentation "A visual representation of a given mark in a
 Drei buffer. The most important role for instances of subclasses
 of this class is to visually represent the position of point."))
-
-(defmethod initialize-instance :after ((object drei-cursor) &rest initargs)
-  (declare (ignore initargs))
-  (stream-add-output-record (output-stream object) object))
 
 (defgeneric active (cursor)
   (:documentation "Whether the cursor is active or
@@ -203,6 +200,14 @@ command loop completely."))
 
 (defmethod (setf view) :after (new-val (drei drei-pane))
   (window-clear drei))
+
+(defmethod (setf cursors) :around (new-cursors (drei drei-pane))
+  (let ((old-cursors (cursors drei)))
+    (call-next-method)
+    (dolist (old-cursor old-cursors)
+      (erase-output-record old-cursor drei nil))
+    (dolist (new-cursor new-cursors)
+      (stream-add-output-record drei new-cursor))))
 
 (defmethod note-sheet-grafted :after ((pane drei-pane))
   (setf (stream-default-view pane) (view pane)))
@@ -374,6 +379,10 @@ record."))
 (defmethod (setf view) :after ((new-view drei-view) (drei drei-area))
   (setf (extend-pane-bottom new-view) t))
 
+(defmethod (setf cursors) :after (new-cursors (drei drei-area))
+  (dolist (new-cursor (cursors drei))
+    (setf (output-record-parent new-cursor) drei)))
+
 (defmethod esa-current-window ((drei drei-area))
   (editor-pane drei))
 
@@ -415,24 +424,28 @@ record."))
   +foreground-ink+)
 
 (defmethod output-record-children ((record drei-area))
-  '())
+  (cursors record))
 
 (defmethod output-record-count ((record drei-area))
-  0)
+  (length (cursors record)))
 
 (defmethod map-over-output-records-containing-position
     (function (record drei-area) x y
      &optional (x-offset 0) (y-offset 0)
      &rest function-args)
-  (declare (ignore function x y x-offset y-offset function-args))
-  nil)
+  (declare (ignore x-offset y-offset))
+  (dolist (cursor (cursors record))
+    (when (region-contains-position-p cursor x y)
+      (apply function cursor function-args))))
 
 (defmethod map-over-output-records-overlapping-region
     (function (record drei-area) region
      &optional (x-offset 0) (y-offset 0)
      &rest function-args)
-  (declare (ignore function region x-offset y-offset function-args))
-  nil)
+  (declare (ignore x-offset y-offset))
+  (dolist (cursor (cursors record))
+    (when (region-intersects-region-p cursor region)
+      (apply function cursor function-args))))
 
 (defmethod bounding-rectangle* ((drei drei-area))
   (with-accessors ((pane editor-pane)
@@ -456,6 +469,16 @@ record."))
                             (+ x1 (bounding-rectangle-width (pane-viewport-region pane))))
                            (t 0)))
                 (max y2 (+ y1 height)))))))
+
+(defmethod replay-output-record :after ((drei drei-area) (stream extended-output-stream)
+                                        &optional (x-offset 0) (y-offset 0) (region +everywhere+))
+  (declare (ignore x-offset y-offset region))
+  (dolist (cursor (cursors drei))
+    (replay cursor stream)))
+
+(defmethod recompute-extent-for-changed-child  ((drei drei-area) (child output-record)
+                                                old-min-x old-min-y old-max-x old-max-y)
+  nil)
 
 (defmethod rectangle-edges* ((rectangle drei-area))
   (bounding-rectangle* rectangle))
