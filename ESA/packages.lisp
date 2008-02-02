@@ -24,6 +24,7 @@
 
 (defpackage :esa-utils
   (:use :clim-lisp :clim-mop :clim)
+  (:shadowing-import-from :clim-lisp #:describe-object)
   (:export #:with-gensyms
            #:once-only
            #:unlisted
