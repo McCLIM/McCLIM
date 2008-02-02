@@ -111,7 +111,7 @@
                     (keyword-args (climi::keyword-args info)))
                 ;; keyword arguments not yet supported
                 (declare (ignore keyword-args))
-                (let (result)
+                (let (result arg-parsed)
                   ;; only required args for now.
                   (do* ((required-args required-args (cdr required-args))
                         (arg (car required-args) (car required-args))
@@ -120,9 +120,11 @@
                        ((null required-args) (cons command-name (nreverse result)))
                     (destructuring-bind (name ptype &rest args) arg
                       (push (cond ((eq command-arg *unsupplied-argument-marker*)
+                                   (setf arg-parsed t)
                                    (esa-parse-one-arg stream name ptype args))
                                   ((eq command-arg *numeric-argument-marker*)
                                    (or numeric-argument (getf args :default)))
                                   (t (eval command-arg)))
                             result)
-                      (maybe-clear-input)))))))))))
+                      (when arg-parsed
+                        (maybe-clear-input))))))))))))
