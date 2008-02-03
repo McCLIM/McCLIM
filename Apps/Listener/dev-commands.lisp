@@ -1123,7 +1123,7 @@
      (show-hidden  'boolean :default nil :prompt "show hidden")
      (hide-garbage 'boolean :default t   :prompt "hide garbage")
      (show-all     'boolean :default nil :prompt "show all")
-     (style '(member items list) :default 'items :prompt "listing style")
+     (style '(member :items :list) :default 'items :prompt "listing style")
      (group-directories 'boolean :default t :prompt "group directories?")
      (full-names 'boolean :default nil :prompt "show full name?")
      (list-all-direct-subdirectories 'boolean :default nil :prompt "list all direct subdirectories?"))
@@ -1139,7 +1139,7 @@
     (with-text-family (t :sans-serif)      
       (invoke-as-heading
         (lambda ()
-          (format t "Directory contents of ")
+          (format t "Contents of ")
           (present (directory-namestring pathname) 'pathname)
           (when (pathname-type pathname)
             (format t " (only files of type ~a)" (pathname-type pathname)))))
@@ -1153,18 +1153,14 @@
         (unless show-all
           (setf group (filter-garbage-pathnames group show-hidden hide-garbage)))
         (ecase style
-          (items (abbreviating-format-items group :row-wise nil :x-spacing "  " :y-spacing 1
-                                            :printer (lambda (x stream)
-                                                       (declare (ignore stream))
-                                                       (pretty-pretty-pathname x *standard-output*
-                                                                               :long-name full-names)))
-                 #+NIL
-                 (format-items group :row-wise nil :x-spacing "  " :y-spacing 1
-                               :printer (lambda (x stream)
-                                          (declare (ignore stream))
-                                          (pretty-pretty-pathname x *standard-output* :long-name full-names)))
-                 (goatee::reposition-stream-cursor *standard-output*)) ; Hmm.
-          (list (dolist (ent group)
+          (:items
+           (abbreviating-format-items group :row-wise nil :x-spacing "  " :y-spacing 1
+                                      :printer (lambda (x stream)
+                                                 (pretty-pretty-pathname x stream
+                                                                         :long-name full-names)))           
+           (multiple-value-bind (x y) (stream-cursor-position *standard-output*)
+             (setf (stream-cursor-position *standard-output*) (values 0 y))))
+          (:list (dolist (ent group)
                   (let ((ent (merge-pathnames ent pathname))) ;; This is for CMUCL, see above. (fixme!)
                                                               ;; And breaks some things for SBCL.. (mgr) 
                     (pretty-pretty-pathname ent *standard-output* :long-name full-names)))))))))
