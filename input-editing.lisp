@@ -67,6 +67,18 @@ output record."))
   (:documentation "A mixin implementing some useful standard
 behavior for input-editing streams."))
 
+(defmethod typeout-record :around ((stream standard-input-editing-mixin))
+  ;; Can't do this in an initform, since we need to proper position...
+  (or (call-next-method)
+      (let ((record
+             (make-instance 'standard-sequence-output-record
+              :x-position 0
+              :y-position (bounding-rectangle-min-y
+                           (input-editing-stream-output-record stream)))))
+        (stream-add-output-record (encapsulating-stream-stream stream)
+                                  record)
+        (setf (typeout-record stream) record))))
+
 ;;; These helper functions take the arguments of ACCEPT so that they
 ;;; can be used directly by ACCEPT.
 
@@ -224,39 +236,42 @@ then repaint `sheet'."
 
 (defmethod invoke-with-input-editor-typeout ((editing-stream standard-input-editing-mixin)
                                              (continuation function) &key erase)
-  (declare (ignore erase))
-  (let* ((encapsulated-stream (encapsulating-stream-stream editing-stream))
-         (new-typeout-record (with-output-to-output-record (encapsulated-stream)
-                               (funcall continuation encapsulated-stream)))
-         (editor-record (input-editing-stream-output-record editing-stream)))
-    (with-accessors ((stream-typeout-record typeout-record)) editing-stream
+  (with-accessors ((stream-typeout-record typeout-record)) editing-stream
+    ;; Can't do this in an initform, as we need to set the proper
+    ;; output record position.
+    (let* ((encapsulated-stream (encapsulating-stream-stream editing-stream))
+           (old-min-y (bounding-rectangle-min-y stream-typeout-record))
+           (old-height (bounding-rectangle-height stream-typeout-record))
+           (new-typeout-record (with-output-to-output-record (encapsulated-stream
+                                                              'standard-sequence-output-record
+                                                              record)
+                                 (unless erase
+                                   ;; Steal the children of the old typeout record.
+                                   (map nil #'(lambda (child)
+                                                (setf (output-record-parent child) nil
+                                                      (output-record-position child) (values 0 0))
+                                                (add-output-record child record))
+                                        (output-record-children stream-typeout-record))
+                                   ;; Make sure new output is done
+                                   ;; after the stolen children.
+                                   (stream-increment-cursor-position
+                                    encapsulated-stream 0 old-height))
+                                 (funcall continuation encapsulated-stream))))
       (with-sheet-medium (medium encapsulated-stream)
-        (setf (output-record-position new-typeout-record)
-              (values 0 (bounding-rectangle-min-y (or stream-typeout-record editor-record))))
+        (setf (output-record-position new-typeout-record) (values 0 old-min-y))
         ;; Calculate the height difference between the old typeout and the new.
-        (let ((delta-y (- (bounding-rectangle-height new-typeout-record)
-                          (if stream-typeout-record
-                              (bounding-rectangle-height stream-typeout-record)
-                              0))))
+        (let ((delta-y (- (bounding-rectangle-height new-typeout-record) old-height)))
           (multiple-value-bind (typeout-x typeout-y)
               (output-record-position new-typeout-record)
             (declare (ignore typeout-x))
-            ;; Clear the old typeout.
-            (when stream-typeout-record
-              (clear-output-record stream-typeout-record))
+            ;; Clear the old typeout...
+            (clear-output-record stream-typeout-record)
+            ;; Move stuff for the new typeout record...
             (sheet-move-output-vertically encapsulated-stream typeout-y delta-y)
-            ;; Reuse the old stream-typeout-record, if any.
-            (cond (stream-typeout-record
-                   (add-output-record new-typeout-record stream-typeout-record))
-                  (t
-                   (stream-add-output-record encapsulated-stream new-typeout-record)
-                   (setf stream-typeout-record new-typeout-record)))
+            ;; Reuse the old stream-typeout-record...
+            (add-output-record new-typeout-record stream-typeout-record)
             ;; Now, let there be light!
-            (with-bounding-rectangle* (x1 y1 x2 y2) stream-typeout-record
-              (declare (ignore x2))
-              (repaint-sheet encapsulated-stream
-                             (make-bounding-rectangle
-                              x1 y1 (bounding-rectangle-width encapsulated-stream) y2)))))))))
+            (repaint-sheet encapsulated-stream stream-typeout-record)))))))
 
 (defun clear-typeout (&optional (stream t))
   "Blank out the input-editor typeout displayed on `stream',
