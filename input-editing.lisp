@@ -592,12 +592,9 @@ of `simple-parse-error'."))
                        (progn
                          (unread-gesture gesture :stream stream)
                          (return-from complete-input-rescan
-                           (values object t input)))
-                       ;; Do we actually want to signal this here? I
-                       ;; don't think we should terminate the
-                       ;; input-editing-session just because the user
-                       ;; tries to complete invalid input.
-		       (error 'simple-completion-error
+                       ;; This used to be an error, but no one thought
+                       ;; that was a really great idea.
+		       (signal 'simple-completion-error
                               :format-control "complete-input: While rescanning,~
                                              can't match ~A~A"
                               :format-arguments (list so-far  gesture)
