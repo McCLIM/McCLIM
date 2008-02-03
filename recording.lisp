@@ -397,15 +397,15 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (values nx ny))
 
 (defmethod* (setf output-record-position) :around
-    (nx ny (record basic-output-record))
+            (nx ny (record basic-output-record))
   (with-bounding-rectangle* (min-x min-y max-x max-y) record
-    (call-next-method)
+    (call-next-method)    
     (let ((parent (output-record-parent record)))
       (when (and parent (not (and (typep parent 'compound-output-record)
                                   (slot-value parent 'in-moving-p)))) ; XXX
         (recompute-extent-for-changed-child parent record
-                                            min-x min-y max-x max-y))))
-  (values nx ny))
+                                            min-x min-y max-x max-y)))   
+    (values nx ny)))
 
 (defmethod* (setf output-record-position)
   :before (nx ny (record compound-output-record))
@@ -616,10 +616,17 @@ the associated sheet can be determined."
     (when sheet
       (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet))))
 
+(defmethod clear-output-record :around ((record compound-output-record))
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* record)
+    (call-next-method)
+    (assert (null-bounding-rectangle-p record))
+    (when (output-record-parent record)
+      (recompute-extent-for-changed-child
+       (output-record-parent record) record x1 y1 x2 y2))))
+
 (defmethod clear-output-record :after ((record compound-output-record))
   ;; XXX banish x and y
-  (with-slots (x y)
-      record
+  (with-slots (x y) record
     (setf (rectangle-edges* record) (values x y x y))))
 
 (defmethod output-record-count ((record displayed-output-record))
@@ -700,20 +707,20 @@ the associated sheet can be determined."
     ((record compound-output-record) child)
   (unless (null-bounding-rectangle-p child)
     (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) record
-      ;; I expect there's a bug here. If you create a record A, add an empty child B
-      ;; then add a displayed-output-record C, the code below will use min/max to
-      ;; grow the all-zero bounds of A, typically giving a bogus x1,y1 of 0,0. --Hefner
-      (if (eql 1 (output-record-count record))
-	  (setf (rectangle-edges* record) (bounding-rectangle* child))
-	  (with-bounding-rectangle* (x1-child y1-child x2-child y2-child)
-		child
-	      (setf (rectangle-edges* record)
-		    (values (min old-x1 x1-child) (min old-y1 y1-child)
-			    (max old-x2 x2-child) (max old-y2 y2-child)))))
+      (cond
+        ((null-bounding-rectangle-p record)
+         (setf (rectangle-edges* record) (bounding-rectangle* child)))
+        ((not (null-bounding-rectangle-p child))
+         (assert (not (null-bounding-rectangle-p record))) ; important.
+         (with-bounding-rectangle* (x1-child y1-child x2-child y2-child)
+             child
+           (setf (rectangle-edges* record)
+                 (values (min old-x1 x1-child) (min old-y1 y1-child)
+                         (max old-x2 x2-child) (max old-y2 y2-child))))))
       (let ((parent (output-record-parent record)))
-	    (when parent
-	      (recompute-extent-for-changed-child
-	       parent record old-x1 old-y1 old-x2 old-y2)))))
+        (when parent
+          (recompute-extent-for-changed-child
+           parent record old-x1 old-y1 old-x2 old-y2)))))
   record)
 
 (defmethod %tree-recompute-extent* ((record compound-output-record))
@@ -725,16 +732,17 @@ the associated sheet can be determined."
 	(first-time t))
     (map-over-output-records
      (lambda (child)
-       (if first-time
-           (progn
-             (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
-               (bounding-rectangle* child))
-             (setq first-time nil))
-           (with-bounding-rectangle* (cx1 cy1 cx2 cy2) child
-             (minf new-x1 cx1)
-             (minf new-y1 cy1)
-             (maxf new-x2 cx2)
-             (maxf new-y2 cy2))))
+       (unless (null-bounding-rectangle-p child)
+         (if first-time
+             (progn
+               (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
+                 (bounding-rectangle* child))
+               (setq first-time nil))
+             (with-bounding-rectangle* (cx1 cy1 cx2 cy2) child
+               (minf new-x1 cx1)
+               (minf new-y1 cy1)
+               (maxf new-x2 cx2)
+               (maxf new-y2 cy2)))))
      record)
     (if first-time
 	;; XXX banish x y
@@ -790,10 +798,13 @@ the associated sheet can be determined."
           (cond
             ;; The child has been deleted; who knows what the
             ;; new bounding box might be.
+            ;; This case shouldn't be really necessary.
             ((not (output-record-parent changed-child))
              (%tree-recompute-extent* record))
             ;; Only one child of record, and we already have the bounds.
             ((eql (output-record-count record) 1)
+             ;; See output-record-children for why this assert breaks:
+             ;; (assert (eq changed-child (elt (output-record-children record) 0)))
              (values cx1 cy1 cx2 cy2))
             ;; If our record occupied no space (had no children, or had only
             ;; children similarly occupying no space, hackishly determined by
@@ -805,15 +816,13 @@ the associated sheet can be determined."
             ;; In the following cases, we can grow the new bounding rectangle
             ;; from its previous state:
             ((or
-              ;; If the child was originally empty, it should not have affected
+              ;; If the child was originally empty, it could not have affected
               ;; previous computation of our bounding rectangle.
               ;; This is hackish for reasons similar to the above.
-              (and (zerop old-min-x) (zerop old-min-y)
-                   (zerop old-max-x) (zerop old-max-y))
-	      ;; For each old child coordinate, either it was not
-	      ;; involved in determining the bounding rectangle of the
-	      ;; parent, or else it is the same as the corresponding
-	      ;; new child coordinate.
+              (and (= old-min-x old-max-x) (= old-min-y old-max-y))
+	      ;; For each edge of the original child bounds, if it was within
+	      ;; its respective edge of the old parent bounding rectangle,
+	      ;; or if it has not changed:
 	      (and (or (> old-min-x ox1) (= old-min-x cx1))
 		   (or (> old-min-y oy1) (= old-min-y cy1))
 		   (or (< old-max-x ox2) (= old-max-x cx2))
@@ -842,11 +851,6 @@ the associated sheet can be determined."
 	      (recompute-extent-for-changed-child parent record
 						  ox1 oy1 ox2 oy2)))))))
   record)
-
-;; There was once an :around method on recompute-extent-for-changed-child here,
-;; but I've eliminated it. Its function was to notify the parent OR in case
-;; the bounding rect here changed - I've merged this into the above method.
-;; --Hefner, 8/7/02
 
 (defmethod tree-recompute-extent ((record compound-output-record))
   (tree-recompute-extent-aux record)
@@ -989,8 +993,21 @@ were added."
 (defmethod output-record-children ((record standard-tree-output-record))
   (map 'list
        #'tree-output-record-entry-record
-       (spatial-trees:search (%record-to-spatial-tree-rectangle record)
-                             (%tree-record-children record))))
+       (spatial-trees:search 
+        (%record-to-spatial-tree-rectangle record)
+        ;; The form below intends to fix output-record-children not
+        ;; reporting empty children, which may lie outside the reported
+        ;; bounding rectangle of their parent.
+        ;; Assumption: null bounding records are always at the origin.
+        ;; I've never noticed this violated, but it's out of line with
+        ;; what null-bounding-rectangle-p checks, and setf of
+        ;; output-record-position may invalidate it. Seems to work, but
+        ;; fix that and try again later.
+        #+NIL
+        (rectangles:make-rectangle
+         :lows (list 0 0) #| `(,(bounding-rectangle-min-x r) ,(bounding-rectangle-min-y r)) |#
+         :highs `(,(bounding-rectangle-max-x record) ,(bounding-rectangle-max-y record)))
+       (%tree-record-children record))))
 
 (defmethod add-output-record (child (record standard-tree-output-record))
   (let ((entry (make-tree-output-record-entry child (incf (last-insertion-nr record)))))
