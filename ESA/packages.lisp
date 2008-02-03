@@ -79,6 +79,7 @@
            #:command-processor #:instant-macro-execution-mixin
            #:asynchronous-command-processor #:command-loop-command-processor
            #:overriding-handler #:directly-processing-p #:process-gesture #:process-gestures-or-command
+           #:command-for-unbound-gestures
            #:*extended-command-prompt*
            #:define-esa-top-level #:esa-top-level #:simple-command-loop
            #:convert-to-gesture #:gesture-name

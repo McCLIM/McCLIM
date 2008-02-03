@@ -511,14 +511,20 @@ Successive kills append to the kill ring."
 ;;; These are what do the basic keypress->character inserted in buffer
 ;;; mapping.
 
-(define-command com-self-insert ((count 'integer :default 1))
-  (loop repeat count do (insert-character *current-gesture*)))
+(define-command com-self-insert
+    ((count 'integer :default 1))
+  "Insert the gesture used to invoke this command into the
+current buffer `count' times. `Count' should get its value from
+the numeric arguments."
+  (loop repeat count
+        do (insert-character *current-gesture*)))
 
-(loop for code from (char-code #\Space) to (char-code #\~)
-      do (set-key `(com-self-insert ,*numeric-argument-marker*)
-	     'self-insert-table
-	     (list (list (code-char code)))))
+(defmethod command-for-unbound-gestures ((view textual-drei-syntax-view) gestures)
+  (when (and (= (length gestures))
+             (characterp (first gestures))
+             (graphic-char-p (first gestures)))
+    `(com-self-insert ,*numeric-argument-marker*)))
 
 (set-key `(com-self-insert ,*numeric-argument-marker*)
-	 'self-insert-table
+         'self-insert-table
 	 '((#\Newline)))

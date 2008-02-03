@@ -459,6 +459,19 @@ fundamental interface to the command processor."))
   (:method ((command-processor command-processor))
     (null (overriding-handler command-processor))))
 
+(defgeneric command-for-unbound-gestures (thing gestures)
+  (:documentation "Called when `gestures' is input by the user
+and there is no associated command in the current command
+table. The function should return either a (possibly incomplete)
+command or NIL. In the latter case (which is handled by a default
+method), the gestures will be treated as actual unbound
+gestures. `Thing' is something that might be interested in
+commands, at the beginning usually a command processor, but it
+can call the function for other objects it knows in order to get
+their opinion. `Gestures' is a list of gestures.")
+  (:method (thing gestures)
+    nil))
+
 (defclass instant-macro-execution-mixin ()
   ()
   (:documentation "Subclasses of this class will immediately
@@ -637,38 +650,43 @@ never refer to a command."))
   (multiple-value-bind (prefix-arg prefix-p gestures)
       (process-gestures-for-numeric-argument
        (accumulated-gestures command-processor))
-    (cond ((null gestures)
-           t)
-          (t
-           (let* ((command-table (command-table command-processor))
-                  (item (find-gestures-with-inheritance gestures command-table)))
-             (cond 
-               ((not item)
-                (setf (accumulated-gestures command-processor) nil)
-                (error 'unbound-gesture-sequence :gestures gestures))
-               ((eq (command-menu-item-type item) :command)
-                (let ((command (command-menu-item-value item))
-                      (*current-gesture* (first (last gestures))))
-                  (unless (consp command)
-                    (setf command (list command)))
-                  ;; Call `*partial-command-parser*' to handle numeric
-                  ;; argument.
-                  (unwind-protect (setq command
-                                        (funcall
-                                         *partial-command-parser*
-                                         (command-table command-processor)
-                                         *standard-input* command 0 (when prefix-p
-                                                                      prefix-arg)))
-                    ;; If we are macrorecording, store whatever the user
-                    ;; did to invoke this command.
-                    (when (recordingp command-processor)
-                      (setf (recorded-keys command-processor)
-                            (append (accumulated-gestures command-processor)
-                                    (recorded-keys command-processor))))
-                    (setf (accumulated-gestures command-processor) nil))
-                  (funcall (command-executor command-processor) command-processor command)
-                  nil))
-               (t t)))))))
+    (flet ((commandp (object)
+             (or (listp object) (symbolp object))))
+      (cond ((null gestures)
+             t)
+            (t
+             (let* ((command-table (command-table command-processor))
+                    (item (or (find-gestures-with-inheritance gestures command-table)
+                              (command-for-unbound-gestures command-processor gestures))))
+               (cond 
+                 ((not item)
+                  (setf (accumulated-gestures command-processor) nil)
+                  (error 'unbound-gesture-sequence :gestures gestures))
+                 ((or (commandp item) ; c-f-u-g does not return a menu-item.
+                      (eq (command-menu-item-type item) :command))
+                  (let ((command (if (commandp item) item
+                                     (command-menu-item-value item)))
+                        (*current-gesture* (first (last gestures))))
+                    (unless (consp command)
+                      (setf command (list command)))
+                    ;; Call `*partial-command-parser*' to handle numeric
+                    ;; argument.
+                    (unwind-protect (setq command
+                                          (funcall
+                                           *partial-command-parser*
+                                           (command-table command-processor)
+                                           *standard-input* command 0 (when prefix-p
+                                                                        prefix-arg)))
+                      ;; If we are macrorecording, store whatever the user
+                      ;; did to invoke this command.
+                      (when (recordingp command-processor)
+                        (setf (recorded-keys command-processor)
+                              (append (accumulated-gestures command-processor)
+                                      (recorded-keys command-processor))))
+                      (setf (accumulated-gestures command-processor) nil))
+                    (funcall (command-executor command-processor) command-processor command)
+                    nil))
+                 (t t))))))))
 
 (defmethod process-gesture :around ((command-processor command-processor) gesture)
   (with-accessors ((overriding-handler overriding-handler)) command-processor

@@ -381,6 +381,9 @@ the Drei instance."
   (print-unreadable-object (object stream :type t :identity t)
     (format stream "~A" (type-of (view object)))))
 
+(defmethod command-for-unbound-gestures ((drei drei) gestures)
+  (command-for-unbound-gestures (view drei) gestures))
+
 ;; Main redisplay entry point.
 (defgeneric display-drei (drei &key redisplay-minibuffer)
   (:documentation "`Drei' must be an object of type `drei' and
