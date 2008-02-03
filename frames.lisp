@@ -395,22 +395,32 @@ documentation produced by presentations.")
   (let ((pane-object (if (typep pane 'pane)
 			 pane
 			 (find-pane-named frame pane))))
-    (multiple-value-bind (redisplayp clearp)
-	(pane-needs-redisplay pane-object)
-      (when force-p
-	(setq redisplayp (or redisplayp t)
-	      clearp t))
-      (when redisplayp
-	(let ((hilited (frame-hilited-presentation frame)))
-	  (when hilited
-	    (highlight-presentation-1 (car hilited) (cdr hilited) :unhighlight)
-	    (setf (frame-hilited-presentation frame) nil)))
-	(with-possible-double-buffering (frame pane-object)
-	  (when clearp
-	    (window-clear pane-object))
-	  (call-next-method))
-	(unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
-	  (setf (pane-needs-redisplay pane-object) nil))))))
+    (restart-case
+        (multiple-value-bind (redisplayp clearp)
+            (pane-needs-redisplay pane-object)
+          (when force-p
+            (setq redisplayp (or redisplayp t)
+                  clearp t))
+          (when redisplayp
+            (let ((hilited (frame-hilited-presentation frame)))
+              (when hilited
+                (highlight-presentation-1 (car hilited) (cdr hilited) :unhighlight)
+                (setf (frame-hilited-presentation frame) nil)))
+            (with-possible-double-buffering (frame pane-object)
+              (when clearp
+                (window-clear pane-object))
+              (call-next-method))
+            (unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
+              (setf (pane-needs-redisplay pane-object) nil))))
+      (clear-pane-try-again ()
+       :report "Clear the output history of the pane and reattempt forceful redisplay"
+       (window-clear pane)
+       (redisplay-frame-pane frame pane :force-p t))
+      (clear-pane ()
+       :report "Clear the output history of the pane, but don't redisplay"
+       (window-clear pane))
+      (skip-redisplay ()
+       :report "Skip this redisplay"))))
 
 (defmethod run-frame-top-level ((frame application-frame)
 				&key &allow-other-keys)
