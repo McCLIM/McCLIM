@@ -592,6 +592,7 @@ of `simple-parse-error'."))
                        (progn
                          (unread-gesture gesture :stream stream)
                          (return-from complete-input-rescan
+                           (values object t input)))
                        ;; This used to be an error, but no one thought
                        ;; that was a really great idea.
 		       (signal 'simple-completion-error
