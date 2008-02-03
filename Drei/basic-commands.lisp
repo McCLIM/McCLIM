@@ -520,7 +520,7 @@ the numeric arguments."
         do (insert-character *current-gesture*)))
 
 (defmethod command-for-unbound-gestures ((view textual-drei-syntax-view) gestures)
-  (when (and (= (length gestures))
+  (when (and (= (length gestures) 1)
              (characterp (first gestures))
              (graphic-char-p (first gestures)))
     `(com-self-insert ,*numeric-argument-marker*)))
