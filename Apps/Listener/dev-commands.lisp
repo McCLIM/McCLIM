@@ -1123,7 +1123,7 @@
      (show-hidden  'boolean :default nil :prompt "show hidden")
      (hide-garbage 'boolean :default t   :prompt "hide garbage")
      (show-all     'boolean :default nil :prompt "show all")
-     (style '(member :items :list) :default 'items :prompt "listing style")
+     (style '(member :items :list) :default :items :prompt "listing style")
      (group-directories 'boolean :default t :prompt "group directories?")
      (full-names 'boolean :default nil :prompt "show full name?")
      (list-all-direct-subdirectories 'boolean :default nil :prompt "list all direct subdirectories?"))
