@@ -57,9 +57,7 @@ not required to handle it nicely, they can just ignore the
 object, or display the `princ'ed representation.)")
   (:method :around ((stream extended-output-stream) (view drei-view))
            (letf (((stream-default-view stream) view))
-             (call-next-method)))
-  (:method ((stream extended-output-stream) (view drei-syntax-view))
-    (call-next-method)))
+             (call-next-method))))
 
 (defgeneric display-drei-view-cursor (stream view cursor)
   (:documentation "The purpose of this function is to display a
@@ -748,15 +746,14 @@ type (found via `presentation-type-of') to generate output."
             ;; like the changing position is ignored. So add some
             ;; minuscule amount to it, and all will be well. 0.1
             ;; device units shouldn't even be visible.
-            (let ((width (bounding-rectangle-width output-record))
-                  (height (bounding-rectangle-height output-record)))
+            (let ((width (bounding-rectangle-width output-record)))
               (setf (output-record-position output-record)
                     (values (+ cursor-x 0.1) (- cursor-y baseline)))
               (when draw
                 (replay output-record stream))
 	      (setf (aref widths 1) width)
               (record-stroke stroke parts widths
-                             cursor-x (- cursor-y height)
+                             cursor-x (- cursor-y baseline)
                              (+ width cursor-x) cursor-y
                              draw baseline)))))))
 
