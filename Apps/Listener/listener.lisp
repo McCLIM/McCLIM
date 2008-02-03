@@ -143,7 +143,7 @@
   "Specialized for the listener, read a lisp form to eval, or a command."
   (multiple-value-bind (object type)
       (let ((*command-dispatchers* '(#\,)))
-        (accept 'command-or-form :stream stream :prompt nil :default "hello" :default-type 'empty-input :insert-default nil))
+        (accept 'command-or-form :stream stream :prompt nil :default "hello" :default-type 'empty-input))
     (cond      
       ((presentation-subtypep type 'empty-input)
        ;; Do nothing.
