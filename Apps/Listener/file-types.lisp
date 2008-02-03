@@ -105,7 +105,6 @@
          (key (if type (concatenate 'string name "." type) ; Why did I do it this way?
                 name))
          (item (gethash key *magic-name-mappings*)))
-;    (when item (hef:debugf item pathname))
     item))
 
 (defun pathname-mime-type (pathname)
@@ -147,7 +146,6 @@
 ;      (call-next-method)))
   (let ((cpl (clim-mop:class-precedence-list (class-of obj))))
     (dolist (class cpl)
-;       (debugf "   " class)
       (let ((icon (gethash (class-name class) *icon-mapping*)))
         (when icon (return-from icon-of icon)))))
   (call-next-method))
@@ -547,7 +545,7 @@
               (cond ((eql d #\s)  (princ (quote-shell-characters (namestring (truename pathname))) out))
                     ((eql d #\t)  (princ (gethash :type spec) out))
                     ((eql d #\u)  (princ (pathname-to-uri-string pathname) out))
-                    (t (debugf "Ignoring unknown % syntax." d))))
+                    (t (format *trace-output* "Ignoring unknown syntax ~W" d))))
             (write-char c out))))))
 
 (defun find-viewspec (pathname)
@@ -577,7 +575,7 @@
             (format t "Sorry, the viewer app needs a terminal (fixme!)~%")
           (progn
             (when test
-              (debugf "Sorry, ignoring TEST option right now.. " test))
+              (format *trace-output* "Sorry, ignoring TEST option ~W for ~A viewer " test type))
             (if view-command 
                 (run-program "/bin/sh" `("-c" ,(gen-view-command-line def pathname) "&"))
               (format t "~&No view-command!~%"))))))))

@@ -29,23 +29,6 @@
       `(let ((,tmp (multiple-value-list ,(first forms))))
          (if (first ,tmp) (values-list ,tmp) (mv-or ,@(rest forms)))))))
 
-
-;; DEBUGF is useful, I can sleep better knowing it's in the image.
-(defmacro debugf (&rest stuff)
-  `(progn (fresh-line *trace-output*)
-     ,@(reduce #'append 
-                  (mapcar #'(lambda (x)                              
-                              (cond
-                                ((stringp x) `((princ ,x *trace-output*)))
-                                (t `((princ ',x *trace-output*)
-                                     (princ "=" *trace-output*)
-                                     (write ,x :stream *trace-output*)
-                                     (princ #\space *trace-output*)))))
-
-                          stuff))
-     (terpri *trace-output*)))
-
-
 ; There has to be a better way..
 (defun directoryp (pathname)
   "Returns pathname when supplied with a directory, otherwise nil"
@@ -65,19 +48,18 @@
    #+clisp (ext:getenv var)
    nil))
 
-;; Need to strip filename/type/version from directory?.. FIXME?
 (defun change-directory (pathname)
   "Ensure that the current directory seen by RUN-PROGRAM has changed, and update *default-pathname-defaults*"
   #+CMU (unix:unix-chdir (namestring pathname))
   #+scl (unix:unix-chdir (ext:unix-namestring pathname))
   #+clisp (ext:cd pathname)
-  ; SBCL FIXME?
+  #+sbcl (sb-posix:chdir (namestring pathname))
  (setf *default-pathname-defaults* pathname))
 
 (defun resolve-stream-designator (desi default)
   (if (eq desi t)
       default
-    (or desi default)))
+      (or desi default)))
 
 ;;; LIST-DIRECTORY is a wrapper for the CL DIRECTORY function, which really doesn't
 ;;; do what I'd like (resolves symbolic links, tends to be horribly buggy, etc.)
@@ -86,48 +68,10 @@
 (defun list-directory (pathname)
   (directory pathname :truenamep nil))
 
-
-#+SBCL
-(defun sbcl-frob-to-pathname (pathname string)
-  "This just keeps getting more disgusting."
-  (let* ((parent (strip-filespec pathname))
-        (pn (merge-pathnames (make-pathname :name (subseq string 0 (position #\. string :start 1 :from-end t))
-                                            :type (let ((x (position #\. string :start 1 :from-end t)))
-                                                     (if x (subseq string (1+ x)) nil)))
-                              parent))
-         (dir (ignore-errors (sb-posix:opendir (namestring pn)))))
-
-	 
-    (cond ((or (string= string ".")
-               (string= string ".."))
-	   (unless (or (null dir) (sb-alien:null-alien dir))
-	     (sb-posix:closedir dir))
-           nil)
-          ((or (null dir)
-               (sb-alien:null-alien dir))
-           pn)
-          (T
-	   (sb-posix:closedir dir)
-	   (merge-pathnames (parse-namestring (concatenate 'string string "/"))
-			    parent)))))
-
 #+SBCL
 (defun list-directory (pathname)
-  (directory pathname)
-  #+nil ;; ugh. is too ughy. (mgr)
-  (let* ((pathname (strip-filespec pathname)) ;; ugh.
-         (dir (sb-posix:opendir pathname))
-         (list nil))
-    (loop
-      (let ((dirent (sb-posix:readdir dir)))
-        (unwind-protect
-            (if (sb-alien:null-alien dirent)
-                (return-from list-directory
-                  (nreverse list))
-              (let ((pn (sbcl-frob-to-pathname pathname (sb-posix::dirent-name dirent))))
-                (when pn (push pn list))))
-	  #+nil ; dirents should not be freed, they belong to the DIR.
-          (sb-posix::free-dirent dirent))))))
+  ;; Wow. When did SBCL's cl:directory become sane? This is great news!
+  (directory pathname))
 
 #+openmcl
 (defun list-directory (pathname)
@@ -246,21 +190,11 @@ this point, increment it by SPACING, which defaults to zero."
     (add-output-record record (stream-output-history stream-pane))
     (repaint-sheet stream-pane record)))
 
-;;; Pathname evil
-;;; Fixme: Invent some more useful operators for manipulating pathnames, add a
-;;;        pinch of syntactic sugar, and cut the LOC here down to a fraction.
+;;; Pathnames are awful.
 
 (defun gen-wild-pathname (pathname)
   "Build a pathname with appropriate :wild components for the directory listing."
-  (make-pathname :name (or (pathname-name pathname) :wild)
-                 :type (or (pathname-type pathname) :wild)
-                 :version (or #+allegro :unspecific
-                              :wild
-                              ;#-SBCL (pathname-version pathname)
-                              ;#+SBCL :newest
-                              )
-		 #+scl :query #+scl nil
-		 :defaults pathname))
+  (merge-pathnames pathname (make-pathname :name :wild :type :wild :version :wild)))
 
 (defun strip-filespec (pathname)
   "Removes name, type, and version components from a pathname."
@@ -282,6 +216,8 @@ this point, increment it by SPACING, which defaults to zero."
 
 
 ;;;; Abbreviating item formatter
+
+;;; FIXME: This would work a lot better if the 
 
 (defparameter *abbreviating-minimum-items* 6
   "Minimum number of items needed to invoke abbreviation. This must be at least one.")
@@ -315,11 +251,6 @@ this point, increment it by SPACING, which defaults to zero."
        (if (= count 1) result  nil)       
        (or text-style (medium-text-style (slot-value record 'climi::medium)))))))
 
-;; This logic could be useful in McCLIM's stream-output.lisp, for computing
-;; line breaks. At the time, I didn't feel like writing it, but now I do. 
-;; Even so, the binary search I used there is probably good enough, but this
-;; would improve the quality of the guess, particularly for the extreme case
-;; of throwing many lines of text at CLIM within one string.
 (defun abbrev-guess-pos (medium string text-style desired-width start end)
   "Makes a guess where to split STRING between START and END in order to fit within WIDTH. Returns the ending character index."
   (let* ((length (- end start))
@@ -347,8 +278,6 @@ as it would be displayed on MEDIUM using TEXT-STYLE"
     (concatenate 'string
                  (subseq string 0 (abbrev-guess-pos medium string text-style working-width 0 (length string)))
                  "...")))
-
-(defvar *tmp* nil)
 
 (defun abbreviate-record (stream record width abbreviator)
   "Attempts to abbreviate the text contained in an output RECORD on STREAM to fit within WIDTH, using the function ABBREVIATOR to produce a shortened string."
@@ -489,7 +418,10 @@ with some attempt to convert arguments intelligently."
     (run-program name (transform-program-arguments args)
                  :wait *program-wait*
                  :output (resolve-stream-designator *run-output* *standard-output*)
-                 :input  nil #+NIL (resolve-stream-designator *run-input* *standard-input*))))
+                 :input  nil #+NIL (resolve-stream-designator *run-input* *standard-input*))
+    ;; It might be useful to return the exit status of the process, but our run-program
+    ;; wrapper doesn't 
+    (values)))
 
 (defun read-stringlet (stream)
   (with-output-to-string (out)
