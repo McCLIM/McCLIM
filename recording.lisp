@@ -2313,15 +2313,11 @@ according to the flags RECORD and DRAW."
   (with-output-recording-options (stream :record nil)
     (call-next-method)))
 
-;;; Helper function to break some infinite recursion issues with
-;;; handle-repaint vs. redisplay-frame-pane (in the Listener, that
-;;; is; is this the right place for the fix? )
-
 ;;; FIXME: Change things so the rectangle below is only drawn in response
 ;;;        to explicit repaint requests from the user, not exposes from X
 ;;; FIXME: Use DRAW-DESIGN*, that is fix DRAW-DESIGN*.
 
-(defun %handle-repaint (stream region)
+(defmethod handle-repaint ((stream output-recording-stream) region)
   (when (output-recording-stream-p stream)
     (unless (region-equal region +nowhere+)                    ; ignore repaint requests for +nowhere+
       (let ((region (if (region-equal region +everywhere+)
@@ -2332,8 +2328,6 @@ according to the flags RECORD and DRAW."
 	    (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+)))
 	(stream-replay stream region)))))
 
-(defmethod handle-repaint ((stream output-recording-stream) region)
-  (%handle-repaint stream region))
 
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
   (declare (ignore x y))
@@ -2396,14 +2390,6 @@ according to the flags RECORD and DRAW."
 					       record-height))))))
 		(setf (stream-cursor-position stream) (values cx cy)))
 	    record))))))
-
-
-
-(defmethod repaint-sheet ((sheet output-recording-stream) region)
-  (map-over-sheets-overlapping-region #'(lambda (s)
-					  (%handle-repaint s region))
-				      sheet
-				      region))
 
 ;;; ----------------------------------------------------------------------------
 ;;;  Baseline
