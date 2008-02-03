@@ -1941,6 +1941,7 @@
    #:with-output-to-pointer-documentation
    #:frame-display-pointer-documentation-string
    #:list-pane-items
+   #:output-record-baseline
    
    #:draw-output-border-over
    #:draw-output-border-under

@@ -730,6 +730,7 @@ expects its stroke to cover a single-object non-character buffer
 region, which will be presented with its appropriate presentation
 type (found via `presentation-type-of') to generate output."
   (let (output-record
+        baseline
 	(widths (make-array 2 :initial-contents (list 0 0)))
 	(parts (list 0 1)))
     #'(lambda (stream view stroke cursor-x cursor-y
@@ -741,7 +742,8 @@ type (found via `presentation-type-of') to generate output."
             (when (or (null output-record) (stroke-modified stroke))
               (setf output-record
                     (with-output-to-output-record (stream)
-                      (present object (presentation-type-of object) :stream stream))))
+                      (present object (presentation-type-of object) :stream stream))
+                    baseline (clim-extensions:output-record-baseline output-record)))
             ;; You will not believe this! If `cursor-x' is 0, it seems
             ;; like the changing position is ignored. So add some
             ;; minuscule amount to it, and all will be well. 0.1
@@ -749,14 +751,14 @@ type (found via `presentation-type-of') to generate output."
             (let ((width (bounding-rectangle-width output-record))
                   (height (bounding-rectangle-height output-record)))
               (setf (output-record-position output-record)
-                    (values (+ cursor-x 0.1) (- cursor-y height)))
+                    (values (+ cursor-x 0.1) (- cursor-y baseline)))
               (when draw
                 (replay output-record stream))
 	      (setf (aref widths 1) width)
               (record-stroke stroke parts widths
                              cursor-x (- cursor-y height)
                              (+ width cursor-x) cursor-y
-                             draw height)))))))
+                             draw baseline)))))))
 
 (defmethod pump-state-for-offset ((view drei-buffer-view) (offset integer))
   "For a `drei-buffer-view' a pump-state is merely an offset into
