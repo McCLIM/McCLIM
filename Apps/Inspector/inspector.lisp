@@ -85,10 +85,18 @@ their specific print lengths, if they have one.")
 		 (*print-level* 10))
 	     (run-frame-top-level
 	      (make-application-frame 'inspector :obj obj)))))
+    
+    (when (typep *application-frame* 'inspector)
+      (restart-case (error "Clouseau called from inside Clouseau, possibly infinite recursion")
+        (continue ()
+         :report "Continue by starting a new Clouseau instance")
+        (abort-clouseau ()
+         :report "Abort this call to Clouseau"
+         (return-from inspector))))
     (if new-process
 	(clim-sys:make-process #'run
-			       :name (format nil "Inspector Clouseau: ~S"
-					     obj))
+         :name (format nil "Inspector Clouseau: ~S"
+                       obj))
 	(run))
     obj))
 
@@ -766,7 +774,8 @@ an error if the given time is not a decodable universal time."
   (frame-exit *application-frame*))
 
 (define-inspector-command (com-inspect :name t) ()
-  (let ((obj (accept t :prompt "Select an object")))
+  (let ((obj (accept t :prompt "Select an object"))
+        (*application-frame* nil))      ; To get around security.
     (inspector obj :new-process t)))
 
 (define-inspector-command (com-toggle-show-list-cells :name t)
