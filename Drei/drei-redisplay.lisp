@@ -487,13 +487,11 @@ of the stroke."
   (loop with parts = (analyse-stroke-string stroke-string)
      with width = 0
      with widths = (make-array 1 :adjustable t :fill-pointer t :initial-element 0)
-     with tab-width
      for (start end object) in parts
      do (cond ((eql object #\Tab)
-               (incf width 
-                     (- (or tab-width
-                            (setf tab-width (tab-width stream (stream-default-view stream))))
-                        (mod (+ width x-position) tab-width)))
+               (incf width
+		     (next-tab-stop stream (stream-default-view stream)
+				    (+ width x-position)))
                (vector-push-extend width widths))
               (object
                (multiple-value-bind (w)

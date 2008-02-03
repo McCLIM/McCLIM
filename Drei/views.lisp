@@ -60,7 +60,12 @@ invoking the debugger)."))
                      :initform nil)
    (%use-tabs :accessor use-tabs
               :initform *use-tabs-for-indentation*
-              :initarg :use-tabs)))
+              :initarg :use-tabs)
+   (%tab-stops :accessor tab-stops
+	       :initform '()
+	       :initarg :tab-stops
+	       :documentation "A list of tab-stops in device units.
+If empty, tabs every TAB-WIDTH are assumed.")))
 
 (defun maybe-update-recordings (stream tabify)
   (with-accessors ((space-width recorded-space-width)
@@ -87,7 +92,28 @@ invoking the debugger)."))
         (* (tab-space-count tabify) (space-width stream tabify))
         (recorded-tab-width tabify))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defgeneric next-tab-stop (stream tabify x)
+  (:documentation "Return the distance to the next tab-stop after `x'
+on `stream' in device units (most likely pixels).")
+  (:method ((stream extended-output-stream) (tabify tabify-mixin) x)
+    (flet ((round-up (x width)
+	     (- width (mod x width))))
+      (if (tab-stops tabify)
+	(let ((next (find-if (lambda (pos) (> pos x)) (tab-stops tabify))))
+	  (or (and next (- next x)) (round-up x (space-width stream tabify))))
+	(round-up x (tab-width stream tabify))))))
+
+(defgeneric (setf tab-stop-columns) (column-list tabify)
+  (:documentation "Set the TAB-STOPS of view at the character column offsets
+in `column-list'.")
+  (:method (column-list (tabify tabify-mixin))
+    (setf (tab-stops tabify) 
+	  (and column-list
+	       (sort (mapcar (lambda (col) (* col (space-width (recorded-stream tabify) tabify)))
+			     column-list) 
+		     #'<)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Undo
 

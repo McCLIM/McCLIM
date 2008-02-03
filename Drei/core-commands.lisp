@@ -222,6 +222,12 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
   (untabify-region (mark) (point)
                    (tab-space-count (current-view))))
 
+(define-command (com-set-tab-stops :name t :command-table editing-table)
+    ((tab-stops '(sequence (integer 0)) :prompt "List of tab stops"))
+  "Accept a list of tab positions (in columns) for the view."
+  (setf (drei::tab-stop-columns (current-view)) 
+	tab-stops))
+
 (define-command (com-indent-line :name t :command-table indent-table) ()
   (indent-current-line (current-view) (point)))
 
