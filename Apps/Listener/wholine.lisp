@@ -55,14 +55,15 @@
 ;; window-clear method which calls the next window-clear method,
 ;; then calls handle-repaint to redraw the decoration.
 
+
 (defmethod handle-repaint ((pane wholine-pane) region)
   (declare (ignore region))
   (with-output-recording-options (pane :draw t :record nil)
     (with-bounding-rectangle* (x0 y0 x1 y1) (sheet-region pane)
+      (draw-rectangle* pane x0 y0 x1 y1 :filled t :ink (pane-background pane))
       (climi::draw-bordered-rectangle* (sheet-medium pane)
                                        x0 y0 x1 y1
-                                       :style :mickey-mouse-inset)
-      #+NIL (draw-rectangle* (sheet-medium pane) x0 y0 x1 y1 :ink +red+))
+                                       :style :mickey-mouse-inset))
     (replay-output-record (stream-output-history pane) pane)))
 
 (defmethod window-clear ((pane wholine-pane))
