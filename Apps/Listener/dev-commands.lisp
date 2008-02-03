@@ -532,7 +532,7 @@
 (defun direct-slot-definitions (class slot-name)
   (let ((cpl (reverse (clim-mop:class-precedence-list class)))
         (direct-slots nil))
-    (dolist (foo cpl)
+    (dolist (foo cpl)                   ; rewrite this
       (let ((dslots (clim-mop:class-direct-slots foo)))
         (dolist (slot dslots)
           (when (eq slot-name (clim-mop:slot-definition-name slot))
@@ -554,10 +554,10 @@
          (initargs (clim-mop:slot-definition-initargs slot))
          (initfunc (clim-mop:slot-definition-initfunction slot))
          (initform (clim-mop:slot-definition-initform slot))
-         (direct-slots (direct-slot-definitions class name))
-         (readers (mapcan #'clim-mop:slot-definition-readers direct-slots))
-         (writers (mapcan #'clim-mop:slot-definition-writers direct-slots))
-         (documentation (first (mapcan (lambda (x) (list (documentation x t))) direct-slots)))
+         (direct-slots (direct-slot-definitions class name))         
+         (readers (mapcan (lambda (x) (copy-list (clim-mop:slot-definition-readers x))) direct-slots))
+         (writers (mapcan (lambda (x) (copy-list (clim-mop:slot-definition-writers x))) direct-slots))
+         (documentation (first (remove nil (mapcar (lambda (x) (documentation x t)) direct-slots))))
          (*standard-output* stream))
 
   (macrolet ((with-ink ((var) &body body)
@@ -719,11 +719,10 @@
   (error "Sorry, not supported in your CL implementation. See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION if you are interested in fixing this."))
 
 (defun class-funcs (class)
-  (let ((classes (remove-ignorable-classes (copy-list (clim-mop:class-precedence-list class))))
-        (gfs nil))
-    (dolist (x classes)
-      (setf gfs (append gfs (x-specializer-direct-generic-functions x))))
-    (remove-duplicates gfs)))
+  (remove-duplicates
+   (mapcan (lambda (class) 
+             (copy-list (x-specializer-direct-generic-functions class)))
+           (remove-ignorable-classes (clim-mop:class-precedence-list class)))))
 
 (defun slot-name-sortp (a b)
   (flet ((slot-name-symbol (x)
@@ -1164,8 +1163,7 @@
                                :printer (lambda (x stream)
                                           (declare (ignore stream))
                                           (pretty-pretty-pathname x *standard-output* :long-name full-names)))
-                 (goatee::reposition-stream-cursor *standard-output*)                 
-                 (vertical-gap t))
+                 (goatee::reposition-stream-cursor *standard-output*)) ; Hmm.
           (list (dolist (ent group)
                   (let ((ent (merge-pathnames ent pathname))) ;; This is for CMUCL, see above. (fixme!)
                                                               ;; And breaks some things for SBCL.. (mgr) 
