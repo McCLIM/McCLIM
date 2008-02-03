@@ -886,7 +886,7 @@ stream. Output will be done to its typeout."
 				    (action :complete)
 				    (predicate (constantly t))
 				    (name-key #'car)
-				    (value-key #'cadar))
+				    (value-key #'second))
   (flet ((generator (input-string suggester)
 	   (declare (ignore input-string))
 	   (do-sequence (possibility completions)
