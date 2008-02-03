@@ -572,7 +572,9 @@ if stuff is inserted after the insertion pointer."
              ;; input-position, so the user will not be able to
              ;; delete arguments prompts or other things.
              (drei-core:with-narrowed-buffer (drei
-                                              (loop for index from (1- (input-position stream)) above 0
+                                              (loop for index from
+                                                    (1- (min (input-position stream)
+                                                             (size (buffer (View drei))))) above 0
                                                     when (typep (buffer-object (buffer (view drei)) index)
                                                                 'noise-string)
                                                     return (1+ index)
