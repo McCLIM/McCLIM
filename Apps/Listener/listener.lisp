@@ -133,14 +133,23 @@
 
 ;;; Lisp listener command loop
 
+(define-presentation-type empty-input ())
+
+(define-presentation-method present 
+    (object (type empty-input) stream view &key &allow-other-keys)
+  (princ "" stream))
+
 (defmethod read-frame-command ((frame listener) &key (stream *standard-input*))  
   "Specialized for the listener, read a lisp form to eval, or a command."
   (multiple-value-bind (object type)
       (let ((*command-dispatchers* '(#\,)))
-        (accept 'command-or-form :stream stream :prompt nil :default nil))
-    (if (presentation-subtypep type 'command)
-        object
-        `(com-eval ,object))))
+        (accept 'command-or-form :stream stream :prompt nil :default "hello" :default-type 'empty-input :insert-default nil))
+    (cond      
+      ((presentation-subtypep type 'empty-input)
+       ;; Do nothing.
+       `(com-eval (values)))
+      ((presentation-subtypep type 'command) object)
+      (t `(com-eval ,object)))))
 
 (defun print-listener-prompt (stream frame)
   (declare (ignore frame))
