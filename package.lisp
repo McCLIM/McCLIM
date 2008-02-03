@@ -353,8 +353,6 @@
    ;; this list of exported symbols was automatically generated from the
    ;; specification as of version 1.17 of this very file, please think twice
    ;; before fiddling with it. thanks! --gb 2002-11-10
-   ;; A good reason for fiddling with with it is to add symbols from
-   ;; CLIM 2.2. --thenriksen 2006-12-11
 
    #:*abort-gestures*                   ;variable
    #:*accelerator-gestures*             ;variable
@@ -412,7 +410,6 @@
    #:+textual-dialog-view+              ;constant
    #:+textual-menu-view+                ;constant
    #:+textual-view+                     ;constant
-   #:+text-field-view+                  ;constant (Franz User's Guide)
    #:+transparent-ink+                  ;constant
    #:+white+                            ;constant
    #:+yellow+                           ;constant
@@ -694,7 +691,6 @@
    #:extended-output-stream-p           ;predicate
    #:filling-output                     ;macro
    #:find-applicable-translators        ;function
-   #:find-application-frame		;function (in Franz User's Guide)
    #:find-cached-output-record          ;generic function
    #:find-child-output-record           ;generic function
    #:find-command-from-command-line-name ;function
@@ -713,7 +709,6 @@
    #:float                              ;presentation type
    #:form                               ;presentation type
    #:format-graph-from-roots            ;function
-   #:format-graph-from-root            ;function
    #:format-items                       ;function
    #:format-textual-list                ;function
    #:formatting-cell                    ;macro
@@ -873,8 +868,6 @@
    #:line-style-unit                    ;generic function
    #:linep                              ;predicate
    #:list-pane                          ;class
-   #:list-pane-view                     ;class
-   #:+list-pane-view+                   ;constant
    #:lookup-keystroke-command-item      ;function
    #:lookup-keystroke-item              ;function
    #:make-3-point-transformation        ;function
@@ -1041,8 +1034,6 @@
    #:open-stream-p                      ;generic function
    #:open-window-stream                 ;function
    #:option-pane                        ;class
-   #:option-pane-view                   ;class
-   #:+option-pane-view+                 ;constant
    #:or                                 ;presentation type
    #:oriented-gadget-mixin              ;class
    #:outlined-pane                      ;pane
@@ -1114,10 +1105,7 @@
    #:pointer-event-x                    ;generic function
    #:pointer-event-y                    ;generic function
    #:pointer-exit-event                 ;class
-   #:pointer-input-rectangle            ;function (in franz user guide)
-   #:pointer-input-rectangle*           ;function (in franz user guide)
    #:pointer-motion-event               ;class
-   #:pointer-place-rubber-band-line*    ;function (in franz user guide)
    #:pointer-position                   ;generic function
    #:pointer-sheet                      ;generic function
    #:pointerp                           ;predicate
@@ -1131,9 +1119,7 @@
    #:port                               ;protocol class
    #:port                               ;generic function
    #:port-keyboard-input-focus          ;generic function
-   #:port-modifier-state		;generic function (in franz user guide)
    #:port-name                          ;generic function
-   #:port-pointer			;generic function (in franz user guide)
    #:port-properties                    ;generic function
    #:port-server-path                   ;generic function
    #:port-type                          ;generic function
@@ -1171,8 +1157,6 @@
    #:propagate-output-record-changes-p  ;generic function
    #:push-button                        ;class
    #:push-button-pane                   ;class
-   #:push-button-view                   ;class
-   #:+push-button-view+                 ;constant
    #:push-button-show-as-default        ;generic function
    #:queue-event                        ;generic function
    #:queue-repaint                      ;generic function
@@ -1181,8 +1165,6 @@
    #:radio-box-current-selection        ;generic function
    #:radio-box-pane                     ;class
    #:radio-box-selections               ;generic function
-   #:radio-box-view                     ;class
-   #:+radio-box-view+                   ;class
    #:raise-frame                        ;generic function
    #:raise-mirror                       ;generic function
    #:raise-sheet                        ;generic function
@@ -1321,8 +1303,6 @@
    #:slider                             ;class
    #:slider-drag-callback               ;generic function
    #:slider-pane                        ;class
-   #:slider-view                        ;slider-view
-   #:+slider-view+                      ;constant
    #:space-requirement                  ;class
    #:space-requirement+                 ;function
    #:space-requirement+*                ;function
@@ -1474,11 +1454,8 @@
    #:text-displayed-output-record-string ;generic function
    #:text-editor                        ;class
    #:text-editor-pane                   ;class
-   #:text-editor-view                   ;class
-   #:+text-editor-view+                 ;constant
    #:text-field                         ;class
    #:text-field-pane                    ;class
-   #:text-field-view                    ;class (Franz User's Guide)
    #:text-size                          ;generic function
    #:text-style                         ;protocol class
    #:text-style-ascent                  ;generic function
@@ -1501,8 +1478,6 @@
    #:toggle-button                      ;class
    #:toggle-button-indicator-type       ;generic function
    #:toggle-button-pane                 ;class
-   #:toggle-button-view                 ;class
-   #:+toggle-button-view+               ;constant
    #:token-or-type                      ;presentation type abbrev
    #:tracking-pointer                   ;macro
    #:transform-distance                 ;generic function
@@ -1656,12 +1631,39 @@
   ;; stream-redisplayable-p
   ;; stream-restore-input-focus
 
-  ;;; Vendor extensions which are exported from the CLIM package
+  ;;; Vendor extensions which are exported from the CLIM package,
+  ;;; including CLIM 2.2 symbols.
   (:export
-   #:+pointer-wheel-up+ 
+   ;; I forget where the wheel symbols come from. They aren't in the
+   ;; Franz guide. Are they from Lispworks, or did McCLIM invent them?
+   #:+pointer-wheel-up+                 
    #:+pointer-wheel-down+
    #:+pointer-wheel-left+
    #:+pointer-wheel-right+
+   ;; Franz and CLIM 2.2 Stuff:
+   #:+text-field-view+                  ;constant (Franz User's Guide)
+   #:find-application-frame		;function (in Franz User's Guide)
+   #:format-graph-from-root            ;function
+   #:list-pane-view                     ;class
+   #:+list-pane-view+                   ;constant
+   #:option-pane-view                   ;class
+   #:+option-pane-view+                 ;constant
+   #:pointer-input-rectangle            ;function (in franz user guide)
+   #:pointer-input-rectangle*           ;function (in franz user guide)
+   #:pointer-place-rubber-band-line*    ;function (in franz user guide)
+   #:port-modifier-state		;generic function (in franz user guide)
+   #:port-pointer			;generic function (in franz user guide)
+   #:push-button-view                   ;class
+   #:+push-button-view+                 ;constant
+   #:radio-box-view                     ;class
+   #:+radio-box-view+                   ;class
+   #:slider-view                        ;slider-view
+   #:+slider-view+                      ;constant
+   #:text-editor-view                   ;class
+   #:+text-editor-view+                 ;constant
+   #:text-field-view                    ;class (Franz User's Guide)
+   #:toggle-button-view                 ;class
+   #:+toggle-button-view+               ;constant
    #:sheet-pointer-cursor)
   
    ;;; x11 color names - some are not in the spec - mikemac
