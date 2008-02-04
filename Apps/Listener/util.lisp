@@ -214,6 +214,16 @@ this point, increment it by SPACING, which defaults to zero."
        (merge-pathnames (make-pathname :directory '(:relative :back))
                         (truename pathname))))))
 
+(defun directorify-pathname (pathname)
+  "Convert a pathname with name/version into a pathname with a
+similarly-named last directory component. Used for user input that
+lacks the final #\\/."
+  (if (directoryp pathname)
+      pathname
+      ;; doing this the primitive way instead of trying to grok name,
+      ;; type, version and trying to reconstruct what the user
+      ;; actually typed.  I think I'm going to hell for this one.
+      (pathname (concatenate 'string (namestring pathname) "/"))))
 
 ;;;; Abbreviating item formatter
 

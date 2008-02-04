@@ -1128,9 +1128,9 @@
      (full-names 'boolean :default nil :prompt "show full name?")
      (list-all-direct-subdirectories 'boolean :default nil :prompt "list all direct subdirectories?"))
 
-  (let* ((pathname (if (wild-pathname-p pathname) ; Forgot why I did this..
-                       (merge-pathnames pathname)
-                     pathname))
+  (let* ((pathname
+          ;; helpfully fix things if trailing slash wasn't entered
+          (directorify-pathname pathname))
          (wild-pathname (gen-wild-pathname pathname))
          (dir (if list-all-direct-subdirectories
                   (list-directory-with-all-direct-subdirectories wild-pathname)
@@ -1181,12 +1181,12 @@
                                       :menu t
                                       :command-table filesystem-commands)
   ((pathname 'pathname :prompt "pathname"))
-  (let ((pathname (merge-pathnames pathname)))
-    (cond ((not (probe-file pathname))
-           (note "~A does not exist." pathname))
-          ((not (directoryp pathname))
-           (note "~A is not a directory." pathname))
-          (t (change-directory (merge-pathnames pathname))) )))
+  (let ((pathname (merge-pathnames
+                   ;; helpfully fix things if trailing slash wasn't entered
+                   (directorify-pathname pathname))))
+    (if (not (probe-file pathname))
+        (note "~A does not exist.~%" pathname)
+        (change-directory pathname))))
 
 (define-command (com-up-directory :name "Up Directory"
                                   :menu t
@@ -1312,15 +1312,12 @@
 (define-command (com-push-directory :name "Push Directory"
                                     :menu t
                                     :command-table directory-stack-commands)
-  ((pathname 'pathname :prompt "pathname"))
-  (let ((pathname (merge-pathnames pathname)))
-    (if (and (probe-file pathname)
-             (directoryp pathname));; FIXME: Need smart conversion to directories, here and elsewhere.
+  ((pathname 'pathname :prompt "directory"))
+  (let ((pathname (merge-pathnames (directorify-pathname pathname))))
+    (if (not (probe-file pathname))
+        (note "~A does not exist.~%" pathname)
         (progn (push *default-pathname-defaults* *directory-stack*)
-               (com-change-directory pathname))
-        (italic (t)
-           (fresh-line) (present (truename pathname))
-           (format t " does not exist or is not a directory.~%")) ))
+               (com-change-directory pathname))))
   (compute-dirstack-command-eligibility *application-frame*))
 
 (defun comment-on-dir-stack ()
