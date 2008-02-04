@@ -336,9 +336,9 @@ buffer using `presentation-replace-input'."
     (loop (block rescan
             (handler-bind ((rescan-condition
                             #'(lambda (c)
+                                (declare (ignore c))
                                 (reset-scan-pointer editing-stream start-scan-pointer)
                                 ;; Input-editing contexts above may be interested...
-                                (signal c)
                                 (return-from rescan nil))))
               (return-from input-editing-rescan-loop
                 (funcall continuation editing-stream)))))))
@@ -372,7 +372,7 @@ the class of the input-editing stream to create, if necessary."))
                                     (first initial-contents)
                                     (second initial-contents)
                                     (stream-default-view stream))))
-  (input-editing-rescan-loop stream continuation))
+  (call-next-method))
 
 (defmethod invoke-with-input-editing :around ((stream extended-output-stream)
 					      continuation

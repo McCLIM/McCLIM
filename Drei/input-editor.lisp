@@ -349,7 +349,7 @@ undoable. When this function returns, the `input-buffer-array' of
                                                 (length old-contents))))
       ;; We have to return "the position in the input buffer". We
       ;; return the insertion position.
-      buffer-start)))
+      (stream-insertion-pointer stream))))
 
 (defun present-acceptably-to-string (object type view for-context-type)
   "Return two values - a string containing the printed

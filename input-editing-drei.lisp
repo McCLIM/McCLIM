@@ -135,7 +135,7 @@ activated with GESTURE"))
                                          :input-sensitizer input-sensitizer
                                          :initial-contents initial-contents
                                          :class class)
-                      (funcall continuation editing-stream))
+                      (input-editing-rescan-loop editing-stream continuation))
       (finalize editing-stream input-sensitizer))))
 
 (defmethod immediate-rescan ((stream standard-input-editing-stream))
