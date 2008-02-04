@@ -710,7 +710,7 @@ to nil."
                 (format stream "&KEY ")
                 (show-parameters (keyword-parameters lambda-list))))))
     (format stream "(~A" operator)
-    (when (required-parameters lambda-list)
+    (when (all-parameters lambda-list)
       (princ #\Space stream))
     (show-lambda-list lambda-list)
     (format stream ")")))
