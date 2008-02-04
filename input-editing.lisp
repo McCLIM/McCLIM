@@ -222,7 +222,7 @@ then repaint `sheet'."
       (map-over-output-records-overlapping-region
        #'(lambda (record)
            (multiple-value-bind (record-x record-y) (output-record-position record)
-             (when (>= (+ record-y (bounding-rectangle-height record)) y)
+             (when (> (+ record-y (bounding-rectangle-height record)) y)
                (setf (output-record-position record)
                      (values record-x (+ record-y delta-y))))))
        (stream-output-history sheet)
