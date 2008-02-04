@@ -573,8 +573,7 @@ if stuff is inserted after the insertion pointer."
              ;; delete arguments prompts or other things.
              (drei-core:with-narrowed-buffer (drei
                                               (loop for index from
-                                                    (1- (min (input-position stream)
-                                                             (size (buffer (View drei))))) above 0
+                                                    (1- (input-position stream)) above 0
                                                     when (typep (buffer-object (buffer (view drei)) index)
                                                                 'noise-string)
                                                     return (1+ index)
@@ -640,8 +639,9 @@ if stuff is inserted after the insertion pointer."
 
 (defmethod reset-scan-pointer ((stream drei-input-editing-mixin)
 			       &optional (scan-pointer 0))
-  (setf (stream-scan-pointer stream) scan-pointer)
-  (setf (stream-rescanning stream) t))
+  (setf (stream-scan-pointer stream) scan-pointer
+        (stream-rescanning stream) t
+        (input-position stream) (min scan-pointer (input-position stream))))
 
 ;; This has been cribbed from SPLIT-SEQUENCE and lightly modified.
 (defun split-sequence (delimiter seq &key (count nil) (remove-empty-subseqs nil) (start 0) (end nil) (test nil test-supplied) (test-not nil test-not-supplied) (key nil key-supplied))
