@@ -157,6 +157,10 @@
                 :cell-align-y (or cell-align-y :top)
                 :row-wise row-wise))
 
+(defclass menu-pane (clim-stream-pane)
+  ()
+  (:default-initargs :background *3d-normal-color*))
+
 ;; Spec macro.
 (defmacro with-menu ((menu &optional associated-window
                            &key (deexpose t) label scroll-bars)
@@ -179,8 +183,7 @@
                                *application-frame*))
          (fm (frame-manager associated-frame)))
     (with-look-and-feel-realization (fm associated-frame) ; hmm... checkme
-      (let* ((menu-stream (make-pane-1 fm associated-frame 'clim-stream-pane
-                                       :background *3d-normal-color* #+NIL +gray80+))
+      (let* ((menu-stream (make-pane-1 fm associated-frame 'menu-pane))
              (container (scrolling (:scroll-bar scroll-bars)
                           menu-stream))
 	     (frame (make-menu-frame (raising ()
@@ -280,7 +283,7 @@ maximum size according to `frame')."
       (values (min x2 max-width)
               (min y2 max-height)))))
 
-(defmethod adjust-menu-size-and-position ((menu clim-stream-pane)
+(defmethod adjust-menu-size-and-position ((menu menu-pane)
                                           &key x-position y-position)
   ;; Make sure the menu isn't higher or wider than the screen.
   (multiple-value-bind (menu-width menu-height)
