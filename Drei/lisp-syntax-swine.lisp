@@ -868,15 +868,20 @@ function will return NIL."
                t)
               (t (replace-symbol-at-mark
                   syntax mark
-                  (or (menu-choose (mapcar
-                                    #'(lambda (completion)
-                                        (if (listp completion)
-                                            (cons completion
-                                                  (first completion))
-                                            completion))
-                                    completions)
-                                   :label "Possible completions"
-                                   :scroll-bars :vertical)
+                  (or (when (or useful-token
+                                (accept 'boolean
+                                 :prompt "You are asking for a list of all exported symbols, proceed?"))
+                        (frame-manager-menu-choose
+                         (find-frame-manager)
+                         (mapcar
+                          #'(lambda (completion)
+                              (if (listp completion)
+                                  (cons completion
+                                        (first completion))
+                                  completion))
+                          completions)
+                         :label "Possible completions"
+                         :scroll-bars :vertical))
                       longest))
                  t))))))
 
