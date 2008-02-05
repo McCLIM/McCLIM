@@ -374,7 +374,7 @@ maximum size according to `frame')."
       (handler-case
           (with-input-context (`(or ,presentation-type blank-area) :override t)
               (object type event) 
-              (prog1 nil (read-gesture :stream menu))
+              (prog1 nil (loop (read-gesture :stream menu)))
             (blank-area nil)
             (t (values object event)))
         (abort-gesture () nil)))))
