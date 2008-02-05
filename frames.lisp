@@ -563,7 +563,13 @@ documentation produced by presentations.")
   ;; frames command loop. Perhaps looking ath the process slot?
   ;; --GB 2005-11-28
   (cond ((eq *application-frame* frame)
-         (apply (command-name command) (command-arguments command)))
+         (restart-case
+             (apply (command-name command) (command-arguments command))
+           (try-again ()
+            :report (lambda (stream)
+                      (format stream "Try executing the command ~A again"
+                              (command-name command)))
+            (execute-frame-command frame command))))
         (t
          (let ((eq (sheet-event-queue (frame-top-level-sheet frame))))
            (event-queue-append eq (make-instance 'execute-command-event
