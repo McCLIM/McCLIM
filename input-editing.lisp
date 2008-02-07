@@ -641,19 +641,14 @@ stream. Output will be done to its typeout."
   (with-input-editor-typeout (stream :erase t)
     (surrounding-output-with-border (stream :shape :drop-shadow :background +cornsilk1+)
       (surrounding-output-with-border (stream :shape :rectangle)
-        (let* ((possibility-count (length possibilities))
-               (row-length (sqrt possibility-count))
-               (ptype `(completion ,possibilities)))
-          (formatting-table (stream)
-            (loop until (null possibilities)
-                  do (formatting-row (stream)
-                       (loop for cell-index from 0 below row-length
-                             until (null possibilities)
-                             do (formatting-cell (stream)
-                                  (funcall possibility-printer
-                                           (pop possibilities)
-                                           ptype
-                                           stream)))))))))))
+        (let ((ptype `(completion ,possibilities)))
+          (format-items possibilities
+           :stream stream
+           :printer #'(lambda (possibility stream)
+                        (funcall possibility-printer
+                                 possibility
+                                 ptype
+                                 stream))))))))
 
 ;;; Helper returns gesture (or nil if gesture shouldn't be part of the input)
 ;;; and completion mode, if any.
