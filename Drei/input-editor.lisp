@@ -625,15 +625,9 @@ if stuff is inserted after the insertion pointer."
     (setf (activation-gesture stream) gesture)
     (rescan-if-necessary stream)
     (return-from stream-process-gesture gesture))
-  ;; XXX: The problem is that `*original-stream*' is a subclass of
-  ;; DREI-INPUT-EDITING-MIXIN (`stream', actually) at this point,
-  ;; which has an array as input buffer (as demanded by the spec),
-  ;; while the `stream-unread-gesture' method expects an event queue.
-  (let ((*original-stream* nil)
-        (*standard-input* (encapsulating-stream-stream stream)))
-    (when (proper-gesture-p gesture)
-      (unread-gesture gesture))
-    (read-gestures-and-act stream gesture type)))
+  (when (proper-gesture-p gesture)
+    (unread-gesture gesture :stream (encapsulating-stream-stream stream)))
+  (read-gestures-and-act stream gesture type))
 
 (defmethod reset-scan-pointer ((stream drei-input-editing-mixin)
 			       &optional (scan-pointer 0))
