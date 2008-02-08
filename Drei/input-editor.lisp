@@ -558,9 +558,11 @@ the gesture that will be read in the first call to
 if stuff is inserted after the insertion pointer."
   (assert (<= (input-position stream) (stream-scan-pointer stream)))
   (let* ((drei (drei-instance stream))
+         (buffer (buffer (view drei)))
          (*command-processor* drei)
          (was-directly-processing (directly-processing-p drei))
-         (*drei-input-editing-stream* stream))
+         (*drei-input-editing-stream* stream)
+         (old-buffer-contents (buffer-sequence buffer 0 (size buffer))))
     (with-bound-drei-special-variables (drei :prompt "M-x ")
       (update-drei-buffer stream)
       ;; Commands are permitted to signal immediate rescans, but
@@ -573,7 +575,7 @@ if stuff is inserted after the insertion pointer."
              (drei-core:with-narrowed-buffer (drei
                                               (loop for index from
                                                     (1- (input-position stream)) above 0
-                                                    when (typep (buffer-object (buffer (view drei)) index)
+                                                    when (typep (buffer-object buffer index)
                                                                 'noise-string)
                                                     return (1+ index)
                                                     finally (return 0))
@@ -589,8 +591,7 @@ if stuff is inserted after the insertion pointer."
                        (when was-directly-processing
                          (display-message "Aborted")))))))
         (update-drei-buffer stream))
-      (let ((first-mismatch (when (plusp (prefix-size (view drei)))
-                              (prefix-size (view drei)))))
+      (let ((first-mismatch (buffer-array-mismatch buffer old-buffer-contents)))
         (display-drei drei :redisplay-minibuffer t)
         (cond ((null first-mismatch)
                ;; No change actually took place, even though IP may
