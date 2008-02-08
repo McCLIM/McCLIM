@@ -43,7 +43,7 @@ on to a call to `update-syntax'."))
 (defgeneric syntax-command-tables (syntax)
   (:documentation "Returns additional command tables provided by
 `syntax'.")
-  (:method-combination append)
+  (:method-combination append :most-specific-last)
   (:method append ((syntax syntax))
            (list (command-table syntax))))
 
