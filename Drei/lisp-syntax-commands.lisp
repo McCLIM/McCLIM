@@ -90,15 +90,20 @@ string at point."
   "Show argument list for a given symbol."
   (show-arglist (current-syntax) symbol))
 
-(define-command (com-space :command-table lisp-table)
+(define-command (com-self-insert-then-arglist :command-table lisp-table)
     ()
-  "Insert a space and display argument hints in the minibuffer."
-  (insert-character #\Space)
-  ;; We must update the syntax in order to reflect any changes to
-  ;; the parse tree our insertion of a space character may have
-  ;; done.
+  "Insert the gesture used to invoke this command and display
+argument hints in the minibuffer."
+  (insert-character *current-gesture*)
   (show-arglist-for-form-at-mark (point) (current-syntax))
   (clear-completions))
+
+(define-command (com-newline-indent-then-arglist :command-table lisp-table) ()
+  "Inserts a newline, indents the new line, then displays
+argument hints in the minibuffer."
+  (insert-object (point) #\Newline)
+  (indent-current-line (current-view) (point))
+  (show-arglist-for-form-at-mark (point) (current-syntax)))
 
 (define-command (com-complete-symbol :name t :command-table lisp-table)
     ()
@@ -216,9 +221,13 @@ the arglist for the most recently enclosed operator."
          'lisp-table
          '((#\c :control) (#\d :control) (#\a)))
 
-(set-key 'com-space
+(set-key 'com-self-insert-then-arglist
          'lisp-table
          '((#\Space)))
+
+(set-key 'com-self-insert-then-arglist
+         'lisp-table
+         '((#\))))
 
 (set-key 'com-complete-symbol
          'lisp-table
@@ -232,7 +241,7 @@ the arglist for the most recently enclosed operator."
          'lisp-table
          '((#\Tab)))
 
-(set-key 'drei-commands::com-newline-and-indent
+(set-key 'com-newline-indent-then-arglist
          'lisp-table
          '(#\Newline))
 
