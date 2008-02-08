@@ -61,9 +61,6 @@
                                     (view drei-buffer-view) (buffer-mark mark))
   (let* ((view-name (name view))
          (buffer-file-name (filepath (buffer view)))
-         ;; swank::compile-string-for-emacs binds *compile-verbose* to t
-         ;; so we need to do this to avoid scribbles on the pane
-         (*standard-output* *debug-io*)
          (swank::*buffer-package* package)
          (swank::*buffer-readtable* *readtable*))
     (let  ((result (swank::compile-string-for-emacs
