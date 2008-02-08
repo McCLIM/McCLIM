@@ -161,17 +161,17 @@ be used outside the input-editor."))
                                    (stream-scan-pointer stream))
                              (call-next-method))
         (setf (stream-insertion-pointer stream) (offset ip-clone)))
-      (redraw-input-buffer stream))
-    ;; We skip ahead of any noise strings to put us past the
-    ;; prompt. This is safe, because the noise strings are to be
-    ;; ignored anyway, but we need to be ahead to set the input
-    ;; position properly (ie. after the prompt).
-    (loop with buffer = (buffer (view (drei-instance stream)))
-          until (>= (stream-scan-pointer stream) (size buffer))
-          while (or (typep #1=(buffer-object buffer (stream-scan-pointer stream)) 'noise-string)
-                    (delimiter-gesture-p #1#))
-          do (incf (stream-scan-pointer stream)))
-    (setf (input-position stream) (stream-scan-pointer stream))))
+      (redraw-input-buffer stream)))
+  ;; We skip ahead of any noise strings to put us past the
+  ;; prompt. This is safe, because the noise strings are to be
+  ;; ignored anyway, but we need to be ahead to set the input
+  ;; position properly (ie. after the prompt).
+  (loop with buffer = (buffer (view (drei-instance stream)))
+        until (>= (stream-scan-pointer stream) (size buffer))
+        while (or (typep #1=(buffer-object buffer (stream-scan-pointer stream)) 'noise-string)
+                  (delimiter-gesture-p #1#))
+        do (incf (stream-scan-pointer stream)))
+  (setf (input-position stream) (stream-scan-pointer stream)))
 
 (defmethod stream-accept :after ((stream drei-input-editing-mixin) type &key &allow-other-keys)
   ;; If we end up asking for more input using the stream, we do not
@@ -514,9 +514,7 @@ input-editing-stream. Bound when executing a command.")
                                (t
                                 (unless peek-p
                                   (incf scan-pointer))
-                                (return-from stream-read-gesture gesture))
-                               (t (incf scan-pointer)
-                                  (setf last-was-noisy nil)))))
+                                (return-from stream-read-gesture gesture)))))
          (unless last-was-noisy      ; This prevents double-prompting.
            (setf (stream-rescanning stream) nil))
          (when activation-gesture
