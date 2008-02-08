@@ -556,6 +556,7 @@ the gesture that will be read in the first call to
 `stream-read-gesture' for the stream encapsulated by
 `stream'. The second return value of this function will be `type'
 if stuff is inserted after the insertion pointer."
+  (assert (<= (input-position stream) (stream-scan-pointer stream)))
   (let* ((drei (drei-instance stream))
          (*command-processor* drei)
          (was-directly-processing (directly-processing-p drei))
@@ -588,13 +589,14 @@ if stuff is inserted after the insertion pointer."
                        (when was-directly-processing
                          (display-message "Aborted")))))))
         (update-drei-buffer stream))
-      (let ((first-mismatch (prefix-size (view drei))))
+      (let ((first-mismatch (when (plusp (prefix-size (view drei)))
+                              (prefix-size (view drei)))))
         (display-drei drei :redisplay-minibuffer t)
         (cond ((null first-mismatch)
                ;; No change actually took place, even though IP may
                ;; have moved.
                nil)
-              ((<= first-mismatch (stream-scan-pointer stream))
+              ((< first-mismatch (stream-scan-pointer stream))
                ;; Eek, change before scan pointer - this probably
                ;; changes the scan, so we'll have to rescan
                ;; everything. Bummer!
