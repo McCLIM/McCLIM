@@ -594,7 +594,7 @@ if stuff is inserted after the insertion pointer."
                ;; No change actually took place, even though IP may
                ;; have moved.
                nil)
-              ((< first-mismatch (stream-scan-pointer stream))
+              ((<= first-mismatch (stream-scan-pointer stream))
                ;; Eek, change before scan pointer - this probably
                ;; changes the scan, so we'll have to rescan
                ;; everything. Bummer!
