@@ -994,7 +994,8 @@ along with any default values) that can be used in a
 ;;;;;;;;;;;;;;;; Reader conditionals
 
 ;;; parse trees
-(defclass reader-conditional-form (form) ())
+(defclass reader-conditional-form (form)
+  ((%conditional-true-p :accessor conditional-true-p)))
 (defclass reader-conditional-positive-form (reader-conditional-form) ())
 (defclass reader-conditional-negative-form (reader-conditional-form) ())
 
@@ -1833,6 +1834,20 @@ macro or special form."
       (progn (cache-symbol-info syntax symbol-form)
              (global-boundp symbol-form))))
 
+(defun cache-conditional-info (syntax form)
+  "Cache information about the reader conditional `symbol-form' represents,
+so that it can be quickly looked up later."
+  (setf (conditional-true-p form)
+        (eval-feature-conditional (second-noncomment (children form)) syntax)))
+
+(defun reader-conditional-true (syntax form)
+  "Return true if the reader conditional `form' has a true
+condition."
+  (if (slot-boundp form '%conditional-true-p)
+      (conditional-true-p form)
+      (progn (cache-conditional-info syntax form)
+             (conditional-true-p form))))
+
 (defun parenthesis-highlighter (view form)
   "Return the drawing style with which the parenthesis lexeme
 `form' should be highlighted."
@@ -1843,6 +1858,23 @@ macro or special form."
            (form-complete-p (parent form)))
       +bold-face-drawing-options+
       +default-drawing-options+))
+
+(defun reader-conditional-rule-fn (positive comment-options)
+  "Return a function for use as a syntax highlighting
+rule-generator for reader conditionals. If `positive', the
+function will be for positive
+reader-conditionals. `Comment-options' is the drawing options
+object that will be returned when the conditional is not
+fulfilled."
+  (if positive
+      #'(lambda (view form)
+          (if (reader-conditional-true (syntax view) form)
+              +default-drawing-options+
+              (values comment-options t)))
+      #'(lambda (view form)
+          (if (not (reader-conditional-true (syntax view) form))
+              +default-drawing-options+
+              (values comment-options t)))))
 
 (define-syntax-highlighting-rules emacs-style-highlighting
   (error-lexeme (*error-drawing-options*))
@@ -1857,18 +1889,29 @@ macro or special form."
                                             ((symbol-form-is-boundp (syntax view) form)
                                              *special-variable-drawing-options*)
                                             (t +default-drawing-options+)))))
-  (parenthesis-lexeme (:function #'parenthesis-highlighter)))
+  (parenthesis-lexeme (:function #'parenthesis-highlighter))
+  (reader-conditional-positive-form
+   (:function (reader-conditional-rule-fn t *comment-drawing-options*)))
+  (reader-conditional-negative-form
+   (:function (reader-conditional-rule-fn nil *comment-drawing-options*))))
+
+(defvar *retro-comment-drawing-options*
+  (make-drawing-options :face (make-face :ink +dimgray+))
+  "The drawing options used for retro-highlighting in Lisp syntax.")
 
 (define-syntax-highlighting-rules retro-highlighting
   (error-symbol (*error-drawing-options*))
   (string-form (:options :face +italic-face+))
-  (comment (:face :ink +dimgray+))
+  (comment (*retro-comment-drawing-options*))
   (literal-object-form (:options :function (object-drawer)))
   (complete-token-form (:function #'(lambda (syntax form)
                                       (cond ((symbol-form-is-macrobound-p syntax form)
                                              +bold-face-drawing-options+)
                                             (t +default-drawing-options+)))))
-  ;; XXX: Ugh, copied from above.
+  (reader-conditional-positive-form
+   (:function (reader-conditional-rule-fn t *retro-comment-drawing-options*)))
+  (reader-conditional-negative-form
+   (:function (reader-conditional-rule-fn nil *retro-comment-drawing-options*)))
   (parenthesis-lexeme (:function #'parenthesis-highlighter)))
 
 (defparameter *syntax-highlighting-rules* 'emacs-style-highlighting

@@ -443,7 +443,18 @@ special symbols.
 
 Alternatively, `type' can be any object (usually a dynamically
 bound symbol), in which case it will be evaluated to get the
-drawing options."
+drawing options.
+
+`Type' can also be a list, in which case the first element will
+be interpreted as described above, and the remaining elements
+will be considered keyword arguments. The following keyword
+arguments are supported:
+
+  `:sticky': if true, the syntax highlighting options defined by
+  this rule will apply to all children as well, effectively
+  overriding their options. The default is false. For a
+  `:function', `:sticky' will not work. Instead, return a true
+  secondary value from the function."
   (check-type name symbol)
   `(progn
      (fmakunbound ',name)
@@ -451,18 +462,20 @@ drawing options."
        (:method (view (parser-symbol parser-symbol))
          nil))
      ,@(flet ((make-rule-exp (type args)
-                             (case type
-                               (:face `(let ((options (make-drawing-options :face (make-face ,@args))))
-                                         #'(lambda (view parser-symbol)
-                                             (declare (ignore view parser-symbol))
-                                             options)))
-                               (:options `#'(lambda (view parser-symbol)
-                                              (declare (ignore view parser-symbol))
-                                              (make-drawing-options ,@args)))
-                               (:function (first args))
-                               (t `#'(lambda (view parser-symbol)
-                                       (declare (ignore view parser-symbol))
-                                       ,type)))))
+                             (let ((actual-type (first (listed type))))
+                               (destructuring-bind (&key sticky) (rest (listed type))
+                                 (case actual-type
+                                   (:face `(let ((options (make-drawing-options :face (make-face ,@args))))
+                                             #'(lambda (view parser-symbol)
+                                                 (declare (ignore view parser-symbol))
+                                                 (values options ,sticky))))
+                                   (:options `#'(lambda (view parser-symbol)
+                                                  (declare (ignore view parser-symbol))
+                                                  (values (make-drawing-options ,@args) ,sticky)))
+                                   (:function (first args))
+                                   (t `#'(lambda (view parser-symbol)
+                                           (declare (ignore view parser-symbol))
+                                           (values ,actual-type ,sticky))))))))
              (loop for (parser-symbol (type . args)) in rules
                 collect `(let ((rule ,(make-rule-exp type args)))
                            (defmethod ,name (view (parser-symbol ,parser-symbol))
@@ -499,6 +512,18 @@ is the rules that are used for syntax highlighting."
   parser-symbol offset
   drawing-options highlighting-rules)
 
+(defstruct (drawing-options-frame
+             (:constructor make-drawing-options-frame
+                           (end-offset drawing-options sticky-p))
+             (:conc-name frame-))
+  "An entry in the drawing options stack maintained by the
+`pump-state' structure. `End-offset' is the end buffer offset
+for the frame, `drawing-options' is the drawing options that
+should be used until that offset, and if `sticky-p' is true it
+will not be possible to put other frames on top of this one in
+the stack."
+  end-offset drawing-options sticky-p)
+
 (defmethod pump-state-for-offset-with-syntax ((view textual-drei-syntax-view)
                                               (syntax lr-syntax-mixin) (offset integer))
   (update-parse syntax 0 (size (buffer view)))
@@ -506,15 +531,18 @@ is the rules that are used for syntax highlighting."
         (highlighting-rules (syntax-highlighting-rules syntax)))
     (labels ((initial-drawing-options (parser-symbol)
                (if (null parser-symbol)
-                   (cons (size (buffer view)) +default-drawing-options+)
-                   (let ((drawing-options
-                          (get-drawing-options highlighting-rules view parser-symbol)))
+                   (make-drawing-options-frame
+                    (size (buffer view)) +default-drawing-options+ nil)
+                   (multiple-value-bind (drawing-options sticky)
+                       (get-drawing-options highlighting-rules view parser-symbol)
                      (if (null drawing-options)
                          (initial-drawing-options (parent parser-symbol))
-                         (cons (end-offset parser-symbol) drawing-options))))))
+                         (make-drawing-options-frame (end-offset parser-symbol)
+                                                     drawing-options sticky))))))
       (make-pump-state parser-symbol offset
                        (list (initial-drawing-options parser-symbol)
-                             (cons (1+ (size (buffer view))) +default-drawing-options+))
+                             (make-drawing-options-frame
+                              (1+ (size (buffer view))) +default-drawing-options+ nil))
                        highlighting-rules))))
 
 (defun find-next-stroke-end (view pump-state)
@@ -527,15 +555,16 @@ drawing options onto `pump-state'."
                    (highlighting-rules pump-state-highlighting-rules))
       pump-state
     (let ((line (line-containing-offset (syntax view) offset)))
-      (flet ((finish (offset symbol &optional stroke-drawing-options)
+      (flet ((finish (new-offset symbol &optional stroke-drawing-options sticky-p)
                (setf start-symbol symbol)
-               (loop until (> (car (first drawing-options)) offset)
-                  do (pop drawing-options))
                (unless (null stroke-drawing-options)
-                 (push (cons (end-offset symbol) stroke-drawing-options)
+                 (push (if (frame-sticky-p (first drawing-options))
+                           (make-drawing-options-frame
+                            (end-offset symbol) (frame-drawing-options (first drawing-options)) t)
+                           (make-drawing-options-frame
+                            (end-offset symbol) stroke-drawing-options sticky-p))
                        drawing-options))
-               (return-from find-next-stroke-end
-                 offset)))
+               (return-from find-next-stroke-end new-offset)))
         (cond ((null start-symbol)
                ;; This means that all remaining lines are blank.
                (finish (line-end-offset line) nil))
@@ -543,28 +572,38 @@ drawing options onto `pump-state'."
                     (= offset (start-offset start-symbol)))
                (finish (end-offset start-symbol) start-symbol nil))
               (t
-               (or (do-parse-symbols-forward (symbol offset start-symbol)
-                     (let ((symbol-drawing-options
-                            (get-drawing-options highlighting-rules view symbol)))
-                       (cond ((> (start-offset symbol) (line-end-offset line))
-                              (finish (line-end-offset line) start-symbol))
-                             ((and (typep symbol 'literal-object-mixin))
-                              (finish (start-offset symbol) symbol
-                                      (or symbol-drawing-options
-                                          (make-drawing-options :function (object-drawer)))))
-                             ((and (> (start-offset symbol) offset)
-                                   (not (drawing-options-equal (or symbol-drawing-options
-                                                                   +default-drawing-options+)
-                                                               (cdr (first drawing-options))))
-                                   (if (null symbol-drawing-options)
-                                       (>= (start-offset symbol) (car (first drawing-options)))
-                                       t))
-                              (finish (start-offset symbol) symbol symbol-drawing-options))
-                             ((and (= (start-offset symbol) offset)
-                                   symbol-drawing-options
-                                   (not (drawing-options-equal symbol-drawing-options
-                                                               (cdr (first drawing-options)))))
-                              (finish (start-offset symbol) symbol symbol-drawing-options)))))
+               (or (let* ((current-frame (first drawing-options))
+                          (currently-used-options (frame-drawing-options current-frame)))
+                     (do-parse-symbols-forward (symbol offset start-symbol)
+                       (multiple-value-bind (symbol-drawing-options sticky)
+                           (get-drawing-options highlighting-rules view symbol)
+                         ;; Remove frames that are no longer applicable...
+                         (loop until (> (frame-end-offset (first drawing-options))
+                                        (start-offset symbol))
+                               do (pop drawing-options))
+                         (let ((options-to-be-used (if (frame-sticky-p (first drawing-options))
+                                                       (frame-drawing-options (first drawing-options))
+                                                       symbol-drawing-options)))
+                           (cond ((> (start-offset symbol) (line-end-offset line))
+                                  (finish (line-end-offset line) start-symbol))
+                                 ((and (typep symbol 'literal-object-mixin))
+                                  (finish (start-offset symbol) symbol
+                                          (or symbol-drawing-options
+                                              (make-drawing-options :function (object-drawer)))))
+                                 ((and (> (start-offset symbol) offset)
+                                       (not (drawing-options-equal (or options-to-be-used
+                                                                       +default-drawing-options+)
+                                                                   currently-used-options))
+                                       (if (null symbol-drawing-options)
+                                           (>= (start-offset symbol) (frame-end-offset current-frame))
+                                           t))
+                                  (finish (start-offset symbol) symbol symbol-drawing-options sticky))
+                                 ((and (= (start-offset symbol) offset)
+                                       symbol-drawing-options
+                                       (not (drawing-options-equal
+                                             options-to-be-used
+                                             (frame-drawing-options (first drawing-options)))))
+                                  (finish (start-offset symbol) symbol symbol-drawing-options sticky)))))))
                    ;; If there are no more parse symbols, we just go
                    ;; line-by-line from here. This should mean that all
                    ;; remaining lines are blank.
@@ -578,11 +617,15 @@ drawing options onto `pump-state'."
     (with-accessors ((offset pump-state-offset)
                      (current-drawing-options pump-state-drawing-options))
         pump-state
-      (let ((old-drawing-options (cdr (first current-drawing-options)))
-            (end-offset (find-next-stroke-end view pump-state)))
+      (let ((old-drawing-options (frame-drawing-options (first current-drawing-options)))
+            (end-offset (find-next-stroke-end view pump-state))
+            (old-offset offset))
         (setf (stroke-start-offset stroke) offset
               (stroke-end-offset stroke) end-offset
               (stroke-drawing-options stroke) old-drawing-options
               offset (if (offset-end-of-line-p (buffer view) end-offset)
                          (1+ end-offset)
-                         end-offset))))))
+                         end-offset))
+        ;; Don't use empty strokes, try again...
+        (when (= old-offset offset)
+          (stroke-pump-with-syntax view syntax stroke pump-state))))))
