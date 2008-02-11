@@ -217,11 +217,18 @@ characters."))
 
            ;; Views and their facilities.
            #:drei-view #:modified-p #:no-cursors
+           
            #:drei-buffer-view #:buffer #:top #:bot #:buffer-view-p
+           #:lines
+           #:buffer-line #:start-mark #:line-length #:chunks #:end-offset
+           #:line-containing-offset #:offset-in-line-p
+           
            #:drei-syntax-view #:syntax #:syntax-view-p
            #:pump-state-for-offset-with-syntax
            #:stroke-pump-with-syntax
+           
            #:point-mark-view #:point-mark-view-p
+           
            #:textual-drei-syntax-view
            #:tab-space-count #:space-width #:tab-width #:use-tabs
            #:auto-fill-mode #:auto-fill-column
@@ -509,9 +516,7 @@ syntax-specific, core functionality of Drei."))
 (defpackage :drei-fundamental-syntax
   (:use :clim-lisp :clim :drei-buffer :drei-base 
         :drei-syntax :flexichain :drei :drei-core :esa-utils)
-  (:export #:fundamental-syntax #:scan
-           #:start-mark #:line-length #:line-end-offset
-           #:line-containing-offset #:offset-in-line-p)
+  (:export #:fundamental-syntax)
   (:documentation "Implementation of the basic syntax module for
 editing plain text."))
 

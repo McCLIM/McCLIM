@@ -35,7 +35,8 @@
       (current-state)
       (initial-state :initarg :initial-state)
       (current-start-mark)
-      (current-size)))
+      (current-size)
+      (scan :accessor scan)))
 
 (defmethod initialize-instance :after ((syntax lr-syntax-mixin) &rest args)
   (declare (ignore args))
@@ -554,7 +555,8 @@ drawing options onto `pump-state'."
                    (drawing-options pump-state-drawing-options)
                    (highlighting-rules pump-state-highlighting-rules))
       pump-state
-    (let ((line (line-containing-offset (syntax view) offset)))
+    (let* ((line (line-containing-offset view offset))
+           (line-end-offset (end-offset line)))
       (flet ((finish (new-offset symbol &optional stroke-drawing-options sticky-p)
                (setf start-symbol symbol)
                (unless (null stroke-drawing-options)
@@ -567,7 +569,7 @@ drawing options onto `pump-state'."
                (return-from find-next-stroke-end new-offset)))
         (cond ((null start-symbol)
                ;; This means that all remaining lines are blank.
-               (finish (line-end-offset line) nil))
+               (finish line-end-offset nil))
               ((and (typep start-symbol 'literal-object-mixin)
                     (= offset (start-offset start-symbol)))
                (finish (end-offset start-symbol) start-symbol nil))
@@ -584,8 +586,8 @@ drawing options onto `pump-state'."
                          (let ((options-to-be-used (if (frame-sticky-p (first drawing-options))
                                                        (frame-drawing-options (first drawing-options))
                                                        symbol-drawing-options)))
-                           (cond ((> (start-offset symbol) (line-end-offset line))
-                                  (finish (line-end-offset line) start-symbol))
+                           (cond ((> (start-offset symbol) line-end-offset)
+                                  (finish line-end-offset start-symbol))
                                  ((and (typep symbol 'literal-object-mixin))
                                   (finish (start-offset symbol) symbol
                                           (or symbol-drawing-options
@@ -607,7 +609,7 @@ drawing options onto `pump-state'."
                    ;; If there are no more parse symbols, we just go
                    ;; line-by-line from here. This should mean that all
                    ;; remaining lines are blank.
-                   (finish (line-end-offset line) nil))))))))
+                   (finish line-end-offset nil))))))))
 
 (defmethod stroke-pump-with-syntax ((view textual-drei-syntax-view)
                                     (syntax lr-syntax-mixin) stroke

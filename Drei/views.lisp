@@ -550,6 +550,10 @@ page up."))
   (:documentation "Scroll `view', which is displayed on `pane', a
 page up."))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Buffer view
+
 (defclass drei-buffer-view (drei-view)
   ((%buffer :accessor buffer
             :initarg :buffer
@@ -595,7 +599,11 @@ displayed line in device units.")
                      :documentation "A list of (start . end) conses
 of buffer offsets, delimiting the regions of the buffer that have
 changed since the last redisplay. The regions are not
-overlapping, and are sorted in ascending order."))
+overlapping, and are sorted in ascending order.")
+   (lines :initform (make-instance 'standard-flexichain)
+          :reader lines
+          :documentation "The lines of the buffer, stored in a
+format that makes it easy to retrieve information about them."))
   (:metaclass modual-class)
   (:documentation "A view that contains a `drei-buffer'
 object. The buffer is displayed on a simple line-by-line basis,
@@ -615,7 +623,8 @@ are automatically set if applicable."))
                                         :read-only read-only
                                         :initial-contents initial-contents)))
     (setf top (make-buffer-mark (buffer view) 0 :left)
-          bot (make-buffer-mark (buffer view) (size (buffer view)) :right))))
+          bot (make-buffer-mark (buffer view) (size (buffer view)) :right))
+    (update-line-data view 0 (size (buffer view)))))
 
 (defmethod (setf top) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view))
@@ -674,11 +683,143 @@ and `end' has been modified."
                     list))))
     (setf (changed-regions view) (worker (changed-regions view)))))
 
+(defclass buffer-line ()
+  ((%start-mark :reader start-mark
+                :initarg :start-mark
+                :documentation "The mark at which this line starts.")
+   (%line-length :reader line-length
+                 :initarg :line-length
+                 :documentation "The length of the line described by this object.")
+   (%chunks :accessor chunks
+            :initform (make-array 5
+                       :adjustable t
+                       :fill-pointer 0)
+            :documentation "A list of cons-cells, with the car
+being a buffer offset relative to the `start-mark' of the line,
+and the cdr being T if the chunk covers a non-character, and NIL
+if it covers a character sequence."))
+  (:documentation "An object describing a single line in the
+buffer associated with a `drei-buffer-view'"))
+
+(defmethod initialize-instance :after ((line buffer-line)
+                                       &rest initargs)
+  (declare (ignore initargs))
+  (loop with buffer = (buffer (start-mark line))
+        with line-start-offset = (offset (start-mark line))
+        with line-end-offset = (+ line-start-offset (line-length line))
+        with chunk-start-offset = line-start-offset
+        for chunk-info = (get-chunk buffer
+                                    line-start-offset
+                                    chunk-start-offset line-end-offset)
+        do (vector-push-extend chunk-info (chunks line))
+        (setf chunk-start-offset (+ (car chunk-info)
+                                    line-start-offset))
+        when (= chunk-start-offset line-end-offset)
+        do (loop-finish)))
+
+(defmethod end-offset ((line buffer-line))
+  "Return the end buffer offset of `line'."
+  (+ (offset (start-mark line)) (line-length line)))
+
+(defun get-chunk (buffer line-start-offset chunk-start-offset line-end-offset)
+  "Return a chunk in the form of a cons cell. The chunk will
+start at `chunk-start-offset' and extend no further than
+`line-end-offset'."
+  (let* ((chunk-end-offset (buffer-find-nonchar
+                            buffer chunk-start-offset
+                            (min (+ *maximum-chunk-size*
+                                    chunk-start-offset)
+                                 line-end-offset))))
+    (cond ((= chunk-start-offset line-end-offset)
+           (cons (- chunk-end-offset
+                    line-start-offset) nil))
+          ((or (not (= chunk-end-offset chunk-start-offset))
+               (and (offset-beginning-of-line-p buffer chunk-start-offset)
+                    (offset-end-of-line-p buffer chunk-end-offset)))
+           (cons (- chunk-end-offset
+                    line-start-offset) nil))
+          ((not (characterp (buffer-object buffer chunk-end-offset)))
+           (cons (- (1+ chunk-end-offset)
+                    line-start-offset) t)))))
+
+(defun update-line-data (view start end)
+  "Update the sequence of lines stored by the `drei-buffer-view'
+`view'. `Start' and `end' are buffer offsets delimiting the
+region that has changed since the last update."
+  (let ((low-mark (make-buffer-mark (buffer view) start :left))
+        (high-mark (make-buffer-mark (buffer view) end :left)))
+    (when (mark<= low-mark high-mark)
+      (beginning-of-line low-mark)
+      (end-of-line high-mark)
+      (with-accessors ((lines lines)) view
+        (let ((low-index 0)
+              (high-index (nb-elements lines)))
+          ;; Binary search for the start of changed lines.
+          (loop while (< low-index high-index)
+                do (let* ((middle (floor (+ low-index high-index) 2))
+                          (line-start (start-mark (element* lines middle))))
+                     (cond ((mark> low-mark line-start)
+                            (setf low-index (1+ middle)))
+                           (t
+                            (setf high-index middle)))))
+          ;; Discard lines that have to be re-analyzed.
+          (loop while (and (< low-index (nb-elements lines))
+                           (mark<= (start-mark (element* lines low-index))
+                                   high-mark))
+                do (delete* lines low-index))
+          ;; Analyze new lines.
+          (loop while (mark<= low-mark high-mark)
+                for i from low-index
+                do (progn (let ((line-start-mark (clone-mark low-mark)))
+                            (insert* lines i (make-instance
+                                              'buffer-line
+                                              :start-mark line-start-mark
+                                              :line-length (- (offset (end-of-line low-mark))
+                                                              (offset line-start-mark))))
+                            (if (end-of-buffer-p low-mark)
+                                (loop-finish)
+                                ;; skip newline
+                                (forward-object low-mark))))))))))
+
 (defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
                               changed-region)
   ;; If something has been redisplayed, and there have been changes to
   ;; some of those lines, mark them as dirty.
-  (remember-changed-region view (car changed-region) (cdr changed-region)))
+  (remember-changed-region view (car changed-region) (cdr changed-region))
+  ;; I suspect it's most efficient to keep this always up to date,
+  ;; even for small changes.
+  (update-line-data view (car changed-region) (cdr changed-region)))
+
+;;; Exploit the stored line information.
+
+(defun offset-in-line-p (line offset)
+  "Return true if `offset' is in the buffer region delimited by
+`line'."
+  (<= (offset (start-mark line)) offset
+      (end-offset line)))
+
+(defun line-containing-offset (view mark-or-offset)
+  "Return the line `mark-or-offset' is in for `view'. `View'
+must be a `drei-buffer-view'."
+  ;; Perform binary search looking for line containing `offset1'.
+  (as-offsets ((offset mark-or-offset))
+    (with-accessors ((lines lines)) view
+      (loop with low-index = 0
+         with high-index = (nb-elements lines)
+         for middle = (floor (+ low-index high-index) 2)
+         for this-line = (element* lines middle)
+         for line-start = (start-mark this-line)
+         do (cond ((offset-in-line-p this-line offset)
+                   (loop-finish))
+                  ((mark> offset line-start)
+                   (setf low-index (1+ middle)))
+                  ((mark< offset line-start)
+                   (setf high-index middle)))
+         finally (return this-line)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Syntax views
 
 (defclass drei-syntax-view (drei-buffer-view)
   ((%syntax :accessor syntax
