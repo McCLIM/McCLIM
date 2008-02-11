@@ -757,48 +757,6 @@ type (found via `presentation-type-of') to generate output."
                              (+ width cursor-x) cursor-y
                              draw baseline)))))))
 
-(defmethod pump-state-for-offset ((view drei-buffer-view) (offset integer))
-  "For a `drei-buffer-view' a pump-state is merely an offset into
-the buffer determining where the next stroke should start."
-  offset)
-
-(defun fetch-chunk (buffer chunk-start-offset)
-  "Retrieve a chunk from `buffer', with the chunk starting at
-`chunk-start-offset'. The chunk is a cons, with the car being the
-start-offset of the chunk as an integer, and the cdr being either
-the end-offset of the chunk as an integer, or a function. If a
-function, the chunk is a one-object non-string chunk, and the
-function is the drawing function for the chunk."
-  (let* ((line-end-offset (end-of-line-offset
-                           buffer chunk-start-offset))
-         (chunk-end-offset (buffer-find-nonchar
-                            buffer chunk-start-offset
-                            (min (+ *maximum-chunk-size*
-                                    chunk-start-offset)
-                                 line-end-offset))))
-    (cond ((or (not (= chunk-end-offset chunk-start-offset))
-               (and (offset-beginning-of-line-p buffer chunk-start-offset)
-                    (offset-end-of-line-p buffer chunk-end-offset)))
-           (cons chunk-start-offset
-                 chunk-end-offset))
-          ((not (characterp (buffer-object buffer chunk-end-offset)))
-           (cons chunk-end-offset (object-drawer))))))
-
-(defmethod stroke-pump ((view drei-buffer-view) stroke pump-state)
-  (let* ((chunk (fetch-chunk (buffer view) pump-state))
-         (drawing-options (if (functionp (cdr chunk))
-                              (make-drawing-options :function (cdr chunk))
-                              +default-drawing-options+))
-         (actual-end-offset (if (functionp (cdr chunk))
-                                (1+ (car chunk))
-                                (cdr chunk))))
-    (setf (stroke-start-offset stroke) (car chunk)
-          (stroke-end-offset stroke) actual-end-offset
-          (stroke-drawing-options stroke) drawing-options)
-    (if (offset-end-of-line-p (buffer view) actual-end-offset)
-        (1+ actual-end-offset)
-        actual-end-offset)))
-
 (defmethod display-drei-view-contents ((pane basic-pane) (view drei-buffer-view))
   (with-bounding-rectangle* (x1 y1 x2 y2) view
     (let ((old-width (- x2 x1))
@@ -823,6 +781,82 @@ function is the drawing function for the chunk."
                 return (progn
                          (setf (offset (bot view)) (line-end-offset line))
                          (clear-stale-lines pane view old-width old-height))))))))
+
+;;; A default redisplay implementation that should work for subclasses
+;;; of `drei-buffer-view'. Syntaxes that don't want to implement their
+;;; own redisplay behavior can just call these.
+
+(defstruct (pump-state
+             (:constructor make-pump-state
+                           (line-index offset chunk-index))) 
+  "A pump state object used by the `drei-buffer-view'. `Line' is
+the line object `offset' is in, and `line-index' is the index of
+`line' in the list of lines maintained by the view that created
+this pump state."
+  line-index offset chunk-index)
+
+(defun buffer-view-pump-state-for-offset (view offset)
+  "Return a pump state usable for pumpting strokes for `view' (a
+`drei-buffer-view') from `offset'."
+  ;; Perform binary search looking for line starting with `offset'.
+  (with-accessors ((lines lines)) view
+    (loop with low-index = 0
+          with high-index = (nb-elements lines)
+          for middle = (floor (+ low-index high-index) 2)
+          for line-start = (start-mark (element* lines middle))
+          do (cond ((mark> offset line-start)
+                    (setf low-index (1+ middle)))
+                   ((mark< offset line-start)
+                    (setf high-index middle))
+                   ((mark= offset line-start)
+                    (loop-finish)))
+          finally (return (make-pump-state middle offset 0)))))
+
+(defun fetch-chunk (line chunk-index)
+  "Retrieve the `chunk-index'th chunk from `line'. The return
+value is either an integer, in which case it specifies the
+end-offset of a string chunk relative to the start of the line,
+or a function, in which case it is the drawing function for a
+single-object non-character chunk."
+  (destructuring-bind (relative-chunk-end-offset . objectp)
+      (aref (chunks line) chunk-index)
+    (if objectp (object-drawer) (+ relative-chunk-end-offset
+                                   (offset (start-mark line))))))
+
+(defun buffer-view-stroke-pump (view stroke pump-state)
+  "Pump redisplay data into `stroke' based on `pump-state' and
+the information managed by `view', which must be a
+`drei-buffer-view'."
+  ;; `Pump-state' will be destructively modified.
+  (prog1 pump-state
+    (with-accessors ((line-index pump-state-line-index)
+                     (offset pump-state-offset)
+                     (chunk-index pump-state-chunk-index)) pump-state
+      (let* ((chunk (fetch-chunk
+                     (element* (lines view) line-index) chunk-index))
+             (drawing-options (if (functionp chunk)
+                                  (make-drawing-options :function chunk)
+                                  +default-drawing-options+))
+             (end-offset (if (functionp chunk)
+                             (1+ offset)
+                             chunk)))
+        (setf (stroke-start-offset stroke) offset
+              (stroke-end-offset stroke) end-offset
+              (stroke-drawing-options stroke) drawing-options)
+        (if (offset-end-of-line-p (buffer view) end-offset)
+            (setf line-index (1+ line-index)
+                  chunk-index 0
+                  offset (1+ end-offset))
+            (setf chunk-index (1+ chunk-index)
+                  offset end-offset))))))
+
+(defmethod pump-state-for-offset ((view drei-buffer-view) (offset integer))
+  (buffer-view-pump-state-for-offset view offset))
+
+(defmethod stroke-pump ((view drei-buffer-view) stroke pump-state)
+  (buffer-view-stroke-pump view stroke pump-state))
+
+;;; Cursor handling.
 
 (defun offset-in-stroke-position (stream view stroke offset)
   "Calculate the position in device units of `offset' in

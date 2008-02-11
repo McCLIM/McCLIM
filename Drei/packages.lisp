@@ -222,6 +222,8 @@ characters."))
            #:lines
            #:buffer-line #:start-mark #:line-length #:chunks #:end-offset
            #:line-containing-offset #:offset-in-line-p
+           #:buffer-view-pump-state-for-offset
+           #:buffer-view-stroke-pump
            
            #:drei-syntax-view #:syntax #:syntax-view-p
            #:pump-state-for-offset-with-syntax

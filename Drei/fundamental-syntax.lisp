@@ -53,71 +53,18 @@
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; display
-
-(defstruct (pump-state
-             (:constructor make-pump-state
-                           (line-index offset chunk-index))) 
-  "A pump state object used in the fundamental syntax. `Line' is
-the line object `offset' is in, and `line-index' is the index of
-`line' in the list of lines maintained by the syntax that created
-this pump state."
-  line-index
-  offset
-  chunk-index)
+;;; Redisplay
+;;;
+;;; Just uses the default buffer-view redisplay behavior.
 
 (defmethod pump-state-for-offset-with-syntax ((view textual-drei-syntax-view)
                                               (syntax fundamental-syntax) (offset integer))
-  ;; Perform binary search looking for line starting with `offset'.
-  (with-accessors ((lines lines)) view
-    (loop with low-index = 0
-          with high-index = (nb-elements lines)
-          for middle = (floor (+ low-index high-index) 2)
-          for line-start = (start-mark (element* lines middle))
-          do (cond ((mark> offset line-start)
-                    (setf low-index (1+ middle)))
-                   ((mark< offset line-start)
-                    (setf high-index middle))
-                   ((mark= offset line-start)
-                    (loop-finish)))
-          finally (return (make-pump-state middle offset 0)))))
-
-(defun fetch-chunk (line chunk-index)
-  "Retrieve the `chunk-index'th chunk from `line'. The return
-value is either an integer, in which case it specifies the
-end-offset of a string chunk relative to the start of the line,
-or a function, in which case it is the drawing function for a
-single-object non-character chunk."
-  (destructuring-bind (relative-chunk-end-offset . objectp)
-      (aref (chunks line) chunk-index)
-    (if objectp (object-drawer) (+ relative-chunk-end-offset
-                                   (offset (start-mark line))))))
+  (buffer-view-pump-state-for-offset view offset))
 
 (defmethod stroke-pump-with-syntax ((view textual-drei-syntax-view)
                                     (syntax fundamental-syntax) stroke
-                                    (pump-state pump-state))
-  ;; `Pump-state' will be destructively modified.
-  (prog1 pump-state
-    (with-accessors ((line-index pump-state-line-index)
-                     (offset pump-state-offset)
-                     (chunk-index pump-state-chunk-index)) pump-state
-      (let* ((chunk (fetch-chunk
-                     (element* (lines view) line-index) chunk-index))
-             (drawing-options (if (functionp chunk)
-                                  (make-drawing-options :function chunk)
-                                  +default-drawing-options+))
-             (end-offset (if (functionp chunk)
-                             (1+ offset)
-                             chunk)))
-        (setf (stroke-start-offset stroke) offset
-              (stroke-end-offset stroke) end-offset
-              (stroke-drawing-options stroke) drawing-options)
-        (if (offset-end-of-line-p (buffer view) end-offset)
-            (setf line-index (1+ line-index)
-                  chunk-index 0
-                  offset (1+ end-offset))
-            (setf chunk-index (1+ chunk-index)
-                  offset end-offset))))))
+                                    pump-state)
+  (buffer-view-stroke-pump view stroke pump-state))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
