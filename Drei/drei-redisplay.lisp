@@ -272,6 +272,37 @@ next redisplay."
      do (invalidate-line-strokes line
          :modified modified :cleared cleared)))
 
+(defun invalidate-strokes-in-region (view start-offset end-offset
+                                     &key modified cleared)
+  "Invalidate all the strokes of `view' that overlap the region
+`start-offset'/`end-offset' by setting their dirty-bit to
+true. If `modified' or `cleared' is true, also set their
+modified-bit to true. If `cleared' is true, inform the strokes
+that their previous output has been cleared by someone, and that
+they do not need to clear it themselves during their next
+redisplay."
+  ;; If the region is outside the visible region, no-op.
+  (when (overlaps start-offset end-offset
+                  (offset (top view)) (offset (bot view)))
+    (let ((line1-index (index-of-displayed-line-containing-offset view start-offset))
+          (line2-index (index-of-displayed-line-containing-offset view end-offset)))
+      (loop for line = (line-information view line1-index)
+            when (<= start-offset
+                     (line-start-offset line) (line-end-offset line)
+                     end-offset)
+            ;; The entire line is within the region.
+            do (invalidate-line-strokes line :modified modified
+                                             :cleared cleared)
+            ;; Only part of the line is within the region.
+            else do (do-displayed-line-strokes (stroke line)
+                      (when (overlaps start-offset end-offset
+                                      (stroke-start-offset stroke)
+                                      (stroke-end-offset stroke))
+                        (invalidate-stroke stroke :modified modified
+                                                  :cleared cleared)))
+            if (= line1-index line2-index) do (loop-finish)
+            else do (incf line1-index)))))
+
 (defmacro do-displayed-lines ((line-sym view) &body body)
   "Loop over lines on display for `view', evaluating `body' with
 `line-sym' bound to the `displayed-line' object for each line."
@@ -328,10 +359,11 @@ NIL."
                        (end-offset (stroke-end-offset stroke))))
           (return stroke))))))
 
-(defun find-index-of-line-containing-offset (view offset)
-  "Return the index of the line containing `offset'. If `offset'
-is before the displayed lines, return 0. If `offset' is after the
-displayed lines, return the index of the last line."
+(defun index-of-displayed-line-containing-offset (view offset)
+  "Return the index of the `displayed-line' object containing
+`offset'. If `offset' is before the displayed lines, return 0. If
+`offset' is after the displayed lines, return the index of the
+last line."
   (with-accessors ((lines displayed-lines)) view
     (cond ((< offset (line-start-offset (aref lines 0)))
            0)
@@ -340,18 +372,18 @@ displayed lines, return the index of the last line."
           (t
            ;; Binary search for the line.
            (loop with low-index = 0
-              with high-index = (displayed-lines-count view)
-              for middle = (floor (+ low-index high-index) 2)
-              for this-line = (aref lines middle)
-              for line-start = (line-start-offset this-line)
-              for line-end = (line-end-offset this-line)
-              do (cond ((<= line-start offset line-end)
-                        (loop-finish))
-                       ((mark> offset line-start)
-                        (setf low-index (1+ middle)))
-                       ((mark< offset line-start)
-                        (setf high-index middle)))
-              finally (return middle))))))
+                 with high-index = (displayed-lines-count view)
+                 for middle = (floor (+ low-index high-index) 2)
+                 for this-line = (aref lines middle)
+                 for line-start = (line-start-offset this-line)
+                 for line-end = (line-end-offset this-line)
+                 do (cond ((<= line-start offset line-end)
+                           (loop-finish))
+                          ((> offset line-start)
+                           (setf low-index (1+ middle)))
+                          ((< offset line-start)
+                           (setf high-index middle)))
+                 finally (return middle))))))
 
 (defun ensure-line-information-size (view min-size)
   "Ensure that the array of lines for `view' contains at least
@@ -402,24 +434,14 @@ it was redisplayed."
   (let* ((stroke (line-stroke-information line (line-stroke-count line)))
          (old-start-offset (stroke-start-offset stroke))
          (old-end-offset (stroke-end-offset stroke))
-         (old-drawing-options (stroke-drawing-options stroke))
-         (changed-region (first (changed-regions view))))
+         (old-drawing-options (stroke-drawing-options stroke)))
     (prog1 (stroke-pump view stroke pump-state)
       (unless (and old-start-offset
                    (= (+ old-start-offset line-change) (stroke-start-offset stroke))
                    (= (+ old-end-offset line-change) (stroke-end-offset stroke))
                    (drawing-options-equal old-drawing-options
-                                          (stroke-drawing-options stroke))
-                   (or (null changed-region)
-                       (not (overlaps (stroke-start-offset stroke) (stroke-end-offset stroke)
-                                      (car changed-region) (cdr changed-region)))))
+                                          (stroke-drawing-options stroke)))
         (invalidate-stroke stroke :modified t))
-      ;; Move to the next changed region, if it is not possible for
-      ;; more stroks to overlap with the current one.
-      (loop while (and (first (changed-regions view))
-                       (>= (stroke-end-offset stroke)
-                           (cdr (first (changed-regions view)))))
-            do (pop (changed-regions view)))
       (incf (line-stroke-count line))
       (setf (line-end-offset line) (stroke-end-offset stroke)))))
 
@@ -634,7 +656,8 @@ dimensions of `line'."
   (do-undisplayed-line-strokes (stroke line)
     (if (null (stroke-start-offset stroke))
         (return)
-        (setf (stroke-start-offset stroke) nil))))
+        (progn (setf (stroke-start-offset stroke) nil)
+               (invalidate-stroke stroke :modified t)))))
 
 (defun draw-line-strokes (pane view initial-pump-state
                           start-offset cursor-x cursor-y
@@ -711,7 +734,8 @@ are the old dimensions of the display of `view' in device units."
     (do-undisplayed-line-strokes (stroke line)
       (if (null (stroke-start-offset stroke))
           (return)
-          (setf (stroke-start-offset stroke) nil))))
+          (progn (setf (stroke-start-offset stroke) nil)
+                 (invalidate-stroke stroke :modified t)))))
   (with-bounding-rectangle* (x1 y1 x2 y2) view
     (declare (ignore x2))
     (when (> old-height (- y2 y1))

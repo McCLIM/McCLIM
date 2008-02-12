@@ -594,12 +594,6 @@ is, used for display right now.")
                     :type number
                     :documentation "The width of the longest
 displayed line in device units.")
-   (%changed-regions :accessor changed-regions
-                     :initform nil
-                     :documentation "A list of (start . end) conses
-of buffer offsets, delimiting the regions of the buffer that have
-changed since the last redisplay. The regions are not
-overlapping, and are sorted in ascending order.")
    (lines :initform (make-instance 'standard-flexichain)
           :reader lines
           :documentation "The lines of the buffer, stored in a
@@ -632,8 +626,11 @@ are automatically set if applicable."))
 (defmethod (setf bot) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view))
 
-(defmethod (setf buffer) :after (new-value (view drei-buffer-view))
-  (invalidate-all-strokes view))
+(defmethod (setf buffer) :after (buffer (view drei-buffer-view))
+  (invalidate-all-strokes view)
+  (with-accessors ((top top) (bot bot)) view
+      (setf top (make-buffer-mark buffer 0 :left)
+            bot (make-buffer-mark buffer (size buffer) :right))))
 
 (defmethod (setf syntax) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view :modified t))
@@ -656,32 +653,6 @@ are automatically set if applicable."))
       (<= y1 x1 y2)
       (<= y1 x1 x2 y2)
       (<= x1 y1 y1 x2)))
-
-(defun remember-changed-region (view start end)
-  "Note that the buffer region delimited by the offset `start'
-and `end' has been modified."
-  (labels ((worker (list)
-             ;; Return a new changed-regions list. Try to extend old
-             ;; regions instead of adding new ones.
-             (cond ((null list)
-                    (list (cons start end)))
-                   ;; If start/end overlaps with (first list), extend
-                   ;; (first list)
-                   ((overlaps start end (car (first list)) (cdr (first list)))
-                    (setf (car (first list)) (min start (car (first list)))
-                          (cdr (first list)) (max end (cdr (first list))))
-                    list)
-                   ;; If start/end is wholly before (first list), push
-                   ;; on a new region.
-                   ((< start (car (first list)))
-                    (cons (cons start end) list))
-                   ;; If start/end is wholly before (first list), go
-                   ;; further down list. If at end of list, add new
-                   ;; element.
-                   ((< (cdr (first list)) end)
-                    (setf (rest list) (worker (rest list)))
-                    list))))
-    (setf (changed-regions view) (worker (changed-regions view)))))
 
 (defclass buffer-line ()
   ((%start-mark :reader start-mark
@@ -783,12 +754,14 @@ region that has changed since the last update."
 
 (defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
                               changed-region)
-  ;; If something has been redisplayed, and there have been changes to
-  ;; some of those lines, mark them as dirty.
-  (remember-changed-region view (car changed-region) (cdr changed-region))
-  ;; I suspect it's most efficient to keep this always up to date,
-  ;; even for small changes.
-  (update-line-data view (car changed-region) (cdr changed-region)))
+  (destructuring-bind (start-offset . end-offset) changed-region
+    ;; If something has been redisplayed, and there have been changes
+    ;; to some of those strokes, mark them as dirty.
+    (invalidate-strokes-in-region
+     view start-offset end-offset :modified t)
+    ;; I suspect it's most efficient to keep this always up to date,
+    ;; even for small changes.
+    (update-line-data view start-offset end-offset)))
 
 ;;; Exploit the stored line information.
 
@@ -866,21 +839,11 @@ buffer."))
   ;; We need a new syntax object of the same type as the old one, and
   ;; to zero out the unchanged-prefix-values.
   (with-accessors ((view-syntax syntax)
-                   (point point) (mark mark)
                    (suffix-size suffix-size)
                    (prefix-size prefix-size)
                    (buffer-size buffer-size)
                    (bot bot) (top top)) view
-    (setf point (clone-mark (point buffer))
-          mark (clone-mark (point buffer) :right)
-          (offset mark) 0
-          view-syntax (make-syntax-for-view view (class-of view-syntax))
-          prefix-size 0
-          suffix-size 0
-          buffer-size -1 ; For reparse even if buffer is empty.
-          ;; Also set the top and bot marks.
-          top (make-buffer-mark buffer 0 :left)
-          bot (make-buffer-mark buffer (size buffer) :right))))
+    (setf view-syntax (make-syntax-for-view view (class-of view-syntax)))))
 
 (defmethod (setf syntax) :after (syntax (view drei-syntax-view))
   (setf (prefix-size view) 0
