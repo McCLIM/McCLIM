@@ -272,37 +272,6 @@ next redisplay."
      do (invalidate-line-strokes line
          :modified modified :cleared cleared)))
 
-(defun invalidate-strokes-in-region (view start-offset end-offset
-                                     &key modified cleared)
-  "Invalidate all the strokes of `view' that overlap the region
-`start-offset'/`end-offset' by setting their dirty-bit to
-true. If `modified' or `cleared' is true, also set their
-modified-bit to true. If `cleared' is true, inform the strokes
-that their previous output has been cleared by someone, and that
-they do not need to clear it themselves during their next
-redisplay."
-  ;; If the region is outside the visible region, no-op.
-  (when (overlaps start-offset end-offset
-                  (offset (top view)) (offset (bot view)))
-    (let ((line1-index (index-of-displayed-line-containing-offset view start-offset))
-          (line2-index (index-of-displayed-line-containing-offset view end-offset)))
-      (loop for line = (line-information view line1-index)
-            when (<= start-offset
-                     (line-start-offset line) (line-end-offset line)
-                     end-offset)
-            ;; The entire line is within the region.
-            do (invalidate-line-strokes line :modified modified
-                                             :cleared cleared)
-            ;; Only part of the line is within the region.
-            else do (do-displayed-line-strokes (stroke line)
-                      (when (overlaps start-offset end-offset
-                                      (stroke-start-offset stroke)
-                                      (stroke-end-offset stroke))
-                        (invalidate-stroke stroke :modified modified
-                                                  :cleared cleared)))
-            if (= line1-index line2-index) do (loop-finish)
-            else do (incf line1-index)))))
-
 (defmacro do-displayed-lines ((line-sym view) &body body)
   "Loop over lines on display for `view', evaluating `body' with
 `line-sym' bound to the `displayed-line' object for each line."
@@ -347,6 +316,39 @@ line."
          (let* ((,stroke-sym (aref (line-strokes ,line)
                                    (+ (line-stroke-count ,line) ,stroke-index))))
            ,@body)))))
+
+(defun invalidate-strokes-in-region (view start-offset end-offset
+                                     &key modified cleared)
+  "Invalidate all the strokes of `view' that overlap the region
+`start-offset'/`end-offset' by setting their dirty-bit to
+true. If `modified' or `cleared' is true, also set their
+modified-bit to true. If `cleared' is true, inform the strokes
+that their previous output has been cleared by someone, and that
+they do not need to clear it themselves during their next
+redisplay."
+  (as-region (start-offset end-offset)
+    ;; If the region is outside the visible region, no-op.
+    (when (and (plusp (displayed-lines-count view)) ; If there is any display...
+               (overlaps start-offset end-offset
+                         (offset (top view)) (offset (bot view))))
+      (let ((line1-index (index-of-displayed-line-containing-offset view start-offset))
+            (line2-index (index-of-displayed-line-containing-offset view end-offset)))
+        (loop for line = (line-information view line1-index)
+              when (<= start-offset
+                       (line-start-offset line) (line-end-offset line)
+                       end-offset)
+              ;; The entire line is within the region.
+              do (invalidate-line-strokes line :modified modified
+                                               :cleared cleared)
+              ;; Only part of the line is within the region.
+              else do (do-displayed-line-strokes (stroke line)
+                        (when (overlaps start-offset end-offset
+                                        (stroke-start-offset stroke)
+                                        (stroke-end-offset stroke))
+                          (invalidate-stroke stroke :modified modified
+                                                    :cleared cleared)))
+              if (= line1-index line2-index) do (loop-finish)
+              else do (incf line1-index))))))
 
 (defun find-stroke-containing-offset (view offset)
   "Find the stroke of `view' that displays the buffer offset
@@ -430,7 +432,8 @@ some point)."
 `view', and add it to the sequence of displayed strokes in
 `line'. `Line-change' should be a relative offset specifying how
 much the start-offset of `line' has changed since the last time
-it was redisplayed."
+it was redisplayed. `Offset' is the offset at which the next
+stroke will start."
   (let* ((stroke (line-stroke-information line (line-stroke-count line)))
          (old-start-offset (stroke-start-offset stroke))
          (old-end-offset (stroke-end-offset stroke))
@@ -678,19 +681,21 @@ iteration."
     ;; ugly, just complex.
     (multiple-value-bind (line-width baseline descent pump-state)
         ;; Pump all the line strokes and calculate their dimensions.
-        (loop for index from 0
-           for stroke = (line-stroke-information line index)
-           for stroke-dimensions = (stroke-dimensions stroke)
-           for pump-state = (put-stroke view line initial-pump-state offset-change) then
-           (put-stroke view line pump-state offset-change)
-           do (update-stroke-dimensions pane view stroke cursor-x cursor-y)
-           (setf cursor-x (x2 stroke-dimensions))
-           maximizing (- (dimensions-height stroke-dimensions)
-                         (center stroke-dimensions)) into descent
-           maximizing (+ (center stroke-dimensions) cursor-y) into baseline
-           summing (dimensions-width stroke-dimensions) into line-width
-           when (stroke-at-end-of-line (buffer view) stroke)
-           return (values line-width baseline descent pump-state))
+        (loop with offset = start-offset
+              for index from 0
+              for stroke = (line-stroke-information line index)
+              for stroke-dimensions = (stroke-dimensions stroke)
+              for pump-state = (put-stroke view line initial-pump-state offset-change)
+              then (put-stroke view line pump-state offset-change)
+              do (update-stroke-dimensions pane view stroke cursor-x cursor-y)
+              (setf cursor-x (x2 stroke-dimensions))
+              (setf offset (stroke-end-offset stroke))
+              maximizing (- (dimensions-height stroke-dimensions)
+                            (center stroke-dimensions)) into descent
+              maximizing (+ (center stroke-dimensions) cursor-y) into baseline
+              summing (dimensions-width stroke-dimensions) into line-width
+              when (stroke-at-end-of-line (buffer view) stroke)
+              return (values line-width baseline descent pump-state))
       (let ((line-height (- (+ baseline descent) cursor-y)))
         ;; Loop over the strokes and clear the parts of the pane that
         ;; has to be redrawn, trying to minimise the number of calls to
@@ -783,16 +788,19 @@ type (found via `presentation-type-of') to generate output."
 
 (defmethod display-drei-view-contents ((pane basic-pane) (view drei-buffer-view))
   (with-bounding-rectangle* (x1 y1 x2 y2) view
-    (let ((old-width (- x2 x1))
-          (old-height (- y2 y1)))
+    (let* ((old-width (- x2 x1))
+           (old-height (- y2 y1))
+           (start-offset (offset (beginning-of-line (top view))))
+           (pump-state (pump-state-for-offset view start-offset))
+           (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane))))
+      ;; For invalidation of the parts of the display that have
+      ;; changed.
+      (synchronize-view view :begin (offset (top view)) :end (offset (bot view)))
       (setf (displayed-lines-count view) 0
             (max-line-width view) 0)
       (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
         (with-output-recording-options (pane :record nil :draw t)
-          (loop with start-offset = (offset (beginning-of-line (top view)))
-                with pump-state = (pump-state-for-offset view start-offset)
-                with pane-height = (bounding-rectangle-height (or (pane-viewport pane) pane))
-                for line = (line-information view (displayed-lines-count view))
+          (loop for line = (line-information view (displayed-lines-count view))
                 do (multiple-value-bind (new-pump-state line-height)
                        (draw-line-strokes pane view pump-state start-offset
                                           cursor-x cursor-y old-width)
@@ -823,17 +831,19 @@ this pump state."
   "Return a pump state usable for pumpting strokes for `view' (a
 `drei-buffer-view') from `offset'."
   ;; Perform binary search looking for line starting with `offset'.
+  (synchronize-view view :begin offset)
   (with-accessors ((lines lines)) view
     (loop with low-index = 0
           with high-index = (nb-elements lines)
           for middle = (floor (+ low-index high-index) 2)
-          for line-start = (start-mark (element* lines middle))
-          do (cond ((mark> offset line-start)
+          for this-line = (element* lines middle)
+          for line-start = (start-mark this-line)
+          do (cond ((offset-in-line-p this-line offset)
+                      (loop-finish))
+                   ((mark> offset line-start)
                     (setf low-index (1+ middle)))
                    ((mark< offset line-start)
-                    (setf high-index middle))
-                   ((mark= offset line-start)
-                    (loop-finish)))
+                    (setf high-index middle)))
           finally (return (make-pump-state middle offset 0)))))
 
 (defun fetch-chunk (line chunk-index)

@@ -578,7 +578,7 @@ string. The fill pointer is automatically set to zero whenever
 the string is accessed through the reader.")
    (%displayed-lines :accessor displayed-lines
                      :initform (make-array 0 :element-type 'displayed-line
-                                           :initial-element (make-displayed-line))
+                                             :initial-element (make-displayed-line))
                      :type array
                      :documentation "An array of the
 `displayed-line' objects displayed by the view. Not all of these
@@ -594,10 +594,18 @@ is, used for display right now.")
                     :type number
                     :documentation "The width of the longest
 displayed line in device units.")
-   (lines :initform (make-instance 'standard-flexichain)
-          :reader lines
-          :documentation "The lines of the buffer, stored in a
-format that makes it easy to retrieve information about them."))
+   (%lines :initform (make-instance 'standard-flexichain)
+           :reader lines
+           :documentation "The lines of the buffer, stored in a
+format that makes it easy to retrieve information about them.")
+   (%lines-prefix :accessor lines-prefix-size
+                  :documentation "The number of unchanged
+objects at the start of the buffer since the list of lines was
+last updated.")
+   (%lines-suffix :accessor lines-suffix-size
+                  :documentation "The number of unchanged objects
+at the end of the buffer since since the list of lines was last
+updated."))
   (:metaclass modual-class)
   (:documentation "A view that contains a `drei-buffer'
 object. The buffer is displayed on a simple line-by-line basis,
@@ -608,7 +616,9 @@ are automatically set if applicable."))
                                        &key buffer single-line read-only
                                        initial-contents)
   (declare (ignore initargs))
-  (with-accessors ((top top) (bot bot)) view
+  (with-accessors ((top top) (bot bot)
+                   (lines-prefix lines-prefix-size)
+                   (lines-suffix lines-suffix-size)) view
     (unless buffer
       ;; So many fun things are defined on (setf buffer) that we use
       ;; slot-value here. This is just a glorified initform anyway.
@@ -617,8 +627,9 @@ are automatically set if applicable."))
                                         :read-only read-only
                                         :initial-contents initial-contents)))
     (setf top (make-buffer-mark (buffer view) 0 :left)
-          bot (make-buffer-mark (buffer view) (size (buffer view)) :right))
-    (update-line-data view 0 (size (buffer view)))))
+          bot (clone-mark top :right)
+          lines-prefix 0
+          lines-suffix 0)))
 
 (defmethod (setf top) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view))
@@ -628,12 +639,13 @@ are automatically set if applicable."))
 
 (defmethod (setf buffer) :after (buffer (view drei-buffer-view))
   (invalidate-all-strokes view)
-  (with-accessors ((top top) (bot bot)) view
-      (setf top (make-buffer-mark buffer 0 :left)
-            bot (make-buffer-mark buffer (size buffer) :right))))
-
-(defmethod (setf syntax) :after (new-value (view drei-buffer-view))
-  (invalidate-all-strokes view :modified t))
+  (with-accessors ((top top) (bot bot)
+                   (lines-prefix lines-prefix-size)
+                   (lines-suffix lines-suffix-size)) view
+    (setf top (make-buffer-mark buffer 0 :left)
+          bot (clone-mark top :right)
+          lines-prefix 0
+          lines-suffix 0)))
 
 (defmethod cache-string :around ((view drei-buffer-view))
   (let ((string (call-next-method)))
@@ -713,55 +725,59 @@ start at `chunk-start-offset' and extend no further than
            (cons (- (1+ chunk-end-offset)
                     line-start-offset) t)))))
 
-(defun update-line-data (view start end)
+(defun update-line-data (view)
   "Update the sequence of lines stored by the `drei-buffer-view'
-`view'. `Start' and `end' are buffer offsets delimiting the
-region that has changed since the last update."
-  (let ((low-mark (make-buffer-mark (buffer view) start :left))
-        (high-mark (make-buffer-mark (buffer view) end :left)))
-    (when (mark<= low-mark high-mark)
-      (beginning-of-line low-mark)
-      (end-of-line high-mark)
-      (with-accessors ((lines lines)) view
-        (let ((low-index 0)
-              (high-index (nb-elements lines)))
-          ;; Binary search for the start of changed lines.
-          (loop while (< low-index high-index)
-                do (let* ((middle (floor (+ low-index high-index) 2))
-                          (line-start (start-mark (element* lines middle))))
-                     (cond ((mark> low-mark line-start)
-                            (setf low-index (1+ middle)))
-                           (t
-                            (setf high-index middle)))))
-          ;; Discard lines that have to be re-analyzed.
-          (loop while (and (< low-index (nb-elements lines))
-                           (mark<= (start-mark (element* lines low-index))
-                                   high-mark))
-                do (delete* lines low-index))
-          ;; Analyze new lines.
-          (loop while (mark<= low-mark high-mark)
-                for i from low-index
-                do (progn (let ((line-start-mark (clone-mark low-mark)))
-                            (insert* lines i (make-instance
-                                              'buffer-line
-                                              :start-mark line-start-mark
-                                              :line-length (- (offset (end-of-line low-mark))
-                                                              (offset line-start-mark))))
-                            (if (end-of-buffer-p low-mark)
-                                (loop-finish)
-                                ;; skip newline
-                                (forward-object low-mark))))))))))
+`view'."
+  (with-accessors ((prefix-size lines-prefix-size)
+                   (suffix-size lines-suffix-size)) view
+    (when (<= prefix-size (- (size (buffer view)) suffix-size))
+      (let ((low-mark (make-buffer-mark (buffer view) prefix-size :left))
+            (high-mark (make-buffer-mark
+                        (buffer view) (- (size (buffer view)) suffix-size) :left)))
+        (beginning-of-line low-mark)
+        (end-of-line high-mark)
+        (with-accessors ((lines lines)) view
+          (let ((low-index 0)
+                (high-index (nb-elements lines)))
+            ;; Binary search for the start of changed lines.
+            (loop while (< low-index high-index)
+                  do (let* ((middle (floor (+ low-index high-index) 2))
+                            (line-start (start-mark (element* lines middle))))
+                       (cond ((mark> low-mark line-start)
+                              (setf low-index (1+ middle)))
+                             (t
+                              (setf high-index middle)))))
+            ;; Discard lines that have to be re-analyzed.
+            (loop while (and (< low-index (nb-elements lines))
+                             (mark<= (start-mark (element* lines low-index))
+                                     high-mark))
+                  do (delete* lines low-index))
+            ;; Analyze new lines.
+            (loop while (mark<= low-mark high-mark)
+                  for i from low-index
+                  do (progn (let ((line-start-mark (clone-mark low-mark)))
+                              (insert* lines i (make-instance
+                                                'buffer-line
+                                                :start-mark line-start-mark
+                                                :line-length (- (offset (end-of-line low-mark))
+                                                                (offset line-start-mark))))
+                              (if (end-of-buffer-p low-mark)
+                                  (loop-finish)
+                                  ;; skip newline
+                                  (forward-object low-mark)))))))))
+    (setf prefix-size (size (buffer view))
+          suffix-size (size (buffer view)))))
 
 (defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
                               changed-region)
   (destructuring-bind (start-offset . end-offset) changed-region
-    ;; If something has been redisplayed, and there have been changes
-    ;; to some of those strokes, mark them as dirty.
-    (invalidate-strokes-in-region
-     view start-offset end-offset :modified t)
-    ;; I suspect it's most efficient to keep this always up to date,
-    ;; even for small changes.
-    (update-line-data view start-offset end-offset)))
+    (with-accessors ((prefix-size lines-prefix-size)
+                     (suffix-size lines-suffix-size)) view
+      (setf prefix-size (min start-offset prefix-size)
+            suffix-size (min (- (size buffer) end-offset) suffix-size)))))
+
+(defmethod synchronize-view ((view drei-buffer-view) &key)
+  (update-line-data view))
 
 ;;; Exploit the stored line information.
 
@@ -771,24 +787,32 @@ region that has changed since the last update."
   (<= (offset (start-mark line)) offset
       (end-offset line)))
 
+(defun index-of-line-containing-offset (view mark-or-offset)
+  "Return the index of the line `mark-or-offset' is in for
+`view'. `View' must be a `drei-buffer-view'."
+  ;; Perform binary search looking for line containing `offset1'.
+  (as-offsets ((offset mark-or-offset))
+    (with-accessors ((lines lines)) view
+      (loop with low-index = 0
+            with high-index = (nb-elements lines)
+            for middle = (floor (+ low-index high-index) 2)
+            for this-line = (element* lines middle)
+            for line-start = (start-mark this-line)
+            do (cond ((offset-in-line-p this-line offset)
+                      (loop-finish))
+                     ((mark> offset line-start)
+                      (setf low-index (1+ middle)))
+                     ((mark< offset line-start)
+                      (setf high-index middle)))
+            finally (return middle)))))
+
 (defun line-containing-offset (view mark-or-offset)
   "Return the line `mark-or-offset' is in for `view'. `View'
 must be a `drei-buffer-view'."
   ;; Perform binary search looking for line containing `offset1'.
   (as-offsets ((offset mark-or-offset))
     (with-accessors ((lines lines)) view
-      (loop with low-index = 0
-         with high-index = (nb-elements lines)
-         for middle = (floor (+ low-index high-index) 2)
-         for this-line = (element* lines middle)
-         for line-start = (start-mark this-line)
-         do (cond ((offset-in-line-p this-line offset)
-                   (loop-finish))
-                  ((mark> offset line-start)
-                   (setf low-index (1+ middle)))
-                  ((mark< offset line-start)
-                   (setf high-index middle)))
-         finally (return this-line)))))
+      (element* lines (index-of-line-containing-offset view offset)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -838,11 +862,7 @@ buffer."))
   (add-observer buffer view)
   ;; We need a new syntax object of the same type as the old one, and
   ;; to zero out the unchanged-prefix-values.
-  (with-accessors ((view-syntax syntax)
-                   (suffix-size suffix-size)
-                   (prefix-size prefix-size)
-                   (buffer-size buffer-size)
-                   (bot bot) (top top)) view
+  (with-accessors ((view-syntax syntax)) view
     (setf view-syntax (make-syntax-for-view view (class-of view-syntax)))))
 
 (defmethod (setf syntax) :after (syntax (view drei-syntax-view))
@@ -869,17 +889,18 @@ buffer."))
 
 (defmethod observer-notified ((view drei-syntax-view) (buffer drei-buffer)
                               changed-region)
-  (with-accessors ((prefix-size prefix-size)
-                   (suffix-size suffix-size)) view
-    (setf prefix-size (min (car changed-region) prefix-size)
-          suffix-size (min (- (size buffer) (cdr changed-region))
-                           suffix-size)
-          (modified-p view) t))
+  (destructuring-bind (start-offset . end-offset) changed-region
+    (with-accessors ((prefix-size prefix-size)
+                     (suffix-size suffix-size)
+                     (modified-p modified-p)) view
+      (setf prefix-size (min start-offset prefix-size)
+            suffix-size (min (- (size buffer) end-offset) suffix-size)
+            modified-p t)))
   (call-next-method))
 
 (defun needs-resynchronization (view)
   "Return true if the the view of the buffer of `view' is
-potentially out of date. Return false otherwise."
+potentially out of date. Return false otherwise."  
   (not (= (prefix-size view) (suffix-size view)
           (buffer-size view) (size (buffer view)))))
 
