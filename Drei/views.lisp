@@ -771,6 +771,7 @@ start at `chunk-start-offset' and extend no further than
 (defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
                               changed-region)
   (destructuring-bind (start-offset . end-offset) changed-region
+    (invalidate-strokes-in-region view start-offset end-offset :modified t)
     (with-accessors ((prefix-size lines-prefix-size)
                      (suffix-size lines-suffix-size)) view
       (setf prefix-size (min start-offset prefix-size)
