@@ -22,7 +22,7 @@
 
 (in-package :drei-syntax)
 
-(defclass syntax (name-mixin)
+(defclass syntax (name-mixin observable-mixin)
   ((%buffer :initarg :buffer :reader buffer)
    (%command-table :initarg :command-table
                    :initform (error "A command table has not been provided for this syntax")

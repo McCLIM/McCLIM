@@ -427,24 +427,21 @@ a single stroke on display, as long as it has been redislayed at
 some point)."
   (aref (line-strokes line) (1- (line-stroke-count line))))
 
-(defun put-stroke (view line pump-state line-change)
+(defun put-stroke (view line pump-state line-change offset)
   "Use `stroke-pump' with `pump-state' to get a new stroke for
 `view', and add it to the sequence of displayed strokes in
 `line'. `Line-change' should be a relative offset specifying how
 much the start-offset of `line' has changed since the last time
 it was redisplayed. `Offset' is the offset at which the next
 stroke will start."
-  (let* ((stroke (line-stroke-information line (line-stroke-count line)))
-         (old-start-offset (stroke-start-offset stroke))
-         (old-end-offset (stroke-end-offset stroke))
-         (old-drawing-options (stroke-drawing-options stroke)))
+  (let ((stroke (line-stroke-information line (line-stroke-count line))))
+    (unless (stroke-modified stroke)
+      (incf (stroke-start-offset stroke) line-change)
+      (incf (stroke-end-offset stroke) line-change)
+      (when (or (null (stroke-start-offset stroke))
+                (/= (stroke-start-offset stroke) offset))
+        (invalidate-stroke stroke :modified t)))
     (prog1 (stroke-pump view stroke pump-state)
-      (unless (and old-start-offset
-                   (= (+ old-start-offset line-change) (stroke-start-offset stroke))
-                   (= (+ old-end-offset line-change) (stroke-end-offset stroke))
-                   (drawing-options-equal old-drawing-options
-                                          (stroke-drawing-options stroke)))
-        (invalidate-stroke stroke :modified t))
       (incf (line-stroke-count line))
       (setf (line-end-offset line) (stroke-end-offset stroke)))))
 
@@ -685,8 +682,8 @@ iteration."
               for index from 0
               for stroke = (line-stroke-information line index)
               for stroke-dimensions = (stroke-dimensions stroke)
-              for pump-state = (put-stroke view line initial-pump-state offset-change)
-              then (put-stroke view line pump-state offset-change)
+              for pump-state = (put-stroke view line initial-pump-state offset-change offset)
+              then (put-stroke view line pump-state offset-change offset)
               do (update-stroke-dimensions pane view stroke cursor-x cursor-y)
               (setf cursor-x (x2 stroke-dimensions))
               (setf offset (stroke-end-offset stroke))
@@ -795,7 +792,8 @@ type (found via `presentation-type-of') to generate output."
            (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane))))
       ;; For invalidation of the parts of the display that have
       ;; changed.
-      (synchronize-view view :begin (offset (top view)) :end (offset (bot view)))
+      (synchronize-view view :begin (offset (top view)) :end (max (offset (bot view))
+                                                                  (offset (top view))))
       (setf (displayed-lines-count view) 0
             (max-line-width view) 0)
       (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
@@ -889,6 +887,35 @@ the information managed by `view', which must be a
 
 (defmethod stroke-pump ((view drei-buffer-view) stroke pump-state)
   (buffer-view-stroke-pump view stroke pump-state))
+
+;;; The following is the equivalent of a turbocharger for the
+;;; redisplay engine.
+(defstruct (skipalong-pump-state
+             (:constructor make-skipalong-pump-state (offset)))
+  "A pump state for fast skipalong that doesn't involve
+the (potentially expensive) actual stroke pump. It transparently
+turns into a real pump state when it happens across invalid
+strokes. `Offset' is the offset of the next stroke to be pumped."
+  offset)
+
+(defmethod stroke-pump :around ((view drei-buffer-view) (stroke displayed-stroke)
+                                (pump-state skipalong-pump-state))
+  (with-accessors ((state-offset skipalong-pump-state-offset)) pump-state
+    (if (or (stroke-modified stroke)
+            (/= (stroke-start-offset stroke) state-offset))
+        (stroke-pump view stroke (pump-state-for-offset view state-offset))
+        (progn (setf state-offset
+                     (+ (stroke-end-offset stroke)
+                        (if (offset-end-of-line-p
+                             (buffer view) (stroke-end-offset stroke))
+                            1 0)))
+               pump-state))))
+
+(defmethod stroke-pump :around ((view drei-buffer-view) (stroke displayed-stroke)
+                                pump-state)
+  (if (stroke-modified stroke)
+      (call-next-method)
+      (stroke-pump view stroke (make-skipalong-pump-state (stroke-start-offset stroke)))))
 
 ;;; Cursor handling.
 
@@ -1170,7 +1197,7 @@ needed."
       (setf (offset top) (offset bot))
       (beginning-of-line top)
       (setf (offset (point view)) (offset top))
-      (invalidate-all-strokes view))))
+      (invalidate-all-strokes view :modified t))))
 
 (defmethod page-up (pane (view drei-buffer-view))
   (with-accessors ((top top) (bot bot)) view

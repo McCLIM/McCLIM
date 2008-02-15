@@ -220,7 +220,7 @@ characters."))
            
            #:drei-buffer-view #:buffer #:top #:bot #:buffer-view-p
            #:lines
-           #:buffer-line #:start-mark #:line-length #:chunks #:end-offset
+           #:buffer-line #:start-mark #:end-mark #:line-length #:chunks
            #:line-containing-offset #:offset-in-line-p
            #:buffer-view-pump-state-for-offset
            #:buffer-view-stroke-pump
@@ -242,6 +242,8 @@ characters."))
            #:prefix-start-offset
            #:overwrite-mode
            #:goal-column
+
+           #:invalidate-strokes
 
            #:view-command-tables
            #:use-editor-commands-p
@@ -538,6 +540,8 @@ editing plain text."))
 	   #:action #:new-state #:done
 	   #:reduce-fixed-number #:reduce-until-type #:reduce-all 
 	   #:error-state #:error-reduce-state
+           #:do-parse-symbols-forward
+           #:parser-symbol-containing-offset
            #:define-syntax-highlighting-rules
            #:syntax-highlighting-rules)
   (:documentation "Underlying LR parsing functionality."))

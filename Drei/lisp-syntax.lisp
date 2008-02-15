@@ -1921,6 +1921,24 @@ syntax.")
 (defmethod syntax-highlighting-rules ((syntax lisp-syntax))
   *syntax-highlighting-rules*)
 
+(defmethod invalidate-strokes ((view textual-drei-syntax-view) (syntax lisp-syntax))
+  ;; Invalidate the area touched by parenthesis highlighting, if
+  ;; applicable. Cheap test to do coarse elimination...
+  (when (or (and (not (end-of-buffer-p (point view)))
+                 (equal (object-after (point view)) #\())
+            (and (not (beginning-of-buffer-p (point view)))
+                 (equal (object-before (point view)) #\))))
+    ;; Might still be a fake match, so do the semiexpensive proper test.
+    (let ((form (form-around syntax (offset (point view)))))
+      (when form
+        (let ((start-offset (start-offset form))
+              (end-offset (end-offset form)))
+          (when (or (mark= start-offset (point view))
+                    (mark= end-offset (point view)))
+            ;; We actually have parenthesis highlighting.
+            (list (cons start-offset (1+ start-offset))
+                  (cons (1- end-offset) end-offset))))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; exploit the parse

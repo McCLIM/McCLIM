@@ -605,7 +605,10 @@ last updated.")
    (%lines-suffix :accessor lines-suffix-size
                   :documentation "The number of unchanged objects
 at the end of the buffer since since the list of lines was last
-updated."))
+updated.")
+   (%last-seen-buffer-size :accessor last-seen-buffer-size
+                           :documentation "The buffer size the
+last time a change to the buffer was registered."))
   (:metaclass modual-class)
   (:documentation "A view that contains a `drei-buffer'
 object. The buffer is displayed on a simple line-by-line basis,
@@ -618,7 +621,8 @@ are automatically set if applicable."))
   (declare (ignore initargs))
   (with-accessors ((top top) (bot bot)
                    (lines-prefix lines-prefix-size)
-                   (lines-suffix lines-suffix-size)) view
+                   (lines-suffix lines-suffix-size)
+                   (buffer-size last-seen-buffer-size)) view
     (unless buffer
       ;; So many fun things are defined on (setf buffer) that we use
       ;; slot-value here. This is just a glorified initform anyway.
@@ -629,7 +633,8 @@ are automatically set if applicable."))
     (setf top (make-buffer-mark (buffer view) 0 :left)
           bot (clone-mark top :right)
           lines-prefix 0
-          lines-suffix 0)))
+          lines-suffix 0
+          buffer-size (size (buffer view)))))
 
 (defmethod (setf top) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view))
@@ -641,11 +646,13 @@ are automatically set if applicable."))
   (invalidate-all-strokes view)
   (with-accessors ((top top) (bot bot)
                    (lines-prefix lines-prefix-size)
-                   (lines-suffix lines-suffix-size)) view
+                   (lines-suffix lines-suffix-size)
+                   (buffer-size last-seen-buffer-size)) view
     (setf top (make-buffer-mark buffer 0 :left)
           bot (clone-mark top :right)
           lines-prefix 0
-          lines-suffix 0)))
+          lines-suffix 0
+          buffer-size 0)))
 
 (defmethod cache-string :around ((view drei-buffer-view))
   (let ((string (call-next-method)))
@@ -670,9 +677,9 @@ are automatically set if applicable."))
   ((%start-mark :reader start-mark
                 :initarg :start-mark
                 :documentation "The mark at which this line starts.")
-   (%line-length :reader line-length
-                 :initarg :line-length
-                 :documentation "The length of the line described by this object.")
+   (%end-mark :reader end-mark
+              :initarg :end-mark
+              :documentation "The mark at which this line ends.")
    (%chunks :accessor chunks
             :initform (make-array 5
                        :adjustable t
@@ -700,9 +707,15 @@ buffer associated with a `drei-buffer-view'"))
         when (= chunk-start-offset line-end-offset)
         do (loop-finish)))
 
+(defmethod start-offset ((line buffer-line))
+  (offset (start-mark line)))
+
 (defmethod end-offset ((line buffer-line))
-  "Return the end buffer offset of `line'."
-  (+ (offset (start-mark line)) (line-length line)))
+  (offset (end-mark line)))
+
+(defun line-length (line)
+  "Return the length of the `buffer-line' object `line'."
+  (- (end-offset line) (start-offset line)))
 
 (defun get-chunk (buffer line-start-offset chunk-start-offset line-end-offset)
   "Return a chunk in the form of a cons cell. The chunk will
@@ -755,12 +768,11 @@ start at `chunk-start-offset' and extend no further than
             ;; Analyze new lines.
             (loop while (mark<= low-mark high-mark)
                   for i from low-index
-                  do (progn (let ((line-start-mark (clone-mark low-mark)))
-                              (insert* lines i (make-instance
-                                                'buffer-line
+                  do (progn (let ((line-start-mark (clone-mark low-mark :left))
+                                  (line-end-mark (clone-mark (end-of-line low-mark) :right)))
+                              (insert* lines i (make-instance 'buffer-line
                                                 :start-mark line-start-mark
-                                                :line-length (- (offset (end-of-line low-mark))
-                                                                (offset line-start-mark))))
+                                                :end-mark line-end-mark))
                               (if (end-of-buffer-p low-mark)
                                   (loop-finish)
                                   ;; skip newline
@@ -770,12 +782,40 @@ start at `chunk-start-offset' and extend no further than
 
 (defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
                               changed-region)
+  (declare (optimize (debug 3)))
   (destructuring-bind (start-offset . end-offset) changed-region
-    (invalidate-strokes-in-region view start-offset end-offset :modified t)
     (with-accessors ((prefix-size lines-prefix-size)
-                     (suffix-size lines-suffix-size)) view
-      (setf prefix-size (min start-offset prefix-size)
-            suffix-size (min (- (size buffer) end-offset) suffix-size)))))
+                     (suffix-size lines-suffix-size)
+                     (buffer-size last-seen-buffer-size)) view
+      ;; Figure out whether the change involved insertion or deletion of
+      ;; a newline.
+      (let* ((line-index (index-of-line-containing-offset view start-offset))
+             (line (element* (lines view) line-index))
+             (newline-change
+              (or (loop for index from start-offset below end-offset
+                        when (equal (buffer-object (buffer view) index) #\Newline)
+                        return t)
+                  ;; If the line is joined with the one before or
+                  ;; after it, a newline object has been removed.
+                  (or (when (/= line-index (nb-elements (lines view)))
+                        (= (start-offset (element* (lines view) (1+ line-index)))
+                           (end-offset line)))
+                      (when (plusp line-index)
+                        (= (end-offset (element* (lines view) (1- line-index)))
+                           (start-offset line)))))))
+        ;; If the line structure changed, everything after the newline is suspect.
+        (invalidate-strokes-in-region view start-offset
+                                      (if newline-change
+                                          (max start-offset (offset (bot view)))
+                                          end-offset)
+                                      :modified t)
+        (setf prefix-size (min start-offset prefix-size)
+              suffix-size (min (- (size buffer) end-offset) suffix-size)
+              buffer-size (size buffer))
+        ;; If the line structure changed, we need to update the line
+        ;; data, or we can't pick up future changes correctly.
+        (when newline-change
+          (update-line-data view))))))
 
 (defmethod synchronize-view ((view drei-buffer-view) &key)
   (update-line-data view))
@@ -844,13 +884,14 @@ buffer."))
                                        &key (syntax *default-syntax*))
   (declare (ignore args))
   (check-type syntax (or symbol syntax))
-  (with-accessors ((view-syntax syntax)
-                   (buffer buffer)
+  (with-accessors ((buffer buffer)
                    (suffix-size suffix-size)
                    (prefix-size prefix-size)) view
-    (setf view-syntax (if (symbolp syntax)
-                          (make-syntax-for-view view syntax)
-                          syntax))
+    (setf (slot-value view '%syntax)
+          (if (symbolp syntax)
+              (make-syntax-for-view view syntax)
+              syntax))
+    (add-observer (syntax view) view)
     (add-observer buffer view)))
 
 (defmethod (setf buffer) :before ((buffer drei-buffer) (view drei-syntax-view))
@@ -866,7 +907,11 @@ buffer."))
   (with-accessors ((view-syntax syntax)) view
     (setf view-syntax (make-syntax-for-view view (class-of view-syntax)))))
 
+(defmethod (setf syntax) :before (syntax (view drei-syntax-view))
+  (remove-observer (syntax view) view))
+
 (defmethod (setf syntax) :after (syntax (view drei-syntax-view))
+  (add-observer syntax view)
   (setf (prefix-size view) 0
         (suffix-size view) 0
         (buffer-size view) -1))
@@ -898,6 +943,11 @@ buffer."))
             suffix-size (min (- (size buffer) end-offset) suffix-size)
             modified-p t)))
   (call-next-method))
+
+(defmethod observer-notified ((view drei-syntax-view) (syntax syntax)
+                              changed-region)
+  (destructuring-bind (start-offset . end-offset) changed-region
+    (invalidate-strokes-in-region view start-offset end-offset :modified t)))
 
 (defun needs-resynchronization (view)
   "Return true if the the view of the buffer of `view' is
@@ -1017,6 +1067,37 @@ into its buffer."))
 textual representation of the buffer, possibly with syntax
 highlighting, and maintains point and mark marks into the buffer,
 in order to permit useful editing commands."))
+
+(defgeneric invalidate-strokes (view syntax)
+  (:documentation "Called just before redisplay of the
+`textual-drei-syntax-view' `view' in order to give `syntax',
+which is the syntax of `view', a chance to mark part of the
+display as invalid due to do something not caused by buffer
+modification (for example, parenthesis matching). This function
+should return a list of pairs of buffer offsets, each pair
+delimiting a buffer region that should be redrawn.")
+  (:method ((view textual-drei-syntax-view view) (syntax syntax))
+    nil))
+
+(defun invalidate-as-appropriate (view invalid-regions)
+  "Invalidate strokes of `view' overlapping regions in
+`invalid-regions'. `Invalid-regions' is a list of conses of
+buffer offsets delimiting regions."
+  (loop with top-offset = (offset (top view))
+        with bot-offset = (offset (bot view))
+        for (start . end) in invalid-regions
+        do (as-region (start end)
+             (when (overlaps start end top-offset bot-offset)
+               (invalidate-strokes-in-region view start end :modified t)))))
+
+(defmethod display-drei-view-contents :around (stream (view textual-drei-syntax-view))
+  (let ((invalid-regions (invalidate-strokes view (syntax view))))
+    (invalidate-as-appropriate view invalid-regions)
+    (call-next-method)
+    ;; We do not expect whatever ephemeral state that caused
+    ;; invalidation to stick around until the next redisplay, so
+    ;; whatever it imposed on us, mark as dirty immediately.
+    (invalidate-as-appropriate view invalid-regions)))
 
 (defmethod create-view-cursors nconc ((output-stream extended-output-stream)
                                       (view textual-drei-syntax-view))
