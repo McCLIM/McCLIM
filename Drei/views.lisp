@@ -797,7 +797,7 @@ start at `chunk-start-offset' and extend no further than
                         return t)
                   ;; If the line is joined with the one before or
                   ;; after it, a newline object has been removed.
-                  (or (when (/= line-index (nb-elements (lines view)))
+                  (or (when (< (1+ line-index) (nb-elements (lines view)))
                         (= (start-offset (element* (lines view) (1+ line-index)))
                            (end-offset line)))
                       (when (plusp line-index)
