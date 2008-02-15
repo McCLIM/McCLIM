@@ -71,6 +71,7 @@
 (defmethod stream-present :around 
     ((stream listener-interactor-pane) object type
      &rest args &key (single-box nil sbp) &allow-other-keys)
+  (declare (ignore single-box sbp))
   (apply #'call-next-method stream object type :single-box t args)
   ;; we would do this, but CLIM:PRESENT calls STREAM-PRESENT with all
   ;; the keyword arguments explicitly.  *sigh*.
@@ -166,15 +167,17 @@
                           (height 550)
                           port
                           frame-manager
-                          (process-name "Listener"))  
+                          (process-name "Listener")
+                          (package :clim-user))
   (let* ((fm (or frame-manager (find-frame-manager :port (or port (find-port)))))
          (frame (make-application-frame 'listener
                                        :frame-manager fm
                                        :width width
                                        :height height)))
     (flet ((run () 
-             (unwind-protect (run-frame-top-level frame)
-               (disown-frame fm frame))))
+             (let ((*package* (find-package package)))
+               (unwind-protect (run-frame-top-level frame)
+                 (disown-frame fm frame)))))
       (if new-process
           (values (clim-sys:make-process #'run :name process-name)
                   frame)

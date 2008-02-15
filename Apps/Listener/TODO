@@ -14,7 +14,6 @@ Listener TODO:
    to distinguish between subtypes in methods.
  - Flesh out icons - support multiple sizes in separate subdirectories of icons/
  - Implement sorting and other options to Show Directory
- - Do something about Edit File and Show File
  - Copy File, Delete File, etc.
  - Debugger integration
 

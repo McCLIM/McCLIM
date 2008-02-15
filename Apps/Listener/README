@@ -49,13 +49,10 @@ features used (MOP, pathnames, run-program, environment variables, etc).
 Usage
 -----
 
-After starting the listener, a typical lisp prompt will be displayed, with
-the package name preceding the prompt. You may type lisp forms or commands to
-this prompt. The listener will treat alphabetical characters as beginning a 
-command name, and most other characters as the beginning of a lisp form. If for
-some reason you had a special variable with a name such as FOO which would be
-interpreted as a command, you can use a comma before the variable name as an 
-escape character.
+After starting the listener, a typical lisp prompt will be displayed, with the
+package name preceding the prompt. You may type lisp forms or commands to this
+prompt. The , (comma) character starts a command, every other input will be
+treated by the listener as a form to be evaluated.
 
 At the bottom of the window is a wholine which shows various things such as the
 username/hostname, package, current directory (*default-pathname-defaults*), 
