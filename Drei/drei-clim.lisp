@@ -337,7 +337,8 @@ modifier key."))
 
 (defmethod additional-command-tables append ((drei drei-gadget-pane)
                                              (table drei-command-table))
-  `(exclusive-gadget-table))
+  `(exclusive-gadget-table
+    ,(frame-command-table *application-frame*)))
 
 (defclass drei-area (drei displayed-output-record region
                           command-processor
