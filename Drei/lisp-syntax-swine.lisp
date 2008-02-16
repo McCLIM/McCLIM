@@ -927,3 +927,141 @@ results."
              (result (apply #'format nil "~{{~:[No values~;~:*~{~S~^,~}~]}~}"
                             values)))
         (esa:display-message result)))))
+
+(defclass undefiner ()
+  ()
+  (:documentation "A base class for classes that contain logic
+for undefining Lisp constructs. Subclasses of `undefiner' must
+implement the undefiner protocol. An instance of `undefiner'
+works on a specific kind of definition (a `defun', `defclass',
+`defgeneric', etc)."))
+
+(defgeneric undefiner-type (undefiner)
+  (:documentation "Return the kind of definition undefined by
+`undefiner'. The return value is a string - a textual,
+user-oriented description."))
+
+(defgeneric definition-name (undefiner syntax definition-form)
+  (:documentation "Return the name of the definition described by
+`definition-form', as per the kind of definition `undefiner'
+handles. `Syntax' is the Lisp syntax object that has
+`definition-form'. The name returned is an actual Lisp
+object. `Form-conversion-error' is signalled if the form
+describing the name cannot be converted to an object, or if the
+form is otherwise inappropriate."))
+
+(defgeneric undefine (undefiner syntax definition-form)
+  (:documentation "Undefine whatever `definition-form' defines,
+provided `definition-form' is the kind of definition handled by
+`undefiner'. If it isn't, the results are undefined. `Syntax' is
+the Lisp syntax object that has `definition-form'."))
+
+(defclass simple-undefiner (undefiner)
+  ((%undefiner-type :reader undefiner-type
+                    :initform (error "A description must be provided.")
+                    :type string
+                    :documentation "A textual, user-oriented name
+for the type of definition handled by this
+undefiner."
+                    :initarg :undefiner-type)
+   (%undefiner-function :reader undefiner-function
+                        :initform (error "An undefiner function must be provided.")
+                        :documentation "A function of three
+arguments: the syntax object, the name of the definition to be
+undefined and the form to be undefined."
+                        :initarg :undefiner-function)))
+
+(defmethod definition-name ((undefiner simple-undefiner) (syntax lisp-syntax) (form form))
+  (form-conversion-error syntax form "Form ~A cannot define a ~A." (undefiner-type undefiner)))
+
+(defmethod definition-name ((undefiner simple-undefiner) (syntax lisp-syntax) (form list-form))
+  (if (>= (length (form-children form)) 2)
+      (form-to-object syntax (second-form (children form)))
+      (call-next-method)))
+
+(defmethod undefine ((undefiner simple-undefiner) (syntax lisp-syntax) (form form))
+  (funcall (undefiner-function undefiner) syntax
+           (definition-name undefiner syntax form)
+           form))
+
+(defvar *undefiners* (make-hash-table)
+  "A hash table mapping operators to undefiners. The undefiners
+are instances of `undefiner'.")
+
+(defun get-undefiner (definition-type)
+  "Return the undefiner for `definition-type', which must be a
+symbol. Returns NIL if there is no undefiner of the given type."
+  (values (gethash definition-type *undefiners*)))
+
+(defmacro define-simple-undefiner (definition-spec (syntax-sym name-sym form-sym) &body body)
+  "Define a way to undefine some definition. `Definition-spec' is
+the operator (like `defun', `defclass', etc), and `syntax-sym',
+`name-sym' and `form-sym' will be bound to the Lisp syntax
+instance, the name of the definition to be undefined and the
+entire form of the definition, when the undefinition is invoked
+by the user. Syntactical problems (such as an incomplete or
+invalid `form') should be signalled via `form-conversion-error'."
+  (check-type definition-spec (or list symbol))
+  (let* ((definition-type (unlisted definition-spec))
+         (undefiner-name (if (listp definition-spec)
+                             (second definition-spec)
+                             (string-downcase definition-type))))
+    (check-type definition-type symbol)
+    `(setf (gethash ',definition-type *undefiners*)
+           (make-instance 'simple-undefiner
+            :undefiner-type ,undefiner-name
+            :undefiner-function #'(lambda (,syntax-sym ,name-sym ,form-sym)
+                                    (declare (ignorable ,syntax-sym ,name-sym ,form-sym))
+                                    ,@body)))))
+
+(define-simple-undefiner (defun "function") (syntax name form)
+  (fmakunbound name))
+
+(define-simple-undefiner (defgeneric "generic function") (syntax name form)
+  (fmakunbound name))
+
+(define-simple-undefiner (defmacro "macro") (syntax name form)
+  (fmakunbound name))
+
+(define-simple-undefiner (cl:defclass "class") (syntax name form)
+  (setf (find-class name nil) nil))
+
+(define-simple-undefiner (clim-lisp:defclass "class") (syntax name form)
+  (setf (find-class name nil) nil))
+
+(define-simple-undefiner (defmethod "method") (syntax name form)
+  (let ((function (fdefinition name)))
+    (labels ((get-qualifiers (maybe-qualifiers)
+               (unless (or (null maybe-qualifiers)
+                           (form-list-p (first maybe-qualifiers)))
+                 (cons (form-to-object syntax (first maybe-qualifiers))
+                       (get-qualifiers (rest maybe-qualifiers)))))
+             (get-specializers (maybe-specializers)
+               (cond ((null maybe-specializers)
+                      (form-conversion-error syntax form "~A form invalid." 'defmethod))
+                     ;; Map across the elements in the lambda list.
+                     ((form-list-p (first maybe-specializers))
+                      (mapcar #'(lambda (ll-form)
+                                  (if (and (form-list-p ll-form)
+                                           (second-form (children ll-form)))
+                                      (form-to-object syntax (second-form (children ll-form)))
+                                      t))
+                              (form-children (first maybe-specializers))))
+                     ;; Skip the qualifiers to get the lambda-list.
+                     (t (get-specializers (rest maybe-specializers))))))
+      (remove-method function (find-method function
+                                           (get-qualifiers (cddr (form-children form)))
+                                           (get-specializers (cddr (form-children form)))
+                                           nil)))))
+
+(define-simple-undefiner (defvar "special variable") (syntax name form)
+  (makunbound name))
+
+(define-simple-undefiner (defparameter "special variable") (syntax name form)
+  (makunbound name))
+
+(define-simple-undefiner (defconstant "constant") (syntax name form)
+  (makunbound name))
+
+(define-simple-undefiner (defpackage "package") (syntax name form)
+  (delete-package name))

@@ -169,6 +169,37 @@ the arglist for the most recently enclosed operator."
 (define-command (com-eval-defun :name t :command-table pane-lisp-table) ()
   (eval-defun (point) (current-syntax)))
 
+(define-command (com-remove-definition :name t :command-table lisp-table)
+    ()
+  "Remove the definition point is in.
+
+The operator of the definition form will be used to determine
+what kind of definition it is. The user will be asked for
+confirmation before anything is actually done."
+  (let ((definition-form (definition-at-mark (current-syntax) (point))))
+    (if (or (null definition-form)
+            (mark> (point) (end-offset definition-form))
+            (mark< (point) (start-offset definition-form)))
+        (display-message "No definition found at point.")
+        (handler-case
+            (let* ((definition-type (form-to-object (current-syntax)
+                                                    (form-operator definition-form)))
+                   (undefiner (get-undefiner definition-type)))
+              (if (null undefiner)
+                  (display-message "Doesn't know how to undefine ~S." definition-type)
+                  (handler-case
+                      (when (accept 'boolean
+                             :prompt (format nil "Undefine the ~A ~S?"
+                                             (undefiner-type undefiner)
+                                             (definition-name undefiner (current-syntax) definition-form))
+                             :default t :insert-default t)
+                        (undefine undefiner (current-syntax) definition-form))
+                    (form-conversion-error (e)
+                      (display-message "Could not undefine ~S form: ~A" definition-type (problem e))))))
+          (form-conversion-error (e)
+            (display-message "Couldn't turn \"~A\" into valid operator: ~A"
+                             (form-string (current-syntax) (form e)) (problem e)))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Gesture bindings
@@ -261,3 +292,6 @@ the arglist for the most recently enclosed operator."
 	 'lisp-table
 	 '((#\Delete :control :meta)))
 
+(set-key 'com-remove-definition
+         'lisp-table
+         '((#\c :control) (#\u :control)))
