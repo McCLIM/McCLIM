@@ -318,14 +318,16 @@ line."
            ,@body)))))
 
 (defun invalidate-strokes-in-region (view start-offset end-offset
-                                     &key modified cleared)
+                                     &key modified cleared to-line-end)
   "Invalidate all the strokes of `view' that overlap the region
 `start-offset'/`end-offset' by setting their dirty-bit to
 true. If `modified' or `cleared' is true, also set their
 modified-bit to true. If `cleared' is true, inform the strokes
 that their previous output has been cleared by someone, and that
 they do not need to clear it themselves during their next
-redisplay."
+redisplay. If `to-line-end' is true, if a line is in the region,
+strokes in it will be invalidated until the end, even if line-end
+is beyond the region."
   (as-region (start-offset end-offset)
     ;; If the region is outside the visible region, no-op.
     (when (and (plusp (displayed-lines-count view)) ; If there is any display...
@@ -342,9 +344,11 @@ redisplay."
                                                :cleared cleared)
               ;; Only part of the line is within the region.
               else do (do-displayed-line-strokes (stroke line)
-                        (when (overlaps start-offset end-offset
-                                        (stroke-start-offset stroke)
-                                        (stroke-end-offset stroke))
+                        (when (if to-line-end
+                                  (<= start-offset (stroke-start-offset stroke))
+                                  (overlaps start-offset end-offset
+                                            (stroke-start-offset stroke)
+                                            (stroke-end-offset stroke)))
                           (invalidate-stroke stroke :modified modified
                                                     :cleared cleared)))
               if (= line1-index line2-index) do (loop-finish)

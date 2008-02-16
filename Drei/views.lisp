@@ -782,7 +782,6 @@ start at `chunk-start-offset' and extend no further than
 
 (defmethod observer-notified ((view drei-buffer-view) (buffer drei-buffer)
                               changed-region)
-  (declare (optimize (debug 3)))
   (destructuring-bind (start-offset . end-offset) changed-region
     (with-accessors ((prefix-size lines-prefix-size)
                      (suffix-size lines-suffix-size)
@@ -808,7 +807,8 @@ start at `chunk-start-offset' and extend no further than
                                       (if newline-change
                                           (max start-offset (offset (bot view)))
                                           end-offset)
-                                      :modified t)
+                                      :modified t
+                                      :to-line-end t)
         (setf prefix-size (min start-offset prefix-size)
               suffix-size (min (- (size buffer) end-offset) suffix-size)
               buffer-size (size buffer))
