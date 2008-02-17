@@ -559,6 +559,9 @@ drawing options onto `pump-state'."
            (line-end-offset (end-offset line)))
       (flet ((finish (new-offset symbol &optional stroke-drawing-options sticky-p)
                (setf start-symbol symbol)
+               (loop until (> (frame-end-offset (first drawing-options))
+                              new-offset)
+                     do (pop drawing-options))
                (unless (null stroke-drawing-options)
                  (push (if (frame-sticky-p (first drawing-options))
                            (make-drawing-options-frame

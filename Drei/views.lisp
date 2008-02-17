@@ -1088,7 +1088,8 @@ buffer offsets delimiting regions."
         for (start . end) in invalid-regions
         do (as-region (start end)
              (when (overlaps start end top-offset bot-offset)
-               (invalidate-strokes-in-region view start end :modified t)))))
+               (invalidate-strokes-in-region view start end
+                :modified t :to-line-end t)))))
 
 (defmethod display-drei-view-contents :around (stream (view textual-drei-syntax-view))
   (let ((invalid-regions (invalidate-strokes view (syntax view))))
