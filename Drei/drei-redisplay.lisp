@@ -344,11 +344,10 @@ is beyond the region."
                                                :cleared cleared)
               ;; Only part of the line is within the region.
               else do (do-displayed-line-strokes (stroke line)
-                        (when (if to-line-end
-                                  (<= start-offset (stroke-start-offset stroke))
-                                  (overlaps start-offset end-offset
-                                            (stroke-start-offset stroke)
-                                            (stroke-end-offset stroke)))
+                        (when (overlaps start-offset
+                                        (if to-line-end (line-end-offset line) end-offset)
+                                        (stroke-start-offset stroke)
+                                        (stroke-end-offset stroke))
                           (invalidate-stroke stroke :modified modified
                                                     :cleared cleared)))
               if (= line1-index line2-index) do (loop-finish)
