@@ -956,6 +956,26 @@ provided `definition-form' is the kind of definition handled by
 `undefiner'. If it isn't, the results are undefined. `Syntax' is
 the Lisp syntax object that has `definition-form'."))
 
+(defvar *undefiners* (make-hash-table)
+  "A hash table mapping operators to undefiners. The undefiners
+are instances of `undefiner'.")
+
+(defun get-undefiner (definition-type)
+  "Return the undefiner for `definition-type', which must be a
+symbol. Returns NIL if there is no undefiner of the given type."
+  (values (gethash definition-type *undefiners*)))
+
+(defun invalid-form-for-type (syntax form type-name)
+  "Signal a `form-conversion-error' describing the fact that
+`form' cannot define a `type-name'."
+  (form-conversion-error syntax form "Form cannot define a ~A." type-name))
+
+(defun invalid-form (undefiner syntax form)
+  "Signal a `form-conversion-error' describing the fact that
+`form' cannot define whatever kind of definition `undefiner'
+handles."
+  (invalid-form-for-type syntax form (undefiner-type undefiner)))
+
 (defclass simple-undefiner (undefiner)
   ((%undefiner-type :reader undefiner-type
                     :initform (error "A description must be provided.")
@@ -972,7 +992,7 @@ undefined and the form to be undefined."
                         :initarg :undefiner-function)))
 
 (defmethod definition-name ((undefiner simple-undefiner) (syntax lisp-syntax) (form form))
-  (form-conversion-error syntax form "Form ~A cannot define a ~A." (undefiner-type undefiner)))
+  (invalid-form undefiner syntax form))
 
 (defmethod definition-name ((undefiner simple-undefiner) (syntax lisp-syntax) (form list-form))
   (if (>= (length (form-children form)) 2)
@@ -983,15 +1003,6 @@ undefined and the form to be undefined."
   (funcall (undefiner-function undefiner) syntax
            (definition-name undefiner syntax form)
            form))
-
-(defvar *undefiners* (make-hash-table)
-  "A hash table mapping operators to undefiners. The undefiners
-are instances of `undefiner'.")
-
-(defun get-undefiner (definition-type)
-  "Return the undefiner for `definition-type', which must be a
-symbol. Returns NIL if there is no undefiner of the given type."
-  (values (gethash definition-type *undefiners*)))
 
 (defmacro define-simple-undefiner (definition-spec (syntax-sym name-sym form-sym) &body body)
   "Define a way to undefine some definition. `Definition-spec' is
@@ -1013,6 +1024,82 @@ invalid `form') should be signalled via `form-conversion-error'."
             :undefiner-function #'(lambda (,syntax-sym ,name-sym ,form-sym)
                                     (declare (ignorable ,syntax-sym ,name-sym ,form-sym))
                                     ,@body)))))
+
+(defclass generic-undefiner (undefiner)
+  ((%undefiner-type :reader undefiner-type
+                    :initform (error "A description must be provided.")
+                    :type string
+                    :documentation "A textual, user-oriented name
+for the type of definition handled by this
+undefiner."
+                    :initarg :undefiner-type)
+   (%name-function :reader name-function
+                   :initform (error "A name retrieval function must be provided.")
+                   :documentation "A function of three arguments:
+the syntax object and the form to retrieve a name from. Should
+return the name as a Lisp object (probably a symbol). Should
+signal a `form-conversion-error' if the form cannot define
+whatever type this undefiner handles."
+                   :initarg :name-function)
+   (%undefiner-function :reader undefiner-function
+                        :initform (error "An undefiner function must be provided.")
+                        :documentation "A function of three
+arguments: the syntax object, the name of the definition to be
+undefined and the form to be undefined."
+                        :initarg :undefiner-function)))
+
+(defmethod definition-name ((undefiner generic-undefiner) (syntax lisp-syntax) (form form))
+  (funcall (name-function undefiner) syntax form))
+
+(defmethod undefine ((undefiner generic-undefiner) (syntax lisp-syntax) (form form))
+  (funcall (undefiner-function undefiner) syntax
+           (definition-name undefiner syntax form)
+           form))
+
+(defmacro define-undefiner (definition-spec
+                            ((name-syntax-sym name-form-sym) &body name-body)
+                            ((undef-syntax-sym undef-name-sym undef-form-sym)
+                             &body undefiner-body))
+  "Define a way to undefine definitions. `Definition-spec' is the
+operator (like `defun', `defclass', etc) and may optionally be a
+list, in which case the first element is the operator, and the
+second a user-oriented name for the kind of thing defined by the
+operator. `Name-body' and `Undefiner-body' will be evaluated to
+retrieve the name and perform the undefinition, respectively.
+
+`Name-syntax-sym' and `name-form-sym' will be bound to the Lisp
+syntax instance and the entire form of the definition during
+evaluation of `name-body'. Syntactical problems (such as an
+incomplete or invalid form) should be signalled by an
+invocation `(invalid)'
+
+`undef-syntax-sym', `undef-name-sym' and `undef-form-sym' will be
+bound to the Lisp syntax instance, the name of the definition to
+be undefined and the entire form of the definition when
+`undefiner-body' is evaluated. Syntactical problems (such as an
+incomplete or invalid form) should be signalled by an
+invocation `(invalid)'."
+  (check-type definition-spec (or list symbol))
+  (let* ((definition-type (unlisted definition-spec))
+         (undefiner-name (if (listp definition-spec)
+                             (second definition-spec)
+                             (string-downcase definition-type))))
+    (check-type definition-type symbol)
+    `(setf (gethash ',definition-type *undefiners*)
+           (make-instance 'generic-undefiner
+            :undefiner-type ,undefiner-name
+            :name-function #'(lambda (,name-syntax-sym ,name-form-sym)
+                               (declare (ignorable ,name-syntax-sym ,name-form-sym))
+                               (flet ((invalid ()
+                                        (invalid-form-for-type ,name-syntax-sym ,name-form-sym ,undefiner-name)))
+                                 (declare (ignorable #'invalid))
+                                 ,@name-body))
+            :undefiner-function #'(lambda (,undef-syntax-sym ,undef-name-sym ,undef-form-sym)
+                                    (declare (ignorable ,undef-syntax-sym ,undef-name-sym ,undef-form-sym))
+                                    (flet ((invalid ()
+                                             (invalid-form-for-type ,undef-syntax-sym ,undef-form-sym ,undef-name-sym)))
+                                      (declare (ignorable #'invalid))
+                                      ,@undefiner-body))))))
 
 (define-simple-undefiner (defun "function") (syntax name form)
   (fmakunbound name))
@@ -1065,3 +1152,50 @@ invalid `form') should be signalled via `form-conversion-error'."
 
 (define-simple-undefiner (defpackage "package") (syntax name form)
   (delete-package name))
+
+(defun get-listed-name (syntax form)
+  "Retrieve the name of `form' under the assumption that the name
+is the second element of `form', and if this is a list, the first
+element of that list. The secondary value will be true if a name
+can be found, false otherwise."
+  (if (and (form-list-p form)
+           (>= (length (form-children form)) 2))
+      (let ((name-form (second (form-children form))))
+        (cond ((and (form-list-p name-form)
+                    (form-children name-form))
+               (values (form-to-object syntax (first (form-children name-form))) t))
+              ((form-token-p name-form)
+               (values (form-to-object syntax name-form) t))
+              (t (values nil nil))))
+      (values nil nil)))
+
+;; Cannot recognize the common define-FOO-command macros.
+(define-undefiner (define-command "command")
+  ((syntax form)
+   (multiple-value-bind (name success) (get-listed-name syntax form)
+     (if success name (invalid))))
+  ((syntax name form)
+   ;; Pick out the command table from the define-command form. The
+   ;; command may also be in other command tables, but we can't find
+   ;; those.
+   (let ((name-form (listed (form-to-object syntax (second (form-children form))))))
+     (destructuring-bind (ignore &key command-table keystroke &allow-other-keys) name-form
+       (declare (ignore ignore))
+       (when command-table
+         (remove-command-from-command-table name command-table :errorp nil)
+         (remove-keystroke-from-command-table command-table keystroke :errorp nil))))
+   (fmakunbound name)))
+
+(define-undefiner (define-undefiner "undefiner")
+  ((syntax form)
+   (multiple-value-bind (name success) (get-listed-name syntax form)
+     (if success name (invalid))))
+  ((syntax name form)
+   (remhash name *undefiners*)))
+
+(define-undefiner (define-simple-undefiner "simple undefiner")
+  ((syntax form)
+   (multiple-value-bind (name success) (get-listed-name syntax form)
+     (if success name (invalid))))
+  ((syntax name form)
+   (remhash name *undefiners*)))
