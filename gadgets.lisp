@@ -1463,7 +1463,7 @@ and must never be nil."))
       (let ((ts (scroll-bar-thumb-size sb)))
         ;; This is the right spot to handle ts = :none or perhaps NIL
         (multiple-value-bind (range) (gadget-range sb)
-          (let ((ts-in-pixels (round (* (- y3 y1) (/ ts (+ range ts)))))) ;### range + ts = 0?
+          (let ((ts-in-pixels (round (* (- y3 y1) (/ ts (max 1 (+ range ts))))))) ; handle range + ts = 0
             (setf ts-in-pixels (min (- y3 y1) ;thumb can't be larger than the thumb bed
                                     (max +minimum-thumb-size-in-pixels+ ;but shouldn't be smaller than this.
                                          ts-in-pixels)))
