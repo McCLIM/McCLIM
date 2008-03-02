@@ -2903,7 +2903,7 @@ will be signalled for incomplete forms.")
       (list +quote-marker+ (apply #'form-to-object syntax (second (children form)) args))
       `',(apply #'form-to-object syntax (second (children form)) args)))
 
-(defmethod form-to-object (syntax (form incomplete-quote-form) &rest args)
+(defmethod form-to-object ((syntax lisp-syntax) (form incomplete-quote-form) &rest args)
   (declare (ignore args))
   ;; Utterly arbitrary, but reasonable in my opinion.
   '(quote))
