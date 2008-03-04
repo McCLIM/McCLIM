@@ -75,15 +75,27 @@ specialized on, removing duplicates"
       #+CMU (typep x 'pcl::class)
       #+scl (typep x 'clos::std-class)))
 
+;; FIXME: returns nil if there is both an EQL specializer and a
+;; class specializer for which no prototype instance is available.
 (defun compute-applicable-methods-from-specializers (gf specializers)
-  (clim-mop:compute-applicable-methods gf
-     (mapcar (lambda (spec)
-               (cond ((typep spec 'clim-mop:eql-specializer)
-                      (clim-mop:eql-specializer-object spec))
-                     ((classp spec)
-                      (clim-mop:class-prototype spec))
-                     (t (error "Can't compute effective methods, specializer ~A is not understood." spec))))
-             specializers)))
+  (if (every #'classp specializers)
+      (clim-mop:compute-applicable-methods-using-classes gf specializers)
+      (let ((instances
+             (mapcar (lambda (s)
+                       (cond ((classp s) 
+                              ;; Implementation-dependent whether prototypes for
+                              ;; built-in classes (like integer, t) are available.
+                              (multiple-value-bind (prot err)
+                                  (ignore-errors (clim-mop:class-prototype s))
+                                (if err 'no-prototype prot)))
+                             ((typep s 'clim-mop:eql-specializer)
+                              (clim-mop:eql-specializer-object s))
+                             (t
+                              (error "Can't compute effective methods, specializer ~A is not understood."
+                                     s))))
+                     specializers)))
+        (unless (member 'no-prototype instances)
+          (clim-mop:compute-applicable-methods gf instances)))))
 
 ;; FIXME: Support EQL specializers.
 ;; This is hard to do ideally, and I'm not really trying.
