@@ -1078,7 +1078,7 @@ display as invalid due to do something not caused by buffer
 modification (for example, parenthesis matching). This function
 should return a list of pairs of buffer offsets, each pair
 delimiting a buffer region that should be redrawn.")
-  (:method ((view textual-drei-syntax-view view) (syntax syntax))
+  (:method ((view textual-drei-syntax-view) (syntax syntax))
     nil))
 
 (defun invalidate-as-appropriate (view invalid-regions)
