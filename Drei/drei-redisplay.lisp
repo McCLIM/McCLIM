@@ -827,6 +827,12 @@ the line object `offset' is in, and `line-index' is the index of
 this pump state."
   line-index offset chunk-index)
 
+(defun chunk-for-offset (buffer-line offset)
+  "Return the index of the first chunk of `buffer-line' that
+contains `offset'."
+  (position (- offset (offset (start-mark buffer-line)))
+            (chunks buffer-line) :test #'<= :key #'car))
+
 (defun buffer-view-pump-state-for-offset (view offset)
   "Return a pump state usable for pumpting strokes for `view' (a
 `drei-buffer-view') from `offset'."
@@ -844,7 +850,8 @@ this pump state."
                     (setf low-index (1+ middle)))
                    ((mark< offset line-start)
                     (setf high-index middle)))
-          finally (return (make-pump-state middle offset 0)))))
+          finally (return (make-pump-state
+                           middle offset (chunk-for-offset this-line offset))))))
 
 (defun fetch-chunk (line chunk-index)
   "Retrieve the `chunk-index'th chunk from `line'. The return
