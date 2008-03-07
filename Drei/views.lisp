@@ -634,7 +634,8 @@ are automatically set if applicable."))
           bot (clone-mark top :right)
           lines-prefix 0
           lines-suffix 0
-          buffer-size (size (buffer view)))))
+          buffer-size (size (buffer view)))
+    (update-line-data view)))
 
 (defmethod (setf top) :after (new-value (view drei-buffer-view))
   (invalidate-all-strokes view))
@@ -652,7 +653,8 @@ are automatically set if applicable."))
           bot (clone-mark top :right)
           lines-prefix 0
           lines-suffix 0
-          buffer-size 0)))
+          buffer-size 0)
+    (update-line-data view)))
 
 (defmethod cache-string :around ((view drei-buffer-view))
   (let ((string (call-next-method)))
