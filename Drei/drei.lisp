@@ -240,12 +240,6 @@ and specialise a method for it."
 whenever this Drei is being displayed. During redisplay, the
 `stream-default-view' of the output stream will be temporarily
 bound to this value.")
-   (%kill-ring :initform (make-instance 'kill-ring :max-size 7)
-               :initarg :kill-ring
-               :accessor kill-ring
-               :type kill-ring
-               :documentation "The kill ring object associated
-with the Drei instance.")
    (%previous-command :initform nil
                       :accessor previous-command
                       :documentation "The previous CLIM command
@@ -507,12 +501,12 @@ variables (`(drei-instance)', `*kill-ring*', `*minibuffer*',
 proper values, taken from `drei-instance'. The keyword arguments
 can be used to provide forms that will be used to obtain values
 for the respective special variables, instead of finding their
-value in `drei-instance'. This macro binds all of the usual Drei
-special variables, but also some CLIM special variables needed
-for ESA-style command parsing."
+value in `drei-instance' or their existing binding. This macro
+binds all of the usual Drei special variables, but also some CLIM
+special variables needed for ESA-style command parsing."
   `(let* ((*esa-instance* ,drei-instance)
           (*kill-ring* ,(if kill-ring-p kill-ring
-                            `(kill-ring (drei-instance))))
+                            '*kill-ring*))
           (*minibuffer* ,(if minibuffer-p minibuffer
                              `(find-available-minibuffer (drei-instance))))
           (*command-parser* ,(if command-parser-p command-parser

@@ -187,6 +187,6 @@ of type `empty-kill-ring' is signalled."))
   (if reset (reset-yank-position kr))
   (element> (kill-ring-cursor kr)))
 
-(defparameter *kill-ring* nil
+(defparameter *kill-ring* (make-instance 'kill-ring :max-size 7)
   "This special variable is bound to the kill ring of the running
 application or Drei instance whenever a command is executed.")
