@@ -119,7 +119,7 @@
    (:file "package" :depends-on ("Lisp-Dep" "patch"))))
 
 (defsystem :clim-basic
-    :depends-on (:clim-lisp :spatial-trees :flexichain)
+    :depends-on (:clim-lisp :spatial-trees (:version "flexichain" "1.5.1"))
     :components ((:file "decls")
 		 (:file "protocol-classes" :depends-on ("decls"))
                  (:module "Lisp-Dep"
@@ -266,7 +266,7 @@
 
 
 (defsystem :drei-mcclim
-  :depends-on (:flexichain :esa-mcclim :clim-core #+#.(mcclim.system::dep-on-swank) :swank)
+  :depends-on ((:version "flexichain" "1.5.1") :esa-mcclim :clim-core #+#.(mcclim.system::dep-on-swank) :swank)
   :components
   ((:module "cl-automaton"
             :pathname #.(make-pathname :directory '(:relative "Drei" "cl-automaton"))
