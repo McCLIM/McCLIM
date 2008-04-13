@@ -991,23 +991,24 @@ were added."
   (remhash entry (%tree-record-children-cache record)))
 
 (defmethod output-record-children ((record standard-tree-output-record))
-  (map 'list
-       #'tree-output-record-entry-record
-       (spatial-trees:search 
-        (%record-to-spatial-tree-rectangle record)
-        ;; The form below intends to fix output-record-children not
-        ;; reporting empty children, which may lie outside the reported
-        ;; bounding rectangle of their parent.
-        ;; Assumption: null bounding records are always at the origin.
-        ;; I've never noticed this violated, but it's out of line with
-        ;; what null-bounding-rectangle-p checks, and setf of
-        ;; output-record-position may invalidate it. Seems to work, but
-        ;; fix that and try again later.
-        #+NIL
-        (rectangles:make-rectangle
-         :lows (list 0 0) #| `(,(bounding-rectangle-min-x r) ,(bounding-rectangle-min-y r)) |#
-         :highs `(,(bounding-rectangle-max-x record) ,(bounding-rectangle-max-y record)))
-       (%tree-record-children record))))
+  (with-bounding-rectangle* (min-x min-y max-x max-y) record
+    (map 'list
+         #'tree-output-record-entry-record
+         (spatial-trees:search 
+          ;; Originally, (%record-to-spatial-tree-rectangle record).
+          ;; The form below intends to fix output-record-children not
+          ;; reporting empty children, which may lie outside the reported
+          ;; bounding rectangle of their parent.
+          ;; Assumption: null bounding records are always at the origin.
+          ;; I've never noticed this violated, but it's out of line with
+          ;; what null-bounding-rectangle-p checks, and setf of
+          ;; output-record-position may invalidate it. Seems to work, but
+          ;; fix that and try again later.
+          ;; Note that max x or y may be less than zero..
+          (rectangles:make-rectangle
+           :lows  (list (min 0 min-x) (min 0 min-y))
+           :highs (list (max 0 max-x) (max 0 max-y)))
+          (%tree-record-children record)))))
 
 (defmethod add-output-record (child (record standard-tree-output-record))
   (let ((entry (make-tree-output-record-entry child (incf (last-insertion-nr record)))))
