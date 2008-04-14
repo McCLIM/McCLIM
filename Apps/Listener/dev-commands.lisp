@@ -1420,16 +1420,22 @@
   (object)
   (list object))
 
-#+nil(define-command (com-display-image :name t :command-table filesystem-commands
+(define-command (com-display-image :name t :command-table filesystem-commands
                                            :menu t)
     ((image-pathname 'pathname
       :default (user-homedir-pathname) :insert-default t))
   (if (probe-file image-pathname)
-      (handler-case 
-          (with-room-for-graphics ()
-            (mcclim-images:draw-image *standard-output* (mcclim-images:load-image image-pathname)))
-        (mcclim-images:unsupported-image-format (c)
-          (format t "Image format ~A not recognized" (mcclim-images:image-format c))))
+      (let* ((type (funcall (case (readtable-case *readtable*)
+                              (:upcase #'string-upcase)
+                              (:downcase #'string-downcase)
+                              (t #'identity))
+                            (pathname-type image-pathname)))
+             (format (find-symbol type (find-package :keyword))))
+        (handler-case (let ((pattern (make-pattern-from-bitmap-file image-pathname :format format)))
+                        (with-room-for-graphics ()
+                          (draw-pattern* *standard-output* pattern 0 0)))
+          (unsupported-bitmap-format ()
+            (format t "Image format ~A not recognized" type))))
       (format t "No such file: ~A" image-pathname)))
 
 (define-command (com-edit-definition :name "Edit Definition"
