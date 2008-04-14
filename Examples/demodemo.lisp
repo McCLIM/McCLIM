@@ -67,6 +67,7 @@
                    ;(make-demo-button "Colorslider" 'colorslider)                   
                    (make-demo-button "D&D Translator" 'drag-test)
                    (make-demo-button "Draggable Graph" 'draggable-graph-demo)
+                   (make-demo-button "Image viewer" 'image-viewer)
 		   (make-pane 'push-button
 			      :label "Font Selector"
 			      :activate-callback

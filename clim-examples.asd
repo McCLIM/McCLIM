@@ -37,7 +37,8 @@
                (:file "font-selector")
                (:file "tabdemo")
                (:file "bordered-output-examples")
-               (:file "misc-tests")))
+               (:file "misc-tests")
+               (:file "image-viewer")))
      (:module "Goatee"
 	      :components
 	      ((:file "goatee-test")))))

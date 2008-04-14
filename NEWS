@@ -4,8 +4,9 @@
 ** Bug fix: Some missing methods and functions have been implemented
    for the Null backend, allowing headless operation for many
    applications.
-** New extension: MCCLIM-IMAGES. This extension makes it easy to use
-   McCLIM for loading and displaying images of various formats.
+** Specification compliance: READ-BITMAP-FILE and
+   MAKE-PATTERN-FROM-BITMAP-FILE from CLIM 2.2. Includes new example
+   program, IMAGE-VIEWER.
 ** Drei improvements
 *** New redisplay engine that is faster and has more features.
 *** Support for "views" concept.

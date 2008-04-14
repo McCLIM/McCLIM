@@ -18,26 +18,25 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :mcclim-images)
+(in-package :clim-internals)
 
-(define-image-reader "gif" (image-pathname &key)
+(define-bitmap-file-reader :gif (image-pathname)
   (let* ((data-stream (skippy:load-data-stream image-pathname))
          (first-image (aref (skippy:images data-stream) 0))
          (image-height (skippy:height first-image))
          (image-width (skippy:width first-image))
          (pattern-array (make-array (list image-height image-width)))
          (designs (coerce (loop with color-table = (skippy:color-table data-stream)
-                             with transparency-index = (skippy:transparency-index first-image)
-                             for i below (skippy:color-table-size color-table)
-                             when (and transparency-index (= i transparency-index))
-                             collect +transparent-ink+
-                             else collect
-                             (multiple-value-bind (r g b) 
-                                 (skippy:color-rgb (skippy:color-table-entry color-table i))
-                               (make-rgb-color (/ r 255) (/ g 255) (/ b 255))))
+                                with transparency-index = (skippy:transparency-index first-image)
+                                for i below (skippy:color-table-size color-table)
+                                when (and transparency-index (= i transparency-index))
+                                collect +transparent-ink+
+                                else collect
+                                (multiple-value-bind (r g b) 
+                                    (skippy:color-rgb (skippy:color-table-entry color-table i))
+                                  (make-rgb-color (/ r 255) (/ g 255) (/ b 255))))
                           'vector)))
     (dotimes (y image-height)
       (dotimes (x image-width)
         (setf (aref pattern-array y x) (skippy:pixel-ref first-image x y))))
-    (make-image (make-pattern pattern-array designs)
-                image-height image-width)))
+    (values pattern-array designs)))

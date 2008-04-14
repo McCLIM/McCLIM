@@ -400,6 +400,21 @@
 (defgeneric medium-clear-area (medium left top right bottom))
 (defgeneric medium-beep (medium))
 
+;;;; 14.2
+
+(defgeneric pattern-width (pattern)
+  (:documentation "Return the width of `pattern'."))
+
+(defgeneric pattern-height (pattern)
+  (:documentation "Return the height of `pattern'."))
+
+(defgeneric pattern-array (pattern)
+  (:documentation "Returns the array associated with `pattern'."))
+
+(defgeneric pattern-designs (pattern)
+  (:documentation "Returns the array of designs associated with
+`pattern'."))
+
 ;;;; 14.5
 (defgeneric draw-design
     (medium design

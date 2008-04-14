@@ -2,7 +2,7 @@
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000 by Robert Strandh (strandh@labri.u-bordeaux.fr)
-;;;  (c) copyright 2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 1998,2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -402,6 +402,73 @@
 (defgeneric compose-in (ink mask))
 (defgeneric compose-out (ink mask))
 
+;;; RGB image designs, efficient support for truecolor images. ARGB
+;;; image data represented as an (unsigned-byte 32) array
+
+(defclass rgb-image ()
+    ((width :initarg :width :accessor image-width)
+     (height :initarg :height :accessor image-height)
+     (data :initarg :data
+	   :accessor image-data
+	   :type (or null (simple-array (unsigned-byte 32) (* *))))
+     (alphap :initarg :alphap
+	     :initform nil
+	     :accessor image-alpha-p)))
+
+;; Applications (closure in particular) might want to cache any
+;; backend-specific data required to draw an RGB-IMAGE.
+;;
+;; To implement this caching, designs must be created separately for each
+;; medium, so that mediums can put their own data into them.
+
+(defclass rgb-image-design (design)
+    ((medium :initform nil :initarg :medium)
+     (image :reader image
+            :initarg :image)
+     (medium-data :initform nil)))
+
+(defun make-rgb-image-design (image)
+  (make-instance 'rgb-image-design :image image))
+
+
+;; Protocol to free cached data
+
+(defgeneric medium-free-image-design (medium design))
+
+(defun free-image-design (design)
+  (medium-free-image-design (slot-value design 'medium) design))
+
+
+;; Drawing protocol
+
+(defgeneric medium-draw-image-design* (medium design x y))
+
+;; Fetching protocol
+
+(defun sheet-rgb-image (sheet &key x y width height)
+  (multiple-value-bind (data alphap)
+      (sheet-rgb-data (port sheet)
+		      sheet
+		      :x x
+		      :y y
+		      :width width
+		      :height height)
+    (destructuring-bind (height width)
+	(array-dimensions data)
+      (make-instance 'rgb-image
+	:width width
+	:height height
+	:data data
+	:alphap alphap))))
+
+(defgeneric sheet-rgb-data (port sheet &key x y width height))
+
+(defmethod draw-design
+    (medium (design rgb-image-design) &rest options
+     &key (x 0) (y 0) &allow-other-keys)
+  (with-medium-options (medium options)
+    (medium-draw-image-design* medium design x y)))
+
 ;; PATTERN is just the an abstract class of all pattern-like design. 
 
 ;; For performance might consider to sort out pattern, which consists
@@ -410,23 +477,17 @@
 (define-protocol-class pattern (design))
 
 (defclass indexed-pattern (pattern)
-  ((array   :initarg :array)
-   (designs :initarg :designs)))
+  ((array   :initarg :array :reader pattern-array)
+   (designs :initarg :designs :reader pattern-designs)))
    
 (defun make-pattern (array designs)
   (make-instance 'indexed-pattern :array array :designs designs))
 
-(defgeneric pattern-width (pattern))
-
 (defmethod pattern-width ((pattern indexed-pattern))
-  (with-slots (array) pattern
-    (array-dimension array 1)))
-
-(defgeneric pattern-height (pattern))
+  (array-dimension (pattern-array pattern) 1))
 
 (defmethod pattern-height ((pattern indexed-pattern))
-  (with-slots (array) pattern
-    (array-dimension array 0)))
+  (array-dimension (pattern-array pattern) 0))
 
 (defclass stencil (pattern)
   ((array :initarg :array)))
@@ -441,6 +502,37 @@
 (defmethod pattern-height ((pattern stencil))
   (with-slots (array) pattern
     (array-dimension array 0)))
+
+;; These methods are included mostly for completeness and are likely
+;; of little use in practice.
+(defmethod pattern-array ((pattern stencil))
+  (let ((array (make-array (list (pattern-height pattern)
+                                 (pattern-width pattern)))))
+    (dotimes (i (pattern-height pattern))
+      (dotimes (j (pattern-width pattern))
+        (setf (aref array i j) (+ (* i (array-dimension array 1)) j))))
+    array))
+
+(defmethod pattern-designs ((pattern stencil))
+  (with-slots (array) pattern
+    (let ((designs (make-array (* (pattern-height pattern)
+                                  (pattern-width pattern)))))
+      (dotimes (i (length designs))
+        (setf (aref designs i) (make-opacity (row-major-aref array i))))
+      array)))
+
+(defclass rgb-pattern (pattern rgb-image-design)
+  ())
+   
+(defmethod pattern-width ((pattern rgb-pattern))
+  (image-width (image pattern)))
+
+(defmethod pattern-height ((pattern rgb-pattern))
+  (image-height (image pattern)))
+
+;; RGB-PATTERNs must be treated specially...
+(defmethod medium-draw-pattern* (medium (pattern rgb-pattern) x y)
+  (medium-draw-image-design* medium pattern x y))
 
 ;;;
 

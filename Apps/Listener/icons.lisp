@@ -34,7 +34,8 @@
 
 (defmacro deficon (var pathname)
   `(eval-when (:load-toplevel :execute)
-     (defparameter ,var (mcclim-images:load-image ,(merge-pathnames pathname *icon-path*)))))
+     (defparameter ,var (make-pattern-from-bitmap-file
+                         ,(merge-pathnames pathname *icon-path*) :format :xpm))))
 
 (defvar *icon-cache* (make-hash-table  :test #'equal))
 
@@ -42,9 +43,10 @@
   "Loads an icon from the *icon-path*, caching it by name in *icon-cache*"
   (or (gethash filename *icon-cache*)
       (setf (gethash filename *icon-cache*)
-            (mcclim-images:load-image
+            (make-pattern-from-bitmap-file
              (merge-pathnames (parse-namestring filename)
-                              *icon-path*)))))
+                              *icon-path*)
+             :format :xpm))))
 
 ;; Don't particularly need these any more..
 (deficon *folder-icon*   #P"folder.xpm")
@@ -58,8 +60,9 @@
 
 (defun draw-icon (stream pattern &key (extra-spacing 0) )
   (let ((stream (if (eq stream t) *standard-output* stream)))
-    (mcclim-images:draw-image stream pattern)
-    (stream-increment-cursor-position stream (+ (mcclim-images:image-width pattern) extra-spacing) 0)))
+    (multiple-value-bind (x y) (stream-cursor-position stream)
+      (draw-pattern* stream pattern x y)
+      (stream-increment-cursor-position stream (+ (pattern-width pattern) extra-spacing) 0))))
 
 (defun precache-icons ()
   (let ((pathnames (remove-if #'directoryp

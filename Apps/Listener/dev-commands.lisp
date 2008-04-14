@@ -1420,7 +1420,7 @@
   (object)
   (list object))
 
-(define-command (com-display-image :name t :command-table filesystem-commands
+#+nil(define-command (com-display-image :name t :command-table filesystem-commands
                                            :menu t)
     ((image-pathname 'pathname
       :default (user-homedir-pathname) :insert-default t))

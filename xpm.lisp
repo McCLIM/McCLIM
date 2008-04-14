@@ -168,13 +168,13 @@
         (lengthsym (gensym)))
     `(let* ((,arraysym ,arrayform)
             (,lengthsym (length ,arraysym)))
-      (declare (type xpm-data-array ,arraysym)
-               (optimize (speed 3)))
-      (loop for ,idx0 of-type array-index from ,start below (1- ,lengthsym)
-            as ,idx1 of-type array-index = (1+ ,idx0)
-            as ,elt0 = (aref ,arraysym ,idx0)
-            as ,elt1 = (aref ,arraysym ,idx1)
-            do (progn ,@body)))))
+       (declare (type xpm-data-array ,arraysym)
+                (optimize (speed 3)))
+       (loop for ,idx0 of-type array-index from ,start below (1- ,lengthsym)
+             as ,idx1 of-type array-index = (1+ ,idx0)
+             as ,elt0 = (aref ,arraysym ,idx0)
+             as ,elt1 = (aref ,arraysym ,idx1)
+             do (progn ,@body)))))
 
 (declaim (inline xpm-whitespace-p)
          (ftype (function ((unsigned-byte 8)) t) xpm-whitespace-p))
@@ -237,7 +237,7 @@
   ;; >
   ;; > It seems that the C code just parse everything until one of keys. 
   ;; > That is we do the same although it is quite stupid.
-  ;(declare (optimize (debug 3) (safety 3)))
+                                        ;(declare (optimize (debug 3) (safety 3)))
   (declare (optimize (speed 3) (space 0) (safety 0))
            (type xpm-data-array data)
            (type array-index start end))
@@ -252,32 +252,32 @@
                     (p2 (and p1 (or (position-if #'xpm-white-space-p data :start p1 :end end) end))))
                (values p1 p2)))
            (quux (key color-token-start color-token-end)
-               (let ((ink (xpm-parse-single-color key data color-token-start color-token-end)))
-                 (when ink
-                   (return-from xpm-parse-color-spec ink))))
+             (let ((ink (xpm-parse-single-color key data color-token-start color-token-end)))
+               (when ink
+                 (return-from xpm-parse-color-spec ink))))
            (stringize () (map 'string #'code-char (subseq data original-start end))))
-    (loop
-      (multiple-value-bind (p1 p2) (find-token start end)
-        (unless p1
-          (when last-was-key
-            (error "Premature end of color line (no color present after key): ~S." (stringize)))
-          (when color-token-start (quux key color-token-start color-token-end))
-          (error "We failed to parse a color out of ~S." (stringize)))
-        (cond (last-was-key
-               (setf last-was-key      nil
-                     color-token-start p1
-                     color-token-end   p2))              
-              ((xpm-key-p (elt data p1))
-               (when color-token-start (quux key color-token-start color-token-end))               
-               (setf last-was-key t
-                     color-token-start nil
-                     color-token-end nil
-                     key (elt data p1)))
-              (t (when (null color-token-start)
-                   (error "Color not prefixed by a key: ~S." (stringize)))
-                 (setf last-was-key nil)                 
-                 (setf color-token-end p2)))
-        (setf start p2))))))
+      (loop
+       (multiple-value-bind (p1 p2) (find-token start end)
+         (unless p1
+           (when last-was-key
+             (error "Premature end of color line (no color present after key): ~S." (stringize)))
+           (when color-token-start (quux key color-token-start color-token-end))
+           (error "We failed to parse a color out of ~S." (stringize)))
+         (cond (last-was-key
+                (setf last-was-key      nil
+                      color-token-start p1
+                      color-token-end   p2))              
+               ((xpm-key-p (elt data p1))
+                (when color-token-start (quux key color-token-start color-token-end))               
+                (setf last-was-key t
+                      color-token-start nil
+                      color-token-end nil
+                      key (elt data p1)))
+               (t (when (null color-token-start)
+                    (error "Color not prefixed by a key: ~S." (stringize)))
+                  (setf last-was-key nil)                 
+                  (setf color-token-end p2)))
+         (setf start p2))))))
                      
 (defun xpm-subvector-eql-p (data start end vector) ; FIXME: Guarantee type of input 'vector' and strengthen declaration
   (declare (type xpm-data-array data)
@@ -328,7 +328,7 @@
   (declare (type xpm-data-array data)
            (type array-index start end)
            (optimize (speed 3)))
-  (or (and (= (elt data start) 35)   ; 35 = #\#
+  (or (and (= (elt data start) 35)      ; 35 = #\#
            (= 0 (mod (- end start 1) 3))
            (loop for i from (1+ start) below end do (unless (xpm-hex-digit-p (elt data i)) (return nil)) finally (return t))
            (let* ((n (- end start 1))
@@ -347,12 +347,12 @@
              (unless p1 (error "~A field missing in header." name))
              (setf index p2)             
              (parse-integer (map 'string #'code-char (subseq data p1 p2)) :radix 10 :junk-allowed nil))))
-  (values
-   (token "width")
-   (token "height")
-   (token "ncolors")
-   (token "cpp")
-   (xpm-exit-string data index))))
+    (values
+     (token "width")
+     (token "height")
+     (token "ncolors")
+     (token "cpp")
+     (xpm-exit-string data index))))
 
 (defun xpm-parse* (data)
   (declare (type xpm-data-array data))
@@ -373,7 +373,7 @@
       ;; of this file would have to be compiled twice for the different types, which is more
       ;; trouble than its worth. =(
       (let ((res (make-array (list height width) #|:element-type '(unsigned-byte 8)|#)))
-            ;(line-start (xpm-find-next-c-string data index))
+                                        ;(line-start (xpm-find-next-c-string data index))
         (setf index (xpm-find-next-c-string data index))
         (dotimes (y height)
           (dotimes (x width)
@@ -384,16 +384,7 @@
                       (error "Color code ~S not defined."
                              (subseq data index (+ index cpp)))))
             (incf index cpp)))
-        (clim:make-pattern res designs)))))
-                  
-;        (dotimes (y height)
-;          (dotimes (x width)
-;            (setf (aref res y x)
-;                  (or (gethash (subseq (first strings) (* x cpp) (+ cpp (* x cpp))) color-hash)
-;                      (error "Color code ~S not defined."
-;                             (subseq (first strings) (* x cpp) (+ cpp (* x cpp)))))))
-;          (pop strings))
-;        (clim:make-pattern res designs))))))
+        (values res designs)))))
 
 (declaim (ftype (function (xpm-data-array array-index) array-index) xpm-scan-comment))
 (defun xpm-scan-comment (data start)
@@ -409,8 +400,8 @@
            (type array-index start))
   (xpm-over-array (data b0 i0 b1 i1 start)
     (cond
-      ((and (= b0 47)                 ; 47 = #\/
-            (= b1 42))                ; 42 = #\*
+      ((and (= b0 47)                   ; 47 = #\/
+            (= b1 42))                  ; 42 = #\*
        (setf i0 (1- (xpm-scan-comment data (1+ i1)))))
       ((= b0 34) (return i1)))))
 
@@ -422,23 +413,23 @@
     (when (= byte 92) (incf index)))    ; 92 = #\\ (escape sequence)
   (error "Unterminated string"))
 
-;(loop for index of-type array-index from start below length
-;          as byte = (elt data index)
-;          do (cond
-;               ( ; 42 = #\*
-;                (incf index 2)
-;                ;; a comment
-;                (do ((c1 0 c2)
-;                     (c2 (elt data index) (elt data index)))
-;                    (and (= c1 42) (= c2
+                                        ;(loop for index of-type array-index from start below length
+                                        ;          as byte = (elt data index)
+                                        ;          do (cond
+                                        ;               ( ; 42 = #\*
+                                        ;                (incf index 2)
+                                        ;                ;; a comment
+                                        ;                (do ((c1 0 c2)
+                                        ;                     (c2 (elt data index) (elt data index)))
+                                        ;                    (and (= c1 42) (= c2
   
 (defun xpm-parse-stream (input)
   ;; For not needing to parse an actual subset of C, we take a very lazy approach.
   ;; We just seek out for the first #\" and parse a C string from there.
   (let ((data (make-array (file-length input)
-                          :element-type '(unsigned-byte 8)
-                          :adjustable nil
-                          :fill-pointer nil)))
+               :element-type '(unsigned-byte 8)
+               :adjustable nil
+               :fill-pointer nil)))
     (read-sequence data input)
     (xpm-parse* data)))
 
@@ -1207,8 +1198,6 @@
 
 (defun xpm-find-named-color (name)
   (if (string-equal name "None") clim:+transparent-ink+
-    (let ((q (find name *xpm-x11-colors* :key #'fourth :test #'string-equal)))
-      (and q
-           (clim:make-rgb-color (/ (first q) 255) (/ (second q) 255) (/ (third q) 255))))))
-
-
+      (let ((q (find name *xpm-x11-colors* :key #'fourth :test #'string-equal)))
+        (and q
+             (clim:make-rgb-color (/ (first q) 255) (/ (second q) 255) (/ (third q) 255))))))

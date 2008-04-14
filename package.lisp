@@ -1648,6 +1648,8 @@
    #:+list-pane-view+                   ;constant
    #:option-pane-view                   ;class
    #:+option-pane-view+                 ;constant
+   #:pattern-array                      ;generic function (in franz user guide)
+   #:pattern-designs                    ;generic function (in franz user guide)
    #:pointer-input-rectangle            ;function (in franz user guide)
    #:pointer-input-rectangle*           ;function (in franz user guide)
    #:pointer-place-rubber-band-line*    ;function (in franz user guide)
@@ -1657,6 +1659,7 @@
    #:+push-button-view+                 ;constant
    #:radio-box-view                     ;class
    #:+radio-box-view+                   ;class
+   #:read-bitmap-file                   ;function
    #:slider-view                        ;slider-view
    #:+slider-view+                      ;constant
    #:text-editor-view                   ;class
@@ -1963,7 +1966,11 @@
    #:font-face-family
    #:font-face-all-sizes
    #:font-face-scalable-p
-   #:font-face-text-style))
+   #:font-face-text-style
+
+   #:define-bitmap-file-reader
+   #:unsupported-bitmap-format
+   #:bitmap-format))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
