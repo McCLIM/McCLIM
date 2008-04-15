@@ -461,9 +461,9 @@ account, and create a list of menu buttons."
                            (find-command-table (command-menu-item-value item))
                            stream args)))
                  ((eq (command-menu-item-type item) :command)
-                  (let ((name (command-name (command-menu-item-value item))))
-                    (when (command-line-name-for-command name command-table :errorp nil)
-                      (present name 'command-name :stream stream)))))))
+                  (let ((name (command-menu-item-name item)))
+                    (with-output-as-presentation (stream (command-menu-item-value item) 'command)
+                      (write-string name stream)))))))
      command-table)))
 
 (defmethod display-command-menu (frame (stream fundamental-output-stream)
