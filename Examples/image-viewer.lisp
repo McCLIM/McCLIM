@@ -43,17 +43,23 @@ value of the gadget is the image being displayed."))
   ;; Clear the old image.
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
+  ;; Draw the new one, if there is one.
   (when (gadget-value pane)
-    ;; Try to ensure there is room for the new image.
-    (change-space-requirements pane
-     :height (pattern-height (gadget-value pane))
-     :width (pattern-width (gadget-value pane)))
-    ;; Draw the new one, if there is one.
-    (handler-case (draw-pattern* pane (gadget-value pane) 0 0)
-      (error ()
-        (with-text-style (pane (make-text-style nil :italic nil))
-          (draw-text* pane (format nil "Error while drawing image")
-                      0 0 :align-y :top))))))
+    (let ((image-height (pattern-height (gadget-value pane)))
+          (image-width (pattern-width (gadget-value pane))))
+      ;; Try to ensure there is room for the new image.
+      (change-space-requirements pane :height image-height :width image-width)
+      ;; Draw it in the center.
+      (handler-case (draw-pattern*
+                     pane (gadget-value pane)
+                     (/ (- (bounding-rectangle-width pane) image-width)
+                        2)
+                     (/ (- (bounding-rectangle-height pane) image-height)
+                        2))
+        (error ()
+          (with-text-style (pane (make-text-style nil :italic nil))
+            (draw-text* pane (format nil "Error while drawing image")
+                        0 0 :align-y :top)))))))
 
 (define-application-frame image-viewer ()
   ((%image-pathname :accessor image-pathname
@@ -92,6 +98,10 @@ value of the gadget is the image being displayed."))
           (unsupported-bitmap-format ()
             (format t "Image format ~A not recognized" type))))
       (format t "No such file: ~A" image-pathname)))
+
+(define-image-viewer-command (com-blank-image :name t :menu t)
+    ()
+  (setf (gadget-value (find-pane-named *application-frame* 'viewer)) nil))
 
 (defun image-viewer (&key (new-process t))
   (flet ((run ()
