@@ -305,7 +305,10 @@
 	    (when (>= (+ cx width) margin)
 	      (ecase (stream-end-of-line-action stream)
 		(:wrap
-		 (setq split (find-split (- margin cx))))
+                 ;; Let's prevent infinite recursion if there isn't
+                 ;; room for even a single character.
+		 (setq split (max (find-split (- margin cx))
+                                  (1+ start)))) 
 		(:scroll
 		 (scroll-horizontal stream width))
 		(:allow)))
