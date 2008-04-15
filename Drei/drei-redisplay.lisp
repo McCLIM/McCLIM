@@ -1291,5 +1291,3 @@ non-NIL."
 
 (defmethod full-redisplay ((pane drei-pane))
   (setf (full-redisplay-p (view pane)) t))
-
-(defgeneric display-region (pane syntax))
