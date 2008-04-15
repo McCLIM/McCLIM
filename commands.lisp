@@ -415,18 +415,20 @@ designator) inherits menu items."
 (defun %add-menu-item (command-table item after)
   (with-slots (menu)
       command-table
+    (when (null menu)
+      (setf after :start))
     (case after
       (:start (push item menu))
       ((:end nil) (setf menu (nconc menu (list item))))
       (:sort (setf menu (sort (cons item menu)
-			      #'string-lessp
-			      :key #'command-menu-item-name)))
+                              #'string-lessp
+                              :key #'command-menu-item-name)))
       (t (push item
-	       (cdr (member after menu
-			    :key #'command-menu-item-name
-			    :test #'string-equal))))))
+               (cdr (member after menu
+                     :key #'command-menu-item-name
+                     :test #'string-equal))))))
   (when (and (slot-boundp item 'keystroke)
-	      (slot-value item 'keystroke))
+             (slot-value item 'keystroke))
     (%add-keystroke-item command-table (slot-value item 'keystroke) item nil)))
 
 
