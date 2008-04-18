@@ -35,7 +35,8 @@
 (defmacro deficon (var pathname)
   `(eval-when (:load-toplevel :execute)
      (defparameter ,var (make-pattern-from-bitmap-file
-                         ,(merge-pathnames pathname *icon-path*) :format :xpm))))
+                         ,(merge-pathnames pathname *icon-path*)
+                         :format :xpm :port nil))))
 
 (defvar *icon-cache* (make-hash-table  :test #'equal))
 
@@ -46,7 +47,7 @@
             (make-pattern-from-bitmap-file
              (merge-pathnames (parse-namestring filename)
                               *icon-path*)
-             :format :xpm))))
+             :format :xpm :port nil))))
 
 ;; Don't particularly need these any more..
 (deficon *folder-icon*   #P"folder.xpm")
