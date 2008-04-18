@@ -424,7 +424,7 @@ If found, leaves point before the word. If not, leaves point where it is."
                      (occurrences occurrences)
                      (targets targets)) state
       (let ((string1-length (length string1))
-            (mark (point (drei-instance targets))))
+            (mark (point (view (drei-instance targets)))))
         (backward-object mark string1-length)
         (replace-one-string mark
                             string1-length
@@ -443,7 +443,7 @@ If found, leaves point before the word. If not, leaves point where it is."
                      (occurrences occurrences)
                      (targets targets)) state
         (let ((string1-length (length string1))
-              (mark (point (drei-instance targets))))
+              (mark (point (view (drei-instance targets)))))
           (loop do (backward-object mark string1-length)
                (replace-one-string mark
                                    string1-length
