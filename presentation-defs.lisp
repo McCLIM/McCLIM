@@ -1047,12 +1047,13 @@ protocol retrieving gestures from a provided string."))
 
 (defmethod stream-read-gesture ((stream string-input-editing-stream)
                                 &key peek-p &allow-other-keys)
-  (prog1 (if (= (stream-scan-pointer stream) (length (stream-input-buffer stream)))
-             (second (first (gethash (first *activation-gestures*)
-                                     climi::*gesture-names*))) ; XXX - will always be non-NIL?
-             (aref (stream-input-buffer stream) (stream-scan-pointer stream)))
-    (unless peek-p
-      (incf (stream-scan-pointer stream)))))
+  (unless (> (stream-scan-pointer stream) (length (stream-input-buffer stream)))
+    (prog1 (if (= (stream-scan-pointer stream) (length (stream-input-buffer stream)))
+               (second (first (gethash (first *activation-gestures*)
+                                       climi::*gesture-names*))) ; XXX - will always be non-NIL?
+               (aref (stream-input-buffer stream) (stream-scan-pointer stream)))
+      (unless peek-p
+        (incf (stream-scan-pointer stream))))))
 
 (defmethod stream-unread-gesture ((stream string-input-editing-stream) gesture)
   (decf (stream-scan-pointer stream)))
