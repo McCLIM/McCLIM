@@ -964,6 +964,102 @@ history will be unchanged."
   (declare (ignore type view other-args))
   nil)
 
+;;; For ACCEPT-FROM-STRING, use this barebones input-editing-stream.
+(defclass string-input-editing-stream (input-editing-stream fundamental-character-input-stream)
+  ((input-buffer :accessor stream-input-buffer)
+   (insertion-pointer :accessor stream-insertion-pointer
+                      :initform 0
+                      :documentation "This is not used for anything at any point.")
+   (scan-pointer :accessor stream-scan-pointer
+                 :initform 0
+                 :documentation "This is not used for anything at any point."))
+  (:documentation "An implementation of the input-editing stream
+protocol retrieving gestures from a provided string."))
+
+(defmethod initialize-instance :after ((stream string-input-editing-stream)
+                                       &key (string (error "A string must be provided"))
+                                       (start 0) (end (length string))
+                                       &allow-other-keys)
+  (setf (stream-input-buffer stream)
+        (replace (make-array (- end start) :fill-pointer (- end start))
+                 string :start1 start :end2 end)))
+
+(defmethod stream-element-type ((stream string-input-editing-stream))
+  'character)
+
+(defmethod close ((stream string-input-editing-stream) &key abort)
+  (declare (ignore abort)))
+
+(defmethod stream-peek-char ((stream string-input-editing-stream))
+  (let ((char (read-char-no-hang stream nil nil)))
+    (when char
+      (unread-char char stream))
+    (or char :eof)))
+
+(defmethod stream-read-char-no-hang ((stream string-input-editing-stream))
+  (if (> (stream-scan-pointer stream) (length (stream-input-buffer stream)))
+   :eof
+   (stream-read-gesture stream)))
+
+(defmethod stream-read-char ((stream string-input-editing-stream))
+  (stream-read-gesture stream))
+
+(defmethod stream-listen ((stream string-input-editing-stream))
+  (< (stream-scan-pointer stream) (length (stream-input-buffer stream))))
+
+(defmethod stream-unread-char ((stream string-input-editing-stream) char)
+  (stream-unread-gesture stream char))
+
+(defmethod invoke-with-input-editor-typeout ((stream string-input-editing-stream) continuation
+                                             &key erase)
+  (declare (ignore erase)))
+
+(defmethod input-editor-format ((stream string-input-editing-stream) format-string
+                                &rest args)
+  (declare (ignore args)))
+
+(defmethod stream-rescanning-p ((stream string-input-editing-stream))
+  t)
+
+(defmethod reset-scan-pointer ((stream string-input-editing-stream)
+                               &optional scan-pointer)
+  (declare (ignore scan-pointer)))
+
+(defmethod immediate-rescan ((stream string-input-editing-stream)))
+
+(defmethod queue-rescan ((stream string-input-editing-stream)))
+
+(defmethod rescan-if-necessary ((stream string-input-editing-stream)
+                                &optional inhibit-activation)
+  (declare (ignore inhibit-activation)))
+
+(defmethod erase-input-buffer ((stream string-input-editing-stream)
+                                &optional start-position)
+  (declare (ignore start-position)))
+
+(defmethod redraw-input-buffer ((stream string-input-editing-stream)
+                                &optional start-position)
+  (declare (ignore start-position)))
+
+(defmethod stream-process-gesture ((stream string-input-editing-stream) gesture type)
+  (when (characterp gesture)
+    (values gesture type)))
+
+(defmethod stream-read-gesture ((stream string-input-editing-stream)
+                                &key peek-p &allow-other-keys)
+  (prog1 (if (= (stream-scan-pointer stream) (length (stream-input-buffer stream)))
+             (second (first (gethash (first *activation-gestures*)
+                                     climi::*gesture-names*))) ; XXX - will always be non-NIL?
+             (aref (stream-input-buffer stream) (stream-scan-pointer stream)))
+    (unless peek-p
+      (incf (stream-scan-pointer stream)))))
+
+(defmethod stream-unread-gesture ((stream string-input-editing-stream) gesture)
+  (decf (stream-scan-pointer stream)))
+
+(defmethod stream-accept ((stream string-input-editing-stream) type &rest args)
+  (apply #'accept-1 stream type args))
+
 ;;; XXX This needs work! It needs to do everything that accept does for
 ;;; expanding ptypes and setting up recursive call procesusing
 (defun accept-from-string (type string
@@ -982,7 +1078,7 @@ history will be unchanged."
 			   (start 0)
 			   (end (length string)))
   (declare (ignore view))
-  ;;; XXX work in progress here.
+  ;; XXX work in progress here.
   (with-activation-gestures ((if additional-activations-p
 				 additional-activation-gestures
 				 activation-gestures)
@@ -999,13 +1095,12 @@ history will be unchanged."
 						    type)
 						0))
 	(simple-parse-error "Empty string")))
-  (let ((index 0))
+  (let ((stream (make-instance 'string-input-editing-stream
+                 :string string :start start :end end)))
     (multiple-value-bind (val ptype)
-	(with-input-from-string (stream string :start start :end end
-                                               :index index)
-	  (with-keywords-removed (args (:start :end))
-	    (apply #'stream-accept stream type :view +textual-view+ args)))
-      (values val ptype index))))
+        (with-keywords-removed (args (:start :end))
+          (apply #'stream-accept stream type :history nil :view +textual-view+ args))
+      (values val ptype (+ (stream-scan-pointer stream) start)))))
 
 (define-presentation-generic-function %presentation-refined-position-test
     presentation-refined-position-test
