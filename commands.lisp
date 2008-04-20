@@ -663,7 +663,7 @@ examine the type of the command menu item to see if it is
 
 (defun accept-form-for-argument (stream arg)
   (let ((accept-keys '(:default :default-type :display-default
-		       :prompt :documentation)))
+		       :prompt :documentation :insert-default)))
     (destructuring-bind (name ptype &rest key-args
 			 &key (mentioned-default nil mentioned-default-p)
 			 &allow-other-keys)
@@ -692,7 +692,7 @@ examine the type of the command menu item to see if it is
 (defun accept-form-for-argument-partial (stream ptype-arg command-arg
 					 original-command-arg )
   (let ((accept-keys '(:default :default-type :display-default
-		       :prompt :documentation)))
+		       :prompt :documentation :insert-default)))
     (destructuring-bind (name ptype &rest key-args)
 	ptype-arg
       (declare (ignore name))
