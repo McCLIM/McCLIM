@@ -24,6 +24,15 @@
    CLIM 2.2 semantics. The :keystrokes value is not handled yet.
 ** Specification compliance: :PRINTER functions for MENU-CHOOSE are
    now called with the menu item, not the display object.
+** Improvement: Faster drawing and AA text rendering. AA text requires
+   a fix to the Xrender support of CLX, available in Christophe Rhodes's
+   current CLX distribution from darcs.
+** Improvement: Look up arbitrary truetype fonts by name via fontconfig.
+** New extension: mcclim-truetype: provides a 100% lisp path for 
+   AA fonts with CLX using cl-vectors and zpb-ttf, as an alternative
+   to mcclim-freetype.
+** Bug fix: correct computation of bounding rectangle after
+   clear-output-record and recompute-extent-for-new-child.
 
 * Changes in mcclim-0.9.5 relative to 0.9.4:
 ** Installation: the systems clim-listener, clim-examples,
