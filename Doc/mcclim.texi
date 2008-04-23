@@ -6,10 +6,10 @@
 @setfilename mcclim
 @settitle McCLIM User's Manual
 
-@set MCCLIMVERSION 0.9.6-dev
+@set MCCLIMVERSION 0.9.6
 
 @copying
-Copyright @copyright{} 2004,2005,2006 the McCLIM hackers.
+Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
 @end copying
 
 @dircategory Common Lisp
