@@ -2,7 +2,7 @@
 (in-package :cl-user)
 
 (defpackage "CLIM-LISTENER"
-  (:use "CLIM" "CLIM-LISP")
+  (:use "CLIM" "CLIM-LISP" "CLIM-EXTENSIONS")
   (:export #:run-listener #:dev-commands))
 
 (in-package :clim-listener)
