@@ -42,31 +42,38 @@
 (defun x-event-to-key-name-and-modifiers (port event-key keycode state)
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (clim-xcommon:x-event-state-modifiers port state)
+    ;; We filter away the shift state if there is a difference between
+    ;; the shifted and unshifted keysym. This is so eg. #\A will not
+    ;; look like "#\A with a Shift modifier", as this makes gesture
+    ;; processing more difficult.
     (let* ((display (clx-port-display port))
 	   (shift? (logtest +shift-key+ clim-modifiers))
-	   (keysym (xlib:keycode->keysym display keycode 
-                                         (+ (if (if shift-lock? 
-                                                    (not shift?) 
-                                                    (if caps-lock? t shift?))
-                                                1 0)
-                                            (if mode-switch?
-                                                2 0))))
-	   (keysym-keyword (clim-xcommon:lookup-keysym keysym))
-	   (char (xlib:keysym->character display keysym
-					 (+ (if (if shift-lock? 
-                                                    (not shift?) 
-						  (if caps-lock? t shift?))
-                                                1 0)
-                                            (if mode-switch?
-                                                2 0)))))
-      (values char
-	      (clim-xcommon:x-keysym-to-clim-modifiers port
-						       event-key
-						       char
-						       (clim-xcommon:lookup-keysym
-							keysym)
-						       state)
-	      keysym-keyword))))
+           (shift-modifier? (if shift-lock?
+                                (not shift?)
+                                (if caps-lock? t shift?)))
+	   (shifted-keysym (xlib:keycode->keysym display keycode 
+                                                 (+ 1 (if mode-switch?
+                                                          2 0))))
+           (unshifted-keysym (xlib:keycode->keysym display keycode 
+                                                   (if mode-switch?
+                                                       2 0)))
+           (keysym (if shift-modifier?
+                       shifted-keysym
+                       unshifted-keysym)))
+      (let* ((keysym-keyword (clim-xcommon:lookup-keysym keysym))
+             (char (xlib:keysym->character display keysym
+                                           (+ (if shift-modifier?
+                                                  1 0)
+                                              (if mode-switch?
+                                                  2 0))))
+             (modifiers (clim-xcommon:x-keysym-to-clim-modifiers
+                         port event-key char (clim-xcommon:lookup-keysym keysym)
+                         state)))
+        (values char
+                (if (= shifted-keysym unshifted-keysym)
+                    modifiers
+                    (logandc2 modifiers +shift-key+))
+                keysym-keyword)))))
 
 ;;;;
 

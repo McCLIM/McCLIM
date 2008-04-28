@@ -156,7 +156,7 @@ Successive invocations extend the selection."))
 
 (set-key `(com-mark-word ,*numeric-argument-marker*)
 	 'marking-table
-	 '((#\@ :meta :shift)))
+	 '((#\@ :meta)))
 
 (set-key `(com-mark-paragraph ,*numeric-argument-marker*)
 	 'marking-table
@@ -264,7 +264,7 @@ beginning of the buffer at leaves point there."
 
 (set-key 'com-delete-indentation
 	 'indent-table
-	 '((#\^ :shift :meta)))
+	 '((#\^ :meta)))
 
 (define-command (com-auto-fill-mode :name t :command-table fill-table) ()
   (let ((view (current-view)))
@@ -297,7 +297,7 @@ beginning of the buffer at leaves point there."
 
 (set-key 'com-beginning-of-buffer
 	 'movement-table
-	 '((#\< :shift :meta)))
+	 '((#\< :meta)))
 
 (set-key 'com-beginning-of-buffer
 	 'movement-table
@@ -331,7 +331,7 @@ beginning of the buffer at leaves point there."
 
 (set-key 'com-end-of-buffer
 	 'movement-table
-	 '((#\> :shift :meta)))
+	 '((#\> :meta)))
 
 (set-key 'com-end-of-buffer
 	 'movement-table
@@ -510,7 +510,7 @@ The default is 5. A number less than 5 will be replaced by 5."
 
 (set-key 'com-undo
 	 'editing-table
-	 '((#\_ :shift :control)))
+	 '((#\_ :control)))
 
 (set-key 'com-undo
 	 'editing-table
@@ -522,7 +522,7 @@ The default is 5. A number less than 5 will be replaced by 5."
 
 (set-key 'com-redo
 	 'editing-table
-	 '((#\_ :shift :meta)))
+	 '((#\_ :meta)))
 
 (set-key 'com-redo
 	 'editing-table

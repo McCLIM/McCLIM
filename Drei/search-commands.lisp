@@ -393,7 +393,7 @@ If found, leaves point before the word. If not, leaves point where it is."
 
 (set-key 'com-query-replace
 	 'search-table
-	 '((#\% :shift :meta)))
+	 '((#\% :meta)))
 
 (define-command (com-query-replace-replace :name t :command-table query-replace-drei-table) ()
   (let ((state (query-replace-state (drei-instance))))

@@ -242,7 +242,7 @@ with a negative argument -n, move point forward by n lines."
 
 (set-key `(com-backward-paragraph ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#\{ :shift :meta)))
+	 '((#\{ :meta)))
 
 (set-key `(com-backward-paragraph ,*numeric-argument-marker*)
 	 'movement-table
@@ -250,7 +250,7 @@ with a negative argument -n, move point forward by n lines."
 
 (set-key `(com-forward-paragraph ,*numeric-argument-marker*)
 	 'movement-table
-	 '((#\} :shift :meta)))
+	 '((#\} :meta)))
 
 (set-key `(com-forward-paragraph ,*numeric-argument-marker*)
 	 'movement-table

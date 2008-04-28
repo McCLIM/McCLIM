@@ -68,7 +68,7 @@ Also prints the number of objects (as 'o character[s]')."
 
 (set-key `(com-eval-expression ,*unsupplied-argument-marker* ,*numeric-argument-marker*)
 	 'editor-table
-	 '((#\: :shift :meta)))
+	 '((#\: :meta)))
 
 (set-key 'com-count-lines-page
 	 'info-table
