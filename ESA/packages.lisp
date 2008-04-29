@@ -89,6 +89,7 @@
            #:find-applicable-command-table
            #:esa-command-parser
            #:esa-partial-command-parser
+           #:handling-dead-keys
 
            #:gesture-matches-gesture-name-p #:meta-digit
            #:proper-gesture-p

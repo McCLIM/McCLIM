@@ -550,7 +550,7 @@ to do stuff such as incremental search)."))
     (end-command-loop (overriding-handler command-processor)))
   (setf (overriding-handler (super-command-processor command-processor)) nil))
 
-(defmethod process-gesture ((command-processor command-loop-command-processor) gesture)
+(defmethod process-gesture :around ((command-processor command-loop-command-processor) gesture)
   (handling-dead-keys (gesture)
     (cond ((find gesture *abort-gestures*
             :test #'gesture-matches-gesture-name-p)
@@ -562,10 +562,7 @@ to do stuff such as incremental search)."))
                (end-command-loop command-processor)
                (signal c))))
           (t
-           (setf (accumulated-gestures command-processor)
-                 (nconc (accumulated-gestures command-processor)
-                        (list gesture)))
-           (process-gestures command-processor)
+           (call-next-method)
            (when (funcall (end-condition command-processor))
              (funcall (end-function command-processor))
              (end-command-loop command-processor))))))
@@ -777,11 +774,12 @@ corresponding commands in `command-table' and invoke them using
   ;; well, something that either requires this kind of repeated
   ;; rescanning of accumulated input data or some yet-unimplemented
   ;; complex state retaining mechanism (such as continuations).
-  (loop
-     (setf *current-gesture*
-           (esa-read-gesture :command-processor command-processor))
-     (unless (process-gesture command-processor *current-gesture*)
-       (return))))
+  (loop for gesture = (esa-read-gesture :command-processor command-processor)
+        for first = t then nil
+        do (handling-dead-keys (gesture first)
+             (let ((*current-gesture* gesture))
+               (unless (process-gesture command-processor *current-gesture*)
+                 (return))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

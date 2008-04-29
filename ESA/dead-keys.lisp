@@ -113,18 +113,26 @@ table)."
 (define-dead-key-combination (code-char 251) (:dead-circumflex #\u))
 (define-dead-key-combination (code-char 94) (:dead-circumflex #\space))
 
-(defmacro handling-dead-keys ((gesture) &body body)
+(defmacro handling-dead-keys ((gesture &optional restart) &body body)
   "Accumulate dead keys and subsequent characters. `Gesture'
 should be a symbol bound to either a gesture or an input
 event. When it has been determined that a sequence of `gesture's
 either does or doesn't result in a full gesture, `body' will be
-evaluated with `gesture' bound to that gesture."
+evaluated with `gesture' bound to that gesture. If `restart' is
+true, start over with a new accumulation. If an `abort-gesture'
+condition is signalled in `body', the accumulation will be
+cleared."
   (with-gensyms (state-sym)
     `(retaining-value (,state-sym *dead-key-table*)
+       (when ,restart
+         (setf ,state-sym *dead-key-table*))
        (flet ((invoke-body (,gesture)
                 (setf ,state-sym *dead-key-table*)
-                ,@body))
-         (if (typep gesture '(or keyboard-event character))
+                (handler-case (progn ,@body)
+                  (abort-gesture (c)
+                    (setf ,state-sym *dead-key-table*)
+                    (signal c)))))
+         (if (typep ,gesture '(or keyboard-event character))
              (let ((value (gethash (if (characterp ,gesture)
                                        ,gesture
                                        (keyboard-event-key-name ,gesture))
