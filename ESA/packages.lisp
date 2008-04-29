@@ -46,6 +46,7 @@
            #:capitalize
            #:ensure-array-size
            #:values-max-min
+           #:retaining-value
            #:build-menu #:define-menu-table
            #:observable-mixin
            #:add-observer #:remove-observer

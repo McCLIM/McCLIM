@@ -259,7 +259,8 @@
                         :components ((:file "packages")
                                      (:file "utils" :depends-on ("packages"))
                                      (:file "colors" :depends-on ("packages"))
-                                     (:file "esa" :depends-on ("colors" "packages" "utils"))
+                                     (:file "dead-keys" :depends-on ("utils"))
+                                     (:file "esa" :depends-on ("colors" "packages" "utils" "dead-keys"))
                                      (:file "esa-buffer" :depends-on ("packages" "esa"))
                                      (:file "esa-io" :depends-on ("packages" "esa" "esa-buffer"))
                                      (:file "esa-command-parser" :depends-on ("packages" "esa"))))))
@@ -319,7 +320,6 @@
                                 :pathname #p"Persistent/persistent-undo.lisp"
                                 :depends-on ("packages" "buffer" "persistent-buffer" "undo"))
                          (:file "misc-commands" :depends-on ("basic-commands"))
-                         (:file "unicode-commands" :depends-on ("core" "drei-clim"))
                          (:file "search-commands" :depends-on ("core" "targets" "drei-clim"))
                          (:file "lr-syntax" :depends-on ("fundamental-syntax" "core" "drawing-options"))
                          (:file "lisp-syntax" :depends-on ("lr-syntax" "motion" "core"))

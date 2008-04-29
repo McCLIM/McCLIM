@@ -261,6 +261,18 @@ vector."
 	  `(call-method ,(first around) (,@(rest around) (make-method ,form)))
 	  form))))
 
+(defmacro retaining-value ((bound-symbol &optional initial-value) &body body)
+  "Evaluate `body' with `bound-symbol' bound to
+`initial-value' (default NIL). Th next time `body' is evaluated,
+`bound-symbol' will be bound to whatever its value was the last
+time evaluation of `body' ended."
+  (let ((symbol (gensym)))
+    `(progn (unless (boundp ',symbol)
+              (setf (symbol-value ',symbol) ,initial-value))
+            (let ((,bound-symbol (symbol-value ',symbol)))
+              (unwind-protect (progn ,@body)
+                (setf (symbol-value ',symbol) ,bound-symbol))))))
+
 (defun build-menu (command-tables &rest commands)
   "Create a command table inheriting commands from
 `command-tables', which must be a list of command table

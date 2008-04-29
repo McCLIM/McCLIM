@@ -550,21 +550,25 @@ to do stuff such as incremental search)."))
     (end-command-loop (overriding-handler command-processor)))
   (setf (overriding-handler (super-command-processor command-processor)) nil))
 
-(defmethod process-gesture :around ((command-processor command-loop-command-processor) gesture)
-  (cond ((find gesture *abort-gestures*
-               :test #'gesture-matches-gesture-name-p)
-         ;; It is to be expected that the abort function might signal
-         ;; `abort-gesture'. If that happens, we must end the command
-         ;; loop, but ONLY if this is signalled.
-         (handler-case (funcall (abort-function command-processor))
-           (abort-gesture (c)
-             (end-command-loop command-processor)
-             (signal c))))
-        (t
-         (call-next-method)
-         (when (funcall (end-condition command-processor))
-           (funcall (end-function command-processor))
-           (end-command-loop command-processor)))))
+(defmethod process-gesture ((command-processor command-loop-command-processor) gesture)
+  (handling-dead-keys (gesture)
+    (cond ((find gesture *abort-gestures*
+            :test #'gesture-matches-gesture-name-p)
+           ;; It is to be expected that the abort function might signal
+           ;; `abort-gesture'. If that happens, we must end the command
+           ;; loop, but ONLY if this is signalled.
+           (handler-case (funcall (abort-function command-processor))
+             (abort-gesture (c)
+               (end-command-loop command-processor)
+               (signal c))))
+          (t
+           (setf (accumulated-gestures command-processor)
+                 (nconc (accumulated-gestures command-processor)
+                        (list gesture)))
+           (process-gestures command-processor)
+           (when (funcall (end-condition command-processor))
+             (funcall (end-function command-processor))
+             (end-command-loop command-processor))))))
 
 (defun process-gestures-for-numeric-argument (gestures)
   "Processes a list of gestures for numeric argument
