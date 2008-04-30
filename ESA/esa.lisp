@@ -551,21 +551,20 @@ to do stuff such as incremental search)."))
   (setf (overriding-handler (super-command-processor command-processor)) nil))
 
 (defmethod process-gesture :around ((command-processor command-loop-command-processor) gesture)
-  (handling-dead-keys (gesture)
-    (cond ((find gesture *abort-gestures*
-            :test #'gesture-matches-gesture-name-p)
-           ;; It is to be expected that the abort function might signal
-           ;; `abort-gesture'. If that happens, we must end the command
-           ;; loop, but ONLY if this is signalled.
-           (handler-case (funcall (abort-function command-processor))
-             (abort-gesture (c)
-               (end-command-loop command-processor)
-               (signal c))))
-          (t
-           (call-next-method)
-           (when (funcall (end-condition command-processor))
-             (funcall (end-function command-processor))
-             (end-command-loop command-processor))))))
+  (cond ((find gesture *abort-gestures*
+          :test #'gesture-matches-gesture-name-p)
+         ;; It is to be expected that the abort function might signal
+         ;; `abort-gesture'. If that happens, we must end the command
+         ;; loop, but ONLY if this is signalled.
+         (handler-case (funcall (abort-function command-processor))
+           (abort-gesture (c)
+             (end-command-loop command-processor)
+             (signal c))))
+        (t
+         (call-next-method)
+         (when (funcall (end-condition command-processor))
+           (funcall (end-function command-processor))
+           (end-command-loop command-processor)))))
 
 (defun process-gestures-for-numeric-argument (gestures)
   "Processes a list of gestures for numeric argument
@@ -774,12 +773,9 @@ corresponding commands in `command-table' and invoke them using
   ;; well, something that either requires this kind of repeated
   ;; rescanning of accumulated input data or some yet-unimplemented
   ;; complex state retaining mechanism (such as continuations).
-  (loop for gesture = (esa-read-gesture :command-processor command-processor)
-        for first = t then nil
-        do (handling-dead-keys (gesture first)
-             (let ((*current-gesture* gesture))
-               (unless (process-gesture command-processor *current-gesture*)
-                 (return))))))
+  (loop (let ((*current-gesture* (esa-read-gesture :command-processor command-processor)))
+          (unless (process-gesture command-processor *current-gesture*)
+            (return)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

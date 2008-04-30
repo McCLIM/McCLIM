@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: ESA -*-
+;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2008 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
@@ -14,17 +14,14 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+;;; License along with this library; if not, write to the 
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-;;; Elegantly handle dead keys by collapsing into single characters.
+;;; Define various dead keys - perhaps this should be more
+;;; backend-agnostic? Bah...
 
-(in-package :esa)
-
-(defvar *dead-key-table* (make-hash-table :test 'equal)
-  "A hash table mapping keyboard event names and characters to
-either a similar hash table or characters.")
+(in-package :clim-internals)
 
 (defun set-dead-key-combination (character gestures table)
   "Set `gestures' to result in `character' in the hash table
@@ -79,6 +76,7 @@ table)."
 (define-dead-key-combination (code-char 242) (:dead-grave #\o))
 (define-dead-key-combination (code-char 249) (:dead-grave #\u))
 (define-dead-key-combination (code-char 96) (:dead-grave #\space))
+(define-dead-key-combination (code-char 96) (:dead-grave :dead-grave))
 (define-dead-key-combination (code-char 196) (:dead-diaeresis #\a))
 (define-dead-key-combination (code-char 203) (:dead-diaeresis #\e))
 (define-dead-key-combination (code-char 207) (:dead-diaeresis #\i))
@@ -90,7 +88,8 @@ table)."
 (define-dead-key-combination (code-char 246) (:dead-diaeresis #\o))
 (define-dead-key-combination (code-char 252) (:dead-diaeresis #\u))
 (define-dead-key-combination (code-char 255) (:dead-diaeresis #\y))
-(define-dead-key-combination (code-char 34) (:dead-diaeresis #\space))
+(define-dead-key-combination (code-char 168) (:dead-diaeresis #\space))
+(define-dead-key-combination (code-char 168) (:dead-diaeresis :dead-diaeresis))
 (define-dead-key-combination (code-char 195) (:dead-tilde #\a))
 (define-dead-key-combination (code-char 209) (:dead-tilde #\n))
 (define-dead-key-combination (code-char 227) (:dead-tilde #\a))
@@ -101,6 +100,7 @@ table)."
 (define-dead-key-combination (code-char 240) (:dead-tilde #\d))
 (define-dead-key-combination (code-char 245) (:dead-tilde #\o))
 (define-dead-key-combination (code-char 126) (:dead-tilde #\space))
+(define-dead-key-combination (code-char 126) (:dead-tilde :dead-tilde))
 (define-dead-key-combination (code-char 194) (:dead-circumflex #\a))
 (define-dead-key-combination (code-char 202) (:dead-circumflex #\e))
 (define-dead-key-combination (code-char 206) (:dead-circumflex #\i))
@@ -112,38 +112,4 @@ table)."
 (define-dead-key-combination (code-char 244) (:dead-circumflex #\o))
 (define-dead-key-combination (code-char 251) (:dead-circumflex #\u))
 (define-dead-key-combination (code-char 94) (:dead-circumflex #\space))
-
-(defmacro handling-dead-keys ((gesture &optional restart) &body body)
-  "Accumulate dead keys and subsequent characters. `Gesture'
-should be a symbol bound to either a gesture or an input
-event. When it has been determined that a sequence of `gesture's
-either does or doesn't result in a full gesture, `body' will be
-evaluated with `gesture' bound to that gesture. If `restart' is
-true, start over with a new accumulation. If an `abort-gesture'
-condition is signalled in `body', the accumulation will be
-cleared."
-  (with-gensyms (state-sym)
-    `(retaining-value (,state-sym *dead-key-table*)
-       (when ,restart
-         (setf ,state-sym *dead-key-table*))
-       (flet ((invoke-body (,gesture)
-                (setf ,state-sym *dead-key-table*)
-                (handler-case (progn ,@body)
-                  (abort-gesture (c)
-                    (setf ,state-sym *dead-key-table*)
-                    (signal c)))))
-         (if (typep ,gesture '(or keyboard-event character))
-             (let ((value (gethash (if (characterp ,gesture)
-                                       ,gesture
-                                       (keyboard-event-key-name ,gesture))
-                                   ,state-sym)))
-               (etypecase value
-                 (null
-                  (if (eq ,state-sym *dead-key-table*)
-                      (invoke-body ,gesture)
-                      (setf ,state-sym *dead-key-table*)))
-                 (character
-                  (invoke-body value))
-                 (hash-table
-                  (setf ,state-sym value))))
-             (invoke-body ,gesture))))))
+(define-dead-key-combination (code-char 94) (:dead-circumflex :dead-circumflex))

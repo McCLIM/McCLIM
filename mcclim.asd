@@ -164,6 +164,7 @@
                                                             "stream-output" "recording"))
                  (:file "stream-input" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "input" "ports" "sheets" "events"
                                                             "encapsulate" "transforms" "utils"))
+                 (:file "dead-keys" :depends-on ("stream-input"))
                  (:file "text-selection" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "X11-colors" "medium" "output"
                                                                    "transforms" "sheets" "stream-output"
                                                                    "ports" "recording" "regions"
@@ -259,8 +260,7 @@
                         :components ((:file "packages")
                                      (:file "utils" :depends-on ("packages"))
                                      (:file "colors" :depends-on ("packages"))
-                                     (:file "dead-keys" :depends-on ("utils"))
-                                     (:file "esa" :depends-on ("colors" "packages" "utils" "dead-keys"))
+                                     (:file "esa" :depends-on ("colors" "packages" "utils"))
                                      (:file "esa-buffer" :depends-on ("packages" "esa"))
                                      (:file "esa-io" :depends-on ("packages" "esa" "esa-buffer"))
                                      (:file "esa-command-parser" :depends-on ("packages" "esa"))))))

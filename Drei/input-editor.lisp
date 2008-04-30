@@ -565,32 +565,37 @@ if stuff is inserted after the insertion pointer."
          (old-buffer-contents (buffer-sequence buffer 0 (size buffer))))
     (with-bound-drei-special-variables (drei :prompt "M-x ")
       (update-drei-buffer stream)
-      ;; Commands are permitted to signal immediate rescans, but
-      ;; we may need to do some stuff first.
-      (unwind-protect
-           (accepting-from-user (drei)
-             ;; We narrow the buffer to the last object before
-             ;; input-position, so the user will not be able to
-             ;; delete arguments prompts or other things.
-             (drei-core:with-narrowed-buffer (drei
-                                              (loop for index from
-                                                    (1- (input-position stream)) above 0
-                                                    when (typep (buffer-object buffer index)
-                                                                'noise-string)
-                                                    return (1+ index)
-                                                    finally (return 0))
-                                              t t)
-               (handler-case (process-gestures-or-command drei)
-                 (unbound-gesture-sequence (c)
-                   (display-message "~A is unbound" (gesture-name (gestures c))))
-                 (abort-gesture (c)
-                   (if (member (abort-gesture-event c)
-                               *abort-gestures*
-                        :test #'event-matches-gesture-name-p)
-                       (signal 'abort-gesture :event (abort-gesture-event c))
-                       (when was-directly-processing
-                         (display-message "Aborted")))))))
-        (update-drei-buffer stream))
+      ;; Since we have an unread gesture in the encapsulated stream,
+      ;; we should use that for further input. *standard-input* is
+      ;; bound back to the minibuffer (maybe) when an actual command
+      ;; is executed.
+      (let ((*standard-input* (encapsulating-stream-stream stream)))
+        ;; Commands are permitted to signal immediate rescans, but
+        ;; we may need to do some stuff first.
+        (unwind-protect
+             (accepting-from-user (drei)
+               ;; We narrow the buffer to the last object before
+               ;; input-position, so the user will not be able to
+               ;; delete arguments prompts or other things.
+               (drei-core:with-narrowed-buffer (drei
+                                                (loop for index from
+                                                      (1- (input-position stream)) above 0
+                                                      when (typep (buffer-object buffer index)
+                                                                  'noise-string)
+                                                      return (1+ index)
+                                                      finally (return 0))
+                                                t t)
+                 (handler-case (process-gestures-or-command drei)
+                   (unbound-gesture-sequence (c)
+                     (display-message "~A is unbound" (gesture-name (gestures c))))
+                   (abort-gesture (c)
+                     (if (member (abort-gesture-event c)
+                                 *abort-gestures*
+                          :test #'event-matches-gesture-name-p)
+                         (signal 'abort-gesture :event (abort-gesture-event c))
+                         (when was-directly-processing
+                           (display-message "Aborted")))))))
+          (update-drei-buffer stream)))
       (let ((first-mismatch (buffer-array-mismatch buffer old-buffer-contents)))
         (display-drei drei :redisplay-minibuffer t)
         (cond ((null first-mismatch)

@@ -122,9 +122,77 @@
 	do (handle-event (event-sheet event) event))
   nil)
 
+(defvar *dead-key-table* (make-hash-table :test 'equal)
+  "A hash table mapping keyboard event names and characters to
+either a similar hash table or characters.")
+
+(defclass dead-key-merging-mixin ()
+  ((state :initform *dead-key-table*)
+   (last-deadie-gesture) ; For avoiding name clash with standard-extended-input-stream
+   (last-state))
+  (:documentation "A mixin class for extended input streams that
+takes care of handling dead keys. This is done by still passing
+every gesture on, but accenting the final one as per the dead
+keys read."))
+
+(defmethod stream-read-gesture :around
+    ((stream dead-key-merging-mixin)
+     &key timeout peek-p
+     (input-wait-test *input-wait-test*)
+     (input-wait-handler *input-wait-handler*)
+     (pointer-button-press-handler
+      *pointer-button-press-handler*))
+  (with-slots (state last-deadie-gesture last-state) stream
+    (handler-case
+        (loop with start-time = (get-internal-real-time)
+              with end-time = start-time
+              for gesture = (call-next-method stream
+                             :timeout (when timeout
+                                        (- timeout (/ (- end-time start-time)
+                                                      internal-time-units-per-second)))
+                             :peek-p peek-p
+                             :input-wait-test input-wait-test
+                             :input-wait-handler input-wait-handler
+                             :pointer-button-press-handler
+                             pointer-button-press-handler)
+              do (setf end-time (get-internal-real-time)
+                       last-deadie-gesture gesture
+                       last-state state)
+              do (if (typep gesture '(or keyboard-event character))
+                     (let ((value (gethash (if (characterp gesture)
+                                               gesture
+                                               (keyboard-event-key-name gesture))
+                                           state)))
+                       (etypecase value
+                         (null
+                          (cond ((eq state *dead-key-table*)
+                                 (return gesture))
+                                ((or (and (typep gesture 'keyboard-event)
+                                          (keyboard-event-character gesture))
+                                     (characterp gesture))
+                                 (setf state *dead-key-table*))))
+                         (character
+                          (setf state *dead-key-table*)
+                          (return value))
+                         (hash-table
+                          (return (setf state value)))))
+                     (return gesture)))
+      ;; Policy decision: an abort cancels the current composition.
+      (abort-gesture (c)
+        (setf state *dead-key-table*)
+        (signal c)))))
+
+(defmethod stream-unread-gesture :around ((stream dead-key-merging-mixin) gesture)
+  (if (typep gesture '(or keyboard-event character))
+      (with-slots (state last-deadie-gesture last-state) stream
+        (setf state last-state)
+        (call-next-method stream last-deadie-gesture))
+      (call-next-method)))
+
 (defclass standard-extended-input-stream (extended-input-stream
                                           ;; FIXME: is this still needed?
-                                          standard-sheet-input-mixin)
+                                          standard-sheet-input-mixin
+                                          dead-key-merging-mixin)
   ((pointer)
    (cursor :initarg :text-cursor)
    (last-gesture :accessor last-gesture :initform nil

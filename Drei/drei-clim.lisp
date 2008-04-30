@@ -392,6 +392,10 @@ record."))
   (declare (ignore args))
   (display-drei-area drei))
 
+(defmethod execute-drei-command ((drei drei-area) command)
+  (let ((*standard-input* (or *minibuffer* *standard-input*)))
+    (call-next-method)))
+
 ;;; Implementation of the displayed-output-record and region protocol
 ;;; for Drei areas. The redisplay-related stuff is in
 ;;; drei-redisplay.lisp.
