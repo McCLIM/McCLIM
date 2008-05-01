@@ -117,13 +117,12 @@ table)."
 (defmacro merging-dead-keys ((gesture state) &body body)
   "Accumulate dead keys and subsequent characters. `Gesture'
 should be a symbol bound to either a gesture or an input
-event. When it has been determined that a sequence of `gesture's
-either does or doesn't result in a full gesture, `body' will be
-evaluated with `gesture' bound to that gesture. `State' must be a
-place, initially NIL, that will contain the state of dead-key
-handling, enabling asynchronous use of the macro."
+event. `Body' will be evaluated either with the `gesture' binding
+unchanged, or with `gesture' bound to the result of merging
+preceding dead keys. `State' must be a place, initially NIL, that
+will contain the state of dead-key handling, enabling
+asynchronous use of the macro."
   `(flet ((invoke-body (,gesture)
-            (setf ,state *dead-key-table*)
             ,@body))
      (when (null ,state)
        (setf ,state *dead-key-table*))
@@ -141,7 +140,10 @@ handling, enabling asynchronous use of the macro."
                          (characterp ,gesture))
                      (setf ,state *dead-key-table*))))
              (character
+              (setf ,state *dead-key-table*)
               (invoke-body value))
              (hash-table
-              (setf ,state value))))
-         (invoke-body ,gesture))))
+              (setf ,state value)
+              (invoke-body value))))
+         (progn (setf ,state *dead-key-table*)
+                (invoke-body ,gesture)))))

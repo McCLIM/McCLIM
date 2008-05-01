@@ -146,37 +146,23 @@ keys read."))
     (handler-case
         (loop with start-time = (get-internal-real-time)
               with end-time = start-time
-              for gesture = (call-next-method stream
-                             :timeout (when timeout
-                                        (- timeout (/ (- end-time start-time)
-                                                      internal-time-units-per-second)))
-                             :peek-p peek-p
-                             :input-wait-test input-wait-test
-                             :input-wait-handler input-wait-handler
-                             :pointer-button-press-handler
-                             pointer-button-press-handler)
-              do (setf end-time (get-internal-real-time)
-                       last-deadie-gesture gesture
-                       last-state state)
-              do (if (typep gesture '(or keyboard-event character))
-                     (let ((value (gethash (if (characterp gesture)
-                                               gesture
-                                               (keyboard-event-key-name gesture))
-                                           state)))
-                       (etypecase value
-                         (null
-                          (cond ((eq state *dead-key-table*)
-                                 (return gesture))
-                                ((or (and (typep gesture 'keyboard-event)
-                                          (keyboard-event-character gesture))
-                                     (characterp gesture))
-                                 (setf state *dead-key-table*))))
-                         (character
-                          (setf state *dead-key-table*)
-                          (return value))
-                         (hash-table
-                          (return (setf state value)))))
-                     (return gesture)))
+              do (multiple-value-bind (gesture reason)
+                     (call-next-method stream
+                      :timeout (when timeout
+                                 (- timeout (/ (- end-time start-time)
+                                               internal-time-units-per-second)))
+                      :peek-p peek-p
+                      :input-wait-test input-wait-test
+                      :input-wait-handler input-wait-handler
+                      :pointer-button-press-handler
+                      pointer-button-press-handler)
+                   (when (null gesture)
+                     (return (values nil reason)))
+                   (setf end-time (get-internal-real-time)
+                         last-deadie-gesture gesture
+                         last-state state)
+                   (merging-dead-keys (gesture state)
+                     (return gesture))))
       ;; Policy decision: an abort cancels the current composition.
       (abort-gesture (c)
         (setf state *dead-key-table*)
