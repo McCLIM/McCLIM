@@ -113,3 +113,35 @@ table)."
 (define-dead-key-combination (code-char 251) (:dead-circumflex #\u))
 (define-dead-key-combination (code-char 94) (:dead-circumflex #\space))
 (define-dead-key-combination (code-char 94) (:dead-circumflex :dead-circumflex))
+
+(defmacro merging-dead-keys ((gesture state) &body body)
+  "Accumulate dead keys and subsequent characters. `Gesture'
+should be a symbol bound to either a gesture or an input
+event. When it has been determined that a sequence of `gesture's
+either does or doesn't result in a full gesture, `body' will be
+evaluated with `gesture' bound to that gesture. `State' must be a
+place, initially NIL, that will contain the state of dead-key
+handling, enabling asynchronous use of the macro."
+  `(flet ((invoke-body (,gesture)
+            (setf ,state *dead-key-table*)
+            ,@body))
+     (when (null ,state)
+       (setf ,state *dead-key-table*))
+     (if (typep ,gesture '(or keyboard-event character))
+         (let ((value (gethash (if (characterp ,gesture)
+                                   ,gesture
+                                   (keyboard-event-key-name ,gesture))
+                               ,state)))
+           (etypecase value
+             (null
+              (cond ((eq ,state *dead-key-table*)
+                     (invoke-body ,gesture))
+                    ((or (and (typep ,gesture 'keyboard-event)
+                              (keyboard-event-character ,gesture))
+                         (characterp ,gesture))
+                     (setf ,state *dead-key-table*))))
+             (character
+              (invoke-body value))
+             (hash-table
+              (setf ,state value))))
+         (invoke-body ,gesture))))

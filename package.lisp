@@ -1945,6 +1945,7 @@
    #:frame-display-pointer-documentation-string
    #:list-pane-items
    #:output-record-baseline
+   #:merging-dead-keys
    
    #:draw-output-border-over
    #:draw-output-border-under

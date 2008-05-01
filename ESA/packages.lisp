@@ -65,7 +65,7 @@
            #:add-default-modes #:remove-default-modes))
 
 (defpackage :esa
-  (:use :clim-lisp :clim :esa-utils)
+  (:use :clim-lisp :clim :esa-utils :clim-extensions)
   (:export #:*esa-instance*
            #:buffers #:esa-current-buffer #:current-buffer
            #:windows #:esa-current-window #:current-window
@@ -79,6 +79,7 @@
            #:unbound-gesture-sequence #:gestures
            #:command-processor #:instant-macro-execution-mixin
            #:asynchronous-command-processor #:command-loop-command-processor
+           #:dead-key-merging-command-processor
            #:overriding-handler #:directly-processing-p #:process-gesture #:process-gestures-or-command
            #:command-for-unbound-gestures
            #:*extended-command-prompt*
@@ -89,7 +90,6 @@
            #:find-applicable-command-table
            #:esa-command-parser
            #:esa-partial-command-parser
-           #:handling-dead-keys
 
            #:gesture-matches-gesture-name-p #:meta-digit
            #:proper-gesture-p

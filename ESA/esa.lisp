@@ -501,6 +501,18 @@ asynchronous event handling, and not through
     (setf (accumulated-gestures command-processor) nil)
     (signal 'abort-gesture :event gesture)))
 
+(defclass dead-key-merging-command-processor (command-processor)
+  ((%dead-key-state :accessor dead-key-state
+                    :initform nil
+                    :documentation "The state of dead key
+handling as per `merging-dead-keys'."))
+  (:documentation "Helper class useful for asynchronous command
+processors, merges incoming dead keys with the following key."))
+
+(defmethod process-gesture :around ((command-processor dead-key-merging-command-processor) gesture)
+  (merging-dead-keys (gesture (dead-key-state command-processor))
+    (call-next-method command-processor gesture)))
+
 (defclass command-loop-command-processor (command-processor)
   ((%command-table :reader command-table
                    :initarg :command-table

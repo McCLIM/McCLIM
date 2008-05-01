@@ -229,7 +229,8 @@ command loop completely."))
 ;;; updating is done after a command has been executed, and only then
 ;;; (or by commands at their own discretion).
 (defclass drei-gadget-pane (drei-pane value-gadget action-gadget
-                                      asynchronous-command-processor)
+                                      asynchronous-command-processor
+                                      dead-key-merging-command-processor)
   ((%currently-processing :initform nil
                           :accessor currently-processing-p)
    (%previous-focus :accessor previous-focus :initform nil
@@ -296,12 +297,11 @@ modifier key."))
         (*abort-gestures* *esa-abort-gestures*)
         (*standard-input* drei))
     (accepting-from-user (drei)
-      (handling-dead-keys (gesture)
-        (handler-case (process-gesture drei gesture)
-          (unbound-gesture-sequence (c)
-            (display-message "~A is unbound" (gesture-name (gestures c))))
-          (abort-gesture ()
-            (display-message "Aborted"))))
+      (handler-case (process-gesture drei gesture)
+        (unbound-gesture-sequence (c)
+          (display-message "~A is unbound" (gesture-name (gestures c))))
+        (abort-gesture ()
+          (display-message "Aborted")))
       (display-drei drei :redisplay-minibuffer t)
       (when (modified-p (view drei))
         (when (gadget-value-changed-callback drei)
