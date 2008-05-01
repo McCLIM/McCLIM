@@ -140,6 +140,7 @@
                  (:file "coordinates" :depends-on ("decls" "protocol-classes" "Lisp-Dep"))
                  (:file "setf-star" :depends-on ("decls" "Lisp-Dep"))
                  (:file "transforms" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "coordinates" "utils"))
+                 (:file "dead-keys" :depends-on ("decls"))
                  (:file "regions" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "coordinates" "utils" "transforms" "setf-star" "design"))
                  (:file "sheets" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "utils" "transforms" "regions"))
                  (:file "pixmap" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "sheets" "transforms" "regions"))
@@ -163,8 +164,7 @@
                  (:file "encapsulate" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "sheets" "graphics" "utils" "medium" "input"
                                                             "stream-output" "recording"))
                  (:file "stream-input" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "input" "ports" "sheets" "events"
-                                                            "encapsulate" "transforms" "utils"))
-                 (:file "dead-keys" :depends-on ("stream-input"))
+                                                            "encapsulate" "transforms" "utils" "dead-keys"))
                  (:file "text-selection" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "X11-colors" "medium" "output"
                                                                    "transforms" "sheets" "stream-output"
                                                                    "ports" "recording" "regions"

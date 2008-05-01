@@ -23,6 +23,10 @@
 
 (in-package :clim-internals)
 
+(defvar *dead-key-table* (make-hash-table :test 'equal)
+  "A hash table mapping keyboard event names and characters to
+either a similar hash table or characters.")
+
 (defun set-dead-key-combination (character gestures table)
   "Set `gestures' to result in `character' in the hash table
 `table' (see `*dead-key-table*' for the format of the hash

@@ -122,10 +122,6 @@
 	do (handle-event (event-sheet event) event))
   nil)
 
-(defvar *dead-key-table* (make-hash-table :test 'equal)
-  "A hash table mapping keyboard event names and characters to
-either a similar hash table or characters.")
-
 (defclass dead-key-merging-mixin ()
   ((state :initform *dead-key-table*)
    (last-deadie-gesture) ; For avoiding name clash with standard-extended-input-stream
