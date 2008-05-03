@@ -841,8 +841,8 @@ the completion is ambiguous, a list of possible completions will
 be displayed. If no symbol can be found at `mark', return NIL. If
 there is no symbol at `mark' and `complete-blank' is true (the
 default), all symbols available in the current package will be
-shown. If `complete-blank' is true, nothing will be shown and the
-function will return NIL."
+shown. If `complete-blank' is false, nothing will be shown and
+the function will return NIL."
   (let* ((token (form-around syntax (offset mark)))
          (useful-token (and (not (null token))
                             (form-token-p token)
@@ -870,7 +870,8 @@ function will return NIL."
                   syntax mark
                   (or (when (or useful-token
                                 (accept 'boolean
-                                 :prompt "You are asking for a list of all exported symbols, proceed?"))
+                                 :prompt "You are asking for a list of all exported symbols, proceed?")
+                                (return-from complete-symbol-at-mark-with-fn nil))
                         (frame-manager-menu-choose
                          (find-frame-manager)
                          (mapcar
