@@ -562,6 +562,7 @@ editing plain text."))
            #:find-list-parent
            #:expression-at-mark
            #:definition-at-mark
+           #:form-of-type-at-mark
            #:list-at-mark
            #:symbol-at-mark
            #:fully-quoted-form

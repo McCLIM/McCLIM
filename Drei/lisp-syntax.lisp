@@ -1420,17 +1420,22 @@ is returned. Otherwise, the top-level-form following
 `mark-or-offset' is returned."
   (form-toplevel syntax (expression-at-mark syntax mark-or-offset)))
 
-(defun list-at-mark (syntax mark-or-offset)
-  "Return the list form that `mark-or-offset' is inside, or NIL
-if no such form exists."
+(defun form-of-type-at-mark (syntax mark-or-offset test)
+  "Return the form that `mark-or-offset' is inside and for which
+`test' returns true, or NIL if no such form exists."
   (as-offsets ((offset mark-or-offset))
     (update-parse syntax)
     (let ((form-around (form-around syntax offset)))
       (when form-around
-        (if (and (form-list-p form-around)
+        (if (and (funcall test form-around)
                  (> offset (start-offset form-around)))
             form-around
             (find-list-parent form-around))))))
+
+(defun list-at-mark (syntax mark-or-offset)
+  "Return the list form that `mark-or-offset' is inside, or NIL
+if no such form exists."
+  (form-of-type-at-mark syntax mark-or-offset #'form-list-p))
 
 (defun symbol-at-mark (syntax mark-or-offset
                        &optional (form-fetcher 'expression-at-mark))
@@ -2044,41 +2049,67 @@ syntax.")
                   nil
                   (form-around-in-children syntax (children stack-top) offset))))))
 
+(defun find-parent-of-type (form test)
+  "Find a parent of `form' for which the function `test' is true
+and return it. If a such a parent cannot be found, return nil."
+  (let ((parent (parent form)))
+    (cond ((null parent)
+           nil)
+          ((funcall test parent)
+           parent)
+          (t (find-parent-of-type parent test)))))
+
+(defun find-parent-of-type-offset (form test fn)
+  "Find a parent of `form' for which the function `test' is true
+and return `fn' applied to this parent form. `Fn' should be a
+function that returns an offset when applied to a
+form (eg. `start-offset' or `end-offset'). If such a parent
+cannot be found, return nil"
+  (let ((parent (find-parent-of-type form test)))
+    (when parent
+      (funcall fn parent))))
+
+(defun find-child-of-type (form test)
+  "Find the first child of `form' for which the function `test'
+is true and return it. If such a child cannot be found, return
+nil."
+  (find-if #'(lambda (child)
+               (cond ((funcall test child) child)
+                     ((formp child) (find-child-of-type child test))))
+           (children form)))
+
+(defun find-child-of-type-offset (form test fn)
+  "Find the first child of `form' for which the function `test' is true and return `fn' applied to this child.
+`Fn' should be a function that returns an offset when applied to
+a form (eg. `start-offset' or `end-offset'). If such a child
+cannot be found, return nil."
+  (let ((child (find-child-of-type form test)))
+    (when child
+      (funcall fn child))))
+
 (defun find-list-parent (form)
   "Find a list parent of `form' and return it. If a list parent
 cannot be found, return nil."
-  (let ((parent (parent form)))
-    (typecase parent
-      (list-form parent)
-      ((or form* null) nil)
-      (t (find-list-parent parent)))))
+  (find-parent-of-type form #'form-list-p))
 
 (defun find-list-parent-offset (form fn)
   "Find a list parent of `form' and return `fn' applied to this
 parent token. `Fn' should be a function that returns an offset
 when applied to a token (eg. `start-offset' or `end-offset'). If
 a list parent cannot be found, return nil"
-  (let ((list-parent (find-list-parent form)))
-    (when list-parent
-      (funcall fn list-parent))))
+  (find-parent-of-type-offset form #'form-list-p fn))
 
 (defun find-list-child (form)
   "Find the first list child of `form' and return it. If a list
 child cannot be found, return nil."
-  (find-if #'(lambda (child)
-               (typecase child
-                 (list-form child)
-                 (form (find-list-child child))))
-           (children form)))
+  (find-child-of-type form #'form-list-p))
 
 (defun find-list-child-offset (form fn)
   "Find a list child of `form' and return `fn' applied to this child.
 `Fn' should be a function that returns an offset when applied to
 a form (eg. `start-offset' or `end-offset'). If a list child
 cannot be found, return nil."
-  (let ((list-child (find-list-child form)))
-    (when list-child
-      (funcall fn list-child))))
+  (find-child-of-type-offset form #'form-list-p fn))
 
 (defmethod backward-one-expression (mark (syntax lisp-syntax))
   (update-parse syntax 0 (offset mark))
