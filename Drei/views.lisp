@@ -719,6 +719,11 @@ buffer associated with a `drei-buffer-view'"))
   "Return the length of the `buffer-line' object `line'."
   (- (end-offset line) (start-offset line)))
 
+(defvar *maximum-chunk-size* 100
+  "The maximum amount of objects put into a single chunk by a
+`drei-buffer-view'. Actual chunks may be smaller if a #\Newline
+character is encountered.")
+
 (defun get-chunk (buffer line-start-offset chunk-start-offset line-end-offset)
   "Return a chunk in the form of a cons cell. The chunk will
 start at `chunk-start-offset' and extend no further than

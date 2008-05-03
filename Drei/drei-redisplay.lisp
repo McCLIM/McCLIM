@@ -745,11 +745,6 @@ are the old dimensions of the display of `view' in device units."
     (when (> old-height (- y2 y1))
       (clear-rectangle* pane x1 y2 (+ x1 old-width) (+ y1 old-height)))))
 
-(defvar *maximum-chunk-size* 100
-  "The maximum amount of objects put into a stroke by a
-`drei-buffer-view'. Actual strokes may be smaller if a #\Newline
-character is encountered.")
-
 (defun object-drawer ()
   "Return a closure capable of functioning as a stroke drawer. It
 expects its stroke to cover a single-object non-character buffer
