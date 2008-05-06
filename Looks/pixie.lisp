@@ -1170,7 +1170,11 @@
   (:default-initargs
     :default-view +pixie-tab-bar-view+
     :background +gray83+
-    :text-style (make-text-style :sans-serif :roman :small)))
+    :text-style (make-text-style :sans-serif 
+                                 :roman 
+                                 (if (find-package :mcclim-truetype)
+                                     :normal
+                                     :small))))
 
 (defmethod compose-space ((pane pixie-tab-bar-pane) &key width height)
   (declare (ignore width height))
