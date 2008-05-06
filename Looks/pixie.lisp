@@ -268,6 +268,13 @@
 (defmethod handle-event ((pane pixie-slider-pane) (event pointer-button-release-event))
   (with-slots (armed dragging value bounce-value repeating was-repeating) pane
     (setf was-repeating repeating)
+    (when armed
+      (setf armed t
+           (gadget-value pane :invoke-callback t)
+           (convert-position-to-value pane
+                                      (if (eq (gadget-orientation pane) :vertical)
+                                          (pointer-event-y event)
+                                          (pointer-event-x event)))))
     (when dragging
       (unless (eq dragging :inside)
         (setf armed nil
