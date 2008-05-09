@@ -628,7 +628,8 @@ and must never be nil."))
   (:documentation 
    "The instantiable class that implements an abstract list pane, that is, a gadget
     whose semantics are similar to a radio box or check box, but whose visual
-    appearance is a list of buttons."))
+    appearance is a list of buttons.")
+  (:default-initargs :value nil))
 
 (defclass option-pane (value-gadget)
   ()
