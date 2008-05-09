@@ -1976,15 +1976,18 @@ selection via the control modifier.")
              (> (length (gadget-value gadget)) 1))
     (error "An 'exclusive' list-pane cannot be initialized with more than one item selected.")))
 
-(defmethod value-changed-callback
-    :before
+(defmethod value-changed-callback :before
     ((gadget generic-list-pane) client gadget-id value)
   (declare (ignore client gadget-id))
-  (let* ((i (position value (generic-list-pane-item-values gadget)))
-	 (item (elt (list-pane-items gadget) i))
-	 (ptype (funcall (list-pane-presentation-type-key gadget) item)))
-    (when ptype
-      (throw-object-ptype value ptype))))
+  ;; Maybe act as if a presentation was clicked on, but only if the
+  ;; list pane only allows single-selection.
+  (when (or (eq (list-pane-mode gadget) :one-of)
+            (eq (list-pane-mode gadget) :exclusive))
+    (let* ((i (position value (generic-list-pane-item-values gadget)))
+           (item (elt (list-pane-items gadget) i))
+           (ptype (funcall (list-pane-presentation-type-key gadget) item)))
+      (when ptype
+        (throw-object-ptype value ptype)))))
 
 (defun list-pane-exclusive-p (pane)
   (or (eql (list-pane-mode pane) :exclusive)
