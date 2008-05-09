@@ -550,7 +550,8 @@ and must never be nil."))
   ()
   (:documentation "The value is a list of buttons")
   (:default-initargs
-      :value nil))
+   :value nil
+   :orientation :vertical))
 
 ;; CHECK-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
 

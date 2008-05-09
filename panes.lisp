@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.189 2008/01/30 21:21:44 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.190 2008/05/09 19:12:14 thenriksen Exp $
 
 (in-package :clim-internals)
 
@@ -1074,6 +1074,7 @@ order to produce a double-click")
   ((box-layout-orientation
     :initarg :box-layout-orientation
     :initform :vertical
+    :type (member :vertical :horizontal)
     :accessor box-layout-orientation))
   (:documentation
    "Mixin class for layout panes, which want to behave like a HRACK/VRACK."))
