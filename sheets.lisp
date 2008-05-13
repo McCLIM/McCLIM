@@ -448,7 +448,7 @@
     (bury-mirror (port sheet) sheet)))
 
 (defmethod graft ((sheet sheet-parent-mixin))
-  (graft (sheet-parent sheet)))
+  (and (sheet-parent sheet) (graft (sheet-parent sheet))))
 
 (defmethod (setf sheet-transformation) :after (newvalue (sheet sheet-parent-mixin))
   (declare (ignore newvalue))

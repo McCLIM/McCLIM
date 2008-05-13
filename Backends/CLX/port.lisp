@@ -743,8 +743,8 @@
 			:timestamp time))
         ;;
 	(:configure-notify
-         ;; Resizes are consolidated later..   --Hefner
          (cond ((and (eq (sheet-parent sheet) (graft sheet))
+                     (graft sheet)
                      (not override-redirect-p)
                      (not send-event-p))
                 ;; this is genuine event for a top-level sheet (with
