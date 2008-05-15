@@ -80,13 +80,17 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 			  (encapsulating-stream-stream stream))))
 	(call-next-method))))
 
+(defmethod stream-write-string :around ((stream filling-stream) string
+                                        &optional (start 0) (end (length string)))
+  (dotimes (i (- end start))
+    (stream-write-char stream (aref string (+ i start)))))
+
 ;;; All the monkey business with the lambda form has to do with capturing the
 ;;; keyword arguments of the macro while preserving the user's evaluation order.
 
 (defmacro filling-output ((stream &rest args &key fill-width break-characters
 				  after-line-break after-line-break-initially)
 			  &body body)
-  (declare (ignore after-line-break-initially))
   (when (eq stream t)
     (setq stream '*standard-output*))
   (with-gensyms (fill-var break-var after-var initially-var)
@@ -94,7 +98,7 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 	       ((:break-characters ,break-var))
 	       ((:after-line-break ,after-var))
 	       ((:after-line-break-initially ,initially-var)))
-        (declare (ignorable ,fill-var ,break-var ,after-var))
+        (declare (ignorable ,fill-var ,break-var ,after-var ,initially-var))
 	(let ((,stream (make-instance
 			'filling-stream
 			:stream ,stream
@@ -103,8 +107,9 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 			       `(:break-characters ,break-var))
 			,@(and after-line-break
 			       `(:after-line-break ,after-var)))))
-	  (when ,initially-var
-	    (write-string ,after-var ,stream))
+	  ,(unless (null after-line-break-initially)
+             `(when ,initially-var
+                (write-string ,after-var ,stream)))
 	  ,@body))
       ,@args)))
 
