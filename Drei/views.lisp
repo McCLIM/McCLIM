@@ -645,7 +645,7 @@ are automatically set if applicable."))
 
 (defmethod (setf buffer) :after (buffer (view drei-buffer-view))
   (invalidate-all-strokes view)
-  (with-accessors ((top top) (bot bot)
+  (with-accessors ((top top) (bot bot) (lines lines)
                    (lines-prefix lines-prefix-size)
                    (lines-suffix lines-suffix-size)
                    (buffer-size last-seen-buffer-size)) view
@@ -654,6 +654,7 @@ are automatically set if applicable."))
           lines-prefix 0
           lines-suffix 0
           buffer-size 0)
+    (delete-elements* lines 0 (nb-elements lines))
     (update-line-data view)))
 
 (defmethod cache-string :around ((view drei-buffer-view))
