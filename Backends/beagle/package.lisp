@@ -1,18 +1,5 @@
 ;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (require :cocoa))
-
-;;; START - Cribbed from framework/cocoa-support.lisp
-(in-package "CCL")
-(defun nslog (c)
-  "Writes a string message to the OSX console log."
-  (let* ((rep (format nil "~a" c)))
-    (with-cstrs ((str rep))
-      (with-nsstr (nsstr str (length rep))
-	(#_NSLog #@"Logging: %@" :address nsstr)))))
-;;; END
-
 (in-package :common-lisp-user)
 
 (defpackage :beagle
@@ -84,11 +71,9 @@
   (:import-from :ccl
 				#:@class
 				#:define-objc-method
-				#:description
 				#:get-selector-for
 				#:make-cstring
 				#:%make-nsstring
-				#:nslog
 				#:ns-make-point
 				#:%null-ptr
 				#:pref

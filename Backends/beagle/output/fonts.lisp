@@ -37,13 +37,13 @@
  				      :serif       "Times New Roman"
 				      :sans-serif  "Verdana"))
 
-(defparameter *beagle-text-sizes* '(:normal         12.0
-			  	   :tiny            9.0
-				   :very-small     10.0
-				   :small          11.0
-				   :large          14.0
-				   :very-large     18.0
-				   :huge           24.0))
+(defparameter *beagle-text-sizes* '(:normal         #.(cg-floatify 12.0)
+                                    :tiny           #.(cg-floatify 9.0)
+                                    :very-small     #.(cg-floatify 10.0)
+                                    :small          #.(cg-floatify 11.0)
+                                    :large          #.(cg-floatify 14.0)
+                                    :very-large     #.(cg-floatify 18.0)
+                                    :huge           #.(cg-floatify 24.0)))
 
 (defparameter *beagle-native-fonts* (make-hash-table :test #'equal))
 (defparameter *beagle-font-metrics* (make-hash-table :test #'equal))

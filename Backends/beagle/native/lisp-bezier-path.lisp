@@ -28,7 +28,7 @@
 (defclass lisp-bezier-path (ns:ns-bezier-path)
   ((colour :foreign-type :id
 	   :accessor path-colour)
-   (fill   :foreign-type :bool
+   (fill   :foreign-type :<bool>
 	   :initform #$NO
 	   :accessor path-fill))
   (:metaclass ns:+ns-object))
@@ -36,7 +36,7 @@
 (define-objc-method ((:void :set-colour colour) lisp-bezier-path)
   (setf (path-colour self) colour))
 
-(define-objc-method ((:void :set-fill (:bool fill)) lisp-bezier-path)
+(define-objc-method ((:void :set-fill (:<bool> fill)) lisp-bezier-path)
   (setf (path-fill self) fill))
 
 (define-objc-method ((:void draw) lisp-bezier-path)

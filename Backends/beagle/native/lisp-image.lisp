@@ -129,7 +129,7 @@ See "http://www.stone.com/porting/dict_walk_and_lockFocus.html"
       (progn
 	(send self 'lock-focus)
 	(let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
-	  (send image :dissolve-to-point point :fraction 1.0))
+	  (send image :dissolve-to-point point :fraction #.(cg-floatify 1.0)))
 ;;;	(send (send self 'window) 'flush-window)
 	(send self 'unlock-focus))))
 ;;;    (format *debug-io* "(paste-bitmap...) - FAILED TO LOCK FOCUS ON VIEW (NOT VALID) ~S!!!~%" self)))

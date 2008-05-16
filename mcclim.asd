@@ -82,11 +82,9 @@
   (defsystem :clx
     :class requireable-system))
 
-;;; Required for the beagle backend (not activated by default)
+;;; Clozure CL native GUI stuff
 #+clim-beagle
-(progn
-  (require :cocoa)
-  (require :objc-support))
+(require :cocoa)
 
 (defmacro clim-defsystem ((module &key depends-on) &rest components)
   `(progn
@@ -405,6 +403,7 @@
               :serial t
               :components
               ((:file "package")
+               (:file "cocoa-util")
                (:module "native"
                 :components ((:file "lisp-bezier-path")
                              (:file "lisp-window")
@@ -417,7 +416,6 @@
                              (:file "lisp-slider")
                              (:file "lisp-button")
                              (:file "lisp-image")))
-               (:file "cocoa-util")
                (:module "windowing"
                 :depends-on ("native")
                 :components ((:file "port")

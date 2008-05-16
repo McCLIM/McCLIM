@@ -84,7 +84,7 @@
 
 (defmethod (setf medium-line-style) :before (line-style (medium beagle-medium))
   (unless (equal (medium-line-style medium) line-style)
-    (let ((width (coerce (line-style-thickness line-style) 'short-float))
+    (let ((width (cg-floatify (line-style-thickness line-style)))
 	  (cap (%translate-cap-shape (line-style-cap-shape line-style)))
 	  (dashes (line-style-dashes line-style))
 	  (join (%translate-joint-shape (line-style-joint-shape line-style))))
@@ -344,7 +344,7 @@ for non-tiled designs."
 (defmethod %clim-opacity-from-design ((medium beagle-medium) design)
   (declare (ignore medium design))
   ;; Just a stub for now. ::FIXME:: Need to ask on the list about this...
-  1.0)
+  #.(cg-floatify 1.0))
 
 
 (defmethod %clim-colour-from-design ((medium beagle-medium) (design climi::indirect-ink))
@@ -477,12 +477,8 @@ for non-tiled designs."
 (defun medium-copy-area-aux (from from-x from-y width height to to-x to-y)
   "Helper method for copying areas. 'from' and 'to' must both be 'mirror'
 objects. From and To coordinates must already be transformed as appropriate."
-  (let* ((source-region (ccl::make-ns-rect (coerce from-x 'short-float)
-					   (coerce from-y 'short-float)
-					   (coerce width  'short-float)
-					   (coerce height 'short-float)))
-	 (target-point  (ccl::make-ns-point (coerce to-x 'short-float)
-					    (coerce to-y 'short-float)))
+  (let* ((source-region (make-ns-rect from-x from-y width height))
+	 (target-point  (make-ns-point to-x to-y))
 	 (bitmap-image  (send from :copy-bitmap-from-region source-region)))
     (when (eql bitmap-image (%null-ptr))
       (warn "medium.lisp -> medium-copy-area: failed to copy specified region (null bitmap)~%")
@@ -581,10 +577,10 @@ objects. From and To coordinates must already be transformed as appropriate."
         (do-sequence ((left top right bottom) coord-seq)
 	  (when (< right left) (rotatef left right))
 	  (when (< top bottom) (rotatef top bottom))
-	  (let ((rect (ccl::make-ns-rect (pixel-center left)
-					 (pixel-center bottom)
-					 (pixel-count (- right left))
-					 (pixel-count (- top bottom)))))
+	  (let ((rect (make-ns-rect (pixel-center left)
+				    (pixel-center bottom)
+				    (pixel-count (- right left))
+				    (pixel-count (- top bottom)))))
 	    (send path :append-bezier-path-with-rect rect)
 	    (#_free rect)))
 	(if filled
@@ -594,16 +590,15 @@ objects. From and To coordinates must already be transformed as appropriate."
 ;; ::FIXME:: Move these from here!
 (defun pixel-center (pt)
 "Ensure any ordinate provided sits on the center of a pixel. This
-prevents Cocoa from 'antialiasing' lines, making them thicker and
-a shade of grey. Ensures the return value is a short-float, as
-required by the Cocoa methods."
-  (coerce (+ (round-coordinate pt) 0.5) 'short-float))
+prevents Cocoa from 'antialiasing' lines, making them thicker and a
+shade of grey. Ensures the return value is an appropriate float type."
+  (cg-floatify (+ (round-coordinate pt) 0.5)))
 
 
 (defun pixel-count (sz)
 "Ensures any value provided is rounded to the nearest unit, and
-returned as a short-float as required by the Cocoa methods."
-  (coerce (round-coordinate sz) 'short-float))
+returned as an appropriate float type."
+  (cg-floatify (round-coordinate sz)))
 
 
 ;;; Nabbed from CLX backend medium.lisp
@@ -657,10 +652,10 @@ rounding\" gives consistent results."
 	     (origin-y (- center-y radius-dy))
 	     (width (* 2 radius-dx))
 	     (height (* 2 radius-dy))
-	     (rect (ccl::make-ns-rect (pixel-center origin-x)
-				      (pixel-center origin-y)
-				      (pixel-count width)
-				      (pixel-count height))))
+	     (rect (make-ns-rect (pixel-center origin-x)
+				 (pixel-center origin-y)
+				 (pixel-count width)
+				 (pixel-count height))))
 	(send path :append-bezier-path-with-oval-in-rect rect)
 	(#_free rect)
 	(if filled
@@ -677,8 +672,8 @@ rounding\" gives consistent results."
 				       (pixel-center center-y))))
 	    (send path :append-bezier-path-with-arc-with-center point
 		       :radius (pixel-count radius)
-		       :start-angle (coerce (/ start-angle (/ pi 180)) 'short-float)
-		       :end-angle (coerce (/ end-angle (/ pi 180)) 'short-float)
+		       :start-angle (cg-floatify (/ start-angle (/ pi 180)))
+		       :end-angle (cg-floatify (/ end-angle (/ pi 180)))
 		       :clockwise NIL)))
 	(if filled
 	    (send mirror :fill-path path :in-colour colour)
@@ -692,8 +687,7 @@ rounding\" gives consistent results."
 ;;; Draws a point on the medium 'medium'.
 
 (defmethod medium-draw-point* ((medium beagle-medium) x y)
-  (let ((width (coerce (line-style-thickness (medium-line-style medium))
-		       'short-float)))
+  (let ((width (cg-floatify (line-style-thickness (medium-line-style medium)))))
     (medium-draw-circle* medium x y (/ width 2) 0 (* 2 pi) t)))
 
 
@@ -707,7 +701,7 @@ rounding\" gives consistent results."
 
 (defmethod medium-draw-points* ((medium beagle-medium) coord-seq)
   (with-transformed-positions ((sheet-native-transformation (medium-sheet medium)) coord-seq)
-    (let ((width (coerce (line-style-thickness (medium-line-style medium)) 'short-float)))
+    (let ((width (cg-floatify (line-style-thickness (medium-line-style medium)))))
       (do-sequence ((x y) coord-seq)
         (medium-draw-circle* medium x y (/ width 2) 0 (* 2 pi) t)))))
 
@@ -775,10 +769,10 @@ rounding\" gives consistent results."
 	    (send mirror :draw-image colour :at-point (ns-make-point (pixel-center left)
 								     (pixel-center top)))
 	    (return-from medium-draw-rectangle* (values)))
-	  (let ((rect (ccl::make-ns-rect (pixel-center left)
-					 (pixel-center bottom)
-					 (pixel-count (- right left))
-					 (pixel-count (- top bottom)))))
+	  (let ((rect (make-ns-rect (pixel-center left)
+				    (pixel-center bottom)
+				    (pixel-count (- right left))
+				    (pixel-count (- top bottom)))))
 	    (send path :append-bezier-path-with-rect rect)
 	    (#_free rect)
 	    (if filled
@@ -853,8 +847,7 @@ rounding\" gives consistent results."
 		    (:baseline (- y baseline))
 ;;;		    (:bottom y)))
 		    (:bottom (- y text-height))))
-	  (slet ((point (ns-make-point (coerce x 'short-float)
-				       (coerce y 'short-float))))
+	  (slet ((point (ns-make-point (cg-floatify x) (cg-floatify y))))
 	    (let ((objc-string (%make-nsstring (subseq string start end))))
 	      ;; NB: draw-string-at-point uses upper-left as origin in a flipped
 	      ;; view.

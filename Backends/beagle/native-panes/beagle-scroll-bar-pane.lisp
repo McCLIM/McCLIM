@@ -21,10 +21,10 @@
   ;; bar; otherwise we get a :vertical bar.
 
   (let* ((q (compose-space sheet))
-	 (rect (ccl::make-ns-rect 0.0
-				  0.0
-				  (space-requirement-width q)
-				  (space-requirement-height q)))
+	 (rect (make-ns-rect 0.0
+				0.0
+				(space-requirement-width q)
+				(space-requirement-height q)))
 	 (mirror (make-instance 'lisp-scroller :with-frame rect)))
     (send mirror 'retain)
 
@@ -33,7 +33,7 @@
     (send mirror :set-enabled #$YES)
 
     ;; Make knob fill pane initially.
-    (send mirror :set-float-value 0.0 :knob-proportion 1.0)
+    (send mirror :set-float-value 0.0 :knob-proportion #.(cg-floatify 1.0))
     (setf (toolkit-object sheet) mirror)
     (setf (view-lisp-scroller mirror) sheet)
 
@@ -99,7 +99,7 @@
 		       (/ ts (+ range ts)))))
     (send (toolkit-object scroll-bar)
 	  :set-float-value (coerce (clamp value 0.0 1.0) 'short-float)
-	  :knob-proportion (coerce (clamp loz-size 0.0 1.0) 'short-float))))
+	  :knob-proportion (cg-floatify (clamp loz-size 0.0 1.0)))))
 
 (defmethod (setf gadget-min-value) :after
     (new-value (pane beagle-scroll-bar-pane))
@@ -153,7 +153,7 @@
 		     (/ size range))))
     (send (toolkit-object gadget)
 	  :set-float-value (coerce position 'short-float)
-	  :knob-proportion (coerce loz-size 'short-float)))))
+	  :knob-proportion (cg-floatify loz-size)))))
 
 
 ;;; Called in the Cocoa App thread.

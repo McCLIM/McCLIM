@@ -235,8 +235,8 @@ for windows that are not decorated."
 	   (y               0)
 	   (width           (space-requirement-width q))
 	   (height          (space-requirement-height q))
-	   (rect            (ccl::make-ns-rect (pixel-center x) (pixel-center y)
-					       (pixel-count width) (pixel-count height)))
+	   (rect            (make-ns-rect (pixel-center x) (pixel-center y)
+					  (pixel-count width) (pixel-count height)))
 	   (name            (%make-nsstring (frame-pretty-name frame)))
 	   (top-level-frame (%beagle-make-window (beagle-port-screen port)
 						 rect
@@ -266,8 +266,8 @@ for windows that are not decorated."
 	   (y             0)
 	   (width         (space-requirement-width q))
 	   (height        (space-requirement-height q))
-	   (rect          (ccl::make-ns-rect (pixel-center x) (pixel-center y)
-					     (pixel-count width) (pixel-count height)))
+	   (rect          (make-ns-rect (pixel-center x) (pixel-center y)
+					(pixel-count width) (pixel-count height)))
 	   (menu-frame    (%beagle-make-window (beagle-port-screen port) rect :decorated nil))
 	   (clim-mirror   (make-instance 'lisp-view :with-frame rect)))
 	(send clim-mirror 'retain)
@@ -294,8 +294,8 @@ for windows that are not decorated."
 	   (q             (compose-space sheet))
 	   (width         (space-requirement-width q))
 	   (height        (space-requirement-height q))
-	   (rect          (ccl::make-ns-rect (pixel-center x) (pixel-center y)
-					     (pixel-count width) (pixel-count height)))
+	   (rect          (make-ns-rect (pixel-center x) (pixel-center y)
+					(pixel-count width) (pixel-count height)))
 	   (mirror        (make-instance view :with-frame rect)))
       (#_free rect)
       (send mirror 'retain)
@@ -331,8 +331,8 @@ for windows that are not decorated."
 
 (defmethod realize-mirror ((port beagle-port) (pixmap pixmap))
   (when (null (port-lookup-mirror port pixmap))
-    (let* ((width  (coerce (pixmap-width pixmap) 'short-float))
-	   (height (coerce (pixmap-height pixmap) 'short-float))
+    (let* ((width  (cg-floatify (pixmap-width pixmap)))
+	   (height (cg-floatify (pixmap-height pixmap)))
 	   (mirror (make-instance 'lisp-image))) ;; :with-frame rect)))
       (send mirror 'retain)
       (slet ((size (ccl::ns-make-size width height)))
@@ -432,9 +432,8 @@ for windows that are not decorated."
 
     ;; We've handled the frame (if necessary) - now resize the mirror itself.
     (slet ((frame-size (send mirror 'frame)))
-      (rlet ((size :<NSS>ize :width  (coerce (floor (bounding-rectangle-width mirror-region))
-					     'short-float)
-		   :height (coerce (floor (bounding-rectangle-height mirror-region)) 'short-float)))
+      (rlet ((size :<NSS>ize :width  (cg-floatify (floor (bounding-rectangle-width mirror-region)))
+		   :height (cg-floatify (floor (bounding-rectangle-height mirror-region)))))
 	;; ignore this (for now)
 	#+nil
         (when (and (equal (pref frame-size :<NSR>ect.size.width) (pref size :<NSS>ize.width))
@@ -448,9 +447,8 @@ for windows that are not decorated."
   (slet ((frame-rect (send mirror 'frame)))
     (rlet ((rect :<NSR>ect :origin.x    (pref frame-rect :<NSR>ect.origin.x)
 		 :origin.y    (pref frame-rect :<NSR>ect.origin.y)
-		 :size.width  (coerce (floor (bounding-rectangle-width mirror-region)) 'short-float)
-		 :size.height (coerce (floor (bounding-rectangle-height mirror-region))
-				      'short-float)))
+		 :size.width  (cg-floatify (floor (bounding-rectangle-width mirror-region)))
+		 :size.height (cg-floatify (floor (bounding-rectangle-height mirror-region)))))
       (send (send mirror 'window) :set-frame
 	    (send (send mirror 'window)
 		  :frame-rect-for-content-rect rect
@@ -547,7 +545,7 @@ If invoked on any other kind of sheet, returns NIL."
 	       (let* ((app-tls (frame-top-level-sheet (pane-frame sheet)))
 		      (tls-mirror (port-lookup-mirror port app-tls))
 		      (tls-window (send tls-mirror 'window))
-		      (origin-pt (ccl::make-ns-point 0.0 0.0)))
+		      (origin-pt (make-ns-point 0.0 0.0)))
 		 (slet ((frame-pt (send tls-window :convert-base-to-screen origin-pt))
 			(tls-bounds (send tls-mirror 'bounds)))
 		   (#_free origin-pt)
@@ -560,8 +558,7 @@ If invoked on any other kind of sheet, returns NIL."
 ;;;		     (setf y (+ y frame-y))
 		     (setf y (- (+ frame-y tls-height) y)))))))
 	
-	(let ((point (ccl::make-ns-point (coerce x 'short-float)
-					 (coerce y 'short-float))))
+	(let ((point (make-ns-point x y)))
 	  (send (send mirror 'window) :set-frame-top-left-point point)
 	  (#_free point)))))
 
@@ -606,11 +603,9 @@ If invoked on any other kind of sheet, returns NIL."
       (%beagle-port-move-mirror-window port mirror mirror-transformation)
     (slet ((mirror-bounds (send mirror 'bounds))
 	   (frame-origin (send mirror 'frame)))  ;position + size _in parent_
-      (let* ((x (coerce (floor (nth-value 0 (transform-position mirror-transformation 0 0)))
-			'short-float))
-	     (y (coerce (floor (nth-value 1 (transform-position mirror-transformation 0 0)))
-			'short-float))
-	     (point (ccl::make-ns-point x y)))
+      (let* ((x (floor (nth-value 0 (transform-position mirror-transformation 0 0))))
+	     (y (floor (nth-value 1 (transform-position mirror-transformation 0 0))))
+	     (point (make-ns-point x y)))
 	;; Skip this (for now...)
 	#+nil
 	(when (and (equal (pref frame-origin :<NSR>ect.origin.x) x)

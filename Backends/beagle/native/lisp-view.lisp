@@ -119,7 +119,7 @@
 
   (when (send self 'lock-focus-if-can-draw)
     (let ((image (send (send (@class ns-image) 'alloc) :init-with-data (send bitmap "TIFFRepresentation"))))
-      (send image :dissolve-to-point point :fraction 1.0))
+      (send image :dissolve-to-point point :fraction #.(cg-floatify 1.0)))
 ;;;	(send (send self 'window) 'flush-window)
     (send self 'unlock-focus))
 ;;;  (send (send self 'window) 'flush-window))
@@ -127,7 +127,7 @@
 
 (define-objc-method ((:void :draw-image image :at-point (:<NSP>oint point)) lisp-view)
   (when (send self 'lock-focus-if-can-draw)
-    (send image :dissolve-to-point point :fraction 1.0)
+    (send image :dissolve-to-point point :fraction #.(cg-floatify 1.0))
     (send self 'unlock-focus)))
 
 ;;; ----------------------------------------------------------------------------

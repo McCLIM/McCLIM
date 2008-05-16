@@ -164,16 +164,16 @@ not initialised, we'll just get \":screen NIL\" in that case."
 
 
 ;;; From CLX/port.lisp
-(defun %beagle-pixel (port color &key (alpha 1.0))
+(defun %beagle-pixel (port color &key (alpha #.(cg-floatify 1.0)))
   (let* ((table (slot-value port 'color-table))
 	 (nscol (gethash color table)))
     (when (null nscol)
       (setf (gethash color table)
 	    (multiple-value-bind (r g b) (color-rgb color)
-	      (let ((nsc (send (@class ns-color) :color-with-calibrated-red (coerce r 'short-float)
-			       :green (coerce g 'short-float)
-			       :blue (coerce b 'short-float)
-			       :alpha (coerce alpha 'short-float))))
+	      (let ((nsc (send (@class ns-color) :color-with-calibrated-red (cg-floatify r)
+			       :green (cg-floatify g)
+			       :blue (cg-floatify b)
+			       :alpha (cg-floatify alpha))))
 		(send nsc 'retain)))))
     (gethash color table)))
 	 

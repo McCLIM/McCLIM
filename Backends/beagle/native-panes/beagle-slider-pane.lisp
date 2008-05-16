@@ -26,10 +26,10 @@
   ;; bar; otherwise we get a :vertical bar.
 
   (let* ((q (compose-space sheet))
-	 (rect (ccl::make-ns-rect 0.0
-				  0.0
-				  (coerce (space-requirement-width q) 'short-float)
-				  (coerce (space-requirement-height q) 'short-float)))
+	 (rect (make-ns-rect 0.0
+			     0.0
+			     (space-requirement-width q)
+			     (space-requirement-height q)))
 	 (mirror (make-instance 'lisp-slider :with-frame rect)))
     (send mirror 'retain)
 

@@ -23,30 +23,33 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :ccl)
+(in-package :beagle)
 
-;; Make an NSRect structure with the origin at (x, y) and with the width and height
-;; specified.
+(declaim (inline cg-floatify))
+(defun cg-floatify (cg-float-value)
+  (float cg-float-value ns:+cgfloat-zero+))
+
 (defun make-ns-rect (x y width height)
   "Make a Cocoa NSRect structure with the origin at (x, y) and with the
 width and height specified. The memory for any structure created with
 this method must be released by the user (using (#_free))."
-  (make-record :<NSR>ect :origin.x    x
-                         :origin.y    y
-			 :size.width  width
-			 :size.height height))
+  (ccl:make-record :<NSR>ect
+		   :origin.x    (cg-floatify x)
+		   :origin.y    (cg-floatify y)
+		   :size.width  (cg-floatify width)
+		   :size.height (cg-floatify height)))
 
 (defun make-ns-point (x y)
   "Make a Cocoa NSPoint structure populated with x and y provided.
 The memory for any structure created with this method must be released
 by the user (using (#_free))."
-  (make-record :<NSP>oint :x x :y y))
+  (ccl:make-record :<NSP>oint :x (cg-floatify x) :y (cg-floatify y)))
 
 ;; Stolen from Bosco "main.lisp".
 (defun description (c)
-  (with-autorelease-pool
-   (lisp-string-from-nsstring
-	(send c 'description))))
+  (ccl::with-autorelease-pool
+    (ccl::lisp-string-from-nsstring
+     (ccl::send c 'description))))
 
 (defun nslog (c)
   (let* ((rep (format nil "~a" c)))
