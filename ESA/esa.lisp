@@ -106,30 +106,45 @@ message is supposed to be displayed in the minibuffer.")
 current message was set."))
   (:default-initargs
    :scroll-bars nil
-    :display-function 'display-minibuffer
-    :display-time :no-clear
-    :incremental-redisplay t))
+   :display-function 'display-minibuffer
+   :display-time :command-loop
+   :incremental-redisplay t))
 
-(defmethod stream-accept :before ((pane minibuffer-pane) type &rest args)
-  (declare (ignore type args))
-  (window-clear pane)
-  (when (message pane)
-    (setf (message pane) nil)
-    ;; FIXME: If we do not redisplay here, the area occupied by the
-    ;; message will be blanked with a white rectangle at the first
-    ;; keystroke.
-    (redisplay-frame-pane (pane-frame pane) pane)))
+(defmethod handle-repaint ((pane minibuffer-pane) region)
+  (when (and (message pane)
+             (> (get-universal-time)
+                (+ *minimum-message-time* (message-time pane))))
+    (window-clear pane)
+    (setf (message pane) nil))
+  (call-next-method))
+
+(defmethod (setf message) :after (new-value (pane minibuffer-pane))
+  (change-space-requirements pane))
+
+(defmethod pane-needs-redisplay ((pane minibuffer-pane))
+  ;; Always call the display function, never clear the window. This
+  ;; allows us to time-out the message in the minibuffer.
+  (values t nil))
+
+(defun display-minibuffer (frame pane)
+  (declare (ignore frame))
+  (handle-repaint pane +everywhere+))
 
 (defmethod stream-accept :around ((pane minibuffer-pane) type &rest args)
   (declare (ignore args))
+  (when (message pane)
+    (setf (message pane) nil))
+  (window-clear pane)
   ;; FIXME: this isn't the friendliest way of indicating a parse
   ;; error: there's no feedback, unlike emacs' quite nice "[no
   ;; match]".
-  (loop
-   (handler-case
-       (with-input-focus (pane)
-         (return (call-next-method)))
-     (parse-error () nil))))
+  (unwind-protect
+       (loop
+        (handler-case
+            (with-input-focus (pane)
+              (return (call-next-method)))
+          (parse-error () nil)))
+    (window-clear pane)))
 
 (defmethod stream-accept ((pane minibuffer-pane) type &rest args
                           &key (view (stream-default-view pane))
@@ -138,6 +153,21 @@ current message was set."))
   (apply #'prompt-for-accept pane type view args)
   ;; but we need to turn some of ACCEPT-1 off.
   (apply #'accept-1-for-minibuffer pane type args))
+
+(defmethod compose-space ((pane minibuffer-pane) &key width height)
+  (declare (ignore width height))
+  (with-sheet-medium (medium pane)
+    (let* ((sr (call-next-method))
+           (height (max (text-style-height (medium-merged-text-style medium)
+                                           medium)
+                        (if (message pane)
+                            (bounding-rectangle-height (message pane))
+                            0))))
+      (make-space-requirement
+       :height height :min-height height :max-height height
+       :width (space-requirement-width sr)
+       :min-width (space-requirement-min-width sr)
+       :max-width (space-requirement-max-width sr)))))
 
 ;;; simpler version of McCLIM's internal operators of the same names:
 ;;; HANDLE-EMPTY-INPUT to make default processing work, EMPTY-INPUT-P
@@ -288,24 +318,15 @@ current message was set."))
           stream object object-type view :rescan nil))
        (values object object-type)))))
 
-(defun display-minibuffer (frame pane)
-  (declare (ignore frame))
-  (if (message pane)
-      (if (> (get-universal-time)
-             (+ *minimum-message-time* (message-time pane)))
-          (setf (message pane) nil)
-          (replay-output-record (message pane) pane))
-      ;; Even if there isn't a message, someone else might still have
-      ;; scribbled in the pane. We shouldn't disappoint them.
-      (replay (stream-output-history pane) pane)))
-
 (defgeneric invoke-with-minibuffer-stream (minibuffer continuation))
 
 (defmethod invoke-with-minibuffer-stream ((minibuffer minibuffer-pane) continuation)
+  (window-clear minibuffer)
   (setf (message minibuffer)
-        (with-output-to-output-record (minibuffer)
+        (with-new-output-record (minibuffer)
           (setf (message-time minibuffer) (get-universal-time))
-          (funcall continuation minibuffer))))
+          (filling-output (minibuffer :fill-width (bounding-rectangle-width minibuffer))
+            (funcall continuation minibuffer)))))
 
 (defmethod invoke-with-minibuffer-stream ((minibuffer pointer-documentation-pane) continuation)
   (clim-extensions:with-output-to-pointer-documentation (stream (pane-frame minibuffer))
@@ -900,7 +921,7 @@ used.")
                                 ;; for presentation-to-command-translators,
                                 ;; which are searched for in
                                 ;; (frame-command-table *application-frame*)
-                                (redisplay-frame-pane ,frame (frame-standard-input ,frame) :force-p t)
+                                (redisplay-frame-pane ,frame (frame-standard-input ,frame))
                                 (setf (frame-command-table ,frame) command-table)
                                 (process-gestures-or-command ,frame))
                             (unbound-gesture-sequence (c)
