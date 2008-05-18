@@ -160,9 +160,7 @@ current message was set."))
     (let* ((sr (call-next-method))
            (height (max (text-style-height (medium-merged-text-style medium)
                                            medium)
-                        (if (message pane)
-                            (bounding-rectangle-height (message pane))
-                            0))))
+                        (bounding-rectangle-height (stream-output-history pane)))))
       (make-space-requirement
        :height height :min-height height :max-height height
        :width (space-requirement-width sr)
