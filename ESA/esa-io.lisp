@@ -248,25 +248,28 @@ to overwrite."
 	t)))
 
 (defmethod frame-save-buffer (application-frame buffer)
-  (let ((filepath (or (filepath buffer)
-                      (accept 'pathname :prompt "Save Buffer to File"))))
-    (check-buffer-writability application-frame filepath buffer)
-    (unless (check-file-times buffer filepath "Overwrite" "written")
-      (return-from frame-save-buffer))
-    (when (and (probe-file filepath) (not (file-saved-p buffer)))
-      (let ((backup-name (pathname-name filepath))
-            (backup-type (format nil "~A~~~D~~"
-                                 (pathname-type filepath)
-                                 (1+ (version-number filepath)))))
-        (rename-file filepath (make-pathname :name backup-name
-                                             :type backup-type))))
-    (with-open-file (stream filepath :direction :output :if-exists :supersede)
-      (save-buffer-to-stream buffer stream))
-    (setf (filepath buffer) filepath
-          (file-write-time buffer) (file-write-date filepath)
-          (name buffer) (filepath-filename filepath))
-    (display-message "Wrote: ~a" (filepath buffer))
-    (setf (needs-saving buffer) nil)))
+  (handler-case
+      (let ((filepath (or (filepath buffer)
+                          (accept 'pathname :prompt "Save Buffer to File"))))
+        (check-buffer-writability application-frame filepath buffer)
+        (unless (check-file-times buffer filepath "Overwrite" "written")
+          (return-from frame-save-buffer))
+        (when (and (probe-file filepath) (not (file-saved-p buffer)))
+          (let ((backup-name (pathname-name filepath))
+                (backup-type (format nil "~A~~~D~~"
+                                     (pathname-type filepath)
+                                     (1+ (version-number filepath)))))
+            (rename-file filepath (make-pathname :name backup-name
+                                                 :type backup-type))))
+        (with-open-file (stream filepath :direction :output :if-exists :supersede)
+          (save-buffer-to-stream buffer stream))
+        (setf (filepath buffer) filepath
+              (file-write-time buffer) (file-write-date filepath)
+              (name buffer) (filepath-filename filepath))
+        (display-message "Wrote: ~a" (filepath buffer))
+        (setf (needs-saving buffer) nil))
+    (file-error (c)
+      (display-message "~A" c))))
 
 (define-command (com-save-buffer :name t :command-table esa-io-table) ()
   "Write the contents of the buffer to a file.
