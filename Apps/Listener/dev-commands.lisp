@@ -1519,14 +1519,36 @@
 
 (define-command (com-eval :menu t :command-table lisp-commands)
     ((form 'clim:form :prompt "form"))
-  (let* ((- form)
-         (values (multiple-value-list (eval form))))
-    (fresh-line)
-    (shuffle-specials form values)
-    (display-evalues values)
-    (fresh-line)))
-
-
+  (flet ((evaluate ()
+           (let ((- form))
+             (multiple-value-list (eval form)))))
+    ;; If possible, use a thread for evaluation, permitting us to
+    ;; interrupt it.
+    (let* ((start-time (get-internal-real-time))
+           (values
+            (if clim-sys:*multiprocessing-p*
+                (catch 'done
+                  (let* ((orig-process (clim-sys:current-process))
+                         (eval-process
+                          (clim-sys:make-process
+                           #'(lambda ()
+                               (let ((values (evaluate)))
+                                 (clim-sys:process-interrupt orig-process
+                                                             #'(lambda ()
+                                                                 (throw 'done values))))))))
+                    (handler-case (loop (read-gesture))
+                      (abort-gesture ()
+                        (clim-sys:destroy-process eval-process)
+                        (with-text-style (t (make-text-style nil :italic nil))
+                          (format t "Aborted by user after ~F seconds."
+                                  (/ (- (get-internal-real-time) start-time)
+                                     internal-time-units-per-second)))
+                        (return-from com-eval)))))
+                (evaluate))))
+      (fresh-line)
+      (shuffle-specials form values)
+      (display-evalues values)
+      (fresh-line))))
 
 ;;; Some CLIM developer commands
 
