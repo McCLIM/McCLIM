@@ -1519,36 +1519,53 @@
 
 (define-command (com-eval :menu t :command-table lisp-commands)
     ((form 'clim:form :prompt "form"))
-  (flet ((evaluate ()
-           (let ((- form))
-             (multiple-value-list (eval form)))))
-    ;; If possible, use a thread for evaluation, permitting us to
-    ;; interrupt it.
-    (let* ((start-time (get-internal-real-time))
-           (values
+  (let ((standard-output *standard-output*)
+        (standard-input *standard-input*))
+    (flet ((evaluate ()
+             (let ((- form)
+                   (*standard-output* standard-output)
+                   (*standard-input* standard-input)
+                   error success)
+               (unwind-protect (handler-case (prog1 (cons :values (multiple-value-list (eval form)))
+                                               (setf success t))
+                                 (condition (e)
+                                   (setf error e)
+                                   (error e)))
+                 (when (and error (not success))
+                   (return-from evaluate (cons :error error)))))))
+      ;; If possible, use a thread for evaluation, permitting us to
+      ;; interrupt it.
+      (let ((start-time (get-internal-real-time)))
+        (destructuring-bind (result . value)
             (if clim-sys:*multiprocessing-p*
                 (catch 'done
                   (let* ((orig-process (clim-sys:current-process))
                          (eval-process
                           (clim-sys:make-process
                            #'(lambda ()
-                               (let ((values (evaluate)))
+                               (let ((result (evaluate)))
                                  (clim-sys:process-interrupt orig-process
                                                              #'(lambda ()
-                                                                 (throw 'done values))))))))
-                    (handler-case (loop (read-gesture))
+                                                                 (throw 'done result))))))))
+                    (handler-case (loop for gesture = (read-gesture)
+                                        when (event-matches-gesture-name-p gesture :pause)
+                                        do (clim-sys:process-interrupt eval-process #'break))
                       (abort-gesture ()
                         (clim-sys:destroy-process eval-process)
-                        (with-text-style (t (make-text-style nil :italic nil))
-                          (format t "Aborted by user after ~F seconds."
-                                  (/ (- (get-internal-real-time) start-time)
-                                     internal-time-units-per-second)))
-                        (return-from com-eval)))))
-                (evaluate))))
-      (fresh-line)
-      (shuffle-specials form values)
-      (display-evalues values)
-      (fresh-line))))
+                        (cons :abort (/ (- (get-internal-real-time) start-time)
+                                        internal-time-units-per-second))))))
+                (evaluate))
+          (ecase result
+            (:values
+             (fresh-line)
+             (shuffle-specials form value)
+             (display-evalues value)
+             (fresh-line))
+            (:error (with-text-style (t (make-text-style nil :italic nil))
+                      (with-output-as-presentation (t value 'expression)
+                        (format t "Aborted due to ~A: ~A" (type-of value) value))))
+            (:abort (with-text-style (t (make-text-style nil :italic nil))
+                      (format t "Aborted by user after ~F seconds." value)))))))))
 
 ;;; Some CLIM developer commands
 
