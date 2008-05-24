@@ -1809,10 +1809,13 @@ so that it can be quickly looked up later."
   ;; We don't use `form-to-object' as we want to retrieve information
   ;; even about symbol that are not interned.
   (multiple-value-bind (symbol package)
-      (parse-symbol (form-string syntax symbol-form) :package *package*)
+      (parse-symbol (form-string syntax symbol-form)
+       :package (package-at-mark syntax (start-offset symbol-form)))
     (setf (keyword-symbol-p symbol-form) (eq package +keyword-package+)
-          (macroboundp symbol-form) (or (special-operator-p symbol)
-                                        (macro-function symbol))
+          (macroboundp symbol-form) (when (eq (first-form (children (parent symbol-form)))
+                                              symbol-form)
+                                      (or (special-operator-p symbol)
+                                          (macro-function symbol)))
           (global-boundp symbol-form) (and (boundp symbol)
                                            (not (constantp symbol))))))
 
@@ -1909,8 +1912,8 @@ fulfilled."
   (string-form (:options :face +italic-face+))
   (comment (*retro-comment-drawing-options*))
   (literal-object-form (:options :function (object-drawer)))
-  (complete-token-form (:function #'(lambda (syntax form)
-                                      (cond ((symbol-form-is-macrobound-p syntax form)
+  (complete-token-form (:function #'(lambda (view form)
+                                      (cond ((symbol-form-is-macrobound-p (syntax view) form)
                                              +bold-face-drawing-options+)
                                             (t +default-drawing-options+)))))
   (reader-conditional-positive-form
