@@ -32,16 +32,16 @@
 
 (defun simple-search (drei-instance search-function
                       targets more-targets-predicate more-targets-fn)
-  (let ((old-buffer (buffer drei-instance))
-        (old-offset (offset (point drei-instance))))
+  (let ((old-buffer (buffer (view drei-instance)))
+        (old-offset (offset (point (view drei-instance)))))
     (activate-target-specification targets)
-    (or (loop until (funcall search-function (point drei-instance))
+    (or (loop until (funcall search-function (point (view drei-instance)))
            if (funcall more-targets-predicate targets)
            do (funcall more-targets-fn targets)
            else return nil
            finally (return t))
-        (setf (buffer drei-instance) old-buffer
-              (offset (point drei-instance)) old-offset))))
+        (setf (buffer (view drei-instance)) old-buffer
+              (offset (point (view drei-instance))) old-offset))))
 
 (defun simple-search-forward (drei-instance search-function &optional
                              (targets (funcall *default-target-creator* drei-instance)))
@@ -244,7 +244,7 @@ If found, leaves point before the word. If not, leaves point where it is."
             until (search-success-p (first (isearch-states (drei-instance))))
             do (pop (isearch-states (drei-instance))))
          (let ((state (first (isearch-states (drei-instance)))))
-           (setf (offset (point (drei-instance)))
+           (setf (offset (point (view (drei-instance))))
                  (if (search-forward-p state)
                      (+ (offset (search-mark state))
                         (length (search-string state)))
