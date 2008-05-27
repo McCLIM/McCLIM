@@ -1614,72 +1614,76 @@ protocol retrieving gestures from a provided string."))
   'pathname)
 
 (defun filename-completer (so-far mode)
-  (flet ((remove-trail (s)
-           (subseq s 0 (let ((pos (position #\/ s :from-end t)))
-                         (if pos (1+ pos) 0)))))
-    (let* ((directory-prefix
-            (if (and (plusp (length so-far)) (eql (aref so-far 0) #\/))
-                ""
-                (namestring #+sbcl *default-pathname-defaults*
-                            #+cmu (ext:default-directory)
-                            #-(or sbcl cmu) *default-pathname-defaults*)))
-           (full-so-far (concatenate 'string directory-prefix so-far))
-           (pathnames
-            (loop with length = (length full-so-far)
-               and wildcard = (concatenate 'string (remove-trail so-far) "*.*")
-               for path in
-               #+(or sbcl cmu lispworks) (directory wildcard)
-               #+openmcl (directory wildcard :directories t)
-               #+allegro (directory wildcard :directories-are-files nil)
-               #+cormanlisp (nconc (directory wildcard)
-                                   (cl::directory-subdirs dirname))
-               #-(or sbcl cmu lispworks openmcl allegro cormanlisp)
-               (directory wildcard)
-               when (let ((mismatch (mismatch (namestring path) full-so-far)))
-                      (or (null mismatch) (= mismatch length)))
-               collect path))
-           (strings (mapcar #'namestring pathnames))
-           (first-string (car strings))
-           (length-common-prefix nil)
-           (completed-string nil)
-           (full-completed-string nil)
-           (input-is-directory-p (when (plusp (length so-far))
-                                   (char= (aref so-far (1- (length so-far))) #\/))))
-      (unless (null pathnames)
-        (setf length-common-prefix
-              (loop with length = (length first-string)
-                 for string in (cdr strings)
-                 do (setf length (min length (or (mismatch string first-string) length)))
-                 finally (return length))))
-      (unless (null pathnames)
-        (setf completed-string
-              (subseq first-string (length directory-prefix)
-                      (if (null (cdr pathnames)) nil length-common-prefix)))
-        (setf full-completed-string
-              (concatenate 'string directory-prefix completed-string)))
-      (case mode
-        ((:complete-limited :complete-maximal)
-         (cond ((null pathnames)
-                (values so-far nil nil 0 nil))
-               ((null (cdr pathnames))
-                (values completed-string (plusp (length so-far)) (car pathnames) 1 nil))
-               (input-is-directory-p
-                (values completed-string t (parse-namestring so-far) (length pathnames) nil))
-               (t
-                (values completed-string nil nil (length pathnames) nil))))
-        (:complete
-         ;; This is reached when input is activated, if we did
-         ;; completion, that would mean that an input of "foo" would
-         ;; be expanded to "foobar" if "foobar" exists, even if the
-         ;; user actually *wants* the "foo" pathname (to create the
-         ;; file, for example).
-         (values so-far t so-far 1 nil))
-        (:possibilities
-         (values nil nil nil (length pathnames)
-                 (loop with length = (length directory-prefix)
-                    for name in pathnames
-                    collect (list (subseq (namestring name) length nil)
-                                  name))))))))
+  (let* ((directory-prefix
+          (if (and (plusp (length so-far)) (eql (aref so-far 0) #\/))
+              ""
+              (namestring #+sbcl *default-pathname-defaults*
+                          #+cmu (ext:default-directory)
+                          #-(or sbcl cmu) *default-pathname-defaults*)))
+         (full-so-far (concatenate 'string directory-prefix so-far))
+         (pathnames
+          (loop with length = (length full-so-far)
+                and wildcard = (format nil "~A*.*"
+                                       (loop for start = 0 ; Replace * -> \*
+                                             for occurence = (position #\* so-far :start start)
+                                             until (= start (length so-far))
+                                             until (null occurence)
+                                             do (replace so-far "\\*" :start1 occurence)
+                                                (setf start (+ occurence 2))
+                                             finally (return so-far)))
+                for path in
+                #+(or sbcl cmu lispworks) (directory wildcard)
+                #+openmcl (directory wildcard :directories t)
+                #+allegro (directory wildcard :directories-are-files nil)
+                #+cormanlisp (nconc (directory wildcard)
+                                    (cl::directory-subdirs dirname))
+                #-(or sbcl cmu lispworks openmcl allegro cormanlisp)
+                (directory wildcard)
+                when (let ((mismatch (mismatch (namestring path) full-so-far)))
+                       (or (null mismatch) (= mismatch length)))
+                  collect path))
+         (strings (mapcar #'namestring pathnames))
+         (first-string (car strings))
+         (length-common-prefix nil)
+         (completed-string nil)
+         (full-completed-string nil)
+         (input-is-directory-p (when (plusp (length so-far))
+                                 (char= (aref so-far (1- (length so-far))) #\/))))
+    (unless (null pathnames)
+      (setf length-common-prefix
+            (loop with length = (length first-string)
+                  for string in (cdr strings)
+                  do (setf length (min length (or (mismatch string first-string) length)))
+                  finally (return length))))
+    (unless (null pathnames)
+      (setf completed-string
+            (subseq first-string (length directory-prefix)
+                    (if (null (cdr pathnames)) nil length-common-prefix)))
+      (setf full-completed-string
+            (concatenate 'string directory-prefix completed-string)))
+    (case mode
+      ((:complete-limited :complete-maximal)
+       (cond ((null pathnames)
+              (values so-far nil nil 0 nil))
+             ((null (cdr pathnames))
+              (values completed-string (plusp (length so-far)) (car pathnames) 1 nil))
+             (input-is-directory-p
+              (values completed-string t (parse-namestring so-far) (length pathnames) nil))
+             (t
+              (values completed-string nil nil (length pathnames) nil))))
+      (:complete
+       ;; This is reached when input is activated, if we did
+       ;; completion, that would mean that an input of "foo" would
+       ;; be expanded to "foobar" if "foobar" exists, even if the
+       ;; user actually *wants* the "foo" pathname (to create the
+       ;; file, for example).
+       (values so-far t so-far 1 nil))
+      (:possibilities
+       (values nil nil nil (length pathnames)
+               (loop with length = (length directory-prefix)
+                     for name in pathnames
+                     collect (list (subseq (namestring name) length nil)
+                                   name)))))))
 
 (define-presentation-method accept ((type pathname) stream (view textual-view)
                                     &key (default *default-pathname-defaults* defaultp)
