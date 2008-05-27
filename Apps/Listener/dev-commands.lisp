@@ -1540,21 +1540,25 @@
             (if clim-sys:*multiprocessing-p*
                 (catch 'done
                   (let* ((orig-process (clim-sys:current-process))
+                         (evaluating t)
                          (eval-process
                           (clim-sys:make-process
                            #'(lambda ()
                                (let ((result (evaluate)))
-                                 (clim-sys:process-interrupt orig-process
-                                                             #'(lambda ()
-                                                                 (throw 'done result))))))))
-                    (handler-case (loop for gesture = (read-gesture)
-                                        when (and (typep gesture 'keyboard-event)
-                                                  (eq (keyboard-event-key-name gesture) :pause))
-                                        do (clim-sys:process-interrupt eval-process #'break))
-                      (abort-gesture ()
-                        (clim-sys:destroy-process eval-process)
-                        (cons :abort (/ (- (get-internal-real-time) start-time)
-                                        internal-time-units-per-second))))))
+                                 (when evaluating
+                                   (clim-sys:process-interrupt orig-process
+                                                               #'(lambda ()
+                                                                   (throw 'done result)))))))))
+                    (unwind-protect
+                         (handler-case (loop for gesture = (read-gesture)
+                                             when (and (typep gesture 'keyboard-event)
+                                                       (eq (keyboard-event-key-name gesture) :pause))
+                                             do (clim-sys:process-interrupt eval-process #'break))
+                           (abort-gesture ()
+                             (clim-sys:destroy-process eval-process)
+                             (cons :abort (/ (- (get-internal-real-time) start-time)
+                                             internal-time-units-per-second))))
+                      (setf evaluating nil))))
                 (evaluate))
           (ecase result
             (:values
