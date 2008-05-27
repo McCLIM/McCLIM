@@ -1532,7 +1532,7 @@
                                  (serious-condition (e)
                                    (setf error e)
                                    (error e)))
-                 (when (and error (not success))
+                 (when (not success)
                    (return-from evaluate (cons :error error)))))))
       ;; If possible, use a thread for evaluation, permitting us to
       ;; interrupt it.
@@ -1568,8 +1568,10 @@
              (display-evalues value)
              (fresh-line))
             (:error (with-text-style (t (make-text-style nil :italic nil))
-                      (with-output-as-presentation (t value 'expression)
-                        (format t "Aborted due to ~A: ~A" (type-of value) value))))
+                      (if value
+                          (with-output-as-presentation (t value 'expression)
+                            (format t "Aborted due to ~A: ~A" (type-of value) value))
+                          (format t "Aborted for unknown reasons (possibly use of ~A)." 'break))))
             (:abort (with-text-style (t (make-text-style nil :italic nil))
                       (format t "Aborted by user after ~F seconds." value)))))))))
 
