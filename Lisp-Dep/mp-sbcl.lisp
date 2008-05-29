@@ -42,15 +42,23 @@
   function
   thread)
 
-(defvar *current-process*
+(defun make-current-process ()
   (%make-process
    :name (sb-thread:thread-name sb-thread:*current-thread*)
    :function nil
    :thread sb-thread:*current-thread*))
 
+(defvar *current-process* (make-current-process))
+
 (defvar *all-processes* (list *current-process*)
   "A list of processes created by McCLIM, plus the one that was
 running when this file was loaded.")
+
+(defun reinit-processes ()
+  (setf *current-process* (make-current-process))
+  (setf *all-processes* (list *current-process*)))
+ 
+(push 'reinit-processes sb-ext:*init-hooks*)
 
 (defvar *all-processes-lock*
   (sb-thread:make-mutex :name "Lock around *ALL-PROCESSES*"))
