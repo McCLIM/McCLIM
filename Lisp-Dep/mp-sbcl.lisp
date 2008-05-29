@@ -48,7 +48,9 @@
    :function nil
    :thread sb-thread:*current-thread*))
 
-(defvar *all-processes* (list *current-process*))
+(defvar *all-processes* (list *current-process*)
+  "A list of processes created by McCLIM, plus the one that was
+running when this file was loaded.")
 
 (defvar *all-processes-lock*
   (sb-thread:make-mutex :name "Lock around *ALL-PROCESSES*"))
@@ -64,21 +66,21 @@
 
 (defun make-process (function &key name)
   (let ((p (%make-process :name name :function function)))
-    (sb-thread:with-mutex (*all-processes-lock*)
-      (pushnew p *all-processes*))
     (restart-process p)))
 
 (defun restart-process (p)
   (labels ((boing ()
 	     (let ((*current-process* p))
-	       (funcall (process-function p) ))))
+               (sb-thread:with-mutex (*all-processes-lock*)
+                 (pushnew p *all-processes*))
+	       (unwind-protect (funcall (process-function p))
+                 (sb-thread:with-mutex (*all-processes-lock*)
+                   (setf *all-processes* (delete p *all-processes*)))))))
     (when (process-thread p) (sb-thread:terminate-thread p))
     (when (setf (process-thread p) (sb-thread:make-thread #'boing :name (process-name p)))
       p)))
 
 (defun destroy-process (process)
-  (sb-thread:with-mutex (*all-processes-lock*)
-    (setf *all-processes* (delete process *all-processes*)))
   (sb-thread:terminate-thread (process-thread process)))
 
 (defun current-process ()
@@ -87,6 +89,8 @@
       (setf *current-process*
             (or (find sb-thread:*current-thread* *all-processes*
                  :key #'process-thread)
+                ;; Don't add this to *all-processes*, because we don't
+                ;; control it.
                 (%make-process
                  :name (sb-thread:thread-name sb-thread:*current-thread*)
                  :function nil
