@@ -44,12 +44,9 @@
 
 (defvar *current-process*
   (%make-process
-   :name "initial process" :function nil
-   :thread
-   #+#.(cl:if (cl:find-symbol "THREAD-NAME" "SB-THREAD") '(and) '(or))
-   sb-thread:*current-thread*
-   #-#.(cl:if (cl:find-symbol "THREAD-NAME" "SB-THREAD") '(and) '(or))
-   (sb-thread:current-thread-id)))
+   :name (sb-thread:thread-name sb-thread:*current-thread*)
+   :function nil
+   :thread sb-thread:*current-thread*))
 
 (defvar *all-processes* (list *current-process*))
 
@@ -85,7 +82,15 @@
   (sb-thread:terminate-thread (process-thread process)))
 
 (defun current-process ()
-  *current-process*)
+  (if (eq (process-thread *current-process*) sb-thread:*current-thread*)
+      *current-process*
+      (setf *current-process*
+            (or (find sb-thread:*current-thread* *all-processes*
+                 :key #'process-thread)
+                (%make-process
+                 :name (sb-thread:thread-name sb-thread:*current-thread*)
+                 :function nil
+                 :thread sb-thread:*current-thread*)))))
 
 (defun all-processes ()
   ;; we're calling DELETE on *ALL-PROCESSES*.  If we look up the value
