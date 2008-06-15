@@ -47,6 +47,7 @@
            #:ensure-array-size
            #:values-max-min
            #:retaining-value
+           #:format-sym
            #:build-menu #:define-menu-table
            #:observable-mixin
            #:add-observer #:remove-observer

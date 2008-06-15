@@ -273,6 +273,18 @@ time evaluation of `body' ended."
               (unwind-protect (progn ,@body)
                 (setf (symbol-value ',symbol) ,bound-symbol))))))
 
+(defun format-sym (format-string &rest args)
+  "Return `format-string' with args spliced in, where all
+arguments that are symbols with have their `symbol-name' spliced
+instead, this makes sure the result is correct even on systems
+where read/print case is other than default."
+  (apply #'format nil format-string
+         (mapcar #'(lambda (arg)
+                     (if (symbolp arg)
+                         (symbol-name arg)
+                         arg))
+                 args)))
+
 (defun build-menu (command-tables &rest commands)
   "Create a command table inheriting commands from
 `command-tables', which must be a list of command table
