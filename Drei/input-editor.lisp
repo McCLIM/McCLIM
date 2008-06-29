@@ -833,7 +833,8 @@ invoke the command, and the accumulated numeric argument."
             ;; above us will not believe us when we tell them that the
             ;; input is empty
            (delete-buffer-range (buffer (view drei)) start-scan-pointer
-                                (stream-scan-pointer stream))
+                                (- (stream-scan-pointer stream)
+                                   start-scan-pointer))
            (setf (stream-scan-pointer stream) start-scan-pointer)
            (simple-parse-error "Empty input")
          ;; We only want to process the gesture if it is fresh, because
