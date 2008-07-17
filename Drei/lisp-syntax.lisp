@@ -3251,6 +3251,13 @@ including implementation-specific lambda list keywords."
                                    :reader original-lambda-list))
   (:documentation "The superclass of all lambda list classes."))
 
+(defmethod print-object ((ll lambda-list) stream)
+  (print-unreadable-object (ll stream :type t :identity t)
+    (when (compute-applicable-methods #'lambda-list-as-list `(,ll))
+      (let ((*print-length* (or *print-length* 10)))
+	;; PRINC because the names of KEYWORD-PARAMETERs are keywords.
+	(princ (lambda-list-as-list ll) stream)))))
+
 (defgeneric required-parameters (lambda-list)
   (:documentation "Return a list containing objects representing
 the required parameters of `lambda-list'.")
@@ -3526,6 +3533,10 @@ affect the value of this parameter."))
   (:documentation "The base class for all parameter classes
 representing a named parameter."))
 
+(defmethod print-object ((p named-parameter) stream)
+  (print-unreadable-object (p stream :type t :identity t)
+    (prin1 (name p) stream)))
+
 (defmethod minimum-lambda-list-class ((parameter named-parameter))
   'semiordinary-lambda-list)
 
@@ -3556,6 +3567,10 @@ parameters."))
                   :initform (error "A keyword parameter must have a keyword")
                   :reader keyword-name))
   (:documentation "The class for representing keyword parameters."))
+
+(defmethod print-object ((p keyword-parameter) stream)
+  (print-unreadable-object (p stream :type t :identity t)
+    (prin1 (keyword-name p) stream)))
 
 (defclass destructuring-required-parameter (destructuring-parameter required-parameter)
   ()
