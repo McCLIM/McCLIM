@@ -977,7 +977,7 @@
                         (+ (/ (+ y1 y2) 2) (/ (+ as ds) 2)))
               (draw-toggle-button-indicator pane (toggle-button-indicator-type pane) (gadget-value pane)
                                             tx1 ty1 tx2 ty2)
-              (draw-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2
+              (draw-label* pane (+ tx2 3 (pane-x-spacing pane)) y1 x2 y2
                            :ink (pane-inking-color pane)))))))))
 
 ; Push Button
