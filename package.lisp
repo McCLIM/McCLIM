@@ -1955,6 +1955,8 @@
    #:draw-rounded-rectangle*
 
    #:highlight-output-record-tree
+   #:cut-and-paste-mixin
+   #:mouse-wheel-scroll-mixin
    
    ;; Font listing extension:
    #:font-family

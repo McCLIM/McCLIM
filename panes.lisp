@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.190 2008/05/09 19:12:14 thenriksen Exp $
+;;; $Id: panes.lisp,v 1.191 2008/08/21 22:34:29 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -2489,9 +2489,7 @@ to computed distance to scroll in response to mouse wheel events."))
                             standard-output-recording-stream
                             ;; sheet-leaf-mixin
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
-                            basic-pane
-                            mouse-wheel-scroll-mixin
-                            cut-and-paste-mixin)
+                            basic-pane)
   ((redisplay-needed :initarg :display-time) 
    (scroll-bars :type scroll-bar-spec ; (member t :vertical :horizontal nil)
 		:initform nil
@@ -2682,7 +2680,9 @@ to computed distance to scroll in response to mouse wheel events."))
 
 ;;; INTERACTOR PANES
 
-(defclass interactor-pane (clim-stream-pane)
+(defclass interactor-pane (clim-stream-pane 
+                           cut-and-paste-mixin
+                           mouse-wheel-scroll-mixin)
   ()
   (:default-initargs :display-time nil
                      :end-of-line-action :scroll
@@ -2710,7 +2710,9 @@ to computed distance to scroll in response to mouse wheel events."))
 
 ;;; APPLICATION PANES
 
-(defclass application-pane (clim-stream-pane)
+(defclass application-pane (clim-stream-pane 
+                            cut-and-paste-mixin
+                            mouse-wheel-scroll-mixin)
   ()
   (:default-initargs :display-time :command-loop
                      :scroll-bars t))
@@ -2832,7 +2834,9 @@ current background message was set."))
 
 ;;; 29.4.5 Creating a Standalone CLIM Window
 
-(defclass window-stream (clim-stream-pane)
+(defclass window-stream (clim-stream-pane
+                         cut-and-paste-mixin
+                         mouse-wheel-scroll-mixin)
   ())
 
 (defmethod close ((stream window-stream)
