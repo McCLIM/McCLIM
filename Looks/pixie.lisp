@@ -25,6 +25,10 @@
 (defclass pixie-look (frame-manager) ())
 #+clx (defclass pixie/clx-look (pixie-look clim-clx::clx-frame-manager) ())
 
+(defun use-pixie ()
+  (setf *default-frame-manager* 
+        (make-instance 'pixie/clx-look
+                       :port (find-port))))
 
 (defmacro define-pixie-gadget (abstract-type pixie-type &key (enabled t))
   `(defmethod make-pane-1 ((fm pixie-look)
