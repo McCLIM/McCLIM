@@ -20,7 +20,7 @@
 ;;; Boston, MA  02111-1307  USA.
 
 
-;(defmacro multiple-value-prog2 (&body body)  `(progn ,(first body) (multiple-value-prog1 ,@(rest body))))
+
 
 ;; multiple-value-or, ugh. Normal OR drops values except from the last form.
 (defmacro mv-or (&rest forms)
@@ -29,14 +29,15 @@
       `(let ((,tmp (multiple-value-list ,(first forms))))
          (if (first ,tmp) (values-list ,tmp) (mv-or ,@(rest forms)))))))
 
-; There has to be a better way..
-(defun directoryp (pathname)
-  "Returns pathname when supplied with a directory, otherwise nil"
+(defun directoryp (path)
+  "Determine if PATH designates a directory"
   #+allegro (excl:file-directory-p pathname)
-  #-allegro 
-  (if (or (pathname-name pathname) (pathname-type pathname))
+  #-allegro
+  (flet ((f (x) (if (eq x :unspecific) nil x)))
+    (if (or (f (pathname-name path))
+            (f (pathname-type path)))
       nil
-      pathname))
+      path)))
 
 (defun getenv (var)
   (or 
@@ -61,16 +62,22 @@
       default
       (or desi default)))
 
-;;; LIST-DIRECTORY is a wrapper for the CL DIRECTORY function, which really doesn't
-;;; do what I'd like (resolves symbolic links, tends to be horribly buggy, etc.)
+;;; LIST-DIRECTORY is a wrapper for the CL DIRECTORY function. Work
+;;; around various issues which may arise, such as:
 
-#+(or CMU scl)
+;;;  * Don't error in response to broken symlinks (as cl:truename might)
+;;;  * Ideally, don't return truenames at all.
+;;;  * Don't error in response to garbage filenames not conforming to
+;;;    the preferred encoding for filenames
+
+#+(or cmu scl)
 (defun list-directory (pathname)
   (directory pathname :truenamep nil))
 
-#+SBCL
+#+sbcl
 (defun list-directory (pathname)
-  ;; Wow. When did SBCL's cl:directory become sane? This is great news!
+  ;; Sooner or later, I'm putting all the sb-posix junk back in.
+  ;; I *really* don't like truenames.
   (directory pathname))
 
 #+openmcl
@@ -82,7 +89,7 @@
   (directory pathname :directories-are-files nil))
 
 ;; Fallback to ANSI CL
-#-(OR CMU scl SBCL OPENMCL ALLEGRO)
+#-(or cmu scl sbcl openmcl allegro)
 (defun list-directory (pathname)
   (directory pathname))
 
@@ -96,9 +103,20 @@
                (delete-if (lambda (directory)
                             (member directory file-list :test #'equal))
                           (delete-if-not #'directoryp
-                                        (list-directory (gen-wild-pathname
-                                                         (strip-filespec pathname))))))
+                                         (list-directory (gen-wild-pathname
+                                                          (strip-filespec pathname))))))
         file-list)))
+
+;;; Native namestring. cl:namestring is allowed to do anything it wants to
+;;; the filename, and some lisps do (CCL, for instance).
+(defun native-namestring (pathname-designator)
+  #+sbcl (sb-ext:native-namestring pathname-designator)
+  #+openmcl  (ccl::native-untranslated-namestring pathname-designator)
+  #-(or sbcl openmcl) (namestring pathname-designator))
+
+(defun native-enough-namestring (pathname &optional
+                                 (defaults *default-pathname-defaults*))
+  (native-namestring (enough-namestring pathname defaults)))
 
 ;;; A farce of a  "portable" run-program, which grows as I need options from
 ;;; the CMUCL run-program.
@@ -117,7 +135,6 @@
                :output-stream output
                :wait wait)
   #+clisp (ext:run-program program :arguments args :wait wait)
-
   #-(or CMU scl SBCL lispworks clisp)
   (format t "~&Sorry, don't know how to run programs in your CL.~%"))
 
@@ -153,13 +170,18 @@
   (stream-increment-cursor-position stream 0
       (truncate (/ (text-style-ascent (medium-text-style stream) stream) fraction))))
 
-(defun invoke-as-heading (cont &optional ink)
-  (with-drawing-options (t :ink (or ink +royal-blue+) :text-style (make-text-style :sans-serif :bold nil))
+(defun invoke-as-heading (cont &optional (ink +royal-blue+))
+  (with-drawing-options (t :ink ink :text-style (make-text-style :sans-serif :bold nil))
     (fresh-line)
     (underlining (t)
       (funcall cont))
     (fresh-line)
     (vertical-gap t)))
+
+(defun heading (control-string &rest args)
+  (invoke-as-heading
+   (lambda ()
+     (apply 'format t control-string args))))
 
 (defun indent-to (stream x &optional (spacing 0) )
   "Advances cursor horizontally to coordinate X. If the cursor is already past
@@ -206,7 +228,8 @@ this point, increment it by SPACING, which defaults to zero."
 
 (defun parent-directory (pathname)
   "Returns a pathname designating the directory 'up' from PATHNAME"
-  (let ((dir (pathname-directory (truename pathname))))
+  (let ((dir (pathname-directory pathname ))) ;(if (probe-file pathname)
+                                               ;    pathname
     (when (and (eq (first dir) :absolute)
                (rest dir))
       ;; merge-pathnames merges :back, but not :up
@@ -214,20 +237,23 @@ this point, increment it by SPACING, which defaults to zero."
        (merge-pathnames (make-pathname :directory '(:relative :back))
                         (truename pathname))))))
 
-(defun directorify-pathname (pathname)
+(defun coerce-to-directory (pathname)
   "Convert a pathname with name/version into a pathname with a
 similarly-named last directory component. Used for user input that
 lacks the final #\\/."
   (if (directoryp pathname)
       pathname
-      ;; doing this the primitive way instead of trying to grok name,
-      ;; type, version and trying to reconstruct what the user
-      ;; actually typed.  I think I'm going to hell for this one.
-      (pathname (concatenate 'string (namestring pathname) "/"))))
+      (merge-pathnames
+       (make-pathname
+        :directory (if (pathname-name pathname)
+                       (list :relative (file-namestring pathname))
+                       '(:relative)))
+       (strip-filespec pathname))))
 
 ;;;; Abbreviating item formatter
 
-;;; FIXME: This would work a lot better if the 
+;;; Doesn't work as well as I'd like, due to the table formatter not sizing
+;;; columns as anticipated.
 
 (defparameter *abbreviating-minimum-items* 6
   "Minimum number of items needed to invoke abbreviation. This must be at least one.")
@@ -363,7 +389,6 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 
 
 ;;; An attempt at integrating RUN-PROGRAM closer with lisp.
-;;; That is, close enough to make it less of a pain in the ass.
 
 ;;; This code creates a macro on the #! character sequence which expands
 ;;; to a lambda closed over a call to RUN-PROGRAM invoked the program
@@ -373,8 +398,7 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 
 
 ;; TODO:
-;;  * Evil environment variable hack (scan some package for variables prefixed
-;;    with '$', build the environment variables from that)
+;;  * Environment variables?
 ;;  * Figure out what to do with the input/output streams
 ;;  * Ability to pipe programs together, input/output redirection.
 ;;  * Utilities for getting data in and out of unix programs through streams    
@@ -419,7 +443,6 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
     (dolist (arg args)
       (setf list (nconc list (multiple-value-list (transform-program-arg arg)))))
     list))
-;  (mapcar #'transform-program-arg args)
 
 (defun program-wrapper (name)
   "Returns a closure which invokes the NAMEd program through the operating system,
@@ -446,6 +469,8 @@ with some attempt to convert arguments intelligently."
        (write-char c out))
      stream)))
 
+;;; Don't install this by default, because no one uses it.
+#+NIL
 (set-dispatch-macro-character #\# #\!
   #'(lambda (stream char p)
       (declare (ignore char p))
@@ -453,3 +478,58 @@ with some attempt to convert arguments intelligently."
         `(lambda (&rest args)
            (apply (program-wrapper ,name) args)))))
 
+;;;; Graphing and various helpers
+
+(defparameter *min-x* -7)
+(defparameter *max-x* 7)
+(defparameter *min-y* -7)
+(defparameter *max-y* 7)
+(defparameter *graph-size* 600)
+(defparameter *graph-width* nil)
+(defparameter *graph-height* nil)
+(defparameter *graph-ink* +black+)
+
+(defun draw-thin-bar-graph-1 (medium function scale min max dx)
+  (loop for i from 0 below (floor (- max min) dx)
+        for x = min then (+ x dx)
+        do (draw-line* medium i 0 i (* scale (funcall function x)))))
+
+(defun draw-vector-bar-graph 
+    (vector &key (stream *standard-output*) (scale-y 1) (ink +black+)
+     (key 'identity) (start 0) (end nil))
+  (let ((range (- (reduce 'max vector :start start :end end :key key)
+                  0 #+NIL (reduce 'min vector :start start :end end :key key)))) ; totally wrong
+
+    (with-room-for-graphics (stream :first-quadrant t)
+      (with-new-output-record (stream)
+        (with-drawing-options (stream :ink ink)
+          (unless (zerop range)
+            (when (eql t scale-y)
+              (setf scale-y (/ 250 range))
+              #+NIL (hef:debugf scale-y))
+            (draw-thin-bar-graph-1 
+             stream 
+             (lambda (i) (funcall key (aref vector i)))
+             scale-y start (or end (length vector)) 1)))))))
+
+;(defun draw-coordinate-labels (stream value-min val-max stream-min stream-max)
+;  
+;  (text-size stream (format nil "~4F" value)
+
+;; Broken - min-y/max-y aren't, in the sense that it won't clip to
+;; those values. 
+(defun draw-function-filled-graph 
+    (function &key (stream *standard-output*)
+     (min-x *min-x*) (max-x *max-x*)
+     (min-y *min-y*) (max-y *max-y*)
+     size
+     (width  (or size *graph-width* *graph-size*))
+     (height (or size *graph-height* *graph-size*))
+     (ink *graph-ink*))
+  (with-room-for-graphics (stream :first-quadrant t)
+    (with-new-output-record (stream)
+      (with-drawing-options (stream :ink ink)
+        (draw-thin-bar-graph-1 stream function
+                               (float (/ height (- max-y min-y)) 0.0f0)
+                               min-x max-x
+                               (/ (- max-x min-x) width))))))

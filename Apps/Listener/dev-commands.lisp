@@ -1,6 +1,6 @@
 (in-package :clim-listener)
 
-;;; (C) Copyright 2003 by Andy Hefner (hefner1@umbc.edu)
+;;; (C) Copyright 2003,2008 by Andy Hefner (ahefner@gmail.com)
 ;;; (C) Copyright 2004 by Paolo Amoroso (amoroso@mclink.it)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -78,6 +78,12 @@
 (define-presentation-type package-name () :inherit-from 'string)
 (define-presentation-method presentation-typep (object (type package-name))
   (find-package object))
+
+;;; Views
+
+(defclass fancy-view (textual-view)
+  ((icon-size :initarg :icon-size :initform 16)
+   (base-path :initform nil :initarg :base-path)))
 
 ;;; Presentation methods
 
@@ -233,9 +239,6 @@
     ()
   (window-clear *standard-output*))
 
-;; You have to seperate command arguments with commas..
-;; Need to find a better way to input these.
-
 ;; McCLIM fixme: Shouldn't we be able to activate before the (args) prompt
 ;; since defaults are defined?
 ;; FIXME: Disabled input, as it usually seems to hang.
@@ -272,18 +275,10 @@
     ()
   (frame-exit *application-frame*))
 
-
-
-;;; Commands related to Lisp development
-;;; ------------------------------------
+;;;; Commands relating to the Lisp environment
 
 (defvar *apropos-list* nil
   "The apropos command stores its output here.")
-
-(defparameter *apropos-symbol-unbound-family* :fix)
-(defparameter *apropos-symbol-unbound-face*   :roman)
-(defparameter *apropos-symbol-bound-family*   :fix)
-(defparameter *apropos-symbol-bound-face*     :roman)
 
 ;; FIXME: Make this a present method specialzed on a view?
 
@@ -459,9 +454,6 @@
 
 ;;; CLOS introspection commands
 
-(defparameter *graph-edge-ink* (make-rgb-color 0.72 0.72 0.72))
-(defparameter *graph-text-style* (make-text-style :fix :roman :normal))
-
 (defun class-grapher (stream class inferior-fun &key (orientation :horizontal))
   "Does the graphing for Show Class Superclasses and Subclasses commands"
   (let ((normal-ink +foreground-ink+)
@@ -525,27 +517,14 @@
         (note "~A is not a defined class." class-spec))))
 
 
-; Lookup direct slots from along the CPL given a class and a slot name.
-; Returns them in an order parallel with the CPL.
-; Need this to find readers/writers, which exist in the direct slot
-; definitions, not the effective slot definitions. (ouch)
 (defun direct-slot-definitions (class slot-name)
-  (let ((cpl (reverse (clim-mop:class-precedence-list class)))
-        (direct-slots nil))
-    (dolist (foo cpl)                   ; rewrite this
-      (let ((dslots (clim-mop:class-direct-slots foo)))
-        (dolist (slot dslots)
-          (when (eq slot-name (clim-mop:slot-definition-name slot))
-            (push slot direct-slots)))))
-    direct-slots))
-
-(defparameter *slot-name-ink*     +black+)
-(defparameter *slot-type-ink*     +gray50+)
-(defparameter *slot-initargs-ink* +red+)
-(defparameter *slot-initform-ink* +goldenrod3+)
-(defparameter *slot-readers-ink*  +black+)
-(defparameter *slot-writers-ink*  +black+)
-(defparameter *slot-documentation-ink* +turquoise4+)
+  "Given a class and a slot name, returns a list of the direct slot
+   definitions for this slot in the order they occur along the CPL."
+  (mapcan (lambda (cpl-class)
+            (copy-list
+             (remove slot-name (clim-mop:class-direct-slots cpl-class)
+                     :key #'clim-mop:slot-definition-name :test-not #'eql)))
+          (clim-mop:class-precedence-list class)))
 
 (defun present-slot (slot class &key (stream *standard-output*))
   "Formats a slot definition into a table row."
@@ -583,19 +562,6 @@
           (format t "~W" initform)
         (note "No initform")))
 
-    #+NIL   ; argh, shouldn't this work?
-    (formatting-cell ()
-      (formatting-table ()
-        (formatting-column ()
-          (fcell (readers :center)
-                 (if readers
-                     (dolist (reader readers)  (format T "~A~%" reader))
-                   (note "No readers")))
-          (fcell (writers :center)
-                 (if writers
-                     (dolist (writer writers)  (format T "~A~%" writer))
-                   (note "No writers"))))))
-
     (formatting-cell (t :align-x :left)
       (if (not (or readers writers))
           (note "No accessors")
@@ -614,8 +580,7 @@
               (note "No writers"))))))
 
     (fcell (documentation :left)
-      (when documentation (with-text-family (t :serif) (princ documentation))))
-)))
+      (when documentation (with-text-family (t :serif) (princ documentation)))) )))
 
 
 (defun earliest-slot-definer (slot class)
@@ -708,7 +673,8 @@
                    (not (typep c 'standard-class))))
              classes))
 
-(defun x-specializer-direct-generic-functions (specializer)  ;; FIXME - move to CLIM-MOP
+(defun x-specializer-direct-generic-functions (specializer)
+  ;; This still belongs in CLIM-MOP.
   #+PCL (pcl::specializer-direct-generic-functions specializer)
   #+SBCL (sb-pcl::specializer-direct-generic-functions specializer)
   #+clisp (clos:specializer-direct-generic-functions specializer)
@@ -716,13 +682,16 @@
   (openmcl-mop:specializer-direct-generic-functions specializer)
   #+scl (clos:specializer-direct-generic-functions specializer)
   #-(or PCL SBCL scl clisp openmcl-partial-mop)
-  (error "Sorry, not supported in your CL implementation. See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION if you are interested in fixing this."))
+  (error "Sorry, not supported in your CL implementation. 
+See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION 
+if you are interested in fixing this."))
 
 (defun class-funcs (class)
   (remove-duplicates
-   (mapcan (lambda (class) 
-             (copy-list (x-specializer-direct-generic-functions class)))
-           (remove-ignorable-classes (clim-mop:class-precedence-list class)))))
+   (mapcan 
+    (lambda (class) 
+      (copy-list (x-specializer-direct-generic-functions class)))
+    (remove-ignorable-classes (clim-mop:class-precedence-list class)))))
 
 (defun slot-name-sortp (a b)
   (flet ((slot-name-symbol (x)
@@ -752,13 +721,13 @@
   (let ((class (frob-to-class class-spec)))
     (if (null class)
         (note "~A is not a defined class." class-spec)
-      (let ((funcs (sort (class-funcs class) (lambda (a b)
-                                               (slot-name-sortp (clim-mop:generic-function-name a)
-                                                                (clim-mop:generic-function-name b))))))
+      (let ((funcs (sort (class-funcs class) #'slot-name-sortp
+                         :key #'clim-mop:generic-function-name)))
         (with-text-size (t :small)
-          (format-items funcs :printer (lambda (item stream)
-                                         (present item 'generic-function :stream stream))
-                        :move-cursor t))))))
+          (format-items funcs 
+            :printer (lambda (item stream)
+                       (present item 'generic-function :stream stream))
+            :move-cursor t))))))
 
 (defun method-applicable-to-args-p (method args arg-types)
   (loop
@@ -1060,29 +1029,28 @@
 ;;; Filesystem Commands
 ;;; -------------------
 
-(defun pathname-printing-name (pathname long-name)
-  (if long-name
-      (princ-to-string (namestring pathname))
-    (if (directoryp pathname)
-        (format nil "~A/" (first (last (pathname-directory pathname))))
-      (namestring (make-pathname :name (pathname-name pathname)
-                                 :type (pathname-type pathname)
-                                 :version (pathname-version pathname))))))
+(defun pathname-printing-name (pathname &optional relative-to)
+  (if relative-to 
+      (native-enough-namestring pathname relative-to)
+      (native-namestring pathname)))
 
-(defun pretty-pretty-pathname (pathname stream &key (long-name t))
-  (with-output-as-presentation (stream pathname 'clim:pathname
-                                       :single-box t)
+(defun pretty-pretty-pathname (pathname stream &optional (relative-to nil))
+  (with-output-as-presentation (stream pathname 'clim:pathname :single-box t)
     (let ((icon (icon-of pathname)))
-      (when icon  (draw-icon stream icon :extra-spacing 3)))
-    (princ (pathname-printing-name pathname long-name) stream))
+      (when icon (draw-icon stream icon :extra-spacing 3)))
+    (princ (pathname-printing-name pathname relative-to) stream))
   (terpri stream))
+
+(defun actual-name (pathname)
+  (if (directoryp pathname)
+      (if (stringp (car (last (pathname-directory pathname))))
+          (car (last (pathname-directory pathname)))
+          (directory-namestring pathname))
+      (native-namestring (file-namestring pathname))))
 
 (defun sort-pathnames (list sort-by)
   (case sort-by            ; <--- FIXME
-    ('name  (sort list #'string-lessp
-                  :key (lambda (pathname)
-                         (or (file-namestring pathname)
-                             (first (last (pathname-directory pathname)))))))
+    ('name  (sort list #'string-lessp :key #'actual-name))
     (t list)))
 
 (defun split-sort-pathnames (list group-dirs sort-by)
@@ -1100,16 +1068,24 @@
           (and (char= first #\#)
                (char= last  #\#))))))
 
-(defun hidden-name-p (name)
-  (when (> (length name) 1)
-    (char= (elt name 0) #\.)))
+(defun hidden-name-p (name) 
+  (and (> (length name) 1) (char= (elt name 0) #\.)))
 
 (defun filter-garbage-pathnames (seq show-hidden hide-garbage)
-  (delete-if (lambda (p)
-               (let ((name (pathname-printing-name p nil)))
-                 (or (and (not show-hidden) (hidden-name-p name))
-                     (and hide-garbage (garbage-name-p name)))))
-             seq))
+  (remove-if (lambda (name)
+               (or (and (not show-hidden) (hidden-name-p name))
+                   (and hide-garbage (garbage-name-p name))))
+             seq :key #'actual-name))
+
+(defun show-directory-pathnames (pathname)
+  "Convert the pathname entered by the user into a query pathname
+ (the pathname which will be passed to cl:directory, potentially a
+ wild pathname), and a base pathname (which directory entries may
+ be printed relative to in the fashion of enough-namestring)."
+  (values (if (wild-pathname-p pathname)
+              pathname
+              (gen-wild-pathname pathname))
+          (strip-filespec pathname)))
 
 ;; Change to using an :ICONIC view for pathnames?
 
@@ -1128,42 +1104,58 @@
      (full-names 'boolean :default nil :prompt "show full name?")
      (list-all-direct-subdirectories 'boolean :default nil :prompt "list all direct subdirectories?"))
 
-  (let* ((pathname
-          ;; helpfully fix things if trailing slash wasn't entered
-          (directorify-pathname pathname))
-         (wild-pathname (gen-wild-pathname pathname))
-         (dir (if list-all-direct-subdirectories
-                  (list-directory-with-all-direct-subdirectories wild-pathname)
-                  (list-directory wild-pathname))))
-
-    (with-text-family (t :sans-serif)      
-      (invoke-as-heading
-        (lambda ()
-          (format t "Contents of ")
-          (present (directory-namestring pathname) 'pathname)
-          (when (pathname-type pathname)
-            (format t " (only files of type ~a)" (pathname-type pathname)))))
+  (multiple-value-bind (query-pathname base-pathname)
+      (show-directory-pathnames pathname)
     
+    (let ((dir (if list-all-direct-subdirectories
+                   (list-directory-with-all-direct-subdirectories query-pathname)
+                   (list-directory query-pathname))))
+
+    (with-text-family (t :sans-serif)
+      (invoke-as-heading
+       (lambda ()
+         (cond
+           ((wild-pathname-p pathname)
+            (format t "Files matching ")
+            (present query-pathname 'pathname))
+           (t
+            (format t "Contents of ")
+            (present (directory-namestring query-pathname) 'pathname)))))
+
       (when (parent-directory pathname)
-        (with-output-as-presentation (t (parent-directory pathname) 'clim:pathname :single-box t)
-          (draw-icon t (standard-icon "up-folder.xpm") :extra-spacing 3)
-          (format t "Parent Directory~%")))
+        (with-output-as-presentation (t (parent-directory pathname)
+                                        'clim:pathname :single-box t)
+          ;; Workaround new mcclim-images draw-icon silliness using
+          ;; table formatter
+          (formatting-table (t :move-cursor nil)          
+            (formatting-row ()
+              (formatting-cell ()
+                (draw-icon t (standard-icon "up-folder.xpm")
+                           :extra-spacing 3)
+                (format t "Parent Directory")))))
+        ;; Note that the above leaves the cursor positioned at the end
+        ;; of the "Parent Directory" line.
+        (terpri))
+
+
 
       (dolist (group (split-sort-pathnames dir group-directories sort-by))
         (unless show-all
           (setf group (filter-garbage-pathnames group show-hidden hide-garbage)))
         (ecase style
           (:items
-           (abbreviating-format-items group :row-wise nil :x-spacing "  " :y-spacing 1
-                                      :printer (lambda (x stream)
-                                                 (pretty-pretty-pathname x stream
-                                                                         :long-name full-names)))           
+           (abbreviating-format-items 
+            group
+            :row-wise nil :x-spacing "  " :y-spacing 1
+            :printer (lambda (x stream) 
+                       (pretty-pretty-pathname x stream (if full-names 
+                                                            nil
+                                                            base-pathname))))
            (multiple-value-bind (x y) (stream-cursor-position *standard-output*)
              (setf (stream-cursor-position *standard-output*) (values 0 y))))
           (:list (dolist (ent group)
-                  (let ((ent (merge-pathnames ent pathname))) ;; This is for CMUCL, see above. (fixme!)
-                                                              ;; And breaks some things for SBCL.. (mgr) 
-                    (pretty-pretty-pathname ent *standard-output* :long-name full-names)))))))))
+                   (let ((ent (merge-pathnames ent pathname)))
+                    (pretty-pretty-pathname ent *standard-output* :long-name full-names))))))))))
 
 #+nil   ; OBSOLETE
 (define-presentation-to-command-translator show-directory-translator
@@ -1307,7 +1299,13 @@
     (setf (command-enabled 'com-drop-directory frame) state
           (command-enabled 'com-pop-directory  frame) state
           (command-enabled 'com-swap-directory frame) state)))
-    
+
+(defmacro with-directory-stack (() &body body)
+  `(prog1
+     (if *directory-stack*
+         (progn ,@body)
+         (note "The directory stack is empty."))
+     (compute-dirstack-command-eligibility *application-frame*)))
 
 (define-command (com-push-directory :name "Push Directory"
                                     :menu t
@@ -1326,58 +1324,47 @@
         (format t "~&The top of the directory stack is now ")
         (present (truename (first *directory-stack*)))
         (terpri))
-    (format t "~&The directory stack is now empty.~%")))
+      (format "~&The directory stack is now empty.~%")))
 
 (define-command (com-pop-directory :name "Pop Directory"
                                   :menu t
                                   :command-table directory-stack-commands)
   ()
-  (if (null *directory-stack*)
-      (note "The directory stack is empty!")
-    (progn 
-      (com-change-directory (pop *directory-stack*))
-      (italic (t) (comment-on-dir-stack))))
-  (compute-dirstack-command-eligibility *application-frame*))
+  (with-directory-stack ()
+    (com-change-directory (pop *directory-stack*))
+    (comment-on-dir-stack)))
 
 (define-command (com-drop-directory :name "Drop Directory"
                                     :menu t
                                     :command-table directory-stack-commands)
   ()
-  (italic (t)
-    (if (null *directory-stack*)
-        (format t "~&The directory stack is empty!~%")
-      (progn
-        (setf *directory-stack* (rest *directory-stack*))
-        (comment-on-dir-stack))))
-  (compute-dirstack-command-eligibility *application-frame*))
+  (with-directory-stack ()
+    (setf *directory-stack* (rest *directory-stack*))
+    (comment-on-dir-stack)))
+
 
 (define-command (com-swap-directory :name "Swap Directory"
                                     :menu t
                                     :command-table directory-stack-commands)
   ()
-  (italic (t)
-    (if (null *directory-stack*)
-        (format t "~&The directory stack is empty!~%")
-      (progn
-        (psetf (first *directory-stack*) *default-pathname-defaults*
-               *default-pathname-defaults* (first *directory-stack*))
-        (comment-on-dir-stack))))
-  (compute-dirstack-command-eligibility *application-frame*))
+  (with-directory-stack ()
+    (psetf (first *directory-stack*) *default-pathname-defaults*
+           *default-pathname-defaults* (first *directory-stack*))
+    (comment-on-dir-stack)))
 
 (define-command (com-display-directory-stack :name "Display Directory Stack"
                                              :menu t
                                              :command-table directory-stack-commands)
   ()
-  (if (null *directory-stack*)
-      (note "~&The directory stack is empty!~%")
+  (with-directory-stack ()
     (dolist (pathname *directory-stack*)
       (fresh-line)
-      (pretty-pretty-pathname pathname *standard-output*) )))
+      (pretty-pretty-pathname pathname *standard-output*)
+      (terpri))))
 
 (define-presentation-to-command-translator display-dir-stack-translator
   (directory-stack com-display-directory-stack filesystem-commands :gesture :select)
   () ())
-
 
 (define-command (com-edit-file :name "Edit File"
                                :menu t
