@@ -12,11 +12,12 @@
               :pathname #.(make-pathname :directory '(:relative "Apps" "Listener"))
               :components
               ((:file "package")
+               (:file "appearance" :depends-on ("package"))
                (:file "util" :depends-on ("package"))
                (:file "icons" :depends-on ("package" "util"))
                (:file "file-types" :depends-on ("package" "icons" "util"))
-               (:file "dev-commands" :depends-on ("package" "icons" "file-types" "util"))
+               (:file "dev-commands" :depends-on ("package" "appearance" "icons" "file-types" "util"))
                (:file "wholine" :depends-on ("package" "dev-commands" "util"))
                (:file "listener" :depends-on ("package" "wholine" "file-types" "icons" "dev-commands" "util"))
-               
                #+CMU (:file "cmu-hacks" :depends-on ("package"))))))
+
