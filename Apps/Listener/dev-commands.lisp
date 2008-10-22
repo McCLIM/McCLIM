@@ -1155,7 +1155,7 @@ if you are interested in fixing this."))
              (setf (stream-cursor-position *standard-output*) (values 0 y))))
           (:list (dolist (ent group)
                    (let ((ent (merge-pathnames ent pathname)))
-                    (pretty-pretty-pathname ent *standard-output* :long-name full-names))))))))))
+                    (pretty-pretty-pathname ent *standard-output* full-names))))))))))
 
 #+nil   ; OBSOLETE
 (define-presentation-to-command-translator show-directory-translator
@@ -1175,7 +1175,7 @@ if you are interested in fixing this."))
   ((pathname 'pathname :prompt "pathname"))
   (let ((pathname (merge-pathnames
                    ;; helpfully fix things if trailing slash wasn't entered
-                   (directorify-pathname pathname))))
+                   (coerce-to-directory pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
         (change-directory pathname))))
@@ -1311,7 +1311,7 @@ if you are interested in fixing this."))
                                     :menu t
                                     :command-table directory-stack-commands)
   ((pathname 'pathname :prompt "directory"))
-  (let ((pathname (merge-pathnames (directorify-pathname pathname))))
+  (let ((pathname (merge-pathnames (coerce-to-directory pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
         (progn (push *default-pathname-defaults* *directory-stack*)
@@ -1324,7 +1324,7 @@ if you are interested in fixing this."))
         (format t "~&The top of the directory stack is now ")
         (present (truename (first *directory-stack*)))
         (terpri))
-      (format "~&The directory stack is now empty.~%")))
+      (format t "~&The directory stack is now empty.~%")))
 
 (define-command (com-pop-directory :name "Pop Directory"
                                   :menu t
@@ -1504,6 +1504,13 @@ if you are interested in fixing this."))
         **  *
         *   (first values)))
 
+;;; The background evaluation feature is neat, but some people (namely
+;;; myself) sometimes need a backdoor to disable it when evaluating
+;;; code which does a lot of graphics in the listener, due to thread
+;;; safety issues with concurrent access to a CLIM stream.
+(defparameter *use-background-eval* t
+  "Perform evaluation in a background thread, which can be interrupted.")
+
 (define-command (com-eval :menu t :command-table lisp-commands)
     ((form 'clim:form :prompt "form"))
   (let ((standard-output *standard-output*)
@@ -1527,7 +1534,7 @@ if you are interested in fixing this."))
       ;; interrupt it.
       (let ((start-time (get-internal-real-time)))
         (destructuring-bind (result . value)
-            (if clim-sys:*multiprocessing-p*
+            (if (and *use-background-eval* clim-sys:*multiprocessing-p*)
                 (catch 'done
                   (let* ((orig-process (clim-sys:current-process))
                          (evaluating t)
@@ -1571,7 +1578,7 @@ if you are interested in fixing this."))
                                         :command-table show-commands)
     ((table 'clim:command-table :prompt "command table")
      &key
-     (locally 'boolean :default nil :mentioned-default t)
+     ;;(locally 'boolean :default nil :mentioned-default t)
      (show-commands 'boolean :default t))
   (let ((our-tables nil)
 	(processed-commands (make-hash-table :test #'eq)))

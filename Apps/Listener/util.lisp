@@ -505,8 +505,7 @@ with some attempt to convert arguments intelligently."
         (with-drawing-options (stream :ink ink)
           (unless (zerop range)
             (when (eql t scale-y)
-              (setf scale-y (/ 250 range))
-              #+NIL (hef:debugf scale-y))
+              (setf scale-y (/ 250 range)))
             (draw-thin-bar-graph-1 
              stream 
              (lambda (i) (funcall key (aref vector i)))
@@ -533,3 +532,4 @@ with some attempt to convert arguments intelligently."
                                (float (/ height (- max-y min-y)) 0.0f0)
                                min-x max-x
                                (/ (- max-x min-x) width))))))
+
