@@ -480,6 +480,39 @@ examine the type of the command menu item to see if it is
           (map-over-command-table-menu-items function table))))
     (values)))
 
+(defun map-over-command-table-translators
+    (function command-table &key (inherited t))
+  (flet ((map-func (table)
+           (maphash #'(lambda (k v)
+                        (declare (ignore k))
+                        (funcall function v))
+                    (slot-value
+                     (presentation-translators table)
+                     'translators))))
+    (let ((command-table (find-command-table command-table)))
+      (if inherited
+          (apply-with-command-table-inheritance #'map-func command-table)
+          (map-func command-table)))))
+
+;(defun add-presentation-translator-to-command-table
+;    (command-table translator-name &key (errorp t)))
+; - fixme; spec says this fun is given a translator name, but that
+; find-presentation-translator needs a translator name and a command
+; table designator
+(defun add-actual-presentation-translator-to-command-table
+    (command-table translator &key (errorp t))
+  (let ((translators
+         (presentation-translators
+          (find-command-table command-table))))
+    (when (and errorp
+               (second
+                (multiple-value-list
+                 (gethash (name translator)
+                          (slot-value translators 'translators)))))
+      (error 'command-already-present
+       :command-table-name command-table))
+    (add-translator translators translator)))
+
 ;; At this point we should still see the gesture name as supplied by the
 ;; programmer in 'gesture'
 (defun %add-keystroke-item (command-table gesture item errorp)
