@@ -57,10 +57,10 @@
 ;;; though.
 
 ;;; Cursors are output records. After a cursor is created, The owning
-;;; Drei instance instnace should add it to the output stream. The
-;;; owner of the cursor (a Drei instance) is responsible for removing
-;;; the cursor once it is done with it. Cursors can be active/inactive
-;;; and enabled/disabled and have the same activity-status as their
+;;; Drei instance should add it to the output stream. The owner of the
+;;; cursor (a Drei instance) is responsible for removing the cursor
+;;; once it is done with it. Cursors can be active/inactive and
+;;; enabled/disabled and have the same activity-status as their
 ;;; associated view.
 (defclass drei-cursor (standard-sequence-output-record)
   ((%view :reader view
