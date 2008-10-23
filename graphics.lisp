@@ -1016,7 +1016,8 @@ position for the character."
     (medium (design rgb-image-design) &rest options
      &key (x 0) (y 0) &allow-other-keys)
   (with-medium-options (medium options)
-    (medium-draw-image-design* medium design x y)))
+    (medium-draw-image-design* medium design x y))
+  (values))
 
 ;;;;
 
@@ -1203,8 +1204,8 @@ significant octets being the values R, G and B, in order."
     (if read-designs
         (make-pattern res (or designs read-designs))
         (make-instance 'rgb-pattern :image (make-instance 'rgb-image
-                                            :width (array-dimension res 0)
-                                            :height (array-dimension res 1)
+                                            :width (array-dimension res 1)
+                                            :height (array-dimension res 0)
                                             :data res)))))
 
 (define-bitmap-file-reader :xpm (pathname)
