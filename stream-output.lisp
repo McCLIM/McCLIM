@@ -287,7 +287,9 @@
 						   :text-style text-style)
 	       while (<= sub-width delta)
 	       finally (return (1- i)))))
-  
+      (when (eql end 0)
+        (return-from seos-write-string))
+      
       (with-slots (baseline height vspace) stream
 	(multiple-value-bind (cx cy) (stream-cursor-position stream)
 	  (when (> new-baseline baseline)
