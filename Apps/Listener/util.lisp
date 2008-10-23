@@ -31,7 +31,7 @@
 
 (defun directoryp (path)
   "Determine if PATH designates a directory"
-  #+allegro (excl:file-directory-p pathname)
+  #+allegro (excl:file-directory-p path)
   #-allegro
   (flet ((f (x) (if (eq x :unspecific) nil x)))
     (if (or (f (pathname-name path))

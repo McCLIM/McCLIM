@@ -681,6 +681,7 @@
   #+openmcl-partial-mop
   (openmcl-mop:specializer-direct-generic-functions specializer)
   #+scl (clos:specializer-direct-generic-functions specializer)
+  #+allegro (mop:specializer-direct-generic-functions specializer)
   #-(or PCL SBCL scl clisp openmcl-partial-mop)
   (error "Sorry, not supported in your CL implementation. 
 See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION 
