@@ -376,9 +376,6 @@ cause the activate callback to be called."))
     (setf (substrate object) substrate)
     (sheet-adopt-child object substrate)))
 
-(defmethod allocate-space ((pane text-field-pane) w h)
-  (resize-sheet pane w h))
-
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.9 The concrete text-editor Gadget
 

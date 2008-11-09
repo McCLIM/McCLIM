@@ -1150,9 +1150,6 @@
                                 :max-width width :max-height height
                                 :min-width width :min-height height)))))
 
-(defmethod allocate-space ((pane pixie-text-field-pane) w h)
-  (resize-sheet pane w h))
-
 ;;;; Pixie tab-layout. Reuses implementation of the generic tab-layout-pane.
 
 (define-pixie-gadget clim-tab-layout:tab-layout pixie-tab-layout-pane)
