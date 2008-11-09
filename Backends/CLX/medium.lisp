@@ -612,7 +612,7 @@ time an indexed pattern is drawn.")
 
 (defmacro with-clx-graphics ((medium) &body body)
   `(let* ((port (port ,medium))
-	  (mirror (or (medium-buffer medium) (port-lookup-mirror port (medium-sheet ,medium)))))
+	  (mirror (or (medium-buffer ,medium) (port-lookup-mirror port (medium-sheet ,medium)))))
     (when mirror
       (let* ((line-style (medium-line-style ,medium))
 	     (ink        (medium-ink ,medium))
