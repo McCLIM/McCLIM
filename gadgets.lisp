@@ -1405,12 +1405,15 @@ and must never be nil."))
     (:vertical   +identity-transformation+)
     (:horizontal (make-transformation 0 1 1 0 0 0))))
 
-(defun translate-range-value (a mina maxa mino maxo)
+(defun translate-range-value (a mina maxa mino maxo 
+                              &optional (empty-result (/ (+ mino maxo) 2)))
   "When \arg{a} is some value in the range from \arg{mina} to \arg{maxa},
    proportionally translate the value into the range \arg{mino} to \arg{maxo}."
-  (+ mino (* (/ (- a mina)
-                (- maxa mina))          ;### avoid divide by zero here.
-             (- maxo mino))))
+  (if (zerop (- maxa mina))
+      empty-result
+      (+ mino (* (/ (- a mina)
+                    (- maxa mina))
+                 (- maxo mino)))))
 
 ;;;; SETF :after methods
 
@@ -1487,18 +1490,13 @@ and must never be nil."))
   (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
     (declare (ignore y3))
     (multiple-value-bind (minv maxv) (gadget-range* sb)
-      (if (= y1 y2)             ;### fix this in translate-range-value
-          minv
-          (translate-range-value y y1 y2 minv maxv)))))
+      (translate-range-value y y1 y2 minv maxv minv))))
 
 (defun scroll-bar/map-value-to-coordinate (sb v)
   (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
     (declare (ignore y3))
     (multiple-value-bind (minv maxv) (gadget-range* sb)
-      ;; oops, if the range is empty we lose!
-      (if (= minv maxv)         ;### fix this in translate-range-value
-          y1
-          (round (translate-range-value v minv maxv y1 y2))))))
+      (round (translate-range-value v minv maxv y1 y2 y1)))))
 
 (defmethod scroll-bar-thumb-region ((sb scroll-bar-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
@@ -2666,6 +2664,7 @@ if INVOKE-CALLBACK is given."))
   ;; gadget is ever adopted, and an erase-output-record called on a newer
   ;; gadget-output-record will face a sheet-not-child error when trying
   ;; to disown the never adopted gadget.
+  (setf stream (stream-designator-symbol stream '*standard-output*))
   (let ((gadget-output-record (gensym))
 	(x (gensym))
 	(y (gensym)))
