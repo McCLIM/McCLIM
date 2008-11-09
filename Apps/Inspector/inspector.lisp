@@ -71,14 +71,6 @@ their specific print lengths, if they have one.")
                           (- (bounding-rectangle-height scrollable-pane)
                              (bounding-rectangle-height viewport)))))))
 
-(defmethod redisplay-frame-pane :after ((frame inspector)
-					(pane application-pane)
-					&key force-p)
-  (declare (ignore force-p))
-  (change-space-requirements
-   pane
-   :height (bounding-rectangle-height (stream-output-history pane))))
-
 (defun inspector (obj &key (new-process nil))
   (flet ((run ()
 	   (let ((*print-length* 10)

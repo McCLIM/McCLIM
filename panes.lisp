@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.191 2008/08/21 22:34:29 ahefner Exp $
+;;; $Id: panes.lisp,v 1.192 2008/11/09 19:58:26 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -2472,7 +2472,8 @@ to computed distance to scroll in response to mouse wheel events."))
 				 (pane pane-display-mixin)
 				 &key force-p)
   (declare (ignore force-p))
-  (invoke-display-function frame pane))
+  (invoke-display-function frame pane)
+  (fit-pane-to-output pane))
 
 (defgeneric pane-double-buffering (pane))
 
@@ -2965,3 +2966,15 @@ current background message was set."))
   (warn "Are you sure you want to use schedule-timer-event? It probably doesn't work.")
   (schedule-event pane (make-instance 'timer-event :token token :sheet pane) delay))
 
+(defgeneric fit-pane-to-output (pane)
+  (:method (pane) (declare (ignore pane))))
+
+(defmethod fit-pane-to-output ((stream clim-stream-pane))
+  (when (sheet-mirror stream)
+    (let* ((output (stream-output-history stream))
+           (width  (bounding-rectangle-max-x  output))
+           (height (bounding-rectangle-max-y output)))
+      (change-space-requirements stream
+                                 :min-width width :min-height height
+                                 ;;:max-width width :max-height height
+                                 :width width :height height))))

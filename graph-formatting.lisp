@@ -3,7 +3,7 @@
 ;;;     Title: Graph Formatting
 ;;;   Created: 2002-08-13
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: graph-formatting.lisp,v 1.22 2007/09/17 19:20:49 crhodes Exp $
+;;;       $Id: graph-formatting.lisp,v 1.23 2008/11/09 19:58:26 ahefner Exp $
 ;;; ---------------------------------------------------------------------------
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
@@ -188,6 +188,7 @@
 	  (setf (stream-cursor-position stream)
 	    (values (bounding-rectangle-max-x graph-output-record)
 		    (bounding-rectangle-max-y graph-output-record))))
+        (fit-pane-to-output stream)
 	graph-output-record))))
 
 ;;;; Graph Output Records
