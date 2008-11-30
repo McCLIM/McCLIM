@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.192 2008/11/09 19:58:26 ahefner Exp $
+;;; $Id: panes.lisp,v 1.193 2008/11/30 22:22:29 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -906,7 +906,10 @@ order to produce a double-click")
                                       &key resize-frame &allow-other-keys)
   (declare (ignore space-req-keys))
   (cond (*changing-space-requirements*
-         ;; just record what we have
+         ;; Record changed space requirements.
+         ;; What happens if we change the requirements successively
+         ;; with different values? Only the first takes effect?
+         ;; -Hefner
          (unless (find pane *changed-space-requirements* :key #'second)
            (push (list (pane-frame pane) pane resize-frame)
                  *changed-space-requirements*)))
@@ -2972,9 +2975,15 @@ current background message was set."))
 (defmethod fit-pane-to-output ((stream clim-stream-pane))
   (when (sheet-mirror stream)
     (let* ((output (stream-output-history stream))
-           (width  (bounding-rectangle-max-x  output))
-           (height (bounding-rectangle-max-y output)))
+           (fit-width  (bounding-rectangle-max-x  output))
+           (fit-height (bounding-rectangle-max-y output)))
+      (multiple-value-bind (width min-width max-width 
+                            height min-height max-height)
+          (space-requirement-components (compose-space stream))
       (change-space-requirements stream
-                                 :min-width width :min-height height
-                                 ;;:max-width width :max-height height
-                                 :width width :height height))))
+                                 :min-width (max fit-width min-width)
+                                 :min-height (max fit-height min-height)
+                                 :width (max fit-width width)
+                                 :height (max fit-height height)
+                                 :max-width max-width
+                                 :max-height max-height)))))
