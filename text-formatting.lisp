@@ -81,8 +81,8 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 	(call-next-method))))
 
 (defmethod stream-write-string :around ((stream filling-stream) string
-                                        &optional (start 0) (end (length string)))
-  (dotimes (i (- end start))
+                                        &optional (start 0) end)
+  (dotimes (i (- (or end (length string)) start))
     (stream-write-char stream (aref string (+ i start)))))
 
 ;;; All the monkey business with the lambda form has to do with capturing the
