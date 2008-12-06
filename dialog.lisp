@@ -155,12 +155,12 @@ accept of this query")))
       &rest args
       &key own-window exit-boxes initially-select-query-identifier
            modify-initial-query resynchronize-every-pass resize-frame
-           align-prompts label scroll-bars
+           align-prompts label scroll-bars select-first-query
            x-position y-position width height command-table frame-class)
      &body body)
   (declare (ignorable exit-boxes initially-select-query-identifier
             modify-initial-query resynchronize-every-pass resize-frame
-            align-prompts scroll-bars
+            align-prompts scroll-bars select-first-query
             x-position y-position width height command-table frame-class))
   (setq stream (stream-designator-symbol stream '*standard-input*))
   (with-gensyms (accepting-values-continuation)
@@ -185,6 +185,7 @@ accept of this query")))
     (stream body
      &key own-window exit-boxes
      (initially-select-query-identifier nil initially-select-p)
+     select-first-query
      modify-initial-query resynchronize-every-pass resize-frame
      align-prompts label scroll-bars
      x-position y-position width height
@@ -229,6 +230,14 @@ accept of this query")))
                         ('(command :command-table accept-values))
                       (object)
                       (progn
+                        (when (and select-first-query
+                                   (not initially-select-p))
+                          (setf current-command 
+                                `(com-select-query
+                                  ,(query-identifier 
+                                    (first
+                                     (queries *accepting-values-stream*))))
+                                select-first-query nil))
                         (apply (command-name current-command)
                                (command-arguments current-command))
                         ;; If current command returns without throwing a
@@ -252,13 +261,22 @@ accept of this query")))
   (declare (ignore frame))
   (updating-output (stream :unique-id 'buttons :cache-value t)
     (fresh-line stream)
-    (with-output-as-presentation
-	(stream nil 'exit-button)
-      (format stream "OK"))
-    (write-char #\space stream)
-    (with-output-as-presentation
-	(stream nil 'abort-button)
-      (format stream "Cancel"))
+    (formatting-table (stream)
+      (formatting-row (stream)
+        (formatting-cell (stream)
+          (with-output-as-presentation (stream nil 'exit-button)
+            (surrounding-output-with-border
+                (stream :shape :rounded :radius 6
+                        :background +gray80+ :highlight-background +gray90+)
+              (format stream "OK"))))
+        (formatting-cell (stream)
+          (with-output-as-presentation
+              (stream nil 'abort-button) (with-output-as-presentation
+              (stream nil 'exit-button)
+            (surrounding-output-with-border
+                (stream :shape :rounded :radius 6
+                        :background +gray80+ :highlight-background +gray90+)
+              (format stream "Cancel")))))))
     (terpri stream)))
 
 (defmethod stream-accept ((stream accepting-values-stream) type
@@ -457,16 +475,25 @@ is called. Used to determine if any editing has been done by user")))
                        (stream query-identifier 'selectable-query
                                :single-box t)
                      (surrounding-output-with-border
-                         (stream :shape :inset :move-cursor t)
+                         (stream :shape :rounded
+                                 :radius 3 :background +white+
+                                 :foreground +gray40+
+                                 :move-cursor t)
+                       ;;; FIXME: In this instance we really want borders that
+                       ;;; react to the growth of their children. This should
+                       ;;; be straightforward unless there is some involvement
+                       ;;; of incremental redisplay.
+                       ;;; KLUDGE: Arbitrary min-width.
                        (setq editing-stream
                              (make-instance (if *use-goatee*
                                                 'goatee-input-editing-stream
                                                 'standard-input-editing-stream)
                                             :stream stream
                                             :cursor-visibility nil
-                                            :background-ink +grey90+
                                             :single-line t
-                                            :min-width t))))
+                                            :min-width (- (bounding-rectangle-max-x stream)
+                                                          (stream-cursor-position stream)
+                                                          100)))))
                    (when default-supplied-p
                      (input-editing-rescan-loop ;XXX probably not needed
                       editing-stream

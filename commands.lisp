@@ -856,24 +856,26 @@ examine the type of the command menu item to see if it is
                                           ,command-table
                                           :errorp nil))
                      ,@(mapcar #'list required-arg-names original-args))
-                 (accepting-values (,stream)
+                 (accepting-values (,stream :select-first-query t
+                                            :align-prompts t)
                    (format ,stream
-                           "You are being prompted for arguments to ~S~%~%"
+                           "You are being prompted for arguments to ~S~%"
                            ,command-line-name)
                    ,@(loop
                         for var in required-arg-names
                         for original-var in original-args
                         for parameter in required-args
+                        for first-arg = t then nil
                         append `((multiple-value-bind (,value ,ptype ,changedp)
                                      ,(accept-form-for-argument-partial
                                        stream parameter var original-var)
                                    (declare (ignore ,ptype))
-                                   (terpri ,stream)
+                                    ,@(unless first-arg `((terpri ,stream)))
                                    (when ,changedp
                                      (setq ,var ,value)))))
                    (when still-missing
                      (format ,stream
-                             "~&Please supply all arguments.")))
+                             "~&Please supply all arguments.~%")))
                  (setf ,partial-command (list ,command-name ,@required-arg-names))
                  (unless (partial-command-p ,partial-command)
                    (return ,partial-command))))))))))
