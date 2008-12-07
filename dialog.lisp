@@ -339,7 +339,7 @@ accept of this query")))
       (let ((query-record nil))
 	(if align
 	    (formatting-row (stream)
-	      (formatting-cell (stream :align-x align)
+	      (formatting-cell (stream :align-x align :align-y :center)
 		(do-prompt))
 	      (formatting-cell (stream)
 		(setq query-record (do-accept-present-default))))
