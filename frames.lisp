@@ -325,7 +325,7 @@ documentation produced by presentations.")
    (lambda (sheet)
      (when (typep sheet 'pane)
        (when (and (typep sheet 'clim-stream-pane)
-                  (not (eq :no-clear (pane-redisplay-needed sheet))))        
+                  (not (eq :no-clear (pane-redisplay-needed sheet))))
          (window-clear sheet))
        (redisplay-frame-pane frame sheet :force-p force-p)))
    (frame-top-level-sheet frame)))
@@ -463,7 +463,7 @@ documentation produced by presentations.")
           (:disowned
            (disown-frame fm frame)))))))
 
-(defparameter +default-prompt-style+ (make-text-style :fix :italic :normal))
+(defparameter +default-prompt-style+ (make-text-style :sans-serif :bold :normal))
 
 (defmethod default-frame-top-level
     ((frame application-frame)

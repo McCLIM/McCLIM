@@ -140,12 +140,18 @@
     (object (type empty-input) stream view &key &allow-other-keys)
   (princ "" stream))
 
+;;; Sneaky - we want to use :fix text for the command prompt, but
+;;; use the default :sans-serif in accepting-values dialogs. Those
+;;; are invokved by the :around method on r-f-c, so if we bind
+;;; the text style here in the primary method, we're okay.
+
 (defmethod read-frame-command ((frame listener) &key (stream *standard-input*))  
   "Specialized for the listener, read a lisp form to eval, or a command."
   (multiple-value-bind (object type)
       (let ((*command-dispatchers* '(#\,)))
-        (accept 'command-or-form :stream stream :prompt nil 
-                :default "hello" :default-type 'empty-input))
+        (with-text-style (stream (make-text-style :fix :roman :normal))
+          (accept 'command-or-form :stream stream :prompt nil 
+                  :default "hello" :default-type 'empty-input)))
     (cond
       ((presentation-subtypep type 'empty-input)
        ;; Do nothing.
