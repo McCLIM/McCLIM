@@ -63,12 +63,13 @@
          (buffer-file-name (filepath (buffer view)))
          (swank::*buffer-package* package)
          (swank::*buffer-readtable* *readtable*))
-    (let  ((result (swank::compile-string-for-emacs
-                    string view-name (offset buffer-mark) (princ-to-string buffer-file-name)
-                    nil))
-           (notes (loop for note in (swank::compiler-notes-for-emacs)
-                     collect (make-compiler-note note))))
-      (values result notes))))
+    (let*  ((result (swank::compile-string-for-emacs
+                     string view-name (offset buffer-mark) (princ-to-string buffer-file-name)
+                     nil))
+            (notes (loop for note in (swank::compilation-result-notes result)
+                         collect (make-compiler-note note))))
+      (values (list (swank::compilation-result-successp result)
+                    (swank::compilation-result-duration result)) notes))))
 
 (defmethod compile-file-for-drei ((image swank-local-image) filepath package &optional load-p)
   (declare (ignore image))
@@ -76,9 +77,10 @@
          (swank::*buffer-readtable* *readtable*)
          (*compile-verbose* nil)
          (result (swank::compile-file-for-emacs filepath load-p))
-         (notes (loop for note in (swank::compiler-notes-for-emacs)
-                   collect (make-compiler-note note))))
-    (values result notes)))
+         (notes (loop for note in (swank::compilation-result-notes result)
+                      collect (make-compiler-note note))))
+    (values (list (swank::compilation-result-successp result)
+                  (swank::compilation-result-duration result)) notes)))
 
 (defmethod find-definitions-for-drei ((image swank-local-image) symbol)
   (declare (ignore image))
@@ -108,4 +110,4 @@
 
 (defmethod fuzzy-completions ((image swank-local-image) symbol-name default-package &optional limit)
   (declare (ignore image))
-  (swank::fuzzy-completions symbol-name (package-name default-package) limit))
+  (swank::fuzzy-completions symbol-name (package-name default-package) :limit limit))
