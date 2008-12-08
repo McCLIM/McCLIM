@@ -1326,14 +1326,7 @@ In either of those cases, @genfun{allocate-space} is called.
 @node Protocol Changes
 @section Protocol Changes
 
-@deffn {Generic Function}{line-style-effective-thickness} line-style medium
-
-The thickness in device units of the lines rendered on @var{medium} in
-the line style @var{line-style}. The default method, assuming normal
-line width to be 1 device unit, is provided.
-@end deffn
-
-@c @initarg{:parent}
+@include fun-clim-extensions-line-style-effective-thickness.texi
 
 @deffn {Generic Function} {(setf output-record-parent)} parent record
 
@@ -1342,16 +1335,9 @@ record or @cl{nil}.
 
 @end deffn
 
-@deffn {Generic Function} {replay-output-record} record stream &optional region x-offset y-offset
-@end deffn
-
-@deffn {Generic Function} {map-over-output-records-containing-position} function record x y &optional x-offset y-offset &rest function-args
-@end deffn
-
-@deffn {Generic Function} {map-over-output-records-overlapping-region} function record region &optional x-offset y-offset &rest function-args
-
-@var{x-offset} and @var{y-offset} are ignored.
-@end deffn
+@include fun-clim-replay-output-record.texi
+@include fun-clim-map-over-output-records-containing-position.texi
+@include fun-clim-map-over-output-records-overlapping-region.texi
 
 @c XXX \defgeneric displayed-output-record-ink for text records
 
@@ -1373,12 +1359,8 @@ Sets the parent of all children of @var{record} to @cl{nil}.
 
 @c \defgeneric {invoke-with-new-output-record} :parent key
 
-@deffn {Macro} {with-new-output-record} ({stream &optional record-type record &rest initargs}) \body body
-@end deffn
-@deffn {Macro} {with-output-to-output-record} ({stream &optional record-type record &rest initargs}) \body body
-@end deffn
-
-@var{record-type} is evaluated.
+@include macro-clim-with-new-output-record.texi
+@include macro-clim-with-output-to-output-record.texi
 
 @node Command Processing
 @chapter Command Processing
@@ -1408,13 +1390,7 @@ tables must inherit from @cl{global-command-table}. McCLIM treats a
 @chapter Output Protocol Extensions
 @cindex extensions
 
-@deffn {Generic Function} {medium-miter-limit} medium
-@end deffn
-
-Returns the minimal value of an angle for which :MITER line joint may be
-used; for smaller angles :MITER is interpreted as :BEVEL.
-@c Different calls of the function with the same argument must return
-@c values which are COORDINATE=.
+@include fun-clim-extensions-medium-miter-limit.texi
 
 @node Output Recording Extensions
 @chapter Output Recording Extensions
