@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.193 2008/11/30 22:22:29 ahefner Exp $
+;;; $Id: panes.lisp,v 1.194 2008/12/19 08:58:14 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -2552,7 +2552,7 @@ to computed distance to scroll in response to mouse wheel events."))
   (flet ((compute (val default)
 	   (if (eq val :compute) default val)))
     (if (or (eq (pane-user-width pane) :compute)
-            (eq (pane-user-height pane) :compute))  
+            (eq (pane-user-height pane) :compute))
 	(progn
 	  (with-output-recording-options (pane :record t :draw nil)
 	    ;; multiple-value-letf anyone?
@@ -2973,7 +2973,12 @@ current background message was set."))
   (:method (pane) (declare (ignore pane))))
 
 (defmethod fit-pane-to-output ((stream clim-stream-pane))
-  (when (sheet-mirror stream)
+  ;;; Guard against infinite recursion of size is set to :compute, as this
+  ;;; could get called from the display function. We'll call compose-space
+  ;;; here, which will invoke the display function again..
+  (when (and (sheet-mirror stream)
+             (not (or (eq (pane-user-width stream) :compute)
+                      (eq (pane-user-height stream) :compute))))
     (let* ((output (stream-output-history stream))
            (fit-width  (bounding-rectangle-max-x  output))
            (fit-height (bounding-rectangle-max-y output)))
