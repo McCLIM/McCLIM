@@ -991,10 +991,8 @@ protocol retrieving gestures from a provided string."))
   (declare (ignore abort)))
 
 (defmethod stream-peek-char ((stream string-input-editing-stream))
-  (let ((char (read-char-no-hang stream nil nil)))
-    (when char
-      (unread-char char stream))
-    (or char :eof)))
+  (or (stream-read-gesture stream :peek-p t)
+      :eof))
 
 (defmethod stream-read-char-no-hang ((stream string-input-editing-stream))
   (if (> (stream-scan-pointer stream) (length (stream-input-buffer stream)))
