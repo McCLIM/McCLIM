@@ -982,7 +982,7 @@ protocol retrieving gestures from a provided string."))
                                        &allow-other-keys)
   (setf (stream-input-buffer stream)
         (replace (make-array (- end start) :fill-pointer (- end start))
-                 string :start1 start :end2 end)))
+                 string :start2 start :end2 end)))
 
 (defmethod stream-element-type ((stream string-input-editing-stream))
   'character)
