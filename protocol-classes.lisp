@@ -188,10 +188,8 @@
 ;;; standard-frame-manager and I don't want to add these slots to all the frame
 ;;; manager classes right now.
 (define-protocol-class frame-manager ()
-  ((port :initarg :port
-	 :reader frame-manager-port)
-   (frames :initform nil
-	   :reader frame-manager-frames)))
+  ((port :initarg :port :reader port)
+   (frames :initform nil :reader frame-manager-frames)))
 
 ;;; 30.3 Basic Gadget Classes
 ;;; XXX Slots definitions should be banished.

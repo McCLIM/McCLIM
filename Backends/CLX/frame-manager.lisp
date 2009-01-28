@@ -92,7 +92,7 @@
   ;; Temporary kludge.
   (when (eq (slot-value frame 'climi::top) nil)
     (multiple-value-bind (x y)
-        (xlib:query-pointer (clx-port-window (climi::frame-manager-port fm)))
+        (xlib:query-pointer (clx-port-window (port fm)))
       (incf x 10)
       (setf (slot-value frame 'climi::left) x
             (slot-value frame 'climi::top) y))))

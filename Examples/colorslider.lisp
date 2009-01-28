@@ -66,7 +66,7 @@
 ;  (setq fm (find-frame-manager))
 ;  (setq frame (make-application-frame 'colorslider
 ;                                      :frame-manager fm))
-;  (setq port (climi::frame-manager-port fm))
+;  (setq port (port fm))
 ;  (setq pane (frame-panes frame))
 ;  (setq medium (sheet-medium pane))
 ;  (setq graft (graft frame))

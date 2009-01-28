@@ -37,7 +37,7 @@
                                                       :port (find-port))))
 ; (setq frame (make-application-frame 'gadget-test))
   (setq fm (frame-manager frame))
-  (setq port (climi::frame-manager-port fm))
+  (setq port (port fm))
   (setq pane (first (frame-panes frame)))
   (setq medium (sheet-medium pane))
   (setq graft (graft frame))

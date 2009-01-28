@@ -28,7 +28,7 @@
   (setq climi::*all-ports* nil)
   (setq frame (make-application-frame 'address-book))
 ;  (setq fm (frame-manager frame))
-;  (setq port (climi::frame-manager-port fm))
+;  (setq port (port fm))
 ;  (setq pane (frame-standard-output frame))
 ;  (setq medium (sheet-medium pane))
 ;  (setq graft (graft frame))

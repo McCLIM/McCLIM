@@ -268,7 +268,7 @@
 `frame' (essentially, the screen resolution with a slight
 padding.)"
   ;; FIXME? There may be a better way.
-  (let* ((port (frame-manager-port (frame-manager frame)))
+  (let* ((port (port (frame-manager frame)))
          (graft (find-graft :port port)))
     (values (- (graft-width graft) 50)
             (- (graft-height graft) 50))))
