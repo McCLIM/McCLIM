@@ -1202,17 +1202,31 @@ examine the type of the command menu item to see if it is
            (let ((possibilities nil))
              (map-over-command-table-names
               (lambda (cline-name command-name)
-                (when (command-enabled command-name *application-frame*)
+                (unless (member command-name (disabled-commands *application-frame*))
                   (pushnew (cons cline-name command-name) possibilities
                            :key #'car :test #'string=)))
               command-table)
              (loop for (cline-name . command-name) in possibilities
                    do (funcall suggester cline-name command-name)))))
-    ;; Bind the frame's command table so that the command-enabled
-    ;; test passes with this command table.
-    (letf (((frame-command-table *application-frame*)
-	    (find-command-table command-table)))
-      (multiple-value-bind (object success string)
+    ;; KLUDGE: here, we used to bind the frame's command table so that
+    ;; a test with COMMAND-ENABLED passed with the command-table being
+    ;; accepted from.  Unfortunately, that interfered awfully with
+    ;; drei gadgets and their command-table inheritance; the dynamic
+    ;; inheritance from (frame-command-table *application-frame*) [
+    ;; which is needed to get things like frame menu items and other
+    ;; commands to work ] works really badly if (frame-command-table
+    ;; *application-frame*) is set/bound to the dispatching
+    ;; command-table itself.
+    ;; 
+    ;; Instead we now use the knowledge of how disabled commands are
+    ;; implemented to satisfy the constraint that only enabeled
+    ;; commands are acceptable (with the "accessible" constraint being
+    ;; automatically satisfied by the generator mapping over the
+    ;; command-table).
+    ;;
+    ;; This means that someone implementing their own version of the
+    ;; "enabled-command" protocol will lose.  Sorry.  CSR, 2009-02-17
+    (multiple-value-bind (object success string)
 	(complete-input stream
 			#'(lambda (so-far mode)
 			    (complete-from-generator so-far
@@ -1222,7 +1236,7 @@ examine the type of the command menu item to see if it is
 			:partial-completers '(#\space))
       (if success
 	  (values object type)
-	  (simple-parse-error "No command named ~S" string))))))
+	  (simple-parse-error "No command named ~S" string)))))
 
 (defun command-line-command-parser (command-table stream)
   (let ((command-name nil)
