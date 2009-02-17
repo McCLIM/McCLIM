@@ -697,17 +697,18 @@ never refer to a command."))
                       (eq (command-menu-item-type item) :command))
                   (let ((command (if (commandp item) item
                                      (command-menu-item-value item)))
-                        (*current-gesture* (first (last gestures))))
+                        (*current-gesture* (first (last gestures)))
+                        (*standard-input* (or *minibuffer* *standard-input*)))
                     (unless (consp command)
                       (setf command (list command)))
                     ;; Call `*partial-command-parser*' to handle numeric
                     ;; argument.
-                    (unwind-protect (setq command
-                                          (funcall
-                                           *partial-command-parser*
-                                           (command-table command-processor)
-                                           *standard-input* command 0 (when prefix-p
-                                                                        prefix-arg)))
+                    (unwind-protect 
+                         (setq command
+                               (funcall *partial-command-parser*
+                                        (command-table command-processor)
+                                        *standard-input*
+                                        command 0 (when prefix-p prefix-arg)))
                       ;; If we are macrorecording, store whatever the user
                       ;; did to invoke this command.
                       (when (recordingp command-processor)
