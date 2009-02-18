@@ -452,7 +452,7 @@
                                       :map nil
                                       :width (round-coordinate (space-requirement-width q))
                                       :height (round-coordinate (space-requirement-height q))
-                                      :event-mask nil)))
+                                      :event-mask '(:key-press :key-release))))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
@@ -867,6 +867,21 @@
 (defmethod port-client-message (sheet time (type t) data)
   (warn "Unprocessed client message: ~:_type = ~S;~:_ data = ~S;~_ sheet = ~S."
         type data sheet))
+
+;;; this client message is only necessary if we advertise that we
+;;; participate in the :WM_TAKE_FOCUS protocol; otherwise, the window
+;;; manager is responsible for all setting of input focus for us.  If
+;;; we want to do something more complicated with server input focus,
+;;; then this method should be adjusted appropriately and the
+;;; top-level-sheet REALIZE-MIRROR method should be adjusted to add
+;;; :WM_TAKE_FOCUS to XLIB:WM-PROTOCOLS.  CSR, 2009-02-18
+(defmethod port-wm-protocols-message (sheet time (message (eql :wm_take_focus)) data)
+  (let ((timestamp (elt data 1))
+        (mirror (sheet-mirror sheet)))
+    (when mirror
+      (xlib:set-input-focus (clx-port-display *clx-port*)
+                            mirror :parent timestamp))
+    nil))
 
 (defmethod port-wm-protocols-message (sheet time (message (eql :wm_delete_window)) data)
   (declare (ignore data))
