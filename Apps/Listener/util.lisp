@@ -135,7 +135,8 @@
                :output-stream output
                :wait wait)
   #+clisp (ext:run-program program :arguments args :wait wait)
-  #-(or CMU scl SBCL lispworks clisp)
+  #+openmcl (ccl:run-program program args :input input :output output :wait wait)
+  #-(or CMU scl SBCL lispworks clisp openmcl)
   (format t "~&Sorry, don't know how to run programs in your CL.~%"))
 
 ;;;; CLIM/UI utilities
