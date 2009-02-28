@@ -671,14 +671,12 @@ examine the type of the command menu item to see if it is
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
 
-
-(defvar *unsupplied-argument-marker* (gensym "UNSUPPLIED-ARGUMENT-MARKER"))
+(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
+(defvar *numeric-argument-marker* '%numeric-argument-marker%)
 
 (defvar *command-name-delimiters* '(command-delimiter))
 
 (defvar *command-argument-delimiters* '(command-delimiter))
-
-(defvar *numeric-argument-marker* (cons nil nil))
 
 ;;; A type indicating empty input. For example, if one types <space>
 ;;; to get the default value of a keyword argument, and then types
