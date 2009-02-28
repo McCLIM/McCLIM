@@ -533,10 +533,8 @@ documentation produced by presentations.")
            (table (frame-command-table frame)))
        (unless (listp command)
 	 (setq command (partial-command-from-name command table)))
-       (if (and (typep stream 'interactor-pane)
-		(partial-command-p command))
-	   (command-line-read-remaining-arguments-for-partial-command
-	    table stream command 0)
+       (if (partial-command-p command)
+	   (funcall *partial-command-parser* table stream command 0)
 	   command)))))
 
 (defmethod read-frame-command ((frame application-frame)
