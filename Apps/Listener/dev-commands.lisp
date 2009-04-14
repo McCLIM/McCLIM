@@ -244,8 +244,8 @@
 ;; FIXME: Disabled input, as it usually seems to hang.
 (define-command (com-run :name "Run" :command-table application-commands :menu t
 			 :provide-output-destination-keyword t)
-  ((program 'string :prompt "command")
-   (args '(sequence string) :default nil :prompt "args"))
+  ((program 'string :prompt "Command")
+   (args '(sequence string) :default nil :prompt "Arguments"))
   (run-program program args :wait t :input nil))
 
 ;; I could replace this command with a keyword to COM-RUN..
@@ -253,8 +253,8 @@
                                     :menu t
 				    :command-table application-commands
 				    :provide-output-destination-keyword t)
-  ((program 'string :prompt "command")
-   (args '(sequence string) :default nil :prompt "args"))
+  ((program 'string :prompt "Command")
+   (args '(sequence string) :default nil :prompt "Args"))
   (run-program program args :wait nil :output nil :input nil))
 
 (define-command (com-reload-mime-database :name "Reload Mime Database"
@@ -338,10 +338,10 @@
 			     :command-table lisp-commands
                              :menu t
 			     :provide-output-destination-keyword t)
-    ((string 'clim:string :prompt "string")
+    ((string 'clim:string :prompt "String")
      &key
-     (package '(or package-name package) :prompt "in package" :default nil)
-     (domain '(member symbols classes functions variables command-tables) :prompt "domain" :default 'symbols))
+     (package '(or package-name package) :prompt "Package" :default nil)
+     (domain '(member symbols classes functions variables command-tables) :prompt "Domain" :default 'symbols))
   (let ((real-package (when package
                         (if (typep package 'package)
                             package
@@ -1505,11 +1505,13 @@ if you are interested in fixing this."))
         **  *
         *   (first values)))
 
-;;; The background evaluation feature is neat, but some people (namely
-;;; myself) sometimes need a backdoor to disable it when evaluating
-;;; code which does a lot of graphics in the listener, due to thread
-;;; safety issues with concurrent access to a CLIM stream.
-(defparameter *use-background-eval* t
+;;; The background evaluation feature is neat, but there are thread
+;;; safety issues doing output to streams, special variables have
+;;; unexpected values, and input doesn't work right due to racing to
+;;; read from the event queue. Sadly, I am forced to disable it by
+;;; default.
+
+(defparameter *use-background-eval* nil
   "Perform evaluation in a background thread, which can be interrupted.")
 
 (define-command (com-eval :menu t :command-table lisp-commands)
