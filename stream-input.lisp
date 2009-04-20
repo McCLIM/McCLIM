@@ -215,7 +215,7 @@ keys read."))
 ;;; Do streams care about any other events?
 (defun handle-non-stream-event (buffer)
   (let* ((event (event-queue-peek buffer))
-	 (sheet (event-sheet event)))
+	 (sheet (and event (event-sheet event))))
     (if (and event
 	     (or (and (gadgetp sheet)
                       (gadget-active-p sheet))
