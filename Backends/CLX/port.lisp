@@ -458,7 +458,14 @@
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
-      (setf (xlib:wm-protocols window) `(:wm_delete_window)))))
+      (xlib:set-wm-class
+       window
+       (string-downcase (frame-name frame))
+       (string-capitalize (string-downcase (frame-name frame))))
+      (setf (xlib:wm-protocols window) `(:wm_delete_window))
+      (xlib:change-property window
+                            :WM_CLIENT_LEADER (list (xlib:window-id window))
+                            :WINDOW 32))))
 
 (defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
