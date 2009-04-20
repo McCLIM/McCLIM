@@ -363,6 +363,7 @@
 				(override-redirect :off)
 				(map t)
 				(backing-store :not-useful)
+                                (save-under :off)
 				(event-mask `(:exposure 
 					      :key-press :key-release
 					      :button-press :button-release
@@ -412,6 +413,7 @@
                     :border border
                     :override-redirect override-redirect
                     :backing-store backing-store
+                    :save-under save-under
                     :gravity :north-west
                     ;; Evil Hack -- but helps enormously (Has anybody
                     ;; a good idea how to sneak the concept of
@@ -461,6 +463,7 @@
 (defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
 		      :override-redirect :on
+                      :save-under :on
 		      :map nil
 		      :event-mask '(:structure-notify)))
 
