@@ -980,8 +980,6 @@
       :italic-bold         "bold-i")) ))
 
 (defun open-font (display font-name)
-
-
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
     (if fonts
 	(xlib:open-font display (first fonts))
@@ -1013,13 +1011,20 @@
                    (size-number (if (numberp size)
                                     (round size)
                                     (or (getf *clx-text-sizes* size)
-                                        (getf *clx-text-sizes* :normal))))
-                   (font-name (format nil "-~A-~A-*-*-~D-*-*-*-*-*-*-*"
-                                      family-name face-name size-number)))
-              (setf (gethash text-style table)
-                    (cons font-name
-                          (open-font (clx-port-display port) font-name)))
-              font-name))))))
+                                        (getf *clx-text-sizes* :normal)))))
+              (flet ((try (encoding)
+                       (let* ((fn (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
+                                          family-name face-name size-number
+                                          encoding))
+                              (font (open-font (clx-port-display port) fn)))
+                         (and font (cons fn font)))))
+                (let ((fn-font
+                       (or
+                        (and (> char-code-limit #x100) (try "iso10646-1"))
+                        (try "iso8859-1")
+                        (try "*-*"))))
+                  (setf (gethash text-style table) fn-font)
+                  (car fn-font)))))))))
 
 (defmethod (setf text-style-mapping) (font-name (port clx-port)
                                       (text-style text-style)

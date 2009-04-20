@@ -945,8 +945,8 @@ time an indexed pattern is drawn.")
 ;;; is by no means a proper solution to the problem of
 ;;; internationalization, because fonts tend not to have a complete
 ;;; coverage of the entirety of the Unicode space, even assuming that
-;;; the underlying lisp supports it (as of 2006-02-06, only the case
-;;; for SBCL and CLISP); instead, the translation function is meant to
+;;; the underlying lisp supports it (this is the case at least for SBCL,
+;;; CLISP and CCL); instead, the translation function is meant to
 ;;; handle font sets by requesting the X server change fonts in the
 ;;; middle of rendering strings.  However, the below stands a chance
 ;;; of working when using ISO-8859-1-encoded fonts, and will tend to
