@@ -187,6 +187,16 @@ instance of `delete-record'."))
 `delete-record' containing a mark is created and added to the
 undo tree."))
 
+(defclass change-record (simple-undo-record)
+  ((objects :initarg :objects
+	    :documentation "The sequence of objects that are to 
+replace the records that are currently in the buffer at the 
+offset whenever flip-undo-record is called on an instance of 
+change-record"))
+  (:documentation "Whenever objects are modified, a 
+`change-record' containing a mark is created and added to the 
+undo tree."))
+
 (defclass compound-record (drei-undo-record)
   ((records :initform '()
             :initarg :records
@@ -201,7 +211,11 @@ records."))
 
 (defmethod print-object  ((object insert-record) stream)
   (with-slots (offset objects) object
-    (format stream "[offset: ~a objects: ~a]" offset objects)))
+    (format stream "[offset: ~a inserted objects: ~a]" offset objects)))
+
+(defmethod print-object  ((object change-record) stream)
+  (with-slots (offset objects) object
+    (format stream "[offset: ~a changed objects: ~a]" offset objects)))
 
 (defmethod print-object  ((object compound-record) stream)
   (with-slots (records) object
@@ -225,6 +239,14 @@ records."))
     (push (make-instance 'insert-record
                          :buffer buffer :offset offset
                          :objects (buffer-sequence buffer offset (+ offset n)))
+	  (undo-accumulate buffer))))
+
+(defmethod (setf buffer-object) :before (new-object (buffer undo-mixin) offset)
+  (unless (performing-undo buffer)
+    (push (make-instance 'change-record
+			 :buffer buffer
+			 :offset offset
+			 :objects (buffer-sequence buffer offset (1+ offset)))
 	  (undo-accumulate buffer))))
 
 (defmacro with-undo ((get-buffers-exp) &body body)
@@ -272,6 +294,11 @@ all."
     (change-class record 'insert-record
                   :objects (buffer-sequence buffer offset (+ offset length)))
     (delete-buffer-range buffer offset length)))
+
+(defmethod flip-undo-record ((record change-record))
+  (with-slots (buffer offset objects) record
+    (loop for i from 0 below (length objects)
+	  do (rotatef (aref objects i) (buffer-object buffer (+ i offset))))))
 
 (defmethod flip-undo-record ((record compound-record))
   (with-slots (records) record
