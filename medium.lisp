@@ -158,7 +158,7 @@
        (equal (text-style-face style1) (text-style-face style2))
        (eql (text-style-size style1) (text-style-size style2))))
 
-(defconstant *default-text-style* (make-text-style :fix :roman :normal))
+(defconstant *default-text-style* (make-text-style :sans-serif :roman :normal))
 (defconstant *undefined-text-style* *default-text-style*)
 
 (defconstant *smaller-sizes* '(:huge :very-large :large :normal
