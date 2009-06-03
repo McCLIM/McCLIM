@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.194 2008/12/19 08:58:14 ahefner Exp $
+;;; $Id: panes.lisp,v 1.195 2009/06/03 20:33:16 ahefner Exp $
 
 (in-package :clim-internals)
 
@@ -2597,7 +2597,7 @@ to computed distance to scroll in response to mouse wheel events."))
       (setf (cursor-position cursor) (values 0 0))))
   (scroll-extent pane 0 0)  
   (change-space-requirements pane :width 0 :height 0))
-  
+
 
 (defmethod window-refresh ((pane clim-stream-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
@@ -2684,9 +2684,9 @@ to computed distance to scroll in response to mouse wheel events."))
 
 ;;; INTERACTOR PANES
 
-(defclass interactor-pane (clim-stream-pane 
-                           cut-and-paste-mixin
-                           mouse-wheel-scroll-mixin)
+(defclass interactor-pane (cut-and-paste-mixin
+                           mouse-wheel-scroll-mixin
+                           clim-stream-pane)
   ()
   (:default-initargs :display-time nil
                      :end-of-line-action :scroll
@@ -2714,9 +2714,9 @@ to computed distance to scroll in response to mouse wheel events."))
 
 ;;; APPLICATION PANES
 
-(defclass application-pane (clim-stream-pane 
-                            cut-and-paste-mixin
-                            mouse-wheel-scroll-mixin)
+(defclass application-pane (cut-and-paste-mixin
+                            mouse-wheel-scroll-mixin
+                            clim-stream-pane)
   ()
   (:default-initargs :display-time :command-loop
                      :scroll-bars t))
@@ -2838,9 +2838,9 @@ current background message was set."))
 
 ;;; 29.4.5 Creating a Standalone CLIM Window
 
-(defclass window-stream (clim-stream-pane
-                         cut-and-paste-mixin
-                         mouse-wheel-scroll-mixin)
+(defclass window-stream (cut-and-paste-mixin
+                         mouse-wheel-scroll-mixin
+                         clim-stream-pane)
   ())
 
 (defmethod close ((stream window-stream)

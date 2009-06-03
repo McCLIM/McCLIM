@@ -4,7 +4,7 @@
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.38 2008/01/23 22:37:08 thenriksen Exp $
+;;;       $Id: regions.lisp,v 1.39 2009/06/03 20:33:16 ahefner Exp $
 ;;; --------------------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -88,6 +88,9 @@
 
 (defvar +everywhere+ (make-instance 'everywhere-region))
 (defvar +nowhere+ (make-instance 'nowhere-region))
+
+(defmethod bounding-rectangle* ((x nowhere-region))
+  (values 0 0 0 0))
 
 ;; 2.5.1.1 Region Predicates in CLIM
 

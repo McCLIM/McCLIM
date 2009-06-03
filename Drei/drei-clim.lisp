@@ -292,6 +292,15 @@ corresponds to a useful gesture that should be handled. A useful
 gesture is, for example, one that is not simply a click on a
 modifier key."))
 
+(defun propagate-changed-value (drei)
+  (when (modified-p (view drei))
+    (when (gadget-value-changed-callback drei)
+      (value-changed-callback drei
+                              (gadget-client drei)
+                              (gadget-id drei)
+                              (gadget-value drei)))
+    (setf (modified-p (view drei)) nil)))
+
 (defmethod handle-gesture ((drei drei-gadget-pane) gesture)
   (let ((*command-processor* drei)
         (*abort-gestures* *esa-abort-gestures*)
@@ -303,13 +312,7 @@ modifier key."))
         (abort-gesture ()
           (display-message "Aborted")))
       (display-drei drei :redisplay-minibuffer t)
-      (when (modified-p (view drei))
-        (when (gadget-value-changed-callback drei)
-          (value-changed-callback drei
-                                  (gadget-client drei)
-                                  (gadget-id drei)
-                                  (gadget-value drei)))
-        (setf (modified-p (view drei)) nil)))))
+      (propagate-changed-value drei))))
 
 ;;; This is the method that functions as the entry point for all Drei
 ;;; gadget logic.
@@ -320,6 +323,16 @@ modifier key."))
         (when (proper-gesture-p gesture)
           (with-bound-drei-special-variables (gadget :prompt (format nil "~A " (gesture-name gesture)))
             (handle-gesture gadget gesture)))))))
+
+(defmethod handle-event ((gadget drei-gadget-pane)
+                         (event clim-backend:selection-notify-event))
+  ;; Cargo-culted from above:
+  (unless (and (currently-processing-p gadget) (directly-processing-p gadget))
+    (letf (((currently-processing-p gadget) t))
+      (insert-sequence (point (view gadget)) 
+                       (clim-backend:get-selection-from-event (port gadget) event))
+      (display-drei gadget :redisplay-minibuffer t)
+      (propagate-changed-value gadget))))
 
 (defmethod handle-event :before 
     ((gadget drei-gadget-pane) (event pointer-button-press-event))

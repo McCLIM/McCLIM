@@ -60,7 +60,7 @@
   "Background ink to use for marked stuff.")
 
 
-;;;; Text Selection "Protocol"
+;;;; Text Selection Protocol
 
 (defgeneric release-selection (port &optional time)
   (:documentation "Relinquish ownership of the selection."))
@@ -153,7 +153,12 @@ the incoming selection."))
    (point-1-y  :initform nil)
    (point-2-x  :initform nil)
    (point-2-y  :initform nil)
-   (dragging-p :initform nil) ))
+   (dragging-p :initform nil)))
+
+(defclass paste-as-keypress-mixin ()
+  ()
+  (:documentation "Implements the old McCLIM behavior of pasting via a
+  sequence of key press events. You couldn't possibly want this."))
 
 (defmethod handle-repaint :around ((pane cut-and-paste-mixin) region)
   (with-slots (markings) pane
@@ -174,29 +179,23 @@ the incoming selection."))
                           ((medium-background medium) *marked-background*))
                      (call-next-method pane R))))))))))
 
-
-(defmethod bounding-rectangle* ((x (eql +nowhere+)))
-  (values 0 0 0 0))
-
-
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
+(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                            (event pointer-button-press-event))  
   (if (eql (event-modifier-state event) +shift-key+)
       (eos/shift-click pane event)
       (call-next-method)))
 
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
+(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                            (event pointer-button-release-event))
   (if (eql (event-modifier-state event) +shift-key+)
       (eos/shift-release pane event)
       (call-next-method)))
 
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
+(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                            (event pointer-motion-event))
   (with-slots (point-1-x dragging-p) pane
     (if (and (eql (event-modifier-state event) +shift-key+))
-        (when dragging-p
-          (eos/shift-drag pane event))
+        (when dragging-p (eos/shift-drag pane event))
         (call-next-method))))
 
 
@@ -283,7 +282,7 @@ the incoming selection."))
     (rotatef bx1 bx2))
   (let ((*lines* nil)
         (*all-lines* nil))
-    (map-over-text record ;(stream-output-history stream)
+    (map-over-text record
                    (lambda (x y string ts record full-record)
                      (let ((q (assoc y *lines*)))
                        (unless q
@@ -311,7 +310,6 @@ the incoming selection."))
     (let ((start-i 0)
           (start-record (fifth (cadar *lines*)))
           (end-i 0)
-         ; end-record
           (end-record (fifth (cadar (last *lines*)))))
       
       (loop for chunk in (cdr (first *lines*)) do
@@ -323,8 +321,10 @@ the incoming selection."))
               (setf start-i i
                     start-record record)))))
 
-      ;; Finally in the last line find the index farthest to the left which still is greater than bx2.
-      ;; Or put differently: Search from the left and while we are still in bounds maintain end-i and end-record.
+      ;; Finally in the last line find the index farthest to the left
+      ;; which still is greater than bx2.  Or put differently: Search
+      ;; from the left and while we are still in bounds maintain end-i
+      ;; and end-record.
       (loop for chunk in (cdr (car (last *lines*))) do
         (destructuring-bind (x y string ts record full-record) chunk
           (declare (ignorable x y string ts record full-record))
@@ -375,21 +375,24 @@ the incoming selection."))
 
 ;;;; Selections Events
 
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
+(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                                    (event selection-clear-event))  
   (pane-clear-markings pane (event-timestamp event)))
 
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
+(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                                    (event selection-request-event))  
   (send-selection (port pane) event (fetch-selection pane)))
 
+(define-condition selection-notify ()
+  ((event :reader event-of :initarg :event)))
 
+(defmethod handle-event ((pane cut-and-paste-mixin)
+                         (event selection-notify-event))
+  (signal 'selection-notify :event event))
 
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin #|extended-output-stream|#)
+(defmethod dispatch-event :around ((pane paste-as-keypress-mixin)
                                    (event selection-notify-event))
   (let ((matter (get-selection-from-event (port pane) event)))
-    #+NIL
-    (format *trace-output* "Got ~S.~%" matter)
     (loop for c across matter do
          (dispatch-event pane
                          (make-instance 'key-press-event
