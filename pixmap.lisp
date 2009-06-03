@@ -88,3 +88,6 @@
    (transform-region
     (sheet-device-transformation pixmap)
     (medium-clipping-region (pixmap-medium pixmap)))))
+
+(defmethod sheet-direct-mirror ((pixmap mirrored-pixmap))
+  (port-lookup-mirror (port pixmap) pixmap))
