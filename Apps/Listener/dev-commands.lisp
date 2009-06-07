@@ -24,7 +24,9 @@
 (define-command-table application-commands)
 
 (define-command-table lisp-dev-commands :inherit-from nil) ;; Translators live here
-(define-command-table lisp-commands :inherit-from (lisp-dev-commands))
+(define-command-table lisp-commands 
+    :inherit-from (lisp-dev-commands)
+    :menu (("ASDF" :menu asdf-commands)))
 
 (define-command-table show-commands :inherit-from (lisp-dev-commands))
 
@@ -33,7 +35,6 @@
     :menu (("Directory Stack" :menu directory-stack-commands)))
 
 (define-command-table directory-stack-commands)
-
 
 ;;; Presentation types
 
@@ -1240,11 +1241,6 @@ if you are interested in fixing this."))
   (values `(com-load-file ,pathname)
           "Load"
           (format nil "Load ~A" pathname)))
-
-(defmethod mime-type-to-command ((mime-type text/x-lisp-system) pathname)
-  (values `(com-load-file ,pathname)
-          "Load System"
-          (format nil "Load System ~A" pathname)))
 
 ;; I've taken to doing translator documentation exactly opposite of how the CLIM
 ;; spec seems to intend. The spec says that the pointer-documentation should be

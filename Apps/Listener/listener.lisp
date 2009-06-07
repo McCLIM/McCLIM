@@ -96,11 +96,15 @@
                                 :display-time :command-loop :end-of-line-action :allow)))
   (:top-level (default-frame-top-level :prompt 'print-listener-prompt))
   (:command-table (listener
-                   :inherit-from (application-commands lisp-commands filesystem-commands show-commands)
-                   :menu (("Application" :menu application-commands)
-                          ("Lisp"        :menu lisp-commands)
-                          ("Filesystem"  :menu filesystem-commands)
-                          ("Show"        :menu show-commands))))
+                   :inherit-from (application-commands
+                                  lisp-commands
+                                  asdf-commands
+                                  filesystem-commands
+                                  show-commands)
+                   :menu (("Listener"   :menu application-commands)
+                          ("Lisp"       :menu lisp-commands)
+                          ("Filesystem" :menu filesystem-commands)
+                          ("Show"       :menu show-commands))))
   (:disabled-commands com-pop-directory com-drop-directory com-swap-directory)
   (:menu-bar t)
   (:layouts (default
