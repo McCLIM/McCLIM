@@ -18,12 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:defpackage :mcclim-gif-bitmaps.system
-  (:use :asdf :cl))
-
-(cl:in-package :mcclim-gif-bitmaps.system)
-
-(defsystem :mcclim-gif-bitmaps
-           :description "Support for GIF images in McCLIM bitmap reading functions."
-           :depends-on (:mcclim :skippy)
-           :components ((:file "gif" :pathname #P"Extensions/Bitmap-formats/gif")))
+(asdf:defsystem :mcclim-gif-bitmaps
+  :description "Support for GIF images in McCLIM bitmap reading functions."
+  :depends-on (:mcclim :skippy)
+  :components ((:file "gif" :pathname #P"Extensions/Bitmap-formats/gif")))

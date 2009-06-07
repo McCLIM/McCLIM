@@ -18,12 +18,8 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:defpackage :mcclim-gif-bitmaps.system
-  (:use :asdf :cl))
+(asdf:defsystem :mcclim-jpeg-bitmaps
+  :description "Support for JPEG images in McCLIM bitmap reading functions."
+  :depends-on (:mcclim :cl-jpeg)
+  :components ((:file "jpeg" :pathname #P"Extensions/Bitmap-formats/jpeg")))
 
-(cl:in-package :mcclim-gif-bitmaps.system)
-
-(defsystem :mcclim-jpeg-bitmaps
-           :description "Support for JPEG images in McCLIM bitmap reading functions."
-           :depends-on (:mcclim :cl-jpeg)
-           :components ((:file "gif" :pathname #P"Extensions/Bitmap-formats/jpeg")))
