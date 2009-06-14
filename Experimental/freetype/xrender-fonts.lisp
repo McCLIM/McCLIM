@@ -439,6 +439,7 @@
                  (setf face (or face :roman))
                  (setf family (or family :fix))
                  (setf size (or size :normal))
+                 (when (eq family :fixed) (setf family :fix))                   
                  (cond (size
                         (setf size (getf *sizes* size size))
                         (let ((val (gethash (list display family face size) *display-face-hash*)))
