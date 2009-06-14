@@ -40,7 +40,7 @@
 ;;; are defined here.
 
 (defparameter *default-text-field-text-style*
-  (make-text-style :fixed :roman :normal))
+  (make-text-style :fix :roman :normal))
 
 (defclass editor-substrate-mixin (value-gadget)
   ((activation-gestures :reader activation-gestures
