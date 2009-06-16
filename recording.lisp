@@ -1508,8 +1508,7 @@ were added."
 				 (if (eql i final-index)
 				     (values final-xn final-yn)
 				     (values (svref coord-seq (+ i 2))
-					     (svref coord-seq (+ i
-								 3)))))
+					     (svref coord-seq (+ i 3)))))
 			   (multiple-value-bind (ex1 ey1)
 			       (normalize-coords (- x xp) (- y yp))
 			     (multiple-value-bind (ex2 ey2)
@@ -1559,8 +1558,8 @@ were added."
 				 (maxf max-y (+ y ny))))))))
 	       (unless closed
 		 (multiple-value-bind (x y)
-		     (values (svref coord-seq final-index)
-			     (svref coord-seq (1+ final-index)))
+		     (values (svref coord-seq (- len 2))
+			     (svref coord-seq (- len 1)))
 		   (minf min-x (- x border))
 		   (minf min-y (- y border))
 		   (maxf max-x (+ x border))
