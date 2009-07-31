@@ -202,6 +202,11 @@
   (with-sheet-medium (medium stream)
     (medium-force-output medium)))
 
+(defmethod stream-finish-output :after ((stream
+					 standard-extended-output-stream))
+  (with-sheet-medium (medium stream)
+    (medium-finish-output medium)))
+
 (defmethod compose-space ((pane standard-extended-output-stream) &key width height)
   (declare (ignorable width height))
   
