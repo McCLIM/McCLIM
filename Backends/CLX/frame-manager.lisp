@@ -117,6 +117,14 @@
       (setf (xlib:window-event-mask mirror)
             (logior (xlib:window-event-mask mirror)
                     (xlib:make-event-mask :structure-notify)))
+      ;; Care for calling-frame, be careful not to trip on missing bits
+      (let* ((calling-frame (frame-calling-frame frame))
+             (tls (and calling-frame (frame-top-level-sheet calling-frame)))
+             (calling-mirror (and tls (sheet-mirror tls))))
+        (when calling-mirror
+          (setf (xlib:transient-for mirror)
+                calling-mirror)))
+      ;;
       (when (sheet-enabled-p sheet)
         (xlib:map-window mirror) ))))
 
