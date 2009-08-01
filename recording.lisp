@@ -324,7 +324,7 @@ unspecified. "))
 		   (,continuation (,stream ,record)
 		     ,(declare-ignorable-form* stream record)
 		     ,@body))
-	      (declare (dynamic-extent #'constructor #'continuation))
+	      (declare (dynamic-extent #',constructor #',continuation))
 	      (,',func-name ,stream #',continuation ,record-type #',constructor
 			    ,@m-i-args)))))))
 
