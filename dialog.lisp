@@ -737,7 +737,7 @@ is run for the last time"))
   ;; Keywords from notify-user:
   ;; associated-window title documentation exit-boxes name style text-style
   (let ((frame (make-application-frame 'generic-notify-user-frame
-                                       :frame-event-queue (and frame (frame-event-queue frame))
+                                       :calling-frame frame
                                        :pretty-name title
                                        :message-string message-string
                                        :frame-manager frame-manager
