@@ -2292,7 +2292,7 @@ according to the flags RECORD and DRAW."
     (letf (((stream-current-output-record stream) new-record))
       ;; Should we switch on recording? -- APD
       (funcall continuation stream new-record)
-      (finish-output stream))
+      (force-output stream))
     (if parent
 	(add-output-record new-record parent)
 	(stream-add-output-record stream new-record))
@@ -2309,7 +2309,7 @@ according to the flags RECORD and DRAW."
       (letf (((stream-current-output-record stream) new-record))
 	;; Should we switch on recording? -- APD
 	(funcall continuation stream new-record)
-	(finish-output stream))
+	(force-output stream))
       (if parent
 	  (add-output-record new-record parent)
 	  (stream-add-output-record stream new-record))
@@ -2325,7 +2325,7 @@ according to the flags RECORD and DRAW."
       (letf (((stream-current-output-record stream) new-record)
              ((stream-cursor-position stream) (values 0 0)))
         (funcall continuation stream new-record)
-        (finish-output stream)))
+        (force-output stream)))
     new-record))
 
 (defmethod invoke-with-output-to-output-record
@@ -2337,7 +2337,7 @@ according to the flags RECORD and DRAW."
       (letf (((stream-current-output-record stream) new-record)
              ((stream-cursor-position stream) (values 0 0)))
         (funcall continuation stream new-record)
-        (finish-output stream)))
+        (force-output stream)))
     new-record))
 
 (defmethod make-design-from-output-record (record)

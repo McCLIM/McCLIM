@@ -289,7 +289,7 @@ the incoming selection."))
                          (push (setf q (cons y nil)) *lines*))
                        (push (list x y string ts record full-record)
                              (cdr q)))
-                     (finish-output *trace-output*)))
+                     (force-output *trace-output*)))
     (setf *lines*
           (sort (mapcar (lambda (line)
                           (cons (car line)

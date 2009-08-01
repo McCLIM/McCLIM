@@ -234,7 +234,7 @@
                                    nil)))
                          packages)
                    (progn (format t "~&there is no ~A." name)
-                          (finish-output)
+                          (force-output)
                           nil)))
              (dump-defpackage (&aux imports export-ansi export-gray)
                (labels ((push-import-from (symbol package)
@@ -255,7 +255,7 @@
                                             (and sym2 (eq res :external))))
                                      ;;
                                      (format t "~&;; ~S is patched." sym)
-                                     (finish-output)
+                                     (force-output)
                                      (push-import-from nam :clim-lisp-patch))
                                     (t
                                      (setf sym (car sym))

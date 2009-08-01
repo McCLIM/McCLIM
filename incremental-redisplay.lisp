@@ -513,7 +513,7 @@ updating-output-parent above this one in the tree.")
                  (rectangle-edges* sub-record))))
      record
      nil)
-    (finish-output stream)
+    (force-output stream)
     ;; Why is this binding here? We need the "environment" in this call that
     ;; computes the new records of an outer updating output record to resemble
     ;; that when a record's contents are computed in invoke-updating-output. 
@@ -860,7 +860,7 @@ in an equalp hash table"))
 				   unique-id id-test cache-value cache-test
 				   &key (fixed-position nil) (all-new nil)
 				   (parent-cache nil))
-  (finish-output stream)
+  (force-output stream)
   (let ((parent-cache (or parent-cache *current-updating-output* stream)))
     (when (eq unique-id *no-unique-id*)
       (setq unique-id (incf (id-counter parent-cache))))

@@ -863,7 +863,7 @@
          (port-client-message sheet time type data))
 	(t         
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
-	   (xlib:display-finish-output (clx-port-display *clx-port*)))
+	   (xlib:display-force-output (clx-port-display *clx-port*)))
 	 nil)))))
 
 
@@ -908,7 +908,7 @@
   (let* ((*clx-port* port)
          (display    (clx-port-display port)))
     (unless (xlib:event-listen display)
-      (xlib:display-finish-output (clx-port-display port)))
+      (xlib:display-force-output (clx-port-display port)))
     ; temporary solution
     (or (xlib:process-event (clx-port-display port) :timeout timeout :handler #'event-handler :discard-p t)
 	:timeout)))
@@ -1386,7 +1386,7 @@
     #+nil ; debugging output
     (progn
       (describe event *trace-output*)
-      (finish-output *trace-output*))
+      (force-output *trace-output*))
     (flet ((send-event (&key target (property property))
 	     ;; debugging output, but the KDE Klipper client turns out
 	     ;; to poll other clients for selection, which means it
