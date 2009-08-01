@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.196 2009/08/01 21:27:13 gbaumann Exp $
+;;; $Id: panes.lisp,v 1.197 2009/08/01 22:11:06 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -2060,7 +2060,7 @@ order to produce a double-click")
                     (ecase vertical-scroll-bar-position
                       (:left vsbar-width)
                       (:right 0))
-                    (- height *scrollbar-thickness*))
+                    (- height hsbar-height))
         (allocate-space hscrollbar
                         (- width vsbar-width)
                         hsbar-height))
@@ -2645,19 +2645,6 @@ to computed distance to scroll in response to mouse wheel events."))
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y)
   (values x y))
-
-;; this function appears to be unused, however...
-;; v-- does this handle scrolling with occlusion? ie, if another thing is overlapping
-;; the area being scrolled, will we copy junk off the top? -- BTS
-(defun scroll-area (pane dx dy)
-  (let ((transform (sheet-transformation pane)))
-    ;; Region has been "scrolled" already.
-    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-      (multiple-value-bind (srcx srcy)
-	  (untransform-position transform 0 0)
-	(multiple-value-bind (destx desty)
-	    (untransform-position transform dx dy)
-	  (copy-area pane  srcx srcy (- x2 x1) (- y2 y1) destx desty))))))
 
 (defmethod stream-set-input-focus ((stream clim-stream-pane))
   (with-slots (port) stream
