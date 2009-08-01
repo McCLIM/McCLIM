@@ -1973,7 +1973,8 @@
 
    #:define-bitmap-file-reader
    #:unsupported-bitmap-format
-   #:bitmap-format))
+   #:bitmap-format
+   #:*default-vertical-scroll-bar-position*))
 
 ;;; Symbols that must be defined by a backend.
 ;;;

@@ -27,7 +27,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; $Id: panes.lisp,v 1.195 2009/06/03 20:33:16 ahefner Exp $
+;;; $Id: panes.lisp,v 1.196 2009/08/01 21:27:13 gbaumann Exp $
 
 (in-package :clim-internals)
 
@@ -1929,6 +1929,13 @@ order to produce a double-click")
 
 (defparameter *scrollbar-thickness* 17)
 
+(defvar clim-extensions:*default-vertical-scroll-bar-position*
+  :right
+  "Default for the :VERTICAL-SCROLL-BAR-POSITION init arg of a
+   SCROLLER-PANE. Set it to :LEFT to have the vertical scroll bar of a
+   SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
+   :RIGHT to have it on the distant right hand side of the scroller.")
+
 (defclass scroller-pane (composite-pane)
   ((scroll-bar :type scroll-bar-spec ; (member t :vertical :horizontal nil)
                ;; ### Note: I added NIL here, so that the application
@@ -1951,7 +1958,13 @@ order to produce a double-click")
    (vscrollbar :initform nil)
    (hscrollbar :initform nil)
    (suggested-width  :initform 300 :initarg :suggested-width)
-   (suggested-height :initform 300 :initarg :suggested-height))
+   (suggested-height :initform 300 :initarg :suggested-height)
+   (vertical-scroll-bar-position
+    :initform clim-extensions:*default-vertical-scroll-bar-position*
+    :initarg :vertical-scroll-bar-position
+    :type (member :left :right)
+    :documentation "Whether to put the vertical scroll bar on the left hand or
+                    right hand side of the scroller pane."))
   (:default-initargs
    :x-spacing 4
    :y-spacing 4))
@@ -2028,23 +2041,29 @@ order to produce a double-click")
         (make-space-requirement))))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
-  (with-slots (viewport vscrollbar hscrollbar x-spacing y-spacing) pane
-    (let ((viewport-width  (if vscrollbar (- width  *scrollbar-thickness*) width))
-          (viewport-height (if hscrollbar (- height *scrollbar-thickness*) height)))
-      
+  (with-slots (viewport vscrollbar hscrollbar x-spacing y-spacing vertical-scroll-bar-position) pane
+    (let* ((vsbar-width (if vscrollbar (space-requirement-width (compose-space vscrollbar)) 0))
+           (hsbar-height (if hscrollbar (space-requirement-height (compose-space hscrollbar)) 0))
+           (viewport-width  (- width vsbar-width))
+           (viewport-height (- height hsbar-height)))
       (when vscrollbar
-        (setf (sheet-transformation vscrollbar)
-              (make-translation-transformation (- width *scrollbar-thickness*) 0))
+        (move-sheet vscrollbar
+                    (ecase vertical-scroll-bar-position
+                      (:left 0)
+                      (:right (- width vsbar-width)))
+                    0)
         (allocate-space vscrollbar
-                        *scrollbar-thickness*
-                        (if hscrollbar (- height *scrollbar-thickness*) height)))
+                        vsbar-width
+                        (- height hsbar-height)))
       (when hscrollbar
         (move-sheet hscrollbar
-		    0
+                    (ecase vertical-scroll-bar-position
+                      (:left vsbar-width)
+                      (:right 0))
                     (- height *scrollbar-thickness*))
         (allocate-space hscrollbar
-                        (if vscrollbar (- width *scrollbar-thickness*) width)
-                        *scrollbar-thickness*))
+                        (- width vsbar-width)
+                        hsbar-height))
       ;;
       ;; Recalculate the gadget-values of the scrollbars
       ;;
@@ -2073,10 +2092,12 @@ order to produce a double-click")
                            max))))
 	  (setf (scroll-bar-values hscrollbar) (values min max ts val))))
       (when viewport
-        (setf (sheet-transformation viewport)
-              (make-translation-transformation
-                   (+ x-spacing 0)
-                   (+ y-spacing 0)))
+        (move-sheet viewport
+                    (+ x-spacing
+                       (ecase vertical-scroll-bar-position
+                         (:left vsbar-width)
+                         (:right 0)))
+                    (+ y-spacing 0))
         (allocate-space viewport
                         (- viewport-width (* 2 x-spacing))
                         (- viewport-height (* 2 y-spacing)))))))
