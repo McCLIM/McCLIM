@@ -198,12 +198,12 @@
    :end-of-page-action :scroll :default-view +textual-view+))
 
 (defmethod stream-force-output :after ((stream
-					standard-extended-output-stream))
+                                        standard-extended-output-stream))
   (with-sheet-medium (medium stream)
     (medium-force-output medium)))
 
 (defmethod stream-finish-output :after ((stream
-					 standard-extended-output-stream))
+                                         standard-extended-output-stream))
   (with-sheet-medium (medium stream)
     (medium-finish-output medium)))
 
