@@ -534,6 +534,103 @@
 	    (cairo_move_to cr (df x) (df (+ y y2))))
 	  (pango_cairo_show_layout cr layout))))))
 
+;; Stolen from the CLX backend.
+(defmethod climi::medium-draw-image-design*
+    ((medium cairo-medium) (design climi::rgb-image-design) x y)
+  (destructuring-bind (&optional surface buffer mask)
+      (slot-value design 'climi::medium-data)
+    (unless surface
+      (let* ((image (slot-value design 'climi::image)))
+        (setf (values surface buffer) (image-to-cairosurface image))
+        (when (climi::image-alpha-p image)
+          (error "~@<Drawing of images with alpha component is not supported.~:@>"))
+        (setf (slot-value design 'climi::medium-data) (list surface buffer mask))))
+    (when mask
+      (error "~@<A mask in your image design.~:@>"))
+    (with-medium (medium)
+      (multiple-value-bind (x y)
+          (transform-position
+           (sheet-device-transformation (medium-sheet medium))
+           x y)
+        (setf x (float x 0d0))
+        (setf y (float y 0d0))
+        (with-slots (cr) medium
+          (cairo_set_source_surface cr surface x y)
+          (cond
+            #+ (or)
+            (mask
+             (xlib:with-gcontext (gcontext 
+                                  :clip-mask mask
+                                  :clip-x x
+                                  :clip-y y)
+               (xlib:copy-area pixmap gcontext 0 0 width height
+                               da x y)))
+            (t
+             (cairo_paint cr))))))))
+
+(defmethod climi::medium-free-image-design
+    ((medium cairo-medium) (design climi::rgb-image-design))
+  (destructuring-bind (&optional surface buffer mask)
+      (slot-value design 'climi::medium-data)
+    (when surface
+      #+ (or)
+      ;; This one bites, no idea why.
+      (cairo_destroy surface)
+      (cffi:foreign-free buffer)
+      (setf (slot-value design 'climi::medium-data) nil))))
+
+;; Was: CLX/compute-rgb-image-mask
+#+ (or)
+(defun compute-rgb-image-mask (drawable image)
+  (let* ((width (climi::image-width image))
+         (height (climi::image-height image))
+         (bitmap (xlib:create-pixmap :drawable drawable
+                                     :width width 
+                                     :height height
+                                     :depth 1))
+         (gc (xlib:create-gcontext :drawable bitmap
+				   :foreground 1
+				   :background 0))
+         (idata (climi::image-data image))
+         (xdata (make-array (list height width)
+			    :element-type '(unsigned-byte 1)))
+         (im (xlib:create-image :width width
+                                :height height
+                                :depth 1
+                                :data xdata)) )
+    (dotimes (y width)
+      (dotimes (x height)
+        (if (> (aref idata x y) #x80000000)
+            (setf (aref xdata x y) 0)
+	    (setf (aref xdata x y) 1))))
+    (unless (or (>= width 2048) (>= height 2048)) ;### CLX breaks here
+      (xlib:put-image bitmap gc im :src-x 0 :src-y 0
+		      :x 0 :y 0 :width width :height height
+		      :bitmap-p nil))
+    (xlib:free-gcontext gc)
+    bitmap))
+
+;; Was: CLX/image-to-ximage
+(defun image-to-cairosurface (image)
+  (let* ((width (climi::image-width image))
+         (height (climi::image-height image))
+         (idata (climi::image-data image))
+         (stride (cairo_format_stride_for_width :rgb24 width))
+         (cairodata (cffi:foreign-alloc :uint8 :count (* stride height))))
+    (declare (type (simple-array (unsigned-byte 32) (* *)) idata))
+    (loop :for row-offset :from 0 :by stride
+       :for y :from 0 :below height
+       :do (loop :for offset :from row-offset :by 4
+              :for x :from 0 :below width
+              :do (let ((px (aref idata y x)))
+                    (setf (cffi:mem-ref cairodata :uint32 offset)
+                          (dpb (ldb (byte 8 0) px) (byte 8 16)
+                               (dpb (ldb (byte 8 8) px) (byte 8 8)
+                                    (dpb (ldb (byte 8 16) px) (byte 8 0)
+                                         0)))))))
+    (values (cairo_image_surface_create_for_data cairodata :rgb24 width height stride)
+            cairodata)))
+
 (defmethod medium-finish-output ((medium cairo-medium))
   (with-medium (medium)
     (when (cr medium)

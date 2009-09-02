@@ -333,6 +333,12 @@
   (arg0 :pointer)                       ;cairo_font_face_t *
   )
 
+(defcfun "cairo_format_stride_for_width"
+    :int
+  (arg0 cairo_format_t)
+  (arg1 :int)
+  )
+
 (defcfun "cairo_get_font_face"
     :pointer
   (arg0 :pointer)                       ;cairo_t *
@@ -641,6 +647,14 @@
   (arg2 :double)                        ;double
   (arg3 :double)                        ;double
   (arg4 :double)                        ;double
+  )
+
+(defcfun "cairo_set_source_surface"
+    :void
+  (arg0 :pointer)                       ;cairo_t *
+  (arg1 :pointer)                       ;cairo_surface_t *
+  (arg2 :double)
+  (arg3 :double)
   )
 
 (defcfun "cairo_set_tolerance"
