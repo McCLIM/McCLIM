@@ -271,12 +271,11 @@ accept of this query")))
               (format stream "OK"))))
         (formatting-cell (stream)
           (with-output-as-presentation
-              (stream nil 'abort-button) (with-output-as-presentation
-              (stream nil 'exit-button)
+              (stream nil 'abort-button)
             (surrounding-output-with-border
-                (stream :shape :rounded :radius 6
-                        :background +gray80+ :highlight-background +gray90+)
-              (format stream "Cancel")))))))
+	     (stream :shape :rounded :radius 6
+		     :background +gray80+ :highlight-background +gray90+)
+	     (format stream "Cancel"))))))
     (terpri stream)))
 
 (defmethod stream-accept ((stream accepting-values-stream) type
