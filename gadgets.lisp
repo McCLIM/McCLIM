@@ -2678,8 +2678,8 @@ if INVOKE-CALLBACK is given."))
 	      (gadget-output-record-constructor ()
 		(make-instance 'gadget-output-record
 			       ,@options :x ,x :y ,y)))
-	 (declare (dynamic-extent with-output-as-gadget-continuation
-				  gadget-output-record-constructor))
+	 (declare (dynamic-extent #'with-output-as-gadget-continuation
+				  #'gadget-output-record-constructor))
 	 (let ((,gadget-output-record
 		(invoke-with-output-to-output-record
 		 ,stream
