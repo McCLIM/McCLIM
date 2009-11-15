@@ -1311,24 +1311,36 @@ time an indexed pattern is drawn.")
     (let ((l (integer-length (logxor mask (1- (ash 1 h))))))
       (byte (- h l) l))))
 
+
 ;; fixme!  This is not just incomplete, but also incorrect: The original
 ;; true color code knew how to deal with non-linear RGB value
 ;; allocation.
+
+(defvar *translator-cache-lock* (clim-sys:make-lock "translator cache lock"))
+(defvar *translator-cache* (make-hash-table :test #'equal))
+
 (defun pixel-translator (colormap)
   (unless (eq (xlib:visual-info-class (xlib:colormap-visual-info colormap))
 	      :true-color)
     (error "sorry, cannot draw rgb image for non-true-color drawable yet"))
-  colormap
   (let* ((info (xlib:colormap-visual-info colormap))
 	 (rbyte (mask->byte (xlib:visual-info-red-mask info)))
 	 (gbyte (mask->byte (xlib:visual-info-green-mask info)))
-	 (bbyte (mask->byte (xlib:visual-info-blue-mask info))))
-    (lambda (x y sample)
-      (declare (ignore x y))
-      (dpb (the (unsigned-byte 8) (ldb (byte 8 0) sample))
-	   rbyte
-	   (dpb (the (unsigned-byte 8) (ldb (byte 8 8) sample))
-		gbyte
-		(dpb (the (unsigned-byte 8) (ldb (byte 8 16) sample))
-		     bbyte
-		     0))))))
+	 (bbyte (mask->byte (xlib:visual-info-blue-mask info)))
+         (key (list rbyte gbyte bbyte)))
+    (clim-sys:with-lock-held (*translator-cache-lock*)
+      (or (gethash key *translator-cache*)
+          ;; COMPILE instead of a closure, because out-of-line byte specifiers
+          ;; are universally slow. Getting them inline like this is *much*
+          ;; faster.
+          (setf (gethash key *translator-cache*)
+                (compile nil
+                         `(lambda (x y sample)
+                            (declare (ignore x y))
+                            (dpb (the (unsigned-byte 8) (ldb (byte 8 0) sample))
+                                 ',rbyte
+                                 (dpb (the (unsigned-byte 8) (ldb (byte 8 8) sample))
+                                      ',gbyte
+                                      (dpb (the (unsigned-byte 8) (ldb (byte 8 16) sample))
+                                           ',bbyte
+                                           0))))))))))
