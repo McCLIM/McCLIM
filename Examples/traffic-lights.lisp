@@ -2,6 +2,8 @@
 
 ;;;  (c) copyright 2001 by
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;  (c) copyright 2009 by
+;;;           Robert Strandh (strandh@labri.fr)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -29,26 +31,18 @@
 
 (in-package :clim-internals)
 
-;; example gadget definition
+;;; example gadget definition
 (defclass light-pane (standard-gadget) ())
-
-#+nil
-(defmethod dispatch-repaint ((pane light-pane) region)
-  (repaint-sheet pane region))
 
 (defmethod handle-repaint ((pane light-pane) region)
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
-
-#+nil
-(defmethod handle-event ((pane light-pane) (event window-repaint-event))
-  (declare (ignorable event))
-  (dispatch-repaint pane (sheet-region pane)))
+    (display-gadget-background
+     pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
 
 (in-package :clim-demo)
 
-;; callback functions
+;;; callback functions
 
 (defmethod handle-event :after ((pane clim-internals::light-pane) (event pointer-event))
   (declare (ignorable event))
@@ -95,7 +89,7 @@
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
 	  (clim-internals::gadget-pushed-and-highlighted-color (slot-value *application-frame* 'light)))))
 
-;; test functions
+;;; test functions
 
 (defun traffic-lights ()
   (loop for port in climi::*all-ports*
