@@ -24,10 +24,7 @@
 (defparameter calc '(0))
 (defvar *text-field* nil)
 
-(defun slidertest ()
-  (loop for port in climi::*all-ports*
-      do (destroy-port port))
-  (setq climi::*all-ports* nil)
+(defun sliderdemo ()
   (let ((frame (make-application-frame 'sliderdemo)))
     (run-frame-top-level frame)))
 
@@ -38,7 +35,8 @@
        (if (numberp last-item)
 	   (setf (car (last calc)) (+ (* 10 last-item) ,int))
 	   (setf calc (nconc calc (list ,int))))
-       (setf (gadget-value *text-field*) (princ-to-string (first (last calc)))))))
+       (setf (gadget-value *text-field*)
+             (princ-to-string (first (last calc)))))))
 
 (defmacro queue-operator (operator)
   `(lambda (gadget)
@@ -76,100 +74,69 @@
 
 (defun find-text-field (frame)
   (first (member-if #'(lambda (gadget) (typep gadget 'text-field))
-		    (frame-panes frame))))
+		    (frame-current-panes frame))))
 
-(defmethod sliderdemo-frame-top-level ((frame application-frame)
-				       &key (command-parser 'command-line-command-parser)
-				       (command-unparser 'command-line-command-unparser)
-				       (partial-command-parser
-					'command-line-read-remaining-arguments-for-partial-command)
-				       (prompt "Command: "))
+(defmethod sliderdemo-frame-top-level
+    ((frame application-frame)
+     &key (command-parser 'command-line-command-parser)
+     (command-unparser 'command-line-command-unparser)
+     (partial-command-parser
+      'command-line-read-remaining-arguments-for-partial-command)
+     (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (setf *text-field* (find-text-field frame))
   (clim-extensions:simple-event-loop))
 
-(define-application-frame sliderdemo () ()
-  (:panes
-   (plus             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "+"
-		     :activate-callback (queue-operator #'+))
-   (dash             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "-"
-		     :activate-callback (queue-operator #'-))
-   (multiplicate     :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "*"
-		     :activate-callback (queue-operator #'*))
-   (divide           :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "/"
-		     :activate-callback (queue-operator #'round))
-   (result           :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "="
-		     :activate-callback #'do-operation)
-   (one              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "1"
-		     :activate-callback (queue-number 1))
-   (two              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "2"
-		     :activate-callback (queue-number 2))
-   (three            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "3"
-		     :activate-callback (queue-number 3))
-   (four             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "4"
-		     :activate-callback (queue-number 4))
-   (five             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "5"
-		     :activate-callback (queue-number 5))
-   (six              :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "6"
-		     :activate-callback (queue-number 6))
-   (seven            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "7"
-		     :activate-callback (queue-number 7))
-   (eight            :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "8"
-		     :activate-callback (queue-number 8))
-   (nine             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "9"
-		     :activate-callback (queue-number 9))
-   (zero             :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "0"
-		     :activate-callback (queue-number 0))
-  (screen            :text-field
-		     :value "0"
-		     :space-requirement (make-space-requirement :width 200 :height 50))
-  (ac                :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "AC"
-		     :activate-callback #'initac)
-  (ce                :push-button
-		     :space-requirement (make-space-requirement :width 50 :height 50)
-		     :label "CE"
-		     :activate-callback #'initce)
-  (slider            :slider
-		     :value-changed-callback #'slide
-		     :min-value 0
-		     :max-value 100
-		     :value 0
-		     :normal +white+
-		     :highlighted +cyan+
-		     :pushed-and-highlighted +blue+))
+(eval-when (:compile-toplevel)
+  (defun make-operator-button-form (name label operator)
+    `(,name :push-button
+            :space-requirement (make-space-requirement
+                                :width 50 :height 50)
+            :label ,label
+            :activate-callback (queue-operator #',operator)))
 
+  (defun make-number-button-form (name label number)
+    `(,name :push-button
+            :space-requirement (make-space-requirement
+                                :width 50 :height 50)
+            :label ,label
+            :activate-callback (queue-number ,number))))
+
+(define-application-frame sliderdemo () ()
+  (:panes #.(make-operator-button-form 'plus "+" '+)
+          #.(make-operator-button-form 'dash "-" '-)
+          #.(make-operator-button-form 'multiply "*" '*)
+          #.(make-operator-button-form 'divide "/" 'round)
+          #.(make-operator-button-form 'result "=" 'do-operation)
+          #.(make-number-button-form 'one "1" 1)
+          #.(make-number-button-form 'two "2" 2)
+          #.(make-number-button-form 'three "3" 3)
+          #.(make-number-button-form 'four "4" 4)
+          #.(make-number-button-form 'five "5" 5)
+          #.(make-number-button-form 'six "6" 6)
+          #.(make-number-button-form 'seven "7" 7)
+          #.(make-number-button-form 'eight "8" 8)
+          #.(make-number-button-form 'nine "9" 9)
+          #.(make-number-button-form 'zero "0" 0)
+          (screen :text-field
+                  :value "0"
+                  :space-requirement (make-space-requirement :width 200 :height 50))
+          (ac     :push-button
+                  :space-requirement (make-space-requirement :width 50 :height 50)
+                  :label "AC"
+                  :activate-callback #'initac)
+          (ce     :push-button
+                  :space-requirement (make-space-requirement :width 50 :height 50)
+                  :label "CE"
+                  :activate-callback #'initce)
+          (slider :slider
+                  :value-changed-callback #'slide
+                  :min-value 0
+                  :max-value 100
+                  :value 0
+                  :normal +white+
+                  :highlighted +cyan+
+                  :pushed-and-highlighted +blue+))
   (:layouts
    (defaults (horizontally ()
 	        (vertically ()
@@ -178,7 +145,7 @@
 		   (tabling ()
 		      (list one two plus)
 		      (list three four dash)
-		      (list five six multiplicate)
+		      (list five six multiply)
 		      (list seven eight divide)
 		      (list nine zero result)))
 		slider)))
