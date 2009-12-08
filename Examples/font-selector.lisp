@@ -99,10 +99,11 @@
     (reset-list-pane face-list new-faces)
     (when old-face
       (setf (gadget-value face-list :invoke-callback t)
-	    (find (font-face-name old-face)
-		  new-faces
-		  :key #'font-face-name
-		  :test #'equal)))))
+	    (or (find (font-face-name old-face)
+                      new-faces
+                      :key #'font-face-name
+                      :test #'equal)
+                (first new-faces))))))
 
 (defun face-changed (pane value)
   (declare (ignore pane))
