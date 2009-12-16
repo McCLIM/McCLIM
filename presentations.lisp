@@ -71,7 +71,7 @@
 	`(flet ((,continuation ()
 		  ,@decls
 		  ,@with-body))
-	   (declare (dynamic-extent #'continuation))
+	   (declare (dynamic-extent #',continuation))
 	   (if (and (output-recording-stream-p ,stream)
 		    *allow-sensitive-inferiors*)
 	       (with-new-output-record
