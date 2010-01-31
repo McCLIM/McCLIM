@@ -346,7 +346,7 @@
     ((:FIX (:ITALIC :BOLD)) . "DejaVuSansMono-BoldOblique.ttf") 
     ((:FIX :BOLD) . "DejaVuSansMono-Bold.ttf")
     ((:SERIF :ROMAN) . "DejaVuSerif.ttf") 
-    ((:SERIF :ITALIC) . "DejaVuSerif-Oblique.ttf")
+    ((:SERIF :ITALIC) . "DejaVuSerif-Italic.ttf")
     ((:SERIF (:BOLD :ITALIC)) . "DejaVuSerif-BoldOblique.ttf")
     ((:SERIF (:ITALIC :BOLD)) . "DejaVuSerif-BoldOblique.ttf") 
     ((:SERIF :BOLD) . "DejaVuSerif-Bold.ttf")
@@ -356,7 +356,7 @@
     ((:SANS-SERIF (:ITALIC :BOLD)) . "DejaVuSans-BoldOblique.ttf")
     ((:SANS-SERIF :BOLD) . "DejaVuSans-Bold.ttf")))
 
-(defvar *families/faces* *vera-families/faces*)
+(defparameter *families/faces* *dejavu-families/faces*)
 
 (defparameter *truetype-font-path* #p"/usr/share/fonts/truetype/ttf-dejavu/")
 
