@@ -16,7 +16,7 @@
                (:file "util" :depends-on ("package"))
                (:file "icons" :depends-on ("package" "util"))
                (:file "file-types" :depends-on ("package" "icons" "util"))
-               (:file "asdf" :depends-on ("package"))
+               (:file "asdf" :depends-on ("file-types"))
                (:file "dev-commands" 
                       :depends-on ("package" "appearance" "icons" "file-types" "util" "asdf"))
                (:file "wholine" :depends-on ("package" "dev-commands" "util"))
