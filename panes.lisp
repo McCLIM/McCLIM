@@ -2866,14 +2866,24 @@ current background message was set."))
                                            standard-application-frame)
   ((stream)
    (scroll-bars :initform :vertical
-                :initarg :scroll-bars))
+                :initarg :scroll-bars)
+   (foreground :initarg :foreground)
+   (background :initarg :background))
   (:panes
    (io
-    (scrolling (:height 400 :width 700 :scroll-bar (slot-value *application-frame* 'scroll-bars))
-      (setf (slot-value *application-frame* 'stream)
-        (make-pane 'window-stream
-                   :width 700
-                   :height 2000)))))
+    (scrolling (:height 400 :width 700
+                :scroll-bar (slot-value *application-frame* 'scroll-bars))
+      (let ((color-args
+             `(,@(and (slot-boundp *application-frame* 'foreground)
+                      `(:foreground ,(slot-value *application-frame*
+                                                 'foreground)))
+               ,@(and (slot-boundp *application-frame* 'background)
+                      `(:background ,(slot-value *application-frame*
+                                                 'background))))))
+        (setf (slot-value *application-frame* 'stream)
+              (apply #'make-pane 'window-stream :width 700 :height 2000
+                     color-args))))))
+  
   (:layouts
    (:default io)))
 
