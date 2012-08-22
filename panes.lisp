@@ -701,7 +701,7 @@ order to produce a double-click")
                (eql (pane-current-height pane) height))
     (setf (pane-current-width pane) width
           (pane-current-height pane) height)
-    (unless (typep pane 'top-level-sheet-pane)
+    (unless (top-level-sheet-pane-p pane)
       (resize-sheet pane width height))
     (call-next-method)))
 
