@@ -291,12 +291,23 @@
                            :reader gadget-value-changed-callback)))
 
 (defmethod (setf gadget-value) (value (gadget value-gadget) &key invoke-callback)
-  (setf (slot-value gadget 'value) value)
-  (when invoke-callback
-    (value-changed-callback gadget 
-                            (gadget-client gadget) 
-                            (gadget-id gadget)
-                            value)))
+  (declare (ignore invoke-callback))
+  (setf (slot-value gadget 'value) value))
+
+;;; Try to call the callback after all other (setf gadget-value) methods have
+;;; been called. The gadget methods, which may update graphical appearance,
+;;; will be run even if the callback does a non-local exit (like throwing a
+;;; presentation).
+
+(defmethod (setf gadget-value) :around (value (gadget value-gadget)
+                                        &key invoke-callback)
+  (multiple-value-prog1
+      (call-next-method)
+    (when invoke-callback
+      (value-changed-callback gadget 
+                              (gadget-client gadget) 
+                              (gadget-id gadget)
+                              value))))
 
 (defgeneric value-changed-callback (gadget client gadget-id value)
   (:argument-precedence-order client gadget-id value gadget))
@@ -1950,7 +1961,9 @@ and must never be nil."))
      :documentation "For nonexclusive menus, emulate the common behavior of 
 preferring selection of a single item, but allowing extension of the 
 selection via the control modifier.")
-   (items-length :initform nil :documentation "Number of items"))
+   (items-length :initform nil
+                 :initarg :visible-items ; Clim 2.0 compatibility
+                 :documentation "Number of items"))
   (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
                      :background +white+ :foreground +black+))
 

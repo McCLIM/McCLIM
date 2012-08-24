@@ -81,3 +81,31 @@ COMPLETION presentation type as a pop-up menu."))
   (declare (ignore query))
   nil)
 
+(define-presentation-method accept-present-default
+    ((type completion) stream (view list-pane-view)
+     default default-supplied-p present-p query-identifier)
+  (declare (ignore present-p))
+  (unless default-supplied-p
+    (setq default (funcall value-key (elt sequence 0))))
+  (let ((gadget-options
+         (loop
+            for slot in '(foreground background text-style visible-items)
+            for initarg in '(:foreground :background :text-style :visible-items)
+            when (slot-boundp view slot)
+            append (list initarg (slot-value view slot))))
+        (fm (frame-manager *application-frame*))
+        (command-ptype '(command :command-table accept-values)))
+    (flet ((value-changed-callback (pane item)
+             (throw-object-ptype `(com-change-query ,query-identifier ,item)
+                                 command-ptype)))
+      (updating-output (stream
+                        :test (constantly t)
+                        :unique-id query-identifier
+                        :record-type 'accepting-values-record)
+        (with-look-and-feel-realization (fm *application-frame*)
+          (with-output-as-gadget (stream)
+            (apply #'make-pane 'list-pane
+                   :items sequence :name-key name-key :value-key value-key
+                   gadget-options)))))))
+
+

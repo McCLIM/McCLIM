@@ -96,7 +96,15 @@ to this accept")
 accept of this query")))
 
 (defclass accepting-values-record (standard-updating-output-record)
-  ())
+  ()
+  (:documentation "Record class for an entire dialog and its elements."))
+
+(defgeneric editing-stream (record)
+  (:documentation "Reader for getting the editing stream, if any, from an
+  accepting-values record."))
+
+(defmethod editing-stream ((record accepting-values-record))
+  nil)
 
 (defclass accepting-values-stream (standard-encapsulating-stream)
   ((queries :accessor queries :initform nil)
@@ -456,7 +464,7 @@ highlighting, etc." ))
 			(record selected-query))
 	(setf selected-query nil)))))
 
-(defclass av-text-record (standard-updating-output-record)
+(defclass av-text-record (accepting-values-record)
   ((editing-stream :accessor editing-stream)
    (snapshot :accessor snapshot :initarg :snapshot :initform nil
 	     :documentation "A copy of the stream buffer before accept

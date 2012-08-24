@@ -31,7 +31,9 @@
   ())
 
 (defclass gadget-view (view)
-  ())
+  ((foreground :initarg :foreground :reader gadget-view-foreground)
+   (background :initarg :background :reader gadget-view-background)
+   (text-style :initarg :text-style :reader gadget-view-text-style)))
 
 (defclass gadget-menu-view (gadget-view)
   ())
@@ -66,7 +68,7 @@
   ())
 
 (defclass list-pane-view (gadget-view)
-  ())
+  ((visible-items :accessor visible-items :initarg :visible-items)))
 
 (defclass option-pane-view (gadget-view)
   ())
