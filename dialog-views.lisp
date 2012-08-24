@@ -97,15 +97,20 @@ COMPLETION presentation type as a pop-up menu."))
         (command-ptype '(command :command-table accept-values)))
     (flet ((value-changed-callback (pane item)
              (throw-object-ptype `(com-change-query ,query-identifier ,item)
-                                 command-ptype)))
+                                 command-ptype))
+           (dont-redisplay (a b)
+             (declare (ignore a b))
+             t))
       (updating-output (stream
-                        :test (constantly t)
+                        :cache-value t
+                        :cache-test #'dont-redisplay
                         :unique-id query-identifier
                         :record-type 'accepting-values-record)
         (with-look-and-feel-realization (fm *application-frame*)
           (with-output-as-gadget (stream)
             (apply #'make-pane 'list-pane
                    :items sequence :name-key name-key :value-key value-key
+                   :value-changed-callback #'value-changed-callback
                    gadget-options)))))))
 
 
