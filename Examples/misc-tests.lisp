@@ -318,6 +318,10 @@
                            :view `(list-pane-view :visible-items 10)
                            :stream stream
                            :prompt nil
-                           :query-identifier 'abbrev)))
+                           :query-identifier 'abbrev))
+      (accept-values-command-button
+       (stream)
+       "cheer"
+       (notify-user *application-frame* "Go USA!")))
     (notify-user *application-frame* (format nil "~s selected." abbrev))))
 

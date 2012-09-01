@@ -80,6 +80,3 @@ COMPLETION presentation type as a pop-up menu."))
 (defmethod finalize-query-record (query (record av-pop-up-menu-record))
   (declare (ignore query))
   nil)
-
-
-

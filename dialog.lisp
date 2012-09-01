@@ -46,6 +46,8 @@ COM-QUERY-EXIT -- Exits accepting-values
 
 COM-QUERY-ABORT -- Aborts accepting-values
 
+COM-DO-COMMAND-BUTTON -- Execute the body of a command-button after a push
+
 These commands are generated in two ways. For query fields that are entirely
 based on CLIM drawing commands and presentations, these are emitted by
 presentation translators. There is a presentation type selectable-query that
@@ -56,8 +58,8 @@ McCLIM function throw-object-ptype.
 
 After a command is executed the body of accepting-values is rerun, calling
 accept-present-default again to update the fields' graphic appearance. [This
-may be calling these methods too often an may change in the future]. The
-values returned by the user's calls to accept are come from the query objects.
+may be calling these methods too often and may change in the future]. The
+values returned by the user's calls to accept come from the query objects.
 
 
 If a query field is selectable than it should implement the method
@@ -810,3 +812,95 @@ is run for the last time"))
                    :items sequence :name-key name-key :value-key value-key
                    :value-changed-callback #'value-changed-callback
                    gadget-options)))))))
+
+;;; An accept-values button sort of behaves like an accepting-values query with
+;;; no value.
+(defmacro accept-values-command-button
+    ((&optional (stream t) &rest key-args
+      &key documentation query-identifier cache-value cache-test
+      (view '+push-button-view+) resynchronize)
+        prompt
+        &body body)
+  (declare (ignorable documentation query-identifier cache-value cache-test
+            resynchronize))
+  (setq stream (stream-designator-symbol stream '*standard-input*))
+  (with-gensyms (command-button-continuation prompt-function)
+    (with-keywords-removed (key-args (:view))
+      (let* ((prompt-arg (if (stringp prompt)
+                             prompt
+                             `#',prompt-function))
+             (button-body
+              `(flet ((,command-button-continuation ()
+                        ,@body))
+                 (invoke-accept-values-command-button
+                  ,stream
+                  #',command-button-continuation
+                  ,view
+                  ,prompt-arg
+                  ,@key-args))))
+        (if (stringp prompt)
+            button-body
+            `(flet ((,prompt-function (,stream) ,prompt))
+               ,button-body))))))
+
+(defclass command-button-state ()
+  ((continuation :reader continuation :initarg :continuation)
+   (query-identifier :reader query-identifier :initarg :query-identifier)
+   (documentation :reader button-documentation :initarg :documentation)
+   (resynchronize :reader resynchronize :initarg :resynchronize)))
+
+(defgeneric invoke-accept-values-command-button
+    (stream continuation view prompt
+     &key documentation query-identifier cache-value cache-test resynchronize))
+
+(defmethod invoke-accept-values-command-button
+    ((stream accepting-values-stream) continuation view prompt
+     &key (documentation prompt)
+       (query-identifier `(:command-button ,prompt)) (cache-value t)
+       (cache-test #'eql) resynchronize)
+  (let ((stream (encapsulating-stream-stream stream)))
+      (updating-output (stream
+                        :cache-value cache-value
+                        :cache-test cache-test
+                        :unique-id query-identifier
+                        :id-test #'equal
+                        :record-type 'accepting-values-record)
+        (with-output-as-presentation
+            (stream
+             (make-instance 'command-button-state
+                            :continuation continuation
+                            :query-identifier query-identifier
+                            :documentation documentation
+                            :resynchronize resynchronize)
+             'command-button-state)
+          (surrounding-output-with-border
+              (stream :shape :rounded :radius 6
+                      :background +gray80+ :highlight-background +gray90+)
+            (if (functionp prompt)
+                (funcall prompt stream)
+                (princ prompt stream)))))))
+
+(define-command (com-do-command-button :command-table accept-values
+                                       :name nil
+                                       :provide-output-destination-keyword nil)
+    ((query-identifier t)
+     (continuation nil))
+  (funcall continuation)
+  (when *accepting-values-stream*
+    (let ((query (find query-identifier (queries *accepting-values-stream*)
+		       :key #'query-identifier :test #'equal)))
+      (when query
+	(setf (changedp query) t)))))
+
+(define-presentation-to-command-translator com-command-button
+    (command-button-state com-do-command-button accept-values
+     :gesture :select
+     :documentation ((object stream)
+                     (let ((doc (button-documentation object)))
+                       (if (functionp doc)
+                           (funcall doc stream)
+                           (princ doc stream))))
+     :echo nil
+     :menu nil)
+  (object)
+  (list (query-identifier object) (continuation object)))
