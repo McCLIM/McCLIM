@@ -348,6 +348,9 @@ buffer using `presentation-replace-input'."
 longer supposed to be used for editing, like turning off the
 cursor, etc."))
 
+(defmethod finalize ((stream t) input-sensitizer)
+  nil)
+
 (defmethod finalize ((stream input-editing-stream) input-sensitizer)
   (clear-typeout stream)
   (redraw-input-buffer stream))
