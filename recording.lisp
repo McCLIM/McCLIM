@@ -187,6 +187,10 @@ unspecified. "))
   (declare (ignore x-offset y-offset))
   (map-over-output-records-1 continuation record continuation-args))
 
+;;; Forward definition
+(defclass stream-output-history-mixin ()
+  ((stream :initarg :stream :reader output-history-stream)))
+
 ;;; 16.2.3. Output Record Change Notification Protocol
 
 (defgeneric recompute-extent-for-new-child (record child))
@@ -2061,8 +2065,6 @@ were added."
             do (write-string (styled-string-string styled-string) result))))))
 
 ;;; 16.3.4. Top-Level Output Records
-(defclass stream-output-history-mixin ()
-  ((stream :initarg :stream :reader output-history-stream)))
 
 (defclass standard-sequence-output-history
     (standard-sequence-output-record stream-output-history-mixin)
