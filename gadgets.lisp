@@ -1941,8 +1941,7 @@ and must never be nil."))
 
 (defclass generic-list-pane (list-pane meta-list-pane
                                        standard-sheet-input-mixin ;; Hmm..
-                                       value-changed-repaint-mixin
-                                       mouse-wheel-scroll-mixin)
+                                       value-changed-repaint-mixin)
   ((highlight-ink :initform +royalblue4+
                   :initarg :highlight-ink
                   :reader list-pane-highlight-ink)
@@ -1962,8 +1961,13 @@ and must never be nil."))
 preferring selection of a single item, but allowing extension of the 
 selection via the control modifier.")
    (items-length :initform nil
-                 :initarg :visible-items ; Clim 2.0 compatibility
-                 :documentation "Number of items"))
+                 :documentation "Number of items")
+   (items-origin :initform 0 :accessor items-origin
+     :documentation "Index of the first item to be rendered. This changes in
+response to scroll wheel events.")
+   (visible-items :initarg :visible-items ; Clim 2.0 compatibility
+                  :accessor visible-items
+                  :documentation "Maximum number of visible items in list"))
   (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
                      :background +white+ :foreground +black+))
 
@@ -2016,7 +2020,9 @@ selection via the control modifier.")
               last-index
               (reduce #'max
                       (mapcar #'(lambda (item) (position item (generic-list-pane-item-values gadget) :test test))
-                              (gadget-value gadget))))))))
+                              (gadget-value gadget)))))))
+  (unless (slot-boundp gadget 'visible-items)
+    (setf (visible-items gadget) (generic-list-pane-items-length gadget))))
 
 (defmethod generic-list-pane-item-strings ((pane generic-list-pane))
   (with-slots (item-strings) pane
@@ -2056,7 +2062,7 @@ selection via the control modifier.")
 
 (defmethod compose-space ((pane generic-list-pane) &key width height)
   (declare (ignore width height))
-  (let* ((n (generic-list-pane-items-length pane))
+  (let* ((n (visible-items pane))
          (w (generic-list-pane-items-width pane))
          (h (* n (generic-list-pane-item-height pane))))
     (make-space-requirement :width w     :height h
@@ -2079,7 +2085,8 @@ selection via the control modifier.")
               (sheet-region pane)))
       (let ((item-height (generic-list-pane-item-height pane))
             (highlight-ink (list-pane-highlight-ink pane)))
-        (do ((index (floor (- ry0 sy0) item-height) (1+ index)))
+        (do ((index (floor (- ry0 sy0) item-height) (1+ index))
+             (elt-index (items-origin pane) (1+ elt-index)))
             ((or (> (+ sy0 (* item-height index)) ry1)
                  (>= index (generic-list-pane-items-length pane))))
           (let ((y0 (+ sy0 (* index item-height)))
@@ -2088,15 +2095,19 @@ selection via the control modifier.")
                 (cond ((not (slot-boundp pane 'value))
                        (values (pane-background pane) (pane-foreground pane)))
                       ((if (list-pane-exclusive-p pane)
-                        (funcall (list-pane-test pane)
-                                 (elt (generic-list-pane-item-values pane) index)
-                                 (gadget-value pane))
-                        (member (elt (generic-list-pane-item-values pane) index) (gadget-value pane)
+                           (funcall (list-pane-test pane)
+                                    (elt (generic-list-pane-item-values pane)
+                                         elt-index)
+                                    (gadget-value pane))
+                           (member (elt (generic-list-pane-item-values pane)
+                                        elt-index)
+                                   (gadget-value pane)
                                 :test (list-pane-test pane)))
                        (values highlight-ink (pane-background pane)))
                       (t (values (pane-background pane) (pane-foreground pane))))
               (draw-rectangle* pane rx0 y0 rx1 y1 :filled t :ink background)
-              (draw-text* pane (elt (generic-list-pane-item-strings pane) index)
+              (draw-text* pane (elt (generic-list-pane-item-strings pane)
+                                    elt-index)
                           sx0
                           (+ y0 (text-style-ascent (pane-text-style pane) pane))
                           :ink foreground
@@ -2148,7 +2159,7 @@ Returns two values, the item itself, and the index within the item list."
       (with-slots (items) pane
         (let* ((item-height (generic-list-pane-item-height pane))
                (number-of-items (generic-list-pane-items-length pane))
-               (n (floor (- my sy0) item-height))
+               (n (+ (items-origin pane) (floor (- my sy0) item-height)))
                (index (and (>= n 0)
                            (< n number-of-items)
                            n))
@@ -2209,6 +2220,14 @@ Returns two values, the item itself, and the index within the item list."
       (let* ((item (elt (list-pane-items pane) index)))
 	(meta-list-pane-call-presentation-menu pane item)))))
 
+(defun generic-list-pane-scroll (pane amount)
+  (let ((new-origin (+ (items-origin pane) amount)))
+    (when (and (>= new-origin 0)
+               (<= (+ new-origin (visible-items pane))
+                   (generic-list-pane-items-length pane)))
+      (setf (items-origin pane) new-origin)
+      (handle-repaint pane +everywhere+))))
+
 (defun meta-list-pane-call-presentation-menu (pane item)
   (let ((ptype (funcall (list-pane-presentation-type-key pane) item)))
     (when ptype
@@ -2233,6 +2252,10 @@ Returns two values, the item itself, and the index within the item list."
       (setf (slot-value pane 'armed) nil))      
     (#.+pointer-right-button+
       (generic-list-pane-handle-right-click pane event))
+    (#.+pointer-wheel-up+
+     (generic-list-pane-scroll pane -1))
+    (#.+pointer-wheel-down+
+     (generic-list-pane-scroll pane 1))
     (t
       (when (next-method-p) (call-next-method)))))
 
