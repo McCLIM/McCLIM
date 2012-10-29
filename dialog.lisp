@@ -818,7 +818,7 @@ is run for the last time"))
 (defmacro accept-values-command-button
     ((&optional (stream t) &rest key-args
       &key documentation query-identifier cache-value cache-test
-      (view '+push-button-view+) resynchronize)
+      (view '+push-button-view+) resynchronize &allow-other-keys)
         prompt
         &body body)
   (declare (ignorable documentation query-identifier cache-value cache-test
@@ -851,7 +851,8 @@ is run for the last time"))
 
 (defgeneric invoke-accept-values-command-button
     (stream continuation view prompt
-     &key documentation query-identifier cache-value cache-test resynchronize))
+     &key documentation query-identifier cache-value cache-test resynchronize
+       &allow-other-keys))
 
 (defmethod invoke-accept-values-command-button
     ((stream accepting-values-stream) continuation view prompt
