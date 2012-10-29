@@ -423,8 +423,10 @@
 (define-condition sheet-is-ancestor (error) ())
 
 (defmethod sheet-adopt-child :before (sheet (child sheet-parent-mixin))
-  (when (sheet-parent child) (error 'sheet-already-has-parent))
-  (when (sheet-ancestor-p sheet child) (error 'sheet-is-ancestor)))
+  (when (and (sheet-parent child) (not (eq sheet (sheet-parent child))))
+    (error 'sheet-already-has-parent))
+  (when (sheet-ancestor-p sheet child)
+    (error 'sheet-is-ancestor)))
 
 (defmethod sheet-adopt-child :after (sheet (child sheet-parent-mixin))
   (setf (sheet-parent child) sheet))
