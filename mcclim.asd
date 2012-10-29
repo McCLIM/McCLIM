@@ -246,7 +246,7 @@
                                                     "table-formatting" "presentations"
                                                     "bordered-output" "presentation-defs"
                                                     "dialog-views" "input-editing"
-                                                    "commands"))
+                                                    "commands" "gadgets"))
                (:file "builtin-commands" :depends-on ("table-formatting"
                                                       "commands" "presentations"
                                                       "dialog" "presentation-defs"
