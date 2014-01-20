@@ -309,19 +309,59 @@
     ("Wisconsin" WI)
     ("Wyoming" WY)))
 
+(defconstant +presidential-candidates+
+  '(("Barak Obama" obama)
+    ("Mitt Romney" romney)))
+
+(defconstant +vp-candidates+
+  '(("Joseph Biden" biden)
+    ("Paul Ryan" ryan)))
+
 (define-misc-test "List Pane Dialog" (stream)
     "Tests a list pane gadget in an accepting-values dialog."
-  (let ((abbrev nil))
-    (accepting-values (stream)
-      (setq abbrev (accept `((completion ,+states+ :value-key cadr)
-                             :name-key car)
-                           :view `(list-pane-view :visible-items 10)
-                           :stream stream
-                           :prompt nil
-                           :query-identifier 'abbrev))
-      (accept-values-command-button
-       (stream)
-       "cheer"
-       (notify-user *application-frame* "Go USA!")))
-    (notify-user *application-frame* (format nil "~s selected." abbrev))))
+  (let ((abbrev nil)
+        (prez nil)
+        (vp nil))
+    (accepting-values (stream :resynchronize-every-pass t
+                              :exit-boxes '((:exit "Accept") (:abort "Cancel")))
+      (formatting-table (stream :x-spacing 28 :multiple-columns 5)
+        (formatting-row (stream)
+          (formatting-cell (stream)
+            (format stream ""))
+          (formatting-cell (stream)
+            (format stream "STATE~&")
+            (setq abbrev (accept `((completion ,+states+ :value-key cadr)
+                                   :name-key car)
+                                 :view `(list-pane-view :visible-items 10)
+                                 :stream stream
+                                 :prompt nil
+                                 :query-identifier 'abbrev))
+            (fresh-line stream)
+            (accept-values-command-button
+                (stream)
+                "cheer"
+              (notify-user *application-frame* "Go USA!")))
+          (formatting-cell (stream)
+            (format stream "PRESIDENT~&")
+            (setq prez (accept `((completion ,+presidential-candidates+
+                                             :value-key cadr)
+                                   :name-key car)
+                                 :view 'list-pane-view
+                                 :stream stream
+                                 :prompt nil
+                                 :query-identifier 'abbrev))
+            (fresh-line stream))
+          (formatting-cell (stream)
+            (format stream "VICE PRESIDENT~&")
+            (setq prez (accept `((completion ,+vp-candidates+ :value-key cadr)
+                                   :name-key car)
+                                 :view 'list-pane-view
+                                 :stream stream
+                                 :prompt nil
+                                 :query-identifier 'abbrev))
+            (fresh-line stream))
+          (formatting-cell (stream)
+            (format stream "")))))
+    (notify-user *application-frame*
+                 (format nil "~a, ~a, and ~a were selected." abbrev prez vp))))
 
