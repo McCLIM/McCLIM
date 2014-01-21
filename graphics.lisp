@@ -156,14 +156,6 @@
       (when changed-text-style 
         (setf (medium-text-style medium) old-text-style)))))
 
-(defmacro with-medium-options ((sheet args)
-			       &body body)
-  `(flet ((graphics-op (medium)
-	    (declare (ignorable medium))
-	    ,@body))
-     #-clisp (declare (dynamic-extent #'graphics-op))
-     (apply #'do-graphics-with-options ,sheet #'graphics-op ,args)))
-
 (defmacro with-drawing-options ((medium &rest drawing-options) &body body)
   (setq medium (stream-designator-symbol medium '*standard-output*))
   (with-gensyms (gcontinuation cont-arg)

@@ -463,6 +463,24 @@
 
 (defgeneric sheet-rgb-data (port sheet &key x y width height))
 
+;;; The generic function DO-GRAPHICS-WITH-OPTIONS is internal to the
+;;; CLIM-INTERNALS package.  It is used in the expansion of the macro
+;;; WITH-MEDIUM-OPTIONS.  
+(defgeneric do-graphics-with-options (medium function &rest options))
+
+;;; Most usages of WITH-MEDIUM-OPTIONS are in the file graphics.lisp,
+;;; but it is also used in the method on DRAW-DESIGN specialized for
+;;; RGB-IMAGE-DESIGN below.  For that reason, we need to define it
+;;; here, so that it will not be considered to be an undefined
+;;; function by default.
+(defmacro with-medium-options ((sheet args)
+			       &body body)
+  `(flet ((graphics-op (medium)
+	    (declare (ignorable medium))
+	    ,@body))
+     #-clisp (declare (dynamic-extent #'graphics-op))
+     (apply #'do-graphics-with-options ,sheet #'graphics-op ,args)))
+
 (defmethod draw-design
     (medium (design rgb-image-design) &rest options
      &key (x 0) (y 0) &allow-other-keys)
