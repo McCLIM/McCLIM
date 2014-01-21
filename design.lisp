@@ -1,7 +1,8 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2000,2014 by
+;;;      Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 1998,2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
 ;;; This library is free software; you can redistribute it and/or
