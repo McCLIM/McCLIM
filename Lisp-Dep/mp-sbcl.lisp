@@ -185,14 +185,16 @@ running when this file was loaded.")
   (sb-thread:make-mutex :name name))
 
 (defmacro with-lock-held ((place &optional state) &body body)
-  (let ((old-state (gensym "OLD-STATE")))
-    `(let (,old-state)
+  (let ((old-state (gensym "OLD-STATE"))
+        (state-var (gensym "STATE")))
+    `(let (,old-state
+           (,state-var ,state))
        (unwind-protect
             (progn
               (sb-thread:get-mutex ,place)
-              (when ,state
+              (when ,state-var
                 (setf ,old-state (process-state *current-process*))
-                (setf (process-state *current-process*) ,state))
+                (setf (process-state *current-process*) ,state-var))
               ,@body)
          (setf (process-state *current-process*) ,old-state)
          (sb-thread::release-mutex ,place)))))
@@ -202,14 +204,16 @@ running when this file was loaded.")
   (sb-thread:make-mutex :name name))
 
 (defmacro with-recursive-lock-held ((place &optional state) &body body)
-  (let ((old-state (gensym "OLD-STATE")))
+  (let ((old-state (gensym "OLD-STATE"))
+        (state-var (gensym "STATE")))
     `(sb-thread:with-recursive-lock (,place)
-       (let (,old-state)
+       (let (,old-state
+             (,state-var ,state))
          (unwind-protect
               (progn
-                (when ,state
+                (when ,state-var
                   (setf ,old-state (process-state *current-process*))
-                  (setf (process-state *current-process*) ,state))
+                  (setf (process-state *current-process*) ,state-var))
                 ,@body)
            (setf (process-state *current-process*) ,old-state))))))
 
