@@ -134,14 +134,15 @@ running when this file was loaded.")
 
 (defun process-wait-with-timeout (reason timeout predicate)
   (let ((old-state (process-whostate *current-process*))
-        (end-time (+ (get-universal-time) timeout)))
+        (end-time (+ (get-internal-real-time)
+                     (round (* timeout internal-time-units-per-second)))))
     (unwind-protect
          (progn
            (setf old-state (process-whostate *current-process*)
                  (process-whostate *current-process*) reason)
            (loop
               (let ((it (funcall predicate)))
-                (when (or (> (get-universal-time) end-time) it)
+                (when (or (> (get-internal-real-time) end-time) it)
                   (return it)))
                                         ;(sleep .01)))
               (yield)))
