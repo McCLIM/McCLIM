@@ -27,32 +27,27 @@
 
 (in-package :clim-internals)
 
-;;;; Changes
+;;; The CLIM 2 spec says:
+;;;
+;;;    "Implementations are encouraged to allow transformations that
+;;;    are not numerically equal due to floating-point roundoff errors
+;;;    to be TRANSFORMATION-EQUAL. An appropriate level of 'fuzziness'
+;;;    is single-float-epsilon, or some small multiple of
+;;;    single-float-epsilon."
 
-;;;  When        Who    What
-;;; --------------------------------------------------------------------------
-;;;  2001-07-16  GB     added a cache for the inverse transformation
+;;; Note: All the predicates like RIGID-TRANSFORMATION-P,
+;;; RECTILINEAR-TRANSFORMATION-P etc. inherit the "fuzziness" defined
+;;; by COORDINATE-EPSILON. An implementation of a medium probably
+;;; invoke these predicates to decide, whether the graphics primitives
+;;; provided by the underlying windowing system could be used; or if
+;;; they have to use an own implementation, which may be much slower,
+;;; since individual pixels may have to be transferred. So I trade
+;;; speed for precision here.
 
-;;; nobody bothers to use the log above ;-(
-
-;; The CLIM 2 spec says:
-;;    "Implementations are encouraged to allow transformations that are not
-;;    numerically equal due to floating-point roundoff errors to be
-;;    TRANSFORMATION-EQUAL. An appropriae level of 'fuzziness' is
-;;    single-float-epsilon, or some small multiple of single-float-epsilon."
-
-;; Note: All the predicates like RIGID-TRANSFORMATION-P,
-;; RECTILINEAR-TRANSFORMATION-P etc. inherit the "fuzziness" defined by
-;; COORDINATE-EPSILON. An implementation of a medium probably invoke these
-;; predicates to decide, whether the graphics primitives provided by the
-;; underlying windowing system could be used; or if they have to use an own
-;; implementation, which may be much slower, since individual pixels may have to
-;; be transferred. So I trade speed for precision here.
-
-;; Of course it would be better to assume some resomable maximal device
-;; coordinate for instance 40" * 2400dpi. Now two transformations could be said
-;; to be practically equal, if the (rounded) images of any point within that
-;; range are equal.
+;;; Of course it would be better to assume some reasonable maximal
+;;; device coordinate for instance 40" * 2400dpi. Now two
+;;; transformations could be said to be practically equal, if the
+;;; (rounded) images of any point within that range are equal.
 
 ;;;; -------------------------------------------------------------------------
 ;;;;  Transformations
