@@ -600,6 +600,22 @@ real numbers, and default to 0."
 (defmethod untransform-rectangle* ((transformation transformation) x1 y1 x2 y2)
   (transform-rectangle* (invert-transformation transformation) x1 y1 x2 y2))
 
+;;; The generic function TRANSFORMATION-TRANSFORMATOR is not part of
+;;; the CLIM II specification.  It appears to be used nowhere and the
+;;; only methods defined on it are the two methods below.  
+;;;
+;;; In order to avoid a style warning by some Common Lisp compilers,
+;;; we include an explicit DEFGENERIC form here.  
+;;;
+;;; FIXME: Contact Gilbert Baumann and ask him what action to take:
+;;;
+;;;  * remove this function entirely because it is not used.
+;;;  * keep it because it might be used one day, but rename it to
+;;;    the more idiomatic TRANSFORMATION-TRANSFORMER. 
+;;;  * keep it with its current name perhaps because this file is
+;;;    also used in software other than McCLIM.
+(defgeneric transformation-transformator (transformation &optional input-type))
+
 (defmethod transformation-transformator ((transformation standard-transformation)
                                          &optional (input-type 'real))
   ;; returns a function, which transforms its arguments
