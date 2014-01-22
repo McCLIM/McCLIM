@@ -1,14 +1,14 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
-;;; --------------------------------------------------------------------------------------
+;;; --------------------------------------------------------------------------
 ;;;     Title: The CLIM Transformations
 ;;;   Created: 1998-09-29
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
 ;;;       $Id: transforms.lisp,v 1.33 2006/03/10 21:58:13 tmoore Exp $
-;;; --------------------------------------------------------------------------------------
+;;; --------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
-;;;  (c) copyright 2000 by 
-;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2000, 2014 by 
+;;;           Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -30,7 +30,7 @@
 ;;;; Changes
 
 ;;;  When        Who    What
-;;; --------------------------------------------------------------------------------------
+;;; --------------------------------------------------------------------------
 ;;;  2001-07-16  GB     added a cache for the inverse transformation
 
 ;;; nobody bothers to use the log above ;-(
@@ -54,7 +54,7 @@
 ;; to be practically equal, if the (rounded) images of any point within that
 ;; range are equal.
 
-;;;; ----------------------------------------------------------------------------------------------------
+;;;; -------------------------------------------------------------------------
 ;;;;  Transformations
 ;;;;
 
