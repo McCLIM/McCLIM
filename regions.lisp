@@ -1,11 +1,11 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
-;;; --------------------------------------------------------------------------------------
+;;; ----------------------------------------------------------------------------
 ;;;     Title: The CLIM Region Datatype
 ;;;   Created: 1998-12-02 19:26
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
 ;;;       $Id: regions.lisp,v 1.39 2009/06/03 20:33:16 ahefner Exp $
-;;; --------------------------------------------------------------------------------------
+;;; ----------------------------------------------------------------------------
 ;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 
@@ -27,7 +27,7 @@
 ;;;; Changes
 
 ;;;  When        Who    What
-;;; --------------------------------------------------------------------------------------
+;;; ----------------------------------------------------------------------------
 ;;;  2002-06-27  GB     REGION-INTERSECTS-REGION-P has an :around method on bounding
 ;;;                     rectangles.
 ;;;  2002-06-04  APD    partially fixed (BOUNDING-RECTANGLE* STANDARD-ELLIPSE)
@@ -48,7 +48,7 @@
 ;;;  GB = Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;  AR = Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
 
-;;; ---- TODO ----------------------------------------------------------------------------
+;;; ---- TODO ------------------------------------------------------------------
 
 ;; - ellipses: The intersection of two ellipses is there, but
 ;;   handling the start/end angle is not implemented.
@@ -118,7 +118,7 @@
 (defgeneric region-intersection (region1 region2))
 (defgeneric region-difference (region1 region2))
 
-;;; ---- 2.5.2 CLIM Point Objects --------------------------------------------------------
+;;; ---- 2.5.2 CLIM Point Objects ----------------------------------------------
 
 (defclass standard-point (point)
   ((x :type coordinate :initarg :x)
@@ -154,7 +154,7 @@
   (with-slots (x y) self
     (and (coordinate= x px) (coordinate= y py))))
 
-;;; ---- 2.5.3 Polygons and Polylines in CLIM --------------------------------------------
+;;; ---- 2.5.3 Polygons and Polylines in CLIM ----------------------------------
 
 ;; Protocol: 
 (defclass standard-polyline (polyline)
@@ -164,7 +164,7 @@
 (defclass standard-polygon (polygon)
   ((points :initarg :points)) )
 
-;;; ---- 2.5.3.1 Constructors for CLIM Polygons and Polylines  ---------------------------
+;;; ---- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
 (defun coord-seq->point-seq (sequence)
   (let ((res nil))
@@ -267,7 +267,7 @@
                (* (- px x1) (- y2 y1))))
 
 
-;;; ---- 2.5.4 Lines in CLIM -------------------------------------------------------------
+;;; ---- 2.5.4 Lines in CLIM ---------------------------------------------------
 
 ;; Line protocol: line-start-point* line-end-point* 
 
@@ -339,7 +339,7 @@
   (with-slots (x1 y1 x2 y2) self
     (format sink "#<~S ~D ~D ~D ~D>" (type-of self) x1 y1 x2 y2)))
 
-;;; ---- 2.5.5 Rectangles in CLIM --------------------------------------------------------
+;;; ---- 2.5.5 Rectangles in CLIM ----------------------------------------------
 
 ;; protocol:
 ;;     rectangle-edges*
@@ -540,7 +540,7 @@
     (and (<= x1 (coerce x 'coordinate) x2)
          (<= y1 (coerce y 'coordinate) y2))))
 
-;;; ---- 2.5.6 Ellipses and Elliptical Arcs in CLIM --------------------------------------
+;;; ---- 2.5.6 Ellipses and Elliptical Arcs in CLIM ----------------------------
 
 (defclass elliptical-thing ()
   ((start-angle :initarg :start-angle)
@@ -687,7 +687,7 @@
 (defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
   (region-intersection ellipse line))
 
-;;; ---- 2.5.6.2 Accessors for CLIM Elliptical Objects -----------------------------------
+;;; ---- 2.5.6.2 Accessors for CLIM Elliptical Objects -------------------------
 
 (defmethod ellipse-center-point* ((self elliptical-thing))
   (with-slots (tr) self
@@ -848,7 +848,7 @@
 			    c))))
 	     (values x1 y1 x2 y2))))))
 
-;;; ---- Intersection of Ellipse vs. Ellipse ---------------------------------------------
+;;; ---- Intersection of Ellipse vs. Ellipse -----------------------------------
 
 ;; Das ganze ist so unverstaendlich, ich muss noch mal nach meinen Notizen
 ;; fanden, um die Herleitung der Loesung fuer das Schnittproblem praesentieren
@@ -1015,7 +1015,7 @@
 
 
 
-;;;; ====================================================================================================
+;;;; ===========================================================================
 
 (defmethod region-union ((a point) (b point))
   (cond ((region-equal a b)
@@ -1033,9 +1033,9 @@
        (coordinate= (point-y a) (point-y b))))
 
 
-;;; ====================================================================================================
+;;; ============================================================================
 
-;;; ---- Rectangle Sets ---------------------------------------------------------------------------------
+;;; ---- Rectangle Sets --------------------------------------------------------
 
 (defclass standard-rectangle-set (region-set bounding-rectangle)
   ((bands
@@ -1167,7 +1167,7 @@
   (multiple-value-bind (x y) (point-position point)
     (region-contains-position-p xs x y)))
 
-;;; ---- interval sums ----------------------------------------------------------------------------------
+;;; ---- interval sums ---------------------------------------------------------
 
 (defun isum-union* (xs ys)        (isum-op xs ys boole-ior   0 0 nil))
 (defun isum-difference* (xs ys)   (isum-op xs ys boole-andc2 0 0 nil))
@@ -1213,7 +1213,7 @@
                       (isum-op as bs boole-op in-a in-b x)
                     (isum-op as bs boole-op in-a in-b x0))))))))
 
-;;; ---- Bands ------------------------------------------------------------------------------------------
+;;; ---- Bands -----------------------------------------------------------------
 
 
 ;; A band list is represented by
@@ -1343,7 +1343,7 @@
 	    self)
            res)) ))
 
-;;; ====================================================================================================
+;;; ============================================================================
 
 (defclass standard-bounding-rectangle (standard-rectangle) ())
 
@@ -1665,7 +1665,7 @@
 
 
 
-;;; ---- Set operations on polygons ---------------------------------------------------------------------
+;;; ---- Set operations on polygons --------------------------------------------
 
 (defstruct (pg-edge (:constructor make-pg-edge* (x1 y1 x2 y2 extra)))
   x1 y1 x2 y2 extra)
@@ -1856,7 +1856,7 @@
                    (y (/ (+ (* dy (- (* u1 dv) (* v1 du))) (* dv (- (* y1 dx) (* x1 dy)))) q)))
                (values x y)))))))
 
-;;; -----------------------------------------------------------------------------------------------------
+;;; ----------------------------------------------------------------------------
 
 (defmethod region-union ((a standard-region-union) (b nowhere-region))
   a)
@@ -1886,7 +1886,7 @@
 (defmethod region-union ((a standard-rectangle-set) (b point)) a)
 (defmethod region-union ((b point) (a standard-rectangle-set)) a)
 
-;;; ---- Intersection Line/Polygon ----------------------------------------------------------------------
+;;; ---- Intersection Line/Polygon ---------------------------------------------
 
 (defun geraden-schnitt/prim (x1 y1 x12 y12  x2 y2 x22 y22)
   (let ((dx1 (- x12 x1)) (dy1 (- y12 y1))
@@ -2221,7 +2221,7 @@
   (or (eq a b)
       (region-equal +nowhere+ (region-difference b a))))
   
-;;;; ====================================================================================================
+;;;; ===========================================================================
 
 (defmethod bounding-rectangle* ((a standard-line))
   (with-slots (x1 y1 x2 y2) a
@@ -2294,7 +2294,7 @@
                                  self)
     (values bx1 by1 bx2 by2)))
 
-;;;; ====================================================================================================
+;;;; ===========================================================================
 
 (defun make-bounding-rectangle (x1 y1 x2 y2)
   (setf x1 (coerce x1 'coordinate)
