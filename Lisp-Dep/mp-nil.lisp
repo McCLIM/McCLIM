@@ -19,8 +19,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
@@ -124,16 +124,16 @@
 (defun condition-wait (cv lock &optional timeout)
   (declare (ignore lock))
   (flet ((wait-func ()
-	   (loop for port in climi::*all-ports*	;; this is dubious
+           (loop for port in climi::*all-ports*	;; this is dubious
                  do (loop as this-event = (process-next-event port :timeout 0)
                      for got-events = this-event then (or got-events this-event)
                      while this-event
                      finally (unless got-events (process-next-event port))))
-	   (car cv)))
+           (car cv)))
     (setf (car cv) nil)
     (if timeout
-	(process-wait-with-timeout "Waiting for event" timeout #'wait-func)
-	(process-wait "Waiting for event" #'wait-func))))
+        (process-wait-with-timeout "Waiting for event" timeout #'wait-func)
+        (process-wait "Waiting for event" #'wait-func))))
 
 (defun condition-notify (cv)
   (setf (car cv) t))
