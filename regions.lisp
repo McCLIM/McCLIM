@@ -2167,6 +2167,13 @@
 (defmethod region-union ((a nowhere-region) (b nowhere-region))
   +nowhere+)
 
+;;; The generic function REGION-EXCLUSIVE-OR is not part of the CLIM
+;;; II specification, which is why it does not have a corresponding
+;;; DEFGENERIC form in the "Protocol" section in the beginning of this
+;;; file.  However, to avoid a style warning emitted by certain
+;;; compilers, we still want an explicit DEFGENERIC form.  This is why
+;;; we include it here.
+(defgeneric region-exclusive-or (region1 region2))
 
 (defmethod region-exclusive-or ((a region) (b region))
   (region-union (region-difference a b) (region-difference b a)))
