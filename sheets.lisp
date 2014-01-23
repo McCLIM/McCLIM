@@ -676,7 +676,15 @@ that this might be different from the sheet's native region."
         (port-enable-sheet (port sheet) sheet)
         (port-disable-sheet (port sheet) sheet))))
 
-;;; Reflecting a Sheet's Geometry to the Mirror
+;;; The generic function SHEET-MIRROR-REGION is not part of the CLIM
+;;; II specification.  For that reason, there is no DEFGENERIC form
+;;; for it in decls.lisp.  Since some Common Lisp compilers emit a
+;;; warning if there is no explicit DEFGENERIC form, and in order to
+;;; get a clean build, we include the DEFGENERIC form here.
+;;;
+;;; Reflecting a Sheet's Geometry to the Mirror.
+;;; FIXME: Improve the previous comment.
+(defgeneric sheet-mirror-region (sheet))
 
 (defmethod sheet-mirror-region ((sheet mirrored-sheet-mixin))
   (cond
@@ -716,15 +724,23 @@ that this might be different from the sheet's native region."
   (loop for child in (sheet-children sheet)
         do (invalidate-cached-transformations child)))
 
+;;; The generic function EFFECTIVE-MIRROR-REGION is not part of the
+;;; CLIM II specification.  For that reason, there is no DEFGENERIC
+;;; form for it in decls.lisp.  Since some Common Lisp compilers emit
+;;; a warning if there is no explicit DEFGENERIC form, and in order to
+;;; get a clean build, we include the DEFGENERIC form here.
+(defgeneric effective-mirror-region (sheet))
+
 (defmethod effective-mirror-region ((sheet mirrored-sheet-mixin))
   ;; XXX is this really needed, can't we deduce this information more easily?
   (let* ((parent (sheet-parent sheet))
          (ancestor (and parent (sheet-mirrored-ancestor parent))))
     (if ancestor
-        (region-intersection (sheet-mirror-region sheet)
-                             (untransform-region (%sheet-mirror-transformation sheet)
-                                                 (effective-mirror-region ancestor)))
-      (sheet-mirror-region sheet))))
+        (region-intersection
+	 (sheet-mirror-region sheet)
+	 (untransform-region (%sheet-mirror-transformation sheet)
+			     (effective-mirror-region ancestor)))
+	(sheet-mirror-region sheet))))
 
 ;;; Internal interface for enabling/disabling motion hints
 
