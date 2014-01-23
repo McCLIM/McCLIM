@@ -48,6 +48,9 @@
 (defgeneric event-peek (client &optional event-type))
 (defgeneric event-unread (client event))
 (defgeneric event-listen (client))
+
+;;; These DEFGENERIC forms are commented out because they appear
+;;; in decls.lisp.
 ;(defgeneric sheet-direct-mirror (sheet))
 ;(defgeneric sheet-mirrored-ancestor (sheet))
 ;(defgeneric sheet-mirror (sheet))
@@ -617,6 +620,13 @@ that this might be different from the sheet's native region."
 
 (defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
   (port-lookup-mirror (port sheet) sheet))
+
+;;; The generic function (SETF SHEET-DIRECT-MIRROR) is not part of the
+;;; CLIM II specification.  For that reason, there is no DEFGENERIC
+;;; form for it in decls.lisp.  Since some Common Lisp compilers emit
+;;; a warning if there is no explicit DEFGENERIC form, and in order to
+;;; get a clean build, we include the DEFGENERIC form here. 
+(defgeneric (setf sheet-direct-mirror) (mirror sheet))
 
 (defmethod (setf sheet-direct-mirror) (mirror (sheet mirrored-sheet-mixin))
   (port-register-mirror (port sheet) sheet mirror))
