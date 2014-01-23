@@ -2328,14 +2328,6 @@
     (declare (ignore x2 y2))
     (values x1 y1)))
 
-(defmethod set-bounding-rectangle-position ((self standard-rectangle) x y)
-  ;;(error "DO NOT CALL ME")
-  ;;Yes, but... output records are based on rectangles
-  (with-standard-rectangle (x1 y1 x2 y2)
-      self
-    (setf (rectangle-edges* self)
-	  (values x y (+ x (- x2 x1)) (+ y (- y2 y1))))))
-
 (defmethod bounding-rectangle-min-x ((self bounding-rectangle)) 
   (nth-value 0 (bounding-rectangle* self)))
 
