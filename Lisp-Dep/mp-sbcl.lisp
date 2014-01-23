@@ -70,7 +70,9 @@ running when this file was loaded.")
 (defvar *permanent-queue*
   (sb-thread:make-mutex :name "Lock for disabled threads"))
 (unless (sb-thread:mutex-value *permanent-queue*)
-  (sb-thread:get-mutex *permanent-queue* nil))
+  (sb-sys:without-interrupts
+    (sb-sys:allow-with-interrupts
+      (sb-thread:grab-mutex *permanent-queue*))))
 
 (defun make-process (function &key name)
   (let ((p (%make-process :name name :function function)))
@@ -78,12 +80,16 @@ running when this file was loaded.")
 
 (defun restart-process (p)
   (labels ((boing ()
-	     (let ((*current-process* p))
+             (let ((*current-process* p))
                (sb-thread:with-mutex (*all-processes-lock*)
-                 (pushnew p *all-processes*))
-	       (unwind-protect (funcall (process-function p))
-                 (sb-thread:with-mutex (*all-processes-lock*)
-                   (setf *all-processes* (delete p *all-processes*)))))))
+                 (sb-sys:without-interrupts
+                   (pushnew p *all-processes*)))
+               (sb-sys:without-interrupts
+                 (unwind-protect (sb-sys:with-local-interrupts
+                                   (funcall (process-function p)))
+                   (sb-thread:with-mutex (*all-processes-lock*)
+                     (sb-sys:without-interrupts
+                       (setf *all-processes* (delete p *all-processes*)))))))))
     (when (process-thread p) (sb-thread:terminate-thread p))
     (when (setf (process-thread p) (sb-thread:make-thread #'boing :name (process-name p)))
       p)))
@@ -121,31 +127,33 @@ running when this file was loaded.")
 
 (defun process-wait (reason predicate)
   (let ((old-state (process-whostate *current-process*)))
-    (unwind-protect
-	 (progn
-	   (setf old-state (process-whostate *current-process*)
-		 (process-whostate *current-process*) reason)
-	   (loop 
-	    (let ((it (funcall predicate)))
-	      (when it (return it)))
-	    ;(sleep .01)
-               (yield)))
-      (setf (process-whostate *current-process*) old-state))))
+    (sb-sys:without-interrupts
+      (unwind-protect
+           (progn
+             (setf old-state (process-whostate *current-process*)
+                   (process-whostate *current-process*) reason)
+             (loop
+                (let ((it (sb-sys:with-local-interrupts (funcall predicate))))
+                  (when it (return it)))
+                                        ;(sleep .01)
+                (yield)))
+        (setf (process-whostate *current-process*) old-state)))))
 
 (defun process-wait-with-timeout (reason timeout predicate)
   (let ((old-state (process-whostate *current-process*))
-	(end-time (+ (get-universal-time) timeout)))
-    (unwind-protect
-	 (progn
-	   (setf old-state (process-whostate *current-process*)
-		 (process-whostate *current-process*) reason)
-	   (loop 
-	    (let ((it (funcall predicate)))
-	      (when (or (> (get-universal-time) end-time) it)
-		(return it)))
-	    ;(sleep .01)))
-               (yield)))
-      (setf (process-whostate *current-process*) old-state))))
+        (end-time (+ (get-universal-time) timeout)))
+    (sb-sys:without-interrupts
+      (unwind-protect
+           (progn
+             (setf old-state (process-whostate *current-process*)
+                   (process-whostate *current-process*) reason)
+             (loop
+                (let ((it (sb-sys:with-local-interrupts (funcall predicate))))
+                  (when (or (> (get-universal-time) end-time) it)
+                    (return it)))
+                                        ;(sleep .01)))
+                (yield)))
+        (setf (process-whostate *current-process*) old-state)))))
 
 (defun process-interrupt (process function)
   (sb-thread:interrupt-thread (process-thread process) function))
@@ -154,7 +162,7 @@ running when this file was loaded.")
   (sb-thread:interrupt-thread
    (process-thread process)
    (lambda ()
-     (catch 'interrupted-wait (sb-thread:get-mutex *permanent-queue*)))))
+     (catch 'interrupted-wait (sb-thread:with-mutex (*permanent-queue*))))))
 
 (defun enable-process (process)
   (sb-thread:interrupt-thread
@@ -173,11 +181,13 @@ running when this file was loaded.")
 
 (defmacro atomic-incf (place)
   `(sb-thread:with-mutex (*atomic-lock*)
-    (incf ,place)))
+     (sb-sys:without-interrupts
+       (incf ,place))))
 
-(defmacro atomic-decf (place) 
+(defmacro atomic-decf (place)
   `(sb-thread:with-mutex (*atomic-lock*)
-    (decf ,place)))
+     (sb-sys:without-interrupts
+       (decf ,place))))
 
 ;;; 32.3 Locks
 
@@ -187,15 +197,16 @@ running when this file was loaded.")
 (defmacro with-lock-held ((place &optional state) &body body)
   (let ((old-state (gensym "OLD-STATE")))
     `(let (,old-state)
-      (unwind-protect
-           (progn
-             (sb-thread:get-mutex ,place)
-	     (when ,state
-	       (setf ,old-state (process-state *current-process*))
-	       (setf (process-state *current-process*) ,state))
-             ,@body)
-        (setf (process-state *current-process*) ,old-state)
-        (sb-thread::release-mutex ,place)))))
+       (sb-thread:with-mutex (,place)
+         (sb-sys:without-interrupts
+           (unwind-protect
+                (progn
+                  (when ,state
+                    (setf ,old-state (process-state *current-process*))
+                    (setf (process-state *current-process*) ,state))
+                  (sb-sys:with-local-interrupts
+                    ,@body))
+             (setf (process-state *current-process*) ,old-state)))))))
 
 
 (defun make-recursive-lock (&optional name)
@@ -203,15 +214,17 @@ running when this file was loaded.")
 
 (defmacro with-recursive-lock-held ((place &optional state) &body body)
   (let ((old-state (gensym "OLD-STATE")))
-  `(sb-thread:with-recursive-lock (,place)
-    (let (,old-state)
-      (unwind-protect
-	   (progn
-	     (when ,state
-	       (setf ,old-state (process-state *current-process*))
-	       (setf (process-state *current-process*) ,state))
-	     ,@body)
-	(setf (process-state *current-process*) ,old-state))))))
+    `(sb-thread:with-recursive-lock (,place)
+       (sb-sys:without-interrupts
+         (let (,old-state)
+           (unwind-protect
+                (progn
+                  (when ,state
+                    (setf ,old-state (process-state *current-process*))
+                    (setf (process-state *current-process*) ,state))
+                  (sb-sys:with-local-interrupts
+                    ,@body))
+             (setf (process-state *current-process*) ,old-state)))))))
 
 (defun make-condition-variable () (sb-thread:make-waitqueue))
 
