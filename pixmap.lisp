@@ -22,8 +22,7 @@
 (defclass pixmap ()
   ((sheet :initarg :sheet :reader pixmap-sheet)
    (width :initarg :width :reader pixmap-width)
-   (height :initarg :height :reader pixmap-height)
-   ))
+   (height :initarg :height :reader pixmap-height)))
 
 (defgeneric pixmap-mirror (mirrored-pixmap))
 (defgeneric allocate-pixmap (sheet width height))
@@ -39,10 +38,11 @@
 (defclass mirrored-pixmap (pixmap)
   ((port :initform nil :initarg :port :accessor port)
    (medium :initform nil :accessor pixmap-medium)
-   (region :initform nil :accessor sheet-region)
-   ))
+   (region :initform nil :accessor sheet-region)))
 
-; added this. CHECKME -- BTS
+(defgeneric (setf %sheet-medium) (medium sheet))
+
+;;; added this. CHECKME -- BTS
 (defmethod (setf %sheet-medium) (value (pixmap mirrored-pixmap))
   (setf (slot-value pixmap 'medium) value))
 
@@ -52,7 +52,7 @@
 (defmethod invalidate-cached-regions ((sheet mirrored-pixmap))
   (values))
 
-; BTS stopped adding. ^-- CHECKME
+;;;; BTS stopped adding. ^-- CHECKME
 
 (defmethod initialize-instance :after ((pixmap mirrored-pixmap) &rest args)
   (declare (ignore args))
