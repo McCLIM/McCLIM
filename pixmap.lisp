@@ -1,6 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2001 by Iban HATCHONDO (hatchond@mei.u-bordeaux.fr)
+;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -13,8 +14,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
