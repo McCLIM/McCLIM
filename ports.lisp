@@ -131,7 +131,10 @@
   (setf (gethash mirror (slot-value port 'mirror->sheet)) sheet)
   nil)
 
-(defmethod port-unregister-mirror ((port basic-port) (sheet mirrored-sheet-mixin) mirror)
+(defgeneric port-unregister-mirror (port sheet mirror))
+
+(defmethod port-unregister-mirror
+    ((port basic-port) (sheet mirrored-sheet-mixin) mirror)
   (remhash sheet (slot-value port 'sheet->mirror))
   (remhash mirror (slot-value port 'mirror->sheet))
   nil)
