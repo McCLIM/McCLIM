@@ -228,13 +228,19 @@
        (call-next-method)
     (setf *all-ports* (remove port *all-ports*))))
 
+(defgeneric add-watcher (port watcher))
+
 (defmethod add-watcher ((port basic-port) watcher)
   (declare (ignore watcher))
   nil)
 
+(defgeneric delete-watcher (port watcher))
+
 (defmethod delete-watcher ((port basic-port) watcher)
   (declare (ignore watcher))
   nil)
+
+(defgeneric reset-watcher (port how))
 
 (defmethod reset-watcher ((port basic-port) how)
   (declare (ignore how))
