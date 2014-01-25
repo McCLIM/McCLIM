@@ -180,6 +180,8 @@
       (distribute-event port event)
       t))))
 
+(defgeneric distribute-event (port event))
+
 (defmethod distribute-event ((port basic-port) event)
   (cond
    ((typep event 'keyboard-event)
