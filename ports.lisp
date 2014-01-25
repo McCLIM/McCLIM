@@ -187,7 +187,6 @@
    ((typep event 'keyboard-event)
     (dispatch-event (event-sheet event) event))
    ((typep event 'window-event)
-;   (dispatch-event (window-event-mirrored-sheet event) event)
     (dispatch-event (event-sheet event) event))
    ((typep event 'pointer-event)
     (dispatch-event (event-sheet event) event))
@@ -254,11 +253,6 @@
 		 :orientation orientation :units units)))
     (push graft (port-grafts port))
     graft))
-
-#||
-(defmethod make-medium ((port basic-port) sheet)
-  (make-instance 'basic-medium :port port :graft (graft sheet) :sheet sheet))
-||#
 
 ;;; Pixmap
 
