@@ -246,6 +246,8 @@
   (declare (ignore how))
   nil)
 
+(defgeneric make-graft (port &key orientation units))
+
 (defmethod make-graft ((port basic-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'graft
 		 :port port :mirror nil
