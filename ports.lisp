@@ -207,6 +207,8 @@
       (declare (dynamic-extent #',fn))
       (invoke-with-port-locked ,port #',fn))))
 
+(defgeneric invoke-with-port-locked (port continuation))
+
 (defmethod invoke-with-port-locked ((port basic-port) continuation)
   (with-recursive-lock-held ((port-lock port))
     (funcall continuation)))
