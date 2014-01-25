@@ -265,6 +265,10 @@
 (defmethod port-lookup-mirror ((port basic-port) (pixmap pixmap))
   (gethash pixmap (slot-value port 'pixmap->mirror)))
 
+;;; FIXME: The generic function PORT-LOOKUP-PIXMAP appear not to be
+;;; used anywhere.
+(defgeneric port-lookup-pixmap (port mirror))
+
 (defmethod port-lookup-pixmap ((port basic-port) mirror)
   (gethash mirror (slot-value port 'mirror->pixmap)))
 
