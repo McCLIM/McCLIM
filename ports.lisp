@@ -158,6 +158,8 @@
   (with-slots (properties) port
     (setf (getf properties indicator) value)))
 
+(defgeneric get-next-event (port &key wait-function timeout))
+
 (defmethod get-next-event ((port basic-port) &key wait-function timeout)
   (declare (ignore wait-function timeout))
   (error "Calling GET-NEXT-EVENT on a PORT protocol class"))
