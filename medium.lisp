@@ -653,6 +653,9 @@
                         align-x align-y
                         toward-x toward-y transform-glyphs))))
 
+(defgeneric medium-draw-glyph
+  (medium element x y align-x align-y toward-x toward-y transform-glyphs))
+
 (defmethod medium-draw-glyph :around ((medium transform-coordinates-mixin) element x y
                                       align-x align-y toward-x toward-y
                                       transform-glyphs)
