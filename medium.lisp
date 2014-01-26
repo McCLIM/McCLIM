@@ -435,8 +435,12 @@
 
 ;;; Medium Device functions
 
+(defgeneric medium-device-transformation (medium))
+
 (defmethod medium-device-transformation ((medium medium))
   (sheet-device-transformation (medium-sheet medium)))
+
+(defgeneric medium-device-region (medium))
 
 (defmethod medium-device-region ((medium medium))
   (sheet-device-region (medium-sheet medium)))
