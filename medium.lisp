@@ -594,6 +594,8 @@
         (medium-draw-polygon* medium (expand-rectangle-coords left top right bottom)
                               t filled))) )
 
+(defgeneric medium-draw-rectangles* (medium coord-seq filled))
+
 (defmethod medium-draw-rectangles* :around ((medium transform-coordinates-mixin) position-seq filled)
   (let ((tr (medium-transformation medium)))
     (if (rectilinear-transformation-p tr)
