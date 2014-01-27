@@ -54,6 +54,16 @@
 	     ,text-size ,text-size-p))))
   )
 
+(defgeneric do-graphics-with-options-internal
+  (medium orig-medium func
+	  &rest args
+	  &key
+	  ink clipping-region transformation
+	  line-unit line-thickness line-style line-dashes
+	  line-join-shape line-cap-shape
+	  text-style text-family text-face text-size
+	  &allow-other-keys))
+	  
 (defmethod do-graphics-with-options ((sheet sheet) func &rest options)
   (with-sheet-medium (medium sheet)
     (apply #'do-graphics-with-options-internal medium sheet func options)))
