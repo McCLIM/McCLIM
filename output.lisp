@@ -91,14 +91,19 @@
       (declare (dynamic-extent #',fn))
       (invoke-with-sheet-medium-bound #',fn ,medium ,sheet))))
 
-(defmethod invoke-with-sheet-medium-bound (continuation (medium null) (sheet permanent-medium-sheet-output-mixin))
+(defgeneric invoke-with-sheet-medium-bound (continuation medium sheet))
+
+(defmethod invoke-with-sheet-medium-bound
+    (continuation (medium null) (sheet permanent-medium-sheet-output-mixin))
   (funcall continuation (sheet-medium sheet)))
 
 ; BTS added this. CHECKME
-(defmethod invoke-with-sheet-medium-bound (continuation (medium null) (sheet mirrored-pixmap))
+(defmethod invoke-with-sheet-medium-bound
+    (continuation (medium null) (sheet mirrored-pixmap))
   (funcall continuation (pixmap-medium sheet)))
 
-(defmethod invoke-with-sheet-medium-bound (continuation (medium null) (sheet temporary-medium-sheet-output-mixin))
+(defmethod invoke-with-sheet-medium-bound
+    (continuation (medium null) (sheet temporary-medium-sheet-output-mixin))
   (let ((old-medium (sheet-medium sheet))
         (new-medium (allocate-medium (port sheet) sheet)))
     (unwind-protect
@@ -113,15 +118,13 @@
 ;; The description of WITH-SHEET-MEDIUM-BOUND in the spec, seems to be
 ;; extremly bogus, what is its purpose?
 
-(defmethod invoke-with-sheet-medium-bound (continuation
-                                           (medium basic-medium)
-                                           (sheet permanent-medium-sheet-output-mixin))
+(defmethod invoke-with-sheet-medium-bound
+    (continuation (medium basic-medium) (sheet permanent-medium-sheet-output-mixin))
   ;; this seems to be extremly bogus to me.
   (funcall continuation medium))
 
-(defmethod invoke-with-sheet-medium-bound (continuation
-                                           (medium basic-medium)
-                                           (sheet temporary-medium-sheet-output-mixin))
+(defmethod invoke-with-sheet-medium-bound
+    (continuation (medium basic-medium) (sheet temporary-medium-sheet-output-mixin))
   (cond ((not (null (sheet-medium sheet)))
          (funcall continuation medium))
         (t
