@@ -1014,17 +1014,6 @@ position for the character."
 (defmethod draw-design (medium (color indirect-ink) &rest options &key &allow-other-keys)
   (apply #'draw-design medium +everywhere+ :ink color options))
 
-;;;;
-
-(defmethod draw-design
-    (medium (design rgb-image-design) &rest options
-     &key (x 0) (y 0) &allow-other-keys)
-  (with-medium-options (medium options)
-    (medium-draw-image-design* medium design x y))
-  (values))
-
-;;;;
-
 (defmethod draw-design (medium (pattern pattern) &key clipping-region transformation
                         &allow-other-keys)
   (draw-pattern* medium pattern 0 0
