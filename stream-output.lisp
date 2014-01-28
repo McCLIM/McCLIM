@@ -267,6 +267,8 @@
   (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
     (scroll-extent stream tx (+ ty dy))))
 
+(defgeneric scroll-horizontal (stream dx))
+
 (defmethod scroll-horizontal ((stream standard-extended-output-stream) dx)
   (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
     (scroll-extent stream (+ tx dx) ty)))
