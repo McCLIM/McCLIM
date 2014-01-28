@@ -232,6 +232,8 @@
 (defmethod* (setf stream-cursor-position) (x y (stream standard-extended-output-stream))
   (setf (cursor-position (stream-text-cursor stream)) (values x y)))
 
+(defgeneric stream-set-cursor-position (stream x y))
+
 (defmethod stream-set-cursor-position ((stream standard-extended-output-stream) x y)
   (setf (stream-cursor-position stream) (values x y)))
 
