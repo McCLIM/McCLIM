@@ -79,6 +79,8 @@
     (print-unreadable-object (cursor stream :type t :identity t)
       (format stream "~D ~D " x y))))
 
+(defgeneric flip-screen-cursor (cursor))
+
 ;;; XXX What to do when we can't draw the cursor immediately (like,
 ;;; we're not drawing?) The whole flip-screen-cursor idea breaks down.
 
