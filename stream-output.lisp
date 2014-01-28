@@ -277,6 +277,8 @@
   `(letf (((cursor-visibility (stream-text-cursor ,stream)) nil))
      ,@body))
 
+(defgeneric stream-wrap-line (stream))
+
 (defmethod stream-wrap-line ((stream standard-extended-output-stream))
   (let ((margin (stream-text-margin stream)))
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
