@@ -133,6 +133,8 @@
                                    (:solid t) (:hollow nil))
 			 :ink +flipping-ink+)))))
 
+(defgeneric display-cursor (cursor state))
+
 (defmethod display-cursor ((cursor cursor-mixin) state)
   (unless (stream-drawing-p (cursor-sheet cursor))
     (return-from display-cursor nil))
