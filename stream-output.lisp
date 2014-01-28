@@ -261,6 +261,8 @@
 	  (call-next-method))
 	(call-next-method))))
 
+(defgeneric scroll-vertical (stream dy))
+
 (defmethod scroll-vertical ((stream standard-extended-output-stream) dy)
   (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
     (scroll-extent stream tx (+ ty dy))))
