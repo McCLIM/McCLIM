@@ -2384,6 +2384,9 @@ according to the flags RECORD and DRAW."
   (when (stream-drawing-p stream)
     (call-next-method)))
 
+(defgeneric invoke-with-room-for-graphics
+  (cont stream &key first-quadrant height move-cursor record-type))
+
 ;;; ----------------------------------------------------------------------------
 ;;; Complicated, underspecified...
 ;;;
