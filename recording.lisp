@@ -2521,6 +2521,8 @@ according to the flags RECORD and DRAW."
 
 ;;; Debugging hacks
 
+(defgeneric count-records (r))
+
 (defmethod count-records (r)
   (declare (ignore r))
   1)
@@ -2532,6 +2534,8 @@ according to the flags RECORD and DRAW."
        (incf count (count-records child)))
      r)
     (1+ count)))
+
+(defgeneric count-displayed-records (r))
 
 (defmethod count-displayed-records ((r displayed-output-record))
   1)
