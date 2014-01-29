@@ -727,6 +727,8 @@ the associated sheet can be determined."
            parent record old-x1 old-y1 old-x2 old-y2)))))
   record)
 
+(defgeneric %tree-recompute-extent* (record))
+
 (defmethod %tree-recompute-extent* ((record compound-output-record))
   ;; Internal helper function
   (let ((new-x1 0)
