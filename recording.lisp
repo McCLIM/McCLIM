@@ -2097,6 +2097,8 @@ were added."
 
 ;;; Used in initializing clim-stream-pane
 
+(defgeneric reset-output-history (stream))
+
 (defmethod reset-output-history ((stream
 				  standard-output-recording-stream))
   (setf (slot-value stream 'output-history)
