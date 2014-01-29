@@ -2448,6 +2448,8 @@ according to the flags RECORD and DRAW."
 ;;;  Baseline
 ;;;
 
+(defgeneric output-record-baseline (record))
+
 (defmethod output-record-baseline ((record output-record))
   "Fall back method"
   (with-bounding-rectangle* (x1 y1 x2 y2)
