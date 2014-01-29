@@ -65,6 +65,8 @@
       (setf (event-queue-tail eq) nil))
     res))
 
+(defgeneric event-queue-read-no-hang (event-queue))
+
 (defmethod event-queue-read-no-hang ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event just return NIL."
   (with-lock-held ((event-queue-lock eq))
