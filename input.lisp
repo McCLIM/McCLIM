@@ -56,6 +56,8 @@
          :accessor event-queue-port
          :documentation "The port which will be generating events for the queue.")))
 
+(defgeneric event-queue-read-no-hang/locked (event-queue))
+
 (defmethod event-queue-read-no-hang/locked ((eq standard-event-queue))
   (check-schedule eq)
   (let ((res (pop (event-queue-head eq))))
