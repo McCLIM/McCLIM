@@ -393,6 +393,8 @@
   (with-slots (queue) sheet
     (event-queue-read queue)))
 
+(defgeneric event-read-with-timeout (sheet &key timeout wait-function))
+
 (defmethod event-read-with-timeout ((sheet standard-sheet-input-mixin)
 				    &key (timeout nil) (wait-function nil))
   ;; This one is not in the spec ;-( --GB
