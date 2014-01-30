@@ -205,6 +205,8 @@
        (t (append-event))))
     (condition-notify (event-queue-processes eq))))
 
+(defgeneric event-queue-prepend (event-queue item))
+
 (defmethod event-queue-prepend ((eq standard-event-queue) item)
   "Prepend the item to the beginning of the queue."
   (with-lock-held ((event-queue-lock eq))
