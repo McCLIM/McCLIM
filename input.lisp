@@ -233,6 +233,8 @@
   (with-lock-held ((event-queue-lock eq))
     (find-if predicate (event-queue-head eq))))
 
+(defgeneric event-queue-listen (event-queue))
+
 (defmethod event-queue-listen ((eq standard-event-queue))
   (check-schedule eq)
   (not (null (event-queue-head eq))))
