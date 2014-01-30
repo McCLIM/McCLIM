@@ -243,6 +243,8 @@
   (/ (get-internal-real-time)
      internal-time-units-per-second))
 
+(defgeneric event-queue-listen-or-wait (event-queue &key timeout))
+
 (defmethod event-queue-listen-or-wait ((eq standard-event-queue) &key timeout)
   (check-schedule eq)
   (let ((lock (event-queue-lock eq)))
