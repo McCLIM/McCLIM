@@ -89,6 +89,8 @@
 		    (timeout (when schedule-time (- schedule-time now))))
 	       (condition-wait (event-queue-processes eq) lock timeout))))))))
 
+(defgeneric event-queue-read-with-timeout (event-queue timeout wait-function))
+
 ;;; XXX Should we do something with the wait function? I suspect that
 ;;; it's not compatible with the brave new world of native threads.
 
