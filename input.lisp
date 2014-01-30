@@ -217,6 +217,8 @@
            (push item (event-queue-head eq))))
     (condition-notify (event-queue-processes eq))))
 
+(defgeneric event-queue-peek (event-queue))
+
 (defmethod event-queue-peek ((eq standard-event-queue))
   (with-lock-held ((event-queue-lock eq))
     (check-schedule eq)
