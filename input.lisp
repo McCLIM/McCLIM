@@ -224,6 +224,8 @@
     (check-schedule eq)
     (first (event-queue-head eq))))
 
+(defgeneric event-queue-peek-if (predicate event-queue))
+
 (defmethod event-queue-peek-if (predicate (eq standard-event-queue))
   "Goes thru the whole event queue and returns the first event, which
    satisfies 'predicate' and leaves the event in the queue.
