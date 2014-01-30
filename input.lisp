@@ -293,6 +293,8 @@
         (dispatch-event sheet event))
       t)))
 
+(defgeneric schedule-event-queue (event-queue sheet event delay))
+
 ; ugh. FIXME when I work - build a priority queue or something
 (defmethod schedule-event-queue ((eq standard-event-queue) sheet event delay)
   (with-slots (schedule-time schedule) eq
