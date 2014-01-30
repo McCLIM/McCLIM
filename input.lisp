@@ -307,7 +307,6 @@
              (push event schedule)
              (setf schedule-time when))
             (t
-; (format *trace-output* "queue = ~A~%" schedule)
              (do* ((prev  (cdr schedule)  (cdddr prev))
                    (point (cddr schedule) (cdddr point))
                    (time  (car point)))
