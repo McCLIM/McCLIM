@@ -108,6 +108,8 @@
 	   (unless (condition-wait (event-queue-processes eq) lock timeout)
 	     (return)))))))
 
+(defgeneric event-queue-append (event-queue item))
+
 (defmethod event-queue-append ((eq standard-event-queue) item)
   "Append the item at the end of the queue. Does event compression."
   (with-lock-held ((event-queue-lock eq))
