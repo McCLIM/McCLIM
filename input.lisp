@@ -72,6 +72,8 @@
   (with-lock-held ((event-queue-lock eq))
     (event-queue-read-no-hang/locked eq)))
 
+(defgeneric event-queue-read (event-queue))
+
 (defmethod event-queue-read ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event, hang until here is one."
   (let ((lock (event-queue-lock eq)))
