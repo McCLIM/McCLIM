@@ -56,6 +56,9 @@
          :accessor event-queue-port
          :documentation "The port which will be generating events for the queue.")))
 
+;;; See if it's time to inject a scheduled event into the queue.
+(defgeneric check-schedule (event-queue))
+
 (defgeneric event-queue-read-no-hang/locked (event-queue))
 
 (defmethod event-queue-read-no-hang/locked ((eq standard-event-queue))
