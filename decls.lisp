@@ -543,6 +543,7 @@
 
 (defgeneric stream-input-buffer (stream))
 (defgeneric (setf stream-input-buffer) (buffer stream))
+(defgeneric stream-pointer-position (stream &key pointer))
 ;; (defgeneric (setf* stream-pointer-position))
 (defgeneric stream-set-input-focus (stream))
 (defgeneric stream-read-gesture 
