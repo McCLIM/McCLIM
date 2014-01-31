@@ -1,6 +1,7 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIMI; -*-
 
 ;;;  (c) copyright 2003 by Gilbert Baumann
+;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
