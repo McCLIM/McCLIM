@@ -280,39 +280,39 @@ the incoming selection."))
   (when (> by1 by2)
     (rotatef by1 by2)
     (rotatef bx1 bx2))
-  (let ((*lines* nil)
-        (*all-lines* nil))
+  (let ((lines nil)
+        (all-lines nil))
     (map-over-text record
                    (lambda (x y string ts record full-record)
-                     (let ((q (assoc y *lines*)))
+                     (let ((q (assoc y lines)))
                        (unless q
-                         (push (setf q (cons y nil)) *lines*))
+                         (push (setf q (cons y nil)) lines))
                        (push (list x y string ts record full-record)
                              (cdr q)))
                      (force-output *trace-output*)))
-    (setf *lines*
+    (setf lines
           (sort (mapcar (lambda (line)
                           (cons (car line)
                                 (sort (cdr line) #'< :key #'first)))
-                        *lines*)
+                        lines)
                 #'< :key #'car))
-    (setf *all-lines* *lines*)
+    (setf all-lines lines)
     ;; Nuke every line that is above by1
-    (setf *lines* (remove-if (lambda (line) (< (+ (car line) 3) by1)) *lines*))
+    (setf lines (remove-if (lambda (line) (< (+ (car line) 3) by1)) lines))
     ;; Also nuke all that are below by2
-    (setf *lines* (remove-if (lambda (line) (> (- (car line) 10) by2)) *lines*))
+    (setf lines (remove-if (lambda (line) (> (- (car line) 10) by2)) lines))
     ;; Special case:
-    (when (= 1 (length *lines*))
+    (when (= 1 (length lines))
       (psetf bx1 (min bx1 bx2)
              bx2 (max bx1 bx2)))
     ;; Then, in the first line find the index farthest to the right
     ;; which is still less than bx1.
     (let ((start-i 0)
-          (start-record (fifth (cadar *lines*)))
+          (start-record (fifth (cadar lines)))
           (end-i 0)
-          (end-record (fifth (cadar (last *lines*)))))
+          (end-record (fifth (cadar (last lines)))))
       
-      (loop for chunk in (cdr (first *lines*)) do
+      (loop for chunk in (cdr (first lines)) do
         (destructuring-bind (x y string ts record full-record) chunk
           (declare (ignorable x y string ts record full-record))
           (loop for i to (length string) do
@@ -325,7 +325,7 @@ the incoming selection."))
       ;; which still is greater than bx2.  Or put differently: Search
       ;; from the left and while we are still in bounds maintain end-i
       ;; and end-record.
-      (loop for chunk in (cdr (car (last *lines*))) do
+      (loop for chunk in (cdr (car (last lines))) do
         (destructuring-bind (x y string ts record full-record) chunk
           (declare (ignorable x y string ts record full-record))
           (loop for i to (length string) do
@@ -367,7 +367,7 @@ the incoming selection."))
                                                 :start (car marked-extent)
                                                 :end (cdr marked-extent)))
                                marks)) ))))
-          (loop for line in *all-lines* do
+          (loop for line in all-lines do
             (loop for chunk in (cdr line) do
               (visit chunk)) )
           (setf (slot-value stream 'markings) (reverse marks)))))))
