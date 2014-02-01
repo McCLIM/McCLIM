@@ -184,6 +184,8 @@ the incoming selection."))
 
 (defgeneric eos/shift-release (pane event))
 
+(defgeneric eos/shift-drag (pane event))
+
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                            (event pointer-button-press-event))  
   (if (eql (event-modifier-state event) +shift-key+)
