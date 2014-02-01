@@ -225,6 +225,8 @@
 	       (coordinate= (cadr coord-seq) (car (last coord-seq)))))
   (make-bezier-thing* 'bezier-area coord-seq))
 
+(defgeneric segments (area))
+
 (defmethod segments ((area bezier-area))
   (let ((tr (transformation area)))
     (mapcar (lambda (s) (transform-segment tr s)) (%segments area))))
