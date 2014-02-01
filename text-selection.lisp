@@ -180,6 +180,8 @@ the incoming selection."))
                           ((medium-background medium) *marked-background*))
                      (call-next-method pane R))))))))))
 
+(defgeneric eos/shift-click (pane event))
+
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                            (event pointer-button-press-event))  
   (if (eql (event-modifier-state event) +shift-key+)
