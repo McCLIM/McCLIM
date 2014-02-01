@@ -237,6 +237,8 @@ keys read."))
 (defun repush-gesture (gesture buffer)
   (event-queue-prepend buffer gesture))
 
+(defgeneric convert-to-gesture (event))
+
 (defmethod convert-to-gesture ((ev event))
   nil)
 
