@@ -117,6 +117,8 @@
 (defclass segments-mixin (bounding-rectangle-mixin)
   ((%segments :initarg :segments :initform '() :reader %segments)))
 
+(defgeneric compute-bounding-rectangle* (object))
+
 (defmethod compute-bounding-rectangle* ((segments-mixin segments-mixin))
   (multiple-value-bind (final-min-x final-min-y final-max-x final-max-y)
       (segment-bounding-rectangle (car (%segments segments-mixin)))
