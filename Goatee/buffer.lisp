@@ -367,6 +367,8 @@
   (:documentation "A delimited region in a buffer.  The concept follows extents
   in XEmacs, though the interface is more in line with Common Lisp."))
 
+(defgeneric record-extent-lines (extent))
+
 (defmethod initialize-instance :after ((obj extent) 
 				       &key start-line 
 				       start-pos
@@ -410,6 +412,8 @@
 	do (push extent (extents line))
 	finally (push extent (extents line))))
 
+(defgeneric detach-extent (extent))
+
 (defmethod detach-extent ((extent extent))
   (loop for line = (line (bp-start extent)) then (next line)
 	until (eq line (lines (bp-end extent)))
@@ -418,10 +422,14 @@
   (setf (line (bp-start extent)) nil)
   (setf (line (bp-end extent)) nil))
 
+(defgeneric start-state (extent))
+
 (defmethod start-state ((extent extent))
   (if (typep (bp-start extent) 'fixed-buffer-pointer)
       :closed
       :open))
+
+(defgeneric (setf start-state) (new-val extent))
 
 (defmethod (setf start-state) (new-val (extent extent))
   (with-slots (bp-start)
@@ -432,10 +440,14 @@
 	(when (not (typep bp-start 'fixed-buffer-pointer))
 	  (setf bp-start (change-class bp-start 'fixed-buffer-pointer))))))
 
+(defgeneric end-state (extent))
+
 (defmethod end-state ((extent extent))
   (if (typep (bp-end extent) 'fixed-buffer-pointer)
       :open
       :closed))
+
+(defgeneric (setf end-state) (new-val extent))
 
 (defmethod (setf end-state) (new-val (extent extent))
   (with-slots (bp-end)
