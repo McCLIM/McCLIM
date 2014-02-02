@@ -91,6 +91,8 @@ of size ~S"
 	(setf (gap obj) 0)
 	(setf (gap-size obj) (size-increment obj)))))
 
+(defgeneric char-ref (buffer position))
+
 (defmethod print-object ((object flexivector) stream)
   (print-unreadable-object (object stream :type t)
     (write-char #\" stream)

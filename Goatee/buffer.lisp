@@ -105,8 +105,6 @@
 (defmethod last-line-p ((line buffer-line))
   (null (next line)))
 
-(defgeneric char-ref (buffer position))
-
 (defmethod char-ref ((buf basic-buffer) position)
   (char-ref (line position) (pos position)))
 
