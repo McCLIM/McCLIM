@@ -174,22 +174,20 @@ of size ~S"
     (update-flexivector-for-insertion buf len))
   buf)
 
-(defgeneric delete-element (buf &optional n &key position))
+(defgeneric delete-element (buf &key count position))
 
-
-(defmethod delete-element ((buf flexivector-base)  &optional (n 1)
-			   &key (position 0))
+(defmethod delete-element ((buf flexivector-base) &key (count 1) (position 0))
   (ensure-point-gap buf position 0)
-  (if (> n 0)
+  (if (> count 0)
       (progn
-	(incf (gap-size buf) n)
-	(decf (size buf) n))
-      (update-flexivector-for-insertion buf n)))
+	(incf (gap-size buf) count)
+	(decf (size buf) count))
+      (update-flexivector-for-insertion buf count)))
 
 (defgeneric delete-char (buf &optional n &key position))
 
 (defmethod delete-char ((buf flexivector) &optional (n 1) &key (position 0))
-  (delete-element buf n :position position))
+  (delete-element buf :count n :position position))
 
 (defgeneric flexivector-string (buf &key start end))
 
