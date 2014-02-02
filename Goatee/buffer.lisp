@@ -221,9 +221,13 @@
 ;;; ... but we'll keep 'em around; these might be useful for basic-buffers even
 ;;; though they're overridden by methods on editable-buffer.
 
+(defgeneric beginning-of-buffer* (buffer))
+
 (defmethod beginning-of-buffer* ((buf basic-buffer))
   (values (dbl-head (lines buf))
 	  0))
+
+(defgeneric end-of-buffer* (buffer))
 
 (defmethod end-of-buffer* ((buf basic-buffer))
   (loop for line = (dbl-head (lines buf)) then (next line)
