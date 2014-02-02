@@ -72,8 +72,12 @@
 (defclass dbl-list-head (dbl-super)
   ())
 
+(defgeneric dbl-head (dbl-list))
+
 (defmethod dbl-head ((dbl-list dbl-list-head))
   (next dbl-list))
+
+(defgeneric (setf dbl-head) (new-value dbl-list))
 
 (defmethod (setf dbl-head) (val (dbl-list dbl-list-head))
   (setf (next dbl-list) val))
