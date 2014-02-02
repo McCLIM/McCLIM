@@ -25,6 +25,8 @@
    (pos :accessor pos :initarg :pos))
   (:documentation "A location in a buffer."))
 
+(defgeneric location* (bp))
+
 (defmethod location* ((bp location))
   (values (line bp) (pos bp)))
 
@@ -109,6 +111,8 @@
 
 (defmethod char-ref ((buf basic-buffer) position)
   (char-ref (line position) (pos position)))
+
+(defgeneric char-ref* (buffer line pos))
 
 (defmethod char-ref* ((buf basic-buffer) line pos)
   (char-ref line pos))
@@ -216,6 +220,7 @@
 ;;; The need for these should go away once we have real buffer pointers...
 ;;; ... but we'll keep 'em around; these might be useful for basic-buffers even
 ;;; though they're overridden by methods on editable-buffer.
+
 (defmethod beginning-of-buffer* ((buf basic-buffer))
   (values (dbl-head (lines buf))
 	  0))
