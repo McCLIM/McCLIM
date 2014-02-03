@@ -507,6 +507,9 @@
 	   (1- size))
 	  (t size))))
 
+(defgeneric map-over-extents-at-location*
+    (func line pos &key start-state end-state))
+
 (defmethod map-over-extents-at-location* (func (line extent-buffer-line) pos
 					  &key
 					  (start-state nil start-statep)
