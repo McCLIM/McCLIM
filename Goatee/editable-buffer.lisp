@@ -209,6 +209,8 @@
 			  (return (values current-line
 					  (- current-pos remaining))))))))
 
+(defgeneric forward-char (buffer n &rest key-args))
+
 (defmethod forward-char ((buf basic-buffer) n &rest key-args)
   (multiple-value-bind (new-line new-pos)
       (apply #'forward-char* buf n key-args)
