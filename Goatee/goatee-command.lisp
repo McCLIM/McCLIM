@@ -253,7 +253,7 @@
   (unless (goal-column-preserving-p (last-command *area*))
     (setf (goal-column *area*) (pos (point *buffer*))))
   (setf (point* *buffer*)
-	(next-line *buffer* n :pos (goal-column *area*))))
+	(next-line *buffer* :count n :pos (goal-column *area*))))
 
 (defun goal-column-preserving-p (cmd)
   (member cmd '(up-line down-line)))
