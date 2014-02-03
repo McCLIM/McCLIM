@@ -170,6 +170,8 @@
 	  do (flexivector-string-into line result :start1 line-in-string))
     result))
 
+(defgeneric forward-char* (buffer n &key position line pos))
+
 (defmethod forward-char* ((buf editable-buffer) n
 			  &key (position (point buf)) line (pos 0))
   (multiple-value-bind (line pos)
