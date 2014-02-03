@@ -463,6 +463,8 @@
 	       (when line-changed
 		 (redisplay-line line stream))))))
 
+(defgeneric get-line-differences (line))
+
 (defmethod get-line-differences ((line screen-line))
   "Returns: line is different (t or nil)
     end of current (screen) unchanged beginning
