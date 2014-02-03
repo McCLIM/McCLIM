@@ -49,6 +49,8 @@
 
 ;;; A moment of convenience, a lifetime of regret...
 
+(defgeneric point* (buffer))
+
 (defmethod point* ((buf editable-buffer))
   (let ((point (point buf)))
     (values (line point) (pos point))))
