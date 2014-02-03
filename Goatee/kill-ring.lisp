@@ -42,12 +42,16 @@
 (defun make-ring ()
   (make-instance 'ring))
 
+(defgeneric forward (ring))
+
 (defmethod forward ((r ring))
   "Move forward in a ring."
   (let ((next-element (next (or (last-access r)
 				r))))
     (setf (last-access r) (or next-element
 			      (dbl-head r)))))
+
+(defgeneric backward (ring))
 
 (defmethod backward ((r ring))
   "Move backward in a ring."
