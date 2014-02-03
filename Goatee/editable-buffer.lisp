@@ -309,6 +309,8 @@ if beyond the actual line's maximum)."))
 				     (pos start)))))
       (buffer-delete-char* buf (line start) (pos start) (pos end)))))
 
+(defgeneric clear-buffer (buffer))
+
 (defmethod clear-buffer ((buf editable-buffer))
   (delete-region buf (buffer-start buf) (buffer-end buf))
   (setf (extents (line (buffer-start buf))) nil))
