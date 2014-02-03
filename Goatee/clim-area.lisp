@@ -61,6 +61,8 @@
 		   :documentation "Default background color (ink) for area"))
   (:documentation "A Goatee editable area implemented as an output record."))
 
+(defgeneric initialize-area-from-buffer (area buffer))
+
 (defmethod initialize-instance :after ((area simple-screen-area)
 				       &key area-stream
 				       (cursor-visibility :on))
