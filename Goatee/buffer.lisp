@@ -132,7 +132,7 @@
 			 :initial-store (flexivector-string line :start pos)
 			 :tick (incf (tick buf)))))
 	  ;; delete to end of line
-	  (delete-char line (- (size line) pos) :position pos)
+	  (delete-char line :count (- (size line) pos) :position pos)
 	  (insert line (newline-character buf) :position pos)
 	  (setf (tick line) (incf (tick buf)))
 	  (dbl-insert-after new-line line)
@@ -183,7 +183,7 @@
 	  (newline-character (newline-character buffer)))
       (if (eql (char-ref this-line (1- line-size)) newline-character)
 	  (progn
-	    (delete-char this-line 1 :position (1- line-size))
+	    (delete-char this-line :count 1 :position (1- line-size))
 	    (decf (slot-value buffer 'size))
 	    (when next-line
 	      (loop for i from 0 below (size next-line)
@@ -205,13 +205,13 @@
 	    (progn
 	      (when (> (+ pos n) (line-last-point line))
 		(error 'buffer-bounds-error :buffer buffer :line line :pos pos))
-	      (delete-char line n :position pos)
+	      (delete-char line :count n :position pos)
 	      (decf (slot-value buffer 'size) n)
 	      (values line pos))
 	    (progn
 	      (when (< (+ pos n) 0)
 		(error 'buffer-bounds-error :buffer buffer :line line :pos pos))
-	      (delete-char line n :position pos)
+	      (delete-char line :count n :position pos)
 	      (incf (slot-value buffer 'size) n)
 	      (values line (+ pos n))))
     (setf (tick line) (incf (tick buffer)))))

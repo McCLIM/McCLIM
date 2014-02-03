@@ -123,16 +123,16 @@
        finally (return (buffer-insert* buffer s line pos
 				       :start search-start :end end)))))
 
-(defmethod delete-char ((buf editable-buffer) &optional (n 1)
-			&key position line (pos 0))
+(defmethod delete-char ((buf editable-buffer)
+			&key (count 1) position line (pos 0))
   (cond (position
 	 (setf (point* buf) (location* position)))
 	(line
 	 (setf (point* buf) (values line pos))))
   (multiple-value-bind (line pos)
       (point* buf)
-    (if (>= n 0)
-	(loop with remaining = n
+    (if (>= count 0)
+	(loop with remaining = count
 	      for last-point = (line-last-point line)
 	      while (> (+ remaining pos) last-point)
 	      do (let ((del-chars (- last-point pos)))
@@ -142,7 +142,7 @@
 		   (setf (values line pos) (buffer-close-line* buf line 1)) 
 		   (decf remaining (1+ del-chars)))
 	    finally (return (buffer-delete-char* buf line pos remaining)))
-	(loop with remaining = (- n)
+	(loop with remaining = (- count)
 	      while (< (- pos remaining) 0)
 	      do (progn
 		   (buffer-delete-char* buf line pos (- pos))

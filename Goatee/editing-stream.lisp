@@ -283,7 +283,7 @@
 	    (multiple-value-bind (line pos)
 		(location*-offset buf buffer-start)
 	      (when (> del-chars 0)
-		(delete-char buf del-chars :line line :pos pos))
+		(delete-char buf :count del-chars :line line :pos pos))
 	      ;; location should be preserved across the delete-char, but
 	      ;; it would be safest to use a buffer pointer or something...
 	      (let ((extent (and extent-class

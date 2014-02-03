@@ -184,10 +184,11 @@ of size ~S"
 	(decf (size buf) count))
       (update-flexivector-for-insertion buf count)))
 
-(defgeneric delete-char (buf &optional n &key position))
+(defgeneric delete-char (buf &key count position pos))
 
-(defmethod delete-char ((buf flexivector) &optional (n 1) &key (position 0))
-  (delete-element buf :count n :position position))
+(defmethod delete-char ((buf flexivector) &key (count 1) (position 0) pos)
+  (declare (ignore pos))
+  (delete-element buf :count count :position position))
 
 (defgeneric flexivector-string (buf &key start end))
 

@@ -117,7 +117,7 @@
   (delete-char *buffer*))
 
 (defun backwards-delete-character (&key &allow-other-keys)
-  (delete-char *buffer* -1))
+  (delete-char *buffer* :count -1))
 
 (defun forward-character (&key &allow-other-keys)
   (setf (point* *buffer*) (forward-char* *buffer* 1)))
