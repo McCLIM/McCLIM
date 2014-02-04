@@ -34,6 +34,7 @@
 	(present-acceptably-to-string object type
 				      +textual-view+ ; XXX
 				      type)
+      (declare (ignore accept-object))
       ;; XXX accept-object
       (insert *buffer* printed-rep :line line :pos pos))))
 
