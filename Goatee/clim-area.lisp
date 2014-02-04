@@ -521,8 +521,7 @@
 	    and do (setq line-width 0)
 	  else
 	   do (incf line-width char-width)
-	  end))
-  )
+	  end)))
 
 (defgeneric line-update-cursor (line stream))
 
