@@ -127,6 +127,8 @@
       (setf (stream-insertion-pointer snapshot)
 	    (offset-location* buffer point-line point-pos)))))
 
+(defgeneric update-input-editing-stream (stream))
+
 (defmethod update-input-editing-stream ((stream goatee-input-editing-mixin))
   (let ((area (area stream))
 	(snapshot (snapshot stream)))
