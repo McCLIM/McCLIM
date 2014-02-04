@@ -448,6 +448,8 @@
 
 (defgeneric maybe-update-line-dimensions (line))
 
+(defgeneric redisplay-line (line stream))
+
 (defmethod redisplay-area ((area simple-screen-area))
   (let ((stream (area-stream area)))
     (multiple-value-bind (area-unchanged
