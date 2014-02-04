@@ -82,6 +82,8 @@
 
 (defvar *error-fallthrough* nil)
 
+(defgeneric execute-gesture-command (gesture area table))
+
 (defmethod execute-gesture-command (gesture (area editable-area) table)
   (let ((command (lookup-gesture-command gesture table)))
     (if command
