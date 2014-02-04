@@ -85,9 +85,10 @@
 		   (,continuation)))
 	       (,continuation)))))))
 
-(defgeneric ptype-specializer (type)
-  (:documentation "The specializer to use for this type in a presentation
-method lambda list"))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defgeneric ptype-specializer (type)
+    (:documentation "The specializer to use for this type in a presentation
+method lambda list")))
 
 ;;; Metaclass for presentation types.  For presentation types not associated
 ;;; with CLOS classes, objects with this metaclass are used as a proxy for the
