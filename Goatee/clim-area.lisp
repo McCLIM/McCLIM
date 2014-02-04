@@ -446,6 +446,8 @@
 				      area-beginning-end line
 				      buffer-beginning-end buffer-line))))))
 
+(defgeneric maybe-update-line-dimensions (line))
+
 (defmethod redisplay-area ((area simple-screen-area))
   (let ((stream (area-stream area)))
     (multiple-value-bind (area-unchanged
