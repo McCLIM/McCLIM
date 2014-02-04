@@ -406,6 +406,8 @@
 
 (defgeneric redisplay-area (area))
 
+(defgeneric get-area-differences (area))
+
 (defmethod get-area-differences ((area simple-screen-area))
   (let ((buf-start (line (area-bp-start area)))
 	(buf-end (line (area-bp-end area))))
