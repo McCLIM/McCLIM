@@ -525,6 +525,8 @@
 
 (defgeneric line-update-cursor (line stream))
 
+(defgeneric erase-line (line medium left right))
+
 ;;; Two steps to redisplaying a line: figure out if the
 ;;; ascent/descent/baseline have changed, then render the line, incrementally
 ;;; or not.
