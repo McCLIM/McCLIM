@@ -1293,6 +1293,9 @@ have a `pointer-documentation-pane' as pointer documentation,
   (with-output-to-pointer-documentation (stream frame)
     (write-string string stream)))
 
+(defgeneric frame-input-context-track-pointer
+    (frame input-context stream event))
+
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)
      input-context
