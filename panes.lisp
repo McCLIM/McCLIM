@@ -4,8 +4,8 @@
 ;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2001 by
-;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2000, 2001,2014 by
+;;;           Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2001 by
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
