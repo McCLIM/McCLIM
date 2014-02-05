@@ -854,7 +854,6 @@ history will be unchanged."
 	 :input-sensitizer #'(lambda (stream cont)
 			       (with-output-as-presentation
 				   (stream sensitizer-object sensitizer-type)
-				 (declare (ignore stream))
 				 (funcall cont))))
       (with-input-position (stream)	; support for calls to replace-input
         (when (and insert-default
