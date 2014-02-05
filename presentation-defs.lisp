@@ -251,6 +251,7 @@
                ((and (consp and-type) (eq (car and-type) 'not))
                 (multiple-value-bind (yp sp)
                     (presentation-subtypep type (cadr and-type))
+		  (declare (ignore sp))
                   (if yp
                       (return-from presentation-subtypep (values nil t))
                       (setq result nil))))
@@ -281,6 +282,7 @@
          (assert (not (eq super-name 'and)))
          (multiple-value-bind (yp sp)
              (presentation-subtypep (car type-parameters) maybe-supertype)
+	   (declare (ignore sp))
            (return-from presentation-subtypep (values yp yp))))))
     (map-over-presentation-type-supertypes
      #'(lambda (name massaged)
