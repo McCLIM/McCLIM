@@ -355,9 +355,9 @@ spatially organized data structure.
 
 (defun state-matches-stream-p (state stream)
   (multiple-value-bind (cx cy) (stream-cursor-position stream)
+    (declare (ignore cy))
     (with-sheet-medium (medium stream)
       ;; Note: We don't match the y coordinate.
-      (declare (ignore cy))
       (match-output-records state :cursor-x cx))))
 
 (defclass updating-output-record-mixin (updating-output-map-mixin
