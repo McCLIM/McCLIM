@@ -777,6 +777,7 @@ standardised form."))
 (defgeneric read-frame-command (frame &key stream))
 (defgeneric run-frame-top-level (frame &key &allow-other-keys))
 (defgeneric command-enabled (command-name frame))
+(defgeneric (setf command-enabled) (enabled command-name frame))
 (defgeneric (setf command-name) (enabled command-name frame))
 (defgeneric display-command-menu (frame stream &key command-table
                                         initial-spacing row-wise max-width
