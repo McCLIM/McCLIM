@@ -1149,8 +1149,6 @@ protocol retrieving gestures from a provided string."))
 					   stream
 					   state)))
 
-(defgeneric highlight-output-record-tree (record stream state))
-
 (defmethod highlight-output-record-tree (record stream state)
   (declare (ignore record stream state))
   (values))

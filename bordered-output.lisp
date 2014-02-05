@@ -631,6 +631,8 @@
   (format *trace-output* "b-o-r ~A ~A ~A~%" record stream state)
   (call-next-method))
 
+(defgeneric highlight-output-record-tree (record stream state))
+
 ;;; Suppress highlighting of the border decoration itself:
 (defmethod highlight-output-record-tree
     ((record bordered-output-record) stream state)
