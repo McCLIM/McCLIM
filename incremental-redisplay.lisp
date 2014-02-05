@@ -2,6 +2,7 @@
 
 ;;;  (c) copyright 2002 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2002-2004 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
