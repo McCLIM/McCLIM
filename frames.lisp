@@ -165,6 +165,8 @@ documentation produced by presentations.")
 		  :initarg :height
 		  :initform nil)))
 
+(defgeneric frame-geometry* (frame))
+
 (defmethod frame-geometry* ((frame standard-application-frame))
   "-> width height &optional top left"
   (let ((pane (frame-top-level-sheet frame)))
