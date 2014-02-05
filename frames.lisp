@@ -468,6 +468,8 @@ documentation produced by presentations.")
 
 (defparameter +default-prompt-style+ (make-text-style :sans-serif :bold :normal))
 
+(defgeneric execute-frame-command (frame command))
+
 (defmethod default-frame-top-level
     ((frame application-frame)
      &key (command-parser 'command-line-command-parser)
