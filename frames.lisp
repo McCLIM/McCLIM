@@ -1490,19 +1490,6 @@ have a `pointer-documentation-pane' as pointer documentation,
       (union-with-bounds new-presentation)
       (values x1 y1 x2 y2))))
 
-(defun make-drag-and-drop-feedback-function (from-presentation)
-  (multiple-value-bind (record-x record-y)
-      (output-record-position from-presentation)
-    (let ((current-to-presentation nil)
-	  (current-from-higlighting nil))
-      (lambda (frame from-presentation to-presentation initial-x initial-y
-	       x y event)
-	(let ((dx (- record-x initial-x))
-	      (dy (- record-y initial-y)))
-	  (typecase event
-	    (null
-	     ())))))))
-
 (defmethod frame-drag-and-drop-feedback
     ((frame standard-application-frame) from-presentation stream
      initial-x initial-y x y state)
