@@ -1276,6 +1276,8 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defun invalidate-translator-caches ()
   (incf *current-translator-cache-generation*))
 
+(defgeneric presentation-translators-cache (table))
+
 (defmethod presentation-translators-cache ((table translator-table))
   (with-slots ((cache presentation-translators-cache)
 	       (generation translator-cache-generation))
