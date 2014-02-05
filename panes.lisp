@@ -612,6 +612,8 @@ order to produce a double-click")
 	foo     (clamp user-foo     min-foo max-foo))
   (values foo min-foo max-foo))
 
+(defgeneric merge-user-specified-options (pane sr))
+
 (defmethod merge-user-specified-options ((pane space-requirement-options-mixin)
 					 sr)
   ;; ### I want proper error checking and in case there is an error we 
