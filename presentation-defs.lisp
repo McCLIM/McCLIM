@@ -2293,6 +2293,7 @@ protocol retrieving gestures from a provided string."))
 				       &key documentation
 				       pointer-documentation
 				       destination-translator)
+  (declare (ignore destination-translator))
   ;; This is starting to smell...
   (flet ((make-adapter (func)
 	   (lambda (object &rest args &key presentation &allow-other-keys)
