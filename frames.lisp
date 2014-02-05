@@ -4,7 +4,8 @@
 ;;;  (c) copyright 2000 by 
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2000, 2014 by 
+;;;           Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2004 by
 ;;;           Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 
