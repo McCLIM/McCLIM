@@ -291,6 +291,8 @@ documentation produced by presentations.")
 		     (frame-panes frame))
     panes))
 
+(defgeneric find-pane-named (frame pane-name))
+
 (defmethod get-frame-pane ((frame application-frame) pane-name)
   (let ((pane (find-pane-named frame pane-name)))
     (if (typep pane 'clim-stream-pane)
