@@ -318,9 +318,6 @@ that has no default is supplied with '*"
     (return-from map-over-lambda-list ll))
   (loop for args-tail = ll then (cdr args-tail)))
 
-(defun make-keyword (sym)
-  (intern (symbol-name sym) :keyword))
-
 (defun cull-keywords (keys prop-list)
   (let ((plist (copy-list prop-list)))
     (loop for key in keys

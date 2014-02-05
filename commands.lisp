@@ -744,10 +744,6 @@ examine the type of the command menu item to see if it is
 		 (accept ,ptype :stream ,stream :default ,command-arg
 			 ,@args)))))))
 
-
-(defun make-keyword (sym)
-  (intern (symbol-name sym) :keyword))
-
 (defun make-key-acceptors (stream keyword-args key-results)
   ;; We don't use the name as a variable, and we do want a symbol in the
   ;; keyword package.
