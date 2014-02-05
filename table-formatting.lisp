@@ -102,6 +102,10 @@ table cell as argument."
            'formatting-column
            'formatting-item-list)))
 
+(defgeneric invoke-formatting-cell (stream cont
+                                    &key align-x align-y min-width min-height record-type
+                                    &allow-other-keys))
+
 (defmethod invoke-formatting-cell (stream cont
                                    &key (align-x :left)
                                         (align-y :baseline)
@@ -121,10 +125,6 @@ table cell as argument."
    :align-y align-y
    :min-width (parse-space stream min-width :horizontal)
    :min-height (parse-space stream min-height :vertical)))
-
-(defgeneric invoke-formatting-cell (stream cont
-                                    &key align-x align-y min-width min-height record-type
-                                    &allow-other-keys))
 
 (defmacro formatting-cell ((&optional (stream t)
 				      &rest more
