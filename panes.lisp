@@ -1203,6 +1203,8 @@ order to produce a double-click")
                  :max-minor 0
                  :minor     0))))))
 
+  (defgeneric box-layout-mixin/xically-allocate-space-aux* (box width height))
+
   (defmethod box-layout-mixin/xically-allocate-space-aux* ((box box-layout-mixin) width height)
    (declare (ignorable width height))
    (let ((children (reverse (sheet-enabled-children box))))
