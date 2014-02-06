@@ -2060,6 +2060,8 @@ order to produce a double-click")
 			       0))
 		    (round (- new-value)))))))
 
+(defgeneric scroller-pane/horizontal-drag-callback (pane new-value))
+
 (defmethod scroller-pane/horizontal-drag-callback ((pane scroller-pane) new-value)
   "Callback for the horizontal scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
