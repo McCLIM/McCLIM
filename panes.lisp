@@ -2261,6 +2261,8 @@ order to produce a double-click")
 (defmacro labelling ((&rest options) &body contents)
   `(make-pane 'label-pane ,@options :contents (list ,@contents)))
 
+(defgeneric label-pane-margins (pane))
+
 (defmethod label-pane-margins ((pane label-pane))
   (let ((m0 2)
         (a (text-style-ascent (pane-text-style pane) pane))
