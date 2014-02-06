@@ -1520,6 +1520,8 @@ order to produce a double-click")
                              allot qs)))))
           allot)) )
 
+(defgeneric table-pane-row-space-requirement (pane i))
+
 (defmethod table-pane-row-space-requirement ((pane table-pane) i)
   (with-slots (array) pane
     (stack-space-requirements-horizontally
