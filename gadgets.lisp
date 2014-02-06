@@ -2141,7 +2141,7 @@ Returns :select or :deselect, depending on what action was performed."
 (defun generic-list-pane-deselect-items (pane item-values)
   "Remove a set of items from the current selection"
   (when (not (list-pane-exclusive-p pane))
-    (setf (gadget-value pane :invoke-calback t)
+    (setf (gadget-value pane :invoke-callback t)
           (labels ((fun (item-values result)
                      (if (null item-values)
                          result
