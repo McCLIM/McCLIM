@@ -2305,6 +2305,7 @@ if INVOKE-CALLBACK is given."))
 
 (defmethod (setf list-pane-items) :after
     (newval (pane generic-list-pane) &key invoke-callback)
+  (declare (ignore invoke-callback))
   (change-space-requirements
    pane
    :height (space-requirement-height (compose-space pane)))
