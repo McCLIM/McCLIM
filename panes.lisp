@@ -939,23 +939,6 @@ order to produce a double-click")
 	(clamp width  (sr-min-width pane)  (sr-max-width pane))
 	(clamp height (sr-min-height pane) (sr-max-height pane)))))
 
-#+nil ; old
-(defmethod handle-event ((pane top-level-sheet-pane)
-			 (event window-configuration-event))
-  (let ((x (window-configuration-event-x event))
-	(y (window-configuration-event-y event))
-	(width (window-configuration-event-width event))
-        (height (window-configuration-event-height event)))
-    ;; avoid going into an infinite loop by not using (setf sheet-transformation)
-    (setf (slot-value pane 'transformation)
-	  (make-translation-transformation x y))
-    (invalidate-cached-transformations pane)
-    ;; avoid going into an infinite loop by not using (setf sheet-region)
-    (setf (slot-value pane 'region)
-	  (make-bounding-rectangle 0 0 width height))
-    (invalidate-cached-regions pane)
-    (allocate-space pane width height)))
-
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-configuration-event))
   (let ((x (window-configuration-event-x event))
@@ -1289,11 +1272,6 @@ order to produce a double-click")
              for minor in minors
              do
              (when (box-client-pane child)
-               #+NIL
-               (format *trace-output* "~&;;   child ~S at 0, ~D ~D x ~D(~D)~%;;       ~S~%"
-                       (box-client-pane child)
-                       x width height real-height
-                       (compose-space (box-client-pane child)))
                (layout-child (box-client-pane child)
                              (pane-align-x (box-client-pane child))
                              (pane-align-y (box-client-pane child))
@@ -1315,11 +1293,6 @@ order to produce a double-click")
              for minor in minors
              do
              (when (box-client-pane child)
-               #+NIL
-               (format *trace-output* "~&;;   child ~S at 0, ~D ~D x ~D(~D)~%;;       ~S~%"
-                       (box-client-pane child)
-                       x width height real-height
-                       (compose-space (box-client-pane child)))
                (layout-child (box-client-pane child)
                              :expand
                              :expand
@@ -1329,18 +1302,6 @@ order to produce a double-click")
                              ((lambda (major minor) height width) real-height height) ))
              (incf x major)
              (incf x major-spacing)))))))
-
-;; #+nil
-(defmethod note-sheet-enabled :before ((pane pane))
-  ;; hmmm
-  (when (panep (sheet-parent pane))
-    (change-space-requirements pane)) )
-
-;; #+nil
-(defmethod note-sheet-disabled :before ((pane pane))
-  ;; hmmm
-  (when (panep (sheet-parent pane))
-    (change-space-requirements pane)) )
 
 (defmethod reorder-sheets :after ((pane box-layout-mixin) new-order)
   ;; Bring the order of the clients in sync with the new order of the
@@ -1538,9 +1499,6 @@ order to produce a double-click")
                                       (space-requirement-min-major sr))
                                   (space-requirement-major sr))))
                         srs)))
-          #+nil
-          (format t "~&;; ~S: allot=~S, wanted=~S, excess=~S, qs=~S~%"
-                  'allot-space-xically allot wanted excess qs)
           (let ((sum (reduce #'+ qs)))
             (cond ((zerop sum)
                    (let ((n (length qs)))
@@ -1595,8 +1553,6 @@ order to produce a double-click")
                 :height     (+ (space-requirement-height c) ys)
                 :min-height (+ (space-requirement-min-height c) ys)
                 :max-height (+ (space-requirement-max-height c) ys))))
-          #+nil
-          (format *trace-output* "~%;;; TABLE-PANE sr = ~S." res)
           res)))))
 
 (defmethod allocate-space ((pane table-pane) width height)
@@ -1614,15 +1570,6 @@ order to produce a double-click")
                     (setq csrs (loop for j from 0 below (array-dimension array 1)
                                      collect (table-pane-col-space-requirement pane j)))
                     (- width xs))))
-        #+nil
-        (progn
-          (format t "~&;; row space requirements = ~S." rsrs)
-          (format t "~&;; col space requirements = ~S." csrs)
-          (format t "~&;; row allotment: needed = ~S result = ~S (sum ~S)." height rows (reduce #'+ rows))
-          (format t "~&;; col allotment: needed = ~S result = ~S (sum ~S)." width cols (reduce #'+ cols))
-          (format t "~&;; align-x = ~S, align-y ~S~%"
-                  (pane-align-x pane)
-                  (pane-align-y pane)))
         ;; now finally layout each child
         (loop
             for y = 0 then (+ y h y-spacing)
@@ -1645,13 +1592,6 @@ order to produce a double-click")
   (if grid
       `(make-pane 'grid-pane  ,@options :contents (list ,@contents))
       `(make-pane 'table-pane ,@options :contents (list ,@contents))))
-
-
-
-;(defmethod sheet-adopt-child :before ((table table-pane) child)
-;  (declare (ignore child))
-;  (when (= (length (sheet-children table)) (table-pane-number table))
-;    (error "The table can't adopt more childs than specified by the table-number")))
 
 (defmethod sheet-disowned-child :before ((table table-pane) child
 					 &key (error-p t))
@@ -1733,9 +1673,7 @@ order to produce a double-click")
   (declare (ignorable thickness contents))
   (with-slots (user-width user-min-width user-max-width
                user-height user-min-height user-max-height)
-      spacing
-    #+nil(setf user-width  (max (or thickness 0) (or user-width 0)))
-    #+nil(setf user-height (max (or thickness 0) (or user-height 0)))))
+      spacing))
 
 (defmethod compose-space ((pane spacing-pane) &key width height)
   (declare (ignore width height))
@@ -1908,17 +1846,7 @@ order to produce a double-click")
                                    child-height)
                                 (- child-height viewport-height)
                                 vertical-scroll))))
-      (scroller-pane/update-scroll-bars (sheet-parent pane))
-      #+NIL
-      (scroll-extent child
-                     (if (> (+ horizontal-scroll viewport-width)
-                            child-width)
-                         (max 0 (- child-width viewport-width))
-                         horizontal-scroll)
-                     (if (> (+ vertical-scroll viewport-height)
-                            child-height)
-                         (max 0 (- child-height viewport-height))
-                         vertical-scroll)))))
+      (scroller-pane/update-scroll-bars (sheet-parent pane)))))
 
 ;;;;
 ;;;; SCROLLER PANE
@@ -2665,13 +2593,6 @@ to computed distance to scroll in response to mouse wheel events."))
     (prog1 (port-keyboard-input-focus port)
       (setf (port-keyboard-input-focus port) stream))))
 
-#+nil
-(defmethod stream-set-input-focus ((stream null))
-  (let ((frame *application-frame*))
-    (prog1
-        (frame-keyboard-input-focus frame)
-      (setf (frame-keyboard-input-focus frame) nil))))
-
 ;;; output any buffered stuff before input
 
 (defmethod stream-read-gesture :before ((stream clim-stream-pane)
@@ -2716,9 +2637,7 @@ to computed distance to scroll in response to mouse wheel events."))
                      :incremental-redisplay t))
 
 (defmethod initialize-instance :after ((pane interactor-pane) &rest args)
-  (declare (ignore args))
-#+ignore  (let ((cursor (stream-text-cursor pane)))
-    (setf (cursor-visibility cursor) t)))
+  (declare (ignore args)))
 
 ;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
 ;;; roughly working for interactor panes.  It's a hack somewhat
