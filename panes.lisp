@@ -552,6 +552,8 @@ order to produce a double-click")
 (defclass standard-space-requirement-options-mixin (space-requirement-options-mixin)
   ())
 
+(defgeneric spacing-value-to-device-units (pane x))
+
 (defun merge-one-option
     (pane foo user-foo user-min-foo user-max-foo min-foo max-foo)
   
