@@ -238,6 +238,8 @@
 ;; Redrawing is supposed to be handled on an :AFTER method on arm- and
 ;; disarm-callback.
 
+(defgeneric arm-gadget (gadget &optional value))
+
 (defmethod arm-gadget ((gadget basic-gadget) &optional (value t))
   (with-slots (armed) gadget
     (unless (eql armed value)
@@ -245,6 +247,8 @@
       (if value
           (armed-callback gadget (gadget-client gadget) (gadget-id gadget))
           (disarmed-callback gadget (gadget-client gadget) (gadget-id gadget))))))
+
+(defgeneric disarm-gadget (gadget))
 
 (defmethod disarm-gadget ((gadget basic-gadget))
   (arm-gadget gadget nil))
