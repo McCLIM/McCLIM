@@ -2073,6 +2073,7 @@ order to produce a double-click")
 			       (- (gadget-value vscrollbar))
 			       0)))))))
     
+(defgeneric scroller-pane/update-scroll-bars (pane))
 
 (defmethod scroller-pane/update-scroll-bars ((pane scroller-pane))
   (with-slots (viewport hscrollbar vscrollbar) pane
