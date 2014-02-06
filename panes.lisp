@@ -1135,6 +1135,8 @@ order to produce a double-click")
              (t
               sr) ))))
 
+ (defgeneric xically-content-sr*** (pane client major))
+
  (defmethod xically-content-sr*** ((pane box-layout-mixin) client major)
    (let (p)
      (let ((sr (if (box-client-pane client)
