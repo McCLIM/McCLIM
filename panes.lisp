@@ -1528,6 +1528,8 @@ order to produce a double-click")
      (loop for j from 0 below (array-dimension array 1)
          collect (compose-space (aref array i j))))))
 
+(defgeneric table-pane-col-space-requirement (pane j))
+
 (defmethod table-pane-col-space-requirement ((pane table-pane) j)
   (with-slots (array) pane
     (stack-space-requirements-vertically
