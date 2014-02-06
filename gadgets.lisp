@@ -1,13 +1,14 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2000 by 
-;;; Arthur Lemmens (lemmens@simplex.nl),
-;;; Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;; and Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;      Arthur Lemmens (lemmens@simplex.nl),
+;;;      Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
+;;;      and Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2001 by
-;;; Lionel Salabartan (salabart@emi.u-bordeaux.fr)
+;;;      Lionel Salabartan (salabart@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2001 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2001 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
