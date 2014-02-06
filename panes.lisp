@@ -1108,6 +1108,8 @@ order to produce a double-click")
   (major-spacing x-spacing y-spacing)
   (minor-spacing x-spacing y-spacing)  )
 
+ (defgeneric xically-content-sr** (pane client))
+
  (defmethod xically-content-sr** ((pane box-layout-mixin) client)
    (let (p)
      (let ((sr (if (box-client-pane client)
