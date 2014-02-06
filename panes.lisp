@@ -1718,6 +1718,9 @@ order to produce a double-click")
 (defmacro bordering ((&rest options) &body contents)
   `(make-pane 'border-pane ,@options :contents (list ,@contents)))
 
+;;; This generic function appears to be nowhere used. 
+(defgeneric pane-border (pane))
+
 (defmethod pane-border ((pane basic-pane))
   (let ((parent (sheet-parent pane)))
     (when (and parent (typep parent 'border-pane))
