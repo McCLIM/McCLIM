@@ -2047,6 +2047,8 @@ order to produce a double-click")
 
 ;;;; Initialization
 
+(defgeneric scroller-pane/vertical-drag-callback (pane new-value))
+
 (defmethod scroller-pane/vertical-drag-callback ((pane scroller-pane) new-value)
   "Callback for the vertical scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
