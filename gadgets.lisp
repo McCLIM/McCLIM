@@ -2296,6 +2296,7 @@ if INVOKE-CALLBACK is given."))
 
 (defmethod (setf list-pane-items)
     (newval (pane generic-list-pane) &key invoke-callback)
+  (declare (ignore invoke-callback))
   (call-next-method)
   (with-slots (items items-length item-strings item-values) pane
     (setf items-length (length newval))
