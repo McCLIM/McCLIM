@@ -1597,12 +1597,6 @@ order to produce a double-click")
       `(make-pane 'grid-pane  ,@options :contents (list ,@contents))
       `(make-pane 'table-pane ,@options :contents (list ,@contents))))
 
-(defmethod sheet-disowned-child :before ((table table-pane) child
-					 &key (error-p t))
-  (declare (ignore child error-p))
-  (error "The table pane can't disown one of its child"))
-
-
 ;;; GRID PANE
 
 (defclass grid-pane (table-pane)
