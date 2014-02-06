@@ -1276,6 +1276,8 @@ order to produce a double-click")
  ;; alignment option. We do the same with the minor dimension.
  ;;
  
+ (defgeneric box-layout-mixin/xically-allocate-space (pane real-width real-height))
+
  (defmethod box-layout-mixin/xically-allocate-space ((pane box-layout-mixin) real-width real-height)
    (with-slots (major-spacing) pane
      (multiple-value-bind (majors minors)
