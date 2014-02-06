@@ -1172,6 +1172,8 @@ order to produce a double-click")
              (t
               sr) ))))
 
+ (defgeneric box-layout-mixin/xically-compose-space (pane))
+
  (defmethod box-layout-mixin/xically-compose-space ((pane box-layout-mixin))
    (let ((n (length (sheet-enabled-children pane))))
      (with-slots (major-spacing) pane
