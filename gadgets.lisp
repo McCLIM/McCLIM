@@ -2218,6 +2218,7 @@ Returns two values, the item itself, and the index within the item list."
       (values (pointer-event-x event) (pointer-event-y event))
     (multiple-value-bind (item-value index)
 	(generic-list-pane-item-from-x-y pane x y)
+      (declare (ignore item-value))
       (let* ((item (elt (list-pane-items pane) index)))
 	(meta-list-pane-call-presentation-menu pane item)))))
 
