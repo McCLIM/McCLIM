@@ -773,6 +773,8 @@ and must never be nil."))
 
 ;;; Labels
 
+(defgeneric compose-label-space (gadget &key wider higher))
+
 (defmethod compose-label-space ((gadget labelled-gadget-mixin) &key (wider 0) (higher 0))
   (with-slots (label align-x align-y) gadget
     (let* ((as (text-style-ascent (pane-text-style gadget) gadget))
