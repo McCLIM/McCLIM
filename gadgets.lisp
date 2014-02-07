@@ -537,6 +537,8 @@ and must never be nil."))
 
 ;; RADIO-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
 
+(defgeneric radio-box-current-selection (radio-box))
+
 (defmethod radio-box-current-selection ((radio-box radio-box))
   (gadget-value radio-box))
 
