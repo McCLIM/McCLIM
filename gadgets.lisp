@@ -580,6 +580,8 @@ and must never be nil."))
 (defmethod check-box-current-selection ((check-box check-box))
   (gadget-value check-box))
 
+(defgeneric (setf check-box-current-selection) (new-value check-box))
+
 (defmethod (setf check-box-current-selection) (new-value (check-box check-box))
   (setf (gadget-value check-box) new-value))
 
