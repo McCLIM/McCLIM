@@ -542,6 +542,8 @@ and must never be nil."))
 (defmethod radio-box-current-selection ((radio-box radio-box))
   (gadget-value radio-box))
 
+(defgeneric (setf radio-box-current-selection) (new-value radio-box))
+
 (defmethod (setf radio-box-current-selection) (new-value (radio-box radio-box))
   (setf (gadget-value radio-box) new-value))
 
