@@ -575,6 +575,8 @@ and must never be nil."))
 
 ;; CHECK-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
 
+(defgeneric check-box-current-selection (check-box))
+
 (defmethod check-box-current-selection ((check-box check-box))
   (gadget-value check-box))
 
