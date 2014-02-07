@@ -547,6 +547,8 @@ and must never be nil."))
 (defmethod (setf radio-box-current-selection) (new-value (radio-box radio-box))
   (setf (gadget-value radio-box) new-value))
 
+(defgeneric radio-box-selections (radio-box))
+
 (defmethod radio-box-selections ((pane radio-box))
   (let ((v (radio-box-current-selection pane)))
     (and v (list v))))
