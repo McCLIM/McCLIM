@@ -1015,6 +1015,8 @@ and must never be nil."))
    (border-style :initarg :border-style :initform :outset)
    (border-color :initarg :border-color :initform "???")))
 
+(defgeneric pane-inner-region (pane))
+
 (defmethod pane-inner-region ((pane 3D-border-mixin))
   (with-slots (border-width) pane
     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
