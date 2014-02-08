@@ -1063,6 +1063,8 @@ and must never be nil."))
       (gadget-highlight-background gadget)
       (pane-background gadget)))
 
+(defgeneric effective-gadget-input-area-color (gadget))
+
 (defmethod effective-gadget-input-area-color ((gadget basic-gadget))
   (if (gadget-active-p gadget)
       +lemonchiffon+
