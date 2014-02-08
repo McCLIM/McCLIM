@@ -1047,6 +1047,8 @@ and must never be nil."))
   (compose-over (compose-in #|+paleturquoise+|# +white+ (make-opacity .5))
                 (pane-background gadget)))
 
+(defgeneric effective-gadget-foreground (gadget))
+
 (defmethod effective-gadget-foreground ((gadget basic-gadget))
   (if (gadget-active-p gadget)
       +foreground-ink+
