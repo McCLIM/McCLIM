@@ -784,6 +784,8 @@ and must never be nil."))
       (make-space-requirement :width w  :min-width w  :max-width  w
                               :height h :min-height h :max-height h))))
 
+(defgeneric draw-label* (pane x1 y1 x2 y2 &key ink))
+
 (defmethod draw-label* ((pane labelled-gadget-mixin) x1 y1 x2 y2
                         &key (ink +foreground-ink+))
   (with-slots (align-x align-y label) pane
