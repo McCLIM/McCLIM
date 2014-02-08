@@ -1056,6 +1056,8 @@ and must never be nil."))
                                 (make-opacity .5))
                     (pane-background gadget))))
 
+(defgeneric effective-gadget-background (gadget))
+
 (defmethod effective-gadget-background ((gadget basic-gadget))
   (if (slot-value gadget 'armed)
       (gadget-highlight-background gadget)
