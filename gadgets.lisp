@@ -1041,6 +1041,8 @@ and must never be nil."))
 
 ;;; Common colors:
 
+(defgeneric gadget-highlight-background (gadget))
+
 (defmethod gadget-highlight-background ((gadget basic-gadget))
   (compose-over (compose-in #|+paleturquoise+|# +white+ (make-opacity .5))
                 (pane-background gadget)))
