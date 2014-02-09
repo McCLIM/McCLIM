@@ -2082,6 +2082,8 @@ response to scroll wheel events.")
                              (princ-to-string s)))) ;defensive programming!
                 (list-pane-items pane))))))
 
+(defgeneric generic-list-pane-item-values (generic-list-pane))
+
 (defmethod generic-list-pane-item-values ((pane generic-list-pane))
   (with-slots (item-values) pane
     (or item-values
