@@ -2090,6 +2090,8 @@ response to scroll wheel events.")
         (setf item-values
           (map 'vector (list-pane-value-key pane) (list-pane-items pane))))))
 
+(defgeneric generic-list-pane-items-width (generic-list-pane))
+
 (defmethod generic-list-pane-items-width ((pane generic-list-pane))
   (with-slots (items-width) pane
     (or items-width
