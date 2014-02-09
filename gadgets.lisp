@@ -2109,6 +2109,8 @@ response to scroll wheel events.")
         (setf items-length
               (length (generic-list-pane-item-strings pane))))))
 
+(defgeneric generic-list-pane-item-height (generic-list-pane))
+
 (defmethod generic-list-pane-item-height ((pane generic-list-pane))
   (+ (text-style-ascent  (pane-text-style pane) pane)
      (text-style-descent (pane-text-style pane) pane)))
