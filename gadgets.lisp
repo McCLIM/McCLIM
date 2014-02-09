@@ -1736,6 +1736,8 @@ and must never be nil."))
       (let ((control-string (format nil "~~,~DF" decimal-places)))
         (format nil control-string value))))
 
+(defgeneric convert-value-to-position (slider-pane))
+
 (defmethod handle-repaint ((pane slider-pane) region)
   (declare (ignore region))
   (with-special-choices (pane)
