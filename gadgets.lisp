@@ -2476,6 +2476,8 @@ if INVOKE-CALLBACK is given."))
                             :height total-height
                             :max-height total-height)))
 
+(defgeneric generic-option-pane-draw-widget (pane))
+
 (defmethod generic-option-pane-draw-widget (pane)
   (with-bounding-rectangle* (x0 y0 x1 y1) pane
     (declare (ignore x0))                            
