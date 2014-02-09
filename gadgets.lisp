@@ -1338,7 +1338,7 @@ and must never be nil."))
 
 (defgeneric scroll-bar-thumb-bed-region (scroll-bar-pane))
 
-(defgeneric scroll-bar-thumb-region (scroll-bar-pane)
+(defgeneric scroll-bar-thumb-region (scroll-bar-pane))
 
 (defun scroll-bar/update-display (scroll-bar)
   (with-slots (up-state dn-state tb-state tb-y1 tb-y2
@@ -2068,6 +2068,8 @@ response to scroll wheel events.")
                               (gadget-value gadget)))))))
   (unless (slot-boundp gadget 'visible-items)
     (setf (visible-items gadget) (generic-list-pane-items-length gadget))))
+
+(defgeneric generic-list-pane-item-strings (generic-list-pane))
 
 (defmethod generic-list-pane-item-strings ((pane generic-list-pane))
   (with-slots (item-strings) pane
