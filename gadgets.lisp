@@ -1332,6 +1332,8 @@ and must never be nil."))
 
 (defgeneric scroll-bar-transformation (scroll-bar))
 
+(defgeneric scroll-bar-up-region (scroll-bar))
+
 (defun scroll-bar/update-display (scroll-bar)
   (with-slots (up-state dn-state tb-state tb-y1 tb-y2
                old-up-state old-dn-state old-tb-state old-tb-y1 old-tb-y2
