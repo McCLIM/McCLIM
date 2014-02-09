@@ -2101,6 +2101,8 @@ response to scroll wheel events.")
                                  (generic-list-pane-item-strings pane))
                       :initial-value 0)))))
 
+(defgeneric generic-list-pane-items-length (generic-list-pane))
+
 (defmethod generic-list-pane-items-length ((pane generic-list-pane))
   (with-slots (items-length) pane
     (or items-length
