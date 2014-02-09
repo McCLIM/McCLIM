@@ -1685,6 +1685,8 @@ and must never be nil."))
      (when armed
        (setf armed ':button-press))))
 
+(defgeneric convert-position-to-value (slider-pane dim))
+
 (defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
   (with-slots (armed) pane
     (when (eq armed ':button-press)
