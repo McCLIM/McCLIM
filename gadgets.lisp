@@ -2415,6 +2415,8 @@ if INVOKE-CALLBACK is given."))
   (setf (slot-value gadget 'current-label)
         (generic-option-pane-compute-label-from-value gadget new-value)))
 
+(defgeneric generic-option-pane-widget-size (pane))
+
 (defmethod generic-option-pane-widget-size (pane)
   ;; We now always make the widget occupying a square.
   (let ((h (bounding-rectangle-height pane)))
