@@ -1188,6 +1188,8 @@ and must never be nil."))
      :max-height 0
      :height 0)))
 
+(defgeneric draw-toggle-button-indicator (gadget type value x1 y1 x2 y2))
+
 (defmethod draw-toggle-button-indicator ((gadget standard-gadget-pane) (type (eql :one-of)) value x1 y1 x2 y2)
   (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
     (let ((radius (/ (- y2 y1) 2)))
