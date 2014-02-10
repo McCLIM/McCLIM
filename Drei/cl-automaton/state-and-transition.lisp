@@ -2,6 +2,8 @@
 ;;;
 ;;;  (c) copyright 2005-2007 by
 ;;;           Aleksandar Bakic (a_bakic@yahoo.com)
+;;;  (c) copyright 2014 by
+;;;           Robert Strandh (robert.strandh@gmail.com)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
