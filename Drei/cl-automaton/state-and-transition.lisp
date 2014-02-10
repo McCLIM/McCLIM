@@ -115,6 +115,8 @@ same (eq) destination state."
   (with-slots (minc maxc) tr
     (the fixnum (mod (+ (* 2 minc) (* 3 maxc)) most-positive-fixnum))))
 
+(defgeneric clone (transition))
+
 (defmethod clone ((tr transition))
   "Returns a clone of TR."
   (with-slots (minc maxc to) tr
