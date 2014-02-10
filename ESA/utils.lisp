@@ -433,6 +433,9 @@ buffers with the same name)."))
   (setf (subscript name-mixin)
         (funcall (subscript-generator name-mixin) (name name-mixin))))
 
+;;; This generic function appears to be nowhere used.  
+(defgeneric subscripted-name (name-mixin))
+
 (defmethod subscripted-name ((name-mixin subscriptable-name-mixin))
   ;; Perhaps this could be written as a single format statement?
   (if (/= (subscript name-mixin) 1)
