@@ -73,6 +73,8 @@
                              :filled t)
             (draw-label* gadget x1 y1 x2 y2)))))))
 
+(defgeneric arm-branch (pane))
+
 (defmethod handle-event ((pane menu-button-pane) (event pointer-enter-event))
   (when (slot-value (slot-value pane 'client) 'armed)
     (arm-branch pane)))
