@@ -368,6 +368,8 @@ suitable for use in a PERSISTENT-BUFFER."))
 (defmethod line-number ((mark p-mark-mixin))
   (buffer-line-number (buffer mark) (offset mark)))
 
+(defgeneric buffer-line-offset (buffer line-number))
+
 (defmethod buffer-line-offset ((buffer binseq2-buffer) (line-no integer))
   (binseq2-offset (slot-value buffer 'contents) line-no))
 
