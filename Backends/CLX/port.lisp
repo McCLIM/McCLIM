@@ -125,6 +125,8 @@
                  entries)
        ,fontset)))
 
+(defgeneric set-fontset-range (fontset font translator start finish))
+
 (defmethod set-fontset-range ((fontset fontset) font translator start finish)
   ; should check ordering invariants, disjointity, etc
   (with-slots (ranges ascent descent height default-font) fontset
