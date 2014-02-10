@@ -39,6 +39,8 @@
       (arm-gadget button t))
     (dispatch-repaint button (sheet-region button))))
 
+(defgeneric disarm-menu (button))
+
 (defmethod disarm-menu ((button menu-button-pane))
   (with-slots (client armed id) button
     (when armed
