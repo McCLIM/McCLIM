@@ -75,6 +75,8 @@
 
 (defgeneric arm-branch (pane))
 
+(defgeneric destroy-substructure (pane))
+
 (defmethod handle-event ((pane menu-button-pane) (event pointer-enter-event))
   (when (slot-value (slot-value pane 'client) 'armed)
     (arm-branch pane)))
