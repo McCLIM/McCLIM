@@ -411,6 +411,8 @@ following the last one of a parse tree."))
      (when start-mark
        (+ (offset start-mark) size))))
 
+(defgeneric (setf end-offset) (offset tree))
+
 (defmethod (setf end-offset) ((offset number) (tree parse-tree))
   (with-slots (start-mark size) tree
      (assert (not (null start-mark)))
