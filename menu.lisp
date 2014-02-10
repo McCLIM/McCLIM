@@ -29,6 +29,8 @@
 (defmethod menu-root ((button menu-button-pane))
   (menu-root (gadget-client button)))
 
+(defgeneric arm-menu (button))
+
 (defmethod arm-menu ((button menu-button-pane))
   (with-slots (client armed id) button
     (unless armed
