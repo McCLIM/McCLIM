@@ -389,6 +389,8 @@ character of a parse tree."))
     (when mark
       (offset mark))))
 
+(defgeneric (setf start-offset) (offset tree))
+
 (defmethod (setf start-offset) ((offset number) (tree parse-tree))
   (let ((mark (start-mark tree)))
     (assert (not (null mark)))
