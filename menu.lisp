@@ -31,6 +31,8 @@
 
 (defgeneric arm-menu (button))
 
+(defgeneric menu-children (pane))
+
 (defmethod arm-menu ((button menu-button-pane))
   (with-slots (client armed id) button
     (unless armed
