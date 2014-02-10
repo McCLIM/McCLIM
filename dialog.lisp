@@ -1,6 +1,8 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2003 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
+
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
 ;;; License as published by the Free Software Foundation; either
