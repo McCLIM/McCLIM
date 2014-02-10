@@ -2791,6 +2791,8 @@ if INVOKE-CALLBACK is given."))
 
 (defclass orientation-from-parent-mixin () ())
 
+(defgeneric orientation (gadget))
+
 (defmethod orientation ((gadget orientation-from-parent-mixin))
   (etypecase (sheet-parent gadget)
     ((or hbox-pane hrack-pane) :vertical)
