@@ -279,6 +279,8 @@ constituent character of the line."
            (incf (offset mark2))
            finally (return indentation)))))
 
+(defgeneric buffer-number-of-lines-in-region (buffer offset1 offset2))
+
 (defmethod buffer-number-of-lines-in-region (buffer offset1 offset2)
   "Helper method for number-of-lines-in-region.  Count newline
 characters in the region between offset1 and offset2."
