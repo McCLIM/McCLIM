@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: DREI-LISP-SYNTAX -*-
 
-;;;  (c) copyright 2005 by
-;;;           Robert Strandh (strandh@labri.fr)
+;;;  (c) copyright 2005, 2014 by
+;;;           Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2006-2007 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
 ;;;
