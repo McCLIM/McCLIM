@@ -24,6 +24,8 @@
   (with-sheet-medium (medium pane)
     (medium-force-output medium)))
 
+(defgeneric menu-root (button))
+
 (defmethod menu-root ((button menu-button-pane))
   (menu-root (gadget-client button)))
 
