@@ -4007,6 +4007,8 @@ lambda list parameter objects to symbols or lists."))
       (values tree 0)
       (indent-form syntax (elt-form (children tree) 0) (cdr path))))
 
+(defgeneric compute-list-indentation (syntax symbol tree path))
+
 (defmethod indent-form ((syntax lisp-syntax) (tree list-form) path)
   (if (and (= (car path) 1)
            (null (cdr path)))
