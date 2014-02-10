@@ -4093,6 +4093,8 @@ lambda list parameter objects to symbols or lists."))
 	     (values (elt-noncomment (children tree) 2) 0)))
       (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
 
+(defgeneric indent-bindings (syntax tree path))
+
 (defmethod indent-bindings ((syntax lisp-syntax) tree path)
   (if (null (cdr path))
       ;; entire bind form
