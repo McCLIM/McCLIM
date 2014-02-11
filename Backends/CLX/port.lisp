@@ -1050,6 +1050,8 @@
   (xlib:text-width (text-style-to-X-font port text-style)
 		   string :start start :end end))
 
+(defgeneric X-pixel (port color))
+
 (defmethod X-pixel ((port clx-port) color)
   (let ((table (slot-value port 'color-table)))
     (or (gethash color table)
