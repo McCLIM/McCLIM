@@ -146,6 +146,8 @@
           (xlib:char-width font (funcall translator point)))
         0)))
 
+(defgeneric %fontset-point (fontset point))
+
 (defun fontset-point (point &optional (fontset *fontset*))
   (%fontset-point fontset point))
 
