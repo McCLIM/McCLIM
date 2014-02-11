@@ -1062,7 +1062,8 @@ time an indexed pattern is drawn.")
                         (xlib:text-extents xfont string
                                    :start start :end end
                                    :translate #'translate)
-                      (declare (ignore width direction first-not-done))
+                      (declare (ignore width ascent descent)
+			       (ignore direction first-not-done))
                       ;; FIXME: Potential style points:
                       ;; * (min 0 left), (max width right)
                       ;; * font-ascent / ascent
@@ -1098,10 +1099,14 @@ time an indexed pattern is drawn.")
             (y (round-coordinate y)))
         (when (and (<= #x-8000 x #x7FFF)
                    (<= #x-8000 y #x7FFF))
+	  ;; FIXME: What could possibly be the reason for this
+	  ;; MULTIPLE-VALUE-BIND form, since both variables are
+	  ;; unused?
           (multiple-value-bind (halt width)
               (xlib:draw-glyphs mirror gc x y string
                                 :start start :end end
-                                :translate #'translate)))))))
+                                :translate #'translate)
+	    (declare (ignore halt width))))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
