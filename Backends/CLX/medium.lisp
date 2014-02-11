@@ -1052,6 +1052,7 @@ time an indexed pattern is drawn.")
                           (climi::text-bounding-rectangle*
                            medium string :text-style text-style
                            :start (1+ position-newline) :end end)
+			(declare (ignore miny))
                         (values (min minx left) (- ascent)
                                 (max maxx right) (+ descent maxy)))))
                    (t
