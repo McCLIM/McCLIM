@@ -684,6 +684,8 @@
 
 (defvar *clx-port*)
 
+(defgeneric port-client-message (sheet time type data))
+
 (defun event-handler (&key display window event-key code state mode time
 		      type width height x y root-x root-y
 		      data override-redirect-p send-event-p hint-p
