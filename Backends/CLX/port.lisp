@@ -230,7 +230,8 @@
 
 (defmethod initialize-instance :after ((port clx-port) &rest args)
   (declare (ignore args))
-  (push (make-instance 'clx-frame-manager :port port) (slot-value port 'frame-managers))
+  (push (make-instance 'clx-frame-manager :port port)
+	(slot-value port 'frame-managers))
   (setf (slot-value port 'pointer)
 	(make-instance 'clx-pointer :port port))
   (initialize-clx port))
@@ -244,8 +245,11 @@
 		  :host (xlib:display-host display)
 		  :display-id (xlib:display-display display)))))))
 
-(defun clx-error-handler (display error-name &rest args &key major &allow-other-keys)
-  (unless (and (eql major 42)  ; 42 is SetInputFocus, we ignore match-errors from that
+(defun clx-error-handler (display error-name
+			  &rest args
+			  &key major &allow-other-keys)
+  ;; 42 is SetInputFocus, we ignore match-errors from that.
+  (unless (and (eql major 42)
                (eq error-name 'xlib:match-error))
     (format *error-output* "Received CLX ~A in process ~W~%"
             error-name (clim-sys:process-name (clim-sys:current-process)))
@@ -301,13 +305,14 @@
     (progn
       (setf (xlib:display-error-handler (clx-port-display port))
         #'clx-error-handler)
-
-      #+nil ;; Uncomment this when debugging CLX backend if asynchronous errors become troublesome..
-      (setf (xlib:display-after-function (clx-port-display port)) #'xlib:display-finish-output))
-      
-    
-    (setf (clx-port-screen port) (nth (getf options :screen-id)
-				      (xlib:display-roots (clx-port-display port))))
+      ;; Uncomment this when debugging CLX backend if asynchronous
+      ;; errors become troublesome.
+      #+nil 
+      (setf (xlib:display-after-function (clx-port-display port))
+	    #'xlib:display-finish-output))
+    (setf (clx-port-screen port)
+	  (nth (getf options :screen-id)
+	       (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
     (make-cursor-table port)    
     (make-graft port)
@@ -321,22 +326,20 @@
                   "Restart CLIM's event loop.")
                  (loop
                    (process-next-event port)) )))
-         :name (format nil "~S's event process." port)))
-      #+nil(format *trace-output* "~&Started CLX event loop process ~A~%" (port-event-process port))) ))
-
-#+nil
-(defmethod (setf sheet-mirror-transformation) :after (new-value (sheet mirrored-sheet-mixin))
-  )
+         :name (format nil "~S's event process." port))))))
 
 (defmethod port-set-mirror-region ((port clx-port) mirror mirror-region)
-  (setf (xlib:drawable-width mirror) (floor (bounding-rectangle-max-x mirror-region))
-        (xlib:drawable-height mirror) (floor (bounding-rectangle-max-y mirror-region))))
+  (setf (xlib:drawable-width mirror)
+	(floor (bounding-rectangle-max-x mirror-region)))
+  (setf (xlib:drawable-height mirror)
+	(floor (bounding-rectangle-max-y mirror-region))))
                                    
-(defmethod port-set-mirror-transformation ((port clx-port) mirror mirror-transformation)
-  (setf (xlib:drawable-x mirror) (floor (nth-value 0 (transform-position mirror-transformation 0 0)))
-        (xlib:drawable-y mirror) (floor (nth-value 1 (transform-position mirror-transformation 0 0)))))
-
-
+(defmethod port-set-mirror-transformation
+    ((port clx-port) mirror mirror-transformation)
+  (setf (xlib:drawable-x mirror)
+	(floor (nth-value 0 (transform-position mirror-transformation 0 0))))
+  (setf (xlib:drawable-y mirror)
+	(floor (nth-value 1 (transform-position mirror-transformation 0 0)))))
 
 (defun invent-sheet-mirror-transformation-and-region (sheet)
   ;; -> tr region
@@ -344,14 +347,6 @@
          (r* (transform-region
               (sheet-native-transformation (sheet-parent sheet))
               (transform-region (sheet-transformation sheet) r)))
-         #+nil
-         (r*
-          (bounding-rectangle
-           (region-intersection
-                  r*
-                  (make-rectangle* 0 0
-                                   (port-mirror-width (port sheet) (sheet-parent sheet))
-                                   (port-mirror-height (port sheet) (sheet-parent sheet))))))
          (mirror-transformation
           (if (region-equal r* +nowhere+)
               (make-translation-transformation 0 0)
@@ -452,10 +447,6 @@
 
 (defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
   (let ((q (compose-space sheet)))
-    #+nil ; SHEET and its descendants are grafted, but unmirrored :-\ -- APD
-    (allocate-space sheet
-                    (space-requirement-width q)
-                    (space-requirement-height q))
     (let ((frame (pane-frame sheet))
           (window (realize-mirror-aux port sheet
                                       :map nil
@@ -534,16 +525,6 @@
   nil)
 
 (defmethod port-set-sheet-transformation ((port clx-port) (graft graft) transformation)
-  (declare (ignore transformation))
-  nil)
-
-#+nil
-(defmethod port-set-sheet-transformation ((port clx-port) (pane application-pane) transformation)
-  (declare (ignore transformation))
-  nil)
-
-#+nil
-(defmethod port-set-sheet-transformation ((port clx-port) (pane interactor-pane) transformation)
   (declare (ignore transformation))
   nil)
 
@@ -1166,13 +1147,6 @@
 	   +pointer-wheel-down+)
 	  (t 0)))
 
-#+nil
-(defmethod pointer-modifier-state ((pointer clx-pointer))
-  (multiple-value-bind (x y same-screen-p child mask)
-      (xlib:query-pointer (clx-port-window (port pointer)))
-    (declare (ignore x y same-screen-p child))
-    (clim-xcommon:x-event-state-modifiers (port pointer) mask)))
-
 (defmethod port-modifier-state ((port clx-port))
   (multiple-value-bind (x y same-screen-p child mask)
       (xlib:query-pointer (clx-port-window port))
@@ -1390,20 +1364,10 @@
         (time      (event-timestamp event)))
     (when (null property)
       (format *trace-output* "~&* Requestor property is null! *~%"))
-    #+nil ; debugging output
-    (progn
-      (describe event *trace-output*)
-      (force-output *trace-output*))
     (flet ((send-event (&key target (property property))
 	     ;; debugging output, but the KDE Klipper client turns out
 	     ;; to poll other clients for selection, which means it
 	     ;; would be bad to print at every request.
-             #+nil
-             (format *trace-output*
-                     "~&;; clim-clx::send-selection - Requested target ~A, sent ~A to property ~A. time ~S~%"
-                     (selection-event-target event)
-                     target
-                     property time)
              (xlib:send-event requestor
 			      :selection-notify nil
 			      :window requestor
