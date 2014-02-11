@@ -859,6 +859,8 @@
 
 ;; Handling of X client messages
 
+(defgeneric port-wm-protocols-message (sheet time message data))
+
 (defmethod port-client-message (sheet time (type (eql :wm_protocols)) data)
   (port-wm-protocols-message sheet time
                              (xlib:atom-name (slot-value *clx-port* 'display) (aref data 0))
