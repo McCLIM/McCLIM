@@ -107,8 +107,7 @@
 (defun %set-gc-clipping-region (medium gc)
   (declare (type clx-medium medium))
   (let ((clipping-region (medium-device-region medium))
-        (tmp (slot-value medium 'clipping-region-tmp))
-        (port (port medium)))
+        (tmp (slot-value medium 'clipping-region-tmp)))
     (cond
       ((region-equal clipping-region +nowhere+)
        (setf (xlib:gcontext-clip-mask gc) #()))
