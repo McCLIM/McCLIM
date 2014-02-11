@@ -342,11 +342,9 @@
                        (dotimes (x width)
                          (let ((ink-index (aref image-array y x)))
                            (when (< (elt opacity-map ink-index) #x40)  ; FIXME? Arbitrary threshold.
-                             (setf (elt mask-data mask-index) (logxor (elt mask-data mask-index) mask-bitcursor)))
-                           #+NIL
-                           (setf (elt converted-data (+ index 0)) (elt blue-map  ink-index)
-                                 (elt converted-data (+ index 1)) (elt green-map ink-index)
-                                 (elt converted-data (+ index 2)) (elt red-map   ink-index))
+                             (setf (elt mask-data mask-index)
+				   (logxor (elt mask-data mask-index)
+					   mask-bitcursor)))
                            (let ((red   (elt red-map ink-index))
                                  (green (elt green-map ink-index))
                                  (blue  (elt blue-map ink-index)))                             
@@ -502,10 +500,6 @@ time an indexed pattern is drawn.")
            (drawable (port-lookup-mirror (port medium) (medium-sheet medium)))
            (pm   (allocate-pixmap (first (port-grafts (port medium))) w h))
            (mask (xlib:create-pixmap :drawable drawable
-                                     #+NIL
-                                               (port-lookup-mirror
-                                                (port medium)
-                                                (first (port-grafts (port medium))))
                                      :depth 1
                                      :width w
                                      :height h))
@@ -576,16 +570,6 @@ time an indexed pattern is drawn.")
               (type-of ink))))))
 
 ;;;;
-
-#+nil
-(defun clipping-region->rect-seq (clipping-region)
-  (loop for region in (nreverse (region-set-regions clipping-region
-                                                    :normalize :x-banding))
-        as rectangle = (bounding-rectangle region)
-        nconcing (list (round (rectangle-min-x rectangle))
-                       (round (rectangle-min-y rectangle))
-                       (round (rectangle-width rectangle))
-                       (round (rectangle-height rectangle)))))
 
 (defun region->clipping-values (region)
   (with-bounding-rectangle* (min-x min-y max-x max-y) region
@@ -866,8 +850,6 @@ time an indexed pattern is drawn.")
 	       (min-y (round-coordinate (- center-y radius-dy)))
 	       (max-x (round-coordinate (+ center-x radius-dx)))
 	       (max-y (round-coordinate (+ center-y radius-dy))))
-	   #+nil (when (typep mirror 'xlib:pixmap)
-		  (break))
           (xlib:draw-arc mirror gc
                          min-x min-y (- max-x min-x) (- max-y min-y)
                          (mod start-angle (* 2 pi)) arc-angle
