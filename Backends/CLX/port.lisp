@@ -1041,6 +1041,11 @@
 	 (width (xlib:char-width font (char-code char))))
     width))
 
+;;; The generic function PORT-STRING-WIDTH might be intended to be
+;;; common for all ports, but in fact, that symbol is in the CLIM-CLX
+;;; package, so it is only defined here, and nowhere used. 
+(defgeneric port-string-width (port text-style string &key start end))
+
 (defmethod port-string-width ((port clx-port) text-style string &key (start 0) end)
   (xlib:text-width (text-style-to-X-font port text-style)
 		   string :start start :end end))
