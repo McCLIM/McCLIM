@@ -1031,6 +1031,11 @@
     (text-style-mapping port text-style)
     (cdr (gethash text-style (port-text-style-mappings port)))))
 
+;;; The generic function PORT-CHARACTER-WIDTH might be intended to be
+;;; common for all ports, but in fact, that symbol is in the CLIM-CLX
+;;; package, so it is only defined here, and nowhere used. 
+(defgeneric port-character-width (port text-style char))
+
 (defmethod port-character-width ((port clx-port) text-style char)
   (let* ((font (text-style-to-X-font port text-style))
 	 (width (xlib:char-width font (char-code char))))

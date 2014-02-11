@@ -124,6 +124,11 @@
   (declare (ignore font-name text-style character-set))
   nil)
 
+;;; The generic function PORT-CHARACTER-WIDTH might be intended to be
+;;; common for all ports, but in fact, that symbol is in the CLIM-CLX
+;;; package, so it is only defined here, and nowhere used. 
+(defgeneric port-character-width (port text-style char))
+
 (defmethod port-character-width ((port null-port) text-style char)
   (declare (ignore text-style char))
   nil)
