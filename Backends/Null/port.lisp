@@ -1,6 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-NULL; -*-
 
-;;;  (c) 2005 Christophe Rhodes (c.rhodes@gold.ac.uk)
+;;;  (c) copyright 2005 by Christophe Rhodes (c.rhodes@gold.ac.uk)
+;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
