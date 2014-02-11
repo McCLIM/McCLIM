@@ -1045,7 +1045,7 @@ time an indexed pattern is drawn.")
                         (xlib:text-extents xfont string
                                            :start start :end position-newline
                                            :translate #'translate)
-                      (declare (ignorable left right
+                      (declare (ignorable width left right
                                           font-ascent font-descent
                                           direction first-not-done))
                       (multiple-value-bind (minx miny maxx maxy)
