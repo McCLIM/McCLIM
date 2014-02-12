@@ -23,19 +23,20 @@
 
 (in-package :clim-internals)
 
-;
-; This file is in transition, please don't fix it :]
-;
-; Much is left purposefully un-refactored until enough is reworked that it can be
-; refactored into sensible subcomponents, without becoming a hodge-podge of random
-; mixins (as opposed to a hodge-podge of sensible mixins :]) - BTS
-;
-; This especially applies to colour and event management :\
-;
-; TODO: move the hardcoded color-settings into proper defaults
-;
-;;;
+;;; The following comment was written by Brian Spilsbury, I assume in
+;;; 2002.  -- Robert Strandh 
 
+;;; This file is in transition, please don't fix it :]
+;;;
+;;; Much is left purposefully un-refactored until enough is reworked
+;;; that it can be refactored into sensible subcomponents, without
+;;; becoming a hodge-podge of random mixins (as opposed to a
+;;; hodge-podge of sensible mixins :]) - BTS
+;;;
+;;; This especially applies to colour and event management :\
+
+;;; TODO: move the hardcoded color-settings into proper defaults
+;;;
 ;;; TODO: Add units label to slider pane
 ;;; TODO: Matching repaint method for the list pane
 ;;; TODO: Is there a locking bug, and does it somehow involve pixie?
