@@ -94,6 +94,8 @@
 (defmethod color-image-max-level ((image truecolor-image))
   (image-max-level image))
 
+(defgeneric color-image-min-level (image))
+
 (defmethod color-image-min-level ((image truecolor-image))
   0)
 
