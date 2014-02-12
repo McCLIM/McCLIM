@@ -253,6 +253,8 @@
     (:vertical   +identity-transformation+)
     (:horizontal (make-transformation 0 1 1 0 0 0))))
 
+(defgeneric gadget-thumb-region (pane))
+
 (defmethod gadget-thumb-region ((pane pixie-slider-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-bed-region pane)
     (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 1) (+ y1 1) (- x2 1) (- y2 1))
