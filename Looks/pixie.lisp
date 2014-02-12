@@ -523,6 +523,8 @@
       (make-rectangle* x1 y1
                        x2 (+ y1 (- x2 x1))))))
 
+(defgeneric gadget-down-region (pane))
+
 (defmethod gadget-down-region ((pane pixie-scroll-bar-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2)
       (transform-region (vertical-gadget-orientation-transformation pane)
