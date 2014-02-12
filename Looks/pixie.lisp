@@ -286,7 +286,8 @@
     (when dragging
       (unless (eq dragging :inside)
         (setf armed nil
-            ; value bounce-value ; this bouncing is more annoying than anything for sliders
+	      ;; value bounce-value ; this bouncing is more annoying
+	      ;; than anything for sliders
             )
         (disarmed-callback pane (gadget-client pane) (gadget-id pane)))
       (setf dragging nil)
@@ -320,26 +321,26 @@
       (let ((thumb (gadget-thumb-region pane)))
         (cond
           ((region-contains-position-p thumb x y)
-           ; Thumb
+           ;; Thumb
            (setf dragging     :inside
                  armed        t
                  bounce-value value
                  drag-delta   (- y (bounding-rectangle-min-y thumb))))
           ((region-contains-position-p (gadget-bed-region pane) x y)
-           ; well, they clicked in the bed, but not on the thumb
-           ; move up or down one notch
+           ;; well, they clicked in the bed, but not on the thumb move
+           ;; up or down one notch
            (cond
              ((< y (bounding-rectangle-min-y thumb))
 	      #+NIL
               (clim-internals::schedule-timer-event pane 'down-notch 0.1)
-              ; move toward the min
+              ;; move toward the min
               (when (> (gadget-value pane) (gadget-min-value pane))
                 (decf (gadget-value pane))
                 (dispatch-repaint pane (sheet-region pane))))
              ((> y (bounding-rectangle-max-y thumb))
 	      #+NIL
               (clim-internals::schedule-timer-event pane 'up-notch 0.1)
-              ; move toward the max
+              ;; move toward the max
               (when (< (gadget-value pane) (gadget-max-value pane))
                 (incf (gadget-value pane))
                 (dispatch-repaint pane (sheet-region pane)))))))))))
@@ -379,10 +380,10 @@
         (with-bounding-rectangle* (minx miny maxx maxy)
             transformed-sheet
           (with-drawing-options (pane :transformation tr)
-            ; This region-difference is a bit weird
-            ; the gadget-bed-region seems to be being transformed by the with-drawing-options
-            ; but the sheet-region itself not, which I guess makes some kind of sense
-            ; -- CHECKME
+            ;; This region-difference is a bit weird the
+            ;; gadget-bed-region seems to be being transformed by the
+            ;; with-drawing-options but the sheet-region itself not,
+            ;; which I guess makes some kind of sense -- CHECKME
             (with-drawing-options (pane :clipping-region (region-difference
                                                            transformed-sheet
                                                            (gadget-bed-region pane)))
@@ -604,26 +605,26 @@
       (let ((thumb (gadget-thumb-region pane)))
         (cond
           ((region-contains-position-p thumb x y)
-           ; Thumb
+           ;; Thumb
            (setf dragging :inside
                  armed    t
                  drag-delta (- y (bounding-rectangle-min-y thumb))))
           ((region-contains-position-p (gadget-up-region pane) x y)
 	   #+NIL
            (clim-internals::schedule-timer-event pane 'up-line 0.1)
-           ; Up Arrow
+           ;; Up Arrow
            (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane))
            (setf (slot-value pane 'armed) :up)
            (dispatch-repaint pane +everywhere+))
           ((region-contains-position-p (gadget-down-region pane) x y)
 	   #+NIL
            (clim-internals::schedule-timer-event pane 'down-line 0.1)
-           ; Down Arrow
+           ;; Down Arrow
            (scroll-down-line-callback pane (gadget-client pane) (gadget-id pane))
            (setf (slot-value pane 'armed) :down)
            (dispatch-repaint pane +everywhere+))
           ((region-contains-position-p (gadget-bed-region pane) x y)
-           ; Bed
+           ;; Bed
            (cond
              ((< y (bounding-rectangle-min-y thumb))
 	      #+NIL
@@ -634,7 +635,7 @@
               (clim-internals::schedule-timer-event pane 'down-page 0.1)
               (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane)))))
           (t
-           ; Nowhere (!)
+           ;; Nowhere (!)
            nil))))))
 
 (defmethod handle-event ((pane pixie-scroll-bar-pane) (event pointer-motion-event))
@@ -666,7 +667,7 @@
            (transformed-sheet (transform-region tr (sheet-region pane))))
       (with-bounding-rectangle* (minx miny maxx maxy)
           transformed-sheet
-        ; draw the bed?
+        ;; draw the bed?
         (with-drawing-options (pane :transformation tr)
           (let ((gadget-thumb-region (gadget-thumb-region pane))
                 (gadget-down-region  (gadget-down-region pane))
@@ -795,7 +796,7 @@
 (defmethod handle-repaint ((pane pixie-menu-button-leaf-pane) region)
   (declare (ignore region))
   (with-slots (armed) pane
-    ; XXX only do this when the gadget is realized.
+    ;; XXX only do this when the gadget is realized.
     (when (sheet-mirror pane)
       (with-special-choices (pane)
         (with-slots (label) pane
