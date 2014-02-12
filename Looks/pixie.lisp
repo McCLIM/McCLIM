@@ -1087,8 +1087,7 @@
     (make-space-requirement :min-height h :height h :max-height h)))
 
 (defun draw-pixie-tab-bar-bottom (pane)
-  (let ((y0 (bounding-rectangle-min-y (sheet-region pane)))
-	(y1 (bounding-rectangle-max-y (sheet-region pane))))
+  (let ((y1 (bounding-rectangle-max-y (sheet-region pane))))
     (draw-line* pane 0 (- y1 6) +fill+ (- y1 6) :ink *3d-light-color*)
     (draw-line* pane 0 (- y1 1) +fill+ (- y1 1) :ink *3d-dark-color*)))
 
