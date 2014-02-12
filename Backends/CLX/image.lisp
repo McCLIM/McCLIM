@@ -89,6 +89,8 @@
 (defun make-truecolor-image (pixels max-value)
   (make-instance 'truecolor-image :pixels pixels :max-level max-value))
 
+(defgeneric color-image-max-level (image))
+
 (defmethod color-image-max-level ((image truecolor-image))
   (image-max-level image))
 
