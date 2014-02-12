@@ -251,11 +251,6 @@
     (:vertical   +identity-transformation+)
     (:horizontal (make-transformation 0 1 1 0 0 0))))
 
-;(defun translate-range-value (a mina maxa mino maxo)
-;  "When \arg{a} is some value in the range from \arg{mina} to \arg{maxa},
-;   proportionally translate the value into the range \arg{mino} to \arg{maxo}."
-;  (+ mino (* (/ (- a mina) (- maxa mina)) (- maxo mino))))
-
 (defmethod gadget-thumb-region ((pane pixie-slider-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (gadget-bed-region pane)
     (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 1) (+ y1 1) (- x2 1) (- y2 1))
