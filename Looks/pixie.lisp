@@ -300,14 +300,10 @@
         (case token
           ((up-notch)
            (when (< (gadget-value pane) (gadget-max-value pane))
-	     #+NIL
-             (clim-internals::schedule-timer-event pane token 0.1)
              (incf (gadget-value pane))
              (dispatch-repaint pane (sheet-region pane))))
           ((down-notch)
            (when (> (gadget-value pane) (gadget-min-value pane))
-	     #+NIL
-             (clim-internals::schedule-timer-event pane token 0.1)
              (decf (gadget-value pane))
              (dispatch-repaint pane (sheet-region pane)))))))))
 
@@ -331,15 +327,11 @@
            ;; up or down one notch
            (cond
              ((< y (bounding-rectangle-min-y thumb))
-	      #+NIL
-              (clim-internals::schedule-timer-event pane 'down-notch 0.1)
               ;; move toward the min
               (when (> (gadget-value pane) (gadget-min-value pane))
                 (decf (gadget-value pane))
                 (dispatch-repaint pane (sheet-region pane))))
              ((> y (bounding-rectangle-max-y thumb))
-	      #+NIL
-              (clim-internals::schedule-timer-event pane 'up-notch 0.1)
               ;; move toward the max
               (when (< (gadget-value pane) (gadget-max-value pane))
                 (incf (gadget-value pane))
@@ -583,8 +575,6 @@
   (let ((token (clim-internals::event-token event)))
     (with-slots (was-repeating repeating) pane
       (unless (eql was-repeating repeating)
-	#+NIL
-        (clim-internals::schedule-timer-event pane token 0.1)
         (case token
           ((up-line)
            (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane)))
@@ -610,15 +600,11 @@
                  armed    t
                  drag-delta (- y (bounding-rectangle-min-y thumb))))
           ((region-contains-position-p (gadget-up-region pane) x y)
-	   #+NIL
-           (clim-internals::schedule-timer-event pane 'up-line 0.1)
            ;; Up Arrow
            (scroll-up-line-callback pane (gadget-client pane) (gadget-id pane))
            (setf (slot-value pane 'armed) :up)
            (dispatch-repaint pane +everywhere+))
           ((region-contains-position-p (gadget-down-region pane) x y)
-	   #+NIL
-           (clim-internals::schedule-timer-event pane 'down-line 0.1)
            ;; Down Arrow
            (scroll-down-line-callback pane (gadget-client pane) (gadget-id pane))
            (setf (slot-value pane 'armed) :down)
@@ -627,12 +613,8 @@
            ;; Bed
            (cond
              ((< y (bounding-rectangle-min-y thumb))
-	      #+NIL
-              (clim-internals::schedule-timer-event pane 'up-page 0.1)
               (scroll-up-page-callback pane (gadget-client pane) (gadget-id pane)))
              (t
-	      #+NIL
-              (clim-internals::schedule-timer-event pane 'down-page 0.1)
               (scroll-down-page-callback pane (gadget-client pane) (gadget-id pane)))))
           (t
            ;; Nowhere (!)
