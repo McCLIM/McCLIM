@@ -1,7 +1,7 @@
 ;;   (c) copyright 2002 by
 ;;;           Joachim Pouderoux (pixel@pixeledena.com)
-;;;  (c) copyright 2001 by 
-;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2001, 2014 by 
+;;;           Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
