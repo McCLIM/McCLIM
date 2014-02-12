@@ -102,7 +102,7 @@
   (when (sheet-enabled-p (slot-value frame 'top-level-sheet))
     (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet)))))
 
-(defmethod tell-window-manager-about-space-requirements (pane))
+(defgeneric tell-window-manager-about-space-requirements (pane))
 
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame application-frame))
   (let ((sheet (slot-value frame 'top-level-sheet)))
