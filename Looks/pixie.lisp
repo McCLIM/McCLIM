@@ -100,10 +100,10 @@
 	(def down)
 	(def left)))))
 
-; Standard
+;;; Standard
 
-; TODO - clean up all of this colour nonsense
-; which should involve some sensible ideas about tints vs' inks
+;;; TODO - clean up all of this colour nonsense
+;;; which should involve some sensible ideas about tints vs' inks
 
 (defclass pixie-gadget ()
   ((highlighted      :initarg :highlight
@@ -122,7 +122,7 @@
                      :initform +gray76+
                      :reader pane-background)))
 
-; Convenience
+;;; Convenience
 
 (defun draw-up-box (pane x1 y1 x2 y2 foreground)
   (let ((x2 (- x2 1)))
@@ -161,7 +161,7 @@
   (draw-label* pane x1 y1 x2 y2
                :ink (pane-inking-color pane)))
 
-; Highlighting
+;;; Highlighting
 
 (defmethod gadget-highlight-background ((gadget pixie-gadget))
   +gray93+)
@@ -201,7 +201,7 @@
         (when armed
           (disarm-gadget pane)))))
 
-; Slider (refactor into 'thumbed' gadget?)
+;;; Slider (refactor into 'thumbed' gadget?)
 
 (defconstant +pixie-slider-pane-thumb-size+  5000.0)
 (defconstant +pixie-slider-thumb-half-height+ 17)
@@ -417,10 +417,10 @@
                 (draw-line* pane x1 y2 x2 y2 :ink +white+)
                 (draw-line* pane x2 y1 x2 y2 :ink +white+)))))))))
 
-; Scrollbar
+;;; Scrollbar
 
-; We derive from the slider, since the slider is the same, only
-; less so.
+;;; We derive from the slider, since the slider is the same, only
+;;; less so.
 ;;; XXX Probably should derive from scroll-bar too.
 
 (defconstant +pixie-scroll-bar-pane-thumb-size+  5000.0)
@@ -721,7 +721,7 @@
                ;; no thumb decoration
                )))))))
   
-; Menus
+;;; Menus
 
 (defclass pixie-menu-bar-pane (pixie-gadget menu-bar) ())
 
@@ -860,12 +860,12 @@
 
 
 
-; Image pane
+;;; Image pane
 
-; rebuild this with a pixmap repository for general re-use of pixmaps
-; within a port/visual combination.
+;;; rebuild this with a pixmap repository for general re-use of
+;;; pixmaps within a port/visual combination.
 
-; This is just test/proof-of-concept code :]
+;;; This is just test/proof-of-concept code :]
 
 #+NIL
 (defclass pixie-image-pane (pixie-gadget basic-gadget) (
@@ -927,7 +927,7 @@
                               :min-width w :min-height h
                               :max-width w :max-height h))))
 
-; Toggle Button (for checkboxes and radio-buttons)
+;;; Toggle Button (for checkboxes and radio-buttons)
 
 (defclass pixie-toggle-button-pane (pixie-gadget toggle-button-pane) ())
 
@@ -992,9 +992,9 @@
               (draw-label* pane (+ tx2 3 (pane-x-spacing pane)) y1 x2 y2
                            :ink (pane-inking-color pane)))))))))
 
-; Push Button
+;;; Push Button
 
-; why does this inherit from slider-pane?
+;;; why does this inherit from slider-pane?
 (defclass pixie-push-button-pane  (pixie-gadget push-button-pane slider-pane) (
   (dragging
     :initform nil)))
@@ -1018,7 +1018,7 @@
                        :height     (* 4 *3d-border-thickness*)
                        :max-height (* 4 *3d-border-thickness*)))
 
-; factor out the dragging code into a mixin
+;;; factor out the dragging code into a mixin
 (defmethod handle-event ((pane pixie-push-button-pane) (event pointer-enter-event))
   (with-slots (armed dragging) pane
     (cond
@@ -1088,7 +1088,7 @@
 				:style :outset
 				:border-width border-width))))
 
-; Text Area
+;;; Text Area
 
 (defclass pixie-text-field-pane (text-field-pane) ())
 
@@ -1158,7 +1158,7 @@
                                 :max-width width :max-height height
                                 :min-width width :min-height height)))))
 
-;;;; Pixie tab-layout. Reuses implementation of the generic tab-layout-pane.
+;;; Pixie tab-layout. Reuses implementation of the generic tab-layout-pane.
 
 (define-pixie-gadget clim-tab-layout:tab-layout pixie-tab-layout-pane)
 (define-pixie-gadget clim-tab-layout::tab-bar-pane pixie-tab-bar-pane)
