@@ -766,6 +766,9 @@ time an indexed pattern is drawn.")
                            coord-seq)
                        :fill-p filled))))
 
+(defgeneric medium-draw-rectangle-using-ink*
+    (medium ink left top right bottom filled))
+
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
   (medium-draw-rectangle-using-ink* medium (medium-ink medium)
                                     left top right bottom filled))
