@@ -214,6 +214,8 @@
     (setf (xlib:gcontext-background gc) flipper)
     gc))
 
+(defgeneric design-gcontext (medium ink))
+
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::indexed-pattern))
   (design-gcontext medium ink))
 
