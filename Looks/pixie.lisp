@@ -246,6 +246,8 @@
 			      :width       (* 4 *scrollbar-thickness*)
                               :max-width   +fill+)))
 
+(defgeneric vertical-gadget-orientation-transformation (pane))
+
 (defmethod vertical-gadget-orientation-transformation ((pane gadget))
   (ecase (gadget-orientation pane)
     (:vertical   +identity-transformation+)
