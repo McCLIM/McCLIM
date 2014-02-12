@@ -68,20 +68,6 @@
 	   args)
 	 `(call-next-method))))
 
-;; Let us please stop playing these stupid symbol games.
-#+NIL
-(defmethod make-pane-1 ((fm pixie-look) (frame application-frame) type &rest args)
-  (apply #'make-instance
-         (or (find-symbol (concatenate 'string "PIXIE-" (symbol-name type)) :climi)
-             (find-symbol (concatenate 'string "PIXIE-" (symbol-name type) "-PANE") :climi)
-             ; drop back to the built ins...
-             (find-symbol (concatenate 'string (symbol-name type) "-PANE") :climi)
-             type)
-         :frame frame
-         :manager fm
-         :port (port frame)
-         args))
-
 ;;; Scroll button patterns
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
