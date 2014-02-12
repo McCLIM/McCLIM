@@ -509,6 +509,8 @@
 (defmethod (setf scroll-bar-thumb-size) (value (pane pixie-scroll-bar-pane))
   (setf (gadget-thumb-size pane) value))
 
+(defgeneric gadget-up-region (pane))
+
 (defmethod gadget-up-region ((pane pixie-scroll-bar-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2)
       (transform-region (vertical-gadget-orientation-transformation pane)
