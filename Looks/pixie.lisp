@@ -710,7 +710,6 @@
   (with-special-choices (pane)
     (let* ((region (sheet-region pane))
            (frame (polygon-points (bounding-rectangle region))))
-      #+NIL      (draw-polygon pane frame :ink +Blue+ :filled t)
       (draw-bordered-polygon pane frame :style :outset :border-width 1))))
 
 (define-pixie-gadget menu-button pixie-menu-button-pane)
@@ -737,27 +736,6 @@
                   (not vertical))
               (values *pixie-menubar-item-left-margin* *pixie-menubar-item-right-margin*)
               (values *pixie-menu-button-left-margin* *pixie-menu-button-right-margin*)))))
-
-;; What even uses this? All the subclasses have their own handle-repaint methods!
-#+NIL
-(defmethod handle-repaint ((pane pixie-menu-button-pane) region)
-  (declare (ignore region))
-  (with-special-choices (pane)
-    (let* ((region (sheet-region pane))
-           (frame (polygon-points (bounding-rectangle region))))
-      (draw-polygon pane frame :filled t :ink (effective-gadget-foreground pane))
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-        (cond
-          ((slot-value pane 'armed)
-           (let ((inset-frame (polygon-points
-                                (make-rectangle* (+ x1 2) (+ y1 2) (- x2 2) (- y2 2)))))
-             (draw-polygon pane inset-frame :filled t :ink (effective-gadget-foreground pane))
-             (draw-bordered-polygon pane inset-frame
-                           :style :outset
-                           :border-width 1)))
-          (t
-           (draw-polygon pane frame :filled t :ink (effective-gadget-foreground pane))))
-        (draw-label* pane (+ x1 (left-margin pane)) y1 (- x2 (right-margin pane)) y2 :ink +red+ #+NIL (pane-inking-color pane))))))
 
 (defmethod compose-space ((gadget pixie-menu-button-pane) &key width height)
   (declare (ignore width height))
@@ -835,75 +813,6 @@
 			       (+ x1 (left-margin pane))  y1
 			       (- x2 (right-margin pane)) y2
 			       :ink +black+)))))))))
-
-
-
-;;; Image pane
-
-;;; rebuild this with a pixmap repository for general re-use of
-;;; pixmaps within a port/visual combination.
-
-;;; This is just test/proof-of-concept code :]
-
-#+NIL
-(defclass pixie-image-pane (pixie-gadget basic-gadget) (
-  (image-pathname :initarg :pathname)
-  (image-mask-pathname :initarg :mask-pathname :initform nil)
-  (image-width    :type integer
-                  :reader width
-                  :initform 0)
-  (image-height   :type integer
-                  :reader height
-                  :initform 0)
-  (image-image    :initform nil)
-  (image-pixmap   :initform nil)
-  (image-stencil  :initform nil)))
-
-; TODO: allow pixmaps to be realized from unrealized media
-#+NIL
-(defmethod initialize-instance :after ((pane pixie-image-pane) &rest args)
-  (declare (ignore args))
-  (with-slots (image-pathname image-image image-width image-height) pane
-    (let* ((data (image:read-image-file image-pathname))
-           (image (image:make-truecolor-image data 255)))
-      (destructuring-bind (width height) (array-dimensions data)
-        (setf image-width  width
-              image-height height
-              image-image  image))))
-  (with-slots (image-mask-pathname image-stencil) pane
-    (when image-mask-pathname
-      (let* ((data (image:read-image-file image-mask-pathname)))
-        (setf image-stencil (make-stencil data))))))
-
-#+NIL
-(defmethod handle-repaint ((pane pixie-image-pane) region)
-  (declare (ignore region))
-  (with-slots (image-pixmap image-width image-height) pane
-    ; we defer the image loading until after realisation
-    ; which will cause a delay in the initial exposure,
-    ; CHECKME - should we be able to realize pixmaps derived
-    ; from unrealized panes?
-    ; Technically we could just do it from the port's root
-    ; since we don't switch visuals within a port at this point.
-    ; but that is not necessarily a good thing
-    (unless image-pixmap
-      (with-slots (image-image image-width image-height image-pixmap) pane
-        (setf image-pixmap
-              (with-output-to-pixmap (medium pane :width image-width :height image-height)
-                (draw-image (medium-sheet medium)
-                            image-image
-                            :clipping-region (make-rectangle* 0 0 image-width image-height))))))
-    (copy-from-pixmap image-pixmap 0 0 image-width image-height pane 0 0)))
-
-#+NIL
-(defmethod compose-space ((pane pixie-image-pane) &key width height)
-  (declare (ignore width height))
-  (with-slots (image-width image-height) pane
-    (let ((w image-width)
-          (h image-height))
-      (make-space-requirement :width     w :height     h
-                              :min-width w :min-height h
-                              :max-width w :max-height h))))
 
 ;;; Toggle Button (for checkboxes and radio-buttons)
 
@@ -1182,8 +1091,7 @@
   (let ((y0 (bounding-rectangle-min-y (sheet-region pane)))
 	(y1 (bounding-rectangle-max-y (sheet-region pane))))
     (draw-line* pane 0 (- y1 6) +fill+ (- y1 6) :ink *3d-light-color*)
-    (draw-line* pane 0 (- y1 1) +fill+ (- y1 1) :ink *3d-dark-color*)
-    #+NIL (draw-line* pane 0 (1- y1) x1 (1- y1)   :ink +gray30+)))
+    (draw-line* pane 0 (- y1 1) +fill+ (- y1 1) :ink *3d-dark-color*)))
 
 (defmethod draw-output-border-over
     ((shape (eql 'pixie-tab-bar-border)) stream record &key &allow-other-keys)
@@ -1199,7 +1107,7 @@
       (let ((bottom (- y1 7))
 	    (left   (- left 4 (if enabled 2 0)))
 	    (right  (+ right 4 (if enabled 2 0)))
-	    (top    (- top 2 #+NIL (if enabled 2 0))))
+	    (top    (- top 2)))
 	(draw-rectangle* stream left top right (+ bottom (if enabled 2 1))
 			 :filled t :ink background)
 	(draw-line* stream (1+ left) (1- top) (- right 1) (1- top) :ink +white+)
