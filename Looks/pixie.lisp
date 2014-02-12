@@ -341,7 +341,7 @@
                 (dispatch-repaint pane (sheet-region pane)))))))))))
 
 (defmethod handle-event ((pane pixie-slider-pane) (event pointer-motion-event))
-  (with-slots (dragging drag-delta thumb-size) pane
+  (with-slots (dragging drag-delta) pane
     (multiple-value-bind (x y)
         (transform-position (vertical-gadget-orientation-transformation pane)
                             (pointer-event-x event) (pointer-event-y event))
@@ -353,7 +353,6 @@
                (maxy            (bounding-rectangle-max-y bed-region))
                (minv            (gadget-min-value pane))
                (maxv            (gadget-max-value pane))
-               (thumb-size      (* thumb-size (- minv maxv)))
                (value           (min maxv
                                      (max minv
                                           (translate-range-value
