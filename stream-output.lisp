@@ -519,5 +519,9 @@ STREAM-STRING-WIDTH will be called."))
       (when (sheetp *standard-output*)
         (medium-beep (sheet-medium *standard-output*)))))
   
+(defgeneric scroll-quantum (pane)
+  (:documentation "Returns the number of pixels respresenting a 'line', used
+to computed distance to scroll in response to mouse wheel events."))
+
 (defmethod scroll-quantum ((sheet standard-extended-output-stream))
   (stream-line-height sheet))

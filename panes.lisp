@@ -2385,10 +2385,6 @@ order to produce a double-click")
 (defparameter *mouse-scroll-distance* 4
   "Number of lines by which to scroll the window in response to the scroll wheel")
 
-(defgeneric scroll-quantum (pane)
-  (:documentation "Returns the number of pixels respresenting a 'line', used
-to computed distance to scroll in response to mouse wheel events."))
-
 (defmethod scroll-quantum (pane) 10)	; TODO: Connect this with the scroller-pane motion
 
 (defun find-viewport-for-scroll (pane)
