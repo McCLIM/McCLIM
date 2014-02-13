@@ -131,24 +131,31 @@ evaluated."
          new-values-set-form old-values-set-form
          update-form)
     (loop for (place new-value) in forms
-       for (vars vals store-vars writer-form reader-form)
-         = (multiple-value-list (get-setf-expansion place env))
-       for old-value-names = (mapcar (lambda (var)
-                                       (declare (ignore var))
-                                       (gensym))
-                                     store-vars)
-       nconc (mapcar #'list vars vals) into temp-init-let-form
-       nconc (copy-list store-vars) into temp-init-let-form
-       nconc (copy-list old-value-names) into temp-init-let-form
-       nconc `(,(valueify old-value-names) ,reader-form) into temp-save-old-values-setf-form
-       nconc `(,(valueify store-vars) ,new-value) into temp-new-values-set-form
-       nconc `(,(valueify store-vars) ,(valueify old-value-names)) into temp-old-values-set-form
-       collect writer-form into temp-update-form
-       finally (setq init-let-form temp-init-let-form
-                     save-old-values-setf-form temp-save-old-values-setf-form
-                     new-values-set-form temp-new-values-set-form
-                     old-values-set-form temp-old-values-set-form
-                     update-form (cons 'progn temp-update-form)))
+	  for (vars vals store-vars writer-form reader-form)
+	    = (multiple-value-list (get-setf-expansion place env))
+	  for old-value-names = (mapcar (lambda (var)
+					  (declare (ignore var))
+					  (gensym))
+					store-vars)
+	  nconc (mapcar #'list vars vals)
+	    into temp-init-let-form
+	  nconc (copy-list store-vars)
+	    into temp-init-let-form
+	  nconc (copy-list old-value-names)
+	    into temp-init-let-form
+	  nconc `(,(valueify old-value-names) ,reader-form)
+	    into temp-save-old-values-setf-form
+	  nconc `(,(valueify store-vars) ,new-value)
+	    into temp-new-values-set-form
+	  nconc `(,(valueify store-vars) ,(valueify old-value-names))
+	    into temp-old-values-set-form
+	  collect writer-form
+	    into temp-update-form
+	  finally (setq init-let-form temp-init-let-form
+			save-old-values-setf-form temp-save-old-values-setf-form
+			new-values-set-form temp-new-values-set-form
+			old-values-set-form temp-old-values-set-form
+			update-form (cons 'progn temp-update-form)))
     `(let* ,init-let-form
        (setf ,@save-old-values-setf-form)
        (unwind-protect
@@ -198,24 +205,33 @@ Note:
   (cond ((eq result-type 'nil)
          ;; just map for effect
          (cond ((vectorp sequence)
-                (loop for i from 0 below (length sequence) by n do
-                      (apply function (loop for j from 0 below n collect (aref sequence (+ i j))))))
+                (loop for i from 0 below (length sequence) by n
+		      do (apply function
+				(loop for j from 0 below n
+				      collect (aref sequence (+ i j))))))
                ((listp sequence)
                 (let ((q sequence))
-                  (loop until (null q) do
-                        (apply function (loop for j from 0 below n collect (pop q))))))))
+                  (loop until (null q)
+			do (apply function
+				  (loop for j from 0 below n
+					collect (pop q))))))))
         (t
-         ;; otherwise, we (for now) take the easy route of calling COERCE
+         ;; Otherwise, we (for now) take the easy route of calling
+         ;; COERCE.
          (coerce
           (cond ((vectorp sequence)
                  (loop for i from 0 below (length sequence) by n
                        nconc (multiple-value-list
-                                 (apply function (loop for j from 0 below n collect (aref sequence (+ i j)))))))
+			      (apply function
+				     (loop for j from 0 below n
+					   collect (aref sequence (+ i j)))))))
                 ((listp sequence)
                  (let ((q sequence))
-                   (loop until (null q) nconc
-                         (multiple-value-list
-                             (apply function (loop for j from 0 below n collect (pop q))))))))
+                   (loop until (null q)
+			 nconc (multiple-value-list
+				(apply function
+				       (loop for j from 0 below n
+					     collect (pop q))))))))
           result-type))))
 
 ;;; A different way of attacking iteration of sequences
@@ -396,8 +412,8 @@ by the number of variables in VARS."
   "If FUNCTION is not NIL, apply it."
   (when function (apply #'apply function args)))
 
-;;; Remove keyword pairs from an argument list, consing as little as possible
-
+;;; Remove keyword pairs from an argument list, consing as little as
+;;; possible.
 (defun remove-keywords (arg-list keywords)
   (let ((clean-tail arg-list))
     ;; First, determine a tail in which there are no keywords to be removed.
@@ -413,7 +429,7 @@ by the number of variables in VARS."
 	    nconc clean-tail
 	    and do (loop-finish)
 	  else if (not (member key keywords :test #'eq))
-	    nconc (list key value)
+		 nconc (list key value)
 	  end)))
 
 (defmacro with-keywords-removed ((var keywords &optional (new-var var))
