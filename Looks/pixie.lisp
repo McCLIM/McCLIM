@@ -208,7 +208,6 @@
 (defconstant +pixie-slider-thumb-height+      34)
 (defconstant +pixie-slider-thumb-half-width+   8)
 
-
 (defclass pixie-slider-pane (pixie-gadget draggable-arming-mixin slider-pane)
   ((dragging
     :initform nil)
@@ -422,44 +421,44 @@
 (defconstant +pixie-scroll-bar-thumb-height+      34)
 (defconstant +pixie-scroll-bar-thumb-half-width+   8)
 
-(defclass pixie-scroll-bar-pane (pixie-slider-pane) (
-   (drag-callback
-     :initarg :drag-callback
-     :initform nil
-     :reader scroll-bar-drag-callback)
+(defclass pixie-scroll-bar-pane (pixie-slider-pane)
+  ((drag-callback
+    :initarg :drag-callback
+    :initform nil
+    :reader scroll-bar-drag-callback)
    (scroll-to-bottom-callback
-     :initarg :scroll-to-bottom-callback
-     :initform nil
-     :reader scroll-bar-scroll-to-bottom-callback)
+    :initarg :scroll-to-bottom-callback
+    :initform nil
+    :reader scroll-bar-scroll-to-bottom-callback)
    (scroll-to-top-callback
-     :initarg :scroll-to-top-callback
-     :initform nil
-     :reader scroll-bar-scroll-to-top-callback)
+    :initarg :scroll-to-top-callback
+    :initform nil
+    :reader scroll-bar-scroll-to-top-callback)
    (scroll-down-line-callback
-     :initarg :scroll-down-line-callback
-     :initform nil
-     :reader scroll-bar-scroll-down-line-callback)
+    :initarg :scroll-down-line-callback
+    :initform nil
+    :reader scroll-bar-scroll-down-line-callback)
    (scroll-up-line-callback
-     :initarg :scroll-up-line-callback
-     :initform nil
-     :reader scroll-bar-scroll-up-line-callback)
+    :initarg :scroll-up-line-callback
+    :initform nil
+    :reader scroll-bar-scroll-up-line-callback)
    (scroll-down-page-callback
-     :initarg :scroll-down-page-callback
-     :initform nil
-     :reader scroll-bar-scroll-down-page-callback)
+    :initarg :scroll-down-page-callback
+    :initform nil
+    :reader scroll-bar-scroll-down-page-callback)
    (scroll-up-page-callback
-     :initarg :scroll-up-page-callback
-     :initform nil
-     :reader scroll-bar-scroll-up-page-callback)
+    :initarg :scroll-up-page-callback
+    :initform nil
+    :reader scroll-bar-scroll-up-page-callback)
    (thumb-size
-     :initarg :thumb-size
-     :initform 1/4
-     :accessor gadget-thumb-size))
+    :initarg :thumb-size
+    :initform 1/4
+    :accessor gadget-thumb-size))
   (:default-initargs
-     :value 0
-     :min-value 0
-     :max-value 1
-     :orientation :vertical))
+   :value 0
+   :min-value 0
+   :max-value 1
+   :orientation :vertical))
 
 (define-pixie-gadget scroll-bar pixie-scroll-bar-pane)
 
@@ -727,9 +726,8 @@
 (defclass pixie-menu-button-pane (pixie-gadget menu-button-pane)
   ((left-margin :reader left-margin)
    (right-margin :reader right-margin))                
-  (:default-initargs
-    :align-x :left
-    :align-y :center))
+  (:default-initargs :align-x :left
+		     :align-y :center))
 
 (defparameter *pixie-menu-button-left-margin*  26)
 (defparameter *pixie-menu-button-right-margin* 26)
@@ -744,8 +742,10 @@
     (setf (values left-margin right-margin)
           (if (or (typep (slot-value pane 'client) 'menu-bar)
                   (not vertical))
-              (values *pixie-menubar-item-left-margin* *pixie-menubar-item-right-margin*)
-              (values *pixie-menu-button-left-margin* *pixie-menu-button-right-margin*)))))
+              (values *pixie-menubar-item-left-margin*
+		      *pixie-menubar-item-right-margin*)
+              (values *pixie-menu-button-left-margin*
+		      *pixie-menu-button-right-margin*)))))
 
 (defmethod compose-space ((gadget pixie-menu-button-pane) &key width height)
   (declare (ignore width height))
@@ -892,9 +892,8 @@
 ;;; Push Button
 
 ;;; why does this inherit from slider-pane?
-(defclass pixie-push-button-pane  (pixie-gadget push-button-pane slider-pane) (
-  (dragging
-    :initform nil)))
+(defclass pixie-push-button-pane  (pixie-gadget push-button-pane slider-pane)
+  ((dragging :initform nil)))
 
 (define-pixie-gadget push-button pixie-push-button-pane)
 
@@ -1069,8 +1068,6 @@
 
 (defparameter +pixie-selected-tab-bar-view+
   (make-instance 'pixie-tab-bar-view :selected t))
-
-
 
 (defclass pixie-tab-layout-pane (clim-tab-layout:tab-layout-pane)
   ()
