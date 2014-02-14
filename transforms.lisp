@@ -142,16 +142,21 @@ transformation protocol."))
         (origin-y (or origin-y 0)))
     (let ((s (coerce (sin angle) 'coordinate))
           (c (coerce (cos angle) 'coordinate)))
-      ;; This clamping should be done more sensible -- And: is this actually a good thing?
+      ;; This clamping should be done more sensible -- And: is this
+      ;; actually a good thing?
       (when (coordinate= s 0) (setq s 0))
       (when (coordinate= c 0) (setq c 0))
       (when (coordinate= s 1) (setq s 1))
       (when (coordinate= c 1) (setq c 1))
       (when (coordinate= s -1) (setq s -1))
       (when (coordinate= c -1) (setq c -1))
-      ;; Wir stellen uns hier mal ganz dumm:
-      (make-3-point-transformation* origin-x origin-y  (+ origin-x 1) origin-y        origin-x (+ origin-y 1)
-                                    origin-x origin-y  (+ origin-x c) (+ origin-y s)  (- origin-x s) (+ origin-y c)) )))
+      ;; We pretend to be stupid here:
+      (make-3-point-transformation* origin-x origin-y
+				    (+ origin-x 1) origin-y
+				    origin-x (+ origin-y 1)
+                                    origin-x origin-y
+				    (+ origin-x c) (+ origin-y s)
+				    (- origin-x s) (+ origin-y c)))))
 
 (defun make-scaling-transformation (scale-x scale-y &optional origin)
   "MAKE-SCALING-TRANSFORMATION returns a transformation that multiplies 
@@ -169,10 +174,12 @@ real numbers, and default to 0."
         (origin-y (or origin-y 0)))
     (make-transformation scale-x 0
                          0 scale-y
-                         (- origin-x (* scale-x origin-x)) (- origin-y (* scale-y origin-y)))) )
+                         (- origin-x (* scale-x origin-x))
+			 (- origin-y (* scale-y origin-y)))) )
 
 (defun make-reflection-transformation (point1 point2)
-  (make-reflection-transformation* (point-x point1) (point-y point1) (point-x point2) (point-y point2)))
+  (make-reflection-transformation* (point-x point1) (point-y point1)
+				   (point-x point2) (point-y point2)))
 
 (defun make-reflection-transformation* (x1 y1 x2 y2)
   (let ((dx (- x2 x1))
@@ -182,7 +189,8 @@ real numbers, and default to 0."
       (transformation-underspecified (c)
         (error 'reflection-underspecified :why c :coords (list x1 y1 x2 y2))))))
 
-(defun make-3-point-transformation (point-1 point-2 point-3 point-1-image point-2-image point-3-image)
+(defun make-3-point-transformation (point-1 point-2 point-3
+				    point-1-image point-2-image point-3-image)
   (make-3-point-transformation* (point-x point-1) (point-y point-1)
                                 (point-x point-2) (point-y point-2)
                                 (point-x point-3) (point-y point-3)
@@ -190,7 +198,10 @@ real numbers, and default to 0."
                                 (point-x point-2-image) (point-y point-2-image)
                                 (point-x point-3-image) (point-y point-3-image)))
 
-(defun make-3-point-transformation* (x1 y1 x2 y2 x3 y3 x1-image y1-image x2-image y2-image x3-image y3-image)
+(defun make-3-point-transformation* (x1 y1 x2 y2 x3 y3
+				     x1-image y1-image
+				     x2-image y2-image
+				     x3-image y3-image)
   ;; Find a transformation matrix, which transforms each of the three
   ;; points (x_i, y_i) to its image (y_i_image, y_i_image)
   ;; 
@@ -202,7 +213,8 @@ real numbers, and default to 0."
   ;;
   ;; These matrices are small enough to simply calculate A^-1 = |A|^-1 (adj A).
   ;; 
-  (let ((det (+ (* x1 y2) (* y1 x3) (* x2 y3) (- (* y2 x3)) (- (* y1 x2)) (- (* x1 y3)))))
+  (let ((det (+ (* x1 y2) (* y1 x3) (* x2 y3)
+		(- (* y2 x3)) (- (* y1 x2)) (- (* x1 y3)))))
     (if (coordinate/= 0 det)
         (let* ((/det (/ det))
                ;; a thru' i is (adj A) 
@@ -217,11 +229,14 @@ real numbers, and default to 0."
                (myx (* /det (+ (* a y1-image) (* b y2-image) (* c y3-image))))
                (myy (* /det (+ (* d y1-image) (* e y2-image) (* f y3-image))))
                (ty  (* /det (+ (* g y1-image) (* h y2-image) (* i y3-image)))))
-          ;; we're done
+          ;; We're done.
           (make-transformation mxx mxy myx myy tx ty) )
-      ;; determinant was zero, so signal error
+      ;; Determinant was zero, so signal error.
       (error 'transformation-underspecified
-             :coords (list x1 y1 x2 y2 x3 y3 x1-image y1-image x2-image y2-image x3-image y3-image)) )))
+             :coords (list x1 y1 x2 y2 x3 y3
+			   x1-image y1-image
+			   x2-image y2-image
+			   x3-image y3-image)) )))
 
 (define-condition transformation-error (error)
   ())
@@ -231,7 +246,8 @@ real numbers, and default to 0."
 	   :reader transformation-error-coords))
   (:report
    (lambda (self sink)
-     (apply #'format sink "The three points (~D,~D), (~D,~D), and (~D,~D) are propably collinear."
+     (apply #'format sink
+	    "The three points (~D,~D), (~D,~D), and (~D,~D) are propably collinear."
 	    (subseq (transformation-error-coords self) 0 6)))))
 
 (define-condition reflection-underspecified (transformation-error)
@@ -240,7 +256,8 @@ real numbers, and default to 0."
    (why :initarg :why :initform nil
 	:reader transformation-error-why))
   (:report (lambda (self sink)
-	     (apply #'format sink "The two points (~D,~D) and (~D,~D) are coincident."
+	     (apply #'format sink
+		    "The two points (~D,~D) and (~D,~D) are coincident."
 		    (transformation-error-coords self))
 	     (when (transformation-error-why self)
 	       (format sink " (That was determined by the following error:~%~A)"
@@ -252,10 +269,12 @@ real numbers, and default to 0."
    (why :initarg :why :initform nil
 	:reader transformation-error-why))
   (:report (lambda (self sink)
-	     (format sink "Attempt to invert the probably singular transformation ~S."
+	     (format sink
+		     "Attempt to invert the probably singular transformation ~S."
 		     (transformation-error-transformation self))
 	     (when (transformation-error-why self)
-	       (format sink "~%Another error occurred while computing the inverse:~%    ~A"
+	       (format sink
+		       "~%Another error occurred while computing the inverse:~%    ~A"
 		       (transformation-error-why self))))))
 
 (define-condition rectangle-transformation-error (transformation-error)
@@ -274,10 +293,10 @@ real numbers, and default to 0."
          (multiple-value-list (get-transformation transformation1))
          (multiple-value-list (get-transformation transformation2))))
 
-;; make-transformation always returns +identity-transformation+, if
-;; the transformation to be build would be the identity. So we
-;; IDENTITY-TRANSFORMATION-P can just specialize on
-;; STANDARD-IDENTITY-TRANSFORMATION.
+;;; MAKE-TRANSFORMATION always returns +IDENTITY-TRANSFORMATION+, if
+;;; the transformation to be build would be the identity. So we
+;;; IDENTITY-TRANSFORMATION-P can just specialize on
+;;; STANDARD-IDENTITY-TRANSFORMATION.
 
 (defmethod identity-transformation-p ((transformation standard-identity-transformation))
   t)
@@ -285,7 +304,7 @@ real numbers, and default to 0."
 (defmethod identity-transformation-p ((transformation standard-transformation))
   nil)
 
-;; Same for translations, but +identity-transformation+ is a translation too.
+;;; Same for translations, but +identity-transformation+ is a translation too.
 
 (defmethod translation-transformation-p ((transformation standard-translation))
   t)
@@ -329,7 +348,7 @@ real numbers, and default to 0."
 
 (defmethod rectilinear-transformation-p ((transformation standard-transformation))
   ;; Das testen wir einfach ganz brutal
-  ;;; ist das auch richtig?
+  ;; ist das auch richtig?
   (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
     (or (and (coordinate= mxx 0) (coordinate/= mxy 0)
              (coordinate/= myx 0) (coordinate= myy 0))
@@ -397,52 +416,64 @@ real numbers, and default to 0."
                value)))
 
 (defun compose-translation-with-transformation (transformation dx dy)
-  (compose-transformations transformation (make-translation-transformation dx dy)))
+  (compose-transformations transformation
+			   (make-translation-transformation dx dy)))
 
 (defun compose-scaling-with-transformation (transformation sx sy &optional origin)
-  (compose-transformations transformation (make-scaling-transformation sx sy origin)))
+  (compose-transformations transformation
+			   (make-scaling-transformation sx sy origin)))
 
 (defun compose-rotation-with-transformation (transformation angle &optional origin)
-  (compose-transformations transformation (make-rotation-transformation angle origin)))
+  (compose-transformations transformation
+			   (make-rotation-transformation angle origin)))
 
 (defun compose-transformation-with-translation (transformation dx dy)
-  (compose-transformations (make-translation-transformation dx dy) transformation))
+  (compose-transformations (make-translation-transformation dx dy)
+			   transformation))
 
 (defun compose-transformation-with-scaling (transformation sx sy &optional origin)
-  (compose-transformations (make-scaling-transformation sx sy origin) transformation))
+  (compose-transformations (make-scaling-transformation sx sy origin)
+			   transformation))
 
 (defun compose-transformation-with-rotation (transformation angle &optional origin)
-  (compose-transformations (make-rotation-transformation angle origin) transformation))
+  (compose-transformations (make-rotation-transformation angle origin)
+			   transformation))
 
 (defmacro with-translation ((medium dx dy) &body body)
-  `(with-drawing-options (,medium :transformation (make-translation-transformation ,dx ,dy))
+  `(with-drawing-options (,medium
+			  :transformation
+			  (make-translation-transformation ,dx ,dy))
      ,@body))
 
 (defmacro with-scaling ((medium sx &optional sy origin) &body body)
   (if sy
-      `(with-drawing-options (,medium :transformation (make-scaling-transformation
-                                                       ,sx ,sy ,@(if origin (list origin) nil)))
+      `(with-drawing-options (,medium
+			      :transformation
+			      (make-scaling-transformation
+			       ,sx ,sy ,@(if origin (list origin) nil)))
          ,@body)
     (let ((sx-var (make-symbol "SX")))
       `(let* ((,sx-var ,sx))
          (with-drawing-options (,medium 
-                                :transformation (make-scaling-transformation ,sx-var ,sx-var))
+                                :transformation
+				(make-scaling-transformation ,sx-var ,sx-var))
            ,@body)) )))
 
 (defmacro with-rotation ((medium angle &optional origin) &body body)
   `(with-drawing-options (,medium 
-                          :transformation (make-rotation-transformation ,angle ,@(if origin (list origin) nil)))
+                          :transformation
+			  (make-rotation-transformation
+			   ,angle ,@(if origin (list origin) nil)))
      ,@body))
 
-;;(defmacro with-local-coordinates ((medium &optional x y) &body body)) -- what are local coordinates?
-;;(defmacro with-first-quadrant-coordinates ((medium &optional x y) &body body))
 (defmacro with-identity-transformation ((medium) &body body)
-  ;; I believe this should set the medium transformation to the identity
-  ;; transformation. To use WITH-DRAWING-OPTIONS which concatenates the the
-  ;; transformation given to the existing one we just pass the inverse.
+  ;; I believe this should set the medium transformation to the
+  ;; identity transformation. To use WITH-DRAWING-OPTIONS which
+  ;; concatenates the the transformation given to the existing one we
+  ;; just pass the inverse.
   ;;
-  ;; "Further we don't use LETF since it is a pretty much broken idea in case
-  ;; of multithreading." -- gilbert
+  ;; "Further we don't use LETF since it is a pretty much broken idea
+  ;; in case of multithreading." -- gilbert
   ;;
   ;; "That may be, but all of the transformation functions/macros are
   ;; going to set the medium state at some point (see
@@ -457,11 +488,11 @@ real numbers, and default to 0."
                            nil
                            body)))
 
-;; invoke-with-identity-transformation is gone to graphics.lisp
-;; invoke-with-identity-transformation and
-;; invoke-with-first-quadrant-coordinates
-;; likewise because of the with-drawing-options macro,
-;; perhaps we should gather macros in a macros.lisp file?
+;;; invoke-with-identity-transformation is gone to graphics.lisp
+;;; invoke-with-identity-transformation and
+;;; invoke-with-first-quadrant-coordinates
+;;; likewise because of the with-drawing-options macro,
+;;; perhaps we should gather macros in a macros.lisp file?
 
 (defmacro with-local-coordinates ((medium &optional x y) &body body)
   (setf medium (stream-designator-symbol medium '*standard-output*))
@@ -504,11 +535,11 @@ real numbers, and default to 0."
   (transform-distance (invert-transformation transformation) dx dy))
 
 (defun transform-positions (transformation coord-seq)
-  ;; Some appliations (like a function graph plotter) use a large number of
-  ;; coordinates, therefore we bother optimizing this. We do this by testing
-  ;; the individual elements of the transformation matrix for being 0 or +1 or
-  ;; -1 as these are common cases as most transformations are either mere
-  ;; translations or just scalings.
+  ;; Some appliations (like a function graph plotter) use a large
+  ;; number of coordinates, therefore we bother optimizing this. We do
+  ;; this by testing the individual elements of the transformation
+  ;; matrix for being 0 or +1 or -1 as these are common cases as most
+  ;; transformations are either mere translations or just scalings.
   ;;
   ;; Also: For now we always return a vector.
   ;;
@@ -618,7 +649,7 @@ real numbers, and default to 0."
 
 (defmethod transformation-transformator ((transformation standard-transformation)
                                          &optional (input-type 'real))
-  ;; returns a function, which transforms its arguments
+  ;; Return a function that transforms its arguments.
   (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
     (labels ((s* (x y)
                (cond ((coordinate= 0 x) nil)
@@ -665,7 +696,8 @@ real numbers, and default to 0."
   (multiple-value-bind (rotations remainder) (ffloor phi (* 2 pi))
     (when (reflection-transformation-p transformation)
       (setq rotations  (ffloor (- phi) (* 2 pi))))
-    (multiple-value-bind (ix iy) (transform-distance transformation (cos remainder) (sin remainder))
+    (multiple-value-bind (ix iy)
+	(transform-distance transformation (cos remainder) (sin remainder))
       (multiple-value-bind (x0 y0) (transform-distance transformation 1 0)
         (let ((my-angle (atan* ix iy))
               (null-angle (atan* x0 y0)))
@@ -675,7 +707,8 @@ real numbers, and default to 0."
   (multiple-value-bind (rotations remainder) (ffloor phi (* 2 pi))
     (when (reflection-transformation-p transformation)
       (setq rotations  (ffloor (- phi) (* 2 pi))))
-    (multiple-value-bind (ix iy) (untransform-distance transformation (cos remainder) (sin remainder))
+    (multiple-value-bind (ix iy)
+	(untransform-distance transformation (cos remainder) (sin remainder))
       (multiple-value-bind (x0 y0) (untransform-distance transformation 1 0)
         (let ((my-angle (atan* ix iy))
               (null-angle (atan* x0 y0)))
@@ -691,15 +724,16 @@ real numbers, and default to 0."
     (with-slots ((dx2 dx) (dy2 dy)) transformation2
       (make-translation-transformation (+ dx1 dx2) (+ dy1 dy2)))))
 
-(defmethod compose-transformations (transformation2
-                                    (transformation1 standard-identity-transformation))
+(defmethod compose-transformations
+    (transformation2 (transformation1 standard-identity-transformation))
   transformation2)
 
-(defmethod compose-transformations ((transformation2 standard-identity-transformation)
-                                    transformation1)
+(defmethod compose-transformations
+    ((transformation2 standard-identity-transformation) transformation1)
   transformation1)
 
-(defmethod invert-transformation ((transformation standard-identity-transformation))
+(defmethod invert-transformation
+    ((transformation standard-identity-transformation))
   transformation)
 
 (defmethod invert-transformation ((transformation standard-translation))
@@ -713,10 +747,12 @@ real numbers, and default to 0."
       (declare (type coordinate dx dy x y))
       (values (+ x dx) (+ y dy)))))
 
-(defmethod transform-position ((transformation standard-identity-transformation) x y)
+(defmethod transform-position
+    ((transformation standard-identity-transformation) x y)
   (values x y))
 
-(defmethod transform-region ((transformation standard-identity-transformation) region)
+(defmethod transform-region
+    ((transformation standard-identity-transformation) region)
   region)
 
 (defmethod rectilinear-transformation-p ((tr standard-identity-transformation))
