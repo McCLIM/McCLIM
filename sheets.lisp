@@ -25,8 +25,6 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; The sheet protocol
@@ -105,8 +103,11 @@
 	      :initarg :enabled-p
               :initform t
               :accessor sheet-enabled-p)))
-; Native region is volatile, and is only computed at the first request when it's equal to nil.
-; Invalidate-cached-region method sets the native-region to nil.
+
+;;; Native region is volatile, and is only computed at the first
+;;; request when it's equal to nil.
+;;;
+;;; Invalidate-cached-region method sets the native-region to nil.
 
 (defmethod sheet-parent ((sheet basic-sheet))
   nil)
@@ -124,11 +125,13 @@
 
 (define-condition sheet-is-not-child (error) ())
 
-(defmethod sheet-disown-child :before ((sheet basic-sheet) (child sheet) &key (errorp t))
+(defmethod sheet-disown-child :before
+    ((sheet basic-sheet) (child sheet) &key (errorp t))
   (when (and (not (member child (sheet-children sheet))) errorp)
     (error 'sheet-is-not-child)))
 
-(defmethod sheet-disown-child :after ((sheet basic-sheet) (child sheet) &key (errorp t))
+(defmethod sheet-disown-child :after
+    ((sheet basic-sheet) (child sheet) &key (errorp t))
   (declare (ignore errorp))
   (note-sheet-disowned child)
   (when (sheet-grafted-p sheet)
@@ -230,40 +233,42 @@
   (error "Sheet has no parent"))
 
 (defmethod map-over-sheets-containing-position (function (sheet basic-sheet) x y)
-  (map-over-sheets #'(lambda (child)
-                       (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
-                         (when (region-contains-position-p (sheet-region child) tx ty)
-                           (funcall function child))))
-                   sheet))
+  (map-over-sheets
+   #'(lambda (child)
+       (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
+	 (when (region-contains-position-p (sheet-region child) tx ty)
+	   (funcall function child))))
+   sheet))
 
 
 (defmethod map-over-sheets-overlapping-region (function (sheet basic-sheet) region)
-  (map-over-sheets #'(lambda (child)
-                       (when (region-intersects-region-p
-                              region
-                              (transform-region
-                               (if (eq child sheet)
-                                   +identity-transformation+
-                                   (sheet-transformation child))
-                               (sheet-region child)))
-                         (funcall function child)))
-                   sheet))
+  (map-over-sheets
+   #'(lambda (child)
+       (when (region-intersects-region-p
+	      region
+	      (transform-region
+	       (if (eq child sheet)
+		   +identity-transformation+
+		   (sheet-transformation child))
+	       (sheet-region child)))
+	 (funcall function child)))
+   sheet))
 
 (defmethod child-containing-position ((sheet basic-sheet) x y)
   (loop for child in (sheet-children sheet)
-      do (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
-	    (if (and (sheet-enabled-p child)
-		     (region-contains-position-p (sheet-region child) tx ty))
-		(return child)))))
+	do (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
+	     (if (and (sheet-enabled-p child)
+		      (region-contains-position-p (sheet-region child) tx ty))
+		 (return child)))))
 
 (defmethod children-overlapping-region ((sheet basic-sheet) (region region))
   (loop for child in (sheet-children sheet)
-      if (and (sheet-enabled-p child)
-	      (region-intersects-region-p
-	       region
-	       (transform-region (sheet-transformation child)
-				 (sheet-region child))))
-      collect child))
+	if (and (sheet-enabled-p child)
+		(region-intersects-region-p
+		 region
+		 (transform-region (sheet-transformation child)
+				   (sheet-region child))))
+	  collect child))
 
 (defmethod children-overlapping-rectangle* ((sheet basic-sheet) x1 y1 x2 y2)
   (children-overlapping-region sheet (make-rectangle* x1 y1 x2 y2)))
@@ -401,7 +406,8 @@
   (loop for child in (sheet-children sheet)
         do (invalidate-cached-regions child)))
 
-(defmethod (setf sheet-transformation) :after (transformation (sheet basic-sheet))
+(defmethod (setf sheet-transformation) :after
+    (transformation (sheet basic-sheet))
   (declare (ignore transformation))
   (note-sheet-transformation-changed sheet)
   (invalidate-cached-transformations sheet)
@@ -418,7 +424,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; sheet parent mixin
-
 
 (defclass sheet-parent-mixin ()
   ((parent :initform nil :accessor sheet-parent)))
@@ -456,8 +461,12 @@
 (defmethod graft ((sheet sheet-parent-mixin))
   (and (sheet-parent sheet) (graft (sheet-parent sheet))))
 
-(defmethod (setf sheet-transformation) :after (newvalue (sheet sheet-parent-mixin))
+(defmethod (setf sheet-transformation) :after
+    (newvalue (sheet sheet-parent-mixin))
   (declare (ignore newvalue))
+  ;; FIXME: I do not know why this next form is commented out, but it
+  ;; looks like it might have its place, so I am not removing it right
+  ;; now.  
   #+nil(note-sheet-transformation-changed sheet))
 
 (defmethod map-sheet-position-to-parent ((sheet sheet-parent-mixin) x y)
@@ -466,10 +475,12 @@
 (defmethod map-sheet-position-to-child ((sheet sheet-parent-mixin) x y)
   (untransform-position (sheet-transformation sheet) x y))
 
-(defmethod map-sheet-rectangle*-to-parent ((sheet sheet-parent-mixin) x1 y1 x2 y2)
+(defmethod map-sheet-rectangle*-to-parent
+    ((sheet sheet-parent-mixin) x1 y1 x2 y2)
   (transform-rectangle* (sheet-transformation sheet) x1 y1 x2 y2))
 
-(defmethod map-sheet-rectangle*-to-child ((sheet sheet-parent-mixin) x1 y1 x2 y2)
+(defmethod map-sheet-rectangle*-to-child
+    ((sheet sheet-parent-mixin) x1 y1 x2 y2)
   (untransform-rectangle* (sheet-transformation sheet) x1 y1 x2 y2))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -484,10 +495,10 @@
 (defmethod sheet-adopt-child ((sheet sheet-leaf-mixin) (child sheet))
   (error "Leaf sheet attempting to adopt a child"))
 
-(defmethod sheet-disown-child ((sheet sheet-leaf-mixin) (child sheet) &key (errorp t))
+(defmethod sheet-disown-child
+    ((sheet sheet-leaf-mixin) (child sheet) &key (errorp t))
   (declare (ignorable errorp))
   (error "Leaf sheet attempting to disown a child"))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -569,8 +580,9 @@
 (defclass sheet-translation-transformation-mixin (sheet-transformation-mixin)
   ())
 
-(defmethod (setf sheet-transformation) :before ((transformation transformation)
-						(sheet sheet-translation-transformation-mixin))
+(defmethod (setf sheet-transformation) :before
+    ((transformation transformation)
+     (sheet sheet-translation-transformation-mixin))
   (if (not (translation-transformation-p transformation))
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-TRANSLATION-TRANSFORMATION-MIXIN to a non translation transformation")))
 
@@ -578,40 +590,37 @@
   ()
   (:default-initargs :transformation (make-transformation 1 0 0 -1 0 0)))
 
-(defmethod (setf sheet-transformation) :before ((transformation transformation)
-						(sheet sheet-y-inverting-transformation-mixin))
+(defmethod (setf sheet-transformation) :before
+    ((transformation transformation)
+     (sheet sheet-y-inverting-transformation-mixin))
   (if (not (y-inverting-transformation-p transformation))
       (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-Y-INVERTING-TRANSFORMATION-MIXIN to a non Y inverting transformation")))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; mirrored sheet
 
-
-;; We assume the following limitations of the host window systems:
-;;
-;;  mirror transformations:
-;;   . can only be translations
-;;   . are limited to 16-bit signed integer deltas
-;;
-;;  mirror regions:
-;;   . can only be axis-aligend rectangles
-;;   . min-x = min-y = 0
-;;   . max-x, max-y < 2^16
-;;
-;; These are the limitations of the X Window System.
-;;
+;;; We assume the following limitations of the host window systems:
+;;;
+;;;  mirror transformations:
+;;;   . can only be translations
+;;;   . are limited to 16-bit signed integer deltas
+;;;
+;;;  mirror regions:
+;;;   . can only be axis-aligend rectangles
+;;;   . min-x = min-y = 0
+;;;   . max-x, max-y < 2^16
+;;;
+;;; These are the limitations of the X Window System.
+;;;
 
 (defclass mirrored-sheet-mixin ()
   ((port :initform nil :initarg :port :accessor port)
-
    (mirror-transformation
     :documentation "Our idea of the current mirror transformation. Might not
                     be correct if a foreign application changes our mirror's geometry."
     :initform +identity-transformation+
     :accessor %sheet-mirror-transformation)
-
    (mirror-region
     :documentation "Our idea of the current mirror region. Might not be
 correct if a foreign application changes our mirror's geometry. Also note
@@ -626,7 +635,7 @@ that this might be different from the sheet's native region."
 ;;; CLIM II specification.  For that reason, there is no DEFGENERIC
 ;;; form for it in decls.lisp.  Since some Common Lisp compilers emit
 ;;; a warning if there is no explicit DEFGENERIC form, and in order to
-;;; get a clean build, we include the DEFGENERIC form here. 
+;;; get a clean build, we include the DEFGENERIC form here.
 (defgeneric (setf sheet-direct-mirror) (mirror sheet))
 
 (defmethod (setf sheet-direct-mirror) (mirror (sheet mirrored-sheet-mixin))
@@ -640,7 +649,8 @@ that this might be different from the sheet's native region."
 
 (defmethod note-sheet-grafted :before ((sheet mirrored-sheet-mixin))
   (unless (port sheet)
-    (error "~S called on sheet ~S, which has no port?!" 'note-sheet-grafted sheet))
+    (error "~S called on sheet ~S, which has no port?!" '
+	   note-sheet-grafted sheet))
   (realize-mirror (port sheet) sheet))
 
 (defmethod note-sheet-degrafted :after ((sheet mirrored-sheet-mixin))
@@ -648,6 +658,8 @@ that this might be different from the sheet's native region."
 
 (defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
   (declare (ignore region))
+  ;; FIXME: I don't know why this next form is commented out.  It
+  ;; should either be uncommented or removed.
   #+nil(port-set-sheet-region (port sheet) sheet region)
   (update-mirror-geometry sheet)
   )
@@ -671,8 +683,10 @@ that this might be different from the sheet's native region."
 		  this-region))))
     native-region))
 
-(defmethod (setf sheet-enabled-p) :after (new-value (sheet mirrored-sheet-mixin))
-  (when (sheet-direct-mirror sheet)     ;only do this if the sheet actually has a mirror
+(defmethod (setf sheet-enabled-p) :after
+    (new-value (sheet mirrored-sheet-mixin))
+  (when (sheet-direct-mirror sheet)
+    ;; We do this only if the sheet actually has a mirror.
     (if new-value
         (port-enable-sheet (port sheet) sheet)
         (port-disable-sheet (port sheet) sheet))))
@@ -689,17 +703,21 @@ that this might be different from the sheet's native region."
 
 (defmethod sheet-mirror-region ((sheet mirrored-sheet-mixin))
   (cond
-    ;; for grafts or top-level-sheet's always read the mirror region from
-    ;; the server, since it is not under our control.
+    ;; For grafts or top-level-sheet's always read the mirror region
+    ;; from the server, since it is not under our control.
     ((or (null (sheet-parent sheet))
          (null (sheet-parent (sheet-parent sheet))))
+     ;; FIXME: I don't know why we have this following form rather
+     ;; than the next one which is commented out.  One of them should
+     ;; be chosen, and the other one whould be removed.
      (make-rectangle* 0 0 #x10000 #x10000)
      #+nil
      (make-rectangle* 0 0
                       (port-mirror-width (port sheet) sheet)
                       (port-mirror-height (port sheet) sheet)))
     (t
-     ;; For other sheets just use the calculated value, saves a round trip.
+     ;; For other sheets just use the calculated value, which saves a
+     ;; round trip.
      (or (%sheet-mirror-region sheet)
          ;; XXX what to do if the sheet has no idea about its region?
          ;; XXX can we consider calling sheet-mirror-region then an error?
@@ -760,105 +778,103 @@ that this might be different from the sheet's native region."
 
 ;;;; Coordinate Swizzling
 
-;; This implements what I call "coordinate swizzling", the illusion that
-;; sheets can be arbitrary large. The key idea here is that there is a
-;; certain kind freedom in choosing the native transformation. A little
-;; diagram to illustrate the involved transformations:
+;;; This implements what I call "coordinate swizzling", the illusion that
+;;; sheets can be arbitrary large. The key idea here is that there is a
+;;; certain kind freedom in choosing the native transformation. A little
+;;; diagram to illustrate the involved transformations:
 
-;;
-;;                  NT                           NT = native transformation
-;;    sheet  ---------------->  mirror          PNT = parent's NT
-;;      |                         |              MT = mirror transformation
-;;      |                         |               T = sheet transformation
-;;      |                         |
-;;    T |                         | MT
-;;      |                         |
-;;      |                         |
-;;      |                         |
-;;      v          PNT            v
-;;    parent ----------------> parent
-;;                             mirror
-;;
+;;;
+;;;                  NT                           NT = native transformation
+;;;    sheet  ---------------->  mirror          PNT = parent's NT
+;;;      |                         |              MT = mirror transformation
+;;;      |                         |               T = sheet transformation
+;;;      |                         |
+;;;    T |                         | MT
+;;;      |                         |
+;;;      |                         |
+;;;      |                         |
+;;;      v          PNT            v
+;;;    parent ----------------> parent
+;;;                             mirror
+;;;
 
-;; To setup both the mirror transformation (MR) and the mirror region (MR),
-;; we start with the mirror region. The window systems limitations are here:
-;; We can only have a certain size and its upper-left corner must be at the
-;; origin.
+;;; To setup both the mirror transformation (MR) and the mirror region (MR),
+;;; we start with the mirror region. The window systems limitations are here:
+;;; We can only have a certain size and its upper-left corner must be at the
+;;; origin.
 
-;; Now the parent already has a mirror region (PMR) assigned, which obeys to
-;; the very same size restrictions. Since every part of MR outside of (PMR o
-;; MT^1) is not visible, the first idea is to just clip it by the visible
-;; part:
+;;; Now the parent already has a mirror region (PMR) assigned, which obeys to
+;;; the very same size restrictions. Since every part of MR outside of (PMR o
+;;; MT^1) is not visible, the first idea is to just clip it by the visible
+;;; part:
 
-;;  MR_1 = intersection (SR o NT, PMR o MT^-1)             [mirror space]
+;;;  MR_1 = intersection (SR o NT, PMR o MT^-1)             [mirror space]
 
-;; Since both NT and MT^-1 are not yet known let us reformulate that region
-;; in the parent mirror space:
+;;; Since both NT and MT^-1 are not yet known let us reformulate that region
+;;; in the parent mirror space:
 
-;;  MR_2 = MR_1 o MT                                       [parent mirror space]
-;;       = intersection (SR o NT, PMR o MT^-1) o MT
-;;       = intersection (SR o NT o MT, PMR o MT^-1 o MT)
-;;       = intersection (SR o (T o PNT o MT^-1) o MT, PMR)
-;;       = intersection (SR o T o PNT, PMR)
+;;;  MR_2 = MR_1 o MT                                       [parent mirror space]
+;;;       = intersection (SR o NT, PMR o MT^-1) o MT
+;;;       = intersection (SR o NT o MT, PMR o MT^-1 o MT)
+;;;       = intersection (SR o (T o PNT o MT^-1) o MT, PMR)
+;;;       = intersection (SR o T o PNT, PMR)
 
-;; MR_2 now is a good candidate for a mirror region. Unfortunately it is
-;; still in parent mirror space, so we transform it back, yielding MR_3:
+;;; MR_2 now is a good candidate for a mirror region. Unfortunately it is
+;;; still in parent mirror space, so we transform it back, yielding MR_3:
 
-;;  MR_3 = MR_2 o MT^-1
-;;       = intersection (SR o T o PNT, PMR) o MT^-1
+;;;  MR_3 = MR_2 o MT^-1
+;;;       = intersection (SR o T o PNT, PMR) o MT^-1
 
-;; Here the only unknown is the mirror transformation MT, we can still
-;; choose any as long as the window system limitations are met for both MR
-;; and MT.
+;;; Here the only unknown is the mirror transformation MT, we can still
+;;; choose any as long as the window system limitations are met for both MR
+;;; and MT.
 
-;; 1. MT should be a translation, whose delta x and y components are within
-;;    limits.
+;;; 1. MT should be a translation, whose delta x and y components are within
+;;;    limits.
 
-;; 2. The size limitation of MR is already met, since MR_3's size is no
-;;    larger than PMR's size (which mets the limitations). [Remember that MT
-;;    was defined to be some translation].
+;;; 2. The size limitation of MR is already met, since MR_3's size is no
+;;;    larger than PMR's size (which mets the limitations). [Remember that MT
+;;;    was defined to be some translation].
 
-;; 3. MR_3's upper left corner should also be at the origin which nicely
-;;    defines MT^-1: Just choose this upper left corner coordinates as MT's x
-;;    and y deltas.
+;;; 3. MR_3's upper left corner should also be at the origin which nicely
+;;;    defines MT^-1: Just choose this upper left corner coordinates as MT's x
+;;;    and y deltas.
 
-;; So we can meet all criteria. The NT can easily be set up by the identity:
+;;; So we can meet all criteria. The NT can easily be set up by the identity:
 
-;;    NT = T o PNT o MT^-1
+;;;    NT = T o PNT o MT^-1
 
 ;;; Notes
 
-;; . when the native transformation changes, we need to:
+;;; . when the native transformation changes, we need to:
 
-;;  a. Redraw the mirror's contents since the mapping from the sheet space
-;;     to the mirror space (that is the native transformation) just changed. 
-;;     Translational changes in the native transformation can be catered by
-;;     blittering, but then have a nice synchronization problem: Suppose
-;;     a repaint event is underway as we blitter from some region R_1 to
-;;     region R_2. Say the repaint event's region intersects with R_1. In
-;;     this case we just blittered pixels which were considered dirty into
-;;     R_2. Redrawing R_1 now does not repair the defect, since R_2 now also
-;;     contains dirty pixels. => oops, redraw error.
+;;;  a. Redraw the mirror's contents since the mapping from the sheet space
+;;;     to the mirror space (that is the native transformation) just changed. 
+;;;     Translational changes in the native transformation can be catered by
+;;;     blittering, but then have a nice synchronization problem: Suppose
+;;;     a repaint event is underway as we blitter from some region R_1 to
+;;;     region R_2. Say the repaint event's region intersects with R_1. In
+;;;     this case we just blittered pixels which were considered dirty into
+;;;     R_2. Redrawing R_1 now does not repair the defect, since R_2 now also
+;;;     contains dirty pixels. => oops, redraw error.
 ;;
-;;  b. Since the above above calculation took the parent's native
-;;     transformation into account, (and even the naively wanted mirror
-;;     region depends on the parent's native transformation), we need to
-;;     redo mirror geometry calculation for any child.
+;;;  b. Since the above above calculation took the parent's native
+;;;     transformation into account, (and even the naively wanted mirror
+;;;     region depends on the parent's native transformation), we need to
+;;;     redo mirror geometry calculation for any child.
 ;;
-;;  c. I imagine more aggressive output records which remember the actual
-;;     octets which need to be send to the X server. These would contain
-;;     mirror coordinates and will need to be recalculated, when the native
-;;     transformation changes.
+;;;  c. I imagine more aggressive output records which remember the actual
+;;;     octets which need to be send to the X server. These would contain
+;;;     mirror coordinates and will need to be recalculated, when the native
+;;;     transformation changes.
 
-;; => Changing the native transformation can be expensive, so we want a way
-;;    to minimize changes to the native transformation.
+;;; => Changing the native transformation can be expensive, so we want a way
+;;;    to minimize changes to the native transformation.
 
-;;
-
-;; What did we do? We clipped the wanted mirror region, SR o NT, inside the
-;; parent's mirror region to meet the window system limitations. We can make
-;; this clip region larger as long as we still come up with an mirror
-;; region, which meets the limits.
+;;; What did we do? We clipped the wanted mirror region, SR o NT, inside the
+;;; parent's mirror region to meet the window system limitations. We can make
+;;; this clip region larger as long as we still come up with an mirror
+;;; region, which meets the limits.
 
 (defun update-mirror-geometry (sheet &key)
   "This function reflects the current sheet region and sheet transformation
@@ -879,11 +895,11 @@ this function tries to minimize changes to it. (although it does not try
 very hard)."
   (let ((old-native-transformation (%%sheet-native-transformation sheet)))
     (cond ((null (sheet-parent sheet))
-           ;; Ugh, we have no parent, this must be the graft, we cannot resize it can we?
+           ;; Ugh, we have no parent, this must be the graft, we
+           ;; cannot resize it can we?
            nil)
-          ;;
-          ;; Otherwise, the native transformation has to changed or needs to be computed initially
-          ;;
+          ;; Otherwise, the native transformation has to changed or
+          ;; needs to be computed initially
           (t
            (let* ((parent (sheet-parent sheet))
                   (sheet-region-in-native-parent
@@ -891,22 +907,25 @@ very hard)."
                    (transform-region (sheet-native-transformation parent)
                                      (transform-region (sheet-transformation sheet)
                                                        (sheet-region sheet)))))
-
              (when (region-equal sheet-region-in-native-parent +nowhere+)
                ;; hmm
-               (setf (%sheet-mirror-transformation sheet) (make-translation-transformation -5 -5))
+               (setf (%sheet-mirror-transformation sheet)
+		     (make-translation-transformation -5 -5))
                (setf (%sheet-mirror-region sheet) (make-rectangle* 0 0 1 1))
                (when (sheet-direct-mirror sheet)
-                 (port-set-mirror-region (port sheet) (sheet-direct-mirror sheet)
-                                         (%sheet-mirror-region sheet))
-                 (port-set-mirror-transformation (port sheet)
-                                                 (sheet-direct-mirror sheet)
-                                                 (%sheet-mirror-transformation sheet)))
+                 (port-set-mirror-region
+		  (port sheet)
+		  (sheet-direct-mirror sheet)
+		  (%sheet-mirror-region sheet))
+                 (port-set-mirror-transformation
+		  (port sheet)
+		  (sheet-direct-mirror sheet)
+		  (%sheet-mirror-transformation sheet)))
                (return-from update-mirror-geometry))
-             
-             ;; mx1 .. my2 are is now the wanted mirror region in the parent
-             ;; coordinate system.
-             (with-bounding-rectangle* (mx1 my1 mx2 my2) sheet-region-in-native-parent
+             ;; mx1 .. my2 are is now the wanted mirror region in the
+             ;; parent coordinate system.
+             (with-bounding-rectangle* (mx1 my1 mx2 my2)
+				       sheet-region-in-native-parent
                (let (;; pw, ph is the width/height of the parent
                      (pw  (bounding-rectangle-width (sheet-mirror-region parent)))
                      (ph  (bounding-rectangle-height (sheet-mirror-region parent))))
@@ -926,9 +945,7 @@ very hard)."
                                            (> (round (- x2 x1)) 0)
                                            (> (round (- y2 y1)) 0))
                                   (values t (make-rectangle* 0 0 (round (- x2 x1)) (round (- y2 y1)))))))))
-                   ;;
                    ;; Try reusing the native transformation:
-                   ;;
                    (when old-native-transformation
                      (let ((MT (compose-transformations
                                 (compose-transformations
@@ -945,10 +962,13 @@ very hard)."
                                (port-set-mirror-region port mirror MR)
                                (port-set-mirror-transformation port mirror MT)))
                            (return-from update-mirror-geometry nil) ))))
-
-                   ;;
+		   ;; FIXME: There is a quote character on a line by
+		   ;; itself here.  It looks like someone tried to
+		   ;; avoid evaluation, but WHY?  Certainly not the
+		   ;; right method to do that, especially without
+		   ;; explanation.
+		   ;;
                    ;; Try reusing the mirror transformation:
-                   ;;
                    '
                    (let ((MT (%sheet-mirror-transformation sheet)))
                      (when MT
@@ -971,15 +991,19 @@ very hard)."
                                  (port-set-mirror-transformation port mirror MT)))
                              ;; update the native transformation if neccessary.
                              (unless (and old-native-transformation
-                                          (transformation-equal native-transformation old-native-transformation))
+                                          (transformation-equal
+					   native-transformation
+					   old-native-transformation))
                                (invalidate-cached-transformations sheet)
-                               (%%set-sheet-native-transformation native-transformation sheet)
+                               (%%set-sheet-native-transformation
+				native-transformation sheet)
                                (when old-native-transformation
                                  (care-for-new-native-transformation
-                                  sheet old-native-transformation native-transformation))))
+                                  sheet
+				  old-native-transformation
+				  native-transformation))))
                            (return-from update-mirror-geometry nil)
                            ))))
-
                    ;; Otherwise just choose
 
                    ;; Conditions to be met:
@@ -1018,22 +1042,31 @@ very hard)."
                                 (port-set-mirror-transformation port mirror MT)))
                             ;; update the native transformation if neccessary.
                             (unless (and old-native-transformation
-                                         (transformation-equal native-transformation old-native-transformation))
+                                         (transformation-equal
+					  native-transformation
+					  old-native-transformation))
                               (invalidate-cached-transformations sheet)
-                              (%%set-sheet-native-transformation native-transformation sheet)
+                              (%%set-sheet-native-transformation
+			       native-transformation sheet)
                               (when old-native-transformation
                                 (care-for-new-native-transformation
-                                 sheet old-native-transformation native-transformation))))
-
+                                 sheet
+				 old-native-transformation
+				 native-transformation))))
                            (t
-                            (setf (%sheet-mirror-transformation sheet) (make-translation-transformation -5 -5))
-                            (setf (%sheet-mirror-region sheet) (make-rectangle* 0 0 1 1))
+                            (setf (%sheet-mirror-transformation sheet)
+				  (make-translation-transformation -5 -5))
+                            (setf (%sheet-mirror-region sheet)
+				  (make-rectangle* 0 0 1 1))
                             (when (sheet-direct-mirror sheet)
-                              (port-set-mirror-region (port sheet) (sheet-direct-mirror sheet)
-                                                      (%sheet-mirror-region sheet))
-                              (port-set-mirror-transformation (port sheet)
-                                                              (sheet-direct-mirror sheet)
-                                                              (%sheet-mirror-transformation sheet)))) ))))))))))
+                              (port-set-mirror-region
+			       (port sheet)
+			       (sheet-direct-mirror sheet)
+			       (%sheet-mirror-region sheet))
+                              (port-set-mirror-transformation
+			       (port sheet)
+			       (sheet-direct-mirror sheet)
+			       (%sheet-mirror-transformation sheet))))))))))))))
 
 (defun care-for-new-native-transformation (sheet old-native-transformation native-transformation)
   "Internal and helper for UPDATE-MIRROR-GEOMETRY. This is called in
