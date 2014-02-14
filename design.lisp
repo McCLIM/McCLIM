@@ -22,62 +22,61 @@
 
 ;;;; Some Notes
 
-;; The design design has a pitfall:
+;;; The design design has a pitfall:
+;;;
+;;; As drawing is specified, a design of class opacity carries no color
+;;; and thus borrows its color from  +foreground-ink+. So that
+;;;
+;;; (make-opacity v) == (compose-in +foreground-ink+ (make-opacity v))
 ;;
-;; As drawing is specified, a design of class opacity carries no color
-;; and thus borrows its color from  +foreground-ink+. So that
-;;
-;; (make-opacity v) == (compose-in +foreground-ink+ (make-opacity v))
-;;
-;; This implies, that an opacity is not neccessary uniform, it depends
-;; on the selected foreground ink.
-;;
-;; They halfway fix this by specifing that the mask argument of
-;; compose-in and compose-out is thought as to be drawn with
-;; +foreground-ink+ = +background-ink+ = +black+.
-;;
-;; But Is (make-opacity 1) really the same as +foreground-ink+? 
-;;     Or: Is
-;;         (compose-in D +foreground-ink+) different from
-;;         (compose-in D (make-opacity 1))?
-;;
-;; If the above equation is true, we get a funny algebra:
-;;
-;; (make-opacity 0) = +transparent-ink+ = +nowhere+
-;; (make-opacity 1) = +foreground-ink+ = +everywhere+
-;;
-;; --GB
+;;; This implies, that an opacity is not neccessary uniform, it depends
+;;; on the selected foreground ink.
+;;;
+;;; They halfway fix this by specifing that the mask argument of
+;;; compose-in and compose-out is thought as to be drawn with
+;;; +foreground-ink+ = +background-ink+ = +black+.
+;;;
+;;; But Is (make-opacity 1) really the same as +foreground-ink+? 
+;;;     Or: Is
+;;;         (compose-in D +foreground-ink+) different from
+;;;         (compose-in D (make-opacity 1))?
+;;;
+;;; If the above equation is true, we get a funny algebra:
+;;;
+;;; (make-opacity 0) = +transparent-ink+ = +nowhere+
+;;; (make-opacity 1) = +foreground-ink+ = +everywhere+
+;;;
+;;; --GB
 
-;; I agree with this interpretation. -Hefner
+;;; I agree with this interpretation. -Hefner
 
-;; It might be handy to have the equivalent of parent-relative
-;; backgrounds. We can specify new indirect inks:
-;;
-;; +parent-background+
-;; +parent-relative-background+
-;; +parent-foreground+
-;; +parent-relative-foreground+
-;;
-;; The relative one would have the same "absolute" origin as the
-;; relevant inks of the parent.
-;;
-;; When they are evaluated, they look at the parent's
-;; foreground/background ink. Though the relative variants are
-;; expensive, when you want to scroll them ...
-;;
-;;
-;; Further we really should specify some form of indirekt ink
-;; protocol.
-;;
-;; --GB
+;;; It might be handy to have the equivalent of parent-relative
+;;; backgrounds. We can specify new indirect inks:
+;;;
+;;; +parent-background+
+;;; +parent-relative-background+
+;;; +parent-foreground+
+;;; +parent-relative-foreground+
+;;;
+;;; The relative one would have the same "absolute" origin as the
+;;; relevant inks of the parent.
+;;;
+;;; When they are evaluated, they look at the parent's
+;;; foreground/background ink. Though the relative variants are
+;;; expensive, when you want to scroll them ...
+;;;
+;;;
+;;; Further we really should specify some form of indirekt ink
+;;; protocol.
+;;;
+;;; --GB
 
 ;;;; Design Protocol
 
-;;
-;; DRAW-DESIGN already is all you need for a design protocol.
-;;
-;; --GB
-
+;;;
+;;; DRAW-DESIGN already is all you need for a design protocol.
+;;;
+;;; --GB
 
 (in-package :clim-internals)
 
@@ -150,53 +149,6 @@
 		   (make-instance 'named-color :name name :red red :green green :blue blue))))))
 ) ; eval-when
 
-;;;    ;;; For ihs to rgb conversion, we use the formula 
-;;;    ;;;  i = (r+g+b)/3
-;;;    ;;;  s = 1-min(r,g,b)/i
-;;;    ;;;  h =     60(g-b)/(max(r,g,b)-min(r,g,b)) if r >= g,b
-;;;    ;;;      120+60(b-r)/(max(r,g,b)-min(r,g,b)) if g >= r,b
-;;;    ;;;      240+60(r-g)/(max(r,g,b)-min(r,g,b)) if b >= r,g
-;;;    ;;; First, we introduce colors x, y, z such that x >= y >= z
-;;;    ;;; We compute x, y, and z and then determine the correspondance
-;;;    ;;; between x, y, and z on the one hand and r, g, and b on the other. 
-;;;    (defun make-ihs-color (i h s)
-;;;      (assert (and (<= 0 i 1)
-;;;                 (<= 0 s 1)
-;;;                 (<= 0 h 360)))
-;;;      (let ((ah (/ (abs (cond ((<= h 60) h)
-;;;                            ((<= h 180) (- h 120))
-;;;                            ((<= h 300) (- h 240))
-;;;                            (t (- h 360))))
-;;;                 60)))
-;;;        (let* ((z (* i (- 1 s)))
-;;;             (y (/ (+ (* ah (- (* 3 i) (* 2 z))) z) (+ 1 ah)))
-;;;             (x (- (* 3 i) y z)))
-;;;          (assert (and (<= 0 x 1)
-;;;                     (<= 0 y 1)
-;;;                     (<= 0 z 1)))
-;;;          (cond ((<= h 60) (make-rgb-color x y z))
-;;;              ((<= h 120) (make-rgb-color y x z))
-;;;              ((<= h 180) (make-rgb-color z x y))
-;;;              ((<= h 240) (make-rgb-color z y x))
-;;;              ((<= h 300) (make-rgb-color y z x))
-;;;              (t (make-rgb-color x z y))))))
-;;;    
-;;;    (defmethod color-ihs ((color color))
-;;;      (multiple-value-bind (r g b) (color-rgb color)
-;;;        (let ((max (max r g b))
-;;;            (min (min r g b))
-;;;            (intensity (/ (+ r g b) 3)))
-;;;          (if (= max min)
-;;;            (values intensity 0 0)
-;;;            (let* ((saturation (- 1 (/ min intensity)))
-;;;                   (diff (- max min))
-;;;                   (hue (* 60 (cond ((= max r) (/ (- g b) diff))
-;;;                                    ((= max g) (+ 2 (/ (- b r) diff)))
-;;;                                    (t (+ 4 (/ (- r g) diff)))))))
-;;;              (when (< hue 0)
-;;;                (incf hue 360))
-;;;	    (values intensity hue saturation))))))
-
 ;;;
 ;;; Below is a literal translation from Dylan's DUIM source code,
 ;;; which was itself probably literal translation from some Lisp code.
@@ -243,10 +195,9 @@
 (defun make-ihs-color (i h s)
   (multiple-value-call #'make-rgb-color (ihs-to-rgb i h s)))
 
-
 (defun make-contrasting-inks (n &optional k)
-  ;; Look +contrasting-colors+ up at runtime, because it has not yet been
-  ;; declared when this is compiled.
+  ;; Look +contrasting-colors+ up at runtime, because it has not yet
+  ;; been declared when this is compiled.
   (let ((contrasting-colors (symbol-value '+contrasting-colors+)))
     (if (> n (length contrasting-colors))
         (error "The argument N is out of range [1-~D]" (length contrasting-colors)))
@@ -267,9 +218,12 @@
 	  until (null line)
 	  do (if (eql (aref line 0) #\!)
 		 (format out ";~A~%" (subseq line 1))
-	       (multiple-value-bind (red index) (parse-integer line :start 0 :junk-allowed t)
-		 (multiple-value-bind (green index) (parse-integer line :start index :junk-allowed t)
-		   (multiple-value-bind (blue index) (parse-integer line :start index :junk-allowed t)
+	       (multiple-value-bind (red index)
+		   (parse-integer line :start 0 :junk-allowed t)
+		 (multiple-value-bind (green index)
+		     (parse-integer line :start index :junk-allowed t)
+		   (multiple-value-bind (blue index)
+		       (parse-integer line :start index :junk-allowed t)
 		     (let ((name (substitute #\- #\Space (string-trim '(#\Space #\Tab #\Newline) (subseq line index)))))
 		       (format out "(defconstant +~A+ (make-named-color ~S ~,4F ~,4F ~,4F))~%" name name (/ red 255.0) (/ green 255.0) (/ blue 255.0))
 		       (setq names (nconc names (list name))))))))
@@ -416,11 +370,11 @@
 	     :initform nil
 	     :accessor image-alpha-p)))
 
-;; Applications (closure in particular) might want to cache any
-;; backend-specific data required to draw an RGB-IMAGE.
-;;
-;; To implement this caching, designs must be created separately for each
-;; medium, so that mediums can put their own data into them.
+;;; Applications (closure in particular) might want to cache any
+;;; backend-specific data required to draw an RGB-IMAGE.
+;;;
+;;; To implement this caching, designs must be created separately for
+;;; each medium, so that mediums can put their own data into them.
 
 (defclass rgb-image-design (design)
     ((medium :initform nil :initarg :medium)
@@ -431,8 +385,7 @@
 (defun make-rgb-image-design (image)
   (make-instance 'rgb-image-design :image image))
 
-
-;; Protocol to free cached data
+;;; Protocol to free cached data
 
 (defgeneric medium-free-image-design (medium design))
 
@@ -440,11 +393,11 @@
   (medium-free-image-design (slot-value design 'medium) design))
 
 
-;; Drawing protocol
+;;; Drawing protocol
 
 (defgeneric medium-draw-image-design* (medium design x y))
 
-;; Fetching protocol
+;;; Fetching protocol
 
 (defun sheet-rgb-image (sheet &key x y width height)
   (multiple-value-bind (data alphap)
@@ -488,10 +441,10 @@
   (with-medium-options (medium options)
     (medium-draw-image-design* medium design x y)))
 
-;; PATTERN is just the an abstract class of all pattern-like design. 
+;;; PATTERN is just the an abstract class of all pattern-like design. 
 
-;; For performance might consider to sort out pattern, which consists
-;; of uniform designs only and convert them to an RGBA-image.
+;;; For performance might consider to sort out pattern, which consists
+;;; of uniform designs only and convert them to an RGBA-image.
 
 (define-protocol-class pattern (design))
 
@@ -522,8 +475,8 @@
   (with-slots (array) pattern
     (array-dimension array 0)))
 
-;; These methods are included mostly for completeness and are likely
-;; of little use in practice.
+;;; These methods are included mostly for completeness and are likely
+;;; of little use in practice.
 (defmethod pattern-array ((pattern stencil))
   (let ((array (make-array (list (pattern-height pattern)
                                  (pattern-width pattern)))))
@@ -554,7 +507,7 @@
 ;;; by DRAW-PATTERN*.  
 (defgeneric medium-draw-pattern* (medium pattern x y))
 
-;; RGB-PATTERNs must be treated specially...
+;;; RGB-PATTERNs must be treated specially...
 (defmethod medium-draw-pattern* (medium (pattern rgb-pattern) x y)
   (medium-draw-image-design* medium pattern x y))
 
@@ -641,7 +594,7 @@
 ;;;
 
 
-;;;; ------------------------------------------------------------------------------------------
+;;;; -----------------------------------------------------------------
 ;;;;
 ;;;; COMPOSE-IN
 ;;;;
@@ -698,7 +651,7 @@
 
 ;;; IN-COMPOSITUM
 
-;; Since compose-in is associative, we can write it this way:
+;;; Since compose-in is associative, we can write it this way:
 (defmethod compose-in ((ink in-compositum) (mask design))
   (compose-in (compositum-ink ink)
               (compose-in (compositum-mask ink)
@@ -800,7 +753,7 @@
   (declare (ignorable ink mask))
   )
 
-;;;; ------------------------------------------------------------------------------------------
+;;;; -----------------------------------------------------------------
 ;;;;
 ;;;;  Compose-Out
 ;;;;
@@ -823,7 +776,7 @@
 (defmethod compose-out ((design design) (mask standard-opacity))
   (compose-in design (make-opacity (- 1.0 (opacity-value mask)))))
 
-;;;; ------------------------------------------------------------------------------------------
+;;;; -----------------------------------------------------------------
 ;;;;
 ;;;;  Compose-Over
 ;;;;
@@ -1011,7 +964,7 @@
   (declare (ignorable foreground background))
   )
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Comparison of designs.
 
