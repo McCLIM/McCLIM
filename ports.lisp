@@ -26,16 +26,16 @@
 
 (defvar *default-server-path* nil)
 
-;; - CLX is the de-facto reference backend.
-;; - Prefer Graphic-Forms and Gtkairo over CLX, since they get installed only
-;;   on explicit user request anyway.
-;; - If both are present, use Graphics-Forms in favour of Gtkairo, since
-;;   it is the native Windows backend.
-;; - Beagle should be treated like Graphic-Forms in the long term, but is
-;;   currently lacking a maintainer, so let's leave it near the end.
-;; - OpenGL and Null are in this list mostly to document their existence,
-;;   and neither is currently a complete backend we would want to make
-;;   a default.  Put them after CLX, so that they won't actually be reached.
+;;; - CLX is the de-facto reference backend.
+;;; - Prefer Graphic-Forms and Gtkairo over CLX, since they get installed only
+;;;   on explicit user request anyway.
+;;; - If both are present, use Graphics-Forms in favour of Gtkairo, since
+;;;   it is the native Windows backend.
+;;; - Beagle should be treated like Graphic-Forms in the long term, but is
+;;;   currently lacking a maintainer, so let's leave it near the end.
+;;; - OpenGL and Null are in this list mostly to document their existence,
+;;;   and neither is currently a complete backend we would want to make
+;;;   a default.  Put them after CLX, so that they won't actually be reached.
 (defvar *server-path-search-order*
     '(:graphic-forms :gtkairo :clx :opengl :beagle :null))
 
@@ -67,7 +67,6 @@
     :accessor port-event-process
     :documentation "In a multiprocessing environment, the particular process
                     reponsible for calling PROCESS-NEXT-EVENT in a loop.")
-
    (lock
     :initform (make-recursive-lock "port lock")
     :accessor port-lock)
@@ -98,21 +97,21 @@
       (setq server-path (find-default-server-path)))
   (if (atom server-path)
       (setq server-path (list server-path)))
-  (setq server-path (funcall (get (first server-path) :server-path-parser) server-path))
+  (setq server-path
+	(funcall (get (first server-path) :server-path-parser) server-path))
   (loop for port in *all-ports*
       if (equal server-path (port-server-path port))
       do (return port)
       finally (let ((port-type (get (first server-path) :port-type))
 		    port)
 		(if (null port-type)
-		    (error "Don't know how to make a port of type ~S" server-path))
-		(setq port (funcall 'make-instance port-type :server-path server-path))
+		    (error "Don't know how to make a port of type ~S"
+			   server-path))
+		(setq port
+		      (funcall 'make-instance port-type
+			       :server-path server-path))
 		(push port *all-ports*)
 		(return port))))
-
-(defmethod initialize-instance :after ((port basic-port) &rest args)
-  (declare (ignorable args))
-  )
 
 (defmethod destroy-port :before ((port basic-port))
   (when (and *multiprocessing-p* (port-event-process port))
