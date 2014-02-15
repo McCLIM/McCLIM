@@ -126,7 +126,8 @@
 (defmethod port-lookup-sheet ((port basic-port) mirror)
   (gethash mirror (slot-value port 'mirror->sheet)))
 
-(defmethod port-register-mirror ((port basic-port) (sheet mirrored-sheet-mixin) mirror)
+(defmethod port-register-mirror
+    ((port basic-port) (sheet mirrored-sheet-mixin) mirror)
   (setf (gethash sheet (slot-value port 'sheet->mirror)) mirror)
   (setf (gethash mirror (slot-value port 'mirror->sheet)) sheet)
   nil)
@@ -246,7 +247,8 @@
 
 (defgeneric make-graft (port &key orientation units))
 
-(defmethod make-graft ((port basic-port) &key (orientation :default) (units :device))
+(defmethod make-graft
+    ((port basic-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'graft
 		 :port port :mirror nil
 		 :orientation orientation :units units)))
