@@ -74,22 +74,15 @@
           (setf (slot-value event 'timestamp)
                 (incf *last-timestamp*))))))
 
-;; ### method deleted, since it is defined below in a less obfuscated
-;;     way.
-;; --GB 2002-11-20
-;(defmethod event-type ((event event))
-;  (let* ((type (string (type-of event)))
-;	 (position (search "-EVENT" type)))
-;    (if (null position)
-;	:event
-;      (intern (subseq type 0 position) :keyword))))
-;;; Reintroduce something like that definition, with defmethod goodness.
-;;; -- moore
-
-(defmacro define-event-class (name supers slots &rest options)
+;;; This macro automates the definition of a method on the EVENT-TYPE
+;;; generic function.  Methods on that function should return a
+;;; keyword with the same name as the event class name, except with
+;;; the "-event" suffix stripped off.
+(defmacro define-event-class (name superclasses slots &rest options)
   (let* ((event-tag (string '#:-event))
 	 (name-string (string name))
 	 (pos (search event-tag name-string :from-end t)))
+    ;; Check that the name of the class ends with "-EVENT".
     (when (or (null pos)
 	      (not (eql (+ pos (length event-tag)) (length name-string))))
       (error "~S does not end in ~A and is not a valid event name for ~
@@ -97,7 +90,7 @@
 	     name event-tag))
     (let ((type (intern (subseq name-string 0 pos) :keyword)))
       `(progn
-	 (defclass ,name ,supers
+	 (defclass ,name ,superclasses
 	   ,slots
 	   ,@options)
 	 (defmethod event-type ((event ,name))
