@@ -21,17 +21,13 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; The Repaint Protocol
+;;;; The Repaint Protocol.
 
 (in-package :clim-internals)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; repaint protocol functions
+;;; Repaint protocol functions.
 
 (defmethod queue-repaint ((sheet basic-sheet) (event window-repaint-event))
   (queue-event sheet event))
@@ -46,13 +42,13 @@
 				      sheet
 				      region))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; repaint protocol classes
+;;; Repaint protocol classes.
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; standard repainting mixin
+;;; Class STANDARD-REPAINTING-MIXIN.
 
 (defclass standard-repainting-mixin () ())
 
@@ -72,9 +68,9 @@
 			 (event window-repaint-event))
   (handle-repaint sheet (window-event-region event)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; immediate repainting mixin
+;;; Class IMMEDIATE-REPAINTING-MIXIN.
 
 (defclass immediate-repainting-mixin () ())
 
@@ -89,21 +85,22 @@
 			 (event window-repaint-event))
   (handle-repaint sheet (window-event-region event)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; sheet mute repainting mixin
+;;; Class SHEET-MUTE-REPAINTING-MIXIN.
 
 (defclass sheet-mute-repainting-mixin () ())
 
 (defmethod dispatch-repaint ((sheet sheet-mute-repainting-mixin) region)
-  (when (sheet-mirror sheet)            ;only dispatch repaints, when the sheet has a mirror
+  (when (sheet-mirror sheet)
+    ;; Only dispatch repaints, when the sheet has a mirror.
     (queue-repaint sheet (make-instance 'window-repaint-event
-                                        :sheet sheet
-                                        :region (transform-region
-                                                 (sheet-native-transformation sheet)
-                                                 region)))))
+			   :sheet sheet
+			   :region (transform-region
+				    (sheet-native-transformation sheet)
+				    region)))))
 
-;;; I know what the spec says about sheet-mute-repainting-mixin, but I don't
+;;; I know what the spec says about SHEET-MUTE-REPAINTING-MIXIN, but I don't
 ;;; think it's right; "repaint-sheet that does nothing" makes no sense.
 ;;; -- moore
 #+nil
