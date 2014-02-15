@@ -21,12 +21,10 @@
 (in-package :clim-internals)
 
 (defclass standard-sheet-output-mixin ()
-  (
-   ))
+  ())
 
 (defclass sheet-mute-output-mixin ()
-  (
-   ))
+  ())
 
 (defclass sheet-with-medium-mixin ()
   ((medium :initform nil
@@ -67,7 +65,8 @@
 (defclass permanent-medium-sheet-output-mixin (sheet-with-medium-mixin)
   ())
 
-(defmethod initialize-instance :after ((sheet permanent-medium-sheet-output-mixin) &rest args)
+(defmethod initialize-instance :after
+    ((sheet permanent-medium-sheet-output-mixin) &rest args)
   (declare (ignore args))
   ;; hmm, 
   (setf (%sheet-medium sheet) (make-medium (port sheet) sheet))
@@ -116,8 +115,8 @@
       (degraft-medium new-medium (port sheet) sheet)
       (deallocate-medium (port sheet) new-medium))))
 
-;; The description of WITH-SHEET-MEDIUM-BOUND in the spec, seems to be
-;; extremly bogus, what is its purpose?
+;;; The description of WITH-SHEET-MEDIUM-BOUND in the spec, seems to be
+;;; extremly bogus, what is its purpose?
 
 (defmethod invoke-with-sheet-medium-bound
     (continuation (medium basic-medium) (sheet permanent-medium-sheet-output-mixin))
@@ -139,7 +138,8 @@
              (setf (%sheet-medium sheet) old-medium)
              (degraft-medium new-medium (port sheet) sheet) )))))
 
-(defmethod invoke-with-special-choices (continuation (sheet sheet-with-medium-mixin))
+(defmethod invoke-with-special-choices
+    (continuation (sheet sheet-with-medium-mixin))
   (with-sheet-medium (medium sheet)
     (with-special-choices (medium)
       (funcall continuation sheet))))
