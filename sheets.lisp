@@ -1142,15 +1142,15 @@ very hard)."
 
 ;;; Sheets as bounding rectangles
 
-;; Somewhat hidden in the spec, we read (section 4.1.1 "The Bounding
-;; Rectangle Protocol")
-;;
+;;; Somewhat hidden in the spec, we read (section 4.1.1 "The Bounding
+;;; Rectangle Protocol")
+;;;
 
-;; | bounding-rectangle* region [Generic Function]
-;; |
-;; |      [...] The argument region must be either a bounded region [...] or
-;; |      some other object that obeys the bounding rectangle protocol, such
-;; |      as a sheet or an output record. [...]
+;;; | bounding-rectangle* region [Generic Function]
+;;; |
+;;; |      [...] The argument region must be either a bounded region [...] or
+;;; |      some other object that obeys the bounding rectangle protocol, such
+;;; |      as a sheet or an output record. [...]
 
 (defmethod bounding-rectangle* ((sheet sheet))
   (bounding-rectangle* (sheet-region sheet)))
@@ -1158,4 +1158,3 @@ very hard)."
 ;;; The null sheet
 
 (defclass null-sheet (basic-sheet) ())
-
