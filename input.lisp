@@ -38,7 +38,7 @@
          :initform (make-condition-variable)
 	 :accessor event-queue-processes
 	 :documentation "Condition variable for waiting processes")
-   ;; experimental extension for scheduled event insersion
+   ;; experimental extension for scheduled event insertion
    (schedule-time
          :initform nil
          :accessor event-schedule-time
@@ -168,8 +168,9 @@
               (did-something-p nil))
           (labels ((fun (xs)
 		     (cond ((null xs)
-                          ;; We reached the queue's tail: Append the new event, construct a new
-                          ;; one if necessary.
+                          ;; We reached the queue's tail: Append the
+                          ;; new event, construct a new one if
+                          ;; necessary.
                           (when did-something-p
                             (setf item
                               (make-instance 'window-repaint-event
@@ -177,16 +178,18 @@
                                 :sheet     (event-sheet item)
                                 :region    region)))
                           (setf (event-queue-tail eq) (cons item nil)) )
-                         ;;
                          ((and (typep (car xs) 'window-repaint-event)
                                (eq (event-sheet (car xs)) sheet))
-                          ;; This is a repaint event for the same sheet, delete it and combine
-                          ;; its region into the new event.
+                          ;; This is a repaint event for the same
+                          ;; sheet, delete it and combine its region
+                          ;; into the new event.
                           (setf region
-                            (region-union region (window-event-native-region (car xs))))
-                          ;; Here is an alternative, which just takes the bounding rectangle. 
-                          ;; NOTE: When doing this also take care that the new region really
-                          ;; is cleared.
+                            (region-union region
+					  (window-event-native-region (car xs))))
+                          ;; Here is an alternative, which just takes
+                          ;; the bounding rectangle.
+                          ;; NOTE: When doing this also take care that
+                          ;; the new region really is cleared.
                           ;; (setf region
                           ;;   (let ((old-region (window-event-native-region (car xs))))
                           ;;     (make-rectangle*
@@ -205,8 +208,9 @@
                           (setf (cdr xs) (fun (cdr xs)))
                           xs))))
 	    (setf (event-queue-head eq) (fun (event-queue-head eq))))))
-     ;; Regular events are just appended:
-       (t (append-event))))
+       (t 
+	;; Regular events are just appended:
+	(append-event))))
     (condition-notify (event-queue-processes eq))))
 
 (defgeneric event-queue-prepend (event-queue item))
@@ -258,25 +262,25 @@
 		 (not (null (event-queue-head eq)))))
 	  (cond
 	    (timeout
-	     (loop as    timeout-time = (+ now timeout)
-		with  now = (now)
-		do    (when (pred)
+	     (loop as timeout-time = (+ now timeout)
+		   with now = (now)
+		   do (when (pred)
 			(return t))
-		do    (when (>= now timeout-time)
+		   do (when (>= now timeout-time)
 			(return nil))
-		do    (let ((timeout (if schedule-time
+		   do (let ((timeout (if schedule-time
 					 (min (- schedule-time now)
 					      (- timeout-time now))
 					 (- timeout-time now))))
 			(condition-wait (event-queue-processes eq)
 					lock timeout))
-		do    (check-schedule eq)))
+		   do (check-schedule eq)))
 	    (schedule-time
 	     (loop do (when (pred)
 			(return t))
-		do (condition-wait
-		    (event-queue-processes eq) lock (- schedule-time (now)))
-		do (check-schedule eq)))
+		   do (condition-wait
+		       (event-queue-processes eq) lock (- schedule-time (now)))
+		   do (check-schedule eq)))
 	    (t
 	     (or (pred)
 		 (progn
@@ -296,7 +300,7 @@
 
 (defgeneric schedule-event-queue (event-queue sheet event delay))
 
-; ugh. FIXME when I work - build a priority queue or something
+;;; ugh. FIXME when I work - build a priority queue or something
 (defmethod schedule-event-queue ((eq standard-event-queue) sheet event delay)
   (with-slots (schedule-time schedule) eq
     (let ((when (+ (now) delay)))
@@ -320,7 +324,7 @@
             (push sheet schedule)
             (push event schedule))))))
 
-;; PORT-EVENT-QUEUE methods
+;;; PORT-EVENT-QUEUE methods
 
 (defun do-port-force-output (port-event-queue)
   (let ((port (event-queue-port port-event-queue)))
@@ -352,7 +356,7 @@
   (declare (ignore predicate))
   (do-port-force-output eq))
 
-;; STANDARD-SHEET-INPUT-MIXIN
+;;; STANDARD-SHEET-INPUT-MIXIN
 
 (defclass standard-sheet-input-mixin ()
   ((queue :initform (make-instance 'port-event-queue)
@@ -368,11 +372,6 @@
 (defmethod (setf stream-input-buffer) (new-val
 				       (stream standard-sheet-input-mixin))
   (setf (slot-value stream 'queue) new-val))
-
-;(defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
-;  (if (typep event 'device-event)
-;      (queue-event sheet event)
-;    (handle-event sheet event)))
 
 (defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
   (queue-event sheet event))
@@ -422,8 +421,6 @@
 (defmethod event-listen ((sheet standard-sheet-input-mixin))  
   (with-slots (queue) sheet
     (event-queue-listen queue)))
-
-;;;;
 
 ;;; Support for callers that want to set an event queue for every pane.
 
@@ -499,8 +496,8 @@
 	     :initarg :delegate
 	     :accessor delegate-sheet-delegate) ))
 
-;;; Don't know if this event queue stuff is completely right, or if it matters
-;;; much...
+;;; Don't know if this event queue stuff is completely right, or if it
+;;; matters much...
 
 (defmethod initialize-instance :after ((obj delegate-sheet-input-mixin)
 				       &key input-buffer)
