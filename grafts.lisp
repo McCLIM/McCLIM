@@ -26,14 +26,11 @@
    (units :initform :device
 	  :initarg :units
 	  :reader graft-units)
-   (mirror :initarg :mirror)
-   )
-  )
+   (mirror :initarg :mirror)))
 
 (defmethod initialize-instance :after ((graft graft) &rest args)
   (declare (ignore args))
   (port-register-mirror (port graft) graft (slot-value graft 'mirror)))
-;  (setf (graft graft) graft))
 
 (defun graftp (x)
   (typep x 'graft))
@@ -64,7 +61,8 @@
 				  (eq units (graft-units graft)))
 			     (return-from find-graft graft)))
 		     port)
-    (return-from find-graft (make-graft port :orientation orientation :units units))))
+    (return-from find-graft
+      (make-graft port :orientation orientation :units units))))
 
 (defun map-over-grafts (function port)
   (mapc function (port-grafts port)))
@@ -72,18 +70,6 @@
 (defmacro with-graft-locked (graft &body body)
   `(let ((graft ,graft))
      ,@body))
-
-#-(and)
-(defmethod graft-width ((graft graft) &key (units :device))
-  (if (eq units :device)
-      1000
-    1))
-
-#-(and)
-(defmethod graft-height ((graft graft) &key (units :device))
-  (if (eq units :device)
-      1000
-    1))
 
 (defun graft-pixels-per-millimeter (graft)
   ;; We assume square pixels here --GB
