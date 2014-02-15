@@ -22,43 +22,43 @@
 
 ;;; Text Styles
 
-;; - *UNDEFINED-TEXT-STYLE* is missing
-;; - Why is (EQ (MAKE-TEXT-STYLE NIL NIL 10) (MAKE-TEXT-STYLE NIL NIL 10.0005)) = T?
-;;   Does it matter?
-;; - Don't we want a weak hash-table for *TEXT-STYLE-HASH-TABLE*
-;;
-;; --GB 2002-02-26
+;;; - *UNDEFINED-TEXT-STYLE* is missing
+;;; - Why is (EQ (MAKE-TEXT-STYLE NIL NIL 10) (MAKE-TEXT-STYLE NIL NIL 10.0005)) = T?
+;;;   Does it matter?
+;;; - Don't we want a weak hash-table for *TEXT-STYLE-HASH-TABLE*
+;;;
+;;; --GB 2002-02-26
 
 ;;; Notes
 
-;; The text-style protocol is kind of useless for now. How is an
-;; application programmer expected to implement new text-styles? I
-;; think we would need something like:
+;;; The text-style protocol is kind of useless for now. How is an
+;;; application programmer expected to implement new text-styles? I
+;;; think we would need something like:
 ;;
-;;  TEXT-STYLE-CHARACTER-METRICS text-style character[1]
-;;    -> width, ascent, descent, left-bearing, right-bearing
+;;;  TEXT-STYLE-CHARACTER-METRICS text-style character[1]
+;;;    -> width, ascent, descent, left-bearing, right-bearing
 ;;
-;;  TEXT-STYLE-DRAW-TEXT text-style medium string x y
-;;  Or even better:
-;;  DESIGN-FROM-TEXT-STYLE-CHARACTER text-style character
+;;;  TEXT-STYLE-DRAW-TEXT text-style medium string x y
+;;;  Or even better:
+;;;  DESIGN-FROM-TEXT-STYLE-CHARACTER text-style character
 ;;
 ;;
-;; And when you start to think about it, text-styles are not fonts. So
-;; we need two protocols: A text style protocol and a font protocol. 
+;;; And when you start to think about it, text-styles are not fonts. So
+;;; we need two protocols: A text style protocol and a font protocol. 
 ;;
-;; A text style is then something, which maps a sequence of characters
-;; into a couple of drawing commands, while probably using some font.
+;;; A text style is then something, which maps a sequence of characters
+;;; into a couple of drawing commands, while probably using some font.
 ;;
-;; While a font is something, which maps a _glyph index_ into a design.
+;;; While a font is something, which maps a _glyph index_ into a design.
 ;;
-;; Example: Underlined with extra word spacing is a text style, while
-;;          Adobe Times Roman 12pt is a font.
+;;; Example: Underlined with extra word spacing is a text style, while
+;;;          Adobe Times Roman 12pt is a font.
 ;;
-;; And [it can't be said too often] unicode is not a glyph encoding
-;; but more a kind of text formating.
-;; 
-;; [1] or even a code position
-;; --GB
+;;; And [it can't be said too often] unicode is not a glyph encoding
+;;; but more a kind of text formating.
+;;; 
+;;; [1] or even a code position
+;;; --GB
 
 (in-package :clim-internals)
 
@@ -417,8 +417,8 @@
 (defmethod medium-merged-text-style ((medium medium))
   (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
 
-;; with-sheet-medium moved to output.lisp. --GB
-;; with-sheet-medium-bound moved to output.lisp. --GB
+;;; with-sheet-medium moved to output.lisp. --GB
+;;; with-sheet-medium-bound moved to output.lisp. --GB
 
 (defmacro with-pixmap-medium ((medium pixmap) &body body)
   (let ((old-medium (gensym))
@@ -472,7 +472,7 @@
 	        :initform nil
 	        :reader line-style-dashes
                 :type (or (member t nil)
-                          sequence)) ))
+                          sequence))))
 
 (defun make-line-style (&key (unit :normal) (thickness 1)
 			     (joint-shape :miter) (cap-shape :butt)
@@ -721,17 +721,7 @@
 
 (defmethod engraft-medium ((medium basic-medium) port sheet)
   (declare (ignore port))
-  (setf (%medium-sheet medium) sheet)
-  #||
-  (medium-foreground medium) (medium-foreground sheet)
-  (medium-background medium) (medium-background sheet)
-  (medium-ink medium) (medium-ink sheet)
-  (medium-transformation medium) (medium-transformation sheet)
-  (medium-clipping-region medium) (medium-clipping-region sheet)
-  (medium-line-style medium) (medium-line-style sheet)
-  (medium-text-stle medium) (medium-text-stle sheet)
-  ||#
-  )
+  (setf (%medium-sheet medium) sheet))
 
 (defmethod degraft-medium ((medium basic-medium) port sheet)
   (declare (ignore port sheet))
