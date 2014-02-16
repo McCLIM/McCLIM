@@ -201,25 +201,26 @@ unspecified. "))
 (defgeneric tree-recompute-extent (record))
 
 ;;; 21.3 Incremental Redisplay Protocol.  These generic functions need
-;;; to be implemented for all the basic displayed-output-records, so they are
-;;; defined in this file.
+;;; to be implemented for all the basic displayed-output-records, so
+;;; they are defined in this file.
 ;;;
-;;; match-output-records and find-child-output-record, as defined in
-;;; the CLIM spec, are pretty silly.  How does incremental redisplay know
-;;; what keyword arguments to supply to find-child-output-record?  Through
-;;; a gf specialized on the type of the record it needs to match... why
-;;; not define the search function and the predicate on two records then!
+;;; MATCH-OUTPUT-RECORDS and FIND-CHILD-OUTPUT-RECORD, as defined in
+;;; the CLIM spec, are pretty silly.  How does incremental redisplay
+;;; know what keyword arguments to supply to FIND-CHILD-OUTPUT-RECORD?
+;;; Through a gf specialized on the type of the record it needs to
+;;; match... why not define the search function and the predicate on
+;;; two records then!
 ;;;
-;;; We'll implement match-output-records and find-child-output-record,
+;;; We'll implement MATCH-OUTPUT-RECORDS and FIND-CHILD-OUTPUT-RECORD,
 ;;; but we won't actually use them.  Instead, output-record-equal will
 ;;; match two records, and find-child-record-equal will search for the
 ;;; equivalent record.
 
 (defgeneric match-output-records (record &rest args))
 
-;;; These gf's use :most-specific-last because one of the least
-;;; specific methods will check the bounding boxes of the records, which
-;;; should cause an early out most of the time.
+;;; These gf's use :MOST-SPECIFIC-LAST because one of the least
+;;; specific methods will check the bounding boxes of the records,
+;;; which should cause an early out most of the time.
 
 (defgeneric match-output-records-1 (record &key)
   (:method-combination and :most-specific-last))
@@ -245,11 +246,11 @@ unspecified. "))
   (declare (ignore record1 record2))
   'maybe)
 
-;;; The code for match-output-records-1 and output-record-equal
+;;; The code for MATCH-OUTPUT-RECORDS-1 and OUTPUT-RECORD-EQUAL
 ;;; methods are very similar, hence this macro.  In order to exploit
 ;;; the similarities, it's necessary to treat the slots of the second
 ;;; record like variables, so for convenience the macro will use
-;;; slot-value on both records.
+;;; SLOT-VALUE on both records.
 
 (defmacro defrecord-predicate (record-type slots &body body)
   "Each element of SLOTS is either a symbol or (:initarg-name slot-name)."
@@ -289,10 +290,8 @@ unspecified. "))
 					 (error 'type-error
 						:datum ,var
 						:expected-type ',type))))))))
-	   ,@body)))
-    
-    ))
-;;; Macros
+	   ,@body)))))
+
 (defmacro with-output-recording-options ((stream
 					  &key (record nil record-supplied-p)
 					       (draw nil draw-supplied-p))
@@ -374,8 +373,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (setf (rectangle-edges* record)
 	(values x-position y-position x-position y-position)))
 
-;;; XXX I'd really like to get rid of the x and y slots. They are surely
-;;; redundant with the bounding rectangle coordinates.
+;;; XXX I'd really like to get rid of the x and y slots. They are
+;;; surely redundant with the bounding rectangle coordinates.
 (defclass compound-output-record (basic-output-record)
   ((x :initarg :x-position
       :initform 0.0d0
@@ -514,23 +513,25 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
          (draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
                           :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+? 
         (:unhighlight
-	 ;; FIXME: repaint the hit detection rectangle. It could be bigger than
-	 ;; the bounding rectangle.         
+	 ;; FIXME: repaint the hit detection rectangle. It could be
+	 ;; bigger than the bounding rectangle.
 	 (repaint-sheet stream record)
-         
-         ;; Using queue-repaint should be faster in apps (such as clouseau) that
-         ;; highlight/unhighlight many bounding rectangles at once. The event 
-         ;; code should merge these into a single larger repaint. Unfortunately,
-         ;; since an enqueued repaint does not occur immediately, and highlight
-         ;; rectangles are not recorded, newer highlighting gets wiped out
-         ;; shortly after being drawn. So, we aren't ready for this yet.
-         ;; ..Actually, it isn't necessarily faster. Depends on the app.
+         ;; Using queue-repaint should be faster in apps (such as
+         ;; clouseau) that highlight/unhighlight many bounding
+         ;; rectangles at once. The event code should merge these into
+         ;; a single larger repaint. Unfortunately, since an enqueued
+         ;; repaint does not occur immediately, and highlight
+         ;; rectangles are not recorded, newer highlighting gets wiped
+         ;; out shortly after being drawn. So, we aren't ready for
+         ;; this yet.  ..Actually, it isn't necessarily
+         ;; faster. Depends on the app.
          #+NIL
-	 (queue-repaint stream (make-instance 'window-repaint-event
-					      :sheet stream
-					      :region (transform-region
-						       (sheet-native-transformation stream)
-						       record))))))))
+	 (queue-repaint stream
+			(make-instance 'window-repaint-event
+			  :sheet stream
+			  :region (transform-region
+				   (sheet-native-transformation stream)
+				   record))))))))
 
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record output-record) stream state)
@@ -540,8 +541,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
 ;;; 16.2.2. The Output Record "Database" Protocol
 
-;; These two aren't in the spec, but are needed to make indirect adding/deleting
-;; of GADGET-OUTPUT-RECORDs work:
+;;; These two aren't in the spec, but are needed to make indirect
+;;; adding/deleting of GADGET-OUTPUT-RECORDs work:
 
 (defgeneric note-output-record-lost-sheet (record sheet))
 (defgeneric note-output-record-got-sheet  (record sheet))
@@ -550,22 +551,26 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (declare (ignore record sheet))
   (values))
 
-(defmethod note-output-record-lost-sheet :after ((record compound-output-record) sheet)
+(defmethod note-output-record-lost-sheet :after
+    ((record compound-output-record) sheet)
   (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet))
 
-(defmethod note-output-record-got-sheet  ((record output-record) sheet)
+(defmethod note-output-record-got-sheet ((record output-record) sheet)
   (declare (ignore record sheet))
   (values))
 
-(defmethod note-output-record-got-sheet :after ((record compound-output-record) sheet)
+(defmethod note-output-record-got-sheet :after
+    ((record compound-output-record) sheet)
   (map-over-output-records #'note-output-record-got-sheet record 0 0 sheet))
 
 (defun find-output-record-sheet (record)
   "Walks up the parents of RECORD, searching for an output history from which
 the associated sheet can be determined."
   (typecase record
-    (stream-output-history-mixin (output-history-stream record))
-    (basic-output-record (find-output-record-sheet (output-record-parent record)))))  
+    (stream-output-history-mixin
+     (output-history-stream record))
+    (basic-output-record
+     (find-output-record-sheet (output-record-parent record)))))
 
 (defmethod output-record-children ((record basic-output-record))
   nil)
@@ -607,7 +612,7 @@ the associated sheet can be determined."
   (when errorp (error "Cannot delete a child from ~S." record)))
 
 (defmethod delete-output-record :after (child (record compound-output-record)
-                                              &optional (errorp t))
+					&optional (errorp t))
   (declare (ignore errorp))
   (with-bounding-rectangle* (x1 y1 x2 y2) child
     (recompute-extent-for-changed-child record child x1 y1 x2 y2)))
@@ -796,10 +801,11 @@ the associated sheet can be determined."
      old-min-x old-min-y old-max-x old-max-y)    
   (with-bounding-rectangle* (ox1 oy1 ox2 oy2)  record
     (with-bounding-rectangle* (cx1 cy1 cx2 cy2) changed-child
-      ;; If record is currently empty, use the child's bbox directly. Else..
-      ;; Does the new rectangle of the child contain the original rectangle?
-      ;; If so, we can use min/max to grow record's current rectangle.
-      ;; If not, the child has shrunk, and we need to fully recompute.
+      ;; If record is currently empty, use the child's bbox
+      ;; directly. Else..  Does the new rectangle of the child contain
+      ;; the original rectangle?  If so, we can use min/max to grow
+      ;; record's current rectangle.  If not, the child has shrunk,
+      ;; and we need to fully recompute.
       (multiple-value-bind (nx1 ny1 nx2 ny2) 
           (cond
             ;; The child has been deleted; who knows what the
@@ -810,40 +816,44 @@ the associated sheet can be determined."
             ;; Only one child of record, and we already have the bounds.
             ((eql (output-record-count record) 1)
              ;; See output-record-children for why this assert breaks:
-             ;; (assert (eq changed-child (elt (output-record-children record) 0)))
+             ;; (assert (eq changed-child (elt (output-record-children
+             ;; record) 0)))
              (values cx1 cy1 cx2 cy2))
-            ;; If our record occupied no space (had no children, or had only
-            ;; children similarly occupying no space, hackishly determined by
-            ;; null-bounding-rectangle-p), recompute the extent now, otherwise
-            ;; the next COND clause would, as an optimization, attempt to extend
-            ;; our current bounding rectangle, which is invalid.
+            ;; If our record occupied no space (had no children, or
+            ;; had only children similarly occupying no space,
+            ;; hackishly determined by null-bounding-rectangle-p),
+            ;; recompute the extent now, otherwise the next COND
+            ;; clause would, as an optimization, attempt to extend our
+            ;; current bounding rectangle, which is invalid.
             ((null-bounding-rectangle-p record)
              (%tree-recompute-extent* record))
-            ;; In the following cases, we can grow the new bounding rectangle
-            ;; from its previous state:
+            ;; In the following cases, we can grow the new bounding
+            ;; rectangle from its previous state:
             ((or
-              ;; If the child was originally empty, it could not have affected
-              ;; previous computation of our bounding rectangle.
-              ;; This is hackish for reasons similar to the above.
+              ;; If the child was originally empty, it could not have
+              ;; affected previous computation of our bounding
+              ;; rectangle.  This is hackish for reasons similar to
+              ;; the above.
               (and (= old-min-x old-max-x) (= old-min-y old-max-y))
-	      ;; For each edge of the original child bounds, if it was within
-	      ;; its respective edge of the old parent bounding rectangle,
-	      ;; or if it has not changed:
+	      ;; For each edge of the original child bounds, if it was
+	      ;; within its respective edge of the old parent bounding
+	      ;; rectangle, or if it has not changed:
 	      (and (or (> old-min-x ox1) (= old-min-x cx1))
 		   (or (> old-min-y oy1) (= old-min-y cy1))
 		   (or (< old-max-x ox2) (= old-max-x cx2))
 		   (or (< old-max-y oy2) (= old-max-y cy2)))
-              ;; New child bounds contain old child bounds, so use min/max
-              ;; to extend the already-calculated rectangle.
+              ;; New child bounds contain old child bounds, so use
+              ;; min/max to extend the already-calculated rectangle.
               (and (<= cx1 old-min-x) (<= cy1 old-min-y)
                    (>= cx2 old-max-x) (>= cy2 old-max-y)))
              (values (min cx1 ox1) (min cy1 oy1)
                      (max cx2 ox2) (max cy2 oy2)))
-            ;; No shortcuts - we must compute a new bounding box from those of
-            ;; all our children. We want to avoid this - in worst cases, such as
-            ;; a toplevel output history, large graph, or table, there may exist
-            ;; thousands of children. Without the above optimizations,
-            ;; construction becomes O(N^2) due to bounding rectangle calculation.
+            ;; No shortcuts - we must compute a new bounding box from
+            ;; those of all our children. We want to avoid this - in
+            ;; worst cases, such as a toplevel output history, large
+            ;; graph, or table, there may exist thousands of
+            ;; children. Without the above optimizations, construction
+            ;; becomes O(N^2) due to bounding rectangle calculation.
             (t (%tree-recompute-extent* record)))
         ;; XXX banish x, y
         (with-slots (x y)
@@ -918,11 +928,11 @@ the associated sheet can be determined."
   "Applies FUNCTION to all children in the order they were added."
   (if function-args
       (loop with children = (output-record-children record)
-	 for child across children
-	 do (apply function child function-args))
+	    for child across children
+	    do (apply function child function-args))
       (loop with children = (output-record-children record)
-	 for child across children
-	 do (funcall function child))))
+	    for child across children
+	    do (funcall function child))))
 
 (defmethod map-over-output-records-containing-position
     (function (record standard-sequence-output-record) x y
@@ -932,13 +942,13 @@ the associated sheet can be determined."
 order they were added."
   (declare (ignore x-offset y-offset))
   (loop with children = (output-record-children record)
-     for i from (1- (length children)) downto 0
-     for child = (aref children i)
-     when (and (multiple-value-bind (min-x min-y max-x max-y)
-                   (output-record-hit-detection-rectangle* child)
-                 (and (<= min-x x max-x) (<= min-y y max-y)))
-               (output-record-refined-position-test child x y))
-     do (apply function child function-args)))
+	for i from (1- (length children)) downto 0
+	for child = (aref children i)
+	when (and (multiple-value-bind (min-x min-y max-x max-y)
+		      (output-record-hit-detection-rectangle* child)
+		    (and (<= min-x x max-x) (<= min-y y max-y)))
+		  (output-record-refined-position-test child x y))
+	  do (apply function child function-args)))
 
 (defmethod map-over-output-records-overlapping-region
     (function (record standard-sequence-output-record) region
@@ -948,20 +958,23 @@ order they were added."
 were added."
   (declare (ignore x-offset y-offset))
   (loop with children = (output-record-children record)
-     for child across children
-     when (region-intersects-region-p region child)
-     do (apply function child function-args)))
-
+	for child across children
+	when (region-intersects-region-p region child)
+	  do (apply function child function-args)))
 
 ;;; tree output recording
 
 (defclass tree-output-record-entry ()
      ((record :initarg :record :reader tree-output-record-entry-record)
-      (cached-rectangle :initform nil :accessor tree-output-record-entry-cached-rectangle)
-      (inserted-nr :initarg :inserted-nr :accessor tree-output-record-entry-inserted-nr)))
+      (cached-rectangle :initform nil
+			:accessor tree-output-record-entry-cached-rectangle)
+      (inserted-nr :initarg :inserted-nr
+		   :accessor tree-output-record-entry-inserted-nr)))
 
 (defun make-tree-output-record-entry (record inserted-nr)
-  (make-instance 'tree-output-record-entry :record record :inserted-nr inserted-nr))
+  (make-instance 'tree-output-record-entry
+    :record record
+    :inserted-nr inserted-nr))
 
 (defun %record-to-spatial-tree-rectangle (r)
   (rectangles:make-rectangle
@@ -973,7 +986,8 @@ were added."
 (defun %output-record-entry-to-spatial-tree-rectangle (r)
   (when (null (tree-output-record-entry-cached-rectangle r))
     (let* ((record (tree-output-record-entry-record r)))
-      (setf (tree-output-record-entry-cached-rectangle r) (%record-to-spatial-tree-rectangle record))))
+      (setf (tree-output-record-entry-cached-rectangle r)
+	    (%record-to-spatial-tree-rectangle record))))
   (tree-output-record-entry-cached-rectangle r))
 
 (defun %make-tree-output-record-tree ()
@@ -983,7 +997,8 @@ were added."
 (defclass standard-tree-output-record (compound-output-record)
   ((children :initform (%make-tree-output-record-tree)
              :accessor %tree-record-children)
-   (children-hash :initform (make-hash-table :test #'eql) :reader %tree-record-children-cache)
+   (children-hash :initform (make-hash-table :test #'eql)
+		  :reader %tree-record-children-cache)
    (child-count :initform 0)
    (last-insertion-nr :initform 0 :accessor last-insertion-nr)))
 
@@ -1003,30 +1018,33 @@ were added."
          (spatial-trees:search 
           ;; Originally, (%record-to-spatial-tree-rectangle record).
           ;; The form below intends to fix output-record-children not
-          ;; reporting empty children, which may lie outside the reported
-          ;; bounding rectangle of their parent.
-          ;; Assumption: null bounding records are always at the origin.
-          ;; I've never noticed this violated, but it's out of line with
-          ;; what null-bounding-rectangle-p checks, and setf of
-          ;; output-record-position may invalidate it. Seems to work, but
-          ;; fix that and try again later.
-          ;; Note that max x or y may be less than zero..
+          ;; reporting empty children, which may lie outside the
+          ;; reported bounding rectangle of their parent.
+          ;; Assumption: null bounding records are always at the
+          ;; origin.  I've never noticed this violated, but it's out
+          ;; of line with what null-bounding-rectangle-p checks, and
+          ;; setf of output-record-position may invalidate it. Seems
+          ;; to work, but fix that and try again later.  Note that max
+          ;; x or y may be less than zero..
           (rectangles:make-rectangle
            :lows  (list (min 0 min-x) (min 0 min-y))
            :highs (list (max 0 max-x) (max 0 max-y)))
           (%tree-record-children record)))))
 
 (defmethod add-output-record (child (record standard-tree-output-record))
-  (let ((entry (make-tree-output-record-entry child (incf (last-insertion-nr record)))))
+  (let ((entry (make-tree-output-record-entry
+		child (incf (last-insertion-nr record)))))
     (spatial-trees:insert entry (%tree-record-children record))
     (setf (output-record-parent child) record)
     (setf (%entry-in-children-cache record child) entry))
   (incf (slot-value record 'child-count))
   (values))
 
-(defmethod delete-output-record (child (record standard-tree-output-record) &optional (errorp t))
-  (let ((entry (find child (spatial-trees:search (%entry-in-children-cache record child)
-                                                 (%tree-record-children record))
+(defmethod delete-output-record
+    (child (record standard-tree-output-record) &optional (errorp t))
+  (let ((entry (find child (spatial-trees:search
+			    (%entry-in-children-cache record child)
+			    (%tree-record-children record))
                      :key #'tree-output-record-entry-record)))
     (decf (slot-value record 'child-count))
     (cond
@@ -1047,7 +1065,8 @@ were added."
 (defmethod output-record-count ((record standard-tree-output-record))
   (slot-value record 'child-count))
 
-(defun map-over-tree-output-records (function record rectangle sort-order function-args)
+(defun map-over-tree-output-records
+    (function record rectangle sort-order function-args)
   (dolist (child (sort (spatial-trees:search rectangle
                                              (%tree-record-children record))
                        (ecase sort-order
@@ -1309,8 +1328,9 @@ were added."
     `(with-sheet-medium (medium stream)
                   (when (stream-recording-p stream)
                     (let ((record
-                           ;; Hack: the coord-seq-mixin makes the assumption that, well
-                           ;; coord-seq is a coord-vector. So we morph a possible
+                           ;; Hack: the coord-seq-mixin makes the
+                           ;; assumption that, well coord-seq is a
+                           ;; coord-vector. So we morph a possible
                            ;; coord-seq argument into a vector.
                            (let (,@(when (member 'coord-seq args)
                                          `((coord-seq
@@ -1324,16 +1344,18 @@ were added."
                   (when (stream-drawing-p stream)
                     (,method-name medium ,@args)))))
 
-;; DEF-GRECORDING: This is the central interface through which recording
-;; is implemented for drawing functions. The body provided is used to
-;; compute the bounding rectangle of the rendered output. DEF-GRECORDING
-;; will define a class for the output record, with slots corresponding to the
-;; drawing function arguments. It also defines an INITIALIZE-INSTANCE method
-;; computing the bounding rectangle of the record. It defines a method for
-;; the medium drawing function specialized on output-recording-stream, which
-;; is responsible for creating the output record and adding it to the stream
-;; history. It also defines a REPLAY-OUTPUT-RECORD method, which calls the
-;; medium drawing function based on the recorded slots.
+;;; DEF-GRECORDING: This is the central interface through which
+;;; recording is implemented for drawing functions. The body provided
+;;; is used to compute the bounding rectangle of the rendered
+;;; output. DEF-GRECORDING will define a class for the output record,
+;;; with slots corresponding to the drawing function arguments. It
+;;; also defines an INITIALIZE-INSTANCE method computing the bounding
+;;; rectangle of the record. It defines a method for the medium
+;;; drawing function specialized on output-recording-stream, which is
+;;; responsible for creating the output record and adding it to the
+;;; stream history. It also defines a REPLAY-OUTPUT-RECORD method,
+;;; which calls the medium drawing function based on the recorded
+;;; slots.
 
 (defmacro def-grecording (name ((&rest mixins) &rest args)
                                (&key (class t)
@@ -2224,39 +2246,6 @@ were added."
     (without-local-recording stream
       (call-next-method))))
 
-#+nil
-(defmethod stream-write-char :around ((stream standard-output-recording-stream) char)
-  (when (and (stream-recording-p stream)
-             (slot-value stream 'local-record-p))
-    (if (or (eql char #\return)
-
-        (stream-close-text-output-record stream)
-      (let* ((medium (sheet-medium stream))
-             (text-style (medium-text-style medium)))
-        (stream-add-character-output stream char text-style
-                                     (stream-character-width stream char :text-style text-style)
-                                     (text-style-height text-style medium)
-                                     (text-style-ascent text-style medium)))))
-  (without-local-recording stream
-                           (call-next-method))))
-
-#+nil
-(defmethod stream-write-string :around ((stream standard-output-recording-stream) string
-                                        &optional (start 0) end)
-  (when (and (stream-recording-p stream)
-             (slot-value stream 'local-record-p))
-    (let* ((medium (sheet-medium stream))
-           (text-style (medium-text-style medium)))
-      (stream-add-string-output stream string start end text-style
-                                (stream-string-width stream string
-                                                     :start start :end end
-                                                     :text-style text-style)
-                                (text-style-height text-style medium)
-                                (text-style-ascent text-style medium))))
-  (without-local-recording stream
-                           (call-next-method)))
-
-
 (defmethod stream-finish-output :after ((stream standard-output-recording-stream))
   (stream-close-text-output-record stream))
 
@@ -2269,9 +2258,6 @@ were added."
 (defmethod* (setf stream-cursor-position) :after (x y (stream standard-output-recording-stream))
   (declare (ignore x y))
   (stream-close-text-output-record stream))
-
-;(defmethod stream-set-cursor-position :after ((stream standard-output-recording-stream))
-;  (stream-close-text-output-record stream))
 
 (defmethod stream-wrap-line :before ((stream standard-output-recording-stream))
   (when (stream-recording-p stream)
