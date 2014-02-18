@@ -22,12 +22,13 @@
 
 (in-package :clim-internals)
 
-;;; X returns #\Return and #\Backspace where we want to see #\Newline
-;;; and #\Delete at the stream-read-char level.  Dunno if this is the
-;;; right place to do the transformation...
+;;; X11 returns #\Return and #\Backspace where we want to see
+;;; #\Newline and #\Delete at the stream-read-char level.  Dunno if
+;;; this is the right place to do the transformation...
 
-;;  Why exactly do we want to see #\Delete instead of #\Backspace?
-;;  There is a separate Delete key, unless your keyboard is strange. --Hefner
+;;;  Why exactly do we want to see #\Delete instead of #\Backspace?
+;;;  There is a separate Delete key, unless your keyboard is
+;;;  strange. --Hefner
 
 (defconstant +read-char-map+ '((#\Return . #\Newline)
 			       #+nil (#\Backspace . #\Delete)))
@@ -124,7 +125,8 @@
 
 (defclass dead-key-merging-mixin ()
   ((state :initform *dead-key-table*)
-   (last-deadie-gesture) ; For avoiding name clash with standard-extended-input-stream
+   ;; Avoid name clash with standard-extended-input-stream.
+   (last-deadie-gesture)
    (last-state))
   (:documentation "A mixin class for extended input streams that
 takes care of handling dead keys. This is done by still passing
@@ -287,18 +289,19 @@ keys read."))
 	      (return-from stream-read-gesture (values nil
 						       :timeout)))
 	     (:input-wait-test
-	      ;; input-wait-handler might leave the event for us.  This is
-	      ;; actually quite messy; I'd like to confine handle-event to
-	      ;; stream-input-wait, but we can't loop back to it because the
-	      ;; input handler will continue to decline to read the event :(
+	      ;; input-wait-handler might leave the event for us.
+	      ;; This is actually quite messy; I'd like to confine
+	      ;; handle-event to stream-input-wait, but we can't loop
+	      ;; back to it because the input handler will continue to
+	      ;; decline to read the event :(
 	      (let ((event (event-queue-peek buffer)))
 		(when input-wait-handler
 		  (funcall input-wait-handler stream))
 		(let ((current-event (event-queue-peek buffer)))
 		  (when (or (not current-event)
 			    (not (eq event current-event)))
-		    ;; If there's a new event input-wait-test needs to take a
-		    ;; look at it. 
+		    ;; If there's a new event input-wait-test needs to
+		    ;; take a look at it.
 		    (go wait-for-char)))))
 	     (t (go wait-for-char)))))
 	 ;; An event should  be in the stream buffer now.
@@ -306,12 +309,12 @@ keys read."))
 	   (go wait-for-char))
 	 (let* ((raw-gesture (pop-gesture buffer peek-p))
 		(gesture (convert-to-gesture raw-gesture)))
-	   ;; Sometimes key press events get generated with a key code for
-	   ;; which there is no keysym.  This seems to happen on my machine
-	   ;; when keys are hit rapidly in succession.  I'm not sure if this is
-	   ;; a hardware problem with my keyboard, and this case is probably
-	   ;; better handled in the backend, but for now the case below handles
-	   ;; the problem. -- moore
+	   ;; Sometimes key press events get generated with a key code
+	   ;; for which there is no keysym.  This seems to happen on
+	   ;; my machine when keys are hit rapidly in succession.  I'm
+	   ;; not sure if this is a hardware problem with my keyboard,
+	   ;; and this case is probably better handled in the backend,
+	   ;; but for now the case below handles the problem. -- moore
 	   (cond ((null gesture)
 		  (go wait-for-char))
                  ((and pointer-button-press-handler
@@ -347,7 +350,8 @@ keys read."))
 	     (if (handle-non-stream-event buffer)
 		 (go check-buffer)
 		 (return-from exit t))))
-	 ;; Event queue has been drained, time to block waiting for new events.
+	 ;; Event queue has been drained, time to block waiting for
+	 ;; new events.
 	 (if *multiprocessing-p*
 	     (unless (event-queue-listen-or-wait buffer :timeout timeout)
 	       (return-from exit (values nil :timeout)))
@@ -472,6 +476,7 @@ keys read."))
 (defmethod stream-unread-gesture ((stream #.*string-input-stream-class*)
 				  gesture)
   (unread-char gesture stream))
+
 ;;; Gestures
 
 (defparameter *gesture-names* (make-hash-table))
@@ -605,7 +610,7 @@ known gestures."
   (let ((gesture-entry
          (typecase gesture-name
            (character (list (multiple-value-list (realize-gesture-spec :keyboard gesture-name))))
-           (cons (list gesture-name)) ;; Literal physical gesture
+           (cons (list gesture-name)) ; Literal physical gesture
            (t (gethash gesture-name *gesture-names*)))))    
     (loop for (type device-name modifier-state) in gesture-entry
 	  do (when (%event-matches-gesture event
@@ -630,7 +635,8 @@ known gestures."
 				      (:meta +meta-key+)
 				      (:super +super-key+)
 				      (:hyper +hyper-key+)
-				      (t (error "~S is not a known modifier" modifier)))
+				      (t (error "~S is not a known modifier"
+						modifier)))
 				    result)
 	for modifier in modifiers
 	finally (return result)))
