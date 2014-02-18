@@ -25,9 +25,9 @@
 					 fundamental-character-output-stream)
   ((stream :reader encapsulating-stream-stream :initarg :stream)))
 
-;;; Macro used by methods for other stream classes that need to respect the
-;;; possibility of an encapsulating stream when calling other methods on their
-;;; stream argument.
+;;; Macro used by methods for other stream classes that need to
+;;; respect the possibility of an encapsulating stream when calling
+;;; other methods on their stream argument.
 
 (defmacro with-encapsulating-stream ((maybe-encapsulating-stream stream)
 				     &body body)
@@ -59,11 +59,10 @@ if there is one, or STREAM"
 		    (push arg required-args))
 		   ((eq state '&optional)
 		    (push arg optional-args))
-		   (t (error "How did I get in this lambda list state?~%
-state ~S lambda list ~S"
+		   (t (error "How did I get in this lambda list state?~%~
+                              state ~S lambda list ~S"
 			     state ll))))
-    (values (nreverse required-args) (nreverse optional-args) rest-or-key)))
-)
+    (values (nreverse required-args) (nreverse optional-args) rest-or-key))))
 
 (defmacro def-stream-method (name lambda-list)
   "stream is a required argument"
@@ -180,9 +179,10 @@ state ~S lambda list ~S"
 (def-stream-method stream-write-byte ((stream standard-encapsulating-stream)
 				      integer))
 
-;; stream-line-length is a CMUCL extension to Gray Streams which the pretty
-;; printer seems to use. There's a default method which works for most CLIM
-;; streams. For several dumb reasons it doesn't work on encapsulating streams.
+;;; STREAM-LINE-LENGTH is a CMUCL extension to Gray Streams which the
+;;; pretty printer seems to use. There's a default method which works
+;;; for most CLIM streams. For several dumb reasons it doesn't work on
+;;; encapsulating streams.
 #+CMU
 (defmethod ext:stream-line-length ((stream standard-encapsulating-stream))
   nil)
@@ -190,8 +190,8 @@ state ~S lambda list ~S"
 (defmethod sb-gray:stream-line-length ((stream standard-encapsulating-stream))
   nil)
 
-;;;The sheet protocols, as specified in Chapters Properties of Sheets and Sheet
-;;;Protocols .  
+;;; The sheet protocols, as specified in Chapters Properties of Sheets
+;;; and Sheet Protocols.
 
 (def-stream-method sheetp ((stream standard-encapsulating-stream)))
 
@@ -403,10 +403,6 @@ state ~S lambda list ~S"
 
 ;;; Text Style binding forms
 
-#+nil
-(def-stream-method invoke-with-text-style
-    ((stream standard-encapsulating-stream) continuation text-style))
-
 (defmethod invoke-with-text-style ((stream standard-encapsulating-stream)
 				   continuation text-style)
   (invoke-with-text-style (slot-value stream 'stream)
@@ -475,9 +471,9 @@ state ~S lambda list ~S"
     ((stream standard-encapsulating-stream)))
 
 ;;; A setf* method, but this should still work...
-;; (It didn't. --Hefner)
-;(def-stream-method (setf stream-cursor-position)
-;    (x y (stream standard-encapsulating-stream)))
+;;; (It didn't. --Hefner)
+;;;(def-stream-method (setf stream-cursor-position)
+;;;    (x y (stream standard-encapsulating-stream)))
 
 (defmethod* (setf stream-cursor-position)
     (x y (stream standard-encapsulating-stream))
@@ -656,8 +652,6 @@ state ~S lambda list ~S"
 	 record-type
 	 constructor
 	 initargs))
-
-						    
 
 ;;; Presentation type generics
 
