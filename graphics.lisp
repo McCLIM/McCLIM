@@ -976,11 +976,13 @@ position for the character."
                                design))
 
 #+nyi
-(defmethod draw-design (medium (design standard-region-intersection) &rest options &key &allow-other-keys)
+(defmethod draw-design (medium (design standard-region-intersection)
+			&rest options &key &allow-other-keys)
   )
 
 #+nyi
-(defmethod draw-design (medium (design standard-region-difference) &rest options &key &allow-other-keys)
+(defmethod draw-design (medium (design standard-region-difference)
+			&rest options &key &allow-other-keys)
   )
 
 (defmethod draw-design (medium (design (eql +nowhere+))
@@ -991,11 +993,13 @@ position for the character."
 
 (defmethod draw-design ((medium sheet) (design (eql +everywhere+))
 			&rest options &key &allow-other-keys)
-  (apply #'draw-design medium (bounding-rectangle (sheet-region medium)) options))
+  (apply #'draw-design
+	 medium (bounding-rectangle (sheet-region medium)) options))
 
 (defmethod draw-design ((medium medium) (design (eql +everywhere+))
 			&rest options &key &allow-other-keys)
-  (apply #'draw-design medium (bounding-rectangle (sheet-region (medium-sheet medium))) options))
+  (apply #'draw-design medium
+	 (bounding-rectangle (sheet-region (medium-sheet medium))) options))
 
 ;;;
 
@@ -1038,15 +1042,11 @@ position for the character."
   (let ((width  (pattern-width pattern))
         (height (pattern-height pattern)))
     ;; As I read the spec, the pattern itself is not transformed, so
-    ;; we should draw the full (untransformed) pattern at the tranformed
-    ;; x/y coordinates. This requires we revert to the identity transformation
-    ;; before drawing the rectangle. -Hefner
+    ;; we should draw the full (untransformed) pattern at the
+    ;; tranformed x/y coordinates. This requires we revert to the
+    ;; identity transformation before drawing the rectangle. -Hefner
     (with-transformed-position ((medium-transformation medium) x y)
       (with-identity-transformation (medium)
-	#+NIL ;; debugging aid.
-	(draw-rectangle* medium x y (+ x width) (+ y height)
-			 :filled t
-			 :ink +red+)
 	(draw-rectangle* medium x y (+ x width) (+ y height)
 			 :filled t
 			 :ink (transform-region
@@ -1064,7 +1064,6 @@ position for the character."
                                       (radius-bottom radius-y)
                                       filled &allow-other-keys)
   "Draw a rectangle with rounded corners"
-
   (apply #'invoke-with-drawing-options sheet
     (lambda (medium)
       (declare (ignore medium))
@@ -1084,35 +1083,59 @@ position for the character."
                 (if filled
                     (progn              ; Filled
                       (unless (or zl zt)
-                        (draw-ellipse* medium ix1 iy1 radius-left  0 0 radius-top    :filled t))
+                        (draw-ellipse* medium
+				       ix1 iy1 radius-left
+				       0 0 radius-top
+				       :filled t))
                       (unless (or zr zt)
-                        (draw-ellipse* medium ix2 iy1 radius-right 0 0 radius-top    :filled t))
+                        (draw-ellipse* medium
+				       ix2 iy1 radius-right
+				       0 0 radius-top
+				       :filled t))
                       (unless (or zl zb)
-                        (draw-ellipse* medium ix1 iy2 radius-left  0 0 radius-bottom :filled t))
+                        (draw-ellipse* medium
+				       ix1 iy2 radius-left
+				       0 0 radius-bottom
+				       :filled t))
                       (unless (or zr zb)
-                        (draw-ellipse* medium ix2 iy2 radius-right 0 0 radius-bottom :filled t))
+                        (draw-ellipse* medium
+				       ix2 iy2 radius-right
+				       0 0 radius-bottom
+				       :filled t))
                       (draw-rectangle* medium x1 iy1 x2 iy2 :filled t)
                       (draw-rectangle* medium ix1 y1 ix2 iy1 :filled t)
-                      (draw-rectangle* medium ix1 iy2 ix2 y2 :filled t))                    
+                      (draw-rectangle* medium ix1 iy2 ix2 y2 :filled t))
                     (progn              ; Unfilled
                       (unless (or zl zt)
-                        (draw-ellipse* medium ix1 iy1 (- radius-left) 0 0 (- radius-top)
+                        (draw-ellipse* medium
+				       ix1 iy1 (- radius-left)
+				       0 0 (- radius-top)
                                        :start-angle (/ pi 2) :end-angle pi
                                        :filled nil))
                       (unless (or zr zt)
-                        (draw-ellipse* medium ix2 iy1 (- radius-right) 0 0 (- radius-top)
+                        (draw-ellipse* medium
+				       ix2 iy1 (- radius-right)
+				       0 0 (- radius-top)
                                        :start-angle 0 :end-angle (/ pi 2)
                                        :filled nil))
                       (unless (or zl zb)
-                        (draw-ellipse* medium ix1 iy2 (- radius-left) 0 0 (- radius-bottom)
+                        (draw-ellipse* medium
+				       ix1 iy2 (- radius-left)
+				       0 0 (- radius-bottom)
                                        :start-angle pi :end-angle (* 3/2 pi)
                                        :filled nil))
                       (unless (or zr zb)
-                        (draw-ellipse* medium ix2 iy2 (- radius-right) 0 0 (- radius-bottom)
+                        (draw-ellipse* medium
+				       ix2 iy2 (- radius-right)
+				       0 0 (- radius-bottom)
                                        :start-angle (* 3/2 pi)
                                        :filled nil))
-                      (labels ((fx (y p x1a x2a x1b x2b) (draw-line* medium (if p x1a x1b) y (if p x2a x2b) y))
-                               (fy (x p y1a y2a y1b y2b) (draw-line* medium x (if p y1a y1b) x (if p y2a y2b))))
+                      (labels ((fx (y p x1a x2a x1b x2b)
+				 (draw-line* medium
+					     (if p x1a x1b) y (if p x2a x2b) y))
+                               (fy (x p y1a y2a y1b y2b)
+				 (draw-line* medium
+					     x (if p y1a y1b) x (if p y2a y2b))))
                         (fx y1 zt x1 x2 ix1 ix2)
                         (fy x1 zl y1 y2 iy1 iy2)
                         (fx y2 zb x1 x2 ix1 ix2)
