@@ -18,8 +18,6 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Cut and Paste
@@ -28,27 +26,27 @@
 
 ;;;; Interaction implemented:
 
-;; Shift-Mouse-L down: clear active selection and set the first point
-;; Shift-Mouse-L drag: drag the second point
-;; Shift-Mouse-L up:   set the second point
+;;; Shift-Mouse-L down: clear active selection and set the first point
+;;; Shift-Mouse-L drag: drag the second point
+;;; Shift-Mouse-L up:   set the second point
 
-;; Shift-Mouse-R down: pick the nearest point, if any
-;; Shift-Mouse-R drag: drag said point
-;; Shift-Mouse-R up:   leave said point where it was dragged to.
+;;; Shift-Mouse-R down: pick the nearest point, if any
+;;; Shift-Mouse-R drag: drag said point
+;;; Shift-Mouse-R up:   leave said point where it was dragged to.
 
-;; Shift-Mouse-M:      paste
+;;; Shift-Mouse-M:      paste
 
 ;;;; Interaction to implement:
 
-;; Shift-Mouse-L single click: (maybe) select current presentation, if any.
-;; Shift-Mouse-L double click: select word
-;; Shift-Mouse-L triple click: select "line".
+;;; Shift-Mouse-L single click: (maybe) select current presentation, if any.
+;;; Shift-Mouse-L double click: select word
+;;; Shift-Mouse-L triple click: select "line".
 
-;; TODO:
-;;   * Editor input (both active and old) is not currently highlighted.
-;;   * Selecting large regions gets slow.
-;;   * Structure of line breaks in the original text is not preserved (CLIM/McCLIM design issue)
-
+;;; TODO:
+;;;   * Editor input (both active and old) is not currently highlighted.
+;;;   * Selecting large regions gets slow.
+;;;   * Structure of line breaks in the original text is not preserved
+;;;     (CLIM/McCLIM design issue)
 
 ;;;; Preferences
 
@@ -60,15 +58,16 @@
 (defparameter *marked-background* +blue4+
   "Background ink to use for marked stuff.")
 
-
 ;;;; Text Selection Protocol
 
 (defgeneric release-selection (port &optional time)
   (:documentation "Relinquish ownership of the selection."))
 
 (defgeneric request-selection (port requestor time)
-  (:documentation "Request that the window system retrieve the selection from
-its current owner. This should cause a selection-notify-event to be delivered."))
+  (:documentation
+   #.(format nil "Request that the window system retrieve the selection ~
+                  from its current owner. This should cause a ~
+                  selection-notify-event to be delivered.")))
 
 (defgeneric bind-selection (port window &optional time)
   (:documentation "Take ownership of the selection."))
@@ -80,10 +79,10 @@ its current owner. This should cause a selection-notify-event to be delivered.")
   (:documentation "Given a selection-notify event, return a string containing
 the incoming selection."))
 
-;; These events are probably very X11 specific.
+;;; These events are probably very X11 specific.
 
-;; Backends will likely produce subclasses of selection-notify-event
-;; and selection-request-event.
+;;; Backends will likely produce subclasses of selection-notify-event
+;;; and selection-request-event.
 
 (defclass selection-event (window-event)
   ((selection :initarg :selection
@@ -97,7 +96,7 @@ the incoming selection."))
 
 ;;;; Random Notes
 
-;; - McCLIM still has absolutely no idea of lines.
+;;; - McCLIM still has absolutely no idea of lines.
 
 (defclass marking ()
   ()
@@ -138,13 +137,6 @@ the incoming selection."))
                                 *marking-border*)
                              (+ start-y baseline (text-style-descent text-style stream)
                                 *marking-border*)))))))
-
-;(defgeneric draw-marking (medium marking)
-;  (:documentation "Draw the marking to medium."))
-;
-;(defmethod draw-marking (stream (marking string-marking))
-;  (draw-design (sheet-medium stream) (marking-region marking)
-;               :ink +flipping-ink+))
 
 ;;;;
 
@@ -409,7 +401,6 @@ the incoming selection."))
                                         :x 0 :y 0 :graft-x 0 :graft-y 0
                                         :key-name nil
                                         :key-character c)))))
-
 
 ;; FIXME: Non-text target conversions.. (?)
 (defun fetch-selection (pane)
