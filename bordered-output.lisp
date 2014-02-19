@@ -54,8 +54,8 @@
 (defgeneric draw-output-border-under
     (shape stream record &rest drawing-options &key &allow-other-keys)
   (:documentation
-   "Draws the portion of border shape which is visible underneath the surrounded
-    output"))
+   "Draws the portion of border shape which is visible underneath the
+    surrounded output"))
 
 (defgeneric draw-output-border-over
     (shape stream record &rest drawing-options &key &allow-other-keys)
@@ -63,17 +63,19 @@
    "Draws the portion of border shape which is visible above the surrounded
     output"))
 
-;; Keep this around just for fun, so we can list the defined border types.
+;;; Keep this around just for fun, so we can list the defined border
+;;; types.
 (defvar *border-types* nil)
 
 (defparameter *border-default-padding* 4)
 (defparameter *border-default-radius*  7)
 (defparameter *drop-shadow-default-offset* 6)
 
-;; Defining the border edges directly by the edges of the surrounded output
-;; record is wrong in the 'null bounding rectangle' case, occuring when the
-;; record has no chidren, or no children with non-null bounding rectangles.
-;; Intuitively, the empty border should remain centered on the cursor.
+;;; Defining the border edges directly by the edges of the surrounded
+;;; output record is wrong in the 'null bounding rectangle' case,
+;;; occuring when the record has no chidren, or no children with
+;;; non-null bounding rectangles.  Intuitively, the empty border
+;;; should remain centered on the cursor.
 (defmacro with-border-edges ((stream record) &body body)
   `(if (null-bounding-rectangle-p ,record)
     (multiple-value-bind (left top) (stream-cursor-position ,stream)
@@ -129,8 +131,8 @@
                                    (make-instance 'bordered-output-record)
                                    inner-record drawing-options))
 
-;; This should have been exported by the CLIM package, otherwise you can't
-;; apply a computed list of drawing options.
+;;; This should have been exported by the CLIM package, otherwise you
+;;; can't apply a computed list of drawing options.
 (defun invoke-surrounding-output-with-border (stream cont
                                               &rest drawing-options
                                               &key (shape :rectangle)
@@ -157,12 +159,14 @@
             (replay border stream)))
 
         (if move-cursor
-	    ;; move-cursor is true, move cursor to lower-right corner of output.
+	    ;; move-cursor is true, move cursor to lower-right corner
+	    ;; of output.
 	    (with-bounding-rectangle* (left top right bottom) border
 	      (declare (ignore left top))
 	      (setf (stream-cursor-position stream) (values right bottom)))
-	    ;; move-cursor is false, preserve the cursor position from after
-	    ;; the output (I think this is right, it's useful for :underline)
+	    ;; move-cursor is false, preserve the cursor position from
+	    ;; after the output (I think this is right, it's useful
+	    ;; for :underline)
 	    (setf (stream-cursor-position stream) (values cx cy)))
         border))))
 
@@ -362,10 +366,10 @@
                        :line-style (%%line-style-for-method)
                        :ink (or outline-ink ink)
                        :filled nil)                     
-      ;; If the user has (wisely) chosen my more modern "filled" style,
-      ;; we'll simply draw two rectangles, one offset from the other,
-      ;; to provide a solid background color and shadow.
-      ;; Note that the background keyword implies :filled t.
+      ;; If the user has (wisely) chosen my more modern "filled"
+      ;; style, we'll simply draw two rectangles, one offset from the
+      ;; other, to provide a solid background color and shadow.  Note
+      ;; that the background keyword implies :filled t.
       (unless (or filled background)
         (when (< shadow-offset 0)                ; FIXME!
           (setf shadow-offset 0))
@@ -457,12 +461,13 @@
         (draw left right bottom top light dark)
         (draw (1+ left) (1- right) (1- bottom) (1+ top) light dark)))))
 
-;;; Padding defaults to radius. I'm not sure if this is right, but it lets you do
-;;; things like forcing the radius on one side to zero, flattening that side,
-;;; and stopping the edge from jamming against the output (saving you the trouble
-;;; of having to manually hack the padding on one side to compensate). If someone
-;;; can think of a better approach to defaulting the radius and padding arguments,
-;;; do share.
+;;; Padding defaults to radius. I'm not sure if this is right, but it
+;;; lets you do things like forcing the radius on one side to zero,
+;;; flattening that side, and stopping the edge from jamming against
+;;; the output (saving you the trouble of having to manually hack the
+;;; padding on one side to compensate). If someone can think of a
+;;; better approach to defaulting the radius and padding arguments, do
+;;; share.
 (define-border-type :rounded (stream left top right bottom                                     
                                      (radius *border-default-radius*)
                                      (radius-x radius)

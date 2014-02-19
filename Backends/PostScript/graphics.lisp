@@ -207,7 +207,6 @@ setmatrix")
 
 (defmethod postscript-add-path (stream (region standard-region-intersection))
   (format stream "gsave~%")
-  #+nil (format stream "initclip~%")
   (loop for subregion in (region-set-regions region)
         do (format stream "newpath~%")
         (postscript-add-path stream subregion)
