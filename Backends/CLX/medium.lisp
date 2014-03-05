@@ -1092,7 +1092,8 @@ time an indexed pattern is drawn.")
           (multiple-value-bind (halt width)
               (xlib:draw-glyphs mirror gc x y string
                                 :start start :end end
-                                :translate #'translate)
+                                :translate #'translate
+                                :size 16)
 	    (declare (ignore halt width))))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
