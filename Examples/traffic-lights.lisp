@@ -24,7 +24,7 @@
 ;;; possibilites :
 ;;; 1 - Click on a toggle-button : the color of the light-pane
 ;;;     will change
-;;; 2 - Click on the orange or green toggle-button, then move your
+;;; 2 - Click on the yellow or green toggle-button, then move your
 ;;;     mouse-pointer on the light-pane, and wait a few seconds.
 
 (in-package :clim-internals)
@@ -56,7 +56,7 @@
            (simulate-user-action (find-pane-named *application-frame* 'red)))
 	  ((string= label "G")
            (traffic-pause 5)
-           (simulate-user-action (find-pane-named *application-frame* 'orange)))
+           (simulate-user-action (find-pane-named *application-frame* 'yellow)))
 	  (t nil))))
 
 (defun traffic-pause (time)
@@ -75,7 +75,7 @@
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
 	  (clim-internals::gadget-normal-color (slot-value *application-frame* 'light)))))
 
-(defun callback-orange (gadget value)
+(defun callback-yellow (gadget value)
   (declare (ignore gadget))
   (when value
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
@@ -121,12 +121,12 @@
    (light     :light
 	      :width 30
 	      :normal +red+
-	      :highlighted +orange+
+	      :highlighted +gold1+
 	      :pushed-and-highlighted +green+)
    (radio-box (with-radio-box ()
                 (radio-box-current-selection
                  (make-color-chooser-toggle-button 'red +red+ "R" 'callback-red))
-                (make-color-chooser-toggle-button 'orange +orange+ "O" 'callback-orange)
+                (make-color-chooser-toggle-button 'yellow +gold1+ "Y" 'callback-yellow)
                 (make-color-chooser-toggle-button 'green +green+ "G" 'callback-green)))
    (time-left text-field
               :editable-p nil
