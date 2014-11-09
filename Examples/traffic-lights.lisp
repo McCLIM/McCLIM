@@ -42,7 +42,7 @@
 
 ;;; callback functions
 
-(defun simulate-user-action (toggle-button)
+(defun simulate-action (toggle-button)
   (setf (gadget-value toggle-button :invoke-callback t)
 	(not (gadget-value toggle-button))))
 
@@ -53,10 +53,10 @@
                               (slot-value *application-frame* 'radio-box)))))
     (cond ((string= label "O")
            (traffic-pause 3)
-           (simulate-user-action (find-pane-named *application-frame* 'red)))
+           (simulate-action (find-pane-named *application-frame* 'red)))
 	  ((string= label "G")
            (traffic-pause 5)
-           (simulate-user-action (find-pane-named *application-frame* 'yellow)))
+           (simulate-action (find-pane-named *application-frame* 'yellow)))
 	  (t nil))))
 
 (defun traffic-pause (time)
