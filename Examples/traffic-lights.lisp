@@ -27,7 +27,7 @@
 ;;; 2 - Click on the yellow or green toggle-button, then move your
 ;;;     mouse-pointer on the light-pane, and wait a few seconds.
 
-(in-package :clim-internals)
+(in-package :clim-demo)
 
 ;;; example gadget definition
 (defclass light-pane (standard-gadget) ())
@@ -35,10 +35,8 @@
 (defmethod handle-repaint ((pane light-pane) region)
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (display-gadget-background
-     pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
-
-(in-package :clim-demo)
+    (climi::display-gadget-background
+     pane (climi::gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
 
 ;;; callback functions
 
