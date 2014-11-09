@@ -20,18 +20,6 @@
           (import sym :clim-mop)
           (export sym :clim-mop))))
 
-
-;;; In SBCL the Common Lisp versions of CLASS-OF and FIND-CLASS used
-;;; to return wrappers which the MOP couldn't grok.  This has been fixed
-;;; for some time, certainly in sbcl 0.9.4.
-#+nil
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (flet ((reexport (symbols)
-           (import symbols :clim-lisp-patch)
-           (export symbols :clim-lisp-patch)))
-    (reexport '(sb-pcl:class-name sb-pcl:class-of
-                sb-pcl:find-class sb-pcl::standard-class))))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export '(clim-lisp-patch::defconstant
             clim-lisp-patch::defclass)
