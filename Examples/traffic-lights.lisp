@@ -20,14 +20,12 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-
 ;;; How to use the possibilities of the traffic-lights, you have two
 ;;; possibilites :
 ;;; 1 - Click on a toggle-button : the color of the light-pane
 ;;;     will change
 ;;; 2 - Click on the orange or green toggle-button, then move your
 ;;;     mouse-pointer on the light-pane, and wait a few seconds.
-
 
 (in-package :clim-internals)
 
@@ -50,8 +48,7 @@
                               (slot-value *application-frame* 'radio-box)))))
     (cond ((string= label "O")
            (traffic-pause 3)
-           (simulate-user-action (find-pane-named *application-frame*
-                                                  'red)))
+           (simulate-user-action (find-pane-named *application-frame* 'red)))
 	  ((string= label "G")
            (traffic-pause 5)
            (simulate-user-action (find-pane-named *application-frame*
@@ -101,7 +98,6 @@
   (setf (slot-value frame 'light) (find-pane-named frame 'light)
         (slot-value frame 'radio-box) (find-pane-named frame 'radio-box))
   (clim-extensions:simple-event-loop))
-
 
 (defmacro make-color-chooser-toggle-button (name color label callback)
   (let ((color-name (gensym "COLOR")))
