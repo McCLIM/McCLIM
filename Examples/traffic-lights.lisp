@@ -52,10 +52,10 @@
   (let ((label (gadget-label (radio-box-current-selection
                               (slot-value *application-frame* 'radio-box)))))
     (cond ((string= label "O")
-           (traffic-pause 3)
+           (traffic-pause 2)
            (simulate-action (find-pane-named *application-frame* 'red)))
 	  ((string= label "G")
-           (traffic-pause 5)
+           (traffic-pause 3)
            (simulate-action (find-pane-named *application-frame* 'yellow)))
 	  (t nil))))
 
