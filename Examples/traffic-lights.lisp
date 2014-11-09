@@ -42,7 +42,12 @@
 
 ;;; callback functions
 
-(defmethod handle-event :after ((pane clim-internals::light-pane) (event pointer-event))
+(defun simulate-user-action (toggle-button)
+  (setf (gadget-value toggle-button :invoke-callback t)
+	(not (gadget-value toggle-button))))
+
+(defmethod handle-event :after
+    ((pane clim-internals::light-pane) (event pointer-event))
   (declare (ignorable event))
   (let ((label (gadget-label (radio-box-current-selection
                               (slot-value *application-frame* 'radio-box)))))
@@ -51,8 +56,7 @@
            (simulate-user-action (find-pane-named *application-frame* 'red)))
 	  ((string= label "G")
            (traffic-pause 5)
-           (simulate-user-action (find-pane-named *application-frame*
-                                                  'orange)))
+           (simulate-user-action (find-pane-named *application-frame* 'orange)))
 	  (t nil))))
 
 (defun traffic-pause (time)
@@ -64,9 +68,6 @@
          do (show-time left)
             (sleep 1))
       (show-time 0))))
-
-(defmethod simulate-user-action ((pane toggle-button))
-  (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane))))
 
 (defun callback-red (gadget value)
   (declare (ignorable gadget))
@@ -90,7 +91,7 @@
 
 (defun traffic-lights ()
   (loop for port in climi::*all-ports*
-      do (destroy-port port))
+	do (destroy-port port))
   (setq climi::*all-ports* nil)
   (run-frame-top-level (make-application-frame 'traffic-lights)))
 
