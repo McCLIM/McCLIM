@@ -20,7 +20,7 @@ your lisp's init file:
 (in-package :mcclim-truetype-system)
 
 (defsystem :mcclim-truetype
-  :depends-on (:clim-clx :mcclim :zpb-ttf :cl-vectors :cl-paths-ttf :cl-aa)
+  :depends-on (:mcclim :clim-clx :zpb-ttf :cl-vectors :cl-paths-ttf :cl-aa)
   :serial t
   :components
   ((:file "truetype-package")

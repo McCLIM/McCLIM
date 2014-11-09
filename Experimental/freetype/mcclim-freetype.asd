@@ -39,7 +39,7 @@ for testing the CFFI code.
   "lisp")
 
 (defsystem :mcclim-freetype
-  :depends-on (:clim-clx :mcclim #-(or sbcl cmucl scl) :cffi)
+  :depends-on (:mcclim :clim-clx #-(or sbcl cmucl scl) :cffi)
   :serial t
   :components
   #+(or cmucl sbcl scl)
