@@ -2,8 +2,8 @@
 
 ;;;  (c) copyright 2001 by
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2009 by
-;;;           Robert Strandh (strandh@labri.fr)
+;;;  (c) copyright 2009, 2014 by
+;;;           Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
