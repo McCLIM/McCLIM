@@ -116,7 +116,7 @@
   ((radio-box :initform nil)
    (light :initform nil))
   (:panes
-   (light     :light
+   (light     light-pane
 	      :width 30
 	      :normal +red+
 	      :highlighted +gold1+
