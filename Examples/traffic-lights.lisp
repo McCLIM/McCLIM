@@ -45,7 +45,7 @@
 	(not (gadget-value toggle-button))))
 
 (defmethod handle-event :after
-    ((pane clim-internals::light-pane) (event pointer-event))
+    ((pane light-pane) (event pointer-event))
   (declare (ignorable event))
   (let ((label (gadget-label (radio-box-current-selection
                               (slot-value *application-frame* 'radio-box)))))
