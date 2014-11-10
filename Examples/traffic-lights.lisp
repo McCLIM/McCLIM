@@ -30,7 +30,7 @@
 (in-package :clim-demo)
 
 ;;; example gadget definition
-(defclass light-pane (standard-gadget) ())
+(defclass light-pane (climi::standard-gadget) ())
 
 (defmethod handle-repaint ((pane light-pane) region)
   (declare (ignore region))
