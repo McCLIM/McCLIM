@@ -834,10 +834,10 @@ order to produce a double-click")
                      :reader pane-align-y))
   (:default-initargs
    :foreground +black+
-    :background *3d-normal-color*
-    :text-style *default-text-style*
-    :align-x :left
-    :align-y :top))
+   :background *3d-normal-color*
+   :text-style *default-text-style*
+   :align-x :left
+   :align-y :top))
 
 (defmethod initialize-instance :after ((obj basic-pane) &key text-style)
   (when (consp text-style)
