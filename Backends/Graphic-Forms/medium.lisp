@@ -73,16 +73,7 @@
       (gfg:background-color gc))))
 
 (defun target-of (medium)
-  (let ((sheet (medium-sheet medium)))
-    (if (climi::pane-double-buffering sheet)
-	(or (image-of medium)
-	    (let* ((region (climi::sheet-mirror-region sheet))
-		   (width (floor (bounding-rectangle-max-x region)))
-		   (height (floor (bounding-rectangle-max-y region))))
-	      (setf (image-of medium)
-		    (make-instance 'gfg:image
-				   :size (gfs:make-size width height)))))
-	(sheet-mirror (medium-sheet medium)))))
+  (sheet-mirror (medium-sheet medium)))
 
 (defun resize-medium-buffer (medium size)
   (let ((old-image (image-of medium)))
