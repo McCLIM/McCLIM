@@ -817,8 +817,7 @@ order to produce a double-click")
 
 ;;; BASIC PANE
 
-(defclass basic-pane (;; layout-protocol-mixin
-                      standard-space-requirement-options-mixin
+(defclass basic-pane (standard-space-requirement-options-mixin
                       sheet-parent-mixin mirrored-sheet-mixin
                       pane)
   ((foreground       :initarg :foreground
