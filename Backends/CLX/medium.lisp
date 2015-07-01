@@ -1161,19 +1161,7 @@ time an indexed pattern is drawn.")
   #.(* pi (/ 11 180)))
 
 (defmethod climi::medium-invoke-with-possible-double-buffering (frame pane (medium clx-medium) continuation)
-  (if (climi::pane-double-buffering pane)
-      (let* ((mirror (sheet-direct-mirror pane))
-	     (width (xlib:drawable-width mirror))
-	     (height (xlib:drawable-height mirror))
-	     (depth (xlib:drawable-depth mirror))
-	     (pixmap (xlib:create-pixmap :width width :height height :depth depth :drawable mirror)))
-	(setf (medium-buffer medium) pixmap)
-	(unwind-protect (funcall continuation)
-	  (xlib:copy-area pixmap (medium-gcontext medium (medium-foreground medium)) 0 0 width height mirror 0 0)
-	  (xlib:free-pixmap pixmap)
-	  (setf (medium-buffer medium) nil)))
-      (funcall continuation)))
-
+  (funcall continuation))
 
 ;;; RGB-IMAGE support, from Closure
 
