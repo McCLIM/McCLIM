@@ -501,9 +501,9 @@ order to produce a double-click")
     (allocate-space child child-width child-height)))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;; User Space Requirements
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; User Space Requirements
 
 (defclass space-requirement-options-mixin ()
   ((user-width       
@@ -813,8 +813,8 @@ order to produce a double-click")
                             (t
                              (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane)))))))) ))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; BASIC PANE
 
 (defclass basic-pane (standard-space-requirement-options-mixin
