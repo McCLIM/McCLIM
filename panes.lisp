@@ -2445,12 +2445,6 @@ order to produce a double-click")
   (invoke-display-function frame pane)
   (fit-pane-to-output pane))
 
-(defgeneric pane-double-buffering (pane))
-
-(defmethod pane-double-buffering (pane)
-  (declare (ignore pane))
-  nil)
-
 (defclass clim-stream-pane (updating-output-stream-mixin
 			    pane-display-mixin
 			    permanent-medium-sheet-output-mixin
@@ -2482,9 +2476,6 @@ order to produce a double-click")
    (end-of-page-action :initform :scroll
 		       :initarg :end-of-page-action
 		       :reader pane-end-of-page-action)
-   (double-buffering :initform nil
-		     :initarg :double-buffering
-		     :reader pane-double-buffering)
    ;; Slots of space-requirement-options-mixin defined with accessors for our
    ;; convenience
    (user-width :accessor pane-user-width)
