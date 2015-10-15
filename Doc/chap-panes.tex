@@ -1,0 +1,173 @@
+\chapter{Panes}
+\index{pane}
+
+Panes are subclasses of sheets.  Some panes are \emph{layout panes}
+that determine the size and position of its children according to rules
+specific to each particular type of layout pane.  Examples of layout
+panes are vertical and horizontal boxes, tables etc.
+
+According to the CLIM specification, all CLIM panes are
+\emph{rectangular objects}.  For McCLIM, we interpret that phrase to
+mean that:
+
+\begin{itemize}
+\item
+ CLIM panes appear rectangular in the native windowing system;
+\item
+ CLIM panes have a native transformation that does not have a rotation
+  component, only translation and scaling.
+\end{itemize}
+
+Of course, the specification is unclear here.  Panes are subclasses of
+sheets, and sheets don't have a shape per-se.  Their \emph{regions} may
+have a shape, but the sheet itself certainly does not.
+
+The phrase in the specification \emph{could} mean that the
+\emph{sheet-region} of a pane is a subclass of the region class
+\emph{rectangle}.  But that would not exclude the possibility that the
+region of a pane would be some non-rectangular shape in the
+\emph{native coordinate system}.  For that to happen, it would be
+enough that the \emph{sheet-transformation} of some ancestor of the
+pane contain a rotation component.  In that case, the layout protocol
+would be insufficient in its current version.
+
+McCLIM panes have the following additional restrictions:
+
+\begin{itemize}
+\item
+ McCLIM panes have a coordinate system that is only a translation
+  compared to that of the frame manager;
+\item
+ The parent of a pane is either nil or another pane.
+\end{itemize}
+
+Thus, the panes form a \emph{prefix} in the hierarchy of sheets.  It is
+an error for a non-pane to adopt a pane.
+
+Notice that the native transformation of a pane need not be the identity
+transformation.  If the pane is not mirrored, then its native
+transformation is probably a translation of that of its parent.
+
+Notice also that the native transformation of a pane need not be the
+composition of the identity transformation and a translation.  That
+would be the case only of the native transformation of the top level
+sheet is the identity transformation, but that need not be the case.  It
+is possible for the frame manager to impose a coordinate system in (say)
+millimeters as opposed to pixels.  The native transformation of the top
+level sheet of such a frame manager is a scaling with coefficients other
+than 1.
+
+\section{Layout protocol}
+\index{layout protocol}
+
+There is a set of fundamental rules of CLIM dividing responsibility
+between a parent pane and a child pane, with respect to the size and
+position of the region of the child and the \emph{sheet transformation}
+of the child.  This set of rules is called the \emph{layout protocol}.
+
+The layout protocol is executed in two phases.  The first phase is
+called the \emph{space compostion} phase, and the second phase is
+called the \emph{space allocation} phase.
+
+\subsection{Space composition}
+
+The space composition is accomplished by the generic function
+\texttt{compose-space}.  When applied to a pane, \texttt{compose-space}
+returns an object of type \emph{space-requirement} indicating the needs
+of the pane in terms of preferred size, minimum size and maximum size.
+The phase starts when compose-space is applied to the top-level pane of
+the application frame.  That pane in turn may ask its children for their
+space requirements, and so on until the leaves are reached.  When the
+top-level pane has computed its space requirments, it asks the system
+for that much space.  A conforming window manager should respect the
+request (space wanted, min space, max space) and allocate a top-level
+window of an acceptable size.  The space given by the system must then
+be distributed among the panes in the hierarchy
+\refSec{space-allocation}.
+
+Each type of pane is responsible for a different method on
+\texttt{compose-space}.  Leaf panes such as \emph{labelled gadgets} may
+compute space requirements based on the size and the text-style of the
+label.  Other panes such as the vbox layout pane compute the space as a
+combination of the space requirements of their children.  The result of
+such a query (in the form of a space-requirement object) is stored in
+the pane for later use, and is only changed as a result of a call to
+\texttt{note-space-requirement-changed}.
+
+Most \emph{composite panes} can be given explicit values for the values
+of \texttt{:width}, \texttt{:min-width}, \texttt{:max-width},
+\texttt{:height}, \texttt{:min-height}, and \texttt{:max-height}
+options.  If such arguments are not given (effectively making these
+values nil), a general method is used, such as computing from children
+or, for leaf panes with no such reasonable default rule, a fixed value
+is given.  If such arguments are given, their values are used instead.
+Notice that one of \texttt{:height} and \texttt{:width} might be
+given, applying the rule only in one of the dimensions.
+
+Subsequent calls to \texttt{compose-space} with the same arguments are
+assumed to return the same space-requirement object, unless a call to
+note-space-requirement-changed has been called in between.
+
+\subsection{Space allocation}
+\label{space-allocation}
+
+When \texttt{allocate-space} is called on a pane \texttt{P}, it must
+compare the space-requirement of the children of \texttt{P} to the
+available space, in order to distribute it in the most preferable way.
+In order to avoid a second recursive invokation of
+\texttt{compose-space} at this point, we store the result of the
+previous call to \texttt{compose-space} in each pane.
+
+To handle this situtation and also explicitly given size options, we use
+an \texttt{:around} method on \texttt{compose-space}.  The
+\texttt{:around} method will call the primary method only if necessary
+(i.e., \texttt{(eq (slot-value pane 'space-requirement) nil)}), and store
+the result of the call to the primary method in the
+\texttt{space-requirement} slot.
+
+We then compute the space requirement of the pane as follows:
+
+\begin{verbatim}
+     (setf (space-requirement-width ...)  (or explicit-width
+           (space-requirement-width request)) ...
+           (space-requirement-max-width ...)  (or explicit-max-width
+           explicit-width (space-requirement-max-width request)) ...)
+\end{verbatim}
+
+When the call to the primary method is not necessary we simply return
+the stored value.
+
+The \texttt{spacer-pane} is an exception to the rule indicated above.  The
+explicit size you can give for this pane should represent the margin
+size.  So its primary method should only call compose on the child.  And
+the around method will compute the explicit sizes for it from the space
+requirement of the child and for the values given for the surrounding
+space.
+
+\subsection{Change-space Notification Protocol}
+
+The purpose of the change-space notification protocol is to force a
+recalculation of the space occupied by potentially each pane in the
+\emph{pane hierarchy}.  The protocol is triggerred by a call to
+\texttt{note-space-requirement-changed} on a pane \texttt{P}. In McCLIM, we
+must therefore invalidate the stored space-requirement value and
+re-invoke \texttt{compose-space} on \texttt{P}.  Finally, the
+\emph{parent} of \texttt{P} must be notified recursively.
+
+This process would be repeated for all the panes on a path from \texttt{P}
+to the top-level pane, if it weren't for the fact that some panes
+compute their space requirements independently of those of their
+children.  Thus, we stop calling \texttt{note-space-requirement-changed}
+in the following cases:
+
+\begin{itemize}
+\item
+ when \texttt{P} is a \texttt{restraining-pane},
+\item
+ when \texttt{P} is a \texttt{top-level-sheet-pane}, or
+\item
+ when \texttt{P} has been given explicit values for \texttt{:width} and
+  \texttt{:height}
+\end{itemize}
+
+In either of those cases, \texttt{allocate-space} is called.
