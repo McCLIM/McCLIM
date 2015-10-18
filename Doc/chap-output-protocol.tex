@@ -1,0 +1,44 @@
+\chapter{Output Protocol}
+
+\section{Protocol Changes}
+
+\Defgeneric {line-style-effective-thickness} {line-style medium}
+
+Returns the thickness in device units of a line,
+rendered on \textit{medium} with the style \textit{line-style}.
+
+%% @include fun-clim-extensions-line-style-effective-thickness.texi
+
+%% @deffn {Generic Function} {(setf output-record-parent)} parent record
+
+%% Additional protocol generic function. @var{parent} may be an output
+%% record or @cl{nil}.
+
+%% @end deffn
+
+%% @include fun-clim-replay-output-record.texi
+%% @include fun-clim-map-over-output-records-containing-position.texi
+%% @include fun-clim-map-over-output-records-overlapping-region.texi
+
+%% @c XXX \defgeneric displayed-output-record-ink for text records
+
+%% @deffn {Generic Function} {add-output-record} child record
+
+%% Sets @var{record} to be the parent of @var{child}.
+%% @end deffn
+
+%% @deffn {Generic Function} {delete-output-record} child record &optional (errorp t)
+
+%% If @var{child} is a child of @var{record}, sets the parent of
+%% @var{child} to @cl{nil}.
+%% @end deffn
+
+%% @deffn {Generic Function} {clear-output-record} record
+%% @end deffn
+
+%% Sets the parent of all children of @var{record} to @cl{nil}.
+
+%% @c \defgeneric {invoke-with-new-output-record} :parent key
+
+%% @include macro-clim-with-new-output-record.texi
+%% @include macro-clim-with-output-to-output-record.texi
