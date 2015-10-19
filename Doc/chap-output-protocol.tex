@@ -7,14 +7,11 @@
 Returns the thickness in device units of a line,
 rendered on \textit{medium} with the style \textit{line-style}.
 
-%% @include fun-clim-extensions-line-style-effective-thickness.texi
+\Defgeneric {(setf output-record-parent)} {parent record}
 
-%% @deffn {Generic Function} {(setf output-record-parent)} parent record
-
-%% Additional protocol generic function. @var{parent} may be an output
-%% record or @cl{nil}.
-
-%% @end deffn
+Set the parent of the output record \textit{record}
+to \textit{parent}.  The value of \textit{parent} may be an output
+record or \texttt{nil}.
 
 %% @include fun-clim-replay-output-record.texi
 %% @include fun-clim-map-over-output-records-containing-position.texi
