@@ -13,6 +13,17 @@ Set the parent of the output record \textit{record}
 to \textit{parent}.  The value of \textit{parent} may be an output
 record or \texttt{nil}.
 
+\Defgeneric {replay-output-record}
+{(record stream \optional region x-offset y-offset)}
+
+Displays the output captured by \textit{record} on the
+\textit{stream}, exactly as it was originally captured. The current
+user transformation, line style, text style, ink and clipping region
+of \textit{stream} are all ignored. Instead, these are gotten from the
+output record.
+
+Only those records that overlap \textit{region} are displayed.
+
 %% @include fun-clim-replay-output-record.texi
 %% @include fun-clim-map-over-output-records-containing-position.texi
 %% @include fun-clim-map-over-output-records-overlapping-region.texi
