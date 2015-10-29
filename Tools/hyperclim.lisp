@@ -1,74 +1,12 @@
-;; hyperclim.el: Looks up symbols in the CLIM spec from inside xemacs.
-;; Written and tested using XEmacs.
-;; This code is in the public domain.
-
-;; Orginally written by Andy Hefner (andy.hefner@verizon.net)
-
-(require 'cl)
-(require 'browse-url)
-(require 'thingatpt)
-
-
-(defvar clim-sybmol-table nil
-  "The symbol table for looking up CLIM symbols")
-
-;;; Override base URL of CLIM specification, set this if you want
-;;; to use one of the above from your local disk.
-(setq clim-url-base-override nil)
-
-;;; Selection of CLIM spec according to preference -- uncomment one of the lines below
-
-;; MikeMac conversion of the CLIM specification
-;(setq clim-dataset 'clim-mikemac-spec)
-
-;; Gilbert Baumann conversion of the CLIM specification
-(setq clim-dataset 'clim-gilberth-spec)
-
-;; Alternate URL for Gilbert's spec..
-; (setq clim-url-base-override "http://bauhh.dyndns.org:8000/clim-spec/"
-
-
-;;; Internal bits
-
-(defvar clim-history nil)
-
-(defun clim-get-dataset ()
-  (symbol-value clim-dataset))
-
-(defun clim-get-symbol-table ()
-  (rest (clim-get-dataset)))
-
-(defun clim-get-url-base ()
-  (first (clim-get-dataset)))
-
-(defun clim-find-symbol (string)
-  (assoc (downcase symbol-name)
-         (clim-get-symbol-table)))
-
-(defun clim-find-symbol-url (string)
-  (let ((syminfo (clim-find-symbol string)))
-    (when syminfo
-      (concat (or clim-url-base-override 
-                  (clim-get-url-base))
-              (cdr syminfo)))))
+;; hyperclim.lisp: Looks up symbols in the CLIM spec from inside CLIMACS.
+;;
+;; Orginally written by Andy Hefner as hyperclim.el (andy.hefner@verizon.net)
 
 ;;; CLIM-LOOKUP command
 ;;    Look up a symbol in MikeMac's CLIM documentation.
 ;;    By default it looks up the symbol under the point, but if it isn't over
 ;;    something resembling a symbol, it will prompt you. 
 ;;    Also, you can use a prefix arg to force prompting.
-(defun clim-lookup (p)
-  (interactive "p")  
-  (let ((symbol-name (thing-at-point 'symbol)))
-    (unless (and (= 1 p) (stringp symbol-name))
-      (setq symbol-name (read-from-minibuffer "Symbol name: " "" nil nil 'clim-history)))
-    (let ((url (clim-find-symbol-url (downcase symbol-name))))
-      (if url 
-          (browse-url url)
-          (message "Symbol %s not found." symbol-name)))))
-
-
-;;; CLIM spec datasets
 
 (setq clim-gilberth-spec 
  '("http://www.stud.uni-karlsruhe.de/~unk6/clim-spec/"
