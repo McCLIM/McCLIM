@@ -1,5 +1,0 @@
-cl-mcclim (0.0+cvs.2002.12.27) unstable; urgency=low
-
-  * Initial release (closes: 168876)
-
- -- Kevin M. Rosenberg <kmr@debian.org>  Fri,  8 Nov 2002 09:46:00 -0700
