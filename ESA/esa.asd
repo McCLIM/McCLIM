@@ -22,10 +22,7 @@
 
 ;;; ASDF system definition for ESA.
 
-(defpackage :esa.system
-  (:use :cl :asdf))
-
-(in-package :esa.system)
+(in-package :asdf-user)
 
 (defsystem :esa
   :depends-on (:mcclim)
