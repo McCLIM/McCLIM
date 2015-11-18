@@ -1,8 +1,8 @@
 ;; -*- Mode: Lisp; -*-
 
-(in-package :common-lisp-user)
+(in-package #:asdf-user)
 
-(asdf:defsystem :conditional-commands
+(defsystem :conditional-commands
   :depends-on (:mcclim)
   :components ((:file "package")
                (:file "command-and-command-table-utilities" :depends-on ("package"))
