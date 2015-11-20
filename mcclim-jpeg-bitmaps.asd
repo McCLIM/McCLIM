@@ -18,7 +18,9 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(asdf:defsystem :mcclim-jpeg-bitmaps
+(cl:in-package #:asdf-user)
+
+(defsystem :mcclim-jpeg-bitmaps
   :description "Support for JPEG images in McCLIM bitmap reading functions."
   :depends-on (:mcclim :cl-jpeg)
   :components ((:file "jpeg" :pathname #P"Extensions/Bitmap-formats/jpeg")))
