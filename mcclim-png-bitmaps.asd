@@ -18,7 +18,9 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(asdf:defsystem :mcclim-png-bitmaps
+(cl:in-package #:asdf-user)
+
+(defsystem :mcclim-png-bitmaps
   :description "Support for PNG images in McCLIM bitmap reading functions."
   :depends-on (:mcclim :png-read)
   :components ((:file "png" :pathname #P"Extensions/Bitmap-formats/png")))
