@@ -18,7 +18,9 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(asdf:defsystem :mcclim-tiff-bitmaps
+(cl:in-package #:asdf-user)
+
+(defsystem :mcclim-tiff-bitmaps
   :description "Support for TIFF images in McCLIM bitmap reading functions."
   :depends-on (:mcclim :retrospectiff)
   :components ((:file "tiff" :pathname #P"Extensions/Bitmap-formats/tiff")))
