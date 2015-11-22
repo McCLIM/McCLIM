@@ -19,6 +19,6 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (asdf:defsystem :mcclim-tiff-bitmaps
-           :description "Support for TIFF images in McCLIM bitmap reading functions."
-           :depends-on (:mcclim :retrospectiff)
-           :components ((:file "tiff" :pathname #P"Extensions/Bitmap-formats/tiff")))
+  :description "Support for TIFF images in McCLIM bitmap reading functions."
+  :depends-on (:mcclim :retrospectiff)
+  :components ((:file "tiff" :pathname #P"Extensions/Bitmap-formats/tiff")))
