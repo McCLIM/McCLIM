@@ -1,9 +1,6 @@
 ;;; -*- lisp -*-
 
-(defpackage :clouseau.system
-  (:use :cl :asdf))
-
-(in-package :clouseau.system)
+(cl:in-package :asdf-user)
 
 (defsystem :clouseau
     :depends-on (:mcclim)
