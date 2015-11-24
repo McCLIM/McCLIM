@@ -16,8 +16,7 @@ your lisp's init file:
 
 |#
 
-(defpackage :mcclim-truetype-system (:use :cl :asdf))
-(in-package :mcclim-truetype-system)
+(in-package :asdf-user)
 
 (defsystem :mcclim-truetype
   :depends-on (:mcclim :clim-clx :zpb-ttf :cl-vectors :cl-paths-ttf :cl-aa)
