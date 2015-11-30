@@ -130,7 +130,7 @@
       (apply callback pane more-arguments))))
 
 ;;
-;; gadget sub-classes
+;; gadget subclasses
 ;;
 
 ;;
