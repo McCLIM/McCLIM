@@ -1285,7 +1285,6 @@
 			keycodes)))
     modifier-map))
 
-
 ;;;; Backend component of text selection support
 
 ;;; Event classes
