@@ -24,6 +24,18 @@
 
 (in-package :clim-clx)
 
+;;; Recall that the function CLIM-XCOMMON:LOOKUP-KEYSYM simply
+;;; consults a fixed hash table that maps X11 keysyms (which are
+;;; numbers) to Common Lisp symbols in the KEYWORD package.
+;;;
+;;; This function returns a list of length 0, 1 or 2.  It returns the
+;;; empty list if the keysym with index 0 is 0.  I don't see how this
+;;; can be the case, though.  Otherwise, it returns a singleton list
+;;; if the keysyms with index 0 and 1 are the same, and a list of the
+;;; keysyms with index 0 and 1 if the two are different.
+;;;
+;;; I am guessing that for all modifier keys, the two are the same, so
+;;; that this function always returns a singleton list.
 (defun modifier-keycode->keysyms (display keycode)
   (let ((first-x-keysym (xlib:keycode->keysym display keycode 0)))
     (when (zerop first-x-keysym)
