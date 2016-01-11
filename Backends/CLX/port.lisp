@@ -1272,6 +1272,12 @@
 ;;; criteria the X11 server uses.  But for our purpose it is important
 ;;; to start by checking the lock modifier first.
 
+;;; This method creates a modifier mapping that is similar in spirit
+;;; to the one returned by XLIB:MODIFIER-MAPPING.  It differs from the
+;;; XLIB function in two ways.  First it returns a vector of length 8
+;;; rather than 8 different values.  Second, each element of the
+;;; vector is a list of keysym names rather than of keycodes.  Recall
+;;; that a keysym name is a Common Lisp symbol in the KEYWORD package.
 (defmethod clim-xcommon:modifier-mapping ((port clx-port))
   (let* ((display (clx-port-display port))
 	 (x-modifiers (multiple-value-list (xlib:modifier-mapping display)))
