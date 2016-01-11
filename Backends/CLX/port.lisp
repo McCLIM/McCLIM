@@ -1239,6 +1239,39 @@
 
 ;;; Modifier cache support
 
+;;; Recall that XLIB:MODIFIER-MAPPING returns 8 values.  Each value is
+;;; a list of keycodes (in some arbitrary order) that are currently
+;;; used to mean a particular modifier.  Each value as the following
+;;; meaning:
+;;;
+;;;   value number  meaning
+;;;        0        shift keycodes
+;;;        1        lock keycodes
+;;;        2        control keycodes
+;;;        3        mod1 keycodes
+;;;        4        mod2 keycodes
+;;;        5        mod3 keycodes
+;;;        6        mod4 keycodes
+;;;        7        mod5 keycodes
+;;;
+;;; The problem here is that a keycode can be a member of more than
+;;; one list.  For example, if you turn your caps lock key into an
+;;; additional control key, then the keycode for the caps lock key may
+;;; very well be a member both of the list in value 1 and the list in
+;;; value 2.
+;;;
+;;; Let us take the case of caps lock.  The X11 programming manual
+;;; tells us that lock modifier is interpreted as caps lock when the
+;;; keysym named :CAPS-LOCK (as used by CLX) is attached to some
+;;; keycode and that keycode is also attached (as determined by
+;;; XLIB:MODIFIER-MAPPING) to the lock modifier, i.e., that keycode is
+;;; a member of the list in value 1.  The converse seems to be untrue,
+;;; though.  Just because someone pressed a key that satisfies those
+;;; criteria does not mean that the X11 server will switch on the lock
+;;; modifier next time a key is pressed.  It is unclear what the
+;;; criteria the X11 server uses.  But for our purpose it is important
+;;; to start by checking the lock modifier first.
+
 (defmethod clim-xcommon:modifier-mapping ((port clx-port))
   (let* ((display (clx-port-display port))
 	 (x-modifiers (multiple-value-list (xlib:modifier-mapping display)))
