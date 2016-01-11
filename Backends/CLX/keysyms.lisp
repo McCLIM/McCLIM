@@ -39,6 +39,41 @@
 ;;; pressing or releasing those keys.  We want the CLIM modifiers to
 ;;; reflect the post event state.
 
+;;; Recall that X11 defines how to map keycodes to keysyms by defining
+;;; a "list" (not a Common Lisp list, though.  More like a vector in
+;;; fact.) of possible keysyms for each keycode.  The third argument
+;;; to XLIB:KEYCODE->KEYSYM is an index into that list.  The standard
+;;; rules make use only of indices 0 to 3 in that list.  Indices 0 and
+;;; 1 are considered members of "Group 1" and indices 2 and 3 are
+;;; members of "Group 2".
+;;;
+;;; The Xlib C language library function XKeycodeToKeysym might return
+;;; some value corresponding NoSymbol for certain values of the index,
+;;; in particular for index 1 when the keycode corresponds to an
+;;; alphabetic symbol with both a lower and an upper case version, CLX
+;;; applies the rules for us, so that in that case, index 1 is the
+;;; keysym of the upper-case version of the character.
+;;;
+;;; The parameter STATE is an bit mask represented as the logical OR
+;;; of individual bits.  Each bit corresponds to a modifier or a
+;;; pointer button that is active immediately before the key was
+;;; pressed or released.  The bits have the following meaning:
+;;;
+;;;   position  value    meaning
+;;;     0         1      shift
+;;;     1         2      lock
+;;;     2         4      control
+;;;     3         8      mod1
+;;;     4        16      mod2
+;;;     5        32      mod3
+;;;     6        64      mod4
+;;;     7       128      mod5
+;;;     8       256      button1
+;;;     9       512      button2
+;;;    10      1024      button3
+;;;    11      2048      button4
+;;;    12      4096      button5
+
 (defun x-event-to-key-name-and-modifiers (port event-key keycode state)
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (clim-xcommon:x-event-state-modifiers port state)
