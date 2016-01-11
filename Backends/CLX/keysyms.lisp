@@ -42,10 +42,6 @@
 (defun x-event-to-key-name-and-modifiers (port event-key keycode state)
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (clim-xcommon:x-event-state-modifiers port state)
-    ;; We filter away the shift state if there is a difference between
-    ;; the shifted and unshifted keysym. This is so eg. #\A will not
-    ;; look like "#\A with a Shift modifier", as this makes gesture
-    ;; processing more difficult.
     (let* ((display (clx-port-display port))
 	   (shift? (logtest +shift-key+ clim-modifiers))
            (shift-modifier? (if shift-lock?
@@ -70,6 +66,11 @@
                          port event-key char (clim-xcommon:lookup-keysym keysym)
                          state)))
         (values char
+		;; We filter away the shift state if there is a
+		;; difference between the shifted and unshifted
+		;; keysym. This is so eg. #\A will not look like "#\A
+		;; with a Shift modifier", as this makes gesture
+		;; processing more difficult.
                 (if (= shifted-keysym unshifted-keysym)
                     modifiers
                     (logandc2 modifiers +shift-key+))
