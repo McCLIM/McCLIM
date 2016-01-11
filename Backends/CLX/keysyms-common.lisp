@@ -91,6 +91,21 @@
 				 (:caps-lock #.+caps-lock+)
 				 (:mode-switch #.+mode-switch+)))
 
+;;; Recall that the function MODIFIER-MAPPING is similar to the one
+;;; with the same name in the XLIB package.  It returns a vector of
+;;; length 8, where each element is a list of keysym names (which are
+;;; Common Lisp symbols in the KEYWORD package).  The elements of the
+;;; vector are as follows:
+;;;
+;;;   index  meaning
+;;;     0    shift keysym names
+;;;     1    lock keysym names
+;;;     2    control keysym names
+;;;     3    mod1 keysym names
+;;;     4    mod2 keysym names
+;;;     5    mod3 keysym names
+;;;     6    mod4 keysym names
+;;;     7    mod5 keysym names
 
 (defun make-modifier-cache (port)
   (let* ((modifiers (modifier-mapping port))
