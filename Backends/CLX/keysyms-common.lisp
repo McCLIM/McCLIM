@@ -27,6 +27,22 @@
 
 (in-package :clim-xcommon)
 
+;;; Recall some terminology.  A KEYCODE is an integer between 8 and
+;;; 255 and it corresponds to some key on the keyboard.  The
+;;; correspondence is arbitrary in that it can vary from one X11
+;;; server to another.
+;;;
+;;; A KEYSYM is non-negative integer with an equivalent Common Lisp
+;;; type of (UNSIGNED-BYTE 32).  A keysym has a fixed meaning as a
+;;; some upper or lower-case letter, as some special character, or as
+;;; some operation that does not have a character equivalent, for
+;;; example the UP arrow key or the CapsLock key.
+;;;
+;;; In addition, we give one or more NAMEs to some important keysyms.
+;;; Such a KEYSYM NAME is a symbol in the KEYWORD package.  Even
+;;; ordinary letters follow this pattern, so that the keysym name for
+;;; the lower-case letter #\a is the symbol :|a|.
+
 ;;; This hash table maps a keysym to a list of keysym names for that
 ;;; keysym.
 (defvar *keysym-name-table*
