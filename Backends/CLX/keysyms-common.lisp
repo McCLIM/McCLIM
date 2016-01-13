@@ -80,16 +80,17 @@
 (defconstant +mode-switch+ 4)
 )
 
-(defconstant +clim-modifiers+ '(((:meta-left :meta-right) #.+meta-key+)
-				((:hyper-left :hyper-right) #.+hyper-key+)
-				((:super-left :super-right) #.+super-key+)
-				((:shift-left :shift-right) #.+shift-key+)
-				((:control-left :control-right)
-				 #.+control-key+)))
+(defconstant +clim-modifiers+
+  '(((:meta-left :meta-right) #.+meta-key+)
+    ((:hyper-left :hyper-right) #.+hyper-key+)
+    ((:super-left :super-right) #.+super-key+)
+    ((:shift-left :shift-right) #.+shift-key+)
+    ((:control-left :control-right) #.+control-key+)))
 
-(defconstant +other-modifiers+ '((:shift-lock #.+shift-lock+)
-				 (:caps-lock #.+caps-lock+)
-				 (:mode-switch #.+mode-switch+)))
+(defconstant +other-modifiers+
+  '((:shift-lock #.+shift-lock+)
+    (:caps-lock #.+caps-lock+)
+    (:mode-switch #.+mode-switch+)))
 
 ;;; Recall that the function MODIFIER-MAPPING is similar to the one
 ;;; with the same name in the XLIB package.  It returns a vector of
