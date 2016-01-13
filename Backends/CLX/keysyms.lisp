@@ -44,7 +44,7 @@
     (let ((second-x-keysym (xlib:keycode->keysym display keycode 1)))
       (cons (clim-xcommon:keysym-to-keysym-name first-x-keysym)
 	    (if (eql first-x-keysym second-x-keysym)
-		nil
+		'()
 		(list (clim-xcommon:keysym-to-keysym-name second-x-keysym)))))))
 
 ;;; The X state is the state before the current event, so key events
