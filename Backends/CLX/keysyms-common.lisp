@@ -48,18 +48,18 @@
 (defvar *keysym-name-table*
   (make-hash-table :test #'eql))
 
-(defvar *reverse-keysym-hash-table*
+(defvar *keysym-table*
     (make-hash-table :test #'eq))
 
 (defun define-keysym (name value)
   (pushnew name (gethash value *keysym-name-table* nil))
-  (setf (gethash name *reverse-keysym-hash-table*) value))
+  (setf (gethash name *keysym-table*) value))
 
 (defun keysym-to-keysym-name (value)
   (car (last (gethash value *keysym-name-table*))))
 
 (defun keysym-name-to-keysym (value)
-  (gethash value *reverse-keysym-hash-table*))
+  (gethash value *keysym-table*))
 
 (defclass keysym-port-mixin ()
   ((modifier-cache :accessor modifier-cache :initform nil)))
