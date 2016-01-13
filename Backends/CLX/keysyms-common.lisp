@@ -71,9 +71,21 @@
 
 ;;; Modifier cache
 ;;;
-;;; Cache word is cons of two integers, CLIM modifier word and other bits for
-;;; shift-lock, etc.  The defconstants below are for the other word.
+;;; A cache entry is a CONS of two bit masks, each one represented as
+;;; an integer.  Each bit mask is the logical OR of constants, each of
+;;; which is a power of 2 and defining some modifier.
+;;;
+;;; The CAR of the cache entry is the bit mask for modifiers defined
+;;; by the CLIM II specification.  The corresponding constants are not
+;;; backend specific, so they are defined elsewhere.
+;;;
+;;; The CDR of the cache entry is the bit mask for backend-specific
+;;; modifiers, in this case CLX modifiers for shift lock, caps lock,
+;;; and mode switch.  Recall that the mode switch modifier is the one
+;;; that determines which of the two groups of keysyms should be used
+;;; as an interpretation of a particular keycode.
 
+;;; Definition of constants for the backend-specific modifier mask.
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defconstant +shift-lock+ 1)
 (defconstant +caps-lock+ 2)
