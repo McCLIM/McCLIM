@@ -26,7 +26,8 @@
 
 ;;; Recall that the function CLIM-XCOMMON:KEYSYM-TO-KEYSYM-NAME simply
 ;;; consults a fixed hash table that maps X11 keysyms (which are
-;;; numbers) to Common Lisp symbols in the KEYWORD package.
+;;; numbers) to keysym names (which are Common Lisp symbols in the
+;;; KEYWORD package).
 ;;;
 ;;; This function returns a list of length 0, 1 or 2.  It returns the
 ;;; empty list if the keysym with index 0 is 0.  I don't see how this
