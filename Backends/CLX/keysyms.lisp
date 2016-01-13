@@ -134,5 +134,5 @@
        (code-char keysym)))
 
 (defun keysym-to-character (keysym)
-  (numeric-keysym-to-character (clim-xcommon:reverse-lookup-keysym keysym)))
+  (numeric-keysym-to-character (clim-xcommon:keysym-name-to-keysym keysym)))
 

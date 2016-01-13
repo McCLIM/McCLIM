@@ -58,7 +58,7 @@
 (defun keysym-to-keysym-name (value)
   (car (last (gethash value *keysym-name-table*))))
 
-(defun reverse-lookup-keysym (value)
+(defun keysym-name-to-keysym (value)
   (gethash value *reverse-keysym-hash-table*))
 
 (defclass keysym-port-mixin ()
