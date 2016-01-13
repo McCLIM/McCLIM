@@ -80,6 +80,8 @@
 (defconstant +mode-switch+ 4)
 )
 
+;;; This dictionary maps CLX keysym names to the power-of-two
+;;; constants that the CLIM II specification requires.
 (defconstant +clim-modifiers+
   '(((:meta-left :meta-right) #.+meta-key+)
     ((:hyper-left :hyper-right) #.+hyper-key+)
@@ -87,6 +89,10 @@
     ((:shift-left :shift-right) #.+shift-key+)
     ((:control-left :control-right) #.+control-key+)))
 
+;;; This dictionary maps CLX keysym names to the power-of-two
+;;; constants that are not required by the CLIM II specification, but
+;;; that we need anyway, in order to determine what keysym to choose
+;;; based on current modifiers.
 (defconstant +other-modifiers+
   '((:shift-lock #.+shift-lock+)
     (:caps-lock #.+caps-lock+)
