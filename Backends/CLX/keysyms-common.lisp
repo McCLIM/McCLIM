@@ -50,7 +50,7 @@
 
 ;;; This hash table maps a keysym name to the corresponding keysym.
 (defvar *keysym-table*
-    (make-hash-table :test #'eq))
+  (make-hash-table :test #'eq))
 
 (defun define-keysym (name value)
   (pushnew name (gethash value *keysym-name-table* nil))
