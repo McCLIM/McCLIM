@@ -111,7 +111,10 @@
                                               (if mode-switch?
                                                   2 0))))
              (modifiers (clim-xcommon:x-keysym-to-clim-modifiers
-                         port event-key char (clim-xcommon:keysym-to-keysym-name keysym)
+                         port
+			 event-key
+			 char
+			 (clim-xcommon:keysym-to-keysym-name keysym)
                          state)))
         (values char
 		;; We filter away the shift state if there is a
