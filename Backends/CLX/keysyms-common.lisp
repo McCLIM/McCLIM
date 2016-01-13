@@ -83,9 +83,7 @@
     (declare (ignore shift-lock? caps-lock? mode-switch?))
     (if (characterp keychar)
 	clim-modifiers	;; ?? true?
-	(modify-modifiers event-key
-			  keysym-name
-			  clim-modifiers))))
+	(modify-modifiers event-key keysym-name clim-modifiers))))
 
 ;;; Modifier cache
 ;;;
