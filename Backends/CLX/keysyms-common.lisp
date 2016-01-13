@@ -27,18 +27,20 @@
 
 (in-package :clim-xcommon)
 
-(defvar *keysym-hash-table*
-    (make-hash-table :test #'eql))
+;;; This hash table maps a keysym to a list of keysym names for that
+;;; keysym.
+(defvar *keysym-name-table*
+  (make-hash-table :test #'eql))
 
 (defvar *reverse-keysym-hash-table*
     (make-hash-table :test #'eq))
 
 (defun define-keysym (name value)
-  (pushnew name (gethash value *keysym-hash-table* nil))
+  (pushnew name (gethash value *keysym-name-table* nil))
   (setf (gethash name *reverse-keysym-hash-table*) value))
 
-(defun lookup-keysym (value)
-  (car (last (gethash value *keysym-hash-table*))))
+(defun keysym-to-keysym-name (value)
+  (car (last (gethash value *keysym-name-table*))))
 
 (defun reverse-lookup-keysym (value)
   (gethash value *reverse-keysym-hash-table*))
@@ -128,7 +130,15 @@
 
 (defun make-modifier-cache (port)
   (let* ((modifiers (modifier-mapping port))
+	 ;; The name MODIFIER-BYTE-SIZE is not such a great choice.
+	 ;; The variable holds the number of different possible
+	 ;; modifiers, and the X11 specification says that it will
+	 ;; always be 8.
 	 (modifier-byte-size (length modifiers))
+	 ;; The name NUM-MODIFIERS is not such a great choice.  The
+	 ;; variable holds the number of different possible modifier
+	 ;; masks, and the X11 specification says that it will always
+	 ;; be 256.
 	 (num-modifiers (ash 1 modifier-byte-size))
 	 (cache (make-array num-modifiers)))
     (loop for x-modifier from 0 below num-modifiers

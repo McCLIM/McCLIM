@@ -5,7 +5,7 @@
 (defpackage :clim-xcommon
   (:use :clim :clim-lisp)
   (:export #:keysym-port-mixin
-	   #:lookup-keysym
+	   #:keysym-to-keysym-name
 	   #:modifier-mapping
 	   #:reverse-lookup-keysym
 	   #:x-event-state-modifiers

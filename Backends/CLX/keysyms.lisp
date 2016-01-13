@@ -24,7 +24,7 @@
 
 (in-package :clim-clx)
 
-;;; Recall that the function CLIM-XCOMMON:LOOKUP-KEYSYM simply
+;;; Recall that the function CLIM-XCOMMON:KEYSYM-TO-KEYSYM-NAME simply
 ;;; consults a fixed hash table that maps X11 keysyms (which are
 ;;; numbers) to Common Lisp symbols in the KEYWORD package.
 ;;;
@@ -41,10 +41,10 @@
     (when (zerop first-x-keysym)
       (return-from modifier-keycode->keysyms nil))
     (let ((second-x-keysym (xlib:keycode->keysym display keycode 1)))
-      (cons (clim-xcommon:lookup-keysym first-x-keysym)
+      (cons (clim-xcommon:keysym-to-keysym-name first-x-keysym)
 	    (if (eql first-x-keysym second-x-keysym)
 		nil
-		(list (clim-xcommon:lookup-keysym second-x-keysym)))))))
+		(list (clim-xcommon:keysym-to-keysym-name second-x-keysym)))))))
 
 ;;; The X state is the state before the current event, so key events
 ;;; for the modifier keys don't reflect the state that results from
@@ -103,14 +103,14 @@
            (keysym (if shift-modifier?
                        shifted-keysym
                        unshifted-keysym)))
-      (let* ((keysym-keyword (clim-xcommon:lookup-keysym keysym))
+      (let* ((keysym-keyword (clim-xcommon:keysym-to-keysym-name keysym))
              (char (xlib:keysym->character display keysym
                                            (+ (if shift-modifier?
                                                   1 0)
                                               (if mode-switch?
                                                   2 0))))
              (modifiers (clim-xcommon:x-keysym-to-clim-modifiers
-                         port event-key char (clim-xcommon:lookup-keysym keysym)
+                         port event-key char (clim-xcommon:keysym-to-keysym-name keysym)
                          state)))
         (values char
 		;; We filter away the shift state if there is a
