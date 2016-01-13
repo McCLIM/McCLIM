@@ -697,13 +697,13 @@
     (when sheet
       (case event-key
 	((:key-press :key-release)
-         (multiple-value-bind (keyname modifier-state keysym-keyword)
+         (multiple-value-bind (keyname modifier-state keysym-name)
 	     (x-event-to-key-name-and-modifiers *clx-port* 
 						event-key code state)
            (make-instance (if (eq event-key :key-press)
 			      'key-press-event
 			      'key-release-event)
-             :key-name keysym-keyword
+             :key-name keysym-name
 	     :key-character (and (characterp keyname) keyname)
 	     :x x :y y
 	     :graft-x root-x

@@ -104,7 +104,7 @@
            (keysym (if shift-modifier?
                        shifted-keysym
                        unshifted-keysym)))
-      (let* ((keysym-keyword (clim-xcommon:keysym-to-keysym-name keysym))
+      (let* ((keysym-name (clim-xcommon:keysym-to-keysym-name keysym))
              (char (xlib:keysym->character display keysym
                                            (+ (if shift-modifier?
                                                   1 0)
@@ -125,7 +125,7 @@
                 (if (= shifted-keysym unshifted-keysym)
                     modifiers
                     (logandc2 modifiers +shift-key+))
-                keysym-keyword)))))
+                keysym-name)))))
 
 ;;;;
 
