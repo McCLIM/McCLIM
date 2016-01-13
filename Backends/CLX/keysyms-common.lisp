@@ -76,7 +76,7 @@
 ;;; pressing or releasing those keys.  We want the CLIM modifiers to
 ;;; reflect the post event state.
 
-(defun x-keysym-to-clim-modifiers (port event-key keychar keysym-keyword state)
+(defun x-keysym-to-clim-modifiers (port event-key keychar keysym-name state)
   "event-key is :key-press or :key-release"
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (x-event-state-modifiers port state)
@@ -84,7 +84,7 @@
     (if (characterp keychar)
 	clim-modifiers	;; ?? true?
 	(modify-modifiers event-key
-			  keysym-keyword
+			  keysym-name
 			  clim-modifiers))))
 
 ;;; Modifier cache
@@ -195,9 +195,9 @@
 	      (logtest +caps-lock+ other-modifiers)
 	      (logtest +mode-switch+ other-modifiers)))))
 
-(defun modify-modifiers (event-key keysym-keyword modifiers)
+(defun modify-modifiers (event-key keysym-name modifiers)
   (let ((keysym-modifier (loop for (keysyms modifier) in +clim-modifiers+
-			       if (member keysym-keyword keysyms)
+			       if (member keysym-name keysyms)
 			       return modifier)))
     (cond ((and keysym-modifier (eq event-key :key-press))
 	   (logior modifiers keysym-modifier))
