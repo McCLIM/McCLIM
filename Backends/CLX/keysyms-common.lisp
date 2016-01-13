@@ -48,6 +48,7 @@
 (defvar *keysym-name-table*
   (make-hash-table :test #'eql))
 
+;;; This hash table maps a keysym name to the corresponding keysym.
 (defvar *keysym-table*
     (make-hash-table :test #'eq))
 
