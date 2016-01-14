@@ -169,15 +169,15 @@
 	  for clim-modifier = 0
 	  for other-modifier = 0
 	  do (loop for bit from 0 below modifier-count
-		   for bit-modifiers = (aref modifier-mapping bit)
+		   for modifier-names = (aref modifier-mapping bit)
 		   when (logbitp bit x-modifier)
 		   do (progn
 			(loop for (syms val) in +clim-modifiers+
-			      when (intersection syms bit-modifiers)
+			      when (intersection syms modifier-names)
 			      do (setf clim-modifier
 				       (logior clim-modifier val)))
 			(loop for (sym val) in +other-modifiers+
-			      when (member sym bit-modifiers)
+			      when (member sym modifier-names)
 			      do (setf other-modifier
 				       (logior other-modifier val))))
 		   finally (setf (aref cache x-modifier)
