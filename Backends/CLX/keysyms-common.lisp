@@ -42,6 +42,17 @@
 ;;; Such a KEYSYM NAME is a symbol in the KEYWORD package.  Even
 ;;; ordinary letters follow this pattern, so that the keysym name for
 ;;; the lower-case letter #\a is the symbol :|a|.
+;;;
+;;; Let us introduce some terminology related to modifiers.  A
+;;; MODIFIER is some abstract concept with no representation in code.
+;;; Examples of modifiers are SHIFT, CONTROL, CAPSLOCK, HYPER, etc.  A
+;;; MODIFIER KEYCODE is a keycode that is currently working as a
+;;; modifier.  A MODIFIER KEYSYM is one of the keysyms in the fixed
+;;; set of keysyms corresponding to modifier keys.  A MODIFIER NAME is
+;;; the keysym name of modifier keysym.  A MODIFIER VALUE is an
+;;; integer that is a power of 2 and that uniquely identifies a
+;;; particular modifier.  A MODIFIER MASK is an integer made up the
+;;; logical OR of modifier values.
 
 ;;; This hash table maps a keysym to a list of keysym names for that
 ;;; keysym.
