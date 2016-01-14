@@ -156,21 +156,20 @@
 
 (defun make-modifier-cache (port)
   (let* ((modifier-mapping (modifier-mapping port))
-	 ;; The name MODIFIER-BYTE-SIZE is not such a great choice.
-	 ;; The variable holds the number of different possible
+	 ;; This variable holds the number of different possible
 	 ;; modifiers, and the X11 specification says that it will
 	 ;; always be 8.
-	 (modifier-byte-size (length modifier-mapping))
+	 (modifier-count (length modifier-mapping))
 	 ;; The name NUM-MODIFIERS is not such a great choice.  The
 	 ;; variable holds the number of different possible modifier
 	 ;; masks, and the X11 specification says that it will always
 	 ;; be 256.
-	 (num-modifiers (ash 1 modifier-byte-size))
+	 (num-modifiers (ash 1 modifier-count))
 	 (cache (make-array num-modifiers)))
     (loop for x-modifier from 0 below num-modifiers
 	  for clim-modifier = 0
 	  for other-modifier = 0
-	  do (loop for bit from 0 below modifier-byte-size
+	  do (loop for bit from 0 below modifier-count
 		   for bit-modifiers = (aref modifier-mapping bit)
 		   when (logbitp bit x-modifier)
 		   do (progn
