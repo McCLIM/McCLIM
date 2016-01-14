@@ -155,12 +155,12 @@
 ;;;     7    mod5 keysym names
 
 (defun make-modifier-cache (port)
-  (let* ((modifiers (modifier-mapping port))
+  (let* ((modifier-mapping (modifier-mapping port))
 	 ;; The name MODIFIER-BYTE-SIZE is not such a great choice.
 	 ;; The variable holds the number of different possible
 	 ;; modifiers, and the X11 specification says that it will
 	 ;; always be 8.
-	 (modifier-byte-size (length modifiers))
+	 (modifier-byte-size (length modifier-mapping))
 	 ;; The name NUM-MODIFIERS is not such a great choice.  The
 	 ;; variable holds the number of different possible modifier
 	 ;; masks, and the X11 specification says that it will always
@@ -171,7 +171,7 @@
 	  for clim-modifier = 0
 	  for other-modifier = 0
 	  do (loop for bit from 0 below modifier-byte-size
-		   for bit-modifiers = (aref modifiers bit)
+		   for bit-modifiers = (aref modifier-mapping bit)
 		   when (logbitp bit x-modifier)
 		   do (progn
 			(loop for (syms val) in +clim-modifiers+
