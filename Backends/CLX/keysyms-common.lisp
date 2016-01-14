@@ -160,13 +160,12 @@
 	 ;; modifiers, and the X11 specification says that it will
 	 ;; always be 8.
 	 (modifier-count (length modifier-mapping))
-	 ;; The name NUM-MODIFIERS is not such a great choice.  The
-	 ;; variable holds the number of different possible modifier
-	 ;; masks, and the X11 specification says that it will always
-	 ;; be 256.
-	 (num-modifiers (ash 1 modifier-count))
-	 (cache (make-array num-modifiers)))
-    (loop for x-modifier from 0 below num-modifiers
+	 ;; This variable holds the number of different possible
+	 ;; modifier masks, and the X11 specification says that it
+	 ;; will always be 256.
+	 (modifier-mask-count (ash 1 modifier-count))
+	 (cache (make-array modifier-mask-count)))
+    (loop for x-modifier from 0 below modifier-mask-count
 	  for clim-modifier = 0
 	  for other-modifier = 0
 	  do (loop for bit from 0 below modifier-count
