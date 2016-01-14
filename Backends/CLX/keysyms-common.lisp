@@ -165,12 +165,12 @@
 	 ;; will always be 256.
 	 (modifier-mask-count (ash 1 modifier-count))
 	 (cache (make-array modifier-mask-count)))
-    (loop for x-modifier from 0 below modifier-mask-count
+    (loop for x-modifier-mask from 0 below modifier-mask-count
 	  for clim-modifier = 0
 	  for other-modifier = 0
 	  do (loop for bit from 0 below modifier-count
 		   for modifier-names = (aref modifier-mapping bit)
-		   when (logbitp bit x-modifier)
+		   when (logbitp bit x-modifier-mask)
 		   do (progn
 			(loop for (syms val) in +clim-modifiers+
 			      when (intersection syms modifier-names)
@@ -180,7 +180,7 @@
 			      when (member sym modifier-names)
 			      do (setf other-modifier
 				       (logior other-modifier val))))
-		   finally (setf (aref cache x-modifier)
+		   finally (setf (aref cache x-modifier-mask)
 				 (cons clim-modifier other-modifier))))
     (setf (modifier-cache port) cache)))
 
