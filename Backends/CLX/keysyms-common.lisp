@@ -171,15 +171,14 @@
 	  do (loop for bit from 0 below modifier-count
 		   for modifier-names = (aref modifier-mapping bit)
 		   when (logbitp bit x-modifier-mask)
-		     do (progn
-			  (loop for (syms val) in +clim-modifiers+
-				when (intersection syms modifier-names)
-				  do (setf clim-modifier
-					   (logior clim-modifier val)))
-			  (loop for (sym val) in +other-modifiers+
-				when (member sym modifier-names)
-				  do (setf other-modifier
-					   (logior other-modifier val))))
+		     do (loop for (syms val) in +clim-modifiers+
+			      when (intersection syms modifier-names)
+				do (setf clim-modifier
+					 (logior clim-modifier val)))
+			(loop for (sym val) in +other-modifiers+
+			      when (member sym modifier-names)
+				do (setf other-modifier
+					 (logior other-modifier val)))
 		   finally (setf (aref cache x-modifier-mask)
 				 (cons clim-modifier other-modifier))))
     (setf (modifier-cache port) cache)))
