@@ -23,6 +23,18 @@
 
 (cl:in-package #:clim-clx)
 
+;;;; The purpose of the code in this file is to apply the standard X11
+;;;; rules for translating a keycode to a keysym.
+;;;;
+;;;; There are two steps involved in this process.
+;;;;
+;;;; The first step is executed when a CLX port is created, and when
+;;;; the keyboard mapping of a port is altered.  In this step, we
+;;;; create a KEYSYM-INTERPRETATION instance that determines how a
+;;;; modifier mask should be interpreted.  The interpretation of the
+;;;; modifier mask depends on the assignment of keycodes to certain
+;;;; keysyms, and of the attachment of those keycodes to modifiers.
+
 (defclass keysym-interpretation ()
   (;; This slot contains a mask to be applied to an X11 modifier mask
    ;; to determine whether the "mode switch" modifier is in effect.
