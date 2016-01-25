@@ -59,7 +59,7 @@
 ;;;; occurs in a way similar to the way mode switch is determined.  It
 ;;;; can be one or more of the bits corresponding to Mod1 through
 ;;;; Mod5, or none of those bits.  Whether one of those bits (say M)
-;;;; indicates that group 2 should be used is controlled by a two
+;;;; indicates that num-lock is in effect is controlled by a two
 ;;;; things: an assignment of some keycode K to the keysym named
 ;;;; :NUM-LOCK, and the attachment of that same keycode K to the
 ;;;; modifier M.  Again, We can determine whether this is the case by
