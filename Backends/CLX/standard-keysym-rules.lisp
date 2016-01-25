@@ -38,9 +38,12 @@
 (defclass keysym-interpretation ()
   (;; This slot contains a mask to be applied to an X11 modifier mask
    ;; to determine whether the "mode switch" modifier is in effect.
-   (%mode-switch-mask :initarg :mode-swith-mask
+   (%mode-switch-mask :initarg :mode-switch-mask
 		      :initform #b00000000
-		      :accessor mode-switch-mask)))
+		      :accessor mode-switch-mask)
+   (%num-lock-mask :initarg :num-lock-mask
+		   :initform #b00000000
+		   :accessor num-lock-mask)))
 
 ;;; Return true if and only if the mode switch is in effect.  This is
 ;;; the case when the modifier contains a 1 in a position that has
