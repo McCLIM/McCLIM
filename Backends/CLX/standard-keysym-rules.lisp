@@ -46,7 +46,13 @@
 		   :accessor num-lock-mask)))
 
 ;;; Return true if and only if the mode switch is in effect.  This is
-;;; the case when the modifier contains a 1 in a position that has
-;;; been assigned to the mode switch modifier.
+;;; the case when the modifier mask contains a 1 in a position that
+;;; has been assigned to the mode switch modifier.
 (defun mode-switch-in-effect-p (keysym-interpretation modifier-mask)
   (plusp (logand (mode-switch-mask keysym-interpretation) modifier-mask)))
+
+;;; Return true if and only if numeric lock is in effect.  This is the
+;;; case when the modifier mask contains a 1 in a position that has
+;;; been assigned to the num-lock modifier.
+(defun num-lock-in-effect-p (keysym-interpretation modifier-mask)
+  (plusp (logand (num-lock-mask keysym-interpretation) modifier-mask)))
