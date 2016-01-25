@@ -95,6 +95,19 @@
 ;;;; summarize this information as a mask that has a 1 in the position
 ;;;; corresponding to the lock modifier the lock modifier should be
 ;;;; interpreted as a caps-lock modifier.
+;;;;
+;;;; SHIFT-LOCK: Whether shift-lock is in effect is controlled by the
+;;;; lock bit position in the modifier mask in effect when a key-press
+;;;; event occurs, in exactly the same way as caps-lock is controlled.
+;;;; Therefore, only one of the two can be in effect.  Whether
+;;;; shift-lock is in effect is determined in exactly the same way as
+;;;; for caps-lock with the difference that some keycode must be
+;;;; assigned to the keysym named :SHIFT-LOCK.  The mask for to the
+;;;; shift-lock information contains a 1 in the bit position
+;;;; corresponding to the lock modifier only if the mask for the
+;;;; caps-lock information does not contain a 1 in that position.
+;;;; This way, if a lock modifier can be interpreted as wither
+;;;; shift-lock or caps-lock, then caps-lock take precedence.
 
 ;;;; There are two steps involved in this process.
 ;;;;
