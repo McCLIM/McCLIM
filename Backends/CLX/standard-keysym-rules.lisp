@@ -41,3 +41,9 @@
    (%mode-switch-mask :initarg :mode-swith-mask
 		      :initform #b00000000
 		      :accessor mode-switch-mask)))
+
+;;; Return true if and only if the mode switch is in effect.  This is
+;;; the case when the modifier contains a 1 in a position that has
+;;; been assigned to the mode switch modifier.
+(defun mode-switch-in-effect-p (keysym-interpretation modifier-mask)
+  (plusp (logand (mode-switch-mask keysym-interpretation) modifier-mask)))
