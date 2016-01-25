@@ -72,6 +72,13 @@
 ;;;; this information as a mask that has a 1 in the position
 ;;;; corresponding to M if and only if M should be interpreted as a
 ;;;; num-lock modifier.
+;;;;
+;;;; Whether a caps-lock or a shift-lock modifier is in effect is a
+;;;; bit trickier, because there is only one bit position in the
+;;;; modifier mask corresponding to both these modifiers.  The rules
+;;;; described below make it possible for that mask bit to mean either
+;;;; or both of those modifiers.  If it can mean both, then caps-lock
+;;;; takes precedence.
 
 ;;;; There are two steps involved in this process.
 ;;;;
