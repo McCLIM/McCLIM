@@ -22,3 +22,10 @@
 ;;;; Boston, MA  02111-1307  USA.
 
 (cl:in-package #:clim-clx)
+
+(defclass keysym-interpretation ()
+  (;; This slot contains a mask to be applied to an X11 modifier mask
+   ;; to determine whether the "mode switch" modifier is in effect.
+   (%mode-switch-mask :initarg :mode-swith-mask
+		      :initform #b00000000
+		      :accessor mode-switch-mask)))
