@@ -79,6 +79,22 @@
 ;;;; described below make it possible for that mask bit to mean either
 ;;;; or both of those modifiers.  If it can mean both, then caps-lock
 ;;;; takes precedence.
+;;;;
+;;;; CAPS-LOCK: Whether caps-lock is in effect is controlled by the
+;;;; lock bit position in the modifier mask in effect when a key-press
+;;;; event occurs.  Whether caps-lock is in effect is controlled by a
+;;;; two things: an assignment of some keycode K to the keysym named
+;;;; :CAPS-LOCK, and the attachment of that same keycode K to the lock
+;;;; modifier.  We can determine whether this is the case by looking
+;;;; at the return value of a call to XLIB:MODIFIER-MAPPING
+;;;; corresponding to the lock modifier, and then call
+;;;; XLIB:KEYCODE->KEYSYM with each of the keycodes in that return
+;;;; value to check whether it is assigned to the keysym named
+;;;; :CAPS-LOCK.  As before, this information needs to be determined
+;;;; only at start-up and when the keyboard mapping changes.  We
+;;;; summarize this information as a mask that has a 1 in the position
+;;;; corresponding to the lock modifier the lock modifier should be
+;;;; interpreted as a caps-lock modifier.
 
 ;;;; There are two steps involved in this process.
 ;;;;
