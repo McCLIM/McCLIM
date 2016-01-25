@@ -26,6 +26,29 @@
 ;;;; The purpose of the code in this file is to apply the standard X11
 ;;;; rules for translating a keycode to a keysym.
 ;;;;
+;;;; Recall that the standard rules for interpreting keycodes involve
+;;;; (up to) four different keysyms, indexed from 0 to 3.  Keysyms
+;;;; with indices 0 and 1 are said to be in group 1 and keysyms with
+;;;; indices 2 and 3 are said to be in group 2.
+;;;;
+;;;; Whether keysyms in group 1 or keysyms in group 2 should be used
+;;;; is controlled by a bit position in the modifier mask in effect
+;;;; when a key-press event occurs.  It can be one or more of the bits
+;;;; corresponding to Mod1 through Mod5, or none of those bits.
+;;;; Whether one of those bits (say M) indicates that group 2 should
+;;;; be used is controlled by a two things: an assignment of some
+;;;; keycode K to the keysym named :MODE-SWITCH, and the attachment of
+;;;; that same keycode K to the modifier M.  We can determine whether
+;;;; this is the case by looking at the return values of a call to
+;;;; XLIB:MODIFIER-MAPPING corresponding to Mod1 through Mod5, and
+;;;; then call XLIB:KEYCODE->KEYSYM with each of the keycodes in those
+;;;; return values to check whether it is assigned to the keysym named
+;;;; :MODE-SWITCH.  This information needs to be determined only at
+;;;; start-up and when the keyboard mapping changes.  We summarize
+;;;; this information as a mask that has a 1 in the position
+;;;; corresponding to M if and only if M should be interpreted as a
+;;;; mode switch modifier.
+
 ;;;; There are two steps involved in this process.
 ;;;;
 ;;;; The first step is executed when a CLX port is created, and when
