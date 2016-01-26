@@ -143,6 +143,12 @@
 (defun num-lock-in-effect-p (keysym-interpretation modifier-mask)
   (plusp (logand (num-lock-mask keysym-interpretation) modifier-mask)))
 
+;;; Return true if and only if shift-lock is in effect.  This is the
+;;; case when the modifier mask contains a 1 in a position that has
+;;; been assigned to the shift-lock modifier.
+(defun shift-lock-in-effect-p (keysym-interpretation modifier-mask)
+  (plusp (logand (shift-lock-mask keysym-interpretation) modifier-mask)))
+
 (defparameter *keypad-keysym-names*
   '(:KP-SPACE :KP-TAB :KP-ENTER :KP-F1 :KP-F2 :KP-F3 :KP-F4
     :KP-HOME :KP-LEFT :KP-UP :KP-RIGHT :KP-DOWN
