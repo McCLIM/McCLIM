@@ -117,6 +117,13 @@
 ;;;; summarize this information as a mask that has a 1 in the position
 ;;;; corresponding to the lock modifier the lock modifier should be
 ;;;; interpreted as a caps-lock modifier.
+(defun compute-caps-lock-mask (display)
+  (let* ((keysym (clim-xcommon:keysym-name-to-keysym :CAPS-LOCK))
+	 (keycodes  (nth-value 1 (xlib:modifier-mapping display))))
+    (loop for keycode in keycodes
+	  when (= keysym (xlib:keycode->keysym display keycode 0))
+	    return #b00000010
+	finally (return #b00000000))))
 
 ;;;; SHIFT-LOCK: Whether shift-lock is in effect is controlled by the
 ;;;; lock bit position in the modifier mask in effect when a key-press
