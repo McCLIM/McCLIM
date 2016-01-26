@@ -146,6 +146,11 @@
 (defun num-lock-in-effect-p (keysym-interpretation modifier-mask)
   (plusp (logand (num-lock-mask keysym-interpretation) modifier-mask)))
 
+;;; Return true if and only if the lock modifier bit is on.  This is
+;;; the case when the modifier mask contains a 1 in a position 1.
+(defun lock-in-effect-p (modifier-mask)
+  (logbitp 1 modifier-mask))
+
 ;;; Return true if and only if shift-lock is in effect.  This is the
 ;;; case when the modifier mask contains a 1 in a position that has
 ;;; been assigned to the shift-lock modifier.
