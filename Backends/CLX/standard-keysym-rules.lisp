@@ -30,7 +30,7 @@
 ;;;; (up to) four different keysyms, indexed from 0 to 3.  Keysyms
 ;;;; with indices 0 and 1 are said to be in group 1 and keysyms with
 ;;;; indices 2 and 3 are said to be in group 2.
-;;;;
+
 ;;;; MODE SWITCH: Whether keysyms in group 1 or keysyms in group 2
 ;;;; should be used is controlled by a bit position in the modifier
 ;;;; mask in effect when a key-press event occurs.  It can be one or
@@ -48,7 +48,18 @@
 ;;;; changes.  We summarize this information as a mask that has a 1 in
 ;;;; the position corresponding to M if and only if M should be
 ;;;; interpreted as a mode switch modifier.
-;;;;
+(defun compute-mode-switch-mask (display)
+  ;; Loop over the modifier positions corresponding to Mod1
+  ;; through Mod5.
+  (loop with mask = #b00000000
+	with keysym = (clim-xcommon:keysym-name-to-keysym :MODE-SWITCH)
+	for index from 3 to 7
+	for keycodes = (nth-value index (xlib:modifier-mapping display))
+	do (loop for keycode in keycodes
+		 when (= keysym (xlib:keycode->keysym display keycode 0))
+		   do (setf mask (logior mask (ash 1 index))))
+	finally (return mask)))
+
 ;;;; Which keysym to use within a group is controlled by rules
 ;;;; described below.  To understand those rules, we need to
 ;;;; understand how to determine from the modifier mask whether
