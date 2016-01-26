@@ -251,3 +251,12 @@
        offset)
       ;; Rule 2 does not apply.  Return false.
       nil))
+
+;;; Rule 3 applies when the shift modifier is off and the caps-lock
+;;; modifier is on.
+(defun rule-3 (display keysym-interpretation keycode modifier-mask offset)
+  (if (and (not (shift-in-effect-p modifier-mask))
+	   (caps-lock-in-effect-p keysym-interpretation modifier-mask))
+      (let* ((second (xlib:keycode->keysym display keycode (1+ offset)))
+	     (upper (lower-case-keysym-p second)))
+	(if (null upper) second upper))))
