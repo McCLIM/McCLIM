@@ -139,3 +139,12 @@
 ;;; been assigned to the num-lock modifier.
 (defun num-lock-in-effect-p (keysym-interpretation modifier-mask)
   (plusp (logand (num-lock-mask keysym-interpretation) modifier-mask)))
+
+(defparameter *keypad-keysym-names*
+  '(:KP-SPACE :KP-TAB :KP-ENTER :KP-F1 :KP-F2 :KP-F3 :KP-F4
+    :KP-HOME :KP-LEFT :KP-UP :KP-RIGHT :KP-DOWN
+    :KP-PRIOR :KP-PAGE-UP :KP-NEXT :KP-PAGE-DOWN
+    :KP-END :KP-BEGIN :KP-INSERT :KP-DELETE
+    :KP-EQUAL :KP-MULTIPLY :KP-ADD :KP-SEPARATOR
+    :KP-SUBTRACT[ :KP-DECIMAL :KP-DIVIDE :KP-0
+    :KP-1 :KP-2 :KP-3 :KP-4 :KP-5 :KP-6 :KP-7 :KP-8 :KP-9))
