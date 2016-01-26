@@ -149,6 +149,11 @@
 (defun shift-lock-in-effect-p (keysym-interpretation modifier-mask)
   (plusp (logand (shift-lock-mask keysym-interpretation) modifier-mask)))
 
+;;; Return true if and only if the shift modifier bit is on.  This is
+;;; the case when the modifier mask contains a 1 in a position 0.
+(defun shift-in-effect-p (modifier-mask)
+  (logbitp 0 modifier-mask))
+
 (defparameter *keypad-keysym-names*
   '(:KP-SPACE :KP-TAB :KP-ENTER :KP-F1 :KP-F2 :KP-F3 :KP-F4
     :KP-HOME :KP-LEFT :KP-UP :KP-RIGHT :KP-DOWN
