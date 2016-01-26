@@ -204,3 +204,17 @@
 	   (1+ offset)))
       ;; Rule 1 does not apply.  Return false.
       nil))
+
+;;; Rule 2 applies when the SHIFT and LOCK modifiers are both off.  It
+;;; says that if both the SHIFT and the LOCK modifier bits are off,
+;;; then the first keysym in the group is returned.
+(defun rule-2 (display keycode modifier-mask offset)
+  (if (not (or (shift-in-effect-p modifier-mask)
+	       (lock-in-effect-p modifier-mask)))
+      ;; Rule 2 applies.
+      (xlib:keycode->keysym
+       display
+       keycode
+       offset)
+      ;; Rule 2 does not apply.  Return false.
+      nil))
