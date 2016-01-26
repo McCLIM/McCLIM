@@ -145,7 +145,7 @@
 	(loop for keycode in keycodes
 	      when (= keysym (xlib:keycode->keysym display keycode 0))
 		return #b00000010
-	      finally (return #b00000000))))
+	      finally (return #b00000000)))))
 
 ;;;; There are two steps involved in this process.
 ;;;;
@@ -171,6 +171,13 @@
    (%caps-lock-mask :initarg :caps-lock-mask
 		    :initform #b00000000
 		    :accessor caps-lock-mask)))
+
+(defun compute-keysym-interpretation (display)
+  (make-instance 'keysym-interpretation
+    :mode-switch-mask (compute-mode-switch-mask display)
+    :num-lock-mask (compute-num-lock-mask display)
+    :shift-lock-mask (compute-shift-lock-mask display)
+    :caps-lock-mask (compute-caps-lock-mask display)))
 
 ;;; Return true if and only if the mode switch is in effect.  This is
 ;;; the case when the modifier mask contains a 1 in a position that
