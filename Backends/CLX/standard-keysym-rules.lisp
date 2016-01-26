@@ -126,7 +126,10 @@
 		      :accessor mode-switch-mask)
    (%num-lock-mask :initarg :num-lock-mask
 		   :initform #b00000000
-		   :accessor num-lock-mask)))
+		   :accessor num-lock-mask)
+   (%shift-lock-mask :initarg :shift-lock-mask
+		     :initform #b00000000
+		     :accessor shift-lock-mask)))
 
 ;;; Return true if and only if the mode switch is in effect.  This is
 ;;; the case when the modifier mask contains a 1 in a position that
