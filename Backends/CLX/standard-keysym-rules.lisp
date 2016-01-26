@@ -64,7 +64,7 @@
 ;;;; described below.  To understand those rules, we need to
 ;;;; understand how to determine from the modifier mask whether
 ;;;; any of caps-lock, shift-lock, or num-lock is in effect.
-;;;;
+
 ;;;; NUM-LOCK: Whether num-lock is in effect is controlled by a bit
 ;;;; position in the modifier mask in effect when a key-press event
 ;;;; occurs in a way similar to the way mode switch is determined.  It
@@ -83,14 +83,25 @@
 ;;;; this information as a mask that has a 1 in the position
 ;;;; corresponding to M if and only if M should be interpreted as a
 ;;;; num-lock modifier.
-;;;;
+(defun compute-num-lock-mask (display)
+  ;; Loop over the modifier positions corresponding to Mod1
+  ;; through Mod5.
+  (loop with mask = #b00000000
+	with keysym = (clim-xcommon:keysym-name-to-keysym :NUM-LOCK)
+	for index from 3 to 7
+	for keycodes = (nth-value index (xlib:modifier-mapping display))
+	do (loop for keycode in keycodes
+		 when (= keysym (xlib:keycode->keysym display keycode 0))
+		   do (setf mask (logior mask (ash 1 index))))
+	finally (return mask)))
+
 ;;;; Whether a caps-lock or a shift-lock modifier is in effect is a
 ;;;; bit trickier, because there is only one bit position in the
 ;;;; modifier mask corresponding to both these modifiers.  The rules
 ;;;; described below make it possible for that mask bit to mean either
 ;;;; or both of those modifiers.  If it can mean both, then caps-lock
 ;;;; takes precedence.
-;;;;
+
 ;;;; CAPS-LOCK: Whether caps-lock is in effect is controlled by the
 ;;;; lock bit position in the modifier mask in effect when a key-press
 ;;;; event occurs.  Whether caps-lock is in effect is controlled by a
@@ -106,7 +117,7 @@
 ;;;; summarize this information as a mask that has a 1 in the position
 ;;;; corresponding to the lock modifier the lock modifier should be
 ;;;; interpreted as a caps-lock modifier.
-;;;;
+
 ;;;; SHIFT-LOCK: Whether shift-lock is in effect is controlled by the
 ;;;; lock bit position in the modifier mask in effect when a key-press
 ;;;; event occurs, in exactly the same way as caps-lock is controlled.
