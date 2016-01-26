@@ -187,6 +187,36 @@
 (defun keypad-keysym-p (keysym)
   (gethash keysym *keypad-table*))
 
+;;; This hash table maps each keysym that is considered lower-case
+;;; alphabetic to its upper-case counterpart.
+(defparameter *lower-case-alphabetic-table*
+  (let ((result (make-hash-table :test #'eql)))
+    ;; ASCII lower-case characters.
+    (loop for keysym from #x61 to #x7a
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    ;; More Latin-1 characters.
+    (loop for keysym from #xe0 to #xf6
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    (loop for keysym from #xf8 to #xff
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    ;; Latin-2 characters.
+    (loop for keysym in '(#x1b1 #x1b3 #x1b5 #x1b6 #x1b9
+			  #x1ba #x1bb #x1bc #x1be #x1bf)
+	  do (setf (gethash keysym result) (- keysym #x10)))
+    (loop for keysym in '(#x1e0 #x1e3 #x1e5 #x1e6 #x1e8 #x1ea #x1ec #x1ef
+			  #x1f0 #x1f1 #x1f2 #x1f5 #x1fb #x1f8 #x1f9 #x1f0e)
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    ;; Latin-3 characters.
+    (loop for keysym in '(#x3b3 #x3b5 #x3b6 #x3ba #x3bb #x3bc)
+	  do (setf (gethash keysym result) (- keysym #x10)))
+    (loop for keysym in '(#x3e0 #x3e7 #x3ec #x3ef #x3e0
+			  #x3f1 #x3f2 #x3f3 #x3f9 #x3fd #x3fe)
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    ;; Latin-9 characters.
+    (setf (gethash #x13bd result) #x13bc)
+    ;; FIXME, do more characters
+    result))
+
 ;;; Rule 1 applies when the num-lock modifier is on in MODIFIER-MASK
 ;;; and the second keysym in the group is a keypad keysym.  Which
 ;;; group to use is indicated by OFFSET which is 0 if group 1 is to be
