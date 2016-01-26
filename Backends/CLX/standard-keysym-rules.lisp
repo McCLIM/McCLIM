@@ -195,9 +195,12 @@
   (if (and (num-lock-in-effect-p keysym-interpretation modifier-mask)
 	   (keypad-keysym-p (xlib:keycode->keysym display keycode (1+ offset))))
       ;; Rule 1 applies.
-      (if (or (shift-in-effect-p modifier-mask)
-	      (shift-lock-in-effect-p keysym-interpretation modifier-mask))
-	  0
-	  1)
+      (xlib:keycode->keysym
+       display
+       keycode
+       (if (or (shift-in-effect-p modifier-mask)
+	       (shift-lock-in-effect-p keysym-interpretation modifier-mask))
+	   offset
+	   (1+ offset)))
       ;; Rule 1 does not apply.  Return false.
       nil))
