@@ -172,3 +172,18 @@
 
 (defun keypad-keysym-p (keysym)
   (gethash keysym *keypad-table*))
+
+;;; Rule 1 applies when the num-lock modifier is on in MODIFIER-MASK
+;;; and the second keysym in the group is a keypad keysym.  Which
+;;; group to use is indicated by OFFSET which is 0 if group 1 is to be
+;;; used and 2 if group 2 is to be used.
+(defun rule-1 (display keysym-interpretation keycode modifier-mask offset)
+  (if (and (num-lock-in-effect-p keysym-interpretation modifier-mask)
+	   (keypad-keysym-p (xlib:keycode->keysym display keycode (1+ offset))))
+      ;; Rule 1 applies.
+      (if (or (shift-in-effect-p modifier-mask)
+	      (shift-lock-in-effect-p keysym-interpretation modifier-mask))
+	  0
+	  1)
+      ;; Rule 1 does not apply.  Return false.
+      nil))
