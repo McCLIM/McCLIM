@@ -86,13 +86,15 @@
    (:module "Lisp-Dep"
             :depends-on ("patch")
             :components
-            ((:file   #+cmu       "fix-cmu"
-                      #+scl       "fix-scl"
-                      #+excl      "fix-acl"
-                      #+sbcl      "fix-sbcl"
-                      #+openmcl   "fix-openmcl"
-                      #+lispworks "fix-lispworks"
-                      #+clisp     "fix-clisp")))
+            (#+(or cmu scl excl sbcl openmcl lispworks clisp ecl)
+               (:file   #+cmu       "fix-cmu"
+                        #+scl       "fix-scl"
+                        #+excl      "fix-acl"
+                        #+sbcl      "fix-sbcl"
+                        #+openmcl   "fix-openmcl"
+                        #+lispworks "fix-lispworks"
+                        #+clisp     "fix-clisp"
+                        #+ecl       "fix-ecl")))
    (:file "package" :depends-on ("Lisp-Dep" "patch"))))
 
 (defsystem :clim-basic
