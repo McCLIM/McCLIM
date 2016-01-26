@@ -259,7 +259,9 @@
 	   (caps-lock-in-effect-p keysym-interpretation modifier-mask))
       (let* ((first (xlib:keycode->keysym display keycode offset))
 	     (upper (lower-case-keysym-p first)))
-	(if (null upper) first upper))))
+	(if (null upper) first upper))
+      ;; Rule 3 does not apply.  Return false.
+      nil))
 
 ;;; Rule 4 applies when the shift modifier and the caps-lock modifier
 ;;; are both on.
@@ -269,4 +271,6 @@
       ;; Rule 4 applies.
       (let* ((second (xlib:keycode->keysym display keycode (1+ offset)))
 	     (upper (lower-case-keysym-p second)))
-	(if (null upper) second upper))))
+	(if (null upper) second upper))
+      ;; Rule 4 does not apply.  Return false.
+      nil))
