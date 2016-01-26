@@ -284,3 +284,13 @@
       (xlib:keycode->keysym display keycode (1+ offset))
       ;; Rule 5 does not apply.  Return false.
       nil))
+
+(defun keycode-to-keysym (display keysym-interpretation keycode modifier-mask)
+  (let ((offset (if (mode-switch-in-effect-p keysym-interpretation modifier-mask)
+		    0
+		    2)))
+    (or (rule-1 display keysym-interpretation keycode modifier-mask offset)
+	(rule-2 display keycode modifier-mask offset)
+	(rule-3 display keysym-interpretation keycode modifier-mask offset)
+	(rule-4 display keysym-interpretation keycode modifier-mask offset)
+	(rule-5 display keysym-interpretation keycode modifier-mask offset))))
