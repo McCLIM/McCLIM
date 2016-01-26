@@ -274,3 +274,13 @@
 	(if (null upper) second upper))
       ;; Rule 4 does not apply.  Return false.
       nil))
+
+;;; Rule 5 applies when the shift modifier and the shift-lock modifier
+;;; are both on.
+(defun rule-5 (display keysym-interpretation keycode modifier-mask offset)
+  (if (and (shift-in-effect-p modifier-mask)
+	   (shift-lock-in-effect-p keysym-interpretation modifier-mask))
+      ;; Rule 5 applies.
+      (xlib:keycode->keysym display keycode (1+ offset))
+      ;; Rule 5 does not apply.  Return false.
+      nil))
