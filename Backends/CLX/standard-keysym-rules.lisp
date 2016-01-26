@@ -148,3 +148,10 @@
     :KP-EQUAL :KP-MULTIPLY :KP-ADD :KP-SEPARATOR
     :KP-SUBTRACT[ :KP-DECIMAL :KP-DIVIDE :KP-0
     :KP-1 :KP-2 :KP-3 :KP-4 :KP-5 :KP-6 :KP-7 :KP-8 :KP-9))
+
+(defparameter *keypad-table*
+  (let ((result (make-hash-table :test #'eql)))
+    (loop for keysym-name in *keypad-keysym-names*
+	  for keysym = (clim-xcommon:keysym-name-to-keysym keysym-name)
+	  do (setf (gethash keysym result) t))
+    result))
