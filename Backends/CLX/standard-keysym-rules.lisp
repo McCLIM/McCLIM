@@ -155,3 +155,6 @@
 	  for keysym = (clim-xcommon:keysym-name-to-keysym keysym-name)
 	  do (setf (gethash keysym result) t))
     result))
+
+(defun keypad-keysym-p (keysym)
+  (gethash keysym *keypad-table*))
