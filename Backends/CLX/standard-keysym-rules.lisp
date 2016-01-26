@@ -137,6 +137,15 @@
 ;;;; caps-lock information does not contain a 1 in that position.
 ;;;; This way, if a lock modifier can be interpreted as wither
 ;;;; shift-lock or caps-lock, then caps-lock take precedence.
+(defun compute-shift-lock-mask (display)
+  (if (not (zerop (compute-caps-lock-mask display)))
+      #b00000000
+      (let* ((keysym (clim-xcommon:keysym-name-to-keysym :SHIFT-LOCK))
+	     (keycodes  (nth-value 1 (xlib:modifier-mapping display))))
+	(loop for keycode in keycodes
+	      when (= keysym (xlib:keycode->keysym display keycode 0))
+		return #b00000010
+	      finally (return #b00000000))))
 
 ;;;; There are two steps involved in this process.
 ;;;;
