@@ -257,6 +257,6 @@
 (defun rule-3 (display keysym-interpretation keycode modifier-mask offset)
   (if (and (not (shift-in-effect-p modifier-mask))
 	   (caps-lock-in-effect-p keysym-interpretation modifier-mask))
-      (let* ((second (xlib:keycode->keysym display keycode (1+ offset)))
-	     (upper (lower-case-keysym-p second)))
+      (let* ((first (xlib:keycode->keysym display keycode offset))
+	     (upper (lower-case-keysym-p first)))
 	(if (null upper) second upper))))
