@@ -217,6 +217,9 @@
     ;; FIXME, do more characters
     result))
 
+(defun lower-case-keysym-p (keysym)
+  (gethash keysym *lower-case-alphabetic-table*))
+
 ;;; Rule 1 applies when the num-lock modifier is on in MODIFIER-MASK
 ;;; and the second keysym in the group is a keypad keysym.  Which
 ;;; group to use is indicated by OFFSET which is 0 if group 1 is to be
