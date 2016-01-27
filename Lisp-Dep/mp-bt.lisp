@@ -1,3 +1,11 @@
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
+;;;   Title: CLIM-2, Chapter 32.2 Multi-processing (BT)
+;;; Created: 2016-01-27
+;;;  Author: Daniel Kochmański <daniel@turtleware.eu>
+;;; License: LGPL-2.1
+;;; ---------------------------------------------------------------------------
+;;; (c) copyright 2016 by Daniel Kochmański
+
 
 ;;;; Multiprocessing non-portable stuff (implemented using
 ;;;; bordeaux-threads where feasible). BT has also limited support for
