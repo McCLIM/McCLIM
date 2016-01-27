@@ -67,7 +67,7 @@
 ;;; applies the rules for us, so that in that case, index 1 is the
 ;;; keysym of the upper-case version of the character.
 ;;;
-;;; The parameter STATE is an bit mask represented as the logical OR
+;;; The parameter STATE is a bit mask represented as the logical OR
 ;;; of individual bits.  Each bit corresponds to a modifier or a
 ;;; pointer button that is active immediately before the key was
 ;;; pressed or released.  The bits have the following meaning:
