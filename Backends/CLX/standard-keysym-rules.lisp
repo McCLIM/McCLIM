@@ -126,7 +126,13 @@
 		      :accessor mode-switch-mask)
    (%num-lock-mask :initarg :num-lock-mask
 		   :initform #b00000000
-		   :accessor num-lock-mask)))
+		   :accessor num-lock-mask)
+   (%shift-lock-mask :initarg :shift-lock-mask
+		     :initform #b00000000
+		     :accessor shift-lock-mask)
+   (%caps-lock-mask :initarg :caps-lock-mask
+		    :initform #b00000000
+		    :accessor caps-lock-mask)))
 
 ;;; Return true if and only if the mode switch is in effect.  This is
 ;;; the case when the modifier mask contains a 1 in a position that
@@ -139,3 +145,152 @@
 ;;; been assigned to the num-lock modifier.
 (defun num-lock-in-effect-p (keysym-interpretation modifier-mask)
   (plusp (logand (num-lock-mask keysym-interpretation) modifier-mask)))
+
+;;; Return true if and only if the lock modifier bit is on.  This is
+;;; the case when the modifier mask contains a 1 in a position 1.
+(defun lock-in-effect-p (modifier-mask)
+  (logbitp 1 modifier-mask))
+
+;;; Return true if and only if shift-lock is in effect.  This is the
+;;; case when the modifier mask contains a 1 in a position that has
+;;; been assigned to the shift-lock modifier.
+(defun shift-lock-in-effect-p (keysym-interpretation modifier-mask)
+  (plusp (logand (shift-lock-mask keysym-interpretation) modifier-mask)))
+
+;;; Return true if and only if the shift modifier bit is on.  This is
+;;; the case when the modifier mask contains a 1 in a position 0.
+(defun shift-in-effect-p (modifier-mask)
+  (logbitp 0 modifier-mask))
+
+;;; Return true if and only if caps-lock is in effect.  This is the
+;;; case when the modifier mask contains a 1 in a position that has
+;;; been assigned to the caps-lock modifier.
+(defun caps-lock-in-effect-p (keysym-interpretation modifier-mask)
+  (plusp (logand (caps-lock-mask keysym-interpretation) modifier-mask)))
+
+(defparameter *keypad-keysym-names*
+  '(:KP-SPACE :KP-TAB :KP-ENTER :KP-F1 :KP-F2 :KP-F3 :KP-F4
+    :KP-HOME :KP-LEFT :KP-UP :KP-RIGHT :KP-DOWN
+    :KP-PRIOR :KP-PAGE-UP :KP-NEXT :KP-PAGE-DOWN
+    :KP-END :KP-BEGIN :KP-INSERT :KP-DELETE
+    :KP-EQUAL :KP-MULTIPLY :KP-ADD :KP-SEPARATOR
+    :KP-SUBTRACT[ :KP-DECIMAL :KP-DIVIDE :KP-0
+    :KP-1 :KP-2 :KP-3 :KP-4 :KP-5 :KP-6 :KP-7 :KP-8 :KP-9))
+
+(defparameter *keypad-table*
+  (let ((result (make-hash-table :test #'eql)))
+    (loop for keysym-name in *keypad-keysym-names*
+	  for keysym = (clim-xcommon:keysym-name-to-keysym keysym-name)
+	  do (setf (gethash keysym result) t))
+    result))
+
+(defun keypad-keysym-p (keysym)
+  (gethash keysym *keypad-table*))
+
+;;; This hash table maps each keysym that is considered lower-case
+;;; alphabetic to its upper-case counterpart.
+(defparameter *lower-case-alphabetic-table*
+  (let ((result (make-hash-table :test #'eql)))
+    ;; ASCII lower-case characters.
+    (loop for keysym from #x61 to #x7a
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    ;; More Latin-1 characters.
+    (loop for keysym from #xe0 to #xf6
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    (loop for keysym from #xf8 to #xff
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    ;; Latin-2 characters.
+    (loop for keysym in '(#x1b1 #x1b3 #x1b5 #x1b6 #x1b9
+			  #x1ba #x1bb #x1bc #x1be #x1bf)
+	  do (setf (gethash keysym result) (- keysym #x10)))
+    (loop for keysym in '(#x1e0 #x1e3 #x1e5 #x1e6 #x1e8 #x1ea #x1ec #x1ef
+			  #x1f0 #x1f1 #x1f2 #x1f5 #x1fb #x1f8 #x1f9 #x1f0e)
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    ;; Latin-3 characters.
+    (loop for keysym in '(#x3b3 #x3b5 #x3b6 #x3ba #x3bb #x3bc)
+	  do (setf (gethash keysym result) (- keysym #x10)))
+    (loop for keysym in '(#x3e0 #x3e7 #x3ec #x3ef #x3e0
+			  #x3f1 #x3f2 #x3f3 #x3f9 #x3fd #x3fe)
+	  do (setf (gethash keysym result) (- keysym #x20)))
+    ;; Latin-9 characters.
+    (setf (gethash #x13bd result) #x13bc)
+    ;; FIXME, do more characters
+    result))
+
+(defun lower-case-keysym-p (keysym)
+  (gethash keysym *lower-case-alphabetic-table*))
+
+;;; Rule 1 applies when the num-lock modifier is on in MODIFIER-MASK
+;;; and the second keysym in the group is a keypad keysym.  Which
+;;; group to use is indicated by OFFSET which is 0 if group 1 is to be
+;;; used and 2 if group 2 is to be used.
+(defun rule-1 (display keysym-interpretation keycode modifier-mask offset)
+  (if (and (num-lock-in-effect-p keysym-interpretation modifier-mask)
+	   (keypad-keysym-p (xlib:keycode->keysym display keycode (1+ offset))))
+      ;; Rule 1 applies.
+      (xlib:keycode->keysym
+       display
+       keycode
+       (if (or (shift-in-effect-p modifier-mask)
+	       (shift-lock-in-effect-p keysym-interpretation modifier-mask))
+	   offset
+	   (1+ offset)))
+      ;; Rule 1 does not apply.  Return false.
+      nil))
+
+;;; Rule 2 applies when the SHIFT and LOCK modifiers are both off.  It
+;;; says that if both the SHIFT and the LOCK modifier bits are off,
+;;; then the first keysym in the group is returned.
+(defun rule-2 (display keycode modifier-mask offset)
+  (if (not (or (shift-in-effect-p modifier-mask)
+	       (lock-in-effect-p modifier-mask)))
+      ;; Rule 2 applies.
+      (xlib:keycode->keysym
+       display
+       keycode
+       offset)
+      ;; Rule 2 does not apply.  Return false.
+      nil))
+
+;;; Rule 3 applies when the shift modifier is off and the caps-lock
+;;; modifier is on.
+(defun rule-3 (display keysym-interpretation keycode modifier-mask offset)
+  (if (and (not (shift-in-effect-p modifier-mask))
+	   (caps-lock-in-effect-p keysym-interpretation modifier-mask))
+      (let* ((first (xlib:keycode->keysym display keycode offset))
+	     (upper (lower-case-keysym-p first)))
+	(if (null upper) first upper))
+      ;; Rule 3 does not apply.  Return false.
+      nil))
+
+;;; Rule 4 applies when the shift modifier and the caps-lock modifier
+;;; are both on.
+(defun rule-4 (display keysym-interpretation keycode modifier-mask offset)
+  (if (and (shift-in-effect-p modifier-mask)
+	   (caps-lock-in-effect-p keysym-interpretation modifier-mask))
+      ;; Rule 4 applies.
+      (let* ((second (xlib:keycode->keysym display keycode (1+ offset)))
+	     (upper (lower-case-keysym-p second)))
+	(if (null upper) second upper))
+      ;; Rule 4 does not apply.  Return false.
+      nil))
+
+;;; Rule 5 applies when the shift modifier and the shift-lock modifier
+;;; are both on.
+(defun rule-5 (display keysym-interpretation keycode modifier-mask offset)
+  (if (and (shift-in-effect-p modifier-mask)
+	   (shift-lock-in-effect-p keysym-interpretation modifier-mask))
+      ;; Rule 5 applies.
+      (xlib:keycode->keysym display keycode (1+ offset))
+      ;; Rule 5 does not apply.  Return false.
+      nil))
+
+(defun keycode-to-keysym (display keysym-interpretation keycode modifier-mask)
+  (let ((offset (if (mode-switch-in-effect-p keysym-interpretation modifier-mask)
+		    0
+		    2)))
+    (or (rule-1 display keysym-interpretation keycode modifier-mask offset)
+	(rule-2 display keycode modifier-mask offset)
+	(rule-3 display keysym-interpretation keycode modifier-mask offset)
+	(rule-4 display keysym-interpretation keycode modifier-mask offset)
+	(rule-5 display keysym-interpretation keycode modifier-mask offset))))
