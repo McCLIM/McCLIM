@@ -86,17 +86,19 @@
    (:module "Lisp-Dep"
             :depends-on ("patch")
             :components
-            ((:file   #+cmu       "fix-cmu"
-                      #+scl       "fix-scl"
-                      #+excl      "fix-acl"
-                      #+sbcl      "fix-sbcl"
-                      #+openmcl   "fix-openmcl"
-                      #+lispworks "fix-lispworks"
-                      #+clisp     "fix-clisp")))
+            (#+(or cmu scl excl sbcl openmcl lispworks clisp ecl)
+               (:file   #+cmu       "fix-cmu"
+                        #+scl       "fix-scl"
+                        #+excl      "fix-acl"
+                        #+sbcl      "fix-sbcl"
+                        #+openmcl   "fix-openmcl"
+                        #+lispworks "fix-lispworks"
+                        #+clisp     "fix-clisp"
+                        #+ecl       "fix-ecl")))
    (:file "package" :depends-on ("Lisp-Dep" "patch"))))
 
 (defsystem :clim-basic
-    :depends-on (:clim-lisp :spatial-trees (:version "flexichain" "1.5.1"))
+    :depends-on (:clim-lisp :spatial-trees (:version "flexichain" "1.5.1") :bordeaux-threads)
     :components ((:file "decls")
                  (:file "protocol-classes" :depends-on ("decls"))
                  (:module "Lisp-Dep"
@@ -110,7 +112,8 @@
                                       #+excl                    "mp-acl"
                                       #+openmcl                 "mp-openmcl"
                                       #+lispworks               "mp-lw"
-                                      #| fall back |#           "mp-nil")))))
+                                      #| bordeaus-threads |#    "mp-bt"
+                                      #+(or) #| fall-back |#    "mp-nil")))))
                  (:file "utils" :depends-on ("decls" "Lisp-Dep"))
                  (:file "design" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "utils"))
                  (:file "X11-colors" :depends-on ("decls" "protocol-classes" "Lisp-Dep" "design"))

@@ -290,7 +290,7 @@ confirmation before anything is actually done."
 
 (set-key `(com-kill-expression ,*numeric-argument-marker*)
 	 'lisp-table
-	 '((#\Delete :control :meta)))
+	 '((#\Rubout :control :meta)))
 
 (set-key 'com-remove-definition
          'lisp-table

@@ -217,7 +217,8 @@
            #:stream-read-byte
            #:stream-write-byte ))
         (gray-packages
-         `(#+clisp                 ,@'(:gray)
+         `(#+ecl                   ,@'(:gray)
+           #+clisp                 ,@'(:gray)
            #+cmu                   ,@'(:ext)
            #+scl                   ,@'(:ext)
 	   #+(or mcl openmcl)      ,@'(:ccl)

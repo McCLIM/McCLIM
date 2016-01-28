@@ -26,7 +26,8 @@
   #+sbcl (sb-ext::posix-getenv string)
   #+openmcl (ccl::getenv string)
   #+lispworks (lw:environment-variable string)
-  #-(or excl cmu scl clisp sbcl openmcl lispworks)
+  #+ecl (ext:getenv string)
+  #-(or ecl excl cmu scl clisp sbcl openmcl lispworks)
   (error "GET-ENVIRONMENT-VARIABLE not implemented"))
 
 ;;; It would be nice to define this macro in terms of letf, but that
@@ -93,9 +94,18 @@
       (sb-ext:lock-package :common-lisp)))
   #-clim-internals::package-locks
   `(progn
-    ,@body))
+     ,@body))
 
-#-(or excl openmcl cmu sbcl clisp)
+#+ecl
+(defmacro with-system-redefinition-allowed (&body body)
+  `(progn
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (ext:package-lock (find-package :common-lisp) nil))
+     ,@body
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (ext:package-lock (find-package :common-lisp) t))))
+
+#-(or ecl excl openmcl cmu sbcl clisp)
 (defmacro with-system-redefinition-allowed (&body body)
   `(progn
      ,@body))

@@ -585,7 +585,6 @@ page up."))
   ((%buffer :accessor buffer
             :initarg :buffer
             :type drei-buffer
-            :accessor buffer
             :documentation "The buffer that is observed by this
 buffer view.")
    (%top :accessor top
