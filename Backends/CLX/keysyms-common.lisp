@@ -225,6 +225,13 @@
   (find :caps-lock (nth-value 1 (xlib:modifier-mapping display))
 	:key (lambda (keycode) (code-to-name keycode display))))
 
+;;; Return true if and only if the lock modifier should be interpreted
+;;; as SHIFT-LOCK.
+(defun lock-is-shift-lock-p (display)
+  (and (not (lock-is-caps-lock-p display))
+       (find :shift-lock (nth-value 1 (xlib:modifier-mapping display))
+	     :key (lambda (keycode) (code-to-name keycode display)))))
+
 ;;; Given an X11/CLX modifier mask, return a backend-specific modifier
 ;;; mask with the relevant bits set.
 ;;;
