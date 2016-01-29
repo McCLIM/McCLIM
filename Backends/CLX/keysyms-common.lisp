@@ -179,6 +179,18 @@
   (defparameter *hyper-bit*     #b00100000)
   (defparameter *super-bit*     #b00100000))
 
+;;; Given an X11/CLX modifier mask, return a CLIM modifier mask with
+;;; the relevant bits set.  Recall that the CLIM modifier mask does
+;;; not contain bits corresponding to modifiers such as locks or mode
+;;; switches.
+(defun create-clim-modifier-mask (clx-modifier-mask)
+  (let ((m clx-modifier-mask))
+    (logior (if (logand m +shift-bit+) +shift-key+ 0)
+	    (if (logand m +control-bit+) +control-key+ 0)
+	    (if (logand m *meta-bit*) +meta-key+ 0)
+	    (if (logand m *hyper-bit*) +hyper-key+ 0)
+	    (if (logand m *super-bit*) +super-key+ 0))))
+
 ;;; Recall that the function MODIFIER-MAPPING is similar to the one
 ;;; with the same name in the XLIB package.  It returns a vector of
 ;;; length 8, where each element is a list of keysym names (which are
