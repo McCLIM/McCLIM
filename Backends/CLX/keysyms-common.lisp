@@ -185,11 +185,11 @@
 ;;; switches.
 (defun create-clim-modifier-mask (clx-modifier-mask)
   (let ((m clx-modifier-mask))
-    (logior (if (logand m +shift-bit+) +shift-key+ 0)
-	    (if (logand m +control-bit+) +control-key+ 0)
-	    (if (logand m *meta-bit*) +meta-key+ 0)
-	    (if (logand m *hyper-bit*) +hyper-key+ 0)
-	    (if (logand m *super-bit*) +super-key+ 0))))
+    (logior (if (plusp (logand m +shift-bit+)) +shift-key+ 0)
+	    (if (plusp (logand m +control-bit+)) +control-key+ 0)
+	    (if (plusp (logand m *meta-bit*)) +meta-key+ 0)
+	    (if (plusp (logand m *hyper-bit*)) +hyper-key+ 0)
+	    (if (plusp (logand m *super-bit*)) +super-key+ 0))))
 
 ;;; Given an X11/CLX modifier mask, return a backend-specific modifier
 ;;; mask with the relevant bits set.
@@ -197,7 +197,7 @@
 ;;; FIXME: At the moment, we set only the caps-lock bit.
 (defun create-other-modifier-mask (clx-modifier-mask)
   (let ((m clx-modifier-mask))
-    (logior (if (logand m +lock-bit+) +caps-lock+ 0))))
+    (logior (if (plusp (logand m +lock-bit+)) +caps-lock+ 0))))
 
 ;;; Recall that the function MODIFIER-MAPPING is similar to the one
 ;;; with the same name in the XLIB package.  It returns a vector of
