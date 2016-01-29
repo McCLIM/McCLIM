@@ -194,6 +194,12 @@
 (defun code-to-name (keycode display)
   (keysym-to-keysym-name (xlib:keycode->keysym display keycode 0)))
 
+(defun mode-switch-position (display)
+  (position-if (lambda (keycodes)
+		 (find :mode-switch keycodes
+		       :key (lambda (keycode) (code-to-name keycode display))))
+	       (multiple-value-list (xlib:modifier-mapping display))))
+
 ;;; Given an X11/CLX modifier mask, return a backend-specific modifier
 ;;; mask with the relevant bits set.
 ;;;
