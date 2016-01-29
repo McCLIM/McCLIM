@@ -1864,27 +1864,6 @@
 (defpackage :clim-sys
   (:use)
   ;;
-  #+cmu
-  (:import-from :mp
-   #:make-process
-   #:destroy-process
-   #:current-process
-   #:all-processes
-   #:processp
-   #:process-name
-   #:process-state
-   #:process-whostate
-   #:process-wait
-   #:process-wait-with-timeout
-   #:process-yield
-   #:process-interrupt
-   #:disable-process
-   #:enable-process
-   #:restart-process
-   #:without-scheduling
-   #:atomic-incf
-   #:atomic-decf)
-  ;;
   (:export
    #:defresource
    #:using-resource
