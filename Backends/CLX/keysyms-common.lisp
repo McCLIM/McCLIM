@@ -191,6 +191,8 @@
 	    (if (plusp (logand m *hyper-bit*)) +hyper-key+ 0)
 	    (if (plusp (logand m *super-bit*)) +super-key+ 0))))
 
+;;; Return the keysym name for the keysym associated with KEYCODE in
+;;; DISPLAY.
 (defun code-to-name (keycode display)
   (keysym-to-keysym-name (xlib:keycode->keysym display keycode 0)))
 
