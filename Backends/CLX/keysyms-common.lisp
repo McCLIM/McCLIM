@@ -138,6 +138,39 @@
     (:caps-lock #.+caps-lock+)
     (:mode-switch #.+mode-switch+)))
 
+;;; We need a way to interpret the individual bits of an X11 modifier
+;;; mask.  This is not a trivial thing to do, because X11 uses
+;;; different rules for different types of modifiers, and for some
+;;; cases there are no fixed rules.
+;;;
+;;; The three least significant bit positions in a mask have a fixed
+;;; interpretation.  Bit 0 means shift, bit 1 means lock and bit 2
+;;; means control.  A keycode assigned to one of these positions takes
+;;; the meaning of the position, independently of the keycode and the
+;;; keysym that the keycode is associated with.
+;;;
+;;; Some modifiers, notably num-lock and mode switch, work very
+;;; differently.  Here, the keysym is important.  To get the effect of
+;;; num-lock, there has to be a keycode with the associated keysym
+;;; that is specific to this modifier assigned to a bit position.
+;;; Similarly, to get the effect of mode switch, there has to be a
+;;; keycode with the associated keysym that is specific to this
+;;; modifier assigned to a bit position.
+;;;
+;;; Finally, for some modifiers, there are no specific rules.  The
+;;; ones we are particularly interested in are META, SUPER, and HYPER.
+;;; So, we have a choice.  We could either use a fixed-position rule.
+;;; That solution makes it possible to associate any keycode,
+;;; independently of its associated keysym to one of these modifiers.
+;;; The other possibility is to use the rule of the associated keysym.
+;;; That solution would require the user to change the mapping from
+;;; keycodes to keysyms in order to obtain these mappings.
+;;;
+;;; We are opting for the fixed-position, for the following reasons:
+;;; There is a tradition for mod1 to mean ALT or META, and for mod4 to
+;;; mean SUPER. Furthermore, mod3 is not assigned to anything in most
+;;; default configurations, so we can use it for HYPER.
+
 ;;; Recall that the function MODIFIER-MAPPING is similar to the one
 ;;; with the same name in the XLIB package.  It returns a vector of
 ;;; length 8, where each element is a list of keysym names (which are
