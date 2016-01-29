@@ -191,6 +191,9 @@
 	    (if (plusp (logand m *hyper-bit*)) +hyper-key+ 0)
 	    (if (plusp (logand m *super-bit*)) +super-key+ 0))))
 
+(defun code-to-name (keycode display)
+  (keysym-to-keysym-name (xlib:keycode->keysym display keycode 0)))
+
 ;;; Given an X11/CLX modifier mask, return a backend-specific modifier
 ;;; mask with the relevant bits set.
 ;;;
