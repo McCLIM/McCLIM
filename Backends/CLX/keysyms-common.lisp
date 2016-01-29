@@ -234,11 +234,14 @@
 
 ;;; Given an X11/CLX modifier mask, return a backend-specific modifier
 ;;; mask with the relevant bits set.
-;;;
-;;; FIXME: At the moment, we set only the caps-lock bit.
-(defun create-other-modifier-mask (clx-modifier-mask)
+(defun create-other-modifier-mask (clx-modifier-mask
+				   caps-lock-mask
+				   shift-lock-mask
+				   mode-switch-mask)
   (let ((m clx-modifier-mask))
-    (logior (if (plusp (logand m +lock-bit+)) +caps-lock+ 0))))
+    (logior (if (plusp (logand m caps-lock-mask)) +caps-lock+ 0)
+	    (if (plusp (logand m shift-lock-mask)) +shift-lock+ 0)
+	    (if (plusp (logand m mode-switch-mask)) +mode-switch+ 0))))
 
 ;;; Recall that the function MODIFIER-MAPPING is similar to the one
 ;;; with the same name in the XLIB package.  It returns a vector of
