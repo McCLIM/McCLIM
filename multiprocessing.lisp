@@ -194,7 +194,7 @@ equivalent to progn."
   (bt:make-condition-variable))
 
 (defun condition-wait (cv lock &optional timeout)
-  (bt:condition-wait cv lock :timeout timeout))
+  (bt:condition-wait cv lock))
 
 (defun condition-notify (cv)
   (bt:condition-notify cv))
