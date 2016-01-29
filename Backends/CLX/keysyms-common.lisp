@@ -196,6 +196,9 @@
 (defun code-to-name (keycode display)
   (keysym-to-keysym-name (xlib:keycode->keysym display keycode 0)))
 
+;;; Return the bit position in a modifier mask that should be
+;;; interpreted as the MODE-SWITCH modifier, or NIL if no modifier is
+;;; to be interpreted as MODE-SWITCH.
 (defun mode-switch-position (display)
   (position-if (lambda (keycodes)
 		 (find :mode-switch keycodes
