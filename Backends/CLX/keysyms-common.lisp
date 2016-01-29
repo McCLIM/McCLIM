@@ -291,11 +291,19 @@
 ;;     (setf (modifier-cache port) cache)))
 
 (defun make-modifier-cache (port)
-  (let ((cache (make-array 256)))
+  (let* ((cache (make-array 256))
+	 (display (clim-clx::clx-port-display port))
+	 (caps-lock-mask (if (lock-is-caps-lock-p display) #b00 #b10))
+	 (shift-lock-mask (if (lock-is-shift-lock-p display) #b00 #b10))
+	 (mode-switch-position (mode-switch-position display))
+	 (mode-switch-mask (position-to-mask mode-switch-position)))
     (loop for x-modifier-mask from 0 below 256
 	  do (setf (aref cache x-modifier-mask)
 		   (cons (create-clim-modifier-mask x-modifier-mask)
-			 (create-other-modifier-mask x-modifier-mask))))
+			 (create-other-modifier-mask x-modifier-mask
+						     caps-lock-mask
+						     shift-lock-mask
+						     mode-switch-mask))))
     (setf (modifier-cache port) cache)))
 
 (defgeneric x-event-state-modifiers (port state)
