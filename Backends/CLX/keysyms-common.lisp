@@ -205,6 +205,11 @@
 		       :key (lambda (keycode) (code-to-name keycode display))))
 	       (multiple-value-list (xlib:modifier-mapping display))))
 
+(defun position-to-mask (position)
+  (if (null position)
+      0
+      (ash 1 position)))
+
 ;;; Given an X11/CLX modifier mask, return a backend-specific modifier
 ;;; mask with the relevant bits set.
 ;;;
