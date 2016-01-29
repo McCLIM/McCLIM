@@ -171,6 +171,14 @@
 ;;; mean SUPER. Furthermore, mod3 is not assigned to anything in most
 ;;; default configurations, so we can use it for HYPER.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant +shift-bit+      #b00000001)
+  (defconstant +lock-bit+       #b00000010)
+  (defconstant +control-bit+    #b00000100)
+  (defparameter *meta-bit*      #b00001000)
+  (defparameter *hyper-bit*     #b00100000)
+  (defparameter *super-bit*     #b00100000))
+
 ;;; Recall that the function MODIFIER-MAPPING is similar to the one
 ;;; with the same name in the XLIB package.  It returns a vector of
 ;;; length 8, where each element is a list of keysym names (which are
