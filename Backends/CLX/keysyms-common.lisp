@@ -205,6 +205,15 @@
 		       :key (lambda (keycode) (code-to-name keycode display))))
 	       (multiple-value-list (xlib:modifier-mapping display))))
 
+;;; Return the bit position in a modifier mask that should be
+;;; interpreted as the NUM-LOCK modifier, or NIL if no modifier is to
+;;; be interpreted as NUM-LOCK.
+(defun num-lock-position (display)
+  (position-if (lambda (keycodes)
+		 (find :num-lock keycodes
+		       :key (lambda (keycode) (code-to-name keycode display))))
+	       (multiple-value-list (xlib:modifier-mapping display))))
+
 (defun position-to-mask (position)
   (if (null position)
       0
