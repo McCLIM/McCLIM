@@ -215,33 +215,43 @@
 ;;;     6    mod4 keysym names
 ;;;     7    mod5 keysym names
 
+;;; This definition does not work because it uses keysyms rather than
+;;; bit positions.
+;; (defun make-modifier-cache (port)
+;;   (let* ((modifier-mapping (modifier-mapping port))
+;; 	 ;; This variable holds the number of different possible
+;; 	 ;; modifiers, and the X11 specification says that it will
+;; 	 ;; always be 8.
+;; 	 (modifier-count (length modifier-mapping))
+;; 	 ;; This variable holds the number of different possible
+;; 	 ;; modifier masks, and the X11 specification says that it
+;; 	 ;; will always be 256.
+;; 	 (modifier-mask-count (ash 1 modifier-count))
+;; 	 (cache (make-array modifier-mask-count)))
+;;     (loop for x-modifier-mask from 0 below modifier-mask-count
+;; 	  for clim-modifier = 0
+;; 	  for other-modifier = 0
+;; 	  do (loop for bit from 0 below modifier-count
+;; 		   for modifier-names = (aref modifier-mapping bit)
+;; 		   when (logbitp bit x-modifier-mask)
+;; 		     do (loop for (syms val) in +clim-modifiers+
+;; 			      when (intersection syms modifier-names)
+;; 				do (setf clim-modifier
+;; 					 (logior clim-modifier val)))
+;; 			(loop for (sym val) in +other-modifiers+
+;; 			      when (member sym modifier-names)
+;; 				do (setf other-modifier
+;; 					 (logior other-modifier val)))
+;; 		   finally (setf (aref cache x-modifier-mask)
+;; 				 (cons clim-modifier other-modifier))))
+;;     (setf (modifier-cache port) cache)))
+
 (defun make-modifier-cache (port)
-  (let* ((modifier-mapping (modifier-mapping port))
-	 ;; This variable holds the number of different possible
-	 ;; modifiers, and the X11 specification says that it will
-	 ;; always be 8.
-	 (modifier-count (length modifier-mapping))
-	 ;; This variable holds the number of different possible
-	 ;; modifier masks, and the X11 specification says that it
-	 ;; will always be 256.
-	 (modifier-mask-count (ash 1 modifier-count))
-	 (cache (make-array modifier-mask-count)))
-    (loop for x-modifier-mask from 0 below modifier-mask-count
-	  for clim-modifier = 0
-	  for other-modifier = 0
-	  do (loop for bit from 0 below modifier-count
-		   for modifier-names = (aref modifier-mapping bit)
-		   when (logbitp bit x-modifier-mask)
-		     do (loop for (syms val) in +clim-modifiers+
-			      when (intersection syms modifier-names)
-				do (setf clim-modifier
-					 (logior clim-modifier val)))
-			(loop for (sym val) in +other-modifiers+
-			      when (member sym modifier-names)
-				do (setf other-modifier
-					 (logior other-modifier val)))
-		   finally (setf (aref cache x-modifier-mask)
-				 (cons clim-modifier other-modifier))))
+  (let ((cache (make-array 256)))
+    (loop for x-modifier-mask from 0 below 256
+	  do (setf (aref cache x-modifier-mask)
+		   (cons (create-clim-modifier-mask x-modifier-mask)
+			 (create-other-modifier-mask x-modifier-mask))))
     (setf (modifier-cache port) cache)))
 
 (defgeneric x-event-state-modifiers (port state)
