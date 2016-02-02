@@ -454,38 +454,38 @@ advised of the possiblity of such damages.
   (compute-point1-position self))
 
 (defclass POINT-ANNOTATION (annotation-link-mixin
-			     recompute-annotation-mixin
-			     annotation)
-    ((point :initform nil :initarg :point :accessor point))
+                            recompute-annotation-mixin
+                            annotation)
+  ((point :initform nil :initarg :point :accessor point-annotation-point))
   (:documentation "An annotation with a pointer to some uv point."))
 
 (defmethod display :after ((self point-annotation) stream)
   (with-output-as-presentation (:stream stream
-				:object (point self)
+				:object (point-annotation-point self)
 				:single-box t
 				:type 'moving-point)
-    (draw-xy-point (point self) stream %draw)))
+    (draw-xy-point (point-annotation-point self) stream %draw)))
 
 (defmethod mark :after ((self point-annotation) stream)
-  (draw-xy-point (point self) stream %flip))
+  (draw-xy-point (point-annotation-point self) stream %flip))
 
 (defmethod display-p :around ((self point-annotation))
   (or (call-next-method)
-      (let ((point (point self)))
+      (let ((point (point-annotation-point self)))
 	(multiple-value-bind (u v) (xy-position point)
 	  (multiple-value-setq (u v) (xy-to-uv (graph self) u v))
 	  (uv-is-inside (graph self) u v)))))
 
 (defmethod default-point2 ((a point-annotation))
-  (multiple-value-bind (u v) (xy-position (point a))
+  (multiple-value-bind (u v) (xy-position (point-annotation-point a))
     (multiple-value-setq (u v) (xy-to-uv (graph a) u v))
     (list u v)))
 
 (defmethod map-points-2 ((function t) (a point-annotation))
   ;; point2 is one of the corners (UV) of the polygon.
-  (multiple-value-bind (u v) (xy-position (point a))
+  (multiple-value-bind (u v) (xy-position (point-annotation-point a))
     (multiple-value-setq (u v) (xy-to-uv (graph a) u v))
-    (funcall function u v (point a))))
+    (funcall function u v (point-annotation-point a))))
 
 ;;; Does anybody call this guy anymore?  JPM 8 May 92.
 ;;; KRA 09JUN93: Yes (method annotate ( annotated-graph-mixin t t))
@@ -496,7 +496,7 @@ advised of the possiblity of such damages.
 	(device-mouse-point STREAM "Choose Point With Mouse")
       (when (and u v)
 	(multiple-value-setq (u v) (uv-to-xy (graph self) u v))
-	(setf (point self)
+	(setf (point-annotation-point self)
 	      (make-instance 'moving-annotation-point :x u :y v :annotation self))
 	(let ((initial-string (make-string 0)))
 	  (set-uv-position self (ull graph) (vur graph))
@@ -512,10 +512,10 @@ advised of the possiblity of such damages.
 (defun ANNOTATE-POINT (graph STREAM text x y point-x point-y &optional text-fn)
   "Noninteractively annotate a point"
   (let ((annotation (make-instance 'point-annotation :graph graph)))
-    (setf (point annotation) (make-instance 'moving-annotation-point
-					    :x point-x
-					    :y point-y
-					    :annotation annotation))
+    (setf (point-annotation-point annotation) (make-instance 'moving-annotation-point
+                                                             :x point-x
+                                                             :y point-y
+                                                             :annotation annotation))
     (install-annotation annotation graph stream text x y text-fn)
     (display annotation STREAM)
     annotation))
@@ -566,7 +566,7 @@ advised of the possiblity of such damages.
 
 (defmethod maybe-change-datum ((point-annotation point-annotation) STREAM dataset)
   ;; Constraint function for point annotations that always have to point to a datum.
-  (let* ((point (point point-annotation))
+  (let* ((point (point-annotation-point point-annotation))
 	 (graph (graph point-annotation)))
     (multiple-value-bind (x y) (xy-position point)
       (multiple-value-bind (new-x new-y datum)
