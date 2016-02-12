@@ -1338,15 +1338,15 @@ and must never be nil."))
 
 (defgeneric scroll-bar-thumb-bed-region (scroll-bar-pane))
 
-(defgeneric scroll-bar-thumb-region (scroll-bar-pane))
+(defgeneric scroll-bar-thumb-region (scroll-bar-pane &optional value))
 
-(defun scroll-bar/update-display (scroll-bar)
+(defun scroll-bar/update-display (scroll-bar &optional (value (gadget-value scroll-bar)))
   (with-slots (up-state dn-state tb-state tb-y1 tb-y2
                old-up-state old-dn-state old-tb-state old-tb-y1 old-tb-y2
                all-new-p)
       scroll-bar
     ;;
-    (scroll-bar/compute-display scroll-bar)
+    (scroll-bar/compute-display scroll-bar value)
     ;; redraw up arrow
     (unless (and (not all-new-p) (eql up-state old-up-state))
       (with-drawing-options (scroll-bar :transformation (scroll-bar-transformation scroll-bar))
@@ -1406,7 +1406,7 @@ and must never be nil."))
               ;; redraw whole thumb bed and thumb all anew
               (with-drawing-options (scroll-bar :transformation (scroll-bar-transformation scroll-bar))
                   (with-bounding-rectangle* (bx1 by1 bx2 by2) (scroll-bar-thumb-bed-region scroll-bar)
-                    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar)
+                    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar value)
                       (draw-rectangle* scroll-bar bx1 by1 bx2 y1 :ink *3d-inner-color*)
                       (draw-rectangle* scroll-bar bx1 y2 bx2 by2 :ink *3d-inner-color*)
                       (draw-rectangle* scroll-bar x1 y1 x2 y2 :ink *3d-normal-color*)
@@ -1435,13 +1435,13 @@ and must never be nil."))
           old-tb-y2 tb-y2
           all-new-p nil) ))
 
-(defun scroll-bar/compute-display (scroll-bar)
+(defun scroll-bar/compute-display (scroll-bar value)
   (with-slots (up-state dn-state tb-state tb-y1 tb-y2
                         event-state) scroll-bar
     (setf up-state (if (eq event-state :up-armed) :armed nil))
     (setf dn-state (if (eq event-state :dn-armed) :armed nil))
     (setf tb-state nil)                 ;we have no armed display yet
-    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar)
+    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar value)
       (declare (ignore x1 x2))
       (setf tb-y1 y1
             tb-y2 y2))))
@@ -1550,12 +1550,12 @@ and must never be nil."))
     (multiple-value-bind (minv maxv) (gadget-range* sb)
       (round (translate-range-value v minv maxv y1 y2 y1)))))
 
-(defmethod scroll-bar-thumb-region ((sb scroll-bar-pane))
+(defmethod scroll-bar-thumb-region ((sb scroll-bar-pane) &optional (value (gadget-value sb)))
   (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
     (declare (ignore y1 y2))
     (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
       (declare (ignore y1))
-      (let ((y4 (scroll-bar/map-value-to-coordinate sb (gadget-value sb))))
+      (let ((y4 (scroll-bar/map-value-to-coordinate sb value)))
         (make-rectangle* x1 y4 x2 (+ y4 (- y3 y2)))))))
 
 ;;;; event handler
@@ -1596,9 +1596,7 @@ and must never be nil."))
                  (min (gadget-max-value sb)
                       (max (gadget-min-value sb)
                            (scroll-bar/map-coordinate-to-value sb y-new-thumb-top)))) )
-           ;; ### when dragging value shouldn't be immediately updated
-           (setf (gadget-value sb #|:invoke-callback nil|#)
-                 new-value)
+	   (scroll-bar/update-display sb new-value)
            (drag-callback sb (gadget-client sb) (gadget-id sb) new-value)) )))))
 
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-button-release-event))
@@ -1606,9 +1604,22 @@ and must never be nil."))
     (case event-state
       (:up-armed (setf event-state nil))
       (:dn-armed (setf event-state nil))
+      (:dragging
+       (setf event-state nil)
+       (multiple-value-bind (x y) (transform-position (scroll-bar-transformation sb)
+						      (pointer-event-x event) (pointer-event-y event))
+	 (declare (ignore x))
+	 ;; Update the gadget-value
+	 (with-slots (drag-dy) sb
+	   (let* ((y-new-thumb-top (- y drag-dy))
+		  (new-value
+		   (min (gadget-max-value sb)
+			(max (gadget-min-value sb)
+			     (scroll-bar/map-coordinate-to-value sb y-new-thumb-top)))) )
+	     (setf (gadget-value sb :invoke-callback t) new-value)))))
       (otherwise
        (setf event-state nil) )))
-  (scroll-bar/update-display sb) )
+  (scroll-bar/update-display sb))
 
 (defmethod handle-repaint ((pane scroll-bar-pane) region)
   (with-slots (all-new-p) pane
