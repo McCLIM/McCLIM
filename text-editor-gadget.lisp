@@ -296,13 +296,16 @@
 (defmethod allocate-space ((pane goatee-text-editor-substrate) w h)
   (resize-sheet pane w h))
 
-(defun make-text-field-substrate (user &rest args)
+(defun make-text-field-substrate (user &rest args &key value &allow-other-keys)
   "Create an appropriate text field gadget editing substrate object."
   (let* ((substrate (apply #'make-pane (if *use-goatee*
                                            'goatee-text-field-substrate
                                            'drei-text-field-substrate)
                            :user-gadget user args))
          (sheet substrate))
+    (if *use-goatee*
+        (setf (slot-value substrate 'value) value)
+        (setf (gadget-value substrate) value))
     (values substrate sheet)))
 
 (defun make-text-editor-substrate (user &rest args &key scroll-bars value
@@ -364,7 +367,8 @@ cause the activate callback to be called."))
                                        &key id client armed-callback
                                        disarmed-callback
                                        activation-gestures activate-callback
-                                       value value-changed-callback)
+					 value value-changed-callback
+					 editable-p)
   ;; Make an editor substrate object for the gadget.
   (let ((substrate (make-text-field-substrate
                     object :id id :client client :armed-callback armed-callback
@@ -372,7 +376,8 @@ cause the activate callback to be called."))
                     :activation-gestures activation-gestures
                     :activate-callback activate-callback
                     :value value
-                    :value-changed-callback value-changed-callback)))
+                    :value-changed-callback value-changed-callback
+		    :editable-p editable-p)))
     (setf (substrate object) substrate)
     (sheet-adopt-child object substrate)))
 
