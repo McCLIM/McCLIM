@@ -392,16 +392,22 @@ cause the activate callback to be called."))
 (defmethod initialize-instance :after ((object text-editor-pane)
                                        &key id client armed-callback
                                        disarmed-callback
-                                       activation-gestures scroll-bars
-                                       ncolumns nlines value)
+					 activation-gestures activate-callback
+					 scroll-bars
+					 ncolumns nlines
+					 value value-changed-callback
+					 editable-p)
   ;; Make an editor substrate object for the gadget.
   (multiple-value-bind (substrate sheet)
       (make-text-editor-substrate object
        :id id :client client :armed-callback armed-callback
        :disarmed-callback disarmed-callback
        :activation-gestures activation-gestures
+       :activate-callback activate-callback
        :scroll-bars scroll-bars
        :ncolumns ncolumns :nlines nlines
-       :value value)
+       :value value
+       :value-changed-callback value-changed-callback
+       :editable-p editable-p)
     (setf (substrate object) substrate)
     (sheet-adopt-child object sheet)))
