@@ -1241,6 +1241,9 @@ and must never be nil."))
     (when armed
       (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane))))))
 
+(defmethod deactivate-gadget :after ((gadget toggle-button-pane))
+  (dispatch-repaint gadget +everywhere+))
+
 (defmethod activate-gadget :after ((gadget toggle-button-pane))
   (dispatch-repaint gadget +everywhere+))
 
@@ -1887,7 +1890,7 @@ and must never be nil."))
    :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane radio-box-pane)
-                                       &key choices current-selection orientation &allow-other-keys)
+                                       &key choices current-selection orientation active &allow-other-keys)
   (setf (box-layout-orientation pane) orientation)
   (setf (gadget-value pane) current-selection)
   (let ((children
@@ -1899,7 +1902,9 @@ and must never be nil."))
                      (setf (gadget-client c) pane)
                      c))
                  choices)))
-    (mapc (curry #'sheet-adopt-child pane) children)))
+    (mapc (curry #'sheet-adopt-child pane) children))
+  (unless active
+    (deactivate-gadget pane)))
 
 (defmethod (setf gadget-value) :after (button (radio-box radio-box-pane) &key invoke-callback)
   ;; this is silly, but works ...
@@ -1907,6 +1912,18 @@ and must never be nil."))
     (unless (eq (not (null (eq c button)))
                 (not (null (gadget-value c))))
       (setf (gadget-value c :invoke-callback invoke-callback) (eq c button)) )))
+
+
+(defmethod deactivate-gadget :after ((box radio-box-pane))
+  (dolist (c (sheet-children box))
+    (deactivate-gadget c))
+  (dispatch-repaint box +everywhere+))
+
+(defmethod activate-gadget :after ((box radio-box-pane))
+  (dolist (c (sheet-children box))
+    (activate-gadget c))
+  (dispatch-repaint box +everywhere+))
+
 
 ;; check-box
 
@@ -1917,7 +1934,7 @@ and must never be nil."))
    :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane check-box-pane)
-                                       &key choices current-selection orientation &allow-other-keys)
+                                       &key choices current-selection orientation active &allow-other-keys)
   (setf (box-layout-orientation pane) orientation)
   (setf (gadget-value pane) current-selection)
   (let ((children
@@ -1929,7 +1946,19 @@ and must never be nil."))
                      (setf (gadget-client c) pane)
                      c))
                  choices)))
-    (mapc (curry #'sheet-adopt-child pane) children) ))
+    (mapc (curry #'sheet-adopt-child pane) children))
+  (unless active
+    (deactivate-gadget pane)))
+
+(defmethod deactivate-gadget :after ((box check-box-pane))
+  (dolist (c (sheet-children box))
+    (deactivate-gadget c))
+  (dispatch-repaint box +everywhere+))
+
+(defmethod activate-gadget :after ((box check-box-pane))
+  (dolist (c (sheet-children box))
+    (activate-gadget c))
+  (dispatch-repaint box +everywhere+))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.7 The concrete list-pane and option-pane Gadgets
