@@ -368,7 +368,7 @@ cause the activate callback to be called."))
                                        disarmed-callback
                                        activation-gestures activate-callback
 					 value value-changed-callback
-					 editable-p)
+					 (editable-p t))
   ;; Make an editor substrate object for the gadget.
   (let ((substrate (make-text-field-substrate
                     object :id id :client client :armed-callback armed-callback
@@ -396,7 +396,7 @@ cause the activate callback to be called."))
 					 scroll-bars
 					 ncolumns nlines
 					 value value-changed-callback
-					 editable-p)
+					 (editable-p t))
   ;; Make an editor substrate object for the gadget.
   (multiple-value-bind (substrate sheet)
       (make-text-editor-substrate object
