@@ -1241,6 +1241,9 @@ and must never be nil."))
     (when armed
       (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane))))))
 
+(defmethod activate-gadget :after ((gadget toggle-button-pane))
+  (dispatch-repaint gadget +everywhere+))
+
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.3 The concrete menu-button Gadget
 
