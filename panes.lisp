@@ -2042,7 +2042,8 @@ order to produce a double-click")
                     (+ y-spacing 0))
         (allocate-space viewport
                         (- viewport-width (* 2 x-spacing))
-                        (- viewport-height (* 2 y-spacing)))))))
+                        (- viewport-height (* 2 y-spacing))))
+      (scroller-pane/update-scroll-bars pane))))
 
 ;;;; Initialization
 
