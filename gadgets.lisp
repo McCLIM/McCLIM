@@ -2413,6 +2413,10 @@ if INVOKE-CALLBACK is given."))
 (defmethod (setf list-pane-items) :after
     (newval (pane generic-list-pane) &key invoke-callback)
   (declare (ignore invoke-callback))
+  ;; all sheet region must be cleaned.
+  (with-bounding-rectangle* (sx0 sy0 sx1 sy1)
+      (sheet-region pane)
+    (draw-rectangle* pane sx0 sy0 sx1 sy1 :filled t :ink (pane-background pane)))
   (change-space-requirements
    pane
    :height (space-requirement-height (compose-space pane)))

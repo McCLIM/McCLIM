@@ -124,6 +124,8 @@
 		  (frame-standard-output *application-frame*)))
 
 (defun reset-list-pane (pane items &optional (index 0))
+  ;; umm
+  (setf (climi::visible-items pane) (length items))
   (setf (climi::list-pane-items pane :invoke-callback nil) items)
   (setf (gadget-value pane :invoke-callback t)
 	(or (and (slot-boundp pane 'climi::value) (gadget-value pane))
