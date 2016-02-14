@@ -2205,12 +2205,21 @@ response to scroll wheel events.")
                        (values highlight-ink (pane-background pane)))
                       (t (values (pane-background pane) (pane-foreground pane))))
               (draw-rectangle* pane rx0 y0 rx1 y1 :filled t :ink background)
-              (draw-text* pane (elt (generic-list-pane-item-strings pane)
-                                    elt-index)
-                          sx0
-                          (+ y0 (text-style-ascent (pane-text-style pane) pane))
-                          :ink foreground
-                          :text-style (pane-text-style pane)))))))))
+	      (let ((x sx0)
+		    (y (+ y0 (text-style-ascent (pane-text-style pane) pane)))
+		    (el (elt (generic-list-pane-item-strings pane)
+			     elt-index)))
+		(if (gadget-active-p pane)
+		    (draw-text* pane el x y
+				:ink foreground
+				:text-style (pane-text-style pane))
+		    (progn
+		      (draw-text* pane el (1+ x) (1+ y)
+				  :ink *3d-light-color*
+				  :text-style (pane-text-style pane))
+		      (draw-text* pane el (1+ x) (1+ y)
+				  :ink *3d-dark-color*
+				  :text-style (pane-text-style pane))))))))))))
 
 (defun generic-list-pane-select-item (pane item-value)
   "Toggle selection  of a single item in the generic-list-pane.
@@ -2408,6 +2417,13 @@ if INVOKE-CALLBACK is given."))
    pane
    :height (space-requirement-height (compose-space pane)))
   (handle-repaint pane +everywhere+))
+
+(defmethod deactivate-gadget :after ((gadget generic-list-pane))
+  (dispatch-repaint gadget +everywhere+))
+
+(defmethod activate-gadget :after ((gadget generic-list-pane))
+  (dispatch-repaint gadget +everywhere+))
+
 
 ;;; OPTION-PANE
 
@@ -2728,17 +2744,37 @@ if INVOKE-CALLBACK is given."))
         (generic-option-pane-widget-size pane)
       (declare (ignore widget-height))
       (draw-rectangle* pane x0 y0 x1 y1 :ink (effective-gadget-background pane))
-      (let* ((tx1 (- x1 widget-width)))
-        (draw-text* pane (slot-value pane 'current-label)
-                    (/ (- tx1 x0) 2)
-                    (/ (+ (- y1 y0)
-                           (- (text-style-ascent (pane-text-style pane) pane)
-                              (text-style-descent (pane-text-style pane) pane)))
-                        2)
-                    :align-x :center
-                    :align-y :baseline))
+      (let* ((tx1 (- x1 widget-width))
+	     (x (/ (- tx1 x0) 2))
+	     (y (/ (+ (- y1 y0)
+		      (- (text-style-ascent (pane-text-style pane) pane)
+			 (text-style-descent (pane-text-style pane) pane)))
+		   2)))
+	(if (gadget-active-p pane)
+	    (draw-text* pane (slot-value pane 'current-label)
+			x y
+			:align-x :center
+			:align-y :baseline)
+	    (progn
+	      (draw-text* pane (slot-value pane 'current-label)
+			  (1+ x) (1+ y)
+			  :align-x :center
+			  :align-y :baseline
+			  :ink *3d-light-color*)
+	      (draw-text* pane (slot-value pane 'current-label)
+			  x y
+			  :align-x :center
+			  :align-y :baseline
+			  :ink *3d-dark-color*))))
       (generic-option-pane-draw-widget pane))))
         
+
+(defmethod deactivate-gadget :after ((gadget generic-option-pane))
+  (dispatch-repaint gadget +everywhere+))
+
+(defmethod activate-gadget :after ((gadget generic-option-pane))
+  (dispatch-repaint gadget +everywhere+))
+
 
 ;;;; ------------------------------------------------------------------------------------------
 ;;;;
