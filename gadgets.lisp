@@ -1693,9 +1693,9 @@ and must never be nil."))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-exit-event))
   (with-slots (armed) pane
-    (when armed
-      (setf armed nil))
-    (disarmed-callback pane (gadget-client pane) (gadget-id pane))))
+    (when (and armed (not (eq armed ':button-press)))
+      (setf armed nil)
+      (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-button-press-event))
   (with-slots (armed) pane
@@ -1790,8 +1790,10 @@ and must never be nil."))
                (when (gadget-show-value-p pane)
                  (draw-text* pane (format-value (gadget-value pane)
                                                 (slider-decimal-places pane))
-                             5 ;(- position slider-button-half-short-dim)
-                             (- middle slider-button-half-long-dim)))))
+                             ;; without knowing the text size
+			     ;; there is only one safe position where we can put it
+                             (+ middle 10.0)
+			     (- y2 (* 2 slider-button-half-short-dim))))))
             ((:horizontal)
              (let ((middle (round (- y2 y1) 2)))
                (draw-bordered-polygon pane
@@ -1805,8 +1807,8 @@ and must never be nil."))
               (when (gadget-show-value-p pane)
 	        (draw-text* pane (format-value (gadget-value pane)
                                                (slider-decimal-places pane))
-			         5 ;(- position slider-button-half-short-dim)
-			         (- middle slider-button-half-long-dim)))))))))))
+			         (+ x1 (* 2 slider-button-half-short-dim))
+			         (- middle 10.0)))))))))))
 
 #|
 (defmethod handle-repaint ((pane slider-pane) region)
