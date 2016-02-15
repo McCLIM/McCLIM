@@ -714,6 +714,21 @@ and must never be nil."))
   (dispatch-repaint gadget (or (pane-viewport-region gadget)
                                (sheet-region gadget))))
 
+(defclass activate/deactivate-repaint-mixin ()
+  ()
+  (:documentation
+   "Mixin class for gadgets, whose appearence depends on its activatated state."))
+
+(defmethod activate-gadget :after ((gadget activate/deactivate-repaint-mixin))
+  (declare (ignore client id))
+  (dispatch-repaint gadget (or (pane-viewport-region gadget)
+                               (sheet-region gadget))))
+
+(defmethod deactivate-gadget :after ((gadget activate/deactivate-repaint-mixin))
+  (declare (ignore client id))
+  (dispatch-repaint gadget (or (pane-viewport-region gadget)
+                               (sheet-region gadget))))
+
 (defclass value-changed-repaint-mixin ()
   ()
   (:documentation
@@ -1078,6 +1093,7 @@ and must never be nil."))
                              labelled-gadget-mixin
                              changing-label-invokes-layout-protocol-mixin
                              arm/disarm-repaint-mixin
+			     activate/deactivate-repaint-mixin
                              enter/exit-arms/disarms-mixin
                              standard-gadget-pane)
   ((pressedp          :initform nil)
@@ -1137,11 +1153,6 @@ and must never be nil."))
             (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
             (draw-engraved-label* pane x1 y1 x2 y2))))))
 
-(defmethod deactivate-gadget :after ((gadget push-button-pane))
-  (dispatch-repaint gadget +everywhere+))
-
-(defmethod activate-gadget :after ((gadget push-button-pane))
-  (dispatch-repaint gadget +everywhere+))
 
 
 ;;; ------------------------------------------------------------------------------------------
@@ -1150,6 +1161,7 @@ and must never be nil."))
 (defclass toggle-button-pane (toggle-button 
                               ;; repaint behavior:
                               arm/disarm-repaint-mixin
+			      activate/deactivate-repaint-mixin
                               value-changed-repaint-mixin
                               ;; callback behavior:
                               changing-label-invokes-layout-protocol-mixin
@@ -1233,24 +1245,22 @@ and must never be nil."))
                         (+ (/ (+ y1 y2) 2) (/ (+ as ds) 2)))
               (draw-toggle-button-indicator pane (toggle-button-indicator-type pane) (gadget-value pane)
                                             tx1 ty1 tx2 ty2)
-              (draw-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2
-                           :ink (effective-gadget-foreground pane)))))))))
+	      (if (gadget-active-p pane)
+		  (draw-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2
+			       :ink (effective-gadget-foreground pane))
+		  (draw-engraved-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2)))))))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
     (when armed
       (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane))))))
 
-(defmethod deactivate-gadget :after ((gadget toggle-button-pane))
-  (dispatch-repaint gadget +everywhere+))
-
-(defmethod activate-gadget :after ((gadget toggle-button-pane))
-  (dispatch-repaint gadget +everywhere+))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.3 The concrete menu-button Gadget
 
 (defclass menu-button-pane (menu-button
+			    activate/deactivate-repaint-mixin
 			    standard-gadget-pane)
   ()
   (:default-initargs
@@ -1649,7 +1659,7 @@ and must never be nil."))
 (defparameter slider-button-long-dim 30)
 (defparameter slider-button-short-dim 10)
 
-(defclass slider-pane (slider-gadget basic-pane)
+(defclass slider-pane (slider-gadget activate/deactivate-repaint-mixin basic-pane)
   ((drag-callback  :initform nil
 		   :initarg :drag-callback
 		   :reader slider-drag-callback)
@@ -1764,16 +1774,31 @@ and must never be nil."))
           (background-color (pane-background pane))          
           (inner-color (gadget-current-color pane)))      
       (flet ((draw-thingy (x y)
-               (draw-circle* pane x y 8.0 :filled t :ink inner-color)
-               (draw-circle* pane x y 8.0 :filled nil :ink +black+)
-               (draw-circle* pane x y 7.0
-                             :filled nil :ink +white+
-                             :start-angle (* 0.25 pi)
-                             :end-angle   (* 1.25 pi))
-               (draw-circle* pane x y 7.0
-                             :filled nil :ink +black+
-                             :start-angle (* 1.25 pi)
-                             :end-angle   (* 2.25 pi))))
+	       (if (gadget-active-p pane)
+		   (progn
+		     (draw-circle* pane x y 8.0 :filled t :ink inner-color)
+		     (draw-circle* pane x y 8.0 :filled nil :ink +black+)
+		     (draw-circle* pane x y 7.0
+				   :filled nil :ink +white+ 
+				   :start-angle (* 0.25 pi)
+				   :end-angle   (* 1.25 pi))
+		     (draw-circle* pane x y 7.0
+				   :filled nil :ink +black+
+				   :start-angle (* 1.25 pi)
+				   :end-angle   (* 2.25 pi)))
+		   (progn
+		     (draw-circle* pane (1+ x) (1+ y) 8.0 :filled t :ink *3d-light-color*)
+		     (draw-circle* pane x y 8.0 :filled t :ink *3d-dark-color*))))
+	     (draw-value (x y)
+	       (let ((text (format-value (gadget-value pane)
+					 (slider-decimal-places pane))))
+		 (if (gadget-active-p pane)
+		     (draw-text* pane text x y)
+		     (progn
+		       (draw-text* pane text (1+ x) (1+ y)
+				   :ink *3d-light-color*)
+		       (draw-text* pane text x y
+				   :ink *3d-dark-color*))))))
         (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
           (display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
           (case (gadget-orientation pane)
@@ -1788,12 +1813,9 @@ and must never be nil."))
                                       :border-width 2)
                (draw-thingy middle (- position slider-button-half-short-dim))
                (when (gadget-show-value-p pane)
-                 (draw-text* pane (format-value (gadget-value pane)
-                                                (slider-decimal-places pane))
-                             ;; without knowing the text size
-			     ;; there is only one safe position where we can put it
-                             (+ middle 10.0)
-			     (- y2 (* 2 slider-button-half-short-dim))))))
+		 (draw-value 
+		  (+ middle 10.0)
+		  (- y2 (* 2 slider-button-half-short-dim))))))
             ((:horizontal)
              (let ((middle (round (- y2 y1) 2)))
                (draw-bordered-polygon pane
@@ -1804,11 +1826,10 @@ and must never be nil."))
                                       :style :inset
                                       :border-width 2)
                (draw-thingy (- position slider-button-half-short-dim) middle)
-              (when (gadget-show-value-p pane)
-	        (draw-text* pane (format-value (gadget-value pane)
-                                               (slider-decimal-places pane))
-			         (+ x1 (* 2 slider-button-half-short-dim))
-			         (- middle 10.0)))))))))))
+	       (when (gadget-show-value-p pane)
+		 (draw-value (+ x1 (* 2 slider-button-half-short-dim))
+			     (- middle 10.0)))))))))))
+
 
 #|
 (defmethod handle-repaint ((pane slider-pane) region)
@@ -1886,7 +1907,11 @@ and must never be nil."))
 
 ;; radio-box
 
-(defclass radio-box-pane (radio-box rack-layout-mixin sheet-multiple-child-mixin basic-pane)
+(defclass radio-box-pane (radio-box
+			  activate/deactivate-repaint-mixin
+			  rack-layout-mixin
+			  sheet-multiple-child-mixin
+			  basic-pane)
   ()
   (:default-initargs
    :background *3d-normal-color*))
@@ -1918,18 +1943,20 @@ and must never be nil."))
 
 (defmethod deactivate-gadget :after ((box radio-box-pane))
   (dolist (c (sheet-children box))
-    (deactivate-gadget c))
-  (dispatch-repaint box +everywhere+))
+    (deactivate-gadget c)))
 
 (defmethod activate-gadget :after ((box radio-box-pane))
   (dolist (c (sheet-children box))
-    (activate-gadget c))
-  (dispatch-repaint box +everywhere+))
+    (activate-gadget c)))
 
 
 ;; check-box
 
-(defclass check-box-pane (check-box rack-layout-mixin sheet-multiple-child-mixin basic-pane)
+(defclass check-box-pane (check-box
+			  rack-layout-mixin
+			  activate/deactivate-repaint-mixin
+			  sheet-multiple-child-mixin
+			  basic-pane)
   ()
   (:default-initargs
    :text-style (make-text-style :sans-serif nil nil)
@@ -1954,13 +1981,11 @@ and must never be nil."))
 
 (defmethod deactivate-gadget :after ((box check-box-pane))
   (dolist (c (sheet-children box))
-    (deactivate-gadget c))
-  (dispatch-repaint box +everywhere+))
+    (deactivate-gadget c)))
 
 (defmethod activate-gadget :after ((box check-box-pane))
   (dolist (c (sheet-children box))
-    (activate-gadget c))
-  (dispatch-repaint box +everywhere+))
+    (activate-gadget c)))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.7 The concrete list-pane and option-pane Gadgets
@@ -2031,6 +2056,7 @@ and must never be nil."))
 
 (defclass generic-list-pane (list-pane meta-list-pane
                                        standard-sheet-input-mixin ;; Hmm..
+				       activate/deactivate-repaint-mixin
                                        value-changed-repaint-mixin)
   ((highlight-ink :initform +royalblue4+
                   :initarg :highlight-ink
@@ -2427,13 +2453,6 @@ if INVOKE-CALLBACK is given."))
     (draw-rectangle* pane sx0 sy0 sx1 sy1 :filled t :ink (pane-background pane)))
   (handle-repaint pane +everywhere+))
 
-(defmethod deactivate-gadget :after ((gadget generic-list-pane))
-  (dispatch-repaint gadget +everywhere+))
-
-(defmethod activate-gadget :after ((gadget generic-list-pane))
-  (dispatch-repaint gadget +everywhere+))
-
-
 ;;; OPTION-PANE
 
 (define-abstract-pane-mapping 'option-pane 'generic-option-pane)
@@ -2442,6 +2461,7 @@ if INVOKE-CALLBACK is given."))
                                meta-list-pane
                                value-changed-repaint-mixin
                                3d-border-mixin
+			       activate/deactivate-repaint-mixin
                                arm/disarm-repaint-mixin
                                enter/exit-arms/disarms-mixin)
   ((current-label :initform "" :accessor generic-option-pane-label))
@@ -2777,13 +2797,6 @@ if INVOKE-CALLBACK is given."))
 			  :ink *3d-dark-color*))))
       (generic-option-pane-draw-widget pane))))
         
-
-(defmethod deactivate-gadget :after ((gadget generic-option-pane))
-  (dispatch-repaint gadget +everywhere+))
-
-(defmethod activate-gadget :after ((gadget generic-option-pane))
-  (dispatch-repaint gadget +everywhere+))
-
 
 ;;;; ------------------------------------------------------------------------------------------
 ;;;;
