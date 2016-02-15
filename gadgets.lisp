@@ -1241,6 +1241,12 @@ and must never be nil."))
     (when armed
       (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane))))))
 
+(defmethod deactivate-gadget :after ((gadget toggle-button-pane))
+  (dispatch-repaint gadget +everywhere+))
+
+(defmethod activate-gadget :after ((gadget toggle-button-pane))
+  (dispatch-repaint gadget +everywhere+))
+
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.3 The concrete menu-button Gadget
 
@@ -1338,15 +1344,15 @@ and must never be nil."))
 
 (defgeneric scroll-bar-thumb-bed-region (scroll-bar-pane))
 
-(defgeneric scroll-bar-thumb-region (scroll-bar-pane))
+(defgeneric scroll-bar-thumb-region (scroll-bar-pane &optional value))
 
-(defun scroll-bar/update-display (scroll-bar)
+(defun scroll-bar/update-display (scroll-bar &optional (value (gadget-value scroll-bar)))
   (with-slots (up-state dn-state tb-state tb-y1 tb-y2
                old-up-state old-dn-state old-tb-state old-tb-y1 old-tb-y2
                all-new-p)
       scroll-bar
     ;;
-    (scroll-bar/compute-display scroll-bar)
+    (scroll-bar/compute-display scroll-bar value)
     ;; redraw up arrow
     (unless (and (not all-new-p) (eql up-state old-up-state))
       (with-drawing-options (scroll-bar :transformation (scroll-bar-transformation scroll-bar))
@@ -1406,7 +1412,7 @@ and must never be nil."))
               ;; redraw whole thumb bed and thumb all anew
               (with-drawing-options (scroll-bar :transformation (scroll-bar-transformation scroll-bar))
                   (with-bounding-rectangle* (bx1 by1 bx2 by2) (scroll-bar-thumb-bed-region scroll-bar)
-                    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar)
+                    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar value)
                       (draw-rectangle* scroll-bar bx1 by1 bx2 y1 :ink *3d-inner-color*)
                       (draw-rectangle* scroll-bar bx1 y2 bx2 by2 :ink *3d-inner-color*)
                       (draw-rectangle* scroll-bar x1 y1 x2 y2 :ink *3d-normal-color*)
@@ -1435,13 +1441,13 @@ and must never be nil."))
           old-tb-y2 tb-y2
           all-new-p nil) ))
 
-(defun scroll-bar/compute-display (scroll-bar)
+(defun scroll-bar/compute-display (scroll-bar value)
   (with-slots (up-state dn-state tb-state tb-y1 tb-y2
                         event-state) scroll-bar
     (setf up-state (if (eq event-state :up-armed) :armed nil))
     (setf dn-state (if (eq event-state :dn-armed) :armed nil))
     (setf tb-state nil)                 ;we have no armed display yet
-    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar)
+    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar value)
       (declare (ignore x1 x2))
       (setf tb-y1 y1
             tb-y2 y2))))
@@ -1550,12 +1556,12 @@ and must never be nil."))
     (multiple-value-bind (minv maxv) (gadget-range* sb)
       (round (translate-range-value v minv maxv y1 y2 y1)))))
 
-(defmethod scroll-bar-thumb-region ((sb scroll-bar-pane))
+(defmethod scroll-bar-thumb-region ((sb scroll-bar-pane) &optional (value (gadget-value sb)))
   (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
     (declare (ignore y1 y2))
     (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
       (declare (ignore y1))
-      (let ((y4 (scroll-bar/map-value-to-coordinate sb (gadget-value sb))))
+      (let ((y4 (scroll-bar/map-value-to-coordinate sb value)))
         (make-rectangle* x1 y4 x2 (+ y4 (- y3 y2)))))))
 
 ;;;; event handler
@@ -1596,9 +1602,7 @@ and must never be nil."))
                  (min (gadget-max-value sb)
                       (max (gadget-min-value sb)
                            (scroll-bar/map-coordinate-to-value sb y-new-thumb-top)))) )
-           ;; ### when dragging value shouldn't be immediately updated
-           (setf (gadget-value sb #|:invoke-callback nil|#)
-                 new-value)
+	   (scroll-bar/update-display sb new-value)
            (drag-callback sb (gadget-client sb) (gadget-id sb) new-value)) )))))
 
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-button-release-event))
@@ -1606,9 +1610,22 @@ and must never be nil."))
     (case event-state
       (:up-armed (setf event-state nil))
       (:dn-armed (setf event-state nil))
+      (:dragging
+       (setf event-state nil)
+       (multiple-value-bind (x y) (transform-position (scroll-bar-transformation sb)
+						      (pointer-event-x event) (pointer-event-y event))
+	 (declare (ignore x))
+	 ;; Update the gadget-value
+	 (with-slots (drag-dy) sb
+	   (let* ((y-new-thumb-top (- y drag-dy))
+		  (new-value
+		   (min (gadget-max-value sb)
+			(max (gadget-min-value sb)
+			     (scroll-bar/map-coordinate-to-value sb y-new-thumb-top)))) )
+	     (setf (gadget-value sb :invoke-callback t) new-value)))))
       (otherwise
        (setf event-state nil) )))
-  (scroll-bar/update-display sb) )
+  (scroll-bar/update-display sb))
 
 (defmethod handle-repaint ((pane scroll-bar-pane) region)
   (with-slots (all-new-p) pane
@@ -1873,7 +1890,7 @@ and must never be nil."))
    :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane radio-box-pane)
-                                       &key choices current-selection orientation &allow-other-keys)
+                                       &key choices current-selection orientation (active t) &allow-other-keys)
   (setf (box-layout-orientation pane) orientation)
   (setf (gadget-value pane) current-selection)
   (let ((children
@@ -1885,7 +1902,9 @@ and must never be nil."))
                      (setf (gadget-client c) pane)
                      c))
                  choices)))
-    (mapc (curry #'sheet-adopt-child pane) children)))
+    (mapc (curry #'sheet-adopt-child pane) children))
+  (unless active
+    (deactivate-gadget pane)))
 
 (defmethod (setf gadget-value) :after (button (radio-box radio-box-pane) &key invoke-callback)
   ;; this is silly, but works ...
@@ -1893,6 +1912,18 @@ and must never be nil."))
     (unless (eq (not (null (eq c button)))
                 (not (null (gadget-value c))))
       (setf (gadget-value c :invoke-callback invoke-callback) (eq c button)) )))
+
+
+(defmethod deactivate-gadget :after ((box radio-box-pane))
+  (dolist (c (sheet-children box))
+    (deactivate-gadget c))
+  (dispatch-repaint box +everywhere+))
+
+(defmethod activate-gadget :after ((box radio-box-pane))
+  (dolist (c (sheet-children box))
+    (activate-gadget c))
+  (dispatch-repaint box +everywhere+))
+
 
 ;; check-box
 
@@ -1903,7 +1934,7 @@ and must never be nil."))
    :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane check-box-pane)
-                                       &key choices current-selection orientation &allow-other-keys)
+                                       &key choices current-selection orientation (active t) &allow-other-keys)
   (setf (box-layout-orientation pane) orientation)
   (setf (gadget-value pane) current-selection)
   (let ((children
@@ -1915,7 +1946,19 @@ and must never be nil."))
                      (setf (gadget-client c) pane)
                      c))
                  choices)))
-    (mapc (curry #'sheet-adopt-child pane) children) ))
+    (mapc (curry #'sheet-adopt-child pane) children))
+  (unless active
+    (deactivate-gadget pane)))
+
+(defmethod deactivate-gadget :after ((box check-box-pane))
+  (dolist (c (sheet-children box))
+    (deactivate-gadget c))
+  (dispatch-repaint box +everywhere+))
+
+(defmethod activate-gadget :after ((box check-box-pane))
+  (dolist (c (sheet-children box))
+    (activate-gadget c))
+  (dispatch-repaint box +everywhere+))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.7 The concrete list-pane and option-pane Gadgets
@@ -2140,10 +2183,11 @@ response to scroll wheel events.")
               (sheet-region pane)))
       (let ((item-height (generic-list-pane-item-height pane))
             (highlight-ink (list-pane-highlight-ink pane)))
-        (do ((index (floor (- ry0 sy0) item-height) (1+ index))
-             (elt-index (items-origin pane) (1+ elt-index)))
+        (do* ((index (floor (- ry0 sy0) item-height) (1+ index))
+	      (elt-index (+ index (items-origin pane)) (1+ elt-index)))
             ((or (> (+ sy0 (* item-height index)) ry1)
-                 (>= index (generic-list-pane-items-length pane))))
+                 (>= elt-index (generic-list-pane-items-length pane))
+		 (>= elt-index (+ (items-origin pane) (visible-items pane)))))
           (let ((y0 (+ sy0 (* index item-height)))
                 (y1 (+ sy0 (* (1+ index) item-height))))
             (multiple-value-bind (background foreground)
@@ -2161,12 +2205,21 @@ response to scroll wheel events.")
                        (values highlight-ink (pane-background pane)))
                       (t (values (pane-background pane) (pane-foreground pane))))
               (draw-rectangle* pane rx0 y0 rx1 y1 :filled t :ink background)
-              (draw-text* pane (elt (generic-list-pane-item-strings pane)
-                                    elt-index)
-                          sx0
-                          (+ y0 (text-style-ascent (pane-text-style pane) pane))
-                          :ink foreground
-                          :text-style (pane-text-style pane)))))))))
+	      (let ((x sx0)
+		    (y (+ y0 (text-style-ascent (pane-text-style pane) pane)))
+		    (el (elt (generic-list-pane-item-strings pane)
+			     elt-index)))
+		(if (gadget-active-p pane)
+		    (draw-text* pane el x y
+				:ink foreground
+				:text-style (pane-text-style pane))
+		    (progn
+		      (draw-text* pane el (1+ x) (1+ y)
+				  :ink *3d-light-color*
+				  :text-style (pane-text-style pane))
+		      (draw-text* pane el (1+ x) (1+ y)
+				  :ink *3d-dark-color*
+				  :text-style (pane-text-style pane))))))))))))
 
 (defun generic-list-pane-select-item (pane item-value)
   "Toggle selection  of a single item in the generic-list-pane.
@@ -2352,18 +2405,32 @@ if INVOKE-CALLBACK is given."))
     (newval (pane generic-list-pane) &key invoke-callback)
   (declare (ignore invoke-callback))
   (call-next-method)
-  (with-slots (items items-length item-strings item-values) pane
+  (with-slots (items items-length item-strings item-values items-width) pane
     (setf items-length (length newval))
     (setf item-strings nil)
-    (setf item-values nil)))
+    (setf item-values nil)
+    (setf items-width nil)))
 
 (defmethod (setf list-pane-items) :after
     (newval (pane generic-list-pane) &key invoke-callback)
   (declare (ignore invoke-callback))
-  (change-space-requirements
-   pane
-   :height (space-requirement-height (compose-space pane)))
+  (let ((space (compose-space pane)))
+    (change-space-requirements
+     pane
+     :height (space-requirement-height space)
+     :width (space-requirement-width space)))
+  ;; the whole sheet region must be cleaned.
+  (with-bounding-rectangle* (sx0 sy0 sx1 sy1)
+      (sheet-region pane)
+    (draw-rectangle* pane sx0 sy0 sx1 sy1 :filled t :ink (pane-background pane)))
   (handle-repaint pane +everywhere+))
+
+(defmethod deactivate-gadget :after ((gadget generic-list-pane))
+  (dispatch-repaint gadget +everywhere+))
+
+(defmethod activate-gadget :after ((gadget generic-list-pane))
+  (dispatch-repaint gadget +everywhere+))
+
 
 ;;; OPTION-PANE
 
@@ -2684,17 +2751,37 @@ if INVOKE-CALLBACK is given."))
         (generic-option-pane-widget-size pane)
       (declare (ignore widget-height))
       (draw-rectangle* pane x0 y0 x1 y1 :ink (effective-gadget-background pane))
-      (let* ((tx1 (- x1 widget-width)))
-        (draw-text* pane (slot-value pane 'current-label)
-                    (/ (- tx1 x0) 2)
-                    (/ (+ (- y1 y0)
-                           (- (text-style-ascent (pane-text-style pane) pane)
-                              (text-style-descent (pane-text-style pane) pane)))
-                        2)
-                    :align-x :center
-                    :align-y :baseline))
+      (let* ((tx1 (- x1 widget-width))
+	     (x (/ (- tx1 x0) 2))
+	     (y (/ (+ (- y1 y0)
+		      (- (text-style-ascent (pane-text-style pane) pane)
+			 (text-style-descent (pane-text-style pane) pane)))
+		   2)))
+	(if (gadget-active-p pane)
+	    (draw-text* pane (slot-value pane 'current-label)
+			x y
+			:align-x :center
+			:align-y :baseline)
+	    (progn
+	      (draw-text* pane (slot-value pane 'current-label)
+			  (1+ x) (1+ y)
+			  :align-x :center
+			  :align-y :baseline
+			  :ink *3d-light-color*)
+	      (draw-text* pane (slot-value pane 'current-label)
+			  x y
+			  :align-x :center
+			  :align-y :baseline
+			  :ink *3d-dark-color*))))
       (generic-option-pane-draw-widget pane))))
         
+
+(defmethod deactivate-gadget :after ((gadget generic-option-pane))
+  (dispatch-repaint gadget +everywhere+))
+
+(defmethod activate-gadget :after ((gadget generic-option-pane))
+  (dispatch-repaint gadget +everywhere+))
+
 
 ;;;; ------------------------------------------------------------------------------------------
 ;;;;
