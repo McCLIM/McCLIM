@@ -92,3 +92,6 @@
 
 (defmethod sheet-direct-mirror ((pixmap mirrored-pixmap))
   (port-lookup-mirror (port pixmap) pixmap))
+
+(defmethod sheet-mirror ((pixmap mirrored-pixmap))
+  (port-lookup-mirror (port pixmap) pixmap))
