@@ -288,11 +288,11 @@
 	 (end          (or end (length string))))
     (flet ((find-split (delta)  ;; FIXME: This can be done smarter.
 	     (loop for i from (1+ start) upto end
-	       as sub-width = (stream-string-width stream string
-						   :start start :end i
-						   :text-style text-style)
-	       while (<= sub-width delta)
-	       finally (return (1- i)))))
+		   as sub-width = (stream-string-width stream string
+						       :start start :end i
+						       :text-style text-style)
+		   while (<= sub-width delta)
+		   finally (return (1- i)))))
       (when (eql end 0)
         (return-from seos-write-string))
       (with-slots (baseline height vspace) stream
