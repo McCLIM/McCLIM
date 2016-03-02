@@ -110,7 +110,7 @@ advised of the possiblity of such damages.
    (:mcclim
     (locally (declare (ignore stream))
       (clim-extensions:frame-display-pointer-documentation-string
-       *application-frame* clim:*pointer-documentation-output* string)))
+       *application-frame* string)))
    ((not :clim) nil)))
 
 (defmacro with-mouse-documentation ((window string) &body body)

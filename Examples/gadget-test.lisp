@@ -137,6 +137,7 @@
                  :current-color +black+)
      (slider-v   :slider
                  :min-value 0
+		 :show-value-p t
                  :max-value 100
                  :orientation :vertical
                  :current-color +black+
@@ -156,6 +157,7 @@
      (slider-v3  :slider
                  :min-value 0
                  :max-value 100
+		 :show-value-p t
                  :orientation :vertical
                  :current-color +black+
                  :value 0)

@@ -61,7 +61,7 @@ advised of the possiblity of such damages.
   ;; GUI stuff we want imported.
   (import
     #+clim
-    '(clim:present-to-string clim:presentation-type clim:present)
+    '(clim:present-to-string clim:presentation-type clim:present clim:port)
     #-clim
     '(dw:present-to-string dw:presentation-type dw:present scl:send)
     'dwim)
