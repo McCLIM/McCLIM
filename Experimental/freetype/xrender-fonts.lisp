@@ -31,14 +31,14 @@
 
 ;;;; Notes
 
-;; You might need to tweak mcclim-truetype::*families/faces* to point
-;; to where ever there are suitable TTF fonts on your system.
+;;; You might need to tweak mcclim-truetype::*families/faces* to point
+;;; to where ever there are suitable TTF fonts on your system.
 
-;; FIXME: I don't think draw-text* works for strings spanning multiple lines.
-;; FIXME: Not particularly thread safe.
+;;; FIXME: I don't think draw-text* works for strings spanning
+;;; multiple lines.  FIXME: Not particularly thread safe.
 
-;; Some day, it might become useful to decouple the font representation
-;; from the xrender details. 
+;;; Some day, it might become useful to decouple the font
+;;; representation from the xrender details.
 
 (defclass vague-font ()
   ((lib :initarg :lib)
@@ -46,7 +46,7 @@
 
 (defparameter *vague-font-hash* (make-hash-table :test #'equal))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (let ((lookaside nil))
   (defun display-the-glyph-set (display)
@@ -309,8 +309,6 @@
            glyph-ids
            :end (- end start)))))))
 
-
-
 (defparameter *sizes*
   '(:normal 12
     :small 10
@@ -395,7 +393,6 @@
                                         (fontconfig-font-name-size font-name)
                                         (fontconfig-font-name-options font-name)))
                     :size (fontconfig-font-name-size font-name))))))))))
-
 
 (defmethod text-style-mapping :around
     ((port clim-clx::clx-port) (text-style climi::device-font-text-style)
@@ -578,7 +575,6 @@
                       ;; * font-ascent / ascent
                       (values left (- font-ascent) right font-descent)))))))))
 
-
 (defmethod make-medium-gcontext* (medium foreground background line-style text-style (ink color) clipping-region)
   (let* ((drawable (sheet-mirror (medium-sheet medium)))
          (port (port medium)))
@@ -628,7 +624,6 @@
              :start start :end end
              :translate #'translate)))))))
 
-
 (defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
   (with-slots (gc) medium
     (when gc
@@ -639,10 +634,8 @@
               (setf (xlib:gcontext-font gc)
                     fn))))))))
 
-;;;
 ;;; This fixes the worst offenders making the assumption that drawing
 ;;; would be idempotent.
-;;;
 
 (defmethod clim:handle-repaint :around ((s clim:sheet-with-medium-mixin) r)
   (let ((m (clim:sheet-medium s))
@@ -659,4 +652,3 @@
         (call-next-method s r)
         ;; FIXME: Shouldn't McCLIM always do this?
         (medium-force-output (sheet-medium s))))))
-
