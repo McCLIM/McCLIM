@@ -327,8 +327,7 @@
 	      (let ((current-baseline baseline))
 		(setf baseline current-baseline))		
 	      (stream-wrap-line stream)
-	      (seos-write-string stream string split end))
-	    ))))))
+	      (seos-write-string stream string split end))))))))
 
 (defun seos-write-newline (stream)
   (let ((medium       (sheet-medium stream))
