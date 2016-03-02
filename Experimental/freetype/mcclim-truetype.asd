@@ -1,20 +1,17 @@
 ;;;; -*- Lisp -*-
 
-#|
-
-The mcclim-truetype system extends the CLX backend with antialiased font
-rendering in 100% Common Lisp (no foreign code), using the XRender
-extension and the libraries zpb-ttf and cl-vectors.
-
-To autoload mcclim-truetype after mcclim, link this file to a
-directory in your asdf:*central-registry* and add the following to
-your lisp's init file:
-
- (defmethod asdf:perform :after ((o asdf:load-op) 
-                                 (s (eql (asdf:find-system :clim-clx))))
-   (asdf:oos 'asdf:load-op :mcclim-freetype))
-
-|#
+;;;; The mcclim-truetype system extends the CLX backend with
+;;;; antialiased font rendering in 100% Common Lisp (no foreign code),
+;;;; using the XRender extension and the libraries zpb-ttf and
+;;;; cl-vectors.
+;;;;
+;;;; To autoload mcclim-truetype after mcclim, make sure ASDF can find
+;;;; it, and then add the following code to the init file for your
+;;;; Lisp implementation:
+;;;;
+;;;;  (defmethod asdf:perform :after ((o asdf:load-op)
+;;;;                                  (s (eql (asdf:find-system :clim-clx))))
+;;;;    (asdf:oos 'asdf:load-op :mcclim-truetype))
 
 (in-package :asdf-user)
 
@@ -33,4 +30,3 @@ your lisp's init file:
     (unless autoconfig
       (error "Couldn't find autoconfigure-fonts. This shouldn't happen."))
   (funcall autoconfig)))
-
