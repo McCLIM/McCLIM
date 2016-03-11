@@ -92,9 +92,6 @@
 				     'misc-tests)))))))))
 
 (defun demodemo ()
-  #+nil
-  (loop for port in climi::*all-ports*
-      do (destroy-port port))
   (run-frame-top-level (make-application-frame 'demodemo)))
 
 (define-application-frame hbox-test 
