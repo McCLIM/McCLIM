@@ -21,17 +21,17 @@
 
 (in-package :clim-demo)
 
-;; Gadget Test/Demo
+;;; Gadget Test/Demo
 
-;; To run the gadget test:   (clim-demo:gadget-test)
+;;; To run the gadget test:   (clim-demo::gadget-test)
 
-;; McCLIM contains an alternate look and feel entitled "pixie" which is
-;; not the default. It can by used by creating your application using an
-;; alternate frame manager, clim-internals::pixie/clx-look.
+;;; McCLIM contains an alternate look and feel entitled "pixie" which
+;;; is not the default. It can by used by creating your application
+;;; using an alternate frame manager, clim-internals::pixie/clx-look.
 
-;; To run the gadget test using the pixie frame manager:
-;; (gadget-test 'clim-internals::pixie/clx-look)
-;; This may require you to load the clim-looks system.
+;;; To run the gadget test using the pixie frame manager:
+;;; (gadget-test 'clim-internals::pixie/clx-look)
+;;; This may require you to load the clim-looks system.
 
 (defun gadget-test (&optional frame-manager-name)
   (run-frame-top-level
