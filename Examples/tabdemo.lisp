@@ -118,12 +118,10 @@
   (setf (tab-layout-pages (tabdemo-layout))
 	(let ((old (tab-layout-pages (tabdemo-layout)))
 	      (new '()))
-	  (loop
-	      while old
-	      for i = (random (length old))
-	      do
-		(push (elt old i) new)
-		(setf old (remove-if (constantly t) old :start i :count 1)))
+	  (loop while old
+		for i = (random (length old))
+		do (push (elt old i) new)
+		   (setf old (remove-if (constantly t) old :start i :count 1)))
 	  new)))
 
 (define-tabdemo-command (com-change-page-title :name t)
