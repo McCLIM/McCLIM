@@ -146,6 +146,3 @@
   (let ((page (tab-layout-enabled-page (tabdemo-layout))))
     (when page
       (setf (getf (tab-page-drawing-options page) :ink) +green+))))
-
-#+(or)
-(tabdemo:tabdemo)
