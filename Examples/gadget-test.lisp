@@ -236,9 +236,12 @@
 
 (defmethod run-frame-top-level :around ((frame gadget-test) &key &allow-other-keys)
   ;; FIXME: Timer events appear to have rotted.
-  ;; Also, the following won't work because the frame has not really been realized yet,
-  ;; so you can't get at its panes. Yet it has worked, and recently. Odd.
-  ;; (clim-internals::schedule-timer-event (find-pane-named frame 'radar) 'radiate 0.1)
+  ;; Also, the following won't work because the frame has not really
+  ;; been realized yet, so you can't get at its panes. Yet it has
+  ;; worked, and recently. Odd.
+  ;; (clim-internals::schedule-timer-event
+  ;;   (find-pane-named frame 'radar)
+  ;;   'radiate 0.1)
   (call-next-method))
 
 (defclass radar-pane (basic-gadget)
