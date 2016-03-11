@@ -41,8 +41,6 @@
                                                              :port (find-port)))
        (make-application-frame 'gadget-test))))
 
-(export 'gadget-test)
-
 (defun run-pixie-test (name)
   (when name
     (run-frame-top-level
