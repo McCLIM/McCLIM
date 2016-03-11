@@ -241,17 +241,16 @@
   ;; (clim-internals::schedule-timer-event (find-pane-named frame 'radar) 'radiate 0.1)
   (call-next-method))
 
-(defclass radar-pane (basic-gadget) (
-  (points
-    :initform '((0.01 0.01 0.10 0.10)
-                (0.10 0.02 0.70 0.40)
-                (0.20 0.03 0.60 0.30)
-                (0.20 0.04 0.20 0.50)
-                (0.20 0.05 0.60 0.20)
-                (0.20 0.06 0.30 0.40)
-                (0.20 0.07 0.60 0.90)
-                (0.20 0.08 0.80 0.30)
-                (0.20 0.09 0.60 0.20)))))
+(defclass radar-pane (basic-gadget)
+  ((points :initform '((0.01 0.01 0.10 0.10)
+		       (0.10 0.02 0.70 0.40)
+		       (0.20 0.03 0.60 0.30)
+		       (0.20 0.04 0.20 0.50)
+		       (0.20 0.05 0.60 0.20)
+		       (0.20 0.06 0.30 0.40)
+		       (0.20 0.07 0.60 0.90)
+		       (0.20 0.08 0.80 0.30)
+		       (0.20 0.09 0.60 0.20)))))
 
 (defmethod handle-event ((pane radar-pane) (event timer-event))
   (with-slots (points) pane
