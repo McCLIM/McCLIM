@@ -36,24 +36,26 @@
 (defun gadget-test (&optional frame-manager-name)
   (run-frame-top-level
    (if frame-manager-name 
-       (make-application-frame 'gadget-test
-                               :frame-manager (make-instance frame-manager-name
-                                                             :port (find-port)))
+       (make-application-frame
+	'gadget-test
+	:frame-manager (make-instance frame-manager-name :port (find-port)))
        (make-application-frame 'gadget-test))))
 
 (defun run-pixie-test (name)
   (when name
     (run-frame-top-level
-     (make-application-frame name
-                             :frame-manager (make-instance 'clim-internals::pixie/clx-look
-                                                           :port (find-port))))))
+     (make-application-frame
+      name
+      :frame-manager (make-instance 'clim-internals::pixie/clx-look
+		       :port (find-port))))))
 
-(defmethod gadget-test-frame-top-level ((frame application-frame)
-				       &key (command-parser 'command-line-command-parser)
-				       (command-unparser 'command-line-command-unparser)
-				       (partial-command-parser
-					'command-line-read-remaining-arguments-for-partial-command)
-				       (prompt "Command: "))
+(defmethod gadget-test-frame-top-level
+    ((frame application-frame)
+     &key (command-parser 'command-line-command-parser)
+       (command-unparser 'command-line-command-unparser)
+       (partial-command-parser
+	'command-line-read-remaining-arguments-for-partial-command)
+       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (catch 'exit
     (clim-extensions:simple-event-loop))
