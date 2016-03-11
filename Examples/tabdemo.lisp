@@ -65,6 +65,7 @@
 			    ("Presentation Tests"
 			     :menu tabdemo-presentation-tests-menu)))
 
+;;; This is the main entry point for starting the demo.
 (defun tabdemo ()
   (run-frame-top-level (make-application-frame 'tabdemo)))
 
