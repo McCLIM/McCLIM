@@ -289,10 +289,3 @@
                                     orx 0
                                     :ink +white+ :filled nil))))))))
   (clim-internals::schedule-timer-event pane 'radiate 0.1))
-
-#-sbcl
-(defun common-lisp-user::lg ()
-  ; convenience, because I'm lazy
-  (with-open-file (file "Examples/grammar.lisp" :external-format :euc-kr)
-    (load file))
-  (run-pixie-test 'grammar))
