@@ -131,12 +131,10 @@
 
 (define-tabdemo-command (com-paint-page-red :name t)
     ()
-  (let ((page (tab-layout-enabled-page (tabdemo-layout))))
-    (when page
-      (setf (getf (tab-page-drawing-options page) :ink) +red+))))
+  (with-enabled-tab-layout-page page
+    (setf (getf (tab-page-drawing-options page) :ink) +red+)))
 
 (define-tabdemo-command (com-paint-page-green :name t)
     ()
-  (let ((page (tab-layout-enabled-page (tabdemo-layout))))
-    (when page
-      (setf (getf (tab-page-drawing-options page) :ink) +green+))))
+  (with-enabled-tab-layout-page page
+    (setf (getf (tab-page-drawing-options page) :ink) +green+)))
