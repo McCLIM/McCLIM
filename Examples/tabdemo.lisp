@@ -69,8 +69,9 @@
 (defun tabdemo ()
   (run-frame-top-level (make-application-frame 'tabdemo)))
 
-;; FIXME: It only get errors due to bogus frame names with FIND-PANE-NAMED.
-;; Ignoring the symbol identity and case works around that.
+;; FIXME: It only get errors due to bogus frame names with
+;; FIND-PANE-NAMED.  Ignoring the symbol identity and case works
+;; around that.
 (defun sane-find-pane-named (frame name)
   (find name
 	(climi::frame-named-panes frame)
