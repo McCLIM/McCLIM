@@ -69,15 +69,6 @@
 (defun tabdemo ()
   (run-frame-top-level (make-application-frame 'tabdemo)))
 
-;;;(define-presentation-to-command-translator remove-pane
-;;;    (tab-page com-remove-tab-page tabdemo
-;;;	      :gesture :describe
-;;;	      :documentation "remove this pane"
-;;;	      :pointer-documentation "remove this pane")
-;;;  (object)
-;;;  (list object))
-
-
 ;; FIXME: It only get errors due to bogus frame names with FIND-PANE-NAMED.
 ;; Ignoring the symbol identity and case works around that.
 (defun sane-find-pane-named (frame name)
