@@ -116,6 +116,11 @@
 		   (setf old (remove-if (constantly t) old :start i :count 1)))
 	  new)))
 
+(defmacro with-enabled-tab-layout-page (var &body body)
+  `(let ((,var (tab-layout-enabled-page (tabdemo-layout))))
+     (unless (null page)
+       ,@body)))
+
 (define-tabdemo-command (com-change-page-title :name t)
     ()
   (let ((page (tab-layout-enabled-page (tabdemo-layout))))
