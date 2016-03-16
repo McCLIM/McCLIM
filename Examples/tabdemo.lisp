@@ -101,7 +101,7 @@
   (accept 'special-page)
   (write-line "Correct answer!  That's the special page." *standard-input*))
 
-(define-tabdemo-command (com-quit-tabdemo :name t)
+(define-tabdemo-command (com-quit :name t)
     ()
   (frame-exit *application-frame*))
 
