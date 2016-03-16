@@ -123,12 +123,11 @@
 
 (define-tabdemo-command (com-change-page-title :name t)
     ()
-  (let ((page (tab-layout-enabled-page (tabdemo-layout))))
-    (when page
-      (setf (tab-page-title page)
-	    (accept 'string
-		    :prompt "New title"
-		    :default (tab-page-title page))))))
+  (with-enabled-tab-layout-page page
+    (setf (tab-page-title page)
+	  (accept 'string
+		  :prompt "New title"
+		  :default (tab-page-title page)))))
 
 (define-tabdemo-command (com-paint-page-red :name t)
     ()
