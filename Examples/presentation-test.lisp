@@ -46,5 +46,3 @@
 			      :default-type 'real)))
 	 (fresh-line)
 	 (incf (summation-total frame) new-val))))))
-
-
