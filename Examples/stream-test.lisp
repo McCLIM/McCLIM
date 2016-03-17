@@ -34,7 +34,6 @@
 	(when (characterp gesture)
       (stream-write-char stream gesture))))))
 
-
 (defmethod stream-read-gesture :around ((stream echo-interactor-pane)
 				       &key &allow-other-keys)
   (let* ((results (multiple-value-list (call-next-method)))
@@ -44,12 +43,6 @@
       (print gesture *trace-output*))
     (values-list results)))
 
-#+nil
-(define-application-frame stream-test ()
-  ()
-  (:pane (vertically ()
-	   (make-pane 'echo-interactor-pane)) ))
-
 (define-application-frame stream-test ()
   ()
   (:panes
@@ -58,9 +51,6 @@
    (default (vertically () tester))))
 
 (defun run-test (name)
-;  (loop for port in climi::*all-ports*
-;	do (destroy-port port)) 
-;  (setq climi::*all-ports* nil)
   (when name
     (run-frame-top-level (make-application-frame name))))
 
