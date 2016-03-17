@@ -45,19 +45,16 @@
     (with-output-to-postscript-stream
         (stream file-stream
                 :header-comments '(:title "PostScript Medium Test Output"))
-
         (loop repeat 200
            do (draw-line* stream (random 600) (random 900)
                           (random 600) (random 900)
                           :ink (make-random-color)))
         (new-page stream)
-
         (loop repeat 1000
            do (draw-point* stream (random 600) (random 900)
                            :ink (make-random-color)
                            :line-thickness (random 50)))
         (new-page stream)
-
         (formatting-table (stream :x-spacing 50
                                   :y-spacing 20)
           (formatting-row (stream)
@@ -84,7 +81,6 @@
                                 :text-style (make-text-style
                                              :sans-serif :bold :huge))))))
         (new-page stream)
-
         (with-translation (stream 540 75)
           (with-scaling (stream 3)
             (with-rotation (stream (/ pi 2))
@@ -98,12 +94,9 @@
               (clim:draw-polygon* stream '(20 20 50 80 40 20) :filled nil)
               (clim:draw-polygon* stream '(30 90 40 110 20 110)))))
         (new-page stream)
-
         (draw-rosette stream 300 300 200 18
                       :ink +steel-blue+ :line-thickness 2)
-
         (new-page stream)
-
         (with-text-style (stream '(:serif nil :huge))
           (draw-text* stream "Text alignment test" 170 20
                       :text-family :sans-serif
@@ -133,9 +126,7 @@
                       :align-y :baseline)
           (draw-line* stream 50 200 535 200
                       :ink +red+))
-
         (new-page stream)
-
         (formatting-table (stream)
           (flet ((draw (angle line-joint-shape)
                    (let ((record
