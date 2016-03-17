@@ -27,7 +27,10 @@
 (defmethod handle-repaint ((pane slider-test-pane) region)
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
+    (display-gadget-background pane
+			       (gadget-current-color pane)
+			       0 0
+			       (- x2 x1) (- y2 y1))))
 
 (in-package :clim-demo)
 
@@ -41,11 +44,15 @@
   `(defun ,(make-symbol name) (gadget value)
      (let ((colored (find-if (lambda (x) (typep x 'climi::slider-test-pane))
                              (sheet-siblings gadget))))
-       (setf ,(case position (1 `(car *rgb*)) (2 `(cadr *rgb*)) (3 `(caddr *rgb*)))
+       (setf ,(case position
+		(1 `(car *rgb*))
+		(2 `(cadr *rgb*))
+		(3 `(caddr *rgb*)))
 	     (/ value 10000)
 	     (clim-internals::gadget-current-color colored)
 	     (apply #'clim-internals::make-named-color "our-color"
-		    (mapcar #'(lambda (color) (coerce color 'single-float)) *rgb*))))))
+		    (mapcar #'(lambda (color) (coerce color 'single-float))
+			    *rgb*))))))
 
 (defvar callback-red (define-slider-callback "SLIDER-R" 1))
 (defvar callback-green (define-slider-callback "SLIDER-G" 2))
