@@ -56,20 +56,9 @@
 (defvar callback-green (define-slider-callback "SLIDER-G" 2))
 (defvar callback-blue (define-slider-callback "SLIDER-B" 3))
 
-;; test functions
+;;; Test functions.
 
 (defun colorslider ()
-;  (declare (special frame fm port pane medium graft))
-;  (loop for port in climi::*all-ports*
-;      do (destroy-port port))
-;  (setq climi::*all-ports* nil)
-;  (setq fm (find-frame-manager))
-;  (setq frame (make-application-frame 'colorslider
-;                                      :frame-manager fm))
-;  (setq port (port fm))
-;  (setq pane (frame-panes frame))
-;  (setq medium (sheet-medium pane))
-;  (setq graft (graft frame))
   (run-frame-top-level (make-application-frame 'colorslider)))
 
 (defmethod slidertest-frame-top-level
@@ -81,49 +70,6 @@
      (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (clim-extensions:simple-event-loop))
-
-;(define-application-frame colorslider () ()
-;  (:panes
-;   (text    :text-field
-;	    :value "Pick a color"
-;	    ;;:height 50
-;            ;;:width 100
-;            )
-;   (slider-r  :slider
-;	      :drag-callback callback-red
-;	      :value-changed-callback callback-red
-;	      :min-value 0
-;	      :max-value 9999
-;	      :value 0
-;	      :show-value-p t
-;	      ;;:orientation :horizontal
-;	      :width 120)
-;   (slider-g  :slider
-;	      :drag-callback callback-green
-;	      :value-changed-callback callback-green
-;	      :min-value 0
-;	      :max-value 9999
-;	      :value 0
-;	      :width 120)
-;   (slider-b  :slider
-;	      :drag-callback callback-blue
-;	      :value-changed-callback callback-blue
-;	      :min-value 0
-;	      :max-value 9999
-;	      :value 0
-;	      :width 120)
-;   (colored :slider-test
-;            :normal +black+
-;            :width 200 :height 90))
-;  (:layouts
-;   (default (vertically ()
-;                        text
-;                        (horizontally ()
-;                                      slider-r
-;                                      slider-g
-;                                      slider-b
-;                                      colored))))
-;  (:top-level (slidertest-frame-top-level . nil)))
 
 (define-application-frame colorslider
     () ()
@@ -162,15 +108,6 @@
               :normal +black+
               :width 200 :height 90))
     (:layouts
-     #+nil
-     (default (vertically ()
-                text
-                (horizontally ()
-                  (vertically (:equalize-width t)
-                    (horizontally () (make-pane 'push-button :label "Red:") slider-r)
-                    (horizontally () (make-pane 'push-button :label "Green:") slider-g)
-                    (horizontally () (make-pane 'push-button :label "Blue:") slider-b))
-                  colored)))
      (default (vertically ()
                 text
                 slider-r
