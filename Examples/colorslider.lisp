@@ -21,7 +21,7 @@
 
 (in-package :clim-internals)
 
-;; example gadget definition
+;;; Example gadget definition.
 (defclass slider-test-pane (standard-gadget) ())
 
 (defmethod handle-repaint ((pane slider-test-pane) region)
@@ -36,11 +36,11 @@
 
 (in-package :clim-demo)
 
-;; slider callback and macro
+;;; Slider callback and macro.
 
 (defvar *rgb* '(0 0 0))
 
-;; Macro defining all the slider-call-back
+;;; Macro defining all the slider-call-back.
 
 (defmacro define-slider-callback (name position)
   `(defun ,(make-symbol name) (gadget value)
