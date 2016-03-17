@@ -19,7 +19,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; Example gadget definition.
 (defclass slider-test-pane (standard-gadget) ())
@@ -28,11 +28,6 @@
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
     (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
-
-#+nil
-(defmethod handle-event ((pane slider-test-pane) (event window-repaint-event))
-  (declare (ignorable event))
-  (dispatch-repaint pane (sheet-region pane)))
 
 (in-package :clim-demo)
 
@@ -74,36 +69,32 @@
 (define-application-frame colorslider
     () ()
     (:panes
-     (text    :text-field
-              :value "Pick a color"
-              ;;:height 50
-              ;;:width 100
-              )
-     (slider-r  :slider
-                :drag-callback callback-red
-                :value-changed-callback callback-red
-                :min-value 0
-                :max-value 9999
-                :value 0
-                :show-value-p t
-                :orientation :horizontal
-                :width 120)
-     (slider-g  :slider
-                :drag-callback callback-green
-                :value-changed-callback callback-green
-                :min-value 0
-                :max-value 9999
-                :orientation :horizontal
-                :value 0
-                :width 120)
-     (slider-b  :slider
-                :drag-callback callback-blue
-                :value-changed-callback callback-blue
-                :min-value 0
-                :max-value 9999
-                :orientation :horizontal
-                :value 0
-                :width 120)
+     (text :text-field :value "Pick a color")
+     (slider-r :slider
+	       :drag-callback callback-red
+	       :value-changed-callback callback-red
+	       :min-value 0
+	       :max-value 9999
+	       :value 0
+	       :show-value-p t
+	       :orientation :horizontal
+	       :width 120)
+     (slider-g :slider
+	       :drag-callback callback-green
+	       :value-changed-callback callback-green
+	       :min-value 0
+	       :max-value 9999
+	       :orientation :horizontal
+	       :value 0
+	       :width 120)
+     (slider-b :slider
+	       :drag-callback callback-blue
+	       :value-changed-callback callback-blue
+	       :min-value 0
+	       :max-value 9999
+	       :orientation :horizontal
+	       :value 0
+	       :width 120)
      (colored :slider-test
               :normal +black+
               :width 200 :height 90))
