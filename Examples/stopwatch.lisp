@@ -34,8 +34,7 @@
 (in-package :clim-demo)
 
 (define-application-frame stopwatch ()
-  (
-   ;; state of the timer
+  (;; state of the timer
    (start-time :accessor start-time :initform 0
 	       :documentation "In internal time units")
    (elapsed-time :accessor elapsed-time :initform 0
@@ -132,10 +131,10 @@
   ()
   (:default-initargs :modifier-state 0))
 
-;;; Paul's example, which works in Lispworks' CLIM, doesn't specialize on the
-;;; client argument. Mcclim has a primary method defined on
-;;; standard-sheet-input-mixin which does nothing, so we need to specialize
-;;; the first argument here to override that method.
+;;; Paul's example, which works in Lispworks' CLIM, doesn't specialize
+;;; on the client argument. Mcclim has a primary method defined on
+;;; standard-sheet-input-mixin which does nothing, so we need to
+;;; specialize the first argument here to override that method.
 (defmethod handle-event ((client application-pane) (event my-event))
   (with-application-frame (frame)
     (redisplay-frame-pane frame client)))
