@@ -87,7 +87,8 @@
        (logand green-mask (ash pixel green-mask-gap))
        (logand blue-mask (ash pixel blue-mask-gap)))))
 
-; We only handle case where screen type (i.e. visual-class) is :truecolor
+;;; We only handle case where screen type (i.e. visual-class) is
+;;; :truecolor.
 (defun choose-computing-pixel (image depth)
   (declare (type image image)
 	   (type (unsigned-byte 16) depth))
@@ -221,7 +222,7 @@
 			 (type fixnum data-width)
 			 (type xlib::image server-image))
 
-		; optimisation on server
+		;; optimisation on server
 		(let ((x-min* (floor x-min))
 		      (y-min* (floor y-min)) ;why +1 ?
 		      (x-max* (floor x-max)) ;idem
