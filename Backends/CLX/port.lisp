@@ -400,13 +400,13 @@
                                (round-coordinate (bounding-rectangle-width (%sheet-mirror-region sheet)))
                                width)
                     :height (if (%sheet-mirror-region sheet)
-                               (round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet)))
-                               height)
+				(round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet)))
+				height)
                     :x (if (%sheet-mirror-transformation sheet)
-                               (round-coordinate (nth-value 0 (transform-position
-                                                               (%sheet-mirror-transformation sheet)
-                                                               0 0)))
-                               x)
+			   (round-coordinate (nth-value 0 (transform-position
+							   (%sheet-mirror-transformation sheet)
+							   0 0)))
+			   x)
                     :y (if (%sheet-mirror-transformation sheet)
                            (round-coordinate (nth-value 1 (transform-position
                                                            (%sheet-mirror-transformation sheet)
