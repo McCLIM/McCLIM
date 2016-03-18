@@ -395,6 +395,7 @@
 	   (screen (clx-port-screen port))
            (pixel (xlib:alloc-color (xlib:screen-default-colormap screen) color))
 	   (mirror-region (%sheet-mirror-region sheet))
+	   (mirror-transformation (%sheet-mirror-transformation sheet))
            (window (xlib:create-window
                     :parent (sheet-mirror (sheet-parent sheet))
                     :width (if mirror-region
@@ -403,14 +404,14 @@
                     :height (if mirror-region
 				(round-coordinate (bounding-rectangle-height mirror-region))
 				height)
-                    :x (if (%sheet-mirror-transformation sheet)
+                    :x (if mirror-transformation
 			   (round-coordinate (nth-value 0 (transform-position
-							   (%sheet-mirror-transformation sheet)
+							   mirror-transformation
 							   0 0)))
 			   x)
-                    :y (if (%sheet-mirror-transformation sheet)
+                    :y (if mirror-transformation
                            (round-coordinate (nth-value 1 (transform-position
-                                                           (%sheet-mirror-transformation sheet)
+                                                           mirror-transformation
                                                            0 0)))
                            y)
                     :border-width 0 ;;border-width
