@@ -392,7 +392,8 @@
            (color (multiple-value-bind (r g b)
                       (color-rgb desired-color)
                     (xlib:make-color :red r :green g :blue b)))
-           (pixel (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port)) color))
+	   (screen (clx-port-screen port))
+           (pixel (xlib:alloc-color (xlib:screen-default-colormap screen) color))
            (window (xlib:create-window
                     :parent (sheet-mirror (sheet-parent sheet))
                     :width (if (%sheet-mirror-region sheet)
