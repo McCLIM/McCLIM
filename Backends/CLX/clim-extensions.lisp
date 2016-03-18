@@ -19,9 +19,9 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (eval-when (:compile-toplevel :load-toplevel)
-  ; I don't think that this should be necessarily here,
-  ; but while it is, it needs to ensure that the use-package'ing
-  ; happens before the rest of the file is read.
+  ;; I don't think that this should be necessarily here, but while it
+  ;; is, it needs to ensure that the use-package'ing happens before
+  ;; the rest of the file is read.
 
 (in-package :clim-clx)
   (use-package :IMAGE)
