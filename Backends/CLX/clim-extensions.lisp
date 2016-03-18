@@ -358,13 +358,15 @@
 (defmethod realize-mirror ((port clx-port) (pane image-pane))
   (realize-mirror-aux port pane :backing-store :always))
 
-;; [Julien] As drawing-image mostly doesn't work, except drawaing everything (sigh !..)
-;;          the region provided by graphical server is ignored, and the entire pane 
-;;          region is redrawn. Bugs must be fixed before doing the right thing.
-;;pdm: No, don't ignore the region, otherwise the pane becomes completely
-;; unusable, spending all the time redrawing, redrawing, redrawing, ...
-;; There's no reason to ignore the region, everything works fine with it
-;; AFAIK.
+;;; [Julien] As drawing-image mostly doesn't work, except drawaing
+;;; everything (sigh !..)  the region provided by graphical server is
+;;; ignored, and the entire pane region is redrawn. Bugs must be fixed
+;;; before doing the right thing.
+;;;
+;;;pdm: No, don't ignore the region, otherwise the pane becomes
+;;; completely unusable, spending all the time redrawing, redrawing,
+;;; redrawing, ...  There's no reason to ignore the region, everything
+;;; works fine with it AFAIK.
 (defmethod handle-repaint ((pane image-pane) region)
   (with-slots (image) pane
     (when image
