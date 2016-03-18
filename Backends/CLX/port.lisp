@@ -73,9 +73,9 @@
  to generalise this for the future.
 |#
 
-; this is to inform the text renderer which fontset it should be using.
-; it is a complement to the graphics-context stuff, effectively.
-; the #'translate uses/needs this to switch fonts
+;;; This is to inform the text renderer which fontset it should be
+;;; using.  It is a complement to the graphics-context stuff,
+;;; effectively.  The #'translate uses/needs this to switch fonts.
 
 (defclass fontset () (
   ; of the form ((start . stop) font translator)
