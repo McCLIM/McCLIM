@@ -394,13 +394,14 @@
                     (xlib:make-color :red r :green g :blue b)))
 	   (screen (clx-port-screen port))
            (pixel (xlib:alloc-color (xlib:screen-default-colormap screen) color))
+	   (mirror-region (%sheet-mirror-region sheet))
            (window (xlib:create-window
                     :parent (sheet-mirror (sheet-parent sheet))
-                    :width (if (%sheet-mirror-region sheet)
-                               (round-coordinate (bounding-rectangle-width (%sheet-mirror-region sheet)))
+                    :width (if mirror-region
+                               (round-coordinate (bounding-rectangle-width mirror-region))
                                width)
-                    :height (if (%sheet-mirror-region sheet)
-				(round-coordinate (bounding-rectangle-height (%sheet-mirror-region sheet)))
+                    :height (if mirror-region
+				(round-coordinate (bounding-rectangle-height mirror-region))
 				height)
                     :x (if (%sheet-mirror-transformation sheet)
 			   (round-coordinate (nth-value 0 (transform-position
