@@ -4,7 +4,7 @@
 ;;;  (c) copyright 2000,2001 by 
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2001, 2014 by
+;;;  (c) copyright 2000, 2001, 2014, 2016 by
 ;;;           Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
