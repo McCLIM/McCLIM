@@ -74,7 +74,6 @@
       (find-first-defined-class (find-symbols (generate-clx-pane-specs type)))
       type))
   
-  
 ;;; This is an example of how make-pane-1 might create specialized
 ;;; instances of the generic pane types based upon the type of the
 ;;; frame-manager. However, in the CLX case, we don't expect there to
