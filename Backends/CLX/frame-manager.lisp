@@ -24,8 +24,7 @@
 ;;; CLX-FRAME-MANAGER class
 
 (defclass clx-frame-manager (frame-manager)
-  ()
-  )
+  ())
 
 ;; Abstract pane lookup logic
 
