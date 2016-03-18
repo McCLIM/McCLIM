@@ -23,9 +23,9 @@
   ;; is, it needs to ensure that the use-package'ing happens before
   ;; the rest of the file is read.
 
-(in-package :clim-clx)
+  (in-package :clim-clx)
   (use-package :IMAGE)
-(use-package :clim-extensions))
+  (use-package :clim-extensions))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
