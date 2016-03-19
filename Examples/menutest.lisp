@@ -35,9 +35,7 @@
            :display-time nil
            :text-style (make-text-style :sans-serif :roman :normal)))
   (:layouts
-   (defaults (vertically () screen)))
-  #+nil
-  (:top-level (menutest-frame-top-level)))
+   (defaults (vertically () screen))))
 
 (define-menutest-command com-file ()
   (format *standard-output* "You pressed the File button.~%")
