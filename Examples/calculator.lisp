@@ -26,11 +26,6 @@
   (make-text-style :sans-serif :roman :large))
 
 (defun calculator ()
-  #+nil
-  (progn
-    (loop for port in climi::*all-ports*
-        do (destroy-port port))
-    (setq climi::*all-ports* nil))
   (let ((frame (make-application-frame 'calculator)))
     (run-frame-top-level frame)
     frame))
