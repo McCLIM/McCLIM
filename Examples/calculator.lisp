@@ -129,4 +129,3 @@
              (list seven eight divide)
              (list nine zero result))))))
   (:top-level (calculator-frame-top-level . nil)))
-
