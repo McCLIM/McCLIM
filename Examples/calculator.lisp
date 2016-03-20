@@ -20,7 +20,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :clim-demo)
+(in-package #:clim-demo)
 
 (defparameter *calculator-text-style*
   (make-text-style :sans-serif :roman :large))
@@ -72,12 +72,13 @@
       (pop state))
     (show 0)))
 
-(defmethod calculator-frame-top-level ((frame application-frame)
-				       &key (command-parser 'command-line-command-parser)
-				       (command-unparser 'command-line-command-unparser)
-				       (partial-command-parser
-					'command-line-read-remaining-arguments-for-partial-command)
-				       (prompt "Command: "))
+(defmethod calculator-frame-top-level
+    ((frame application-frame)
+     &key (command-parser 'command-line-command-parser)
+       (command-unparser 'command-line-command-unparser)
+       (partial-command-parser
+	'command-line-read-remaining-arguments-for-partial-command)
+       (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (clim-extensions:simple-event-loop))
      
