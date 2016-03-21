@@ -17,3 +17,6 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (cl:in-package #:common-lisp-user)
+
+(defpackage #:mcclim-clx-core
+  (:use #:common-lisp))
