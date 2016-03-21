@@ -1,5 +1,3 @@
-;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: MENUTEST; Base: 10; Lowercase: Yes -*-
-
 ;;;  (c) copyright 2000 by 
 ;;;	      Robert Strandh (robert.strandh@gmail.com)
 
