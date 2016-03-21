@@ -27,3 +27,20 @@
    (%screen :initarg :screen :reader screen)
    ;; this slot contains the root window of the screen.
    (%root :initarg :root :reader root)))
+
+(defmethod initialize-instance :after ((port port) &key)
+  (let* ((options (cdr (clim:port-server-path port)))
+	 (host (getf options :host))
+	 (display-id (getf options :display-id))
+	 (protocol (getf options :protocol))
+	 (screen-id (get options :screen-id))
+	 (display (xlib:open-display host
+				     :display display-id
+				     :protocol protocol))
+	 (roots (xlib:display-roots display))
+	 (screen (nth screen-id roots))
+	 (root (xlib:screen-root screen)))
+    (reinitialize-instance port
+			   :display display
+			   :screen screen
+			   :root root)))
