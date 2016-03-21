@@ -16,16 +16,14 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package #:asdf-user)
+(cl:in-package #:mcclim-clx-core)
 
-;;; This code implements an alternative CLX backend.  It differs from
-;;; the previous CLX backend in that only the root window of a
-;;; hierarchy is mirrored.
-
-(defsystem mcclim-clx-core
-  :depends-on (:mcclim)
-  :serial t
-  :components
-  ((:file "packages")
-   (:file "port")
-   (:file "medium")))
+(defclass port (clim:basic-port)
+  (;; This slot contains the CLX DISPLAY object that defines the
+   ;; connection between this port and the display server.
+   (%display :initarg :display :reader display)
+   ;; This slot contains the CLX SCREEN object that contain the root
+   ;; window of this port.
+   (%screen :initarg :screen :reader screen)
+   ;; this slot contains the root window of the screen.
+   (%root :initarg :root :reader root)))
