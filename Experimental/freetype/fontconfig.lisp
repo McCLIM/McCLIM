@@ -56,10 +56,7 @@
   (cerror "Proceed"
           "~%~%NOTE:~%~
 * McCLIM was unable to configure itself automatically using
-  fontconfig. Therefore you must configure it manually.
-  Remember to set mcclim-freetype:*freetype-font-path* to the
-  location of the Bitstream Vera family of fonts on disk. If you
-  don't have them, get them from http://www.gnome.org/fonts/~%"))
+  fontconfig. Therefore you must configure it manually.~%"))
 
 (defun find-fontconfig-font (font-fc-name)
   (with-input-from-string
