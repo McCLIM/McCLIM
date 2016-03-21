@@ -23,3 +23,9 @@
 (defun point-paintable-p (x y)
   (and (<= #x-8000 x #x7fff)
        (<= #x-8000 y #x7fff)))
+
+;;; A line segment is said to be paintable if both its endpoints are
+;;; paintable.
+(defun line-segment-paintable-p (x1 y1 x2 y2)
+  (and (point-paintable-p x1 y1)
+       (point-paintable-p x2 y2)))
