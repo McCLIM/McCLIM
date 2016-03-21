@@ -22,3 +22,8 @@
 ;;; the previous CLX backend in that only the root window of a
 ;;; hierarchy is mirrored.
 
+(defsystem mcclim-clx-core
+  :depends-on (:mcclim)
+  :serial t
+  :components
+  ((:file "packages")))
