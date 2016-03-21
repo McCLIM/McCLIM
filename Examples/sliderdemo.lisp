@@ -28,7 +28,7 @@
   (let ((frame (make-application-frame 'sliderdemo)))
     (run-frame-top-level frame)))
 
-(defmacro queue-number(int)
+(defmacro queue-integer(int)
   `(lambda (gadget)
      (declare (ignore gadget))
      (let ((last-item (first (last *calc*))))
@@ -38,7 +38,7 @@
        (setf (gadget-value *text-field*)
              (princ-to-string (first (last *calc*)))))))
 
-(defmacro queue-operator (operator)
+(defmacro queue-op (operator)
   `(lambda (gadget)
      (declare (ignore gadget))
      (do-operation t)
@@ -93,14 +93,14 @@
             :space-requirement (make-space-requirement
                                 :width 50 :height 50)
             :label ,label
-            :activate-callback (queue-operator #',operator)))
+            :activate-callback (queue-op #',operator)))
 
   (defun make-number-button-form (name label number)
     `(,name :push-button
             :space-requirement (make-space-requirement
                                 :width 50 :height 50)
             :label ,label
-            :activate-callback (queue-number ,number))))
+            :activate-callback (queue-integer ,number))))
 
 (define-application-frame sliderdemo () ()
   (:panes #.(make-operator-button-form 'plus "+" '+)
