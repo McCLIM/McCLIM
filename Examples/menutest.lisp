@@ -58,6 +58,3 @@
 		    :errorp nil
 		    :menu '(("Buffer" :menu buffer-command-table)
 			    ("File"   :command com-file)))
-
-
-
