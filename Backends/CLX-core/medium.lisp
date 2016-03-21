@@ -17,3 +17,9 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (cl:in-package #:mcclim-clx-core)
+
+;;; A point is said to be PAINTABLE if its coordinates are valid for
+;;; X11.  Recall that coordinates in X11 are signed 16-bit integers.
+(defun point-paintable-p (x y)
+  (and (<= #x-8000 x #x7fff)
+       (<= #x-8000 y #x7fff)))
