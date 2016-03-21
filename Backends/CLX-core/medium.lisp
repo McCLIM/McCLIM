@@ -16,15 +16,4 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package #:asdf-user)
-
-;;; This code implements an alternative CLX backend.  It differs from
-;;; the previous CLX backend in that only the root window of a
-;;; hierarchy is mirrored.
-
-(defsystem mcclim-clx-core
-  :depends-on (:mcclim)
-  :serial t
-  :components
-  ((:file "packages")
-   (:file "medium")))
+(cl:in-package #:mcclim-clx-core)
