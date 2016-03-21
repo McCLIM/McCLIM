@@ -14,8 +14,8 @@
       (rotatef min max)))
   (values min max))
 
-(defun accepting-square (&key (xmin -1.0) (xmax 1.0) (ymin -1.0) (ymax 1.0)
-			 (stream *query-io*))
+(defun accepting-square
+    (&key (xmin -1.0) (xmax 1.0) (ymin -1.0) (ymax 1.0) (stream *query-io*))
   (let (xmin-changed xmax-changed ymin-changed ymax-changed ptype)
     (accepting-values (stream :resynchronize-every-pass t)
       (fresh-line stream)
