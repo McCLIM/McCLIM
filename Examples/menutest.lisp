@@ -18,9 +18,10 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage :MENUTEST (:USE :CLIM :CLIM-EXTENSIONS :CLIM-LISP))
+(defpackage #:menutest
+  (:use :clim :clim-extensions :clim-lisp))
 
-(in-package :menutest)
+(in-package #:menutest)
 
 (defun menutest ()
   (let ((frame (make-application-frame 'menutest)))
