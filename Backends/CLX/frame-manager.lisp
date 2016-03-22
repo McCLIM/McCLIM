@@ -127,7 +127,7 @@
                 calling-mirror)))
       ;;
       (when (sheet-enabled-p sheet)
-        (xlib:map-window mirror) ))))
+        (xlib:map-window mirror)))))
 
 (defmethod tell-window-manager-about-space-requirements ((pane top-level-sheet-pane))
   (multiple-value-bind (w h x y) (climi::frame-geometry* (pane-frame pane))
@@ -143,7 +143,7 @@
                :max-width (min 65535 (round (space-requirement-max-width q)))
                :max-height (min 65535 (round (space-requirement-max-height q)))
                :min-width (round (space-requirement-min-width q))
-               :min-height (round (space-requirement-min-height q)))) ) )))
+               :min-height (round (space-requirement-min-height q))))))))
 
 (defmethod tell-window-manager-about-space-requirements ((pane t))
   ;; hmm
