@@ -947,11 +947,13 @@ order to produce a double-click")
     (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) (sheet-region pane)
       (let ((old-width  (- old-x2 old-x1))
             (old-height (- old-y2 old-y1)))
-        ;; avoid going into an infinite loop by not using (setf sheet-transformation)
+        ;; Avoid going into an infinite loop by not using
+        ;; (SETF SHEET-TRANSFORMATION).
         (setf (slot-value pane 'transformation)
 	      (make-translation-transformation x y))
         (invalidate-cached-transformations pane)
-        ;; avoid going into an infinite loop by not using (setf sheet-region)
+        ;; Avoid going into an infinite loop by not using
+        ;; (SETF SHEET-REGION).
         (setf (slot-value pane 'region)
 	      (make-bounding-rectangle 0 0 width height))
         (when (or (/= width  old-width)
