@@ -681,24 +681,24 @@ order to produce a double-click")
 
 ;;; Note
 
-;; This is how I read the relevant section of the specification:
-;;
-;; - space is only allocated / composed when the space allocation
-;;   protocol is invoked, that is when layout-frame is called.
-;;
-;; - CHANGE-SPACE-REQUIREMENTS is only for
-;;   . reparsing the user space options
-;;   . flushing the space requirement cache of that pane.
-;;
-;; - when within CHANGING-SPACE-REQUIREMENTS, the method for
-;;   CHANGING-SPACE-REQUIREMENTS on the top level sheet should not
-;;   invoke the layout protocol but remember that the SR of the frame
-;;   LAYOUT-FRAME then is then called when leaving
-;;   CHANGING-SPACE-REQUIREMENTS.
-;;
-;; - NOTE-SPACE-REQUIREMENTS-CHANGED is solely for the user.
-;;
-;; --GB 2003-03-16
+;;; This is how I read the relevant section of the specification:
+;;;
+;;; - space is only allocated / composed when the space allocation
+;;;   protocol is invoked, that is when layout-frame is called.
+;;;
+;;; - CHANGE-SPACE-REQUIREMENTS is only for
+;;;   . reparsing the user space options
+;;;   . flushing the space requirement cache of that pane.
+;;;
+;;; - when within CHANGING-SPACE-REQUIREMENTS, the method for
+;;;   CHANGING-SPACE-REQUIREMENTS on the top level sheet should not
+;;;   invoke the layout protocol but remember that the SR of the frame
+;;;   LAYOUT-FRAME then is then called when leaving
+;;;   CHANGING-SPACE-REQUIREMENTS.
+;;;
+;;; - NOTE-SPACE-REQUIREMENTS-CHANGED is solely for the user.
+;;;
+;;; --GB 2003-03-16
 
 (defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
   (unless (and (eql (pane-current-width pane) width)
@@ -717,28 +717,28 @@ order to produce a double-click")
 
 ;;; changing space requirements
 
-;; Here is what we do:
-;;
-;; change-space-requirements (pane) :=
-;;   clear space requirements cache
-;;   call change-space-requirements on parent pane
-;;   call note-space-requirements-changed
-;;
-;; This is split into :before, primary and :after method to allow for
-;; easy overriding of change-space-requirements without needing to
-;; know the details of the space requirement cache and the
-;; note-space-requirements-changed notifications.
-;;
-;; The calls to change-space-requirements travel all the way up to the
-;; top-level-sheet-pane which then invokes the layout protocol calling
-;; layout-frame.
-;;
-;; In case this happens within changing-space-requirements layout
-;; frame is not called but simply recorded and then called when
-;; changing-space-requirements is left.
-;;
-;; No action is taken in note-space-requirements-changed. We leave
-;; that to the user.
+;;; Here is what we do:
+;;;
+;;; change-space-requirements (pane) :=
+;;;   clear space requirements cache
+;;;   call change-space-requirements on parent pane
+;;;   call note-space-requirements-changed
+;;;
+;;; This is split into :before, primary and :after method to allow for
+;;; easy overriding of change-space-requirements without needing to
+;;; know the details of the space requirement cache and the
+;;; note-space-requirements-changed notifications.
+;;;
+;;; The calls to change-space-requirements travel all the way up to
+;;; the top-level-sheet-pane which then invokes the layout protocol
+;;; calling layout-frame.
+;;;
+;;; In case this happens within changing-space-requirements layout
+;;; frame is not called but simply recorded and then called when
+;;; changing-space-requirements is left.
+;;;
+;;; No action is taken in note-space-requirements-changed. We leave
+;;; that to the user.
 
 (defvar *changing-space-requirements* nil
   "Bound to non-NIL while within the execution of CHANGING-SPACE-REQUIREMENTS.")
