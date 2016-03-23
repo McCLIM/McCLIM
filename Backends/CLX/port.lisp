@@ -598,7 +598,7 @@
 			#.(xlib:make-event-mask :pointer-motion-hint)))))
   val)
 
-; think about rewriting this macro to be nicer
+;;; Think about rewriting this macro to be nicer.
 (defmacro peek-event ((display &rest keys) &body body)
   (let ((escape (gensym)))
     `(block ,escape
@@ -621,68 +621,67 @@
                (< code (length button-mapping)))
       (aref button-mapping code))))
 
-;; From "Inter-Client Communication Conventions Manual", Version 2.0.xf86.1,
-;; section 4.1.5:
-;; 
-;; |   Advice to Implementors
-;; |
-;; |   Clients cannot distinguish between the case where a top-level
-;; |   window is resized and moved from the case where the window is
-;; |   resized but not moved, since a real ConfigureNotify event will be
-;; |   received in both cases. Clients that are concerned with keeping
-;; |   track of the absolute position of a top-level window should keep
-;; |   a piece of state indicating whether they are certain of its
-;; |   position. Upon receipt of a real ConfigureNotify event on the
-;; |   top-level window, the client should note that the position is
-;; |   unknown. Upon receipt of a synthetic ConfigureNotify event, the
-;; |   client should note the position as known, using the position in
-;; |   this event. If the client receives a KeyPress, KeyRelease,
-;; |   ButtonPress, ButtonRelease, MotionNotify, EnterNotify, or
-;; |   LeaveNotify event on the window (or on any descendant), the
-;; |   client can deduce the top-level window's position from the
-;; |   difference between the (event-x, event-y) and (root-x, root-y)
-;; |   coordinates in these events. Only when the position is unknown
-;; |   does the client need to use the TranslateCoordinates request to
-;; |   find the position of a top-level window.
-;; |
+;;; From "Inter-Client Communication Conventions Manual", Version
+;;; 2.0.xf86.1, section 4.1.5:
+;;; 
+;;; |   Advice to Implementors
+;;; |
+;;; |   Clients cannot distinguish between the case where a top-level
+;;; |   window is resized and moved from the case where the window is
+;;; |   resized but not moved, since a real ConfigureNotify event will be
+;;; |   received in both cases. Clients that are concerned with keeping
+;;; |   track of the absolute position of a top-level window should keep
+;;; |   a piece of state indicating whether they are certain of its
+;;; |   position. Upon receipt of a real ConfigureNotify event on the
+;;; |   top-level window, the client should note that the position is
+;;; |   unknown. Upon receipt of a synthetic ConfigureNotify event, the
+;;; |   client should note the position as known, using the position in
+;;; |   this event. If the client receives a KeyPress, KeyRelease,
+;;; |   ButtonPress, ButtonRelease, MotionNotify, EnterNotify, or
+;;; |   LeaveNotify event on the window (or on any descendant), the
+;;; |   client can deduce the top-level window's position from the
+;;; |   difference between the (event-x, event-y) and (root-x, root-y)
+;;; |   coordinates in these events. Only when the position is unknown
+;;; |   does the client need to use the TranslateCoordinates request to
+;;; |   find the position of a top-level window.
 
-;; The moral is that we need to distinguish between synthetic and
-;; genuine configure-notify events. We expect that synthetic configure
-;; notify events come from the window manager and state the correct
-;; size and position, while genuine configure events only state the
-;; correct size.
+;;; The moral is that we need to distinguish between synthetic and
+;;; genuine configure-notify events. We expect that synthetic
+;;; configure notify events come from the window manager and state the
+;;; correct size and position, while genuine configure events only
+;;; state the correct size.
 
-;; NOTE: Although it might be tempting to compress (consolidate)
-;; events here, this is the wrong place. In our current architecture
-;; the process calling this function (the port's event handler
-;; process) just reads the events from the X server, and does it
-;; with almost no lack behind the reality. While the application
-;; frame's event top level loop does the actual processing of events
-;; and thus may produce lack. So the events have to be compressed in
-;; the frame's event queue.
-;;
-;; So event compression is implemented in EVENT-QUEUE-APPEND.
-;;
-;; This changes for possible _real_ immediate repainting sheets,
-;; here a possible solution for the port's event handler loop can be
-;; to read all available events off into a temponary queue (and
-;; event compression for immediate events is done there) and then
-;; dispatch all events from there as usual.
-;;
-;;--GB
+;;; NOTE: Although it might be tempting to compress (consolidate)
+;;; events here, this is the wrong place. In our current architecture
+;;; the process calling this function (the port's event handler
+;;; process) just reads the events from the X server, and does it with
+;;; almost no lack behind the reality. While the application frame's
+;;; event top level loop does the actual processing of events and thus
+;;; may produce lack. So the events have to be compressed in the
+;;; frame's event queue.
+;;;
+;;; So event compression is implemented in EVENT-QUEUE-APPEND.
+;;;
+;;; This changes for possible _real_ immediate repainting sheets, here
+;;; a possible solution for the port's event handler loop can be to
+;;; read all available events off into a temponary queue (and event
+;;; compression for immediate events is done there) and then dispatch
+;;; all events from there as usual.
+;;;
+;;;--GB
   
-;; XXX :button code -> :button (decode-x-button-code code)
-;;
-;; Only button and keypress events get a :code keyword argument! For mouse
-;; button events, one should use decode-x-button-code; otherwise one needs to
-;; look at the state argument to get the current button state. The CLIM spec
-;; says that pointer motion events are a subclass of pointer-event, which is
-;; reasonable, but unfortunately they use the same button slot, whose value
-;; should only be a single button. Yet pointer-button-state can return the
-;; logical or of the button values... aaargh. For now I'll canonicalize the
-;; value going into the button slot and think about adding a
-;; pointer-event-buttons slot to pointer events. -- moore
-;; 
+;;; XXX :button code -> :button (decode-x-button-code code)
+;;;
+;;; Only button and keypress events get a :code keyword argument! For
+;;; mouse button events, one should use decode-x-button-code;
+;;; otherwise one needs to look at the state argument to get the
+;;; current button state. The CLIM spec says that pointer motion
+;;; events are a subclass of pointer-event, which is reasonable, but
+;;; unfortunately they use the same button slot, whose value should
+;;; only be a single button. Yet pointer-button-state can return the
+;;; logical or of the button values... aaargh. For now I'll
+;;; canonicalize the value going into the button slot and think about
+;;; adding a pointer-event-buttons slot to pointer events. -- moore
 
 (defvar *clx-port*)
 
