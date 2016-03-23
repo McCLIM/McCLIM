@@ -701,13 +701,11 @@ order to produce a double-click")
 ;;; --GB 2003-03-16
 
 (defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
-  (unless (and (eql (pane-current-width pane) width)
-               (eql (pane-current-height pane) height))
-    (setf (pane-current-width pane) width
-          (pane-current-height pane) height)
-    (unless (top-level-sheet-pane-p pane)
-      (resize-sheet pane width height))
-    (call-next-method)))
+  (setf (pane-current-width pane) width
+	(pane-current-height pane) height)
+  (unless (top-level-sheet-pane-p pane)
+    (resize-sheet pane width height))
+  (call-next-method))
 
 (defmethod compose-space :around ((pane layout-protocol-mixin) &key width height)
   (declare (ignore width height))
