@@ -595,7 +595,6 @@ time an indexed pattern is drawn.")
                                                        :normalize :y-banding)))
           nconcing (multiple-value-list (region->clipping-values region))))))
     
-
 (defmacro with-clx-graphics ((medium) &body body)
   `(let ((mirror (sheet-mirror (medium-sheet medium))))
      (when mirror
