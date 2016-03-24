@@ -894,7 +894,7 @@ order to produce a double-click")
   (when (sheet-child pane)
     (allocate-space (sheet-child pane) width height)))
 
-;;;; TOP-LEVEL-SHEET
+;;; TOP-LEVEL-SHEET
 
 (defclass top-level-sheet-pane (composite-pane)
   ()
@@ -963,7 +963,7 @@ order to produce a double-click")
 			 (event window-manager-delete-event))
   (frame-exit (pane-frame (event-sheet event))))
 
-;;;; UNMANAGED-TOP-LEVEL-SHEET PANE
+;;; UNMANAGED-TOP-LEVEL-SHEET PANE
 
 (defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
   ()
@@ -995,10 +995,8 @@ order to produce a double-click")
     (resize-sheet pane w h)
     (allocate-space pane w h) ))
 
-;;;; box-layout-mixin
-
-;; Now each child (client) of a box-layout pane is described by the
-;; following class:
+;;; Now each child (client) of a box-layout pane is described by the
+;;; following class:
 
 (defclass box-client ()
   ((fillp
@@ -1033,8 +1031,8 @@ order to produce a double-click")
   (:documentation
    "Mixin class for layout panes, which want to behave like a HBOX/VBOX."))
 
-;; First we need to make sure that the list of clients and the list of
-;; children agree with each other.
+;;; First we need to make sure that the list of clients and the list
+;;; of children agree with each other.
 
 (defmethod sheet-adopt-child :after ((sheet box-layout-mixin) child)
   ;; When the child is already known in the client list we add no new
@@ -1318,8 +1316,6 @@ order to produce a double-click")
   ;; finally do a re-layout.
   (change-space-requirements pane) )
 
-;;;;
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun make-box-macro-contents (contents)
     (loop
@@ -1430,8 +1426,8 @@ order to produce a double-click")
 
 ;;; TABLE PANE
 
-;; TODO: The table and grid panes should respect the :x-spacing,
-;; :y-spacing, and :spacing initargs.
+;;; TODO: The table and grid panes should respect the :x-spacing,
+;;; :y-spacing, and :spacing initargs.
 
 (defclass table-pane (composite-pane)
   ((array
@@ -1538,8 +1534,8 @@ order to produce a double-click")
 (defmethod compose-space ((pane table-pane) &key width height)
   (declare (ignore width height))
   (with-slots (array x-spacing y-spacing) pane
-    ; ---v our problem is here.
-    ; Which problem? --GB
+    ;; ---v our problem is here.
+    ;; Which problem? --GB
     (let ((rsrs (loop for i from 0 below (array-dimension array 0) 
                     collect (table-pane-row-space-requirement pane i)))
           (csrs (loop for j from 0 below (array-dimension array 1) 
@@ -1819,11 +1815,12 @@ order to produce a double-click")
 (defmethod note-input-focus-changed ((pane viewport-pane) state)
   (note-input-focus-changed (sheet-child pane) state))
 
-;; This method ensures that when the child changes size, the viewport
-;; will move its focus so that it will not display a region outside of
-;; `child' (if at all possible, this ideal can be circumvented by
-;; creating a child sheet that is smaller than the viewport). I do not
-;; believe having a viewport look at "empty" space is ever useful.
+;;; This method ensures that when the child changes size, the viewport
+;;; will move its focus so that it will not display a region outside
+;;; of `child' (if at all possible, this ideal can be circumvented by
+;;; creating a child sheet that is smaller than the viewport). I do
+;;; not believe having a viewport look at "empty" space is ever
+;;; useful.
 (defmethod note-space-requirements-changed ((pane viewport-pane) child)
   (let ((viewport-width (bounding-rectangle-width pane))
         (viewport-height (bounding-rectangle-height pane))
@@ -1848,26 +1845,21 @@ order to produce a double-click")
                                 vertical-scroll))))
       (scroller-pane/update-scroll-bars (sheet-parent pane)))))
 
-;;;;
-;;;; SCROLLER PANE
-;;;;
+;;; SCROLLER PANE
 
 ;;; How scrolling is done
 
-;; The scroll-pane has a child window called the 'viewport', which
-;; itself has the scrolled client pane as child. To scroll the client
-;; pane is to move it [to possibly negative coordinates].
-;;
-;; So the viewport is just a kind of hole, where some part of the
-;; scrolled window shows through.
-;;
+;;; The scroll-pane has a child window called the 'viewport', which
+;;; itself has the scrolled client pane as child. To scroll the client
+;;; pane is to move it [to possibly negative coordinates].
+;;;
+;;; So the viewport is just a kind of hole, where some part of the
+;;; scrolled window shows through.
 
 ;;; How the scroll bars are set up
 
-;; The scroll-bar's min/max values match the min/max arguments to
-;; scroll-extent. The thumb-size is then calculated accordingly.
-
-;; 
+;;; The scroll-bar's min/max values match the min/max arguments to
+;;; scroll-extent. The thumb-size is then calculated accordingly.
 
 (defparameter *scrollbar-thickness* 17)
 
@@ -2045,7 +2037,7 @@ order to produce a double-click")
                         (- viewport-height (* 2 y-spacing))))
       (scroller-pane/update-scroll-bars pane))))
 
-;;;; Initialization
+;;; Initialization
 
 (defgeneric scroller-pane/vertical-drag-callback (pane new-value))
 
@@ -2170,9 +2162,9 @@ order to produce a double-click")
                        :max-value 1))
       (sheet-adopt-child pane hscrollbar))))
 
-;;;; Scrolling itself
+;;; Scrolling itself
 
-;;;; Accounting for changed space requirements
+;;; Accounting for changed space requirements
 
 (defmethod change-space-requirements ((pane clim-extensions:viewport-pane) &rest ignore)
   (declare (ignore ignore))
@@ -2185,8 +2177,6 @@ order to produce a double-click")
     (resize-sheet client width height)
     (allocate-space client width height)
     (scroller-pane/update-scroll-bars (sheet-parent pane))))
-
-;;;; 
 
 (defun scroll-page-callback (scroll-bar direction)
   (let ((client (gadget-client scroll-bar)))
@@ -2412,7 +2402,8 @@ order to produce a double-click")
 			 (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
 			 (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical))))))))))
 
-;; Note that handling this from dispatch-event is evil, and we shouldn't.
+;;; Note that handling this from dispatch-event is evil, and we
+;;; shouldn't.
 (defmethod dispatch-event :around ((sheet mouse-wheel-scroll-mixin)
                                    (event pointer-button-press-event))
   (if (find-viewport-for-scroll sheet)
@@ -2919,9 +2910,10 @@ current background message was set."))
   (:method (pane) (declare (ignore pane))))
 
 (defmethod fit-pane-to-output ((stream clim-stream-pane))
-  ;;; Guard against infinite recursion of size is set to :compute, as this
-  ;;; could get called from the display function. We'll call compose-space
-  ;;; here, which will invoke the display function again..
+  ;; Guard against infinite recursion of size is set to :compute, as
+  ;; this could get called from the display function. We'll call
+  ;; compose-space here, which will invoke the display function
+  ;; again..
   (when (and (sheet-mirror stream)
              (not (or (eq (pane-user-width stream) :compute)
                       (eq (pane-user-height stream) :compute))))
