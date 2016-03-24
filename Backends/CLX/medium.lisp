@@ -582,8 +582,8 @@ time an indexed pattern is drawn.")
               (- (round-coordinate max-x) clip-x)
               (- (round-coordinate max-y) clip-y)))))
 
-; this seems to work, but find out why all of these +nowhere+s are coming from
-; and kill them at the source...
+;;; This seems to work, but find out why all of these +nowhere+s are
+;;; coming from and kill them at the source...
 #-nil
 (defun clipping-region->rect-seq (clipping-region)
   (typecase clipping-region 
