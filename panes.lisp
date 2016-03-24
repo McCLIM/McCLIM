@@ -775,7 +775,8 @@ order to produce a double-click")
 (defmacro changing-space-requirements ((&key resize-frame layout) &body body)
   `(invoke-with-changing-space-requirements (lambda () ,@body) :resize-frame ,resize-frame :layout ,layout))
 
-(defun invoke-with-changing-space-requirements (continuation &key resize-frame layout)
+(defun invoke-with-changing-space-requirements (continuation
+						&key resize-frame layout)
   (cond (*changed-space-requirements*
          ;; We are already within changing-space-requirements, so just
          ;; call the body. This might however lead to surprising
