@@ -601,7 +601,7 @@ time an indexed pattern is drawn.")
        (let* ((line-style (medium-line-style ,medium))
 	      (ink        (medium-ink ,medium))
 	      (gc         (medium-gcontext ,medium ink)))
-	 line-style ink
+	 (declare (ignorable line-style gc))
 	 (unwind-protect
 	      (unless (eql ink +transparent-ink+)
 		(progn ,@body)))))))
