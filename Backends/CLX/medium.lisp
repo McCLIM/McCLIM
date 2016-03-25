@@ -604,8 +604,7 @@ time an indexed pattern is drawn.")
 	 line-style ink
 	 (unwind-protect
 	      (unless (eql ink +transparent-ink+)
-		(progn ,@body))
-	   #+ignore(xlib:free-gcontext gc))))))
+		(progn ,@body)))))))
 
 
 ;;; Pixmaps
