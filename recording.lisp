@@ -2103,6 +2103,7 @@ were added."
   ((recording-p :initform t :reader stream-recording-p)
    (drawing-p :initform t :accessor stream-drawing-p)
    (output-history :initform (make-instance 'standard-tree-output-history)
+		   :initarg :output-record
                    :reader stream-output-history)
    (current-output-record :accessor stream-current-output-record)
    (current-text-output-record :initform nil
