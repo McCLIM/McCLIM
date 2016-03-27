@@ -2483,10 +2483,6 @@ according to the flags RECORD and DRAW."
                  (cond ((typep record 'standard-text-displayed-output-record)
                         (with-slots (start-y start-x end-x strings) record
                           (setf cy (or cy start-y))
-                          #+NIL
-                          (print (list (list cx cy)
-                                       (list start-x end-x start-y))
-                                 *trace-output*)
                           (when (> start-y cy)
                             (dotimes (k (round (- start-y cy) line-height))
                               (terpri stream))
@@ -2497,10 +2493,7 @@ according to the flags RECORD and DRAW."
                           (setf cx end-x)
                           (dolist (string strings)
                             (with-slots (string) string
-                              (princ string stream))
-                            #+NIL
-                            (print (list start-x start-y string)
-                                   *trace-output*))))
+                              (princ string stream)))))
                        (t
                         (map-over-output-records-overlapping-region #'grok-record
                                                                     record region)))))
