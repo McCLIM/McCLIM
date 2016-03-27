@@ -2505,32 +2505,3 @@ according to the flags RECORD and DRAW."
                         (map-over-output-records-overlapping-region #'grok-record
                                                                     record region)))))
         (grok-record record)))))
-
-;;; Debugging hacks
-
-(defgeneric count-records (r))
-
-(defmethod count-records (r)
-  (declare (ignore r))
-  1)
-
-(defmethod count-records ((r compound-output-record))
-  (let ((count 0))
-    (map-over-output-records
-     (lambda (child)
-       (incf count (count-records child)))
-     r)
-    (1+ count)))
-
-(defgeneric count-displayed-records (r))
-
-(defmethod count-displayed-records ((r displayed-output-record))
-  1)
-
-(defmethod count-displayed-records ((r compound-output-record))
-  (let ((count 0))
-    (map-over-output-records
-     (lambda (child)
-       (incf count (count-records child)))
-     r)
-    count))
