@@ -2471,11 +2471,6 @@ according to the flags RECORD and DRAW."
          (char-width (stream-character-width window #\n :text-style text-style))
          (line-height (+ (stream-line-height window :text-style text-style)
                          (stream-vertical-spacing window))))
-    #+NIL
-    (print (list char-width line-height
-                 (stream-line-height window :text-style text-style)
-                 (stream-vertical-spacing window))
-           *trace-output*)
     ;; humble first ...
     (let ((cy nil)
           (cx 0))
