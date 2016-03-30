@@ -876,12 +876,12 @@ the associated sheet can be determined."
       (if (null pos)
           (when errorp
             (error "~S is not a child of ~S" child record))
-        (progn
-          (setq children (replace children children
-                                  :start1 pos
-                                  :start2 (1+ pos)))
-          (decf (fill-pointer children))
-          (setf (output-record-parent child) nil))))))
+	  (progn
+	    (setq children (replace children children
+				    :start1 pos
+				    :start2 (1+ pos)))
+	    (decf (fill-pointer children))
+	    (setf (output-record-parent child) nil))))))
 
 (defmethod clear-output-record ((record standard-sequence-output-record))
   (let ((children (output-record-children record)))
@@ -2332,7 +2332,7 @@ according to the flags RECORD and DRAW."
       (let ((region (if (region-equal region +everywhere+)
 			;; fallback to the sheet's region for +everwhere+.
 			(sheet-region stream)
-		      (bounding-rectangle region))))
+			(bounding-rectangle region))))
 	(with-bounding-rectangle* (x1 y1 x2 y2) region
 	  (with-output-recording-options (stream :record nil)
 	    (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+)))
