@@ -2328,9 +2328,10 @@ according to the flags RECORD and DRAW."
 
 (defmethod handle-repaint ((stream output-recording-stream) region)
   (when (output-recording-stream-p stream)
-    (unless (region-equal region +nowhere+)                    ; ignore repaint requests for +nowhere+
+    (unless (region-equal region +nowhere+) ; ignore repaint requests for +nowhere+
       (let ((region (if (region-equal region +everywhere+)
-			(sheet-region stream)                  ; fallback to the sheet's region for +everwhere+
+			;; fallback to the sheet's region for +everwhere+.
+			(sheet-region stream)
 		      (bounding-rectangle region))))
 	(with-bounding-rectangle* (x1 y1 x2 y2) region
 	  (with-output-recording-options (stream :record nil)
