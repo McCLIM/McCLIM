@@ -69,10 +69,6 @@
 (in-package :clim-internals)
 
 ;;; 16.2.1. The Basic Output Record Protocol
-#+:cmu(declaim (ftype (function (output-record) (values rational rational))
-		      output-record-position))
-;; XXX What does #+:CMU mean? FTYPE was excluded from ANSI CL? Other
-;; compilers try to check type declarations?
 (defgeneric output-record-position (record)
   (:documentation
    "Returns the x and y position of RECORD. The position is the
@@ -90,8 +86,6 @@ moved by the same amount as RECORD was moved. The bounding rectangles
 of all of RECORD's ancestors will also be updated to be large enough
 to contain RECORD."))
 
-#+:cmu(declaim (ftype (function (output-record) (values integer integer))
-		      output-record-start-cursor-position))
 (defgeneric output-record-start-cursor-position (record)
   (:documentation
    "Returns the x and y starting cursor position of RECORD. The
@@ -100,8 +94,6 @@ upper-left corner of the stream."))
 
 (defgeneric* (setf output-record-start-cursor-position) (x y record))
 
-#+:cmu(declaim (ftype (function (output-record) (values integer integer))
-		      output-record-end-cursor-position))
 (defgeneric output-record-end-cursor-position (record)
   (:documentation
    "Returns the x and y ending cursor position of RECORD. The
