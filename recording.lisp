@@ -1088,14 +1088,16 @@ were added."
 
 ;;; Factor out the graphics state portions of the output records so
 ;;; they can be manipulated seperately e.g., by incremental
-;;; display. The individual slots of a graphics state are factored into mixin
-;;; classes so that each output record can capture only the state that it needs.
+;;; display. The individual slots of a graphics state are factored
+;;; into mixin classes so that each output record can capture only the
+;;; state that it needs.
 ;;; -- moore
 
 ;;; It would be appealing to define a setf method, e.g. (setf
-;;; medium-graphics-state), for setting a medium's state from a graphics state
-;;; object, but that would require us to define a medium-graphics-state reader
-;;; that would cons a state object.  I don't want to do that.
+;;; medium-graphics-state), for setting a medium's state from a
+;;; graphics state object, but that would require us to define a
+;;; medium-graphics-state reader that would cons a state object.  I
+;;; don't want to do that.
 
 (defclass graphics-state ()
   ()
