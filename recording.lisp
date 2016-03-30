@@ -1067,9 +1067,11 @@ were added."
     (nowhere-region nil)
     (otherwise (map-over-tree-output-records
                 (lambda (child)
-                  (if (region-intersects-region-p (multiple-value-call 'make-rectangle* (bounding-rectangle* child))
-                                                     region)
-                       (apply function child function-args)))
+                  (when (region-intersects-region-p
+			 (multiple-value-call 'make-rectangle*
+			   (bounding-rectangle* child))
+			 region)
+		    (apply function child function-args)))
                 record (%record-to-spatial-tree-rectangle (bounding-rectangle region)) :most-recent-last
                 nil))))
 
