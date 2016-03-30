@@ -66,7 +66,6 @@
 ;;; output record class"? Is it OUTPUT-RECORD or BASIC-OUTPUT-RECORD?
 ;;; Now they are defined on OUTPUT-RECORD.
 
-
 (in-package :clim-internals)
 
 ;;; 16.2.1. The Basic Output Record Protocol
