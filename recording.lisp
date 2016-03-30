@@ -429,27 +429,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (x y (record basic-output-record))
   (values x y))
 
-#+cmu
-(progn
-  ;; Sometimes CMU's PCL fails with forward reference classes, so this
-  ;; is a kludge to keep it happy.
-  ;;
-  ;; This was reported as a bug to cmucl-imp [<E18vKN1-0004DQ-00@saphir.local>]
-  ;;
-  ;; In short it exposes itself when you compile and load into a
-  ;; _virgin_ lisp the following:
-  ;;
-  ;;   (defclass foo (bar) ())
-  ;;   (defun barz () (make-instance 'foo))
-  ;;   (defclass bar () ())
-  ;;
-  ;; --GB 2003-03-18
-  ;;
-  (defclass gs-ink-mixin () ())
-  (defclass gs-clip-mixin () ())
-  (defclass gs-line-style-mixin () ())
-  (defclass gs-text-style-mixin () ()))
-
 ;;; Humph. It'd be nice to tie this to the actual definition of a
 ;;; medium. -- moore
 (defclass complete-medium-state
