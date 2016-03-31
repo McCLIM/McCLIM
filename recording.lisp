@@ -1484,8 +1484,8 @@ were added."
 	     (unless closed
 	       (setq min-x (- x1 border)  min-y (- y1 border)
 		     max-x (+ x1 border)  max-y (+ y1 border)))
-	     ;; Setup for iterating over the coordinate vector.  If the polygon
-	     ;; is closed deal with the extra segment.
+	     ;; Setup for iterating over the coordinate vector.  If
+	     ;; the polygon is closed, deal with the extra segment.
 	     (multiple-value-bind (initial-xp initial-yp
 				   final-xn final-yn
 				   initial-index final-index)
