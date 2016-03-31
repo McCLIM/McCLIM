@@ -1450,8 +1450,9 @@ were added."
 	 (coordinate= (slot-value record 'point-y2) point-y2))))
 
 (def-grecording draw-lines ((coord-seq-mixin gs-line-style-mixin) coord-seq) ()
-  (let ((transformed-coord-seq (transform-positions (medium-transformation medium) coord-seq))
-	(border (graphics-state-line-style-border graphic medium)))
+  (let* ((transformation (medium-transformation medium))
+	 (transformed-coord-seq (transform-positions transformation coord-seq))
+	 (border (graphics-state-line-style-border graphic medium)))
     (setf coord-seq transformed-coord-seq)
     (coord-seq-bounds transformed-coord-seq border)))
 
