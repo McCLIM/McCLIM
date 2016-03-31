@@ -1075,7 +1075,7 @@ were added."
                 record
 		(%record-to-spatial-tree-rectangle (bounding-rectangle region))
 		:most-recent-last
-                nil))))
+                '()))))
 
 (defmethod recompute-extent-for-changed-child :around ((record standard-tree-output-record) child old-min-x old-min-y old-max-x old-max-y)
   (when (eql record (output-record-parent child))
