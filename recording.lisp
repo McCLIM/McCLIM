@@ -1072,7 +1072,9 @@ were added."
 			   (bounding-rectangle* child))
 			 region)
 		    (apply function child function-args)))
-                record (%record-to-spatial-tree-rectangle (bounding-rectangle region)) :most-recent-last
+                record
+		(%record-to-spatial-tree-rectangle (bounding-rectangle region))
+		:most-recent-last
                 nil))))
 
 (defmethod recompute-extent-for-changed-child :around ((record standard-tree-output-record) child old-min-x old-min-y old-max-x old-max-y)
