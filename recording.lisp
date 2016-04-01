@@ -1913,7 +1913,6 @@ were added."
 	  (incf start-y dy)
 	  (incf end-x dx)
 	  (incf end-y dy)
-					;(incf baseline dy)
 	  (loop for s in strings
 		do (incf (slot-value s 'start-x) dx)))))))
 
