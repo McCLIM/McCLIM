@@ -1342,9 +1342,9 @@ were added."
 	(medium (gensym "MEDIUM"))
         (class-vars `((stream :initarg :stream)
                       ,@(loop for arg in args
-                           collect `(,arg
-                                     :initarg ,(intern (symbol-name arg)
-                                                       :keyword))))))
+			      collect `(,arg
+					:initarg ,(intern (symbol-name arg)
+							  :keyword))))))
     `(progn
       ,@(when class
               `((defclass ,class-name (,@mixins standard-graphics-displayed-output-record)
