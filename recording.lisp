@@ -1915,7 +1915,7 @@ were added."
 	  (incf end-y dy)
 					;(incf baseline dy)
 	  (loop for s in strings
-	     do (incf (slot-value s 'start-x) dx)))))))
+		do (incf (slot-value s 'start-x) dx)))))))
 
 (defmethod replay-output-record ((record standard-text-displayed-output-record)
 				 stream
