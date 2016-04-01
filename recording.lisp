@@ -1300,7 +1300,7 @@ were added."
 
 (defmacro generate-medium-recording-body (class-name method-name args)
   (let ((arg-list (loop for arg in args
-                     nconc `(,(intern (symbol-name arg) :keyword) ,arg))))
+			nconc `(,(intern (symbol-name arg) :keyword) ,arg))))
     `(with-sheet-medium (medium stream)
                   (when (stream-recording-p stream)
                     (let ((record
