@@ -2342,7 +2342,6 @@ according to the flags RECORD and DRAW."
 	    (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+)))
 	(stream-replay stream region)))))
 
-
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
   (declare (ignore x y))
   (when (stream-drawing-p stream)
