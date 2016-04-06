@@ -625,7 +625,8 @@ time an indexed pattern is drawn.")
 			  (medium-gcontext from-drawable +background-ink+)
 			  (round-coordinate from-x) (round-coordinate from-y)
 			  (round width) (round height)
-			  (or (medium-buffer to-drawable) (sheet-direct-mirror (medium-sheet to-drawable)))
+			  (or (medium-buffer to-drawable)
+			      (sheet-direct-mirror (medium-sheet to-drawable)))
 			  (round-coordinate to-x) (round-coordinate to-y)))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
