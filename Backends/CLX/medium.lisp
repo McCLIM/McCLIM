@@ -632,14 +632,15 @@ time an indexed pattern is drawn.")
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
-  (with-transformed-position ((sheet-native-transformation (medium-sheet from-drawable))
-                              from-x from-y)
-    (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
-                    (medium-gcontext from-drawable +background-ink+)
-                    (round-coordinate from-x) (round-coordinate from-y)
-		    (round width) (round height)
-                    (pixmap-mirror to-drawable)
-                    (round-coordinate to-x) (round-coordinate to-y))))
+  (let* ((from-sheet (medium-sheet from-drawable))
+	 (from-transformation (sheet-native-transformation from-sheet)))
+    (with-transformed-position (from-transformation from-x from-y)
+      (xlib:copy-area (sheet-direct-mirror (medium-sheet from-drawable))
+		      (medium-gcontext from-drawable +background-ink+)
+		      (round-coordinate from-x) (round-coordinate from-y)
+		      (round width) (round height)
+		      (pixmap-mirror to-drawable)
+		      (round-coordinate to-x) (round-coordinate to-y)))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
