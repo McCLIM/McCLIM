@@ -2422,9 +2422,7 @@ according to the flags RECORD and DRAW."
 
 (defmethod output-record-baseline ((record standard-text-displayed-output-record))
   (with-slots (baseline) record
-    (values
-     baseline
-     t)))
+    (values baseline t)))
 
 (defmethod output-record-baseline ((record compound-output-record))
   (map-over-output-records (lambda (sub-record)
