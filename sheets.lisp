@@ -301,8 +301,10 @@
   nil)
 
 (defmethod sheet-mirrored-ancestor ((sheet basic-sheet))
-  (if (sheet-parent sheet)
-      (sheet-mirrored-ancestor (sheet-parent sheet))))
+  (let ((parent (sheet-parent sheet)))
+    (if (null parent)
+	nil
+	(sheet-mirrored-ancestor (sheet-parent sheet)))))
 
 (defmethod sheet-mirror ((sheet basic-sheet))
   (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
