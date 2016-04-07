@@ -798,14 +798,14 @@ that this might be different from the sheet's native region."
 ;;;                             mirror
 ;;;
 
-;;; To setup both the mirror transformation (MR) and the mirror region (MR),
+;;; To setup both the mirror transformation (MT) and the mirror region (MR),
 ;;; we start with the mirror region. The window systems limitations are here:
 ;;; We can only have a certain size and its upper-left corner must be at the
 ;;; origin.
 
 ;;; Now the parent already has a mirror region (PMR) assigned, which obeys to
 ;;; the very same size restrictions. Since every part of MR outside of (PMR o
-;;; MT^1) is not visible, the first idea is to just clip it by the visible
+;;; MT^-1) is not visible, the first idea is to just clip it by the visible
 ;;; part:
 
 ;;;  MR_1 = intersection (SR o NT, PMR o MT^-1)             [mirror space]
