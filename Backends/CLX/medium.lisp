@@ -597,16 +597,16 @@ time an indexed pattern is drawn.")
     
 (defmacro with-clx-graphics ((medium) &body body)
   (let ((medium-var (gensym)))
-  `(let* ((,medium-var ,medium)
-	  (mirror (sheet-mirror (medium-sheet ,medium-var))))
-     (when mirror
-       (let* ((line-style (medium-line-style ,medium-var))
-	      (ink        (medium-ink ,medium-var))
-	      (gc         (medium-gcontext ,medium-var ink)))
-	 (declare (ignorable line-style gc))
-	 (unwind-protect
-	      (unless (eql ink +transparent-ink+)
-		(progn ,@body))))))))
+    `(let* ((,medium-var ,medium)
+	    (mirror (sheet-mirror (medium-sheet ,medium-var))))
+       (when mirror
+	 (let* ((line-style (medium-line-style ,medium-var))
+		(ink        (medium-ink ,medium-var))
+		(gc         (medium-gcontext ,medium-var ink)))
+	   (declare (ignorable line-style gc))
+	   (unwind-protect
+		(unless (eql ink +transparent-ink+)
+		  (progn ,@body))))))))
 
 
 ;;; Pixmaps
