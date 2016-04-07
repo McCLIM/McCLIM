@@ -343,13 +343,13 @@
 (defmethod sheet-native-transformation ((sheet basic-sheet))
   (with-slots (native-transformation) sheet
     (unless native-transformation
-        (setf native-transformation
-              (let ((parent (sheet-parent sheet)))
-                 (if parent
-                     (compose-transformations
-                      (sheet-native-transformation parent)
-                      (sheet-transformation sheet))
-                     +identity-transformation+))))
+      (setf native-transformation
+	    (let ((parent (sheet-parent sheet)))
+	      (if parent
+		  (compose-transformations
+		   (sheet-native-transformation parent)
+		   (sheet-transformation sheet))
+		  +identity-transformation+))))
     native-transformation))
 
 (defmethod sheet-native-region ((sheet basic-sheet))
