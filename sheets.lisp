@@ -257,9 +257,9 @@
 (defmethod child-containing-position ((sheet basic-sheet) x y)
   (loop for child in (sheet-children sheet)
 	do (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
-	     (if (and (sheet-enabled-p child)
-		      (region-contains-position-p (sheet-region child) tx ty))
-		 (return child)))))
+	     (when (and (sheet-enabled-p child)
+			(region-contains-position-p (sheet-region child) tx ty))
+	       (return child)))))
 
 (defmethod children-overlapping-region ((sheet basic-sheet) (region region))
   (loop for child in (sheet-children sheet)
