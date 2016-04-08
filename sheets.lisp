@@ -362,11 +362,11 @@
 				 (sheet-native-transformation sheet)
 				 (sheet-region sheet)))
 	    (parent (sheet-parent sheet)))
-	(setf native-region (if parent
-				(region-intersection this-native-region
-						     (sheet-native-region
-						      parent))
-				this-native-region))))
+	(setf native-region
+	      (if (null parent)
+		  this-native-region
+		  (region-intersection this-native-region
+				       (sheet-native-region parent))))))
     native-region))
 
 (defmethod sheet-device-transformation ((sheet basic-sheet))
