@@ -308,7 +308,8 @@
 
 (defmethod sheet-mirror ((sheet basic-sheet))
   (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
-    (if mirrored-ancestor
+    (if (null mirrored-ancestor)
+	nil
 	(sheet-direct-mirror mirrored-ancestor))))
 
 (defmethod graft ((sheet basic-sheet))
