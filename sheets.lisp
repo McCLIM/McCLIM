@@ -586,8 +586,8 @@
 (defmethod (setf sheet-transformation) :before
     ((transformation transformation)
      (sheet sheet-translation-transformation-mixin))
-  (if (not (translation-transformation-p transformation))
-      (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-TRANSLATION-TRANSFORMATION-MIXIN to a non translation transformation")))
+  (unless (translation-transformation-p transformation)
+    (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-TRANSLATION-TRANSFORMATION-MIXIN to a non translation transformation")))
 
 (defclass sheet-y-inverting-transformation-mixin (sheet-transformation-mixin)
   ()
@@ -596,8 +596,8 @@
 (defmethod (setf sheet-transformation) :before
     ((transformation transformation)
      (sheet sheet-y-inverting-transformation-mixin))
-  (if (not (y-inverting-transformation-p transformation))
-      (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-Y-INVERTING-TRANSFORMATION-MIXIN to a non Y inverting transformation")))
+  (unless (y-inverting-transformation-p transformation)
+    (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-Y-INVERTING-TRANSFORMATION-MIXIN to a non Y inverting transformation")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
