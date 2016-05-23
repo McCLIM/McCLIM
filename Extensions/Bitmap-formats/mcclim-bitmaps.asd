@@ -9,8 +9,7 @@
 ;;;
 
 (defsystem #:mcclim-bitmaps
-  :description "Support for GIF, PNG, JPEG and TIFF images in McCLIM ~
-  bitmap reading functions."
+  :description "Support for GIF, PNG, JPEG and TIFF images in McCLIM bitmap reading functions."
   :depends-on (:mcclim :skippy :png-read :cl-jpeg :retrospectiff)
   :components ((:file "gif")
                (:file "png")
