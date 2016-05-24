@@ -1,26 +1,29 @@
-;;; -*- lisp -*-
+;;; -*- Mode: Lisp -*-
 
-(defpackage :clim-listener.system
-  (:use :cl :asdf))
+(defsystem #:clim-listener
+  :description "CLIM Lisp listener."
+  :long-description "CLIM Lisp listener
 
-(in-package :clim-listener.system)
+The McCLIM Listener provides an interactive toplevel with full access
+to the graphical capabilities of CLIM and a set of built-in commands
+intended to be useful for lisp development and
+experimentation. Present features include:
 
-(defsystem :clim-listener
-    :depends-on (:mcclim #+sbcl :sb-posix)
-    :components
-    ((:module "Apps/Listener"
-              :pathname #.(make-pathname :directory '(:relative "Apps" "Listener"))
-              :components
-              ((:file "package")
-               (:file "appearance" :depends-on ("package"))
-               (:file "util" :depends-on ("package"))
-               (:file "icons" :depends-on ("package" "util"))
-               (:file "file-types" :depends-on ("package" "icons" "util"))
-               (:file "asdf" :depends-on ("file-types"))
-               (:file "dev-commands" 
-                      :depends-on ("package" "appearance" "icons" "file-types" "util" "asdf"))
-               (:file "wholine" :depends-on ("package" "dev-commands" "util"))
-               (:file "listener"
-                      :depends-on ("package" "wholine" "file-types" "icons" "dev-commands" "util"))
-               #+CMU (:file "cmu-hacks" :depends-on ("package"))))))
-
+- Reading/evaluation of lisp expressions
+- Ability to run external programs, through the 'Run' command or #! macro
+- Commands for inspecting CLOS classes (superclasses/subclasses, slots, etc.)
+- Navigation of the filesystem, including a directory stack
+- Launching of external programs sensitive to file type (determined by mailcap
+  and mime.types files)"
+  :depends-on (:mcclim #+sbcl :sb-posix)
+  :serial t
+  :components ((:file "package")
+               (:file "appearance")
+               (:file "util")
+               (:file "icons")
+               (:file "file-types")
+               (:file "asdf")
+               (:file "dev-commands")
+               (:file "wholine")
+               (:file "listener")
+               #+cmu (:file "cmu-hacks")))
