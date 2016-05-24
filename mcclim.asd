@@ -499,7 +499,37 @@ Deleting it, that it may be replaced with a working one.~@:>")
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
 (defsystem :mcclim
+  :author "Alexey Dejneka
+Andreas Fuchs
+Andy Hefner
+Arnaud Rouanet
+Brian Mastenbrook
+Brian Spilsbury
+Christophe Rhodes
+Clemens Fruhwirth
+Daniel Barlow
+Duncan Rose
+Edena Pixel
+Frank Buss
+Gilbert Baumann
+Iban Hatchondo
+Julien Boninfan
+Lionel Salabartan
+Max-Gerd Retzlaff
+Mike McDonald
+Peter Mechleborg
+Rainer Joswig
+Robert Goldman
+Robert Strandh
+Rudi Schlatte
+Timothy Moore"
+  :license "LGPL-2.1+"
   :version "0.9.7-dev"
+  :description "McCLIM is an implementation of the CLIM 2.0 specification."
+  :long-description "McCLIM is an implementation of the CLIM 2.0 specification.
+
+CLIM (Common Lisp Interface Manager) is an advanced graphical user
+interface management system."
   :depends-on (:clim-looks))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
