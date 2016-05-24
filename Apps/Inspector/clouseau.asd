@@ -13,7 +13,7 @@ Common Lisp Inspector – McCLIM application. This application allows
 inspecting arbitrary Common Lisp objects. Provides also a disassembler
 wrapper."
   :license "LGPL-2.1+"
-  :depends-on (:mcclim)
+  :depends-on (#:mcclim)
   :serial t
   :components ((:file "package")
                (:file "disassembly")
