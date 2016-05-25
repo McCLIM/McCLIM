@@ -1,19 +1,23 @@
 ;;; -*- Mode: Lisp -*-
 
 (defsystem #:drei-mcclim
-  :depends-on ((:version "flexichain" "1.5.1") #:esa-mcclim #:clim-core #-clim-without-swank #:swank)
+  :description "Drei Replaces EINE's Inheritor – McCLIM editor substrate"
+  :depends-on ((:version "flexichain" "1.5.1")
+               #:esa-mcclim #:clim-core #-clim-without-swank #:swank)
   :components
   ((:module "cl-automaton"
+    :serial t
     :components ((:file "automaton-package")
-                 (:file "eqv-hash" :depends-on ("automaton-package"))
-                 (:file "state-and-transition" :depends-on ("eqv-hash"))
-                 (:file "automaton" :depends-on ("state-and-transition" "eqv-hash"))
-                 (:file "regexp" :depends-on ("automaton"))))
+                 (:file "eqv-hash")
+                 (:file "state-and-transition")
+                 (:file "automaton")
+                 (:file "regexp")))
    (:module "Persistent"
+    :serial t
     :components ((:file "binseq-package")
-                 (:file "binseq" :depends-on ("binseq-package"))
-                 (:file "obinseq" :depends-on ("binseq-package" "binseq"))
-                 (:file "binseq2" :depends-on ("binseq-package" "obinseq" "binseq"))))
+                 (:file "binseq")
+                 (:file "obinseq")
+                 (:file "binseq2")))
    (:module "" :depends-on ("cl-automaton" "Persistent")
     :components ((:file "packages")
                  (:file "buffer" :depends-on ("packages"))
@@ -44,7 +48,6 @@
                  (:file "core-commands" :depends-on ("core" "rectangle" "drei-clim"))
                  (:file "Persistent/persistent-buffer" :depends-on ("packages"))
                  (:file "Persistent/persistent-undo"
-                        :pathname #p"Persistent/persistent-undo.lisp"
                         :depends-on ("packages" "buffer" "Persistent/persistent-buffer" "undo"))
                  (:file "misc-commands" :depends-on ("basic-commands"))
                  (:file "search-commands" :depends-on ("core" "targets" "drei-clim"))
