@@ -149,17 +149,6 @@ Deleting it, that it may be replaced with a working one.~@:>")
                 :components ((:file "drawing-tests")
                              (:file "graft-tests")))))))))
 
-(defsystem :clim-null
-    :depends-on (:clim)
-    :components
-    ((:module "Backends/Null"
-              :components
-              ((:file "package")
-               (:file "port" :depends-on ("package"))
-               (:file "medium" :depends-on ("port" "package"))
-               (:file "graft" :depends-on ("port" "package"))
-               (:file "frame-manager" :depends-on ("medium" "port" "package"))))))
-
 (defsystem :clim-graphic-forms
     :depends-on (:clim :graphic-forms-uitoolkit)
     :components
