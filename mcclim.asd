@@ -286,29 +286,6 @@ Deleting it, that it may be replaced with a working one.~@:>")
                (:file "graft" :depends-on ("port" "package"))
                (:file "frame-manager" :depends-on ("medium" "port" "package"))))))
 
-(defsystem :clim-gtkairo
-    :depends-on (:clim :cffi)
-    :components
-    ((:module "Backends/gtkairo"
-              :serial t                 ;asf wird's ja richten
-              :components
-              ((:file "clim-fix")
-               (:file "package")
-               (:file "gtk-ffi")
-               (:file "cairo-ffi")
-               (:file "ffi")
-               (:file "graft")
-               (:file "port")
-               (:file "event")
-               (:file "keys")
-               (:file "medium")
-               (:file "pango")
-               (:file "cairo")
-               (:file "gdk")
-               (:file "pixmap")
-               (:file "frame-manager")
-               (:file "gadgets")))))
-
 (defsystem :clim-graphic-forms
     :depends-on (:clim :graphic-forms-uitoolkit)
     :components
