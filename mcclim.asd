@@ -55,24 +55,24 @@ Timothy Moore"
 
 CLIM (Common Lisp Interface Manager) is an advanced graphical user
 interface management system."
-  :depends-on (:clim-looks))
+  :depends-on (#:mcclim/looks))
 
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
-(defsystem :mcclim/looks
+(defsystem #:mcclim/looks
   :depends-on (#:clim #:clim-postscript
                ;; If we're on an implementation that ships CLX, use
                ;; it. Same if the user has loaded CLX already.
                #+(and (or sbcl scl openmcl ecl clx allegro)
                       (not (or clim-gtkairo clim-graphic-forms clim-beagle)))
-               :clim-clx
-               #+clim-graphic-forms :clim-graphic-forms  #| Defunct now |#
-               #+clim-gl            :clim-opengl         #| Defunct now |#
-               #+clim-gtkairo       :clim-gtkairo        #| Defunct now |#
-               #+clim-beagle        :clim-beagle         #| OSX native (clozure only) |#
+               #:clim-clx
+               #+clim-graphic-forms #:clim-graphic-forms  #| Defunct now |#
+               #+clim-gl            #:clim-opengl         #| Defunct now |#
+               #+clim-gtkairo       #:clim-gtkairo        #| Defunct now |#
+               #+clim-beagle        #:clim-beagle         #| OSX native (clozure only) |#
 
                ;; null backend
-               :clim-null)
+               #:clim-null)
   :components (#-(or clim-gtkairo clim-graphic-forms clim-beagle)
                  (:file "Looks/pixie")))
 
