@@ -2071,11 +2071,6 @@
 
 ;(use-package :clim-extensions :clim)
 
-(defpackage :clim-demo
-  (:use :clim-extensions :clim :clim-lisp)
-  #+excl(:import-from :excl compile-system load-system exit)
-  (:export #:demodemo))
-
 (defpackage :clim-user
   (:use :clim :clim-lisp))
 
