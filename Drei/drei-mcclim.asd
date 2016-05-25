@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp -*-
 
 (defsystem #:drei-mcclim
-  :depends-on ((:version "flexichain" "1.5.1") #:esa-mcclim #:clim-core #:swank)
+  :depends-on ((:version "flexichain" "1.5.1") #:esa-mcclim #:clim-core #-clim-without-swank #:swank)
   :components
   ((:module "cl-automaton"
     :components ((:file "automaton-package")
@@ -52,6 +52,7 @@
                  (:file "lisp-syntax" :depends-on ("lr-syntax" "motion" "core"))
                  (:file "lisp-syntax-swine" :depends-on ("lisp-syntax"))
                  (:file "lisp-syntax-commands" :depends-on ("lisp-syntax-swine" "misc-commands"))
+                 #-clim-without-swank
                  (:file "lisp-syntax-swank" :depends-on ("lisp-syntax"))))))
 
 (defsystem #:drei-mcclim/test

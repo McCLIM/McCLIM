@@ -32,25 +32,6 @@
 
 (defparameter *clim-directory* (directory-namestring *load-truename*))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun find-swank-package ()
-    (find-package :swank))
-  (defun find-swank-system ()
-    (handler-case (asdf:find-system :swank)
-      (asdf:missing-component ())))
-  (defun find-swank ()
-    (or (find-swank-package)
-        (find-swank-system)))
-  (defun dep-on-swank ()
-    (if (and (find-swank-system)
-             (not (find-package :swank)))
-        '(:and)
-        '(:or)))
-  (defun ifswank ()
-    (if (find-swank)
-        '(:and)
-        '(:or))))
-
 ;;; Legacy CMUCL support stuff
 #+cmu
 (progn
