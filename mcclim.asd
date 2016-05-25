@@ -41,17 +41,13 @@
                  #+(and (or sbcl scl openmcl ecl clx allegro)
                         (not (or clim-gtkairo clim-graphic-forms clim-beagle)))
                  :clim-clx
-                 #+clim-graphic-forms             :clim-graphic-forms
-                 #+clim-gl                        :clim-opengl
-                 ;; OpenMCL and MCL support the beagle backend (native
-                 ;; OS X look&feel on OS X).
-                 #+clim-beagle :clim-beagle
-
-                 #+clim-gtkairo :clim-gtkairo
+                 #+clim-graphic-forms :clim-graphic-forms  #| Defunct now |#
+                 #+clim-gl            :clim-opengl         #| Defunct now |#
+                 #+clim-gtkairo       :clim-gtkairo        #| Defunct now |#
+                 #+clim-beagle        :clim-beagle         #| OSX native (clozure only) |#
 
                  ;; null backend
-                 :clim-null
-                 )
+                 :clim-null)
     :components (#-(or clim-gtkairo clim-graphic-forms clim-beagle)
                  (:file "Looks/pixie")))
 
