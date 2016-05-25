@@ -121,31 +121,6 @@
                                                                    "events"))
                  (:file "bezier" :depends-on ("recording"))))
 
-(defsystem :goatee-core
-    :depends-on (:clim-basic)
-    :components
-    ((:module "Goatee"
-              :components
-              ((:file "conditions")
-               (:file "dbl-list")
-               (:file "flexivector" :depends-on ("conditions" "dbl-list"))
-               (:file "buffer" :depends-on ("conditions" "flexivector" "dbl-list"))
-               (:file "editable-buffer" :depends-on ("dbl-list" "flexivector" "buffer"))
-               (:file "editable-area" :depends-on ("flexivector" "editable-buffer" "dbl-list"
-                                                                 "buffer"))
-               (:file "clim-area" :depends-on ("flexivector" "dbl-list" "buffer"
-                                                             "editable-area" "editable-buffer"))
-               (:file "kill-ring" :depends-on ("editable-buffer" "dbl-list" "flexivector"
-                                                                 "buffer"))
-               (:file "goatee-command" :depends-on ("conditions" "clim-area" "dbl-list"
-                                                                 "editable-buffer" "kill-ring"
-                                                                 "editable-area" "buffer" "flexivector"))
-               (:file "editing-stream" :depends-on ("goatee-command" "kill-ring" "dbl-list"
-                                                                     "conditions" "editable-buffer"
-                                                                     "flexivector" "clim-area" "buffer"))
-               (:file "presentation-history" :depends-on ("editing-stream" "buffer"
-                                                                           "flexivector" "editable-buffer"
-                                                                           "goatee-command"))))))
 ;;; CLIM-PostScript is not a backend in the normal sense.
 ;;; It is an extension (Chap. 35.1 of the spec) and is an
 ;;; "included" part of McCLIM. Hence the defsystem is here.

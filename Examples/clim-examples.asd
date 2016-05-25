@@ -7,7 +7,7 @@
     ((:file "package")
      (:file "calculator")
      (:file "colorslider")
-     (:file "menutest")                ; extra
+     (:file "menutest")                 ; extra
      (:file "address-book")
      (:file "traffic-lights")
      (:file "clim-fig")
@@ -32,4 +32,5 @@
      (:file "tabdemo")
      (:file "bordered-output-examples")
      (:file "misc-tests")
-     (:file "image-viewer")))
+     (:file "image-viewer")
+     (:file "goatee-test")))
