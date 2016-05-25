@@ -174,19 +174,6 @@ Deleting it, that it may be replaced with a working one.~@:>")
                (:file "frame-manager" :depends-on ("medium"))
          (:file "gadgets" :depends-on ("port"))))))
 
-;;; TODO/asf: I don't have the required libs to get :clim-opengl to load. tough.
-(defsystem :clim-opengl
-  :depends-on (:clim)
-  :serial t
-  :components
-  ((:file "Backends/OpenGL/opengl-x-frame-manager")
-   (:file "Backends/OpenGL/opengl-frame-manager")
-   (:file "Backends/OpenGL/opengl-x-port-before")
-   (:file "Backends/OpenGL/opengl-port")
-   (:file "Backends/OpenGL/opengl-x-port-after")
-   (:file "Backends/OpenGL/opengl-medium")
-   (:file "Backends/OpenGL/opengl-x-graft")))
-
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem :clim-looks
