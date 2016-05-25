@@ -2,7 +2,7 @@
 
 (defsystem #:clim-gtkairo
   :description "McCLIM gtk cairo backend"
-  :depends-on (#:clim #:cffi)
+  :depends-on (#:clim #:clim-examples #:cffi)
   :serial t
   :components ((:file "clim-fix")
                (:file "package")
