@@ -21,36 +21,6 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-
-;;; Really, I wouldn't bother with anything but ASDF. Almost every lisp
-;;; ships with it, and it has the added benefit of ASDF-INSTALL.
-;;; Get ASDF, and be welcome to the 21st century. -- [2005-01-31:asf]
-
-(defpackage :mcclim.system
-  (:use :asdf :cl))
-(in-package :mcclim.system)
-
-(defparameter *clim-directory* (directory-namestring *load-truename*))
-
-;;; A system that loads the appropriate backend for the current
-;;; platform.
-(defsystem :clim-looks
-    :depends-on (:clim :clim-postscript
-                 ;; If we're on an implementation that ships CLX, use
-                 ;; it. Same if the user has loaded CLX already.
-                 #+(and (or sbcl scl openmcl ecl clx allegro)
-                        (not (or clim-gtkairo clim-graphic-forms clim-beagle)))
-                 :clim-clx
-                 #+clim-graphic-forms :clim-graphic-forms  #| Defunct now |#
-                 #+clim-gl            :clim-opengl         #| Defunct now |#
-                 #+clim-gtkairo       :clim-gtkairo        #| Defunct now |#
-                 #+clim-beagle        :clim-beagle         #| OSX native (clozure only) |#
-
-                 ;; null backend
-                 :clim-null)
-    :components (#-(or clim-gtkairo clim-graphic-forms clim-beagle)
-                 (:file "Looks/pixie")))
-
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
 (defsystem :mcclim
@@ -86,6 +56,25 @@ Timothy Moore"
 CLIM (Common Lisp Interface Manager) is an advanced graphical user
 interface management system."
   :depends-on (:clim-looks))
+
+;;; A system that loads the appropriate backend for the current
+;;; platform.
+(defsystem :mcclim/looks
+  :depends-on (#:clim #:clim-postscript
+               ;; If we're on an implementation that ships CLX, use
+               ;; it. Same if the user has loaded CLX already.
+               #+(and (or sbcl scl openmcl ecl clx allegro)
+                      (not (or clim-gtkairo clim-graphic-forms clim-beagle)))
+               :clim-clx
+               #+clim-graphic-forms :clim-graphic-forms  #| Defunct now |#
+               #+clim-gl            :clim-opengl         #| Defunct now |#
+               #+clim-gtkairo       :clim-gtkairo        #| Defunct now |#
+               #+clim-beagle        :clim-beagle         #| OSX native (clozure only) |#
+
+               ;; null backend
+               :clim-null)
+  :components (#-(or clim-gtkairo clim-graphic-forms clim-beagle)
+                 (:file "Looks/pixie")))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.
