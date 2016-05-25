@@ -32,54 +32,6 @@
 
 (defparameter *clim-directory* (directory-namestring *load-truename*))
 
-;;; Legacy CMUCL support stuff
-#+cmu
-(progn
-  (unless (fboundp 'ext:stream-read-char)
-    (unless (ignore-errors (ext:search-list "gray-streams:"))
-      (setf (ext:search-list "gray-streams:")
-        '("target:pcl/" "library:subsystems/")))
-    (if (fboundp 'extensions:without-package-locks)
-        (extensions:without-package-locks
-         (load "gray-streams:gray-streams-library"))
-      (load "gray-streams:gray-streams-library")))
-  #-(or clx clim-gtkairo clim-graphic-forms)
-  (require :clx)
-  #+mp (when (eq mp::*initial-process* mp::*current-process*)
-         (format t "~%~%You need to run (mp::startup-idle-and-top-level-loops) to start up the multiprocessing support.~%~%")))
-
-;;; Make CLX asdf-loadable on Allegro 6.2
-;;; possibly this should be further refined to function properly for
-;;; Allegro on Windows platforms. [2005/04/18:rpg]
-
-#+allegro
-(defsystem :clx
-  :components ((:file "require-clx")))
-
-#+clisp
-(when (and (find-package :xlib)
-           ;; Just some random symbol I know is unexported in CLISP's CLX.
-           (not (eq (nth-value 1 (find-symbol "SET-SELECTION-OWNER" :xlib)) :external)))
-  (warn "~@<CLISP provided you a CLX that is not capable of running the McCLIM CLX backend.
-Deleting it, that it may be replaced with a working one.~@:>")
-  (ext:without-package-lock ("XLIB")
-    (delete-package :xlib)))
-
-(defsystem :clim-clx
-  :depends-on (:clim #+(or sbcl openmcl ecl clisp allegro) :clx)
-  :components
-  ((:module "Backends/CLX"
-    :components
-    ((:file "package")
-     (:file "image" :depends-on ("package"))
-     (:file "keysyms-common" :depends-on ("package"))
-     (:file "keysyms" :depends-on ("keysyms-common" "package"))
-     (:file "keysymdef" :depends-on ("keysyms-common" "package"))
-     (:file "port" :depends-on ("keysyms-common" "keysyms" "package"))
-     (:file "medium" :depends-on ("port" "keysyms" "package"))
-     (:file "graft" :depends-on ("port" "package"))
-     (:file "frame-manager" :depends-on ("medium" "port" "package"))))))
-
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem :clim-looks
