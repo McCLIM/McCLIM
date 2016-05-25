@@ -34,20 +34,30 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun find-swank-package ()
-    (find-package :swank))
+    #-clim-without-swank (find-package :swank)
+    #+clim-without-swank nil)
   (defun find-swank-system ()
+    #+clim-without-swank nil
+    #-clim-without-swank
     (handler-case (asdf:find-system :swank)
       (asdf:missing-component ())))
   (defun find-swank ()
+    #+clim-without-swank nil
+    #-clim-without-swank
     (or (find-swank-package)
         (find-swank-system)))
   (defun dep-on-swank ()
-    (if (and (find-swank-system)
-             (not (find-package :swank)))
+    (if (and 
+          #+clim-without-swank nil
+          (find-swank-system)
+          (not (find-package :swank)))
         '(:and)
         '(:or)))
   (defun ifswank ()
-    (if (find-swank)
+    
+    (if (and
+          #+clim-without-swank nil
+          (find-swank))
         '(:and)
         '(:or))))
 
