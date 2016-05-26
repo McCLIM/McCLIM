@@ -7,7 +7,7 @@ and the Scieneer CL.
 
 The INSTALL file in this directory give instructions for each Lisp
 implementation. Release notes for each release of McCLIM are in the
-Documentation/historical-documents directory.
+NEWS file in this directory.
 
 The other directories of interest are:
 
