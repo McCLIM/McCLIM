@@ -27,17 +27,15 @@
 (defvar *default-server-path* nil)
 
 ;;; - CLX is the de-facto reference backend.
-;;; - Prefer Graphic-Forms and Gtkairo over CLX, since they get installed only
+;;; - Prefer Beagle and Gtkairo over CLX, since they get installed only
 ;;;   on explicit user request anyway.
-;;; - If both are present, use Graphics-Forms in favour of Gtkairo, since
-;;;   it is the native Windows backend.
-;;; - Beagle should be treated like Graphic-Forms in the long term, but is
-;;;   currently lacking a maintainer, so let's leave it near the end.
+;;; - If both are present, use Beagle in favour of Gtkairo, since
+;;;   it is the native OSX backend.
 ;;; - OpenGL and Null are in this list mostly to document their existence,
 ;;;   and neither is currently a complete backend we would want to make
 ;;;   a default.  Put them after CLX, so that they won't actually be reached.
 (defvar *server-path-search-order*
-    '(:graphic-forms :gtkairo :clx :opengl :beagle :null))
+    '(:beagle :gtkairo :clx :opengl :null))
 
 (defun find-default-server-path ()
   (loop for port in *server-path-search-order*
