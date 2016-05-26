@@ -5,18 +5,16 @@
                #:esa-mcclim #:clim-core #-clim-without-swank #:swank)
   :components
   ((:module "cl-automaton"
-    :serial t
     :components ((:file "automaton-package")
-                 (:file "eqv-hash")
-                 (:file "state-and-transition")
-                 (:file "automaton")
-                 (:file "regexp")))
+                 (:file "eqv-hash" :depends-on ("automaton-package"))
+                 (:file "state-and-transition" :depends-on ("eqv-hash"))
+                 (:file "automaton" :depends-on ("state-and-transition" "eqv-hash"))
+                 (:file "regexp" :depends-on ("automaton"))))
    (:module "Persistent"
-    :serial t
     :components ((:file "binseq-package")
-                 (:file "binseq")
-                 (:file "obinseq")
-                 (:file "binseq2")))
+                 (:file "binseq" :depends-on ("binseq-package"))
+                 (:file "obinseq" :depends-on ("binseq-package" "binseq"))
+                 (:file "binseq2" :depends-on ("binseq-package" "obinseq" "binseq"))))
    (:module "" :depends-on ("cl-automaton" "Persistent")
     :components ((:file "packages")
                  (:file "buffer" :depends-on ("packages"))
