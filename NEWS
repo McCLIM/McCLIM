@@ -3,7 +3,8 @@
 ** Improvement: Multiprocessing is now provided by the bordeaux-threads
 ** Housekeeping: Major system cleanup and directory reordering
 ** Housekeeping: Cleaning up chunks of code
-** Housekeeping: Remove non-functional graphic-forms backend (Windows specific)
+** Housekeeping: Removed non-functional graphic-forms backend (Windows specific)
+** Housekeeping: Moved core systems to the Core/ and substrates to Libraries/
 ** Improvements: Many! (given that the last release was in 2008 :-)
 
 * Changes in mcclim-0.9.6 relative to 0.9.5:
