@@ -55,8 +55,9 @@
                  (:file "lisp-syntax" :depends-on ("lr-syntax" "motion" "core"))
                  (:file "lisp-syntax-swine" :depends-on ("lisp-syntax"))
                  (:file "lisp-syntax-commands" :depends-on ("lisp-syntax-swine" "misc-commands"))
-                 #-clim-without-swank
-                 (:file "lisp-syntax-swank" :depends-on ("lisp-syntax"))))))
+                 (:file "lisp-syntax-swank"
+                        :if-feature (:not :clim-without-swank)
+                        :depends-on ("lisp-syntax"))))))
 
 (defsystem #:drei-mcclim/test
   :depends-on (:drei-mcclim :fiveam)
