@@ -65,7 +65,6 @@ interface management system."
                #+(and (or sbcl scl openmcl ecl clx allegro)
                       (not (or clim-gtkairo clim-beagle)))
                #:clim-clx
-               #+clim-gl            #:clim-opengl         #| Defunct now |#
                #+clim-gtkairo       #:clim-gtkairo        #| Defunct now |#
                #+clim-beagle        #:clim-beagle         #| OSX native (clozure only) |#
 

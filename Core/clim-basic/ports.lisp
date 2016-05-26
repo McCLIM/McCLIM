@@ -31,11 +31,12 @@
 ;;;   on explicit user request anyway.
 ;;; - If both are present, use Beagle in favour of Gtkairo, since
 ;;;   it is the native OSX backend.
-;;; - OpenGL and Null are in this list mostly to document their existence,
-;;;   and neither is currently a complete backend we would want to make
-;;;   a default.  Put them after CLX, so that they won't actually be reached.
+;;; - Null are in this list mostly to document its existence, and is
+;;;   not currently a complete backend we would want to make a
+;;;   default.  Put it after CLX, so that it won't actually be
+;;;   reached.
 (defvar *server-path-search-order*
-    '(:beagle :gtkairo :clx :opengl :null))
+    '(:beagle :gtkairo :clx :null))
 
 (defun find-default-server-path ()
   (loop for port in *server-path-search-order*
