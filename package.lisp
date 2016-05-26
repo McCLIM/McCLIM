@@ -2071,22 +2071,8 @@
 
 ;(use-package :clim-extensions :clim)
 
-(defpackage :clim-demo
-  (:use :clim-extensions :clim :clim-lisp)
-  #+excl(:import-from :excl compile-system load-system exit)
-  (:export #:demodemo))
-
 (defpackage :clim-user
   (:use :clim :clim-lisp))
-
-(defpackage :goatee
-  (:use :clim :clim-lisp :clim-sys)
-  (:import-from :clim-internals #:letf)
-  (:shadow #:point)
-  (:export
-   #:execute-gesture-command
-   #:goatee-input-editing-mixin
-   #:simple-screen-area))
 
 ;;; Macros and definitions for interfacing with a host Lisp's FFI.
 (defpackage :clim-ffi
