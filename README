@@ -1,17 +1,19 @@
-McCLIM 0.9.2 "Laetare Sunday"
+McCLIM 0.9.7-dev post-"St. George's Day"
 
 This is McCLIM, an implementation of the "Common Lisp Interface
 Manager CLIM II Specification." It currently works on X Windows using
 CLX. It works with CMUCL, SBCL, CLISP, OpenMCL, Allegro CL, LispWorks,
 and the Scieneer CL.
 
-The INSTALL files in this directory give instructions for each Lisp
+The INSTALL file in this directory give instructions for each Lisp
 implementation. Release notes for each release of McCLIM are in the
-ReleaseNotes directory.
+NEWS file in this directory.
 
 The other directories of interest are:
 
-Doc - the start of a manual
+Documentation - Various documentation
+Documentation/Manual - the start of a manual
+Documentation/Specification - The LaTeX source to the CLIM specification.
 
 Apps - sample applications. This includes:
 Apps/Debugger - Peter Mechleborg's debugger (similar to SLIME's)
@@ -32,8 +34,5 @@ postscript-test - shows off the CLIM PostScript stream
 gadget-test - fun with CLIM gadgets
 calculator - a gadget-based calculator
 goatee-test - Hacks with Goatee, the Emacs-like editor used in McCLIM
-
-Spec - The LaTeX source to the CLIM specification.
-
 
 Please send bug reports and comments to mcclim-devel@common-lisp.net

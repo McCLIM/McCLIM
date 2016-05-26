@@ -1,6 +1,3 @@
-;; -*- Mode: Lisp; -*-
-
-(in-package #:asdf-user)
 
 (defsystem :conditional-commands
   :depends-on (:mcclim)

@@ -1,4 +1,3 @@
-;;;; -*- Lisp -*-
 
 ;;;; The mcclim-truetype system extends the CLX backend with
 ;;;; antialiased font rendering in 100% Common Lisp (no foreign code),
