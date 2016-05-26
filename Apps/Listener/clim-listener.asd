@@ -1,4 +1,3 @@
-;;; -*- Mode: Lisp -*-
 
 (defsystem #:clim-listener
   :description "CLIM Lisp listener."
@@ -26,4 +25,4 @@ experimentation. Present features include:
                (:file "dev-commands")
                (:file "wholine")
                (:file "listener")
-               #+cmu (:file "cmu-hacks")))
+               (:file "cmu-hacks" :if-feature :cmu)))

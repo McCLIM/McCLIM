@@ -1,4 +1,3 @@
-;;; -*- Mode: Lisp -*-
 ;;;
 ;;; Copyright (c) 2005, Robert Strandh (strandh@labri.fr)
 ;;; Copyright (c) 2005, Vincent Arkesteijn

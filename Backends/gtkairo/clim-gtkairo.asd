@@ -1,4 +1,3 @@
-;;; -*- Mode: Lisp -*-
 
 (defsystem #:clim-gtkairo
   :description "McCLIM gtk cairo backend"

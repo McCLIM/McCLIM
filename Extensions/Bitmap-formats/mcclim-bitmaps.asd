@@ -1,4 +1,3 @@
-;;; -*- Mode: Lisp -*-
 ;;;
 ;;; Copyright (c) 2008, Troels Henriksen (athas@sigkill.dk)
 ;;; Copyright (c) 2009, Samium Gromoff (_deepfire@feelingofgreen.ru)

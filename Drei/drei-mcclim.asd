@@ -1,4 +1,3 @@
-;;; -*- Mode: Lisp -*-
 
 (defsystem #:drei-mcclim
   :description "Drei Replaces EINE's Inheritor – McCLIM editor substrate"

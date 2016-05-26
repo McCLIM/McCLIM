@@ -1,4 +1,3 @@
-;;; -*- lisp -*-
 
 ;;; CLIM-Examples depends on having at least one backend loaded.
 (defsystem #:clim-examples

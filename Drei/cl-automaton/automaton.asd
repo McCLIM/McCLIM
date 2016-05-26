@@ -1,6 +1,5 @@
-;;; -*- mode: lisp -*-
-;;; 
-;;; (c) copyright 2005 by Aleksandar Bakic (a_bakic@yahoo.com)
+;;;
+;;; Copyright (c) 2005, Aleksandar Bakic (a_bakic@yahoo.com)
 ;;; 
 
 (in-package #:asdf)

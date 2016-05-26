@@ -1,4 +1,3 @@
-;;; -*- Mode: Lisp -*-
 
 (defsystem #:scigraph
     :depends-on (#:mcclim #:scrigraph/dwim)
