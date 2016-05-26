@@ -184,9 +184,7 @@
            #:with-output-to-string #:with-package-iterator #:with-simple-restart #:with-slots
            #:with-standard-io-syntax #:write #:write-byte #:write-char #:write-line #:write-sequence
            #:write-string #:write-to-string #:y-or-n-p #:yes-or-no-p #:zerop))
-        (packages
-         #+gcl    '(:lisp :pcl)
-         #-(or gcl) '(:common-lisp))
+        (packages '(:common-lisp))
         (gray-symbols
          '(#:fundamental-stream
            #:fundamental-input-stream
@@ -2053,23 +2051,6 @@
   #+excl
   (:import-from :excl compile-system load-system)
   (:intern #:letf))
-
-;(defpackage :CLIM
-;  (:use #+nil :clim-extensions ; will use it later
-;        :clim-internals :common-lisp)
-;  )
-
-;(let ((climi-package (find-package :climi))
-;      (ext-package   (find-package :clim-extensions)))
-;  (do-external-symbols (sym ext-package)
-;    (export sym climi-package)))
-
-;(let ((clim-package  (find-package :clim))
-;      (climi-package (find-package :climi)))
-;  (do-external-symbols (sym climi-package)
-;    (export sym clim-package)))
-
-;(use-package :clim-extensions :clim)
 
 (defpackage :clim-user
   (:use :clim :clim-lisp))
