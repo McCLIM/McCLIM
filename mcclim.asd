@@ -59,7 +59,7 @@ interface management system."
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem #:mcclim/looks
-  :depends-on (#:clim #:clim-postscript
+  :depends-on (#:clim #:clim-postscript #:clim-layouts/tab
                ;; If we're on an implementation that ships CLX, use
                ;; it. Same if the user has loaded CLX already.
                #+(and (or sbcl scl openmcl ecl clx allegro)

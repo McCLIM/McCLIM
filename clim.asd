@@ -3,5 +3,4 @@
   :depends-on (#:clim-core #:goatee-core #:clim-postscript #:drei-mcclim)
   :components ((:file "input-editing-goatee")
                (:file "input-editing-drei")
-               (:file "text-editor-gadget")
-               (:file "Extensions/tab-layout")))
+               (:file "text-editor-gadget")))
