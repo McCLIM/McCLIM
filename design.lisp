@@ -120,7 +120,10 @@
     `(make-named-color ',name ,red ,green ,blue)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defvar *color-hash-table* (make-hash-table :test #'eql)))
+  (defvar *color-hash-table* 
+    #+sbcl (make-hash-table :test #'eql :weakness :value) ; maybe, this should go into
+    #+ccl (make-hash-table :test #'eql :weak :value)      ; CLIM-SYS?
+    #-(or sbcl ccl) (make-hash-table :test #'eql)))
 
 (defun compute-color-key (red green blue)
   (+ (ash (round (* 255 red)) 16)
