@@ -2,12 +2,15 @@
 ** Housekeeping: clim-looks system has been renamed to mcclim/looks     :api:
 ** Housekeeping: tab-layout has it's own system now clim-layouts/tab    :api:
 ** Housekeeping: remove clim-ffi package (not used, not in the spec)    :api:
+** Housekeeping: rename mcclim-truetype to clim-fonts/truetype          :api:
+** Housekeeping: fix dependencies of clim-fonts/truetype
 ** Housekeeping: Major system cleanup and directory reordering
 ** Housekeeping: Cleaning up chunks of code
 ** Housekeeping: Removed non-functional graphic-forms backend (Windows specific)
 ** Housekeeping: Removed non-functional OpenGL backend (ancient-CLX specific)
 ** Housekeeping: Moved core systems to the Core/ and substrates to Libraries/
-** Improvements: Multiprocessing is now provided by the bordeaux-threads
+** Improvement: Multiprocessing is now provided by the bordeaux-threads
+** Improvement: Provide clim-clx/pretty system for eyecandy             :api:
 ** Improvements: Many! (given that the last release was in 2008 :-)
 
 * Changes in mcclim-0.9.6 relative to 0.9.5:
