@@ -14,8 +14,9 @@
 
 (in-package :asdf-user)
 
-(defsystem :mcclim-truetype
-  :depends-on (:mcclim :clim-clx :zpb-ttf :cl-vectors :cl-paths-ttf :cl-aa)
+(defsystem #:clim-fonts/truetype
+  :depends-on (#|#:mcclim|#
+               #:clim-clx #:zpb-ttf #:cl-vectors #:cl-paths-ttf #:cl-aa)
   :serial t
   :components
   ((:file "truetype-package")
@@ -23,9 +24,6 @@
    (:file "fontconfig")
    (:file "mcclim-native-ttf")))
 
-(defmethod perform :after ((o load-op) (s (eql (asdf:find-system :mcclim-truetype))))
-  "Detect fonts using fc-match"
-  (let ((autoconfig (find-symbol (symbol-name '#:autoconfigure-fonts) :mcclim-truetype)))
-    (unless autoconfig
-      (error "Couldn't find autoconfigure-fonts. This shouldn't happen."))
-  (funcall autoconfig)))
+(defmethod perform :after ((o load-op)
+                           (s (eql (find-system :clim-fonts/truetype))))
+  (uiop:symbol-call :mcclim-truetype :autoconfigure-fonts))
