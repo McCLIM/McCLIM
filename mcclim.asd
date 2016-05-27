@@ -59,7 +59,7 @@ interface management system."
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem #:mcclim/looks
-  :depends-on (#:clim #:clim-postscript #:clim-layouts/tab
+  :depends-on (#:clim #:clim-postscript
                ;; If we're on an implementation that ships CLX, use
                ;; it. Same if the user has loaded CLX already.
                #+(and (or sbcl scl openmcl ecl clx allegro)
@@ -69,9 +69,7 @@ interface management system."
                #+clim-beagle        #:clim-beagle         #| OSX native (clozure only) |#
 
                ;; null backend
-               #:clim-null)
-  :components (#-(or clim-gtkairo clim-beagle)
-                 (:file "Looks/pixie")))
+               #:clim-null))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.
