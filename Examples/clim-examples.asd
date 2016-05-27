@@ -1,7 +1,7 @@
 
 ;;; CLIM-Examples depends on having at least one backend loaded.
 (defsystem #:clim-examples
-    :depends-on (#:mcclim)
+    :depends-on (#:mcclim #:clim-layouts/tab)
     :components
     ((:file "package")
      (:file "calculator")
