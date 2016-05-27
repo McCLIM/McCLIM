@@ -65,6 +65,7 @@ interface management system."
                #+(and (or sbcl scl openmcl ecl clx allegro)
                       (not (or clim-gtkairo clim-beagle)))
                #:clim-clx
+               ;; #:clim-clx/pretty ; adds truetype and pixie theme
                #+clim-gtkairo       #:clim-gtkairo        #| Defunct now |#
                #+clim-beagle        #:clim-beagle         #| OSX native (clozure only) |#
 
