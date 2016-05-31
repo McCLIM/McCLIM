@@ -60,14 +60,11 @@ interface management system."
 ;;; platform.
 (defsystem #:mcclim/looks
   :depends-on (#:clim #:clim-postscript
-               ;; If we're on an implementation that ships CLX, use
-               ;; it. Same if the user has loaded CLX already.
-               #+(and (or sbcl scl openmcl ecl clx allegro)
-                      (not (or clim-gtkairo clim-beagle)))
-               #:clim-clx
-               ;; #:clim-clx/pretty ; adds truetype and pixie theme
-               #+clim-gtkairo       #:clim-gtkairo        #| Defunct now |#
-               #+clim-beagle        #:clim-beagle         #| OSX native (clozure only) |#
+               #-(or clim-gtkairo clim-beagle)
+                              ;; #:clim-clx       #| 'raw' clim-clx backend        |#
+                              #:clim-clx/pretty   #| adds truetype and pixie theme |#
+               #+clim-gtkairo #:clim-gtkairo      #| Defunct now                   |#
+               #+clim-beagle  #:clim-beagle       #| OSX native (clozure only)     |#
 
                ;; null backend
                #:clim-null))
