@@ -1,3 +1,9 @@
+;;;
+;;; Copyright (c) 2005-2006, Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;; Copyright (c) 2006, Troels Henriksen (athas@sigkill.dk)
+;;;           
+
+;;; ASDF system definition for ESA.
 
 (defsystem #:esa-mcclim
   :depends-on (#:clim-core)
