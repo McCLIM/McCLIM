@@ -15,4 +15,7 @@
    (:file "frame-manager" :depends-on ("medium" "port" "package"))))
 
 (defsystem #:mcclim-clx/pretty
-  :depends-on (#:mcclim-clx #:mcclim-fonts/truetype #:mcclim-looks/pixie))
+  :depends-on (#:mcclim-clx
+               ;; FIXME: truetype is slow, acceptable only on SBCL
+               #+sbcl #:mcclim-fonts/truetype
+               #:mcclim-looks/pixie))
