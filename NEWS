@@ -12,6 +12,7 @@
 ** Housekeeping: fixed the dependency tree to be more sane
 ** Improvement: Multiprocessing is now provided by the bordeaux-threads
 ** Improvement: Provide clim-clx/pretty system for eyecandy             :api:
+** Improvement: Truetype is now default on SBCL
 ** Improvements: Many! (given that the last release was in 2008 :-)
 
 * Changes in mcclim-0.9.6 relative to 0.9.5:
