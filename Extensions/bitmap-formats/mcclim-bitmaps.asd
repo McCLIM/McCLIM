@@ -13,7 +13,8 @@
 bitmap reading functions.
 
 Currently supported formats are GIF, PNG, JPEG and TIFF."
-  :depends-on (#:mcclim #:skippy #:png-read #:cl-jpeg #:retrospectiff)
+  :depends-on (#:clim-basic
+               #:skippy #:png-read #:cl-jpeg #:retrospectiff)
   :components ((:file "gif")
                (:file "png")
                (:file "jpeg")

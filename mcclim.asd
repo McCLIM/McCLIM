@@ -59,7 +59,7 @@ interface management system."
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem #:mcclim/looks
-  :depends-on (#:clim #:clim-postscript
+  :depends-on (#:clim
                #-(or mcclim-gtkairo mcclim-beagle)
                                 ;; #:mcclim-clx      #| 'raw' clim-clx backend        |#
                                 #:mcclim-clx/pretty  #| adds truetype and pixie theme |#
