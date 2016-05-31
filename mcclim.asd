@@ -67,7 +67,7 @@ interface management system."
                #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure only)     |#
 
                ;; null backend
-               #:clim-null))
+               #:mcclim-null))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.
