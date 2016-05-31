@@ -14,5 +14,5 @@
    (:file "graft" :depends-on ("port" "package"))
    (:file "frame-manager" :depends-on ("medium" "port" "package"))))
 
-(asdf:defsystem #:clim-clx/pretty
+(defsystem #:clim-clx/pretty
   :depends-on (#:clim-clx #:clim-fonts/truetype #:clim-looks/pixie))
