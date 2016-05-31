@@ -2,8 +2,6 @@
 ;;; Copyright (c) 2005, Aleksandar Bakic (a_bakic@yahoo.com)
 ;;; 
 
-(in-package #:asdf)
-
 (defsystem #:automaton
   :depends-on ("rt")
   :components
