@@ -1,5 +1,5 @@
 
-(defsystem #:clim-clx
+(defsystem #:mcclim-clx
   :depends-on (#:clim
                #+(or cmu ecl) (:require :clx)
                #+(or sbcl clozure ecl clisp allegro) #:clx)
@@ -14,5 +14,5 @@
    (:file "graft" :depends-on ("port" "package"))
    (:file "frame-manager" :depends-on ("medium" "port" "package"))))
 
-(defsystem #:clim-clx/pretty
-  :depends-on (#:clim-clx #:clim-fonts/truetype #:clim-looks/pixie))
+(defsystem #:mcclim-clx/pretty
+  :depends-on (#:mcclim-clx #:mcclim-fonts/truetype #:mcclim-looks/pixie))

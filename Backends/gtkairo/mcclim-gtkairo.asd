@@ -1,5 +1,5 @@
 
-(defsystem #:clim-gtkairo
+(defsystem #:mcclim-gtkairo
   :description "McCLIM gtk cairo backend"
   :depends-on (#:clim #:clim-examples #:cffi)
   :serial t

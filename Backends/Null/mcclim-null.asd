@@ -1,5 +1,5 @@
 
-(defsystem #:clim-null
+(defsystem #:mcclim-null
   :depends-on (#:clim)
   :components
   ((:file "package")

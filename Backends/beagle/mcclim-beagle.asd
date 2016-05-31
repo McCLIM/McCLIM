@@ -1,5 +1,5 @@
 
-(defsystem #:clim-beagle
+(defsystem #:mcclim-beagle
   :depends-on ((:require :cocoa) #:clim)
   :serial t
   :components

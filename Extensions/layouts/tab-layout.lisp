@@ -429,7 +429,7 @@ that the frame manager can customize the implementation."))
 	  :display-time :command-loop
 	  :display-function
 	  (lambda (frame pane)
-	    (declare (ignore frame))	    
+	    (declare (ignore frame))
 	    (funcall (header-display-function instance) instance pane)))))
     (setf (tab-layout-header-pane instance) header)
     (sheet-adopt-child instance header)
