@@ -48,7 +48,7 @@ Robert Strandh
 Rudi Schlatte
 Timothy Moore"
   :license "LGPL-2.1+"
-  :version "0.9.7-dev"
+  :version "0.9.7"
   :description "McCLIM is an implementation of the CLIM 2.0 specification."
   :long-description "McCLIM is an implementation of the CLIM 2.0 specification.
 
@@ -59,21 +59,15 @@ interface management system."
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem #:mcclim/looks
-  :depends-on (#:clim #:clim-postscript
-               ;; If we're on an implementation that ships CLX, use
-               ;; it. Same if the user has loaded CLX already.
-               #+(and (or sbcl scl openmcl ecl clx allegro)
-                      (not (or clim-gtkairo clim-graphic-forms clim-beagle)))
-               #:clim-clx
-               #+clim-graphic-forms #:clim-graphic-forms  #| Defunct now |#
-               #+clim-gl            #:clim-opengl         #| Defunct now |#
-               #+clim-gtkairo       #:clim-gtkairo        #| Defunct now |#
-               #+clim-beagle        #:clim-beagle         #| OSX native (clozure only) |#
+  :depends-on (#:clim
+               #-(or mcclim-gtkairo mcclim-beagle mcclim-ugly)
+                                #:mcclim-clx/pretty  #| adds truetype and pixie theme |#
+               #+mcclim-ugly    #:mcclim-clx         #| 'raw' clim-clx backend        |#
+               #+mcclim-gtkairo #:mcclim-gtkairo     #| Defunct now                   |#
+               #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure only)     |#
 
                ;; null backend
-               #:clim-null)
-  :components (#-(or clim-gtkairo clim-graphic-forms clim-beagle)
-                 (:file "Looks/pixie")))
+               #:mcclim-null))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.
