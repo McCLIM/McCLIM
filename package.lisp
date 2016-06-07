@@ -214,15 +214,7 @@
            #:stream-clear-output
            #:stream-read-byte
            #:stream-write-byte ))
-        (gray-packages
-         `(#+ecl                   ,@'(:gray)
-           #+clisp                 ,@'(:gray)
-           #+cmu                   ,@'(:ext)
-           #+scl                   ,@'(:ext)
-	   #+(or mcl openmcl)      ,@'(:ccl)
-           #+allegro               ,@'(:common-lisp :excl :stream)
-           #+harlequin-common-lisp ,@'(:stream)
-           #+sbcl                  ,@'(:sb-gray))) )
+        (gray-packages '(#:trivial-gray-streams)))
     ;;
     (labels ((seek-symbol (name packages)
                ;; seek the a symbol named 'name' in `packages'

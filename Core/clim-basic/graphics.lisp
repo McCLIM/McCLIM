@@ -1170,24 +1170,6 @@ per `read-bitmap-file'."
   "Return true if FORMAT is supported by `read-bitmap-file'."
   (not (null (gethash format *bitmap-file-readers*))))
 
-(define-condition unsupported-bitmap-format (error)
-  ((%format :reader bitmap-format
-            :initarg :bitmap-format
-            :initform (error "The bitmap format must be supplied")
-            :documentation "The bitmap format that cannot be loaded"))
-  (:report (lambda (condition stream)
-             (format
-              stream "Cannot read bitmap of unknown format \"~A\""
-              (bitmap-format condition))))
-  (:documentation "This exception is signalled when
-`read-bitmap-file' is called on an bitmap of a type that no reader
-has been defined for."))
-
-(defun unsupported-bitmap-format (format)
-  "Signal an error of type `unsupported-bitmap-format' for the
-bitmap format `format'."
-  (error 'unsupported-bitmap-format :bitmap-format format))
-
 (defun read-bitmap-file (pathname &key (format :bitmap) (port (find-port)))
   "Read a bitmap file named by `pathname'. `Port' specifies the
 port that the bitmap is to be used on. `Format' is a keyword
@@ -1201,7 +1183,7 @@ encoded in 32 bit unsigned integers, with the three most
 significant octets being the values R, G and B, in order."
   (declare (ignore port)) ; XXX?
   (funcall (or (gethash format *bitmap-file-readers*)
-               (unsupported-bitmap-format format))
+               #'opticl-read-bitmap-file)
            pathname))
 
 (defun make-pattern-from-bitmap-file (pathname &key designs
