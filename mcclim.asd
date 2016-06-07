@@ -54,7 +54,7 @@ Timothy Moore"
 
 CLIM (Common Lisp Interface Manager) is an advanced graphical user
 interface management system."
-  :depends-on (#:mcclim/looks))
+  :depends-on (#:mcclim/looks #:mcclim/extensions))
 
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
@@ -68,6 +68,10 @@ interface management system."
 
                ;; null backend
                #:mcclim-null))
+
+(defsystem #:mcclim/extensions
+  :depends-on (#:mcclim-bitmaps
+               #:conditional-commands))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.

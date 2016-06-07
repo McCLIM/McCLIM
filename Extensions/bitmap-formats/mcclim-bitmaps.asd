@@ -12,10 +12,7 @@
   :long-description "Support for various image formats in McCLIM
 bitmap reading functions.
 
-Currently supported formats are GIF, PNG, JPEG and TIFF."
-  :depends-on (#:clim-basic
-               #:skippy #:png-read #:cl-jpeg #:retrospectiff)
-  :components ((:file "gif")
-               (:file "png")
-               (:file "jpeg")
-               (:file "tiff")))
+Currently supported formats are the formats covered by opticl
+library."
+  :depends-on (#:clim-basic #:opticl)
+  :components ((:file "bitmaps")))
