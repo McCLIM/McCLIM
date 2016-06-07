@@ -20,24 +20,3 @@
                         (dpb blue (byte 8 16)
                              (dpb (- 255 0) (byte 8 24) 0)))))))
     array))
-
-
-
-(define-bitmap-file-reader :png (image-pathname)
-  (opticl-read-bitmap-file image-pathname))
-
-(define-bitmap-file-reader :gif (image-pathname)
-  (opticl-read-bitmap-file image-pathname))
-
-(define-bitmap-file-reader :jpg (image-pathname)
-  (opticl-read-bitmap-file image-pathname))
-
-(define-bitmap-file-reader :tif (image-pathname)
-  (opticl-read-bitmap-file image-pathname))
-
-;;; Abberv
-(define-bitmap-file-reader :jpeg (image-pathname)
-  (opticl-read-bitmap-file image-pathname))
-
-(define-bitmap-file-reader :tiff (image-pathname)
-  (opticl-read-bitmap-file image-pathname))
