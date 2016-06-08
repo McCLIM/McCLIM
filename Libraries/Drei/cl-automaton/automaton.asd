@@ -3,7 +3,7 @@
 ;;; 
 
 (defsystem #:automaton
-  :depends-on ("rt")
+  :depends-on ()
   :components
   ((:file "automaton-package")
    (:file "eqv-hash" :depends-on ("automaton-package"))
