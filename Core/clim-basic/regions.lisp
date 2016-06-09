@@ -2421,35 +2421,35 @@
   `(multiple-value-bind (,min-x ,min-y ,max-x ,max-y) (bounding-rectangle* ,region)
      ,@body))
 
-(defmethod bounding-rectangle-position ((self bounding-rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* self)
+(defmethod bounding-rectangle-position (bounding-rectangle)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
     (declare (ignore x2 y2))
     (values x1 y1)))
 
-(defmethod bounding-rectangle-min-x ((self bounding-rectangle)) 
-  (nth-value 0 (bounding-rectangle* self)))
+(defmethod bounding-rectangle-min-x (bounding-rectangle)
+  (nth-value 0 (bounding-rectangle* bounding-rectangle)))
 
-(defmethod bounding-rectangle-min-y ((self bounding-rectangle))
-  (nth-value 1 (bounding-rectangle* self)))
+(defmethod bounding-rectangle-min-y (bounding-rectangle)
+  (nth-value 1 (bounding-rectangle* bounding-rectangle)))
 
-(defmethod bounding-rectangle-max-x ((self bounding-rectangle))
-  (nth-value 2 (bounding-rectangle* self)))
+(defmethod bounding-rectangle-max-x (bounding-rectangle)
+  (nth-value 2 (bounding-rectangle* bounding-rectangle)))
 
-(defmethod bounding-rectangle-max-y ((self bounding-rectangle))
-  (nth-value 3 (bounding-rectangle* self)))
+(defmethod bounding-rectangle-max-y (bounding-rectangle)
+  (nth-value 3 (bounding-rectangle* bounding-rectangle)))
 
-(defmethod bounding-rectangle-width ((self bounding-rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* self)
+(defmethod bounding-rectangle-width (bounding-rectangle)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
     (declare (ignore y1 y2))
     (- x2 x1)))
 
-(defmethod bounding-rectangle-height ((self bounding-rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* self)
+(defmethod bounding-rectangle-height (bounding-rectangle)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
     (declare (ignore x1 x2))
     (- y2 y1)))
 
-(defmethod bounding-rectangle-size ((self bounding-rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* self)
+(defmethod bounding-rectangle-size (bounding-rectangle)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
     (values (- x2 x1) (- y2 y1))))
 
 ;;;
