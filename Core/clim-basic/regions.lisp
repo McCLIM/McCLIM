@@ -2462,7 +2462,6 @@
 
 ;;;;
 
-
 (defmethod region-intersects-region-p :around ((a bounding-rectangle) (b bounding-rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
     (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
