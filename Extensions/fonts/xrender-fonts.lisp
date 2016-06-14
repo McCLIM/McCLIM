@@ -356,7 +356,10 @@
 
 (defparameter *families/faces* *dejavu-families/faces*)
 
-(defparameter *truetype-font-path* #p"/usr/share/fonts/truetype/ttf-dejavu/")
+(defparameter *truetype-font-path* (find-if #'probe-file
+					    '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
+					      #p"/usr/share/fonts/TTF/"
+					      #p"/usr/share/fonts/")))
 
 (fmakunbound 'clim-clx::text-style-to-x-font)
 
