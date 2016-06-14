@@ -155,6 +155,17 @@
                (not (zerop (car (resource-object-lock resource-object))))
                name))))
 
+(defparameter *resource-atomic-lock*
+  (clim-sys:make-lock "atomic incf/decf"))
+
+(defmacro resource-atomic-incf (place)
+  `(clim-sys:with-lock-held (*resource-atomic-lock*)
+       (incf ,place)))
+
+(defmacro resource-atomic-decf (place)
+  `(clim-sys:with-lock-held (*resource-atomic-lock*)
+       (decf ,place)))
+
 (defmacro defresource (name parameters
                             &key (constructor (error "~S argument is required" :constructor))
                             initializer
@@ -237,7 +248,7 @@
                       (let ((,lock. (resource-object-lock ,ro.)))
                         (declare (type cons ,lock.))
                         (when (= 0 (the fixnum (car ,lock.)))
-                          (atomic-incf (the fixnum (car ,lock.)))
+                          (resource-atomic-incf (the fixnum (car ,lock.)))
                           (cond ((and (= 1 (the fixnum 
                                              (locally
                                                #+excl (declare (optimize (safety 3))) ;EXCL bug
@@ -245,7 +256,7 @@
                                       ,(match-expr ro.))
                                  (return ,ro.))
                                 (t
-                                 (atomic-decf (the fixnum (car ,lock.)))) ))))))
+                                 (resource-atomic-decf (the fixnum (car ,lock.)))) ))))))
                
                (allocator ()
                  ;; Function for ALLOCATE-RESOURCE
@@ -307,7 +318,7 @@
                                         `(setf (car ,q.) nil ,q. (cdr ,q.))))
                            nil)
                         (let ((,lock. (resource-object-lock ,ro.)))
-                          (atomic-decf (the fixnum (car ,lock.)))))))) )
+                          (resource-atomic-decf (the fixnum (car ,lock.)))))))) )
         ;;
         (let* ((r.           (gensym "R."))
                (q.           (gensym "Q."))
