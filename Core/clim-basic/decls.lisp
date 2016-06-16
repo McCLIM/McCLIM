@@ -483,6 +483,112 @@
 (defgeneric medium-buffering-output-p (medium))
 (defgeneric (setf medium-buffering-output-p) (buffer-p medium))
 
+;;; 16.2.1. The Basic Output Record Protocol
+(defgeneric output-record-position (record)
+  (:documentation
+   "Returns the x and y position of RECORD. The position is the
+position of the upper-left corner of its bounding rectangle. The
+position is relative to the stream, where (0,0) is (initially) the
+upper-left corner of the stream."))
+
+(defgeneric* (setf output-record-position) (x y record)
+  (:documentation
+   "Changes the x and y position of the RECORD to be X and Y, and
+updates the bounding rectangle to reflect the new position (and saved
+cursor positions, if the output record stores it). If RECORD has any
+children, all of the children (and their descendants as well) will be
+moved by the same amount as RECORD was moved. The bounding rectangles
+of all of RECORD's ancestors will also be updated to be large enough
+to contain RECORD."))
+
+(defgeneric output-record-start-cursor-position (record)
+  (:documentation
+   "Returns the x and y starting cursor position of RECORD. The
+positions are relative to the stream, where (0,0) is (initially) the
+upper-left corner of the stream."))
+
+(defgeneric* (setf output-record-start-cursor-position) (x y record))
+
+(defgeneric output-record-end-cursor-position (record)
+  (:documentation
+   "Returns the x and y ending cursor position of RECORD. The
+positions are relative to the stream, where (0,0) is (initially) the
+upper-left corner of the stream."))
+
+(defgeneric* (setf output-record-end-cursor-position) (x y record))
+
+(defgeneric output-record-parent (record)
+  (:documentation
+   "Returns the output record that is the parent of RECORD, or NIL if
+RECORD has no parent."))
+
+(defgeneric replay-output-record (record stream
+                                  &optional region x-offset y-offset)
+  (:documentation "Displays the output captured by RECORD on the
+STREAM, exactly as it was originally captured. The current user
+transformation, line style, text style, ink and clipping region of
+STREAM are all ignored. Instead, these are gotten from the output
+record.
+
+Only those records that overlap REGION are displayed."))
+
+(defgeneric output-record-hit-detection-rectangle* (record))
+
+(defgeneric output-record-refined-position-test (record x y))
+
+(defgeneric highlight-output-record (record stream state))
+
+(defgeneric displayed-output-record-ink (displayed-output-record))
+
+;;; 16.2.2. Output Record "Database" Protocol
+
+(defgeneric output-record-children (record))
+
+(defgeneric add-output-record (child record))
+
+(defgeneric delete-output-record (child record &optional errorp))
+
+(defgeneric clear-output-record (record))
+
+(defgeneric output-record-count (record))
+
+(defgeneric map-over-output-records-containing-position
+  (function record x y &optional x-offset y-offset &rest function-args)
+  (:documentation "Maps over all of the children of RECORD that
+contain the point at (X,Y), calling FUNCTION on each one. FUNCTION is
+a function of one or more arguments, the first argument being the
+record containing the point. FUNCTION is also called with all of
+FUNCTION-ARGS as APPLY arguments.
+
+If there are multiple records that contain the point,
+MAP-OVER-OUTPUT-RECORDS-CONTAINING-POSITION hits the most recently
+inserted record first and the least recently inserted record
+last. Otherwise, the order in which the records are traversed is
+unspecified."))
+
+(defgeneric map-over-output-records-overlapping-region
+  (function record region &optional x-offset y-offset &rest function-args)
+  (:documentation "Maps over all of the children of the RECORD that
+overlap the REGION, calling FUNCTION on each one. FUNCTION is a
+function of one or more arguments, the first argument being the record
+overlapping the region. FUNCTION is also called with all of
+FUNCTION-ARGS as APPLY arguments.
+
+If there are multiple records that overlap the region and that overlap
+each other, MAP-OVER-OUTPUT-RECORDS-OVERLAPPING-REGION hits the least
+recently inserted record first and the most recently inserted record
+last. Otherwise, the order in which the records are traversed is
+unspecified. "))
+
+;;; 16.2.3. Output Record Change Notification Protocol
+
+(defgeneric recompute-extent-for-new-child (record child))
+
+(defgeneric recompute-extent-for-changed-child
+  (record child old-min-x old-min-y old-max-x old-max-y))
+
+(defgeneric tree-recompute-extent (record))
+
 ;;; 16.3.3 Text Displayed Output Record
 
 (defgeneric add-character-output-to-text-record

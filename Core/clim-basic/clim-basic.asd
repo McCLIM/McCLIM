@@ -2,7 +2,8 @@
 (defsystem #:clim-basic
   :depends-on (#:clim-lisp #:spatial-trees (:version "flexichain" "1.5.1") #:bordeaux-threads)
   :components
-  ((:file "decls")
+  ((:file "setf-star")
+   (:file "decls" :depends-on ("setf-star"))
    (:file "protocol-classes" :depends-on ("decls"))
    #| legacy mp backends are in Lisp-Dep/mp-*.lisp |#
    (:file "multiprocessing" :depends-on ("decls"))
@@ -10,7 +11,6 @@
    (:file "design" :depends-on ("decls" "protocol-classes" "multiprocessing" "utils"))
    (:file "X11-colors" :depends-on ("decls" "protocol-classes" "multiprocessing" "design"))
    (:file "coordinates" :depends-on ("decls" "protocol-classes" "multiprocessing"))
-   (:file "setf-star" :depends-on ("decls" "multiprocessing"))
    (:file "transforms" :depends-on ("decls" "protocol-classes" "multiprocessing" "coordinates" "utils"))
    (:file "dead-keys" :depends-on ("decls"))
    (:file "regions" :depends-on ("decls" "protocol-classes" "multiprocessing" "coordinates" "utils" "transforms" "setf-star" "design"))
