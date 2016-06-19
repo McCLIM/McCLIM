@@ -1900,8 +1900,8 @@ order to produce a double-click")
     :documentation "Whether to put the vertical scroll bar on the left hand or
                     right hand side of the scroller pane."))
   (:default-initargs
-   :x-spacing 4
-   :y-spacing 4))
+   :x-spacing 0
+   :y-spacing 0))
 
 (defgeneric scroll-bar-values (scroll-bar)
   (:documentation "Returns the min value, max value, thumb size, and value of a
