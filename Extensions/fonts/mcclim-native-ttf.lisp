@@ -49,6 +49,9 @@
 ;;;    CLIM apps are, and the lack of WYSIWYG document editors crying out 
 ;;;    for perfect text spacing in small fonts, we don't really need this.
 
+
+(defvar *zpb-font-lock* (climi::make-lock "zpb-font"))
+
 ;; So weird..
 (defun make-vague-font (filename)
   (let ((val (gethash filename *vague-font-hash*)))
@@ -75,24 +78,25 @@
 (let ((font-loader-cache (make-hash-table :test #'equal))
       (font-cache        (make-hash-table :test #'equal)))
   (defun make-truetype-face (display filename size)
-    (unless display (break "no display!"))
-    (let* ((loader (or (gethash filename font-loader-cache)
-                       (setf (gethash filename font-loader-cache)
-                             (zpb-ttf:open-font-loader filename))))
-           (units/em (zpb-ttf:units/em loader))
-           (pixel-size (* size (/ *dpi* 72)))
-           (units->pixels (* pixel-size (/ units/em)))           
-           (font (or (gethash (list display loader size) font-cache)
-                     (setf (gethash (list display loader size) font-cache)
-                           (make-instance 'zpb-ttf-face
-                                          :display display
-                                          :filename filename
-                                          :size size
-                                          :units->pixels units->pixels
-                                          :loader loader
-                                          :ascent  (* (zpb-ttf:ascender loader) units->pixels)
-                                          :descent (- (* (zpb-ttf:descender loader) units->pixels)))))))
-      font)))
+    (climi::with-lock-held (*zpb-font-lock*)
+      (unless display (break "no display!"))
+      (let* ((loader (or (gethash filename font-loader-cache)
+			 (setf (gethash filename font-loader-cache)
+			       (zpb-ttf:open-font-loader filename))))
+	     (units/em (zpb-ttf:units/em loader))
+	     (pixel-size (* size (/ *dpi* 72)))
+	     (units->pixels (* pixel-size (/ units/em)))           
+	     (font (or (gethash (list display loader size) font-cache)
+		       (setf (gethash (list display loader size) font-cache)
+			     (make-instance 'zpb-ttf-face
+					    :display display
+					    :filename filename
+					    :size size
+					    :units->pixels units->pixels
+					    :loader loader
+					    :ascent  (* (zpb-ttf:ascender loader) units->pixels)
+					    :descent (- (* (zpb-ttf:descender loader) units->pixels)))))))
+	font))))
 
 (defmethod print-object ((object zpb-ttf-face) stream)
   (print-unreadable-object (object stream :type t :identity nil)
@@ -107,7 +111,8 @@
    values: alpha mask byte array, x-origin, y-origin (subtracted from
    position before rendering), horizontal and vertical advances."
   (declare (optimize (debug 3)))
-  (with-slots (font-loader units->pixels size ascent descent) font
+  (climi::with-lock-held (*zpb-font-lock*)
+    (with-slots (font-loader units->pixels size ascent descent) font
       (let* ((glyph (zpb-ttf:find-glyph char font-loader))
              (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
              (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
@@ -158,7 +163,7 @@
                 (round advance-width)
                 ;; Bah! Why does X add the vertical advance when we are rendering horizontally?
                 ;; Is this considered a property of the font and glyphs rather than a particular drawing call?
-                0 #+NIL (round (+ ascent descent))))))
+                0 #+NIL (round (+ ascent descent)))))))
 
 (defun font-fixed-width-p (zpb-ttf-font)
   (declare (ignore zpb-ttf-font))
