@@ -3,7 +3,7 @@
 ;;;
 
 (defsystem #:mcclim-clx-core
-  :depends-on (:mcclim)
+  :depends-on (#:clx)
   :license "LGPL-2.1+"
   :serial t
   :components
