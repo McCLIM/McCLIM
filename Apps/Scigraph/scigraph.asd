@@ -33,6 +33,7 @@
                  (:file "scigraph/demo-frame")))
 
 (defsystem #:scrigraph/dwim
+  :depends-on (#:mcclim)
   :components ((:file "dwim/package")
                (:file "dwim/feature-case")
                (:file "dwim/macros")

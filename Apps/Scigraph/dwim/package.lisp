@@ -25,84 +25,25 @@ performance of this software, even if BBN Systems and Technologies is
 advised of the possiblity of such damages.
 |#
 
-(in-package #+ansi-cl :common-lisp-user #-ansi-cl :user)
+(in-package :common-lisp-user)
 
 #+mcclim
 (eval-when (compile load eval)
   (pushnew :clim-2 *features*))
 
 (eval-when (compile load eval)
-  (#+genera future-common-lisp::defpackage
-   #-genera defpackage
-   dwim
-   #-clim
-   (:shadowing-import-from "CLOS" "SETF" "DOCUMENTATION")
-   ;;Get the ANSI Version of Loop.
-   #+lucid
-   (:shadowing-import-from "LOOP" "LOOP")
-   #+kcl
-   (:shadowing-import-from "SLOOP" "LOOP")
-   #+genera
-   (:shadowing-import-from "FUTURE-COMMON-LISP" "LOOP")
-
+  (defpackage dwim
    (:shadow ignore-errors handler-case restart-case handler-bind 
 	    invoke-restart find-restart with-simple-restart 
 	    parse-error *default-server-path*)
-
-   #+clim
-   (:use clim-lisp)
-   #-clim
-   (:use lisp clos)))
+   (:use clim-lisp)))
 
 (eval-when (compile load eval)
-  #+genera
-  (import '(future-common-lisp:defpackage) 'dwim)
-
-  ;; GUI stuff we want imported.
   (import
-    #+clim
-    '(clim:present-to-string clim:presentation-type clim:present clim:port)
-    #-clim
-    '(dw:present-to-string dw:presentation-type dw:present scl:send)
-    'dwim)
+   '(clim:present-to-string clim:presentation-type clim:present clim:port)
+   'dwim)
 
   ;;import the presentation types.
-  (import #+clim
-	  '(clim:boolean #+clim-0.9 clim:alist-member clim:expression clim:command)
-	  #-clim
-	  '(dw:boolean dw:alist-member sys:expression cp:command)
-	  'dwim) 
-
-  ;;declarations we want to work.
-  #+lucid
-  (import '(lcl:dynamic-extent) 'dwim)
-  #+allegro
-  (import '(excl::dynamic-extent) 'dwim)
-  #+genera
-  (import '(sys:downward-funarg sys:downward-function sys:array-register) 'dwim)
-)
-
-(eval-when (compile load eval)
-  (proclaim '(declaration
-	       ;; March 1989, X3J13 votes to subsume downward-funarg & downward-function
-	       ;; by dynamic-extent.  Get rid of the next two eventually.  jpm.
-	       dwim::downward-funarg dwim::downward-function
-              #-ansi-cl
-	       dwim::dynamic-extent
-	       dwim::array-register)))
-
-#+openmcl
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (proclaim '(declaration values)))
-
-#+genera
-(si:enable-who-calls :new)
-#+genera
-(TV:ENABLE-OBSOLETE-CONSOLE-COMPILER-WARNINGS)
-
-;;; Need to load postscript stuff because it defines a package
-;;; that dwim references.
-#+(and clim-2 (not mcclim))
-(eval-when (compile load eval)
-  (require :climps))
-
+  (import
+   '(clim:boolean clim:expression clim:command)
+   'dwim))
