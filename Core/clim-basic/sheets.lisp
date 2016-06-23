@@ -664,8 +664,7 @@ that this might be different from the sheet's native region."
   ;; FIXME: I don't know why this next form is commented out.  It
   ;; should either be uncommented or removed.
   #+nil(port-set-sheet-region (port sheet) sheet region)
-  (update-mirror-geometry sheet)
-  )
+  (update-mirror-geometry sheet))
 
 (defmethod note-sheet-transformation-changed ((sheet mirrored-sheet-mixin))
   (update-mirror-geometry sheet))
