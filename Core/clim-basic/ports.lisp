@@ -120,6 +120,9 @@
 (defmethod port-lookup-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
   (gethash sheet (slot-value port 'sheet->mirror)))
 
+(defmethod port-lookup-mirror ((port basic-port) (sheet basic-sheet))
+  (port-lookup-mirror port (sheet-mirrored-ancestor sheet)))
+
 (defgeneric port-lookup-sheet (port mirror))
 
 (defmethod port-lookup-sheet ((port basic-port) mirror)

@@ -67,7 +67,7 @@
 
 (defmethod handle-event ((sheet standard-repainting-mixin)
 			 (event window-repaint-event))
-  (handle-repaint sheet (window-event-region event)))
+  (repaint-sheet sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -84,7 +84,7 @@
 
 (defmethod handle-event ((sheet immediate-repainting-mixin)
 			 (event window-repaint-event))
-  (handle-repaint sheet (window-event-region event)))
+  (repaint-sheet sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
