@@ -450,11 +450,11 @@
 (defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
   (let ((q (compose-space sheet)))
     (let ((frame (pane-frame sheet))
-          (window (realize-mirror-aux port sheet
-                                      :map nil
-                                      :width (round-coordinate (space-requirement-width q))
-                                      :height (round-coordinate (space-requirement-height q))
-                                      :event-mask '(:key-press :key-release))))
+          (window (realize-mirror-aux
+                   port sheet
+                   :map nil
+                   :width (round-coordinate (space-requirement-width q))
+                   :height (round-coordinate (space-requirement-height q)))))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
