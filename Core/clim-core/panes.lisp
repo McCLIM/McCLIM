@@ -817,7 +817,7 @@ order to produce a double-click")
 ;;; BASIC PANE
 
 (defclass basic-pane (standard-space-requirement-options-mixin
-                      sheet-parent-mixin mirrored-sheet-mixin
+                      sheet-parent-mixin ;mirrored-sheet-mixin
                       pane)
   ((foreground       :initarg :foreground
                      :reader pane-foreground)
@@ -896,7 +896,7 @@ order to produce a double-click")
 
 ;;; TOP-LEVEL-SHEET
 
-(defclass top-level-sheet-pane (composite-pane)
+(defclass top-level-sheet-pane (mirrored-sheet-mixin composite-pane)
   ()
   (:documentation "For the first pane in the architecture"))
 
