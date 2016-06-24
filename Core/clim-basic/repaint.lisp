@@ -39,10 +39,10 @@
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
   (handle-repaint sheet region)
-  (map-over-sheets-overlapping-region #'(lambda (s)
-					  (handle-repaint s region))
-				      sheet
-				      region))
+  (map-over-sheets-overlapping-region
+   #'(lambda (s)
+       (repaint-sheet s region))
+   sheet region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
