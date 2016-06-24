@@ -33,3 +33,7 @@
      (:file "misc-tests")
      (:file "image-viewer")
      (:file "goatee-test")))
+
+(defsystem #:clim-examples/superapp
+  :depends-on (#:mcclim #:bordeaux-threads)
+  :components ((:file "superapp")))
