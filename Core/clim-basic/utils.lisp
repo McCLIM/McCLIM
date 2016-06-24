@@ -19,6 +19,14 @@
 
 (in-package :clim-internals)
 
+(defparameter climi::*console*
+  *standard-output*)
+
+(defun climi::xxx (what &rest args)
+  (apply #'format climi::*console*
+         (concatenate 'string "XXX: " what "~%")
+         args))
+
 (defun get-environment-variable (string)
   #+excl (sys:getenv string)
   #+(or cmu scl) (cdr (assoc string ext:*environment-list* :test #'string=))
