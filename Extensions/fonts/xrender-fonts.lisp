@@ -597,7 +597,7 @@
   (declare (ignore toward-x toward-y transform-glyphs))           
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
-    (with-clx-graphics (medium)
+    (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
       (when (null end) (setq end (length string)))

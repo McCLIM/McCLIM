@@ -233,26 +233,23 @@
   (error "Sheet has no parent"))
 
 (defmethod map-over-sheets-containing-position (function (sheet basic-sheet) x y)
-  (map-over-sheets
-   #'(lambda (child)
-       (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
-	 (when (region-contains-position-p (sheet-region child) tx ty)
-	   (funcall function child))))
-   sheet))
-
+  (mapc #'(lambda (child)
+            (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
+              (when (region-contains-position-p (sheet-region child) tx ty)
+                (funcall function child))))
+        (sheet-children sheet)))
 
 (defmethod map-over-sheets-overlapping-region (function (sheet basic-sheet) region)
-  (map-over-sheets
-   #'(lambda (child)
-       (when (region-intersects-region-p
-	      region
-	      (transform-region
-	       (if (eq child sheet)
-		   +identity-transformation+
-		   (sheet-transformation child))
-	       (sheet-region child)))
-	 (funcall function child)))
-   sheet))
+  (mapc #'(lambda (child)
+            (when (region-intersects-region-p
+                   region
+                   (transform-region
+                    (if (eq child sheet)
+                        +identity-transformation+
+                        (sheet-transformation child))
+                    (sheet-region child)))
+              (funcall function child)))
+        (sheet-children sheet)))
 
 (defmethod child-containing-position ((sheet basic-sheet) x y)
   (loop for child in (sheet-children sheet)

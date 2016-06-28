@@ -594,18 +594,22 @@ time an indexed pattern is drawn.")
                                    (region-set-regions clipping-region
                                                        :normalize :y-banding)))
           nconcing (multiple-value-list (region->clipping-values region))))))
-    
-(defmacro with-clx-graphics ((medium) &body body)
+
+(defmacro with-clx-graphics ((&optional (mirror 'mirror)
+                                        (line-style 'line-style)
+                                        (ink 'ink)
+                                        (gcontext 'gc))
+                                medium &body body)
   (let ((medium-var (gensym)))
     `(let* ((,medium-var ,medium)
-	    (mirror (sheet-mirror (medium-sheet ,medium-var))))
+	    (,mirror (sheet-mirror (medium-sheet ,medium-var))))
        (when mirror
-	 (let* ((line-style (medium-line-style ,medium-var))
-		(ink        (medium-ink ,medium-var))
-		(gc         (medium-gcontext ,medium-var ink)))
-	   (declare (ignorable line-style gc))
+	 (let* ((,line-style (medium-line-style ,medium-var))
+		(,ink        (medium-ink ,medium-var))
+		(,gcontext   (medium-gcontext ,medium-var ink)))
+	   (declare (ignorable ,line-style ,gcontext))
 	   (unwind-protect
-		(unless (eql ink +transparent-ink+)
+		(unless (eql ,ink +transparent-ink+)
 		  (progn ,@body))))))))
 
 
@@ -672,7 +676,7 @@ time an indexed pattern is drawn.")
   (with-transformed-position ((sheet-native-transformation
                                (medium-sheet medium))
                               x y)
-    (with-clx-graphics (medium)
+    (with-clx-graphics () medium
       (cond ((< (line-style-thickness line-style) 2)
              (let ((x (round-coordinate x))
                    (y (round-coordinate y)))
@@ -696,7 +700,7 @@ time an indexed pattern is drawn.")
   (with-transformed-positions ((sheet-native-transformation
                                 (medium-sheet medium))
                                coord-seq)
-    (with-clx-graphics (medium)
+    (with-clx-graphics () medium
       (cond ((< (line-style-thickness line-style) 2)
              (do-sequence ((x y) coord-seq)
                (let ((x (round-coordinate x))
@@ -721,7 +725,7 @@ time an indexed pattern is drawn.")
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
-        (with-clx-graphics (medium)
+        (with-clx-graphics () medium
           (let ((x1 (round-coordinate x1))
                 (y1 (round-coordinate y1))
                 (x2 (round-coordinate x2))
@@ -760,7 +764,7 @@ time an indexed pattern is drawn.")
                                 (medium-sheet medium))
                                coord-seq)
     (setq coord-seq (map 'vector #'round-coordinate coord-seq))
-    (with-clx-graphics (medium)
+    (with-clx-graphics () medium
       (xlib:draw-lines mirror gc
                        (if closed
                            (concatenate 'vector
@@ -781,7 +785,7 @@ time an indexed pattern is drawn.")
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
-        (with-clx-graphics (medium)
+        (with-clx-graphics () medium
           (if (< right left)
               (rotatef left right))
           (if (< bottom top)
@@ -829,7 +833,7 @@ time an indexed pattern is drawn.")
   (with-transformed-positions ((sheet-native-transformation
 				(medium-sheet medium))
                                position-seq)
-    (with-clx-graphics (medium)
+    (with-clx-graphics () medium
       (loop
 	 for (left top right bottom) on position-seq by #'cddddr
 	 for min-x = (round-coordinate left)
@@ -852,7 +856,7 @@ time an indexed pattern is drawn.")
            (arc-angle (if (< arc-angle 0)
                           (+ (* pi 2) arc-angle)
                           arc-angle)))
-      (with-clx-graphics (medium)
+      (with-clx-graphics () medium
         (let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
 	       (radius-dy (abs (+ radius-1-dy radius-2-dy)))
 	       (min-x (round-coordinate (- center-x radius-dx)))
@@ -878,7 +882,7 @@ time an indexed pattern is drawn.")
 	   (min-y (round-coordinate (- center-y radius)))
 	   (max-x (round-coordinate (+ center-x radius)))
 	   (max-y (round-coordinate (+ center-y radius))))
-      (with-clx-graphics (medium)
+      (with-clx-graphics () medium
         (xlib:draw-arc mirror gc
                        min-x min-y
                        (- max-x min-x) (- min-y max-y)
@@ -1069,7 +1073,7 @@ time an indexed pattern is drawn.")
   (declare (ignore toward-x toward-y transform-glyphs))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
-    (with-clx-graphics (medium)
+    (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
       (when (null end) (setq end (length string)))
@@ -1112,7 +1116,7 @@ time an indexed pattern is drawn.")
   (declare (ignore toward-x toward-y transform-glyphs align-x align-y))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
-    (with-clx-graphics (medium)
+    (with-clx-graphics () medium
       (xlib:draw-glyph mirror gc (round-coordinate x) (round-coordinate y)
 		       element
                        :size 16

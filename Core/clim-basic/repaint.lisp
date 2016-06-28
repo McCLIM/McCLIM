@@ -38,10 +38,11 @@
   nil)
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
-  (map-over-sheets-overlapping-region #'(lambda (s)
-					  (handle-repaint s region))
-				      sheet
-				      region))
+  (handle-repaint sheet region)
+  (map-over-sheets-overlapping-region
+   #'(lambda (s)
+       (repaint-sheet s region))
+   sheet region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -67,7 +68,7 @@
 
 (defmethod handle-event ((sheet standard-repainting-mixin)
 			 (event window-repaint-event))
-  (handle-repaint sheet (window-event-region event)))
+  (repaint-sheet sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -84,7 +85,7 @@
 
 (defmethod handle-event ((sheet immediate-repainting-mixin)
 			 (event window-repaint-event))
-  (handle-repaint sheet (window-event-region event)))
+  (repaint-sheet sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
