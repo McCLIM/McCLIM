@@ -1,4 +1,7 @@
 
+#| dummy system to make Quicklisp happy |#
+(defsystem #:mcclim-fonts)
+
 ;;;; The mcclim-truetype system extends the CLX backend with
 ;;;; antialiased font rendering in 100% Common Lisp (no foreign code),
 ;;;; using the XRender extension and the libraries zpb-ttf and

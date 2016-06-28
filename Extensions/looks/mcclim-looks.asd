@@ -1,4 +1,7 @@
 
+#| dummy system to make Quicklisp happy |#
+(defsystem #:mcclim-looks)
+
 (defsystem #:mcclim-looks/pixie
   :depends-on (#:clim #:mcclim-layouts/tab)
   :components ((:file "pixie")))
