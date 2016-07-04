@@ -39,10 +39,15 @@
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
   (handle-repaint sheet region)
-  (map-over-sheets-overlapping-region
-   #'(lambda (s)
-       (repaint-sheet s region))
-   sheet region))
+  (dolist (child (sheet-children sheet))
+    (when (and (sheet-enabled-p child))
+      (let* ((child-region (region-intersection
+			    (untrasform-region
+			     (sheet-transformation child)
+			     region)
+			    (sheet-region child))))
+	(unless (eq child-region +nowhere+)
+	  (repaint-sheet child-region))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -68,7 +73,10 @@
 
 (defmethod handle-event ((sheet standard-repainting-mixin)
 			 (event window-repaint-event))
-  (repaint-sheet sheet (window-event-region event)))
+  ;;(repaint-sheet sheet (window-event-region event)))
+  (handle-repaint sheet (window-event-region event))
+  (propagate-repaint sheet sheet (window-event-region event)))
+  
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -120,3 +128,27 @@
   ()
   (:documentation "Internal class that implements repainting protocol based on
   whether or not multiprocessing is supported."))
+
+;;;
+;;;
+;;;
+
+(defun propagate-repaint (mirrored-sheet sheet region)
+  (dolist (child (sheet-children sheet))
+    (when (and (sheet-enabled-p child)
+	       (not (typep child 'mirrored-sheet-mixin)))
+      (let* ((native-child-region (region-intersection
+				   region
+				   (sheet-native-region child))))
+	(unless (eq native-child-region +nowhere+)
+	  ;; if child is a pane we need to repaint the background
+	  (when (typep child 'basic-pane)
+	    (with-bounding-rectangle* (x1 y1 x2 y2)
+		native-child-region
+	      (draw-rectangle* mirrored-sheet
+			       x1 y1 x2 y2 :filled t
+			       :clipping-region native-child-region :ink (pane-background child))))
+	  (handle-repaint child (untransform-region
+				 (sheet-native-transformation child)
+				 native-child-region))
+	  (propagate-repaint mirrored-sheet child region))))))

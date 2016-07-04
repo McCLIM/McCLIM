@@ -345,8 +345,8 @@
 (defmethod note-sheet-region-changed ((sheet basic-sheet))
   nil) ;have to change
 
-(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
-  nil)
+;;(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
+;;  nil)
 
 (defmethod sheet-native-transformation ((sheet basic-sheet))
   (with-slots (native-transformation) sheet

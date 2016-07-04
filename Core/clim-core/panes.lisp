@@ -896,7 +896,8 @@ order to produce a double-click")
 
 ;;; TOP-LEVEL-SHEET
 
-(defclass top-level-sheet-pane (mirrored-sheet-mixin composite-pane)
+(defclass top-level-sheet-pane (permanent-medium-sheet-output-mixin
+				mirrored-sheet-mixin composite-pane)
   ()
   (:documentation "For the first pane in the architecture"))
 
