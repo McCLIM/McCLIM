@@ -1077,7 +1077,7 @@
 
 (defmethod realize-mirror ((port clx-port) (pixmap pixmap))
   (when (null (port-lookup-mirror port pixmap))
-    (let* ((window (sheet-direct-mirror (pixmap-sheet pixmap)))
+    (let* ((window (sheet-mirror (pixmap-sheet pixmap)))
 	   (pix (xlib:create-pixmap 
 		    :width (round (pixmap-width pixmap))
 		    :height (round (pixmap-height pixmap))
