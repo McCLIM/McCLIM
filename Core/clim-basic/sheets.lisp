@@ -901,11 +901,12 @@ very hard)."
           ;; needs to be computed initially
           (t
            (let* ((parent (sheet-parent sheet))
+		  (mirrored-ancestor (sheet-mirrored-ancestor parent))
                   (sheet-region-in-native-parent
                    ;; this now is the wanted sheet mirror region
-                   (transform-region (sheet-native-transformation parent)
-                                     (transform-region (sheet-transformation sheet)
-                                                       (sheet-region sheet)))))
+		   (transform-region (sheet-native-transformation parent)
+				      (transform-region (sheet-transformation sheet)
+							(sheet-region sheet)))))
              (when (region-equal sheet-region-in-native-parent +nowhere+)
                ;; hmm
                (setf (%sheet-mirror-transformation sheet)
@@ -926,8 +927,8 @@ very hard)."
              (with-bounding-rectangle* (mx1 my1 mx2 my2)
 				       sheet-region-in-native-parent
                (let (;; pw, ph is the width/height of the parent
-                     (pw  (bounding-rectangle-width (sheet-mirror-region parent)))
-                     (ph  (bounding-rectangle-height (sheet-mirror-region parent))))
+                     (pw  (bounding-rectangle-width (sheet-mirror-region mirrored-ancestor)))
+                     (ph  (bounding-rectangle-height (sheet-mirror-region mirrored-ancestor))))
                  (labels ((choose (MT)
                             ;; -> fits-p mirror-region
                             (multiple-value-bind (x1 y1) (transform-position MT 0 0)
@@ -948,7 +949,7 @@ very hard)."
                    (when old-native-transformation
                      (let ((MT (compose-transformations
                                 (compose-transformations
-                                 (sheet-native-transformation (sheet-parent sheet))
+                                 (sheet-native-transformation parent)
                                  (sheet-transformation sheet))
                                 (invert-transformation old-native-transformation))))
                        (multiple-value-bind (fits-p MR) (choose MT)
@@ -978,7 +979,7 @@ very hard)."
                                   (compose-transformations
                                    (invert-transformation MT)
                                    (compose-transformations
-                                    (sheet-native-transformation (sheet-parent sheet))
+                                    (sheet-native-transformation parent)
                                     (sheet-transformation sheet)))))
                              ;; finally reflect the change to the host window system
                              (setf (%sheet-mirror-region sheet) MR)
