@@ -28,6 +28,9 @@
 			     :structure-notify
 			     :pointer-motion :button-motion))
 
+(defmethod clim-clx::realize-mirror ((port clxv2-port) (sheet mirrored-sheet-mixin))
+  (clim-clx::%realize-mirror port sheet))
+
 (defmethod clim-clx::%realize-mirror ((port clxv2-port) (sheet basic-sheet))
   (clim-clx::realize-mirror-aux port sheet
 		      :event-mask *event-mask*
