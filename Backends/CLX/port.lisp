@@ -435,11 +435,15 @@
   (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
+  ;;mirrored-sheet-mixin is always in the top of the Class Precedence List
+  (%realize-mirror port sheet))
+
+(defmethod %realize-mirror ((port clx-port) (sheet basic-sheet))
   (realize-mirror-aux port sheet
                       :border-width 0
                       :map (sheet-enabled-p sheet)))
 
-(defmethod realize-mirror ((port clx-port) (sheet border-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet border-pane))
   ;;(rotatef (medium-background (sheet-medium sheet)) (medium-foreground (sheet-medium sheet)))
   (realize-mirror-aux port sheet
 		      :border-width 0 ; (border-pane-width sheet)
@@ -447,14 +451,14 @@
 				    :structure-notify)
                       :map (sheet-enabled-p sheet)))
 
-(defmethod realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
   (let ((q (compose-space sheet)))
     (let ((frame (pane-frame sheet))
-          (window (realize-mirror-aux
-                   port sheet
-                   :map nil
-                   :width (round-coordinate (space-requirement-width q))
-                   :height (round-coordinate (space-requirement-height q)))))
+          (window (realize-mirror-aux port sheet
+                                      :map nil
+                                      :width (round-coordinate (space-requirement-width q))
+                                      :height (round-coordinate (space-requirement-height q))
+                                      :event-mask '(:key-press :key-release))))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
@@ -467,14 +471,14 @@
                             :WM_CLIENT_LEADER (list (xlib:window-id window))
                             :WINDOW 32))))
 
-(defmethod realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
 		      :override-redirect :on
                       :save-under :on
 		      :map nil
 		      :event-mask '(:structure-notify)))
 
-(defmethod realize-mirror ((port clx-port) (sheet menu-button-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet menu-button-pane))
   (realize-mirror-aux port sheet
 		      :event-mask '(:exposure
 				    :key-press :key-release
@@ -486,7 +490,7 @@
 				    :owner-grab-button)
                       :map (sheet-enabled-p sheet)))
 
-(defmethod realize-mirror ((port clx-port) (sheet clim-stream-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet clim-stream-pane))
   (realize-mirror-aux port sheet
 		      :event-mask '(:exposure
 				    :key-press :key-release
