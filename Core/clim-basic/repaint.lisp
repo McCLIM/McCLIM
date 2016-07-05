@@ -42,12 +42,12 @@
   (dolist (child (sheet-children sheet))
     (when (and (sheet-enabled-p child))
       (let* ((child-region (region-intersection
-			    (untrasform-region
+			    (untransform-region
 			     (sheet-transformation child)
 			     region)
 			    (sheet-region child))))
 	(unless (eq child-region +nowhere+)
-	  (repaint-sheet child-region))))))
+	  (repaint-sheet child child-region))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
