@@ -683,7 +683,7 @@ that this might be different from the sheet's native region."
   (update-mirror-geometry sheet))
 
 (defmethod note-sheet-transformation-changed ((sheet basic-sheet))
-  (unless (graftp sheet)
+  (when (and (not (graftp sheet)) (sheet-mirrored-ancestor sheet))
     (dispatch-event (sheet-mirrored-ancestor sheet)
 		    (make-instance 'window-repaint-event
 				   :sheet (sheet-mirrored-ancestor sheet)
