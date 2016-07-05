@@ -193,12 +193,20 @@
       (note-sheet-enabled sheet)
       (note-sheet-disabled sheet)))
 
+(defmethod (setf sheet-region) :around (region (sheet basic-sheet))
+  (unless (region-equal region (sheet-region sheet))
+    (call-next-method)))
+
 (defmethod sheet-transformation ((sheet basic-sheet))
   (error "Attempting to get the TRANSFORMATION of a SHEET that doesn't contain one"))
 
 (defmethod (setf sheet-transformation) (transformation (sheet basic-sheet))
   (declare (ignore transformation))
   (error "Attempting to set the TRANSFORMATION of a SHEET that doesn't contain one"))
+
+(defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
+  (unless (transformation-equal transformation (sheet-transformation sheet))
+    (call-next-method)))
 
 (defmethod move-sheet ((sheet basic-sheet) x y)
   (let ((transform (sheet-transformation sheet)))
@@ -337,8 +345,8 @@
 (defmethod note-sheet-region-changed ((sheet basic-sheet))
   nil) ;have to change
 
-(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
-  nil)
+;;(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
+;;  nil)
 
 (defmethod sheet-native-transformation ((sheet basic-sheet))
   (with-slots (native-transformation) sheet
@@ -656,12 +664,26 @@ that this might be different from the sheet's native region."
 (defmethod note-sheet-degrafted :after ((sheet mirrored-sheet-mixin))
   (destroy-mirror (port sheet) sheet))
 
+(defmethod note-sheet-region-changed ((sheet basic-sheet))
+  (unless (graftp sheet)
+    (dispatch-event (sheet-mirrored-ancestor sheet)
+		    (make-instance 'window-repaint-event
+				   :sheet (sheet-mirrored-ancestor sheet)
+				   :region (sheet-native-region sheet)))))
+
 (defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
   (declare (ignore region))
   ;; FIXME: I don't know why this next form is commented out.  It
   ;; should either be uncommented or removed.
   #+nil(port-set-sheet-region (port sheet) sheet region)
   (update-mirror-geometry sheet))
+
+(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
+  (unless (graftp sheet)
+    (dispatch-event (sheet-mirrored-ancestor sheet)
+		    (make-instance 'window-repaint-event
+				   :sheet (sheet-mirrored-ancestor sheet)
+				   :region (sheet-native-region sheet)))))
 
 (defmethod note-sheet-transformation-changed ((sheet mirrored-sheet-mixin))
   (update-mirror-geometry sheet))
