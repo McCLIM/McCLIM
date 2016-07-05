@@ -83,8 +83,6 @@
 						:modifier-state (slot-value event 'climi::modifier-state)
 						:timestamp (slot-value event 'climi::timestamp)))))))))
 		 
-
-
 		 
 		 
 ;;;
