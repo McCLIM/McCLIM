@@ -1184,7 +1184,7 @@ time an indexed pattern is drawn.")
 
 (defmethod climi::medium-draw-image-design*
     ((medium clx-medium) (design climi::rgb-image-design) x y)
-  (let* ((da (sheet-direct-mirror (medium-sheet medium)))
+  (let* ((da (sheet-mirror (medium-sheet medium)))
 	 (image (slot-value design 'climi::image))
 	 (width (climi::image-width image))
 	 (height (climi::image-height image)))
