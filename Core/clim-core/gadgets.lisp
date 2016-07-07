@@ -1126,7 +1126,6 @@ and must never be nil."))
                        :max-height (* 2 *3d-border-thickness*)))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
-  ;; (break "button pressed")
   (with-slots (pressedp) pane
     (setf pressedp t)
     (dispatch-repaint pane +everywhere+)))

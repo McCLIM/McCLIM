@@ -386,8 +386,7 @@
   
 (defmethod handle-event ((sheet standard-sheet-input-mixin) event)
   ;; Standard practice is to ignore events
-  ;; (declare (ignore event))
-  (xxx "handling event ~A on sheet ~A" event sheet)
+  (declare (ignore event))
   nil)
 
 (defmethod event-read ((sheet standard-sheet-input-mixin))  

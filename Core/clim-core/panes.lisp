@@ -964,18 +964,6 @@ order to produce a double-click")
 			 (event window-manager-delete-event))
   (frame-exit (pane-frame (event-sheet event))))
 
-#+ (or)
-(defmethod handle-event ((pane top-level-sheet-pane)
-                         (event pointer-event))
-  (map-over-sheets-containing-position
-   #'(lambda (s)
-       (if (eql s pane)
-           (cerror "ignore it" "map-over-sheets access itself ~A" s)
-           (handle-event s event)))
-   pane
-   (pointer-event-native-x event)
-   (pointer-event-native-y event)))
-
 ;;; UNMANAGED-TOP-LEVEL-SHEET PANE
 
 (defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)

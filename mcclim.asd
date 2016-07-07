@@ -61,9 +61,8 @@ interface management system."
 (defsystem #:mcclim/looks
   :depends-on (#:clim
                #-(or mcclim-gtkairo mcclim-beagle mcclim-ugly)
-                                ;#:mcclim-clx/pretty  #| adds truetype and pixie theme |#
-               ;; #+mcclim-ugly
-               #:mcclim-clx         #| 'raw' clim-clx backend        |#
+                                #:mcclim-clx/pretty  #| adds truetype and pixie theme |#
+               #+mcclim-ugly    #:mcclim-clx         #| 'raw' clim-clx backend        |#
                #+mcclim-gtkairo #:mcclim-gtkairo     #| Defunct now                   |#
                #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure only)     |#
 
