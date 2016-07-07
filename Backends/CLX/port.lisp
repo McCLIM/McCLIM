@@ -1130,7 +1130,7 @@
 	 (sheet (port-pointer-sheet port)))
     (when sheet
       (multiple-value-bind (x y same-screen-p)
-	  (xlib:query-pointer (sheet-direct-mirror sheet))
+	  (xlib:query-pointer (sheet-mirror sheet))
 	(when same-screen-p
 	  (untransform-position (sheet-native-transformation sheet) x y))))))
 
