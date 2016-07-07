@@ -345,9 +345,6 @@
 (defmethod note-sheet-region-changed ((sheet basic-sheet))
   nil) ;have to change
 
-;;(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
-;;  nil)
-
 (defmethod sheet-native-transformation ((sheet basic-sheet))
   (with-slots (native-transformation) sheet
     (unless native-transformation
@@ -957,8 +954,10 @@ very hard)."
              (with-bounding-rectangle* (mx1 my1 mx2 my2)
 				       sheet-region-in-native-parent
                (let (;; pw, ph is the width/height of the parent
-                     (pw  (bounding-rectangle-width (sheet-mirror-region mirrored-ancestor)))
-                     (ph  (bounding-rectangle-height (sheet-mirror-region mirrored-ancestor))))
+                     (pw  (bounding-rectangle-width
+                           (sheet-mirror-region mirrored-ancestor)))
+                     (ph  (bounding-rectangle-height
+                           (sheet-mirror-region mirrored-ancestor))))
                  (labels ((choose (MT)
                             ;; -> fits-p mirror-region
                             (multiple-value-bind (x1 y1) (transform-position MT 0 0)
