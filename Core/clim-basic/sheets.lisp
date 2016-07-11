@@ -193,12 +193,20 @@
       (note-sheet-enabled sheet)
       (note-sheet-disabled sheet)))
 
+(defmethod (setf sheet-region) :around (region (sheet basic-sheet))
+  (unless (region-equal region (sheet-region sheet))
+    (call-next-method)))
+
 (defmethod sheet-transformation ((sheet basic-sheet))
   (error "Attempting to get the TRANSFORMATION of a SHEET that doesn't contain one"))
 
 (defmethod (setf sheet-transformation) (transformation (sheet basic-sheet))
   (declare (ignore transformation))
   (error "Attempting to set the TRANSFORMATION of a SHEET that doesn't contain one"))
+
+(defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
+  (unless (transformation-equal transformation (sheet-transformation sheet))
+    (call-next-method)))
 
 (defmethod move-sheet ((sheet basic-sheet) x y)
   (let ((transform (sheet-transformation sheet)))
@@ -336,9 +344,6 @@
 
 (defmethod note-sheet-region-changed ((sheet basic-sheet))
   nil) ;have to change
-
-(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
-  nil)
 
 (defmethod sheet-native-transformation ((sheet basic-sheet))
   (with-slots (native-transformation) sheet
@@ -656,12 +661,34 @@ that this might be different from the sheet's native region."
 (defmethod note-sheet-degrafted :after ((sheet mirrored-sheet-mixin))
   (destroy-mirror (port sheet) sheet))
 
+(defmethod note-sheet-region-changed ((sheet basic-sheet))
+  (unless (graftp sheet)
+    (dispatch-event (sheet-mirrored-ancestor sheet)
+		    (make-instance 'window-repaint-event
+				   :sheet (sheet-mirrored-ancestor sheet)
+				   :region (sheet-native-region sheet))))
+  (dolist (child (sheet-children sheet))
+    (when (sheet-enabled-p child)
+      (note-sheet-transformation-changed child))))
+
+
 (defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
   (declare (ignore region))
   ;; FIXME: I don't know why this next form is commented out.  It
   ;; should either be uncommented or removed.
   #+nil(port-set-sheet-region (port sheet) sheet region)
   (update-mirror-geometry sheet))
+
+(defmethod note-sheet-transformation-changed ((sheet basic-sheet))
+  (when (and (not (graftp sheet)) (sheet-mirrored-ancestor sheet))
+    (dispatch-event (sheet-mirrored-ancestor sheet)
+		    (make-instance 'window-repaint-event
+				   :sheet (sheet-mirrored-ancestor sheet)
+				   :region (sheet-native-region sheet))))
+  ;; propagate to children
+  (dolist (child (sheet-children sheet))
+    (when (sheet-enabled-p child)
+      (note-sheet-transformation-changed child))))
 
 (defmethod note-sheet-transformation-changed ((sheet mirrored-sheet-mixin))
   (update-mirror-geometry sheet))
@@ -901,11 +928,12 @@ very hard)."
           ;; needs to be computed initially
           (t
            (let* ((parent (sheet-parent sheet))
+		  (mirrored-ancestor (sheet-mirrored-ancestor parent))
                   (sheet-region-in-native-parent
                    ;; this now is the wanted sheet mirror region
-                   (transform-region (sheet-native-transformation parent)
-                                     (transform-region (sheet-transformation sheet)
-                                                       (sheet-region sheet)))))
+		   (transform-region (sheet-native-transformation parent)
+				      (transform-region (sheet-transformation sheet)
+							(sheet-region sheet)))))
              (when (region-equal sheet-region-in-native-parent +nowhere+)
                ;; hmm
                (setf (%sheet-mirror-transformation sheet)
@@ -926,8 +954,10 @@ very hard)."
              (with-bounding-rectangle* (mx1 my1 mx2 my2)
 				       sheet-region-in-native-parent
                (let (;; pw, ph is the width/height of the parent
-                     (pw  (bounding-rectangle-width (sheet-mirror-region parent)))
-                     (ph  (bounding-rectangle-height (sheet-mirror-region parent))))
+                     (pw  (bounding-rectangle-width
+                           (sheet-mirror-region mirrored-ancestor)))
+                     (ph  (bounding-rectangle-height
+                           (sheet-mirror-region mirrored-ancestor))))
                  (labels ((choose (MT)
                             ;; -> fits-p mirror-region
                             (multiple-value-bind (x1 y1) (transform-position MT 0 0)
@@ -948,7 +978,7 @@ very hard)."
                    (when old-native-transformation
                      (let ((MT (compose-transformations
                                 (compose-transformations
-                                 (sheet-native-transformation (sheet-parent sheet))
+                                 (sheet-native-transformation parent)
                                  (sheet-transformation sheet))
                                 (invert-transformation old-native-transformation))))
                        (multiple-value-bind (fits-p MR) (choose MT)
@@ -978,7 +1008,7 @@ very hard)."
                                   (compose-transformations
                                    (invert-transformation MT)
                                    (compose-transformations
-                                    (sheet-native-transformation (sheet-parent sheet))
+                                    (sheet-native-transformation parent)
                                     (sheet-transformation sheet)))))
                              ;; finally reflect the change to the host window system
                              (setf (%sheet-mirror-region sheet) MR)
