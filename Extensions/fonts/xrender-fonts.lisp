@@ -430,32 +430,39 @@
       (invoke-with-truetype-path-restart continuation))))
 
 (let (lookaside)
-  (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port) (text-style standard-text-style))
+  (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port)
+                                                     (text-style standard-text-style))
     (flet ((f ()
              (multiple-value-bind (family face size) 
                  (clim:text-style-components text-style)
-            
+
+               (setf face   (or face :roman)
+                     family (or family :fix)
+                     size   (or size :normal))
+
+               (when (eq family :fixed)
+                 (setf family :fix))
+
                (let ((display (clim-clx::clx-port-display port)))
-                 (setf face (or face :roman))
-                 (setf family (or family :fix))
-                 (setf size (or size :normal))
-                 (when (eq family :fixed) (setf family :fix))                   
                  (cond (size
                         (setf size (getf *sizes* size size))
-                        (let ((val (gethash (list display family face size) *display-face-hash*)))
-                          (if val val
-                              (setf (gethash (list display family face size) *display-face-hash*)
-                                    (let* ((font-path-relative (cdr (assoc (list family face) *families/faces*
-                                                                           :test #'equal)))
-                                           (font-path (namestring (merge-pathnames font-path-relative 
-                                                                                   *truetype-font-path*))))
-                                      (unless (and font-path (probe-file font-path))
-                                        (error 'missing-font :filename font-path))                                      
-                                      (make-truetype-face display font-path size))))))
+                        (alexandria:ensure-gethash
+                         (list display family face size)
+                         *display-face-hash*
+                         (let* ((font-path-relative
+                                 (cdr (assoc (list family face) *families/faces*
+                                             :test #'equal)))
+                                (font-path (namestring
+                                            (merge-pathnames font-path-relative
+                                                             *truetype-font-path*))))
+                           (unless (and font-path (probe-file font-path))
+                             (error 'missing-font :filename font-path))
+                           (make-truetype-face display font-path size))))
                        (t (call-next-method)))))))
       (cdr (if (eq (car lookaside) text-style)
                lookaside
-               (setf lookaside (cons text-style (invoke-with-truetype-path-restart #'f))))))))
+               (setf lookaside
+                     (cons text-style (invoke-with-truetype-path-restart #'f))))))))
 
 (defmethod clim-clx::text-style-to-X-font ((port clim-clx::clx-port) text-style)
   (error "You lost: ~S." text-style))
