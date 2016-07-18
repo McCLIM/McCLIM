@@ -16,6 +16,5 @@
 
 (defsystem #:mcclim-clx/pretty
   :depends-on (#:mcclim-clx
-               ;; FIXME: truetype is slow, acceptable only on SBCL
-               #+sbcl #:mcclim-fonts/truetype
+               #:mcclim-fonts/truetype
                #:mcclim-looks/pixie))
