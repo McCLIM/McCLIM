@@ -762,7 +762,8 @@ position for the character."
   (let* ((msheet (sheet-mirrored-ancestor sheet))
 	 (medium (sheet-medium sheet))
 	 (sheet-transform (sheet-native-transformation sheet))
-	 (medium-transform (medium-transformation (sheet-medium sheet)))
+	 (msheet-transform (sheet-native-transformation msheet))
+	 (medium-transform (medium-transformation medium))
 	 (world-transform (compose-transformations
 			   sheet-transform
 			   medium-transform)))
@@ -778,9 +779,9 @@ position for the character."
 	       (pixmap-y2 (ceiling sheet-y2))
 	       (pixmap-width (- pixmap-x2 pixmap-x1))
 	       (pixmap-height (- pixmap-y2 pixmap-y1))
-	       (current-sheet-region (sheet-region msheet))
-	       (sheet-native (compose-transformation-with-translation
-			      sheet-transform
+	       (current-msheet-region (sheet-region msheet))
+	       (msheet-native (compose-transformation-with-translation
+			      msheet-transform
 			      (- pixmap-x1)
 			      (- pixmap-y1)))
 	       (pixmap (allocate-pixmap msheet pixmap-width pixmap-height))
@@ -791,45 +792,49 @@ position for the character."
 	      (untransform-position world-transform pixmap-x1 pixmap-y1)
 	    (multiple-value-bind (user-pixmap-x2 user-pixmap-y2)
 		(untransform-position world-transform pixmap-x2 pixmap-y2)
-	      (flet ((set-native (transform region sheet)
-		       (%%set-sheet-native-transformation transform sheet)
-		       (setf (slot-value sheet 'region) region)
-		       (invalidate-cached-regions sheet)
-		       (invalidate-cached-transformations sheet)))
-		;; Assume that the scaling for the sheet-native
-		;; transformation for the pixmap will be the same as that of
-		;; the mirror .
-		(unwind-protect
-		     (letf (((sheet-parent msheet) nil)
-			    ((sheet-direct-mirror msheet)
-			     (pixmap-mirror pixmap)))
-		       (unwind-protect
-			    (let ((pixmap-region
-				   (make-bounding-rectangle user-pixmap-x1
+	      (multiple-value-bind (msheet-pixmap-x1 msheet-pixmap-y1)
+		  (untransform-position msheet-transform pixmap-x1 pixmap-y1)
+		(multiple-value-bind (msheet-pixmap-x2 msheet-pixmap-y2)
+		    (untransform-position msheet-transform pixmap-x2 pixmap-y2)
+		  (flet ((set-native (transform region sheet)
+			   (%%set-sheet-native-transformation transform sheet)
+			   (setf (slot-value sheet 'region) region)
+			   (invalidate-cached-regions sheet)
+			   (invalidate-cached-transformations sheet)))
+		    ;; Assume that the scaling for the sheet-native
+		    ;; transformation for the pixmap will be the same as that of
+		    ;; the mirror .
+		    (unwind-protect
+			 (letf (((sheet-parent msheet) nil)
+				((sheet-direct-mirror msheet)
+				 (pixmap-mirror pixmap)))
+			   (unwind-protect
+				(let ((pixmap-region
+				       (region-intersection
+					(sheet-native-region sheet)
+					(make-bounding-rectangle msheet-pixmap-x1
+								 msheet-pixmap-y1
+								 msheet-pixmap-x2
+								 msheet-pixmap-y2))))
+				  (set-native msheet-native pixmap-region msheet)
+				  (with-drawing-options
+				      (medium :ink (medium-background medium))
+				    (medium-draw-rectangle* medium
+							    user-pixmap-x1
 							    user-pixmap-y1
 							    user-pixmap-x2
-							    user-pixmap-y2)))
-			      (set-native sheet-native pixmap-region  msheet)
-			      ;(break)
-			      (with-drawing-options
-				  (medium :ink (medium-background medium))
-				
-				(medium-draw-rectangle* medium
-							user-pixmap-x1
-							user-pixmap-y1
-							user-pixmap-x2
-							user-pixmap-y2
-							t))
-			      (funcall continuation sheet
-				       user-pixmap-x1 user-pixmap-y1
-				       user-pixmap-x2 user-pixmap-y2))
-			 (set-native sheet-transform
-				     current-sheet-region
-				     msheet)))
-		  (copy-from-pixmap pixmap 0 0
-				    pixmap-width pixmap-height msheet
-				    pixmap-x1 pixmap-y1)
-		  (deallocate-pixmap pixmap))))))))))
+							    user-pixmap-y2
+							    t))
+				  (funcall continuation sheet
+					   user-pixmap-x1 user-pixmap-y1
+					   user-pixmap-x2 user-pixmap-y2))
+			     (set-native msheet-transform
+					 current-msheet-region
+					 msheet)))
+		      (copy-from-pixmap pixmap 0 0
+					pixmap-width pixmap-height sheet
+					user-pixmap-x1 user-pixmap-y1)
+		      (deallocate-pixmap pixmap))))))))))))
 
 (defmacro with-double-buffering (((sheet &rest bounds-args)
 				  (&rest pixmap-args))

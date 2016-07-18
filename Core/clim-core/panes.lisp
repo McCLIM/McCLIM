@@ -971,7 +971,8 @@ order to produce a double-click")
   (:documentation "Top-level sheet without window manager intervention"))
 
 (defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
-  +identity-transformation+)
+  (with-slots (native-transformation) sheet
+    	native-transformation))
 
 (defmethod change-space-requirements ((pane unmanaged-top-level-sheet-pane)
                                       &rest space-req-keys

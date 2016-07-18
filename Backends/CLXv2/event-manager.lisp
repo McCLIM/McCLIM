@@ -149,7 +149,7 @@
 
 (defun sheet-common-ancestor (sheet-a sheet-b)
   (cond
-    ((null sheet-a)
+    ((or (null sheet-a) (null sheet-b))
      nil)
     ((climi::graftp sheet-a)
      sheet-a)
