@@ -378,7 +378,7 @@
   ;; of the constant 0.  -- RS 2007-07-22
   (declare (ignore border-width))
   (when (null (port-lookup-mirror port sheet))
-    (update-mirror-geometry sheet)
+    (update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
                             (sheet-with-medium-mixin
                               (medium-background sheet))

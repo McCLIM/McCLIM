@@ -897,9 +897,16 @@ order to produce a double-click")
 ;;; TOP-LEVEL-SHEET
 
 (defclass top-level-sheet-pane (permanent-medium-sheet-output-mixin
-				mirrored-sheet-mixin composite-pane)
+				;;mirrored-sheet-mixin
+				composite-pane)
   ()
   (:documentation "For the first pane in the architecture"))
+
+(defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
+  (with-slotss (native-transformation) sheet
+    (unless native-transformation
+      (setf native-transformation +identity-transformation+))
+    native-transformation))
 
 (defun top-level-sheet-pane-p (pane)
   (typep pane 'top-level-sheet-pane))

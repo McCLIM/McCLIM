@@ -21,9 +21,10 @@
                 #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
-                #:update-mirror-geometry
                 #:%sheet-mirror-region
                 #:%sheet-mirror-transformation
+		#:%%sheet-native-transformation
+		#:%%set-sheet-native-transformation
                 ;;
                 #:clamp
                 #:get-environment-variable

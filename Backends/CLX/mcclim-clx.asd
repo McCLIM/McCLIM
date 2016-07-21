@@ -12,7 +12,8 @@
    (:file "port" :depends-on ("keysyms-common" "keysyms" "package"))
    (:file "medium" :depends-on ("port" "keysyms" "package"))
    (:file "graft" :depends-on ("port" "package"))
-   (:file "frame-manager" :depends-on ("medium" "port" "package"))))
+   (:file "mirrored-sheets" :depends-on ("port" "package"))
+   (:file "frame-manager" :depends-on ("medium" "port" "package" "mirrored-sheets"))))
 
 (defsystem #:mcclim-clx/pretty
   :depends-on (#:mcclim-clx
