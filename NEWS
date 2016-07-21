@@ -1,4 +1,5 @@
 * Changes in mcclim-0.9.7 relative to 0.9.6:
+** Improvement: Removed assumption about panes that each one is morrored
 ** Housekeeping: clim-looks system has been renamed to mcclim/looks     :api:
 ** Housekeeping: tab-layout has it's own system now clim-layouts/tab    :api:
 ** Housekeeping: remove clim-ffi package (not used, not in the spec)    :api:
@@ -8,6 +9,7 @@
 ** Housekeeping: Cleaning up chunks of code
 ** Housekeeping: Removed non-functional graphic-forms backend (Windows specific)
 ** Housekeeping: Removed non-functional OpenGL backend (ancient-CLX specific)
+** Housekeeping: Removed non-functional gtkairo backend
 ** Housekeeping: Moved core systems to the Core/ and substrates to Libraries/
 ** Housekeeping: fixed the dependency tree to be more sane
 ** Improvement: Multiprocessing is now provided by the bordeaux-threads

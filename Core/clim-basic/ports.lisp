@@ -27,16 +27,14 @@
 (defvar *default-server-path* nil)
 
 ;;; - CLX is the de-facto reference backend.
-;;; - Prefer Beagle and Gtkairo over CLX, since they get installed only
+;;; - Prefer Beagle over CLX, since it gets installed only
 ;;;   on explicit user request anyway.
-;;; - If both are present, use Beagle in favour of Gtkairo, since
-;;;   it is the native OSX backend.
 ;;; - Null are in this list mostly to document its existence, and is
 ;;;   not currently a complete backend we would want to make a
 ;;;   default.  Put it after CLX, so that it won't actually be
 ;;;   reached.
 (defvar *server-path-search-order*
-    '(:beagle :gtkairo :clx :null))
+    '(:beagle :clx :null))
 
 (defun find-default-server-path ()
   (loop for port in *server-path-search-order*
