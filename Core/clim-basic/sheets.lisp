@@ -675,6 +675,13 @@ that this might be different from the sheet's native region."
         (port-enable-sheet (port sheet) sheet)
         (port-disable-sheet (port sheet) sheet))))
 
+(defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
+  (with-slots (native-transformation device-transformation) sheet
+    (setf ;;native-transformation nil
+     device-transformation nil))
+  (loop for child in (sheet-children sheet)
+        do (invalidate-cached-transformations child)))
+
 (defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
   (with-slots (native-region) sheet     
     (unless native-region      

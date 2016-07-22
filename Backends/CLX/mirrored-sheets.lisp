@@ -3,13 +3,6 @@
 (defclass clx-mirrored-sheet-mixin (mirrored-sheet-mixin)
   ())
 
-(defmethod clim:invalidate-cached-transformations ((sheet clx-mirrored-sheet-mixin))
-  (with-slots (climi::native-transformation climi::device-transformation) sheet
-    (setf ;;native-transformation nil
-          climi::device-transformation nil))
-  (loop for child in (sheet-children sheet)
-        do (invalidate-cached-transformations child)))
-
 (defmethod (setf clim:sheet-region) (region (sheet clx-mirrored-sheet-mixin))
   (declare (ignore region))
   (let ((old-native-transformation (%%sheet-native-transformation sheet)))
@@ -402,7 +395,7 @@ very hard)."
           (t
            ;; Full sheet contents need to be redrawn, since transformation is no
            ;; translation.
-           (dispatch-repaint sheet
+           (climi::dispatch-repaint sheet
                              (untransform-region native-transformation MR)) ))))
 
 
@@ -460,3 +453,6 @@ very hard)."
 	 (untransform-region (%sheet-mirror-transformation sheet)
 			     (effective-mirror-region ancestor)))
 	(sheet-mirror-region sheet))))
+
+(defmethod effective-mirror-region ((sheet clx-graft))
+  (sheet-mirror-region sheet))

@@ -65,11 +65,5 @@
 
 
 
-;;;
-;;;
-;;;
-
-(defclass clxv2-mirrored-sheet-mixin (mirrored-sheet-mixin)
-  ())
 
 
