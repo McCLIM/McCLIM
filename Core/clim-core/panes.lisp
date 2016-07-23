@@ -902,6 +902,7 @@ order to produce a double-click")
   ()
   (:documentation "For the first pane in the architecture"))
 
+
 (defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
   (with-slotss (native-transformation) sheet
     (unless native-transformation
@@ -943,29 +944,6 @@ order to produce a double-click")
     (allocate-space (first (sheet-children pane))
 		    (clamp width  (sr-min-width pane)  (sr-max-width pane))
 		    (clamp height (sr-min-height pane) (sr-max-height pane)))))
-
-(defmethod handle-event ((pane top-level-sheet-pane)
-			 (event window-configuration-event))
-  (let ((x (window-configuration-event-x event))
-	(y (window-configuration-event-y event))
-	(width (window-configuration-event-width event))
-        (height (window-configuration-event-height event)))
-    (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) (sheet-region pane)
-      (let ((old-width  (- old-x2 old-x1))
-            (old-height (- old-y2 old-y1)))
-        ;; Avoid going into an infinite loop by not using
-        ;; (SETF SHEET-TRANSFORMATION).
-        (setf (slot-value pane 'transformation)
-	      (make-translation-transformation x y))
-        (invalidate-cached-transformations pane)
-        ;; Avoid going into an infinite loop by not using
-        ;; (SETF SHEET-REGION).
-        (setf (slot-value pane 'region)
-	      (make-bounding-rectangle 0 0 width height))
-        (when (or (/= width  old-width)
-                  (/= height old-height))
-          (invalidate-cached-regions pane)
-          (allocate-space pane width height))))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-manager-delete-event))

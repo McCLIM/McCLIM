@@ -1,6 +1,7 @@
 
 (defsystem #:mcclim-clxv2
-  :depends-on (#:mcclim-clx)
+  :depends-on (#:mcclim-clx
+	       #:mcclim-standard)
 
   :components
   ((:file "package")

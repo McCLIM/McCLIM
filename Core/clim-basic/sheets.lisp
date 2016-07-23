@@ -342,21 +342,10 @@
   nil)
 
 (defmethod note-sheet-region-changed ((sheet basic-sheet))
-  (when (and (sheet-viewable-p sheet)
-	     (not (graftp sheet)))
-    (dispatch-event (sheet-mirrored-ancestor sheet)
-		    (make-instance 'window-repaint-event
-				   :sheet (sheet-mirrored-ancestor sheet)
-				   :region (sheet-native-region sheet)))))
+  nil)
 
 (defmethod note-sheet-transformation-changed ((sheet basic-sheet))
-  (when (and (sheet-viewable-p sheet)
-	     (not (graftp sheet)))
-    (dispatch-event (sheet-mirrored-ancestor sheet)
-		    (make-instance 'window-repaint-event
-				   :sheet (sheet-mirrored-ancestor sheet)
-				   :region (sheet-native-region sheet)))))
-
+  nil)
 
 (defmethod sheet-native-transformation ((sheet basic-sheet))
   (with-slots (native-transformation) sheet
@@ -610,33 +599,11 @@
 ;;;
 ;;; mirrored sheet
 
-;;; We assume the following limitations of the host window systems:
-;;;
-;;;  mirror transformations:
-;;;   . can only be translations
-;;;   . are limited to 16-bit signed integer deltas
-;;;
-;;;  mirror regions:
-;;;   . can only be axis-aligend rectangles
-;;;   . min-x = min-y = 0
-;;;   . max-x, max-y < 2^16
-;;;
-;;; These are the limitations of the X Window System.
+;;; No limitations
 ;;;
 
 (defclass mirrored-sheet-mixin ()
   ((port :initform nil :initarg :port :accessor port)
-   (mirror-transformation
-    :documentation "Our idea of the current mirror transformation. Might not
-                    be correct if a foreign application changes our mirror's geometry."
-    :initform +identity-transformation+
-    :accessor %sheet-mirror-transformation)
-   (mirror-region
-    :documentation "Our idea of the current mirror region. Might not be
-correct if a foreign application changes our mirror's geometry. Also note
-that this might be different from the sheet's native region."
-    :initform nil
-    :accessor %sheet-mirror-region)
    (native-transformation :initform +identity-transformation+)))
 
 (defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
@@ -674,43 +641,6 @@ that this might be different from the sheet's native region."
     (if new-value
         (port-enable-sheet (port sheet) sheet)
         (port-disable-sheet (port sheet) sheet))))
-
-(defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
-  (with-slots (native-transformation device-transformation) sheet
-    (setf ;;native-transformation nil
-     device-transformation nil))
-  (loop for child in (sheet-children sheet)
-        do (invalidate-cached-transformations child)))
-
-(defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
-  (with-slots (native-region) sheet     
-    (unless native-region      
-      (let ((this-region (transform-region (sheet-native-transformation sheet)
-					   (sheet-region sheet)))
-	    (parent (sheet-parent sheet)))
-	(setf native-region
-	      (if parent
-		  (region-intersection this-region
-				       (transform-region
-					(invert-transformation
-					 (%sheet-mirror-transformation sheet))
-					(sheet-native-region parent)))
-		  this-region))))
-    native-region))
-
-(defmethod sheet-native-transformation ((sheet mirrored-sheet-mixin))
-  ;; XXX hm...
-  (with-slots (native-transformation) sheet
-    (unless native-transformation
-      (setf native-transformation
-            (compose-transformations
-             (invert-transformation
-              (%sheet-mirror-transformation sheet))
-             (compose-transformations
-              (sheet-native-transformation (sheet-parent sheet))
-              (sheet-transformation sheet)))))
-      native-transformation))
-
 
 ;;; Internal interface for enabling/disabling motion hints
 

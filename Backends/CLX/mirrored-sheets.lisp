@@ -1,6 +1,6 @@
 (in-package :clim-clx)
 
-(defclass clx-mirrored-sheet-mixin (mirrored-sheet-mixin)
+(defclass clx-mirrored-sheet-mixin (standard-mirrored-sheet-mixin)
   ())
 
 (defmethod (setf clim:sheet-region) (region (sheet clx-mirrored-sheet-mixin))
@@ -16,6 +16,14 @@
     (call-next-method)
     ;;(%%set-sheet-native-transformation old-native-transformation sheet)
     (update-mirror-geometry sheet old-native-transformation)))
+
+
+(defmethod invalidate-cached-transformations ((sheet clx-mirrored-sheet-mixin))
+  (with-slots (native-transformation device-transformation) sheet
+    (setf ;;native-transformation nil
+     device-transformation nil))
+  (loop for child in (sheet-children sheet)
+        do (invalidate-cached-transformations child)))
 
 #|
 (defmethod clim:invalidate-cached-regions ((sheet clx-mirrored-sheet-mixin))
@@ -169,7 +177,8 @@ very hard)."
 	     (setf (%sheet-mirror-transformation sheet)
 		   (make-translation-transformation -5 -5))
 	     (setf (%sheet-mirror-region sheet) (make-rectangle* 0 0 1 1))
-	     (when (sheet-direct-mirror sheet)
+	     (when (and (sheet-direct-mirror sheet)
+			(not (eql *configuration-event-p* sheet)))
 	       (port-set-mirror-region
 		(port sheet)
 		(sheet-direct-mirror sheet)
@@ -215,7 +224,8 @@ very hard)."
 		       (when fits-p
 			 (setf (%sheet-mirror-region sheet) MR)
 			 (setf (%sheet-mirror-transformation sheet) MT)
-			 (when (sheet-direct-mirror sheet)
+			 (when (and (sheet-direct-mirror sheet)
+				    (not (eql *configuration-event-p* sheet)))
 			   (let ((port (port sheet))
 				 (mirror (sheet-direct-mirror sheet)))
 			     (port-set-mirror-region port mirror MR)
@@ -243,7 +253,8 @@ very hard)."
 			   ;; finally reflect the change to the host window system
 			   (setf (%sheet-mirror-region sheet) MR)
 			   (setf (%sheet-mirror-transformation sheet) MT)
-			   (when (sheet-direct-mirror sheet)
+			   (when (and (sheet-direct-mirror sheet)
+				      (not (eql *configuration-event-p* sheet)))
 			     (let ((port (port sheet))
 				   (mirror (sheet-direct-mirror sheet)))
 			       (port-set-mirror-region port mirror MR)
@@ -294,7 +305,8 @@ very hard)."
 			  ;; finally reflect the change to the host window system
 			  (setf (%sheet-mirror-region sheet) MR)
 			  (setf (%sheet-mirror-transformation sheet) MT)
-			  (when (sheet-direct-mirror sheet)
+			  (when (and (sheet-direct-mirror sheet)
+				     (not (eql *configuration-event-p* sheet)))
 			    (let ((port (port sheet))
 				  (mirror (sheet-direct-mirror sheet)))
 			      (port-set-mirror-region port mirror MR)
@@ -317,7 +329,8 @@ very hard)."
 				(make-translation-transformation -5 -5))
 			  (setf (%sheet-mirror-region sheet)
 				(make-rectangle* 0 0 1 1))
-			  (when (sheet-direct-mirror sheet)
+			  (when (and (sheet-direct-mirror sheet)
+				     (not (eql *configuration-event-p* sheet)))
 			    (port-set-mirror-region
 			     (port sheet)
 			     (sheet-direct-mirror sheet)

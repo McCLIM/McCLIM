@@ -157,7 +157,7 @@
     (assoc point ranges :test (lambda (point range)
                                 (<= (car range) point (cdr range))))))
 
-(defclass clx-port (clim-xcommon:keysym-port-mixin basic-port)
+(defclass clx-port (clim-xcommon:keysym-port-mixin standard-port)
   ((display :initform nil
 	    :accessor clx-port-display)
    (screen :initform nil

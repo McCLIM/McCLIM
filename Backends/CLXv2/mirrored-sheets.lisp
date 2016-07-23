@@ -1,29 +1,35 @@
 (in-package :clim-clxv2)
 
-(defclass clxv2-mirrored-sheet-mixin (mirrored-sheet-mixin)
+(defclass clxv2-mirrored-sheet-mixin (standard-mirrored-sheet-mixin)
   ())
 
 
 (defmethod (setf clim:sheet-region) (region (sheet clxv2-mirrored-sheet-mixin))
   (declare (ignore region))
-  (let ((old-native-transformation (%%sheet-native-transformation sheet)))
-    (call-next-method)
-    ;;(%%set-sheet-native-transformation old-native-transformation sheet)
-    (update-mirror-geometry sheet)))
+  (call-next-method)
+  (update-mirror-geometry sheet))
 
 (defmethod (setf clim:sheet-transformation) (region (sheet clxv2-mirrored-sheet-mixin))
   (declare (ignore region))
-  (let ((old-native-transformation (%%sheet-native-transformation sheet)))
-    (call-next-method)
-    ;;(%%set-sheet-native-transformation old-native-transformation sheet)
-    (update-mirror-geometry sheet)))
+  (call-next-method)
+  (update-mirror-geometry sheet))
+
+(defmethod clim:invalidate-cached-regions :after ((sheet clxv2-mirrored-sheet-mixin))
+
+  )
+
+(defmethod clim:invalidate-cached-transformations :after ((sheet clxv2-mirrored-sheet-mixin))
+
+)
+
 
 (defun update-mirror-geometry (sheet &key)
   (flet ((set-nowhere (sheet)
 	   (setf (%sheet-mirror-transformation sheet)
 		 (make-translation-transformation -5 -5))
 	   (setf (%sheet-mirror-region sheet) (make-rectangle* 0 0 1 1))
-	   (when (sheet-direct-mirror sheet)
+	   (when (and (sheet-direct-mirror sheet)
+		      (not (eql *configuration-event-p* sheet)))
 	     (port-set-mirror-region
 	      (port sheet)
 	      (sheet-direct-mirror sheet)
@@ -67,20 +73,21 @@
 			(compose-transformations
 			 (sheet-native-transformation (sheet-parent sheet))
 			 (sheet-transformation sheet)))))
-		 ;;(format *debug-io* "m: ~A ~A~%" MR MT)
-		 ;;(format *debug-io* "t: ~A ~A~%" native-transformation-old native-transformation)
 		 (cond ((and (> (round (- mx2 mx1)) 0)
 			     (> (round (- my2 my1)) 0))
 			;; finally reflect the change to the host window system
 			(setf (%sheet-mirror-region sheet) MR)
 			(setf (%sheet-mirror-transformation sheet) MT)
-			(when (sheet-direct-mirror sheet)
+			(when (and (sheet-direct-mirror sheet)
+				   (not (eql *configuration-event-p* sheet)))
 			  (let ((port (port sheet))
 				(mirror (sheet-direct-mirror sheet)))
+			 
 			    (port-set-mirror-region port mirror MR)
 			    (port-set-mirror-transformation port mirror MT)))
 			;; update the native transformation if neccessary.
-			  (invalidate-cached-transformations sheet)
-			  (%%set-sheet-native-transformation native-transformation sheet))
+			  ;;(invalidate-cached-transformations sheet)
+			;;(%%set-sheet-native-transformation native-transformation sheet))
+			)
 		       (t
 			(set-nowhere sheet))))))))))

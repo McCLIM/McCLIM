@@ -21,10 +21,9 @@
                 #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
-                #:%sheet-mirror-region
-                #:%sheet-mirror-transformation
 		#:%%sheet-native-transformation
 		#:%%set-sheet-native-transformation
+		#:device-transformation	
                 ;;
                 #:clamp
                 #:get-environment-variable
@@ -64,4 +63,12 @@
 		#:pointer-motion-hint-event
                 #:device-font-text-style
                 ;;
-                ) )
+                )
+  (:import-from :clim-standard
+		#:standard-mirrored-sheet-mixin
+		#:%sheet-mirror-region
+                #:%sheet-mirror-transformation
+		#:standard-port
+		#:*configuration-event-p*
+		)
+  )
