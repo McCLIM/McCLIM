@@ -1235,6 +1235,13 @@
 	(queue-event grab-sheet event)
 	(call-next-method))))
 
+(defmethod set-sheet-pointer-cursor ((port clx-port) (sheet mirrored-sheet-mixin) cursor)
+  (set-sheet-current-pointer-cursor port sheet cursor))
+
+(defmethod set-sheet-pointer-cursor ((port clx-port) sheet cursor)
+  )
+
+
 (defmethod set-sheet-current-pointer-cursor ((port clx-port) (sheet mirrored-sheet-mixin) cursor)
   (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port))))
     (when cursor

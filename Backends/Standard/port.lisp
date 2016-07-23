@@ -10,7 +10,7 @@
 (defmethod port-lookup-current-pointer-cursor ((port standard-port) sheet)
   (gethash sheet (slot-value port 'mirrored-sheet->current-pointer-cursor)))
 
-(defmethod set-sheet-pointer-cursor ((port standard-port) sheet cursor)
+(defmethod set-sheet-pointer-cursor :before ((port standard-port) sheet cursor)
   (setf (gethash sheet (slot-value port 'sheet->pointer-cursor)) cursor))
 
 (defmethod set-sheet-current-pointer-cursor :before ((port standard-port) sheet cursor)
