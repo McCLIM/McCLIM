@@ -12,5 +12,6 @@
 		#:window-configuration-event-y
 		#:window-configuration-event-width
 		#:window-configuration-event-height
+		#:top-level-sheet-pane-p
 		)
   )

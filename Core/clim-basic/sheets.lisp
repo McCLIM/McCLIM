@@ -614,6 +614,7 @@
 ;;; form for it in decls.lisp.  Since some Common Lisp compilers emit
 ;;; a warning if there is no explicit DEFGENERIC form, and in order to
 ;;; get a clean build, we include the DEFGENERIC form here.
+
 (defgeneric (setf sheet-direct-mirror) (mirror sheet))
 
 (defmethod (setf sheet-direct-mirror) (mirror (sheet mirrored-sheet-mixin))

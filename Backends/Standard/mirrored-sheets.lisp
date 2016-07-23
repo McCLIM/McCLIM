@@ -1,6 +1,6 @@
 (in-package :clim-standard)
 
-(defclass standard-mirrored-sheet-mixin (mirrored-sheet-mixin)
+(defclass standard-mirrored-sheet-mixin (mirrored-sheet-mixin permanent-medium-sheet-output-mixin)
   ((mirror-transformation
     :documentation "Our idea of the current mirror transformation. Might not
                     be correct if a foreign application changes our mirror's geometry."
@@ -12,13 +12,6 @@ correct if a foreign application changes our mirror's geometry. Also note
 that this might be different from the sheet's native region."
     :initform nil
     :accessor %sheet-mirror-region)))
-
-(defmethod invalidate-cached-transformations ((sheet standard-mirrored-sheet-mixin))
-  (with-slots (native-transformation device-transformation) sheet
-    (setf native-transformation nil
-     device-transformation nil))
-  (loop for child in (sheet-children sheet)
-        do (invalidate-cached-transformations child)))
 
 (defmethod sheet-native-region ((sheet standard-mirrored-sheet-mixin))
   (with-slots (native-region) sheet     
@@ -41,14 +34,21 @@ that this might be different from the sheet's native region."
     (unless native-transformation
       (setf native-transformation
 	    (let ((parent (sheet-parent sheet)))
-	      (if parent
+	      (cond
+		((top-level-sheet-pane-p sheet)
+		 +identity-transformation+)
+		(parent
+		 (compose-transformations
+		  (invert-transformation
+		   (%sheet-mirror-transformation sheet))
 		  (compose-transformations
-		   (invert-transformation
-		    (%sheet-mirror-transformation sheet))
-		   (compose-transformations
-		    (sheet-native-transformation parent)
-		    (sheet-transformation sheet)))
-		  +identity-transformation+))))
+		   (sheet-native-transformation parent)
+		   (sheet-transformation sheet))))
+		(t
+		 (compose-transformations
+		  (invert-transformation
+		   (%sheet-mirror-transformation sheet))
+		  (sheet-transformation sheet)))))))
       native-transformation))
 
 
@@ -65,15 +65,20 @@ that this might be different from the sheet's native region."
       (setf (sheet-transformation sheet) (make-translation-transformation x y)))))
 
 
-(defmethod (setf clim:sheet-region) (region (sheet standard-mirrored-sheet-mixin))
-  (declare (ignore region))
-  (call-next-method)
+(defmethod note-sheet-transformation-changed :before ((sheet standard-mirrored-sheet-mixin))
   (%update-mirror-geometry sheet))
 
-(defmethod (setf clim:sheet-transformation) (region (sheet standard-mirrored-sheet-mixin))
-  (declare (ignore region))
-  (call-next-method)
+(defmethod note-sheet-regions-changed :before ((sheet standard-mirrored-sheet-mixin))
   (%update-mirror-geometry sheet))
+
+(defmethod note-sheet-transformation-changed :after ((sheet standard-mirrored-sheet-mixin))
+    (loop for child in (sheet-children sheet)
+       do (note-parent-mirror-geometry-changed child)))
+
+(defmethod note-sheet-regions-changed :after ((sheet standard-mirrored-sheet-mixin))
+    (loop for child in (sheet-children sheet)
+       do (note-parent-mirror-geometry-changed child)))
+
 
 (defun %set-mirror-geometry (sheet x1 y1 x2 y2)
   (let* ((MT (make-translation-transformation x1 y1))
@@ -85,9 +90,12 @@ that this might be different from the sheet's native region."
       (let ((port (port sheet))
 	    (mirror (sheet-direct-mirror sheet)))
 	(port-set-mirror-region port mirror MR)
-	(port-set-mirror-transformation port mirror MT)))))
-
-(defun %update-mirror-geometry (sheet &key)
+	(port-set-mirror-transformation port mirror MT))
+      (with-slots (native-transformation device-transformation) sheet
+	(setf native-transformation nil
+	      device-transformation nil)))))
+  
+(defmethod %update-mirror-geometry ((sheet standard-mirrored-sheet-mixin))
   (let* ((parent (sheet-parent sheet))
 	 (mirrored-ancestor (sheet-mirrored-ancestor parent))
 	 (sheet-region-in-native-parent
@@ -105,3 +113,16 @@ that this might be different from the sheet's native region."
 	    sheet-region-in-native-parent
 	  (%set-mirror-geometry sheet mx1 my1 mx2 my2)))))
 
+
+(defgeneric note-parent-mirror-geometry-changed (sheet))
+
+(defmethod note-parent-mirror-geometry-changed ((sheet standard-mirrored-sheet-mixin))
+  (note-sheet-transformation-changed sheet)
+  (note-sheet-region-changed sheet))
+
+(defmethod note-parent-mirror-geometry-changed ((sheet basic-sheet))
+  (loop for child in (sheet-children sheet)
+     do (note-parent-mirror-geometry-changed child)))
+
+
+ 

@@ -896,18 +896,11 @@ order to produce a double-click")
 
 ;;; TOP-LEVEL-SHEET
 
-(defclass top-level-sheet-pane (permanent-medium-sheet-output-mixin
+(defclass top-level-sheet-pane (;;permanent-medium-sheet-output-mixin
 				;;mirrored-sheet-mixin
 				composite-pane)
   ()
   (:documentation "For the first pane in the architecture"))
-
-
-(defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
-  (with-slotss (native-transformation) sheet
-    (unless native-transformation
-      (setf native-transformation +identity-transformation+))
-    native-transformation))
 
 (defun top-level-sheet-pane-p (pane)
   (typep pane 'top-level-sheet-pane))
@@ -944,6 +937,11 @@ order to produce a double-click")
     (allocate-space (first (sheet-children pane))
 		    (clamp width  (sr-min-width pane)  (sr-max-width pane))
 		    (clamp height (sr-min-height pane) (sr-max-height pane)))))
+
+(defmethod note-sheet-region-changed :before ((pane top-level-sheet-pane))
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+    (allocate-space pane (- x2 x1) (- y2 y1))))
+
 
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-manager-delete-event))
