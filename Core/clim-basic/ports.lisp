@@ -182,23 +182,6 @@
 
 (defgeneric distribute-event (port event))
 
-(defmethod distribute-event ((port basic-port) event)
-  (cond
-   ((typep event 'keyboard-event)
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'window-event)
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'pointer-event)
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'window-manager-delete-event)
-    ;; not sure where this type of event should get sent - mikemac
-    ;; This seems fine; will be handled by the top-level-sheet-pane - moore
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'timer-event)
-    (error "Where do we send timer-events?"))
-   (t
-    (error "Unknown event ~S received in DISTRIBUTE-EVENT" event))))
-
 (defmacro with-port-locked ((port) &body body)
   (let ((fn (gensym "CONT.")))
     `(labels ((,fn ()

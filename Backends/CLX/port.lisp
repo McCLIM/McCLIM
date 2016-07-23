@@ -1229,12 +1229,6 @@
     (xlib:ungrab-pointer (clx-port-display port))
     (setf (pointer-grab-sheet port) nil)))
 
-(defmethod distribute-event :around ((port clx-port) event)
-  (let ((grab-sheet (pointer-grab-sheet port)))
-    (if grab-sheet
-	(queue-event grab-sheet event)
-	(call-next-method))))
-
 (defmethod set-sheet-pointer-cursor ((port clx-port) (sheet mirrored-sheet-mixin) cursor)
   (set-sheet-current-pointer-cursor port sheet cursor))
 

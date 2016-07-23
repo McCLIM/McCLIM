@@ -4,6 +4,26 @@
 (defclass standard-event-port-mixin ()
   ((pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)))
 
+(defmethod distribute-event ((port standard-event-port-mixin) event)
+  (let ((grab-sheet (pointer-grab-sheet port)))
+    (if grab-sheet
+	(queue-event grab-sheet event)
+	(cond
+	  ((typep event 'keyboard-event)
+	   (dispatch-event (event-sheet event) event))
+	  ((typep event 'window-event)
+	   (dispatch-event (event-sheet event) event))
+	  ((typep event 'pointer-event)
+	   (dispatch-event (event-sheet event) event))
+	  ((typep event 'window-manager-delete-event)
+	   ;; not sure where this type of event should get sent - mikemac
+	   ;; This seems fine; will be handled by the top-level-sheet-pane - moore
+	   (dispatch-event (event-sheet event) event))
+	  ((typep event 'timer-event)
+	   (error "Where do we send timer-events?"))
+	  (t
+	   (error "Unknown event ~S received in DISTRIBUTE-EVENT" event))))))
+
 
 
 (defclass standard-handled-event-port-mixin (standard-event-port-mixin)
@@ -31,6 +51,8 @@
        (if (sheet-ancestor-p pointer-sheet grab-sheet)
            (setf pointer-sheet grab-sheet)
            (setf pointer-sheet (sheet-parent grab-sheet))))
+      ((typep (event-sheet event) 'unmanaged-top-level-sheet-pane)
+       nil)
       ((typep top-level-sheet 'unmanaged-top-level-sheet-pane)
        nil)
       (pointer-pressed-sheet
@@ -65,14 +87,16 @@
             (setf (port-pointer-sheet port) pointer-sheet))
            (t
             nil)))
-        (t
+        (t	 
          (call-next-method))))))
 
 
 (defmethod climi::distribute-event ((port standard-handled-event-port-mixin) (event pointer-event))
+
   (let ((sheet (port-pointer-sheet port)))
     (when sheet
       (cond ((eq sheet (event-sheet event))
+	     
              (dispatch-event sheet event))
             (t
              (if (eq (sheet-mirrored-ancestor sheet) (sheet-mirrored-ancestor (event-sheet event)))
