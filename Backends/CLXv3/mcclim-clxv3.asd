@@ -1,7 +1,7 @@
 
-(defsystem #:mcclim-clxv2
+(defsystem #:mcclim-clxv3
   :depends-on (#:mcclim-clx
-	       #:mcclim-multi-mirrored-standard)
+	       #:mcclim-single-mirrored-standard)
 
   :components
   ((:file "package")
@@ -10,7 +10,7 @@
    (:file "event-manager" :depends-on ("port" "package"))
    (:file "mirrored-sheets" :depends-on ("port" "package"))))
 
-(defsystem #:mcclim-clxv2/pretty
-    :depends-on (#:mcclim-clxv2
+(defsystem #:mcclim-clxv3/pretty
+    :depends-on (#:mcclim-clxv3
 		 #:mcclim-clx/pretty))
 

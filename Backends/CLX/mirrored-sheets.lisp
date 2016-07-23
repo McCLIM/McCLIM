@@ -13,7 +13,7 @@
 ;;; These are the limitations of the X Window System.
 ;;;
 
-(defclass clx-mirrored-sheet-mixin (standard-mirrored-sheet-mixin)
+(defclass clx-mirrored-sheet-mixin (standard-multi-mirrored-sheet-mixin)
   ())
 
 (defmethod %update-mirror-geometry ((sheet clx-mirrored-sheet-mixin))

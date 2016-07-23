@@ -11,8 +11,6 @@
 (defgeneric note-port-sheet-region-changed (sheet port))
 (defgeneric note-port-sheet-transformation-changed (sheet port))
 
-
-
 (defmethod note-port-sheet-region-changed (sheet port)
   (declare (ignore sheet port))
   nil)

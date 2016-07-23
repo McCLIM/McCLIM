@@ -65,7 +65,7 @@
                 ;;
                 )
   (:import-from :clim-standard
-		#:standard-mirrored-sheet-mixin
+		#:standard-multi-mirrored-sheet-mixin
 		#:%sheet-mirror-region
                 #:%sheet-mirror-transformation
 		#:standard-port

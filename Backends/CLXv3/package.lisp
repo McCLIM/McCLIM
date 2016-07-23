@@ -2,7 +2,7 @@
 
 (in-package :common-lisp-user)
 
-(defpackage :clim-clxv2
+(defpackage :clim-clxv3
     (:use :clim :clim-lisp :clim-backend :clim-clx)
   (:import-from :climi
                 #:+alt-key+
@@ -55,7 +55,7 @@
                 ;;
                 )
   (:import-from :clim-standard
-		#:standard-multi-mirrored-sheet-mixin
+		#:standard-single-mirrored-sheet-mixin
 		#:%sheet-mirror-region
                 #:%sheet-mirror-transformation
 		#:*configuration-event-p*
