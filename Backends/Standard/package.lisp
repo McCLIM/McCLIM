@@ -13,5 +13,9 @@
 		#:window-configuration-event-width
 		#:window-configuration-event-height
 		#:top-level-sheet-pane-p
+		#:set-sheet-pointer-cursor
+		#:port-pointer-sheet
+		#:top-level-sheet-pane
+		#:unmanaged-top-level-sheet-pane
 		)
   )

@@ -1,8 +1,7 @@
 (in-package :clim-clxv2)
 
-(defclass clxv2-port (clim-clx::clx-port)
-  ((mirroring :accessor clxv2-port-mirroring)
-   (port-pointer-pressed-sheet :initform nil :accessor port-pointer-pressed-sheet)))
+(defclass clxv2-port (standard-handled-event-port-mixin clim-clx::clx-port)
+  ((mirroring :accessor clxv2-port-mirroring)))
 
 (defun parse-clxv2-server-path (path)
   (let ((server-path (clim-clx::parse-clx-server-path path)))

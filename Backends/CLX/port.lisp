@@ -157,7 +157,7 @@
     (assoc point ranges :test (lambda (point range)
                                 (<= (car range) point (cdr range))))))
 
-(defclass clx-port (clim-xcommon:keysym-port-mixin standard-port)
+(defclass clx-port (clim-xcommon:keysym-port-mixin standard-event-port-mixin standard-port)
   ((display :initform nil
 	    :accessor clx-port-display)
    (screen :initform nil
@@ -169,7 +169,6 @@
                  :accessor clx-port-cursor-table)
    (design-cache :initform (make-hash-table :test #'eq))
    (pointer :reader port-pointer)
-   (pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)
    (selection-owner :initform nil :accessor selection-owner)
    (selection-timestamp :initform nil :accessor selection-timestamp)
    (font-families :accessor font-families)))
@@ -1236,10 +1235,10 @@
 	(queue-event grab-sheet event)
 	(call-next-method))))
 
-(defmethod set-sheet-pointer-cursor ((port clx-port) sheet cursor)
-  (let ((cursor (gethash cursor (clx-port-cursor-table port))))
+(defmethod set-sheet-current-pointer-cursor ((port clx-port) (sheet mirrored-sheet-mixin) cursor)
+  (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port))))
     (when cursor
-      (setf (xlib:window-cursor (sheet-mirror sheet)) cursor))))
+      (setf (xlib:window-cursor (sheet-direct-mirror sheet)) cursor))))
         
 
 ;;; Modifier cache support

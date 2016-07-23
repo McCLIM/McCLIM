@@ -4,4 +4,5 @@
   :components
   ((:file "package")
    (:file "port" :depends-on ("package"))
+   (:file "event-manager" :depends-on ("port" "package"))
    (:file "mirrored-sheet" :depends-on ("package"))))
