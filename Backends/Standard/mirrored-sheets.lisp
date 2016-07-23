@@ -1,19 +1,5 @@
 (in-package :clim-standard)
 
-;;; We assume the following limitations of the host window systems:
-;;;
-;;;  mirror transformations:
-;;;   . can only be translations
-;;;   . are limited to 16-bit signed integer deltas
-;;;
-;;;  mirror regions:
-;;;   . can only be axis-aligend rectangles
-;;;   . min-x = min-y = 0
-;;;   . max-x, max-y < 2^16
-;;;
-;;; These are the limitations of the X Window System.
-;;;
-
 (defclass standard-mirrored-sheet-mixin (mirrored-sheet-mixin)
   ((mirror-transformation
     :documentation "Our idea of the current mirror transformation. Might not
@@ -51,7 +37,6 @@ that this might be different from the sheet's native region."
     native-region))
 
 (defmethod sheet-native-transformation ((sheet standard-mirrored-sheet-mixin))
-  ;; XXX hm...
   (with-slots (native-transformation) sheet
     (unless native-transformation
       (setf native-transformation
@@ -78,3 +63,45 @@ that this might be different from the sheet's native region."
     (let ((*configuration-event-p* sheet))
       (setf (sheet-region sheet) (make-bounding-rectangle 0 0 width height))
       (setf (sheet-transformation sheet) (make-translation-transformation x y)))))
+
+
+(defmethod (setf clim:sheet-region) (region (sheet standard-mirrored-sheet-mixin))
+  (declare (ignore region))
+  (call-next-method)
+  (%update-mirror-geometry sheet))
+
+(defmethod (setf clim:sheet-transformation) (region (sheet standard-mirrored-sheet-mixin))
+  (declare (ignore region))
+  (call-next-method)
+  (%update-mirror-geometry sheet))
+
+(defun %set-mirror-geometry (sheet x1 y1 x2 y2)
+  (let* ((MT (make-translation-transformation x1 y1))
+	 (MR (make-rectangle* 0 0 (round (- x2 x1)) (round (- y2 y1)))))
+    (setf (%sheet-mirror-region sheet) MR)
+    (setf (%sheet-mirror-transformation sheet) MT)
+    (when (and (sheet-direct-mirror sheet)
+	       (not (eql *configuration-event-p* sheet)))
+      (let ((port (port sheet))
+	    (mirror (sheet-direct-mirror sheet)))
+	(port-set-mirror-region port mirror MR)
+	(port-set-mirror-transformation port mirror MT)))))
+
+(defun %update-mirror-geometry (sheet &key)
+  (let* ((parent (sheet-parent sheet))
+	 (mirrored-ancestor (sheet-mirrored-ancestor parent))
+	 (sheet-region-in-native-parent
+	  (region-intersection
+	   (sheet-native-region parent)
+	   (transform-region
+	    (sheet-native-transformation parent)
+	    (region-intersection
+	     (sheet-region parent)
+	     (transform-region (sheet-transformation sheet)
+			       (sheet-region sheet)))))))
+    (if (region-equal sheet-region-in-native-parent +nowhere+)
+	(%set-mirror-geometry sheet -5 -5 1 1)
+	(with-bounding-rectangle* (mx1 my1 mx2 my2)
+	    sheet-region-in-native-parent
+	  (%set-mirror-geometry sheet mx1 my1 mx2 my2)))))
+

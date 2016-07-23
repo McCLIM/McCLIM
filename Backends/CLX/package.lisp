@@ -70,5 +70,6 @@
                 #:%sheet-mirror-transformation
 		#:standard-port
 		#:*configuration-event-p*
+		#:%update-mirror-geometry
 		)
   )

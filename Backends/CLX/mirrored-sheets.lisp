@@ -1,7 +1,23 @@
 (in-package :clim-clx)
+;;; We assume the following limitations of the host window systems:
+;;;
+;;;  mirror transformations:
+;;;   . can only be translations
+;;;   . are limited to 16-bit signed integer deltas
+;;;
+;;;  mirror regions:
+;;;   . can only be axis-aligend rectangles
+;;;   . min-x = min-y = 0
+;;;   . max-x, max-y < 2^16
+;;;
+;;; These are the limitations of the X Window System.
+;;;
 
 (defclass clx-mirrored-sheet-mixin (standard-mirrored-sheet-mixin)
   ())
+
+(defmethod %update-mirror-geometry ((sheet clx-mirrored-sheet-mixin))
+  )
 
 (defmethod (setf clim:sheet-region) (region (sheet clx-mirrored-sheet-mixin))
   (declare (ignore region))
