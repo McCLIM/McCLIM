@@ -77,6 +77,22 @@
 (defgeneric note-sheet-transformation-changed (sheet))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; non standard notification protocol
+;;; a mirrored sheet propagates all notifications to its mirrored ancestor
+
+(defgeneric %note-mirrored-sheet-child-grafted (sheet child))
+(defgeneric %note-mirrored-sheet-child-degrafted (sheet child))
+(defgeneric %note-mirrored-sheet-child-adopted (sheet child))
+(defgeneric %note-mirrored-sheet-child-disowned (sheet child))
+(defgeneric %note-mirrored-sheet-child-enabled (sheet child))
+(defgeneric %note-mirrored-sheet-child-disabled (sheet child))
+(defgeneric %note-mirrored-sheet-child-region-changed (sheet child))
+(defgeneric %note-mirrored-sheet-child-transformation-changed (sheet child))
+(defgeneric %note-sheet-pointer-cursor-changed (sheet))
+(defgeneric %note-mirrored-sheet-child-pointer-cursor-changed (sheet child))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;
 ;;;; sheet protocol class
 
@@ -426,8 +442,7 @@
   (note-sheet-region-changed sheet))
 
 (defmethod (setf sheet-pointer-cursor) :after (cursor (sheet basic-sheet))
-  (set-sheet-pointer-cursor (port sheet) sheet cursor))
-
+  (%note-sheet-pointer-cursor-changed sheet))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; sheet parent mixin
@@ -607,7 +622,7 @@
    (native-transformation :initform +identity-transformation+)))
 
 (defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
-  (port-lookup-mirror (port sheet) sheet))
+  (error "sheet-direct-mirror is not implemented on sheet ~S" sheet))
 
 ;;; The generic function (SETF SHEET-DIRECT-MIRROR) is not part of the
 ;;; CLIM II specification.  For that reason, there is no DEFGENERIC
@@ -618,7 +633,7 @@
 (defgeneric (setf sheet-direct-mirror) (mirror sheet))
 
 (defmethod (setf sheet-direct-mirror) (mirror (sheet mirrored-sheet-mixin))
-  (port-register-mirror (port sheet) sheet mirror))
+  (error "setf sheet-direct-mirror is not implemented on sheet ~S" sheet))
 
 (defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet-mixin))
   sheet)
@@ -634,14 +649,6 @@
 
 (defmethod note-sheet-degrafted :after ((sheet mirrored-sheet-mixin))
   (destroy-mirror (port sheet) sheet))
-
-(defmethod (setf sheet-enabled-p) :after
-    (new-value (sheet mirrored-sheet-mixin))
-  (when (sheet-direct-mirror sheet)
-    ;; We do this only if the sheet actually has a mirror.
-    (if new-value
-        (port-enable-sheet (port sheet) sheet)
-        (port-disable-sheet (port sheet) sheet))))
 
 ;;; Internal interface for enabling/disabling motion hints
 
@@ -676,3 +683,86 @@
 ;;; The null sheet
 
 (defclass null-sheet (basic-sheet) ())
+
+;;;
+;;; default implementation for notification protocol
+;;;
+
+
+(defmethod note-sheet-grafted :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-grafted msheet sheet))))
+
+(defmethod note-sheet-degrafted :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-degrafted msheet sheet))))
+
+(defmethod note-sheet-adopted :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-adopted msheet sheet))))
+
+(defmethod note-sheet-disowned :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-disowned msheet sheet))))
+
+(defmethod note-sheet-enabled :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-enabled msheet sheet))))
+
+(defmethod note-sheet-disabled :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-disabled msheet sheet))))
+
+(defmethod note-sheet-region-changed :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-region-changed  msheet sheet))))
+
+(defmethod note-sheet-transformation-changed :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-transformation-changed  msheet sheet))))
+
+(defmethod %note-sheet-pointer-cursor-changed ((sheet basic-sheet))
+  )
+
+(defmethod %note-sheet-pointer-cursor-changed :before ((sheet basic-sheet))
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-pointer-cursor-changed  msheet sheet))))
+
+(defmethod %note-mirrored-sheet-child-grafted ((sheet mirrored-sheet-mixin) child)
+  )
+(defmethod %note-mirrored-sheet-child-degrafted ((sheet mirrored-sheet-mixin) child)
+  )
+(defmethod %note-mirrored-sheet-child-adopted ((sheet mirrored-sheet-mixin) child)
+  )
+(defmethod %note-mirrored-sheet-child-disowned ((sheet mirrored-sheet-mixin) child)
+  )
+(defmethod %note-mirrored-sheet-child-enabled ((sheet mirrored-sheet-mixin) child)
+  )
+(defmethod %note-mirrored-sheet-child-disabled ((sheet mirrored-sheet-mixin) child)
+  )
+(defmethod %note-mirrored-sheet-child-region-changed ((sheet mirrored-sheet-mixin) child)
+  )
+(defmethod %note-mirrored-sheet-child-transformation-changed ((sheet mirrored-sheet-mixin) child)
+  )
+(defmethod %note-mirrored-sheet-child-pointer-cursor-changed ((sheet mirrored-sheet-mixin) child)
+ )
+
+  

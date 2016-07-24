@@ -17,5 +17,19 @@
 		#:port-pointer-sheet
 		#:top-level-sheet-pane
 		#:unmanaged-top-level-sheet-pane
+		#:sheet-direct-mirror
+		#:port-lookup-mirror
+		#:port-register-mirror
+
+		#:%note-mirrored-sheet-child-grafted
+		#:%note-mirrored-sheet-child-degrafted
+		#:%note-mirrored-sheet-child-adopted
+		#:%note-mirrored-sheet-child-disowned
+		#:%note-mirrored-sheet-child-enabled
+		#:%note-mirrored-sheet-child-disabled
+		#:%note-mirrored-sheet-child-region-changed
+		#:%note-mirrored-sheet-child-transformation-changed
+		#:%note-sheet-pointer-cursor-changed
+		#:%note-mirrored-sheet-child-pointer-cursor-changed
 		)
   )
