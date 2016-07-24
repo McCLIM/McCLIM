@@ -33,6 +33,20 @@ that this might be different from the sheet's native region."
       (setf (sheet-region sheet) (make-bounding-rectangle 0 0 width height))
       (setf (sheet-transformation sheet) (make-translation-transformation x y)))))
 
+;;;
+;;; mirror geometry
+;;;
+
+(defmethod note-sheet-transformation-changed :before ((sheet standard-mirrored-sheet-mixin))
+  (%update-mirror-geometry sheet))
+
+(defmethod note-sheet-regions-changed :before ((sheet standard-mirrored-sheet-mixin))
+  (%update-mirror-geometry sheet))
+
+(defgeneric %update-mirror-geometry (sheet))
+  
+(defmethod %update-mirror-geometry ((sheet standard-mirrored-sheet-mixin))
+  ())
 
  (defun %set-mirror-geometry (sheet x1 y1 x2 y2)
   (let* ((MT (make-translation-transformation x1 y1))
@@ -49,8 +63,15 @@ that this might be different from the sheet's native region."
 	(setf native-transformation nil
 	      device-transformation nil)))))
 
+;;;
+;;;
 
-
+(defun repaint-mirrored-sheet-child (sheet child)
+  (when (sheet-viewable-p sheet)   
+    (dispatch-event sheet
+		    (make-instance 'window-repaint-event
+				   :sheet sheet
+				   :region (sheet-native-region child)))))
 
 ;;;
 ;;;
@@ -65,34 +86,18 @@ that this might be different from the sheet's native region."
    (port-disable-sheet (port sheet) sheet)))
 
 (defmethod %note-mirrored-sheet-child-enabled :after ((sheet standard-mirrored-sheet-mixin) child)
-  (dispatch-event sheet
-		  (make-instance 'window-repaint-event
-				 :sheet sheet
-				 :region (sheet-native-region child))))
+  (repaint-mirrored-sheet-child sheet child))
 
 (defmethod %note-mirrored-sheet-child-disabled :after ((sheet standard-mirrored-sheet-mixin) child)
-  (dispatch-event sheet
-		  (make-instance 'window-repaint-event
-				 :sheet sheet
-				 :region (sheet-native-region child))))
+  (repaint-mirrored-sheet-child sheet child))
 
 (defmethod %note-mirrored-sheet-child-region-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
-   (when (and (sheet-viewable-p sheet)
-	     (not (graftp sheet)))
-    (dispatch-event sheet
-		    (make-instance 'window-repaint-event
-				   :sheet sheet
-				   :region (sheet-native-region child)))))
+  (repaint-mirrored-sheet-child sheet child))
 
 (defmethod %note-mirrored-sheet-child-transformation-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
-   (when (and (sheet-viewable-p sheet)
-	     (not (graftp sheet)))
-    (dispatch-event sheet
-		    (make-instance 'window-repaint-event
-				   :sheet sheet
-				   :region (sheet-native-region child)))))
+  (repaint-mirrored-sheet-child sheet child)) 
 
 (defmethod %note-sheet-pointer-cursor-changed :after ((sheet standard-mirrored-sheet-mixin))
   (set-sheet-pointer-cursor (port sheet) sheet (sheet-pointer-cursor sheet)))
