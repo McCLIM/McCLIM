@@ -8,10 +8,3 @@
 
 (defmethod set-sheet-pointer-cursor :before ((port standard-port) sheet cursor)
   (setf (gethash sheet (slot-value port 'mirrored-sheet->current-pointer-cursor)) cursor))
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; notification protocol
-

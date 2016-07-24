@@ -1,7 +1,7 @@
 
 (defsystem #:mcclim-clx
   :depends-on (#:clim
-	       #:mcclim-multi-mirrored-standard
+	       #:mcclim-full-mirrored-standard
                #+(or cmu ecl) (:require :clx)
                #+(or sbcl clozure ecl clisp allegro) #:clx)
   :components

@@ -3,4 +3,4 @@
   :depends-on (#:mcclim-standard)
   :components
   ((:file "package")
-   (:file "multi-mirrored-sheets" :depends-on ("package"))))
+   (:file "mm-sheets" :depends-on ("package"))))
