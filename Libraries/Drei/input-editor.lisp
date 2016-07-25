@@ -56,7 +56,7 @@ instantiated."))
 				       &key stream
 				       (cursor-visibility t)
                                        (min-width 0))
-  (check-type min-width (or (integer 0) (eql t)))
+  ;;(check-type min-width (or (integer 0) (eql t)))
   (check-type stream clim-stream-pane)
   (multiple-value-bind (cx cy)
       (stream-cursor-position stream)

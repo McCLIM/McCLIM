@@ -800,7 +800,9 @@ position for the character."
 			   (%%set-sheet-native-transformation transform sheet)
 			   (setf (slot-value sheet 'region) region)
 			   (invalidate-cached-regions sheet)
-			   (invalidate-cached-transformations sheet)))
+			   (invalidate-cached-transformations sheet)
+			   (%%set-sheet-native-transformation transform sheet)
+			 ))
 		    ;; Assume that the scaling for the sheet-native
 		    ;; transformation for the pixmap will be the same as that of
 		    ;; the mirror .

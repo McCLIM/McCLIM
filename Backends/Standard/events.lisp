@@ -1,16 +1,47 @@
-(in-package :clim-clxv2)
+(in-package :clim-standard)
+
+
+(defclass standard-event-port-mixin ()
+  ((pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)))
+
+(defmethod distribute-event ((port standard-event-port-mixin) event)
+  (let ((grab-sheet (pointer-grab-sheet port)))
+    (if grab-sheet
+	(queue-event grab-sheet event)
+	(cond
+	  ((typep event 'keyboard-event)
+	   (dispatch-event (event-sheet event) event))
+	  ((typep event 'window-event)
+	   (dispatch-event (event-sheet event) event))
+	  ((typep event 'pointer-event)
+	   (dispatch-event (event-sheet event) event))
+	  ((typep event 'window-manager-delete-event)
+	   ;; not sure where this type of event should get sent - mikemac
+	   ;; This seems fine; will be handled by the top-level-sheet-pane - moore
+	   (dispatch-event (event-sheet event) event))
+	  ((typep event 'timer-event)
+	   (error "Where do we send timer-events?"))
+	  (t
+	   (error "Unknown event ~S received in DISTRIBUTE-EVENT" event))))))
+
+
+
+(defclass standard-handled-event-port-mixin (standard-event-port-mixin)
+  ((port-pointer-pressed-sheet :initform nil :accessor port-pointer-pressed-sheet)))
+
+
 
 ;;;
 ;;; pointer events
 ;;;
-(defmethod climi::distribute-event :before ((port clxv2-port) (event pointer-button-press-event))
+(defmethod climi::distribute-event :before ((port standard-handled-event-port-mixin) (event pointer-button-press-event))
   (setf (port-pointer-pressed-sheet port) (port-pointer-sheet port)))
 
-(defmethod climi::distribute-event :after ((port clxv2-port) (event pointer-button-release-event))
+(defmethod climi::distribute-event :after ((port standard-handled-event-port-mixin) (event pointer-button-release-event))
   (setf (port-pointer-pressed-sheet port) nil))
 
-(defmethod climi::distribute-event :around ((port clxv2-port) (event pointer-event))
-  (let ((grab-sheet (clim-clx::pointer-grab-sheet port))
+(defmethod climi::distribute-event :around ((port standard-handled-event-port-mixin) (event pointer-event))
+  (let ((grab-sheet (pointer-grab-sheet port))
         (pointer-pressed-sheet (port-pointer-pressed-sheet port))
         (pointer-sheet (get-pointer-event-sheet (event-sheet event) event))
         (old-pointer-sheet (or (port-pointer-sheet port) (event-sheet event)))
@@ -20,6 +51,8 @@
        (if (sheet-ancestor-p pointer-sheet grab-sheet)
            (setf pointer-sheet grab-sheet)
            (setf pointer-sheet (sheet-parent grab-sheet))))
+      ((typep (event-sheet event) 'unmanaged-top-level-sheet-pane)
+       nil)
       ((typep top-level-sheet 'unmanaged-top-level-sheet-pane)
        nil)
       (pointer-pressed-sheet
@@ -32,6 +65,12 @@
       (distribute-exit-events old-pointer-sheet common-sheet event)
       (distribute-enter-events pointer-sheet common-sheet event)
       (setf (port-pointer-sheet port) pointer-sheet))
+    ;; set the pointer cursor
+    (let ((pointer-cursor
+	   (sheet-pointer-cursor (port-pointer-sheet port))))
+      (unless (eql (port-lookup-current-pointer-cursor port (event-sheet event))
+		       pointer-cursor)
+	(set-sheet-pointer-cursor port (event-sheet event) pointer-cursor)))
     (unless (or (typep event 'pointer-enter-event)
                 (typep event 'pointer-exit-event))
       (cond
@@ -49,14 +88,16 @@
             (setf (port-pointer-sheet port) pointer-sheet))
            (t
             nil)))
-        (t
+        (t	 
          (call-next-method))))))
 
 
-(defmethod climi::distribute-event ((port clxv2-port) (event pointer-event))
+(defmethod climi::distribute-event ((port standard-handled-event-port-mixin) (event pointer-event))
+
   (let ((sheet (port-pointer-sheet port)))
     (when sheet
       (cond ((eq sheet (event-sheet event))
+	     
              (dispatch-event sheet event))
             (t
              (if (eq (sheet-mirrored-ancestor sheet) (sheet-mirrored-ancestor (event-sheet event)))
@@ -94,7 +135,7 @@
 ;;; all events
 ;;;
 
-(defmethod climi::distribute-event ((port clxv2-port) event)
+(defmethod climi::distribute-event ((port standard-handled-event-port-mixin) event)
   (cond
    ((typep event 'keyboard-event)
     (dispatch-event (event-sheet event) event))

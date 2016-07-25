@@ -21,7 +21,7 @@
 
 ;;; CLX-GRAFT class
 
-(defclass clx-graft (graft) ())
+(defclass clx-graft (standard-graft) ())
 
 (defmethod graft-width ((graft clx-graft) &key (units :device))
   (let ((screen (clx-port-screen (port graft))))

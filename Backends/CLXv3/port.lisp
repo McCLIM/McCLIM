@@ -1,23 +1,20 @@
-(in-package :clim-clxv2)
+(in-package :clim-clxv3)
 
-(defclass clxv2-port (standard-handled-event-port-mixin clim-clx::clx-port)
-  ((mirroring :accessor clxv2-port-mirroring)))
+(defclass clxv3-port (standard-handled-event-port-mixin clim-clx::clx-port)
+  ())
 
-(defun parse-clxv2-server-path (path)
+(defun parse-clxv3-server-path (path)
   (let ((server-path (clim-clx::parse-clx-server-path path)))
     (pop path)
-    (cons :clxv2 (append (list :mirroring  (getf path :mirroring :none)) (cdr server-path)))))
+    (cons :clxv3 (cdr server-path))))
 
-(setf (get :clxv2 :port-type) 'clxv2-port)
-(setf (get :clxv2 :server-path-parser) 'parse-clxv2-server-path)
+(setf (get :clxv3 :port-type) 'clxv3-port)
+(setf (get :clxv3 :server-path-parser) 'parse-clxv3-server-path)
 
-(defmethod initialize-instance :after ((port clxv2-port) &rest args)
+(defmethod initialize-instance :after ((port clxv3-port) &rest args)
   (declare (ignore args))
-  (push (make-instance 'clxv2-frame-manager :port port)
-	(slot-value port 'frame-managers))
-  (setf (slot-value port 'mirroring)
-	(getf (cdr (port-server-path port)) :mirroring)))
-
+  (push (make-instance 'clxv3-frame-manager :port port)
+	(slot-value port 'frame-managers)))
 
 (defparameter *event-mask* '(:exposure 
 			     :key-press :key-release
@@ -27,16 +24,16 @@
 			     :structure-notify
 			     :pointer-motion :button-motion))
 
-(defmethod clim-clx::realize-mirror ((port clxv2-port) (sheet mirrored-sheet-mixin))
+(defmethod clim-clx::realize-mirror ((port clxv3-port) (sheet mirrored-sheet-mixin))
   (clim-clx::%realize-mirror port sheet))
 
-(defmethod clim-clx::%realize-mirror ((port clxv2-port) (sheet basic-sheet))
+(defmethod clim-clx::%realize-mirror ((port clxv3-port) (sheet basic-sheet))
   (clim-clx::realize-mirror-aux port sheet
 		      :event-mask *event-mask*
                       :border-width 0
                       :map (sheet-enabled-p sheet)))
 
-(defmethod clim-clx::%realize-mirror ((port clxv2-port) (sheet top-level-sheet-pane))
+(defmethod clim-clx::%realize-mirror ((port clxv3-port) (sheet top-level-sheet-pane))
   (let ((q (compose-space sheet)))
     (let ((frame (pane-frame sheet))
           (window (clim-clx::realize-mirror-aux port sheet
@@ -56,7 +53,7 @@
                             :WM_CLIENT_LEADER (list (xlib:window-id window))
                             :WINDOW 32))))
 
-(defmethod clim-clx::%realize-mirror ((port clxv2-port) (sheet unmanaged-top-level-sheet-pane))
+(defmethod clim-clx::%realize-mirror ((port clxv3-port) (sheet unmanaged-top-level-sheet-pane))
   (clim-clx::realize-mirror-aux port sheet
 		      :event-mask *event-mask*
 		      :override-redirect :on
