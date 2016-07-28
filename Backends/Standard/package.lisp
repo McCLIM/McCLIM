@@ -37,5 +37,7 @@
 		#:%note-sheet-repaint-request
 		#:%note-mirrored-sheet-child-repaint-request
 		#:dispatch-repaint
+		#:always-repaint-background-mixin
+		#:never-repaint-background-mixin
 		)
   )

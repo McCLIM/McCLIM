@@ -122,6 +122,19 @@ that this might be different from the sheet's native region."
 (defmethod %note-sheet-pointer-cursor-changed :after ((sheet standard-mirrored-sheet-mixin))
   (set-sheet-pointer-cursor (port sheet) sheet (sheet-pointer-cursor sheet)))
 
-(defmethod %note-mirrored-sheet-child-repaint-request :after
+(defmethod %note-mirrored-sheet-child-repaint-request 
     ((sheet standard-mirrored-sheet-mixin) child region)
   (repaint-background sheet child region))
+
+(defmethod %note-mirrored-sheet-child-repaint-request 
+    ((sheet standard-mirrored-sheet-mixin) (child always-repaint-background-mixin) region)
+  nil)
+
+(defmethod %note-mirrored-sheet-child-repaint-request 
+    ((sheet standard-mirrored-sheet-mixin) (child never-repaint-background-mixin) region)
+  nil)
+
+(defmethod %note-sheet-repaint-request ((sheet always-repaint-background-mixin)
+					region)
+  (repaint-background sheet sheet region))
+    

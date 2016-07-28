@@ -132,3 +132,14 @@
   whether or not multiprocessing is supported."))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; No Standard.
+
+;; as present in silica's implementation
+(defclass always-repaint-background-mixin () ())
+
+;; never repaint the background (only for speed)
+(defclass never-repaint-background-mixin () ())
+
+
