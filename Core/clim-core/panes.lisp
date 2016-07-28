@@ -938,7 +938,7 @@ order to produce a double-click")
 		    (clamp width  (sr-min-width pane)  (sr-max-width pane))
 		    (clamp height (sr-min-height pane) (sr-max-height pane)))))
 
-(defmethod note-sheet-region-changed :before ((pane top-level-sheet-pane))
+(defmethod note-sheet-region-changed :after ((pane top-level-sheet-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (allocate-space pane (- x2 x1) (- y2 y1))))
 

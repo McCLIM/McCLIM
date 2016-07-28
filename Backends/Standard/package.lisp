@@ -24,7 +24,6 @@
 
 		#:%%sheet-native-transformation
 		#:%%set-sheet-native-transformation
-		
 		#:%note-mirrored-sheet-child-grafted
 		#:%note-mirrored-sheet-child-degrafted
 		#:%note-mirrored-sheet-child-adopted

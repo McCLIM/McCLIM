@@ -43,15 +43,23 @@
 
 
 (defmethod note-sheet-transformation-changed :after ((sheet standard-multi-mirrored-sheet-mixin))
-  (repaint-mirrored-sheet-child (sheet-mirrored-ancestor sheet) sheet)
   (loop for child in (sheet-children sheet)
-     do (note-parent-mirror-geometry-changed child)))
+     do (note-parent-mirror-geometry-changed child))
+  (repaint-mirrored-sheet-child (sheet-mirrored-ancestor sheet) sheet))
 
 (defmethod note-sheet-regions-changed :after ((sheet standard-multi-mirrored-sheet-mixin))
-  (repaint-mirrored-sheet-child (sheet-mirrored-ancestor sheet) sheet)
   (loop for child in (sheet-children sheet)
-     do (note-parent-mirror-geometry-changed child)))
-  
+     do (note-parent-mirror-geometry-changed child))
+  (repaint-mirrored-sheet-child (sheet-mirrored-ancestor sheet) sheet))
+
+(defmethod %note-mirrored-sheet-child-region-changed
+    ((sheet standard-multi-mirrored-sheet-mixin) child)
+  (note-parent-mirror-geometry-changed child))
+
+
+(defmethod %note-mirrored-sheet-child-transformation-changed
+    ((sheet standard-multi-mirrored-sheet-mixin) child)
+  (note-parent-mirror-geometry-changed child))
 
 (defgeneric note-parent-mirror-geometry-changed (sheet))
 
@@ -59,8 +67,8 @@
   (note-sheet-transformation-changed sheet)
   (note-sheet-region-changed sheet))
 
+
 (defmethod note-parent-mirror-geometry-changed ((sheet basic-sheet))
-  
   (loop for child in (sheet-children sheet)
      do (note-parent-mirror-geometry-changed child)))
 

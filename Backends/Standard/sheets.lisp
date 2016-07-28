@@ -25,6 +25,7 @@ that this might be different from the sheet's native region."
 
 (defmethod handle-event ((sheet standard-mirrored-sheet-mixin)
 			 (event window-configuration-event))
+
   (let ((x (window-configuration-event-x event))
 	(y (window-configuration-event-y event))
 	(width (window-configuration-event-width event))
@@ -40,7 +41,7 @@ that this might be different from the sheet's native region."
 (defmethod note-sheet-transformation-changed :before ((sheet standard-mirrored-sheet-mixin))
   (%update-mirror-geometry sheet))
 
-(defmethod note-sheet-regions-changed :before ((sheet standard-mirrored-sheet-mixin))
+(defmethod note-sheet-region-changed :before ((sheet standard-mirrored-sheet-mixin))
   (%update-mirror-geometry sheet))
 
 (defgeneric %update-mirror-geometry (sheet))
@@ -48,7 +49,7 @@ that this might be different from the sheet's native region."
 (defmethod %update-mirror-geometry ((sheet standard-mirrored-sheet-mixin))
   ())
 
- (defun %set-mirror-geometry (sheet x1 y1 x2 y2)
+(defun %set-mirror-geometry (sheet x1 y1 x2 y2)
   (let* ((MT (make-translation-transformation x1 y1))
 	 (MR (make-rectangle* 0 0 (round (- x2 x1)) (round (- y2 y1)))))
     (setf (%sheet-mirror-region sheet) MR)
