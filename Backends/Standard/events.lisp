@@ -66,9 +66,9 @@
       (distribute-enter-events pointer-sheet common-sheet event)
       (setf (port-pointer-sheet port) pointer-sheet))
     ;; set the pointer cursor
-    (when (port-pointer-sheet port)
+    (when pointer-sheet
       (let ((pointer-cursor
-	     (sheet-pointer-cursor (port-pointer-sheet port))))
+	     (sheet-pointer-cursor pointer-sheet)))
 	(unless (eql (port-lookup-current-pointer-cursor port (event-sheet event))
 		     pointer-cursor)
 	  (set-sheet-pointer-cursor port (event-sheet event) pointer-cursor))))

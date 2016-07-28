@@ -38,16 +38,30 @@
   nil)
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
-  (handle-repaint sheet region)
-  (dolist (child (sheet-children sheet))
-    (when (and (sheet-enabled-p child))
-      (let* ((child-region (region-intersection
-			    (untransform-region
-			     (sheet-transformation child)
-			     region)
-			    (sheet-region child))))
-	(unless (eq child-region +nowhere+)
-	  (repaint-sheet child child-region))))))
+  (%note-sheet-repaint-request sheet region)
+  (handle-repaint sheet region))
+
+(defmethod repaint-sheet :after ((sheet sheet-parent-mixin) region)
+  ;; propagate repaint to unmirrored sheets
+  (labels ((propagate-repaint-1 (sheet region)
+	   (dolist (child (sheet-children sheet))
+	     (when (and (sheet-enabled-p child)
+			(not (sheet-direct-mirror child)))
+	       (let ((child-region (region-intersection
+				    (untransform-region
+				     (sheet-transformation child)
+				     region)
+				    (sheet-region child))))
+		 (unless (eq child-region +nowhere+)
+		   (%note-sheet-repaint-request child child-region)
+		   (handle-repaint child child-region)
+		   (propagate-repaint-1 child child-region)))))))
+    (propagate-repaint-1 sheet region)))
+	       
+(defmethod repaint-sheet :around ((sheet basic-sheet) region)
+  (declare (ignore region))
+  (when (sheet-mirror sheet)
+    (call-next-method)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -68,15 +82,12 @@
     (queue-repaint sheet (make-instance 'window-repaint-event
                                         :sheet sheet
                                         :region (transform-region
-                                                 (sheet-native-transformation sheet)
-                                                 region)))))
+						 (sheet-native-transformation sheet)
+						 region)))))
 
 (defmethod handle-event ((sheet standard-repainting-mixin)
 			 (event window-repaint-event))
-  ;;(repaint-sheet sheet (window-event-region event)))
-  (handle-repaint sheet (window-event-region event))
-  (propagate-repaint sheet sheet (window-event-region event)))
-  
+  (repaint-sheet sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -86,10 +97,10 @@
 
 (defmethod dispatch-event
     ((sheet immediate-repainting-mixin) (event window-repaint-event))
-  (handle-repaint sheet (window-event-region event)))
+  (repaint-sheet sheet (window-event-region event)))
 
 (defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
-  (handle-repaint sheet region))
+  (repaint-sheet sheet region))
 
 (defmethod handle-event ((sheet immediate-repainting-mixin)
 			 (event window-repaint-event))
@@ -110,15 +121,6 @@
 				    (sheet-native-transformation sheet)
 				    region)))))
 
-;;; I know what the spec says about SHEET-MUTE-REPAINTING-MIXIN, but I don't
-;;; think it's right; "repaint-sheet that does nothing" makes no sense.
-;;; -- moore
-#+nil
-(defmethod repaint-sheet ((sheet sheet-mute-repainting-mixin) region)
-  (declare (ignorable sheet region))
-  (format *trace-output* "repaint ~S~%" sheet)
-  (values))
-
 (defmethod handle-repaint ((sheet sheet-mute-repainting-mixin) region)
   (declare (ignore region))
   nil)
@@ -129,26 +131,4 @@
   (:documentation "Internal class that implements repainting protocol based on
   whether or not multiprocessing is supported."))
 
-;;;
-;;;
-;;;
 
-(defun propagate-repaint (mirrored-sheet sheet region)
-  (dolist (child (sheet-children sheet))
-    (when (and (sheet-enabled-p child)
-	       (not (typep child 'mirrored-sheet-mixin)))
-      (let* ((native-child-region (region-intersection
-				   region
-				   (sheet-native-region child))))
-	(unless (eq native-child-region +nowhere+)
-	  ;; if child is a pane we need to repaint the background
-	  (when (typep child 'basic-pane)
-	    (with-bounding-rectangle* (x1 y1 x2 y2)
-		native-child-region
-	      (draw-rectangle* mirrored-sheet
-			       x1 y1 x2 y2 :filled t
-			       :clipping-region native-child-region :ink (pane-background child))))
-	  (handle-repaint child (untransform-region
-				 (sheet-native-transformation child)
-				 native-child-region))
-	  (propagate-repaint mirrored-sheet child region))))))

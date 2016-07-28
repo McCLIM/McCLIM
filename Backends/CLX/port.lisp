@@ -379,7 +379,7 @@
   (when (null (port-lookup-mirror port sheet))
     ;;(update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
-                            (sheet-with-medium-mixin
+                            (permanent-medium-sheet-output-mixin ;; sheet-with-medium-mixin
                               (medium-background sheet))
                             (basic-pane ; CHECKME [is this sensible?] seems to be
                               (let ((background (pane-background sheet)))
@@ -1230,8 +1230,10 @@
     (setf (pointer-grab-sheet port) nil)))
 
 (defmethod set-sheet-pointer-cursor ((port clx-port) (sheet mirrored-sheet-mixin) cursor)
-  (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port))))
-    (when cursor
+  (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port)))
+	(mirror (sheet-direct-mirror sheet)))
+    (when (and cursor
+	       (typep mirror 'xlib:window))
       (setf (xlib:window-cursor (sheet-direct-mirror sheet)) cursor))))
         
 

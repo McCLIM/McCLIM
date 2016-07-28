@@ -91,6 +91,8 @@
 (defgeneric %note-mirrored-sheet-child-transformation-changed (sheet child))
 (defgeneric %note-sheet-pointer-cursor-changed (sheet))
 (defgeneric %note-mirrored-sheet-child-pointer-cursor-changed (sheet child))
+(defgeneric %note-sheet-repaint-request (sheet region))
+(defgeneric %note-mirrored-sheet-child-repaint-request (sheet child region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -781,9 +783,18 @@
 (defmethod %note-mirrored-sheet-child-transformation-changed ((sheet mirrored-sheet-mixin) child)
   )
 (defmethod %note-mirrored-sheet-child-pointer-cursor-changed ((sheet mirrored-sheet-mixin) child)
- )
+  )
+(defmethod %note-sheet-repaint-request ((sheet basic-sheet) region)
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-repaint-request msheet sheet region))))
+(defmethod %note-mirrored-sheet-child-repaint-request ((sheet mirrored-sheet-mixin) child region)
+  )
 
-  
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; dangerous codes
 ;;; postfix: %%% 

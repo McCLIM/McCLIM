@@ -36,15 +36,21 @@
 						      (symbol-name concrete-pane-class-symbol)
 						      "-DUMMY"))
 	   (concrete-mirrored-pane-class-symbol (find-symbol concrete-mirrored-pane-class
-							     :clim-clxv2)))
+							     :clim-clxv2))
+	   (superclasses (if (subtypep concrete-pane-class 'sheet-with-medium-mixin)
+			     (list 'clxv2-mirrored-sheet-mixin
+				   concrete-pane-class-symbol)
+			     (list 'clxv2-mirrored-sheet-mixin
+				   ;;'temporary-medium-sheet-output-mixin
+				   'permanent-medium-sheet-output-mixin
+				   concrete-pane-class-symbol))))
       (format *debug-io* "use dummy mirrored class ~A ~A~%" (clxv2-port-mirroring port) concrete-mirrored-pane-class)
       (unless concrete-mirrored-pane-class-symbol
 	(setf concrete-mirrored-pane-class-symbol
 	      (intern concrete-mirrored-pane-class :clim-clxv2))
 	(eval
 	 `(defclass ,concrete-mirrored-pane-class-symbol
-	      (clxv2-mirrored-sheet-mixin
-	       ,concrete-pane-class-symbol)
+	      ,superclasses
 	    ()
 	    (:metaclass ,(type-of (find-class concrete-pane-class-symbol)))))
 	(format *debug-io* "create class ~A~%" concrete-mirrored-pane-class-symbol))

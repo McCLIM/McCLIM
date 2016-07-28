@@ -34,5 +34,8 @@
 		#:%note-mirrored-sheet-child-transformation-changed
 		#:%note-sheet-pointer-cursor-changed
 		#:%note-mirrored-sheet-child-pointer-cursor-changed
+		#:%note-sheet-repaint-request
+		#:%note-mirrored-sheet-child-repaint-request
+		#:dispatch-repaint
 		)
   )
