@@ -91,6 +91,15 @@
 (defgeneric %note-mirrored-sheet-child-transformation-changed (sheet child))
 (defgeneric %note-sheet-pointer-cursor-changed (sheet))
 (defgeneric %note-mirrored-sheet-child-pointer-cursor-changed (sheet child))
+(defgeneric %note-sheet-repaint-request (sheet region))
+(defgeneric %note-mirrored-sheet-child-repaint-request (sheet child region))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; non standard protocol
+
+(defgeneric %invalidate-cached-device-transformations (sheet))
+(defgeneric %invalidate-cached-device-regions (sheet))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;
@@ -122,7 +131,6 @@
 ;;; Native region is volatile, and is only computed at the first
 ;;; request when it's equal to nil.
 ;;;
-;;; Invalidate-cached-region method sets the native-region to nil.
 
 (defmethod sheet-parent ((sheet basic-sheet))
   nil)
@@ -428,6 +436,18 @@
           device-region nil))
   (loop for child in (sheet-children sheet)
         do (invalidate-cached-regions child)))
+
+(defmethod %invalidate-cached-device-transformations ((sheet basic-sheet))
+    (with-slots (device-transformation) sheet
+      (setf device-transformation nil))
+    (loop for child in (sheet-children sheet)
+       do (%invalidate-cached-device-transformations child)))
+
+(defmethod %invalidate-cached-device-regions ((sheet basic-sheet))
+    (with-slots (device-region) sheet
+      (setf device-region nil))
+    (loop for child in (sheet-children sheet)
+       do (%invalidate-cached-device-regions child)))
 
 (defmethod (setf sheet-transformation) :after
     (transformation (sheet basic-sheet))
@@ -763,6 +783,40 @@
 (defmethod %note-mirrored-sheet-child-transformation-changed ((sheet mirrored-sheet-mixin) child)
   )
 (defmethod %note-mirrored-sheet-child-pointer-cursor-changed ((sheet mirrored-sheet-mixin) child)
- )
+  )
+(defmethod %note-sheet-repaint-request ((sheet basic-sheet) region)
+  (let ((msheet (sheet-mirrored-ancestor sheet)))
+    (when (and msheet
+	       (not (eql msheet sheet)))
+      (%note-mirrored-sheet-child-repaint-request msheet sheet region))))
+(defmethod %note-mirrored-sheet-child-repaint-request ((sheet mirrored-sheet-mixin) child region)
+  )
 
-  
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; dangerous codes
+;;; postfix: %%% 
+;;;
+
+;; used by invoke-with-double-buffering
+(defmacro with-temp-mirror%%% ((mirrored-sheet new-mirror new-native-transformation new-region)
+			       &body body)
+  (let ((ori-native-transformation (gensym "ori-transformation"))
+	(ori-region (gensym "ori-region")))
+    ;; how use gensym in flet?
+    `(flet ((set-native (transform region sheet)
+	      (invalidate-cached-regions sheet)
+	      (invalidate-cached-transformations sheet)
+	      (%%set-sheet-native-transformation transform sheet)
+	      (setf (slot-value sheet 'region) region)))
+       (let ((,ori-native-transformation (sheet-native-transformation ,mirrored-sheet))
+	     (,ori-region (sheet-region ,mirrored-sheet)))
+	 (letf (((sheet-parent ,mirrored-sheet) nil)
+		((sheet-direct-mirror ,mirrored-sheet) ,new-mirror))
+	   (unwind-protect
+		(progn
+		  (set-native ,new-native-transformation ,new-region ,mirrored-sheet)
+		  ,@body)
+	     (set-native ,ori-native-transformation ,ori-region ,mirrored-sheet)))))))

@@ -1,6 +1,6 @@
 (in-package :clim-standard)
 
-(defclass standard-mirrored-sheet-mixin (mirrored-sheet-mixin permanent-medium-sheet-output-mixin)
+(defclass standard-mirrored-sheet-mixin (mirrored-sheet-mixin)
   ((mirror-transformation
     :documentation "Our idea of the current mirror transformation. Might not
                     be correct if a foreign application changes our mirror's geometry."
@@ -25,6 +25,7 @@ that this might be different from the sheet's native region."
 
 (defmethod handle-event ((sheet standard-mirrored-sheet-mixin)
 			 (event window-configuration-event))
+
   (let ((x (window-configuration-event-x event))
 	(y (window-configuration-event-y event))
 	(width (window-configuration-event-width event))
@@ -40,7 +41,7 @@ that this might be different from the sheet's native region."
 (defmethod note-sheet-transformation-changed :before ((sheet standard-mirrored-sheet-mixin))
   (%update-mirror-geometry sheet))
 
-(defmethod note-sheet-regions-changed :before ((sheet standard-mirrored-sheet-mixin))
+(defmethod note-sheet-region-changed :before ((sheet standard-mirrored-sheet-mixin))
   (%update-mirror-geometry sheet))
 
 (defgeneric %update-mirror-geometry (sheet))
@@ -48,7 +49,7 @@ that this might be different from the sheet's native region."
 (defmethod %update-mirror-geometry ((sheet standard-mirrored-sheet-mixin))
   ())
 
- (defun %set-mirror-geometry (sheet x1 y1 x2 y2)
+(defun %set-mirror-geometry (sheet x1 y1 x2 y2)
   (let* ((MT (make-translation-transformation x1 y1))
 	 (MR (make-rectangle* 0 0 (round (- x2 x1)) (round (- y2 y1)))))
     (setf (%sheet-mirror-region sheet) MR)
@@ -66,12 +67,27 @@ that this might be different from the sheet's native region."
 ;;;
 ;;;
 
-(defun repaint-mirrored-sheet-child (sheet child)
-  (when (sheet-viewable-p sheet)   
-    (dispatch-event sheet
-		    (make-instance 'window-repaint-event
-				   :sheet sheet
-				   :region (sheet-native-region child)))))
+(defun repaint-background (sheet child region)
+  (labels ((effective-repaint-region (mirrored-sheet child region)
+	     (if (eq mirrored-sheet child)
+		 (region-intersection
+		  (sheet-region mirrored-sheet)
+		  region)
+		 (effective-repaint-region mirrored-sheet
+					   (sheet-parent child)
+					   (transform-region
+					    (sheet-transformation child)
+					    (region-intersection
+					     region
+					     (sheet-region child)))))))
+    (let ((native-child-region (effective-repaint-region sheet child region)))
+      (with-sheet-medium (medium sheet)
+	(with-drawing-options (medium :clipping-region native-child-region
+				      :ink (pane-background child)
+				      :transformation +identity-transformation+)
+	  (with-bounding-rectangle* (left top right bottom)
+	    native-child-region
+	    (medium-draw-rectangle* sheet left top right bottom t)))))))
 
 ;;;
 ;;;
@@ -86,19 +102,39 @@ that this might be different from the sheet's native region."
    (port-disable-sheet (port sheet) sheet)))
 
 (defmethod %note-mirrored-sheet-child-enabled :after ((sheet standard-mirrored-sheet-mixin) child)
-  (repaint-mirrored-sheet-child sheet child))
+  (declare (ignore sheet))
+  (dispatch-repaint child (sheet-region child)))
 
 (defmethod %note-mirrored-sheet-child-disabled :after ((sheet standard-mirrored-sheet-mixin) child)
-  (repaint-mirrored-sheet-child sheet child))
+  (declare (ignore sheet))
+  (dispatch-repaint child (sheet-region child)))
 
 (defmethod %note-mirrored-sheet-child-region-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
-  (repaint-mirrored-sheet-child sheet child))
+  (declare (ignore sheet))
+  (dispatch-repaint child (sheet-region child)))
 
 (defmethod %note-mirrored-sheet-child-transformation-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
-  (repaint-mirrored-sheet-child sheet child)) 
+  (declare (ignore sheet))
+  (dispatch-repaint child (sheet-region child)))
 
 (defmethod %note-sheet-pointer-cursor-changed :after ((sheet standard-mirrored-sheet-mixin))
   (set-sheet-pointer-cursor (port sheet) sheet (sheet-pointer-cursor sheet)))
 
+(defmethod %note-mirrored-sheet-child-repaint-request 
+    ((sheet standard-mirrored-sheet-mixin) child region)
+  (repaint-background sheet child region))
+
+(defmethod %note-mirrored-sheet-child-repaint-request 
+    ((sheet standard-mirrored-sheet-mixin) (child always-repaint-background-mixin) region)
+  nil)
+
+(defmethod %note-mirrored-sheet-child-repaint-request 
+    ((sheet standard-mirrored-sheet-mixin) (child never-repaint-background-mixin) region)
+  nil)
+
+(defmethod %note-sheet-repaint-request ((sheet always-repaint-background-mixin)
+					region)
+  (repaint-background sheet sheet region))
+    
