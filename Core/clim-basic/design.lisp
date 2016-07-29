@@ -120,7 +120,10 @@
     `(make-named-color ',name ,red ,green ,blue)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defvar *color-hash-table* (make-hash-table :test #'eql)))
+  (defvar *color-hash-table*
+    (trivial-garbage:make-weak-hash-table
+     :weakness :value
+     :weakness-matters nil)))
 
 (defun compute-color-key (red green blue)
   (+ (ash (round (* 255 red)) 16)
