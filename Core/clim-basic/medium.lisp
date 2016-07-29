@@ -406,13 +406,13 @@
   (declare (ignore region))
   (let ((sheet (medium-sheet medium)))    
     (when sheet
-      (invalidate-cached-regions sheet))))
+      (%invalidate-cached-device-regions sheet))))
 
 (defmethod (setf medium-transformation) :after (transformation (medium medium))
   (declare (ignore transformation))
   (let ((sheet (medium-sheet medium)))
     (when sheet
-      (invalidate-cached-transformations sheet))))
+      (%invalidate-cached-device-transformations sheet))))
 
 (defmethod medium-merged-text-style ((medium medium))
   (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))

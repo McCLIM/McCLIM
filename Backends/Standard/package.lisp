@@ -24,7 +24,6 @@
 
 		#:%%sheet-native-transformation
 		#:%%set-sheet-native-transformation
-		
 		#:%note-mirrored-sheet-child-grafted
 		#:%note-mirrored-sheet-child-degrafted
 		#:%note-mirrored-sheet-child-adopted
@@ -35,5 +34,10 @@
 		#:%note-mirrored-sheet-child-transformation-changed
 		#:%note-sheet-pointer-cursor-changed
 		#:%note-mirrored-sheet-child-pointer-cursor-changed
+		#:%note-sheet-repaint-request
+		#:%note-mirrored-sheet-child-repaint-request
+		#:dispatch-repaint
+		#:always-repaint-background-mixin
+		#:never-repaint-background-mixin
 		)
   )

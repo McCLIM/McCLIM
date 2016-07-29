@@ -24,20 +24,19 @@
 	  (t
 	   (error "Unknown event ~S received in DISTRIBUTE-EVENT" event))))))
 
-
-
 (defclass standard-handled-event-port-mixin (standard-event-port-mixin)
   ((port-pointer-pressed-sheet :initform nil :accessor port-pointer-pressed-sheet)))
-
 
 
 ;;;
 ;;; pointer events
 ;;;
-(defmethod climi::distribute-event :before ((port standard-handled-event-port-mixin) (event pointer-button-press-event))
+(defmethod climi::distribute-event :before ((port standard-handled-event-port-mixin)
+					    (event pointer-button-press-event))
   (setf (port-pointer-pressed-sheet port) (port-pointer-sheet port)))
 
-(defmethod climi::distribute-event :after ((port standard-handled-event-port-mixin) (event pointer-button-release-event))
+(defmethod climi::distribute-event :after ((port standard-handled-event-port-mixin)
+					   (event pointer-button-release-event))
   (setf (port-pointer-pressed-sheet port) nil))
 
 (defmethod climi::distribute-event :around ((port standard-handled-event-port-mixin) (event pointer-event))
@@ -48,9 +47,12 @@
         (top-level-sheet (get-top-level-sheet (event-sheet event))))
     (cond
       (grab-sheet
-       (if (sheet-ancestor-p pointer-sheet grab-sheet)
-           (setf pointer-sheet grab-sheet)
-           (setf pointer-sheet (sheet-parent grab-sheet))))
+       (setf (port-pointer-sheet port) pointer-sheet)
+       (call-next-method)
+       ;;(if (sheet-ancestor-p pointer-sheet grab-sheet)
+       ;;    (setf pointer-sheet grab-sheet)
+       ;;    (setf pointer-sheet (sheet-parent grab-sheet))))
+       nil)
       ((typep (event-sheet event) 'unmanaged-top-level-sheet-pane)
        nil)
       ((typep top-level-sheet 'unmanaged-top-level-sheet-pane)
@@ -61,68 +63,75 @@
            (setf pointer-sheet (sheet-parent pointer-pressed-sheet))))
       (t
        nil))
-    (let ((common-sheet (sheet-common-ancestor old-pointer-sheet pointer-sheet)))
-      (distribute-exit-events old-pointer-sheet common-sheet event)
-      (distribute-enter-events pointer-sheet common-sheet event)
-      (setf (port-pointer-sheet port) pointer-sheet))
-    ;; set the pointer cursor
-    (let ((pointer-cursor
-	   (sheet-pointer-cursor (port-pointer-sheet port))))
-      (unless (eql (port-lookup-current-pointer-cursor port (event-sheet event))
+    (unless grab-sheet
+      ;; distribute exit and enter events
+      (let ((common-sheet (sheet-common-ancestor old-pointer-sheet pointer-sheet)))
+	(distribute-exit-events old-pointer-sheet common-sheet event)
+	(distribute-enter-events pointer-sheet common-sheet event)
+	(setf (port-pointer-sheet port) pointer-sheet))
+      ;; set the pointer cursor
+      (when pointer-sheet
+	(let ((pointer-cursor
+	       (sheet-pointer-cursor pointer-sheet)))
+	  (unless (eql (port-lookup-current-pointer-cursor port (event-sheet event))
 		       pointer-cursor)
-	(set-sheet-pointer-cursor port (event-sheet event) pointer-cursor)))
-    (unless (or (typep event 'pointer-enter-event)
-                (typep event 'pointer-exit-event))
-      (cond
-        ((typep top-level-sheet 'unmanaged-top-level-sheet-pane)
-         (call-next-method))
-        ((or grab-sheet pointer-pressed-sheet)
-         (cond
-           ((eq pointer-sheet (or grab-sheet pointer-pressed-sheet))
-            (call-next-method))
-           ((or (typep event 'pointer-button-release-event)
-                (typep event 'pointer-motion-event))
-            ;; send event to ...
-            (setf (port-pointer-sheet port) (or grab-sheet pointer-pressed-sheet))
-            (call-next-method)
-            (setf (port-pointer-sheet port) pointer-sheet))
-           (t
-            nil)))
-        (t	 
-         (call-next-method))))))
+	    (set-sheet-pointer-cursor port (event-sheet event) pointer-cursor))))
+      (unless (or (typep event 'pointer-enter-event)
+		  (typep event 'pointer-exit-event))
+	(cond
+	  ((typep top-level-sheet 'unmanaged-top-level-sheet-pane)
+	   (call-next-method))
+	  ((or grab-sheet pointer-pressed-sheet)
+	   (cond
+	     ((eq pointer-sheet (or grab-sheet pointer-pressed-sheet))
+	      (call-next-method))
+	     ((or (typep event 'pointer-button-release-event)
+		  (typep event 'pointer-motion-event))
+	      ;; send event to ...
+	      (setf (port-pointer-sheet port) (or grab-sheet pointer-pressed-sheet))
+	      (call-next-method)
+	      (setf (port-pointer-sheet port) pointer-sheet))
+	     (t
+	      nil)))
+	  (t	 
+	   (call-next-method)))))))
 
 
 (defmethod climi::distribute-event ((port standard-handled-event-port-mixin) (event pointer-event))
-
-  (let ((sheet (port-pointer-sheet port)))
+  (let* ((sheet (port-pointer-sheet port))
+	 (grab-sheet (pointer-grab-sheet port))
+	 (destination (or (pointer-grab-sheet port) sheet)))
     (when sheet
       (cond ((eq sheet (event-sheet event))
-	     
-             (dispatch-event sheet event))
-            (t
-             (if (eq (sheet-mirrored-ancestor sheet) (sheet-mirrored-ancestor (event-sheet event)))
-                 (dispatch-event sheet
-                                 (make-instance (type-of event)
-                                                :pointer (slot-value event 'climi::pointer)
-                                                :button (slot-value event 'climi::button)
-                                                :x (slot-value event 'climi::x)
-                                                :y (slot-value event 'climi::y)
-                                                :graft-x (slot-value event 'climi::graft-x)
-                                                :graft-y (slot-value event 'climi::graft-y)
-                                                :sheet sheet
-                                                :modifier-state (slot-value event 'climi::modifier-state)
-                                                :timestamp (slot-value event 'climi::timestamp)))
-                 (dispatch-event sheet
-                                 (make-instance (type-of event)
-                                                :pointer (slot-value event 'climi::pointer)
-                                                :button (slot-value event 'climi::button)
-                                                :x (slot-value event 'climi::x)  ;; wrong value
-                                                :y (slot-value event 'climi::y)  ;; wrong value
-                                                :graft-x (slot-value event 'climi::graft-x)
-                                                :graft-y (slot-value event 'climi::graft-y)
-                                                :sheet sheet
-                                                :modifier-state (slot-value event 'climi::modifier-state)
-                                                :timestamp (slot-value event 'climi::timestamp)))))))))
+	     (dispatch-event sheet event))
+            ((eq (sheet-mirrored-ancestor sheet) (sheet-mirrored-ancestor (event-sheet event)))
+	     (dispatch-event destination
+			     (make-instance (type-of event)
+					    :pointer (slot-value event 'climi::pointer)
+					    :button (slot-value event 'climi::button)
+					    :x (slot-value event 'climi::x)
+					    :y (slot-value event 'climi::y)
+					    :graft-x (slot-value event 'climi::graft-x)
+					    :graft-y (slot-value event 'climi::graft-y)
+					    :sheet sheet
+					    :modifier-state (slot-value event 'climi::modifier-state)
+					    :timestamp (slot-value event 'climi::timestamp))))
+	    (t
+	     (multiple-value-bind (cx cy)
+		 (untransform-position (sheet-delta-transformation (sheet-mirrored-ancestor sheet) nil)
+				     (slot-value event 'climi::graft-x)
+				     (slot-value event 'climi::graft-y))
+	     (dispatch-event destination
+			     (make-instance (type-of event)
+					    :pointer (slot-value event 'climi::pointer)
+					    :button (slot-value event 'climi::button)
+					    :x cx
+					    :y cy
+					    :graft-x (slot-value event 'climi::graft-x)
+					    :graft-y (slot-value event 'climi::graft-y)
+					    :sheet sheet
+					    :modifier-state (slot-value event 'climi::modifier-state)
+					    :timestamp (slot-value event 'climi::timestamp)))))))))
 
 
 
@@ -135,20 +144,7 @@
 ;;; all events
 ;;;
 
-(defmethod climi::distribute-event ((port standard-handled-event-port-mixin) event)
-  (cond
-   ((typep event 'keyboard-event)
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'window-event)
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'window-manager-delete-event)
-    ;; not sure where this type of event should get sent - mikemac
-    ;; This seems fine; will be handled by the top-level-sheet-pane - moore
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'timer-event)
-    (error "Where do we send timer-events?"))
-   (t
-    (error "Unknown event ~S received in DISTRIBUTE-EVENT" event))))
+
 
 
 (defun distribute-enter-events (sheet-b sheet-t event)
