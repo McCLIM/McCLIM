@@ -366,8 +366,6 @@
 					      #p"/usr/share/fonts/TTF/"
 					      #p"/usr/share/fonts/")))
 
-(fmakunbound 'clim-clx::text-style-to-x-font)
-
 (defstruct truetype-device-font-name
   (font-file (error "missing argument"))
   (size      (error "missing argument")))
