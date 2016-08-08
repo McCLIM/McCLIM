@@ -1030,10 +1030,11 @@
         (cons font-name (open-font (clx-port-display port) font-name)))
   font-name)
 
-(defun text-style-to-X-font (port text-style)
-  (let ((text-style (parse-text-style text-style)))
-    (text-style-mapping port text-style)
-    (cdr (gethash text-style (port-text-style-mappings port)))))
+(defgeneric text-style-to-X-font (port text-style)
+  (:method ((port t) (text-style t))
+    (let ((text-style (parse-text-style text-style)))
+      (text-style-mapping port text-style)
+      (cdr (gethash text-style (port-text-style-mappings port))))))
 
 ;;; The generic function PORT-CHARACTER-WIDTH might be intended to be
 ;;; common for all ports, but in fact, that symbol is in the CLIM-CLX
