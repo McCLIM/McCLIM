@@ -409,8 +409,7 @@ for `type', or `object' if it isn't."
   ;; it.
   (let ((insertion (make-array 10 :adjustable t :fill-pointer 0)))
     (labels ((insert-object (object)
-               (vector-push-extend object insertion
-                                   (* (length insertion))))
+               (vector-push-extend object insertion))
              (insert-objects (objects)
                (setf insertion (adjust-array insertion
                                              (+ (length insertion)
