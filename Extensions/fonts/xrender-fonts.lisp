@@ -101,9 +101,9 @@
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
           (setf fixed-width t)
-          (#-hef warn #+hef cerror #+hef "Ignore it." "Font ~A is fixed width, but the glyph width appears to vary.
+          (warn "Font ~A is fixed width, but the glyph width appears to vary.
  Disabling fixed width optimization for this font. ~A vs ~A" 
-                 font dx fixed-width))
+                font dx fixed-width))
         (when (and (numberp fixed-width)
                    (font-fixed-width-p font))
           (setf fixed-width dx)))
