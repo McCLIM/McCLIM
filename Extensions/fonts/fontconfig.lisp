@@ -77,8 +77,14 @@
           collect
           (cons (list (car family) (car face)) filename))))
 
+
 (defun autoconfigure-fonts ()
   (let ((map (build-font/family-map)))
-    (if map
+    (if (and map (support-map-p map))
         (setf *families/faces* map)
         (warn-about-unset-font-path))))
+
+(defun support-map-p (map)
+  (not (find-if #'(lambda (font-path)
+		    (string-equal "ttc" (pathname-type font-path)))
+		map :key #'cdr)))

@@ -363,6 +363,7 @@
 
 (defparameter *truetype-font-path* (find-if #'probe-file
 					    '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
+					      #p"/usr/share/fonts/truetype/dejavu/"
 					      #p"/usr/share/fonts/TTF/"
 					      #p"/usr/share/fonts/")))
 
