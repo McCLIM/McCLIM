@@ -112,11 +112,6 @@
         (setf arr (make-array (list 1 1)
                               :element-type '(unsigned-byte 8)
                               :initial-element 0)))
-      (when (> (array-total-size arr)
-	       (- (* 4 (xlib::DISPLAY-MAX-REQUEST-LENGTH DISPLAY))
-		  100 ;; size of the header
-		  ))
-	(error "The size of the font is too big"))
       (xlib::render-add-glyph (display-the-glyph-set display) glyph-id
                               :data arr
                               :x-origin (- left)
