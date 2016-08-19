@@ -64,7 +64,7 @@
                    (make-demo-button "Logic Cube" 'logic-cube)
                    (make-demo-button "Gadget Test"  'gadget-test)
                    (make-demo-button "Drag and Drop" 'dragndrop)
-                   ;(make-demo-button "Colorslider" 'colorslider)                   
+                   (make-demo-button "Colorslider" 'colorslider)
                    (make-demo-button "D&D Translator" 'drag-test)
                    (make-demo-button "Draggable Graph" 'draggable-graph-demo)
                    (make-demo-button "Image viewer" 'image-viewer)
