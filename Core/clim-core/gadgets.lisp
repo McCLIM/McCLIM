@@ -649,7 +649,8 @@ and must never be nil."))
 
 ;;; 30.4.7 The abstract list-pane and option-pane Gadgets
 
-(defclass list-pane (value-gadget)
+(defclass list-pane (value-gadget
+                     clim-extensions:mouse-wheel-scroll-mixin)
   ()
   (:documentation
    "The instantiable class that implements an abstract list pane, that is, a gadget
