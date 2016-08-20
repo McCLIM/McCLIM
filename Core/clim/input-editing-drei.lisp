@@ -162,7 +162,7 @@ activated with GESTURE"))
 ;;;
 ;;; Presentation histories are pretty underspecified, so we have to
 ;;; rely on internal features and implement input-editor support in
-;;; CLIM-INTERNALS (Goatee does the same trick).
+;;; CLIM-INTERNALS.
 
 (defun history-yank-next (stream input-buffer gesture numeric-argument)
   (declare (ignore input-buffer gesture numeric-argument))

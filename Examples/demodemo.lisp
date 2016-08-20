@@ -85,7 +85,6 @@
                    (make-demo-button "Option Test" 'option-test)
                    (make-demo-button "HBOX Test"  'hbox-test)
                    (make-demo-button "Text Size Test"  'text-size-test)
-                   (make-demo-button "Goatee Test" 'goatee::goatee-test)
                    (make-demo-button "Drawing Benchmark"
 				     'drawing-benchmark)
                    (make-demo-button "Border Styles Test" 'bordered-output)

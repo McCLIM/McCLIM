@@ -27,10 +27,6 @@
 
 (in-package :clim-internals)
 
-(defvar *use-goatee* nil
-  "If true, use the Goatee editing component instead of Drei. The
-Goatee component is faster and more mature than Drei.")
-
 (defvar *activation-gestures* nil
   "The set of currently active activation gestures. The global
 value of this must be NIL. The exact format of
@@ -315,10 +311,7 @@ buffer using `presentation-replace-input'."
     `(invoke-with-input-editing ,stream
                                 #'(lambda (,stream) ,@body)
                                 ,input-sensitizer ,initial-contents
-                                ,(if class-provided-p
-                                     class
-                                     `(if *use-goatee* 'goatee-input-editing-stream
-                                          ,class))
+                                ,class
                                 ,@args)))
 
 (defmacro with-input-position ((stream) &body body)

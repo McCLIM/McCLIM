@@ -27,9 +27,7 @@
 
 ;;; This file contains the concrete implementation of the text-field
 ;;; and text-editor gadgets. It is loaded rather late, because it
-;;; requires Drei. Half of the complexity here is about working around
-;;; annoying Goatee quirks, generalising it to three editor substrates
-;;; is nontrivial.
+;;; requires Drei.
 
 (in-package :clim-internals)
 
@@ -152,160 +150,12 @@
 (defmethod allocate-space ((pane drei-text-editor-substrate) w h)
   (resize-sheet pane w h))
 
-;;; Now, define the Goatee substrate.
-
-(defclass goatee-editor-substrate (editor-substrate-mixin
-                                   text-field
-                                   clim-stream-pane)
-  ((area :accessor area
-         :initform nil
-         :documentation "The Goatee area used for text editing.")
-   ;; This hack is necessary because the Goatee editing area is not
-   ;; created until the first redisplay... yuck.
-   (value :documentation "The initial value for the Goatee area."))
-  (:default-initargs
-   :text-style *default-text-field-text-style*))
-
-(defmethod initialize-instance :after ((pane goatee-editor-substrate) &rest rest)
-  (declare (ignore rest))
-  (setf (medium-text-style (sheet-medium pane))
-        (slot-value pane 'text-style)))
-
-;; Is there really a benefit to waiting until the first painting to
-;; create the goatee instance? Why not use INITIALIZE-INSTANCE?
-(defmethod handle-repaint :before ((pane goatee-editor-substrate) region)
-  (declare (ignore region))
-  (unless (area pane)
-    (multiple-value-bind (cx cy)
-        (stream-cursor-position pane)
-      (setf (cursor-visibility (stream-text-cursor pane)) nil)
-      (setf (area pane) (make-instance 'goatee:simple-screen-area
-                         :area-stream pane
-                         :x-position cx
-                         :y-position cy
-                         :initial-contents (slot-value pane 'value))))
-    (stream-add-output-record pane (area pane))))
-
-;;; This implements click-to-focus-keyboard-and-pass-click-through
-;;; behaviour.
-(defmethod handle-event :before
-    ((gadget goatee-editor-substrate) (event pointer-button-press-event))
-  (let ((previous (stream-set-input-focus gadget)))
-    (when (and previous (typep previous 'gadget))
-      (disarmed-callback previous (gadget-client previous) (gadget-id previous)))
-    (armed-callback gadget (gadget-client gadget) (gadget-id gadget))))
-
-(defmethod armed-callback :after ((gadget goatee-editor-substrate) client id)
-  (declare (ignore client id))
-  (handle-repaint gadget +everywhere+)	;FIXME: trigger initialization
-  (let ((cursor (cursor (area gadget))))
-    (letf (((cursor-state cursor) nil))
-      (setf (cursor-appearance cursor) :solid))))
-
-(defmethod disarmed-callback :after ((gadget goatee-editor-substrate) client id)
-  (declare (ignore client id))
-  (handle-repaint gadget +everywhere+)	;FIXME: trigger initialization
-  (let ((cursor (cursor (area gadget))))
-    (letf (((cursor-state cursor) nil))
-      (setf (cursor-appearance cursor) :hollow))))
-
-(defmethod handle-event
-    ((gadget goatee-editor-substrate) (event key-press-event))
-  (let ((gesture (convert-to-gesture event))
-	(*activation-gestures* (activation-gestures gadget)))
-    (when (activation-gesture-p gesture)
-      (activate-callback gadget (gadget-client gadget) (gadget-id gadget))
-      (return-from handle-event t))
-    (goatee:execute-gesture-command gesture
-				    (area gadget)
-				    goatee::*simple-area-gesture-table*)
-    (let ((new-value (goatee::buffer-string (goatee::buffer (area gadget)))))
-      (unless (string= (gadget-value gadget) new-value)
-	(setf (slot-value gadget 'value) new-value)
-	(value-changed-callback gadget
-				(gadget-client gadget)
-				(gadget-id gadget)
-				new-value)))))
-
-(defmethod (setf gadget-value) :after (new-value (gadget goatee-editor-substrate)
-				       &key invoke-callback)
-  (declare (ignore invoke-callback))
-  (let* ((area (area gadget))
-	 (buffer (goatee::buffer area))
-	 (start (goatee::buffer-start buffer))
-	 (end (goatee::buffer-end buffer)))
-    (goatee::delete-region buffer start end)
-    (goatee::insert buffer new-value :position start)
-    (goatee::redisplay-area area)))
-
-#+nil
-(defmethod handle-repaint ((pane goatee-editor-substrate) region)
-  (declare (ignore region))
-  (with-special-choices (pane)
-    (with-sheet-medium (medium pane)
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-        (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
-        (draw-text* pane (gadget-value pane)
-                    x1
-                    (+ y1 (text-style-ascent (medium-text-style medium) medium))
-                    :align-x :left
-                    :align-y :baseline)))))
-
-(defclass goatee-text-field-substrate (text-field-substrate-mixin
-                                       goatee-editor-substrate)
-  ()
-  (:documentation "The class for Goatee-based text field substrates."))
-
-(defmethod compose-space ((pane goatee-text-field-substrate) &key width height)
-  (declare (ignore width height))
-  (with-sheet-medium (medium pane)
-    (let ((as (text-style-ascent (medium-text-style medium) medium))
-          (ds (text-style-descent (medium-text-style medium) medium))
-          (w  (text-size medium (gadget-value pane))))
-      (let ((width w)
-            (height (+ as ds)))
-        (make-space-requirement :width width :height height
-                                             :max-width width :max-height height
-                                             :min-width width :min-height height)))))
-
-(defclass goatee-text-editor-substrate (text-editor-substrate-mixin
-                                       goatee-editor-substrate)
-  ()
-  (:documentation "The class for Goatee-based text field substrates."))
-
-(defmethod compose-space ((pane goatee-text-editor-substrate) &key width height)
-  (with-sheet-medium (medium pane)
-    (let* ((text-style (medium-text-style medium))
-           (line-height (+ (text-style-height text-style medium)
-                           (stream-vertical-spacing pane)))
-           (column-width (text-style-width text-style medium)))
-      (with-accessors ((ncolumns text-editor-ncolumns)
-                       (nlines text-editor-nlines)) pane
-        (apply #'space-requirement-combine* #'(lambda (req1 req2)
-                                                (or req2 req1))
-               (call-next-method)
-               (let ((width (if ncolumns
-                                (+ (* ncolumns column-width))
-                                width))
-                     (height (if nlines
-                                 (+ (* nlines line-height))
-                                 height)))
-                 (list :width width :max-width width :min-width width
-                       :height height :max-height height :min-height height)))))))
-
-(defmethod allocate-space ((pane goatee-text-editor-substrate) w h)
-  (resize-sheet pane w h))
-
 (defun make-text-field-substrate (user &rest args &key value &allow-other-keys)
   "Create an appropriate text field gadget editing substrate object."
-  (let* ((substrate (apply #'make-pane (if *use-goatee*
-                                           'goatee-text-field-substrate
-                                           'drei-text-field-substrate)
+  (let* ((substrate (apply #'make-pane 'drei-text-field-substrate
                            :user-gadget user args))
          (sheet substrate))
-    (if *use-goatee*
-        (setf (slot-value substrate 'value) value)
-        (setf (gadget-value substrate) value))
+    (setf (gadget-value substrate) value)
     (values substrate sheet)))
 
 (defun make-text-editor-substrate (user &rest args &key scroll-bars value
@@ -314,20 +164,16 @@
 object. Returns two values, the first is the substrate object,
 the second is the sheet that should be adopted by the user
 gadget."
-  (let* ((minibuffer (when (and (not *use-goatee*) scroll-bars)
+  (let* ((minibuffer (when scroll-bars
                        (make-pane 'drei::drei-minibuffer-pane)))
-         (substrate (apply #'make-pane (if *use-goatee*
-                                           'goatee-text-editor-substrate
-                                           'drei-text-editor-substrate)
+         (substrate (apply #'make-pane 'drei-text-editor-substrate
                      :user-gadget user
                      :minibuffer minibuffer args))
          (sheet (if scroll-bars
                     (scrolling (:scroll-bars scroll-bars)
                       substrate)
                     substrate)))
-    (if *use-goatee*
-        (setf (slot-value substrate 'value) value)
-        (setf (gadget-value substrate) value))
+    (setf (gadget-value substrate) value)
     (values substrate (if minibuffer
                           (vertically ()
                             sheet
