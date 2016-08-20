@@ -150,14 +150,6 @@
 (defmethod allocate-space ((pane drei-text-editor-substrate) w h)
   (resize-sheet pane w h))
 
-(defun make-text-field-substrate (user &rest args &key value &allow-other-keys)
-  "Create an appropriate text field gadget editing substrate object."
-  (let* ((substrate (apply #'make-pane 'drei-text-field-substrate
-                           :user-gadget user args))
-         (sheet substrate))
-    (setf (gadget-value substrate) value)
-    (values substrate sheet)))
-
 (defun make-text-editor-substrate (user &rest args &key scroll-bars value
                                    &allow-other-keys)
   "Create an appropriate text editor gadget editing substrate
@@ -216,16 +208,20 @@ cause the activate callback to be called."))
 					 value value-changed-callback
 					 (editable-p t))
   ;; Make an editor substrate object for the gadget.
-  (let ((substrate (make-text-field-substrate
-                    object :id id :client client :armed-callback armed-callback
-                    :disarmed-callback disarmed-callback
-                    :activation-gestures activation-gestures
-                    :activate-callback activate-callback
-                    :value value
-                    :value-changed-callback value-changed-callback
-		    :editable-p editable-p)))
-    (setf (substrate object) substrate)
-    (sheet-adopt-child object substrate)))
+  (let ((pane (make-pane 'drei-text-field-substrate
+                         :user-gadget object
+                         :id id
+                         :client client
+                         :armed-callback armed-callback
+                         :disarmed-callback disarmed-callback
+                         :activation-gestures activation-gestures
+                         :activate-callback activate-callback
+                         :value value
+                         :value-changed-callback value-changed-callback
+                         :editable-p editable-p)))
+    (setf (gadget-value pane) value
+          (substrate object) pane)
+    (sheet-adopt-child object pane)))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.9 The concrete text-editor Gadget
