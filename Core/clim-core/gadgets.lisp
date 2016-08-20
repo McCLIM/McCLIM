@@ -1145,6 +1145,7 @@ and must never be nil."))
     (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
       (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
       (draw-bordered-rectangle* pane x1 y1 x2 y2
+                                :border-width 1
                                 :style (if (and pressedp armed) :inset :outset))
       (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 *3d-border-thickness* (pane-x-spacing pane))
                                                  (+ y1 *3d-border-thickness* (pane-y-spacing pane))
