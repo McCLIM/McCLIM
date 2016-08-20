@@ -79,6 +79,13 @@
 
 (defun autoconfigure-fonts ()
   (let ((map (build-font/family-map)))
-    (if map
+    (if (and map (support-map-p map))
         (setf *families/faces* map)
         (warn-about-unset-font-path))))
+
+(defun support-map-p (font-map)
+  (handler-case
+      (every #'(lambda (font)
+		 (zpb-ttf:with-font-loader (ignored (cdr font)) t))
+	     font-map)
+    (zpb-ttf::bad-magic () nil)))
