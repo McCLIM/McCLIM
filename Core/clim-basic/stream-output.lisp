@@ -134,11 +134,10 @@
 				    (:solid t) (:hollow nil))
 			  :ink +foreground-ink+))       
         (:erase
-	 ;; This is how I'd like this to work, as painting over
-	 ;; with the background ink is repugnant. I leave this
-	 ;; disabled because I'm concerned about infinite
-	 ;; recursion if replay-output-record calls here (which
-	 ;; Goatee does currently).  --Hefner
+	 ;; This is how I'd like this to work, as painting over with
+	 ;; the background ink is repugnant. I leave this disabled
+	 ;; because I'm concerned about infinite recursion if
+	 ;; replay-output-record calls here. --Hefner
 	 #+nil (repaint-sheet (cursor-sheet cursor)
 			      (make-bounding-rectangle x y (+ 1 x width)
 						       (+ 1 y height)))

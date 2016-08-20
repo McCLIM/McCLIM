@@ -874,9 +874,7 @@ examine the type of the command menu item to see if it is
                  (unless (partial-command-p ,partial-command)
                    (return ,partial-command))))))))))
 
-;;; XXX What do to about :acceptably? Probably need to wait for Goatee "buffer
-;;; streams" so we can insert an accept-result-extent in the buffer for
-;;; unacceptable objects. -- moore 
+;;; XXX What do to about :acceptably? -- moore
 (defun make-unprocessor-fun (name required-args key-args)
   (with-gensyms (command command-args stream key key-arg-val seperator arg-tail)
     ;; Bind the argument variables because expressions in the

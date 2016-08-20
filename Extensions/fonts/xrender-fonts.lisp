@@ -101,9 +101,9 @@
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
           (setf fixed-width t)
-          (#-hef warn #+hef cerror #+hef "Ignore it." "Font ~A is fixed width, but the glyph width appears to vary.
+          (warn "Font ~A is fixed width, but the glyph width appears to vary.
  Disabling fixed width optimization for this font. ~A vs ~A" 
-                 font dx fixed-width))
+                font dx fixed-width))
         (when (and (numberp fixed-width)
                    (font-fixed-width-p font))
           (setf fixed-width dx)))
@@ -112,11 +112,6 @@
         (setf arr (make-array (list 1 1)
                               :element-type '(unsigned-byte 8)
                               :initial-element 0)))
-      (when (> (array-total-size arr)
-	       (- (* 4 (xlib::DISPLAY-MAX-REQUEST-LENGTH DISPLAY))
-		  100 ;; size of the header
-		  ))
-	(error "The size of the font is too big"))
       (xlib::render-add-glyph (display-the-glyph-set display) glyph-id
                               :data arr
                               :x-origin (- left)
@@ -363,6 +358,7 @@
 
 (defparameter *truetype-font-path* (find-if #'probe-file
 					    '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
+					      #p"/usr/share/fonts/truetype/dejavu/"
 					      #p"/usr/share/fonts/TTF/"
 					      #p"/usr/share/fonts/")))
 

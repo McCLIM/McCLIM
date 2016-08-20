@@ -64,7 +64,7 @@
                    (make-demo-button "Logic Cube" 'logic-cube)
                    (make-demo-button "Gadget Test"  'gadget-test)
                    (make-demo-button "Drag and Drop" 'dragndrop)
-                   ;(make-demo-button "Colorslider" 'colorslider)                   
+                   (make-demo-button "Colorslider" 'colorslider)
                    (make-demo-button "D&D Translator" 'drag-test)
                    (make-demo-button "Draggable Graph" 'draggable-graph-demo)
                    (make-demo-button "Image viewer" 'image-viewer)
@@ -82,9 +82,9 @@
                    (make-demo-button "Table Test" 'table-test)
                    (make-demo-button "Scroll Test" 'Scroll-test)
                    (make-demo-button "List Test" 'list-test)
+                   (make-demo-button "Option Test" 'option-test)
                    (make-demo-button "HBOX Test"  'hbox-test)
                    (make-demo-button "Text Size Test"  'text-size-test)
-                   (make-demo-button "Goatee Test" 'goatee::goatee-test)
                    (make-demo-button "Drawing Benchmark"
 				     'drawing-benchmark)
                    (make-demo-button "Border Styles Test" 'bordered-output)
@@ -247,6 +247,20 @@
 		       (find-pane-named *application-frame* 'substring))
 		      :clim t)))
 
+(define-application-frame option-test
+    () ()
+    (:panes (option-pane-1 :option-pane
+                           :value 1
+                           :items '(1 2 3 4 6 7)
+                           :value-changed-callback (constantly nil))
+            (option-pane-2 :option-pane
+                           :value "Option 1"
+                           :items '("Option 1" "Option 2" "Option 3" "Option 4" "Option 6" "Option 7")
+                           :value-changed-callback (constantly nil)))
+    (:layouts
+     (:default
+         (vertically (:label "Option panes example")
+           (1/2 option-pane-1)
+           (1/2 option-pane-2)))))
 
-
-(format t "~&;; try (CLIM-DEMO::DEMODEMO)~%")
+(format t "~&;; try (CLIM-DEMO:DEMODEMO)~%")

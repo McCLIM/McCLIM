@@ -30,16 +30,7 @@
                         gesture)
                     (stream-input-buffer estream))))
 
-(in-package :goatee)
-
-(defmethod lookup-gesture-command ((gesture key-press-event) table)
-  (let ((modifier-state (logandc1 climi::+alt-key+
-                                  (event-modifier-state gesture))))
-
-    (cdr (assoc modifier-state
-                (gethash (keyboard-event-character gesture) table nil)))))
-
-(in-package "DEBUG")
+(in-package #:debug)
 
 (#+CMU19C
  ext:without-package-locks

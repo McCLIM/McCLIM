@@ -308,9 +308,6 @@ Finally, run it with:
 @lisp
 (clim-demo::demodemo)
 @end lisp
-@item Examples/goatee-test.lisp
-Text editor with Emacs-like key bindings.  See McCLIM's installation
-instructions.
 @item Examples/menutest.lisp
 Displays a window with a simple menu bar.  See McCLIM's installation
 instructions.

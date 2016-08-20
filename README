@@ -33,6 +33,5 @@ clim-fig - a drawing program
 postscript-test - shows off the CLIM PostScript stream
 gadget-test - fun with CLIM gadgets
 calculator - a gadget-based calculator
-goatee-test - Hacks with Goatee, the Emacs-like editor used in McCLIM
 
 Please send bug reports and comments to mcclim-devel@common-lisp.net

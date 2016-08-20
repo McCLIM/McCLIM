@@ -52,8 +52,7 @@
 ;;;     just understood the standard method combination and qualifiers
 ;;;     with substantially less work.
 ;;;   * Change focus behavior of McCLIM text entry gadget
-;;;   * Implement focus-aware cursor shapes in McCLIM and/or Goatee
-;;;     (actually I did this ages ago, but let it rot away on my disk..)
+;;;   * Implement focus-aware cursor shapes in McCLIM
 ;;;   * Make sure the MOP usage works outside CMUCL/SBCL
 
 ;;;; CLOS / MOP Utilities

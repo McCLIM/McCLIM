@@ -587,7 +587,6 @@ One day, I'd actually like to use McCLIM to write some applications ;-)
 The following are on the wish-list:
 
 1.  Editor, one of this list most likely:
-      + Goatee extensions
       + DUECE port
       + portable hemlock
 

@@ -93,7 +93,7 @@
 						      "-DUMMY"))
 	   (concrete-mirrored-pane-class-symbol (find-symbol concrete-mirrored-pane-class
 							     :clim-clx)))
-      ;;(format *debug-io* "use dummy mirrored class ~A~%" concrete-mirrored-pane-class)
+      #+(or) (format *debug-io* "use dummy mirrored class ~A~%" concrete-mirrored-pane-class)
       (unless concrete-mirrored-pane-class-symbol
 	(setf concrete-mirrored-pane-class-symbol
 	      (intern concrete-mirrored-pane-class :clim-clx))
@@ -103,7 +103,7 @@
 	       ,concrete-pane-class-symbol)
 	    ()
 	    (:metaclass ,(type-of (find-class concrete-pane-class-symbol))))))
-      ;;(format *debug-io* "create class ~A~%" concrete-mirrored-pane-class-symbol))
+      #+(or) (format *debug-io* "create class ~A~%" concrete-mirrored-pane-class-symbol)
       (setf concrete-pane-class (find-class concrete-mirrored-pane-class-symbol))))
   concrete-pane-class)
 

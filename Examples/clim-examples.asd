@@ -31,8 +31,7 @@
      (:file "tabdemo")
      (:file "bordered-output-examples")
      (:file "misc-tests")
-     (:file "image-viewer")
-     (:file "goatee-test")))
+     (:file "image-viewer")))
 
 (defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
