@@ -210,6 +210,8 @@ cause the activate callback to be called."))
   ;; Make an editor substrate object for the gadget.
   (let ((pane (make-pane 'drei-text-field-substrate
                          :user-gadget object
+                         :text-style (or (slot-value object 'text-style)
+                                         *default-text-field-text-style*)
                          :id id
                          :client client
                          :armed-callback armed-callback
