@@ -150,28 +150,6 @@
 (defmethod allocate-space ((pane drei-text-editor-substrate) w h)
   (resize-sheet pane w h))
 
-(defun make-text-editor-substrate (user &rest args &key scroll-bars value
-                                   &allow-other-keys)
-  "Create an appropriate text editor gadget editing substrate
-object. Returns two values, the first is the substrate object,
-the second is the sheet that should be adopted by the user
-gadget."
-  (let* ((minibuffer (when scroll-bars
-                       (make-pane 'drei::drei-minibuffer-pane)))
-         (substrate (apply #'make-pane 'drei-text-editor-substrate
-                     :user-gadget user
-                     :minibuffer minibuffer args))
-         (sheet (if scroll-bars
-                    (scrolling (:scroll-bars scroll-bars)
-                      substrate)
-                    substrate)))
-    (setf (gadget-value substrate) value)
-    (values substrate (if minibuffer
-                          (vertically ()
-                            sheet
-                            minibuffer)
-                          sheet))))
-
 ;;; The class for using these substrates in the gadgets.
 
 (defclass editor-substrate-user-mixin (value-gadget)
@@ -235,23 +213,45 @@ cause the activate callback to be called."))
 
 (defmethod initialize-instance :after ((object text-editor-pane)
                                        &key id client armed-callback
-                                       disarmed-callback
+                                         disarmed-callback
 					 activation-gestures activate-callback
 					 scroll-bars
 					 ncolumns nlines
 					 value value-changed-callback
 					 (editable-p t))
   ;; Make an editor substrate object for the gadget.
-  (multiple-value-bind (substrate sheet)
-      (make-text-editor-substrate object
-       :id id :client client :armed-callback armed-callback
-       :disarmed-callback disarmed-callback
-       :activation-gestures activation-gestures
-       :activate-callback activate-callback
-       :scroll-bars scroll-bars
-       :ncolumns ncolumns :nlines nlines
-       :value value
-       :value-changed-callback value-changed-callback
-       :editable-p editable-p)
-    (setf (substrate object) substrate)
+  (let* ((minibuffer (when scroll-bars
+                       (make-pane 'drei::drei-minibuffer-pane)))
+         (substrate (make-pane 'drei-text-editor-substrate
+                               :user-gadget object
+                               :minibuffer minibuffer
+                               :id id
+                               :client client
+                               :text-style (pane-text-style object)
+                               :armed-callback armed-callback
+                               :disarmed-callback disarmed-callback
+                               :activation-gestures activation-gestures
+                               :activate-callback activate-callback
+                               :scroll-bars scroll-bars
+                               :ncolumns ncolumns
+                               :nlines nlines
+                               :value value
+                               :value-changed-callback value-changed-callback
+                               :editable-p editable-p))
+         (sheet (cond ((and scroll-bars minibuffer)
+                       (vertically ()
+                         (scrolling (:scroll-bars scroll-bars)
+                           substrate)
+                         minibuffer))
+                      (scroll-bars
+                       (scrolling (:scroll-bars scroll-bars)
+                         substrate))
+                      (minibuffer
+                       (vertically ()
+                         substrate
+                         minibuffer))
+                      (:otherwise substrate))))
+    (setf (gadget-value substrate) value
+          (substrate object) substrate)
     (sheet-adopt-child object sheet)))
+
