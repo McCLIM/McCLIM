@@ -1365,7 +1365,7 @@ examine the type of the command menu item to see if it is
 (defmacro define-presentation-to-command-translator 
     (name (from-type command-name command-table &key
 	   (gesture :select)
-	   (tester 'default-translator-tester testerp)
+	   (tester 'default-translator-tester)
 	   (documentation nil documentationp)
 	   (pointer-documentation (command-name-from-symbol command-name))
 	   (menu t)
@@ -1386,8 +1386,7 @@ examine the type of the command menu item to see if it is
 		     :translator-class presentation-command-translator
 		     :command-name ',command-name)
        ,arglist
-       (let ((,command-args (progn
-			      ,@body)))
+       (let ((,command-args (let () ,@body)))
 	 (values (cons ',command-name ,command-args)
 		 '(command :command-table ,command-table)
 		 '(:echo ,echo))))))
