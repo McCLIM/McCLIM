@@ -1287,8 +1287,6 @@ and used to ensure that presentation-translators-caches are up to date.")
       (clrhash cache))
     (setf generation *current-translator-cache-generation*)
     cache))
-      
-      
 
 ;;; Returns function lambda list, ignore forms
 (defun make-translator-ll (translator-args)
