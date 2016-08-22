@@ -148,11 +148,6 @@ the incoming selection."))
    (point-2-y  :initform nil)
    (dragging-p :initform nil)))
 
-(defclass paste-as-keypress-mixin ()
-  ()
-  (:documentation "Implements the old McCLIM behavior of pasting via a
-  sequence of key press events. You couldn't possibly want this."))
-
 (defmethod handle-repaint :around ((pane cut-and-paste-mixin) region)
   (with-slots (markings) pane
     (cond ((null markings)
@@ -388,19 +383,6 @@ the incoming selection."))
 (defmethod handle-event ((pane cut-and-paste-mixin)
                          (event selection-notify-event))
   (signal 'selection-notify :event event))
-
-(defmethod dispatch-event :around ((pane paste-as-keypress-mixin)
-                                   (event selection-notify-event))
-  (let ((matter (get-selection-from-event (port pane) event)))
-    (loop for c across matter do
-         (dispatch-event pane
-                         (make-instance 'key-press-event
-                                        :timestamp (event-timestamp event)
-                                        :sheet pane
-                                        :modifier-state 0
-                                        :x 0 :y 0 :graft-x 0 :graft-y 0
-                                        :key-name nil
-                                        :key-character c)))))
 
 ;; FIXME: Non-text target conversions.. (?)
 (defun fetch-selection (pane)
