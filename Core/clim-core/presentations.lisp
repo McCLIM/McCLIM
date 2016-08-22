@@ -1288,16 +1288,6 @@ and used to ensure that presentation-translators-caches are up to date.")
     (setf generation *current-translator-cache-generation*)
     cache))
 
-;;; Returns function lambda list, ignore forms
-(defun make-translator-ll (translator-args)
-  (cond ((null translator-args)
-         (cerror "Ignore error" "Invalid LL, the valid one is")
-         (let ((object-arg (gensym "OBJECT-ARG")))
-           (values `(,object-arg &key &allow-other-keys)
-                   `(declare (ignore ,object-arg)))))
-        (:otherwise `(,(car translator-args)
-                       &key ,@(cdr translator-args) &allow-other-keys))))
-
 (defun default-translator-tester (object-arg &key &allow-other-keys)
   (declare (ignore object-arg))
   t)
@@ -1321,11 +1311,16 @@ and used to ensure that presentation-translators-caches are up to date.")
       translator)))
 
 (defun make-translator-fun (args body)
-  (multiple-value-bind (ll ignore)
-      (make-translator-ll args)
-    `(lambda ,ll
-       ,@(and ignore (list ignore))
-       ,@body)))
+  (cond ((null args)
+         (let ((object-arg (gensym "OBJECT-ARG")))
+           (cerror "Ignore error (add ignored parameter)"
+                   "OBJECT parameter is obligatory")
+           `(lambda (,object-arg &key &allow-other-keys)
+              (declare (ignore ,object-arg))
+              ,@body)))
+        (t
+         `(lambda (,(car args) &key ,@(cdr args) &allow-other-keys)
+            ,@body))))
 
 (defun make-documentation-fun (doc-arg)
   (cond ((and doc-arg (symbolp doc-arg))
