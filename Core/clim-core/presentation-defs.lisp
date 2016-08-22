@@ -2311,17 +2311,17 @@ protocol retrieving gestures from a provided string."))
 	    (make-adapter pointer-documentation)))))
 
 (defmacro define-drag-and-drop-translator
-   (name (from-type to-type destination-type command-table
-           &rest args &key
-           (gesture :select)
-           (tester 'default-translator-tester)
-           documentation
-           (pointer-documentation nil pointer-doc-p)
-           (menu t)
-           (priority 0)
-           (feedback 'frame-drag-and-drop-feedback)
-           (highlighting 'frame-drag-and-drop-highlighting))
-     arglist
+    (name (from-type to-type destination-type command-table
+                     &rest args &key
+                     (gesture :select)
+                     (tester 'default-translator-tester)
+                     documentation
+                     (pointer-documentation nil pointer-doc-p)
+                     (menu t)
+                     (priority 0)
+                     (feedback 'frame-drag-and-drop-feedback)
+                     (highlighting 'frame-drag-and-drop-highlighting))
+                                  arglist
      &body body)
   (declare (ignore tester gesture documentation pointer-documentation
 		   menu priority))
