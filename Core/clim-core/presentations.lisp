@@ -1312,9 +1312,8 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun make-translator-fun (args body)
   (cond ((null args)
+         (warn "OBJECT parameter is obligatory (adding ignored parameter)")
          (let ((object-arg (gensym "OBJECT-ARG")))
-           (cerror "Ignore error (add ignored parameter)"
-                   "OBJECT parameter is obligatory")
            `(lambda (,object-arg &key &allow-other-keys)
               (declare (ignore ,object-arg))
               ,@body)))
