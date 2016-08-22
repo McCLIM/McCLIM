@@ -888,6 +888,7 @@ position for the character."
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
+  (declare (ignore x y start end align-x align-y toward-x toward-y transform-glyphs))
   (write-string string medium))
 
 ;;; Some image junk...
