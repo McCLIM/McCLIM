@@ -79,12 +79,14 @@
 (define-presentation-to-command-translator com-describe-presentation-translator
     (t com-describe-presentation global-command-table
      :gesture :describe-presentation
-     :tester ((presentation)
+     :tester ((object presentation)
+              (declare (ignore object))
 	      (not (eq presentation *null-presentation*)))
      :documentation "Describe Presentation"
      :pointer-documentation "Describe Presentation"
      :menu presentation-debugging)
-  (presentation)
+    (object presentation)
+  (declare (ignore object))
   (list presentation))
 
 ;;; Default presentation translator; translates an object to itself.
@@ -92,11 +94,12 @@
 (define-presentation-translator default-translator
     (t nil global-command-table
      :gesture :select
-     :tester ((presentation context-type)
+     :tester ((object presentation context-type)
               ;; see the comments around DEFUN PRESENTATION-SUBTYPEP
               ;; for some of the logic behind this.  Only when
               ;; PRESENTATION-SUBTYPEP is unsure do we test the object
               ;; itself for PRESENTATION-TYPEP.
+              (declare (ignore object))
               (multiple-value-bind (yp sp)
                   (presentation-subtypep (presentation-type presentation)
                                          context-type)
@@ -133,14 +136,16 @@
        :documentation "Menu"
        :menu nil
        :gesture :menu
-       :tester ((presentation frame window x y event)
+       :tester ((object presentation frame window x y event)
+                (declare (ignore object))
                 (find-applicable-translators presentation
                                              *input-context* ; XXX ?
                                              frame window x y
                                              :event event ; XXX ?
                                              :for-menu t
                                              :fastp t)))
-  (presentation frame window x y)
+    (object presentation frame window x y)
+  (declare (ignore object))
   (call-presentation-menu presentation *input-context*
                           frame window x y
                           :for-menu t
@@ -157,9 +162,11 @@
      :pointer-documentation "Possibilities"
      :menu nil
      :gesture :menu
-     :tester (()
+     :tester ((object)
+              (declare (ignore object))
 	      *completion-possibilities-continuation*))
-  ()
+    (object)
+  (declare (ignore object))
   (funcall *completion-possibilities-continuation*))
 
 ;;; Turn symbols and lists into forms

@@ -2338,19 +2338,22 @@ protocol retrieving gestures from a provided string."))
 					       ,name-string
 					       ,drag-string)
 			                   stream))))))
-        (with-keywords-removed (args (:feedback :highlighting))
-      `(progn
-	 (define-presentation-translator ,name
-	     (,from-type ,to-type ,command-table
-	      :tester-definitive t
-	      ,@args
-	      ,@pointer-doc
-	      :feedback #',feedback :highlighting #',highlighting
-	      :destination-ptype ',real-dest-type
-	      :destination-translator #',(make-translator-fun arglist body)
-	      :translator-class drag-n-drop-translator)
-	   (presentation context-type frame event window x y)
-	   (frame-drag-and-drop ',name ',command-table
-				presentation context-type
-				frame event window x y))))))
+    (with-keywords-removed (args (:feedback :highlighting))
+      (with-gensyms (object)
+        `(progn
+           (define-presentation-translator ,name
+               (,from-type ,to-type ,command-table
+                           :tester-definitive t
+                           ,@args
+                           ,@pointer-doc
+                           :feedback #',feedback
+                           :highlighting #',highlighting
+                           :destination-ptype ',real-dest-type
+                           :destination-translator #',(make-translator-fun arglist body)
+                           :translator-class drag-n-drop-translator)
+               (,object presentation context-type frame event window x y)
+             (declare (ignore ,object))
+             (frame-drag-and-drop ',name ',command-table
+                                  presentation context-type
+                                  frame event window x y)))))))
 

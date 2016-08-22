@@ -413,7 +413,8 @@
                      :gesture :select
                      :documentation "Room"
                      :pointer-documentation "Room")
-  ())
+    (object)
+  (declare (ignore object)))
   
 
 (define-presentation-to-command-translator com-show-class-subclasses-translator
@@ -1361,7 +1362,8 @@ if you are interested in fixing this."))
 
 (define-presentation-to-command-translator display-dir-stack-translator
   (directory-stack com-display-directory-stack filesystem-commands :gesture :select)
-  () ())
+    (object)
+  (declare (ignore object)))
 
 (define-command (com-edit-file :name "Edit File"
                                :menu t
@@ -1374,7 +1376,9 @@ if you are interested in fixing this."))
   (clim:pathname com-edit-file filesystem-commands :gesture :select
 		 :pointer-documentation ((object stream)
 					 (format stream "Edit ~A" object))
-		 :documentation ((stream) (format stream "Edit File"))
+		 :documentation ((object stream)
+                                 (declare (ignore object))
+                                 (format stream "Edit File"))
 		 :tester ((object)
 			  (and (not (wild-pathname-p object))
                                (probe-file object)
@@ -1394,7 +1398,9 @@ if you are interested in fixing this."))
   (clim:pathname com-show-file filesystem-commands :gesture :select
 		 :pointer-documentation ((object stream)
 					 (format stream "Show ~A" object))
-		 :documentation ((stream) (format stream "Show File"))
+		 :documentation ((object stream)
+                                 (declare (ignore object))
+                                 (format stream "Show File"))
 		 :tester ((object)
 			  (and (not (wild-pathname-p object))
                                (probe-file object)
@@ -1433,8 +1439,10 @@ if you are interested in fixing this."))
   (function-name com-edit-definition lisp-commands :gesture :select
 	  :pointer-documentation ((object stream)
 				  (format stream "Edit Definition of ~A" object))
-	  :documentation ((stream) (format stream "Edit Definition")))
-  (object)
+	  :documentation ((object stream)
+                          (declare (ignore object))
+                          (format stream "Edit Definition")))
+    (object)
   (list object))
 		   
 
@@ -1656,7 +1664,9 @@ if you are interested in fixing this."))
     (package com-set-package lisp-commands
              :pointer-documentation ((object stream)
                                      (format stream "Set current package to ~A" (package-name object)))
-             :documentation ((stream) (format stream "Set Package"))
+             :documentation ((object stream)
+                             (declare (ignore object))
+                             (format stream "Set Package"))
              :menu t
              :tester ((object) (not (eql *package* object))))
     (object)
