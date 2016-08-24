@@ -669,7 +669,8 @@ is run for the last time"))
      :documentation "Exit dialog"
      :pointer-documentation "Exit dialog"
      :echo nil)
-  ()
+    (object)
+  (declare (ignore object))
   ())
 
 (define-presentation-to-command-translator com-abort-button
@@ -678,7 +679,8 @@ is run for the last time"))
      :documentation "Abort dialog"
      :pointer-documentation "Abort dialog"
      :echo nil)
-  ()
+    (object)
+  (declare (ignore object))
   ())
 
 (defun accepting-values-default-command ()
@@ -904,5 +906,5 @@ is run for the last time"))
                            (princ doc stream))))
      :echo nil
      :menu nil)
-  (object)
+    (object)
   (list (query-identifier object) (continuation object)))

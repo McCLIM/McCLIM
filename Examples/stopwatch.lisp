@@ -197,7 +197,8 @@
 
 (define-presentation-to-command-translator com-click-stopwatch
     (clock com-toggle-watch stopwatch)
-    ()
+    (object)
+  (declare (ignore object))
   nil)
 
 (define-stopwatch-command (com-quit :name t)

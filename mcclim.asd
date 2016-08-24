@@ -70,7 +70,8 @@ interface management system."
 
 (defsystem #:mcclim/extensions
   :depends-on (#:mcclim-bitmaps
-               #:conditional-commands))
+               #:conditional-commands
+               #:mcclim-layouts/tab))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.

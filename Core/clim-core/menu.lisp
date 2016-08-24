@@ -1,4 +1,4 @@
-1;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2000, 2014 by 
 ;;;           Robert Strandh (robert.strandh@gmail.com)

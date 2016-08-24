@@ -113,9 +113,11 @@
          
 (define-presentation-to-command-translator record-dragging-translator
     (t com-drag-node draggable-graph-demo
-       :tester ((presentation)
+       :tester ((object presentation)
+                (declare (ignore object))
                 (find-graph-node presentation)))
-  (presentation x y)
+    (object presentation x y)
+  (declare (ignore object))
   (list presentation x y))
 
 ;;; (CSR) This demo code is quite cool; visually, it's a little

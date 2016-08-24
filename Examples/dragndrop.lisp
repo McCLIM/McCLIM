@@ -55,9 +55,10 @@
 
 (define-presentation-to-command-translator translator-draw-circle
     (blank-area com-add-circle dragndrop
-     :documentation "Add a circle")
+                :documentation "Add a circle")
     (object x y)
-  `(,x ,y 50))
+  (declare (ignore object))
+  (list x y 50))
 
 (define-dragndrop-command (com-clone-circle)
     ((original 'circle)
