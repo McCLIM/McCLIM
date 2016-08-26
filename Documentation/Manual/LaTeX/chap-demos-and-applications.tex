@@ -111,20 +111,6 @@ The following programs are currently \textbf{known not to work}:
 This section collects useful installation and usage tips.  They refer to
 specific Common Lisp implementations or McCLIM features.
 
-\subsection{Multiprocessing with CMUCL}
-
-Before beginning a McCLIM session with CMUCL, \textbf{you are strongly
-advised} to initialize multiprocessing by evaluating the form:
-\begin{verbatim}
-(mp::startup-idle-and-top-level-loops)
-\end{verbatim}
-If you use the SLIME development environment under Emacs, evaluate the
-above form from the \texttt{*inferior-lisp*} buffer, not from
-\texttt{*slime-repl[n]*}.  Initializing multiprocessing can make a difference
-between an application that starts instantaneously on, say, a Pentium IV
-class PC, and one that may take \emph{minutes} on the same machine.
-
-
 \subsection{Adding mouse button icons}
 
 McCLIM comes with experimental code for adding graphical mouse button
