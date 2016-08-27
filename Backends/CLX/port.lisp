@@ -1394,7 +1394,7 @@
         (format *trace-output* "~&;; Oops, selection-notify property is null. Trying the cut buffer instead..~%")
         (xlib:cut-buffer (clx-port-display port)))                
       (map 'string #'code-char
-           (xlib:get-property (sheet-direct-mirror (event-sheet event))
+           (xlib:get-property (sheet-mirror (event-sheet event))
                               (selection-event-property event)
                               ;; :type :text
                               :delete-p t

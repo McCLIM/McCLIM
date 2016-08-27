@@ -39,5 +39,11 @@
 		#:dispatch-repaint
 		#:always-repaint-background-mixin
 		#:never-repaint-background-mixin
+		#:selection-event
+		#:selection-request-event
+		#:selection-notify-event
+		#:bind-selection
+		#:release-selection
+		#:request-selection		
 		)
   )
