@@ -50,16 +50,30 @@
       (call-next-method))))
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
-  (let ((r (bounding-rectangle
-            (region-intersection region (sheet-region sheet)))))
-    ;; %note-sheet-repaint-request is responsible for clearing to the background
-    ;; color before repainting
-    ;; This causes applications which want to do a double-buffered repaint,
-    ;; such as the logic cube, to flicker. On the other hand, it also
-    ;; stops things such as the listener wholine from overexposing their
-    ;; text.
-    (%note-sheet-repaint-request sheet r)
-    (handle-repaint sheet r)))
+  (labels ((effective-native-region (mirrored-sheet child region)
+	     (if (eq mirrored-sheet child)
+		 (region-intersection
+		  (sheet-region mirrored-sheet)
+		  region)
+		 (effective-native-region mirrored-sheet
+					  (sheet-parent child)
+					  (transform-region
+					   (sheet-transformation child)
+					   (region-intersection
+					    region
+					    (sheet-region child)))))))
+    (let ((r (bounding-rectangle
+	      (untransform-region
+	       (sheet-native-transformation sheet)
+	       (effective-native-region (sheet-mirrored-ancestor sheet) sheet region)))))
+      ;; %note-sheet-repaint-request is responsible for clearing to the background
+      ;; color before repainting
+      ;; This causes applications which want to do a double-buffered repaint,
+      ;; such as the logic cube, to flicker. On the other hand, it also
+      ;; stops things such as the listener wholine from overexposing their
+      ;; text.
+      (%note-sheet-repaint-request sheet r)
+      (handle-repaint sheet r))))
 
 (defmethod repaint-sheet :after ((sheet sheet-parent-mixin) region)
   ;; propagate repaint to unmirrored sheets
