@@ -39,10 +39,12 @@ that this might be different from the sheet's native region."
 ;;;
 
 (defmethod note-sheet-transformation-changed :before ((sheet standard-mirrored-sheet-mixin))
-  (%update-mirror-geometry sheet))
+  (when (sheet-mirror sheet)
+    (%update-mirror-geometry sheet)))
 
 (defmethod note-sheet-region-changed :before ((sheet standard-mirrored-sheet-mixin))
-  (%update-mirror-geometry sheet))
+  (when (sheet-mirror sheet)
+    (%update-mirror-geometry sheet)))
 
 (defgeneric %update-mirror-geometry (sheet))
   
