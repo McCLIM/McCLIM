@@ -23,7 +23,7 @@
                                         "transforms" "design"))
    (:file "output" :depends-on ("decls" "protocol-classes" "multiprocessing" "medium"))
    (:file "input" :depends-on ("decls" "protocol-classes" "multiprocessing" "events" "regions" "sheets"))
-   (:file "repaint" :depends-on ("decls" "protocol-classes" "multiprocessing" "sheets" "events"))
+   (:file "repaint" :depends-on ("decls" "protocol-classes" "multiprocessing" "sheets" "events" "graphics"))
    (:file "graphics" :depends-on ("decls" "protocol-classes" "multiprocessing" "output" "utils" "medium" "sheets" "pixmap"
                                           "regions" "design" "transforms"))
    (:file "views" :depends-on ("utils" "protocol-classes"))

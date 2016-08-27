@@ -648,7 +648,9 @@
 
 ;;; This fixes the worst offenders making the assumption that drawing
 ;;; would be idempotent.
+;; moved on basic repaint protocol
 
+#|
 (defmethod clim:handle-repaint :around ((s clim:sheet-with-medium-mixin) r)
   (let ((m (clim:sheet-medium s))
         (r (clim:bounding-rectangle
@@ -664,3 +666,4 @@
         (call-next-method s r)
         ;; FIXME: Shouldn't McCLIM always do this?
         (medium-force-output (sheet-medium s))))))
+|#
