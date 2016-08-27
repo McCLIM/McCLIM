@@ -62,7 +62,9 @@
 		      :override-redirect :on
 		      :map nil))
 
-
-
-
+(defmethod make-medium ((port clxv2-port) sheet)
+  (make-instance 'clxv2-medium 
+		 ;; :port port 
+		 ;; :graft (find-graft :port port) 
+		 :sheet sheet))
 
