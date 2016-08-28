@@ -51,7 +51,7 @@
 ;;;; User tweakable Parameters:
 
 (defparameter *clim-doc-pathname-defaults*
-  '#p"home:work/McCLIM/Spec/src/*.tex")
+  '#p"home:work/McCLIM/Documentation/Specification/*.tex")
 
 (defparameter *input-file*
   (merge-pathnames "clim" *clim-doc-pathname-defaults*))
