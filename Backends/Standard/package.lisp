@@ -44,6 +44,4 @@
 		#:selection-notify-event
 		#:bind-selection
 		#:release-selection
-		#:request-selection		
-		)
-  )
+		#:request-selection))

@@ -16,7 +16,7 @@
 (defmethod bind-selection :around ((port standard-port) (sheet basic-sheet) &optional time)
   (setf (selection-owner port) sheet)
   (call-next-method port (sheet-mirrored-ancestor sheet) time))
- 
+
 (defmethod release-selection :around ((port standard-port) &optional time)
   (declare (ignore time))
   (setf (selection-owner port) nil)
