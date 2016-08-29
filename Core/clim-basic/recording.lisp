@@ -1987,8 +1987,9 @@ were added."
 (defmethod initialize-instance :after
     ((stream standard-output-recording-stream) &rest args)
   (declare (ignore args))
-  (let ((history (make-instance 'standard-tree-output-history :stream stream)))
-    (setf (slot-value stream 'output-history) history
+  (let ((history (stream-output-history stream)))
+    (setf (slot-value history 'stream) stream
+          (slot-value stream 'output-history) history
           (stream-current-output-record stream) history)))
 
 ;;; Used in initializing clim-stream-pane

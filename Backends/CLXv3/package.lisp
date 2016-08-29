@@ -53,7 +53,15 @@
 		#:pointer-motion-hint-event
                 #:device-font-text-style
                 ;;
+		#:make-medium
                 )
+  (:import-from :clim-clx
+		#:clx-medium
+		#:design-gcontext
+		#:medium-draw-rectangle-using-ink*
+		#:REGION->CLIPPING-VALUES
+		#:ROUND-COORDINATE
+		#:with-clx-graphics)
   (:import-from :clim-standard
 		#:standard-handled-event-port-mixin
 		#:standard-single-mirrored-sheet-mixin

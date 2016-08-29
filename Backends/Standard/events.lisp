@@ -6,23 +6,23 @@
 
 (defmethod distribute-event ((port standard-event-port-mixin) event)
   (let ((grab-sheet (pointer-grab-sheet port)))
-    (if grab-sheet
-	(queue-event grab-sheet event)
-	(cond
-	  ((typep event 'keyboard-event)
-	   (dispatch-event (event-sheet event) event))
-	  ((typep event 'window-event)
-	   (dispatch-event (event-sheet event) event))
-	  ((typep event 'pointer-event)
-	   (dispatch-event (event-sheet event) event))
-	  ((typep event 'window-manager-delete-event)
-	   ;; not sure where this type of event should get sent - mikemac
-	   ;; This seems fine; will be handled by the top-level-sheet-pane - moore
-	   (dispatch-event (event-sheet event) event))
-	  ((typep event 'timer-event)
-	   (error "Where do we send timer-events?"))
-	  (t
-	   (error "Unknown event ~S received in DISTRIBUTE-EVENT" event))))))
+    (cond
+      ((typep event 'keyboard-event)
+       (dispatch-event (event-sheet event) event))
+      ((typep event 'window-event)
+       (dispatch-event (event-sheet event) event))
+      ((typep event 'pointer-event)
+       (if grab-sheet
+	   (queue-event grab-sheet event)
+	   (dispatch-event (event-sheet event) event)))
+      ((typep event 'window-manager-delete-event)
+       ;; not sure where this type of event should get sent - mikemac
+       ;; This seems fine; will be handled by the top-level-sheet-pane - moore
+       (dispatch-event (event-sheet event) event))
+      ((typep event 'timer-event)
+       (error "Where do we send timer-events?"))
+      (t
+       (error "Unknown event ~S received in DISTRIBUTE-EVENT" event)))))
 
 (defclass standard-handled-event-port-mixin (standard-event-port-mixin)
   ((port-pointer-pressed-sheet :initform nil :accessor port-pointer-pressed-sheet)))
@@ -136,8 +136,30 @@
 
 
 ;;;
-;;; repaint
+;;; selection
 ;;;
+
+
+(defmethod climi::distribute-event ((port standard-handled-event-port-mixin)
+				    (event selection-event))
+  (let ((owner (port-selection-owner port)))
+    (if owner
+	(progn
+	  (setf (slot-value event 'clim::sheet) owner)
+	  (dispatch-event owner event))
+	(dispatch-event (event-sheet event)
+			event))))
+
+
+(defmethod climi::distribute-event ((port standard-handled-event-port-mixin)
+				    (event selection-notify-event))
+  (let ((owner (port-selection-requester port)))
+    (if owner
+	(progn
+	  (setf (slot-value event 'clim::sheet) owner)
+	  (dispatch-event owner event))
+	(dispatch-event (event-sheet event)
+			event))))
 
 
 ;;;

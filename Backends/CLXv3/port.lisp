@@ -61,5 +61,9 @@
 
 
 
-
+(defmethod make-medium ((port clxv3-port) sheet)
+  (make-instance 'clxv3-medium 
+		 ;; :port port 
+		 ;; :graft (find-graft :port port) 
+		 :sheet sheet))
 

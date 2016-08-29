@@ -209,7 +209,7 @@ the incoming selection."))
            (setf dragging-p t))
           ((eql +pointer-middle-button+ (pointer-event-button event))
            ;; paste           
-           (request-selection (port pane) #|:UTF8_STRING|# (sheet-direct-mirror pane) (event-timestamp event)))
+           (request-selection (port pane) #|:UTF8_STRING|# pane (event-timestamp event)))
           ((eql +pointer-right-button+ (pointer-event-button event))
            (when (and point-1-x point-1-y point-2-x point-2-y)
              ;; If point-1 and point-2 are set up pick the nearest (what metric?) and drag it around.
