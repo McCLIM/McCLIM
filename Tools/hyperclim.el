@@ -1,32 +1,25 @@
-;; hyperclim.el: Looks up symbols in the CLIM spec from inside xemacs.
-;; Written and tested using XEmacs.
+;;; hyperclim.el --- Browse a HTML conversion of the CLIM2
+;;; specification inside emacs.
+
 ;; This code is in the public domain.
 
 ;; Orginally written by Andy Hefner (andy.hefner@verizon.net)
 
-(require 'cl)
-(require 'browse-url)
+(require 'cl-lib nil t)
+(require 'cl-lib "lib/cl-lib")
+(require 'browse-url)                   ;you need the Emacs 20 version
 (require 'thingatpt)
-
-
-(defvar clim-sybmol-table nil
-  "The symbol table for looking up CLIM symbols")
 
 ;;; Override base URL of CLIM specification, set this if you want
 ;;; to use one of the above from your local disk.
 (setq clim-url-base-override nil)
 
-;;; Selection of CLIM spec according to preference -- uncomment one of the lines below
-
+;;; Selection of CLIM spec according to preference -- uncomment one of
+;;; the lines below
 ;; MikeMac conversion of the CLIM specification
 ;(setq clim-dataset 'clim-mikemac-spec)
-
 ;; Gilbert Baumann conversion of the CLIM specification
 (setq clim-dataset 'clim-gilberth-spec)
-
-;; Alternate URL for Gilbert's spec..
-; (setq clim-url-base-override "http://bauhh.dyndns.org:8000/clim-spec/"
-
 
 ;;; Internal bits
 
@@ -41,8 +34,13 @@
 (defun clim-get-url-base ()
   (first (clim-get-dataset)))
 
+(defun clim-remove-package-name (string)
+  (car
+   (last
+    (split-string string ":+" t nil))))
+
 (defun clim-find-symbol (string)
-  (assoc (downcase symbol-name)
+  (assoc (clim-remove-package-name (downcase string))
          (clim-get-symbol-table)))
 
 (defun clim-find-symbol-url (string)
@@ -52,7 +50,7 @@
                   (clim-get-url-base))
               (cdr syminfo)))))
 
-;;; CLIM-LOOKUP command
+;;; HYPERCLIM-LOOKUP command
 ;;    Look up a symbol in MikeMac's CLIM documentation.
 ;;    By default it looks up the symbol under the point, but if it isn't over
 ;;    something resembling a symbol, it will prompt you. 
@@ -70,6 +68,7 @@
 
 ;;; CLIM spec datasets
 
+;; Gilbert Baumann one
 (setq clim-gilberth-spec 
  '("http://bauhh.dyndns.org:8000/clim-spec/"
    ("+yellow+" . "13-3.html#_700") ("+white+" . "13-3.html#_702")
