@@ -2,6 +2,7 @@
 .#*
 *#
 *~
+/bugs.lisp
 /Documentation/Manual/tempfiles-stamp
 /Documentation/Manual/inspect-object-3.png
 /Documentation/Manual/LaTeX/mcclim.out
