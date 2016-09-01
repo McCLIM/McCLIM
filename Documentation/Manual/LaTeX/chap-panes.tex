@@ -57,6 +57,46 @@ millimeters as opposed to pixels.  The native transformation of the top
 level sheet of such a frame manager is a scaling with coefficients other
 than 1.
 
+\section{Pane names}
+
+Every pane class accepts the initialization argument \texttt{:name}
+the value of which is typically a symbol in the package defined by the
+application.  The generic function \texttt{pane-name} returns the
+value of this initialization argument.  There is no standard way of
+changing the name of an existing pane.  Using the function
+\texttt{reinitialize-instance} may not have the desired effect, since
+the application frame may create a dictionary mapping names to panes,
+and there is no way to invalidate the contents of such a potential
+dictionary.
+
+The function \texttt{find-pane-named} searches the pane hierarchy of
+the application frame, consulting the names of each pane until a
+matching name is found.  The CLIM specification does not say what
+happens if a name is given that does not correspond to any pane.
+McCLIM returns \texttt{nil} in that case.  If pane names are not
+unique, it is unspecified which of several panes is returned by a call
+to this function.
+
+Notice that the name given to a pane in the \texttt{:panes} option of
+the macro \texttt{define-application-frame} may or may not become the
+name of the pane that is constructed by the \textit{body} that follows
+the name.  Recall that the syntax of the expression that defines a
+pane in the \texttt{:panes} option is \texttt{(}\textit{name}
+\texttt{.} \textit{body}\texttt{)}.  When \textit{body} defines the
+creation of a complex pane such as an application pane with scroll
+bars, then the resulting pane may in fact be a layout pane of a
+different type that contains the application pane as a child, and then
+the name will sometimes be assigned to that layout pane instead of to
+the application pane itself.  For that reason, the names given in the
+\texttt{:panes} section should be used only in the \texttt{:layouts}
+section of \texttt{define-application-frame}.
+
+When an application needs to find a pane by name, using
+\texttt{find-pane-named},  the solution is to supply the
+\texttt{:name} option to the pane-creation form, and to make the value
+of that option distinct from the names used in the \texttt{:panes}
+option of \texttt{define-application-frame}.
+
 \section{Layout protocol}
 \index{layout protocol}
 
