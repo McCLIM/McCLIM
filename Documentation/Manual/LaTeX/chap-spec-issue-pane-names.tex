@@ -1,0 +1,110 @@
+\chapter{Pane names}
+\label{chap-spec-issue-pane-names}
+
+There are several places in the specification where \emph{pane names}
+are mentioned.
+
+\section{Pane initialization and pane properties}
+\label{sec-spec-issue-pane-name-pane-initialization-and-pane-properties}
+
+The first place is in sections 29.2.1 (Pane Initialization Options).
+In this section, we learn that the keyword argument \texttt{:name} can
+be used as an initialization option to the function \texttt{make-pane}
+and to the generic function \texttt{make-pane-1}, and that the default
+value of this option is \texttt{nil}.  There is no indication
+regarding the \emph{type} that the value of this option can take, but
+all the examples used in the specification use symbols for this name.
+This section also mentions that the \texttt{:name} initialization
+option must be accepted by all pane classes.
+
+The second place where \emph{pane names} are mentioned is in section
+29.2.2 (Pane Properties).  In this section, we learn that the generic
+function named \texttt{pane-name} returns the name of the pane.  The
+is no corresponding \texttt{setf} function, indicating that the name
+of the pane is immutable.
+
+In other parts of the specification, there are hints that indicate
+that panes may be unnamed.  Presumably, when \texttt{nil} is the value
+of the initialization option, this indicates that the pane is unnamed,
+but this fact is nowhere explicitly mentioned in the specification.
+
+\section{Application frame functions}
+
+The third place where \emph{pane names} are mentioned is in section
+28.3 (Application Frame Functions).  There ares several occurrences of
+pane names in this section
+
+\subsection{\texttt{frame-standard-output}}
+
+The description of the generic function \texttt{frame-standard-output}
+says that the default method returns the first named pane of type
+\texttt{application-pane} that is visible in the current layout, and
+that if there is no such pane, then it returns the first pane of type
+\texttt{interactor-pane} that is exposed in the current layout.
+
+First of all, the description of this function does not mention what
+is returned if there is no pane that fits this description.
+
+More importantly, one may wonder why the candidate application pane
+has to be named.  As we mentioned in
+\refSec{sec-spec-issue-pane-name-pane-initialization-and-pane-properties},
+presumably a pane is considered unnamed when its name was initialized
+to \texttt{nil}.  According to the specification, an unnamed
+application pane does not qualify, and if no named application pane
+fitting the description can be found, then instead an interactor pane
+is chosen.  According to the specification, that interactor pane does
+not have to be named, however.
+
+\subsection{\texttt{frame-standard-input}}
+
+The description of the generic function \texttt{frame-standard-input}
+says that the default method returns the first named pane of type
+\texttt{interactor-pane} that is visible in the current layout, and
+that if there is no such pane, then it returns the value returned by a
+call to \texttt{frame-standard-output}.
+
+As a consequence of this rule, it appears that it is preferable to
+have a named pane than to have a pane of type
+\texttt{interactor-pane}.
+
+\subsection{\texttt{frame-panes}}
+
+According to the specification, this generic function return the pane
+that is the top-level pane in the current layout of the named panes of
+the frame given as an argument.  It is hard to understand what is
+meant by the restriction regarding the names here.  Presumably, it is
+possible for some children of the top-level pane to be unnamed.
+
+\subsection{\texttt{frame-current-panes}}
+
+According to the specification, this generic function returns a list
+of the named panes in the current layout of the frame given as an
+argument.  And if there are no named panes, then the specification
+says that only the single, top-level pane is returned.
+
+It is not clear whether in the second case, a \emph{list} containing
+that single pane is returned, or whether that pane is returned as an
+atom.
+
+\subsection{\texttt{get-frame-pane}}
+
+According to the specification, this generic function returns the
+named CLIM stream pane with the name given as an argument.  Again, no
+indication is given as to the nature of the name, nor what equality
+function might be used to determine whether the right name has been
+found.  And, no indication is given as to what happens if there is no
+pane with the name given.
+
+\subsection{\texttt{find-pane-named}}
+
+According to the specification, this generic function returns the
+pane with the name given as argument.  The difference between this
+function and the function \texttt{get-frame-pane} is that this
+function can return a pane of any type, and not just a CLIM stream
+pane.  Otherwise, the same omissions apply.
+
+\subsection{\texttt{redisplay-frame-pane}}
+
+This generic function is called in order to redisplay a particular
+pane of a frame.  The \textit{pane} argument can be a pane object or
+the name of a pane.
