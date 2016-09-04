@@ -207,3 +207,29 @@ Scenario number $2$ is unlikely.  The reason is that the function
 \texttt{:scroll-bars} option.  If scenario number $2$ were correct,
 the description of this function would instead say that the default
 for the option depends on the type of the pane to be created.
+
+\section{Dilemma to resolve}
+
+Currently, McCLIM stream panes accepts the \texttt{:scroll-bars}
+initialization option.  For example, for the \texttt{application-pane}
+the default is \texttt{t} as indicated in section 29.4.2.  As a
+consequence, if the application programmer does not supply the
+\texttt{:scroll-bars} option in the definition of the application
+frame, nor any scroller pane, then the resulting application pane will
+still have scroll bars.
+
+Furthermore, if the application programmer follows the examples in the
+CLIM specification, supplying a scroller pane in the \texttt{:layouts}
+option of the macro \texttt{define-application-frame}, then the
+application pane will have a double set of scroll bars.
+
+In order to avoid breaking existing applications, we must suggest a
+migration path.  One possibility is to recommend that users
+temporarily supply the option \texttt{:scroll-bars nil} to the pane
+specification in \texttt{define-application-frame}, and instead
+indicate scrolling behavior in the \texttt{:layouts} option of the
+macro \texttt{define-application-frame}.  At some later date, we can
+remove the current default behavior with respect to scroll bars for
+the application pane, while still accepting the \texttt{:scroll-bars}
+option.  Finally, at some even later date, we can remove that option
+entirely.
