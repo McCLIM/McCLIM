@@ -437,13 +437,13 @@
 
                (setf face   (or face :roman)
                      family (or family :fix)
-                     size   (or size :normal))
+                     size   (or size :normal)
+                     size   (getf *sizes* size size))
 
                (when (eq family :fixed)
                  (setf family :fix))
 
                (let ((display (clim-clx::clx-port-display port)))
-                 (setf size (getf *sizes* size size))
                  (alexandria:ensure-gethash
                   (list display family face size)
                   *display-face-hash*
