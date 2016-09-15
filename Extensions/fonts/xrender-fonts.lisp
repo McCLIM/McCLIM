@@ -427,7 +427,7 @@ The following files should exist:~&~{  ~A~^~%~}"
     (change-font-path (new-path)
       :report (lambda (stream) (format stream "Retry with alternate truetype font path"))
       :interactive (lambda ()
-                     (format t "Enter new value: ")
+                     (format *query-io* "Enter new value: ")
                      (list (read-line)))
       (setf *truetype-font-path* new-path)
       (invoke-with-truetype-path-restart continuation))))
