@@ -431,35 +431,38 @@
 (let (lookaside)
   (defmethod clim-clx::text-style-to-X-font :around
       ((port clim-clx::clx-port) (text-style standard-text-style))
-    (flet ((find-font ()
-             (multiple-value-bind (family face size) 
-                 (clim:text-style-components text-style)
+    (labels
+        ((find-and-make-truetype-face (display family face size)
+           (let* ((font-path-relative
+                   (cdr (assoc (list family face) *families/faces*
+                               :test #'equal)))
+                  (font-path (namestring
+                              (merge-pathnames font-path-relative
+                                               *truetype-font-path*))))
+             (unless (and font-path (probe-file font-path))
+               (error 'missing-font :filename font-path))
+             (make-truetype-face display font-path size)))
+         (find-font ()
+           (multiple-value-bind (family face size)
+               (clim:text-style-components text-style)
 
-               (setf face   (or face :roman)
-                     family (or family :fix)
-                     size   (or size :normal)
-                     size   (getf *sizes* size size))
+             (setf face   (or face :roman)
+                   family (or family :fix)
+                   size   (or size :normal)
+                   size   (getf *sizes* size size))
 
-               (when (eq family :fixed)
-                 (setf family :fix))
+             (when (eq family :fixed)
+               (setf family :fix))
 
-               (let ((display (clim-clx::clx-port-display port)))
-                 (alexandria:ensure-gethash
-                  (list display family face size)
-                  *display-face-hash*
-                  (let* ((font-path-relative
-                          (cdr (assoc (list family face) *families/faces*
-                                      :test #'equal)))
-                         (font-path (namestring
-                                     (merge-pathnames font-path-relative
-                                                      *truetype-font-path*))))
-                    (unless (and font-path (probe-file font-path))
-                      (error 'missing-font :filename font-path))
-                    (make-truetype-face display font-path size)))
-                 ;; This was a second clause of the cond, which could
-                 ;; never be satisfied because size is never NIL due to earlier setf.
-                 ;; The second clause body was:
-                 #|(t (call-next-method))|#))))
+             (let ((display (clim-clx::clx-port-display port)))
+               (alexandria:ensure-gethash
+                (list display family face size)
+                *display-face-hash*
+                (find-and-make-truetype-face display family face size))
+               ;; This was a second clause of the cond, which could
+               ;; never be satisfied because size is never NIL due to earlier setf.
+               ;; The second clause body was:
+               #|(t (call-next-method))|#))))
       (unless (eq (car lookaside) text-style)
         (setf lookaside (cons text-style
                               (invoke-with-truetype-path-restart
