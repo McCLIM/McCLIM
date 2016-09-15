@@ -411,10 +411,14 @@
 (defparameter *display-face-hash* (make-hash-table :test #'equal))
 
 (define-condition missing-font (simple-error)
-  ((filename :reader missing-font-filename :initarg :filename))
+  ((filename :reader missing-font-filename :initarg :filename)
+   (text-style :reader missing-font-text-style :initarg :text-style))
   (:report (lambda (condition stream)
-             (format stream  "Cannot access ~W~%Your *truetype-font-path* is currently ~W~%The following files should exist:~&~{  ~A~^~%~}"
+             (format stream  "Cannot access ~W (~a)
+Your *truetype-font-path* is currently ~W
+The following files should exist:~&~{  ~A~^~%~}"
                      (missing-font-filename condition)
+                     (missing-font-text-style condition)
                      *truetype-font-path*
                      (mapcar #'cdr *families/faces*)))))
 
@@ -445,7 +449,9 @@
                                                       *truetype-font-path*))))))
              (if (and font-path (probe-file font-path))
                  (make-truetype-face display font-path size)
-                 (error 'missing-font :filename font-path))))
+                 (error 'missing-font
+                        :filename font-path
+                        :text-style text-style))))
          (find-font ()
            (multiple-value-bind (family face size)
                (clim:text-style-components text-style)
