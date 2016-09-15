@@ -458,10 +458,11 @@
                              (error 'missing-font :filename font-path))
                            (make-truetype-face display font-path size))))
                        (t (call-next-method)))))))
-      (cdr (if (eq (car lookaside) text-style)
-               lookaside
-               (setf lookaside
-                     (cons text-style (invoke-with-truetype-path-restart #'find-font))))))))
+      (unless (eq (car lookaside) text-style)
+        (setf lookaside (cons text-style
+                              (invoke-with-truetype-path-restart
+                               #'find-font))))
+      (cdr lookaside))))
 
 (defmethod clim-clx::text-style-to-X-font ((port clim-clx::clx-port) text-style)
   (error "You lost: ~S." text-style))
