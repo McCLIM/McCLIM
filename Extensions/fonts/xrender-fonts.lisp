@@ -433,15 +433,19 @@
       ((port clim-clx::clx-port) (text-style standard-text-style))
     (labels
         ((find-and-make-truetype-face (display family face size)
-           (let* ((font-path-relative
+           (let* ((font-path-maybe-relative
                    (cdr (assoc (list family face) *families/faces*
                                :test #'equal)))
-                  (font-path (namestring
-                              (merge-pathnames font-path-relative
-                                               *truetype-font-path*))))
-             (unless (and font-path (probe-file font-path))
-               (error 'missing-font :filename font-path))
-             (make-truetype-face display font-path size)))
+                  (font-path
+                   (and font-path-maybe-relative
+                        (case (car (pathname-directory
+                                    font-path-maybe-relative))
+                          (:absolute font-path-maybe-relative)
+                          (otherwise (merge-pathnames font-path-maybe-relative
+                                                      *truetype-font-path*))))))
+             (if (and font-path (probe-file font-path))
+                 (make-truetype-face display font-path size)
+                 (error 'missing-font :filename font-path))))
          (find-font ()
            (multiple-value-bind (family face size)
                (clim:text-style-components text-style)
