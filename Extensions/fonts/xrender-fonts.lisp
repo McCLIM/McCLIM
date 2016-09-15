@@ -443,21 +443,23 @@
                  (setf family :fix))
 
                (let ((display (clim-clx::clx-port-display port)))
-                 (cond (size
-                        (setf size (getf *sizes* size size))
-                        (alexandria:ensure-gethash
-                         (list display family face size)
-                         *display-face-hash*
-                         (let* ((font-path-relative
-                                 (cdr (assoc (list family face) *families/faces*
-                                             :test #'equal)))
-                                (font-path (namestring
-                                            (merge-pathnames font-path-relative
-                                                             *truetype-font-path*))))
-                           (unless (and font-path (probe-file font-path))
-                             (error 'missing-font :filename font-path))
-                           (make-truetype-face display font-path size))))
-                       (t (call-next-method)))))))
+                 (setf size (getf *sizes* size size))
+                 (alexandria:ensure-gethash
+                  (list display family face size)
+                  *display-face-hash*
+                  (let* ((font-path-relative
+                          (cdr (assoc (list family face) *families/faces*
+                                      :test #'equal)))
+                         (font-path (namestring
+                                     (merge-pathnames font-path-relative
+                                                      *truetype-font-path*))))
+                    (unless (and font-path (probe-file font-path))
+                      (error 'missing-font :filename font-path))
+                    (make-truetype-face display font-path size)))
+                 ;; This was a second clause of the cond, which could
+                 ;; never be satisfied because size is never NIL due to earlier setf.
+                 ;; The second clause body was:
+                 #|(t (call-next-method))|#))))
       (unless (eq (car lookaside) text-style)
         (setf lookaside (cons text-style
                               (invoke-with-truetype-path-restart
