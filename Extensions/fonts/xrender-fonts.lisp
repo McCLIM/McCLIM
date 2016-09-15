@@ -429,8 +429,8 @@
       (invoke-with-truetype-path-restart continuation))))
 
 (let (lookaside)
-  (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port)
-                                                     (text-style standard-text-style))
+  (defmethod clim-clx::text-style-to-X-font :around
+      ((port clim-clx::clx-port) (text-style standard-text-style))
     (flet ((find-font ()
              (multiple-value-bind (family face size) 
                  (clim:text-style-components text-style)
