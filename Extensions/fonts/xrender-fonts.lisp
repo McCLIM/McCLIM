@@ -431,7 +431,7 @@
 (let (lookaside)
   (defmethod clim-clx::text-style-to-X-font :around ((port clim-clx::clx-port)
                                                      (text-style standard-text-style))
-    (flet ((f ()
+    (flet ((find-font ()
              (multiple-value-bind (family face size) 
                  (clim:text-style-components text-style)
 
@@ -461,7 +461,7 @@
       (cdr (if (eq (car lookaside) text-style)
                lookaside
                (setf lookaside
-                     (cons text-style (invoke-with-truetype-path-restart #'f))))))))
+                     (cons text-style (invoke-with-truetype-path-restart #'find-font))))))))
 
 (defmethod clim-clx::text-style-to-X-font ((port clim-clx::clx-port) text-style)
   (error "You lost: ~S." text-style))
