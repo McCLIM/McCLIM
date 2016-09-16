@@ -265,8 +265,8 @@
 
 (let ((buffer (make-array 1024 :element-type '(unsigned-byte 16) ; TODO: thread safety
                                :adjustable nil :fill-pointer nil)))
-  (defun clim-clx::font-draw-glyphs (font #|(font truetype-face)|# mirror gc x y string
-                                     #|x0 y0 x1 y1|# &key start end translate)
+  (defmethod clim-clx::font-draw-glyphs ((font truetype-face) mirror gc x y string
+                                         #|x0 y0 x1 y1|# &key start end translate size)
     (declare (optimize (speed 3))
              (type #-sbcl (integer 0 #.array-dimension-limit)
                    #+sbcl sb-int:index
@@ -485,24 +485,6 @@ The following files should exist:~&~{  ~A~^~%~}"
 ;;;;;;
 
 (in-package :clim-clx)
-
-(defmethod text-style-ascent (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
-    (clim-clx::font-ascent font)))
-
-(defmethod text-style-descent (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
-    (clim-clx::font-descent font)))
-
-(defmethod text-style-height (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
-    (+ (clim-clx::font-ascent font) (clim-clx::font-descent font))))
-
-(defmethod text-style-character-width (text-style (medium clx-medium) char)
-  (clim-clx::font-glyph-width (text-style-to-X-font (port medium) text-style) char))
-
-(defmethod text-style-width (text-style (medium clx-medium))
-  (text-style-character-width text-style medium #\m))
 
 (defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
   (declare (optimize (speed 3)))

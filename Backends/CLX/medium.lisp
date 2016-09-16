@@ -899,18 +899,18 @@ time an indexed pattern is drawn.")
 
 (defmethod text-style-ascent (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
-    (xlib:font-ascent font)))
+    (font-ascent font)))
 
 (defmethod text-style-descent (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
-    (xlib:font-descent font)))
+    (font-descent font)))
 
 (defmethod text-style-height (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
-    (+ (xlib:font-ascent font) (xlib:font-descent font))))
+    (+ (font-ascent font) (font-descent font))))
 
 (defmethod text-style-character-width (text-style (medium clx-medium) char)
-  (xlib:char-width (text-style-to-X-font (port medium) text-style) (char-code char)))
+  (font-glyph-width (text-style-to-X-font (port medium) text-style) char))
 
 (defmethod text-style-width (text-style (medium clx-medium))
   (text-style-character-width text-style medium #\m))
@@ -1002,7 +1002,7 @@ time an indexed pattern is drawn.")
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
                                                 first-not-done)
-                        (xlib:text-extents xfont string
+                        (font-text-extents xfont string
                                            :start start :end position-newline
                                            :translate #'translate)
                       (declare (ignorable left right
@@ -1017,9 +1017,9 @@ time an indexed pattern is drawn.")
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
                                                 first-not-done)
-                        (xlib:text-extents xfont string
-                                   :start start :end end
-                                   :translate #'translate)
+                        (font-text-extents xfont string
+                                           :start start :end end
+                                           :translate #'translate)
                       (declare (ignorable left right
                                           font-ascent font-descent
                                           direction first-not-done))
@@ -1040,7 +1040,7 @@ time an indexed pattern is drawn.")
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
                                                 first-not-done)
-                        (xlib:text-extents xfont string
+                        (font-text-extents xfont string
                                            :start start :end position-newline
                                            :translate #'translate)
                       (declare (ignorable width left right
@@ -1057,9 +1057,8 @@ time an indexed pattern is drawn.")
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
                                                 first-not-done)
-                        (xlib:text-extents xfont string
-                                   :start start :end end
-                                   :translate #'translate)
+                        (font-text-extents
+                         xfont string :start start :end end :translate #'translate)
                       (declare (ignore width ascent descent)
 			       (ignore direction first-not-done))
                       ;; FIXME: Potential style points:
@@ -1097,15 +1096,11 @@ time an indexed pattern is drawn.")
             (y (round-coordinate y)))
         (when (and (<= #x-8000 x #x7FFF)
                    (<= #x-8000 y #x7FFF))
-	  ;; FIXME: What could possibly be the reason for this
-	  ;; MULTIPLE-VALUE-BIND form, since both variables are
-	  ;; unused?
-          (multiple-value-bind (halt width)
-              (xlib:draw-glyphs mirror gc x y string
-                                :start start :end end
-                                :translate #'translate
-                                :size 16)
-	    (declare (ignore halt width))))))))
+          (font-draw-glyphs
+           (text-style-to-X-font (port medium) (medium-text-style medium))
+           mirror gc x y string
+           :start start :end end
+           :translate #'translate :size 16))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
