@@ -542,46 +542,6 @@ The following files should exist:~&~{  ~A~^~%~}"
                                           direction first-not-done))
                       (values width (+ ascent descent) width 0 ascent)) )))))) )
 
-(defmethod climi::text-bounding-rectangle*
-    ((medium clx-medium) string &key text-style (start 0) end)
-  (when (characterp string)
-    (setf string (make-string 1 :initial-element string)))
-  (unless end (setf end (length string)))
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (let ((xfont (text-style-to-X-font (port medium) text-style)))
-    (cond ((= start end)
-           (values 0 0 0 0))
-          (t
-           (let ((position-newline (position #\newline string :start start)))
-             (cond ((not (null position-newline))
-                    (multiple-value-bind (width ascent descent left right
-                                                font-ascent font-descent direction
-                                                first-not-done)
-                        (font-text-extents xfont string
-                                           :start start :end position-newline
-                                           :translate #'translate)
-                      (declare (ignorable left right
-                                          font-ascent font-descent
-                                          direction first-not-done))
-                      (multiple-value-bind (minx miny maxx maxy)
-                          (climi::text-bounding-rectangle*
-                           medium string :text-style text-style
-                           :start (1+ position-newline) :end end)
-                        (values (min minx left) (- ascent)
-                                (max maxx right) (+ descent maxy)))))
-                   (t
-                    (multiple-value-bind (width ascent descent left right
-                                                font-ascent font-descent direction
-                                                first-not-done)
-                        (font-text-extents xfont string
-                                   :start start :end end
-                                   :translate #'translate)
-                      (declare (ignore width direction first-not-done))
-                      ;; FIXME: Potential style points:
-                      ;; * (min 0 left), (max width right)
-                      ;; * font-ascent / ascent
-                      (values left (- font-ascent) right font-descent)))))))))
-
 (defmethod make-medium-gcontext* (medium foreground background line-style text-style (ink color) clipping-region)
   (let* ((drawable (sheet-mirror (medium-sheet medium)))
          (port (port medium)))
