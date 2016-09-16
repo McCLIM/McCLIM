@@ -1,0 +1,27 @@
+\chapter{Incremental redisplay}
+
+CLIM applications are most often structured around the \emph{command
+  loop}.  The various steps that such an application follow are:
+
+\begin{itemize}
+\item A \emph{command} is acquired because the user, either typed the
+  name of the command to an interactive prompt, selected a menu item
+  representing a command, or clicked on an active object that
+  translates to a command.
+\item The \emph{arguments} to that command are acquired.  As with the
+  acquisition of the command itself, various gestures can be used to
+  supply the arguments.
+\item The command is \emph{executed} with the acquired arguments.
+  Typically, the command modifies some part of the \emph{model}%
+\footnote{Some authors use the term \emph{business logic} instead of
+  \emph{model}.  Both words refer to the representation of the
+  intrinsic purpose of the application, as opposed to superficial
+  characteristics such as how objects are physically presented to the
+  user.} contained in one or more slots in the application frame.
+\item The \emph{redisplay functions} associated with the visible panes
+  of the application are executed.  Typically, the redisplay function
+  erases all the output and traverses the entire model in order to
+  produce a new version of that output.  Since output exists in the
+  form of \emph{output records}, this process involves deleting the
+  existing output records and computing an entirely new set of them.
+\end{itemize}
