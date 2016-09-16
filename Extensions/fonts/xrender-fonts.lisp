@@ -486,62 +486,6 @@ The following files should exist:~&~{  ~A~^~%~}"
 
 (in-package :clim-clx)
 
-(defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
-  (declare (optimize (speed 3)))
-  (when (characterp string)
-    (setf string (make-string 1 :initial-element string)))
-  (check-type string string)
-  (unless end (setf end (length string)))
-  (check-type start
-              #-sbcl (integer 0 #.array-dimension-limit)
-              #+sbcl sb-int:index)
-  (check-type end
-              #-sbcl (integer 0 #.array-dimension-limit)
-              #+sbcl sb-int:index)
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (let ((xfont (text-style-to-X-font (port medium) text-style)))
-    (cond ((= start end)
-           (values 0 0 0 0 0))
-          (t
-           (let ((position-newline 
-                  (macrolet ((p (type)
-                               `(locally 
-                                 (declare (type ,type string))
-                                 (position #\newline string :start start))))
-                    (typecase string 
-                      (simple-base-string (p simple-base-string))
-                      #+SBCL (sb-kernel::simple-character-string (p sb-kernel::simple-character-string))
-                      #+SBCL (sb-kernel::character-string (p sb-kernel::character-string))
-                      (simple-string (p simple-string))
-                      (string (p string))))))
-
-             (cond ((not (null position-newline))
-                    (multiple-value-bind (width ascent descent left right
-                                                font-ascent font-descent direction
-                                                first-not-done)
-                        (font-text-extents xfont string
-                                           :start start :end position-newline
-                                           :translate #'translate)
-                      (declare (ignorable left right
-                                          font-ascent font-descent
-                                          direction first-not-done))
-                      (multiple-value-bind (w h x y baseline)
-                          (text-size medium string :text-style text-style
-                                     :start (1+ position-newline) :end end)
-                        (values (max w width) (+ ascent descent h)
-                                x (+ ascent descent y) (+ ascent descent baseline)))))
-                   (t
-                    (multiple-value-bind (width ascent descent left right
-                                                font-ascent font-descent direction
-                                                first-not-done)
-                        (font-text-extents xfont string
-                                   :start start :end end
-                                   :translate #'translate)
-                      (declare (ignorable left right
-                                          font-ascent font-descent
-                                          direction first-not-done))
-                      (values width (+ ascent descent) width 0 ascent)) )))))) )
-
 (defmethod make-medium-gcontext* (medium foreground background line-style text-style (ink color) clipping-region)
   (let* ((drawable (sheet-mirror (medium-sheet medium)))
          (port (port medium)))

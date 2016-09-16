@@ -988,16 +988,32 @@ time an indexed pattern is drawn.")
                 (return i))
               (setf (aref dst j) elt))))))
 
-(defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
+(defmethod text-size ((medium clx-medium) string
+                      &key text-style (start 0) end)
+  (declare (optimize (speed 3)))
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
+  (check-type string string)
+
   (unless end (setf end (length string)))
+  (check-type start (integer 0 #.array-dimension-limit))
+  (check-type end (integer 0 #.array-dimension-limit))
+
   (unless text-style (setf text-style (medium-text-style medium)))
   (let ((xfont (text-style-to-X-font (port medium) text-style)))
     (cond ((= start end)
            (values 0 0 0 0 0))
           (t
-           (let ((position-newline (position #\newline string :start start :end end)))
+           (let ((position-newline
+                  (macrolet ((p (type)
+                               `(locally (declare (type ,type string))
+                                  (position #\newline string :start start :end end))))
+                    (typecase string
+                      (simple-base-string (p simple-base-string))
+                      #+SBCL (sb-kernel::simple-character-string (p sb-kernel::simple-character-string))
+                      #+SBCL (sb-kernel::character-string (p sb-kernel::character-string))
+                      (simple-string (p simple-string))
+                      (string (p string))))))
              (cond ((not (null position-newline))
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
