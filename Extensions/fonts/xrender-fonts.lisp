@@ -360,7 +360,9 @@
 					    '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
 					      #p"/usr/share/fonts/truetype/dejavu/"
 					      #p"/usr/share/fonts/TTF/"
-					      #p"/usr/share/fonts/")))
+					      #p"/usr/share/fonts/"
+					      #p"/opt/X11/share/fonts/TTF/"
+					      #p"/opt/X11/lib/X11/fonts/TTF/")))
 
 (defstruct truetype-device-font-name
   (font-file (error "missing argument"))
