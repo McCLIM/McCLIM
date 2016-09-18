@@ -361,7 +361,7 @@
 					      #p"/usr/share/fonts/truetype/dejavu/"
 					      #p"/usr/share/fonts/TTF/"
 					      #p"/usr/share/fonts/"
-					      #p"/opt/X11/share/fonts/TTF"
+					      #p"/opt/X11/share/fonts/TTF/"
 					      #p"/opt/X11/share/fonts/")))
 
 (defstruct truetype-device-font-name
