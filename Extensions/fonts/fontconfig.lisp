@@ -58,13 +58,25 @@
 * McCLIM was unable to configure itself automatically using
   fontconfig. Therefore you must configure it manually.~%"))
 
+(defparameter *fc-match-program*
+  (find-if #'probe-file
+	   '("/usr/bin/fc-match"
+	     "/usr/local/bin/fc-match"
+	     "/opt/X11/bin/fc-match")))
+
 (defun find-fontconfig-font (font-fc-name)
-  (with-input-from-string
-      (s (with-output-to-string (asdf::*verbose-out*)
-	   (let ((code (asdf:run-shell-command "fc-match -v \"~A\"" font-fc-name)))
-	     (unless (zerop code)
-	       (warn "~&fc-match failed with code ~D.~%" code)))))
-    (parse-fontconfig-output s)))
+  (and *fc-match-program*
+       (multiple-value-bind (output errors code)
+	   (uiop:run-program (list *fc-match-program* "-v" font-fc-name)
+			     :input nil :output :string :error-output nil
+			     :force-shell nil :ignore-error-status t)
+	 (declare (ignore errors))
+	 (if (not (zerop code))
+	     (progn
+	       (warn "~&fc-match failed with code ~D.~%" code)
+	       nil)
+	     (with-input-from-string (stream output)
+	       (parse-fontconfig-output stream))))))
 
 (defun fontconfig-name (family face) 
   (format nil "~A:~A" family face))
