@@ -445,8 +445,9 @@ The following files should exist:~&~{  ~A~^~%~}"
                         (case (car (pathname-directory
                                     font-path-maybe-relative))
                           (:absolute font-path-maybe-relative)
-                          (otherwise (merge-pathnames font-path-maybe-relative
-                                                      *truetype-font-path*))))))
+                          (otherwise (merge-pathnames
+                                      font-path-maybe-relative
+                                      (or *truetype-font-path* "")))))))
              (if (and font-path (probe-file font-path))
                  (make-truetype-face display font-path size)
                  (error 'missing-font
