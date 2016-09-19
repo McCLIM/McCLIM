@@ -285,15 +285,21 @@ all."
 
 (defmethod flip-undo-record ((record insert-record))
   (with-slots (buffer offset objects) record
+    (let ((%buffer buffer)
+	  (%offset offset)
+	  (%objects objects))
     (change-class record 'delete-record
-                  :length (length objects))
-    (insert-buffer-sequence buffer offset objects)))
+                  :length (length %objects))
+    (insert-buffer-sequence %buffer %offset %objects))))
 
 (defmethod flip-undo-record ((record delete-record))
   (with-slots (buffer offset length) record
+    (let ((%buffer buffer)
+	  (%offset offset)
+	  (%length length))
     (change-class record 'insert-record
-                  :objects (buffer-sequence buffer offset (+ offset length)))
-    (delete-buffer-range buffer offset length)))
+                  :objects (buffer-sequence %buffer %offset (+ %offset %length)))
+    (delete-buffer-range %buffer %offset %length))))
 
 (defmethod flip-undo-record ((record change-record))
   (with-slots (buffer offset objects) record
