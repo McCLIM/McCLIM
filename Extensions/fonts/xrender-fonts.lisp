@@ -455,10 +455,10 @@ The following files should exist:~&~{  ~A~^~%~}"
                  ;; We could error here, but we want to fallback to
                  ;; fonts provided by CLX server. Its better to have
                  ;; ugly fonts than none at all.
-                 (call-next-method)
-                 #|(error 'missing-font
-                          :filename font-path
-                          :text-style text-style)|#)))
+                 (or (call-next-method)
+                     (error 'missing-font
+                            :filename font-path
+                            :text-style text-style)))))
          (find-font ()
            (multiple-value-bind (family face size)
                (clim:text-style-components text-style)
