@@ -475,11 +475,7 @@ The following files should exist:~&~{  ~A~^~%~}"
                (alexandria:ensure-gethash
                 (list display family face size)
                 *display-face-hash*
-                (find-and-make-truetype-face display family face size))
-               ;; This was a second clause of the cond, which could
-               ;; never be satisfied because size is never NIL due to earlier setf.
-               ;; The second clause body was:
-               #|(t (call-next-method))|#))))
+                (find-and-make-truetype-face display family face size))))))
       (unless (eq (car lookaside) text-style)
         (setf lookaside (cons text-style
                               (invoke-with-truetype-path-restart
