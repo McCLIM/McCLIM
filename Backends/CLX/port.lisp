@@ -886,40 +886,45 @@
   (:method ((port t) (text-style t))
     (let ((text-style (parse-text-style text-style)))
       (labels
-          ((find-font ()
+          ((find-and-make-xlib-face (display family face size)
+             (destructuring-bind (family-name face-table)
+                 (if (stringp family)
+                     (list family *clx-text-faces*)
+                     (or (getf *clx-text-family+face-map* family)
+                         (getf *clx-text-family+face-map* :fix)))
+               (let* ((face-name (if (stringp face)
+                                     face
+                                     (or (getf face-table
+                                               (if (listp face)
+                                                   (intern (format nil "~A-~A"
+                                                                   (symbol-name (first face))
+                                                                   (symbol-name (second face)))
+                                                           :keyword)
+                                                   face))
+                                         (getf *clx-text-faces* :roman)))))
+                 (flet ((try (encoding)
+                          (open-font
+                           display
+                           (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
+                                   family-name face-name size encoding))))
+                   (or (when (> char-code-limit #x100)
+                         (try "iso10646-1"))
+                       (try "iso8859-1")
+                       (try "*-*"))))))
+           (find-font ()
              (multiple-value-bind (family face size)
                  (text-style-components text-style)
-               (destructuring-bind (family-name face-table)
-                   (if (stringp family)
-                       (list family *clx-text-faces*)
-                       (or (getf *clx-text-family+face-map* family)
-                           (getf *clx-text-family+face-map* :fix)))
-                 (let* ((face-name (if (stringp face)
-                                       face
-                                       (or (getf face-table
-                                                 (if (listp face)
-                                                     (intern (format nil "~A-~A"
-                                                                     (symbol-name (first face))
-                                                                     (symbol-name (second face)))
-                                                             :keyword)
-                                                     face))
-                                           (getf *clx-text-faces* :roman))))
-                        (size-number (if (numberp size)
-                                         (round size)
-                                         (or (getf *clx-text-sizes* size)
-                                             (getf *clx-text-sizes* :normal)))))
-                   (flet ((try (encoding)
-                            (open-font
-                             (clx-port-display port)
-                             (format nil
-                                     "-~A-~A-*-*-~D-*-*-*-*-*-~A"
-                                     family-name
-                                     face-name
-                                     size-number
-                                     encoding))))
-                     (or (and (> char-code-limit #x100) (try "iso10646-1"))
-                         (try "iso8859-1")
-                         (try "*-*"))))))))
+
+               (setf face   (or face :roman)
+                     family (or family :fix)
+                     size   (or size :normal)
+                     size   (getf clim-clx::*clx-text-sizes* size size))
+
+               (when (eq family :fixed)
+                 (setf family :fix))
+
+               (let ((display (clim-clx::clx-port-display port)))
+                 (find-and-make-xlib-face display family face size)))))
         (or (text-style-mapping port text-style)
             (setf (climi::text-style-mapping port text-style)
                   (find-font)))))))
