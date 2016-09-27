@@ -389,11 +389,6 @@
                                         (fontconfig-font-name-options font-name)))
                     :size (fontconfig-font-name-size font-name))))))))))
 
-(defmethod text-style-mapping :around
-    ((port clim-clx::clx-port) (text-style climi::device-font-text-style)
-     &optional character-set)
-  (values (gethash text-style (clim-clx::port-text-style-mappings port))))
-
 (defparameter *display-face-hash* (make-hash-table :test #'equal))
 
 (define-condition missing-font (simple-error)

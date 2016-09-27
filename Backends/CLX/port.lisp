@@ -874,39 +874,7 @@
 (defmethod text-style-mapping ((port clx-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
-  (let ((table (port-text-style-mappings port)))
-    (or (values (gethash text-style table))
-        (multiple-value-bind (family face size)
-            (text-style-components text-style)
-          (destructuring-bind (family-name face-table)
-              (if (stringp family)
-                  (list family *clx-text-faces*)
-                  (or (getf *clx-text-family+face-map* family)
-                      (getf *clx-text-family+face-map* :fix)))
-            (let* ((face-name (if (stringp face)
-                                  face
-                                  (or (getf face-table
-                                            (if (listp face)
-                                                (intern (format nil "~A-~A"
-                                                                (symbol-name (first face))
-                                                                (symbol-name (second face)))
-                                                        :keyword)
-                                                face))
-                                      (getf *clx-text-faces* :roman))))
-                   (size-number (if (numberp size)
-                                    (round size)
-                                    (or (getf *clx-text-sizes* size)
-                                        (getf *clx-text-sizes* :normal)))))
-              (flet ((try (encoding)
-                       (let* ((fn (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
-                                          family-name face-name size-number
-                                          encoding))
-                              (font (open-font (clx-port-display port) fn)))
-                         font)))
-                (setf (gethash text-style table)
-                      (or (and (> char-code-limit #x100) (try "iso10646-1"))
-                          (try "iso8859-1")
-                          (try "*-*"))))))))))
+  (values (gethash text-style (port-text-style-mappings port))))
 
 (defmethod (setf text-style-mapping) (value
                                       (port clim-clx::clx-port)
@@ -917,8 +885,45 @@
 (defgeneric text-style-to-X-font (port text-style)
   (:method ((port t) (text-style t))
     (let ((text-style (parse-text-style text-style)))
-      (text-style-mapping port text-style)
-      (gethash text-style (port-text-style-mappings port)))))
+      (labels
+          ((find-font ()
+             (multiple-value-bind (family face size)
+                 (text-style-components text-style)
+               (destructuring-bind (family-name face-table)
+                   (if (stringp family)
+                       (list family *clx-text-faces*)
+                       (or (getf *clx-text-family+face-map* family)
+                           (getf *clx-text-family+face-map* :fix)))
+                 (let* ((face-name (if (stringp face)
+                                       face
+                                       (or (getf face-table
+                                                 (if (listp face)
+                                                     (intern (format nil "~A-~A"
+                                                                     (symbol-name (first face))
+                                                                     (symbol-name (second face)))
+                                                             :keyword)
+                                                     face))
+                                           (getf *clx-text-faces* :roman))))
+                        (size-number (if (numberp size)
+                                         (round size)
+                                         (or (getf *clx-text-sizes* size)
+                                             (getf *clx-text-sizes* :normal)))))
+                   (flet ((try (encoding)
+                            (open-font
+                             (clx-port-display port)
+                             (format nil
+                                     "-~A-~A-*-*-~D-*-*-*-*-*-~A"
+                                     family-name
+                                     face-name
+                                     size-number
+                                     encoding))))
+                     (or (and (> char-code-limit #x100) (try "iso10646-1"))
+                         (try "iso8859-1")
+                         (try "*-*"))))))))
+        (or (text-style-mapping port text-style)
+            (setf (gethash text-style
+                           (clim-clx::port-text-style-mappings port))
+                  (find-font)))))))
 
 ;;; The generic function PORT-CHARACTER-WIDTH might be intended to be
 ;;; common for all ports, but in fact, that symbol is in the CLIM-CLX
