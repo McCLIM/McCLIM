@@ -309,15 +309,6 @@
            glyph-ids
            :end (- end start)))))))
 
-(defparameter *sizes*
-  '(:normal 12
-    :small 10
-    :very-small 8
-    :tiny 8
-    :large 14
-    :very-large 18
-    :huge 24))
-
 (defparameter *vera-families/faces*
   '(((:fix :roman) . "VeraMono.ttf")
     ((:fix :italic) . "VeraMoIt.ttf")
@@ -466,7 +457,7 @@ The following files should exist:~&~{  ~A~^~%~}"
              (setf face   (or face :roman)
                    family (or family :fix)
                    size   (or size :normal)
-                   size   (getf *sizes* size size))
+                   size   (getf clim-clx::*clx-text-sizes* size size))
 
              (when (eq family :fixed)
                (setf family :fix))

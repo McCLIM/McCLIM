@@ -825,13 +825,14 @@
 				:bold-italic    "bold-i"
 				:italic-bold    "bold-i"))
 
-(defparameter *clx-text-sizes* '(:normal         14
-				:tiny            8
-				:very-small     10
-				:small          12
-				:large          18
-				:very-large     20
-				:huge           24))
+(defparameter *clx-text-sizes*
+  '(:normal         12
+    :tiny            8
+    :very-small      8
+    :small          10
+    :large          14
+    :very-large     18
+    :huge           24))
 
 (defparameter *clx-text-family+face-map*
   '(:fix
