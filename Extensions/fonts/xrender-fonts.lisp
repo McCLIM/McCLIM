@@ -394,13 +394,6 @@
      &optional character-set)
   (values (gethash text-style (clim-clx::port-text-style-mappings port))))
 
-(defmethod (setf text-style-mapping) :around
-    (value 
-     (port clim-clx::clx-port) 
-     (text-style climi::device-font-text-style)
-     &optional character-set)
-  (setf (gethash text-style (clim-clx::port-text-style-mappings port)) value))
-
 (defparameter *display-face-hash* (make-hash-table :test #'equal))
 
 (define-condition missing-font (simple-error)

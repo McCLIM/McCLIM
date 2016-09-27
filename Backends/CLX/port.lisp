@@ -874,9 +874,8 @@
 (defmethod text-style-mapping ((port clx-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
-
   (let ((table (port-text-style-mappings port)))
-    (or (car (gethash text-style table))
+    (or (values (gethash text-style table))
         (multiple-value-bind (family face size)
             (text-style-components text-style)
           (destructuring-bind (family-name face-table)
@@ -903,28 +902,23 @@
                                           family-name face-name size-number
                                           encoding))
                               (font (open-font (clx-port-display port) fn)))
-                         (and font (cons fn font)))))
-                (let ((fn-font
-                       (or
-                        (and (> char-code-limit #x100) (try "iso10646-1"))
-                        (try "iso8859-1")
-                        (try "*-*"))))
-                  (setf (gethash text-style table) fn-font)
-                  (car fn-font)))))))))
+                         font)))
+                (setf (gethash text-style table)
+                      (or (and (> char-code-limit #x100) (try "iso10646-1"))
+                          (try "iso8859-1")
+                          (try "*-*"))))))))))
 
-(defmethod (setf text-style-mapping) (font-name (port clx-port)
+(defmethod (setf text-style-mapping) (value
+                                      (port clim-clx::clx-port)
                                       (text-style text-style)
                                       &optional character-set)
-  (declare (ignore character-set))
-  (setf (gethash text-style (port-text-style-mappings port))
-        (cons font-name (open-font (clx-port-display port) font-name)))
-  font-name)
+  (setf (gethash text-style (clim-clx::port-text-style-mappings port)) value))
 
 (defgeneric text-style-to-X-font (port text-style)
   (:method ((port t) (text-style t))
     (let ((text-style (parse-text-style text-style)))
       (text-style-mapping port text-style)
-      (cdr (gethash text-style (port-text-style-mappings port))))))
+      (gethash text-style (port-text-style-mappings port)))))
 
 ;;; The generic function PORT-CHARACTER-WIDTH might be intended to be
 ;;; common for all ports, but in fact, that symbol is in the CLIM-CLX
