@@ -921,8 +921,7 @@
                          (try "iso8859-1")
                          (try "*-*"))))))))
         (or (text-style-mapping port text-style)
-            (setf (gethash text-style
-                           (clim-clx::port-text-style-mappings port))
+            (setf (climi::text-style-mapping port text-style)
                   (find-font)))))))
 
 ;;; The generic function PORT-CHARACTER-WIDTH might be intended to be

@@ -389,8 +389,6 @@
                                         (fontconfig-font-name-options font-name)))
                     :size (fontconfig-font-name-size font-name))))))))))
 
-(defparameter *display-face-hash* (make-hash-table :test #'equal))
-
 (define-condition missing-font (simple-error)
   ((filename :reader missing-font-filename :initarg :filename)
    (text-style :reader missing-font-text-style :initarg :text-style))
@@ -413,53 +411,48 @@ The following files should exist:~&~{  ~A~^~%~}"
       (setf *truetype-font-path* new-path)
       (invoke-with-truetype-path-restart continuation))))
 
-(let (lookaside)
-  (defmethod clim-clx::text-style-to-X-font :around
-      ((port clim-clx::clx-port) (text-style standard-text-style))
-    (labels
-        ((find-and-make-truetype-face (display family face size)
-           (let* ((font-path-maybe-relative
-                   (cdr (assoc (list family face) *families/faces*
-                               :test #'equal)))
-                  (font-path
-                   (and font-path-maybe-relative
-                        (case (car (pathname-directory
-                                    font-path-maybe-relative))
-                          (:absolute font-path-maybe-relative)
-                          (otherwise (merge-pathnames
-                                      font-path-maybe-relative
-                                      (or *truetype-font-path* "")))))))
-             (if (and font-path (probe-file font-path))
-                 (make-truetype-face display font-path size)
-                 ;; We could error here, but we want to fallback to
-                 ;; fonts provided by CLX server. Its better to have
-                 ;; ugly fonts than none at all.
-                 (or (call-next-method)
-                     (error 'missing-font
-                            :filename font-path
-                            :text-style text-style)))))
-         (find-font ()
-           (multiple-value-bind (family face size)
-               (clim:text-style-components text-style)
+(defmethod clim-clx::text-style-to-X-font :around
+    ((port clim-clx::clx-port) (text-style standard-text-style))
+  (labels
+      ((find-and-make-truetype-face (display family face size)
+         (let* ((font-path-maybe-relative
+                 (cdr (assoc (list family face) *families/faces*
+                             :test #'equal)))
+                (font-path
+                 (and font-path-maybe-relative
+                      (case (car (pathname-directory
+                                  font-path-maybe-relative))
+                        (:absolute font-path-maybe-relative)
+                        (otherwise (merge-pathnames
+                                    font-path-maybe-relative
+                                    (or *truetype-font-path* "")))))))
+           (if (and font-path (probe-file font-path))
+               (make-truetype-face display font-path size)
+               ;; We could error here, but we want to fallback to
+               ;; fonts provided by CLX server. Its better to have
+               ;; ugly fonts than none at all.
+               (or (call-next-method)
+                   (error 'missing-font
+                          :filename font-path
+                          :text-style text-style)))))
+       (find-font ()
+         (multiple-value-bind (family face size)
+             (clim:text-style-components text-style)
 
-             (setf face   (or face :roman)
-                   family (or family :fix)
-                   size   (or size :normal)
-                   size   (getf clim-clx::*clx-text-sizes* size size))
+           (setf face   (or face :roman)
+                 family (or family :fix)
+                 size   (or size :normal)
+                 size   (getf clim-clx::*clx-text-sizes* size size))
 
-             (when (eq family :fixed)
-               (setf family :fix))
+           (when (eq family :fixed)
+             (setf family :fix))
 
-             (let ((display (clim-clx::clx-port-display port)))
-               (alexandria:ensure-gethash
-                (list display family face size)
-                *display-face-hash*
-                (find-and-make-truetype-face display family face size))))))
-      (unless (eq (car lookaside) text-style)
-        (setf lookaside (cons text-style
-                              (invoke-with-truetype-path-restart
-                               #'find-font))))
-      (cdr lookaside))))
+           (let ((display (clim-clx::clx-port-display port)))
+             (find-and-make-truetype-face display family face size)))))
+
+    (or (text-style-mapping port text-style)
+        (setf (climi::text-style-mapping port text-style)
+              (invoke-with-truetype-path-restart #'find-font)))))
 
 ;;;;;;
 
