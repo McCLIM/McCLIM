@@ -815,16 +815,6 @@
 		 ;; :graft (find-graft :port port) 
 		 :sheet sheet))
 
-(defconstant *clx-text-families* '(:fix         "adobe-courier"
-				   :serif       "adobe-times"
-				   :sans-serif  "adobe-helvetica"))
-
-(defconstant *clx-text-faces* '(:roman          "medium-r"
-				:bold           "bold-r"
-				:italic         "medium-i"
-				:bold-italic    "bold-i"
-				:italic-bold    "bold-i"))
-
 (defparameter *clx-text-sizes*
   '(:normal         12
     :tiny            8
@@ -834,36 +824,30 @@
     :very-large     18
     :huge           24))
 
-(defparameter *clx-text-family+face-map*
-  '(:fix
-    #-nil
-    ("adobe-courier"
-     (:roman               "medium-r"
-      :bold                "bold-r"
-      :italic              "medium-o"
-      :bold-italic         "bold-o"
-      :italic-bold         "bold-o"))
-    #+nil
-    ("*-lucidatypewriter"
-     (:roman               "medium-r"
-      :bold                "bold-r"
-      :italic              "medium-r"
-      :bold-italic         "bold-r"
-      :italic-bold         "bold-r"))
-    :sans-serif
-    ("adobe-helvetica"
-     (:roman               "medium-r"
-      :bold                "bold-r"
-      :italic              "medium-o"
-      :bold-italic         "bold-o"
-      :italic-bold         "bold-o"))
-    :serif
-    ("adobe-times"
-     (:roman               "medium-r"
-      :bold                "bold-r"
-      :italic              "medium-i"
-      :bold-italic         "bold-i"
-      :italic-bold         "bold-i")) ))
+(defconstant *families/names*
+  '(:fix         "adobe-courier"
+    :serif       "adobe-times"
+    :sans-serif  "adobe-helvetica"))
+
+(defparameter *families/faces*
+  '(;; "adobe-courier"
+    ((:fix :roman)                 . "medium-r")
+    ((:fix :bold)                  . "bold-r")
+    ((:fix :italic)                . "medium-o")
+    ((:fix (:bold :italic))        . "bold-o")
+    ((:fix (:italic :bold))        . "bold-o")
+    ;; "adome-times"
+    ((:sans :roman)                . "medium-r")
+    ((:sans :bold)                 . "bold-r")
+    ((:sans :italic)               . "medium-i")
+    ((:sans (:bold :italic))       . "bold-i")
+    ((:sans (:italic :bold))       . "boid-i")
+    ;; "adobe-helvetica"
+    ((:sans-serif :roman)          . "medium-r")
+    ((:sans-serif :bold)           . "bold-r")
+    ((:sans-serif :italic)         . "medium-o")
+    ((:sans-serif (:bold :italic)) . "bold-o")
+    ((:sans-serif (:italic :bold)) . "bold-o")))
 
 (defun open-font (display font-name)
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
@@ -887,30 +871,23 @@
     (let ((text-style (parse-text-style text-style)))
       (labels
           ((find-and-make-xlib-face (display family face size)
-             (destructuring-bind (family-name face-table)
-                 (if (stringp family)
-                     (list family *clx-text-faces*)
-                     (or (getf *clx-text-family+face-map* family)
-                         (getf *clx-text-family+face-map* :fix)))
-               (let* ((face-name (if (stringp face)
-                                     face
-                                     (or (getf face-table
-                                               (if (listp face)
-                                                   (intern (format nil "~A-~A"
-                                                                   (symbol-name (first face))
-                                                                   (symbol-name (second face)))
-                                                           :keyword)
-                                                   face))
-                                         (getf *clx-text-faces* :roman)))))
-                 (flet ((try (encoding)
-                          (open-font
-                           display
-                           (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
-                                   family-name face-name size encoding))))
-                   (or (when (> char-code-limit #x100)
-                         (try "iso10646-1"))
-                       (try "iso8859-1")
-                       (try "*-*"))))))
+             (let* ((family-name (if (stringp family)
+                                     family
+                                     (getf *families/names* family "adobe-times")))
+                    (face-name (if (stringp face)
+                                   face
+                                   (or (assoc (list family face) *families/faces*
+                                              :test #'equal)
+                                       "medium-r"))))
+               (flet ((try (encoding)
+                        (open-font
+                         display
+                         (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
+                                 family-name face-name size encoding))))
+                 (or (and (> char-code-limit #x100)
+                          (try "iso10646-1"))
+                     (try "iso8859-1")
+                     (try "*-*")))))
            (find-font ()
              (multiple-value-bind (family face size)
                  (text-style-components text-style)
@@ -918,10 +895,13 @@
                (setf face   (or face :roman)
                      family (or family :fix)
                      size   (or size :normal)
-                     size   (getf clim-clx::*clx-text-sizes* size size))
+                     size   (round (getf clim-clx::*clx-text-sizes* size size)))
 
                (when (eq family :fixed)
                  (setf family :fix))
+
+               (when (zerop size)
+                 (setf size (getf clim-clx::*clx-text-sizes* :normal)))
 
                (let ((display (clim-clx::clx-port-display port)))
                  (find-and-make-xlib-face display family face size)))))
