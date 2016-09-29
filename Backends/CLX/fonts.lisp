@@ -69,7 +69,7 @@
 (defmethod clim-extensions:port-all-font-families :around
     ((port clx-port) &key invalidate-cache)
   (when (or (not (slot-boundp port 'font-families)) invalidate-cache)
-    (setf (font-families port) nil))
+    (setf (font-families port) (reload-font-table port)))
   (append (call-next-method)
           (font-families port)))
 
