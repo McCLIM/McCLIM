@@ -855,17 +855,6 @@
 	(xlib:open-font display (first fonts))
         (xlib:open-font display "fixed"))))
 
-(defmethod text-style-mapping ((port clx-port) text-style
-                               &optional character-set)
-  (declare (ignore character-set))
-  (values (gethash text-style (port-text-style-mappings port))))
-
-(defmethod (setf text-style-mapping) (value
-                                      (port clim-clx::clx-port)
-                                      (text-style text-style)
-                                      &optional character-set)
-  (setf (gethash text-style (clim-clx::port-text-style-mappings port)) value))
-
 (defgeneric text-style-to-X-font (port text-style)
   (:method ((port t) (text-style t))
     (let ((text-style (parse-text-style text-style)))
