@@ -107,7 +107,6 @@
 			:key #'clim-extensions:font-face-name
 			:test #'equal)))
 	    (unless face-instance
-              (format t "~s: ~s~%" family-name face-name)
 	      (setf face-instance
 		    (make-instance 'clx-font-face
 		      :family family-instance
