@@ -93,7 +93,13 @@
                      &rest ignore)
 	  (split-font-name font)
 	(declare (ignore setwidth style ignore))
-	(when family
+        (setf pixelsize (parse-integer
+                         ;; FIXME: Python thinks pixelsize is NIL, resulting
+                         ;; in a full WARNING.  Let's COERCE to make it work.
+                         (coerce pixelsize 'string) :junk-allowed t))
+	(unless (or (null family)
+                    (null pixelsize)
+                    (zerop pixelsize))
 	  (let* ((family-name (format nil "~A ~A" foundry family))
 		 (family-instance
 		  (or (gethash family-name table)
@@ -112,24 +118,20 @@
 		      :family family-instance
 		      :name face-name))
 	      (push face-instance (all-faces family-instance)))
-	    (pushnew (parse-integer
-		      ;; FIXME: Python thinks pixelsize is NIL, resulting
-		      ;; in a full WARNING.  Let's COERCE to make it work.
-		      (coerce pixelsize 'string))
-		     (all-sizes face-instance))))))
-    (setf (font-families port)
-	  (sort (loop
-		    for family being each hash-value in table
-		    do
-		      (setf (all-faces family)
-			    (sort (all-faces family)
-				  #'string<
-				  :key #'clim-extensions:font-face-name))
-		      (dolist (face (all-faces family))
-			(setf (all-sizes face) (sort (all-sizes face) #'<)))
-		    collect family)
-		#'string<
-		:key #'clim-extensions:font-family-name))))
+            (pushnew pixelsize (all-sizes face-instance))))))
+    (sort (loop
+             for family being each hash-value in table
+             do
+               (setf (all-faces family)
+                     (sort (all-faces family)
+                           #'string<
+                           :key #'clim-extensions:font-face-name))
+               (dolist (face (all-faces family))
+                 (setf (all-sizes face)
+                       #- (or) (sort (all-sizes face) #'<)))
+             collect family)
+          #'string<
+          :key #'clim-extensions:font-family-name)))
 
 (defmethod clim-extensions:font-face-text-style
     ((face clx-font-face) &optional size)
