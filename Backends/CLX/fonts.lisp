@@ -54,17 +54,20 @@
 
 
 ;;; Font listing implementation
-;;;; Font listing implementation:
 
 (defclass clx-font-family (clim-extensions:font-family)
   ((all-faces :initform nil
               :accessor all-faces
-              :reader clim-extensions:font-family-all-faces)))
+              :reader clim-extensions:font-family-all-faces)
+   (raw-name :initarg :raw-name
+             :reader clx-font-family-raw-name)))
 
 (defclass clx-font-face (clim-extensions:font-face)
   ((all-sizes :initform nil
               :accessor all-sizes
-              :reader clim-extensions:font-face-all-sizes)))
+              :reader clim-extensions:font-face-all-sizes)
+   (raw-name :initarg :raw-name
+             :reader clx-font-face-raw-name)))
 
 (defmethod clim-extensions:port-all-font-families :around
     ((port clx-port) &key invalidate-cache)
@@ -93,21 +96,21 @@
                        &rest ignore)
           (split-font-name font)
         (declare (ignore setwidth style ignore))
-        (setf pixelsize (parse-integer
-                         ;; FIXME: Python thinks pixelsize is NIL, resulting
-                         ;; in a full WARNING.  Let's COERCE to make it work.
-                         (coerce pixelsize 'string) :junk-allowed t))
-        (unless (or (null family)
+        (setf pixelsize (and pixelsize (parse-integer pixelsize)))
+        (unless (or (null foundry)
                     (null pixelsize)
                     (zerop pixelsize))
           (let* ((family-name (format nil "~A ~A" foundry family))
+                 (family-name* (format nil "~A-~A" foundry family))
                  (family-instance
                   (or (gethash family-name table)
                       (setf (gethash family-name table)
                             (make-instance 'clx-font-family
                                            :port port
-                                           :name family-name))))
+                                           :name family-name
+                                           :raw-name family-name*))))
                  (face-name (format nil "~A ~A" weight slant))
+                 (face-name* (format nil "~A-~A" weight slant))
                  (face-instance
                   (find face-name (all-faces family-instance)
                         :key #'clim-extensions:font-face-name
@@ -116,7 +119,8 @@
               (setf face-instance
                     (make-instance 'clx-font-face
                                    :family family-instance
-                                   :name face-name))
+                                   :name face-name
+                                   :raw-name face-name*))
               (push face-instance (all-faces family-instance)))
             (pushnew pixelsize (all-sizes face-instance))))))
     (sort (loop
@@ -135,11 +139,8 @@
 
 (defmethod clim-extensions:font-face-text-style
     ((face clx-font-face) &optional size)
-  (flet ((make-unfriendly-name (str)
-           (substitute #\- #\space str)))
-    (make-text-style (make-unfriendly-name
-                      (clim-extensions:font-family-name
-                       (clim-extensions:font-face-family face)))
-                     (make-unfriendly-name
-                      (clim-extensions:font-face-name face))
-                     size)))
+  (make-text-style
+   (clx-font-family-raw-name
+    (clim-extensions:font-face-family face))
+   (clx-font-face-raw-name face)
+   size))
