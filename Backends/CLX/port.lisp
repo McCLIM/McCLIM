@@ -871,10 +871,13 @@
                         (open-font display
                                    (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
                                            family-name face-name size encoding))))
-                 (or (and (> char-code-limit #x100)
-                          (try "iso10646-1"))
-                     (try "iso8859-1")
-                     (try "*-*")
+;;; XXX: this part is a bit problematic – we either list all fonts
+;;; with any possible encoding (what leads to the situation, when our
+;;; font can't render a simple string "ABCD") or we end with only a
+;;; partial list of fonts. Since we have mcclim-ttf extension which
+;;; handles unicode characters well, this mechanism of getting fonts
+;;; is deprecated and there is no big harm.
+                 (or (try "iso8859-1")
                      (xlib:open-font display "fixed")))))
            (find-font ()
              (multiple-value-bind (family face size)

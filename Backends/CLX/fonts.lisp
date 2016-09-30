@@ -86,9 +86,15 @@
      when prev
      collect (subseq name (1+ prev) next)))
 
+;;; XXX: xlib can acquire very large set of fonts from xserver, but
+;;; most of them doesn't have a pixelsize or doesn't handle even basic
+;;; encodings. To make the result as clean as possible we load only
+;;; fonts which we know that can render correctly basic text. For more
+;;; fancy needs we have ttf fonts which work well with unicode. xorg
+;;; fonts are deprecated.
 (defun reload-font-table (port)
   (let ((table (make-hash-table :test 'equal)))
-    (dolist (font (xlib:list-font-names (clx-port-display port) "*"))
+    (dolist (font (xlib:list-font-names (clx-port-display port) "*-iso8859-1"))
       (destructuring-bind
             (&optional foundry family weight slant setwidth style pixelsize
                        ;;pointsize xresolution yresolution
