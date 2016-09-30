@@ -851,9 +851,8 @@
 
 (defun open-font (display font-name)
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
-    (if fonts
-	(xlib:open-font display (first fonts))
-        (xlib:open-font display "fixed"))))
+    (when fonts
+      (xlib:open-font display (first fonts)))))
 
 (defgeneric text-style-to-X-font (port text-style)
   (:method ((port t) (text-style t))
@@ -869,14 +868,14 @@
                                               :test #'equal)
                                        "medium-r"))))
                (flet ((try (encoding)
-                        (open-font
-                         display
-                         (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
-                                 family-name face-name size encoding))))
+                        (open-font display
+                                   (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
+                                           family-name face-name size encoding))))
                  (or (and (> char-code-limit #x100)
                           (try "iso10646-1"))
                      (try "iso8859-1")
-                     (try "*-*")))))
+                     (try "*-*")
+                     (xlib:open-font display "fixed")))))
            (find-font ()
              (multiple-value-bind (family face size)
                  (text-style-components text-style)
