@@ -40,12 +40,6 @@
 ;;; Some day, it might become useful to decouple the font
 ;;; representation from the xrender details.
 
-(defclass vague-font ()
-  ((lib :initarg :lib)
-   (filename :initarg :filename)))
-
-(defparameter *vague-font-hash* (make-hash-table :test #'equal))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (let ((lookaside nil))

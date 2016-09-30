@@ -52,25 +52,6 @@
 
 (defvar *zpb-font-lock* (climi::make-lock "zpb-font"))
 
-;; So weird..
-(defun make-vague-font (filename)
-  (let ((val (gethash filename *vague-font-hash*)))
-    (or val
-        (setf (gethash filename *vague-font-hash*)
-              (make-instance 'vague-font
-                             :lib t
-                             :filename filename)))))
-
-;;; Ignore the 'concrete font' indirection.
-
-#+NIL
-(defun make-concrete-font (vague-font size &key (dpi *dpi*))
-  (error "Go away."))
-
-#+NIL
-(defun set-concrete-font-size (face size dpi)
-  (declare (ignore face size dpi)))
-
 (defclass zpb-ttf-face (truetype-face)
   ((font-loader :reader zpb-ttf-font-loader :initarg :loader)
    (units->pixels :reader zpb-ttf-font-units->pixels :initarg :units->pixels)))
