@@ -861,12 +861,11 @@
           ((find-and-make-xlib-face (display family face size)
              (let* ((family-name (if (stringp family)
                                      family
-                                     (getf *families/names* family "adobe-times")))
+                                     (getf *families/names* family)))
                     (face-name (if (stringp face)
                                    face
-                                   (or (assoc (list family face) *families/faces*
-                                              :test #'equal)
-                                       "medium-r"))))
+                                   (assoc (list family face) *families/faces*
+                                          :test #'equal))))
                (flet ((try (encoding)
                         (open-font display
                                    (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
