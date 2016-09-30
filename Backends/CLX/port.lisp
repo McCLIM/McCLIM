@@ -870,7 +870,7 @@
                         (open-font display
                                    (format nil "-~A-~A-*-*-~D-*-*-*-*-*-~A"
                                            family-name face-name size encoding))))
-;;; XXX: this part is a bit problematic – we either list all fonts
+;;; XXX: this part is a bit problematic - we either list all fonts
 ;;; with any possible encoding (what leads to the situation, when our
 ;;; font can't render a simple string "ABCD") or we end with only a
 ;;; partial list of fonts. Since we have mcclim-ttf extension which
