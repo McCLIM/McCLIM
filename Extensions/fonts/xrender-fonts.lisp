@@ -122,9 +122,8 @@
 
 (defun font-glyph-info (font character)
   (with-slots (char->glyph-info) font
-    (or (gethash character char->glyph-info)
-        (setf (gethash character char->glyph-info) 
-              (font-generate-glyph font (char-code character))))))
+    (ensure-gethash character char->glyph-info
+                    (font-generate-glyph font (char-code character)))))
 
 (defun font-glyph-id (font character)
   (glyph-info-id (font-glyph-info font character)))

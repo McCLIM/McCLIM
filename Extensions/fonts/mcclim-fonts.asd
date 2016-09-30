@@ -9,7 +9,7 @@
 ;;;;
 
 (defsystem #:mcclim-fonts/truetype
-  :depends-on (#:mcclim-clx #:zpb-ttf #:cl-vectors #:cl-paths-ttf #:cl-aa)
+  :depends-on (#:mcclim-clx #:zpb-ttf #:cl-vectors #:cl-paths-ttf #:cl-aa #:alexandria)
   :serial t
   :components
   ((:file "truetype-package")

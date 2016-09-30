@@ -61,22 +61,21 @@
   (defun make-truetype-face (display filename size)
     (climi::with-lock-held (*zpb-font-lock*)
       (unless display (break "no display!"))
-      (let* ((loader (or (gethash filename font-loader-cache)
-			 (setf (gethash filename font-loader-cache)
-			       (zpb-ttf:open-font-loader filename))))
+      (let* ((loader (ensure-gethash filename font-loader-cache
+                                     (zpb-ttf:open-font-loader filename)))
 	     (units/em (zpb-ttf:units/em loader))
 	     (pixel-size (* size (/ *dpi* 72)))
 	     (units->pixels (* pixel-size (/ units/em)))           
-	     (font (or (gethash (list display loader size) font-cache)
-		       (setf (gethash (list display loader size) font-cache)
-			     (make-instance 'zpb-ttf-face
-					    :display display
-					    :filename filename
-					    :size size
-					    :units->pixels units->pixels
-					    :loader loader
-					    :ascent  (* (zpb-ttf:ascender loader) units->pixels)
-					    :descent (- (* (zpb-ttf:descender loader) units->pixels)))))))
+	     (font (ensure-gethash
+                    (list display loader size) font-cache
+                    (make-instance 'zpb-ttf-face
+                                   :display display
+                                   :filename filename
+                                   :size size
+                                   :units->pixels units->pixels
+                                   :loader loader
+                                   :ascent  (* (zpb-ttf:ascender loader) units->pixels)
+                                   :descent (- (* (zpb-ttf:descender loader) units->pixels))))))
 	font))))
 
 (defmethod print-object ((object zpb-ttf-face) stream)
