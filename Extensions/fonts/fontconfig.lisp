@@ -11,7 +11,7 @@
 ;;;
 
 ;;; This file contains our attempts to configure TTF paths and map
-;;; them to the predefined text styles. First we check if predefined
+;;; them to the predefined text styles. First we check if some default
 ;;; paths can be used for that purpose, otherwise we shell out to
 ;;; `fc-match'.
 
