@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;;   Title: CLIM-2, Chapter 32.2 Multi-processing (BT)
 ;;; Created: 2016-01-27
-;;;  Author: Daniel Kochmański <daniel@turtleware.eu>
+;;;  Author: Daniel Kochmański <daniel@turtleware.eu>, Bo Yao <ailisp@sina.com>
 ;;; License: LGPL-2.1
 ;;; ---------------------------------------------------------------------------
 ;;; (c) copyright 2016 by Daniel Kochmański
