@@ -6,6 +6,7 @@
 ;;;   License: LGPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
 ;;;  (c) copyright 2008 by Andy Hefner
+;;;  (c) copyright 2016 by Daniel Kochmański
 ;;;
 ;;;    See toplevel file 'Copyright' for the copyright details.
 ;;;
@@ -35,21 +36,21 @@
 ;;; variable *truetype-font-path*, so if it is changed in
 ;;; `invoke-with-truetype-path-restart' it will be used.
 (defvar *families/faces*
-  '(((:FIX :ROMAN) . "DejaVuSansMono.ttf")
-    ((:FIX :ITALIC) . "DejaVuSansMono-Oblique.ttf")
-    ((:FIX (:BOLD :ITALIC)) . "DejaVuSansMono-BoldOblique.ttf")
-    ((:FIX (:ITALIC :BOLD)) . "DejaVuSansMono-BoldOblique.ttf")
-    ((:FIX :BOLD) . "DejaVuSansMono-Bold.ttf")
-    ((:SERIF :ROMAN) . "DejaVuSerif.ttf")
-    ((:SERIF :ITALIC) . "DejaVuSerif-Italic.ttf")
-    ((:SERIF (:BOLD :ITALIC)) . "DejaVuSerif-BoldOblique.ttf")
-    ((:SERIF (:ITALIC :BOLD)) . "DejaVuSerif-BoldOblique.ttf")
-    ((:SERIF :BOLD) . "DejaVuSerif-Bold.ttf")
-    ((:SANS-SERIF :ROMAN) . "DejaVuSans.ttf")
-    ((:SANS-SERIF :ITALIC) . "DejaVuSans-Oblique.ttf")
-    ((:SANS-SERIF (:BOLD :ITALIC)) . "DejaVuSans-BoldOblique.ttf")
-    ((:SANS-SERIF (:ITALIC :BOLD)) . "DejaVuSans-BoldOblique.ttf")
-    ((:SANS-SERIF :BOLD) . "DejaVuSans-Bold.ttf")))
+  '(((:fix :roman) . "DejaVuSansMono.ttf")
+    ((:fix :italic) . "DejaVuSansMono-Oblique.ttf")
+    ((:fix (:bold :italic)) . "DejaVuSansMono-BoldOblique.ttf")
+    ((:fix (:italic :bold)) . "DejaVuSansMono-BoldOblique.ttf")
+    ((:fix :bold) . "DejaVuSansMono-Bold.ttf")
+    ((:serif :roman) . "DejaVuSerif.ttf")
+    ((:serif :italic) . "DejaVuSerif-Italic.ttf")
+    ((:serif (:bold :italic)) . "DejaVuSerif-BoldOblique.ttf")
+    ((:serif (:italic :bold)) . "DejaVuSerif-BoldOblique.ttf")
+    ((:serif :bold) . "DejaVuSerif-Bold.ttf")
+    ((:sans-serif :roman) . "DejaVuSans.ttf")
+    ((:sans-serif :italic) . "DejaVuSans-Oblique.ttf")
+    ((:sans-serif (:bold :italic)) . "DejaVuSans-BoldOblique.ttf")
+    ((:sans-serif (:italic :bold)) . "DejaVuSans-BoldOblique.ttf")
+    ((:sans-serif :bold) . "DejaVuSans-Bold.ttf")))
 
 (defun invoke-with-truetype-path-restart (continuation)
   (restart-case (funcall continuation)
