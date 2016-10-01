@@ -10,12 +10,11 @@
 
 (defsystem #:mcclim-fonts/truetype
   :depends-on (#:mcclim-clx #:zpb-ttf #:cl-vectors #:cl-paths-ttf #:cl-aa #:alexandria)
-  :serial t
   :components
   ((:file "truetype-package")
-   (:file "xrender-fonts")
-   (:file "fontconfig")
-   (:file "mcclim-native-ttf")))
+   (:file "xrender-fonts" :depends-on ("truetype-package" "fontconfig"))
+   (:file "fontconfig" :depends-on ("truetype-package"))
+   (:file "mcclim-native-ttf" :depends-on ("truetype-package" "xrender-fonts"))))
 
 (defmethod perform :after ((o load-op)
                            (s (eql (find-system :mcclim-fonts/truetype))))

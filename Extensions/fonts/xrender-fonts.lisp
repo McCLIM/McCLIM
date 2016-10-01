@@ -302,52 +302,6 @@
            glyph-ids
            :end (- end start)))))))
 
-(defparameter *vera-families/faces*
-  '(((:fix :roman) . "VeraMono.ttf")
-    ((:fix :italic) . "VeraMoIt.ttf")
-    ((:fix (:bold :italic)) . "VeraMoBI.ttf")
-    ((:fix (:italic :bold)) . "VeraMoBI.ttf")
-    ((:fix :bold) . "VeraMoBd.ttf")
-    ((:serif :roman) . "VeraSe.ttf")
-    ((:serif :italic) . "VeraSe.ttf")
-    ((:serif (:bold :italic)) . "VeraSeBd.ttf")
-    ((:serif (:italic :bold)) . "VeraSeBd.ttf")
-    ((:serif :bold) . "VeraSeBd.ttf")
-    ((:sans-serif :roman) . "Vera.ttf")
-    ((:sans-serif :italic) . "VeraIt.ttf")
-    ((:sans-serif (:bold :italic)) . "VeraBI.ttf")
-    ((:sans-serif (:italic :bold)) . "VeraBI.ttf")
-    ((:sans-serif :bold) . "VeraBd.ttf")))
-
-;;; Here are alternate mappings for the DejaVu family of fonts, which
-;;; are a derivative of Vera with improved unicode coverage.
-(defparameter *dejavu-families/faces* 
-  '(((:FIX :ROMAN) . "DejaVuSansMono.ttf") 
-    ((:FIX :ITALIC) . "DejaVuSansMono-Oblique.ttf")
-    ((:FIX (:BOLD :ITALIC)) . "DejaVuSansMono-BoldOblique.ttf")
-    ((:FIX (:ITALIC :BOLD)) . "DejaVuSansMono-BoldOblique.ttf") 
-    ((:FIX :BOLD) . "DejaVuSansMono-Bold.ttf")
-    ((:SERIF :ROMAN) . "DejaVuSerif.ttf") 
-    ((:SERIF :ITALIC) . "DejaVuSerif-Italic.ttf")
-    ((:SERIF (:BOLD :ITALIC)) . "DejaVuSerif-BoldOblique.ttf")
-    ((:SERIF (:ITALIC :BOLD)) . "DejaVuSerif-BoldOblique.ttf") 
-    ((:SERIF :BOLD) . "DejaVuSerif-Bold.ttf")
-    ((:SANS-SERIF :ROMAN) . "DejaVuSans.ttf") 
-    ((:SANS-SERIF :ITALIC) . "DejaVuSans-Oblique.ttf")
-    ((:SANS-SERIF (:BOLD :ITALIC)) . "DejaVuSans-BoldOblique.ttf")
-    ((:SANS-SERIF (:ITALIC :BOLD)) . "DejaVuSans-BoldOblique.ttf")
-    ((:SANS-SERIF :BOLD) . "DejaVuSans-Bold.ttf")))
-
-(defparameter *families/faces* *dejavu-families/faces*)
-
-(defparameter *truetype-font-path* (find-if #'probe-file
-					    '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
-					      #p"/usr/share/fonts/truetype/dejavu/"
-					      #p"/usr/share/fonts/TTF/"
-					      #p"/usr/share/fonts/"
-					      #p"/opt/X11/share/fonts/TTF/"
-					      #p"/opt/X11/share/fonts/")))
-
 (defstruct truetype-device-font-name
   (font-file (error "missing argument"))
   (size      (error "missing argument")))
@@ -393,16 +347,6 @@ The following files should exist:~&~{  ~A~^~%~}"
                      (missing-font-text-style condition)
                      *truetype-font-path*
                      (mapcar #'cdr *families/faces*)))))
-
-(defun invoke-with-truetype-path-restart (continuation)
-  (restart-case (funcall continuation)
-    (change-font-path (new-path)
-      :report (lambda (stream) (format stream "Retry with alternate truetype font path"))
-      :interactive (lambda ()
-                     (format *query-io* "Enter new value: ")
-                     (list (read-line)))
-      (setf *truetype-font-path* new-path)
-      (invoke-with-truetype-path-restart continuation))))
 
 (defmethod clim-clx::text-style-to-X-font :around
     ((port clim-clx::clx-port) (text-style standard-text-style))
