@@ -60,7 +60,7 @@
    (pointer :reader port-pointer)
    (selection-owner :initform nil :accessor selection-owner)
    (selection-timestamp :initform nil :accessor selection-timestamp)
-   (font-families :accessor font-families)))
+   (font-families :initform nil :accessor font-families)))
 
 (defun automagic-clx-server-path ()  
   (let ((name (get-environment-variable "DISPLAY")))
