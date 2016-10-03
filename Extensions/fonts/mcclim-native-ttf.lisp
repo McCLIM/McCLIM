@@ -6,6 +6,7 @@
 ;;;   License: LGPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
 ;;;  (c) copyright 2008 by Andy Hefner
+;;;  (c) copyright 2016 by Daniel Kochmański
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -51,38 +52,41 @@
 
 
 (defvar *zpb-font-lock* (climi::make-lock "zpb-font"))
+(defparameter *dpi* 72)
 
-(defclass zpb-ttf-font (truetype-font)
-  ((font-loader :reader zpb-ttf-font-loader :initarg :loader)
-   (units->pixels :reader zpb-ttf-font-units->pixels :initarg :units->pixels)))
+(defclass truetype-font-family (clim-extensions:font-family)
+  ((all-faces :initform nil
+              :accessor all-faces
+              :reader clim-extensions:font-family-all-faces)))
 
-(let ((font-loader-cache (make-hash-table :test #'equal))
-      (font-cache        (make-hash-table :test #'equal)))
-  (defun make-truetype-face (display filename size)
-    (climi::with-lock-held (*zpb-font-lock*)
-      (unless display (break "no display!"))
-      (let* ((loader (ensure-gethash filename font-loader-cache
-                                     (zpb-ttf:open-font-loader filename)))
-	     (units/em (zpb-ttf:units/em loader))
-	     (pixel-size (* size (/ *dpi* 72)))
-	     (units->pixels (* pixel-size (/ units/em)))           
-	     (font (ensure-gethash
-                    (list display loader size) font-cache
-                    (make-instance 'zpb-ttf-font
-                                   :display display
-                                   :filename filename
-                                   :size size
-                                   :units->pixels units->pixels
-                                   :loader loader
-                                   :ascent  (* (zpb-ttf:ascender loader) units->pixels)
-                                   :descent (- (* (zpb-ttf:descender loader) units->pixels))))))
-	font))))
+(defclass truetype-face (clim-extensions:font-face)
+  ((all-fonts :initform nil
+              :accessor all-fonts)
+   (font-loader :initarg :loader :reader zpb-ttf-font-loader)))
 
-(defmethod print-object ((object zpb-ttf-font) stream)
+(defclass truetype-font ()
+  ((face          :initarg :face          :reader truetype-font-face)
+   (size          :initarg :size          :reader truetype-font-size)
+   (ascent        :initarg :ascent        :reader truetype-font-ascent)
+   (descent       :initarg :descent       :reader truetype-font-descent)
+   (font-loader   :initarg :loader        :reader zpb-ttf-font-loader)
+   (units->pixels :initarg :units->pixels :reader zpb-ttf-font-units->pixels)))
+
+(defmethod clim-extensions:font-face-all-sizes ((face truetype-face))
+  (sort (mapcar #'truetype-font-size (all-fonts face)) #'<))
+
+(defmethod clim-extensions:font-face-text-style
+    ((face truetype-face) &optional size)
+  (make-text-style (clim-extensions:font-family-name
+                    (clim-extensions:font-face-family face))
+                   (clim-extensions:font-face-name face)
+                   size))
+
+(defmethod print-object ((object truetype-font) stream)
   (print-unreadable-object (object stream :type t :identity nil)
-    (with-slots (font-loader filename size ascent descent) object      
+    (with-slots (font-loader size ascent descent) object      
       (format stream "~W size=~A ascent=~A descent=~A" 
-              (or (zpb-ttf:name-entry-value :full-name font-loader) filename)
+              (zpb-ttf:name-entry-value :full-name font-loader)
               size ascent descent))))
 
 (defun glyph-pixarray (font char)
@@ -92,8 +96,9 @@
    position before rendering), horizontal and vertical advances."
   (declare (optimize (debug 3)))
   (climi::with-lock-held (*zpb-font-lock*)
-    (with-slots (font-loader units->pixels size ascent descent) font
-      (let* ((glyph (zpb-ttf:find-glyph char font-loader))
+    (with-slots (units->pixels size ascent descent) font
+      (let* ((glyph (zpb-ttf:find-glyph char (zpb-ttf-font-loader
+                                              (truetype-font-face font))))
              (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
              (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
              (advance-width (* units->pixels (zpb-ttf:advance-width glyph)))
@@ -145,6 +150,6 @@
                 ;; Is this considered a property of the font and glyphs rather than a particular drawing call?
                 0 #+NIL (round (+ ascent descent)))))))
 
-(defun font-fixed-width-p (zpb-ttf-font)
-  (declare (ignore zpb-ttf-font))
+(defun font-fixed-width-p (truetype-font)
+  (declare (ignore truetype-font))
   nil)

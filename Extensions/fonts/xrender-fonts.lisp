@@ -27,8 +27,6 @@
 
 (declaim (optimize (speed 1) (safety 3) (debug 1) (space 0)))
 
-(defparameter *dpi* 72)
-
 ;;;; Notes
 
 ;;; You might need to tweak mcclim-truetype::*families/faces* to point
@@ -36,9 +34,6 @@
 
 ;;; FIXME: I don't think draw-text* works for strings spanning
 ;;; multiple lines.  FIXME: Not particularly thread safe.
-
-;;; Some day, it might become useful to decouple the font
-;;; representation from the xrender details.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -77,19 +72,61 @@
 
 
 ;;;;;;; mcclim interface
-(defclass truetype-font ()
-  ((display       :initarg :display       :reader truetype-font-display)
-   (filename      :initarg :filename      :reader truetype-font-filename)
-   (size          :initarg :size          :reader truetype-font-size)
-   (ascent        :initarg :ascent        :reader truetype-font-ascent)
-   (descent       :initarg :descent       :reader truetype-font-descent)
+(defclass clx-truetype-font (truetype-font)
+  ((display           :initarg :display :reader clx-truetype-font-display)
    (fixed-width       :initform nil)
    (glyph-id-cache    :initform (make-gcache))
    (glyph-width-cache :initform (make-gcache))
    (char->glyph-info  :initform (make-hash-table :size 256))))
 
+(let ((font-loader-cache (make-hash-table :test #'equal))
+      (font-families     (make-hash-table :test #'equal))
+      (font-faces        (make-hash-table :test #'equal))
+      (font-cache        (make-hash-table :test #'equal))
+      (text-style-cache  (make-hash-table :test #'eql)))
+  (defun make-truetype-font (port filename size)
+    (climi::with-lock-held (*zpb-font-lock*)
+      (let* ((display (clim-clx::clx-port-display port))
+             (loader (ensure-gethash filename font-loader-cache
+                                     (zpb-ttf:open-font-loader filename)))
+             (family-name (zpb-ttf:family-name loader))
+             (family (ensure-gethash family-name font-families
+                                     (make-instance 'truetype-font-family
+                                                    :port port
+                                                    :name (zpb-ttf:family-name loader))))
+             (face-name (zpb-ttf:subfamily-name loader))
+             (font-face (ensure-gethash
+                         (list family-name face-name) font-faces
+                         (make-instance 'truetype-face
+                                        :family family
+                                        :name (zpb-ttf:subfamily-name loader)
+                                        :loader loader)))
+	     (units/em (zpb-ttf:units/em loader))
+	     (pixel-size (* size (/ *dpi* 72)))
+	     (units->pixels (* pixel-size (/ units/em)))
+	     (font (ensure-gethash
+                    (list display loader size) font-cache
+                    (make-instance 'clx-truetype-font
+                                   :face font-face
+                                   :display display
+                                   :size size
+                                   :units->pixels units->pixels
+                                   :ascent  (* (zpb-ttf:ascender loader) units->pixels)
+                                   :descent (- (* (zpb-ttf:descender loader) units->pixels))))))
+        (pushnew family    (clim-clx::font-families port))
+        (pushnew font-face (all-faces family))
+        (pushnew font      (all-fonts font-face))
+        (ensure-gethash
+         (make-text-style family-name face-name size) text-style-cache
+         font))))
+
+  (defun find-truetype-font (text-style)
+    (gethash text-style text-style-cache)))
+
+
+
 (defun font-generate-glyph (font glyph-index)
-  (let* ((display (truetype-font-display font))
+  (let* ((display (clx-truetype-font-display font))
          (glyph-id (display-draw-glyph-id display)))
     (multiple-value-bind (arr left top dx dy) (glyph-pixarray font (code-char glyph-index))
       (with-slots (fixed-width) font
@@ -115,11 +152,6 @@
                               :y-advance dy)
       (let ((right (+ left (array-dimension arr 1))))
         (glyph-info glyph-id dx dy left right top)))))
-
-(defmethod print-object ((object truetype-font) stream)
-  (print-unreadable-object (object stream :type t :identity nil)
-    (with-slots (filename size ascent descent) object
-      (format stream "~A size=~A ~A/~A" filename size ascent descent))))
 
 (defun font-glyph-info (font character)
   (with-slots (char->glyph-info) font
@@ -315,13 +347,12 @@
 
 (defmethod clim-clx::text-style-to-X-font :around
     ((port clim-clx::clx-port) (text-style climi::device-font-text-style))
-  (let ((display (slot-value port 'clim-clx::display))
-        (font-name (climi::device-font-name text-style)))
+  (let ((font-name (climi::device-font-name text-style)))
     (typecase font-name
       (truetype-device-font-name
-       (make-truetype-face display
-                            (namestring (truetype-device-font-name-font-file font-name))
-                            (truetype-device-font-name-size font-name)))
+       (make-truetype-font port
+                           (namestring (truetype-device-font-name-font-file font-name))
+                           (truetype-device-font-name-size font-name)))
       (fontconfig-font-name        
        (clim-clx::text-style-to-X-font
         port
@@ -352,7 +383,7 @@ The following files should exist:~&~{  ~A~^~%~}"
 (defmethod clim-clx::text-style-to-X-font :around
     ((port clim-clx::clx-port) (text-style standard-text-style))
   (labels
-      ((find-and-make-truetype-face (display family face size)
+      ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative
                  (cdr (assoc (list family face) *families/faces*
                              :test #'equal)))
@@ -365,7 +396,7 @@ The following files should exist:~&~{  ~A~^~%~}"
                                     font-path-maybe-relative
                                     (or *truetype-font-path* "")))))))
            (if (and font-path (probe-file font-path))
-               (make-truetype-face display font-path size)
+               (make-truetype-font port font-path size)
                ;; We could error here, but we want to fallback to
                ;; fonts provided by CLX server. Its better to have
                ;; ugly fonts than none at all.
@@ -385,12 +416,12 @@ The following files should exist:~&~{  ~A~^~%~}"
            (when (eq family :fixed)
              (setf family :fix))
 
-           (let ((display (clim-clx::clx-port-display port)))
-             (find-and-make-truetype-face display family face size)))))
+           (find-and-make-truetype-font family face size))))
 
     (or (text-style-mapping port text-style)
         (setf (climi::text-style-mapping port text-style)
-              (invoke-with-truetype-path-restart #'find-font)))))
+              (or (find-truetype-font text-style)
+                  (invoke-with-truetype-path-restart #'find-font))))))
 
 ;;;;;;
 
