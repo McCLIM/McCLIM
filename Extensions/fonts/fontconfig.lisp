@@ -91,17 +91,6 @@
       ((:sans-serif (:italic :bold)) . ,(try-ttf "DejaVuSans-BoldOblique.ttf"))
       ((:sans-serif :bold) .           ,(try-ttf "DejaVuSans-Bold.ttf")))))
 
-(defun register-all-ttf-fonts (port &optional (dir *truetype-font-path*))
-  (when *truetype-font-path*
-    (dolist (path (directory (merge-pathnames "*.ttf" dir)))
-      ;; make-truetype-font make fail if zpb can't load the particular
-      ;; file - in that case it signals an error and no font is
-      ;; created. In that case we just skip that file- hence IGNORE-ERRORS.
-      (ignore-errors
-        (map () #'(lambda (size)
-                    (make-truetype-font port path size))
-             '(8 10 12 14 18 24 48 72))))))
-
 
 ;;; `fc-match' implementation
 
