@@ -64,13 +64,25 @@
               :accessor all-fonts)
    (font-loader :initarg :loader :reader zpb-ttf-font-loader)))
 
+(defmethod initialize-instance :after ((face truetype-face) &key &allow-other-keys)
+  (let ((family (clim-extensions:font-face-family face)))
+    (pushnew face (all-faces family))))
+
 (defclass truetype-font ()
-  ((face          :initarg :face          :reader truetype-font-face)
-   (size          :initarg :size          :reader truetype-font-size)
-   (ascent        :initarg :ascent        :reader truetype-font-ascent)
-   (descent       :initarg :descent       :reader truetype-font-descent)
-   (font-loader   :initarg :loader        :reader zpb-ttf-font-loader)
-   (units->pixels :initarg :units->pixels :reader zpb-ttf-font-units->pixels)))
+  ((face          :initarg :face :reader truetype-font-face)
+   (size          :initarg :size :reader truetype-font-size)
+   (ascent                       :reader truetype-font-ascent)
+   (descent                      :reader truetype-font-descent)
+   (units->pixels                :reader zpb-ttf-font-units->pixels)))
+
+(defmethod initialize-instance :after ((font truetype-font) &key &allow-other-keys)
+  (with-slots (face size ascent descent font-loader units->pixels) font
+    (let ((loader (zpb-ttf-font-loader face)))
+      (setf units->pixels (/ (* size (/ *dpi* 72))
+                             (zpb-ttf:units/em loader))
+            ascent (* (zpb-ttf:ascender loader) units->pixels)
+            descent (- (* (zpb-ttf:descender loader) units->pixels))))
+    (pushnew font (all-fonts face))))
 
 (defmethod clim-extensions:font-face-all-sizes ((face truetype-face))
   (sort (mapcar #'truetype-font-size (all-fonts face)) #'<))

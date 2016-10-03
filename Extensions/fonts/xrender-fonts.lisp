@@ -101,21 +101,13 @@
                                         :family family
                                         :name (zpb-ttf:subfamily-name loader)
                                         :loader loader)))
-	     (units/em (zpb-ttf:units/em loader))
-	     (pixel-size (* size (/ *dpi* 72)))
-	     (units->pixels (* pixel-size (/ units/em)))
 	     (font (ensure-gethash
                     (list display loader size) font-cache
                     (make-instance 'clx-truetype-font
                                    :face font-face
                                    :display display
-                                   :size size
-                                   :units->pixels units->pixels
-                                   :ascent  (* (zpb-ttf:ascender loader) units->pixels)
-                                   :descent (- (* (zpb-ttf:descender loader) units->pixels))))))
+                                   :size size))))
         (pushnew family    (clim-clx::font-families port))
-        (pushnew font-face (all-faces family))
-        (pushnew font      (all-fonts font-face))
         (ensure-gethash
          (make-text-style family-name face-name size) text-style-cache
          font))))
