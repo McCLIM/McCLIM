@@ -12,7 +12,6 @@
            :fontconfig-font-name
            :make-truetype-device-font-name 
            :make-fontconfig-font-name
-           :truetype-face-filename
-           :truetype-face-size
-           :truetype-face-ascent
-           :truetype-face-descent))
+           :truetype-font-size
+           :truetype-font-ascent
+           :truetype-font-descent))
