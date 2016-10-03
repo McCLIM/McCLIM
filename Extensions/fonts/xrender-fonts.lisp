@@ -79,6 +79,14 @@
    (glyph-width-cache :initform (make-gcache))
    (char->glyph-info  :initform (make-hash-table :size 256))))
 
+(defmethod clim-extensions:port-all-font-families :around
+    ((port clim-clx::clx-port) &key invalidate-cache)
+  (when (or (null (clim-clx::font-families port)) invalidate-cache)
+    (setf (clim-clx::font-families port) (clim-clx::reload-font-table port)))
+  (register-all-ttf-fonts port)
+  (append (call-next-method)
+          (clim-clx::font-families port)))
+
 (let ((font-loader-cache (make-hash-table :test #'equal))
       (font-families     (make-hash-table :test #'equal))
       (font-faces        (make-hash-table :test #'equal))
