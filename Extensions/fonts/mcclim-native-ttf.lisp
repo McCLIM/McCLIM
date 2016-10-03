@@ -52,7 +52,7 @@
 
 (defvar *zpb-font-lock* (climi::make-lock "zpb-font"))
 
-(defclass zpb-ttf-face (truetype-face)
+(defclass zpb-ttf-font (truetype-font)
   ((font-loader :reader zpb-ttf-font-loader :initarg :loader)
    (units->pixels :reader zpb-ttf-font-units->pixels :initarg :units->pixels)))
 
@@ -68,7 +68,7 @@
 	     (units->pixels (* pixel-size (/ units/em)))           
 	     (font (ensure-gethash
                     (list display loader size) font-cache
-                    (make-instance 'zpb-ttf-face
+                    (make-instance 'zpb-ttf-font
                                    :display display
                                    :filename filename
                                    :size size
@@ -78,7 +78,7 @@
                                    :descent (- (* (zpb-ttf:descender loader) units->pixels))))))
 	font))))
 
-(defmethod print-object ((object zpb-ttf-face) stream)
+(defmethod print-object ((object zpb-ttf-font) stream)
   (print-unreadable-object (object stream :type t :identity nil)
     (with-slots (font-loader filename size ascent descent) object      
       (format stream "~W size=~A ascent=~A descent=~A" 
