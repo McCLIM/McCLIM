@@ -75,20 +75,21 @@
   width height
   left right top)
 
+
 ;;;;;;; mcclim interface
-(defclass truetype-face ()
-  ((display       :initarg :display       :reader truetype-face-display)
-   (filename      :initarg :filename      :reader truetype-face-filename)
-   (size          :initarg :size          :reader truetype-face-size)
-   (ascent        :initarg :ascent        :reader truetype-face-ascent)
-   (descent       :initarg :descent       :reader truetype-face-descent)
+(defclass truetype-font ()
+  ((display       :initarg :display       :reader truetype-font-display)
+   (filename      :initarg :filename      :reader truetype-font-filename)
+   (size          :initarg :size          :reader truetype-font-size)
+   (ascent        :initarg :ascent        :reader truetype-font-ascent)
+   (descent       :initarg :descent       :reader truetype-font-descent)
    (fixed-width       :initform nil)
    (glyph-id-cache    :initform (make-gcache))
    (glyph-width-cache :initform (make-gcache))
    (char->glyph-info  :initform (make-hash-table :size 256))))
 
 (defun font-generate-glyph (font glyph-index)
-  (let* ((display (truetype-face-display font))
+  (let* ((display (truetype-font-display font))
          (glyph-id (display-draw-glyph-id display)))
     (multiple-value-bind (arr left top dx dy) (glyph-pixarray font (code-char glyph-index))
       (with-slots (fixed-width) font
@@ -115,7 +116,7 @@
       (let ((right (+ left (array-dimension arr 1))))
         (glyph-info glyph-id dx dy left right top)))))
 
-(defmethod print-object ((object truetype-face) stream)
+(defmethod print-object ((object truetype-font) stream)
   (print-unreadable-object (object stream :type t :identity nil)
     (with-slots (filename size ascent descent) object
       (format stream "~A size=~A ~A/~A" filename size ascent descent))))
@@ -128,19 +129,19 @@
 (defun font-glyph-id (font character)
   (glyph-info-id (font-glyph-info font character)))
 
-(defmethod clim-clx::font-ascent ((font truetype-face))
-  (truetype-face-ascent font))
+(defmethod clim-clx::font-ascent ((font truetype-font))
+  (truetype-font-ascent font))
 
-(defmethod clim-clx::font-descent ((font truetype-face))
-  (truetype-face-descent font))
+(defmethod clim-clx::font-descent ((font truetype-font))
+  (truetype-font-descent font))
 
-(defmethod clim-clx::font-glyph-width ((font truetype-face) char)
+(defmethod clim-clx::font-glyph-width ((font truetype-font) char)
   (glyph-info-width (font-glyph-info font char)))
 
-(defmethod clim-clx::font-glyph-left ((font truetype-face) char)
+(defmethod clim-clx::font-glyph-left ((font truetype-font) char)
   (glyph-info-left (font-glyph-info font char)))
 
-(defmethod clim-clx::font-glyph-right ((font truetype-face) char)
+(defmethod clim-clx::font-glyph-right ((font truetype-font) char)
   (glyph-info-right (font-glyph-info font char)))
 
 ;;; Simple custom cache for glyph IDs and widths. Much faster than
@@ -165,7 +166,7 @@
     (setf (svref cache hash) key-number
           (svref cache (+ 256 hash)) value)))
 
-(defmethod clim-clx::font-text-extents ((font truetype-face) string
+(defmethod clim-clx::font-text-extents ((font truetype-font) string
                                         &key (start 0) (end (length string)) translate)
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
@@ -258,7 +259,7 @@
 
 (let ((buffer (make-array 1024 :element-type '(unsigned-byte 16) ; TODO: thread safety
                                :adjustable nil :fill-pointer nil)))
-  (defmethod clim-clx::font-draw-glyphs ((font truetype-face) mirror gc x y string
+  (defmethod clim-clx::font-draw-glyphs ((font truetype-font) mirror gc x y string
                                          #|x0 y0 x1 y1|# &key start end translate size)
     (declare (optimize (speed 3))
              (type #-sbcl (integer 0 #.array-dimension-limit)
