@@ -2042,6 +2042,8 @@
   (:nicknames :climi)
   #+excl
   (:import-from :excl compile-system load-system)
+  (:import-from #:alexandria
+                #:ensure-gethash)
   (:intern #:letf))
 
 (defpackage :clim-user
