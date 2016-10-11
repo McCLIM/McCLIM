@@ -26,16 +26,6 @@
       nil
       path)))
 
-(defun getenv (var)
-  (or 
-   #+cmu (cdr (assoc var ext:*environment-list*))
-   #+scl (cdr (assoc var ext:*environment-list* :test #'string=))
-   #+sbcl (sb-ext:posix-getenv var)
-   #+lispworks (lw:environment-variable var)
-   #+openmcl (ccl::getenv var)
-   #+clisp (ext:getenv var)
-   nil))
-
 (defun change-directory (pathname)
   "Ensure that the current directory seen by RUN-PROGRAM has changed, and update *default-pathname-defaults*"
   #+CMU (unix:unix-chdir (namestring pathname))

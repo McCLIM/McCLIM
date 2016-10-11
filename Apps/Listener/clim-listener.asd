@@ -15,7 +15,7 @@ experimentation. Present features include:
 - Navigation of the filesystem, including a directory stack
 - Launching of external programs sensitive to file type (determined by mailcap
   and mime.types files)"
-  :depends-on (#:mcclim #+sbcl #:sb-posix)
+  :depends-on (#:mcclim #:osicat #+sbcl #:sb-posix)
   :serial t
   :components ((:file "package")
                (:file "appearance")
