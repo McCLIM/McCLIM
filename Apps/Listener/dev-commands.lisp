@@ -1035,7 +1035,7 @@ if you are interested in fixing this."))
   (terpri stream))
 
 (defun actual-name (pathname)
-  (if (directoryp pathname)
+  (if (osicat:directory-pathname-p pathname)
       (if (stringp (car (last (pathname-directory pathname))))
           (car (last (pathname-directory pathname)))
           (directory-namestring pathname))
@@ -1050,8 +1050,8 @@ if you are interested in fixing this."))
   (mapcar (lambda (x) (sort-pathnames x sort-by))
           (multiple-value-list
            (if (not group-dirs) (values list)
-             (values (remove-if-not #'directoryp list)
-                     (remove-if #'directoryp list))))))
+             (values (remove-if-not #'osicat:directory-pathname-p list)
+                     (remove-if #'osicat:directory-pathname-p list))))))
 
 (defun garbage-name-p (name)
   (when (> (length name) 2)
@@ -1150,18 +1150,6 @@ if you are interested in fixing this."))
                    (let ((ent (merge-pathnames ent pathname)))
                     (pretty-pretty-pathname ent *standard-output* full-names))))))))))
 
-#+nil   ; OBSOLETE
-(define-presentation-to-command-translator show-directory-translator
-  (clim:pathname com-show-directory filesystem-commands :gesture :select
-		 :pointer-documentation ((object stream)
-					 (format stream "Show directory ~A" object))
-                 :tester-definitive t
-		 :tester ((object)
-			  (directoryp object)))
-  (object)
-  (list object))
-
-
 (define-command (com-change-directory :name "Change Directory"
                                       :menu t
                                       :command-table filesystem-commands)
@@ -1196,7 +1184,7 @@ if you are interested in fixing this."))
                                  (format stream "Change to this directory"))
                  
 		 :tester ((object)
-			  (directoryp object)))
+			  (osicat:directory-pathname-p object)))
   (object)
   (list object))
 
@@ -1248,7 +1236,7 @@ if you are interested in fixing this."))
                  (format nil "Show Files Matching ~A" pathname)))
         ((not (probe-file pathname))
          (values nil nil nil))
-        ((directoryp pathname)
+        ((osicat:directory-pathname-p pathname)
          (values `(com-show-directory ,pathname)
                  "Show Directory"
                  (format nil "Show Directory ~A" pathname)))

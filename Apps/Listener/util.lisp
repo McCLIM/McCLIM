@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: MCCLIM-TRUETYPE; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-LISTENER; -*-
 ;;;
 ;;; Miscellaneous utilities, UI tools, gross hacks, and non-portable bits.
 ;;;
@@ -15,16 +15,6 @@
     (let ((tmp (gensym)))
       `(let ((,tmp (multiple-value-list ,(first forms))))
          (if (first ,tmp) (values-list ,tmp) (mv-or ,@(rest forms)))))))
-
-(defun directoryp (path)
-  "Determine if PATH designates a directory"
-  #+allegro (excl:file-directory-p path)
-  #-allegro
-  (flet ((f (x) (if (eq x :unspecific) nil x)))
-    (if (or (f (pathname-name path))
-            (f (pathname-type path)))
-      nil
-      path)))
 
 (defun change-directory (pathname)
   "Ensure that the current directory seen by RUN-PROGRAM has changed,
@@ -77,7 +67,7 @@ and update *default-pathname-defaults*"
         (nconc file-list 
                (delete-if (lambda (directory)
                             (member directory file-list :test #'equal))
-                          (delete-if-not #'directoryp
+                          (delete-if-not #'osicat:directory-pathname-p
                                          (list-directory (gen-wild-pathname
                                                           (strip-filespec pathname))))))
         file-list)))
@@ -217,7 +207,7 @@ this point, increment it by SPACING, which defaults to zero."
   "Convert a pathname with name/version into a pathname with a
 similarly-named last directory component. Used for user input that
 lacks the final #\\/."
-  (if (directoryp pathname)
+  (if (osicat:directory-pathname-p pathname)
       pathname
       (merge-pathnames
        (make-pathname

@@ -66,7 +66,7 @@
       (stream-increment-cursor-position stream (+ (pattern-width pattern) extra-spacing) 0))))
 
 (defun precache-icons ()
-  (let ((pathnames (remove-if #'directoryp
+  (let ((pathnames (remove-if #'osicat:directory-pathname-p
                               (list-directory (gen-wild-pathname
                                                (strip-filespec *icon-path*))))))
     (dolist (pn pathnames)
