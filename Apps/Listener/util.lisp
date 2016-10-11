@@ -27,12 +27,10 @@
       path)))
 
 (defun change-directory (pathname)
-  "Ensure that the current directory seen by RUN-PROGRAM has changed, and update *default-pathname-defaults*"
-  #+CMU (unix:unix-chdir (namestring pathname))
-  #+scl (unix:unix-chdir (ext:unix-namestring pathname))
-  #+clisp (ext:cd pathname)
-  #+sbcl (sb-posix:chdir (namestring pathname))
- (setf *default-pathname-defaults* pathname))
+  "Ensure that the current directory seen by RUN-PROGRAM has changed,
+and update *default-pathname-defaults*"
+  (setf (osicat:current-directory) pathname
+        *default-pathname-defaults* pathname))
 
 (defun resolve-stream-designator (desi default)
   (if (eq desi t)
