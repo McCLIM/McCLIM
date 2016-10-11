@@ -1,5 +1,6 @@
 
 (defsystem #:clim-listener
+  :license "LGPL-2.1+"
   :description "CLIM Lisp listener."
   :long-description "CLIM Lisp listener
 
