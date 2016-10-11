@@ -3,7 +3,6 @@
 
 (defpackage #:clim-listener
   (:use #:clim #:clim-lisp #:clim-extensions)
-  (:import-from #:osicat #:environment-variable)
   (:export #:run-listener #:dev-commands))
 
 (in-package #:clim-listener)

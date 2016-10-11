@@ -73,7 +73,7 @@
 (defun generate-wholine-contents (frame pane)
   (declare (ignore frame))
   (let* ((*standard-output* pane)
-         (username (or (environment-variable "USER")
+         (username (or (osicat:environment-variable "USER")
                        "luser"))        ; sorry..
          (sitename (machine-instance))
          ;; :sans-serif :roman :small is the best looking jaggy font.
