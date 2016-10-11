@@ -51,15 +51,12 @@
 
 (defun asdf-registry-system-files ()
   "Retrieve the list of unique pathnames contained within the ASDF registry folders"
-  (remove-duplicates
-   (remove-if-not #'pathname-name 
-                  (apply #'concatenate 'list
-                         (mapcar 
-                          (lambda (form)
-                            (list-directory
-                             (merge-pathnames (eval form) #p"*.asd")))
-                          (asdf-get-central-registry))))
-   :test #'equal))
+  (uiop:while-collecting (systems)
+    (dolist (reg (asdf-get-central-registry))
+      (osicat:mapdir (lambda (path)
+                       (when (string-equal (pathname-type path) "asd")
+                         (systems (osicat:absolute-pathname path))))
+                     (eval reg)))))
 
 (defun asdf-system-name (system)
   (slot-value system 'asdf::name))
