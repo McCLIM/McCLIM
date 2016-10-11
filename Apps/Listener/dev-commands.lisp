@@ -1159,7 +1159,8 @@ if you are interested in fixing this."))
                    (coerce-to-directory pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
-        (change-directory pathname))))
+        (setf (osicat:current-directory) pathname
+              *default-pathname-defaults* pathname))))
 
 (define-command (com-up-directory :name "Up Directory"
                                   :menu t
@@ -1167,7 +1168,8 @@ if you are interested in fixing this."))
   ()
   (let ((parent (parent-directory *default-pathname-defaults*)))
     (when parent
-      (change-directory parent)
+      (setf (osicat:current-directory) pathname
+            *default-pathname-defaults* pathname)
       (italic (t)
         (format t "~&The current directory is now ")
         (present (truename parent))

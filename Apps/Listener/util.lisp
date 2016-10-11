@@ -16,12 +16,6 @@
       `(let ((,tmp (multiple-value-list ,(first forms))))
          (if (first ,tmp) (values-list ,tmp) (mv-or ,@(rest forms)))))))
 
-(defun change-directory (pathname)
-  "Ensure that the current directory seen by RUN-PROGRAM has changed,
-and update *default-pathname-defaults*"
-  (setf (osicat:current-directory) pathname
-        *default-pathname-defaults* pathname))
-
 (defun resolve-stream-designator (desi default)
   (if (eq desi t)
       default
