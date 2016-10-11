@@ -1070,23 +1070,12 @@ if you are interested in fixing this."))
                    (and hide-garbage (garbage-name-p name))))
              seq :key #'actual-name))
 
-(defun show-directory-pathnames (pathname)
-  "Convert the pathname entered by the user into a query pathname
- (the pathname which will be passed to cl:directory, potentially a
- wild pathname), and a base pathname (which directory entries may
- be printed relative to in the fashion of enough-namestring)."
-  (values (if (wild-pathname-p pathname)
-              pathname
-              (gen-wild-pathname pathname))
-          (strip-filespec pathname)))
-
 ;; Change to using an :ICONIC view for pathnames?
-
 (define-command (com-show-directory :name "Show Directory"
 				    :command-table filesystem-commands
                                     :menu t
 				    :provide-output-destination-keyword t)
-    ((pathname 'pathname #+nil(or 'string 'pathname) :prompt "pathname")
+    ((pathname 'pathname :prompt "pathname")
      &key
      (sort-by '(member name size modify none) :default 'name)
      (show-hidden  'boolean :default nil :prompt "show hidden")
@@ -1097,13 +1086,17 @@ if you are interested in fixing this."))
      (full-names 'boolean :default nil :prompt "show full name?")
      (list-all-direct-subdirectories 'boolean :default nil :prompt "list all direct subdirectories?"))
 
-  (multiple-value-bind (query-pathname base-pathname)
-      (show-directory-pathnames pathname)
-    
-    (let ((dir (if list-all-direct-subdirectories
-                   (list-directory-with-all-direct-subdirectories query-pathname)
-                   (list-directory query-pathname))))
-
+  (let* ((query-pathname (make-pathname :name (or (pathname-name pathname) :wild)
+                                        :type (or (pathname-type pathname) :wild)
+                                        :version (or (pathname-version pathname) :wild)))
+         (base-pathname (osicat:pathname-directory-pathname pathname))
+         (dir (uiop:while-collecting (files)
+                (osicat:mapdir (lambda (path)
+                                 (when (or (pathname-match-p path query-pathname)
+                                           (and list-all-direct-subdirectories
+                                                (osicat:directory-pathname-p path)))
+                                   (files (osicat:absolute-pathname path))))
+                               base-pathname))))
     (with-text-family (t :sans-serif)
       (invoke-as-heading
        (lambda ()
@@ -1130,8 +1123,6 @@ if you are interested in fixing this."))
         ;; of the "Parent Directory" line.
         (terpri))
 
-
-
       (dolist (group (split-sort-pathnames dir group-directories sort-by))
         (unless show-all
           (setf group (filter-garbage-pathnames group show-hidden hide-garbage)))
@@ -1148,7 +1139,7 @@ if you are interested in fixing this."))
              (setf (stream-cursor-position *standard-output*) (values 0 y))))
           (:list (dolist (ent group)
                    (let ((ent (merge-pathnames ent pathname)))
-                    (pretty-pretty-pathname ent *standard-output* full-names))))))))))
+                     (pretty-pretty-pathname ent *standard-output* full-names)))))))))
 
 (define-command (com-change-directory :name "Change Directory"
                                       :menu t
