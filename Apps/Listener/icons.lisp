@@ -67,8 +67,8 @@
 
 (defun precache-icons ()
   (let ((pathnames (remove-if #'osicat:directory-pathname-p
-                              (list-directory (gen-wild-pathname
-                                               (strip-filespec *icon-path*))))))
+                              (osicat:list-directory
+                               (osicat:pathname-directory-pathname *icon-path*)))))
     (dolist (pn pathnames)
       (standard-icon (namestring (make-pathname :name (pathname-name pn)
                                                 :type (pathname-type pn)))))))
