@@ -21,51 +21,6 @@
       default
       (or desi default)))
 
-;;; LIST-DIRECTORY is a wrapper for the CL DIRECTORY function. Work
-;;; around various issues which may arise, such as:
-
-;;;  * Don't error in response to broken symlinks (as cl:truename might)
-;;;  * Ideally, don't return truenames at all.
-;;;  * Don't error in response to garbage filenames not conforming to
-;;;    the preferred encoding for filenames
-
-#+(or cmu scl)
-(defun list-directory (pathname)
-  (directory pathname :truenamep nil))
-
-#+sbcl
-(defun list-directory (pathname)
-  ;; Sooner or later, I'm putting all the sb-posix junk back in.
-  ;; I *really* don't like truenames.
-  (directory pathname))
-
-#+openmcl
-(defun list-directory (pathname)
-  (directory pathname :directories t :follow-links nil))
-
-#+ALLEGRO
-(defun list-directory (pathname)
-  (directory pathname :directories-are-files nil))
-
-;; Fallback to ANSI CL
-#-(or cmu scl sbcl openmcl allegro)
-(defun list-directory (pathname)
-  (directory pathname))
-
-;;; Calls LIST-DIRECTORY and appends the subdirectories of the directory
-;;; PATHNAME to the output of LIST-DIRECTORY if PATHNAME is a wild pathname.
-
-(defun list-directory-with-all-direct-subdirectories (pathname)
-  (let ((file-list (list-directory pathname)))
-    (if (wild-pathname-p pathname)
-        (nconc file-list 
-               (delete-if (lambda (directory)
-                            (member directory file-list :test #'equal))
-                          (delete-if-not #'osicat:directory-pathname-p
-                                         (list-directory (gen-wild-pathname
-                                                          (strip-filespec pathname))))))
-        file-list)))
-
 ;;; Native namestring. cl:namestring is allowed to do anything it wants to
 ;;; the filename, and some lisps do (CCL, for instance).
 (defun native-namestring (pathname-designator)
@@ -173,10 +128,6 @@ this point, increment it by SPACING, which defaults to zero."
     (repaint-sheet stream-pane record)))
 
 ;;; Pathnames are awful.
-
-(defun gen-wild-pathname (pathname)
-  "Build a pathname with appropriate :wild components for the directory listing."
-  (merge-pathnames pathname (make-pathname :name :wild :type :wild :version :wild)))
 
 (defun strip-filespec (pathname)
   "Removes name, type, and version components from a pathname."
