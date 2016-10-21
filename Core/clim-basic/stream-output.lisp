@@ -339,16 +339,16 @@
 	(setf height (max height (text-style-height (medium-text-style medium) medium)))
 	(setf cx 0
 	      cy (+ cy height vspace))
-	(when (> (+ cy height) view-height)
+	(when (> cy view-height)
 	  (ecase (stream-end-of-page-action stream)
 	    ((:scroll :allow)
              (change-space-requirements stream
                                         :width  (bounding-rectangle-width stream)
-                                        :height (+ cy height)))
+                                        :height cy))
 	    (:wrap
 	     (setq cy 0))))
 	(unless (eq :allow (stream-end-of-page-action stream))
-	  (scroll-extent stream 0 (max 0 (- (+ cy height) %view-height))))
+	  (scroll-extent stream 0 (max 0 (-  cy  %view-height))))
 	;; mikemac says that this "erase the new line" behavior is
 	;; required by the stream text protocol, but I don't see
 	;; it.  I'm happy to put this back in again, but in the
