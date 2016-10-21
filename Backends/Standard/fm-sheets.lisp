@@ -17,6 +17,11 @@
 (defclass standard-full-mirrored-sheet-mixin (standard-mirrored-sheet-mixin)
   ())
 
+(defmethod note-sheet-transformation-changed ((sheet standard-full-mirrored-sheet-mixin))
+  (dolist (child (sheet-children sheet))
+    (let ((old-native-transformation (%%sheet-native-transformation child)))
+      (call-next-method)
+      (update-mirror-geometry child old-native-transformation))))
 
 (defmethod sheet-native-region ((sheet standard-full-mirrored-sheet-mixin))
   (with-slots (native-region) sheet     
