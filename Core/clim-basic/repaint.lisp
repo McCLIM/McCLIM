@@ -46,8 +46,8 @@
 (defmethod handle-repaint :around ((sheet sheet-with-medium-mixin) region)
   (let ((medium (sheet-medium sheet)))
     (unless (eql region +nowhere+)
-      (with-drawing-options (medium :clipping-region region))
-      (call-next-method))))
+      (with-drawing-options (medium :clipping-region region)
+	(call-next-method)))))
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
   (labels ((effective-native-region (mirrored-sheet child region)
@@ -81,12 +81,11 @@
 	   (dolist (child (sheet-children sheet))
 	     (when (and (sheet-enabled-p child)
 			(not (sheet-direct-mirror child)))
-	       (let ((child-region (bounding-rectangle
-				    (region-intersection
+	       (let ((child-region (region-intersection
 				     (untransform-region
 				      (sheet-transformation child)
 				      region)
-				     (sheet-region child)))))
+				     (sheet-region child))))
 		 (unless (eq child-region +nowhere+)
 		   (%note-sheet-repaint-request child child-region)
 		   (handle-repaint child child-region)

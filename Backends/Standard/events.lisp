@@ -175,7 +175,7 @@
                  (lis nil))
                 ((or (null s) (climi::graftp s) (eq s sheet-t)) lis)
               (push s lis)))
-    (format *debug-io* "enter ~A ~%" s)
+    ;;(format *debug-io* "enter ~A ~%" s)
     (dispatch-event s
                     (make-instance 'pointer-enter-event
                                    :pointer (slot-value event 'climi::pointer)
@@ -192,7 +192,7 @@
   (when (and sheet-t sheet-b)
     (do ((s sheet-b (sheet-parent s)))
         ((or (null s) (climi::graftp s) (eq s sheet-t)))
-      (format *debug-io* "exit ~A ~A ~A~%" s (slot-value event 'climi::x)(slot-value event 'climi::y) )
+      ;;(format *debug-io* "exit ~A ~A ~A~%" s (slot-value event 'climi::x)(slot-value event 'climi::y) )
       (dispatch-event s
                       (make-instance 'pointer-exit-event
                                      :pointer (slot-value event 'climi::pointer)
