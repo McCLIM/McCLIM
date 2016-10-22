@@ -348,12 +348,17 @@
 (defmethod clim-clx::text-style-to-X-font :around
     ((port clim-clx::clx-port) (text-style climi::device-font-text-style))
   (let ((font-name (climi::device-font-name text-style)))
-    (typecase font-name
+    (when (stringp font-name)
+      (setf (climi::device-font-name text-style)
+            (make-fontconfig-font-name :string font-name
+                                       :size (getf clim-clx::*clx-text-sizes* :normal))
+            font-name (climi::device-font-name text-style)))
+    (etypecase font-name
       (truetype-device-font-name
        (make-truetype-font port
                            (namestring (truetype-device-font-name-font-file font-name))
                            (truetype-device-font-name-size font-name)))
-      (fontconfig-font-name        
+      (fontconfig-font-name
        (clim-clx::text-style-to-X-font
         port
         (or (fontconfig-font-name-device-name font-name)
