@@ -40,7 +40,7 @@
 (defmethod repaint-sheet :around ((sheet basic-sheet) region)
   (declare (ignore region))
   (when (and (sheet-mirror sheet)
-	     (sheet-enabled-p sheet))
+	     (sheet-viewable-p sheet))
     (call-next-method)))
 
 (defmethod handle-repaint :around ((sheet sheet-with-medium-mixin) region)
