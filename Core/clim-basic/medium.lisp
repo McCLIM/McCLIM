@@ -124,7 +124,8 @@
      (family-key family)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defvar *text-style-hash-table* (make-hash-table :test #'eql)))
+  (defvar *text-style-hash-table* (make-hash-table :test #'eql))
+  (defvar *extended-text-style-hash-table* (make-hash-table :test #'equal)))
 
 (defun make-text-style (family face size)
   (if (and (symbolp family)
@@ -134,12 +135,13 @@
       ;; (as permitted by the CLIM spec for immutable objects, section 2.4)
       (let ((key (text-style-key family face size)))
 	(declare (type fixnum key))
-	(or (gethash key *text-style-hash-table*)
-	    (setf (gethash key *text-style-hash-table*)
-		  (make-text-style-1 family face size))))
-      ;; Extended text styles using string components could be cached using
-      ;; an appropriate hash table, but for now we just re-create them:
-      (make-text-style-1 family face size)))
+        (ensure-gethash key *text-style-hash-table*
+                        (make-text-style-1 family face size)))
+      ;; Extended text styles using custom components is cached using
+      ;; an appropriate hash table to ensure `EQL' of the same
+      ;; extended text styles
+      (ensure-gethash (list family face size) *extended-text-style-hash-table*
+                      (make-text-style-1 family face size))))
 
 (defun make-text-style-1 (family face size)
   (make-instance 'standard-text-style

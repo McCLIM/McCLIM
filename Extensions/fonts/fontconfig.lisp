@@ -1,30 +1,98 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: MCCLIM-FREETYPE; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Experimental FreeType support
+;;;     Title: TrueType font detection
 ;;;   Created: 2003-05-25 16:32
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
 ;;;  (c) copyright 2008 by Andy Hefner
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;;  (c) copyright 2016 by Daniel Kochmański
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;    See toplevel file 'Copyright' for the copyright details.
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
 
-;;; Who originally wrote this? I want to put them in the file header. -Hefner
+;;; This file contains our attempts to configure TTF paths and map
+;;; them to the predefined text styles. First we check if some default
+;;; paths can be used for that purpose, otherwise we shell out to
+;;; `fc-match'.
 
 (in-package :mcclim-truetype)
+
+
+;;; fallback (path may be set in a restart by the user)
+(defparameter *truetype-font-path*
+  (find-if #'probe-file
+           '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
+             #p"/usr/share/fonts/truetype/dejavu/"
+             #p"/usr/share/fonts/TTF/"
+             #p"/usr/share/fonts/"
+             #p"/opt/X11/share/fonts/TTF/"
+             #p"/opt/X11/share/fonts/")))
+
+;;; Here are mappings for the DejaVu family of fonts, which are a
+;;; derivative of Vera with improved unicode coverage.
+;;;
+;;; Paths are relative so we are able to rely on value of a special
+;;; variable *truetype-font-path*, so if it is changed in
+;;; `invoke-with-truetype-path-restart' it will be used.
+(defvar *families/faces*
+  '(((:fix :roman) . "DejaVuSansMono.ttf")
+    ((:fix :italic) . "DejaVuSansMono-Oblique.ttf")
+    ((:fix (:bold :italic)) . "DejaVuSansMono-BoldOblique.ttf")
+    ((:fix (:italic :bold)) . "DejaVuSansMono-BoldOblique.ttf")
+    ((:fix :bold) . "DejaVuSansMono-Bold.ttf")
+    ((:serif :roman) . "DejaVuSerif.ttf")
+    ((:serif :italic) . "DejaVuSerif-Italic.ttf")
+    ((:serif (:bold :italic)) . "DejaVuSerif-BoldOblique.ttf")
+    ((:serif (:italic :bold)) . "DejaVuSerif-BoldOblique.ttf")
+    ((:serif :bold) . "DejaVuSerif-Bold.ttf")
+    ((:sans-serif :roman) . "DejaVuSans.ttf")
+    ((:sans-serif :italic) . "DejaVuSans-Oblique.ttf")
+    ((:sans-serif (:bold :italic)) . "DejaVuSans-BoldOblique.ttf")
+    ((:sans-serif (:italic :bold)) . "DejaVuSans-BoldOblique.ttf")
+    ((:sans-serif :bold) . "DejaVuSans-Bold.ttf")))
+
+(defun invoke-with-truetype-path-restart (continuation)
+  (restart-case (funcall continuation)
+    (change-font-path (new-path)
+      :report (lambda (stream) (format stream "Retry with alternate truetype font path"))
+      :interactive (lambda ()
+                     (format *query-io* "Enter new value: ")
+                     (list (read-line)))
+      (setf *truetype-font-path* new-path)
+      (invoke-with-truetype-path-restart continuation))))
+
+
+;;; predefined paths (registers all found ttf fonts)
+
+(defun default-font/family-map ()
+  (flet ((try-ttf (name)
+           ;; probe for files existance - if they do not exist our
+           ;; mapping is futile and we must try `fc-match'.
+           (if-let ((path (probe-file
+                           (merge-pathnames name *truetype-font-path*))))
+             path
+             (progn
+               (warn "~s doesn't exist" (merge-pathnames name *truetype-font-path*))
+               (return-from default-font/family-map)))))
+    `(((:fix :roman) .                 ,(try-ttf "DejaVuSansMono.ttf" ))
+      ((:fix :italic) .                ,(try-ttf "DejaVuSansMono-Oblique.ttf"))
+      ((:fix (:bold :italic)) .        ,(try-ttf "DejaVuSansMono-BoldOblique.ttf"))
+      ((:fix (:italic :bold)) .        ,(try-ttf "DejaVuSansMono-BoldOblique.ttf"))
+      ((:fix :bold) .                  ,(try-ttf "DejaVuSansMono-Bold.ttf"))
+      ((:serif :roman) .               ,(try-ttf "DejaVuSerif.ttf"))
+      ((:serif :italic) .              ,(try-ttf "DejaVuSerif-Italic.ttf"))
+      ((:serif (:bold :italic)) .      ,(try-ttf "DejaVuSerif-BoldItalic.ttf"))
+      ((:serif (:italic :bold)) .      ,(try-ttf "DejaVuSerif-BoldItalic.ttf"))
+      ((:serif :bold) .                ,(try-ttf "DejaVuSerif-Bold.ttf"))
+      ((:sans-serif :roman) .          ,(try-ttf "DejaVuSans.ttf"))
+      ((:sans-serif :italic) .         ,(try-ttf "DejaVuSans-Oblique.ttf"))
+      ((:sans-serif (:bold :italic)) . ,(try-ttf "DejaVuSans-BoldOblique.ttf"))
+      ((:sans-serif (:italic :bold)) . ,(try-ttf "DejaVuSans-BoldOblique.ttf"))
+      ((:sans-serif :bold) .           ,(try-ttf "DejaVuSans-Bold.ttf")))))
+
+
+;;; `fc-match' implementation
 
 (defparameter *family-names*
   '((:serif      . "Serif")
@@ -59,12 +127,15 @@
   fontconfig. Therefore you must configure it manually.~%"))
 
 (defun find-fontconfig-font (font-fc-name)
-  (with-input-from-string
-      (s (with-output-to-string (asdf::*verbose-out*)
-	   (let ((code (asdf:run-shell-command "fc-match -v \"~A\"" font-fc-name)))
-	     (unless (zerop code)
-	       (warn "~&fc-match failed with code ~D.~%" code)))))
-    (parse-fontconfig-output s)))
+  (multiple-value-bind (output errors code)
+      (uiop:run-program (list "fc-match" "-v" font-fc-name)
+			:output :string :input nil :error-output nil
+			:force-shell t :ignore-error-status t)
+    (declare (ignore errors))
+    (if (not (zerop code))
+	(warn "~&fc-match failed with code ~D.~%" code)
+	(with-input-from-string (stream output)
+	  (parse-fontconfig-output stream)))))
 
 (defun fontconfig-name (family face) 
   (format nil "~A:~A" family face))
@@ -77,15 +148,19 @@
           collect
           (cons (list (car family) (car face)) filename))))
 
+
+;;; configure fonts
+
 (defun autoconfigure-fonts ()
-  (let ((map (build-font/family-map)))
-    (if (and map (support-map-p map))
-        (setf *families/faces* map)
-        (warn-about-unset-font-path))))
+  (if-let ((map (or (support-map-p (default-font/family-map))
+                    (support-map-p (build-font/family-map)))))
+    (setf *families/faces* map)
+    (warn-about-unset-font-path)))
 
 (defun support-map-p (font-map)
   (handler-case
-      (every #'(lambda (font)
-		 (zpb-ttf:with-font-loader (ignored (cdr font)) t))
-	     font-map)
+      (when (every #'(lambda (font)
+                       (zpb-ttf:with-font-loader (ignored (cdr font)) t))
+                   font-map)
+        font-map)
     (zpb-ttf::bad-magic () nil)))
