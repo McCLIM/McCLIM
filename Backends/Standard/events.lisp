@@ -49,23 +49,22 @@
       (grab-sheet
        (setf (port-pointer-sheet port) pointer-sheet)
        (call-next-method)
-       ;;(if (sheet-ancestor-p pointer-sheet grab-sheet)
-       ;;    (setf pointer-sheet grab-sheet)
-       ;;    (setf pointer-sheet (sheet-parent grab-sheet))))
-       nil)
-      ((typep (event-sheet event) 'unmanaged-top-level-sheet-pane)
-       nil)
-      ((typep top-level-sheet 'unmanaged-top-level-sheet-pane)
        nil)
       (pointer-pressed-sheet
        (if (sheet-ancestor-p pointer-sheet pointer-pressed-sheet)
-           (setf pointer-sheet pointer-pressed-sheet)
-           (setf pointer-sheet (sheet-parent pointer-pressed-sheet))))
+	   (setf pointer-sheet pointer-pressed-sheet)
+	   (if (sheet-ancestor-p pointer-sheet
+				 (sheet-parent pointer-pressed-sheet))
+	       nil
+	       (unless (or
+			(typep (event-sheet event) 'unmanaged-top-level-sheet-pane)
+			(typep top-level-sheet 'unmanaged-top-level-sheet-pane))
+		 (setf pointer-sheet nil)))))
       (t
        nil))
     (unless grab-sheet
       ;; distribute exit and enter events
-      (let ((common-sheet (sheet-common-ancestor old-pointer-sheet pointer-sheet)))
+      (let ((common-sheet (sheet-common-ancestor old-pointer-sheet (or pointer-sheet top-level-sheet))))
 	(distribute-exit-events old-pointer-sheet common-sheet event)
 	(distribute-enter-events pointer-sheet common-sheet event)
 	(setf (port-pointer-sheet port) pointer-sheet))
