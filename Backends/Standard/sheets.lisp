@@ -32,7 +32,8 @@ that this might be different from the sheet's native region."
         (height (window-configuration-event-height event)))
     (let ((*configuration-event-p* sheet))
       (setf (sheet-region sheet) (make-bounding-rectangle 0 0 width height))
-      (setf (sheet-transformation sheet) (make-translation-transformation x y)))))
+      (setf (sheet-transformation sheet) (make-translation-transformation x y))))
+  (dispatch-repaint sheet (sheet-region sheet)))
 
 ;;;
 ;;; mirror geometry
@@ -113,13 +114,13 @@ that this might be different from the sheet's native region."
 
 (defmethod %note-mirrored-sheet-child-region-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
-  (declare (ignore sheet))
-  (dispatch-repaint child (sheet-region child)))
+  (unless (eql sheet *configuration-event-p*)
+    (dispatch-repaint child (sheet-region child))))
 
 (defmethod %note-mirrored-sheet-child-transformation-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
-  (declare (ignore sheet))
-  (dispatch-repaint child (sheet-region child)))
+  (unless (eql sheet *configuration-event-p*)
+    (dispatch-repaint child (sheet-region child))))
 
 (defmethod %note-sheet-pointer-cursor-changed :after ((sheet standard-mirrored-sheet-mixin))
   (set-sheet-pointer-cursor (port sheet) sheet (sheet-pointer-cursor sheet)))
