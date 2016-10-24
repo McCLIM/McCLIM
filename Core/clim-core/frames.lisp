@@ -924,6 +924,10 @@ documentation produced by presentations.")
 	     (warn ":state ~S not supported yet." state)))
       frame)))
 
+(defgeneric frame-is-override-redirect-p (frame)
+  (:method ((frame t))
+    nil))
+
 ;;; From Franz Users Guide
 
 (defun find-application-frame (frame-name &rest initargs

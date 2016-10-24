@@ -135,6 +135,8 @@
   (let ((sheet (slot-value frame 'top-level-sheet)))
     (let* ((top-level-sheet (frame-top-level-sheet frame))
            (mirror (sheet-direct-mirror top-level-sheet)))
+      (when (clim-internals::frame-is-override-redirect-p frame)
+        (setf (xlib:window-override-redirect mirror) :on))
       (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
         (declare (ignore w h))
         (when (and x y)
