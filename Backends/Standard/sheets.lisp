@@ -25,18 +25,31 @@ that this might be different from the sheet's native region."
 
 (defmethod handle-event ((sheet standard-mirrored-sheet-mixin)
 			 (event window-configuration-event))
-
   (let ((x (window-configuration-event-x event))
 	(y (window-configuration-event-y event))
 	(width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
     (let ((*configuration-event-p* sheet))
-      (setf (sheet-region sheet) (make-bounding-rectangle 0 0 width height))
-      (setf (sheet-transformation sheet) (make-translation-transformation x y)))))
+      (setf (sheet-transformation sheet) (make-translation-transformation x y))
+      (setf (sheet-region sheet) (make-bounding-rectangle 0 0 width height)))))
 
 ;;;
 ;;; mirror geometry
 ;;;
+
+(defparameter *mirrored-sheet-geometry-changed-p* nil)
+
+(defmethod (setf sheet-transformation) :around (tr (sheet standard-mirrored-sheet-mixin))
+  (when (sheet-mirror sheet)
+    (let ((*mirrored-sheet-geometry-changed-p* sheet))
+      (call-next-method))))
+
+(defmethod (setf sheet-region) :around (re (sheet standard-mirrored-sheet-mixin))
+  (when (or (/= (bounding-rectangle-width re) (bounding-rectangle-width (sheet-region sheet)))
+	    (/= (bounding-rectangle-height re) (bounding-rectangle-height (sheet-region sheet))))
+    (let ((*mirrored-sheet-geometry-changed-p* sheet))
+      (call-next-method)
+      (dispatch-repaint sheet (sheet-region sheet)))))
 
 (defmethod note-sheet-transformation-changed :before ((sheet standard-mirrored-sheet-mixin))
   (when (sheet-mirror sheet)
@@ -113,13 +126,13 @@ that this might be different from the sheet's native region."
 
 (defmethod %note-mirrored-sheet-child-region-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
-  (declare (ignore sheet))
-  (dispatch-repaint child (sheet-region child)))
+  (unless (eql sheet *mirrored-sheet-geometry-changed-p*)
+    (dispatch-repaint child (sheet-region child))))
 
 (defmethod %note-mirrored-sheet-child-transformation-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
-  (declare (ignore sheet))
-  (dispatch-repaint child (sheet-region child)))
+  (unless (eql sheet *mirrored-sheet-geometry-changed-p*)
+    (dispatch-repaint child (sheet-region child))))
 
 (defmethod %note-sheet-pointer-cursor-changed :after ((sheet standard-mirrored-sheet-mixin))
   (set-sheet-pointer-cursor (port sheet) sheet (sheet-pointer-cursor sheet)))
