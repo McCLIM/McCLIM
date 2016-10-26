@@ -924,11 +924,7 @@ documentation produced by presentations.")
 	     (warn ":state ~S not supported yet." state)))
       frame)))
 
-(defgeneric frame-is-override-redirect-p (frame)
-  (:method ((frame t))
-    nil))
-
-(defgeneric frame-is-dialog-p (frame)
+(defgeneric find-frame-type (frame)
   (:method ((frame t))
     nil))
 

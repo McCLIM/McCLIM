@@ -135,13 +135,12 @@
   (let ((sheet (slot-value frame 'top-level-sheet)))
     (let* ((top-level-sheet (frame-top-level-sheet frame))
            (mirror (sheet-direct-mirror top-level-sheet)))
-      (when (clim-internals::frame-is-override-redirect-p frame)
-        (setf (xlib:window-override-redirect mirror) :on))
-      (when (clim-internals::frame-is-dialog-p frame)
-        (xlib:change-property mirror :_NET_WM_WINDOW_TYPE
-                              (list (xlib:intern-atom (xlib:window-display mirror) :_NET_WM_WINDOW_TYPE_DIALOG))
-                                     :atom 32)
-        (format t "atom: ~s~%" (xlib:intern-atom (xlib:window-display mirror) :_NET_WM_WINDOW_TYPE_DIALOG)))
+      (case (clim-internals::find-frame-type frame)
+        (:override-redirect (setf (xlib:window-override-redirect mirror) :on))
+        (:dialog (xlib:change-property mirror
+                                       :_NET_WM_WINDOW_TYPE
+                                       (list (xlib:intern-atom (xlib:window-display mirror) :_NET_WM_WINDOW_TYPE_DIALOG))
+                                       :atom 32)))
       (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
         (declare (ignore w h))
         (when (and x y)
