@@ -928,6 +928,10 @@ documentation produced by presentations.")
   (:method ((frame t))
     nil))
 
+(defgeneric frame-is-dialog-p (frame)
+  (:method ((frame t))
+    nil))
+
 ;;; From Franz Users Guide
 
 (defun find-application-frame (frame-name &rest initargs
