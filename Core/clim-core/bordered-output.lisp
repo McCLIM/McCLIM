@@ -13,9 +13,10 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
+
 
 ;;; TODO:
 ;;;  - Define a protocol which the graph formatter can utilize to determine
@@ -34,22 +35,22 @@
 ;;;  - Using padding to control the rounded rectangles might be the wrong thing.
 
 ;;; ???
-;;;  - Would it make more sense to draw borders as part of replay (with recording
-;;;    off, like a displayed record), and letting them effortlessly accomodate
-;;;    changes in the bounding rectangle of the contents? This would only benefit
-;;;    people doing unusual things with output records. How would be determine
-;;;    bounds of the border?
+;;; - Would it make more sense to draw borders as part of replay (with recording
+;;;  off, like a displayed record), and letting them effortlessly accomodate
+;;;  changes in the bounding rectangle of the contents? This would only benefit
+;;;  people doing unusual things with output records. How would be determine
+;;;  bounds of the border?
 
 (in-package :clim-internals)
 
 (defclass bordered-output-record (standard-sequence-output-record)
   (under record over))
 
-(defgeneric make-bordered-output-record (stream shape record &key
-                                                &allow-other-keys)
+(defgeneric make-bordered-output-record
+    (stream shape record &key &allow-other-keys)
   (:documentation "Instantiates an output record of a class appropriate for the
-  specified shape containing the given output record, and renders any decorations
-  associated with the shape."))
+  specified shape containing the given output record,
+  and renders any decorations associated with the shape."))
 
 (defgeneric draw-output-border-under
     (shape stream record &rest drawing-options &key &allow-other-keys)
@@ -63,8 +64,7 @@
    "Draws the portion of border shape which is visible above the surrounded
     output"))
 
-;;; Keep this around just for fun, so we can list the defined border
-;;; types.
+;;; Keep this around just for fun, so we can list the defined border types.
 (defvar *border-types* nil)
 
 (defparameter *border-default-padding* 4)
@@ -85,12 +85,11 @@
     (with-bounding-rectangle* (left top right bottom) ,record
       ,@body)))
 
-(defmacro surrounding-output-with-border ((&optional stream
-                                           &rest drawing-options &key
-                                           (shape :rectangle)
-                                           (move-cursor t)
-					   &allow-other-keys)
-                                          &body body)
+(defmacro surrounding-output-with-border
+    ((&optional stream &rest drawing-options &key (shape :rectangle)
+                (move-cursor t)
+                &allow-other-keys)
+     &body body)
   (declare (ignore shape move-cursor))
   (setf stream (stream-designator-symbol stream '*standard-output*))
   (gen-invoke-trampoline 'invoke-surrounding-output-with-border
@@ -125,8 +124,8 @@
           (add-output-record over   border))
         border))))
 
-(defmethod make-bordered-output-record (stream shape inner-record
-                                               &rest drawing-options)
+(defmethod make-bordered-output-record
+    (stream shape inner-record &rest drawing-options)
   (%prepare-bordered-output-record stream shape
                                    (make-instance 'bordered-output-record)
                                    inner-record drawing-options))
@@ -136,38 +135,38 @@
 (defun invoke-surrounding-output-with-border (stream cont
                                               &rest drawing-options
                                               &key (shape :rectangle)
-					      (move-cursor t)
-					      &allow-other-keys)
+                                              (move-cursor t)
+                                              &allow-other-keys)
   (with-keywords-removed (drawing-options (:shape :move-cursor))
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
       (let ((border (apply #'make-bordered-output-record
                            stream
                            shape
-			   (with-output-to-output-record (stream)
-			     ;; w-o-t-o-r moved the cursor to the origin.
-			     (setf (stream-cursor-position stream)
+                           (with-output-to-output-record (stream)
+                             ;; w-o-t-o-r moved the cursor to the origin.
+                             (setf (stream-cursor-position stream)
                                    (values cx cy))
-			     (funcall cont stream)
-			     (setf (values cx cy)
+                             (funcall cont stream)
+                             (setf (values cx cy)
                                    (stream-cursor-position stream)))
                            drawing-options)))
-        
+
         (stream-add-output-record stream border)
-        
+
         (when (stream-drawing-p stream)
           (with-output-recording-options (stream :record nil)
             (replay border stream)))
 
         (if move-cursor
-	    ;; move-cursor is true, move cursor to lower-right corner
-	    ;; of output.
-	    (with-bounding-rectangle* (left top right bottom) border
-	      (declare (ignore left top))
-	      (setf (stream-cursor-position stream) (values right bottom)))
-	    ;; move-cursor is false, preserve the cursor position from
-	    ;; after the output (I think this is right, it's useful
-	    ;; for :underline)
-	    (setf (stream-cursor-position stream) (values cx cy)))
+            ;; move-cursor is true, move cursor to lower-right corner
+            ;; of output.
+            (with-bounding-rectangle* (left top right bottom) border
+              (declare (ignore left top))
+              (setf (stream-cursor-position stream) (values right bottom)))
+            ;; move-cursor is false, preserve the cursor position from
+            ;; after the output (I think this is right, it's useful
+            ;; for :underline)
+            (setf (stream-cursor-position stream) (values cx cy)))
         border))))
 
 (defmethod draw-output-border-under
@@ -197,8 +196,8 @@
          (padding-top    (+ padding-top    (/ (or line-thickness 0) 2)))
          (padding-bottom (+ padding-bottom (/ (or line-thickness 0) 2))))
     ,@body))
- 
-  
+
+
 (defmacro define-border-type (shape arglist &body body)
   (check-type arglist list)
   ;; The Franz User guide implies that &key isn't needed.
@@ -217,10 +216,9 @@
                :top top
                :bottom bottom
                drawing-options)))))
-  
-
-;;;; Standard border types
 
+
+;;;; Standard border types
 (define-border-type :rectangle (stream left top right bottom
                                        ink outline-ink filled
                                        (padding *border-default-padding*)
@@ -252,7 +250,7 @@
      &key background ink filled
      (padding *border-default-padding*)
      (padding-x padding)
-     (padding-y padding)     
+     (padding-y padding)
      (padding-left   padding-x)
      (padding-right  padding-x)
      (padding-top    padding-y)
@@ -281,7 +279,7 @@
                            :filled t))))))
 
 (define-border-type :oval (stream left top right bottom
-				  (ink (medium-ink stream))
+                                  (ink (medium-ink stream))
                                   outline-ink
 
                                   (padding *border-default-padding*)
@@ -291,7 +289,7 @@
                                   (padding-right  padding-x)
                                   (padding-top    padding-y)
                                   (padding-bottom padding-y)
-                                  
+
                                   line-style
                                   line-unit
                                   line-thickness
@@ -309,7 +307,7 @@
 
 (defmethod draw-output-border-under
     ((shape (eql :oval)) stream record &key
-     background ink filled line-thickness     
+     background ink filled line-thickness
      (shadow-offset *drop-shadow-default-offset*)
      shadow
      (padding *border-default-padding*)
@@ -323,7 +321,7 @@
   (when (or filled background)
     (with-border-edges (stream record)
       (%%adjusting-padding-for-line-style
-        (%%adjusting-for-padding 
+        (%%adjusting-for-padding
           (when shadow
             (draw-oval* stream
                         (+ shadow-offset (/ (+ left right) 2))
@@ -358,14 +356,14 @@
                                   line-thickness
                                   line-cap-shape
                                   line-dashes)
-  (%%adjusting-padding-for-line-style  
-    (%%adjusting-for-padding 
+  (%%adjusting-padding-for-line-style
+    (%%adjusting-for-padding
       (draw-rectangle* stream
                        left  top
                        right bottom
                        :line-style (%%line-style-for-method)
                        :ink (or outline-ink ink)
-                       :filled nil)                     
+                       :filled nil)
       ;; If the user has (wisely) chosen my more modern "filled"
       ;; style, we'll simply draw two rectangles, one offset from the
       ;; other, to provide a solid background color and shadow.  Note
@@ -468,7 +466,7 @@
 ;;; padding on one side to compensate). If someone can think of a
 ;;; better approach to defaulting the radius and padding arguments, do
 ;;; share.
-(define-border-type :rounded (stream left top right bottom                                     
+(define-border-type :rounded (stream left top right bottom
                                      (radius *border-default-radius*)
                                      (radius-x radius)
                                      (radius-y radius)
@@ -497,35 +495,36 @@
                      (and (not filled) (or ink +foreground-ink+)))))
         (when ink
           (draw-rounded-rectangle* stream left top right bottom
-                                   :radius-left   radius-left    ; padding-left
-                                   :radius-right  radius-right   ; padding-right
-                                   :radius-top    radius-top     ; padding-top
-                                   :radius-bottom radius-bottom  ; padding-bottom
+                                   :radius-left   radius-left   ;padding-left
+                                   :radius-right  radius-right  ;padding-right
+                                   :radius-top    radius-top    ;padding-top
+                                   :radius-bottom radius-bottom ;padding-bottom
                                    :ink ink
                                    :filled nil
                                    :line-style (%%line-style-for-method)))))))
 
-(defmethod draw-output-border-under ((shape (eql :rounded)) stream record &key
-                                     (radius *border-default-radius*)
-                                     (radius-x radius)
-                                     (radius-y radius)
-                                     (radius-left   radius-x)
-                                     (radius-right  radius-x)
-                                     (radius-top    radius-y)
-                                     (radius-bottom radius-y)
-                                     (padding radius)
-                                     (padding-x padding)
-                                     (padding-y padding)
-                                     (padding-left   padding-x)
-                                     (padding-right  padding-x)
-                                     (padding-top    padding-y)
-                                     (padding-bottom padding-y)
-                                     ink
-                                     filled
-                                     background
-                                     shadow
-                                     (shadow-offset *drop-shadow-default-offset*)
-                                     line-thickness)
+(defmethod draw-output-border-under
+    ((shape (eql :rounded)) stream record &key
+     (radius *border-default-radius*)
+     (radius-x radius)
+     (radius-y radius)
+     (radius-left   radius-x)
+     (radius-right  radius-x)
+     (radius-top    radius-y)
+     (radius-bottom radius-y)
+     (padding radius)
+     (padding-x padding)
+     (padding-y padding)
+     (padding-left   padding-x)
+     (padding-right  padding-x)
+     (padding-top    padding-y)
+     (padding-bottom padding-y)
+     ink
+     filled
+     background
+     shadow
+     (shadow-offset *drop-shadow-default-offset*)
+     line-thickness)
   (with-border-edges (stream record)
     (%%adjusting-padding-for-line-style
       (%%adjusting-for-padding
@@ -573,7 +572,7 @@
       (%%adjusting-for-padding
         (let ((ink (or outline-ink (and (not filled)
                                         (or ink +foreground-ink+)))))
-          (when ink 
+          (when ink
             (let* ((cx (/ (+ right left) 2))
                    (cy (/ (+ top bottom) 2))
                    (radius-x (- right  cx))
@@ -632,7 +631,8 @@
               (draw-ellipse* stream cx cy fx 0 0 fy
                              :filled t :ink ink))))))))
 
-(defmethod highlight-output-record ((record bordered-output-record) stream state)
+(defmethod highlight-output-record
+    ((record bordered-output-record) stream state)
   (format *trace-output* "b-o-r ~A ~A ~A~%" record stream state)
   (call-next-method))
 
@@ -643,9 +643,7 @@
     ((record bordered-output-record) stream state)
   (highlight-output-record-tree (slot-value record 'record) stream state))
 
-
 ;;;; Highlighting of bordered output records
-
 (defclass highlighting-bordered-output-record (bordered-output-record)
   ((shape :reader shape :initarg :shape)
    (drawing-options :reader drawing-options
@@ -661,10 +659,10 @@
                (getf (drawing-options record) :highlight-outline)))
       (highlight-output-record record stream state)
       (call-next-method)))
-                   
 
-(defmethod highlight-output-record ((record highlighting-bordered-output-record)
-                                    stream state)
+
+(defmethod highlight-output-record
+    ((record highlighting-bordered-output-record) stream state)
   (let ((drawing-options (drawing-options record)))
     (destructuring-bind (&key background
                               outline-ink
@@ -684,23 +682,27 @@
                       (make-instance 'window-repaint-event
                                     :sheet stream
                                     :region (transform-region
-                                             (sheet-native-transformation stream)
-                                             record)))))
+                                            (sheet-native-transformation stream)
+                                            record)))))
             (ecase state
               (:highlight
-               (with-keywords-removed (drawing-options (:background :outline-ink))
-                 (redraw (list* :background
-                                (or (and (eql t highlight-background)
-                                         (highlight-shade (or background
-                                                              (getf drawing-options :ink)
-                                                              +background-ink+)))
+               (with-keywords-removed
+                   (drawing-options (:background :outline-ink))
+                 (redraw
+                  (list* :background
+                         (or (and (eql t highlight-background)
+                                  (highlight-shade
+                                   (or background
+                                       (getf drawing-options :ink)
+                                       +background-ink+)))
                                     highlight-background
                                     background)
-                                :outline-ink
-                                (or (and (eql t highlight-outline)
-                                         (highlight-shade (or outline-ink
-                                                              (getf drawing-options :ink)
-                                                              +foreground-ink+)))
+                         :outline-ink
+                         (or (and (eql t highlight-outline)
+                                  (highlight-shade
+                                   (or outline-ink
+                                       (getf drawing-options :ink)
+                                       +foreground-ink+)))
                                     highlight-outline
                                     outline-ink)
                                 drawing-options))))
@@ -708,8 +710,8 @@
           (call-next-method)))))
 
 (defmacro define-default-highlighting-method (shape)
-  `(defmethod make-bordered-output-record (stream (shape (eql ,shape))
-                                           inner-record &rest drawing-options)
+  `(defmethod make-bordered-output-record
+       (stream (shape (eql ,shape)) inner-record &rest drawing-options)
     (%prepare-bordered-output-record stream shape
      (make-instance 'highlighting-bordered-output-record
       :shape shape
