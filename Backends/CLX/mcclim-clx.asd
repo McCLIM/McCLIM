@@ -19,4 +19,4 @@
 
 (defsystem #:mcclim-clx/pretty
   :depends-on (#:mcclim-clx
-               #:mcclim-fonts/truetype))
+               #:mcclim-fonts/clx-truetype))
