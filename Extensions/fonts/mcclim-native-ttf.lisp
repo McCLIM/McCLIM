@@ -84,10 +84,9 @@
 
 (defmethod print-object ((object truetype-font) stream)
   (print-unreadable-object (object stream :type t :identity nil)
-    (with-slots (font-loader size ascent descent) object      
-      (format stream "~W size=~A ascent=~A descent=~A" 
-              (zpb-ttf:name-entry-value :full-name font-loader)
-              size ascent descent))))
+    (with-slots (size ascent descent units->pixels) object      
+      (format stream " size=~A ascent=~A descent=~A units->pixels=~A"
+              size ascent descent units->pixels))))
 
 (defun glyph-pixarray (font char)
   "Render a character of 'face', returning a 2D (unsigned-byte 8) array
