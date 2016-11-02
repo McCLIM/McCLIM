@@ -931,13 +931,15 @@ of the frame.
 
 This function should never be called by application code. Instead, the
 application should define a method for this function that returns the
-appropriate value for a frame. If not given, the default
-implementation of this function will return NIL.
+appropriate value for a frame.
 
 The following values are currently supported by the CLX backend:
 
 NIL - Default frame behaviour.
-:OVERRIDE-REDIRECT - The frame will be displayed in front of all other frames and will not have focus.
+
+:OVERRIDE-REDIRECT - The frame will be displayed in front of all other
+frames and will not have focus.
+
 :DIALOG - The frame will not have any decorations added by the window manager.
 "
   (:method ((frame t))
