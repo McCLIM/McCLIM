@@ -925,7 +925,9 @@ documentation produced by presentations.")
       frame)))
 
 (defgeneric clim-extensions:find-frame-type (frame)
-  "Returns the type of the given frame. The return value of this
+  (:method ((frame t))
+    nil)
+  (:documentation "Returns the type of the given frame. The return value of this
 function can be used by the frame manager to determine the behaviour
 of the frame.
 
@@ -940,10 +942,7 @@ NIL - Default frame behaviour.
 :OVERRIDE-REDIRECT - The frame will be displayed in front of all other
 frames and will not have focus.
 
-:DIALOG - The frame will not have any decorations added by the window manager.
-"
-  (:method ((frame t))
-    nil))
+:DIALOG - The frame will not have any decorations added by the window manager."))
 
 ;;; From Franz Users Guide
 
