@@ -135,7 +135,7 @@
   (let ((sheet (slot-value frame 'top-level-sheet)))
     (let* ((top-level-sheet (frame-top-level-sheet frame))
            (mirror (sheet-direct-mirror top-level-sheet)))
-      (case (clim-internals::find-frame-type frame)
+      (case (clim-extensions:find-frame-type frame)
         (:override-redirect (setf (xlib:window-override-redirect mirror) :on))
         (:dialog (xlib:change-property mirror
                                        :_NET_WM_WINDOW_TYPE

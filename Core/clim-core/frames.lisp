@@ -924,7 +924,7 @@ documentation produced by presentations.")
 	     (warn ":state ~S not supported yet." state)))
       frame)))
 
-(defgeneric find-frame-type (frame)
+(defgeneric clim-extensions:find-frame-type (frame)
   (:method ((frame t))
     nil))
 
