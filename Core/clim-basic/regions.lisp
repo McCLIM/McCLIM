@@ -1224,7 +1224,7 @@
                       (when (<= y1 y y2)
                         (when (isum-member x isum)
                           (return t)))
-                      (when (> y y2)
+                      (when (< y y2)
                         (return nil)))
                     (standard-rectangle-set-bands self))
     nil))
