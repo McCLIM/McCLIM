@@ -1,7 +1,7 @@
 
 ;;; CLIM-Examples depends on having at least one backend loaded.
 (defsystem #:clim-examples
-    :depends-on (#:mcclim #:mcclim-layouts/tab)
+    :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image/opticl)
     :components
     ((:file "package")
      (:file "calculator")
@@ -31,6 +31,7 @@
      (:file "tabdemo")
      (:file "bordered-output-examples")
      (:file "misc-tests")
+     (:file "drawing-tests")
      (:file "image-viewer")))
 
 (defsystem #:clim-examples/superapp
