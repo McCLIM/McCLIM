@@ -89,7 +89,9 @@
 				     'drawing-benchmark)
                    (make-demo-button "Border Styles Test" 'bordered-output)
                    (make-demo-button "Misc. Tests"
-				     'misc-tests)))))))))
+				     'misc-tests)
+		   (make-demo-button "Drawing Tests"
+				     'drawing-tests)))))))))
 
 (defun demodemo ()
   (run-frame-top-level (make-application-frame 'demodemo)))

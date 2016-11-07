@@ -1,0 +1,60 @@
+(in-package :common-lisp-user)
+
+(defpackage :mcclim-raster-image
+    (:use :clim :clim-lisp :clim-backend)
+    (:import-from :climi
+		  #:port-grafts
+		  #:updating-output-stream-mixin
+		  #:do-sequence
+		  #:with-transformed-position
+		  #:with-transformed-positions
+		  #:port-register-mirror
+		  #:port-unregister-mirror
+		  #:destroy-mirror
+		  #:realize-mirror
+		  #:unmanaged-top-level-sheet-pane
+		  #:vbox-pane
+		  )
+    (:import-from :mcclim-render
+		  #:render-medium-mixin
+		  #:render-port-mixin
+		  #:image-sheet-image
+		  #:image-sheet-mixin
+		  #:image-pixmap-mixin
+		  #:rgb-image-pixmap-mixin
+		  #:save-sheet-image-to-file
+		  #:save-sheet-image-to-stream
+		  )
+    (:import-from :mcclim-truetype
+		  #:truetype-font-size
+		  #:truetype-font-face
+		  #:glyph-pixarray
+		  #:ensure-gethash
+		  #:invoke-with-truetype-path-restart
+		  #:*truetype-font-path*
+		  #:*family-names*
+		  #:zpb-ttf-font-loader
+		  #:*zpb-font-lock* 
+		  #:*fontconfig-faces*
+		  #:*families/faces*
+		  #:truetype-device-font-name 
+		  #:fontconfig-font-name
+		  #:make-truetype-device-font-name 
+		  #:make-fontconfig-font-name
+		  #:truetype-font-family
+		  #:truetype-font
+		  #:truetype-face
+		  #:truetype-font-size
+		  #:truetype-font-ascent
+		  #:truetype-font-descent
+		  )
+    (:import-from :clim-standard
+		  #:standard-single-mirrored-sheet-mixin
+		  #:%sheet-mirror-region
+		  #:%sheet-mirror-transformation)
+    (:export
+     #:with-output-to-raster-image-stream
+     #:with-output-to-rgb-pattern
+     ))
+
+
