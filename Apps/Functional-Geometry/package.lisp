@@ -19,4 +19,5 @@
 (in-package #:cl-user)
 
 (defpackage #:functional-geometry
-  (:use #:clim-lisp #:clim #:clim-listener))
+  (:use #:clim-lisp #:clim #:clim-listener)
+  (:export #:run-functional-geometry))

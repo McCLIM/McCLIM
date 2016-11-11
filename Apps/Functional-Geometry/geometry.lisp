@@ -361,5 +361,6 @@
 (defun run-functional-geometry (&rest args)
   "Run a Lisp Listener augmented with functional geometry commands."
   (let ((*package* (find-package '#:functional-geometry)))
-    (apply #'run-listener (append args '(:process-name "Functional Geometry"
+    (apply #'run-listener (append args '(:package :functional-geometry
+                                         :process-name "Functional Geometry"
 					 :height 800)))))
