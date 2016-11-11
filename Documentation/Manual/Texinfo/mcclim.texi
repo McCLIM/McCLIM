@@ -1368,7 +1368,7 @@ Sets the parent of all children of @var{record} to @cl{nil}.
 @deffn {Macro} {define-command-table} name &key inherit-from menu inherit-menu
 @findex define-command-table
 @end deffn
-@deffn {Macro} {make-command-table} {name &key inherit-from inherit-menu (errorp t)}
+@deffn {Function} {make-command-table} {name &key inherit-from inherit-menu (errorp t)}
 @findex make-command-table
 @end deffn
 
