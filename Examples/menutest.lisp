@@ -17,14 +17,10 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (defpackage #:menutest
-  (:use :clim :clim-extensions :clim-lisp))
+  (:use :clim :clim-extensions :clim-lisp)
+  (:export #:menutest))
 
 (in-package #:menutest)
-
-(defun menutest ()
-  (let ((frame (make-application-frame 'menutest)))
-    (run-frame-top-level frame)
-    frame))
 
 (define-application-frame menutest ()
   ()

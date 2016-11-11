@@ -49,25 +49,3 @@
    (tester (make-clim-stream-pane :type 'echo-interactor-pane)))
   (:layouts
    (default (vertically () tester))))
-
-(defun run-test (name)
-  (when name
-    (run-frame-top-level (make-application-frame name))))
-
-(defun echo-stream-test ()
-  (run-test 'stream-test))
-
-(define-application-frame edit-test ()
-  ()
-  (:panes
-   (tester :interactor))
-  (:layouts
-   (default (vertically () tester))))
-
-(defmethod read-frame-command ((frame edit-test)
-			       &key (stream *standard-input*))
-  (with-input-editing (stream)
-    (call-next-method frame :stream stream)))
-
-(defun input-edit-test ()
-  (run-test 'edit-test))

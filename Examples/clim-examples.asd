@@ -1,6 +1,6 @@
 
 ;;; CLIM-Examples depends on having at least one backend loaded.
-(defsystem #:clim-examples
+(asdf:defsystem #:clim-examples
     :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image/opticl)
     :components
     ((:file "package")
@@ -32,8 +32,9 @@
      (:file "bordered-output-examples")
      (:file "misc-tests")
      (:file "drawing-tests")
-     (:file "image-viewer")))
+     (:file "image-viewer")
+     (:file "sliderdemo")))
 
-(defsystem #:clim-examples/superapp
+(asdf:defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
   :components ((:file "superapp")))
