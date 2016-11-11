@@ -22,25 +22,29 @@ mentioned in the general installation instructions.
 \begin{itemize}
 \item Apps/Listener
 
-  CLIM-enabled Lisp listener.  See the compilation and execution
-  instructions in \texttt{Apps/Listener/README}.
+  CLIM-enabled Lisp listener. System name is
+  \texttt{clim-listener}. See instructions in
+  \texttt{Apps/Listener/README} for more information.
 
 \item Apps/Inspector
 
-  CLIM-enabled Lisp inspector.  See the compilation and execution
-  instructions in \texttt{Apps/Inspector/INSTALL}.
+  CLIM-enabled Lisp inspector. System name is \texttt{clouseau}. See
+  instructions in \texttt{Apps/Inspector/INSTALL} for more
+  information..
 
 \item Apps/Debugger
 
   Common Lisp debugger implemented in McCLIM. It uses the portable
   debugger interface developed for the Slime project. Application has
-  some quirks and requires work.
+  some quirks and requires work. System name is
+  \texttt{clim-debugger}.
 
 \item Apps/Functional-Geometry
 
   Peter Henderson idea, see http://www.ecs.soton.ac.uk/~ph/funcgeo.pdf
   and http://www.ecs.soton.ac.uk/~ph/papers/funcgeo2.pdf implemented
-  in Lisp by Frank Buss. CLIM Listener interface by Rainer Joswig.
+  in Lisp by Frank Buss. CLIM Listener interface by Rainer
+  Joswig. System name is \texttt{functional-geometry}.
 
 \begin{verbatim}
 (functional-geometry:run-functional-geometry)
@@ -56,9 +60,9 @@ mentioned in the general installation instructions.
 \subsection{Demos and tests}
 
 Demos are meant to be run after loading the \texttt{clim-examples}
-system.
+system from the frame created with \texttt{(clim-demo:demodemo)}.
 
-\begin{verbatim}  
+\begin{verbatim}
 (asdf:load-system 'clim-examples)
 (clim-demo:demodemo)
 \end{verbatim}

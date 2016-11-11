@@ -79,7 +79,8 @@
                    (make-demo-button "Tab Layout" 'tabdemo:tabdemo)
                    (make-demo-button "Summation" 'summation)
                    (make-demo-button "Slider demo" 'sliderdemo)
-                   (make-demo-button "Traffic lights" 'traffic-lights)))
+                   ;; this demo invokes the debugger
+                   #+ (or) (make-demo-button "Traffic lights" 'traffic-lights)))
                (labelling (:label "Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Stream test" 'stream-test)
