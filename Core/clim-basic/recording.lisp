@@ -80,7 +80,8 @@
     (continuation record continuation-args))
 
 (defun map-over-output-records
-    (continuation record &optional x-offset y-offset &rest continuation-args)
+    (continuation record &optional (x-offset 0) (y-offset 0)
+     &rest continuation-args)
   (declare (ignore x-offset y-offset))
   (map-over-output-records-1 continuation record continuation-args))
 
