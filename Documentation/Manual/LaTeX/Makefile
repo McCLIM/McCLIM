@@ -20,6 +20,7 @@ all : $(NAME).pdf
 
 $(NAME).pdf: $(TEXFILES) $(PDF) $(PDF_T) $(VERBATIM) $(CODEFILES) $(BIBFILES)
 	pdflatex $<
+	pdflatex $<
 	bibtex $(NAME)
 	pdflatex $<
 	pdflatex $<
