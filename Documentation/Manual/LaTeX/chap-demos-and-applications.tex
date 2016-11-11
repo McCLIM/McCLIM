@@ -17,93 +17,157 @@ alphabetical order.  Each entry provides a short description of what the
 program does, with instructions for compiling and running it if not
 mentioned in the general installation instructions.
 
+\subsection{Applications}
+
 \begin{itemize}
 \item Apps/Listener
-CLIM-enabled Lisp listener.  See the compilation and execution
-instructions in \texttt{Apps/Listener/README}.
+
+  CLIM-enabled Lisp listener.  See the compilation and execution
+  instructions in \texttt{Apps/Listener/README}.
+
 \item Apps/Inspector
-CLIM-enabled Lisp inspector.  See the compilation and execution
-instructions in \texttt{Apps/Inspector/INSTALL}.
-\item Examples/address-book.lisp
-Simple address book.  See McCLIM's installation instructions.
-\item Examples/calculator.lisp
-Simple desk calculator.  See McCLIM's installation instructions.
-\item Examples/clim-fig.lisp
-Simple paint program.  You can run it by evaluating this form at the
-Lisp prompt:
+
+  CLIM-enabled Lisp inspector.  See the compilation and execution
+  instructions in \texttt{Apps/Inspector/INSTALL}.
+
+\item Apps/Debugger
+
+  Common Lisp debugger implemented in McCLIM. It uses the portable
+  debugger interface developed for the Slime project. Application has
+  some quirks and requires work.
+
+\item Apps/Functional-Geometry
+
+  Peter Henderson idea, see http://www.ecs.soton.ac.uk/~ph/funcgeo.pdf
+  and http://www.ecs.soton.ac.uk/~ph/papers/funcgeo2.pdf implemented
+  in Lisp by Frank Buss. CLIM Listener interface by Rainer Joswig.
+
 \begin{verbatim}
-(clim-demo::clim-fig)
+(functional-geometry:run-functional-geometry)
+(clim-plot *fishes*) ; from a listener
 \end{verbatim}
-\item Examples/colorslider.lisp
-Interactive color editor.  See McCLIM's installation instructions.
+
+\item Apps/Scigraph
+
+  Scigraph Scientific Graphing Package. See the compilation and
+  execution instructions in \texttt{Apps/Scigraph/README}.
+\end{itemize}
+
+\subsection{Demos and tests}
+
+Demos are meant to be run from the \texttt{clim-examples} system.
+
+\begin{verbatim}  
+(asdf:load-system 'clim-examples)
+(clim-demo:demodemo)
+\end{verbatim}
+
+Available demos and tests are defined in the following files:
+
+\begin{itemize}
 \item Examples/demodemo.lisp
-Demonstrates different pane types.  You can compile it by evaluating:
-\begin{verbatim}
-(compile-file "Examples/demodemo.lisp")
-\end{verbatim}
-Then load it with:
-\begin{verbatim}
-(load "Examples/demodemo")
-\end{verbatim}
-Finally, run it with:
-\begin{verbatim}
-(clim-demo::demodemo)
-\end{verbatim}
+
+  Demonstrates different pane types and other tests.
+
+\item Examples/clim-fig.lisp
+
+  Simple paint program.
+
+\item Examples/calculator.lisp
+
+  Simple desk calculator.
+
+\item Examples/method-browser.lisp
+
+  Example of how to write a CLIM application with a ``normal'' GUI,
+  where ``normal'' is a completely event driven app built using
+  gadgets and not using the command-oriented framework.
+
+\item Examples/address-book.lisp
+
+  Simple address book.
+
+\item Examples/puzzle.lisp
+
+  Simple puzzle game.
+
+\item Examples/colorslider.lisp
+
+  Interactive color editor.
+
+\item Examples/logic-cube.lisp
+
+  Software-rendered 3d logic cube game. Shows how the transformations
+  work and how to implement custom handle-repaint methods.
+
 \item Examples/menutest.lisp
-Displays a window with a simple menu bar.  See McCLIM's installation
-instructions.
+
+  Displays a window with a simple menu bar.
+
+\item Examples/gadget-test.lisp
+
+  Displays a window with various gadgets.
+
+\item Examples/dragndrop.lisp
+
+  Example of ``Drag and Drop'' functionality.
+
+\item Examples/dragndrop-translator.lisp
+
+  Another example of ``Drag and Drop'' functionality (with colors!).
+
+\item Examples/draggable-graph.lisp
+
+  Demo of draggable graph nodes.
+
+\item Examples/image-viewer.lisp
+
+  A simple program for displaying images of formats known to McCLIM.
+
+\item Examples/font-selection.lisp
+
+  A font selection dialog.
+
+\item Examples/tabdemo.lisp
+
+  A tab layout demo (McCLIM extension).
+
 \item Examples/postscript-test.lisp
-Displays text and graphics to a PostScript file.  Run it with:
+
+  Displays text and graphics to a PostScript file.  Run it with:
+
 \begin{verbatim}
 (clim-demo::postscript-test)
 \end{verbatim}
-The resulting file \texttt{ps-test.ps} is generated in the current directory
-and can be displayed by a PostScript viewer such as \texttt{gv} on Unix-like
-systems.
+
+  The resulting file \texttt{ps-test.ps} is generated in the current
+  directory and can be displayed by a PostScript viewer such as
+  \texttt{gv} on Unix-like systems.
+
 \item Examples/presentation-test.lisp
-Displays an interactive window in which you type numbers that are
-successively added.  When a number is expected as input, you can either
-type it at the keyboard, or click on a previously entered number. Run it
-with:
-\begin{verbatim}
-(clim:run-frame-top-level (clim:make-application-frame
-                           'clim-demo::summation))
-\end{verbatim}
+
+  Displays an interactive window in which you type numbers that are
+  successively added.  When a number is expected as input, you can
+  either type it at the keyboard, or click on a previously entered
+  number. Labeled ``Summation''.
 
 \item Examples/sliderdemo.lisp
-Apparently a calculator demo (see above).  Compile with:
-\begin{verbatim}
-(compile-file "Examples/sliderdemo.lisp")
-\end{verbatim}
-Load with:
-\begin{verbatim}
-(load "Examples/sliderdemo")
-\end{verbatim}
-Run with:
-\begin{verbatim}
-(clim-demo::slidertest)
-\end{verbatim}
+
+  Apparently a calculator demo (see above). Labeled ``Slider demo''.
+
 \item Examples/stream-test.lisp
-Interactive command processor that echoes its input.  Run with:
-\begin{verbatim}
-(clim-demo::run-test)
-\end{verbatim}
+
+  Interactive command processor that echoes its input in
+  \texttt{*trace-output*}.
+
 \end{itemize}
 
 The following programs are currently \textbf{known not to work}:
 \begin{itemize}
 \item
- \texttt{Examples/fire.lisp}
-\item
  \texttt{Examples/gadget-test-kr.lisp}
 \item
- \texttt{Examples/gadget-test.lisp}
-\item
- \texttt{Examples/puzzle.lisp}
-\item
  \texttt{Examples/traffic-lights.lisp}
-\item
- \texttt{Examples/transformations-test.lisp}
 \end{itemize}
 
 \section{McCLIM installation and usage tips}
