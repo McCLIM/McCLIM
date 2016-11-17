@@ -385,11 +385,11 @@
                 (clim-fig-redo-list *application-frame*)))
   (window-clear *standard-output*))
 
-(define-clim-fig-command (com-add-figure :name nil) ((x 'real) (y 'real))
+(define-clim-fig-command (com-add-figure :name nil) ((x real) (y real))
   (handle-draw-object (find-pane-named *application-frame* 'canvas) x y))
 
 (define-clim-fig-command (com-move-figure :name nil)
-    ((figure 'figure) (x 'real) (y 'real))
+    ((figure figure) (x real) (y real))
   (handle-move-object (find-pane-named *application-frame* 'canvas)
                       figure x y))
 

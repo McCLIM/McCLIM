@@ -42,9 +42,9 @@
   (:default-initargs :radius 50))
 
 (define-dragndrop-command (com-add-circle)
-    ((x 'real :prompt "x")
-     (y 'real :prompt "y")
-     (radius 'real :prompt "radius"))
+    ((x real :prompt "x")
+     (y real :prompt "y")
+     (radius real :prompt "radius"))
   (with-output-as-presentation
       (t (make-instance 'circle :x x :y y :radius radius) 'circle)
     (draw-circle* *standard-output* x y radius )))
@@ -61,9 +61,9 @@
   (list x y 50))
 
 (define-dragndrop-command (com-clone-circle)
-    ((original 'circle)
-     (start-x 'real)
-     (start-y 'real))
+    ((original circle)
+     (start-x real)
+     (start-y real))
   ;; Track the pointer offset from the center of the original object
   (let ((x-offset (- (x original) start-x))
 	(y-offset (- (y original) start-y)))
