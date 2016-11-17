@@ -61,13 +61,20 @@ associate with the current buffer.
 This command is not bound to any keyboard shortcut.  It is only
 available as an extended command.
 
+\Defcommand {com-save-buffer} {((file-name \texttt{pathname}))}
+
+This command writes the contents of the current buffer to the file
+whose name is given by the argument.
+
+If the current buffer has a file-name associated with it, then this
+command writes the contents of the current buffer to the file with
+that name.  If not, and if no argument is given, this command prompts
+for a file-name to save the buffer contents to.
+
+This command is bound to the keyboard shortcut \kbd{C-x C-s}.
+
 The commands that are supplied by this table
-are \command{com-find-file} (\kbd{C-x C-f}),
-\command{com-find-file-read-only} (\kbd{C-x C-r}),
-\command{com-read-only} (\kbd{C-x C-q}) which toggle the read-only
-flag of the buffer, \command{com-set-visited-file-name} (available as
-an extended command only) which prompts for a file name to be
-associated with the current buffer, \command{com-save-buffer}
+are \command{com-save-buffer}
 (\kbd{C-x C-s}), and \command{com-write-buffer} (\kbd{C-x C-w}).
 
 These commands handle prompting for file names, searching for existing
