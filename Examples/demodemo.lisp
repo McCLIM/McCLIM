@@ -79,6 +79,8 @@
                    (make-demo-button "Tab Layout" 'tabdemo:tabdemo)
                    (make-demo-button "Summation" 'summation)
                    (make-demo-button "Slider demo" 'sliderdemo)
+                   (make-demo-button "German Towns"
+                                     'town-example:town-example)
                    ;; this demo invokes the debugger
                    #+ (or) (make-demo-button "Traffic lights" 'traffic-lights)))
                (labelling (:label "Tests")
@@ -242,7 +244,7 @@
 (define-presentation-type list-test-symbol ())
 
 (define-list-test-command com-describe-symbol
-    ((sym 'list-test-symbol :gesture :select))
+    ((sym list-test-symbol :gesture :select))
   ;; Let's print only three lines, we don't have space for more.
   (with-input-from-string (s (with-output-to-string (s) (describe sym s)))
     (dotimes (x 3)

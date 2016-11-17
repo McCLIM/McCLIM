@@ -17,8 +17,8 @@
 (in-package :cl-user)
 
 (defpackage :town-example
-  (:use :clim :clim-lisp)
-  (:export :run))
+  (:use #:clim #:clim-lisp)
+  (:export #:run #:town-example))
 
 (in-package :town-example)
 
@@ -231,7 +231,7 @@ Factor to reduce the size of the circles")
 
 (define-town-example-command (com-show-town-info :name t :menu t
                                                  :keystroke (#\i :meta))
-    ((town 'town :prompt " Which town? "))
+    ((town town :prompt " Which town? "))
   ;; (present town 'town :view +textual-view+)
   (accepting-values-with-style-and-title (stream)
     (format stream "~&Information on ~a~%" (town-name town))
@@ -262,8 +262,8 @@ Factor to reduce the size of the circles")
 
 (define-town-example-command (com-get-distance :name t :menu t
                                                :keystroke (#\d :meta))
-    ((town-a 'town :prompt "Town a")
-     (town-b 'town :prompt "Town b"))
+    ((town-a town :prompt "Town a")
+     (town-b town :prompt "Town b"))
    (accepting-values-with-style-and-title (stream)
     (format stream "~&Distance~%")
     (format stream "~%It's ~d pixels from ~a to ~a.~%~%"

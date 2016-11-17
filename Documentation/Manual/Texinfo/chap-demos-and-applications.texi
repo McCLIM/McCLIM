@@ -93,6 +93,10 @@ Available demos and tests are defined in the following files:
 
   Interactive color editor.
 
+@item Examples/town-example.lisp
+
+  ``Large Cities of Germany'' application example by Max-Gerd Retzlaff.
+
 @item Examples/logic-cube.lisp
 
   Software-rendered 3d logic cube game. Shows how the transformations

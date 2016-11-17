@@ -84,7 +84,7 @@
     (make-rectangle* x0 y0 x1 y1)))
 
 (define-draggable-graph-demo-command (com-drag-node)
-    ((record t) (x 'real) (y 'real))
+    ((record t) (x real) (y real))
   (let* ((graph-node (find-graph-node record))
 	 (edges (node-edges graph-node))
 	 (erase-region (stupid-copy-rectangle
