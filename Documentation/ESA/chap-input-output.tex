@@ -50,6 +50,16 @@ This command toggles the read-only flag of the current buffer.
 
 This command is bound to the keyboard shortcut \kbd{C-x C-q}.
 
+\Defcommand {com-set-visited-file-name} {((file-name
+  \texttt{pathname}))}
+
+This commands sets the file-name associated with the current buffer.
+
+If no argument is given, this command prompts for a file-name to
+associate with the current buffer.
+
+This command is not bound to any keyboard shortcut.  It is only
+available as an extended command.
 
 The commands that are supplied by this table
 are \command{com-find-file} (\kbd{C-x C-f}),
