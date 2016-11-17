@@ -27,6 +27,21 @@ created.
 
 This command is bound to the keyboard shortcut \kbd{C-x C-f}.
 
+\Defgeneric {esa-io:frame-find-file} {(application-frame pathname)}
+
+This generic function is called by the command
+\command{com-find-file}, passing the current application frame and the
+pathname that it received as an argument.
+
+If a buffer with the file-name \textit{pathname} associated with it
+already exists, then return that buffer is returned.  Otherwise, if a
+file with the name \textit{pathname} exists, a fresh buffer created
+from the file is returned.  Otherwise, a new empty buffer having the
+associated file name is returned.
+
+Client code may override this method or provide auxiliary methods on
+it.
+
 \Defcommand {com-find-file-read-only} {((file-name \texttt{pathname}))}
 
 This command is similar to \command{find-file}, except that after
@@ -116,7 +131,7 @@ library can create a new buffer whenever a non-existing file name is
 given.
 
 To implement the i/o functions, the \sysname{} i/o facility calls the
-generic functions \function{esa-io:frame-find-file},
+generic functions
 \function{esa-io:frame-find-file-read-only},
 \function{esa-io:frame-set-visited-file-name},
 \function{esa-io:frame-save-buffer}, and
