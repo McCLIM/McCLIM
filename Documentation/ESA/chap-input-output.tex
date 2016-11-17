@@ -87,7 +87,22 @@ These commands handle prompting for file names, searching for existing
 buffers with the file name given, Emacs-style file versioning, and
 more.  The only thing they need help from the application with is for
 saving a buffer to a stream, and for creating a buffer from a stream.
-For that, the \sysname{} library calls the generic functions
+For that, the \sysname{} library calls the generic functions described
+below.
+
+\Defgeneric {{esa-buffer:frame-save-buffer-to-stream}}\\
+{(application-frame buffer stream)}
+
+This generic function is called by the commands that write the
+contents of a buffer to a file.
+
+Client code that uses the \sysname{} input/output facility must supply
+a method on this generic function, and that method must be specialized
+to the application-specific class of its application-frame.
+
+\Defgeneric {{esa-buffer:frame-make-buffer-from-stream}}\\
+{(application-frame stream)}
+
 \function{esa-buffer:frame-save-buffer-to-stream} and
 \function{esa-buffer:frame-make-buffer-from-stream} respectively.
 Applications that use the \sysname{} i/o facility must provide methods
