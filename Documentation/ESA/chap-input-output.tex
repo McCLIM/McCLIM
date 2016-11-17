@@ -27,6 +27,23 @@ created.
 
 This command is bound to the keyboard shortcut \kbd{C-x C-f}.
 
+\Defcommand {com-find-file-read-only} {((file-name \texttt{pathname}))}
+
+This command is similar to \command{find-file}, except that after
+reading the contents of the file into a buffer, it sets the read-only
+flag of the buffer to \emph{true}.
+
+If no argument is given, this command prompts for a file-name to load
+into a fresh buffer which then becomes the current buffer.
+
+If a buffer is already visiting that file, it instead switches to that
+buffer.
+
+If the file-name given does not name an existing file, an error is
+signaled.
+
+This command is bound to the keyboard shortcut \kbd{C-x C-r}.
+
 The commands that are supplied by this table
 are \command{com-find-file} (\kbd{C-x C-f}),
 \command{com-find-file-read-only} (\kbd{C-x C-r}),
