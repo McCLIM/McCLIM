@@ -1121,6 +1121,26 @@ examine the type of the command menu item to see if it is
 (defmacro define-command (name-and-options args &body body)
   (unless (listp name-and-options)
     (setq name-and-options (list name-and-options)))
+
+  ;; Argument types shouldn't be evaluated. Unfortunately in McCLIM
+  ;; they are, and in all McCLIM applications up to day types are
+  ;; quoted. To preserve backward compatibility we honor this, but we
+  ;; don't evaluate types which are not quoted, but rather add the
+  ;; quotation ourself.
+  ;;
+  ;; Thanks to that we should achieve compatibility with other CLIMs
+  ;; without breaking already existing applications (unless they did
+  ;; some fancy computation in `define-command' macro which isn't
+  ;; conforming anyway).
+  (map () (lambda (arg)
+            ;; we need to sanitize against &key which is atom
+            (unless (atom arg)
+              (let ((type (second arg)))
+                (unless (and (listp type)
+                             (eql (car type) 'quote))
+                  (setf (second arg) `',type)))))
+       args)
+
   (destructuring-bind (func &rest options
 		       &key (provide-output-destination-keyword nil)
 		       &allow-other-keys)
