@@ -354,7 +354,7 @@ accept of this query")))
 				 :default-supplied-p default-supplied-p
 				 :value default))
       (setf (queries stream) (nconc (queries stream) (list query)))
-      (when default
+      (when default-supplied-p
         (setf (changedp query) t)))
     (setf (accept-arguments query) rest-args)
     ;; If the program changes the default, that becomes the value.
