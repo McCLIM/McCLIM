@@ -103,11 +103,14 @@ to the application-specific class of its application-frame.
 \Defgeneric {{esa-buffer:frame-make-buffer-from-stream}}\\
 {(application-frame stream)}
 
-\function{esa-buffer:frame-save-buffer-to-stream} and
-\function{esa-buffer:frame-make-buffer-from-stream} respectively.
-Applications that use the \sysname{} i/o facility must provide methods
-on these generic functions, specialized on the particular class of the
-application frame.  Applications should also provide a method on
+This generic function is called by the commands that read the
+contents of a file into a new buffer.
+
+Client code that uses the \sysname{} input/output facility must supply
+a method on this generic function, and that method must be specialized
+to the application-specific class of its application-frame.
+
+Applications should also provide a method on
 \function{esa-buffer:frame-make-new-buffer} so that the \sysname{}
 library can create a new buffer whenever a non-existing file name is
 given.
