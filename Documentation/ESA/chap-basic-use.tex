@@ -67,7 +67,8 @@ application using the \sysname{} library will need.
 
 This command quits the application by invoking the CLIM function
 FRAME-EXIT on the application frame.  It is included in the
-global-esa-table, together with the standard key bindings C-x C-c. 
+global-esa-table, together with the standard key bindings \kbd{C-x
+  C-c}.
 
 The \class{global-esa-table} also contains the keyboard binding
 \kbd{M-x} which invokes the command \cl{esa:com-extended-command}.  This
@@ -76,7 +77,8 @@ and executes that command.
 
 \Defcommandtable {esa:keyboard-macro-table}
 
-This command table contains three commands, com-start-kbd-macro (C-x
-(), com-end-kbd-macro (C-x )) and com-call-last-kbd-macro (C-x e).
-Applications that want to use Emacs-style keyboard macros should
-include this table in the global application command table. 
+This command table contains three commands, com-start-kbd-macro
+(\kbd{C-x (}), com-end-kbd-macro (\kbd{C-x )}) and
+com-call-last-kbd-macro (\kbd{C-x e}).  Applications that want to use
+Emacs-style keyboard macros should include this table in the global
+application command table.
