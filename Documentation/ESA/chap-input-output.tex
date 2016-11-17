@@ -4,11 +4,31 @@ The \sysname{} library provides facilities for loading a buffer from a
 file, and saving a buffer to a file.  The \package{esa-io} package
 contains symbols related to this functionality.
 
-A command table, esa-io:esa-io-table contains a number of commands and
-related key bindings related to input/output.  Typically, an
-application that needs such i/o would inherit from this command table
-when creating its global command table.  The commands that are
-supplied by this table are \command{com-find-file} (\kbd{C-x C-f}),
+\Defcommandtable {esa-io:esa-io-table}
+
+This command table contains a number of commands and related key
+bindings related to input/output.  Typically, an application that
+needs such i/o would inherit from this command table when creating its
+global command table.
+
+\Defcommand {com-find-file} {((file-name \texttt{pathname}))}
+
+This command is similar to the \emacs{} command with the same name.
+
+If no argument is given, this command prompts for a file-name to load
+into a fresh buffer which then becomes the current buffer.
+
+If a buffer is already visiting that file, it instead switches to that
+buffer.
+
+If the file-name given does not name an existing file, a fresh buffer
+is created that is associated with the file-name given, but no file is
+created.
+
+This command is bound to the keyboard shortcut \kbd{C-x C-f}.
+
+The commands that are supplied by this table
+are \command{com-find-file} (\kbd{C-x C-f}),
 \command{com-find-file-read-only} (\kbd{C-x C-r}),
 \command{com-read-only} (\kbd{C-x C-q}) which toggle the read-only
 flag of the buffer, \command{com-set-visited-file-name} (available as
