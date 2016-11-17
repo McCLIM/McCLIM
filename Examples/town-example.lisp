@@ -17,8 +17,8 @@
 (in-package :cl-user)
 
 (defpackage :town-example
-  (:use :clim :clim-lisp)
-  (:export :run))
+  (:use #:clim #:clim-lisp)
+  (:export #:run #:town-example))
 
 (in-package :town-example)
 
