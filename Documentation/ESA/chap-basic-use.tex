@@ -1,8 +1,8 @@
-\chapter{Basic use of ESA}
+\chapter{Basic use of \sysname{}}
 
 \section{Mixin classes}
 
-For basic use of the ESA library, the application needs to supply it
+For basic use of the \sysname{} library, the application needs to supply it
 with certain functionality.  The basic application document should be a
 class that inherits from the class \class{esa-buffer:esa-buffer} mixin.
 This class supplies functionality for associating the buffer with a
@@ -37,7 +37,7 @@ file, or to toggle the read-only flag of the current buffer.
 
 \section{The info pane}
 
-ESA supplies a class esa:info-pane which is typically used to display
+\sysname{} supplies a class esa:info-pane which is typically used to display
 something similar to the status line of Emacs.  It supplies a slot
 that contains a main application pane.  This slot can be initialized
 with the :initarg :master-pane and can be read using the reader
@@ -47,21 +47,21 @@ master pane.
 
 \section{The minibuffer pane}
 
-ESA supplies a class esa:minibuffer-pane that is used to display
+\sysname{} supplies a class esa:minibuffer-pane that is used to display
 messages to the user of the application, and also to acquire arguments
 to commands.  Applications should make sure the application frame
 contains an instance of this class, or of a subclass of it.  
 
 \section{Command tables}
 
-Typically, an application using the ESA library will need a number of
-CLIM command tables.  ESA supplies a number of such command tables
+Typically, an application using the \sysname{} library will need a number of
+CLIM command tables.  \sysname{} supplies a number of such command tables
 that the application can inherit from.  
 
 \Defcommandtable {esa:global-esa-table}
 
 This command table contains a few basic commands that every
-application using the ESA library will need.
+application using the \sysname{} library will need.
 
 \Defcommand {esa:com-quit} {}
 
