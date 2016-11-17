@@ -59,6 +59,12 @@ signaled.
 
 This command is bound to the keyboard shortcut \kbd{C-x C-r}.
 
+\Defgeneric {esa-io:frame-find-file-read-only} {(application-frame pathname)}
+
+This generic function is called by the command
+\command{com-find-file-read-only}, passing the current application
+frame and the pathname that it received as an argument.
+
 \Defcommand {com-read-only} {()}
 
 This command toggles the read-only flag of the current buffer.
@@ -132,7 +138,6 @@ given.
 
 To implement the i/o functions, the \sysname{} i/o facility calls the
 generic functions
-\function{esa-io:frame-find-file-read-only},
 \function{esa-io:frame-set-visited-file-name},
 \function{esa-io:frame-save-buffer}, and
 \function{esa-io:frame-write-buffer}.  Applications can override these
