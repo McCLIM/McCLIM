@@ -406,7 +406,7 @@ bound to the current command processor.")
 
 (defvar *meta-digit-table*
   (loop for i from 0 to 9
-       collect (list :keyboard (digit-char i) (make-modifier-state :meta))))
+	collect (list :keyboard (digit-char i) (make-modifier-state :meta))))
 
 (defun meta-digit (gesture)
   (position gesture *meta-digit-table*
@@ -499,11 +499,10 @@ their opinion. `Gestures' is a list of gestures.")
   event-based command processing schemes."))
 
 (defmethod (setf executingp) :after ((new-val (eql t)) (drei instant-macro-execution-mixin))
-  (loop
-     until (null (remaining-keys drei))
-     for gesture = (pop (remaining-keys drei))
-     do (process-gesture drei gesture)
-     finally (setf (executingp drei) nil)))
+  (loop until (null (remaining-keys drei))
+	for gesture = (pop (remaining-keys drei))
+	do (process-gesture drei gesture)
+	finally (setf (executingp drei) nil)))
 
 (defclass asynchronous-command-processor (command-processor
                                           instant-macro-execution-mixin)
@@ -615,13 +614,11 @@ of a prefix arg returns 1 (and nil)."
     (cond ((gesture-matches-gesture-name-p
 	    first-gesture 'universal-argument)
 	   (let ((numarg 4))
-	     (loop
-                for gesture = (first gestures)
-                while (gesture-matches-gesture-name-p
-                       gesture 'universal-argument)
-                do
-                (setf numarg (* 4 numarg))
-                (pop gestures))
+	     (loop for gesture = (first gestures)
+		   while (gesture-matches-gesture-name-p
+			  gesture 'universal-argument)
+		   do (setf numarg (* 4 numarg))
+		      (pop gestures))
 	     (let ((gesture (pop gestures))
 		   (sign +1))
 	       (when (and (characterp gesture)
@@ -631,15 +628,13 @@ of a prefix arg returns 1 (and nil)."
                (cond ((and (characterp gesture)
 			   (digit-char-p gesture 10))
                       (setf numarg (digit-char-p gesture 10))
-		      (loop
-                         for gesture = (first gestures)
-                         while (and (characterp gesture)
-                                    (digit-char-p gesture 10))
-                         do
-                         (setf numarg (+ (* 10 numarg)
-                                         (digit-char-p gesture 10)))
-                         (pop gestures)
-                         finally (return (values (* numarg sign) t gestures))))
+		      (loop for gesture = (first gestures)
+			    while (and (characterp gesture)
+				       (digit-char-p gesture 10))
+			    do (setf numarg (+ (* 10 numarg)
+					       (digit-char-p gesture 10)))
+			       (pop gestures)
+			    finally (return (values (* numarg sign) t gestures))))
 		     (t
 		      (values (if (minusp sign) -1 numarg) t
                               (when gesture
@@ -652,17 +647,14 @@ of a prefix arg returns 1 (and nil)."
 	     (cond ((meta-digit first-gesture)
 		    (setf numarg (meta-digit first-gesture)))
 		   (t (setf sign -1)))
-	     (loop
-                for gesture = (first gestures)
-                while (meta-digit gesture)
-                do
-                (setf numarg (+ (* 10 numarg) (meta-digit gesture)))
-                (pop gestures)
-                finally
-                (return (values (if (and (= sign -1) (= numarg 0))
-                                    -1
-                                    (* sign numarg))
-                                t gestures)))))
+	     (loop for gesture = (first gestures)
+		   while (meta-digit gesture)
+		   do (setf numarg (+ (* 10 numarg) (meta-digit gesture)))
+		      (pop gestures)
+		   finally (return (values (if (and (= sign -1) (= numarg 0))
+					       -1
+					       (* sign numarg))
+					   t gestures)))))
 	  (t (values 1 nil (when first-gesture
                              (cons first-gesture gestures)))))))
 
@@ -738,10 +730,9 @@ never refer to a command."))
   (unless (null (remaining-keys command-processor))
     (return-from esa-read-gesture
       (pop (remaining-keys command-processor))))
-  (loop
-     for gesture = (read-gesture :stream stream)
-     until (proper-gesture-p gesture)
-     finally (return gesture)))
+  (loop for gesture = (read-gesture :stream stream)
+	until (proper-gesture-p gesture)
+	finally (return gesture)))
 
 (defun esa-unread-gesture (gesture &key (command-processor *command-processor*)
                            (stream *standard-input*))
@@ -1402,12 +1393,12 @@ sense for the ESA."
       (when (plusp (length keystrokes))
         (princ "It is bound to " stream)
         (loop for gestures-list on (first keystrokes)
-           do (with-drawing-options (stream :ink +dark-blue+
-					    :text-style '(:fix nil nil))
-                (format stream "~{~A~^ ~}"
-                        (mapcar #'gesture-name (reverse (first gestures-list)))))
-           when (not (null (rest gestures-list)))
-           do (princ ", " stream))
+	      do (with-drawing-options (stream :ink +dark-blue+
+					       :text-style '(:fix nil nil))
+		   (format stream "~{~A~^ ~}"
+			   (mapcar #'gesture-name (reverse (first gestures-list)))))
+	      when (not (null (rest gestures-list)))
+		do (princ ", " stream))
         (terpri stream))
       (terpri stream)
       (print-docstring-for-command command-name command-table stream)
