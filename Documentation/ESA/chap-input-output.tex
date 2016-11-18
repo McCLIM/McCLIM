@@ -137,9 +137,15 @@ library can create a new buffer whenever a non-existing file name is
 given.
 
 To implement the i/o functions, the \sysname{} i/o facility calls the
-generic functions
-\function{esa-io:frame-set-visited-file-name},
-\function{esa-io:frame-save-buffer}, and
-\function{esa-io:frame-write-buffer}.  Applications can override these
-methods, or provide auxiliary methods on them in order to customize
-their behavior.
+generic functions described below:
+
+\Defgeneric {esa-io:frame-set-visited-file-name}\\
+{(application-frame pathname buffer)}
+
+\Defgeneric {esa-io:frame-save-buffer} {(application-frame buffer)}
+
+\Defgeneric {esa-io:frame-write-buffer}\\
+{(application-frame pathname buffer)}
+
+Applications can override these methods, or provide auxiliary methods
+on them in order to customize their behavior.
