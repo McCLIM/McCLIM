@@ -1640,26 +1640,23 @@ Use C-x ( to start and C-x ) to finish recording a keyboard macro."
 				   standard-application-frame)
   ()
   (:panes
-   (window (let* ((my-pane 
-		(make-pane 'example-pane
-			   :width 900 :height 400
-			   :display-function 'display-my-pane
-			   :command-table 'global-example-table))
-	       (my-info-pane
-		(make-pane 'example-info-pane
-			   :master-pane my-pane
-			   :width 900)))
-	  (setf (windows *application-frame*) (list my-pane))
-	  (vertically ()
-	    (scrolling ()
-	      my-pane)
-	    my-info-pane)))
+   (window (let* ((my-pane (make-pane 'example-pane
+				      :width 900 :height 400
+				      :display-function 'display-my-pane
+				      :command-table 'global-example-table))
+		  (my-info-pane (make-pane 'example-info-pane
+					   :master-pane my-pane
+					   :width 900)))
+	     (setf (windows *application-frame*) (list my-pane))
+	     (vertically ()
+			 (scrolling ()
+				    my-pane)
+			 my-info-pane)))
    (minibuffer (make-pane 'example-minibuffer-pane :width 900)))
   (:layouts
-   (default
-       (vertically (:scroll-bars nil)
-	 window
-	 minibuffer)))
+   (default (vertically (:scroll-bars nil)
+			window
+			minibuffer)))
   (:top-level (esa-top-level)))
 
 (defun display-my-pane (frame pane)
