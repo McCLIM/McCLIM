@@ -39,7 +39,7 @@ will probably have the same value as `*application-frame*'.")
   (:documentation "Return a list of all the buffers of the application."))
 
 (defgeneric esa-current-buffer (esa)
-  (:documentation "Return the current buffer of APPLICATION-FRAME."))
+  (:documentation "Return the current buffer of the ESA instance ESA."))
 
 (defgeneric (setf esa-current-buffer) (new-buffer esa)
   (:documentation "Replace the current buffer of
