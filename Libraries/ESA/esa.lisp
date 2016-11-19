@@ -42,8 +42,9 @@ will probably have the same value as `*application-frame*'.")
   (:documentation "Return the current buffer of the ESA instance ESA."))
 
 (defgeneric (setf esa-current-buffer) (new-buffer esa)
-  (:documentation "Replace the current buffer of
-APPLICATION-FRAME with NEW-BUFFER."))
+  (:documentation
+   #.(format nil "Replace the current buffer of the ESA instance~@
+                  ESA with NEW-BUFFER.")))
 
 (defun current-buffer ()
   "Return the currently active buffer of the running ESA."
