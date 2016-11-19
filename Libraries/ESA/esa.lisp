@@ -51,7 +51,8 @@ will probably have the same value as `*application-frame*'.")
   (esa-current-buffer *esa-instance*))
 
 (defun (setf current-buffer) (new-buffer)
-  "Return the currently active buffer of the running ESA."
+  #.(format nil "Replace the current buffer of the current running~@
+                 ESA instance with NEW-BUFFER.")
   (setf (esa-current-buffer *esa-instance*) new-buffer))
 
 (defgeneric windows (esa)
