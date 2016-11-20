@@ -68,8 +68,8 @@ will probably have the same value as `*application-frame*'.")
   (esa-current-window *esa-instance*))
 
 (defvar *previous-command* nil
-  "When a command is being executed, the command previously
-executed by the application.")
+  #.(format nil "When a command is being executed, the command~@
+                 previously executed by the application."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
