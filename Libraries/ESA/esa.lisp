@@ -61,7 +61,7 @@ will probably have the same value as `*application-frame*'.")
     '()))
 
 (defgeneric esa-current-window (esa)
-  (:documentation "Return the current window of ESA."))
+  (:documentation "Return the currently active window of ESA."))
 
 (defun current-window ()
   "Return the currently active window of the running ESA instance."
