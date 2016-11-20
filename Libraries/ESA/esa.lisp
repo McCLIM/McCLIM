@@ -270,45 +270,46 @@ current message was set."))
       ;; setup.
       (presentation-replace-input stream default default-type view))
     (with-input-context (type)
-        (object object-type event options)
-        (with-activation-gestures ((if additional-activations-p
-                                       additional-activation-gestures
-                                       activation-gestures)
-                                   :override activationsp)
-          (with-delimiter-gestures ((if additional-delimiters-p
-                                        additional-delimiter-gestures
-                                        delimiter-gestures)
-                                    :override delimitersp)
-            (let ((accept-results nil))
-              (climi::handle-empty-input (stream)
-                  (setq accept-results
-                        (multiple-value-list
-                         (if defaultp
-                             (funcall-presentation-generic-function
-                              accept type stream view
-                              :default default :default-type default-type)
-                             (funcall-presentation-generic-function
-                              accept type stream view))))
-                ;; User entered activation or delimiter gesture
-                ;; without any input.
-                (if defaultp
-                    (presentation-replace-input
-                     stream default default-type view :rescan nil)
-                    (simple-parse-error
-                     "Empty input for type ~S with no supplied default"
-                     type))
-                (setq accept-results (list default default-type)))
-              ;; Eat trailing activation gesture
-              ;; XXX what about pointer gestures?
-              ;; XXX and delimiter gestures?
-              ;;
-              ;; deleted check for *RECURSIVE-ACCEPT-P*
-              (let ((ag (read-char-no-hang stream nil stream t)))
-                (unless (or (null ag) (eq ag stream))
-                  (unless (activation-gesture-p ag)
-                    (unread-char ag stream))))
-              (values (car accept-results) 
-                      (if (cdr accept-results) (cadr accept-results) type)))))
+      (object object-type event options)
+      (with-activation-gestures ((if additional-activations-p
+				     additional-activation-gestures
+				     activation-gestures)
+				 :override activationsp)
+	(with-delimiter-gestures ((if additional-delimiters-p
+				      additional-delimiter-gestures
+				      delimiter-gestures)
+				  :override delimitersp)
+	  (let ((accept-results nil))
+	    (climi::handle-empty-input
+	     (stream)
+	     (setq accept-results
+		   (multiple-value-list
+		    (if defaultp
+			(funcall-presentation-generic-function
+			 accept type stream view
+			 :default default :default-type default-type)
+			(funcall-presentation-generic-function
+			 accept type stream view))))
+	     ;; User entered activation or delimiter gesture
+	     ;; without any input.
+	     (if defaultp
+		 (presentation-replace-input
+		  stream default default-type view :rescan nil)
+		 (simple-parse-error
+		  "Empty input for type ~S with no supplied default"
+		  type))
+	     (setq accept-results (list default default-type)))
+	    ;; Eat trailing activation gesture
+	    ;; XXX what about pointer gestures?
+	    ;; XXX and delimiter gestures?
+	    ;;
+	    ;; deleted check for *RECURSIVE-ACCEPT-P*
+	    (let ((ag (read-char-no-hang stream nil stream t)))
+	      (unless (or (null ag) (eq ag stream))
+		(unless (activation-gesture-p ag)
+		  (unread-char ag stream))))
+	    (values (car accept-results)
+		    (if (cdr accept-results) (cadr accept-results) type)))))
       ;; A presentation was clicked on, or something.
       (t
        (when (and replace-input 
