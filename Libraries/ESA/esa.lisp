@@ -234,15 +234,16 @@ current message was set."))
     (funcall handler-continuation)))
 
 (defun accept-1-for-minibuffer
-    (stream type &key
-     (view (stream-default-view stream))
-     (default nil defaultp) (default-type nil default-type-p)
-     provide-default insert-default (replace-input t)
-     history active-p prompt prompt-mode display-default
-     query-identifier (activation-gestures nil activationsp)
-     (additional-activation-gestures nil additional-activations-p)
-     (delimiter-gestures nil delimitersp)
-     (additional-delimiter-gestures nil  additional-delimiters-p))
+    (stream type
+     &key
+       (view (stream-default-view stream))
+       (default nil defaultp) (default-type nil default-type-p)
+       provide-default insert-default (replace-input t)
+       history active-p prompt prompt-mode display-default
+       query-identifier (activation-gestures nil activationsp)
+       (additional-activation-gestures nil additional-activations-p)
+       (delimiter-gestures nil delimitersp)
+       (additional-delimiter-gestures nil  additional-delimiters-p))
   (declare (ignore provide-default history active-p
 		   prompt prompt-mode
 		   display-default query-identifier))
