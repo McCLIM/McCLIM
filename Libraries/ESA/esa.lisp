@@ -87,8 +87,7 @@ will probably have the same value as `*application-frame*'.")
 ;;; Minibuffer pane
 
 (defgeneric minibuffer (application-frame)
-  (:documentation "Return the minibuffer of
-  `application-frame'."))
+  (:documentation "Return the minibuffer of APPLICATION-FRAME."))
 
 (defvar *minibuffer* nil
   "The minibuffer pane of the running application.")
