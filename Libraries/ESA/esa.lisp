@@ -1091,10 +1091,11 @@ First ask if modified buffers should be saved. If you decide not to save a modif
 ;;; Help
 
 (defgeneric invoke-with-help-stream (esa title continuation)
-  (:documentation "Invoke `continuation' with a single argument -
-a stream for writing on-line help for `esa' onto. The stream
-should have the title, or name, `title' (a string), but the
-specific meaning of this is left to the respective ESA."))
+  (:documentation
+   #.(format nil "Invoke CONTINUATION with a single argument - a stream~@
+                  for writing on-line help for ESA onto. The stream~@
+                  should have the title, or name, TITLE (a string), but the~@
+                  specific meaning of this is left to the respective ESA.")))
 
 (defmethod invoke-with-help-stream (frame title continuation)
   (funcall continuation
