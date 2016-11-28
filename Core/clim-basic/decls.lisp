@@ -873,7 +873,12 @@ is exposed in the current layout."))
 (defgeneric frame-top-level-sheet (frame))
 (defgeneric frame-current-panes (frame))
 (defgeneric get-frame-pane (frame pane-name))
-(defgeneric fine-pane-named (frame pane-name))
+
+(defgeneric find-pane-named (frame pane-name)
+  (:documentation "Returns the pane in the frame `frame' whose name is
+`pane-name'. This can return any type of pane, not just CLIM stream
+panes."))
+
 (defgeneric frame-current-layout (frame))
 (defgeneric (setf frame-current-layout) (layout frame))
 (defgeneric frame-all-layouts (frame))
