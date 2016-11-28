@@ -269,16 +269,12 @@ documentation produced by presentations.")
         (resize-sheet (frame-top-level-sheet frame) width height)))
     (allocate-space pane width height)))
 
-(defun find-pane-if (predicate panes)
-  "Returns a pane satisfying PREDICATE in the forest growing from PANES"
+(defun find-pane-of-type (parent type)
+  "Returns a pane of `type' in the forest growing from `parent'."
   (map-over-sheets #'(lambda (p)
-		       (when (funcall predicate p)
-			 (return-from find-pane-if p)))
-		   panes)
-  nil)
-
-(defun find-pane-of-type (panes type)
-  (find-pane-if #'(lambda (pane) (typep pane type)) panes))
+		       (when (typep p type)
+			 (return-from find-pane-of-type p)))
+		   parent))
 
 ;;; There are several ways to do this; this isn't particularly
 ;;; efficient, but it shouldn't matter much.
