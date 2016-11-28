@@ -296,12 +296,14 @@ documentation produced by presentations.")
 (defmethod find-pane-named ((frame application-frame) pane-name)
   (find pane-name (frame-named-panes frame) :key #'pane-name))
 
+;;; XXX: these functions may be precomputed during the layout change
+;;; in `generate-panes' method.
 (defmethod frame-standard-output ((frame application-frame))
-  (or (find-pane-of-type (frame-panes frame) 'application-pane)
-      (find-pane-of-type (frame-panes frame) 'interactor-pane)))
+  (or (find-pane-of-type (frame-current-panes frame) 'application-pane)
+      (find-pane-of-type (frame-current-panes frame) 'interactor-pane)))
 
 (defmethod frame-standard-input ((frame application-frame))
-  (or (find-pane-of-type (frame-panes frame) 'interactor-pane)
+  (or (find-pane-of-type (frame-current-panes frame) 'interactor-pane)
       (frame-standard-output frame)))
 
 (defmethod frame-query-io ((frame application-frame))
