@@ -272,9 +272,9 @@ documentation produced by presentations.")
 (defun find-pane-of-type (parent type)
   "Returns a pane of `type' in the forest growing from `parent'."
   (map-over-sheets #'(lambda (p)
-		       (when (typep p type)
-			 (return-from find-pane-of-type p)))
-		   parent))
+                       (when (typep p type)
+                         (return-from find-pane-of-type p)))
+                   parent))
 
 ;;; There are several ways to do this; this isn't particularly
 ;;; efficient, but it shouldn't matter much.
