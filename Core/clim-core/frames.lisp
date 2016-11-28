@@ -271,10 +271,12 @@ documentation produced by presentations.")
 
 (defun find-pane-of-type (parent type)
   "Returns a pane of `type' in the forest growing from `parent'."
-  (map-over-sheets #'(lambda (p)
-                       (when (typep p type)
-                         (return-from find-pane-of-type p)))
-                   parent))
+  (flet ((return-found-type (pane)
+           (when (typep pane type)
+             (return-from find-pane-of-type pane))))
+    (if (listp parent)
+        (map nil #'return-found-type parent)
+        (map-over-sheets #'return-found-type parent))))
 
 ;;; XXX: this function should be precomputed during the layout change
 (defmethod frame-current-panes ((frame application-frame))
