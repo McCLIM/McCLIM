@@ -280,9 +280,8 @@ documentation produced by presentations.")
 (defun find-pane-of-type (panes type)
   (find-pane-if #'(lambda (pane) (typep pane type)) panes))
 
-;;; There are several ways to do this; this isn't particularly efficient, but
-;;; it shouldn't matter much.  If it does, it might be better to map over the
-;;; panes in frame-named-panes looking for panes with parents.
+;;; There are several ways to do this; this isn't particularly
+;;; efficient, but it shouldn't matter much.
 (defmethod frame-current-panes ((frame application-frame))
   (let ((panes nil)
 	(named-panes (frame-named-panes frame)))
