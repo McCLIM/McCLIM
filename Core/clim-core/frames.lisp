@@ -39,11 +39,11 @@
   (if (and (boundp '*frame-manager*)
            (or (null port) (eql port (port *frame-manager*))))
       *frame-manager*
-    (if (and *default-frame-manager*
-             (frame-manager-p *default-frame-manager*)
-             (or (null port) (eql port (port *default-frame-manager*))))
-	*default-frame-manager*
-        (first (frame-managers (or port (apply #'find-port options)))))))
+      (if (and *default-frame-manager*
+               (frame-manager-p *default-frame-manager*)
+               (or (null port) (eql port (port *default-frame-manager*))))
+          *default-frame-manager*
+          (first (frame-managers (or port (apply #'find-port options)))))))
 
 (defmacro with-frame-manager ((frame-manager) &body body)
   `(let ((*frame-manager* ,frame-manager))
@@ -808,8 +808,8 @@ documentation produced by presentations.")
                          ,@layouts))))))))
 
 (defmacro define-application-frame (name superclasses slots &rest options)
-  (if (null superclasses)
-      (setq superclasses '(standard-application-frame)))
+  (when (null superclasses)
+    (setq superclasses '(standard-application-frame)))
   (let ((pane nil)
 	(panes nil)
 	(layouts nil)
@@ -846,12 +846,14 @@ documentation produced by presentations.")
                                  (symbol-name '#:define-)
                                  (symbol-name name)
                                  (symbol-name '#:-command)))))
-    (if (or (and pane panes)
-	    (and pane layouts))
-	(error ":pane cannot be specified along with either :panes or :layouts"))
-    (if pane
-	(setq panes (list 'single-pane pane)
-	      layouts `((:default ,(car pane)))))
+    (when (or (and pane panes)
+              (and pane layouts))
+      (error ":pane cannot be specified along with either :panes or :layouts"))
+
+    (when pane
+      (setq panes (list 'single-pane pane)
+            layouts `((:default ,(car pane)))))
+
     (setq current-layout (first (first layouts)))
     `(progn
       (defclass ,name ,superclasses
