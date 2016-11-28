@@ -82,6 +82,7 @@
 ;;;; Early special variables
 
 (defvar *application-frame* nil)
+(defvar *pointer-documentation-output* nil)
 
 
 ;;; 3.2.1.1 The Point Protocol

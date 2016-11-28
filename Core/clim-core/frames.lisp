@@ -313,8 +313,6 @@ documentation produced by presentations.")
 (defmethod frame-error-output ((frame application-frame))
   (frame-standard-output frame))
 
-(defvar *pointer-documentation-output* nil)
-
 (defmethod frame-pointer-documentation-output ((frame application-frame))
   (find-pane-of-type (frame-panes frame) 'pointer-documentation-pane))
 
