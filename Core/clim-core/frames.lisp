@@ -708,31 +708,28 @@ documentation produced by presentations.")
 ;
 ; FIXME
 (defun make-single-pane-generate-panes-form (class-name menu-bar pane)
-  `(progn
-     (defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-       ;; v-- hey, how can this be?
-       (with-look-and-feel-realization (fm frame)
-	 (let ((pane ,(cond
-		       ((eq menu-bar t)
-			`(vertically () (clim-internals::make-menu-bar
-                                         ',class-name)
-				     ,pane))
-		       ((consp menu-bar)
-			`(vertically () (clim-internals::make-menu-bar
-                                         (make-command-table nil
-							     :menu ',menu-bar))
-				     ,pane))
-		       (menu-bar
-			`(vertically () (clim-internals::make-menu-bar
-					 ',menu-bar)
-				     ,pane))
-		       ;; The form below is unreachable with (listp
-		       ;; menu-bar) instead of (consp menu-bar) above
-		       ;; --GB
-		       (t pane))))
-	   (setf (slot-value frame 'panes) pane))))
-     (defmethod frame-all-layouts ((frame ,class-name))
-       nil)))
+  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+     ;; v-- hey, how can this be?
+     (with-look-and-feel-realization (fm frame)
+       (let ((pane ,(cond
+                      ((eq menu-bar t)
+                       `(vertically () (clim-internals::make-menu-bar
+                                        ',class-name)
+                                    ,pane))
+                      ((consp menu-bar)
+                       `(vertically () (clim-internals::make-menu-bar
+                                        (make-command-table nil
+                                                            :menu ',menu-bar))
+                                    ,pane))
+                      (menu-bar
+                       `(vertically () (clim-internals::make-menu-bar
+                                        ',menu-bar)
+                                    ,pane))
+                      ;; The form below is unreachable with (listp
+                      ;; menu-bar) instead of (consp menu-bar) above
+                      ;; --GB
+                      (t pane))))
+         (setf (slot-value frame 'panes) pane)))))
 
 (defun find-pane-for-layout (name frame)
   (cdr (assoc name (frame-panes-for-layout frame) :test #'eq)))
@@ -770,48 +767,45 @@ documentation produced by presentations.")
     (setf panes (append panes
 			'((%pointer-documentation%
 			   pointer-documentation-pane)))))
-  `(progn
-     (defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-       (let ((*application-frame* frame))
-	 (with-look-and-feel-realization (fm frame)
-	   (let ,(loop
-		    for (name . form) in panes
-		    collect `(,name (or (find-pane-for-layout ',name frame)
-					(save-pane-for-layout
-					 ',name
-					 ,(do-pane-creation-form name form)
-					 frame))))
-	     ;; [BTS] added this, but is not sure that this is correct for
-	     ;; adding a menu-bar transparently, should also only be done
-	     ;; where the exterior window system does not support menus
-	     ,(if (or menu-bar pointer-documentation)
-		  `(setf (slot-value frame 'panes)
-			 (ecase (frame-current-layout frame)
-			   ,@(mapcar (lambda (layout)
-				       `(,(first layout)
-					  (vertically ()
-					    ,@(cond
-					       ((eq menu-bar t)
-						`((clim-internals::make-menu-bar
-						   ',class-name)))
-					       ((consp menu-bar)
-						`((clim-internals::make-menu-bar
-						   (make-command-table
-						    nil
-						    :menu ',menu-bar))))
-					       (menu-bar
-						`((clim-internals::make-menu-bar
-						   ',menu-bar)))
-					       (t nil))
-					    ,@(rest layout)
-					    ,@(when pointer-documentation
-						'(%pointer-documentation%)))))
-				     layouts)))
-		  `(setf (slot-value frame 'panes)
-			 (ecase (frame-current-layout frame)
-			   ,@layouts)))))))
-     (defmethod frame-all-layouts ((frame ,class-name))
-       ',(mapcar #'car layouts))))
+  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+     (let ((*application-frame* frame))
+       (with-look-and-feel-realization (fm frame)
+         (let ,(loop
+                  for (name . form) in panes
+                  collect `(,name (or (find-pane-for-layout ',name frame)
+                                      (save-pane-for-layout
+                                       ',name
+                                       ,(do-pane-creation-form name form)
+                                       frame))))
+           ;; [BTS] added this, but is not sure that this is correct for
+           ;; adding a menu-bar transparently, should also only be done
+           ;; where the exterior window system does not support menus
+           ,(if (or menu-bar pointer-documentation)
+                `(setf (slot-value frame 'panes)
+                       (ecase (frame-current-layout frame)
+                         ,@(mapcar (lambda (layout)
+                                     `(,(first layout)
+                                        (vertically ()
+                                          ,@(cond
+                                              ((eq menu-bar t)
+                                               `((clim-internals::make-menu-bar
+                                                  ',class-name)))
+                                              ((consp menu-bar)
+                                               `((clim-internals::make-menu-bar
+                                                  (make-command-table
+                                                   nil
+                                                   :menu ',menu-bar))))
+                                              (menu-bar
+                                               `((clim-internals::make-menu-bar
+                                                  ',menu-bar)))
+                                              (t nil))
+                                          ,@(rest layout)
+                                          ,@(when pointer-documentation
+                                              '(%pointer-documentation%)))))
+                                   layouts)))
+                `(setf (slot-value frame 'panes)
+                       (ecase (frame-current-layout frame)
+                         ,@layouts))))))))
 
 (defmacro define-application-frame (name superclasses slots &rest options)
   (if (null superclasses)
@@ -877,6 +871,10 @@ documentation produced by presentations.")
 	 ,@geometry
 	 ,@user-default-initargs)
         ,@others)
+
+      (defmethod frame-all-layouts ((frame ,name))
+        ',(mapcar #'car layouts))
+
       ,(if pane
            (make-single-pane-generate-panes-form name menu-bar pane)
            (make-panes-generate-panes-form name menu-bar panes layouts
