@@ -881,12 +881,18 @@ documentation produced by presentations.")
                                            pointer-documentation))
       ,@(if command-table
             `((define-command-table ,@command-table)))
+
       ,@(if command-definer
             `((defmacro ,command-definer (name-and-options arguments &rest body)
-                (let ((name (if (listp name-and-options) (first name-and-options) name-and-options))
-                      (options (if (listp name-and-options) (cdr name-and-options) nil))
+                (let ((name (if (listp name-and-options)
+                                (first name-and-options)
+                                name-and-options))
+                      (options (if (listp name-and-options)
+                                   (cdr name-and-options)
+                                   nil))
                       (command-table ',(first command-table)))
-                  `(define-command (,name :command-table ,command-table ,@options) ,arguments ,@body))))))))
+                  `(define-command (,name :command-table ,command-table ,@options)
+                       ,arguments ,@body))))))))
 
 (defun make-application-frame (frame-name
 			       &rest options
