@@ -756,9 +756,11 @@ documentation produced by presentations.")
 
 (defun do-pane-creation-form (name form)  
   (cond
+    ;; Single form which is a function call
     ((and (= (length form) 1)
 	  (listp (first form)))
      `(coerce-pane-name ,(first form) ',name))
+    ;; Standard pane denoted by a keyword (i.e `:application-pane')
     ((keywordp (first form))
      (let ((maker (intern (concatenate 'string
 				       (symbol-name '#:make-clim-)
@@ -769,6 +771,7 @@ documentation produced by presentations.")
 	   `(,maker :name ',name ,@(cdr form))
 	   `(make-pane ',(first form)
 		       :name ',name ,@(cdr form)))))
+    ;; Non-standard pane designator fed to the `make-pane'
     (t `(make-pane ',(first form) :name ',name ,@(cdr form)))))
 
 (defun make-panes-generate-panes-form (class-name menu-bar panes layouts
