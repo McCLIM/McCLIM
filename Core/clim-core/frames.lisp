@@ -39,11 +39,11 @@
   (if (and (boundp '*frame-manager*)
            (or (null port) (eql port (port *frame-manager*))))
       *frame-manager*
-    (if (and *default-frame-manager*
-             (frame-manager-p *default-frame-manager*)
-             (or (null port) (eql port (port *default-frame-manager*))))
-	*default-frame-manager*
-        (first (frame-managers (or port (apply #'find-port options)))))))
+      (if (and *default-frame-manager*
+               (frame-manager-p *default-frame-manager*)
+               (or (null port) (eql port (port *default-frame-manager*))))
+          *default-frame-manager*
+          (first (frame-managers (or port (apply #'find-port options)))))))
 
 (defmacro with-frame-manager ((frame-manager) &body body)
   `(let ((*frame-manager* ,frame-manager))
@@ -269,30 +269,32 @@ documentation produced by presentations.")
         (resize-sheet (frame-top-level-sheet frame) width height)))
     (allocate-space pane width height)))
 
-(defun find-pane-if (predicate panes)
-  "Returns a pane satisfying PREDICATE in the forest growing from PANES"
-  (map-over-sheets #'(lambda (p)
-		       (when (funcall predicate p)
-			 (return-from find-pane-if p)))
-		   panes)
-  nil)
+(defun find-pane-of-type (parent type)
+  "Returns a pane of `type' in the forest growing from `parent'."
+  (flet ((return-found-type (pane)
+           (when (typep pane type)
+             (return-from find-pane-of-type pane))))
+    (if (listp parent)
+        (map nil #'return-found-type parent)
+        (map-over-sheets #'return-found-type parent))))
 
-(defun find-pane-of-type (panes type)
-  (find-pane-if #'(lambda (pane) (typep pane type)) panes))
-
-;;; There are several ways to do this; this isn't particularly efficient, but
-;;; it shouldn't matter much.  If it does, it might be better to map over the
-;;; panes in frame-named-panes looking for panes with parents.
+;;; XXX: this function should be precomputed during the layout change
 (defmethod frame-current-panes ((frame application-frame))
   (let ((panes nil)
+        (sorted-panes nil)
 	(named-panes (frame-named-panes frame)))
     (map-over-sheets #'(lambda (p)
 			 (when (member p named-panes)
 			   (push p panes)))
 		     (frame-panes frame))
-    panes))
-
-(defgeneric find-pane-named (frame pane-name))
+    ;; NB: `frame-named-panes' is reversed (consecutive pushes), so
+    ;; here we bring back the original order.
+    (mapc #'(lambda (p)
+              (when (member p panes)
+                (push p sorted-panes)
+                (setf panes (delete p panes))))
+          named-panes)
+    sorted-panes))
 
 (defmethod get-frame-pane ((frame application-frame) pane-name)
   (let ((pane (find-pane-named frame pane-name)))
@@ -303,12 +305,14 @@ documentation produced by presentations.")
 (defmethod find-pane-named ((frame application-frame) pane-name)
   (find pane-name (frame-named-panes frame) :key #'pane-name))
 
+;;; XXX: these functions may be precomputed during the layout change
+;;; in `generate-panes' method.
 (defmethod frame-standard-output ((frame application-frame))
-  (or (find-pane-of-type (frame-panes frame) 'application-pane)
-      (find-pane-of-type (frame-panes frame) 'interactor-pane)))
+  (or (find-pane-of-type (frame-current-panes frame) 'application-pane)
+      (find-pane-of-type (frame-current-panes frame) 'interactor-pane)))
 
 (defmethod frame-standard-input ((frame application-frame))
-  (or (find-pane-of-type (frame-panes frame) 'interactor-pane)
+  (or (find-pane-of-type (frame-current-panes frame) 'interactor-pane)
       (frame-standard-output frame)))
 
 (defmethod frame-query-io ((frame application-frame))
@@ -318,11 +322,10 @@ documentation produced by presentations.")
 (defmethod frame-error-output ((frame application-frame))
   (frame-standard-output frame))
 
-(defvar *pointer-documentation-output* nil)
-
 (defmethod frame-pointer-documentation-output ((frame application-frame))
   (find-pane-of-type (frame-panes frame) 'pointer-documentation-pane))
 
+
 #+nil
 (defmethod redisplay-frame-panes ((frame application-frame) &key force-p)
   (map-over-sheets
@@ -715,31 +718,28 @@ documentation produced by presentations.")
 ;
 ; FIXME
 (defun make-single-pane-generate-panes-form (class-name menu-bar pane)
-  `(progn
-     (defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-       ;; v-- hey, how can this be?
-       (with-look-and-feel-realization (fm frame)
-	 (let ((pane ,(cond
-		       ((eq menu-bar t)
-			`(vertically () (clim-internals::make-menu-bar
-                                         ',class-name)
-				     ,pane))
-		       ((consp menu-bar)
-			`(vertically () (clim-internals::make-menu-bar
-                                         (make-command-table nil
-							     :menu ',menu-bar))
-				     ,pane))
-		       (menu-bar
-			`(vertically () (clim-internals::make-menu-bar
-					 ',menu-bar)
-				     ,pane))
-		       ;; The form below is unreachable with (listp
-		       ;; menu-bar) instead of (consp menu-bar) above
-		       ;; --GB
-		       (t pane))))
-	   (setf (slot-value frame 'panes) pane))))
-     (defmethod frame-all-layouts ((frame ,class-name))
-       nil)))
+  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+     ;; v-- hey, how can this be?
+     (with-look-and-feel-realization (fm frame)
+       (let ((pane ,(cond
+                      ((eq menu-bar t)
+                       `(vertically () (clim-internals::make-menu-bar
+                                        ',class-name)
+                                    ,pane))
+                      ((consp menu-bar)
+                       `(vertically () (clim-internals::make-menu-bar
+                                        (make-command-table nil
+                                                            :menu ',menu-bar))
+                                    ,pane))
+                      (menu-bar
+                       `(vertically () (clim-internals::make-menu-bar
+                                        ',menu-bar)
+                                    ,pane))
+                      ;; The form below is unreachable with (listp
+                      ;; menu-bar) instead of (consp menu-bar) above
+                      ;; --GB
+                      (t pane))))
+         (setf (slot-value frame 'panes) pane)))))
 
 (defun find-pane-for-layout (name frame)
   (cdr (assoc name (frame-panes-for-layout frame) :test #'eq)))
@@ -756,9 +756,11 @@ documentation produced by presentations.")
 
 (defun do-pane-creation-form (name form)  
   (cond
+    ;; Single form which is a function call
     ((and (= (length form) 1)
 	  (listp (first form)))
      `(coerce-pane-name ,(first form) ',name))
+    ;; Standard pane denoted by a keyword (i.e `:application-pane')
     ((keywordp (first form))
      (let ((maker (intern (concatenate 'string
 				       (symbol-name '#:make-clim-)
@@ -769,6 +771,7 @@ documentation produced by presentations.")
 	   `(,maker :name ',name ,@(cdr form))
 	   `(make-pane ',(first form)
 		       :name ',name ,@(cdr form)))))
+    ;; Non-standard pane designator fed to the `make-pane'
     (t `(make-pane ',(first form) :name ',name ,@(cdr form)))))
 
 (defun make-panes-generate-panes-form (class-name menu-bar panes layouts
@@ -777,52 +780,49 @@ documentation produced by presentations.")
     (setf panes (append panes
 			'((%pointer-documentation%
 			   pointer-documentation-pane)))))
-  `(progn
-     (defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-       (let ((*application-frame* frame))
-	 (with-look-and-feel-realization (fm frame)
-	   (let ,(loop
-		    for (name . form) in panes
-		    collect `(,name (or (find-pane-for-layout ',name frame)
-					(save-pane-for-layout
-					 ',name
-					 ,(do-pane-creation-form name form)
-					 frame))))
-	     ;; [BTS] added this, but is not sure that this is correct for
-	     ;; adding a menu-bar transparently, should also only be done
-	     ;; where the exterior window system does not support menus
-	     ,(if (or menu-bar pointer-documentation)
-		  `(setf (slot-value frame 'panes)
-			 (ecase (frame-current-layout frame)
-			   ,@(mapcar (lambda (layout)
-				       `(,(first layout)
-					  (vertically ()
-					    ,@(cond
-					       ((eq menu-bar t)
-						`((clim-internals::make-menu-bar
-						   ',class-name)))
-					       ((consp menu-bar)
-						`((clim-internals::make-menu-bar
-						   (make-command-table
-						    nil
-						    :menu ',menu-bar))))
-					       (menu-bar
-						`((clim-internals::make-menu-bar
-						   ',menu-bar)))
-					       (t nil))
-					    ,@(rest layout)
-					    ,@(when pointer-documentation
-						'(%pointer-documentation%)))))
-				     layouts)))
-		  `(setf (slot-value frame 'panes)
-			 (ecase (frame-current-layout frame)
-			   ,@layouts)))))))
-     (defmethod frame-all-layouts ((frame ,class-name))
-       ',(mapcar #'car layouts))))
+  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+     (let ((*application-frame* frame))
+       (with-look-and-feel-realization (fm frame)
+         (let ,(loop
+                  for (name . form) in panes
+                  collect `(,name (or (find-pane-for-layout ',name frame)
+                                      (save-pane-for-layout
+                                       ',name
+                                       ,(do-pane-creation-form name form)
+                                       frame))))
+           ;; [BTS] added this, but is not sure that this is correct for
+           ;; adding a menu-bar transparently, should also only be done
+           ;; where the exterior window system does not support menus
+           ,(if (or menu-bar pointer-documentation)
+                `(setf (slot-value frame 'panes)
+                       (ecase (frame-current-layout frame)
+                         ,@(mapcar (lambda (layout)
+                                     `(,(first layout)
+                                        (vertically ()
+                                          ,@(cond
+                                              ((eq menu-bar t)
+                                               `((clim-internals::make-menu-bar
+                                                  ',class-name)))
+                                              ((consp menu-bar)
+                                               `((clim-internals::make-menu-bar
+                                                  (make-command-table
+                                                   nil
+                                                   :menu ',menu-bar))))
+                                              (menu-bar
+                                               `((clim-internals::make-menu-bar
+                                                  ',menu-bar)))
+                                              (t nil))
+                                          ,@(rest layout)
+                                          ,@(when pointer-documentation
+                                              '(%pointer-documentation%)))))
+                                   layouts)))
+                `(setf (slot-value frame 'panes)
+                       (ecase (frame-current-layout frame)
+                         ,@layouts))))))))
 
 (defmacro define-application-frame (name superclasses slots &rest options)
-  (if (null superclasses)
-      (setq superclasses '(standard-application-frame)))
+  (when (null superclasses)
+    (setq superclasses '(standard-application-frame)))
   (let ((pane nil)
 	(panes nil)
 	(layouts nil)
@@ -859,12 +859,14 @@ documentation produced by presentations.")
                                  (symbol-name '#:define-)
                                  (symbol-name name)
                                  (symbol-name '#:-command)))))
-    (if (or (and pane panes)
-	    (and pane layouts))
-	(error ":pane cannot be specified along with either :panes or :layouts"))
-    (if pane
-	(setq panes (list 'single-pane pane)
-	      layouts `((:default ,(car pane)))))
+    (when (or (and pane panes)
+              (and pane layouts))
+      (error ":pane cannot be specified along with either :panes or :layouts"))
+
+    (when pane
+      (setq panes (list 'single-pane pane)
+            layouts `((:default ,(car pane)))))
+
     (setq current-layout (first (first layouts)))
     `(progn
       (defclass ,name ,superclasses
@@ -884,18 +886,28 @@ documentation produced by presentations.")
 	 ,@geometry
 	 ,@user-default-initargs)
         ,@others)
+
+      (defmethod frame-all-layouts ((frame ,name))
+        ',(mapcar #'car layouts))
+
       ,(if pane
            (make-single-pane-generate-panes-form name menu-bar pane)
            (make-panes-generate-panes-form name menu-bar panes layouts
                                            pointer-documentation))
-      ,@(if command-table
-            `((define-command-table ,@command-table)))
-      ,@(if command-definer
-            `((defmacro ,command-definer (name-and-options arguments &rest body)
-                (let ((name (if (listp name-and-options) (first name-and-options) name-and-options))
-                      (options (if (listp name-and-options) (cdr name-and-options) nil))
-                      (command-table ',(first command-table)))
-                  `(define-command (,name :command-table ,command-table ,@options) ,arguments ,@body))))))))
+      ,@(when command-table
+          `((define-command-table ,@command-table)))
+
+      ,@(when command-definer
+          `((defmacro ,command-definer (name-and-options arguments &rest body)
+              (let ((name (if (listp name-and-options)
+                              (first name-and-options)
+                              name-and-options))
+                    (options (if (listp name-and-options)
+                                 (cdr name-and-options)
+                                 nil))
+                    (command-table ',(first command-table)))
+                `(define-command (,name :command-table ,command-table ,@options)
+                     ,arguments ,@body))))))))
 
 (defun make-application-frame (frame-name
 			       &rest options

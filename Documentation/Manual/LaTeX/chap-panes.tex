@@ -85,6 +85,15 @@ Instead, we recommend following the examples of the specification,
 where scroll bars are added in the \texttt{layouts} section of
 \texttt{define-application-frame}.
 
+\index{Panes order}
+
+When specification talks about panes in a fashion implying some order
+(i.e ``first application-pane'') McCLIM assumes order of definition,
+not order of appearing in layout. Particularly that means, that if one
+pane is put before another in \texttt{:PANES} option, then it precedes
+it. It is relevant to \texttt{FRAME-STANDARD-OUTPUT} (therefore
+binding of \texttt{*STANDARD-OUTPUT*}) and other similar functions.
+
 \section{Pane names}
 
 Every pane class accepts the initialization argument \texttt{:name}

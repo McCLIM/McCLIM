@@ -1063,6 +1063,13 @@ millimeters as opposed to pixels.  The native transformation of the top
 level sheet of such a frame manager is a scaling with coefficients other
 than 1.
 
+@cindex{Panes order} When specification talks about panes in a fashion
+implying some order (i.e ``first application-pane'') McCLIM assumes
+order of definition, not order of appearing in layout. Particularly that
+means, that if one pane is put before another in @code{:PANES} option,
+then it precedes it. It is relevant to @code{frame-standard-output}
+(therefore binding of @code{*standard-output*}) and other similar functions.
+
 @menu
 * Layout protocol::
 @end menu

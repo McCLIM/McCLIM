@@ -207,9 +207,19 @@
 
 (defmethod map-over-sheets (function (sheet basic-sheet))
   (funcall function sheet)
-  (mapc #'(lambda (child) (map-over-sheets function child))
-        (sheet-children sheet))
-  nil)
+  (map nil
+       #'(lambda (child)
+           (map-over-sheets function child))
+       (sheet-children sheet)))
+
+;;; Instead of defining yet another function we specialize on
+;;; sequence. Thanks to that we can map over "all-but-parent" sheets
+;;; with `(map-over-sheets function (sheet-children sheet))'.
+(defmethod map-over-sheets (function (sheets list))
+  (map nil
+       #'(lambda (child)
+           (map-over-sheets function child))
+       sheets))
 
 (defmethod (setf sheet-enabled-p) :after (enabled-p (sheet basic-sheet))
   (if enabled-p
