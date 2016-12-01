@@ -38,34 +38,7 @@ Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
 @contents
 @end iftex
 
-@macro glossentry{ENTRY}
-@b{\ENTRY\}
-@cindex \ENTRY\
-@end macro
-
-@macro func{FUN}
-@b{\FUN\}
-@end macro
-
-@macro fmacro{MACRO}
-@func{\MACRO\}
-@end macro
-
-@macro genfun{FUN}
-@func{\FUN\}
-@end macro
-
-@alias gloss = i
-@alias func = code
-@alias class = code
-@alias package = code
-@alias gadget = code
-@alias pane = code
-@alias methcomp = t
-@alias slot = code
-@alias longref = t
-@alias cl = code
-@alias initarg = code
+@include macros.texi
 
 @ifnottex
 @node Top
