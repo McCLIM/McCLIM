@@ -57,6 +57,34 @@ millimeters as opposed to pixels.  The native transformation of the top
 level sheet of such a frame manager is a scaling with coefficients other
 than 1.
 
+\section{Creating panes}
+\label{sec-panes-creating}
+
+There is some confusion about the options that are allowed when a pane
+is created with \texttt{make-pane}.  Some parts of the specification
+suggest that stream panes such as application panes and interactor
+panes can be created using \texttt{make-pane} and an option
+\texttt{:scroll-bars}.  Since these application panes do not in
+themselves contain any scroll bars, using that option results in a
+pane hierarchy being created with the topmost pane being a pane of
+type \texttt{scroller-pane}.
+
+As far as McCLIM is concerned, this option to \texttt{make-pane} is
+obsolete.%
+\footnote{In the specification, there is no example of the use of this
+  option to \texttt{make-pane} or to the equivalent keywords in the
+  \texttt{:panes} section of \texttt{define-application-frame}.  There
+  is however one instance where the \texttt{:scroll-bars} option is
+  mention for pane creation.  We consider this to be an error in the
+  specification.}
+The same goes for using this option together with the equivalent
+keyword, i.e., \texttt{:application} or \texttt{interactor}, in the
+\texttt{:panes} section of \texttt{define-application-frame}.
+
+Instead, we recommend following the examples of the specification,
+where scroll bars are added in the \texttt{layouts} section of
+\texttt{define-application-frame}.
+
 \section{Pane names}
 
 Every pane class accepts the initialization argument \texttt{:name}
@@ -77,25 +105,32 @@ McCLIM returns \texttt{nil} in that case.  If pane names are not
 unique, it is unspecified which of several panes is returned by a call
 to this function.
 
-Notice that the name given to a pane in the \texttt{:panes} option of
-the macro \texttt{define-application-frame} may or may not become the
-name of the pane that is constructed by the \textit{body} that follows
-the name.  Recall that the syntax of the expression that defines a
-pane in the \texttt{:panes} option is \texttt{(}\textit{name}
-\texttt{.} \textit{body}\texttt{)}.  When \textit{body} defines the
-creation of a complex pane such as an application pane with scroll
-bars, then the resulting pane may in fact be a layout pane of a
-different type that contains the application pane as a child, and then
-the name will sometimes be assigned to that layout pane instead of to
-the application pane itself.  For that reason, the names given in the
-\texttt{:panes} section should be used only in the \texttt{:layouts}
-section of \texttt{define-application-frame}.
+If the advice of \refSec{sec-panes-creating} is followed, then the
+name given in the \texttt{:panes} option of the macro
+\texttt{define-application-frame} will always be the name of the
+top-level pane returned by the \textit{body} following the pane name.
 
-When an application needs to find a pane by name, using
-\texttt{find-pane-named},  the solution is to supply the
-\texttt{:name} option to the pane-creation form, and to make the value
-of that option distinct from the names used in the \texttt{:panes}
-option of \texttt{define-application-frame}.
+If that advice is not followed, then the name given to a pane in the
+\texttt{:panes} option of the macro \texttt{define-application-frame}
+may or may not become the name of the pane that is constructed by the
+\textit{body} that follows the name.  Recall that the syntax of the
+expression that defines a pane in the \texttt{:panes} option is
+\texttt{(}\textit{name} \texttt{.} \textit{body}\texttt{)}.
+Currently, McCLIM does the following:
+
+\begin{itemize}
+\item If the \textit{body} creates a pane by using a keyword, or by
+  using an explicitly mentioned call to \texttt{make-pane}, then the
+  name is given to the pane of the type explicitly mentioned, even
+  when the option \texttt{:scroll-bars} is given.
+\item If the \textit{body} creates a pane by calling some arbitrary
+  form other than a call to \texttt{make-pane}, then the name is
+  given to the topmost pane returned by the evaluation of that form.
+\end{itemize}
+
+We reserve the right to modify this behavior in the future.
+Application code should respect the advice given in
+\refSec{sec-panes-creating}.
 
 \section{Layout protocol}
 \index{layout protocol}
