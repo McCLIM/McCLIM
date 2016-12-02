@@ -6,6 +6,13 @@ guided-tour.dvi: guided-tour.tex hello-world.cut draw-frame.cut scheduler.cut fi
 	latex guided-tour.tex
 	latex guided-tour.tex
 
+guided-tour.pdf: guided-tour.tex hello-world.cut draw-frame.cut scheduler.cut file-browser.cut techno-dep.pstex_t techno-dep.pstex
+	pdflatex guided-tour.tex
+	bibtex guided-tour
+	pdflatex guided-tour.tex
+	pdflatex guided-tour.tex
+
+
 %.pstex: %.fig
 	fig2dev -L pstex $(value $@) -b 0 $< $@
 
