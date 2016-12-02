@@ -1,0 +1,276 @@
+@node Panes
+@chapter Panes
+@cindex pane
+
+Panes are subclasses of sheets.  Some panes are @gloss{layout panes}
+that determine the size and position of its children according to rules
+specific to each particular type of layout pane.  Examples of layout
+panes are vertical and horizontal boxes, tables etc.
+
+According to the CLIM specification, all CLIM panes are
+@emph{rectangular objects}.  For McCLIM, we interpret that phrase to
+mean that:
+
+@itemize
+@item
+ CLIM panes appear rectangular in the native windowing system;
+@item
+ CLIM panes have a native transformation that does not have a rotation
+  component, only translation and scaling.
+@end itemize
+
+Of course, the specification is unclear here.  Panes are subclasses of
+sheets, and sheets don't have a shape per-se.  Their @emph{regions} may
+have a shape, but the sheet itself certainly does not.
+
+The phrase in the specification @emph{could} mean that the
+@gloss{sheet-region} of a pane is a subclass of the region class
+@gloss{rectangle}.  But that would not exclude the possibility that the
+region of a pane would be some non-rectangular shape in the
+@gloss{native coordinate system}.  For that to happen, it would be
+enough that the @gloss{sheet-transformation} of some ancestor of the
+pane contain a rotation component.  In that case, the layout protocol
+would be insufficient in its current version.
+
+McCLIM panes have the following additional restrictions:
+
+@itemize
+@item
+ McCLIM panes have a coordinate system that is only a translation
+  compared to that of the frame manager;
+@item
+ The parent of a pane is either nil or another pane.
+@end itemize
+
+Thus, the panes form a @emph{prefix} in the hierarchy of sheets.  It is
+an error for a non-pane to adopt a pane.
+
+Notice that the native transformation of a pane need not be the identity
+transformation.  If the pane is not mirrored, then its native
+transformation is probably a translation of that of its parent.
+
+Notice also that the native transformation of a pane need not be the
+composition of the identity transformation and a translation.  That
+would be the case only of the native transformation of the top level
+sheet is the identity transformation, but that need not be the case.  It
+is possible for the frame manager to impose a coordinate system in (say)
+millimeters as opposed to pixels.  The native transformation of the top
+level sheet of such a frame manager is a scaling with coefficients other
+than 1.
+
+@menu
+* Creating panes::
+* Pane names::
+* Layout protocol::
+@end menu
+
+@node Creating panes
+@section Creating panes
+@cindex @code{make-pane} and @code{:scroll-bars} obsolescence
+
+There is some confusion about the options that are allowed when a pane
+is created with @cl{make-pane}.  Some parts of the specification suggest
+that stream panes such as application panes and interactor panes can be
+created using @cl{make-pane} and an option @cl{:scroll-bars}.  Since
+these application panes do not in themselves contain any scroll bars,
+using that option results in a pane hierarchy being created with the
+topmost pane being a pane of type @cl{scroller-pane}.
+
+As far as McCLIM is concerned, this option to @cl{make-pane} is
+obsolete.
+@footnote{In the specification, there is no example of the use of this
+  option to @code{make-pane} or to the equivalent keywords in the
+  @code{:panes} section of @code{define-application-frame}.  There is
+  however one instance where the @code{:scroll-bars} option is mention
+  for pane creation.  We consider this to be an error in the
+  specification.}
+The same goes for using this option together with the equivalent
+keyword, i.e., @code{:application} or @code{interactor}, in the
+@code{:panes} section of @code{define-application-frame}.
+
+Instead, we recommend following the examples of the specification, where
+scroll bars are added in the @code{layouts} section of
+@code{define-application-frame}.
+
+@cindex{Panes order}
+
+When specification talks about panes in a fashion implying some order
+(i.e ``first application-pane'') McCLIM assumes order of definition, not
+order of appearing in layout. Particularly that means, that if one pane
+is put before another in @code{:panes} option, then it precedes it. It
+is relevant to @code{frame-standard-output} (therefore binding of
+@code{*standard-output*}) and other similar functions.
+
+@node Pane names
+@section Pane names
+
+Every pane class accepts the initialization argument @code{:name} the
+value of which is typically a symbol in the package defined by the
+application.  The generic function @code{pane-name} returns the value of
+this initialization argument.  There is no standard way of changing the
+name of an existing pane.  Using the function
+@code{reinitialize-instance} may not have the desired effect, since the
+application frame may create a dictionary mapping names to panes, and
+there is no way to invalidate the contents of such a potential
+dictionary.
+
+The function @code{find-pane-named} searches the pane hierarchy of the
+application frame, consulting the names of each pane until a matching
+name is found.  The CLIM specification does not say what happens if a
+name is given that does not correspond to any pane.  McCLIM returns
+@code{nil} in that case.  If pane names are not unique, it is
+unspecified which of several panes is returned by a call to this
+function.
+
+If the advice of @ref{Creating panes} is followed, then the name given
+in the @code{:panes} option of the macro @code{define-application-frame}
+will always be the name of the top-level pane returned by the
+@code{body} following the pane name.
+
+If that advice is not followed, then the name given to a pane in the
+@code{:panes} option of the macro @code{define-application-frame} may or
+may not become the name of the pane that is constructed by the
+@code{body} that follows the name.  Recall that the syntax of the
+expression that defines a pane in the @code{:panes} option is
+@code{(name . body)}.  Currently, McCLIM does the following:
+
+@itemize @bullet
+@item
+  If the @code{body} creates a pane by using a keyword, or by using an
+  explicitly mentioned call to @code{make-pane}, then the name is given
+  to the pane of the type explicitly mentioned, even when the option
+  @code{:scroll-bars} is given.
+@item
+  If the @code{body} creates a pane by calling some arbitrary form other
+  than a call to @code{make-pane}, then the name is given to the topmost
+  pane returned by the evaluation of that form.
+@end itemize
+
+We reserve the right to modify this behavior in the future.  Application
+code should respect the advice given in @ref{Creating panes}.
+
+
+@node Layout protocol
+@section Layout protocol
+@cindex layout protocol
+
+There is a set of fundamental rules of CLIM dividing responsibility
+between a parent pane and a child pane, with respect to the size and
+position of the region of the child and the @gloss{sheet transformation}
+of the child.  This set of rules is called the @gloss{layout protocol}.
+
+The layout protocol is executed in two phases.  The first phase is
+called the @gloss{space compostion} phase, and the second phase is
+called the @gloss{space allocation} phase.
+
+@menu
+* Space composition::
+* Space allocation::
+* Change-space Notification Protocol::
+@end menu
+
+@node Space composition
+@subsection Space composition
+
+The space composition is accomplished by the generic function
+@genfun{compose-space}.  When applied to a pane, @genfun{compose-space}
+returns an object of type @gloss{space-requirement} indicating the needs
+of the pane in terms of preferred size, minimum size and maximum size.
+The phase starts when compose-space is applied to the top-level pane of
+the application frame.  That pane in turn may ask its children for their
+space requirements, and so on until the leaves are reached.  When the
+top-level pane has computed its space requirments, it asks the system
+for that much space.  A conforming window manager should respect the
+request (space wanted, min space, max space) and allocate a top-level
+window of an acceptable size.  The space given by the system must then
+be distributed among the panes in the hierarchy
+@longref{space-allocation}.
+
+Each type of pane is responsible for a different method on
+@genfun{compose-space}.  Leaf panes such as @gloss{labelled gadgets} may
+compute space requirements based on the size and the text-style of the
+label.  Other panes such as the vbox layout pane compute the space as a
+combination of the space requirements of their children.  The result of
+such a query (in the form of a space-requirement object) is stored in
+the pane for later use, and is only changed as a result of a call to
+@genfun{note-space-requirement-changed}.
+
+Most @gloss{composite panes} can be given explicit values for the values
+of @initarg{:width}, @initarg{:min-width}, @initarg{:max-width},
+@initarg{:height}, @initarg{:min-height}, and @initarg{:max-height}
+options.  If such arguments are not given (effectively making these
+values nil), a general method is used, such as computing from children
+or, for leaf panes with no such reasonable default rule, a fixed value
+is given.  If such arguments are given, their values are used instead.
+Notice that one of @initarg{:height} and @initarg{:width} might be
+given, applying the rule only in one of the dimensions.
+
+Subsequent calls to @genfun{compose-space} with the same arguments are
+assumed to return the same space-requirement object, unless a call to
+note-space-requirement-changed has been called in between.
+
+@node Space allocation
+@subsection Space allocation
+@anchor{space-allocation}
+
+When @genfun{allocate-space} is called on a pane @var{P}, it must
+compare the space-requirement of the children of @var{P} to the
+available space, in order to distribute it in the most preferable way.
+In order to avoid a second recursive invokation of
+@genfun{compose-space} at this point, we store the result of the
+previous call to @genfun{compose-space} in each pane.
+
+To handle this situtation and also explicitly given size options, we use
+an @methcomp{:around} method on @genfun{compose-space}.  The
+@methcomp{:around} method will call the primary method only if necessary
+(i.e., @code{(eq (slot-value pane 'space-requirement) nil)}), and store
+the result of the call to the primary method in the
+@slot{space-requirement} slot.
+
+We then compute the space requirement of the pane as follows:
+
+@lisp
+     (setf (space-requirement-width ...)  (or explicit-width
+           (space-requirement-width request)) ...
+           (space-requirement-max-width ...)  (or explicit-max-width
+           explicit-width (space-requirement-max-width request)) ...)
+@end lisp
+
+When the call to the primary method is not necessary we simply return
+the stored value.
+
+The @pane{spacer-pane} is an exception to the rule indicated above.  The
+explicit size you can give for this pane should represent the margin
+size.  So its primary method should only call compose on the child.  And
+the around method will compute the explicit sizes for it from the space
+requirement of the child and for the values given for the surrounding
+space.
+
+@node Change-space Notification Protocol
+@subsection Change-space Notification Protocol
+
+The purpose of the change-space notification protocol is to force a
+recalculation of the space occupied by potentially each pane in the
+@gloss{pane hierarchy}.  The protocol is triggerred by a call to
+@genfun{note-space-requirement-changed} on a pane @var{P}. In McCLIM, we
+must therefore invalidate the stored space-requirement value and
+re-invoke @genfun{compose-space} on @var{P}.  Finally, the
+@gloss{parent} of @var{P} must be notified recursively.
+
+This process would be repeated for all the panes on a path from @var{P}
+to the top-level pane, if it weren't for the fact that some panes
+compute their space requirements independently of those of their
+children.  Thus, we stop calling @genfun{note-space-requirement-changed}
+in the following cases:
+
+@itemize @bullet
+@item
+ when @var{P} is a @pane{restraining-pane},
+@item
+ when @var{P} is a @pane{top-level-sheet-pane}, or
+@item
+ when @var{P} has been given explicit values for @initarg{:width} and
+  @initarg{:height}
+@end itemize
+
+In either of those cases, @genfun{allocate-space} is called.
