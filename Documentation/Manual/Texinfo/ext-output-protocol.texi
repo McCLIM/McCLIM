@@ -1,0 +1,4 @@
+@node Output Protocol Extensions
+@chapter Output Protocol Extensions
+
+@include fun-clim-extensions-medium-miter-limit.texi

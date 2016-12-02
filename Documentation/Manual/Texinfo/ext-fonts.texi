@@ -1,0 +1,80 @@
+
+@node Fonts and Extended Text Styles
+@chapter Fonts and Extended Text Styles
+
+@menu
+* Extended Text Styles::
+* Listing Fonts::
+@end menu
+
+@node Extended Text Styles
+@section Extended Text Styles
+
+McCLIM extends the legal values for the @cl{family} and @cl{face}
+arguments to @cl{make-text-style} to include strings (in additional to
+the portable keyword symbols), as permitted by the CLIM spec, section
+11.1.
+
+Each backend defines its own specific syntax for these family and face
+names.
+
+The CLX backend maps the text style family to the X font's
+@emph{foundry} and @emph{family} values, separated by a dash.  The
+face is mapped to @emph{weight} and @emph{slant} in the same way.  For
+example, the following form creates a text style for
+@emph{-misc-fixed-bold-r-*-*-18-*-*-*-*-*-*-*}:
+
+@lisp
+(make-text-style "misc-fixed" "bold-r" 18)
+@end lisp
+
+In the GTK backend, the text style family and face are used directly
+as the Pango font family and face name.  Please refer to Pango
+documentation for details on the syntax of face names.  Example:
+
+@lisp
+(make-text-style "Bitstream Vera Sans" "Bold Oblique" 54)
+@end lisp
+
+@node Listing Fonts
+@section Listing Fonts
+
+McCLIM's font listing functions allow applications to list all
+available fonts available on a @class{port} and create text style
+instances for them.
+
+Example:
+
+@lisp
+* (find "Bitstream Vera Sans Mono"
+        (clim-extensions:port-all-font-families (clim:find-port))
+        :key #'clim-extensions:font-family-name
+        :test #'equal)
+#<CLIM-GTKAIRO::PANGO-FONT-FAMILY Bitstream Vera Sans Mono>
+
+* (clim-extensions:font-family-all-faces *)
+(#<CLIM-GTKAIRO::PANGO-FONT-FACE Bitstream Vera Sans Mono, Bold>
+ #<CLIM-GTKAIRO::PANGO-FONT-FACE Bitstream Vera Sans Mono, Bold Oblique>
+ #<CLIM-GTKAIRO::PANGO-FONT-FACE Bitstream Vera Sans Mono, Oblique>
+ #<CLIM-GTKAIRO::PANGO-FONT-FACE Bitstream Vera Sans Mono, Roman>)
+
+* (clim-extensions:font-face-scalable-p (car *))
+T
+
+* (clim-extensions:font-face-text-style (car **) 50)
+#<CLIM:STANDARD-TEXT-STYLE "Bitstream Vera Sans Mono" "Bold" 50>
+@end lisp
+
+@include class-clim-extensions-font-family.texi
+@include class-clim-extensions-font-face.texi
+
+@include fun-clim-extensions-port-all-font-families.texi
+
+@include fun-clim-extensions-font-family-name.texi
+@include fun-clim-extensions-font-family-port.texi
+@include fun-clim-extensions-font-family-all-faces.texi
+
+@include fun-clim-extensions-font-face-name.texi
+@include fun-clim-extensions-font-face-family.texi
+@include fun-clim-extensions-font-face-all-sizes.texi
+@include fun-clim-extensions-font-face-text-style.texi
