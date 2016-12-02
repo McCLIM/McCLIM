@@ -3,40 +3,9 @@
 @cindex demo applications
 
 @menu
-* McCLIM Installation and Usage Tips::
 * Running the Demos::
 * Applications
 @end menu
-
-@node McCLIM Installation and Usage Tips
-@section McCLIM Installation and Usage Tips
-
-This section collects useful installation and usage tips.  They refer to
-specific Common Lisp implementations or McCLIM features.
-
-@menu
-* Adding Mouse Button Icons::
-@end menu
-
-@node Adding Mouse Button Icons
-@subsection Adding Mouse Button Icons
-
-McCLIM comes with experimental code for adding graphical mouse button
-icons to pointer documentation panes.  To use this feature, you have to
-first compile the file @t{Experimental/pointer-doc-hack.lisp} in the
-source tree.  Assuming you have built McCLIM from source as explained in
-the installation instructions, evaluate this form to compile the file:
-@lisp
-(compile-file "Experimental/pointer-doc-hack.lisp")
-@end lisp
-Then, to activate the feature, load the compiled file before starting a
-McCLIM session or application:
-@lisp
-(load "Experimental/pointer-doc-hack")
-@end lisp
-Alternatively, you may dump a Lisp image containing McCLIM and the
-graphical pointer documentation code.  See the documentation of your
-Common Lisp system for more information.
 
 @node Running the Demos
 @section Running the Demos
