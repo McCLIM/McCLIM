@@ -130,7 +130,6 @@
   (declare (ignore text-style char))
   1)
 
-;;; FIXME: this one is nominally backend-independent
 (defmethod text-style-width (text-style (medium null-medium))
   (text-style-character-width text-style medium #\m))
 
