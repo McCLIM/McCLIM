@@ -125,27 +125,27 @@
 			 (clim-xcommon:keysym-to-keysym-name keysym)
 			 state)))
 
-	(let ((*standard-output* cl-user::*xxx*))
-	  (pprint-logical-block (*standard-output* (list keycode event-key state))
-	    (pprint-indent :block 4)
-	    (format t "Keycode: ~a" keycode)
-	    (pprint-newline :mandatory)
+	;; (let ((*standard-output* cl-user::*xxx*))
+	;;   (pprint-logical-block (*standard-output* (list keycode event-key state))
+	;;     (pprint-indent :block 4)
+	;;     (format t "Keycode: ~a" keycode)
+	;;     (pprint-newline :mandatory)
 
-	    (format t "event-key: ~a" event-key)
-	    (pprint-newline :mandatory)
+	;;     (format t "event-key: ~a" event-key)
+	;;     (pprint-newline :mandatory)
 
-	    (format t "state: ~d" state)
-	    (pprint-newline :mandatory)
+	;;     (format t "state: ~d" state)
+	;;     (pprint-newline :mandatory)
 
-	    (format t "keysym-name: ~a" keysym-name)
-	    (pprint-newline :mandatory)
+	;;     (format t "keysym-name: ~a" keysym-name)
+	;;     (pprint-newline :mandatory)
 
-	    (format t "keysym-char: ~a" char)
-	    (pprint-newline :mandatory)
+	;;     (format t "keysym-char: ~a" char)
+	;;     (pprint-newline :mandatory)
 
-	    (format t "modifiers: ~a" modifiers)
-	    (pprint-newline :mandatory)
-	    ))
+	;;     (format t "modifiers: ~a" modifiers)
+	;;     (pprint-newline :mandatory)
+	;;     ))
 
 	(values char
 		;; We filter away the shift state if there is a
