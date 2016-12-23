@@ -865,7 +865,7 @@ documentation produced by presentations.")
 
     (when pane
       (setq panes (list 'single-pane pane)
-            layouts `((:default ,(car pane)))))
+            layouts `((:default single-pane))))
 
     (setq current-layout (first (first layouts)))
     `(progn
