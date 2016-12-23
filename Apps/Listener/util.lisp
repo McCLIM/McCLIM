@@ -1,26 +1,13 @@
-(in-package :clim-listener)
-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-LISTENER; -*-
+;;;
 ;;; Miscellaneous utilities, UI tools, gross hacks, and non-portable bits.
-
+;;;
 ;;; (C) Copyright 2003 by Andy Hefner (hefner1@umbc.edu)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; See toplevel file 'Copyright' for the copyright details.
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
 
-
-
+(in-package :clim-listener)
 
 ;; multiple-value-or, ugh. Normal OR drops values except from the last form.
 (defmacro mv-or (&rest forms)
@@ -29,83 +16,10 @@
       `(let ((,tmp (multiple-value-list ,(first forms))))
          (if (first ,tmp) (values-list ,tmp) (mv-or ,@(rest forms)))))))
 
-(defun directoryp (path)
-  "Determine if PATH designates a directory"
-  #+allegro (excl:file-directory-p path)
-  #-allegro
-  (flet ((f (x) (if (eq x :unspecific) nil x)))
-    (if (or (f (pathname-name path))
-            (f (pathname-type path)))
-      nil
-      path)))
-
-(defun getenv (var)
-  (or 
-   #+cmu (cdr (assoc var ext:*environment-list*))
-   #+scl (cdr (assoc var ext:*environment-list* :test #'string=))
-   #+sbcl (sb-ext:posix-getenv var)
-   #+lispworks (lw:environment-variable var)
-   #+openmcl (ccl::getenv var)
-   #+clisp (ext:getenv var)
-   nil))
-
-(defun change-directory (pathname)
-  "Ensure that the current directory seen by RUN-PROGRAM has changed, and update *default-pathname-defaults*"
-  #+CMU (unix:unix-chdir (namestring pathname))
-  #+scl (unix:unix-chdir (ext:unix-namestring pathname))
-  #+clisp (ext:cd pathname)
-  #+sbcl (sb-posix:chdir (namestring pathname))
- (setf *default-pathname-defaults* pathname))
-
 (defun resolve-stream-designator (desi default)
   (if (eq desi t)
       default
       (or desi default)))
-
-;;; LIST-DIRECTORY is a wrapper for the CL DIRECTORY function. Work
-;;; around various issues which may arise, such as:
-
-;;;  * Don't error in response to broken symlinks (as cl:truename might)
-;;;  * Ideally, don't return truenames at all.
-;;;  * Don't error in response to garbage filenames not conforming to
-;;;    the preferred encoding for filenames
-
-#+(or cmu scl)
-(defun list-directory (pathname)
-  (directory pathname :truenamep nil))
-
-#+sbcl
-(defun list-directory (pathname)
-  ;; Sooner or later, I'm putting all the sb-posix junk back in.
-  ;; I *really* don't like truenames.
-  (directory pathname))
-
-#+openmcl
-(defun list-directory (pathname)
-  (directory pathname :directories t :follow-links nil))
-
-#+ALLEGRO
-(defun list-directory (pathname)
-  (directory pathname :directories-are-files nil))
-
-;; Fallback to ANSI CL
-#-(or cmu scl sbcl openmcl allegro)
-(defun list-directory (pathname)
-  (directory pathname))
-
-;;; Calls LIST-DIRECTORY and appends the subdirectories of the directory
-;;; PATHNAME to the output of LIST-DIRECTORY if PATHNAME is a wild pathname.
-
-(defun list-directory-with-all-direct-subdirectories (pathname)
-  (let ((file-list (list-directory pathname)))
-    (if (wild-pathname-p pathname)
-        (nconc file-list 
-               (delete-if (lambda (directory)
-                            (member directory file-list :test #'equal))
-                          (delete-if-not #'directoryp
-                                         (list-directory (gen-wild-pathname
-                                                          (strip-filespec pathname))))))
-        file-list)))
 
 ;;; Native namestring. cl:namestring is allowed to do anything it wants to
 ;;; the filename, and some lisps do (CCL, for instance).
@@ -215,10 +129,6 @@ this point, increment it by SPACING, which defaults to zero."
 
 ;;; Pathnames are awful.
 
-(defun gen-wild-pathname (pathname)
-  "Build a pathname with appropriate :wild components for the directory listing."
-  (merge-pathnames pathname (make-pathname :name :wild :type :wild :version :wild)))
-
 (defun strip-filespec (pathname)
   "Removes name, type, and version components from a pathname."
   (make-pathname :name nil
@@ -242,7 +152,7 @@ this point, increment it by SPACING, which defaults to zero."
   "Convert a pathname with name/version into a pathname with a
 similarly-named last directory component. Used for user input that
 lacks the final #\\/."
-  (if (directoryp pathname)
+  (if (osicat:directory-pathname-p pathname)
       pathname
       (merge-pathnames
        (make-pathname

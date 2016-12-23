@@ -134,7 +134,8 @@
 (defmethod icon-of ((pathname pathname))
   (cond ((wild-pathname-p pathname) (standard-icon "wild.xpm"))
         ((not (probe-file pathname)) (standard-icon "invalid.xpm"))
-        ((directoryp pathname) *folder-icon*) ;; FIXME: use inode mime types                              
+        ;; FIXME: use inode mime types
+        ((osicat:directory-pathname-p pathname) *folder-icon*)
         (t (let ((mime-class (find-class (pathname-mime-type pathname) nil)))
              (if mime-class
                  (or (gethash (class-name mime-class) *icon-mapping*)

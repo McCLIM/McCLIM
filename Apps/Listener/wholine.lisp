@@ -73,12 +73,8 @@
 (defun generate-wholine-contents (frame pane)
   (declare (ignore frame))
   (let* ((*standard-output* pane)
-         (username (or #+cmu (cdr (assoc :user ext:*environment-list*))
-		       #+scl (cdr (assoc "USER" ext:*environment-list*
-					 :test 'string=))
-		       #+allegro (sys:getenv "USER")
-		       #-(or allegro cmu scl) (getenv "USER")
-                       "luser"))  ; sorry..
+         (username (or (osicat:environment-variable "USER")
+                       "luser"))        ; sorry..
          (sitename (machine-instance))
          ;; :sans-serif :roman :small is the best looking jaggy font.
          ;; But :small looks awful using freetype, perhaps because the
