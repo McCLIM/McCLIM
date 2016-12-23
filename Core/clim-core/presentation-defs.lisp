@@ -1193,12 +1193,12 @@ protocol retrieving gestures from a provided string."))
 ;;; When no accept method has been defined for a type, allow some kind
 ;;; of input. The accept can be satisfied with pointer input.
 (define-default-presentation-method accept
-    (type stream (view textual-view) &key default default-type)
+    (type stream view &key default default-type)
   (declare (ignore default default-type))
   (let* ((token (read-token stream)))
-    (if (presentation-typep token ptype)
-        (values token ptype)
-        (input-not-of-required-type result ptype))))
+    (if (presentation-typep token type)
+        (values token type)
+        (input-not-of-required-type token type))))
 
 ;;; The presentation types
 
