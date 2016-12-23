@@ -1,20 +1,6 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2001,2002 by Tim Moore (moore@bricoworks.com)
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
 
 ;;; Definitions for the standard presentation types and generic functions
 
@@ -27,7 +13,7 @@
 ;;; auto-activate is described in the Franz user guide; it controls whether an
 ;;; accepting an expression returns immediately after typing the closing
 ;;; delimiter -- a la Genera et Mac Lisp -- or if an activation gesture is
-;;; required. 
+;;; required.
 ;;; preserve-whitespace controls whether the accept method uses read or
 ;;; read-preserving-whitespace. This is used in our redefinitions of read and
 ;;; read-preserving-whitespace that accept forms.
@@ -40,8 +26,8 @@
 (define-presentation-type form ()
   :options (auto-activate (preserve-whitespace t) (subform-read nil))
   :inherit-from `((expression) :auto-activate ,auto-activate
-		  :preserve-whitespace ,preserve-whitespace
-		  :subform-read ,subform-read ))
+                  :preserve-whitespace ,preserve-whitespace
+                  :subform-read ,subform-read ))
 
 ;;; Actual definitions of presentation methods and types.  They've
 ;;; been separated from the macro and presentation class definitions and
@@ -59,9 +45,9 @@
   (with-presentation-type-decoded (name parameters)
     type
     (when (null parameters)
-      (let ((clos-class (find-class name nil)))	; Don't error out.
-	(when (and clos-class (typep clos-class 'standard-class))
-	  (return-from presentation-typep (typep object name)))))
+      (let ((clos-class (find-class name nil))) ; Don't error out.
+        (when (and clos-class (typep clos-class 'standard-class))
+          (return-from presentation-typep (typep object name)))))
     (funcall-presentation-generic-function presentation-typep object type)))
 
 ;;; Not defined as a generic function, but what the hell.
@@ -74,12 +60,12 @@
 
 (defun get-ptype-from-class-of (object)
   (let* ((name (class-name (class-of object)))
-	 (ptype-entry (gethash name *presentation-type-table*)))
+         (ptype-entry (gethash name *presentation-type-table*)))
     (unless ptype-entry
       (return-from get-ptype-from-class-of nil))
     ;; Does the type have required parameters?  If so, we can't use it...
     (let ((parameter-ll (parameters-lambda-list ptype-entry)))
-      (values name 
+      (values name
               (if (eq (car parameter-ll) '&whole)
                   (cddr parameter-ll)
                   parameter-ll)))))
@@ -88,21 +74,21 @@
   (multiple-value-bind (name lambda-list)
       (get-ptype-from-class-of object)
     (cond ((and name
-		(or (null lambda-list)
-		    (member (first lambda-list) lambda-list-keywords)))
-	   name)
-	  (name
-	   'standard-object)
-	  (t (let* ((class (class-of object))
-		    (class-name (class-name class)))
-	       (or class-name class))))))
+                (or (null lambda-list)
+                    (member (first lambda-list) lambda-list-keywords)))
+           name)
+          (name
+           'standard-object)
+          (t (let* ((class (class-of object))
+                    (class-name (class-name class)))
+               (or class-name class))))))
 
 (defmethod presentation-type-of ((object structure-object))
   (multiple-value-bind (name lambda-list)
       (get-ptype-from-class-of object)
     (if (and name
-	     (or (null lambda-list)
-		 (member lambda-list lambda-list-keywords)))
+             (or (null lambda-list)
+                 (member lambda-list lambda-list-keywords)))
         name
         (call-next-method))))
 
@@ -117,19 +103,19 @@
   (let ((type-name (presentation-type-name type)))
     (map-over-ptype-superclasses
      #'(lambda (super)
-	 (let ((super-name (type-name super)))
-	   (funcall function
-		    super-name
-		    (funcall (expansion-function super)
-			     (translate-specifier-for-type type-name
-							   super-name
-							   type)))))
+         (let ((super-name (type-name super)))
+           (funcall function
+                    super-name
+                    (funcall (expansion-function super)
+                             (translate-specifier-for-type type-name
+                                                           super-name
+                                                           type)))))
      type-name)))
 
 (defun map-over-presentation-type-supertypes (function type)
   (funcall-presentation-generic-function map-over-presentation-type-supertypes
-					 function
-					 type))
+                                         function
+                                         type))
 
 (define-presentation-generic-function
     %presentation-subtypep
@@ -143,24 +129,24 @@
 (defmacro define-subtypep-method (&rest args)
   (let ((gf (gethash 'presentation-subtypep *presentation-gf-table*)))
     (multiple-value-bind (qualifiers lambda-list decls body)
-	(parse-method-body args)
+        (parse-method-body args)
       (let ((type-arg (nth (1- (type-arg-position gf)) lambda-list)))
-	
-	(unless (consp type-arg)
-	  (error "Type argument in presentation method must be specialized"))
-	(unless (eq (car type-arg)  'type)
-	  (error "Type argument mismatch with presentation generic function
+
+        (unless (consp type-arg)
+          (error "Type argument in presentation method must be specialized"))
+        (unless (eq (car type-arg)  'type)
+          (error "Type argument mismatch with presentation generic function
  definition"))
-	(destructuring-bind (type-var type-name) type-arg
-	  (let ((method-ll `((,(type-key-arg gf)
-			      (eql (prototype-or-error ',type-name)))
-			     ,@(copy-list lambda-list))))
-	    (setf (nth (type-arg-position gf) method-ll) type-var)
-	    `(defmethod %presentation-subtypep ,@qualifiers ,method-ll
-	       (declare (ignorable ,(type-key-arg gf))
-		        ,@(cdr decls))
-	       (block presentation-subtypep
-		 ,@body))))))))
+        (destructuring-bind (type-var type-name) type-arg
+          (let ((method-ll `((,(type-key-arg gf)
+                              (eql (prototype-or-error ',type-name)))
+                             ,@(copy-list lambda-list))))
+            (setf (nth (type-arg-position gf) method-ll) type-var)
+            `(defmethod %presentation-subtypep ,@qualifiers ,method-ll
+               (declare (ignorable ,(type-key-arg gf))
+                        ,@(cdr decls))
+               (block presentation-subtypep
+                 ,@body))))))))
 
 ;;; PRESENTATION-SUBTYPEP suffers from some of the same problems as
 ;;; CL:SUBTYPEP, most (but sadly not all) of which were solved in
@@ -235,7 +221,7 @@
       (cond
         ;; DO NOT BE TEMPTED TO REARRANGE THESE CLAUSES
         ((eq type-name 'or)
-         (dolist (or-type type-parameters 
+         (dolist (or-type type-parameters
                   (return-from presentation-subtypep (values t t)))
            (multiple-value-bind (yesp surep)
                (presentation-subtypep or-type maybe-supertype)
@@ -243,7 +229,7 @@
                (return-from presentation-subtypep (values yesp surep))))))
         ((eq super-name 'and)
          (let ((result t))
-           (dolist (and-type super-parameters 
+           (dolist (and-type super-parameters
                     (return-from presentation-subtypep (values result result)))
              (cond
                ((and (consp and-type) (eq (car and-type) 'satisfies))
@@ -251,7 +237,7 @@
                ((and (consp and-type) (eq (car and-type) 'not))
                 (multiple-value-bind (yp sp)
                     (presentation-subtypep type (cadr and-type))
-		  (declare (ignore sp))
+                  (declare (ignore sp))
                   (if yp
                       (return-from presentation-subtypep (values nil t))
                       (setq result nil))))
@@ -265,13 +251,13 @@
          (assert (not (eq type-name 'or)))
          ;; FIXME: this would be the right method were it not for the
          ;; fact that there can be unions 'in disguise' in the
-         ;; subtype; examples: 
+         ;; subtype; examples:
          ;;   (PRESENTATION-SUBTYPEP 'NUMBER '(OR REAL COMPLEX))
          ;;   (PRESENTATION-SUBTYPEP '(INTEGER 3 6)
          ;;                          '(OR (INTEGER 2 5) (INTEGER 4 7)))
          ;; Sorry about that.
          (let ((surep t))
-           (dolist (or-type super-parameters 
+           (dolist (or-type super-parameters
                     (return-from presentation-subtypep (values nil surep)))
              (multiple-value-bind (yp sp)
                  (presentation-subtypep type or-type)
@@ -282,15 +268,15 @@
          (assert (not (eq super-name 'and)))
          (multiple-value-bind (yp sp)
              (presentation-subtypep (car type-parameters) maybe-supertype)
-	   (declare (ignore sp))
+           (declare (ignore sp))
            (return-from presentation-subtypep (values yp yp))))))
     (map-over-presentation-type-supertypes
      #'(lambda (name massaged)
-	 (when (eq name super-name)
-	   (return-from presentation-subtypep
-	     (funcall-presentation-generic-function presentation-subtypep
-						    massaged
-						    maybe-supertype))))
+         (when (eq name super-name)
+           (return-from presentation-subtypep
+             (funcall-presentation-generic-function presentation-subtypep
+                                                    massaged
+                                                    maybe-supertype))))
      type))
   (values nil t))
 
@@ -303,8 +289,8 @@
       maybe-supertype
       (declare (ignore super-name))
       (if (equal params super-params)
-	  (values t t)
-	  (values nil nil)))))
+          (values t t)
+          (values nil nil)))))
 
 (define-presentation-generic-function
     %presentation-type-specifier-p
@@ -327,14 +313,14 @@ otherwise return false."
   (if (symbolp description)
       (setq description (make-default-description (symbol-name description))))
   (cond ((eql 1 plural-count)
-	 (format stream "~:[a~;an~] ~A"
-		   (find (char description 0) "aeiouAEIOU")
-		   description))
-	((numberp plural-count)
-	 (format stream "~D ~A~P" plural-count description plural-count))
-	(plural-count
-	 (format stream "~As" description))
-	(t (write-string description stream))))
+         (format stream "~:[a~;an~] ~A"
+                   (find (char description 0) "aeiouAEIOU")
+                   description))
+        ((numberp plural-count)
+         (format stream "~D ~A~P" plural-count description plural-count))
+        (plural-count
+         (format stream "~As" description))
+        (t (write-string description stream))))
 
 (define-presentation-generic-function %describe-presentation-type
     describe-presentation-type
@@ -346,10 +332,10 @@ otherwise return false."
 
 (defmethod description ((class standard-class))
   (let* ((name (class-name class))
-	 (ptype-entry (gethash name *presentation-type-table*)))
+         (ptype-entry (gethash name *presentation-type-table*)))
     (if ptype-entry
-	(description ptype-entry)
-	(make-default-description name))))
+        (description ptype-entry)
+        (make-default-description name))))
 
 (define-default-presentation-method describe-presentation-type
     (type stream plural-count)
@@ -357,24 +343,24 @@ otherwise return false."
     type
     (declare (ignore name parameters))
     (let ((description (or (getf options :description)
-			   (description (class-of type-key)))))
+                           (description (class-of type-key)))))
       (default-describe-presentation-type description
-	                                  stream
-	                                  plural-count))))
+                                          stream
+                                          plural-count))))
 
 (defun describe-presentation-type (type
-				   &optional
-				   (stream *standard-output*)
-				   (plural-count 1))
+                                   &optional
+                                   (stream *standard-output*)
+                                   (plural-count 1))
   (flet ((describe-it (stream)
-	   (funcall-presentation-generic-function describe-presentation-type
-						  type
-						  stream
-						  plural-count)))
+           (funcall-presentation-generic-function describe-presentation-type
+                                                  type
+                                                  stream
+                                                  plural-count)))
     (if stream
-	(describe-it stream)
-	(with-output-to-string (s)
-	  (describe-it s)))))
+        (describe-it stream)
+        (with-output-to-string (s)
+          (describe-it s)))))
 
 (define-presentation-generic-function %presentation-default-processor
     presentation-default-processor
@@ -383,8 +369,8 @@ otherwise return false."
 (define-default-presentation-method presentation-default-processor
     (default type &key (default-type nil default-type-p))
   (values default (if default-type-p
-		      default-type
-		      type)))
+                      default-type
+                      type)))
 
 ;;; XXX The spec calls out that the presentation generic function has keyword
 ;;; arguments acceptably and for-context-type, but the examples I've seen don't
@@ -395,102 +381,102 @@ otherwise return false."
      &key &allow-other-keys))
 
 (defun present (object &optional (type (presentation-type-of object))
-		&key
-		(stream *standard-output*)
-		(view (stream-default-view stream))
-		modifier
-		acceptably
-		(for-context-type type)
-		single-box
-		(allow-sensitive-inferiors t)
-		(sensitive t)
-		(record-type 'standard-presentation))
+                &key
+                (stream *standard-output*)
+                (view (stream-default-view stream))
+                modifier
+                acceptably
+                (for-context-type type)
+                single-box
+                (allow-sensitive-inferiors t)
+                (sensitive t)
+                (record-type 'standard-presentation))
   (let* ((real-type (expand-presentation-type-abbreviation type))
-	 (context-type (if (eq for-context-type type)
-			   real-type
-			   (expand-presentation-type-abbreviation
-			    for-context-type))))
+         (context-type (if (eq for-context-type type)
+                           real-type
+                           (expand-presentation-type-abbreviation
+                            for-context-type))))
     (stream-present stream object real-type
-		    :view view :modifier modifier :acceptably acceptably
-		    :for-context-type context-type :single-box single-box
-		    :allow-sensitive-inferiors allow-sensitive-inferiors
-		    :sensitive sensitive
-		    :record-type record-type)))
+                    :view view :modifier modifier :acceptably acceptably
+                    :for-context-type context-type :single-box single-box
+                    :allow-sensitive-inferiors allow-sensitive-inferiors
+                    :sensitive sensitive
+                    :record-type record-type)))
 
 (defgeneric stream-present (stream object type
-			    &key view modifier acceptably for-context-type
-			    single-box allow-sensitive-inferiors sensitive
-			    record-type))
+                            &key view modifier acceptably for-context-type
+                            single-box allow-sensitive-inferiors sensitive
+                            record-type))
 
 (defmethod stream-present ((stream output-recording-stream) object type
-			   &key
-			   (view (stream-default-view stream))
-			   modifier
-			   acceptably
-			   (for-context-type type)
-			   single-box
-			   (allow-sensitive-inferiors t)
-			   (sensitive t)
-			   (record-type 'standard-presentation))
+                           &key
+                           (view (stream-default-view stream))
+                           modifier
+                           acceptably
+                           (for-context-type type)
+                           single-box
+                           (allow-sensitive-inferiors t)
+                           (sensitive t)
+                           (record-type 'standard-presentation))
   ;; *allow-sensitive-inferiors* controls whether or not
   ;; with-output-as-presentation will emit a presentation
   (let ((*allow-sensitive-inferiors* (and *allow-sensitive-inferiors*
-					  sensitive)))
+                                          sensitive)))
     (with-output-as-presentation (stream object type
-				  :view view
-				  :modifier modifier
-				  :single-box single-box
-				  :allow-sensitive-inferiors
-				  allow-sensitive-inferiors
-				  :record-type record-type)
+                                  :view view
+                                  :modifier modifier
+                                  :single-box single-box
+                                  :allow-sensitive-inferiors
+                                  allow-sensitive-inferiors
+                                  :record-type record-type)
       (funcall-presentation-generic-function
        present object type stream view
        :acceptably acceptably :for-context-type for-context-type))))
 
 ;;; Should work well enough on non-CLIM streams...
 (defmethod stream-present (stream object type
-			   &key
-			   (view +textual-view+)
-			   modifier
-			   acceptably
-			   (for-context-type type)
-			   single-box
-			   (allow-sensitive-inferiors t)
-			   (sensitive t)
-			   (record-type 'standard-presentation))
+                           &key
+                           (view +textual-view+)
+                           modifier
+                           acceptably
+                           (for-context-type type)
+                           single-box
+                           (allow-sensitive-inferiors t)
+                           (sensitive t)
+                           (record-type 'standard-presentation))
   (declare (ignore modifier single-box allow-sensitive-inferiors sensitive
-		   record-type))
+                   record-type))
   (funcall-presentation-generic-function
    present object type stream view
    :acceptably acceptably :for-context-type for-context-type)
   nil)
 
 (defun present-to-string (object &optional (type (presentation-type-of object))
-			  &key (view +textual-view+)
-			  acceptably
-			  (for-context-type type)
-			  (string nil stringp)
-			  (index 0 indexp))
+                          &key (view +textual-view+)
+                          acceptably
+                          (for-context-type type)
+                          (string nil stringp)
+                          (index 0 indexp))
   (let* ((real-type (expand-presentation-type-abbreviation type))
-	 (context-type (if (eq for-context-type type)
-			   real-type
-			   (expand-presentation-type-abbreviation
-			    for-context-type))))
+         (context-type (if (eq for-context-type type)
+                           real-type
+                           (expand-presentation-type-abbreviation
+                            for-context-type))))
     (when (and stringp indexp)
       (setf (fill-pointer string) index))
     (flet ((do-present (s)
-	     (stream-present s object real-type
-			     :view view :acceptably acceptably
-			     :for-context-type context-type)))
+             (stream-present s object real-type
+                             :view view :acceptably acceptably
+                             :for-context-type context-type)))
       (declare (dynamic-extent #'do-present))
       (let ((result (if stringp
-			 (with-output-to-string (stream string)
-			   (do-present stream))
-			 (with-output-to-string (stream)
-			   (do-present stream)))))
-	(if stringp
-	    (values string (fill-pointer string))
-	    result)))))
+                         (with-output-to-string (stream string)
+                           (do-present stream))
+                         (with-output-to-string (stream)
+                           (do-present stream)))))
+        (if stringp
+            (values string (fill-pointer string))
+            result)))))
 
 ;;; I believe this obsolete... --moore
 (defmethod presentation-replace-input
@@ -501,13 +487,13 @@ otherwise return false."
      (for-context-type type))
   (declare (ignore query-identifier))
   (let ((result (present-to-string object type
-				   :view view :acceptably nil
-				   :for-context-type for-context-type)))
+                                   :view view :acceptably nil
+                                   :for-context-type for-context-type)))
     (apply #'replace-input stream result `(,@(and buffer-start-supplied-p
-						  `(:buffer-start
-						    ,buffer-start))
-					   ,@(and rescan-supplied-p
-						  `(:rescan ,rescan))))))
+                                                  `(:buffer-start
+                                                    ,buffer-start))
+                                           ,@(and rescan-supplied-p
+                                                  `(:rescan ,rescan))))))
 
 ;;; Presentation histories.
 
@@ -515,7 +501,7 @@ otherwise return false."
 ;;; histories!  I'm over it already. -- moore
 (defclass presentation-history-mixin ()
   ((presentation-history :accessor frame-presentation-history
-			 :initform (make-hash-table :test #'eq)))
+                         :initform (make-hash-table :test #'eq)))
   (:documentation "Mixin class for frames that implements presentation
 type histories"))
 
@@ -546,27 +532,27 @@ a specific type."))
 
 (define-default-presentation-method presentation-type-history (type)
   (if (and *application-frame*
-	   (frame-maintain-presentation-histories *application-frame*))
+           (frame-maintain-presentation-histories *application-frame*))
       (with-presentation-type-decoded (name)
-	type
-	(let* ((ptype (get-ptype-metaclass name))
-	       (history (history ptype)))
-	  (case history
-	    ((t)
-	     (let* ((history-table (frame-presentation-history
-				    *application-frame*))
-		    (history-object (gethash name history-table)))
-	       (unless history-object
-		 (setf history-object
-		       (make-instance 'presentation-history)
-		       (gethash name history-table)
-		       history-object))
-	       history-object))
-	    (nil
-	     nil)
-	    (otherwise
-	     (funcall-presentation-generic-function presentation-type-history
-						    type)))))))
+        type
+        (let* ((ptype (get-ptype-metaclass name))
+               (history (history ptype)))
+          (case history
+            ((t)
+             (let* ((history-table (frame-presentation-history
+                                    *application-frame*))
+                    (history-object (gethash name history-table)))
+               (unless history-object
+                 (setf history-object
+                       (make-instance 'presentation-history)
+                       (gethash name history-table)
+                       history-object))
+               history-object))
+            (nil
+             nil)
+            (otherwise
+             (funcall-presentation-generic-function presentation-type-history
+                                                    type)))))))
 
 ;;; Not in the spec, but I think this is necessary (or at any rate, the easiest
 ;;; way) to control whether or not to use histories in a given context.
@@ -699,21 +685,21 @@ history will be unchanged."
 ;;; in what we accept.
 
 (defun accept (type &rest rest-args &key
-	       (stream *standard-input*)
-	       (view nil viewp)
-	       (default nil defaultp)
-	       (default-type nil default-type-p)
-	       provide-default insert-default replace-input
-	       (history nil historyp)	; true default supplied below
-	       active-p			; Don't think this will be used
-	       prompt prompt-mode display-default
-	       query-identifier
-	       activation-gestures additional-activation-gestures
-	       delimiter-gestures additional-delimiter-gestures)
+               (stream *standard-input*)
+               (view nil viewp)
+               (default nil defaultp)
+               (default-type nil default-type-p)
+               provide-default insert-default replace-input
+               (history nil historyp)   ; true default supplied below
+               active-p                 ; Don't think this will be used
+               prompt prompt-mode display-default
+               query-identifier
+               activation-gestures additional-activation-gestures
+               delimiter-gestures additional-delimiter-gestures)
   (declare (ignore insert-default replace-input active-p prompt prompt-mode
-		   display-default query-identifier
-		   activation-gestures additional-activation-gestures
-		   delimiter-gestures additional-delimiter-gestures))
+                   display-default query-identifier
+                   activation-gestures additional-activation-gestures
+                   delimiter-gestures additional-delimiter-gestures))
   (handler-bind ((abort-gesture (lambda (condition)
                                   (signal condition) ;; to give outer handlers a chance to say "I know how to handle this"
                                   (abort condition))))
@@ -787,59 +773,59 @@ history will be unchanged."
             (values-list results)))))))
 
 (defmethod stream-accept ((stream standard-extended-input-stream) type
-			  &rest args
-			  &key (view (stream-default-view stream))
-			  &allow-other-keys)
+                          &rest args
+                          &key (view (stream-default-view stream))
+                          &allow-other-keys)
   (apply #'prompt-for-accept stream type view args)
   (apply #'accept-1 stream type args))
 
 (defmethod stream-accept ((stream #.*string-input-stream-class*) type
-			  &key (view (stream-default-view stream))
-			  (default nil defaultp)
-			  (default-type nil default-type-p)
-			  (activation-gestures nil activationsp)
-			  (additional-activation-gestures
-			   nil additional-activations-p)
-			  (delimiter-gestures nil delimitersp)
-			  (additional-delimiter-gestures
-			   nil additional-delimiters-p)
-			  &allow-other-keys)
+                          &key (view (stream-default-view stream))
+                          (default nil defaultp)
+                          (default-type nil default-type-p)
+                          (activation-gestures nil activationsp)
+                          (additional-activation-gestures
+                           nil additional-activations-p)
+                          (delimiter-gestures nil delimitersp)
+                          (additional-delimiter-gestures
+                           nil additional-delimiters-p)
+                          &allow-other-keys)
   (with-activation-gestures ((if additional-activations-p
-				 additional-activation-gestures
-				 activation-gestures)
-			     :override activationsp)
+                                 additional-activation-gestures
+                                 activation-gestures)
+                             :override activationsp)
     (with-delimiter-gestures ((if additional-delimiters-p
-				  additional-delimiter-gestures
-				  delimiter-gestures)
-			      :override delimitersp)
+                                  additional-delimiter-gestures
+                                  delimiter-gestures)
+                              :override delimitersp)
       (multiple-value-bind (object object-type)
-	  (apply-presentation-generic-function
-	   accept
-	   type stream view
-	   `(,@(and defaultp `(:default ,default))
-	     ,@(and default-type-p `(:default-type ,default-type))))
-	(values object (or object-type type))))))
+          (apply-presentation-generic-function
+           accept
+           type stream view
+           `(,@(and defaultp `(:default ,default))
+             ,@(and default-type-p `(:default-type ,default-type))))
+        (values object (or object-type type))))))
 
 (defun accept-1 (stream type &key
-		 (view (stream-default-view stream))
-		 (default nil defaultp)
-		 (default-type nil default-type-p)
-		 provide-default
-		 insert-default
-		 (replace-input t)
-		 history
-		 active-p
-		 prompt
-		 prompt-mode
-		 display-default
-		 query-identifier
-		 (activation-gestures nil activationsp)
-		 (additional-activation-gestures nil additional-activations-p)
-		 (delimiter-gestures nil delimitersp)
-		 (additional-delimiter-gestures nil  additional-delimiters-p))
+                 (view (stream-default-view stream))
+                 (default nil defaultp)
+                 (default-type nil default-type-p)
+                 provide-default
+                 insert-default
+                 (replace-input t)
+                 history
+                 active-p
+                 prompt
+                 prompt-mode
+                 display-default
+                 query-identifier
+                 (activation-gestures nil activationsp)
+                 (additional-activation-gestures nil additional-activations-p)
+                 (delimiter-gestures nil delimitersp)
+                 (additional-delimiter-gestures nil  additional-delimiters-p))
   (declare (ignore provide-default history active-p
-		   prompt prompt-mode
-		   display-default query-identifier))
+                   prompt prompt-mode
+                   display-default query-identifier))
   (when (and defaultp (not default-type-p))
     (error ":default specified without :default-type"))
   (when (and activationsp additional-activations-p)
@@ -848,14 +834,14 @@ history will be unchanged."
   (unless (or activationsp additional-activations-p *activation-gestures*)
     (setq activation-gestures *standard-activation-gestures*))
   (let ((sensitizer-object nil)
-	(sensitizer-type nil))
+        (sensitizer-type nil))
     (with-input-editing
-	(stream
-	 :input-sensitizer #'(lambda (stream cont)
-			       (with-output-as-presentation
-				   (stream sensitizer-object sensitizer-type)
-				 (funcall cont))))
-      (with-input-position (stream)	; support for calls to replace-input
+        (stream
+         :input-sensitizer #'(lambda (stream cont)
+                               (with-output-as-presentation
+                                   (stream sensitizer-object sensitizer-type)
+                                 (funcall cont))))
+      (with-input-position (stream)     ; support for calls to replace-input
         (when (and insert-default
                    (not (stream-rescanning-p stream)))
           ;; Insert the default value to the input stream. It should
@@ -863,105 +849,105 @@ history will be unchanged."
           ;; the default if we're rescanning, only during initial
           ;; setup.
           (presentation-replace-input stream default default-type view))
-	(setf (values sensitizer-object sensitizer-type)
-	      (with-input-context (type)
-		  (object object-type event options)
-		(with-activation-gestures ((if additional-activations-p
-					       additional-activation-gestures
-					       activation-gestures)
-					   :override activationsp)
-		  (with-delimiter-gestures ((if additional-delimiters-p
-						additional-delimiter-gestures
-						delimiter-gestures)
-					    :override delimitersp)
-		    (let ((accept-results nil))
-		      (handle-empty-input (stream)
-			  (setq accept-results
-				(multiple-value-list
-				 (if defaultp
+        (setf (values sensitizer-object sensitizer-type)
+              (with-input-context (type)
+                  (object object-type event options)
+                (with-activation-gestures ((if additional-activations-p
+                                               additional-activation-gestures
+                                               activation-gestures)
+                                           :override activationsp)
+                  (with-delimiter-gestures ((if additional-delimiters-p
+                                                additional-delimiter-gestures
+                                                delimiter-gestures)
+                                            :override delimitersp)
+                    (let ((accept-results nil))
+                      (handle-empty-input (stream)
+                          (setq accept-results
+                                (multiple-value-list
+                                 (if defaultp
                                      (funcall-presentation-generic-function
                                       accept type stream view
                                       :default default
                                       :default-type default-type)
-				     (funcall-presentation-generic-function
-				      accept type stream view))))
-			;; User entered activation or delimiter
-			;; gesture without any input.
-			(if defaultp
-			    (progn
-			      (presentation-replace-input
-			       stream default default-type view :rescan nil))
-			    (simple-parse-error
-			     "Empty input for type ~S with no supplied default"
-			     type))
-			(setq accept-results (list default default-type)))
-		      ;; Eat trailing activation gesture
-		      ;; XXX what about pointer gestures?
-		      ;; XXX and delimiter gestures?
-		      (unless *recursive-accept-p*
-			(let ((ag (read-char-no-hang stream nil stream t)))
-			  (unless (or (null ag) (eq ag stream))
-			    (unless (activation-gesture-p ag)
-			      (unread-char ag stream)))))
-		      (values (car accept-results) (if (cdr accept-results)
-						       (cadr accept-results)
-						       type)))))
-		;; A presentation was clicked on, or something
-		(t
-		 (when (and replace-input
-			    (getf options :echo t)
-			    (not (stream-rescanning-p stream)))
-		   (presentation-replace-input stream object object-type view
-					       :rescan nil))
-		 (values object object-type))))
-	;; Just to make it clear that we're returning values
-	(values sensitizer-object sensitizer-type)))))
+                                     (funcall-presentation-generic-function
+                                      accept type stream view))))
+                        ;; User entered activation or delimiter
+                        ;; gesture without any input.
+                        (if defaultp
+                            (progn
+                              (presentation-replace-input
+                               stream default default-type view :rescan nil))
+                            (simple-parse-error
+                             "Empty input for type ~S with no supplied default"
+                             type))
+                        (setq accept-results (list default default-type)))
+                      ;; Eat trailing activation gesture
+                      ;; XXX what about pointer gestures?
+                      ;; XXX and delimiter gestures?
+                      (unless *recursive-accept-p*
+                        (let ((ag (read-char-no-hang stream nil stream t)))
+                          (unless (or (null ag) (eq ag stream))
+                            (unless (activation-gesture-p ag)
+                              (unread-char ag stream)))))
+                      (values (car accept-results) (if (cdr accept-results)
+                                                       (cadr accept-results)
+                                                       type)))))
+                ;; A presentation was clicked on, or something
+                (t
+                 (when (and replace-input
+                            (getf options :echo t)
+                            (not (stream-rescanning-p stream)))
+                   (presentation-replace-input stream object object-type view
+                                               :rescan nil))
+                 (values object object-type))))
+        ;; Just to make it clear that we're returning values
+        (values sensitizer-object sensitizer-type)))))
 
 (defmethod prompt-for-accept ((stream t)
-			      type view
-			      &rest accept-args
-			      &key &allow-other-keys)
+                              type view
+                              &rest accept-args
+                              &key &allow-other-keys)
   (declare (ignore view))
   (apply #'prompt-for-accept-1 stream type accept-args))
 
 (defun prompt-for-accept-1 (stream type
-			    &key
-			    (default nil defaultp)
-			    (default-type type)
+                            &key
+                            (default nil defaultp)
+                            (default-type type)
                             (insert-default nil)
-			    (prompt t)
-			    (prompt-mode :normal)
-			    (display-default prompt)
-			    &allow-other-keys)
+                            (prompt t)
+                            (prompt-mode :normal)
+                            (display-default prompt)
+                            &allow-other-keys)
   (flet ((display-using-mode (stream prompt default)
-	   (ecase prompt-mode
-	     (:normal
-	      (if *recursive-accept-p*
-		  (input-editor-format stream "(~A~@[[~A]~]) " prompt default)
-		  (input-editor-format stream "~A~@[[~A]~]: " prompt default)))
-	     (:raw
-	      (input-editor-format stream "~A" prompt)))))
+           (ecase prompt-mode
+             (:normal
+              (if *recursive-accept-p*
+                  (input-editor-format stream "(~A~@[[~A]~]) " prompt default)
+                  (input-editor-format stream "~A~@[[~A]~]: " prompt default)))
+             (:raw
+              (input-editor-format stream "~A" prompt)))))
     (let ((prompt-string (if (eq prompt t)
-			     (format nil "~:[Enter ~;~]~A"
-				     *recursive-accept-p*
-				     (describe-presentation-type type nil nil))
-			     prompt))
+                             (format nil "~:[Enter ~;~]~A"
+                                     *recursive-accept-p*
+                                     (describe-presentation-type type nil nil))
+                             prompt))
           ;; Don't display the default in the prompt if it is to be
           ;; inserted into the input stream.
-	  (default-string (and defaultp
-				(not insert-default)
-				display-default
-				(present-to-string default default-type))))
+          (default-string (and defaultp
+                                (not insert-default)
+                                display-default
+                                (present-to-string default default-type))))
       (cond ((null prompt)
-	   nil)
-	  (t
-	   (display-using-mode stream prompt-string default-string))))))
+           nil)
+          (t
+           (display-using-mode stream prompt-string default-string))))))
 
 (defmethod prompt-for-accept ((stream #.*string-input-stream-class*)
-			      type view
-			      &rest other-args
-			      &key &allow-other-keys)
-			      
+                              type view
+                              &rest other-args
+                              &key &allow-other-keys)
+
   (declare (ignore type view other-args))
   nil)
 
@@ -1063,38 +1049,38 @@ protocol retrieving gestures from a provided string."))
 ;;; XXX This needs work! It needs to do everything that accept does for
 ;;; expanding ptypes and setting up recursive call procesusing
 (defun accept-from-string (type string
-			   &rest args
-			   &key view
-			   (default nil defaultp)
-			   (default-type nil default-type-p)
-			   (activation-gestures nil activationsp)
-			   (additional-activation-gestures
-			    nil
-			    additional-activations-p)
-			   (delimiter-gestures nil delimitersp)
-			   (additional-delimiter-gestures
-			    nil
-			    additional-delimiters-p)
-			   (start 0)
-			   (end (length string)))
+                           &rest args
+                           &key view
+                           (default nil defaultp)
+                           (default-type nil default-type-p)
+                           (activation-gestures nil activationsp)
+                           (additional-activation-gestures
+                            nil
+                            additional-activations-p)
+                           (delimiter-gestures nil delimitersp)
+                           (additional-delimiter-gestures
+                            nil
+                            additional-delimiters-p)
+                           (start 0)
+                           (end (length string)))
   (declare (ignore view))
   ;; XXX work in progress here.
   (with-activation-gestures ((if additional-activations-p
-				 additional-activation-gestures
-				 activation-gestures)
-			     :override activationsp)
+                                 additional-activation-gestures
+                                 activation-gestures)
+                             :override activationsp)
     (with-delimiter-gestures ((if additional-delimiters-p
-				  additional-delimiter-gestures
-				  delimiter-gestures)
-			      :override delimitersp)))
+                                  additional-delimiter-gestures
+                                  delimiter-gestures)
+                              :override delimitersp)))
   (when (zerop (- end start))
     (if defaultp
-	(return-from accept-from-string (values default
-						(if default-type-p
-						    default-type
-						    type)
-						0))
-	(simple-parse-error "Empty string")))
+        (return-from accept-from-string (values default
+                                                (if default-type-p
+                                                    default-type
+                                                    type)
+                                                0))
+        (simple-parse-error "Empty string")))
   (let ((stream (make-instance 'string-input-editing-stream
                  :string string :start start :end end)))
     (multiple-value-bind (val ptype)
@@ -1112,29 +1098,29 @@ protocol retrieving gestures from a provided string."))
   ;;; output-record-hit-detection-rectangle* has already been called
   (let ((single-box (presentation-single-box record)))
     (if (or (eq single-box t) (eq single-box :position))
-	t
-	(labels ((tester (record)
-		   (typecase record
-		     (displayed-output-record
-		      (return-from presentation-refined-position-test t))
-		     (compound-output-record
-		      (map-over-output-records-containing-position
-		       #'tester record x y))
-		     (t nil))))
-	  (tester record)
-	  nil))))
+        t
+        (labels ((tester (record)
+                   (typecase record
+                     (displayed-output-record
+                      (return-from presentation-refined-position-test t))
+                     (compound-output-record
+                      (map-over-output-records-containing-position
+                       #'tester record x y))
+                     (t nil))))
+          (tester record)
+          nil))))
 
 (defun presentation-contains-position (record x y)
   (let ((single-box (presentation-single-box record)))
     (multiple-value-bind (min-x min-y max-x max-y)
-	(output-record-hit-detection-rectangle* record)
+        (output-record-hit-detection-rectangle* record)
       (if (and (<= min-x x max-x) (<= min-y y max-y))
-	  (if (or (null single-box) (eq single-box :highlighting))
-	      (funcall-presentation-generic-function
-	       presentation-refined-position-test
-	       (presentation-type record) record x y)
-	      t)
-	  nil))))
+          (if (or (null single-box) (eq single-box :highlighting))
+              (funcall-presentation-generic-function
+               presentation-refined-position-test
+               (presentation-type record) record x y)
+              t)
+          nil))))
 
 (define-presentation-generic-function %highlight-presentation
     highlight-presentation
@@ -1145,10 +1131,10 @@ protocol retrieving gestures from a provided string."))
 (defun highlight-presentation-1 (presentation stream state)
   (with-output-recording-options (stream :record nil)
     (funcall-presentation-generic-function highlight-presentation
-					   (presentation-type presentation)
-					   presentation
-					   stream
-					   state)))
+                                           (presentation-type presentation)
+                                           presentation
+                                           stream
+                                           state)))
 
 (defmethod highlight-output-record-tree (record stream state)
   (declare (ignore record stream state))
@@ -1167,7 +1153,7 @@ protocol retrieving gestures from a provided string."))
     (type record stream state)
   (declare (ignore type))
   (if (or (eq (presentation-single-box record) t)
-	  (eq (presentation-single-box record) :highlighting))
+          (eq (presentation-single-box record) :highlighting))
       (highlight-output-record record stream state)
       (highlight-output-record-tree record stream state)))
 
@@ -1176,34 +1162,34 @@ protocol retrieving gestures from a provided string."))
   (declare (ignore for-context-type type))
   (if acceptably
       (let ((*print-readably* t))
-	(prin1 object stream))
+        (prin1 object stream))
       (princ object stream)))
 
 
 (defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil))
   (let* ((token (read-token stream)))
     (let ((result (handler-case (read-from-string token)
-		    (error (c)
-		      (declare (ignore c))
-		      (simple-parse-error "Error parsing ~S for presentation type ~S"
-					  token
-					  ptype)))))
+                    (error (c)
+                      (declare (ignore c))
+                      (simple-parse-error "Error parsing ~S for presentation type ~S"
+                                          token
+                                          ptype)))))
       (if (presentation-typep result ptype)
-	  (values result ptype)
-	  (input-not-of-required-type result ptype)))))
+          (values result ptype)
+          (input-not-of-required-type result ptype)))))
 
 (defun accept-using-completion (type stream func
-				&rest complete-with-input-key-args)
+                                &rest complete-with-input-key-args)
   "A wrapper around complete-with-input that returns the presentation type with
   the completed object."
   (multiple-value-bind (object success input)
       (apply #'complete-input stream func complete-with-input-key-args)
     (if success
-	(values object type)
-	(simple-parse-error "Error parsing ~S for presentation type ~S"
-			    input
-			    type))))
-  
+        (values object type)
+        (simple-parse-error "Error parsing ~S for presentation type ~S"
+                            input
+                            type))))
+
 ;;; When no accept method has been defined for a type, allow some kind of
 ;;; input.  The accept can be satisfied with pointer input, of course, and this
 ;;; allows the clever user a way to input the type at the keyboard, using #. or
@@ -1223,7 +1209,7 @@ protocol retrieving gestures from a provided string."))
   (declare (ignore object))
   t)
 
-(define-presentation-method present (object (type t) 
+(define-presentation-method present (object (type t)
                                             stream
                                             (view textual-view)
                                             &key acceptably for-context-type)
@@ -1246,17 +1232,17 @@ protocol retrieving gestures from a provided string."))
   (eq object nil))
 
 (define-presentation-method present (object (type null)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore object acceptably for-context-type))
   (write-string "None" stream))
 
 (define-presentation-method accept ((type null) stream (view textual-view)
-				    &key)
+                                    &key)
   (values (completing-from-suggestions (stream)
-	    (suggest "None" nil)
-	    (suggest "" nil))))
+            (suggest "None" nil)
+            (suggest "" nil))))
 
 (define-presentation-type boolean ()
   :inherit-from t)
@@ -1265,23 +1251,23 @@ protocol retrieving gestures from a provided string."))
   (or (eq object t) (eq object nil)))
 
 (define-presentation-method present (object (type boolean) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (if object
       (write-string "Yes" stream)
       (write-string "No" stream)))
 
 (define-presentation-method accept ((type boolean) stream (view textual-view)
-				    &key)
+                                    &key)
   (accept-using-completion 'boolean
-			   stream
-			   #'(lambda (input-string mode)
-			       (complete-from-possibilities
-				input-string
-				'(("yes" t) ("no" nil))
-				nil
-				:action mode))))
+                           stream
+                           #'(lambda (input-string mode)
+                               (complete-from-possibilities
+                                input-string
+                                '(("yes" t) ("no" nil))
+                                nil
+                                :action mode))))
 
 (define-presentation-type symbol ()
   :inherit-from 't)
@@ -1290,25 +1276,25 @@ protocol retrieving gestures from a provided string."))
   (symbolp object))
 
 (define-presentation-method present (object (type symbol) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (if acceptably
       (prin1 object stream)
       (princ object stream)))
 
 (define-presentation-method accept ((type symbol) stream (view textual-view)
-				    &key)
+                                    &key)
   (accept-using-read stream type))
-  
+
 (define-presentation-type keyword () :inherit-from 'symbol)
 
 (define-presentation-method presentation-typep (object (type keyword))
   (keywordp object))
 
 (define-presentation-method present (object (type keyword) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (prin1 object stream))
 
@@ -1321,18 +1307,18 @@ protocol retrieving gestures from a provided string."))
   :inherit-from t)
 
 (define-presentation-method highlight-presentation ((type blank-area)
-						    record
-						    stream
-						    state)
+                                                    record
+                                                    stream
+                                                    state)
   (declare (ignore record stream state))
   nil)
 
 ;;; Do other slots of this have to be bound in order for this to be useful?
 ;;; Guess we'll see.
 (defparameter *null-presentation* (make-instance 'standard-presentation
-						 :object nil
-						 :type 'blank-area
-						 :view +textual-view+))
+                                                 :object nil
+                                                 :type 'blank-area
+                                                 :view +textual-view+))
 
 (define-presentation-type number ()
   :inherit-from 't)
@@ -1352,50 +1338,50 @@ protocol retrieving gestures from a provided string."))
        (typep (imagpart object) type)))
 
 (define-presentation-method presentation-subtypep ((type complex)
-						   maybe-supertype)
+                                                   maybe-supertype)
   (with-presentation-type-parameters (complex type)
-    (let ((component-type type))	;i.e., the parameter named "type"
+    (let ((component-type type))        ;i.e., the parameter named "type"
       (with-presentation-type-parameters (complex maybe-supertype)
-	(let ((super-component-type type))
-	  (presentation-subtypep component-type super-component-type))))))
+        (let ((super-component-type type))
+          (presentation-subtypep component-type super-component-type))))))
 
 
 (defmethod presentation-type-of ((object complex))
   'complex)
 
 (define-presentation-method present (object (type complex) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (present (realpart object) (presentation-type-of (realpart object))
-	   :stream stream :view view :sensitive nil)
+           :stream stream :view view :sensitive nil)
   (write-char #\Space stream)
   (present (imagpart object) (presentation-type-of (imagpart object))
-	   :stream stream :view view :sensitive nil))
+           :stream stream :view view :sensitive nil))
 
 (define-presentation-type real (&optional low high) :options ((base 10) radix)
-			  :inherit-from 'number)
+                          :inherit-from 'number)
 
 (define-presentation-method presentation-typep (object (type real))
   (and (realp object)
        (or (eq low '*)
-	   (<= low object))
+           (<= low object))
        (or (eq high '*)
-	   (<= object high))))
+           (<= object high))))
 
 (defmethod presentation-type-of ((object real))
   'real)
 
 (define-presentation-method present (object (type real) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (let ((*print-base* base)
-	(*print-radix* radix))
+        (*print-radix* radix))
     (princ object stream)))
 
 (define-presentation-method accept ((type real) stream (view textual-view)
-				    &key)
+                                    &key)
   (let ((*read-base* base))
     (accept-using-read stream type)))
 
@@ -1406,14 +1392,14 @@ protocol retrieving gestures from a provided string."))
 (defun number-subtypep (low high super-low super-high)
   (if (eq low '*)
       (unless (eq super-low '*)
-	(return-from number-subtypep nil))
+        (return-from number-subtypep nil))
       (unless (or (eq super-low '*) (>= low super-low))
-	(return-from number-subtypep nil)))
+        (return-from number-subtypep nil)))
   (if (eq high '*)
       (unless (eq super-high '*)
-	(return-from number-subtypep nil))
+        (return-from number-subtypep nil))
       (unless (or (eq super-high '*) (<= high super-high))
-	(return-from number-subtypep nil)))
+        (return-from number-subtypep nil)))
   t)
 
 (define-presentation-type rational (&optional low high)
@@ -1423,19 +1409,19 @@ protocol retrieving gestures from a provided string."))
 (define-presentation-method presentation-typep (object (type rational))
   (and (rationalp object)
        (or (eq low '*)
-	   (<= low object))
+           (<= low object))
        (or (eq high '*)
-	   (<= object high))))
+           (<= object high))))
 
 (defmethod presentation-type-of ((object rational))
   'rational)
 
 (define-presentation-method present (object (type rational) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (let ((*print-base* base)
-	(*print-radix* radix))
+        (*print-radix* radix))
     (princ object stream)))
 
 (define-presentation-type integer (&optional low high)
@@ -1445,19 +1431,19 @@ protocol retrieving gestures from a provided string."))
 (define-presentation-method presentation-typep (object (type integer))
   (and (integerp object)
        (or (eq low '*)
-	   (<= low object))
+           (<= low object))
        (or (eq high '*)
-	   (<= object high))))
+           (<= object high))))
 
 (defmethod presentation-type-of ((object integer))
   'integer)
 
 (define-presentation-method present (object (type integer) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (let ((*print-base* base)
-	(*print-radix* radix))
+        (*print-radix* radix))
     (princ object stream)))
 
 (define-presentation-type ratio (&optional low high)
@@ -1468,19 +1454,19 @@ protocol retrieving gestures from a provided string."))
   (and (not (integerp object))
        (rationalp object)
        (or (eq low '*)
-	   (<= low object))
+           (<= low object))
        (or (eq high '*)
-	   (<= object high))))
+           (<= object high))))
 
 (defmethod presentation-type-of ((object ratio))
   'ratio)
 
 (define-presentation-method present (object (type ratio) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (let ((*print-base* base)
-	(*print-radix* radix))
+        (*print-radix* radix))
     (princ object stream)))
 
 (define-presentation-type float (&optional low high)
@@ -1490,31 +1476,31 @@ protocol retrieving gestures from a provided string."))
 (define-presentation-method presentation-typep (object (type float))
   (and (floatp object)
        (or (eq low '*)
-	   (<= low object))
+           (<= low object))
        (or (eq high '*)
-	   (<= object high))))
+           (<= object high))))
 
 (defmethod presentation-type-of ((object float))
   'float)
 
 (define-presentation-method present (object (type float) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (let ((*print-base* base)
-	(*print-radix* radix))
+        (*print-radix* radix))
     (princ object stream)))
 
 (macrolet ((frob (num-type)
-	     `(define-presentation-method presentation-subtypep ((type
-								  ,num-type)
-								 maybe-supertype)
-	        (with-presentation-type-parameters (,num-type maybe-supertype)
-		  (let ((super-low low)
-			(super-high high))
-		    (with-presentation-type-parameters (,num-type type)
-		      (values (number-subtypep low high super-low super-high)
-			      t)))))))
+             `(define-presentation-method presentation-subtypep ((type
+                                                                  ,num-type)
+                                                                 maybe-supertype)
+                (with-presentation-type-parameters (,num-type maybe-supertype)
+                  (let ((super-low low)
+                        (super-high high))
+                    (with-presentation-type-parameters (,num-type type)
+                      (values (number-subtypep low high super-low super-high)
+                              t)))))))
   (frob real)
   (frob rational)
   (frob ratio)
@@ -1530,8 +1516,8 @@ protocol retrieving gestures from a provided string."))
   'character)
 
 (define-presentation-method present (object (type character) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (princ object stream))
 
@@ -1543,13 +1529,13 @@ protocol retrieving gestures from a provided string."))
        (or (eq length '*) (eql (length object) length))))
 
 (define-presentation-method presentation-subtypep ((type string)
-						   maybe-supertype)
+                                                   maybe-supertype)
   (with-presentation-type-parameters (string maybe-supertype)
     (let ((super-length length))
       (with-presentation-type-parameters (string type)
-	(values (or (eq super-length '*)
-		    (eql length super-length))
-		t)))))
+        (values (or (eq super-length '*)
+                    (eql length super-length))
+                t)))))
 
 ;;; `(string ,length) would be more specific, but is not "likely to be useful
 ;;; to the programmer."
@@ -1558,24 +1544,24 @@ protocol retrieving gestures from a provided string."))
   'string)
 
 (define-presentation-method present (object (type string) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (if acceptably
       (prin1 object stream)
       (princ object stream)))
 
 (define-presentation-method accept ((type string) stream (view textual-view)
-				    &key (default nil defaultp)
-				    (default-type type))
+                                    &key (default nil defaultp)
+                                    (default-type type))
   (let ((result (read-token stream)))
     (cond ((numberp length)
-	   (if (eql length (length result))
-	       (values result type)
-	       (input-not-of-required-type result type)))
-	  ((and (zerop (length result)) defaultp)
-	   (values default default-type))
-	  (t (values result type)))))
+           (if (eql length (length result))
+               (values result type)
+               (input-not-of-required-type result type)))
+          ((and (zerop (length result)) defaultp)
+           (values default default-type))
+          (t (values result type)))))
 
 (define-presentation-type pathname ()
   :options ((default-version :newest) default-type (merge-default t))
@@ -1758,14 +1744,14 @@ protocol retrieving gestures from a provided string."))
       (partial-completers '(#\Space)))))
 
 (define-presentation-type completion (sequence
-				      &key (test 'eql) (value-key 'identity))
+                                      &key (test 'eql) (value-key 'identity))
   :options #.+completion-options+
   :inherit-from t)
 
 (define-presentation-method presentation-typep (object (type completion))
   (map nil #'(lambda (obj)
-	       (when (funcall test object (funcall value-key obj))
-		 (return-from presentation-typep t)))
+               (when (funcall test object (funcall value-key obj))
+                 (return-from presentation-typep t)))
        sequence)
   nil)
 
@@ -1773,67 +1759,67 @@ protocol retrieving gestures from a provided string."))
 
 (defun sequence-subset-p (seq1 test1 value-key1 seq2 test2 value-key2)
   (let ((test-fun (if (eq test1 test2)
-		      test1
-		      ;; The object has to pass both type's equality test
-		      #'(lambda (obj1 obj2)
-			  (and (funcall test1 obj1 obj2)
-			       (funcall test2 obj1 obj2))))))
+                      test1
+                      ;; The object has to pass both type's equality test
+                      #'(lambda (obj1 obj2)
+                          (and (funcall test1 obj1 obj2)
+                               (funcall test2 obj1 obj2))))))
     (map nil #'(lambda (type-obj)
-		 (unless (find (funcall value-key1 type-obj)
-			       seq2
-			       :test test-fun :key value-key2)
-		   (return-from sequence-subset-p nil)))
-	 seq1)
+                 (unless (find (funcall value-key1 type-obj)
+                               seq2
+                               :test test-fun :key value-key2)
+                   (return-from sequence-subset-p nil)))
+         seq1)
     t))
 
 (define-presentation-method presentation-subtypep ((type completion)
-						   maybe-supertype)
+                                                   maybe-supertype)
   (with-presentation-type-parameters (completion maybe-supertype)
     (let ((super-sequence sequence)
-	  (super-test test)
-	  (super-value-key value-key))
+          (super-test test)
+          (super-value-key value-key))
       (with-presentation-type-parameters (completion type)
-	(values (sequence-subset-p sequence test value-key
-				   super-sequence super-test super-value-key)
-		t)))))
+        (values (sequence-subset-p sequence test value-key
+                                   super-sequence super-test super-value-key)
+                t)))))
 
 (define-presentation-method present (object (type completion) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (let ((obj-pos (position object sequence :test test :key value-key)))
     (if obj-pos
-	(write-string (funcall name-key (elt sequence obj-pos)) stream)
-	;; Should define a condition type here.
-	(error "~S is not of presentation type ~S" object type))))
+        (write-string (funcall name-key (elt sequence obj-pos)) stream)
+        ;; Should define a condition type here.
+        (error "~S is not of presentation type ~S" object type))))
 
 (define-presentation-method accept ((type completion)
-				    stream
-				    (view textual-view)
-				    &key)
+                                    stream
+                                    (view textual-view)
+                                    &key)
   (accept-using-completion (make-presentation-type-specifier
-			    `(completion ,@parameters)
-			    options)
-			   stream
-			   #'(lambda (input-string mode)
-			       (complete-from-possibilities
-				input-string
-				sequence
-				partial-completers
-				:action mode
-				:name-key name-key
-				:value-key value-key))
-			   :partial-completers partial-completers))
+                            `(completion ,@parameters)
+                            options)
+                           stream
+                           #'(lambda (input-string mode)
+                               (complete-from-possibilities
+                                input-string
+                                sequence
+                                partial-completers
+                                :action mode
+                                :name-key name-key
+                                :value-key value-key))
+                           :partial-completers partial-completers))
 
 (define-presentation-type-abbreviation member (&rest elements)
   (make-presentation-type-specifier `(completion ,elements)
-				    :name-key name-key
-				    :documentation-key documentation-key
-				    :partial-completers partial-completers)
+                                    :name-key name-key
+                                    :documentation-key documentation-key
+                                    :partial-completers partial-completers)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation member-sequence (sequence
-							&key (test 'eql testp))
+                                                        &key (test 'eql testp))
   (make-presentation-type-specifier
    `(completion ,sequence ,@(and testp `(:test ,test)))
    :name-key name-key
@@ -1843,104 +1829,104 @@ protocol retrieving gestures from a provided string."))
 
 (defun member-alist-value-key (element)
   (cond ((atom element)
-	 element)
-	((atom (cdr element))
-	 (cdr element))
-	((null (cddr element))
-	 (cadr element))
-	(t (getf (cdr element) :value))))
+         element)
+        ((atom (cdr element))
+         (cdr element))
+        ((null (cddr element))
+         (cadr element))
+        (t (getf (cdr element) :value))))
 
 (defun member-alist-doc-key (element)
   (if (and (consp element) (consp (cdr element)) (consp (cddr element)))
       (getf (cdr element) :documentation)))
 
 (define-presentation-type-abbreviation member-alist (alist
-						     &key (test 'eql testp))
+                                                     &key (test 'eql testp))
   (make-presentation-type-specifier
    `(completion ,alist ,@(and testp `(:test ,test))
-		:value-key member-alist-value-key)
+                :value-key member-alist-value-key)
    :name-key name-key
    :documentation-key documentation-key
    :partial-completers partial-completers)
   :options ((name-key 'default-completion-name-key)
-	    (documentation-key 'member-alist-doc-key)
-	    (partial-completers '(#\Space))))
+            (documentation-key 'member-alist-doc-key)
+            (partial-completers '(#\Space))))
 
 (define-presentation-type subset-completion (sequence
-					     &key (test 'eql)
-					     (value-key 'identity))
+                                             &key (test 'eql)
+                                             (value-key 'identity))
   :options ((name-key 'default-completion-name-key)
-	    documentation-key
-	    (partial-completers '(#\Space))
-	    (separator #\,)
-	    (echo-space t))
+            documentation-key
+            (partial-completers '(#\Space))
+            (separator #\,)
+            (echo-space t))
   :inherit-from t)
 
 (define-presentation-method presentation-typep (object
-						(type subset-completion))
+                                                (type subset-completion))
   (map nil #'(lambda (obj)
-	       (unless (find obj sequence :test test :key value-key)
-		 (return-from presentation-typep nil)))
+               (unless (find obj sequence :test test :key value-key)
+                 (return-from presentation-typep nil)))
        object)
   t)
 
 (define-presentation-method presentation-subtypep ((type subset-completion)
-						   maybe-supertype)
+                                                   maybe-supertype)
   (with-presentation-type-parameters (subset-completion maybe-supertype)
     (let ((super-sequence sequence)
-	  (super-test test)
-	  (super-value-key value-key))
+          (super-test test)
+          (super-value-key value-key))
       (with-presentation-type-parameters (subset-completion type)
-	(values (sequence-subset-p sequence test value-key
-				   super-sequence super-test super-value-key)
-		t)))))
+        (values (sequence-subset-p sequence test value-key
+                                   super-sequence super-test super-value-key)
+                t)))))
 
 (define-presentation-method present ((object list) (type subset-completion)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (loop for tail on object
-	for (obj) = tail
-	do (progn
-	     (present obj (presentation-type-of object)
-			:stream stream :view view
-			:acceptably acceptably
-			:sensitive nil)
-	     (when (cdr tail)
-	       (if acceptably
-		   (princ separator stream)
-		   (terpri stream))))))
+        for (obj) = tail
+        do (progn
+             (present obj (presentation-type-of object)
+                        :stream stream :view view
+                        :acceptably acceptably
+                        :sensitive nil)
+             (when (cdr tail)
+               (if acceptably
+                   (princ separator stream)
+                   (terpri stream))))))
 
 (define-presentation-method present ((object vector) (type subset-completion)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (loop for i from 0 below (length object)
-	for obj = (aref object i)
-	do (progn
-	     (present obj (presentation-type-of object)
-			:stream stream :view view
-			:acceptably acceptably
-			:sensitive nil)
-	     (when (< i (1- (length object)))
-	       (if acceptably
-		   (princ separator stream)
-		   (terpri stream))))))
+        for obj = (aref object i)
+        do (progn
+             (present obj (presentation-type-of object)
+                        :stream stream :view view
+                        :acceptably acceptably
+                        :sensitive nil)
+             (when (< i (1- (length object)))
+               (if acceptably
+                   (princ separator stream)
+                   (terpri stream))))))
 
 ;;; XXX is it a typo in the spec that subset, subset-sequence and subset-alist
 ;;; have the same options as completion, and not subset-completion?
 
 (define-presentation-type-abbreviation subset (&rest elements)
   (make-presentation-type-specifier `(subset-completion ,elements)
-				    :name-key name-key
-				    :documentation-key documentation-key
-				    :partial-completers partial-completers)
+                                    :name-key name-key
+                                    :documentation-key documentation-key
+                                    :partial-completers partial-completers)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation subset-sequence (sequence
-							&key (test 'eql testp))
+                                                        &key (test 'eql testp))
   (make-presentation-type-specifier
    `(subset-completion ,sequence ,@(and testp `(:test ,test)))
    :name-key name-key
@@ -1949,7 +1935,7 @@ protocol retrieving gestures from a provided string."))
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation subset-alist (alist
-						     &key (test 'eql testp))
+                                                     &key (test 'eql testp))
   (make-presentation-type-specifier
    `(subset-completion ,@(and testp `(:test ,test))
                        :value-key member-alist-value-key)
@@ -1957,8 +1943,8 @@ protocol retrieving gestures from a provided string."))
    :documentation-key documentation-key
    :partial-completers partial-completers)
   :options ((name-key 'default-completion-name-key)
-	    (documentation-key 'member-alist-doc-key)
-	    (partial-completers '(#\Space))))
+            (documentation-key 'member-alist-doc-key)
+            (partial-completers '(#\Space))))
 
 (define-presentation-type sequence (type)
   :options ((separator #\,) (echo-space t))
@@ -1976,19 +1962,19 @@ protocol retrieving gestures from a provided string."))
     (return-from presentation-typep nil))
   (let ((real-type (expand-presentation-type-abbreviation type)))
     (map nil #'(lambda (obj)
-		 (unless (presentation-typep obj real-type)
-		   (return-from presentation-typep nil)))
-	 object)
+                 (unless (presentation-typep obj real-type)
+                   (return-from presentation-typep nil)))
+         object)
     t))
 
 (define-presentation-method presentation-subtypep ((type sequence)
-						   maybe-supertype)
+                                                   maybe-supertype)
   (with-presentation-type-parameters (sequence type)
     ;; now TYPE is bound to the parameter TYPE
     (let ((real-type (expand-presentation-type-abbreviation type)))
       (with-presentation-type-parameters (sequence maybe-supertype)
-	(let ((real-super-type (expand-presentation-type-abbreviation type)))
-	  (presentation-subtypep real-type real-super-type))))))
+        (let ((real-super-type (expand-presentation-type-abbreviation type)))
+          (presentation-subtypep real-type real-super-type))))))
 
 (defmethod presentation-type-of ((object cons))
   '(sequence t))
@@ -1998,55 +1984,55 @@ protocol retrieving gestures from a provided string."))
   '(sequence t))
 
 (define-presentation-method present ((object list) (type sequence)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (loop for tail on object
-	for (obj) = tail
-	do (progn
-	     (present obj type		; i.e., the type parameter
-			:stream stream :view view
-			:acceptably acceptably
-			:sensitive nil)
-	     (when (cdr tail)
-	       (write-char separator stream)))))
+        for (obj) = tail
+        do (progn
+             (present obj type          ; i.e., the type parameter
+                        :stream stream :view view
+                        :acceptably acceptably
+                        :sensitive nil)
+             (when (cdr tail)
+               (write-char separator stream)))))
 
 (define-presentation-method present ((object vector) (type sequence)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (loop for i from 0 below (length object)
-	for obj = (aref object i)
-	do (progn
-	     (present obj type		; i.e., the type parameter
-			:stream stream :view view
-			:acceptably acceptably
-			:sensitive nil)
-	     (when (< i (1- (length object)))
-	       (write-char separator stream)))))
+        for obj = (aref object i)
+        do (progn
+             (present obj type          ; i.e., the type parameter
+                        :stream stream :view view
+                        :acceptably acceptably
+                        :sensitive nil)
+             (when (< i (1- (length object)))
+               (write-char separator stream)))))
 
 
 (define-presentation-method accept ((type sequence)
-				    stream
-				    (view textual-view)
-				    &key)
+                                    stream
+                                    (view textual-view)
+                                    &key)
   (loop
      with separators = (list separator)
-     for element = (accept type		; i.e., the type parameter
-			   :stream stream
-			   :view view
-			   :prompt nil
-			   :additional-delimiter-gestures separators)
+     for element = (accept type         ; i.e., the type parameter
+                           :stream stream
+                           :view view
+                           :prompt nil
+                           :additional-delimiter-gestures separators)
      collect element
      do (progn
-	  (when (not (eql (peek-char nil stream nil nil) separator))
-	    (loop-finish))
-	  (read-char stream)
-	  (when echo-space
-	    ;; Make the space a noise string
-	    (input-editor-format stream " ")))))
+          (when (not (eql (peek-char nil stream nil nil) separator))
+            (loop-finish))
+          (read-char stream)
+          (when echo-space
+            ;; Make the space a noise string
+            (input-editor-format stream " ")))))
 
 
 (define-presentation-type sequence-enumerated (&rest types)
@@ -2055,107 +2041,107 @@ protocol retrieving gestures from a provided string."))
   :parameters-are-types t)
 
 (define-presentation-method presentation-typep (object
-						(type sequence-enumerated))
+                                                (type sequence-enumerated))
   (unless (or (listp object) (vectorp object))
     (return-from presentation-typep nil))
   (map nil #'(lambda (obj type)
-	       (let ((real-type (expand-presentation-type-abbreviation type)))
-		 (unless (presentation-typep obj real-type)
-		   (return-from presentation-typep nil))))
+               (let ((real-type (expand-presentation-type-abbreviation type)))
+                 (unless (presentation-typep obj real-type)
+                   (return-from presentation-typep nil))))
        object
        types)
   t)
 
 (define-presentation-method presentation-subtypep ((type sequence-enumerated)
-						   maybe-supertype)
+                                                   maybe-supertype)
   (with-presentation-type-parameters (sequence-enumerated maybe-supertype)
     (let ((supertypes types))
       (with-presentation-type-parameters (sequence-enumerated type)
-	(unless (eql (length supertypes) (length types))
-	  (return-from presentation-subtypep (values nil t)))
-	(map nil
-	     #'(lambda (element-type element-supertype)
-		 (let ((real-type (expand-presentation-type-abbreviation
-				   element-type))
-		       (real-supertype (expand-presentation-type-abbreviation
-					element-supertype)))
-		   (multiple-value-bind (subtypep determined)
-		       (presentation-subtypep real-type real-supertype)
-		     (cond ((not determined)
-			    (return-from presentation-subtypep
-			      (values nil nil)))
-			   ((not subtypep)
-			    (return-from presentation-subtypep
-			      (values nil t)))))))
-	     types
-	     supertypes)
-	(values t t)))))
+        (unless (eql (length supertypes) (length types))
+          (return-from presentation-subtypep (values nil t)))
+        (map nil
+             #'(lambda (element-type element-supertype)
+                 (let ((real-type (expand-presentation-type-abbreviation
+                                   element-type))
+                       (real-supertype (expand-presentation-type-abbreviation
+                                        element-supertype)))
+                   (multiple-value-bind (subtypep determined)
+                       (presentation-subtypep real-type real-supertype)
+                     (cond ((not determined)
+                            (return-from presentation-subtypep
+                              (values nil nil)))
+                           ((not subtypep)
+                            (return-from presentation-subtypep
+                              (values nil t)))))))
+             types
+             supertypes)
+        (values t t)))))
 
 (define-presentation-method present ((object list) (type sequence-enumerated)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (loop for tail on object
-	for (obj) = tail
-	for obj-type in types
-	do (progn
-	     (present obj obj-type
-			:stream stream :view view
-			:acceptably acceptably
-			:sensitive nil)
-	     (when (cdr tail)
-	       (if acceptably
-		   (princ separator stream)
-		   (terpri stream))))))
+        for (obj) = tail
+        for obj-type in types
+        do (progn
+             (present obj obj-type
+                        :stream stream :view view
+                        :acceptably acceptably
+                        :sensitive nil)
+             (when (cdr tail)
+               (if acceptably
+                   (princ separator stream)
+                   (terpri stream))))))
 
 (define-presentation-method present ((object vector) (type sequence-enumerated)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (loop for i from 0 below (length object)
-	for obj = (aref object i)
-	for obj-type in types
-	do (progn
-	     (present obj obj-type
-			:stream stream :view view
-			:acceptably acceptably
-			:sensitive nil)
-	     (when (< i (1- (length object)))
-	       (if acceptably
-		   (princ separator stream)
-		   (terpri stream))))))
+        for obj = (aref object i)
+        for obj-type in types
+        do (progn
+             (present obj obj-type
+                        :stream stream :view view
+                        :acceptably acceptably
+                        :sensitive nil)
+             (when (< i (1- (length object)))
+               (if acceptably
+                   (princ separator stream)
+                   (terpri stream))))))
 
 (define-presentation-method accept ((type sequence-enumerated)
-				    stream
-				    (view textual-view)
-				    &key)
+                                    stream
+                                    (view textual-view)
+                                    &key)
   (loop
      with element = nil and element-type = nil
        and separators = (list separator)
      for type-tail on types
      for (this-type) = type-tail
      do (setf (values element element-type)
-	      (accept this-type
-		      :stream stream
-		      :view view
-		      :prompt t
-		      :display-default nil
-		      :additional-delimiter-gestures separators))
+              (accept this-type
+                      :stream stream
+                      :view view
+                      :prompt t
+                      :display-default nil
+                      :additional-delimiter-gestures separators))
      collect element into sequence-val
      do (progn
-	  (when (not (eql (peek-char nil stream nil nil) separator))
-	    (loop-finish))
-	  (read-char stream)
-	  (when echo-space
-	    ;; Make the space a noise string
-	    (input-editor-format stream " ")))
+          (when (not (eql (peek-char nil stream nil nil) separator))
+            (loop-finish))
+          (read-char stream)
+          (when echo-space
+            ;; Make the space a noise string
+            (input-editor-format stream " ")))
      finally (if (cdr type-tail)
-		 (simple-parse-error "Input ~S too short for ~S."
-				     sequence-val
-				     types)
-		 (return sequence-val))))
+                 (simple-parse-error "Input ~S too short for ~S."
+                                     sequence-val
+                                     types)
+                 (return sequence-val))))
 
 (define-presentation-type or (&rest types)
   :inherit-from t
@@ -2163,36 +2149,36 @@ protocol retrieving gestures from a provided string."))
 
 (define-presentation-method presentation-typep (object (type or))
   (loop for type in types
-	for real-type = (expand-presentation-type-abbreviation type)
-	do (when (presentation-typep object real-type)
-	     (return-from presentation-typep t)))
+        for real-type = (expand-presentation-type-abbreviation type)
+        do (when (presentation-typep object real-type)
+             (return-from presentation-typep t)))
   nil)
 
 (define-presentation-method present (object (type or)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (loop for or-type in types
-	for expanded-type = (expand-presentation-type-abbreviation or-type)
-	do (when (presentation-typep object expanded-type)
-	     (present object expanded-type
-		      :stream stream :view view
-		      :acceptably acceptably
-		      :for-context-type for-context-type)
-	     (loop-finish))))
+        for expanded-type = (expand-presentation-type-abbreviation or-type)
+        do (when (presentation-typep object expanded-type)
+             (present object expanded-type
+                      :stream stream :view view
+                      :acceptably acceptably
+                      :for-context-type for-context-type)
+             (loop-finish))))
 
 (define-presentation-method accept ((type or)
-				    (stream input-editing-stream)
-				    (view textual-view)
-				    &key)
+                                    (stream input-editing-stream)
+                                    (view textual-view)
+                                    &key)
   (let ((scan-begin (stream-scan-pointer stream)))
     (loop for or-type in types
-	  do (handler-case (return (accept or-type
-					   :stream stream
-					   :view view
-					   :prompt nil))
-	       (parse-error () (setf (stream-scan-pointer stream) scan-begin)))
-	  finally (simple-parse-error "Input type is not one of ~S" types))))
+          do (handler-case (return (accept or-type
+                                           :stream stream
+                                           :view view
+                                           :prompt nil))
+               (parse-error () (setf (stream-scan-pointer stream) scan-begin)))
+          finally (simple-parse-error "Input type is not one of ~S" types))))
 
 ;;; What does and inherit from?  Maybe we'll punt on that for the moment.
 ;;; Unless it inherits from its arguments...
@@ -2202,29 +2188,29 @@ protocol retrieving gestures from a provided string."))
 
 (define-presentation-method presentation-typep (object (type and))
   (loop for type in types
-	for real-type = (expand-presentation-type-abbreviation type)
-	do (with-presentation-type-decoded (name parameters)
-	     real-type
-	     (cond ((eq name 'satisfies)
-		    (unless (funcall (car parameters) object)
-		      (return-from presentation-typep nil)))
-		   ((eq name 'not)
-		    (unless (not (presentation-typep object (car parameters)))
-		      (return-from presentation-typep nil)))
-		   (t (unless (presentation-typep object real-type)
-			(return-from presentation-typep nil))))))
+        for real-type = (expand-presentation-type-abbreviation type)
+        do (with-presentation-type-decoded (name parameters)
+             real-type
+             (cond ((eq name 'satisfies)
+                    (unless (funcall (car parameters) object)
+                      (return-from presentation-typep nil)))
+                   ((eq name 'not)
+                    (unless (not (presentation-typep object (car parameters)))
+                      (return-from presentation-typep nil)))
+                   (t (unless (presentation-typep object real-type)
+                        (return-from presentation-typep nil))))))
   t)
 
 (define-presentation-method present (object (type and)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (present object (expand-presentation-type-abbreviation (car types))
-	   :stream stream :view view
-	   :acceptably acceptably
-	   :for-context-type for-context-type))
+           :stream stream :view view
+           :acceptably acceptably
+           :for-context-type for-context-type))
 
-(define-presentation-method accept 
+(define-presentation-method accept
     ((type and) (stream input-editing-stream) (view textual-view) &rest args &key)
   (let ((subtype (first types)))
     (multiple-value-bind (obj ptype)
@@ -2247,9 +2233,9 @@ protocol retrieving gestures from a provided string."))
   t)
 
 (define-presentation-method present (object (type expression)
-				     stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                     stream
+                                     (view textual-view)
+                                     &key acceptably for-context-type)
   (declare (ignore for-context-type))
   (let ((*print-readably* acceptably))
     (prin1 object stream)))
@@ -2268,7 +2254,7 @@ protocol retrieving gestures from a provided string."))
    (feedback :reader feedback :initarg :feedback)
    (highlighting :reader highlighting :initarg :highlighting)
    (destination-translator :reader destination-translator
-			   :initarg :destination-translator)))
+                           :initarg :destination-translator)))
 
 
 (defvar *dragged-presentation* nil
@@ -2290,25 +2276,25 @@ protocol retrieving gestures from a provided string."))
 ;;; is the dragged presentation.
 
 (defmethod initialize-instance :after ((obj drag-n-drop-translator)
-				       &key documentation
-				       pointer-documentation
-				       destination-translator)
+                                       &key documentation
+                                       pointer-documentation
+                                       destination-translator)
   (declare (ignore destination-translator))
   ;; This is starting to smell...
   (flet ((make-adapter (func)
-	   (lambda (object &rest args &key presentation &allow-other-keys)
-	     (if *dragged-presentation*
-		 (apply func
-			*dragged-object*
-			:presentation *dragged-presentation*
-			:destination-object object
-			:destination-presentation presentation
-			args)
-		 (apply func object args)))))
+           (lambda (object &rest args &key presentation &allow-other-keys)
+             (if *dragged-presentation*
+                 (apply func
+                        *dragged-object*
+                        :presentation *dragged-presentation*
+                        :destination-object object
+                        :destination-presentation presentation
+                        args)
+                 (apply func object args)))))
     (setf (slot-value obj 'documentation) (make-adapter documentation))
     (when pointer-documentation
       (setf (slot-value obj 'pointer-documentation)
-	    (make-adapter pointer-documentation)))))
+            (make-adapter pointer-documentation)))))
 
 (defmacro define-drag-and-drop-translator
     (name (from-type to-type destination-type command-table
@@ -2324,20 +2310,20 @@ protocol retrieving gestures from a provided string."))
                                   arglist
      &body body)
   (declare (ignore tester gesture documentation pointer-documentation
-		   menu priority))
+                   menu priority))
   (let* ((real-dest-type (expand-presentation-type-abbreviation
-			  destination-type))
-	 (name-string (command-name-from-symbol name))
-	 (drag-string (format nil "Drag to ~A" name-string))
-	 (pointer-doc (if pointer-doc-p
-			  nil
-			  `(:pointer-documentation
-			    ((object destination-object stream)
-			     (declare (ignore object))
-			     (write-string (if destination-object
-					       ,name-string
-					       ,drag-string)
-			                   stream))))))
+                          destination-type))
+         (name-string (command-name-from-symbol name))
+         (drag-string (format nil "Drag to ~A" name-string))
+         (pointer-doc (if pointer-doc-p
+                          nil
+                          `(:pointer-documentation
+                            ((object destination-object stream)
+                             (declare (ignore object))
+                             (write-string (if destination-object
+                                               ,name-string
+                                               ,drag-string)
+                                           stream))))))
     (with-keywords-removed (args (:feedback :highlighting))
       (with-gensyms (object)
         `(progn
@@ -2356,4 +2342,3 @@ protocol retrieving gestures from a provided string."))
              (frame-drag-and-drop ',name ',command-table
                                   presentation context-type
                                   frame event window x y)))))))
-
