@@ -1190,18 +1190,15 @@ protocol retrieving gestures from a provided string."))
                             input
                             type))))
 
-;;; When no accept method has been defined for a type, allow some kind of
-;;; input.  The accept can be satisfied with pointer input, of course, and this
-;;; allows the clever user a way to input the type at the keyboard, using #. or
-;;; some other printed representation.
-;;;
-;;; XXX Once we "go live" we probably want to disable this, probably with a
-;;; beep and warning that input must be clicked on.
-
+;;; When no accept method has been defined for a type, allow some kind
+;;; of input. The accept can be satisfied with pointer input.
 (define-default-presentation-method accept
     (type stream (view textual-view) &key default default-type)
   (declare (ignore default default-type))
-  (accept-using-read stream type :read-eval t))
+  (let* ((token (read-token stream)))
+    (if (presentation-typep token ptype)
+        (values token ptype)
+        (input-not-of-required-type result ptype))))
 
 ;;; The presentation types
 
