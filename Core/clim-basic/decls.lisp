@@ -871,6 +871,8 @@ is exposed in the current layout."))
 (defgeneric frame-calling-frame (frame))
 (defgeneric frame-parent (frame))
 (defgeneric frame-panes (frame))
+;;; missing in the CLIM 2 spec, probably omission
+(defgeneric (setf frame-panes) (panes frame))
 (defgeneric frame-top-level-sheet (frame))
 (defgeneric frame-current-panes (frame))
 (defgeneric get-frame-pane (frame pane-name))

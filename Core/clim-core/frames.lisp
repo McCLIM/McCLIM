@@ -88,7 +88,7 @@ input focus. This is a McCLIM extension."))
 		  :initform nil
 		  :accessor frame-command-table)
    (named-panes :accessor frame-named-panes :initform nil)
-   (panes :initform nil :reader frame-panes
+   (panes :initform nil :accessor frame-panes
 	  :documentation "The tree of panes in the current layout.")
    (layouts :initform nil
 	    :initarg :layouts
@@ -208,7 +208,7 @@ documentation produced by presentations.")
     (setf (%frame-manager frame) nil)
     (when old-manager
       (disown-frame old-manager frame)
-      (setf (slot-value frame 'panes) nil)
+      (setf (frame-panes frame) nil)
       (setf (slot-value frame 'layouts) nil))
     (setf (%frame-manager frame) fm)))
 
@@ -739,7 +739,7 @@ documentation produced by presentations.")
                       ;; menu-bar) instead of (consp menu-bar) above
                       ;; --GB
                       (t pane))))
-         (setf (slot-value frame 'panes) pane)))))
+         (setf (frame-panes frame) pane)))))
 
 (defun find-pane-for-layout (name frame)
   (cdr (assoc name (frame-panes-for-layout frame) :test #'eq)))
@@ -794,7 +794,7 @@ documentation produced by presentations.")
            ;; adding a menu-bar transparently, should also only be done
            ;; where the exterior window system does not support menus
            ,(if (or menu-bar pointer-documentation)
-                `(setf (slot-value frame 'panes)
+                `(setf (frame-panes frame)
                        (ecase (frame-current-layout frame)
                          ,@(mapcar (lambda (layout)
                                      `(,(first layout)
@@ -816,7 +816,7 @@ documentation produced by presentations.")
                                           ,@(when pointer-documentation
                                               '(%pointer-documentation%)))))
                                    layouts)))
-                `(setf (slot-value frame 'panes)
+                `(setf (frame-panes frame)
                        (ecase (frame-current-layout frame)
                          ,@layouts))))))))
 
