@@ -864,7 +864,7 @@ documentation produced by presentations.")
       (error ":pane cannot be specified along with either :panes or :layouts"))
 
     (when pane
-      (setq panes (list 'single-pane pane)
+      (setq panes `((single-pane ,pane))
             layouts `((:default single-pane))))
 
     (setq current-layout (first (first layouts)))
