@@ -721,10 +721,6 @@ documentation produced by presentations.")
 (defun find-pane-for-layout (name frame)
   (cdr (assoc name (frame-panes-for-layout frame) :test #'eq)))
 
-(defun save-pane-for-layout (name pane frame)
-  (push (cons name pane) (frame-panes-for-layout frame))
-  pane)
-
 (defun coerce-pane-name (pane name)
   (when pane
     (setf (slot-value pane 'name) name)    
@@ -760,13 +756,16 @@ documentation produced by presentations.")
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (let ((*application-frame* frame))
        (with-look-and-feel-realization (fm frame)
+         (unless (frame-panes-for-layout frame)
+           (setf (frame-panes-for-layout frame)
+                 (list
+                  ,@(loop
+                       for (name . form) in panes
+                       collect
+                         `(cons ',name ,(do-pane-creation-form name form))))))
          (let ,(loop
                   for (name . form) in panes
-                  collect `(,name (or (find-pane-for-layout ',name frame)
-                                      (save-pane-for-layout
-                                       ',name
-                                       ,(do-pane-creation-form name form)
-                                       frame))))
+                  collect `(,name (find-pane-for-layout ',name frame)))
            ;; [BTS] added this, but is not sure that this is correct for
            ;; adding a menu-bar transparently, should also only be done
            ;; where the exterior window system does not support menus
