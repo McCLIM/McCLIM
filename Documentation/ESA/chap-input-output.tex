@@ -34,9 +34,9 @@ This generic function is called by the command
 pathname that it received as an argument.
 
 If a buffer with the file-name \textit{pathname} associated with it
-already exists, then return that buffer is returned.  Otherwise, if a
-file with the name \textit{pathname} exists, a fresh buffer created
-from the file is returned.  Otherwise, a new empty buffer having the
+already exists, then that buffer is returned.  Otherwise, if a file
+with the name \textit{pathname} exists, a fresh buffer created from
+the file is returned.  Otherwise, a new empty buffer having the
 associated file name is returned.
 
 Client code may override this method or provide auxiliary methods on
