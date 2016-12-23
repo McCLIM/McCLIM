@@ -709,37 +709,14 @@ documentation produced by presentations.")
      (locally
          ,@body)))
 
-; The menu-bar code in the following two functions is incorrect.
-; it needs to be moved to somewhere after the backend, since
-; it depends on the backend chosen.
+; The menu-bar code in the following function is incorrect.  it needs
+; to be moved to somewhere after the backend, since it depends on the
+; backend chosen.
 ;
 ; This hack slaps a menu-bar into the start of the application-frame,
 ; in such a way that it is hard to find.
 ;
 ; FIXME
-(defun make-single-pane-generate-panes-form (class-name menu-bar pane)
-  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-     ;; v-- hey, how can this be?
-     (with-look-and-feel-realization (fm frame)
-       (let ((pane ,(cond
-                      ((eq menu-bar t)
-                       `(vertically () (clim-internals::make-menu-bar
-                                        ',class-name)
-                                    ,pane))
-                      ((consp menu-bar)
-                       `(vertically () (clim-internals::make-menu-bar
-                                        (make-command-table nil
-                                                            :menu ',menu-bar))
-                                    ,pane))
-                      (menu-bar
-                       `(vertically () (clim-internals::make-menu-bar
-                                        ',menu-bar)
-                                    ,pane))
-                      ;; The form below is unreachable with (listp
-                      ;; menu-bar) instead of (consp menu-bar) above
-                      ;; --GB
-                      (t pane))))
-         (setf (frame-panes frame) pane)))))
 
 (defun find-pane-for-layout (name frame)
   (cdr (assoc name (frame-panes-for-layout frame) :test #'eq)))
@@ -890,10 +867,9 @@ documentation produced by presentations.")
       (defmethod frame-all-layouts ((frame ,name))
         ',(mapcar #'car layouts))
 
-      ,(if pane
-           (make-single-pane-generate-panes-form name menu-bar pane)
-           (make-panes-generate-panes-form name menu-bar panes layouts
-                                           pointer-documentation))
+      ,(make-panes-generate-panes-form name menu-bar panes layouts
+                                       pointer-documentation)
+
       ,@(when command-table
           `((define-command-table ,@command-table)))
 
