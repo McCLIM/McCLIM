@@ -6,7 +6,7 @@
 ;;;;
 ;;;;  Copyright (c) 2016, Daniel Kochmański
 ;;;;
-;;;;    See toplevel file 'Copyright' for the copyright details.
+;;;;    see toplevel file 'copyright' for the copyright details.
 ;;;;
 
 ;; (defpackage #:mcclim-clx/fonts
@@ -18,6 +18,110 @@
 ;; (in-package #:mcclim-clx/fonts)
 
 (in-package #:clim-clx)
+
+(defparameter *clx-text-sizes*
+  '(:normal         12
+    :tiny            8
+    :very-small      8
+    :small          10
+    :large          14
+    :very-large     18
+    :huge           24))
+
+(defconstant *families/names*
+  '(:fix         "adobe-courier"
+    :serif       "adobe-times"
+    :sans-serif  "adobe-helvetica"))
+
+(defparameter *families/faces*
+  '(;; "adobe-courier"
+    ((:fix :roman)                 . "medium-r")
+    ((:fix :bold)                  . "bold-r")
+    ((:fix :italic)                . "medium-o")
+    ((:fix (:bold :italic))        . "bold-o")
+    ((:fix (:italic :bold))        . "bold-o")
+    ;; "adome-times"
+    ((:sans :roman)                . "medium-r")
+    ((:sans :bold)                 . "bold-r")
+    ((:sans :italic)               . "medium-i")
+    ((:sans (:bold :italic))       . "bold-i")
+    ((:sans (:italic :bold))       . "boid-i")
+    ;; "adobe-helvetica"
+    ((:sans-serif :roman)          . "medium-r")
+    ((:sans-serif :bold)           . "bold-r")
+    ((:sans-serif :italic)         . "medium-o")
+    ((:sans-serif (:bold :italic)) . "bold-o")
+    ((:sans-serif (:italic :bold)) . "bold-o")))
+
+(defun open-font (display font-name)
+  (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
+    (when fonts
+      (xlib:open-font display (first fonts)))))
+
+(defgeneric text-style-to-x-font (port text-style)
+  (:method ((port t) (text-style t))
+    (let ((text-style (parse-text-style text-style)))
+      (labels
+          ((find-and-make-xlib-face (display family face size)
+             (let* ((family-name (if (stringp family)
+                                     family
+                                     (getf *families/names* family)))
+                    (face-name (if (stringp face)
+                                   face
+                                   (assoc (list family face) *families/faces*
+                                          :test #'equal))))
+               (flet ((try (encoding)
+                        (open-font display
+                                   (format nil "-~a-~a-*-*-~d-*-*-*-*-*-~a"
+                                           family-name face-name size encoding))))
+;;; xxx: this part is a bit problematic - we either list all fonts
+;;; with any possible encoding (what leads to the situation, when our
+;;; font can't render a simple string "abcd") or we end with only a
+;;; partial list of fonts. since we have mcclim-ttf extension which
+;;; handles unicode characters well, this mechanism of getting fonts
+;;; is deprecated and there is no big harm.
+                 (or (try "iso8859-1")
+                     (xlib:open-font display "fixed")))))
+           (find-font ()
+             (multiple-value-bind (family face size)
+                 (text-style-components text-style)
+
+               (setf face   (or face :roman)
+                     family (or family :fix)
+                     size   (or size :normal)
+                     size   (round (getf clim-clx::*clx-text-sizes* size size)))
+
+               (when (eq family :fixed)
+                 (setf family :fix))
+
+               (when (zerop size)
+                 (setf size (getf clim-clx::*clx-text-sizes* :normal)))
+
+               (let ((display (clim-clx::clx-port-display port)))
+                 (find-and-make-xlib-face display family face size)))))
+        (or (text-style-mapping port text-style)
+            (setf (climi::text-style-mapping port text-style)
+                  (find-font)))))))
+
+;;; the generic function port-character-width might be intended to be
+;;; common for all ports, but in fact, that symbol is in the clim-clx
+;;; package, so it is only defined here, and nowhere used. 
+(defgeneric port-character-width (port text-style char))
+
+(defmethod port-character-width ((port clx-basic-port) text-style char)
+  (let* ((font (text-style-to-x-font port text-style))
+	 (width (xlib:char-width font (char-code char))))
+    width))
+
+;;; the generic function port-string-width might be intended to be
+;;; common for all ports, but in fact, that symbol is in the clim-clx
+;;; package, so it is only defined here, and nowhere used. 
+(defgeneric port-string-width (port text-style string &key start end))
+
+(defmethod port-string-width ((port clx-basic-port) text-style string &key (start 0) end)
+  (xlib:text-width (text-style-to-x-font port text-style)
+		   string :start start :end end))
+
 
 
 
@@ -70,7 +174,7 @@
              :reader clx-font-face-raw-name)))
 
 (defmethod clim-extensions:port-all-font-families :around
-    ((port clx-port) &key invalidate-cache)
+    ((port clx-basic-port) &key invalidate-cache)
   (when (or (null (clim-clx::font-families port)) invalidate-cache)
     (setf (font-families port) (reload-font-table port)))
   (append (call-next-method)
