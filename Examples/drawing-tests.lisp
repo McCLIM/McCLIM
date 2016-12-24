@@ -4,6 +4,7 @@
 
 (defparameter *width* 500)
 (defparameter *height* 700)
+(defparameter *border-width* 5)
 
 (defstruct drawing-test name description drawer)
 
@@ -37,10 +38,10 @@
              :value-changed-callback #'render-images)
    (print-ps :push-button
 	     :label "Print All (/tmp/*.ps)"
-	     :activate-callback #'(lambda (x) (run-all-postscript-tests)))
+	     :activate-callback #'(lambda (x) (print-all-postscript-tests)))
    (print-png :push-button
 	      :label "Print All (/tmp/*.png)"
-	      :activate-callback #'(lambda (x) (run-all-raster-image-tests :png))))
+	      :activate-callback #'(lambda (x) (print-all-raster-image-tests :png))))
   (:layouts
    (default
      (spacing (:thickness 3)
@@ -56,7 +57,9 @@
 	     (clim-extensions:lowering ()
 	       (horizontally ()
 		 (labelling (:label "Backend")
-		   (scrolling (:width *width* :height *height*) backend-output))
+		   (scrolling (:width *width* :height *height*)
+		     (climi::bordering (:border-width *border-width*)
+		       backend-output)))
 		 (labelling (:label "Render")
 		   (scrolling (:width *width* :height *height*) render-output)))))
 	   (spacing (:thickness 3)
@@ -84,17 +87,18 @@
 	  (funcall (drawing-test-drawer item) backend-output))
       (condition (condition)
 	(format t "Backend:~a~%" condition)))
-    (handler-case
+    ;;(handler-case
 	(let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
-			   (stream :width *width* :height *height*)
+			   (stream :width *width* :height *height* :border-width *border-width*)
 			 (clim:draw-rectangle* stream 0 0 *width* *height* :filled t
 					       :ink clim:+grey90+)
 
 			(funcall (drawing-test-drawer item) stream))))
 	  (draw-pattern* render-output pattern 0 0)
 	  (medium-finish-output (sheet-medium render-output)))
-      (condition (condition)
-	(format t "Render:~a~%" condition)))))
+	;;(condition (condition)
+	;;  (format t "Render:~a~%" condition)))))
+	))
 
 (defun drawing-test-postscript (test &optional filename)
   (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
@@ -108,7 +112,7 @@
           (format stream "~&~a: ~a~%" test-name (drawing-test-description test)))
         (funcall (drawing-test-drawer test) stream)))))
 
-(defun run-all-postscript-tests ()
+(defun print-all-postscript-tests ()
   (loop for test being the hash-values of *drawing-tests* do
        (restart-case (drawing-test-postscript test)
          (:skip ()
@@ -127,7 +131,7 @@
 			      :ink clim:+grey90+)
         (funcall (drawing-test-drawer test) stream)))))
 
-(defun run-all-raster-image-tests (format)
+(defun print-all-raster-image-tests (format)
   (time
    (loop for test being the hash-values of *drawing-tests* do
 	(restart-case (drawing-test-raster-image test format)
@@ -138,7 +142,7 @@
 ;;; utility functions
 ;;;
 
-(defun make-random-color ()
+(defun make-random-col ()
   (clim:make-rgb-color (/ (random 255) 255)
                   (/ (random 255) 255)
                   (/ (random 255) 255)))
@@ -148,7 +152,7 @@
                   (/ (random 255) 255)
                   (/ (random 255) 255)))
 
-(defun draw-rosette (stream x y radius n &rest drawing-options)
+(defun draw-rosette2 (stream x y radius n &rest drawing-options)
   (loop with alpha = (/ (* 2 pi) n)
         and radius = (/ radius 2)
         for i below n
@@ -266,7 +270,7 @@
   (test-simple-clipping-region stream
 			       #'(lambda (stream)
 				   (clim:draw-point* stream (random *width*) (random *height*)
-						     :ink (make-random-color)
+						     :ink (make-random-col)
 						     :line-thickness (random 100)))))
 
 ;;;
@@ -333,7 +337,7 @@
 				   (clim:draw-line* stream
 						    x y
 						    (+ (random 100)  x) (+ (random 100) y)
-						    :ink (make-random-color)
+						    :ink (make-random-col)
 						    :line-thickness (random 10))))))
 ;;;
 ;;; Polygon
@@ -378,7 +382,7 @@
 							   :closed t
 							   :filled t
 							   :line-thickness (random 10)
-							   :ink (make-random-color))))))
+							   :ink (make-random-col))))))
 (define-drawing-test "03) Polygon Scale" (stream)
     ""
     (test-simple-scale-region stream
@@ -468,7 +472,7 @@
 				   (clim:draw-rectangle* stream
 							 x y
 							 (+ (random 100) x) (+ (random 100) y)
-							 :ink (make-random-color)
+							 :ink (make-random-col)
 							 :line-thickness (random 10)
 							 :filled t)))))
 
@@ -531,7 +535,7 @@
 				     (draw-ellipse* stream (random *width*) (random *height*)
 						    (+ 1 (random 50)) 0 0 (+ 1 (random 50))
 						    :line-thickness (random 5)
-						    :ink (make-random-color)
+						    :ink (make-random-col)
 						    :filled t))))
 
 (define-drawing-test "05) Ellipse Scale" (stream)
@@ -597,7 +601,7 @@
 				     (draw-circle* stream (random *width*) (random *height*)
 						   (+ 1 (random 50))
 						   :line-thickness (random 5)
-						   :ink (make-random-color)
+						   :ink (make-random-col)
 						   :filled t))))
 
 (define-drawing-test "06) Circle Scale" (stream)
@@ -700,7 +704,7 @@
 				     (draw-text* stream (format nil "~A" (random 10))
 						 (random *width*) (random *height*)
 						 :text-size (random 100)
-						 :ink (make-random-color)))))
+						 :ink (make-random-col)))))
 
 (define-drawing-test "07) Text Scale" (stream)
     ""
@@ -724,20 +728,20 @@
 						    :text-size 50))))
 
 
-(defun draw-vstrecke (stream x y1 y2 &rest args &key ink &allow-other-keys)
+(defun draw-vstrecke2 (stream x y1 y2 &rest args &key ink &allow-other-keys)
   (draw-line* stream (- x 10) y1 (+ x 10) y1 :ink ink)
   (draw-line* stream (- x 10) y2 (+ x 10) y2 :ink ink)
   (apply #'draw-arrow* stream x y1 x y2 args))
 
-(defun draw-hstrecke (stream y x1 x2 &rest args &key ink &allow-other-keys)
+(defun draw-hstrecke2 (stream y x1 x2 &rest args &key ink &allow-other-keys)
   (draw-line* stream x1 (- y 10) x1 (+ y 10) :ink ink)
   (draw-line* stream x2 (- y 10) x2 (+ y 10) :ink ink)
   (apply #'draw-arrow* stream x1 y x2 y args))
 
-(defun legend-text-style ()
+(defun legend-text-style2 ()
   (make-text-style :sans-serif :roman :small))
 
-(defun draw-legend (stream &rest entries)
+(defun draw-legend2 (stream &rest entries)
   (let* ((style (legend-text-style))
 	 (y 2)
 	 (h (nth-value 1 (text-size stream "dummy" :text-style style))))
@@ -770,7 +774,7 @@
 		    2
 		    pane-height
 		    :text-style (legend-text-style))
-	(draw-legend stream
+	(draw-legend2 stream
 		     (list "Ascent"
 			   ;; :line-style (make-line-style :dashes '(1.5))
 			   :ink +black+)
@@ -786,7 +790,7 @@
 		       (list "Text size (width/height)" :ink +red+))
 		     (when (eq rectangle :text-size)
 		       (list "Text size (final x/y)" :ink +blue+)))
-	(draw-vstrecke stream
+	(draw-vstrecke2 stream
 		      (- x1 20)
 		      ybase
 		      (- ybase (text-style-ascent style medium))
@@ -797,13 +801,13 @@
 		      ybase
 		      (+ ybase (text-style-descent style medium))
 		      :ink +black+)
-	(draw-vstrecke stream
+	(draw-vstrecke2 stream
 		      (- x1 40)
 		      y1
 		      (+ y1 (text-style-height style medium))
 		      :line-style (make-line-style :thickness 2)
 		      :ink +black+)
-	(draw-hstrecke stream
+	(draw-hstrecke2 stream
 		       (- y1 20)
 		       x1
 		       (+ x1 (text-style-width style medium))
@@ -932,7 +936,7 @@
 	(draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey50+)
 	(loop repeat 100
 	   do (clim:draw-point* stream (random 500) (random 500)
-				:ink (make-random-color)
+				:ink (make-random-col)
 				:line-thickness (random 100)))))))
 
 
@@ -1194,6 +1198,33 @@
 	(draw-circle* stream 220 (+ 10 y) 20 :ink ink :filled nil)
 	(setf y (+ 70 y))))))
 
+(define-drawing-test "13) Ink - flipping" (stream)
+    ""
+  (let ((y 20)
+	(flipping +flipping-ink+))
+    (draw-rectangle* stream 0 0 400 400 :filled t :ink +background-ink+)
+    (with-drawing-options (stream :line-thickness 5)
+      (dolist (ink (list flipping flipping ))
+	(draw-text* stream (format nil "~A" ink) 20 (- y 10) :text-size 8 :ink ink)
+	(draw-text* stream "Text" 20 (+ 40 y) :ink ink)
+	(draw-rectangle* stream 70 y 170 (+ y 40) :ink ink)
+	(draw-circle* stream 220 (+ 10 y) 20 :ink ink :filled nil)
+	(setf y (+ 30 y))))))
+
+
+
+(define-drawing-test "13) Ink - flipping 2" (stream)
+    ""
+  (let ((y 20)
+	(flipping (clim:make-flipping-ink +red+ +green+)))
+    (draw-rectangle* stream 0 0 400 400 :filled t :ink +red+)
+    (with-drawing-options (stream :line-thickness 5)
+      (dolist (ink (list flipping flipping))
+	(draw-text* stream (format nil "~A" ink) 20 (- y 10) :text-size 8 :ink ink)
+	(draw-text* stream "Text" 20 (+ 40 y) :ink ink)
+	(draw-rectangle* stream 70 y 170 (+ y 50) :ink ink)
+	(draw-circle* stream 220 (+ 10 y) 20 :ink ink :filled nil)
+	(setf y (+ 30 y))))))
 
 (define-drawing-test "13) Ink - Pattern" (stream)
     ""
@@ -1267,7 +1298,7 @@
 
 (define-drawing-test "14) Pictures - Rosette" (stream)
   ""
-  (draw-rosette stream 250 300 180 18
+  (draw-rosette2 stream 250 300 180 18
 		:ink clim:+steel-blue+ :line-thickness 2))
 
 
@@ -1277,22 +1308,65 @@
 
 (define-drawing-test "15) Pixmap 1" (stream)
     ""
-  (let ((pixmap (with-output-to-pixmap (m stream :width 300 :height 300)
-		  (draw-rectangle* m 0 0 300 300 :ink +green+)
-		  (draw-rosette m 150 150 100 18
+  (let ((pixmap (with-output-to-pixmap (m stream :width 200 :height 200)
+		  (draw-rectangle* m 0 0 200 200 :ink +green+)
+		  (draw-rosette2 m 100 100 80 18
 				:ink clim:+steel-blue+ :line-thickness 2))))
-    (copy-from-pixmap pixmap 0 0 300 300 stream 0 0)
-    (with-drawing-options (stream :clipping-region (make-rectangle* 100 400 200 500))
-      (copy-from-pixmap pixmap 0 0 300 300 stream 0 300))))
+    (copy-from-pixmap pixmap 0 0 200 200 stream 0 0)
+    (copy-from-pixmap pixmap 50 50 100 100 stream 250 50)
+    (with-drawing-options (stream :clipping-region (make-rectangle* 70 270 130 330))
+      (copy-from-pixmap pixmap 50 50 100 100 stream 50 250))
+    (with-drawing-options (stream)
+      (copy-from-pixmap pixmap 50 50 100 100 stream 250 250))
+    (with-translation (stream -50 0)
+      (copy-from-pixmap pixmap 50 50 100 100 stream 250 250))
+    (with-translation (stream 0 50)
+      (copy-from-pixmap pixmap 50 50 100 100 stream 250 250))))
+
     
 (define-drawing-test "15) Pixmap 2" (stream)
     ""
-  (let ((pixmap (with-output-to-pixmap (m stream :width 300 :height 300)
-		  (draw-rectangle* m 0 0 300 300 :ink +red+)
+  (let ((pixmap (with-output-to-pixmap (m stream :width 200 :height 200)
+		  (draw-rectangle* m 0 0 200 200 :ink +red+)
 		  (picture01 m))))
-    (copy-from-pixmap pixmap 0 0 300 300 stream 0 0)
+    (copy-from-pixmap pixmap 0 0 200 200 stream 0 0)
+    (draw-rectangle* stream 50 50 150 150 :ink +green+ :filled nil)
+    (copy-from-pixmap pixmap 50 50 100 100 stream 0 250)
+    (copy-from-pixmap pixmap 50 50 100 100 stream 150 250)))
+
+(define-drawing-test "15) Pixmap 3" (stream)
+    ""
+  (let ((pixmap (with-output-to-pixmap (m stream :width 200 :height 200)
+		  (draw-rectangle* m 0 0 200 200 :ink +red+)
+		  (picture01 m))))
+    (copy-from-pixmap pixmap 0 0 200 200 stream 0 0)
+    (copy-to-pixmap pixmap 0 0 100 100 pixmap 100 100)
+    (copy-from-pixmap pixmap 0 0 200 200 stream 0 200)
+    (copy-to-pixmap stream 0 0 50 50 pixmap 100 100)
+    (copy-from-pixmap pixmap 0 0 200 200 stream 200 0)))
+
+;;;
+;;; RGB design
+;;;
+
+(define-drawing-test "RGB Design" (stream)
+  ""
+  (let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
+		     (stream :width 200 :height 200)
+		   (clim:draw-rectangle* stream 0 0 200 200 :filled t
+					 :ink clim:+grey90+)
+		   (draw-rectangle* stream 0 0 200 200 :ink +yellow+)
+		   (picture01 stream))))
+    (draw-pattern* stream pattern 0 0)
+    (clim:draw-rectangle* stream 50 50 150 150 :filled nil :line-thickness 5 :ink clim:+blue+)
+    (with-drawing-options (stream :clipping-region (make-rectangle* 250 50 350 150))
+      (draw-pattern* stream pattern 200 0))
+    (with-drawing-options (stream :clipping-region (make-rectangle* 250 200 350 300))
+      (with-translation (stream 0 50)
+	(draw-pattern* stream pattern 200 150)))
+    (with-drawing-options (stream :clipping-region (make-rectangle* 250 350 350 450))
+      (with-translation (stream 50 0)
+	(draw-pattern* stream pattern 200 300)))))
+
     
-    (with-drawing-options (stream :clipping-region
-				  (make-rectangle* 100 400 200 500))
-      (copy-from-pixmap pixmap 0 0 300 300 stream 0 300))))
 

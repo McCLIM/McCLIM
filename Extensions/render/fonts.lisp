@@ -4,22 +4,33 @@
 ;;; Font utilities. 
 ;;;
 
-(defstruct (glyph-info (:constructor glyph-info (id width height left right top)))
+(defstruct (glyph-info (:constructor glyph-info (id width height left right top paths)))
   id                                    ; FIXME: Types?
   width height
-  left right top)
+  left right top
+  paths)
+
+(defclass render-truetype-font (truetype-font)
+  ((fixed-width       :initform nil)
+   (glyph-id-cache    :initform (make-gcache))
+   (glyph-width-cache :initform (make-gcache))
+   (char->glyph-info  :initform (make-hash-table :size 256))))
 
 (defun font-generate-glyph (font glyph-index)
-  (multiple-value-bind (arr left top dx dy) (glyph-pixarray font (code-char glyph-index))
-    (let ((right (+ left (array-dimension arr 1))))
-      (glyph-info 0 dx dy left right top))))
-
+  (multiple-value-bind (paths left top width height dx dy) (glyph-paths font (code-char glyph-index))
+    (let ((right (+ left width)))
+      (glyph-info 0 dx dy left right top paths))))
     
 (defun font-glyph-info (font character)
-  (font-generate-glyph font (char-code character)))
+  (with-slots (char->glyph-info) font
+    (ensure-gethash character char->glyph-info
+                    (font-generate-glyph font (char-code character)))))
 
 (defun font-glyph-id (font character)
   (glyph-info-id (font-glyph-info font character)))
+
+(defun font-glyph-paths (font character)
+  (glyph-info-paths (font-glyph-info font character)))
 
 (defmethod font-ascent ((font truetype-font))
   (truetype-font-ascent font))
@@ -36,62 +47,31 @@
 (defmethod font-glyph-right ((font truetype-font) char)
   (glyph-info-right (font-glyph-info font char)))
 
-;;; Simple custom cache for glyph IDs and widths. Much faster than
-;;; using the char->glyph-info hash table directly.
 
+(defun make-gcache ()
+  (let ((array (make-array 512 :adjustable nil :fill-pointer nil)))
+    (loop for i from 0 below 256 do (setf (aref array i) (1+ i)))
+    array))
 
-(defun register-all-ttf-fonts (port &optional (dir *truetype-font-path*))
-  (when *truetype-font-path*
-    (dolist (path (directory (merge-pathnames "*.ttf" dir)))
-      ;; make-truetype-font make fail if zpb can't load the particular
-      ;; file - in that case it signals an error and no font is
-      ;; created. In that case we just skip that file- hence IGNORE-ERRORS.
-      (ignore-errors
-        (map () #'(lambda (size)
-                    (make-truetype-font port path size))
-             '(8 10 12 14 18 24 48 72))))))
+(declaim (inline gcache-get))
 
-(let ((font-loader-cache (make-hash-table :test #'equal))
-      (font-families     (make-hash-table :test #'equal))
-      (font-faces        (make-hash-table :test #'equal))
-      (font-cache        (make-hash-table :test #'equal))
-      (text-style-cache  (make-hash-table :test #'eql)))
-  (defun make-truetype-font (port filename size)
-    (climi::with-lock-held (*zpb-font-lock*)
-      (let* ((loader (ensure-gethash filename font-loader-cache
-                                     (zpb-ttf:open-font-loader filename)))
-             (family-name (zpb-ttf:family-name loader))
-             (family (ensure-gethash family-name font-families
-                                     (make-instance 'truetype-font-family
-                                                    :port port
-                                                    :name (zpb-ttf:family-name loader))))
-             (face-name (zpb-ttf:subfamily-name loader))
-             (font-face (ensure-gethash
-                         (list family-name face-name) font-faces
-                         (make-instance 'truetype-face
-                                        :family family
-                                        :name (zpb-ttf:subfamily-name loader)
-                                        :loader loader)))
-	     (font (ensure-gethash
-                    (list loader size) font-cache
-                    (make-instance 'truetype-font
-				   :family nil
-				   :name nil
-				   :loader nil
-                                   :face font-face
-                                   :size 10))));;size))))
-        ;;(pushnew family (font-families port))
-        (ensure-gethash
-         (make-text-style family-name face-name size) text-style-cache
-         font))))
+(defun gcache-get (cache key-number)  
+  (declare (optimize (speed 3))
+           (type (simple-array t (512))))
+  (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello.
+    (and (= key-number (the fixnum (svref cache hash)))
+         (svref cache (+ 256 hash)))))
 
-  (defun find-truetype-font (text-style)
-    (gethash text-style text-style-cache)))
+(defun gcache-set (cache key-number value)
+  (let ((hash (logand key-number #xFF)))
+    (setf (svref cache hash) key-number
+          (svref cache (+ 256 hash)) value)))
+
 
 
 (defgeneric font-text-extents (font string &key start end translate))
 
-(defmethod font-text-extents ((font truetype-font) string
+(defmethod font-text-extents ((font render-truetype-font) string
                                         &key (start 0) (end (length string)) translate)
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
@@ -102,20 +82,24 @@
          ;; We could work a little harder and eliminate generic arithmetic
          ;; here. It might shave a few percent off a draw-text benchmark.
          ;; Rather silly to obsess over the array access considering that.
-         (macrolet ((compute ()
-                      `(loop 
+	 (macrolet ((compute ()
+                      `(loop with width-cache = (slot-value font 'glyph-width-cache)
                           for i from start below end
                           as char = (aref string i)
                           as code = (char-code char)
-                          sum (font-glyph-width font char))))
-	   (typecase string 
-	     (simple-string 
-	      (locally (declare (type simple-string string))
-		(compute)))
-	     (string 
-	      (locally (declare (type string string))
-		(compute)))
-	     (t (compute))))))
+                          sum (or (gcache-get width-cache code)
+                                  (gcache-set width-cache code (font-glyph-width font char)))
+                            #+NIL (clim-clx::font-glyph-width font char))))
+           (if (numberp (slot-value font 'fixed-width))
+               (* (slot-value font 'fixed-width) (- end start))
+               (typecase string 
+                 (simple-string 
+                  (locally (declare (type simple-string string))
+                    (compute)))
+                 (string 
+                  (locally (declare (type string string))
+                    (compute)))
+                 (t (compute)))))))
     (values
      width
      (font-ascent font)
@@ -126,8 +110,6 @@
      (font-ascent font)
      (font-descent font)
      0 end)))
-
-  
 
 (defmethod text-size ((medium render-medium-mixin) string
                       &key text-style (start 0) end)
@@ -181,7 +163,6 @@
                (declare (ignorable left right
                                    font-ascent font-descent
                                    direction first-not-done))
-	       ;;(format t ">> ~A ~A~% " string width)
                (values width (+ ascent descent) width 0 ascent)) )))) )
 
 (defmethod text-style-ascent (text-style (medium render-medium-mixin))
@@ -198,7 +179,7 @@
 
 (defmethod text-style-width (text-style (medium render-medium-mixin))
   (let ((xfont (text-style-to-font (port medium) text-style)))
-    (font-glyph-width xfont #\M)))
+    (font-glyph-width xfont #\m)))
 
 (defmethod climi::text-bounding-rectangle*
     ((medium render-medium-mixin) string &key text-style (start 0) end)
@@ -240,5 +221,4 @@
                       ;; * (min 0 left), (max width right)
                       ;; * font-ascent / ascent
                       (values left (- font-ascent) right font-descent)))))))))
-
 

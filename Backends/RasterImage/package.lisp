@@ -10,6 +10,7 @@
 		  #:with-transformed-positions
 		  #:port-register-mirror
 		  #:port-unregister-mirror
+		  #:port-lookup-sheet
 		  #:destroy-mirror
 		  #:realize-mirror
 		  #:unmanaged-top-level-sheet-pane

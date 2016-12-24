@@ -70,3 +70,10 @@
   (make-instance 'raster-image-medium :sheet sheet :port port))
 
 
+(defmethod port-set-mirror-region ((port raster-image-port) mirror region)
+  (declare (ignore port mirror region))
+  nil)
+
+(defmethod port-set-mirror-transformation ((port raster-image-port) mirror transrormation)
+  (declare (ignore port mirror transformation))
+  nil)

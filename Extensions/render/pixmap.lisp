@@ -1,7 +1,7 @@
 (in-package :mcclim-render)
 
-(defclass image-pixmap-mixin (image-sheet-mixin mirrored-pixmap design)
+(defclass image-pixmap-mixin (image-sheet-mixin mirrored-pixmap basic-sheet design)
   ())
 
-(defmethod image-sheet-image ((sheet image-pixmap-mixin))
-  (pixmap-mirror sheet))
+(defmethod sheet-medium ((pixmap image-pixmap-mixin))
+  (pixmap-medium pixmap))
