@@ -2045,6 +2045,7 @@
   #+excl
   (:import-from :excl compile-system load-system)
   (:import-from #:alexandria
+                #:clamp
                 #:ensure-gethash)
   (:intern #:letf))
 

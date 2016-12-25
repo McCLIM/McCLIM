@@ -280,10 +280,6 @@ by the number of variables in VARS."
 		 (declare (ignorable ,vars))
 		 ,result-form)))))))
 
-(defun clamp (value min max)
-  "Clamps the value 'value' into the range [min,max]."
-  (max min (min max value)))
-  
 ;;;;
 ;;;; meta functions
 ;;;;
