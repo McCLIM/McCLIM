@@ -90,6 +90,7 @@ input focus. This is a McCLIM extension."))
    (named-panes :accessor frame-named-panes :initform nil)
    (panes :initform nil :accessor frame-panes
 	  :documentation "The tree of panes in the current layout.")
+   (current-panes :initform nil :accessor frame-current-panes)
    (layouts :initform nil
 	    :initarg :layouts
 	    :reader frame-layouts)
@@ -793,7 +794,27 @@ documentation produced by presentations.")
                                    layouts)))
                 `(setf (frame-panes frame)
                        (ecase (frame-current-layout frame)
-                         ,@layouts))))))))
+                         ,@layouts)))))
+
+       ;; XXX: this computation may be cached for each layout!
+       (let ((named-panes (frame-named-panes frame))
+             (panes nil))
+
+         ;; Find intersection of named panes and current layout panes
+         (map-over-sheets #'(lambda (p)
+                              (when (member p named-panes)
+                                (push p panes)))
+                          (frame-panes frame))
+
+         (setf (frame-current-panes frame)
+               (uiop:while-collecting (sorted-panes)
+                 (mapc #'(lambda (pane)
+                           (when (member pane panes)
+                             ;; collect pane
+                             (sorted-panes pane)
+                             ;; reduce search time
+                             (setf panes (delete pane panes))))
+                       named-panes)))))))
 
 (defmacro define-application-frame (name superclasses slots &rest options)
   (when (null superclasses)
