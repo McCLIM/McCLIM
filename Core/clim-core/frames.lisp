@@ -279,24 +279,6 @@ documentation produced by presentations.")
         (map nil #'return-found-type parent)
         (map-over-sheets #'return-found-type parent))))
 
-;;; XXX: this function should be precomputed during the layout change
-(defmethod frame-current-panes ((frame application-frame))
-  (let ((panes nil)
-        (sorted-panes nil)
-	(named-panes (frame-named-panes frame)))
-    (map-over-sheets #'(lambda (p)
-			 (when (member p named-panes)
-			   (push p panes)))
-		     (frame-panes frame))
-    ;; NB: `frame-named-panes' is reversed (consecutive pushes), so
-    ;; here we bring back the original order.
-    (mapc #'(lambda (p)
-              (when (member p panes)
-                (push p sorted-panes)
-                (setf panes (delete p panes))))
-          named-panes)
-    sorted-panes))
-
 (defmethod get-frame-pane ((frame application-frame) pane-name)
   (let ((pane (find-pane-named frame pane-name)))
     (if (typep pane 'clim-stream-pane)
