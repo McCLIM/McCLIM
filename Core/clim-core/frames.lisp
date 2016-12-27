@@ -718,9 +718,6 @@ documentation produced by presentations.")
 ;
 ; FIXME
 
-(defun find-pane-for-layout (name frame)
-  (cdr (assoc name (frame-panes-for-layout frame) :test #'eq)))
-
 (defun coerce-pane-name (pane name)
   (when pane
     (setf (slot-value pane 'name) name)    
@@ -765,7 +762,9 @@ documentation produced by presentations.")
                          `(cons ',name ,(do-pane-creation-form name form))))))
          (let ,(loop
                   for (name . form) in panes
-                  collect `(,name (find-pane-for-layout ',name frame)))
+                  collect `(,name (alexandria:assoc-value
+                                   (frame-panes-for-layout frame)
+                                   ',name :test #'eq)))
            ;; [BTS] added this, but is not sure that this is correct for
            ;; adding a menu-bar transparently, should also only be done
            ;; where the exterior window system does not support menus
