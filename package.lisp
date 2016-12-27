@@ -2046,6 +2046,7 @@
   (:import-from :excl compile-system load-system)
   (:import-from #:alexandria
                 #:clamp
+                #:make-keyword
                 #:ensure-gethash)
   (:intern #:letf))
 
