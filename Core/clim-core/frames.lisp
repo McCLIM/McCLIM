@@ -98,7 +98,18 @@ input focus. This is a McCLIM extension."))
 		   :initarg :current-layout
 		   :accessor frame-current-layout)
    (panes-for-layout :initform nil :accessor frame-panes-for-layout
-		     :documentation "alist of names and panes (as returned by make-pane)")
+		     :documentation "alist of names and panes ~
+                                     (as returned by make-pane)")
+
+   (output-pane :initform nil
+                :accessor frame-standard-output
+                :accessor frame-error-output)
+   (input-pane :initform nil
+               :accessor frame-standard-input
+               :accessor frame-query-io)
+   (documentation-pane :initform nil
+                       :accessor frame-pointer-documentation-output)
+
    (top-level-sheet :initform nil
 		    :reader frame-top-level-sheet)
    (menu-bar :initarg :menu-bar
@@ -287,26 +298,6 @@ documentation produced by presentations.")
 
 (defmethod find-pane-named ((frame application-frame) pane-name)
   (find pane-name (frame-named-panes frame) :key #'pane-name))
-
-;;; XXX: these functions may be precomputed during the layout change
-;;; in `generate-panes' method.
-(defmethod frame-standard-output ((frame application-frame))
-  (or (find-pane-of-type (frame-current-panes frame) 'application-pane)
-      (find-pane-of-type (frame-current-panes frame) 'interactor-pane)))
-
-(defmethod frame-standard-input ((frame application-frame))
-  (or (find-pane-of-type (frame-current-panes frame) 'interactor-pane)
-      (frame-standard-output frame)))
-
-(defmethod frame-query-io ((frame application-frame))
-  (or (frame-standard-input frame)
-      (frame-standard-output frame)))
-
-(defmethod frame-error-output ((frame application-frame))
-  (frame-standard-output frame))
-
-(defmethod frame-pointer-documentation-output ((frame application-frame))
-  (find-pane-of-type (frame-panes frame) 'pointer-documentation-pane))
 
 
 #+nil
@@ -796,7 +787,18 @@ documentation produced by presentations.")
                              (sorted-panes pane)
                              ;; reduce search time
                              (setf panes (delete pane panes))))
-                       named-panes)))))))
+                       named-panes)))
+
+         (setf (frame-standard-output frame)
+               (or (find-pane-of-type (frame-current-panes frame) 'application-pane)
+                   (find-pane-of-type (frame-current-panes frame) 'interactor-pane))
+
+               (frame-standard-input frame)
+               (or (find-pane-of-type (frame-current-panes frame) 'interactor-pane)
+                   (frame-standard-output frame))
+
+               (frame-pointer-documentation-output frame)
+               (find-pane-of-type (frame-panes frame) 'pointer-documentation-pane))))))
 
 (defmacro define-application-frame (name superclasses slots &rest options)
   (when (null superclasses)
