@@ -2699,14 +2699,14 @@ current background message was set."))
 
 ;;; CONSTRUCTORS
 
+;;; XXX: `scroll-bars' and `borders' parameters are at least
+;;; troublesome – shouldn't `make-clim-stream-pane' return a
+;;; `clim-stream-pane' of requested type?
 (defun make-clim-stream-pane (&rest options
                               &key (type 'clim-stream-pane)
                                 (scroll-bars :vertical)
                                 (borders t)
                                 &allow-other-keys)
-  (when (or scroll-bars borders)
-    (warn "`make-clim-stream-pane' will return composite-pane because ~
-           either `scroll-bars' or `borders' is not NIL."))
   (with-keywords-removed (options (:type :scroll-bars :borders))
     ;; The user space requirement options belong to the scroller ..
     (let* ((space-keys '(:width :height :max-width :max-height
