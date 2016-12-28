@@ -14,6 +14,8 @@
 		  #:port-lookup-mirror
 		  #:port-lookup-sheet
 		  #:pixmap-mirror
+		  #:pixmap-medium
+		  #:standard-flipping-ink
 		  #:named-color
 		  #:%transparent-ink
 		  #:standard-opacity
@@ -28,6 +30,8 @@
 		  #:opacity-value
 		  #:indexed-pattern
 		  #:pattern-designs
+		  #:rgb-pattern
+		  #:image-data
 		  #:rectangular-tile
 		  #:rectangular-tile-design
 		  #:rectangular-tile-width
@@ -35,6 +39,7 @@
 		  #:transformed-design
 		  #:transformed-design-design
 		  #:transformed-design-transformation
+		  #:medium-draw-image-design*
 		  )
     (:import-from :clim-backend
 		  #:port-set-mirror-region
@@ -61,6 +66,7 @@
 		  #:truetype-font-size
 		  #:truetype-font-ascent
 		  #:truetype-font-descent
+		  #:zpb-ttf-font-units->pixels
 		  )
     (:export
      ))

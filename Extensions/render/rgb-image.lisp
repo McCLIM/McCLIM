@@ -30,12 +30,12 @@
 
 ;;; for port
 (defmethod %create-sheet-image ((sheet rgb-image-sheet-mixin) width height)
-  (let ((data (make-array (list height width)
+  (let ((data (make-array (list (1+ height) (1+ width))
 			  :element-type '(unsigned-byte 32)
 			  :initial-element #x00FFFFFF)))
     (make-instance 'climi::rgb-image
-		   :width width
-		   :height height
+		   :width (1+ width)
+		   :height (1+ height)
 		   :alphap t
 		   :data data)))
 

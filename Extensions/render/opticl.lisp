@@ -20,7 +20,7 @@
 
 ;;; for port
 (defmethod %create-sheet-image ((sheet opticl-sheet-mixin) width height)
-  (opticl:make-8-bit-rgba-image height width :initial-element 255))
+  (opticl:make-8-bit-rgba-image (1+ height) (1+ width) :initial-element 255))
 
 ;;; saving
 (defparameter *image-stream-writer-hash-table* (make-hash-table))

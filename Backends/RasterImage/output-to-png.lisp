@@ -76,15 +76,17 @@
 			   ,@body)))
 
 (defun invoke-with-output-to-raster-image (continuation enter-fn exit-fn format
-					   &key (width 1000) (height 1000))
+					   &key (width 1000) (height 1000) (border-width 0))
   (let ((port (find-port :server-path (list :raster-image
 					    :width width :height height)))
 	(result nil))
     (let* ((top-level-sheet (make-raster-top-level-sheet port format))
-	   (vbox (make-instance 'vbox-pane :port port)))
+	   (vbox (make-instance 'vbox-pane :port port))
+	   (border-pane (make-instance 'climi::border-pane :port port :border-width border-width)))
       (sheet-adopt-child top-level-sheet vbox)
       (let ((stream (make-raster-image-stream port)))
-	(clim:sheet-adopt-child vbox stream)
+	(clim:sheet-adopt-child border-pane stream)
+	 (sheet-adopt-child vbox border-pane)
 	(funcall enter-fn top-level-sheet stream)
 	(realize-mirror port top-level-sheet)
 	(setf (sheet-region top-level-sheet)

@@ -13,10 +13,8 @@ Secondly, an rgba design is converted into a function.
 ;;; protocol
 ;;;
 
-
-(defgeneric make-rgba-design-fn (design-structure))
+(defgeneric make-rgba-design-fn (rgba-design))
 (defgeneric make-rgba-design (ink))
-
 
 (defparameter *foreground-design* nil)
 (defparameter *background-design* nil)
@@ -24,7 +22,6 @@ Secondly, an rgba design is converted into a function.
 ;;;
 ;;; Design structure
 ;;;
-
 
 (defstruct uniform-rgba-design
   red
@@ -37,30 +34,29 @@ Secondly, an rgba design is converted into a function.
   color-fn
   mask)
 
-(defgeneric coerce-to-funtional-rgba-design (design)
-  (:method ((design functional-rgba-design))
-    design)
-  (:method ((design uniform-rgba-design))
-    (let ((red (uniform-rgba-design-red design))
-	  (green (uniform-rgba-design-green design))
-	  (blue (uniform-rgba-design-blue design))
-	  (alpha (uniform-rgba-design-alpha design)))
+(defgeneric coerce-to-funtional-rgba-design (rbga-design)
+  (:method ((rbga-design functional-rgba-design))
+    rbga-design)
+  (:method ((rbga-design uniform-rgba-design))
+    (let ((red (uniform-rgba-design-red rbga-design))
+	  (green (uniform-rgba-design-green rbga-design))
+	  (blue (uniform-rgba-design-blue rbga-design))
+	  (alpha (uniform-rgba-design-alpha rbga-design)))
       (make-functional-rgba-design
        :color-fn (lambda (x y)
 		   (values red green blue alpha))
-       :mask (uniform-rgba-design-mask design)))))
-
+       :mask (uniform-rgba-design-mask rbga-design)))))
 
 ;;;
 ;;; make a design function
 ;;;
 
-(defmethod make-rgba-design-fn ((d uniform-rgba-design))
-  (let ((mask (uniform-rgba-design-mask d))
-	(red (uniform-rgba-design-red d))
-	(green (uniform-rgba-design-green d))
-	(blue (uniform-rgba-design-blue d))
-	(alpha (uniform-rgba-design-alpha d)))
+(defmethod make-rgba-design-fn ((rgba-design uniform-rgba-design))
+  (let ((mask (uniform-rgba-design-mask rgba-design))
+	(red (uniform-rgba-design-red rgba-design))
+	(green (uniform-rgba-design-green rgba-design))
+	(blue (uniform-rgba-design-blue rgba-design))
+	(alpha (uniform-rgba-design-alpha rgba-design)))
     (if mask
 	(lambda (x y)
 	  (if (clim:region-contains-position-p mask x y)
@@ -70,10 +66,9 @@ Secondly, an rgba design is converted into a function.
 	  (declare (ignore x y))
 	  (values red green blue alpha)))))
 
-	
-(defmethod make-rgba-design-fn ((d functional-rgba-design))
-  (let ((mask (functional-rgba-design-mask d))
-	(fn (functional-rgba-design-color-fn d)))
+(defmethod make-rgba-design-fn ((rgba-design functional-rgba-design))
+  (let ((mask (functional-rgba-design-mask rgba-design))
+	(fn (functional-rgba-design-color-fn rgba-design)))
     (if mask
 	(lambda (x y)
 	  (if (clim:region-contains-position-p mask x y)
@@ -82,7 +77,7 @@ Secondly, an rgba design is converted into a function.
 	(lambda (x y)
 	  (funcall fn x y)))))
 
-(defmethod make-rgba-design-fn (design)
+(defmethod make-rgba-design-fn ((design design))
   (make-rgba-design-fn (make-rgba-design design)))
 
 ;;;
@@ -95,9 +90,9 @@ Secondly, an rgba design is converted into a function.
 (defmethod make-rgba-design ((ink named-color))
   (multiple-value-bind (red green blue) (color-rgb ink)
     (make-uniform-rgba-design
-     :red (float red)
-     :green (float green)
-     :blue (float blue)
+     :red (float red 1.0)
+     :green (float green 1.0)
+     :blue (float blue 1.0)
      :alpha 1.0)))
 
 (defmethod make-rgba-design ((ink (eql +foreground-ink+)))
@@ -105,6 +100,30 @@ Secondly, an rgba design is converted into a function.
 
 (defmethod make-rgba-design ((ink (eql +background-ink+)))
   (make-rgba-design *background-design*))
+
+(defun make-flipping-fn (design1 design2)
+  (flet ((xor-pixel (d1 d2)
+	   (float (/ (logxor (floor (* 255 d1)) (floor (* 255 d2))) 255))))
+    (let ((d1 (make-rgba-design-fn design1))
+	  (d2 (make-rgba-design-fn design2)))
+      (make-functional-rgba-design
+       :color-fn (lambda (x y)
+		   (multiple-value-bind (r.d1 g.d1 b.d1 a.d1)
+		       (funcall d1 x y)
+		     (multiple-value-bind (r.d2 g.d2 b.d2 a.d2)
+			 (funcall d2 x y)
+		       (values
+			(xor-pixel r.d1 r.d2)
+			(xor-pixel g.d1 g.d2)
+			(xor-pixel b.d1 b.d2)
+			1.0))))))))
+
+(defmethod make-rgba-design ((ink (eql +flipping-ink+)))
+  (make-flipping-fn *background-design* *foreground-design*))
+
+(defmethod make-rgba-design ((ink standard-flipping-ink))
+  (with-slots (climi::design1 climi::design2) ink
+    (make-flipping-fn climi::design1 climi::design2)))
 
 (defmethod  make-rgba-design ((ink %transparent-ink))
   (make-uniform-rgba-design
@@ -121,16 +140,33 @@ Secondly, an rgba design is converted into a function.
    :alpha (float (opacity-value ink))))
 
 (defmethod make-rgba-design ((ink indexed-pattern))
-  (let ((designs (mapcar #'(lambda (ink)
-			     (make-rgba-design-fn ink))
-			 (pattern-designs ink))))
+  (let ((designs (map 'vector #'(lambda (ink)
+				  (make-rgba-design-fn ink))
+		      (pattern-designs ink))))
     (make-functional-rgba-design
      :color-fn (lambda (x y)
-		 (funcall (elt designs (aref (pattern-array ink) x y)) x y))
+		 (funcall (elt designs (aref (pattern-array ink) y x)) x y))
      :mask (make-rectangle* 0 0
-			    (clim:pattern-width ink)
-			    (clim:pattern-height ink)))))
-     
+			    (1- (clim:pattern-width ink))
+			    (1- (clim:pattern-height ink))))))
+
+(defmethod make-rgba-design ((ink rgb-pattern))
+  (let* ((img (slot-value ink 'climi::image))
+	 (data (image-data img)))
+    (make-functional-rgba-design
+     :color-fn (lambda (x y)
+		 (let ((p (aref data y  x)))
+		   (let ((r.bg (ldb (byte 8 0) p))
+			 (g.bg (ldb (byte 8 8) p))
+			 (b.bg (ldb (byte 8 16) p))
+			 (a.bg (- 255 (ldb (byte 8 24) p))))
+		     (values 
+		      (float (/ r.bg 255)) (float (/ g.bg 255))
+		      (float (/ b.bg 255)) (float (/ a.bg 255))))))
+     :mask (make-rectangle* 0 0
+			    (1- (clim:pattern-width ink))
+			    (1- (clim:pattern-height ink))))))
+
 (defmethod make-rgba-design ((ink rectangular-tile))
   (let ((design (make-rgba-design-fn (rectangular-tile-design ink)))
 	(width (rectangular-tile-width ink))
@@ -146,11 +182,11 @@ Secondly, an rgba design is converted into a function.
 
 (defmethod make-rgba-design ((ink transformed-design))
   (let ((design (make-rgba-design-fn (transformed-design-design ink)))
-	(transformation (transformed-design-transformation ink)))
+	(transformation (invert-transformation (transformed-design-transformation ink))))
     (make-functional-rgba-design
      :color-fn (lambda (x y)
 		 (with-transformed-position (transformation x y)
-		   (funcall design (round x) (round y)))))))
+		   (funcall design (floor x) (floor y)))))))
 
 (defgeneric compose-in-rgba-design (ink mask))
 (defgeneric compose-out-rgba-design (ink mask))
@@ -190,10 +226,10 @@ Secondly, an rgba design is converted into a function.
 		       (funcall fore-fn x y)
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall back-fn x y)
-		       (color-blend-function
-			r1 g1 b1 a1 r2 g2 b2 a2))))))))
-
-
+		         (multiple-value-bind (red green blue alpha)
+			     (color-blend-function
+			      r1 g1 b1 a1 r2 g2 b2 a2)
+			   (values (float red) (float green) (float blue) (float alpha))))))))))
 
 (defmethod make-rgba-design ((ink in-compositum))
   (let ((c-ink (make-rgba-design (compositum-ink ink)))
@@ -209,4 +245,3 @@ Secondly, an rgba design is converted into a function.
   (let ((c-fore (make-rgba-design (compositum-foreground ink)))
 	(c-back (make-rgba-design (compositum-background ink))))
     (compose-over-rgba-design c-fore c-back)))
-
