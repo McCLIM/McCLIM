@@ -704,17 +704,28 @@ documentation produced by presentations.")
     ((and (= (length form) 1)
 	  (listp (first form)))
      `(coerce-pane-name ,(first form) ',name))
-    ;; Standard pane denoted by a keyword (i.e `:application-pane')
+    ;; Standard pane denoted by a keyword (i.e `:application')
     ((keywordp (first form))
-     (let ((maker (intern (concatenate 'string
-				       (symbol-name '#:make-clim-)
-				       (symbol-name (first form))
-				       (symbol-name '#:-pane))
-			  :clim)))
-       (if (fboundp maker)
-	   `(,maker :name ',name ,@(cdr form))
-	   `(make-pane ',(first form)
-		       :name ',name ,@(cdr form)))))
+     (when (some #'identity
+                 (remf (rest form) :name)
+                 (remf (rest form) :scroll-bars)
+                 (remf (rest form) :borders))
+       (warn "(member '(:name :scroll-bars :borders)) supplied ~
+              in :panes (ignoring)"))
+     (case (first form)
+       (:application `(make-clim-application-pane
+                       :name ',name
+                       :scroll-bars nil
+                       :borders nil
+                       ,@(cdr form)))
+       (:interactor `(make-clim-interactor-pane
+                      :name ',name ,@(cdr form)
+                      :scroll-bars nil
+                      :borders nil
+                      ,@(cdr form)))
+       (:pointer-documentation `(make-clim-pointer-documentation-pane
+                                 :name ',name ,@(cdr form)))
+       (otherwise `(make-pane ,(first form) :name ,name ,@(cdr form)))))
     ;; Non-standard pane designator fed to the `make-pane'
     (t `(make-pane ',(first form) :name ',name ,@(cdr form)))))
 
