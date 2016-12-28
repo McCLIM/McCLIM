@@ -2700,43 +2700,44 @@ current background message was set."))
 ;;; CONSTRUCTORS
 
 (defun make-clim-stream-pane (&rest options
-				    &key (type 'clim-stream-pane)
-                                    (scroll-bars :vertical)
-                                    (border-width 1)
-				    &allow-other-keys)
-  (with-keywords-removed (options (:type :scroll-bars :border-width))
+                              &key (type 'clim-stream-pane)
+                                (scroll-bars :vertical)
+                                (borders t)
+                                &allow-other-keys)
+  (with-keywords-removed (options (:type :scroll-bars :borders))
     ;; The user space requirement options belong to the scroller ..
     (let* ((space-keys '(:width :height :max-width :max-height
 			 :min-width :min-height))
 	   (user-sr nil)
-	   (pane-options nil)
-	   (borderp (and border-width (> border-width 0))))
+	   (pane-options nil))
       (loop  for (key value) on options by #'cddr
-	     if (and (member key space-keys :test #'eq)
-		     (not (eq value :compute)))
-	      nconc (list key value) into space-options
-	     else
-	      nconc (list key value) into other-options
-	     end
-	     finally (progn
-		       (setq user-sr space-options)
-		       (setq pane-options other-options)))
+         if (and (member key space-keys :test #'eq)
+                 (not (eq value :compute)))
+         nconc (list key value) into space-options
+         else
+         nconc (list key value) into other-options
+         end
+         finally (progn
+                   (setq user-sr space-options)
+                   (setq pane-options other-options)))
       (let ((pane (apply #'make-pane type (append pane-options
 						  (unless (or scroll-bars
-							      borderp)
+							      borders)
 						    user-sr)))))
 	(when scroll-bars
 	  (setq pane (apply #'make-pane 'scroller-pane
 			    :scroll-bar scroll-bars
 			    :contents (list (make-pane 'viewport-pane
 						       :contents (list pane)))
-			    (unless borderp
+			    (unless borders
 			      user-sr))))
-	(when borderp
+	(when borders
 	  (setq pane (apply #'make-pane 'border-pane
-                      :border-width border-width
-                      :contents (list pane)
-                      user-sr)))
+                            :border-width (if (not (numberp borders))
+                                              1
+                                              borders)
+                            :contents (list pane)
+                            user-sr)))
 	pane))))
 
 (defun make-clim-interactor-pane (&rest options)
