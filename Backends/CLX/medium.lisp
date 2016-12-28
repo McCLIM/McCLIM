@@ -26,6 +26,17 @@
 
 (in-package :clim-clx)
 
+(defgeneric X-pixel (port color))
+
+(defmethod X-pixel ((port clx-basic-port) color)
+  (let ((table (slot-value port 'color-table)))
+    (or (gethash color table)
+	(setf (gethash color table)
+	      (multiple-value-bind (r g b) (color-rgb color)
+		(xlib:alloc-color (xlib:screen-default-colormap
+                                   (clx-port-screen port))
+				  (xlib:make-color :red r :green g :blue b)))))))
+
 ;;; Needed changes:
 
 ;; The gc slot in clx-medium must be either thread local, or
