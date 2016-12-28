@@ -87,7 +87,6 @@ input focus. This is a McCLIM extension."))
    (command-table :initarg :command-table
 		  :initform nil
 		  :accessor frame-command-table)
-   (named-panes :accessor frame-named-panes :initform nil)
    (panes :initform nil :accessor frame-panes
 	  :documentation "The tree of panes in the current layout.")
    (current-panes :initform nil :accessor frame-current-panes)
@@ -297,7 +296,10 @@ documentation produced by presentations.")
 	nil)))
 
 (defmethod find-pane-named ((frame application-frame) pane-name)
-  (find pane-name (frame-named-panes frame) :key #'pane-name))
+  (map-over-sheets #'(lambda (p)
+                       (when (eql pane-name (pane-name p))
+                         (return-from find-pane-named p)))
+                   (frame-panes frame)))
 
 
 #+nil
@@ -598,8 +600,6 @@ documentation produced by presentations.")
 		  (apply #'call-next-method fm frame type
 			 :input-buffer (frame-event-queue frame)
 			 args))))
-    (when namep
-      (push pane (frame-named-panes frame)))
     pane))
 
 (defmethod adopt-frame ((fm frame-manager) (frame application-frame))
@@ -693,9 +693,7 @@ documentation produced by presentations.")
 ; FIXME
 
 (defun coerce-pane-name (pane name)
-  (when pane
-    (setf (slot-value pane 'name) name)    
-    (push pane (frame-named-panes (pane-frame pane))))
+  (setf (slot-value pane 'name) name)
   pane)
 
 (defun do-pane-creation-form (name form)  
@@ -781,7 +779,7 @@ documentation produced by presentations.")
                          ,@layouts)))))
 
        ;; XXX: this computation may be cached for each layout!
-       (let ((named-panes (frame-named-panes frame))
+       (let ((named-panes (mapcar #'cdr (frame-panes-for-layout frame)))
              (panes nil))
 
          ;; Find intersection of named panes and current layout panes
