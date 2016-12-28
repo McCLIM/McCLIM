@@ -90,42 +90,73 @@
 (defun x-event-to-key-name-and-modifiers (port event-key keycode state)
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (clim-xcommon:x-event-state-modifiers port state)
+    (terpri)
+    
+;    (format cl-user::*xxx* "~&Ze state is: ~b~%Ze modifiers are: ~b~%Level3? ~a~%" state clim-modifiers iso-level3-shift?)
+
     (let* ((display (clx-port-display port))
 	   (shift? (logtest +shift-key+ clim-modifiers))
-           (shift-modifier? (if shift-lock?
-                                (not shift?)
-                                (if caps-lock? t shift?)))
+	   (shift-modifier? (if shift-lock?
+				(not shift?)
+				(if caps-lock? t shift?)))
 	   (shifted-keysym (xlib:keycode->keysym display keycode 
-                                                 (+ 1 (if mode-switch?
-                                                          2 0))))
-           (unshifted-keysym (xlib:keycode->keysym display keycode 
-                                                   (if mode-switch?
-                                                       2 0)))
-           (keysym (if shift-modifier?
-                       shifted-keysym
-                       unshifted-keysym)))
+						 (if (logbitp 7 state)
+						     5
+						     (+ 1 (if mode-switch?
+							      2 0)))))
+	   (unshifted-keysym (xlib:keycode->keysym display keycode 
+						   (if (logbitp 7 state)
+						       6
+						       (if mode-switch?
+							   2 0))))
+	   (keysym (if shift-modifier?
+		       shifted-keysym
+		       unshifted-keysym)))
       (let* ((keysym-name (clim-xcommon:keysym-to-keysym-name keysym))
-             (char (xlib:keysym->character display keysym
-                                           (+ (if shift-modifier?
-                                                  1 0)
-                                              (if mode-switch?
-                                                  2 0))))
-             (modifiers (clim-xcommon:x-keysym-to-clim-modifiers
-                         port
+	     (char (xlib:keysym->character display keysym
+					   (+ (if shift-modifier?
+						  1 0)
+					      (if mode-switch?
+						  2 0))))
+	     (modifiers (clim-xcommon:x-keysym-to-clim-modifiers
+			 port
 			 event-key
 			 char
 			 (clim-xcommon:keysym-to-keysym-name keysym)
-                         state)))
-        (values char
+			 state)))
+
+	;; (let ((*standard-output* cl-user::*xxx*))
+	;;   (pprint-logical-block (*standard-output* (list keycode event-key state))
+	;;     (pprint-indent :block 4)
+	;;     (format t "Keycode: ~a" keycode)
+	;;     (pprint-newline :mandatory)
+
+	;;     (format t "event-key: ~a" event-key)
+	;;     (pprint-newline :mandatory)
+
+	;;     (format t "state: ~d" state)
+	;;     (pprint-newline :mandatory)
+
+	;;     (format t "keysym-name: ~a" keysym-name)
+	;;     (pprint-newline :mandatory)
+
+	;;     (format t "keysym-char: ~a" char)
+	;;     (pprint-newline :mandatory)
+
+	;;     (format t "modifiers: ~a" modifiers)
+	;;     (pprint-newline :mandatory)
+	;;     ))
+
+	(values char
 		;; We filter away the shift state if there is a
 		;; difference between the shifted and unshifted
 		;; keysym. This is so eg. #\A will not look like "#\A
 		;; with a Shift modifier", as this makes gesture
 		;; processing more difficult.
-                (if (= shifted-keysym unshifted-keysym)
-                    modifiers
-                    (logandc2 modifiers +shift-key+))
-                keysym-name)))))
+		(if (= shifted-keysym unshifted-keysym)
+		    modifiers
+		    (logandc2 modifiers +shift-key+))
+		keysym-name)))))
 
 ;;;;
 

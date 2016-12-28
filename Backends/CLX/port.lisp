@@ -585,9 +585,9 @@
                       target property requestor selection
                       request first-keycode count
                       &allow-other-keys)
-  (declare (ignore display request first-keycode count))
+  (declare (ignore first-keycode))
   (let ((sheet (and window (port-lookup-sheet *clx-port* window))))
-    (when sheet
+    (if sheet
       (case event-key
 	((:key-press :key-release)
          (multiple-value-bind (keyname modifier-state keysym-name)
@@ -747,7 +747,10 @@
 	(t         
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
 	   (xlib:display-force-output (clx-port-display *clx-port*)))
-	 nil)))))
+	 nil))
+      (case event-key
+	;; I don't think the start parameter is used at all...
+	(:mapping-notify (xlib:mapping-notify display request 0 count))))))
 
 
 ;; Handling of X client messages
