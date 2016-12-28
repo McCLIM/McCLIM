@@ -88,8 +88,9 @@
 	(lambda-list (clim-mop:method-lambda-list object))
 	(class-of-t (find-class t)))
     (format stream "~S ~{~S ~}(" name qualifiers)
-    (multiple-value-bind (required optional rest key key-present)
-	(climi::parse-lambda-list lambda-list)
+    (multiple-value-bind (required optional rest key allow-other-keys aux key-present)
+        (alexandria:parse-ordinary-lambda-list lambda-list)
+      (declare (ignore allow-other-keys aux))
       (loop
 	 for spec in specializers
 	 for arg in required
@@ -838,7 +839,7 @@ if you are interested in fixing this."))
 	  (return-from make-gf-specialized-ptype nil))))
     (unless (typep gf 'generic-function)
       (return-from make-gf-specialized-ptype nil))
-    (let ((required (climi::parse-lambda-list
+    (let ((required (alexandria:parse-ordinary-lambda-list
 		     (clim-mop::generic-function-lambda-list gf))))
       (loop
 	 for arg in required
