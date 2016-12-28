@@ -723,7 +723,7 @@ documentation produced by presentations.")
                       ,@(cdr form)))
        (:pointer-documentation `(make-clim-pointer-documentation-pane
                                  :name ',name ,@(cdr form)))
-       (otherwise `(make-pane ,(first form) :name ,name ,@(cdr form)))))
+       (otherwise `(make-pane ,(first form) :name ',name ,@(cdr form)))))
     ;; Non-standard pane designator fed to the `make-pane'
     (t `(make-pane ',(first form) :name ',name ,@(cdr form)))))
 
