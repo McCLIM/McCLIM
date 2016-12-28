@@ -541,30 +541,6 @@ STREAM in the direction DIRECTION."
 		(values (cdr tail) t)))
      finally (return (values list nil))))
 
-;;; Why do I feel like I've written this function 8 million times
-;;; already?
-
-(defun parse-lambda-list (ll)
-  "Extract the parts of a function or method lambda list.
-
-  Returns values of required, &optional, &rest and &key
-  parameters. 5th value indicates that &key was seen"
-  (loop
-       with state = 'required
-       for var in ll
-       if (member var '(&optional &rest &key))
-        do (setq state var)
-       else if (eq state 'required)
-         collect var into required
-       else if (eq state '&optional)
-         collect var into optional
-       else if (eq state '&rest)
-         collect var into rest
-       else if (eq state '&key)
-         collect var into key
-       end
-       finally (return (values required optional rest key (eq state '&key)))))
-
 (defun rebind-arguments (arg-list)
   "Create temporary variables for non keywords in a list of
   arguments. Returns two values: a binding list for let, and a new
