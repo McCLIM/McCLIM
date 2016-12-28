@@ -707,9 +707,9 @@ documentation produced by presentations.")
     ;; Standard pane denoted by a keyword (i.e `:application')
     ((keywordp (first form))
      (when (some #'identity
-                 (remf (rest form) :name)
-                 (remf (rest form) :scroll-bars)
-                 (remf (rest form) :borders))
+                 (list (remf (rest form) :name)
+                       (remf (rest form) :scroll-bars)
+                       (remf (rest form) :borders)))
        (warn "(member '(:name :scroll-bars :borders)) supplied ~
               in :panes (ignoring)"))
      (case (first form)
