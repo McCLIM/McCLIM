@@ -26,7 +26,7 @@
   ((%buffer :initarg :buffer :reader buffer)
    (%command-table :initarg :command-table
                    :initform (error "A command table has not been provided for this syntax")
-                   :reader command-table)
+                   :reader esa-command-table)
    (%updater-fns :initarg :updater-fns
                  :initform '()
                  :accessor updater-fns
@@ -45,7 +45,7 @@ on to a call to `update-syntax'."))
 `syntax'.")
   (:method-combination append :most-specific-last)
   (:method append ((syntax syntax))
-           (list (command-table syntax))))
+           (list (esa-command-table syntax))))
 
 (defun syntaxp (object)
   "Return T if `object' is an instance of a syntax, NIL

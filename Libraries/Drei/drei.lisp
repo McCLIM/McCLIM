@@ -197,7 +197,7 @@ instances."))
   (require-minibuffer)
   (let ((item (handler-case
                   (accept
-                   `(command :command-table ,(command-table (drei-instance)))
+                   `(command :command-table ,(esa-command-table (drei-instance)))
                    ;; this gets erased immediately anyway
                    :prompt "" :prompt-mode :raw)
                 ((or command-not-accessible command-not-present) ()
@@ -259,7 +259,7 @@ instance will perform output to.")
 associated with the Drei instance. This may be NIL.")
    (%command-table :initform (make-instance 'drei-command-table
                                             :name 'drei-dispatching-table)
-                   :reader command-table
+                   :reader esa-command-table
                    :initarg :command-table
                    :type standard-command-table
                    :documentation "The command table used for

@@ -67,6 +67,9 @@ will probably have the same value as `*application-frame*'.")
   "Return the currently active window of the running ESA instance."
   (esa-current-window *esa-instance*))
 
+(defgeneric esa-command-table (esa)
+  (:documentation "Return command table of ESA."))
+
 (defvar *previous-command* nil
   #.(format nil "When a command is being executed, the command~@
                  previously executed by the application."))
@@ -359,7 +362,7 @@ on the `format-string' and the `format-args'."
 (defclass esa-pane-mixin ()
   (;; allows a certain number of commands to have some minimal memory
    (previous-command :initform nil :accessor previous-command)
-   (command-table :initarg :command-table :accessor command-table)))
+   (command-table :initarg :command-table :accessor esa-command-table)))
 
 (defmethod previous-command ((pane pane))
   nil)
@@ -535,7 +538,7 @@ processors, merges incoming dead keys with the following key."))
     (call-next-method command-processor gesture)))
 
 (defclass command-loop-command-processor (command-processor)
-  ((%command-table :reader command-table
+  ((%command-table :reader esa-command-table
                    :initarg :command-table
                    :initform nil)
    (%end-condition :reader end-condition
@@ -681,7 +684,7 @@ never refer to a command."))
       (cond ((null gestures)
              t)
             (t
-             (let* ((command-table (command-table command-processor))
+             (let* ((command-table (esa-command-table command-processor))
                     (item (or (find-gestures-with-inheritance gestures command-table)
                               (command-for-unbound-gestures command-processor gestures))))
                (cond 
@@ -701,7 +704,7 @@ never refer to a command."))
                     (unwind-protect 
                          (setq command
                                (funcall *partial-command-parser*
-                                        (command-table command-processor)
+                                        (esa-command-table command-processor)
                                         *standard-input*
                                         command 0 (when prefix-p prefix-arg)))
                       ;; If we are macrorecording, store whatever the user
@@ -765,7 +768,7 @@ corresponding commands in `command-table' and invoke them using
       ('menu-item)
       (object)
       (with-input-context 
-          (`(command :command-table ,(command-table command-processor)))
+          (`(command :command-table ,(esa-command-table command-processor)))
           (object)
           (call-next-method)
         (command
@@ -779,7 +782,7 @@ corresponding commands in `command-table' and invoke them using
          (setq command
                (funcall
                 *partial-command-parser*
-                (command-table command-processor)
+                (esa-command-table command-processor)
                 *standard-input* command 0)))
        (funcall (command-executor command-processor)
                 command-processor command)))))
@@ -816,7 +819,7 @@ corresponding commands in `command-table' and invoke them using
 (defmethod esa-current-window ((esa esa-frame-mixin))
   (first (windows esa)))
 
-(defmethod command-table ((frame esa-frame-mixin))
+(defmethod esa-command-table ((frame esa-frame-mixin))
   (find-applicable-command-table frame))
 
 ;; Defaults for non-ESA-frames.
@@ -857,7 +860,7 @@ corresponding commands in `command-table' and invoke them using
 on `frame' should be found in."))
 
 (defmethod find-applicable-command-table ((frame esa-frame-mixin))
-  (command-table (car (windows frame))))
+  (esa-command-table (car (windows frame))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 

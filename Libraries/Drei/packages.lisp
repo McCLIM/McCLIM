@@ -30,6 +30,7 @@
   (:use :clim-lisp :flexichain :binseq :esa-utils)
   ;; Kludge to remove symbol conflicts.
   (:import-from :esa-io :buffer)
+  (:import-from :esa :esa-command-table)
   (:export #:buffer #:standard-buffer
            #:mark #:left-sticky-mark #:right-sticky-mark
            #:standard-left-sticky-mark #:standard-right-sticky-mark

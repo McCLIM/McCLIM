@@ -91,6 +91,7 @@
            #:find-applicable-command-table
            #:esa-command-parser
            #:esa-partial-command-parser
+           #:esa-command-table
 
            #:gesture-matches-gesture-name-p #:meta-digit
            #:proper-gesture-p
