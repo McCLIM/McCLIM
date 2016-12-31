@@ -87,3 +87,30 @@ Emacs-style keyboard macros should include this table in the global
 application command table.
 
 \subsection{Finding a command table}
+
+A typical \sysname{} application may require a different command table
+depending on what part of the application is being manipulated.
+\sysname{} makes this possible in two different ways.
+
+\Defgeneric {find-applicable-command-table} {frame}
+
+This function provides the most general way in which \sysname{} finds
+the command table to use for each command.  It has a single argument,
+which is the \sysname{} application frame.  Client code may supply a
+primary method on this generic function, specialized to its particular
+application-frame class.
+
+\Defmethod {find-applicable-command-table} {(frame \texttt{esa-frame-mixin})}
+
+This default method on \texttt{find-applicable-command-table} accesses
+a slot in the current pane (i.e, the first pane in the list returned
+by a call to the generic function \texttt{windows}) that stores a
+command table associated with that pane.
+
+\Definitarg {:command-table}
+
+Relatively simple \sysname{} applications may supply this
+\texttt{:initarg} when making an instance of the class
+\class{esa:esa-pane-mixin}.  This technique works for applications
+in which command table to use is always determined by the current
+pane.
