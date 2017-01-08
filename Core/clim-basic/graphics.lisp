@@ -884,6 +884,13 @@ position for the character."
 			       align-x align-y
 			       toward-x toward-y transform-glyphs))
 
+(defmethod medium-draw-text* ((medium string-stream) string x y
+                              start end
+                              align-x align-y
+                              toward-x toward-y transform-glyphs)
+  (declare (ignore x y start end align-x align-y toward-x toward-y transform-glyphs))
+  (write-string string medium))
+
 ;;; Some image junk...
 
 (defmethod medium-free-image-design ((sheet sheet-with-medium-mixin) design)
