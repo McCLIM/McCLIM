@@ -27,12 +27,6 @@
 (defmethod clim-clx::realize-mirror ((port clxv3-port) (sheet mirrored-sheet-mixin))
   (clim-clx::%realize-mirror port sheet))
 
-(defmethod clim-clx::%realize-mirror ((port clxv3-port) (sheet basic-sheet))
-  (clim-clx::realize-mirror-aux port sheet
-		      :event-mask *event-mask*
-                      :border-width 0
-                      :map (sheet-enabled-p sheet)))
-
 (defmethod clim-clx::%realize-mirror ((port clxv3-port) (sheet top-level-sheet-pane))
   (let ((q (compose-space sheet)))
     (let ((frame (pane-frame sheet))

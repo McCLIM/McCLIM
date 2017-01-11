@@ -2,7 +2,8 @@
 
 
 (defclass standard-event-port-mixin ()
-  ((pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)))
+  ((pointer-grab-sheet :accessor pointer-grab-sheet :initform nil))
+  (:documentation "Standard event distribute for full-mirrored backend"))
 
 (defmethod distribute-event ((port standard-event-port-mixin) event)
   (let ((grab-sheet (pointer-grab-sheet port)))
@@ -25,7 +26,9 @@
        (error "Unknown event ~S received in DISTRIBUTE-EVENT" event)))))
 
 (defclass standard-handled-event-port-mixin (standard-event-port-mixin)
-  ((port-pointer-pressed-sheet :initform nil :accessor port-pointer-pressed-sheet)))
+  ((port-pointer-pressed-sheet :initform nil :accessor port-pointer-pressed-sheet))
+  (:documentation "Standard event distribute for single-mirrored backend, provides pointer-enter, 
+pointer-exit and grab-pointer for non mirrored sheets"))
 
 
 ;;;
