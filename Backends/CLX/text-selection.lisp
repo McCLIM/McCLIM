@@ -82,12 +82,12 @@
 
 (defmethod bind-selection ((port clx-text-selection-port-mixin) window &optional time)
   (xlib:set-selection-owner
-   (xlib:window-display (sheet-direct-mirror window))
-   :primary (sheet-direct-mirror window) time)
+   (xlib:window-display (sheet-direct-xmirror window))
+   :primary (sheet-direct-xmirror window) time)
   (eq (xlib:selection-owner
-       (xlib:window-display (sheet-direct-mirror window))
+       (xlib:window-display (sheet-direct-xmirror window))
        :primary)
-      (sheet-direct-mirror window)))
+      (sheet-direct-xmirror window)))
 
 (defmethod release-selection ((port clx-text-selection-port-mixin) &optional time)
   (xlib:set-selection-owner
@@ -106,7 +106,7 @@
         (format *trace-output* "~&;; Oops, selection-notify property is null. Trying the cut buffer instead..~%")
         (xlib:cut-buffer (clx-port-display port)))                
       (map 'string #'code-char
-           (xlib:get-property (sheet-mirror (event-sheet event))
+           (xlib:get-property (sheet-xmirror (event-sheet event))
                               (selection-event-property event)
                               ;; :type :text
                               :delete-p t

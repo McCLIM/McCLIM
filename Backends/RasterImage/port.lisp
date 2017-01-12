@@ -18,7 +18,6 @@
 				    (num-pages 1)
 				    (width 1000) (height 1000))
       server-path
-    (assert (eq raster-image :raster-image))
     (setf (slot-value port 'width) width)
     (setf (slot-value port 'height) height)
     (make-graft port)))
@@ -33,9 +32,6 @@
  (%destroy-all-mirrors port))
 	    
 ;;; server path
-
-(setf (get :raster-image :port-type) 'raster-image-port)
-(setf (get :raster-image :server-path-parser) 'parse-raster-image-server-path)
 
 (defun parse-raster-image-server-path (path)
   path)
@@ -77,3 +73,13 @@
 (defmethod port-set-mirror-transformation ((port raster-image-port) mirror transrormation)
   (declare (ignore port mirror transformation))
   nil)
+
+
+
+(defgeneric make-raster-top-level-sheet (port format))
+
+(defmethod make-raster-top-level-sheet ((port raster-image-port) format)
+  (declare (ignore format))
+  (let ((tlp (make-instance 'raster-image-top-level-pane
+			    :enabled-p nil :port port)))
+    tlp))

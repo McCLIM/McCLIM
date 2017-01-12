@@ -378,7 +378,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
         (output-record-hit-detection-rectangle* record)
       (ecase state
         (:highlight
-         (draw-rectangle* (sheet-medium stream) x1 y1 (1- x2) (1- y2)
+         (draw-rectangle* (sheet-medium stream) (1+ x1) (1+ y1) (1- x2) (1- y2)
                           :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+? 
         (:unhighlight
 	 ;; FIXME: repaint the hit detection rectangle. It could be

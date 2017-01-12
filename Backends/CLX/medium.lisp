@@ -468,7 +468,7 @@ time an indexed pattern is drawn.")
                                           :width w :height h
                                           :format :z-pixmap
                                           :data converted-data)))
-            (xlib:put-image (pixmap-mirror pm) pm-gc image
+            (xlib:put-image (pixmap-xmirror pm) pm-gc image
                             :x 0 :y 0
                             :width w :height h)))
         
@@ -516,7 +516,7 @@ time an indexed pattern is drawn.")
                                      :depth 1
                                      :width w
                                      :height h))
-           (pm-gc (xlib:create-gcontext :drawable (pixmap-mirror pm)))
+           (pm-gc (xlib:create-gcontext :drawable (pixmap-xmirror pm)))
            (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
 
       (xlib:draw-rectangle mask mask-gc 0 0 w h t)
@@ -613,7 +613,7 @@ time an indexed pattern is drawn.")
                                 medium &body body)
   (let ((medium-var (gensym)))
     `(let* ((,medium-var ,medium)
-	    (,mirror (sheet-mirror (medium-sheet ,medium-var))))
+	    (,mirror (sheet-xmirror (medium-sheet ,medium-var))))
        (when mirror
 	 (let* ((,line-style (medium-line-style ,medium-var))
 		(,ink        (medium-ink ,medium-var))
@@ -639,13 +639,13 @@ time an indexed pattern is drawn.")
 	(multiple-value-bind (width height)
 	    (transform-distance (medium-transformation from-drawable)
 				width height)
-	  (xlib:copy-area (sheet-mirror (medium-sheet from-drawable))
+	  (xlib:copy-area (sheet-xmirror (medium-sheet from-drawable))
 			  ;; why using the context of from-drawable?
 			  (medium-gcontext from-drawable +background-ink+)
 			  (round-coordinate from-x) (round-coordinate from-y)
 			  (round width) (round height)
 			  (or (medium-buffer to-drawable)
-			      (sheet-mirror (medium-sheet to-drawable)))
+			      (sheet-xmirror (medium-sheet to-drawable)))
 			  (round-coordinate to-x) (round-coordinate to-y)))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
@@ -654,33 +654,33 @@ time an indexed pattern is drawn.")
 	 (from-transformation (sheet-native-transformation from-sheet)))
     (with-transformed-position (from-transformation from-x from-y)
       (climi::with-pixmap-medium (to-medium to-drawable)
-	(xlib:copy-area (sheet-mirror (medium-sheet from-drawable))
+	(xlib:copy-area (sheet-xmirror (medium-sheet from-drawable))
 			;; we can not use from-drawable
 			(medium-gcontext to-medium +background-ink+)
 			(round-coordinate from-x) (round-coordinate from-y)
 			(round width) (round height)
-			(pixmap-mirror to-drawable)
+			(pixmap-xmirror to-drawable)
 			(round-coordinate to-x) (round-coordinate to-y))))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
   (with-transformed-position ((sheet-native-transformation (medium-sheet to-drawable))
                               to-x to-y)
-    (xlib:copy-area (pixmap-mirror from-drawable)
+    (xlib:copy-area (pixmap-xmirror from-drawable)
                     (medium-gcontext to-drawable +background-ink+)
                     (round-coordinate from-x) (round-coordinate from-y)
 		    (round width) (round height)
-                    (or (medium-buffer to-drawable) (sheet-mirror (medium-sheet to-drawable)))
+                    (or (medium-buffer to-drawable) (sheet-xmirror (medium-sheet to-drawable)))
                     (round-coordinate to-x) (round-coordinate to-y))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
-  (xlib:copy-area (pixmap-mirror from-drawable)
+  (xlib:copy-area (pixmap-xmirror from-drawable)
                   (medium-gcontext (sheet-medium (slot-value to-drawable 'sheet))
                                    +background-ink+)              
                   (round-coordinate from-x) (round-coordinate from-y)
                   (round width) (round height)
-                  (pixmap-mirror to-drawable)
+                  (pixmap-xmirror to-drawable)
                   (round-coordinate to-x) (round-coordinate to-y)))
 
 
@@ -1206,7 +1206,7 @@ time an indexed pattern is drawn.")
 
 (defmethod climi::medium-draw-image-design*
     ((medium clx-medium) (design climi::rgb-image-design) x y)
-  (let* ((da (sheet-mirror (medium-sheet medium)))
+  (let* ((da (sheet-xmirror (medium-sheet medium)))
 	 (image (slot-value design 'climi::image))
 	 (width (climi::image-width image))
 	 (height (climi::image-height image)))

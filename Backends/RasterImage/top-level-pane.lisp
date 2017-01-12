@@ -11,6 +11,3 @@
 				       standard-single-mirrored-sheet-mixin
 				       unmanaged-top-level-sheet-pane)
   ())
-
-(defgeneric make-raster-top-level-sheet (port format))
-
