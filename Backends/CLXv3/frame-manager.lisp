@@ -39,6 +39,7 @@
 	      ,superclasses
 	    ()
 	    (:metaclass ,(type-of (find-class concrete-pane-class-symbol)))))
+	#+nil
 	(format *debug-io* "create class ~A~%" concrete-mirrored-pane-class-symbol))
       (setf concrete-pane-class (find-class concrete-mirrored-pane-class-symbol))))
   concrete-pane-class)
