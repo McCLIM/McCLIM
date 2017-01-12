@@ -33,7 +33,12 @@
 			     :pointer-motion :button-motion))
 
 (defmethod clim-clx::realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
-  (clim-clx::%realize-mirror port sheet))
+   (clim-clx::%realize-mirror port sheet)
+   (port-register-mirror (port sheet) sheet (make-instance 'clx-fb-mirror :xmirror (port-lookup-mirror port sheet)))
+   (port-lookup-mirror port sheet))
+
+(defmethod clim-clx::realize-mirror ((port clx-fb-port) (pixmap pixmap))
+  )
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
   (clim-clx::realize-mirror-aux port sheet
@@ -110,23 +115,26 @@
     (unless (xlib:event-listen display)
       (xlib:display-force-output (clx-port-display port)))
     (let ((event (xlib:process-event (clx-port-display port)
-				     :timeout 0.10
+				     :timeout 0.1
 				     :handler #'clim-clx::event-handler :discard-p t)))
        (maphash #'(lambda (key val)
-		   (when (typep key 'clx-fb-mirrored-sheet-mixin)
-		     (image-sheet-to-x key)))
-	       (slot-value port 'climi::sheet->mirror))
+		    (when (typep key 'clx-fb-mirrored-sheet-mixin)
+		      (image-mirror-to-x (sheet-mirror key))))
+		(slot-value port 'climi::sheet->mirror))
       (if event
 	  event
 	  :timeout))))
 
 ;;; Pixmap
 
-(defmethod realize-mirror ((port clx-fb-port) (pixmap mcclim-render::image-pixmap-mixin))
-  )
-
 (defmethod destroy-mirror ((port clx-fb-port) (pixmap mcclim-render::image-pixmap-mixin))
-  )
+  (call-next-method))
+
+(defmethod realize-mirror ((port clx-fb-port) (pixmap mcclim-render::image-pixmap-mixin))
+  (setf (sheet-parent pixmap) (graft port))
+  (let ((mirror (make-instance 'mcclim-render::rgb-image-mirror-mixin)))
+    (port-register-mirror port pixmap mirror)
+    (mcclim-render::%make-image mirror pixmap)))
 
 (defmethod port-allocate-pixmap ((port clx-fb-port) sheet width height)
   (let ((pixmap (make-instance 'clx-fb-pixmap
@@ -136,7 +144,6 @@
 			       :port port)))
     (when (sheet-grafted-p sheet)
       (realize-mirror port pixmap))
-    (mcclim-render::%make-image pixmap)
     pixmap))
 
 (defmethod port-deallocate-pixmap ((port clx-fb-port) pixmap)

@@ -58,14 +58,9 @@
    (:import-from :mcclim-render
 		  #:render-medium-mixin
 		  #:render-port-mixin
-		  #:image-sheet-image
+		  #:image-mirror-image
 		  #:image-sheet-mixin
 		  #:image-pixmap-mixin
-		  #:rgb-image-pixmap-mixin
-		  #:save-sheet-image-to-file
-		  #:save-sheet-image-to-stream
-		  #:current-clip-region
-		  #:current-paths-region
 		  )
    (:import-from :clim-clx
 		 #:CLX-PORT-DISPLAY
@@ -79,6 +74,8 @@
 		#:clx-port-screen
 		#:clx-graft
 		#:clx-port-window
+		#:sheet-xmirror
+		#:sheet-direct-xmirror
 		)
   (:import-from :clim-standard
 		#:standard-handled-event-port-mixin

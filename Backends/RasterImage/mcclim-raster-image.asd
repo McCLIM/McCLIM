@@ -10,12 +10,12 @@
      (:file "port")
      (:file "stream")
      (:file "output-to-png")
-     (:file "rgb-image")
+     (:file "rgb-port")
      ))
 
 (defsystem #:mcclim-raster-image/opticl
     :depends-on (#:mcclim-raster-image #:mcclim-render/opticl)
     :serial t
     :components
-    ((:file "opticl")))
+    ((:file "opticl-port")))
 

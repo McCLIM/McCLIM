@@ -12,7 +12,7 @@
 (defmethod port-set-mirror-region :after ((port render-port-mixin) mirror region)
   (declare (ignore port mirror transformation))
   (let ((sheet (port-lookup-sheet port mirror)))
-    (%set-image-region sheet region)))
+    (%set-image-region (sheet-mirror sheet) region)))
 
 (defmethod port-set-mirror-transformation :after ((port render-port-mixin) mirror transrormation)
   (declare (ignore port mirror transformation))
@@ -20,22 +20,11 @@
 
 ;;; realize/destroy mirrors
 (defmethod realize-mirror ((port render-port-mixin) (sheet image-sheet-mixin))
-  (setf (sheet-parent sheet) (graft port))
-  (unless (port-lookup-mirror port sheet)
-    (port-register-mirror port sheet sheet)))
+    )
 
-(defmethod realize-mirror :after ((port render-port-mixin) (sheet image-sheet-mixin))
-  (%make-image sheet))
-
-
-(defmethod destroy-mirror :before ((port render-port-mixin) (sheet image-sheet-mixin))
-  (declare (ignore port))
-  nil)
-
-(defmethod destroy-mirror :before ((port render-port-mixin) (sheet image-pixmap-mixin))
-  (declare (ignore port sheet))
-  nil)
-
+;;;
+;;; Fonts
+;;;
 
 (defmethod text-style-to-font ((port render-port-mixin)
 			       (text-style standard-text-style))

@@ -19,12 +19,12 @@
     (:import-from :mcclim-render
 		  #:render-medium-mixin
 		  #:render-port-mixin
-		  #:image-sheet-image
+		  #:image-mirror-image
 		  #:image-sheet-mixin
+		  #:image-mirror-mixin
 		  #:image-pixmap-mixin
-		  #:rgb-image-pixmap-mixin
-		  #:save-sheet-image-to-file
-		  #:save-sheet-image-to-stream
+		  #:save-mirror-image-to-file
+		  #:save-mirror-image-to-stream
 		  )
     (:import-from :mcclim-truetype
 		  #:truetype-font-size

@@ -6,18 +6,16 @@
 
 (defclass render-mixin ()
   ((state :initform (aa:make-state))
-   (state-lock :initform (climi::make-lock "state"))
-   (current-background :initform nil)
-   (current-foreground :initform nil)
-   (current-mirrored-sheet :initform nil)
-   (current-clip-region :initform nil)
-   (current-ink :initform nil)
-   (current-paths-region :initform +nowhere+)))
+   (state-lock :initform (climi::make-lock "state"))))
 
 ;;; protocol
    
 (defgeneric %draw-paths (render mirrored-sheet paths clip-region ink backgound foreground))
-(defgeneric %flush (render))
+(defgeneric %draw-image (render mirrored-sheet image x y width height x-dest y-dest))
+(defgeneric %notify-image-updated (mirror region))
+
+;;; private protocol
+
 (defgeneric %make-blend-draw-fn (render mirrored-sheet clip-region rgba-design))
 (defgeneric %make-blend-draw-span-fn (render mirrored-sheet clip-region ink)) 
 (defgeneric %make-xor-draw-fn (render mirrored-sheet clip-region rgba-design))
@@ -28,101 +26,129 @@
 ;;;
 
 (defmethod %draw-paths :around ((render render-mixin) msheet paths region ink background foreground)
-  (with-slots (state-lock) render
-    (climi::with-lock-held (state-lock)
-      (call-next-method))))
+  (when (and msheet (image-mirror-image render))
+    (with-slots (state-lock) render
+      (climi::with-lock-held (state-lock)
+	(call-next-method)))))
 
-;;; unlocked %flush
-(defgeneric %%flush (render))
-
-(defmethod %flush ((render render-mixin))
-  (with-slots (state-lock) render
-    (climi::with-lock-held (state-lock)
-      (%%flush render))))
-
+(defmethod %draw-image :around ((render render-mixin) mirrored-sheet image x y width height x-dest y-dest)
+  (when (and mirrored-sheet (image-mirror-image render))
+    (with-slots (state-lock) render
+      (climi::with-lock-held (state-lock)
+	(call-next-method)))))
+  
 ;;;
 ;;; Drawing
 ;;;
 
-(defmethod %draw-paths ((render render-mixin) msheet paths region ink background foreground)
-  (with-slots (current-mirrored-sheet current-clip-region
-	       current-ink current-background
-	       current-foreground current-paths-region)
-      render
-      (when (or (not (and (eq current-mirrored-sheet msheet)
-			  (eq current-clip-region region)
-			  (eq current-ink ink)
-			  (eq current-background background)
-			  (eq current-foreground foreground)))
-		(typep current-ink 'standard-flipping-ink))
-	(%%flush render))
-      (%%flush render)
-      (setf current-mirrored-sheet msheet
-	    current-clip-region region
-	    current-ink ink
-	    current-background background
-	    current-foreground foreground)
-      (let ((paths (remove-if 
-		    #'(lambda (path)
-			(multiple-value-bind (min-x min-y max-x max-y)
-			    (path-extents path)
-			  (setf current-paths-region
-				(region-union current-paths-region
-					      (make-rectangle* min-x min-y max-x max-y)))
-			  (region-equal
-			   (region-intersection region
-						(make-rectangle* min-x min-y max-x max-y))
-			   +nowhere+)))
-		    paths)))
-	(with-slots (state)
-	    render
-	  (vectors:update-state state paths)))))
+(defmethod %draw-paths ((render render-mixin) mirrored-sheet paths clip-region ink background foreground)
+  ;; remove path outside the clipping region
+  (let* ((current-paths-region +nowhere+)
+	 (paths (remove-if
+		 #'(lambda (path)
+		     (multiple-value-bind (min-x min-y max-x max-y)
+			 (path-extents path)
+		       (setf current-paths-region
+			     (region-union current-paths-region
+					   (make-rectangle* min-x min-y max-x max-y)))
+		       (region-equal
+			(region-intersection clip-region
+					     (make-rectangle* min-x min-y max-x max-y))
+			+nowhere+)))
+		 paths)))
+    (with-slots (state)
+	render
+      (vectors:update-state state paths)
+      (let ((*background-design* background)
+	    (*foreground-design* foreground)
+	    (current-clip-region
+	     (if (rectanglep clip-region)
+		 nil
+		 clip-region)))
+	(clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+	    (region-intersection clip-region current-paths-region)
+	  (let ((draw-function nil)
+		(draw-span-function nil)
+		(rgba-design (make-rgba-design ink)))
+	    (setf draw-function
+		  (if (typep ink 'standard-flipping-ink)
+		      (%make-xor-draw-fn render mirrored-sheet current-clip-region
+					 rgba-design)
+		      (%make-blend-draw-fn render mirrored-sheet current-clip-region
+					   rgba-design)))
+	    (setf draw-span-function
+		  (if (typep ink 'standard-flipping-ink)
+		      (%make-xor-draw-span-fn render mirrored-sheet current-clip-region
+					      rgba-design)
+		      (%make-blend-draw-span-fn render mirrored-sheet current-clip-region
+						rgba-design)))
+	    (aa:cells-sweep/rectangle state
+				      (floor min-x)
+				      (floor min-y)
+				      (ceiling max-x)
+				      (ceiling max-y)
+				      draw-function
+				      draw-span-function))
+	  (vectors::state-reset state)
+	  (let ((region (make-rectangle* (floor min-x) (floor min-y)
+					 (ceiling max-x) (ceiling max-y))))
+	    (notify-image-updated render region)))))))
 
-(defmethod %%flush :around ((render render-mixin))
-  (with-slots (current-mirrored-sheet)
-      render
-    (when current-mirrored-sheet
-      (with-slots (state current-paths-region current-background current-foreground)
-	  render
-	(let ((*background-design* current-background)
-	      (*foreground-design* current-foreground))
-	  (call-next-method))
-	;; reset
-	(setf current-mirrored-sheet nil)
-	(setf current-paths-region +nowhere+)
-	(vectors::state-reset state)))))
-	  
-(defmethod %%flush ((render render-mixin))
-  (with-slots (state current-mirrored-sheet current-clip-region current-ink
-		     current-paths-region)
-      render
-    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-	(region-intersection current-clip-region current-paths-region)
-      (when (rectanglep current-clip-region)
-	(setf current-clip-region nil))
-      (let ((draw-function nil)
-	    (draw-span-function nil)
-	    (rgba-design (make-rgba-design current-ink)))
-	(setf draw-function
-	      (if (typep current-ink 'standard-flipping-ink)
-		  (%make-xor-draw-fn render current-mirrored-sheet current-clip-region
-				     rgba-design)
-		  (%make-blend-draw-fn render current-mirrored-sheet current-clip-region
-				       rgba-design))) 
-	(setf draw-span-function
-	      (if (typep current-ink 'standard-flipping-ink)
-		  (%make-xor-draw-span-fn render current-mirrored-sheet current-clip-region
-					  rgba-design)					  
-		  (%make-blend-draw-span-fn render current-mirrored-sheet current-clip-region
-					    rgba-design)))					    
-	(aa:cells-sweep/rectangle state
-				  (floor min-x)
-				  (floor min-y)
-				  (ceiling max-x)
-				  (ceiling max-y)
-				  draw-function
-				  draw-span-function)))))
-  
+(defmethod %draw-image ((render render-mixin) mirrored-sheet image x y width height x-dest y-dest)
+  ;; missing clip-region!!
+  (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+      (sheet-region mirrored-sheet)
+    (let ((get-dest-fn (%make-image-mirror-get-function (sheet-mirror image)))
+	  (set-dest-fn (%make-image-mirror-set-function render))
+	  (x-min (max 0 (- x-dest))) ;; to fix
+	  (y-min (max 0 (- y-dest)))
+	  (x-max (1- (round (min width (- max-x x-dest)))))
+	  (y-max (1- (round (min height (- max-y y-dest))))))
+      (cond
+	((and (<= x x-dest) (<= y y-dest))
+	 (loop
+	    for j from y-max downto y-min 
+	    do
+	      (loop
+		 for i from x-max downto x-min
+		 do
+		   (multiple-value-bind (red green blue alpha)
+		       (funcall get-dest-fn (+ i x) (+ j y))
+		     (funcall set-dest-fn (+ x-dest i) (+ y-dest j)
+			      red green blue alpha)))))
+	((and (<= x x-dest) (> y y-dest))
+	 (loop
+	    for j from y-min to y-max
+	    do
+	      (loop
+		 for i from x-max downto x-min
+		 do
+		   (multiple-value-bind (red green blue alpha)
+		       (funcall get-dest-fn (+ i x) (+ j y))
+		     (funcall set-dest-fn (+ x-dest i) (+ y-dest j) red green blue alpha)))))
+	((and (> x x-dest) (<= y y-dest))
+	 (loop
+	    for j from y-max downto y-min
+	    do
+	      (loop
+		 for i from x-min to x-max
+		 do
+		   (multiple-value-bind (red green blue alpha)
+		       (funcall get-dest-fn (+ i x) (+ j y))
+		     (funcall set-dest-fn (+ x-dest i) (+ y-dest j) red green blue alpha)))))
+	((and (> x x-dest) (> y y-dest))
+	 (loop
+	    for j from y-min to y-max
+	    do
+	      (loop
+		 for i from x-min to x-max
+		 do
+		   (multiple-value-bind (red green blue alpha)
+		       (funcall get-dest-fn (+ i x) (+ j y))
+		     (funcall set-dest-fn (+ x-dest i) (+ y-dest j) red green blue alpha)))))))
+    (let ((region (make-rectangle* x-dest y-dest (+ x-dest width) (+ y-dest height))))
+      (notify-image-updated render region))))
+
 ;;;
 ;;; function used by aa engine
 ;;;
@@ -220,8 +246,8 @@
 ;;; default implementation
 (defmethod %make-blend-draw-fn ((render render-mixin) msheet clip-region design)
   (let ((source-fn (make-rgba-design-fn design))
-	(get-dest-fn (%make-image-sheet-get-function msheet))
-	(set-dest-fn (%make-image-sheet-set-function msheet)))
+	(get-dest-fn (%make-image-mirror-get-function render))
+	(set-dest-fn (%make-image-mirror-set-function render)))
     (%make-blend-draw-function-macro
      (funcall source-fn x y)
      (funcall get-dest-fn x y)
@@ -229,8 +255,8 @@
 
 (defmethod %make-blend-draw-span-fn ((render render-mixin) msheet clip-region design)
   (let ((source-fn (make-rgba-design-fn design))
-	(get-dest-fn (%make-image-sheet-get-function msheet))
-	(set-dest-fn (%make-image-sheet-set-function msheet)))
+	(get-dest-fn (%make-image-mirror-get-function render))
+	(set-dest-fn (%make-image-mirror-set-function render)))
     (%make-blend-draw-span-function-macro
      (funcall source-fn x y)
      (funcall get-dest-fn x y)
@@ -238,8 +264,8 @@
 
 (defmethod %make-xor-draw-fn ((render render-mixin) msheet clip-region design)
   (let ((source-fn (make-rgba-design-fn design))
-	(get-dest-fn (%make-image-sheet-get-function msheet))
-	(set-dest-fn (%make-image-sheet-set-function msheet)))
+	(get-dest-fn (%make-image-mirror-get-function render))
+	(set-dest-fn (%make-image-mirror-set-function render)))
     (%make-xor-draw-function-macro
      (funcall source-fn x y)
      (funcall get-dest-fn x y)
@@ -247,8 +273,8 @@
 
 (defmethod %make-xor-draw-span-fn ((render render-mixin) msheet clip-region design)
   (let ((source-fn (make-rgba-design-fn design))
-	(get-dest-fn (%make-image-sheet-get-function msheet))
-	(set-dest-fn (%make-image-sheet-set-function msheet)))
+	(get-dest-fn (%make-image-mirror-get-function render))
+	(set-dest-fn (%make-image-mirror-set-function render)))
     (%make-xor-draw-span-function-macro
      (funcall source-fn x y)
      (funcall get-dest-fn x y)
@@ -260,8 +286,8 @@
 ;;;
 
 (defmethod %make-blend-draw-fn ((render render-mixin) msheet clip-region (design uniform-rgba-design))
-  (let ((get-dest-fn (%make-image-sheet-get-function msheet))
-	(set-dest-fn (%make-image-sheet-set-function msheet)))
+  (let ((get-dest-fn (%make-image-mirror-get-function render))
+	(set-dest-fn (%make-image-mirror-set-function render)))
     (let ((s-red (uniform-rgba-design-red design))
 	  (s-green (uniform-rgba-design-green design))
 	  (s-blue (uniform-rgba-design-blue design))
@@ -280,8 +306,8 @@
 	   (funcall set-dest-fn x y red green blue alpha))))))
 
 (defmethod %make-blend-draw-span-fn ((render render-mixin) msheet clip-region (design uniform-rgba-design))
-  (let ((get-dest-fn (%make-image-sheet-get-function msheet))
-	(set-dest-fn (%make-image-sheet-set-function msheet)))
+  (let ((get-dest-fn (%make-image-mirror-get-function render))
+	(set-dest-fn (%make-image-mirror-set-function render)))
     (let ((s-red (uniform-rgba-design-red design))
 	  (s-green (uniform-rgba-design-green design))
 	  (s-blue (uniform-rgba-design-blue design))

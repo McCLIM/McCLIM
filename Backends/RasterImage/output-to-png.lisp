@@ -12,16 +12,13 @@
     `(flet ((,cont (,stream-var)
               ,@body)
 	    (,exit-fn (sheet stream)
-	      (with-output-recording-options (stream :draw t :record nil)
-		(stream-replay stream))
-	      (medium-finish-output (sheet-medium sheet))
-	      (medium-finish-output (sheet-medium stream))
-	      (save-sheet-image-to-stream sheet ,stream ,format))
+	      (save-mirror-image-to-stream (sheet-mirror sheet) ,stream ,format))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore sheet))
 	      nil))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
+					   :opticl-image
 					   ,format
 					   ,@options))))
 
@@ -35,14 +32,13 @@
       `(flet ((,cont (,stream-var)
 		,@body)
 	      (,exit-fn (sheet stream)
-		(with-output-recording-options (stream :draw t :record nil)
-		  (stream-replay stream))
-		(save-sheet-image-to-file sheet ,file (extract-format ,file)))
+		(save-mirror-image-to-file (sheet-mirror sheet) ,file (extract-format ,file)))
 	      (,enter-fn (sheet stream)
 		(declare (ignore sheet stream))
 		nil))
 	 (declare (dynamic-extent #',cont))
-	 (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
+	 (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn
+					     :opticl-image
 					     (extract-format ,file)
 					     ,@options)))))
 
@@ -54,17 +50,14 @@
     `(flet ((,cont (,stream-var)
               ,@body)
 	    (,exit-fn (sheet stream)
-	      (with-output-recording-options (stream :draw t :record nil)
-		(stream-replay stream))
-	      (medium-finish-output (sheet-medium sheet))
-	      (medium-finish-output (sheet-medium stream))
-	      (mcclim-render::image-sheet-image sheet))
+	      (mcclim-render::image-mirror-image (sheet-mirror sheet)))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore stream))
 	      (when ,image
 		(setf (mcclim-render::image-sheet-image sheet) ,image))))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
+					   :rgb-image
 					   :rgb-image
 					   ,@options))))
 
@@ -75,9 +68,10 @@
 			     (,stream-var nil ,@options)
 			   ,@body)))
 
-(defun invoke-with-output-to-raster-image (continuation enter-fn exit-fn format
-					   &key (width 1000) (height 1000) (border-width 0))
-  (let ((port (find-port :server-path (list :raster-image
+(defun invoke-with-output-to-raster-image (continuation enter-fn exit-fn server format
+					   &key (width 1000) (height 1000)
+					     (border-width 0) (recording-p t))
+  (let ((port (find-port :server-path (list server
 					    :width width :height height)))
 	(result nil))
     (let* ((top-level-sheet (make-raster-top-level-sheet port format))
@@ -91,9 +85,16 @@
 	(realize-mirror port top-level-sheet)
 	(setf (sheet-region top-level-sheet)
 	      (clim:make-rectangle* 0 0 width height))
-	(with-output-recording-options (stream :record t :draw nil)
-	  (funcall continuation stream)
-	  (medium-finish-output (sheet-medium stream)))
+	(if recording-p
+	    (progn
+	      (with-output-recording-options (stream :record t :draw nil)
+		(funcall continuation stream)
+		(medium-finish-output (sheet-medium stream)))
+	      (with-output-recording-options (stream :draw t :record nil)
+		(stream-replay stream)))
+	    (with-output-recording-options (stream :record nil :draw t)
+	      (funcall continuation stream)
+	      (medium-finish-output (sheet-medium stream))))
 	(setf result (funcall exit-fn top-level-sheet stream))))
     (destroy-port port)
     result))
