@@ -17,7 +17,7 @@
                          :drawer (lambda ,arglist ,@body))))
 
 (define-application-frame drawing-tests ()
-  ()
+  ((recording-p :initform t))
   (:panes
    (backend-output :application-pane 
 		   :width *width*
@@ -36,9 +36,15 @@
              :items (sort (loop for x being the hash-values of *drawing-tests*
                                 collect x) #'string< :key #'drawing-test-name)
              :value-changed-callback #'render-images)
+   (recording-option
+    (clim:with-radio-box (:orientation :vertical
+				       :value-changed-callback '%update-recording-option)
+      (clim:radio-box-current-selection "yes")
+      "no"))
    (print-ps :push-button
 	     :label "Print All (/tmp/*.ps)"
 	     :activate-callback #'(lambda (x) (print-all-postscript-tests)))
+   
    (print-png :push-button
 	      :label "Print All (/tmp/*.png)"
 	      :activate-callback #'(lambda (x) (print-all-raster-image-tests :png))))
@@ -50,6 +56,8 @@
 	   (spacing (:thickness 3)
 	     (clim-extensions:lowering ()
 	       (scrolling (:scroll-bar :vertical :height *height*) selector)))
+	   (labelling (:label "Reder Recording")
+	     recording-option)
 	   print-ps
 	   print-png)
          (vertically ()
@@ -65,6 +73,12 @@
 	   (spacing (:thickness 3)
 	     (clim-extensions:lowering ()
 	       (scrolling (:scroll-bar :vertical :height 200) description)))))))))
+
+(defun %update-recording-option (this-gadget selected-gadget)
+  (declare (ignore this-gadget))
+  (with-slots (recording-p) clim:*application-frame*
+    (setf recording-p
+	  (string= (clim:gadget-label selected-gadget) "yes"))))
 
 (defun run-drawing-tests ()
   (run-frame-top-level
@@ -84,22 +98,24 @@
     (handler-case
 	(clim:with-drawing-options (backend-output :clipping-region
 						   (clim:make-rectangle* 0 0 *width* *height*))
+	  (clim:draw-rectangle* backend-output 0 0 *width* *height* :filled t
+				:ink clim:+grey90+)
 	  (funcall (drawing-test-drawer item) backend-output))
       (condition (condition)
 	(format t "Backend:~a~%" condition)))
     ;;(handler-case
-	(let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
-			   (stream :width *width* :height *height* :border-width *border-width*)
-			 (clim:draw-rectangle* stream 0 0 *width* *height* :filled t
-					       :ink clim:+grey90+)
-
-			(funcall (drawing-test-drawer item) stream))))
-	  (draw-pattern* render-output pattern 0 0)
-	  (medium-finish-output (sheet-medium render-output)))
-	;;(condition (condition)
-	;;  (format t "Render:~a~%" condition)))))
+	(with-slots (recording-p) clim:*application-frame*
+	  (let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
+			     (stream :width *width* :height *height* :border-width *border-width*
+				     :recording-p recording-p)
+			   (clim:draw-rectangle* stream 0 0 *width* *height* :filled t
+						 :ink clim:+grey90+)
+			   (funcall (drawing-test-drawer item) stream))))
+	    (draw-pattern* render-output pattern 0 0)
+	    (medium-finish-output (sheet-medium render-output))))
+      ;;(condition (condition)
+	;;(format t "Render:~a~%" condition)))))
 	))
-
 (defun drawing-test-postscript (test &optional filename)
   (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
          (test-name (drawing-test-name test))
@@ -727,6 +743,15 @@
 						    :align-x :center :align-y :center
 						    :text-size 50))))
 
+(define-drawing-test "07) Text - 1" (stream)
+  ""
+  (dotimes (i 40)
+    (format stream "~&row ~A abcdefghilmnopqrstuvz ABCDEFGHILMNOPRSTUVZ~%" i)))
+
+(define-drawing-test "07) Text - 2" (stream)
+  ""
+  (dotimes (i 10)
+    (format stream "~&row ~A abcdefghilmnopqrstuvz ABCDEFGHILMNOPRSTUVZ 1234567890 <>.;-~%" i)))
 
 (defun draw-vstrecke2 (stream x y1 y2 &rest args &key ink &allow-other-keys)
   (draw-line* stream (- x 10) y1 (+ x 10) y1 :ink ink)
