@@ -149,7 +149,7 @@
 	   (mirror-region (%sheet-mirror-region sheet))
 	   (mirror-transformation (%sheet-mirror-transformation sheet))
            (window (xlib:create-window
-                    :parent (sheet-mirror (sheet-parent sheet))
+                    :parent (sheet-xmirror (sheet-parent sheet))
                     :width (if mirror-region
                                (round-coordinate (bounding-rectangle-width mirror-region))
                                width)
@@ -257,7 +257,7 @@
 
 
 (defmethod port-motion-hints ((port clx-port) (sheet mirrored-sheet-mixin))
-  (let ((event-mask (xlib:window-event-mask (sheet-direct-mirror sheet))))
+  (let ((event-mask (xlib:window-event-mask (sheet-direct-xmirror sheet))))
     (if (zerop (logand event-mask
 		       #.(xlib:make-event-mask :pointer-motion-hint)))
 	nil
@@ -265,7 +265,7 @@
 
 (defmethod (setf port-motion-hints)
     (val (port clx-port) (sheet mirrored-sheet-mixin))
-  (let* ((mirror (sheet-direct-mirror sheet))
+  (let* ((mirror (sheet-direct-xmirror sheet))
 	 (event-mask (xlib:window-event-mask mirror)))
     (setf (xlib:window-event-mask mirror)
 	  (if val
@@ -298,7 +298,7 @@
 
 (defmethod realize-mirror ((port clx-port) (pixmap pixmap))
   (when (null (port-lookup-mirror port pixmap))
-    (let* ((window (sheet-mirror (pixmap-sheet pixmap)))
+    (let* ((window (sheet-xmirror (pixmap-sheet pixmap)))
 	   (pix (xlib:create-pixmap 
 		    :width (round (pixmap-width pixmap))
 		    :height (round (pixmap-height pixmap))
@@ -330,9 +330,9 @@
 
 ;; this is evil.
 (defmethod allocate-space :after ((pane top-level-sheet-pane) width height)
-  (when (sheet-direct-mirror pane)
+  (when (sheet-direct-xmirror pane)
     (with-slots (space-requirement) pane
-      '(setf (xlib:wm-normal-hints (sheet-direct-mirror pane))
+      '(setf (xlib:wm-normal-hints (sheet-direct-xmirror pane))
             (xlib:make-wm-size-hints 
              :width (round width)
              :height (round height)

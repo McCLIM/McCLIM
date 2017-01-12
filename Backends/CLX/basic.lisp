@@ -24,6 +24,8 @@
 
 (in-package :clim-clx)
 
+
+
 (defclass clx-basic-port (standard-port)
   ((display :initform nil
 	    :accessor clx-port-display)
@@ -112,13 +114,37 @@
 	 (sheet (port-pointer-sheet port)))
     (when sheet
       (multiple-value-bind (x y same-screen-p)
-	  (xlib:query-pointer (sheet-mirror sheet))
+	  (xlib:query-pointer (sheet-xmirror sheet))
 	(when same-screen-p
 	  (untransform-position (sheet-native-transformation sheet) x y))))))
 
 (defmethod set-sheet-pointer-cursor ((port clx-basic-port) (sheet mirrored-sheet-mixin) cursor)
   (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port)))
-	(mirror (sheet-direct-mirror sheet)))
+	(mirror (sheet-direct-xmirror sheet)))
     (when (and cursor
 	       (typep mirror 'xlib:window))
-      (setf (xlib:window-cursor (sheet-direct-mirror sheet)) cursor))))
+      (setf (xlib:window-cursor (sheet-direct-xmirror sheet)) cursor))))
+;;;
+;;;
+;;;
+(defgeneric sheet-direct-xmirror (sheet))
+(defgeneric sheet-xmirror (sheet))
+(defgeneric pixmap-xmirror (sheet))
+
+(defmethod sheet-xmirror ((sheet basic-sheet))
+  (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
+    (if (null mirrored-ancestor)
+	nil
+	(sheet-direct-xmirror mirrored-ancestor))))
+
+(defmethod sheet-xmirror ((pixmap pixmap))
+  (sheet-direct-xmirror pixmap))
+
+(defmethod sheet-direct-xmirror ((sheet basic-sheet))
+  (sheet-direct-mirror sheet))
+
+(defmethod sheet-direct-xmirror ((pixmap pixmap))
+  (sheet-direct-mirror pixmap))
+
+(defmethod pixmap-xmirror ((pixmap pixmap))
+  (pixmap-mirror pixmap))

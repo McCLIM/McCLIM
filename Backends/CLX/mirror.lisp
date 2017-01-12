@@ -32,18 +32,19 @@
      mirror-region)))
 
 (defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
+  (when (sheet-xmirror sheet)
+    (xlib:destroy-window (sheet-xmirror sheet)))
   (when (port-lookup-mirror port sheet)
-    (xlib:destroy-window (port-lookup-mirror port sheet))
     (port-unregister-mirror port sheet (sheet-mirror sheet))))
 
 (defmethod raise-mirror ((port clx-basic-port) (sheet basic-sheet))
-  (let ((mirror (sheet-mirror sheet)))
+  (let ((mirror (sheet-xmirror sheet)))
     (when (and mirror
 	       (typep mirror 'xlib:window))
       (xlib:circulate-window-up mirror))))
 
 (defmethod bury-mirror ((port clx-basic-port) (sheet basic-sheet))
-  (let ((mirror (sheet-mirror sheet)))
+  (let ((mirror (sheet-xmirror sheet)))
     (when (and mirror
 	       (typep mirror 'xlib:window))
       (xlib:circulate-window-down mirror))))
@@ -65,7 +66,7 @@
 (defmethod port-set-sheet-transformation ((port clx-basic-port) (sheet mirrored-sheet-mixin) transformation)
   (declare (ignore transformation)) ;; why?
   (break)                               ;obsolete now
-  (let ((mirror (sheet-direct-mirror sheet)))
+  (let ((mirror (sheet-direct-xmirror sheet)))
     (multiple-value-bind (tr rg) (invent-sheet-mirror-transformation-and-region sheet)
       (multiple-value-bind (x y) (transform-position tr 0 0)
         (multiple-value-bind (x1 y1 x2 y2) (if (eql rg +nowhere+)
@@ -82,7 +83,7 @@
 
 (defmethod port-set-sheet-region ((port clx-basic-port) (sheet mirrored-sheet-mixin) region)
   (declare (ignore region)) ;; why?
-  (let ((mirror (sheet-direct-mirror sheet)))
+  (let ((mirror (sheet-direct-xmirror sheet)))
     (multiple-value-bind (tr rg) (invent-sheet-mirror-transformation-and-region sheet)
       (declare (ignore tr))
       (multiple-value-bind (x1 y1 x2 y2) (if (eql rg +nowhere+)
@@ -101,10 +102,10 @@
               (xlib:drawable-height mirror) (clamp y2 1 #xFFFF))))))
 
 (defmethod port-enable-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
-  (xlib:map-window (sheet-direct-mirror mirror)) )
+  (xlib:map-window (sheet-direct-xmirror mirror)) )
 
 (defmethod port-disable-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
-  (xlib:unmap-window (sheet-direct-mirror mirror)) )
+  (xlib:unmap-window (sheet-direct-xmirror mirror)) )
 
 (defmethod port-mirror-width ((port clx-basic-port) sheet)
   (let ((mirror (port-lookup-mirror port sheet)))

@@ -307,7 +307,7 @@
 ;;; :WM_TAKE_FOCUS to XLIB:WM-PROTOCOLS.  CSR, 2009-02-18
 (defmethod port-wm-protocols-message (sheet time (message (eql :wm_take_focus)) data)
   (let ((timestamp (elt data 1))
-        (mirror (sheet-mirror sheet)))
+        (mirror (sheet-xmirror sheet)))
     (when mirror
       (xlib:set-input-focus (clx-port-display *clx-port*)
                             mirror :parent timestamp))
@@ -381,7 +381,7 @@
   (let* ((port (port pointer))
 	 (sheet (port-pointer-sheet port)))
     (when sheet
-      (let ((mirror (sheet-direct-mirror sheet)))
+      (let ((mirror (sheet-direct-xmirror sheet)))
 	(when mirror
 	  (multiple-value-bind (x y same-screen-p child mask root-x root-y)
 	      (xlib:query-pointer mirror)
@@ -413,7 +413,7 @@
 (defmethod port-grab-pointer ((port clx-basic-port) pointer sheet)
   ;; FIXME: Use timestamps?
   (let ((grab-result (xlib:grab-pointer
-		      (sheet-mirror sheet)
+		      (sheet-xmirror sheet)
 		      '(:button-press :button-release
 			:leave-window :enter-window
 			:pointer-motion :pointer-motion-hint)
