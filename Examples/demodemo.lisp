@@ -99,7 +99,8 @@
                    (make-demo-button "Misc. Tests"
 				     'misc-tests)
 		   (make-demo-button "Drawing Tests"
-				     'drawing-tests)))))))))
+				     'drawing-tests)
+                   (make-demo-button "Accepting Values Test"  'av-test)))))))))
 
 (defun demodemo ()
   (run-frame-top-level (make-application-frame 'demodemo)))
