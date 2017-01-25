@@ -250,7 +250,10 @@ accept of this query")))
            (current-command (if initially-select-p
                                 `(com-select-query
                                   ,initially-select-query-identifier)
-                                *default-command*))
+				`(com-select-query
+				  ,(query-identifier 
+				    (first
+				     (queries *accepting-values-stream*))))))
 	   (*accelerator-gestures* (append (compute-inherited-keystrokes command-table)
 					   *accelerator-gestures*)))
       ;; Why?
@@ -497,14 +500,20 @@ highlighting, etc." ))
 			    selected-query
 			    (record selected-query))))
 	(when query
-	  (setf selected-query query)
-	  (select-query *accepting-values-stream* query (record query))
-	  (let ((command-ptype '(command :command-table accept-values)))
-	    (if (cdr query-list)
-	      (throw-object-ptype `(com-select-query ,(query-identifier
-						       (cadr query-list)))
-				  command-ptype)
-	      (throw-object-ptype '(com-deselect-query) command-ptype))))))))
+	  (unless (and selected-query
+		       (equal query-identifier (query-identifier selected-query)))
+	    (setf selected-query query)
+	    (select-query *accepting-values-stream* query (record query))
+	    (let ((command-ptype '(command :command-table accept-values)))
+	      (when (cdr query-list)
+		(throw-object-ptype `(com-select-query ,(query-identifier
+							 (cadr query-list)))
+				    command-ptype)
+		(throw-object-ptype `(com-select-query ,(query-identifier
+							 (car (queries *accepting-values-stream*))))
+				    command-ptype)))))))))
+							  
+							  
 
 (define-command (com-deselect-query :command-table accept-values
 				    :name nil
@@ -735,10 +744,9 @@ is run for the last time"))
   ())
 
 (defun accepting-values-default-command ()
-  (com-select-query
-   (query-identifier 
-      (first
-       (queries *accepting-values-stream*)))))
+  (loop
+     (read-gesture :stream *accepting-values-stream*)))
+
 
 ;;;; notify-user
 
