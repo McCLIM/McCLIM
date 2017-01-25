@@ -324,7 +324,8 @@ the operator that has the argument list `arglist'."))
 (defmethod relevant-keywords ((lambda-list semiordinary-lambda-list)
                               (arg-indices list))
   (let ((keyword-parameters (keyword-parameters lambda-list)))
-    (when (and (null (rest arg-indices))
+    (when (and arg-indices
+	       (null (rest arg-indices))
                keyword-parameters
                (>= (caar arg-indices) (min-arg-index (first keyword-parameters))))
       (mapcar #'keyword-name keyword-parameters))))
