@@ -19,7 +19,6 @@
      (:file "presentation-test")
      (:file "dragndrop")
      (:file "gadget-test")
-     (:file "accepting-values")
      (:file "method-browser")
      (:file "stopwatch")
      (:file "dragndrop-translator")
@@ -34,7 +33,9 @@
      (:file "misc-tests")
      (:file "drawing-tests")
      (:file "image-viewer")
-     (:file "sliderdemo")))
+     (:file "sliderdemo")
+     (:file "accepting-values")
+     (:file "accepting-values-test")))
 
 (asdf:defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
