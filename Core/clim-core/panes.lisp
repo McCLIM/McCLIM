@@ -2845,6 +2845,8 @@ current background message was set."))
 		(eq (frame-state frame) :shrunk))
       (enable-frame frame))
     ;; Start a new thread to run the event loop, if necessary.
+    (let ((*application-frame* frame))
+      (stream-set-input-focus (slot-value frame 'stream)))
     #+clim-mp
     (unless input-buffer
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
