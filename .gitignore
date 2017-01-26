@@ -127,3 +127,5 @@
 /Documentation/Specification/thick-lines.pdf
 /Documentation/Specification/thin-lines.pdf
 /Documentation/Specification/two-triangles.pdf
+*.orig
+*.{aux,bbl,blg,log}
