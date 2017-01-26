@@ -1199,7 +1199,7 @@ protocol retrieving gestures from a provided string."))
 ;;; beep and warning that input must be clicked on.
 
 (define-default-presentation-method accept
-    (type stream view &key default default-type)
+    (type stream (view textual-view) &key default default-type)
   (declare (ignore default default-type))
   (accept-using-read stream type :read-eval t))
 
