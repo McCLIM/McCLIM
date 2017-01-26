@@ -250,7 +250,12 @@ accept of this query")))
            (current-command (if initially-select-p
                                 `(com-select-query
                                   ,initially-select-query-identifier)
-                                *default-command*)))
+				`(com-select-query
+				  ,(query-identifier 
+				    (first
+				     (queries *accepting-values-stream*))))))
+	   (*accelerator-gestures* (append (compute-inherited-keystrokes command-table)
+					   *accelerator-gestures*)))
       (letf (((frame-command-table *application-frame*)
               (find-command-table command-table)))
         (unwind-protect
@@ -272,11 +277,25 @@ accept of this query")))
                                     (first
                                      (queries *accepting-values-stream*))))
                                 select-first-query nil))
-                        (apply (command-name current-command)
-                               (command-arguments current-command))
-                        ;; If current command returns without throwing a
-                        ;; command, go back to the default command
-                        (setq current-command *default-command*))
+			(handler-case
+			    (progn
+			      (apply (command-name current-command)
+				     (command-arguments current-command))
+			      ;; If current command returns without throwing a
+			      ;; command, go back to the default command
+			      (setq current-command *default-command*))
+			  (accelerator-gesture (c)
+			    (let ((command (lookup-keystroke-command-item
+					    (accelerator-gesture-event c) command-table)))
+			      (if (listp command)
+				  (setq current-command
+					(if (clim:partial-command-p command)
+					    (funcall clim:*partial-command-parser*
+						     command-table stream command
+						     (position clim:*unsupplied-argument-marker* command))
+					    command))
+				  ;; may be it is a gesture of the frame's command-table
+				  (signal c))))))
                       (t (setq current-command object)))
                     (redisplay arecord stream))
                (av-exit ()
@@ -396,12 +415,14 @@ accept of this query")))
   (apply #'prompt-for-accept-1 stream type :display-default nil args))
 
 (define-command (com-query-exit :command-table accept-values
+				:keystroke (#\] :control)
 				:name nil
 				:provide-output-destination-keyword nil)
     ()
   (signal 'av-exit))
 
 (define-command (com-query-abort :command-table accept-values
+				 :keystroke (#\z :control)
 				 :name nil
 				 :provide-output-destination-keyword nil)
     ()
@@ -441,6 +462,7 @@ highlighting, etc." ))
 				 :key #'query-identifier :test #'equal))
 	     (query (car query-list)))
 	(when selected-query
+
 	  (unless (equal query-identifier (query-identifier selected-query)) 
 	    (deselect-query *accepting-values-stream*
 			    selected-query
@@ -467,6 +489,40 @@ highlighting, etc." ))
 			selected-query
 			(record selected-query))
 	(setf selected-query nil)))))
+
+(define-command (com-next-query :command-table accept-values
+				:keystroke (#\n :meta)
+				:name nil
+				:provide-output-destination-keyword nil)
+    ()
+  (when *accepting-values-stream*
+    (let ((queries (queries *accepting-values-stream*)))
+      (with-accessors ((selected-query selected-query))
+	  *accepting-values-stream*
+	(let ((query-pos (position selected-query queries)))
+	  (if query-pos
+	      (setq query-pos (1+ query-pos))
+	      (setq query-pos 0))
+	  (when (>= query-pos (length queries))
+	    (setq query-pos 0))
+	  (com-select-query (query-identifier (elt queries query-pos))))))))
+
+(define-command (com-prev-query :command-table accept-values
+				:keystroke (#\p :meta)
+				:name nil
+				:provide-output-destination-keyword nil)
+    ()
+  (when *accepting-values-stream*
+    (let ((queries (queries *accepting-values-stream*)))
+      (with-accessors ((selected-query selected-query))
+	  *accepting-values-stream*
+	(let ((query-pos (position selected-query queries)))
+	  (if query-pos
+	      (setq query-pos (1- query-pos))
+	      (setq query-pos (1- (length queries))))
+	  (when (< query-pos 0)
+	    (setq query-pos (1- (length queries))))
+	  (com-select-query (query-identifier (elt queries query-pos))))))))
 
 (defclass av-text-record (accepting-values-record)
   ((editing-stream :accessor editing-stream)
