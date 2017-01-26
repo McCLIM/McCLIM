@@ -2171,14 +2171,21 @@ protocol retrieving gestures from a provided string."))
                                     (stream input-editing-stream)
                                     (view textual-view)
                                     &key)
-  (let ((scan-begin (stream-scan-pointer stream)))
-    (loop for or-type in types
-          do (handler-case (return (accept or-type
-                                           :stream stream
-                                           :view view
-                                           :prompt nil))
-               (parse-error () (setf (stream-scan-pointer stream) scan-begin)))
-          finally (simple-parse-error "Input type is not one of ~S" types))))
+  (with-input-context (type)
+      (object type-var)
+      (let ((str (read-token stream)))
+	(loop for or-type in types
+	   do 
+	     (handler-case
+		 (progn
+		   (return (accept-from-string or-type
+					       str
+					       :view view)))
+	       (parse-error ()))
+	   finally (simple-parse-error "Input type is not one of ~S" types)))
+    (t
+     (presentation-replace-input stream object type-var view :rescan nil)
+     (return-from accept (values object type-var)))))
 
 ;;; What does and inherit from?  Maybe we'll punt on that for the moment.
 ;;; Unless it inherits from its arguments...
