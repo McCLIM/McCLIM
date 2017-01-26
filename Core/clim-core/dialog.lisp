@@ -386,7 +386,7 @@ accept of this query")))
 	    (values (value query) (ptype query) (changedp query))
 	  (setf (default query) default)
 	  (setf (ptype query) type)
-	  (setf (changedp query) nil))))))
+	  #+nil (setf (changedp query) nil))))))
 
 
 (defmethod prompt-for-accept ((stream accepting-values-stream)
@@ -450,10 +450,10 @@ highlighting, etc." ))
 	  (select-query *accepting-values-stream* query (record query))
 	  (let ((command-ptype '(command :command-table accept-values)))
 	    (if (cdr query-list)
-	      (throw-object-ptype `(com-select-query ,(query-identifier
-						       (cadr query-list)))
-				  command-ptype)
-	      (throw-object-ptype '(com-deselect-query) command-ptype))))))))
+		(throw-object-ptype `(com-select-query ,(query-identifier
+							 (cadr query-list)))
+				    command-ptype)
+		(throw-object-ptype '(com-deselect-query) command-ptype))))))))
 
 (define-command (com-deselect-query :command-table accept-values
 				    :name nil
@@ -631,9 +631,10 @@ is run for the last time"))
 
 (defmethod finalize-query-record (query (record av-text-record))
   (let ((estream (editing-stream record)))
-    (when (and (snapshot record)
-	       (not (equal (snapshot record)
-			   (stream-input-buffer estream))))
+    (when (and (not (changedp query))
+	       (snapshot record)
+	       (not (equalp (snapshot record)
+			    (stream-input-buffer estream))))
       (let* ((activation-gestures (apply #'make-activation-gestures
 					 :existing-activation-gestures
 					 (activation-gestures query)
