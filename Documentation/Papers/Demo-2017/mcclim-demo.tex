@@ -40,12 +40,11 @@ Daniel Kochmański\\
 
 \begin{abstract}
   We describe what is a \emph{Common Lisp Interface
-    Manager}\cite{CLIM2} implementation
-  McCLIM\cite{Strandh:2002:ILC:McCLIM}, recent development progress
-  and some concepts which are central to developing applications with
-  \emph{CLIM} – panes, presentation types and commands. To illustrate
-  their usage we analyse the source code of a demo application
-  ``Clamber'' – book collction managament tool, which was created in
+    Manager}(CLIM)\cite{CLIM2} implementation called
+  McCLIM\cite{Strandh:2002:ILC:McCLIM}. In particular, we describe
+  recent improvements of the code base. We illustrate McCLIM and
+  recent development by developing a demo application ``Clamber'',
+  which is a book collection managament tool, which was created in
   purpose of explaining \emph{CLIM} concepts in form of a tutorial.
 \end{abstract}
 
@@ -67,42 +66,43 @@ Daniel Kochmański\\
 
 \section{Introduction}
 
-CLIM specification is large and requires some initial work from the
-programmer to start writing programs using CLIM. Needless to say,
-implementation of such specification is a non-trivial undertaking and
-indeed, McCLIM development consumed many man-hours of a bright
+The CLIM specification is large and requires some initial work from
+the programmer to start writing programs using CLIM. Needless to say,
+the implementation of such specification is a non-trivial undertaking
+and indeed, McCLIM development consumed many man-hours of a bright
 developers through the first decade of XXI century. In the second
 decade development pace slowed down a little to get in track again
 during the last few years, thanks to individuals like Robert Strandh
 (current project leader), Alessandro Serra and others.
 
-CLIM 2.0 specification was released in 1993. It is meant to be
-portable across Common Lisp\cite{ansi:common:lisp} implementations and
-operating systems by mapping itself to the target window system (like
-X11\cite{X11}, GTK\cite{GTK} or Windows Forms\cite{WindowsForms})
-through backends.
+The \emph{CLIM 2.0} specification was released in 1993. It is meant to
+be portable across Common Lisp\cite{ansi:common:lisp} implementations
+and operating systems by mapping itself to the target window system
+(like X11\cite{X11}, GTK\cite{GTK} or Windows
+Forms\cite{WindowsForms}) through backends.
 
-The key feature of the standard is providing convenient
+The key feature of the standard is providing a convenient
 object-oriented abstraction over the interface presented to the user
 (without compromising programmer's \emph{ability} to change low-level
 details). With these things in mind it is a specification which
-implements model-view-presenter architectural pattern in a consistent
-way with providing defaults and the ability to customize its behavior.
+implements the model-view-presenter architectural pattern in a
+consistent way while also providing defaults and the ability to
+customize its behavior.
 
 McCLIM is a free open source implementation of CLIM II specification
-with extensions proposed by Franz Inc. in \emph{CLIM 2 User Guide,
-  version 2.2.2}. As of 2017 Common Lisp ecosystem doesn't have free
-native graphic user interface toolkit but McCLIM (and recently
-opensourced CLIM2). Other solutions are based on foreign tools
-(LTK\cite{LTK}, CommonQt\cite{CommonQt} or EQL5\cite{EQL5}) or are
-commercial (Common Graphics\cite{CG}, CAPI\cite{CAPI}). Another
-frequently used approach is creating web applications witha
-frameworks.
+with extensions proposed by Franz Inc. in the \emph{CLIM 2 User Guide,
+  version 2.2.2}. As of 2017, McCLIM (and recently opensourced
+clim2\cite{clim2-franz}) is the only available native graphic user
+interface toolkit available to the Common Lisp ecosystem . Other
+solutions are based on foreign tools (LTK\cite{LTK},
+CommonQt\cite{CommonQt} or EQL5\cite{EQL5}) or are commercial (Common
+Graphics\cite{CG}, CAPI\cite{CAPI}). Another frequently used approach
+is creating web applications with frameworks.
 
 \section{Recent development}
 
 During the last year we have replaced various functionalities with the
-third party systems. \emph{Bordeaux Threads}\cite{BT} library is
+third party systems. The \emph{Bordeaux Threads}\cite{BT} library is
 responsible for threading, \emph{OptiCL}\cite{OptiCL} for handling
 raster images etc. We have also refreshed the McCLIM website to
 provide up-to-date information. Some work has been done to assure its
