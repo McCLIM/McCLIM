@@ -396,19 +396,9 @@ bound to the current command processor.")
 	    (command-table-inherit-from
 	     (find-command-table start-table)))))
 
-;;; In Classic CLIM event-matches-gesture-name-p doesn't accept characters.
-#+(or mcclim building-mcclim)
+
 (defun gesture-matches-gesture-name-p (gesture gesture-name)
   (event-matches-gesture-name-p gesture gesture-name))
-
-#-(or mcclim building-mcclim)
-(defun gesture-matches-gesture-name-p (gesture gesture-name)
-  (etypecase gesture
-    (event
-     (event-matches-gesture-name-p gesture gesture-name))
-    (character
-     (clim-internals::keyboard-event-matches-gesture-name-p gesture
-							    gesture-name))))
 
 (defvar *meta-digit-table*
   (loop for i from 0 to 9
@@ -977,7 +967,7 @@ used.")
 	      (eql modifiers +shift-key+))
       (setq char (keyboard-event-character ev)))
     (if char
-	#+(or mcclim building-mcclim) (climi::char-for-read char) #-(or mcclim building-mcclim) char
+        (climi::char-for-read char)
 	event)))
 
 (defmethod convert-to-gesture ((ev pointer-button-press-event))
@@ -1004,18 +994,6 @@ used.")
      table)
   nil)
 
-#-(or mcclim building-mcclim)
-(defun ensure-subtable (table gesture)
-  (let ((item (find-gesture-item table gesture)))
-    (when (or (null item) (not (eq (command-menu-item-type item) :menu)))
-      (let ((name (gensym)))
-	(make-command-table name :errorp nil)
-	(add-menu-item-to-command-table table (symbol-name name)
-					:menu name
-					:keystroke gesture)))
-    (command-menu-item-value (find-gesture-item table gesture))))
-
-#+(or mcclim building-mcclim)
 (defun ensure-subtable (table gesture)
   (let* ((event (make-instance
 		'key-press-event
@@ -1069,7 +1047,7 @@ used.")
   "Exit.
 First ask if modified buffers should be saved. If you decide not to save a modified buffer, you will be asked to confirm your decision to exit."
   (frame-exit *application-frame*))
-
+n
 (set-key 'com-quit 'global-esa-table '((#\x :control) (#\c :control)))
 
 (define-command (com-extended-command
@@ -1104,9 +1082,7 @@ First ask if modified buffers should be saved. If you decide not to save a modif
   (funcall continuation
            (open-window-stream
             :label title
-            :input-buffer (#+(or mcclim building-mcclim) climi::frame-event-queue
-                             #-(or mcclim building-mcclim) silica:frame-input-buffer
-                             *application-frame*)
+            :input-buffer (climi::frame-event-queue *application-frame*)
             :width 400)))
 
 (defmacro with-help-stream ((stream title) &body body)
@@ -1683,5 +1659,3 @@ Use C-x ( to start and C-x ) to finish recording a keyboard macro."
 
 (define-command-table global-example-table
     :inherit-from (global-esa-table keyboard-macro-table))
-
-

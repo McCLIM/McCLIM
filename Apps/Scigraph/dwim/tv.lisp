@@ -143,7 +143,7 @@ advised of the possiblity of such damages.
    ((or :CLIM-1.0 :clim-2)
     (if TEXT-STYLE
 	(truncate (clim:stream-line-height stream
-					   #+mcclim :text-style TEXT-STYLE))
+					   :text-style TEXT-STYLE))
         (truncate (clim:stream-line-height stream))))))
 
 (defun stream-character-width (stream &optional (char #\m))
@@ -222,20 +222,15 @@ advised of the possiblity of such damages.
 	  (values left top (- right xoff) (- bottom yoff))))))
    (:clim-2
     (cond ((not (clim:extended-output-stream-p stream)))
-	  ((and (type-specifier-p #-mcclim 'postscript-clim::postscript-stream
-				  #+mcclim 'clim-postscript::postscript-stream)
-		(typep stream
-		       #-mcclim 'postscript-clim::postscript-stream
-		       #+mcclim 'clim-postscript::postscript-stream))
+	  ((and (type-specifier-p 'clim-postscript::postscript-stream)
+		(typep stream 'clim-postscript::postscript-stream))
 	   ;; width  = inches x 72
 	   ;; height = inches x 72
 	   (values 0 0 #.(* 72 7) #.(* 72 10)))
 	  (t
-	   (let ((v (and #-mcclim (not (typep stream
-					      'clim-silica:pixmap-stream))
-			 #+mcclim (not (typep (clim:medium-sheet
-					       (clim:sheet-medium stream))
-					      'climi::pixmap))
+	   (let ((v (and (not (typep (clim:medium-sheet
+                                      (clim:sheet-medium stream))
+                                     'climi::pixmap))
 			 (clim:window-viewport stream))))
 	     (if v (clim:rectangle-edges* v)
 	       (values 0 0
@@ -507,14 +502,9 @@ advised of the possiblity of such damages.
 		 (top-level-window (clim:frame-top-level-sheet frame)))
 	     (labels ((set-input-buffer (window buffer)
 			(setf (clim:stream-input-buffer window) buffer)
-			(dolist (w (#-mcclim clim:window-children
-				    #+mcclim clim:sheet-children
-				    window))
+			(dolist (w (clim:sheet-children window))
 			  (set-input-buffer w buffer))))
 	       (set-input-buffer top-level-window b)
-	       #-mcclim
-	       (clim:window-expose top-level-window)
-	       #+mcclim
 	       (clim:enable-frame frame)
 	       (clim:redisplay-frame-panes frame :force-p t)
 	       ;; return the window just created
@@ -586,13 +576,8 @@ advised of the possiblity of such damages.
 		  :pretty-name title
 		  :left left :top top
 		  :width width :height height
-		  ;; This is a kludge to solve spr8924 in clim 2.0.beta2:
-		  #+allegro
-		  :calling-frame
-		  #+allegro
-		  clim:*application-frame*
-		  #+mcclim :frame-manager
-		  #+mcclim parent)))
+                  :frame-manager
+                  parent)))
       frame))))
 
 (defmethod size-frame (frame width height)
@@ -688,8 +673,7 @@ advised of the possiblity of such damages.
       (force-output window)
       frame))
    (:clim-2
-    (#+mcclim note-frame-deiconified
-     #-mcclim clim-internals::note-frame-deiconified
+    (note-frame-deiconified
      (clim:frame-manager frame) frame)
     (clim:raise-sheet (clim:frame-top-level-sheet frame))
     frame)))
@@ -710,16 +694,10 @@ advised of the possiblity of such damages.
       (setq width (min width w)
 	    height (min height h))))
    (:clim-2
-    (let ((graft #-mcclim (clim:graft frame-manager)
-		 #+mcclim (clim:graft (port frame-manager))))
+    (let ((graft (clim:graft (port frame-manager))))
       (when graft
-	#-mcclim
-	(setq width (min width (silica::graft-pixel-width graft))
-	      height (min height (silica::graft-pixel-height graft)))
-	#+mcclim
 	(setq width (min width (clim:graft-width graft :units :device))
-	      height (min height (clim:graft-height graft :units :device))))))
-   )
+	      height (min height (clim:graft-height graft :units :device)))))))
   (values width height))
 
 (defun launch-frame 

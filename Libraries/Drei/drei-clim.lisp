@@ -614,9 +614,7 @@ is not T, NIL or a `minibuffer-pane'."))))
                     :minibuffer minibuffer-pane
                     :contents (list pane minibuffer-pane))))
       (when borderp
-        (setf pane (#+(or mcclim building-mcclim)
-                      climi::bordering
-                      #-(or mcclim building-mcclim) outlining
-                      (:border-width border-width)
-                      pane)))
+        (setf pane (climi::bordering
+                       (:border-width border-width)
+                     pane)))
       pane)))

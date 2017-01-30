@@ -492,7 +492,6 @@ input-editing-stream. Bound when executing a command.")
                                ((and (not peek-p)
                                      (typep gesture 'accept-result))
                                 (incf scan-pointer)
-                                #+(or mcclim building-mcclim)
                                 (climi::throw-object-ptype (object gesture)
                                                            (result-type gesture)))
                                ;; Note that this implies that
