@@ -33,20 +33,20 @@ Daniel Kochmański\\
   Permissions@acm.org.
 
   ELS '17, April 3 -- 6 2017, Brussels, Belgium
-  Copyright is held by the owner/author(s). %Publication rights licensed to ACM.
-%  ACM 978-1-4503-2931-6/14/08\$15.00.
-%  http://dx.doi.org/10.1145/2635648.2635654
+  Copyright is held by the owner/author(s).
 }
 
 \maketitle
 
 \begin{abstract}
-  McCLIM is a free open source implementation of CLIM II specification
-  with extensions proposed by Franz Inc. in \emph{CLIM 2 User Guide,
-    version 2.2.2}. In this talk we will summarize the recent
-  development status and some key concepts of \emph{Common Lisp
-    Interface Manager} with small demonstration of the application
-  using it.
+  We describe what is a \emph{Common Lisp Interface
+    Manager}\cite{CLIM2} implementation
+  McCLIM\cite{Strandh:2002:ILC:McCLIM}, recent development progress
+  and some concepts which are central to developing applications with
+  \emph{CLIM} – panes, presentation types and commands. To illustrate
+  their usage we analyse the source code of a demo application
+  ``Clamber'' – book collction managament tool, which was created in
+  purpose of explaining \emph{CLIM} concepts in form of a tutorial.
 \end{abstract}
 
 \begin{CCSXML}
@@ -65,13 +65,130 @@ Daniel Kochmański\\
 
 \keywords{\commonlisp{}, graphic user interfaces}
 
-\inputtex{sec-01-introduction.tex}
-\inputtex{sec-02-clim.tex}
-\inputtex{sec-03-development.tex}
-\inputtex{sec-04-demonstration.tex}
-\inputtex{sec-05-conclusions.tex}
-\inputtex{sec-06-acknowledgements.tex}
+\section{Introduction}
+
+CLIM specification is large and requires some initial work from the
+programmer to start writing programs using CLIM. Needless to say,
+implementation of such specification is a non-trivial undertaking and
+indeed, McCLIM development consumed many man-hours of a bright
+developers through the first decade of XXI century. In the second
+decade development pace slowed down a little to get in track again
+during the last few years, thanks to individuals like Robert Strandh
+(current project leader), Alessandro Serra and others.
+
+CLIM 2.0 specification was released in 1993. It is meant to be
+portable across Common Lisp\cite{ansi:common:lisp} implementations and
+operating systems by mapping itself to the target window system (like
+X11\cite{X11}, GTK\cite{GTK} or Windows Forms\cite{WindowsForms})
+through backends.
+
+The key feature of the standard is providing convenient
+object-oriented abstraction over the interface presented to the user
+(without compromising programmer's \emph{ability} to change low-level
+details). With these things in mind it is a specification which
+implements model-view-presenter architectural pattern in a consistent
+way with providing defaults and the ability to customize its behavior.
+
+McCLIM is a free open source implementation of CLIM II specification
+with extensions proposed by Franz Inc. in \emph{CLIM 2 User Guide,
+  version 2.2.2}. As of 2017 Common Lisp ecosystem doesn't have free
+native graphic user interface toolkit but McCLIM (and recently
+opensourced CLIM2). Other solutions are based on foreign tools
+(LTK\cite{LTK}, CommonQt\cite{CommonQt} or EQL5\cite{EQL5}) or are
+commercial (Common Graphics\cite{CG}, CAPI\cite{CAPI}). Another
+frequently used approach is creating web applications witha
+frameworks.
+
+\section{Recent development}
+
+During the last year we have replaced various functionalities with the
+third party systems. \emph{Bordeaux Threads}\cite{BT} library is
+responsible for threading, \emph{OptiCL}\cite{OptiCL} for handling
+raster images etc. We have also refreshed the McCLIM website to
+provide up-to-date information. Some work has been done to assure its
+portability across implementations. As of 2017-01-25 it is known to
+work on \emph{CCL}\cite{CCL}, \emph{ECL}\cite{ECL} and
+\emph{SBCL}\cite{SBCL}.
+
+After that we have started a crowd funding campaign which allowed us
+to finance bounties and some constant development work (40 hours per
+month). It was a huge success which assured us, that people are lively
+interested in seeing \emph{McCLIM} working. We have gathered very
+valuable feedback which helped us to plan a roadmap\cite{roadmap} for
+the development. We regularily present an iteration summary to the
+community. We have noticed a development steady progress and growing
+interest in using McCLIM by the Common Lisp developers.
+
+
+A lot of effort is put in \emph{McCLIM} internals to assure quality
+and ease of use, and to provide a learning material for new users. One
+of the most discouraging parts of using CLIM is the software
+complexity with a little of material which helps to understand how to
+use it.
+\section{Demonstration}
+
+Key CLIM components are:
+
+\begin{itemize}
+\item Application Frames
+
+  Application frame is a class abstracting one application entity. It
+  is composed of the application internal state, its panes, layouts
+  and commands associated with it.
+
+\item Panes, layouts and views
+
+  Panes are more widely known as widgets. Layout is a special kind of
+  pane responsible for the application frame screen composition. Views
+  may be used to customize the rendering according to the particular
+  needs (textual view, gadget view, list view, grid view etc).
+
+\item Drawing primitives and formatted output
+
+  For custom output programmer is equipped with a rich set of drawing
+  functions which may be used on a sheet. Also output may be arranged
+  in tables, graphs and lists which helps to lay things on a sheet
+  when writing custom widgets.
+
+\item Presentation types
+
+  Presentation of Lisp data displayed on the screen. This allows
+  manipulating underlying Lisp objects with a pointer, supplying them
+  to the commands and requesting input from the user.
+
+\item Commands
+
+  Commands are functions provided by the application to achieve its
+  design goals. Command arguments may be gathered by various means
+  available for the user – through a gesture, by selecting command in
+  a menu or simply typed in the \emph{Listener}\cite{listener}, what
+  allows a clear separation of application logic and its look.
+\end{itemize}
+
+\section{Conclusions and future work}
+
+We have demonstrated that \emph{McCLIM} is an interesting piece of
+software which allows creating customizable user
+interfaces. Convenient abstraction is enables programmer to think in
+high-level terms which are well mapped to the underlying
+functionality.
+
+Recent spawn of interest is a proof, that free CLIM implementation is
+something demanded and we plan to improve it to the point, where it is
+stable enough for production use. One of the primary goals is
+providing a good documentation and learning materials for newcomers,
+since the specification is vast (and not necessarily consistent).
+
+\section{Acknowledgments} 
+
+We would like to thank all the contributors, supporters and
+programmers using \emph{McCLIM} for all the valuable feedback, code
+improvement, financial support and encouraging words.
+
+I personally want to thank professor Robert Strandh for his constant
+patience and mentorship which made this work possible and
+entertaining.
 
 \bibliographystyle{abbrv}
-\bibliography{incremental-parsing}
+\bibliography{mcclim-demo}
 \end{document}
