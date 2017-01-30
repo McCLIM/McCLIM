@@ -1047,7 +1047,7 @@ used.")
   "Exit.
 First ask if modified buffers should be saved. If you decide not to save a modified buffer, you will be asked to confirm your decision to exit."
   (frame-exit *application-frame*))
-n
+
 (set-key 'com-quit 'global-esa-table '((#\x :control) (#\c :control)))
 
 (define-command (com-extended-command
