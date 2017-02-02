@@ -1147,9 +1147,9 @@ examine the type of the command menu item to see if it is
       name-and-options
     (with-keywords-removed (options (:provide-output-destination-keyword))
       (if provide-output-destination-keyword
-	  (multiple-value-bind (required optional rest key allow-other-keys aux key-supplied)
-	      (alexandria:parse-ordinary-lambda-list args)
-	    (declare (ignore required optional rest key allow-other-keys aux))
+	  (multiple-value-bind (required optional rest key key-supplied)
+	      (parse-lambda-list args)
+	    (declare (ignore required optional rest key))
 	    (let* ((destination-arg '(output-destination 'output-destination
 				      :default nil))
 		   (new-args (if key-supplied
