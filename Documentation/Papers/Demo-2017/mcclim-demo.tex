@@ -40,7 +40,7 @@ Daniel Kochmański\\
 
 \begin{abstract}
   We describe what is a \emph{Common Lisp Interface
-    Manager}(CLIM)\cite{CLIM2} implementation called
+    Manager}\cite{McKay:1991:CCL:114669.114675} implementation called
   McCLIM\cite{Strandh:2002:ILC:McCLIM}. In particular, we describe
   recent improvements of the code base. We illustrate McCLIM and
   recent development by developing a demo application ``Clamber'',
@@ -66,20 +66,22 @@ Daniel Kochmański\\
 
 \section{Introduction}
 
-The CLIM specification is large and requires some initial work from
-the programmer to start writing programs using CLIM. Needless to say,
-the implementation of such specification is a non-trivial undertaking
-and indeed, McCLIM development consumed many man-hours of a bright
-developers through the first decade of XXI century. In the second
-decade development pace slowed down a little to get in track again
-during the last few years, thanks to individuals like Robert Strandh
-(current project leader), Alessandro Serra and others.
+The CLIM specification\cite{CLIM2} is large and requires some initial
+work from the programmer to start writing programs using
+CLIM. Needless to say, the implementation of such specification is a
+non-trivial undertaking and indeed, McCLIM development consumed many
+man-hours of a bright developers through the first decade of XXI
+century. In the second decade development pace slowed down a little to
+get in track again during the last few years, thanks to individuals
+like Robert Strandh (current project leader), Alessandro Serra and
+others.
 
 The \emph{CLIM 2.0} specification was released in 1993. It is meant to
 be portable across Common Lisp\cite{ansi:common:lisp} implementations
 and operating systems by mapping itself to the target window system
-(like X11\cite{X11}, GTK\cite{GTK} or Windows
-Forms\cite{WindowsForms}) through backends.
+(like X11\cite{Scheifler:1986:XWS:22949.24053},
+GTK\cite{Pennington:1999:GAD:554548} or Windows
+Forms\cite{Sells:2006:WFP:1146336}) through backends.
 
 The key feature of the standard is providing a convenient
 object-oriented abstraction over the interface presented to the user
@@ -91,30 +93,62 @@ customize its behavior.
 
 McCLIM is a free open source implementation of CLIM II specification
 with extensions proposed by Franz Inc. in the \emph{CLIM 2 User Guide,
-  version 2.2.2}. As of 2017, McCLIM (and recently opensourced
-clim2\cite{clim2-franz}) is the only available native graphic user
-interface toolkit available to the Common Lisp ecosystem . Other
-solutions are based on foreign tools (LTK\cite{LTK},
-CommonQt\cite{CommonQt} or EQL5\cite{EQL5}) or are commercial (Common
-Graphics\cite{CG}, CAPI\cite{CAPI}). Another frequently used approach
-is creating web applications with frameworks.
+  version 2.2.2}.  As of 2017, McCLIM (and recently opensourced
+clim2\footnote{https://github.com/franzinc/clim2}) is the only
+available native graphic user interface toolkit available to the
+Common Lisp ecosystem . Other solutions are based on foreign tools
+(LTK\footnote{http://www.peter-herth.de/ltk/},
+CommonQt\footnote{https://common-lisp.net/project/commonqt/} or
+EQL5\footnote{https://gitlab.com/eql/EQL5}) or are commercial (Common
+Graphics\footnote{http://franz.com/support/documentation/8.2/doc/cgide.htm},
+CAPI\cite{http://www.lispworks.com/products/capi.html}). Another
+frequently used approach is creating web applications with frameworks.
+
+A few applications and libraries written in McCLIM are shipped with
+McCLIM code repository:
+
+\begin{itemize}
+
+\item Listener
+
+  The McCLIM Listener provides an interactive toplevel with full
+  access to the graphical capabilities of CLIM and a set of built-in
+  commands intended to be useful for lisp development and
+  experimentation.
+
+\item Inspector
+
+  \emph{Clouseau} allows inspecting arbitrary Common Lisp objects and
+  provides a disassembler wrapper.
+
+\item Debugger
+
+  Graphical debugger using portable debugger interface developed for
+  the Slime project (Swank). Graphical look and feel is inspired by
+  Slime.
+
+\item ESA\cite{Strandh:2007:ECL:1622123.1622150}
+
+  A CLIM Library for Writing Emacs-Style Applications.
+
+\end{itemize}
 
 \section{Recent development}
 
 During the last year we have replaced various functionalities with the
-third party systems. The \emph{Bordeaux Threads}\cite{BT} library is
-responsible for threading, \emph{OptiCL}\cite{OptiCL} for handling
-raster images etc. We have also refreshed the McCLIM website to
-provide up-to-date information. Some work has been done to assure its
-portability across implementations. As of 2017-01-25 it is known to
-work on \emph{CCL}\cite{CCL}, \emph{ECL}\cite{ECL} and
-\emph{SBCL}\cite{SBCL}.
+third party systems. The \emph{Bordeaux Threads} library is
+responsible for threading, \emph{OptiCL} for handling raster images
+etc. We have also refreshed the McCLIM website to provide up-to-date
+information. Some work has been done to assure its portability across
+implementations. As of 2017-01-25 it is known to work on \emph{CCL},
+\emph{ECL} and \emph{SBCL}.
 
 After that, we have started a crowd funding campaign which allowed us
 to finance bounties and some constant development work (40 hours per
 month). It was a huge success which assured us, that people are lively
 interested in seeing \emph{McCLIM} working. We have gathered very
-valuable feedback which helped us to plan a roadmap\cite{roadmap} for
+valuable feedback which helped us to plan a
+roadmap\footnote{https://common-lisp.net/project/mcclim/involve} for
 the development. We regularily present an iteration summary to the
 community. We have noticed a development steady progress and growing
 interest in using McCLIM by the Common Lisp developers.
@@ -122,8 +156,8 @@ interest in using McCLIM by the Common Lisp developers.
 A lot of effort is put into \emph{McCLIM} internals to assure quality
 and ease of use, and to provide learning material for new users. One
 of the most discouraging parts of using CLIM is the software
-complexity with little material\cite{guided} thatx helps to understand
-how to use it.
+complexity with little material that helps to understand how to use
+it.
 \section{Demonstration}
 
 Key CLIM components are:
@@ -160,8 +194,8 @@ Key CLIM components are:
   Commands are functions provided by the application to achieve its
   design goals. Command arguments may be gathered by various means
   available for the user – through a gesture, by selecting command in
-  a menu or simply typed in the \emph{Listener}\cite{listener}, what
-  allows a clear separation of application logic and its look.
+  a menu or simply typed in the \emph{Listener}, what allows a clear
+  separation of application logic and its look.
 \end{itemize}
 
 \section{Conclusions and future work}
