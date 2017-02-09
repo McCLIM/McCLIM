@@ -404,7 +404,7 @@
 (define-keysym := #x3d)
 (define-keysym :> #x3e)
 (define-keysym :|?| #x3f)
-(define-keysym :@ #x40)
+(define-keysym :|@| #x40)
 (define-keysym :A #x41)
 (define-keysym :B #x42)
 (define-keysym :C #x43)
