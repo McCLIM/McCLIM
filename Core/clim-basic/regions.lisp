@@ -2439,14 +2439,10 @@
   (nth-value 3 (bounding-rectangle* bounding-rectangle)))
 
 (defmethod bounding-rectangle-width (bounding-rectangle)
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
-    (declare (ignore y1 y2))
-    (- x2 x1)))
+  (nth-value 0 (bounding-rectangle-size bounding-rectangle)))
 
 (defmethod bounding-rectangle-height (bounding-rectangle)
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
-    (declare (ignore x1 x2))
-    (- y2 y1)))
+  (nth-value 1 (bounding-rectangle-size bounding-rectangle)))
 
 (defmethod bounding-rectangle-size (bounding-rectangle)
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
