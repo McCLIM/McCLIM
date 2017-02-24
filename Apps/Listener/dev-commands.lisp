@@ -1035,7 +1035,7 @@ if you are interested in fixing this."))
   (terpri stream))
 
 (defun actual-name (pathname)
-  (if (osicat:directory-pathname-p pathname)
+  (if (cl-fad:directory-pathname-p pathname)
       (if (stringp (car (last (pathname-directory pathname))))
           (car (last (pathname-directory pathname)))
           (directory-namestring pathname))
@@ -1050,8 +1050,8 @@ if you are interested in fixing this."))
   (mapcar (lambda (x) (sort-pathnames x sort-by))
           (multiple-value-list
            (if (not group-dirs) (values list)
-             (values (remove-if-not #'osicat:directory-pathname-p list)
-                     (remove-if #'osicat:directory-pathname-p list))))))
+             (values (remove-if-not #'cl-fad:directory-pathname-p list)
+                     (remove-if #'cl-fad:directory-pathname-p list))))))
 
 (defun garbage-name-p (name)
   (when (> (length name) 2)
@@ -1089,14 +1089,15 @@ if you are interested in fixing this."))
   (let* ((query-pathname (make-pathname :name (or (pathname-name pathname) :wild)
                                         :type (or (pathname-type pathname) :wild)
                                         :version (or (pathname-version pathname) :wild)))
-         (base-pathname (osicat:pathname-directory-pathname pathname))
+         (base-pathname (cl-fad:pathname-directory-pathname pathname))
          (dir (uiop:while-collecting (files)
-                (osicat:mapdir (lambda (path)
-                                 (when (or (pathname-match-p path query-pathname)
-                                           (and list-all-direct-subdirectories
-                                                (osicat:directory-pathname-p path)))
-                                   (files (osicat:absolute-pathname path))))
-                               base-pathname))))
+		(mapc (lambda (path)
+			(when (or (pathname-match-p path query-pathname)
+				  (and list-all-direct-subdirectories
+				       (cl-fad:directory-pathname-p path)))
+			  ;; files is a collector defined above
+			  (files (truename path))))
+		      (cl-fad:list-directory base-pathname)))))
     (with-text-family (t :sans-serif)
       (invoke-as-heading
        (lambda ()
@@ -1147,11 +1148,12 @@ if you are interested in fixing this."))
   ((pathname 'pathname :prompt "pathname"))
   (let ((pathname (merge-pathnames
                    ;; helpfully fix things if trailing slash wasn't entered
-                   (coerce-to-directory pathname))))
+                   (cl-fad:pathname-as-directory pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
-        (setf (osicat:current-directory) pathname
-              *default-pathname-defaults* pathname))))
+        (progn
+	  (uiop:chdir pathname)
+	  (setf *default-pathname-defaults* pathname)))))
 
 (define-command (com-up-directory :name "Up Directory"
                                   :menu t
@@ -1159,8 +1161,8 @@ if you are interested in fixing this."))
   ()
   (let ((parent (parent-directory *default-pathname-defaults*)))
     (when parent
-      (setf (osicat:current-directory) pathname
-            *default-pathname-defaults* pathname)
+      (uiop:chdir pathname)
+      (setf *default-pathname-defaults* pathname)
       (italic (t)
         (format t "~&The current directory is now ")
         (present (truename parent))
@@ -1177,7 +1179,7 @@ if you are interested in fixing this."))
                                  (format stream "Change to this directory"))
                  
 		 :tester ((object)
-			  (osicat:directory-pathname-p object)))
+			  (cl-fad:directory-pathname-p object)))
   (object)
   (list object))
 
@@ -1229,7 +1231,7 @@ if you are interested in fixing this."))
                  (format nil "Show Files Matching ~A" pathname)))
         ((not (probe-file pathname))
          (values nil nil nil))
-        ((osicat:directory-pathname-p pathname)
+        ((cl-fad:directory-pathname-p pathname)
          (values `(com-show-directory ,pathname)
                  "Show Directory"
                  (format nil "Show Directory ~A" pathname)))
@@ -1280,7 +1282,7 @@ if you are interested in fixing this."))
                                     :menu t
                                     :command-table directory-stack-commands)
   ((pathname 'pathname :prompt "directory"))
-  (let ((pathname (merge-pathnames (coerce-to-directory pathname))))
+  (let ((pathname (merge-pathnames (cl-fad:pathname-as-directory pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
         (progn (push *default-pathname-defaults* *directory-stack*)
