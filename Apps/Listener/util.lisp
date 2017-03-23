@@ -148,19 +148,6 @@ this point, increment it by SPACING, which defaults to zero."
        (merge-pathnames (make-pathname :directory '(:relative :back))
                         (truename pathname))))))
 
-(defun coerce-to-directory (pathname)
-  "Convert a pathname with name/version into a pathname with a
-similarly-named last directory component. Used for user input that
-lacks the final #\\/."
-  (if (osicat:directory-pathname-p pathname)
-      pathname
-      (merge-pathnames
-       (make-pathname
-        :directory (if (pathname-name pathname)
-                       (list :relative (file-namestring pathname))
-                       '(:relative)))
-       (strip-filespec pathname))))
-
 ;;;; Abbreviating item formatter
 
 ;;; Doesn't work as well as I'd like, due to the table formatter not sizing

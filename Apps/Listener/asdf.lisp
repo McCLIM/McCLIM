@@ -53,10 +53,10 @@
   "Retrieve the list of unique pathnames contained within the ASDF registry folders"
   (uiop:while-collecting (systems)
     (dolist (reg (asdf-get-central-registry))
-      (osicat:mapdir (lambda (path)
-                       (when (string-equal (pathname-type path) "asd")
-                         (systems (osicat:absolute-pathname path))))
-                     (eval reg)))))
+      (mapc (lambda (path)
+	      (when (string-equal (pathname-type path) "asd")
+		(systems (truename path))))
+	    (list-directory (eval reg))))))
 
 (defun asdf-system-name (system)
   (slot-value system 'asdf::name))
