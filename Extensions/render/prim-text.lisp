@@ -14,15 +14,15 @@
 			     :huge           24))
 
 
-(defun string-primitive-paths (x y string font size)
+(defun string-primitive-paths (x y string font size fn)
   (let ((scale (zpb-ttf-font-units->pixels font)))
-    (paths-from-string font string 
+    (paths-from-string font string fn
 		       :offset (paths:make-point x y))))
 
 
-(defun paths-from-string (font text &key (offset (make-point 0 0))
-				      (scale-x 1.0) (scale-y 1.0)
-				      (kerning t) (auto-orient nil))
+(defun paths-from-string (font text fn &key (offset (make-point 0 0))
+					 (scale-x 1.0) (scale-y 1.0)
+					 (kerning t) (auto-orient nil))
   "Extract paths from a string."
   (let ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))	
 	(scale (zpb-ttf-font-units->pixels font)))
@@ -31,7 +31,11 @@
 	 for previous-char = nil then char
 	 for char across text
 	 for paths = (font-glyph-paths font char)
-	 for previous-width = nil then width  
+	 for opacity-image = (font-glyph-opacity-image font char)
+	 for dx = (font-glyph-left font char)
+	 for dy = (font-glyph-top font char)
+	 for previous-width = nil then width
+
 	 for width = (max
 		      (font-glyph-right font char)
 		      (font-glyph-width font char))
@@ -46,13 +50,10 @@
 											  font-loader)
 							       0))))
 					  0))))
-	   (let ((glyph-paths (transform-paths paths
-					       (make-translation-transformation
-						(paths:point-x offset)
-						(paths:point-y offset)
-						))))
-	     (push glyph-paths result)))
-      (apply #'nconc (nreverse result)))))
+	   (funcall fn paths opacity-image dx dy
+		    (make-translation-transformation
+		     (paths:point-x offset)
+		     (paths:point-y offset)))))))
 
 (defun glyph-paths (font char)
   "Render a character of 'face', returning a 2D (unsigned-byte 8) array

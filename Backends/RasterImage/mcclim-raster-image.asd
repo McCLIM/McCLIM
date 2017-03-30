@@ -1,6 +1,7 @@
 
 (defsystem #:mcclim-raster-image
-    :depends-on (#:mcclim-render #:mcclim-single-mirrored-standard)
+    :depends-on (#:mcclim-render
+		 #:mcclim-single-mirrored-standard)
     :serial t
     :components
     ((:file "package")
@@ -12,10 +13,3 @@
      (:file "output-to-png")
      (:file "rgb-port")
      ))
-
-(defsystem #:mcclim-raster-image/opticl
-    :depends-on (#:mcclim-raster-image #:mcclim-render/opticl)
-    :serial t
-    :components
-    ((:file "opticl-port")))
-

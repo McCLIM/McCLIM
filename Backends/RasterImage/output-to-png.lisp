@@ -12,13 +12,13 @@
     `(flet ((,cont (,stream-var)
               ,@body)
 	    (,exit-fn (sheet stream)
-	      (save-mirror-image-to-stream (sheet-mirror sheet) ,stream ,format))
+	      (save-image-to-stream (image-mirror-image (sheet-mirror sheet)) ,stream ,format))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore sheet))
 	      nil))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
-					   :opticl-image
+					   :rgb-image
 					   ,format
 					   ,@options))))
 
@@ -32,13 +32,13 @@
       `(flet ((,cont (,stream-var)
 		,@body)
 	      (,exit-fn (sheet stream)
-		(save-mirror-image-to-file (sheet-mirror sheet) ,file (extract-format ,file)))
+		(save-image-to-file (image-mirror-image (sheet-mirror sheet) ,file (extract-format ,file))))
 	      (,enter-fn (sheet stream)
 		(declare (ignore sheet stream))
 		nil))
 	 (declare (dynamic-extent #',cont))
 	 (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn
-					     :opticl-image
+					     :rgb-image
 					     (extract-format ,file)
 					     ,@options)))))
 
@@ -50,7 +50,7 @@
     `(flet ((,cont (,stream-var)
               ,@body)
 	    (,exit-fn (sheet stream)
-	      (mcclim-render::image-mirror-image (sheet-mirror sheet)))
+	      (mcclim-render::coerce-to-clim-rgb-image (mcclim-render::image-mirror-image (sheet-mirror sheet))))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore stream))
 	      (when ,image

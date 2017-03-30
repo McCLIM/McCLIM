@@ -34,19 +34,6 @@ Secondly, an rgba design is converted into a function.
   color-fn
   mask)
 
-(defgeneric coerce-to-funtional-rgba-design (rbga-design)
-  (:method ((rbga-design functional-rgba-design))
-    rbga-design)
-  (:method ((rbga-design uniform-rgba-design))
-    (let ((red (uniform-rgba-design-red rbga-design))
-	  (green (uniform-rgba-design-green rbga-design))
-	  (blue (uniform-rgba-design-blue rbga-design))
-	  (alpha (uniform-rgba-design-alpha rbga-design)))
-      (make-functional-rgba-design
-       :color-fn (lambda (x y)
-		   (values red green blue alpha))
-       :mask (uniform-rgba-design-mask rbga-design)))))
-
 ;;;
 ;;; make a design function
 ;;;
@@ -175,11 +162,6 @@ Secondly, an rgba design is converted into a function.
      :color-fn (lambda (x y)
 		 (funcall design (mod x width) (mod y height))))))
 
-(defmethod make-rgba-design ((ink image-sheet-mixin))
-  (make-functional-rgba-design
-   :color-fn (%make-image-sheet-get-function ink)
-   :mask (sheet-region ink)))
-
 (defmethod make-rgba-design ((ink transformed-design))
   (let ((design (make-rgba-design-fn (transformed-design-design ink)))
 	(transformation (invert-transformation (transformed-design-transformation ink))))
@@ -245,3 +227,14 @@ Secondly, an rgba design is converted into a function.
   (let ((c-fore (make-rgba-design (compositum-foreground ink)))
 	(c-back (make-rgba-design (compositum-background ink))))
     (compose-over-rgba-design c-fore c-back)))
+
+
+;;;
+;;; design fix
+;;;
+
+(defmethod clim:transform-region (transformation (design named-color))
+  design)
+
+(defmethod clim:transform-region (transformation (design standard-flipping-ink))
+  design)

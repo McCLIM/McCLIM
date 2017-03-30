@@ -1,8 +1,6 @@
 (in-package :mcclim-render)
 
-(declaim (inline round-coordinate))
-(defun round-coordinate (x)
-  (floor (+ x .5)))
+
 
 (defclass render-medium-mixin (basic-medium)
   ())
@@ -17,44 +15,41 @@
 ;;;
 
 (defgeneric %medium-stroke-paths (medium paths &optional transform-p))
-(defgeneric %medium-fill-paths (medium paths &optional transform-p))
-(defgeneric %medium-draw-paths (medium paths))
+(defgeneric %medium-fill-paths (medium paths &optional transform-p transformation))
+(defgeneric %medium-draw-paths (medium paths transformation))
 
 (defmethod %medium-stroke-paths ((medium render-medium-mixin) paths
 				 &optional (transform-p t))
   (let ((paths (mapcar
 		(lambda (path)
-		  (if transform-p
-		      (stroke-path (transform-path path
-						   (sheet-native-transformation
-						    (medium-sheet medium)))
-				   (medium-line-style medium))
-		      (stroke-path path
-				   (medium-line-style medium))))
+		  (stroke-path path
+			       (medium-line-style medium)))
 		paths)))
-    (%medium-draw-paths medium (car paths))))
+    (%medium-draw-paths medium (car paths)
+			(if transform-p
+			    (sheet-native-transformation
+			     (medium-sheet medium))
+			    +identity-transformation+))))
 
 (defmethod %medium-fill-paths ((medium render-medium-mixin) paths
-			       &optional (transform-p t))
+			       &optional (transform-p t) (transformation +identity-transformation+))
   (let ((paths (mapcar
 		(lambda (path)
 		  (setf (paths::path-type path) :closed-polyline)
-		  (if transform-p
-		      (transform-path path
-				      (sheet-native-transformation
-				       (medium-sheet medium)))
-		      path))
+		  path)
 		paths)))
-    (%medium-draw-paths medium paths)))
+    (%medium-draw-paths medium paths (if transform-p
+					 (compose-transformations
+					  (sheet-native-transformation
+					   (medium-sheet medium))
+					  transformation)
+					 transformation))))
 
-(defmethod %medium-draw-paths ((medium render-medium-mixin) paths)
+(defmethod %medium-draw-paths ((medium render-medium-mixin) paths transformation)
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
     (when (and msheet (sheet-mirror msheet))
-      (%draw-paths (sheet-mirror msheet) msheet paths
-		   ;; to fix
-		   ;;(region-intersection
-		    (climi::medium-device-region medium)
-		    ;;(sheet-region msheet))
+      (%draw-paths (sheet-mirror msheet) paths transformation
+		   (climi::medium-device-region medium)
 		   (transform-region (sheet-native-transformation (medium-sheet medium))
 				     (medium-ink medium))
 		   (medium-background medium)
@@ -63,11 +58,27 @@
 (defmethod %medium-draw-image ((medium render-medium-mixin) image from-x from-y width height to-x to-y)
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
     (when (and msheet (sheet-mirror msheet))
-      (%draw-image (sheet-mirror msheet) msheet image
+      (%draw-image (sheet-mirror msheet)
+		   (image-mirror-image (sheet-mirror image))
 		   (round from-x) (round from-y)
 		   (round width)
 		   (round height)
-		   (round to-x) (round to-y)))))
+		   (round to-x) (round to-y) (climi::medium-device-region medium)))))
+
+(defmethod %medium-fill-image-mask ((medium render-medium-mixin) image from-x from-y width height to-x to-y)
+  (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+    (when (and msheet (sheet-mirror msheet))
+      (%fill-image-mask (sheet-mirror msheet)
+			image
+			(round from-x) (round from-y)
+			(round width)
+			(round height)
+			(round to-x) (round to-y) (climi::medium-device-region medium)
+			(transform-region (sheet-native-transformation (medium-sheet medium))
+					  (medium-ink medium))
+			(medium-background medium)
+			(medium-foreground medium)))))
+
 ;;;
 ;;; standard medium protocol
 ;;;
@@ -187,12 +198,32 @@
 				(+ (floor text-height 2))))
 		    (:baseline y)
 		    (:bottom (+ y (- baseline text-height))))))
-	(multiple-value-bind (x y)
+	(multiple-value-bind (x1 y1)
 	    (transform-position (sheet-native-transformation
-				   (medium-sheet medium))
+				 (medium-sheet medium))
 				x y)
-	  (let ((paths (string-primitive-paths x y string xfont size)))
-	    (%medium-fill-paths medium paths nil)))))))
+	  (let ((paths (string-primitive-paths x y string xfont size
+					       (lambda (paths opacity-image dx dy transformation)
+						 
+						  (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+						    (when (and msheet (sheet-mirror msheet))
+						      (multiple-value-bind (x1 y1)
+							  (transform-position
+							   (clim:compose-transformations transformation
+										(sheet-native-transformation
+										 (medium-sheet medium)))
+							   dx (- dy))
+							(%medium-fill-image-mask
+							 medium
+							 opacity-image
+							 0 0
+							 (climi::image-width opacity-image)
+							 (climi::image-height opacity-image)
+							 (round x1) (round y1)
+							 ))))
+						  
+						  #+nil(%medium-fill-paths medium paths t transformation)
+						  ))))))))))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
@@ -264,9 +295,4 @@
 ;;;
 ;;;
 
-(defmethod clim:transform-region (transformation (design named-color))
-  design)
-
-(defmethod clim:transform-region (transformation (design standard-flipping-ink))
-  design)
 

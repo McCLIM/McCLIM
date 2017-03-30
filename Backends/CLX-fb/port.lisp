@@ -92,18 +92,6 @@
 (defmethod graft ((port clx-fb-port))
   (first (port-grafts port)))
 
-;; this is evil.
-(defmethod allocate-space :after ((pane top-level-sheet-pane) width height)
-  (when (sheet-direct-mirror pane)
-    (with-slots (space-requirement) pane
-      '(setf (xlib:wm-normal-hints (sheet-direct-mirror pane))
-            (xlib:make-wm-size-hints 
-             :width (round width)
-             :height (round height)
-             :max-width (min 65535 (round (space-requirement-max-width space-requirement)))
-             :max-height (min 65535 (round (space-requirement-max-height space-requirement)))
-             :min-width (round (space-requirement-min-width space-requirement))
-             :min-height (round (space-requirement-min-height space-requirement)))))))
 
 (defmethod port-force-output ((port clx-fb-port))
   (xlib:display-force-output (clx-port-display port)))
@@ -115,7 +103,7 @@
     (unless (xlib:event-listen display)
       (xlib:display-force-output (clx-port-display port)))
     (let ((event (xlib:process-event (clx-port-display port)
-				     :timeout 0.1
+				     :timeout 0.01
 				     :handler #'clim-clx::event-handler :discard-p t)))
        (maphash #'(lambda (key val)
 		    (when (typep key 'clx-fb-mirrored-sheet-mixin)
@@ -132,7 +120,7 @@
 
 (defmethod realize-mirror ((port clx-fb-port) (pixmap mcclim-render::image-pixmap-mixin))
   (setf (sheet-parent pixmap) (graft port))
-  (let ((mirror (make-instance 'mcclim-render::rgb-image-mirror-mixin)))
+  (let ((mirror (make-instance 'mcclim-render::image-mirror-mixin)))
     (port-register-mirror port pixmap mirror)
     (mcclim-render::%make-image mirror pixmap)))
 

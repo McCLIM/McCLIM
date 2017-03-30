@@ -4,11 +4,14 @@
 ;;; Font utilities. 
 ;;;
 
-(defstruct (glyph-info (:constructor glyph-info (id width height left right top paths)))
+(defstruct (glyph-info (:constructor glyph-info (id width height left right top dx dy paths opacity-image)))
   id                                    ; FIXME: Types?
   width height
   left right top
-  paths)
+  dx
+  dy
+  paths
+  opacity-image)
 
 (defclass render-truetype-font (truetype-font)
   ((fixed-width       :initform nil)
@@ -18,8 +21,9 @@
 
 (defun font-generate-glyph (font glyph-index)
   (multiple-value-bind (paths left top width height dx dy) (glyph-paths font (code-char glyph-index))
-    (let ((right (+ left width)))
-      (glyph-info 0 dx dy left right top paths))))
+    (let ((right (+ left width))
+	  (opacity-image (font-generate-opacity-image paths width height left top)))
+      (glyph-info 0 dx dy left right top dx dy paths opacity-image))))
     
 (defun font-glyph-info (font character)
   (with-slots (char->glyph-info) font
@@ -32,6 +36,9 @@
 (defun font-glyph-paths (font character)
   (glyph-info-paths (font-glyph-info font character)))
 
+(defun font-glyph-opacity-image (font character)
+  (glyph-info-opacity-image (font-glyph-info font character)))
+
 (defmethod font-ascent ((font truetype-font))
   (truetype-font-ascent font))
 
@@ -41,12 +48,23 @@
 (defmethod font-glyph-width ((font truetype-font) char)
   (glyph-info-width (font-glyph-info font char)))
 
+(defmethod font-glyph-height ((font truetype-font) char)
+  (glyph-info-height (font-glyph-info font char)))
+
+(defmethod font-glyph-dx ((font truetype-font) char)
+  (glyph-info-dx (font-glyph-info font char)))
+
+(defmethod font-glyph-dy ((font truetype-font) char)
+  (glyph-info-dy (font-glyph-info font char)))
+
 (defmethod font-glyph-left ((font truetype-font) char)
   (glyph-info-left (font-glyph-info font char)))
 
 (defmethod font-glyph-right ((font truetype-font) char)
   (glyph-info-right (font-glyph-info font char)))
 
+(defmethod font-glyph-top ((font truetype-font) char)
+  (glyph-info-top (font-glyph-info font char)))
 
 (defun make-gcache ()
   (let ((array (make-array 512 :adjustable nil :fill-pointer nil)))
@@ -66,6 +84,28 @@
   (let ((hash (logand key-number #xFF)))
     (setf (svref cache hash) key-number
           (svref cache (+ 256 hash)) value)))
+
+;;;
+;;;
+;;;
+
+
+(defun font-generate-opacity-image (paths width height dx dy)
+  (let* ((image (make-rgba-image (1+ (* 1 width))
+				 (1+ (* 1 height))))
+	 (render (make-instance 'rgb-image-render-engine)))
+    ;;(format *debug-io* ">> ~A ~A~%" (list width height) (list dx dy))
+    (%draw-paths2 render image paths (make-translation-transformation
+				      (- dx) dy)
+		  (make-rectangle* 0 0 (* 1 width) (* 1 height))
+		  clim:+blue+ clim:+white+ clim:+black+)
+    ;;(save-rgb-image-to-file image "/tmp/a.png" :png)
+    ;;(sleep 1)
+    image))
+
+;;;
+;;;
+;;;
 
 
 

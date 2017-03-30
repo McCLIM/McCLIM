@@ -5,8 +5,15 @@
   ())
 
 (defmethod sheet-direct-xmirror ((sheet clx-fb-mirrored-sheet-mixin))
-  (with-slots (xmirror) (sheet-direct-mirror sheet)
+  (when (sheet-direct-mirror sheet)
+    (sheet-direct-xmirror (sheet-direct-mirror sheet))))
+
+(defmethod sheet-direct-xmirror ((mirror clx-fb-mirror))
+  (with-slots (xmirror) mirror
     xmirror))
+
+(defmethod sheet-direct-xmirror ((mirror mcclim-render::image-mirror-mixin))
+    nil)
 
 ;;;
 ;;; Updating
@@ -28,7 +35,19 @@
 	(call-next-method)
 	(setf updating-p old-updating-p)))))
 
-;;;
+;;;;; this is evil.
+(defmethod allocate-space :after ((sheet clx-fb-mirrored-sheet-mixin) width height)
+  (when (sheet-direct-xmirror sheet)
+    (with-slots (space-requirement) sheet
+      '(setf (xlib:wm-normal-hints (sheet-direct-xmirror sheet))
+            (xlib:make-wm-size-hints 
+             :width (round width)
+             :height (round height)
+             :max-width (min 65535 (round (space-requirement-max-width space-requirement)))
+             :max-height (min 65535 (round (space-requirement-max-height space-requirement)))
+             :min-width (round (space-requirement-min-width space-requirement))
+             :min-height (round (space-requirement-min-height space-requirement)))))))
+
 ;;;
 ;;;
 
@@ -41,8 +60,11 @@
 
 (defmethod destroy-mirror :before ((port render-port-mixin) (sheet clx-fb-mirrored-sheet-mixin))
   (declare (ignore port))
-  (with-slots (gcontext) (sheet-mirror sheet)
-    (xlib:free-gcontext gcontext)))
+  (with-slots (gcontext clx-image) (sheet-mirror sheet)
+    (xlib:free-gcontext gcontext)
+    ;;(xlib:destroy-image clx-image)
+    (setf gcontext nil
+	  clx-image nil)))
 
 (defclass clx-fb-pixmap (image-pixmap-mixin permanent-medium-sheet-output-mixin basic-pane)
   ())
