@@ -9,12 +9,6 @@
 (defun round-coordinate (x)
   (floor (+ x .5)))
 
-(declaim (inline float-octet))
-	 ;;(ftype (function (single-float) fixnum) float-octet))
-(defun float-octet (float)
-  "Convert a float in the range 0.0 - 1.0 to an octet."
-  (round (* float 255.0)))
-
 (declaim (notinline float-blend))
 (defun float-blend (r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg alpha)
   (when (= alpha 0.0)
@@ -31,25 +25,6 @@
 ;;; get/set functions
 ;;;
 
-(declaim (inline rgb-image-data-get-pixel))
-	 ;;(ftype (function (image-data fixnum fixnum) t) rgb-image-data-get-pixel))
-(defun rgb-image-data-get-pixel (data x y)
-  (let ((p (aref data y  x)))
-    (let ((r.bg (ldb (byte 8 0) p))
-	  (g.bg (ldb (byte 8 8) p))
-	  (b.bg (ldb (byte 8 16) p))
-	  (a.bg (- 255 (ldb (byte 8 24) p))))
-      (values 
-       (float (/ r.bg 255)) (float (/ g.bg 255)) (float (/ b.bg 255)) (float (/ a.bg 255))))))
-
-(declaim (inline rgb-image-data-set-pixel))
-	 ;;(ftype (function (image-data fixnum fixnum float float float float) t) rgb-image-data-set-pixel))
-(defun rgb-image-data-set-pixel (data x y red green blue alpha)
-  (setf (aref data y x)
-	(dpb (float-octet red) (byte 8 0)
-	     (dpb (float-octet green) (byte 8 8)
-		  (dpb (float-octet blue) (byte 8 16)
-		       (dpb (- 255 (float-octet alpha)) (byte 8 24) 0))))))
 
 ;;;
 ;;; copy 
@@ -174,7 +149,8 @@
 		      nil
 		      clip-region)))
 	(declare (type fixnum dx dy)
-		 (type rgba-image-data data-image data-mask))
+		 (type rgba-image-data data-image)
+		 (type alpha-channel-data data-mask))
 	(let ((x-min (max 0 x (- min-x-dst dx)))
 	      (y-min (max 0 y (- min-y-dst dy)))
 	      (x-max (min (+ x width) (1- (image-width mask-image)) (- max-x-dst dx)))
@@ -192,8 +168,8 @@
 			       do
 				 (multiple-value-bind (r.bg g.bg b.bg a.bg)
 				     (rgba-image-data-get-pixel data-image (+ dx i) (+ dy j))
-				   (multiple-value-bind (r.m g.m b.m a.m )
-				       (rgba-image-data-get-pixel data-mask i j)
+				   (multiple-value-bind (a.m)
+				       (alpha-channel-data-get-alpha data-mask i j)
 				     (multiple-value-bind (r.fg g.fg b.fg a.fg)
 					 (funcall source-fn i j)
 				       (multiple-value-bind (red green blue alpha)	  
@@ -209,8 +185,8 @@
 			       do
 				 (multiple-value-bind (r.bg g.bg b.bg a.bg)
 				     (rgba-image-data-get-pixel data-image (+ dx i) (+ dy j))
-				   (multiple-value-bind (r.m g.m b.m a.m )
-				       (rgba-image-data-get-pixel data-mask i j)
+				   (multiple-value-bind (a.m)
+				       (alpha-channel-data-get-alpha data-mask i j)
 				     (multiple-value-bind (r.fg g.fg b.fg a.fg)
 					 (funcall source-fn i j)
 				       (multiple-value-bind (red green blue alpha)	  

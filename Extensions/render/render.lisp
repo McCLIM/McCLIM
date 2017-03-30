@@ -27,7 +27,7 @@
 ;;; Drawing
 ;;;
 
-(defmethod %draw-paths2 ((render rgb-image-render-engine) image paths transformation clip-region ink background foreground)
+(defmethod %draw-paths2 ((render rgb-image-render-engine) (image rgba-image) paths transformation clip-region ink background foreground)
   ;; remove path outside the clipping region
   (let* ((current-paths-region +everywhere+))
     (with-slots (state)
@@ -68,7 +68,40 @@
 					 (ceiling max-x) (ceiling max-y))))
 	   region))))))
 
-
+(defmethod %draw-paths2 ((render rgb-image-render-engine) (image alpha-channel) paths transformation clip-region ink background foreground)
+  ;; remove path outside the clipping region
+  (let* ((current-paths-region +everywhere+))
+    (with-slots (state)
+	render
+      (render-update-state state paths transformation)
+      (let ((*background-design* background)
+	    (*foreground-design* foreground)
+	    (current-clip-region
+	     (if (rectanglep clip-region)
+		 nil
+		 clip-region)))
+	(clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+	    (region-intersection clip-region current-paths-region)
+	  (let ((draw-function nil)
+		(draw-span-function nil)
+		(rgba-design (make-rgba-design ink)))
+	    (setf draw-function
+		  (%make-alpha-channel-draw-fn image current-clip-region
+					       rgba-design))
+	    (setf draw-span-function
+		  (%make-alpha-channel-draw-span-fn image current-clip-region
+						    rgba-design))
+	    (aa:cells-sweep/rectangle state
+				      (floor min-x)
+				      (floor min-y)
+				      (ceiling max-x)
+				      (ceiling max-y)
+				      draw-function
+				      draw-span-function))
+	  (vectors::state-reset state)
+	  (let ((region (make-rectangle* (floor min-x) (floor min-y)
+					 (ceiling max-x) (ceiling max-y))))
+	   region))))))
 
 
 

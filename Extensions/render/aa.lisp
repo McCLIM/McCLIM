@@ -1,12 +1,6 @@
 (in-package :mcclim-render)
 
 ;;;
-;;;
-;;;
-
-
-
-;;;
 ;;; macro to build drawing function
 ;;;
 
@@ -95,68 +89,75 @@
 		      (values red green blue alpha))))))))))
 
 
+(defmacro %make-alpha-channel-draw-function-macro (data)
+  `(let ((data ,data))
+     (declare (type alpha-channel-data data))
+     (lambda (x y alpha)
+       (declare (optimize (speed 3)))
+       (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
+	 (setf alpha (float (/ (min (abs alpha) 255) 255)))
+	 (when (plusp alpha)
+	   (alpha-channel-data-set-alpha data x y alpha))))))
+
+(defmacro %make-alpha-channel-draw-span-function-macro (data)
+  `(let ((data ,data))
+     (declare (type alpha-channel-data data))
+     (lambda (x1 x2 y alpha)
+       (declare (optimize (speed 3)))
+       (setf alpha (float (/ (min (abs alpha) 255) 255)))
+       (when (plusp alpha)
+	 (loop for x from x1 below x2 do
+	      (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
+		(alpha-channel-data-set-alpha data x y alpha)))))))
+
 ;;; private protocol
 
 (defgeneric %make-blend-draw-fn (image clip-region rgba-design))
 (defgeneric %make-blend-draw-span-fn (image clip-region ink)) 
 (defgeneric %make-xor-draw-fn (image clip-region rgba-design))
-(defgeneric %make-xor-draw-span-fn (image clip-region ink)) 
+(defgeneric %make-xor-draw-span-fn (image clip-region ink))
+(defgeneric %make-alpha-channel-draw-fn (image clip-region rgba-design))
+(defgeneric %make-alpha-channel-draw-span-fn (image clip-region ink)) 
 
 ;;; default implementation
-(defmethod %make-blend-draw-fn ((image climi::rgb-image) clip-region design)
-  (let ((source-fn (make-rgba-design-fn design)))
-    (%make-blend-draw-function-macro
-     (climi::image-data image)
-     (funcall source-fn x y))))
 
-(defmethod %make-blend-draw-span-fn ((image climi::rgb-image) clip-region design)
-  (let ((source-fn (make-rgba-design-fn design)))
-    (%make-blend-draw-span-function-macro
-     (climi::image-data image)
-     (funcall source-fn x y))))
-
-(defmethod %make-xor-draw-fn ((image climi::rgb-image) clip-region design)
-  (let ((source-fn (make-rgba-design-fn design)))
-    (%make-xor-draw-function-macro
-     (climi::image-data image)
-     (funcall source-fn x y))))
-
-(defmethod %make-xor-draw-span-fn ((image climi::rgb-image) clip-region design)
-  (let ((source-fn (make-rgba-design-fn design)))
-    (%make-xor-draw-span-function-macro
-     (climi::image-data image)
-     (funcall source-fn x y))))
-
-;;;
 (defmethod %make-blend-draw-fn ((image rgba-image) clip-region design)
   (let ((source-fn (make-rgba-design-fn design)))
     (%make-blend-draw-function-macro
-     (climi::image-data image)
+     (image-data image)
      (funcall source-fn x y))))
 
 (defmethod %make-blend-draw-span-fn ((image rgba-image) clip-region design)
   (let ((source-fn (make-rgba-design-fn design)))
     (%make-blend-draw-span-function-macro
-     (climi::image-data image)
+     (image-data image)
      (funcall source-fn x y))))
 
 (defmethod %make-xor-draw-fn ((image rgba-image) clip-region design)
   (let ((source-fn (make-rgba-design-fn design)))
     (%make-xor-draw-function-macro
-     (climi::image-data image)
+     (image-data image)
      (funcall source-fn x y))))
 
 (defmethod %make-xor-draw-span-fn ((image rgba-image) clip-region design)
   (let ((source-fn (make-rgba-design-fn design)))
     (%make-xor-draw-span-function-macro
-     (climi::image-data image)
+     (image-data image)
      (funcall source-fn x y))))
+
+(defmethod %make-alpha-channel-draw-fn ((image alpha-channel) clip-region design)
+  (%make-alpha-channel-draw-function-macro
+   (image-data image)))
+
+(defmethod %make-alpha-channel-draw-span-fn ((image alpha-channel) clip-region design)
+  (%make-alpha-channel-draw-span-function-macro
+   (image-data image)))
 
 ;;;
 ;;; Optimization
 ;;;
 
-(defmethod %make-blend-draw-fn ((image climi::rgb-image) clip-region (design uniform-rgba-design))
+(defmethod %make-blend-draw-fn ((image rgba-image) clip-region (design uniform-rgba-design))
   (let ((s-red (uniform-rgba-design-red design))
 	(s-green (uniform-rgba-design-green design))
 	(s-blue (uniform-rgba-design-blue design))
@@ -164,15 +165,15 @@
 	(mask (uniform-rgba-design-mask design)))
     (if mask
 	(%make-blend-draw-function-macro
-	 (climi::image-data image)
+	 (image-data image)
 	 (if (region-contains-position-p mask x y)
 	     (values s-red s-green s-blue s-alpha)
 	     (values 0.0 0.0 0.0 0.0)))
 	(%make-blend-draw-function-macro
-	 (climi::image-data image)
+	 (image-data image)
 	 (values s-red s-green s-blue s-alpha)))))
 
-(defmethod %make-blend-draw-span-fn ((image climi::rgb-image) clip-region (design uniform-rgba-design))
+(defmethod %make-blend-draw-span-fn ((image rgba-image) clip-region (design uniform-rgba-design))
   (let ((s-red (uniform-rgba-design-red design))
 	(s-green (uniform-rgba-design-green design))
 	(s-blue (uniform-rgba-design-blue design))
@@ -180,12 +181,12 @@
 	(mask (uniform-rgba-design-mask design)))
     (if mask
 	(%make-blend-draw-span-function-macro
-	 (climi::image-data image)
+	 (image-data image)
 	 (if (region-contains-position-p mask x y)
 	     (values s-red s-green s-blue s-alpha)
 	     (values 0.0 0.0 0.0 0.0)))
 	(%make-blend-draw-span-function-macro
-	 (climi::image-data image)
+	 (image-data image)
 	 (values s-red s-green s-blue s-alpha)))))
 
 ;;;

@@ -1,10 +1,21 @@
 (in-package :mcclim-render)
 
+;;;
+;;; image base class
+;;;
+
 (defclass image ()
   ((width :initarg :width :accessor image-width)
    (height :initarg :height :accessor image-height)
    (data :initarg :data
 	 :accessor image-data)))
+
+(defgeneric save-image-to-file (image file))
+(defgeneric save-image-to-stream (image stream format))
+
+;;;
+;;; rbga image
+;;;
 
 (deftype rgba-image-data () 'opticl-core:8-bit-rgba-image)
 
@@ -14,25 +25,28 @@
 (defun make-rgba-image (width height)
   (let ((data (opticl:make-8-bit-rgba-image height width :initial-element 255)))
     (opticl:do-pixels (y x) data
-      (setf (opticl:pixel data y x) (values 255 255 255 255)))
+      (setf (opticl:pixel data y x) (values 255 255 255 0)))
     (make-instance 'rgba-image
 		   :width width
 		   :height height
 		   :data data)))
 
-(deftype opacity-image-data () 'opticl-core:8-bit-gray-image)
+;;;
+;;; alpha channel 
+;;;
 
-(defclass opacity-image (image)
-  ((data :type (or null opacity-image-data))))
+(deftype alpha-channel-data () 'opticl-core:8-bit-gray-image)
 
-(defun make-opacity-image (width height)
-  (let ((data (opticl:make-8-bit-gray-image height width :initial-element 255)))
-    (opticl:do-pixels (y x) data
-      (setf (opticl:pixel data y x) (values 255 255 255 0)))
-    (make-instance 'opacity-image
+(defclass alpha-channel (image)
+  ((data :type (or null alpha-channel-data))))
+
+(defun make-alpha-channel (width height)
+  (let ((data (opticl:make-8-bit-gray-image height width :initial-element 0)))
+    (make-instance 'alpha-channel
 		   :width width
 		   :height height
 		   :data data)))
+
 ;;;
 ;;; get/set
 ;;;
@@ -49,7 +63,7 @@
   (multiple-value-bind (r.bg g.bg b.bg a.bg)
       (opticl:pixel data y x)
     (values 
-     (float (/ r.bg 255)) (float (/ g.bg 255)) (float (/ b.bg 255)) (float (/ (- 255 a.bg) 255)))))
+     (float (/ r.bg 255)) (float (/ g.bg 255)) (float (/ b.bg 255)) (float (/ a.bg 255)))))
 
 (declaim (notinline rgb-image-data-set-pixel)
 	 (ftype (function (rgba-image-data fixnum fixnum float float float float) t) rgba-image-data-set-pixel))
@@ -59,7 +73,20 @@
 	 (float-octet red)
 	 (float-octet green)
 	 (float-octet blue)
-	 (- 255 (float-octet alpha)))))
+	 (float-octet alpha))))
+
+(declaim (notinline rgb-image-data-get-pixel)
+	 (ftype (function (alpha-channel-data fixnum fixnum) t) alpha-channel-data-get-pixel))
+(defun alpha-channel-data-get-alpha (data x y)
+  (multiple-value-bind (alpha)
+      (opticl:pixel data y x)
+    (float (/ alpha 255))))
+     
+(declaim (notinline rgb-image-data-set-alpha)
+	 (ftype (function (alpha-channel-data fixnum fixnum float) t) alpha-channel-data-set-alpha))
+(defun alpha-channel-data-set-alpha (data x y alpha)
+  (setf (opticl:pixel data y x)
+	(float-octet alpha)))
 
 ;;;
 ;;; conversion
@@ -85,7 +112,7 @@
 		    (dpb red (byte 8 0)
 			 (dpb green (byte 8 8)
 			      (dpb blue (byte 8 16)
-				   (dpb alpha (byte 8 24) 0)))))))
+				   (dpb (- 255 alpha) (byte 8 24) 0)))))))
 	  rgb-image))))
   (:method ((image climi::rgb-image))
     image))
@@ -107,8 +134,21 @@
 			  (let ((r (ldb (byte 8 0) p))
 				(g (ldb (byte 8 8) p))
 				(b (ldb (byte 8 16) p))
-				(a (- 255 (ldb (byte 8 24) p))))
+				(a (ldb (byte 8 24) p)))
 			    (values r g b a))))))
+	optimg)))
+  (:method ((image alpha-channel))
+    (let ((width (image-width image))
+	  (height (image-height image)))
+      (let ((optimg (opticl:make-8-bit-rgba-image height width :initial-element 255))
+	    (data (image-data image)))
+	(loop for y from 0 to (1- height)
+	   do
+	     (loop for x from 0 to (1- width)
+		do
+		  (setf (opticl:pixel optimg y x)
+			(let ((a (round (* 255 (alpha-channel-data-get-alpha data x y)))))
+			  (values a a a 255)))))
 	optimg))))
 
 ;;;
@@ -129,14 +169,12 @@
        (:ppm opticl:write-ppm-stream)
        (:gif opticl:write-gif-stream)))
 
-(defun save-image-to-file (image file format)
-  (declare (ignore format))
+(defmethod save-image-to-file (image file)
   (let ((optimg (coerce-to-opticl-image image)))
     (opticl:write-image-file file optimg)))
     
-(defun save-image-to-stream (image stream format)
+(defmethod save-image-to-stream (image stream format)
   (let ((fn (gethash format *image-stream-writer-hash-table*)))
     (if fn
-	(let ((optimg (coerce-to-opticl-image image)))
-	  (funcall fn stream optimg))
+	(funcall fn stream (coerce-to-opticl-image image))
 	(error "Cannot write image stream: ~S" stream))))

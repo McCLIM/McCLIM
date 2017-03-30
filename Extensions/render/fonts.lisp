@@ -91,16 +91,15 @@
 
 
 (defun font-generate-opacity-image (paths width height dx dy)
-  (let* ((image (make-rgba-image (1+ (* 1 width))
-				 (1+ (* 1 height))))
+  (let* ((image (make-alpha-channel (1+ (* 1 width))
+				    (1+ (* 1 height))))
 	 (render (make-instance 'rgb-image-render-engine)))
     ;;(format *debug-io* ">> ~A ~A~%" (list width height) (list dx dy))
     (%draw-paths2 render image paths (make-translation-transformation
 				      (- dx) dy)
 		  (make-rectangle* 0 0 (* 1 width) (* 1 height))
 		  clim:+blue+ clim:+white+ clim:+black+)
-    ;;(save-rgb-image-to-file image "/tmp/a.png" :png)
-    ;;(sleep 1)
+    ;;(save-image-to-file image "/tmp/a.png")
     image))
 
 ;;;
