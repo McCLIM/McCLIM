@@ -26,6 +26,7 @@
              #p"/usr/share/fonts/truetype/dejavu/"
              #p"/usr/share/fonts/TTF/"
              #p"/usr/share/fonts/"
+             #p"/usr/local/share/fonts/dejavu/"
              #p"/opt/X11/share/fonts/TTF/"
              #p"/opt/X11/share/fonts/"
              #p"C:/Windows/Fonts/")))
