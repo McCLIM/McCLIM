@@ -74,7 +74,7 @@
 (declaim (inline gcache-get))
 
 (defun gcache-get (cache key-number)  
-  (declare (optimize (speed 3))
+  (declare ;;(optimize (speed 3))
            (type (simple-array t (512))))
   (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello.
     (and (= key-number (the fixnum (svref cache hash)))
@@ -91,14 +91,14 @@
 
 
 (defun font-generate-opacity-image (paths width height dx dy)
-  (let* ((image (make-alpha-channel (1+ (* 1 width))
+  (let* ((image (make-mask-image (1+ (* 1 width))
 				    (1+ (* 1 height))))
 	 (render (make-instance 'rgb-image-render-engine)))
     ;;(format *debug-io* ">> ~A ~A~%" (list width height) (list dx dy))
-    (%draw-paths2 render image paths (make-translation-transformation
-				      (- dx) dy)
-		  (make-rectangle* 0 0 (* 1 width) (* 1 height))
-		  clim:+blue+ clim:+white+ clim:+black+)
+    (paths->mask-image render image paths
+		       (make-translation-transformation
+			(- dx) dy)
+		       (make-rectangle* 0 0 (* 1 width) (* 1 height)))
     ;;(save-image-to-file image "/tmp/a.png")
     image))
 
@@ -115,7 +115,7 @@
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
   ;; first-not-done)  
-  (declare (optimize (speed 3))
+  (declare ;;(optimize (speed 3))
            (ignore translate))
   (let ((width
          ;; We could work a little harder and eliminate generic arithmetic
@@ -152,7 +152,7 @@
 
 (defmethod text-size ((medium render-medium-mixin) string
                       &key text-style (start 0) end)
-  (declare (optimize (speed 3)))
+  ;;(declare (optimize (speed 3)))
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
   (check-type string string)

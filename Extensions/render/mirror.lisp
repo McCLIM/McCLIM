@@ -119,5 +119,5 @@
 (defmethod %draw-paths ((mirror image-mirror-mixin) paths transformation region ink background foreground)
   (with-slots (render) mirror
     (let ((region 
-	   (%draw-paths2 render (image-mirror-image mirror) paths transformation region ink background foreground)))
+	   (draw-paths render (image-mirror-image mirror) paths transformation region ink background foreground)))
       (%notify-image-updated mirror region))))

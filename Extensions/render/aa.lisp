@@ -8,7 +8,7 @@
   `(let ((data ,data))
      (declare (type rgba-image-data data))
      (lambda (x y alpha)
-       (declare (optimize (speed 3)))
+       ;;(declare (optimize (speed 3)))
        (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
 	 (setf alpha (float (/ (min (abs alpha) 255) 255)))
 	 (when (plusp alpha)
@@ -30,7 +30,7 @@
   `(let ((data ,data))
      (declare (type rgba-image-data data))
      (lambda (x1 x2 y alpha)
-       (declare (optimize (speed 3)))
+       ;;(declare (optimize (speed 3)))
        (setf alpha (float (/ (min (abs alpha) 255) 255)))
        (when (plusp alpha)
 	 (loop for x from x1 below x2 do
@@ -53,7 +53,7 @@
   `(let ((data ,data))
      (declare (type rgba-image-data data))
      (lambda (x y alpha)
-       (declare (optimize (speed 3)))
+       ;;(declare (optimize (speed 3)))
        (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
 	 (setf alpha (float (/ (min (abs alpha) 255) 255)))
 	 (when (plusp alpha)
@@ -72,7 +72,7 @@
   `(let ((data ,data))
      (declare (type rgba-image-data data))
      (lambda (x1 x2 y alpha)
-       (declare (optimize (speed 3)))
+       ;;(declare (optimize (speed 3)))
        (setf alpha (float (/ (min (abs alpha) 255) 255)))
        (when (plusp alpha)
 	 (loop for x from x1 below x2 do
@@ -89,26 +89,26 @@
 		      (values red green blue alpha))))))))))
 
 
-(defmacro %make-alpha-channel-draw-function-macro (data)
+(defmacro %make-mask-image-draw-function-macro (data)
   `(let ((data ,data))
-     (declare (type alpha-channel-data data))
+     (declare (type mask-image-data data))
      (lambda (x y alpha)
-       (declare (optimize (speed 3)))
+       ;;(declare (optimize (speed 3)))
        (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
 	 (setf alpha (float (/ (min (abs alpha) 255) 255)))
 	 (when (plusp alpha)
-	   (alpha-channel-data-set-alpha data x y alpha))))))
+	   (mask-image-data-set-alpha data x y alpha))))))
 
-(defmacro %make-alpha-channel-draw-span-function-macro (data)
+(defmacro %make-mask-image-draw-span-function-macro (data)
   `(let ((data ,data))
-     (declare (type alpha-channel-data data))
+     (declare (type mask-image-data data))
      (lambda (x1 x2 y alpha)
-       (declare (optimize (speed 3)))
+       ;;(declare (optimize (speed 3)))
        (setf alpha (float (/ (min (abs alpha) 255) 255)))
        (when (plusp alpha)
 	 (loop for x from x1 below x2 do
 	      (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
-		(alpha-channel-data-set-alpha data x y alpha)))))))
+		(mask-image-data-set-alpha data x y alpha)))))))
 
 ;;; private protocol
 
@@ -116,8 +116,8 @@
 (defgeneric %make-blend-draw-span-fn (image clip-region ink)) 
 (defgeneric %make-xor-draw-fn (image clip-region rgba-design))
 (defgeneric %make-xor-draw-span-fn (image clip-region ink))
-(defgeneric %make-alpha-channel-draw-fn (image clip-region rgba-design))
-(defgeneric %make-alpha-channel-draw-span-fn (image clip-region ink)) 
+(defgeneric %make-mask-image-draw-fn (image clip-region))
+(defgeneric %make-mask-image-draw-span-fn (image clip-region)) 
 
 ;;; default implementation
 
@@ -145,12 +145,12 @@
      (image-data image)
      (funcall source-fn x y))))
 
-(defmethod %make-alpha-channel-draw-fn ((image alpha-channel) clip-region design)
-  (%make-alpha-channel-draw-function-macro
+(defmethod %make-mask-image-draw-fn ((image mask-image) clip-region)
+  (%make-mask-image-draw-function-macro
    (image-data image)))
 
-(defmethod %make-alpha-channel-draw-span-fn ((image alpha-channel) clip-region design)
-  (%make-alpha-channel-draw-span-function-macro
+(defmethod %make-mask-image-draw-span-fn ((image mask-image) clip-region)
+  (%make-mask-image-draw-span-function-macro
    (image-data image)))
 
 ;;;

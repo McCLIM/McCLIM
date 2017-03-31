@@ -5,8 +5,8 @@
 ;;;
 
 (defclass image ()
-  ((width :initarg :width :accessor image-width)
-   (height :initarg :height :accessor image-height)
+  ((width :initform 0 :initarg :width :accessor image-width :type fixnum)
+   (height :initform 0 :initarg :height :accessor image-height :type fixnum)
    (data :initarg :data
 	 :accessor image-data)))
 
@@ -35,14 +35,14 @@
 ;;; alpha channel 
 ;;;
 
-(deftype alpha-channel-data () 'opticl-core:8-bit-gray-image)
+(deftype mask-image-data () 'opticl-core:8-bit-gray-image)
 
-(defclass alpha-channel (image)
-  ((data :type (or null alpha-channel-data))))
+(defclass mask-image (image)
+  ((data :type (or null mask-image-data))))
 
-(defun make-alpha-channel (width height)
+(defun make-mask-image (width height)
   (let ((data (opticl:make-8-bit-gray-image height width :initial-element 0)))
-    (make-instance 'alpha-channel
+    (make-instance 'mask-image
 		   :width width
 		   :height height
 		   :data data)))
@@ -57,15 +57,18 @@
   "Convert a float in the range 0.0 - 1.0 to an octet."
   (round (* float 255.0)))
 
-(declaim (notinline rgb-image-data-get-pixel)
+(declaim (inline rgba-image-data-get-pixel)
 	 (ftype (function (rgba-image-data fixnum fixnum) t) rgba-image-data-get-pixel))
 (defun rgba-image-data-get-pixel (data x y)
   (multiple-value-bind (r.bg g.bg b.bg a.bg)
       (opticl:pixel data y x)
     (values 
-     (float (/ r.bg 255)) (float (/ g.bg 255)) (float (/ b.bg 255)) (float (/ a.bg 255)))))
+     (float (* r.bg (/ 1.0 255.0)))
+     (float (* g.bg (/ 1.0 255.0)))
+     (float (* b.bg (/ 1.0 255.0)))
+     (float (* a.bg (/ 1.0 255.0))))))
 
-(declaim (notinline rgb-image-data-set-pixel)
+(declaim (inline rgba-image-data-set-pixel)
 	 (ftype (function (rgba-image-data fixnum fixnum float float float float) t) rgba-image-data-set-pixel))
 (defun rgba-image-data-set-pixel (data x y red green blue alpha)
   (setf (opticl:pixel data y x)
@@ -75,16 +78,16 @@
 	 (float-octet blue)
 	 (float-octet alpha))))
 
-(declaim (notinline rgb-image-data-get-pixel)
-	 (ftype (function (alpha-channel-data fixnum fixnum) t) alpha-channel-data-get-pixel))
-(defun alpha-channel-data-get-alpha (data x y)
+(declaim (inline mask-image-data-get-alpha)
+	 (ftype (function (mask-image-data fixnum fixnum) t) mask-image-data-get-alpha))
+(defun mask-image-data-get-alpha (data x y)
   (multiple-value-bind (alpha)
       (opticl:pixel data y x)
-    (float (/ alpha 255))))
+    (float (* alpha (/ 1.0 255.0)))))
      
-(declaim (notinline rgb-image-data-set-alpha)
-	 (ftype (function (alpha-channel-data fixnum fixnum float) t) alpha-channel-data-set-alpha))
-(defun alpha-channel-data-set-alpha (data x y alpha)
+(declaim (inline rgb-image-data-set-alpha)
+	 (ftype (function (mask-image-data fixnum fixnum float) t) mask-image-data-set-alpha))
+(defun mask-image-data-set-alpha (data x y alpha)
   (setf (opticl:pixel data y x)
 	(float-octet alpha)))
 
@@ -137,7 +140,7 @@
 				(a (ldb (byte 8 24) p)))
 			    (values r g b a))))))
 	optimg)))
-  (:method ((image alpha-channel))
+  (:method ((image mask-image))
     (let ((width (image-width image))
 	  (height (image-height image)))
       (let ((optimg (opticl:make-8-bit-rgba-image height width :initial-element 255))
@@ -147,7 +150,7 @@
 	     (loop for x from 0 to (1- width)
 		do
 		  (setf (opticl:pixel optimg y x)
-			(let ((a (round (* 255 (alpha-channel-data-get-alpha data x y)))))
+			(let ((a (round (* 255 (mask-image-data-get-alpha data x y)))))
 			  (values a a a 255)))))
 	optimg))))
 
@@ -178,3 +181,27 @@
     (if fn
 	(funcall fn stream (coerce-to-opticl-image image))
 	(error "Cannot write image stream: ~S" stream))))
+
+;;;
+;;;
+;;;
+
+(declaim (inline round-coordinate))
+(defun round-coordinate (x)
+  (floor (+ x .5)))
+
+(declaim (inline float-blend))
+(defun float-blend (r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg alpha)
+  (when (= alpha 0.0)
+    (setf alpha 0.0000001))
+  (multiple-value-bind (red green blue alpha)
+      (color-blend-function  r.fg g.fg b.fg (float (* alpha a.fg)) r.bg g.bg b.bg a.bg)
+    (values (float red) (float green) (float blue) (float alpha))))
+
+(declaim (inline float-xor-pixel))
+(defun float-xor-pixel (d1 d2)
+  (float (/ (logxor (floor (* 255 d1)) (floor (* 255 d2))) 255)))
+
+;;;
+;;; 
+;;;

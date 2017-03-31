@@ -1,32 +1,6 @@
 (in-package :mcclim-render)
 
 ;;;
-;;; color manipulation
-;;;
-
-(deftype image-data () '(simple-array (unsigned-byte 32) (* *)))
-(declaim (inline round-coordinate))
-(defun round-coordinate (x)
-  (floor (+ x .5)))
-
-(declaim (notinline float-blend))
-(defun float-blend (r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg alpha)
-  (when (= alpha 0.0)
-    (setf alpha 0.0000001))
-  (multiple-value-bind (red green blue alpha)
-      (color-blend-function  r.fg g.fg b.fg (float (* alpha a.fg)) r.bg g.bg b.bg a.bg)
-    (values (float red) (float green) (float blue) (float alpha))))
-
-(declaim (inline float-xor-pixel))
-(defun float-xor-pixel (d1 d2)
-  (float (/ (logxor (floor (* 255 d1)) (floor (* 255 d2))) 255)))
-
-;;;
-;;; get/set functions
-;;;
-
-
-;;;
 ;;; copy 
 ;;;
 
@@ -36,7 +10,7 @@
 				 (x-dst 0)
 				 (y-dst 0)
 				 (clip-region nil))
-  (declare (optimize speed)
+  (declare ;;(optimize speed)
 	   (type fixnum x y width height x-dst y-dst))
   (let ((clip-region  (if clip-region
 			  (region-intersection clip-region
@@ -108,15 +82,17 @@
 							 red green blue alpha))))))
 	    (when mask
 	      (warn "mask not implemented"))
-	    (cond
-	      ((and (<= x x-dst) (<= y y-dst))
-	       (copy-bb))
-	      ((and (<= x x-dst) (> y y-dst))
-	       (copy-bf))
-	      ((and (> x x-dst) (<= y y-dst))
-	       (copy-fb))
-	      ((and (> x x-dst) (> y y-dst))
-	       (copy-ff)))
+	    (if (eq data-src data-dst)
+		(cond
+		  ((and (<= x x-dst) (<= y y-dst))
+		   (copy-bb))
+		  ((and (<= x x-dst) (> y y-dst))
+		   (copy-bf))
+		  ((and (> x x-dst) (<= y y-dst))
+		   (copy-fb))
+		  ((and (> x x-dst) (> y y-dst))
+		   (copy-ff)))
+		(copy-ff))
 	    (make-rectangle* (+ x-min dx) (+ y-min dy) (+ x-max dx) (+ y-max dy))))))))
 
 (defun rgb-image-fill (image mask-image &key (x 0) (y 0)
@@ -128,7 +104,7 @@
 				    (ink clim:+foreground-ink+)
 				    (background clim:+yellow+)
 				    (foreground clim:+blue+))
-  (declare (optimize speed)
+  (declare ;;(optimize speed)
 	   (type fixnum x y width height x-dst y-dst))
   (let ((clip-region  (if clip-region
 			  (region-intersection clip-region
@@ -150,7 +126,7 @@
 		      clip-region)))
 	(declare (type fixnum dx dy)
 		 (type rgba-image-data data-image)
-		 (type alpha-channel-data data-mask))
+		 (type mask-image-data data-mask))
 	(let ((x-min (max 0 x (- min-x-dst dx)))
 	      (y-min (max 0 y (- min-y-dst dy)))
 	      (x-max (min (+ x width) (1- (image-width mask-image)) (- max-x-dst dx)))
@@ -160,20 +136,22 @@
 	    (let* ((rgba-design (make-rgba-design ink))
 		   (source-fn (make-rgba-design-fn rgba-design)))
 	      (flet ((fill-color ()
-		       (loop
-			  for j from y-min to y-max
-			  do
-			    (loop
-			       for i from x-min to x-max
-			       do
-				 (multiple-value-bind (r.bg g.bg b.bg a.bg)
-				     (rgba-image-data-get-pixel data-image (+ dx i) (+ dy j))
-				   (multiple-value-bind (a.m)
-				       (alpha-channel-data-get-alpha data-mask i j)
-				     (multiple-value-bind (r.fg g.fg b.fg a.fg)
-					 (funcall source-fn i j)
+		       (let ((s-red (uniform-rgba-design-red rgba-design))
+			     (s-green (uniform-rgba-design-green rgba-design))
+			     (s-blue (uniform-rgba-design-blue rgba-design))
+			     (s-alpha (uniform-rgba-design-alpha rgba-design)))
+			 (loop
+			    for j from y-min to y-max
+			    do
+			      (loop
+				 for i from x-min to x-max
+				 do
+				   (multiple-value-bind (r.bg g.bg b.bg a.bg)
+				       (rgba-image-data-get-pixel data-image (+ dx i) (+ dy j))
+				     (multiple-value-bind (a.m)
+					 (mask-image-data-get-alpha data-mask i j)
 				       (multiple-value-bind (red green blue alpha)	  
-					   (float-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg a.m)
+					   (float-blend r.bg g.bg b.bg a.bg s-red s-green s-blue s-alpha a.m)
 					 (rgba-image-data-set-pixel data-image (+ dx i) (+ dy j)
 								    red green blue alpha))))))))
 		     (fill-function ()
@@ -186,7 +164,7 @@
 				 (multiple-value-bind (r.bg g.bg b.bg a.bg)
 				     (rgba-image-data-get-pixel data-image (+ dx i) (+ dy j))
 				   (multiple-value-bind (a.m)
-				       (alpha-channel-data-get-alpha data-mask i j)
+				       (mask-image-data-get-alpha data-mask i j)
 				     (multiple-value-bind (r.fg g.fg b.fg a.fg)
 					 (funcall source-fn i j)
 				       (multiple-value-bind (red green blue alpha)	  
