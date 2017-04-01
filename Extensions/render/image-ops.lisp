@@ -104,7 +104,7 @@
 				    (ink clim:+foreground-ink+)
 				    (background clim:+yellow+)
 				    (foreground clim:+blue+))
-  (declare ;;(optimize speed)
+  (declare (optimize speed)
 	   (type fixnum x y width height x-dst y-dst))
   (let ((clip-region  (if clip-region
 			  (region-intersection clip-region
@@ -184,7 +184,7 @@
 				(ink clim:+foreground-ink+)
 				(background clim:+yellow+)
 				(foreground clim:+blue+))
-  (declare ;;(optimize speed)
+  (declare (optimize speed)
 	   (type fixnum x y width height))
   (let ((data-image (image-data image)))
     (declare (type rgba-image-data data-image))
