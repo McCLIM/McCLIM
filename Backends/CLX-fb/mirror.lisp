@@ -39,6 +39,7 @@
   )
 
 (defmethod image-mirror-to-x ((sheet clx-fb-mirror))
+  (declare (optimize speed))
   (with-slots (xmirror clx-image clx-image-data mcclim-render::image-lock gcontext
 		       mcclim-render::dirty-region updating-p
 		       width height)
@@ -58,6 +59,9 @@
 						 ;; to fix
 						 (let ((img-s (mcclim-render::image-data (mcclim-render::image-mirror-image sheet)))
 						       (img-d clx-image-data))
+						   (declare (mcclim-render::rgba-image-data img-s)
+							    ((simple-array (unsigned-byte 32) (* *)) img-d)
+							    (fixnum min-x max-x min-y max-y))
 						   (loop for y from min-y to (max max-y)
 						      do
 							(loop for x from min-x to (max max-x)

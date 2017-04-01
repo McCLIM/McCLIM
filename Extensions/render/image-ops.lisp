@@ -178,3 +178,67 @@
 		    (fill-function))
 		(make-rectangle* (+ x-min dx) (+ y-min dy) (+ x-max dx) (+ y-max dy))))))))))
   
+(defun rgb-image-fill2 (image &key (x 0) (y 0)
+				(width (climi::image-width image))
+				(height (climi::image-height image))
+				(ink clim:+foreground-ink+)
+				(background clim:+yellow+)
+				(foreground clim:+blue+))
+  (declare ;;(optimize speed)
+	   (type fixnum x y width height))
+  (let ((data-image (image-data image)))
+    (declare (type rgba-image-data data-image))
+    (let ((*background-design* background)
+	  (*foreground-design* foreground))
+      (let* ((rgba-design (make-rgba-design ink))
+	     (source-fn (make-rgba-design-fn rgba-design))
+	     (max-y (+ y height))
+	     (max-x (+ x width)))
+	(flet ((fill-color ()
+		 (let ((s-red (uniform-rgba-design-red rgba-design))
+		       (s-green (uniform-rgba-design-green rgba-design))
+		       (s-blue (uniform-rgba-design-blue rgba-design))
+		       (s-alpha (uniform-rgba-design-alpha rgba-design)))
+		   (if (> s-alpha 0.99)
+		       (loop
+			  for j from y to max-y
+			  do
+			    (loop
+			       for i from x to max-x
+			       do
+				 (rgba-image-data-set-pixel data-image i j
+							    s-red s-green s-blue s-alpha)))
+		       (loop
+			  for j from y to max-y
+			  do
+			    (loop
+			       for i from x to max-x
+			       do
+				 (multiple-value-bind (r.bg g.bg b.bg a.bg)
+				     (rgba-image-data-get-pixel data-image i j)
+				   (multiple-value-bind (red green blue alpha)	  
+				       (float-blend r.bg g.bg b.bg a.bg s-red s-green s-blue s-alpha 1.0)
+				     (rgba-image-data-set-pixel data-image i j
+								red green blue alpha))))))))
+	       (fill-function ()
+		 (loop
+		    for j from y to max-y
+		    do
+		      (loop
+			 for i from x to max-x
+			 do
+			   (multiple-value-bind (r.bg g.bg b.bg a.bg)
+			       (rgba-image-data-get-pixel data-image i j)
+			     (multiple-value-bind (r.fg g.fg b.fg a.fg)
+				 (funcall source-fn i j)
+			       (if (> a.fg 0.99)
+				   (rgba-image-data-set-pixel data-image i j
+							      r.fg g.fg b.fg a.fg)
+				   (multiple-value-bind (red green blue alpha)	  
+				       (float-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg 1.0)
+				     (rgba-image-data-set-pixel data-image i j
+								red green blue alpha)))))))))
+	  (if (typep rgba-design 'uniform-rgba-design)
+	      (fill-color)
+	      (fill-function))
+	  (make-rectangle* x y (+ x width) (+ y height)))))))

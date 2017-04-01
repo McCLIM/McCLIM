@@ -25,7 +25,7 @@
 (defgeneric %draw-image (mirror image x y width height x-dest y-dest clip-region))
 (defgeneric %draw-paths (mirror paths transformation clip-region ink background foreground))
 (defgeneric %fill-image-mask (mirror image-mask x y width height x-dest y-dest clip-region ink background foreground))
-
+(defgeneric %fill-image (mirror x y width height ink background foreground))
 
 ;;;
 ;;; implementation
@@ -89,6 +89,13 @@
       (climi::with-lock-held (image-lock)
 	(call-next-method)))))
 
+(defmethod %fill-image :around ((mirror image-mirror-mixin) 
+				x y width height ink background foreground)
+  (when (image-mirror-image mirror)
+    (with-slots (image-lock) mirror
+      (climi::with-lock-held (image-lock)
+	(call-next-method)))))
+
 (defmethod %draw-paths :around ((mirror image-mirror-mixin) paths transformation region ink background foreground)
   (when (image-mirror-image mirror)
     (with-slots (image-lock) mirror
@@ -106,15 +113,28 @@
 
 (defmethod %fill-image-mask ((mirror image-mirror-mixin)
 			     image-mask x y width height x-dest y-dest clip-region ink background foreground)
-  (let ((region (rgb-image-fill
+  
+    (let ((region
+	   (rgb-image-fill
+	    (image-mirror-image mirror)
+	    image-mask
+	    :x x :y y :width width :height height :x-dst x-dest :y-dst y-dest
+	    :clip-region clip-region
+	    :ink ink
+	    :background background
+	    :foreground foreground)))
+      (%notify-image-updated mirror region)))
+
+(defmethod %fill-image ((mirror image-mirror-mixin)
+			x y width height ink background foreground)
+  (let ((region (rgb-image-fill2
 		 (image-mirror-image mirror)
-		 image-mask
-		 :x x :y y :width width :height height :x-dst x-dest :y-dst y-dest
-		 :clip-region clip-region
+		 :x x :y y :width width :height height 
 		 :ink ink
 		 :background background
 		 :foreground foreground)))
     (%notify-image-updated mirror region)))
+
 
 (defmethod %draw-paths ((mirror image-mirror-mixin) paths transformation region ink background foreground)
   (with-slots (render) mirror

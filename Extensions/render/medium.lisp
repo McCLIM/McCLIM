@@ -79,6 +79,18 @@
 			(medium-background medium)
 			(medium-foreground medium)))))
 
+(defmethod %medium-fill-image ((medium render-medium-mixin) x y width height)
+  (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+    (when (and msheet (sheet-mirror msheet))
+      (%fill-image (sheet-mirror msheet)
+		   (round x) (round y)
+		   (round width)
+		   (round height)
+		   (transform-region (sheet-native-transformation (medium-sheet medium))
+				     (medium-ink medium))
+		   (medium-background medium)
+		   (medium-foreground medium)))))
+
 ;;;
 ;;; standard medium protocol
 ;;;
@@ -95,15 +107,33 @@
       (rotatef left right))
   (if (< bottom top)
       (rotatef top bottom))
-  (let ((path (make-path left top)))
-    (line-to path right top)
-    (line-to path right bottom)
-    (line-to path left bottom)
-    (close-path path)
-    (if filled
-	(%medium-fill-paths medium (list path))
-	(%medium-stroke-paths medium (list path)))))
-
+  (let* ((clip-region (climi::medium-device-region medium))
+	 (region
+	  (region-intersection
+	   clip-region
+	   (transform-region (sheet-native-transformation (medium-sheet medium))
+			     (make-rectangle* left top right bottom)))))
+    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+	region
+      (if (and
+	   ;;nil
+	   filled
+	   (clim:rectanglep region)
+	   (< (- min-x (round min-x)) 0.01)
+	   (< (- max-x (round max-x)) 0.01)
+	   (< (- min-y (round min-y)) 0.01)
+	   (< (- max-y (round max-y)) 0.01))
+	  (progn
+	    ;;(format *debug-io* ">>> INT!! ~%")
+	    (%medium-fill-image medium min-x min-y (- max-x min-x) (- max-y min-y)))
+	  (let ((path (make-path left top)))
+	    (line-to path right top)
+	    (line-to path right bottom)
+	    (line-to path left bottom)
+	    (close-path path)
+	    (if filled
+		(%medium-fill-paths medium (list path))
+		(%medium-stroke-paths medium (list path))))))))
 
 (defmethod medium-draw-rectangles* ((medium render-medium-mixin) position-seq filled)
   (assert (evenp (length position-seq)))
