@@ -103,12 +103,12 @@
     (unless (xlib:event-listen display)
       (xlib:display-force-output (clx-port-display port)))
     (let ((event (xlib:process-event (clx-port-display port)
-				     :timeout 0.01
+				     :timeout 0.06
 				     :handler #'clim-clx::event-handler :discard-p t)))
-       (maphash #'(lambda (key val)
-		    (when (typep key 'clx-fb-mirrored-sheet-mixin)
-		      (image-mirror-to-x (sheet-mirror key))))
-		(slot-value port 'climi::sheet->mirror))
+      (maphash #'(lambda (key val)
+		   (when (typep key 'clx-fb-mirrored-sheet-mixin)
+		     (image-mirror-to-x (sheet-mirror key))))
+	       (slot-value port 'climi::sheet->mirror))
       (if event
 	  event
 	  :timeout))))
