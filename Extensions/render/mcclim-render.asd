@@ -4,6 +4,7 @@
     :serial t
     :components
     ((:file "package")
+     (:file "color")
      (:file "design")
      (:file "image")
      (:file "image-ops")

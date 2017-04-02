@@ -1,5 +1,7 @@
 (in-package :mcclim-render)
 
+(declaim (optimize speed))
+
 ;;;
 ;;; image base class
 ;;;
@@ -17,6 +19,8 @@
 ;;; rbga image
 ;;;
 
+
+
 (deftype rgba-image-data () 'opticl-core:8-bit-rgba-image)
 
 (defclass rgba-image (image)
@@ -24,8 +28,9 @@
 
 (defun make-rgba-image (width height)
   (let ((data (opticl:make-8-bit-rgba-image height width :initial-element 255)))
-    (opticl:do-pixels (y x) data
-      (setf (opticl:pixel data y x) (values 255 255 255 0)))
+    ;;(declare (type rgba-image-data data))
+    ;;(opticl:do-pixels (y x) data
+    ;;  (setf (opticl:pixel data y x) (values 255 255 255 0)))
     (make-instance 'rgba-image
 		   :width width
 		   :height height
@@ -51,14 +56,10 @@
 ;;; get/set
 ;;;
 
-(declaim (inline float-octet)
-	 (ftype (function (single-float) fixnum) float-octet))
-(defun float-octet (float)
-  "Convert a float in the range 0.0 - 1.0 to an octet."
-  (round (* float 255.0)))
+
 
 (declaim (inline rgba-image-data-get-pixel)
-	 (ftype (function (rgba-image-data fixnum fixnum) t) rgba-image-data-get-pixel))
+	 (ftype (function (rgba-image-data fixnum fixnum) (values single-float single-float single-float single-float)) rgba-image-data-get-pixel))
 (defun rgba-image-data-get-pixel (data x y)
   (multiple-value-bind (r.bg g.bg b.bg a.bg)
       (opticl:pixel data y x)
@@ -69,7 +70,7 @@
      (float (* a.bg (/ 1.0 255.0))))))
 
 (declaim (inline rgba-image-data-set-pixel)
-	 (ftype (function (rgba-image-data fixnum fixnum float float float float) t) rgba-image-data-set-pixel))
+	 (ftype (function (rgba-image-data fixnum fixnum single-float single-float single-float single-float) t) rgba-image-data-set-pixel))
 (defun rgba-image-data-set-pixel (data x y red green blue alpha)
   (setf (opticl:pixel data y x)
 	(values
@@ -79,17 +80,53 @@
 	 (float-octet alpha))))
 
 (declaim (inline mask-image-data-get-alpha)
-	 (ftype (function (mask-image-data fixnum fixnum) t) mask-image-data-get-alpha))
+	 (ftype (function (mask-image-data fixnum fixnum) single-float) mask-image-data-get-alpha))
 (defun mask-image-data-get-alpha (data x y)
   (multiple-value-bind (alpha)
       (opticl:pixel data y x)
     (float (* alpha (/ 1.0 255.0)))))
      
 (declaim (inline rgb-image-data-set-alpha)
-	 (ftype (function (mask-image-data fixnum fixnum float) t) mask-image-data-set-alpha))
+	 (ftype (function (mask-image-data fixnum fixnum single-float) t) mask-image-data-set-alpha))
 (defun mask-image-data-set-alpha (data x y alpha)
   (setf (opticl:pixel data y x)
 	(float-octet alpha)))
+
+
+
+(declaim (inline rgba-image-data-get-pixel-octet)
+	 (ftype (function (rgba-image-data fixnum fixnum) (values octet octet octet octet)) rgba-image-data-get-pixel-octet))
+(defun rgba-image-data-get-pixel-octet (data x y)
+  (multiple-value-bind (r.bg g.bg b.bg a.bg)
+      (opticl:pixel data y x)
+    (values 
+     r.bg
+     g.bg
+     b.bg
+     a.bg)))
+
+(declaim (inline rgba-image-data-set-pixel-octet)
+	 (ftype (function (rgba-image-data fixnum fixnum octet octet octet octet) t) rgba-image-data-set-pixel-octet))
+(defun rgba-image-data-set-pixel-octet (data x y red green blue alpha)
+  (setf (opticl:pixel data y x)
+	(values
+	 red
+	 green
+	 blue
+	 alpha)))
+
+(declaim (inline mask-image-data-get-alpha-octet)
+	 (ftype (function (mask-image-data fixnum fixnum) octet) mask-image-data-get-alpha-octet))
+(defun mask-image-data-get-alpha-octet (data x y)
+  (multiple-value-bind (alpha)
+      (opticl:pixel data y x)
+    alpha))
+     
+(declaim (inline rgb-image-data-set-alpha-octet)
+	 (ftype (function (mask-image-data fixnum fixnum octet) t) mask-image-data-set-alpha-octet))
+(defun mask-image-data-set-alpha-octet (data x y alpha)
+  (setf (opticl:pixel data y x)
+	alpha))
 
 ;;;
 ;;; conversion
@@ -100,6 +137,7 @@
     (let ((width (image-width image))
 	  (height (image-height image))
 	  (pixels (image-data image)))
+      (declare (type rgba-image-data pixels))
       (let ((data (make-array (list height width)
 			      :element-type '(unsigned-byte 32)
 			      :initial-element #x00FFFFFF)))
@@ -128,6 +166,8 @@
 	  (height (image-height image)))
       (let ((optimg (opticl:make-8-bit-rgba-image height width :initial-element 255))
 	    (data (image-data image)))
+	(declare (type clim-rgb-image-data data))
+	(declare (type rgba-image-data optimg))
 	(loop for y from 0 to (1- height)
 	   do
 	     (loop for x from 0 to (1- width)
@@ -145,12 +185,13 @@
 	  (height (image-height image)))
       (let ((optimg (opticl:make-8-bit-rgba-image height width :initial-element 255))
 	    (data (image-data image)))
+	(declare (type rgba-image-data optimg))
 	(loop for y from 0 to (1- height)
 	   do
 	     (loop for x from 0 to (1- width)
 		do
 		  (setf (opticl:pixel optimg y x)
-			(let ((a (round (* 255 (mask-image-data-get-alpha data x y)))))
+			(let ((a (mask-image-data-get-alpha-octet data x y)))
 			  (values a a a 255)))))
 	optimg))))
 
@@ -190,18 +231,3 @@
 (defun round-coordinate (x)
   (floor (+ x .5)))
 
-(declaim (inline float-blend))
-(defun float-blend (r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg alpha)
-  (when (= alpha 0.0)
-    (setf alpha 0.0000001))
-  (multiple-value-bind (red green blue alpha)
-      (color-blend-function  r.fg g.fg b.fg (float (* alpha a.fg)) r.bg g.bg b.bg a.bg)
-    (values (float red) (float green) (float blue) (float alpha))))
-
-(declaim (inline float-xor-pixel))
-(defun float-xor-pixel (d1 d2)
-  (float (/ (logxor (floor (* 255 d1)) (floor (* 255 d2))) 255)))
-
-;;;
-;;; 
-;;;

@@ -118,6 +118,7 @@
       (if (and
 	   ;;nil
 	   filled
+	   (not (typep ink 'standard-flipping-ink))
 	   (clim:rectanglep region)
 	   (< (- min-x (round min-x)) 0.01)
 	   (< (- max-x (round max-x)) 0.01)
