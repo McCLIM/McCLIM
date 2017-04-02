@@ -54,7 +54,7 @@
 					    rgba-design)
 		    (%make-blend-draw-span-fn image current-clip-region
 					      rgba-design)))
-	  (aa:cells-sweep/rectangle state
+	  (render-cells-sweep/rectangle state
 				    (floor min-x)
 				    (floor min-y)
 				    (ceiling max-x)
