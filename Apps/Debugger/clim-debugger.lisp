@@ -245,7 +245,7 @@
 	(princ "Condition:")
 	(clim:with-drawing-options (pane :ink clim:+red+)
 	  (format t "~A" (type-of-condition (condition-info pane)))))
-      (when t;(condition-extra (condition-info pane))
+      (when (condition-extra (condition-info pane))
 	(std-row (pane)
 	  (princ "Extra:")
 	  (clim:with-text-family (pane :fix)
