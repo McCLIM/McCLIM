@@ -226,25 +226,28 @@
 ;;;   Display debugging info   ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun std-form (pane first second &key (family :sans-serif))
-  (formatting-row 
-      (pane)
-    (with-text-family (pane :sans-serif)
-      (formatting-cell (pane) (bold (pane) (format t "~A" first))))
-    (formatting-cell (pane)
-      (with-text-family (pane family) 
-       (format t "~A" second)))))
+(defmacro std-row ((pane) head tail)
+  (alexandria:once-only (pane)
+    `(formatting-row (,pane)
+       (formatting-cell (,pane)
+	 (bold (,pane) ,head))
+       (formatting-cell (,pane) ,tail))))
 
 (defun display-debugger (frame pane)
   (let ((*standard-output* pane))
-    (formatting-table (pane)
-      (std-form pane "Condition type:" (type-of-condition (condition-info
-							     pane)))
-      (std-form pane "Description:"    (condition-message (condition-info
-                                                            pane)))
-      (when (condition-extra (condition-info pane))
-        (std-form pane "Extra:" (condition-extra (condition-info pane))
-                  :family :fix)))
+    (clim:formatting-table (pane)
+      (std-row (pane)
+	(princ "Description:")
+	(princ (condition-message (condition-info pane))))
+      (std-row (pane)
+	(princ "Condition:")
+	(clim:with-drawing-options (pane :ink clim:+red+)
+	  (format t "~A" (type-of-condition (condition-info pane)))))
+      (when t;(condition-extra (condition-info pane))
+	(std-row (pane)
+	  (princ "Extra:")
+	  (clim:with-text-family (pane :fix)
+	    (format t "~A" (condition-extra (condition-info pane)))))))
     (fresh-line)
     
     (with-text-family (pane :sans-serif)
