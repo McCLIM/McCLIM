@@ -176,10 +176,12 @@
     ((obj 'inspect))
   (clouseau:inspector obj))
 
-(define-clim-debugger-command (com-refresh :name "Refresh" :menu t) ()
+(define-clim-debugger-command (com-refresh :name "Refresh" :menu t
+					   :keystroke #\r) ()
   (change-space-requirements (frame-panes *application-frame*)))
 
-(define-clim-debugger-command (com-quit :name "Quit" :menu t) ()
+(define-clim-debugger-command (com-quit :name "Quit" :menu t
+					:keystroke #\q) ()
   (frame-exit *application-frame*))
 
 (define-clim-debugger-command (com-invoke-restart :name "Invoke restart")
