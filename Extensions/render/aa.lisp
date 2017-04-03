@@ -34,7 +34,6 @@
      (lambda (x1 x2 y alpha)
        (declare (type fixnum x1 x2 y)
 		(type fixnum alpha))
-       ;;(declare (optimize (speed 3)))
        (setf alpha (min (abs alpha) 255))
        (when (plusp alpha)
 	 (loop for x from x1 below x2 do
@@ -57,7 +56,6 @@
   `(let ((data ,data))
      (declare (type rgba-image-data data))
      (lambda (x y alpha)
-       ;;(declare (optimize (speed 3)))
        (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
 	 (setf alpha (min (abs alpha) 255))
 	 (when (plusp alpha)
@@ -76,7 +74,6 @@
   `(let ((data ,data))
      (declare (type rgba-image-data data))
      (lambda (x1 x2 y alpha)
-       ;;(declare (optimize (speed 3)))
        (setf alpha (min (abs alpha) 255))
        (when (plusp alpha)
 	 (loop for x from x1 below x2 do
@@ -99,7 +96,6 @@
      (lambda (x y alpha)
        (declare (type fixnum x y)
 		(type fixnum alpha))
-       ;;(declare (optimize (speed 3)))
        (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
 	 (setf alpha (min (abs alpha) 255))
 	 (when (plusp alpha)
@@ -111,7 +107,6 @@
      (lambda (x1 x2 y alpha)
        (declare (type fixnum x1 x2 y)
 		(type fixnum alpha))
-       ;;(declare (optimize (speed 3)))
        (setf alpha (min (abs alpha) 255))
        (when (plusp alpha)
 	 (loop for x from x1 below x2 do
