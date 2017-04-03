@@ -255,7 +255,7 @@
 	(pane)
       (loop for r in (restarts (condition-info pane))
         do (formatting-row (pane)
-              (with-output-as-presentation (pane r 'restart)
+              (with-output-as-presentation (pane r 'restart :single-box t)
                 (formatting-cell (pane)
                   (format pane "~A" (restart-name r)))
               
@@ -280,7 +280,8 @@
     (loop for stack-frame in (backtrace (condition-info pane))
 	  for i from 0
 	  do (formatting-row (pane)
-               (with-output-as-presentation (pane stack-frame 'stack-frame)
+               (with-output-as-presentation (pane stack-frame 'stack-frame
+						  :single-box t :allow-sensitive-inferiors nil)
                  (bold (pane) (formatting-cell (pane) (format t "~A: " i)))
                  (formatting-cell (pane)
                    (present stack-frame 'stack-frame 
