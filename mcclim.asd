@@ -46,7 +46,8 @@ Rainer Joswig
 Robert Goldman
 Robert Strandh
 Rudi Schlatte
-Timothy Moore"
+Timothy Moore
+Daniel Kochmański"
   :license "LGPL-2.1+"
   :version "0.9.7"
   :description "McCLIM is an implementation of the CLIM 2.0 specification."
