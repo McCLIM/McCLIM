@@ -10,9 +10,9 @@
 
 (defvar *table*)
 
-(defmacro with-table ((pane) &body body)
+(defmacro with-table ((pane &rest options) &body body)
   `(let ((*table* ,pane))
-     (clim:formatting-table (*table*)
+     (clim:formatting-table (*table* ,@options)
        ,@body)))
 
 (defmacro row (&body body)
