@@ -149,7 +149,7 @@
    (debugger-pane (make-debugger-pane)))
   (:layouts
    (default (vertically () (scrolling () debugger-pane))))
-  (:geometry :height 600 :width 800))
+  (:geometry :height 480 :width #.(* 480 slim:+golden-ratio+)))
 
 (defun run-debugger-frame ()
   (run-frame-top-level
