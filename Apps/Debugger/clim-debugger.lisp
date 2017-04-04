@@ -249,12 +249,18 @@
       (bold (pane) (format t "Restarts:")))
     (fresh-line)
     (format t " ")
-    (slim:with-table (pane)
-      (dolist (r (restarts (condition-info pane)))
-	(slim:row
-	  (with-output-as-presentation (pane r 'restart :single-box t)
-	    (slim:cell (clim:with-drawing-options (slim:*table* :ink clim:+dark-violet+)
-			 (princ (restart-name r))))
+    (slim:with-table (pane :x-spacing 10)
+      (do* ((restarts (restarts (condition-info pane)) (cdr restarts))
+	    (r #1=(car restarts) #1#)
+	    (n 0 (1+ n)))
+	   ((null restarts) t)
+	(with-output-as-presentation (pane r 'restart :single-box t)
+	  (slim:row
+	    (bold (pane)
+	      (slim:cell (format t "~A: " n)))
+	    (slim:cell
+	      (clim:with-drawing-options (slim:*table* :ink clim:+dark-violet+)
+		(princ (restart-name r))))
 	    (slim:cell (princ r))))))
 
     (fresh-line)
