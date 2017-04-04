@@ -278,16 +278,15 @@
   (fresh-line pane)
   (format pane "   ")
   (slim:with-table (pane)
-    (loop for stack-frame in (backtrace (condition-info pane))
-       for i from 0
-       do (with-output-as-presentation
-	      (pane stack-frame 'stack-frame :single-box t)
-	    (slim:row
-	     (slim:cell
-	       (with-drawing-options (pane :ink clim:+grey41+)
-		 (format pane "~A: " i)))
-	     (slim:cell
-	       (present stack-frame 'stack-frame :view (view stack-frame))))))
+    (dolist (stack-frame (backtrace (condition-info pane)))
+      (with-output-as-presentation
+	  (pane stack-frame 'stack-frame :single-box t)
+	(slim:row
+	  (slim:cell
+	    (with-drawing-options (pane :ink clim:+grey41+)
+	      (format pane "~A: " (frame-no stack-frame))))
+	  (slim:cell
+	    (present stack-frame 'stack-frame :view (view stack-frame))))))
     (when (>= (length (backtrace (condition-info pane)))
 	      +initial-backtrace-length+)
       (slim:row
