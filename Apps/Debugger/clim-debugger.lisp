@@ -267,9 +267,9 @@
 (defun display-backtrace (frame pane)
   (declare (ignore frame)) 
   (with-text-family (pane :sans-serif)
-    (bold (pane) (format t "Backtrace:")))
-  (fresh-line)
-  (format t " ")
+    (bold (pane) (format pane "Backtrace:")))
+  (fresh-line pane)
+  (format pane " ")
   (slim:with-table (pane)
     (loop for stack-frame in (backtrace (condition-info pane))
        for i from 0
@@ -279,7 +279,7 @@
 		      :single-box t :allow-sensitive-inferiors nil)
 	      (slim:cell
 		(bold (pane)
-		  (format t "~A: " i)))
+		  (format pane "~A: " i)))
 	      (slim:cell
 		(present stack-frame 'stack-frame
 			 :view (view stack-frame))))))
@@ -304,36 +304,36 @@
   (declare (ignore acceptably for-context-type))
   (progn
     (princ (frame-string object) stream)
-    (fresh-line)
+    (fresh-line stream)
     (with-text-family (stream :sans-serif)
-      (bold (stream) (format t "  Locals:")))
-    (fresh-line)
-    (format t "     ")
+      (bold (stream) (format stream "  Locals:")))
+    (fresh-line stream)
+    (format stream "     ")
     (slim:with-table (stream)
       (loop for (name n identifier id value val) in (frame-variables object)
 	 do (slim:row
 	      (slim:cell (princ n))
 	      (slim:cell (princ "="))
 	      (slim:cell (present val 'inspect)))))
-    (fresh-line)))
+    (fresh-line stream)))
 
 (define-presentation-method present (object (type restart) stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (bold (stream) (format t "~A" (restart-name object))))
+  (bold (stream) (format stream "~A" (restart-name object))))
 
 (define-presentation-method present (object (type more-type) stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (bold (stream) (format t "--- MORE ---")))
+  (bold (stream) (format stream "--- MORE ---")))
 
 (define-presentation-method present (object (type inspect) stream
 				     (view textual-view)
 				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (format t "~A" object))
+  (format stream "~A" object))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
