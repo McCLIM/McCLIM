@@ -296,7 +296,11 @@
 				     (view minimized-stack-frame-view)
 				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (format t "~A  " (frame-string object)))
+  (let* ((frame-string (frame-string object))
+	 (new-line-pos (position #\newline frame-string)))
+    (if new-line-pos
+	(format stream "~A ..)" (subseq frame-string 0 new-line-pos))
+	(princ frame-string stream))))
 
 (define-presentation-method present (object (type stack-frame) stream
 				     (view maximized-stack-frame-view)
