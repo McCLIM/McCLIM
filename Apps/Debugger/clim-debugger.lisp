@@ -241,8 +241,9 @@
 			     (princ (type-of-condition (condition-info pane))))))
       (when (condition-extra (condition-info pane))
 	(slim:row (slim:cell (bold (slim:*table*) (princ "Extra:")))
-		  (slim:cell (clim:with-text-family (pane :fix)
-			       (format t "~A" (condition-extra (condition-info pane))))))))
+		  (slim:cell
+		    (clim:with-text-family (pane :fix)
+		      (format t "~A" (condition-extra (condition-info pane))))))))
     (fresh-line)
     
     (with-text-family (pane :sans-serif)
@@ -262,12 +263,12 @@
 	      (clim:with-drawing-options (slim:*table* :ink clim:+dark-violet+)
 		(princ (restart-name r))))
 	    (slim:cell (princ r))))))
-
     (fresh-line)
     (display-backtrace frame pane)
-    (change-space-requirements pane
-			      :width (bounding-rectangle-width (stream-output-history pane))
-			      :height (bounding-rectangle-height (stream-output-history pane)))))
+    (change-space-requirements
+     pane
+     :width (bounding-rectangle-width (stream-output-history pane))
+     :height (bounding-rectangle-height (stream-output-history pane)))))
 
 
 (defun display-backtrace (frame pane)
@@ -275,20 +276,18 @@
   (with-text-family (pane :sans-serif)
     (bold (pane) (format pane "Backtrace:")))
   (fresh-line pane)
-  (format pane " ")
+  (format pane "   ")
   (slim:with-table (pane)
     (loop for stack-frame in (backtrace (condition-info pane))
        for i from 0
-       do (slim:row
-	    (with-output-as-presentation
-		(pane stack-frame 'stack-frame
-		      :single-box t :allow-sensitive-inferiors nil)
-	      (slim:cell
-		(bold (pane)
-		  (format pane "~A: " i)))
-	      (slim:cell
-		(present stack-frame 'stack-frame
-			 :view (view stack-frame))))))
+       do (with-output-as-presentation
+	      (pane stack-frame 'stack-frame :single-box t)
+	    (slim:row
+	     (slim:cell
+	       (with-drawing-options (pane :ink clim:+grey41+)
+		 (format pane "~A: " i)))
+	     (slim:cell
+	       (present stack-frame 'stack-frame :view (view stack-frame))))))
     (when (>= (length (backtrace (condition-info pane)))
 	      +initial-backtrace-length+)
       (slim:row
