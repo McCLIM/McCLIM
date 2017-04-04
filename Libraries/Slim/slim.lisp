@@ -1,8 +1,13 @@
 (defpackage slim
   (:use #:cl)
-  (:export #:with-table #:row #:cell #:*table*))
+  (:export #:+golden-ratio+
+	   #:with-table #:row #:cell #:*table*))
 (in-package slim)
 
+(defparameter +golden-ratio+ #. (/ (+ 1 (sqrt 5)) 2)
+  "Golden Ratio constant.")
+
+
 (defvar *table*)
 
 (defmacro with-table ((pane) &body body)
