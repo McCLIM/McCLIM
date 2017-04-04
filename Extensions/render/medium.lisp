@@ -70,10 +70,12 @@
     (when (and msheet (sheet-mirror msheet))
       (%fill-image-mask (sheet-mirror msheet)
 			image
-			(round from-x) (round from-y)
+
+			(round from-x) (round from-y)	
 			(round width)
 			(round height)
-			(round to-x) (round to-y) (climi::medium-device-region medium)
+			(round to-x) (round to-y)			
+			(climi::medium-device-region medium)
 			(transform-region (sheet-native-transformation (medium-sheet medium))
 					  (medium-ink medium))
 			(medium-background medium)
@@ -229,32 +231,32 @@
 				(+ (floor text-height 2))))
 		    (:baseline y)
 		    (:bottom (+ y (- baseline text-height))))))
-	(multiple-value-bind (x1 y1)
-	    (transform-position (sheet-native-transformation
-				 (medium-sheet medium))
-				x y)
-	  (let ((paths (string-primitive-paths x y string xfont size
-					       (lambda (paths opacity-image dx dy transformation)
-						 
-						  (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
-						    (when (and msheet (sheet-mirror msheet))
-						      (multiple-value-bind (x1 y1)
-							  (transform-position
-							   (clim:compose-transformations transformation
-										(sheet-native-transformation
-										 (medium-sheet medium)))
-							   dx (- dy))
-							(%medium-fill-image-mask
-							 medium
-							 opacity-image
-							 0 0
-							 (climi::image-width opacity-image)
-							 (climi::image-height opacity-image)
-							 (round x1) (round y1)
-							 ))))
-						  
-						  #+nil(%medium-fill-paths medium paths t transformation)
-						  ))))))))))
+	(let ((paths (string-primitive-paths x y string xfont size
+					     (lambda (paths opacity-image dx dy transformation)
+					       (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+						 (when (and msheet (sheet-mirror msheet))
+						   (multiple-value-bind (x1 y1)
+						       (transform-position
+							(clim:compose-transformations transformation
+										      (sheet-native-transformation
+										       (medium-sheet medium)))
+							(+ dx ) (-  dy))
+						     
+						     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+							 (region-intersection
+							  (climi::medium-device-region medium)
+							  (make-rectangle* x1 y1 (+ -1 x1 (climi::image-width opacity-image)) (+ -1 y1 (climi::image-height opacity-image))))
+						       
+						       (%medium-fill-image-mask
+							medium
+							opacity-image
+							min-x min-y
+							(- max-x min-x) (- max-y min-y)
+							(- (round x1)) (- (round y1))
+							)))))
+					       
+					       #+nil(%medium-fill-paths medium paths t transformation)
+					       )))))))))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)

@@ -248,3 +248,109 @@
 	      (fill-color)
 	      (fill-function))
 	  (make-rectangle* x y (+ x width) (+ y height)))))))
+
+
+(defgeneric image-fill (image &key x y 
+				width 
+				height 
+				ink 
+				background
+				foreground
+				mask
+				mask-dx
+				mask-dy))
+
+(defmethod image-fill ((image rgba-image) &key
+					    (x 0)
+					    (y 0)
+					    (width (climi::image-width image))
+					    (height (climi::image-height image))
+					    (ink clim:+foreground-ink+)
+					    (background clim:+yellow+)
+					    (foreground clim:+blue+)
+					    (mask nil)
+					    (mask-dx 0)
+					    (mask-dy 0))
+  (declare (type fixnum x y width height mask-dx mask-dy))
+  (let ((data-image (image-data image))
+	(*background-design* background)
+	(*foreground-design* foreground))
+    (declare (type rgba-image-data data-image))
+    (let* ((rgba-design (make-rgba-design ink))
+	   (source-fn (make-rgba-design-fn rgba-design))
+	   (max-y (+ y height))
+	   (max-x (+ x width)))
+      (declare (type design-fn source-fn))
+      (flet ((fill-color-no-mask ()
+	       (let ((s-red (uniform-rgba-design-red rgba-design))
+		     (s-green (uniform-rgba-design-green rgba-design))
+		     (s-blue (uniform-rgba-design-blue rgba-design))
+		     (s-alpha (uniform-rgba-design-alpha rgba-design)))
+		 (if (> s-alpha 250)
+		     (loop for j from y to max-y do
+			  (loop for i from x to max-x do
+			       (rgba-image-data-set-pixel-octet data-image i j
+								s-red s-green s-blue s-alpha)))
+		     (loop for j from y to max-y do
+			  (loop for i from x to max-x do
+			       (multiple-value-bind (r.bg g.bg b.bg a.bg)
+				   (rgba-image-data-get-pixel-octet data-image i j)
+				 (multiple-value-bind (red green blue alpha)	  
+				     (octet-blend r.bg g.bg b.bg a.bg s-red s-green s-blue s-alpha 255)
+				   (rgba-image-data-set-pixel-octet data-image i j
+								    red green blue alpha))))))))
+	     (fill-function-no-mask ()
+	       (loop for j from y to max-y do
+		    (loop for i from x to max-x do
+			 (multiple-value-bind (r.bg g.bg b.bg a.bg)
+			     (rgba-image-data-get-pixel-octet data-image i j)
+			   (multiple-value-bind (r.fg g.fg b.fg a.fg)
+			       (funcall source-fn i j)
+			     (if (> a.fg 250)
+				 (rgba-image-data-set-pixel-octet data-image i j
+								  r.fg g.fg b.fg a.fg)
+				 (multiple-value-bind (red green blue alpha)	  
+				     (octet-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg 255)
+				   (rgba-image-data-set-pixel-octet data-image i j
+								    red green blue alpha))))))))
+	     (fill-color-mask ()
+	       (let ((data-mask (image-data mask))
+		     (s-red (uniform-rgba-design-red rgba-design))
+		     (s-green (uniform-rgba-design-green rgba-design))
+		     (s-blue (uniform-rgba-design-blue rgba-design))
+		     (s-alpha (uniform-rgba-design-alpha rgba-design)))
+		 (loop for j from y below max-y do
+		      (loop for i from x below max-x do
+			   (multiple-value-bind (r.bg g.bg b.bg a.bg)
+			       (rgba-image-data-get-pixel-octet data-image i j)
+			     (multiple-value-bind (a.m)
+				 (mask-image-data-get-alpha-octet data-mask (+ mask-dx i) (+ mask-dy j))
+			       (multiple-value-bind (red green blue alpha)	  
+				   (octet-blend r.bg g.bg b.bg a.bg s-red s-green s-blue s-alpha a.m)
+				 (rgba-image-data-set-pixel-octet data-image i j
+								  red green blue alpha))))))))
+	     (fill-function-mask ()
+	       (let ((data-mask (image-data mask)))
+		 (loop for j from y below max-y do
+		      (loop for i from x below max-x do
+			   (multiple-value-bind (r.bg g.bg b.bg a.bg)
+			       (rgba-image-data-get-pixel-octet data-image i j)
+			     (multiple-value-bind (r.fg g.fg b.fg a.fg)
+				 (funcall source-fn i j)
+			       (multiple-value-bind (a.m)
+				   (mask-image-data-get-alpha-octet data-mask (+ mask-dx i) (+ mask-dy j))
+				 (multiple-value-bind (red green blue alpha)	  
+				     (octet-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg a.m)
+				   (rgba-image-data-set-pixel-octet data-image i j
+								    red green blue alpha))))))))))
+	(if mask
+	    (if (typep rgba-design 'uniform-rgba-design)
+		(fill-color-mask)
+		(fill-function-mask))
+	    (if (typep rgba-design 'uniform-rgba-design)
+		(fill-color-no-mask)
+		(fill-function-no-mask)))
+	(make-rectangle* x y (+ x width) (+ y height))))))
+  
+
+  

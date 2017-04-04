@@ -1,3 +1,4 @@
+
 (in-package :mcclim-render)
 
 (defclass image-mirror-mixin ()
@@ -113,13 +114,21 @@
 
 (defmethod %fill-image-mask ((mirror image-mirror-mixin)
 			     image-mask x y width height x-dest y-dest clip-region ink background foreground)
-  
     (let ((region
-	   (rgb-image-fill
+	   #+nil(rgb-image-fill
 	    (image-mirror-image mirror)
 	    image-mask
 	    :x x :y y :width width :height height :x-dst x-dest :y-dst y-dest
 	    :clip-region clip-region
+	    :ink ink
+	    :background background
+	    :foreground foreground)
+	   (image-fill
+	    (image-mirror-image mirror)
+	    :x x :y y :width width :height height
+	    :mask image-mask
+	    :mask-dx x-dest :mask-dy y-dest
+	    ;;:clip-region clip-region
 	    :ink ink
 	    :background background
 	    :foreground foreground)))
@@ -127,7 +136,7 @@
 
 (defmethod %fill-image ((mirror image-mirror-mixin)
 			x y width height ink background foreground)
-  (let ((region (rgb-image-fill2
+  (let ((region (image-fill
 		 (image-mirror-image mirror)
 		 :x x :y y :width width :height height 
 		 :ink ink
