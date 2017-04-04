@@ -297,11 +297,7 @@
           (bold (pane)
             (present pane 'more-type)))))))
 
-
-(define-presentation-method present (object (type stack-frame) stream
-				     (view minimized-stack-frame-view)
-				     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
+(defun print-stack-frame-header (object stream)
   (let* ((frame-string (frame-string object))
 	 (new-line-pos (position #\newline frame-string)))
     (if new-line-pos
@@ -309,23 +305,28 @@
 	(princ frame-string stream))))
 
 (define-presentation-method present (object (type stack-frame) stream
+				     (view minimized-stack-frame-view)
+				     &key acceptably for-context-type)
+  (declare (ignore acceptably for-context-type))
+  (print-stack-frame-header object stream))
+
+(define-presentation-method present (object (type stack-frame) stream
 				     (view maximized-stack-frame-view)
 				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (progn
-    (princ (frame-string object) stream)
-    (fresh-line stream)
-    (with-text-family (stream :sans-serif)
-      (bold (stream) (format stream "  Locals:")))
-    (fresh-line stream)
-    (format stream "     ")
-    (slim:with-table (stream)
-      (loop for (name n identifier id value val) in (frame-variables object)
-	 do (slim:row
-	      (slim:cell (princ n))
-	      (slim:cell (princ "="))
-	      (slim:cell (present val 'inspect)))))
-    (fresh-line stream)))
+  (print-stack-frame-header object stream)
+  (fresh-line stream)
+  (with-text-family (stream :sans-serif)
+    (bold (stream) (format stream "  Locals:")))
+  (fresh-line stream)
+  (format stream "     ")
+  (slim:with-table (stream)
+    (loop for (name n identifier id value val) in (frame-variables object)
+       do (slim:row
+	    (slim:cell (princ n))
+	    (slim:cell (princ "="))
+	    (slim:cell (present val 'inspect)))))
+  (fresh-line stream))
 
 (define-presentation-method present (object (type restart) stream
 				     (view textual-view)
