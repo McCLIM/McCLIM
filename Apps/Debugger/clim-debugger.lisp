@@ -51,7 +51,7 @@
 
 (defpackage "CLIM-DEBUGGER"
   (:use  "CL-USER" "CLIM" "CLIM-LISP")
-  (:export :debugger))
+  (:export #:debugger #:with-debugger))
 
 (in-package :clim-debugger)
 
@@ -373,6 +373,10 @@
 	       (invoke-restart-interactively restart))
 	     (abort)))))))
 
+(defmacro with-debugger (&body body)
+  `(let ((*debugger-hook* #'debugger)
+	 #+sbcl (sb-ext:*invoke-debugger-hook* #'debugger))
+     ,@body))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   For testing   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -380,7 +384,7 @@
 
 (defun simple-break ()
   (with-simple-restart  (continue "Continue from interrupt.")
-    (let ((*debugger-hook* #'debugger))
+    (with-debugger
       (invoke-debugger 
        (make-condition 'simple-error 
                        :format-control "Debugger test")))))
