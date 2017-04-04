@@ -55,10 +55,12 @@
 
 (in-package :clim-debugger)
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   Misc   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Length of a top of the backtrace
+(defparameter +initial-backtrace-length+ 5)
 
 ;;; Borrowed from Andy Hefner
 (defmacro bold ((stream) &body body)
@@ -281,7 +283,8 @@
 	      (slim:cell
 		(present stack-frame 'stack-frame
 			 :view (view stack-frame))))))
-    (when (>= (length (backtrace (condition-info pane))) 20)
+    (when (>= (length (backtrace (condition-info pane)))
+	      +initial-backtrace-length+)
       (slim:row
         (slim:cell)
         (slim:cell
@@ -351,7 +354,8 @@
 	      :condition-message    (swank::safe-condition-message condition)
 	      :condition-extra      (swank::condition-extras       condition)
 	      :restarts             (compute-restarts)
-	      :backtrace            (compute-backtrace 0 20)))
+	      :backtrace            (compute-backtrace
+				     0 +initial-backtrace-length+)))
 	    (run-debugger-frame))
        (let ((restart *returned-restart*))
 	 (setf *returned-restart* nil)
