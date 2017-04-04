@@ -228,45 +228,33 @@
 ;;;   Display debugging info   ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro std-row ((pane) head tail)
-  (alexandria:once-only (pane)
-    `(formatting-row (,pane)
-       (formatting-cell (,pane)
-	 (bold (,pane) ,head))
-       (formatting-cell (,pane) ,tail))))
-
 (defun display-debugger (frame pane)
   (let ((*standard-output* pane))
-    (clim:formatting-table (pane)
-      (std-row (pane)
-	(princ "Description:")
-	(princ (condition-message (condition-info pane))))
-      (std-row (pane)
-	(princ "Condition:")
-	(clim:with-drawing-options (pane :ink clim:+red+)
-	  (format t "~A" (type-of-condition (condition-info pane)))))
+    (slim:with-table (pane)
+      (slim:row (slim:cell (bold (slim:*table*) (princ "Description:")))
+		(slim:cell (princ (condition-message
+				   (condition-info pane)))))
+      (slim:row (slim:cell (bold (slim:*table*) (princ "Condition:")))
+		(slim:cell (clim:with-drawing-options (slim:*table* :ink clim:+red+)
+			     (princ (type-of-condition (condition-info pane))))))
       (when (condition-extra (condition-info pane))
-	(std-row (pane)
-	  (princ "Extra:")
-	  (clim:with-text-family (pane :fix)
-	    (format t "~A" (condition-extra (condition-info pane)))))))
+	(slim:row (slim:cell (bold (slim:*table*) (princ "Extra:")))
+		  (slim:cell (clim:with-text-family (pane :fix)
+			       (format t "~A" (condition-extra (condition-info pane))))))))
     (fresh-line)
     
     (with-text-family (pane :sans-serif)
       (bold (pane) (format t "Restarts:")))
     (fresh-line)
     (format t " ")
-    (formatting-table 
-	(pane)
-      (loop for r in (restarts (condition-info pane))
-        do (formatting-row (pane)
-              (with-output-as-presentation (pane r 'restart :single-box t)
-                (formatting-cell (pane)
-                  (format pane "~A" (restart-name r)))
-              
-                (formatting-cell (pane)
-                  (with-text-family (pane :sans-serif)
-                    (format pane "~A" r)))))))
+    (slim:with-table (pane)
+      (dolist (r (restarts (condition-info pane)))
+	(slim:row
+	  (with-output-as-presentation (pane r 'restart :single-box t)
+	    (slim:cell (clim:with-drawing-options (slim:*table* :ink clim:+dark-violet+)
+			 (princ (restart-name r))))
+	    (slim:cell (princ r))))))
+
     (fresh-line)
     (display-backtrace frame pane)
     (change-space-requirements pane
@@ -280,21 +268,23 @@
     (bold (pane) (format t "Backtrace:")))
   (fresh-line)
   (format t " ")
-  (formatting-table 
-      (pane)
+  (slim:with-table (pane)
     (loop for stack-frame in (backtrace (condition-info pane))
-	  for i from 0
-	  do (formatting-row (pane)
-               (with-output-as-presentation (pane stack-frame 'stack-frame
-						  :single-box t :allow-sensitive-inferiors nil)
-                 (bold (pane) (formatting-cell (pane) (format t "~A: " i)))
-                 (formatting-cell (pane)
-                   (present stack-frame 'stack-frame 
-                            :view (view stack-frame))))))
+       for i from 0
+       do (slim:row
+	    (with-output-as-presentation
+		(pane stack-frame 'stack-frame
+		      :single-box t :allow-sensitive-inferiors nil)
+	      (slim:cell
+		(bold (pane)
+		  (format t "~A: " i)))
+	      (slim:cell
+		(present stack-frame 'stack-frame
+			 :view (view stack-frame))))))
     (when (>= (length (backtrace (condition-info pane))) 20)
-      (formatting-row (pane)
-        (formatting-cell (pane))
-        (formatting-cell (pane)
+      (slim:row
+        (slim:cell)
+        (slim:cell
           (bold (pane)
             (present pane 'more-type)))))))
 
@@ -316,14 +306,12 @@
       (bold (stream) (format t "  Locals:")))
     (fresh-line)
     (format t "     ")
-    (formatting-table 
-     (stream)
-     (loop for (name n identifier id value val) in (frame-variables object)
-	   do (formatting-row 
-	       (stream)
-	       (formatting-cell (stream) (format t "~A" n))
-	       (formatting-cell (stream) (format t "="))
-	       (formatting-cell (stream) (present val 'inspect)))))
+    (slim:with-table (stream)
+      (loop for (name n identifier id value val) in (frame-variables object)
+	 do (slim:row
+	      (slim:cell (princ n))
+	      (slim:cell (princ "="))
+	      (slim:cell (present val 'inspect)))))
     (fresh-line)))
 
 (define-presentation-method present (object (type restart) stream
