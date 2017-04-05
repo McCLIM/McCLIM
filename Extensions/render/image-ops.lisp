@@ -144,13 +144,13 @@
 			    ,image-set-code)))))))
      (if ,self
 	 (cond
-	   ((and (> src-dx 0) (> src-dy 0))
+	   ((and (<= src-dx 0) (<= src-dy 0))
 	    (copy-bb))
-	   ((and (> src-dx 0) (< src-dy 0))
+	   ((and (<= src-dx 0) (> src-dy 0))
 	    (copy-bf))
-	   ((and (< src-dx 0) (> src-dy 0))
+	   ((and (> src-dx 0) (<= src-dy 0))
 	    (copy-fb))
-	   ((and (< src-dx 0) (< src-dy 0))
+	   ((and (> src-dx 0) (> src-dy 0))
 	    (copy-ff)))
 	 (copy-ff))))
 
@@ -168,18 +168,13 @@
 			 (src-dx 0)
 			 (src-dy 0))
   (declare (type fixnum x y width height src-dx src-dy))
-  (format *debug-io* "## COPY: ~A ~A ~A [~A] [~A]~%"
-	  (list x y) (list width height) (list src-dx src-dy)
-	  (list (climi::image-width image) (climi::image-height image))
-	  (list (climi::image-width src-image) (climi::image-height src-image))
-	  )
   (let ((data-image (image-data image))
-	(src-image (image-data src-image)))
-    (declare (type rgba-image-data data-image src-image))
+	(src-data-image (image-data src-image)))
+    (declare (type rgba-image-data data-image src-data-image))
     (make-copy-image-function
      (eql image src-image)
      src-dx src-dy
-     (rgba-image-data-get-pixel-octet src-image (+ src-dx i) (+ src-dy j))
+     (rgba-image-data-get-pixel-octet src-data-image (+ src-dx i) (+ src-dy j))
      (rgba-image-data-set-pixel-octet data-image i j red green blue alpha)))
   (make-rectangle* x y (+ x width) (+ y height)))
 
@@ -190,8 +185,8 @@
 (defmacro make-fill-image-function (image-get-code image-set-code design-get-code aa-alpha-code)
   `(when (and (> width 0)
 	      (> height 0))
-     (let ((max-y (+ y height))
-	   (max-x (+ x width)))
+     (let ((max-y (+ y height -1))
+	   (max-x (+ x width -1)))
        (loop for j from y to max-y do
 	    (loop for i from x to max-x do
 		 (multiple-value-bind (red green blue alpha)
@@ -218,7 +213,6 @@
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy)
 	   (ignore mask-dx mask-dy))
-  ;;(format *debug-io* "## UN: ~A ~A ~A~%" (list x y) (list width height) (list mask-dx mask-dy))
   (let ((data-image (image-data image)))
     (declare (type rgba-image-data data-image))
     (make-fill-image-function
@@ -239,7 +233,6 @@
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy)
 	   (ignore mask-dx mask-dy))
-  ;;(format *debug-io* "## FN: ~A ~A ~A~%" (list x y) (list width height) (list mask-dx mask-dy))
   (let ((data-image (image-data image))
 	(source-fn (make-rgba-design-fn rgba-design)))
     (declare (type rgba-image-data data-image)
@@ -258,7 +251,6 @@
 			 (width (climi::image-width image)) (height (climi::image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy))
-  ;;(format *debug-io* "## UM: ~A ~A ~A~%" (list x y) (list width height) (list mask-dx mask-dy))
   (let ((data-image (image-data image))
 	(data-mask (image-data mask)))
     (declare (type rgba-image-data data-image)
@@ -280,7 +272,6 @@
 			 (width (climi::image-width image)) (height (climi::image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy))
-  ;;(format *debug-io* "## FM: ~A ~A ~A~%" (list x y) (list width height) (list mask-dx mask-dy))
   (let ((data-image (image-data image))
 	(data-mask (image-data mask))
 	(source-fn (make-rgba-design-fn rgba-design)))
@@ -293,7 +284,3 @@
      (funcall source-fn i j)
      (mask-image-data-get-alpha-octet data-mask (+ mask-dx i) (+ mask-dy j))))
   (make-rectangle* x y (+ x width) (+ y height)))
-
-  
-
-  

@@ -56,7 +56,7 @@
 		   (medium-foreground medium)))))
 
 (defmethod %medium-draw-image ((medium render-medium-mixin) image
-			       width height to-x to-y dst-dx dst-dy)
+			       to-x to-y width height dst-dx dst-dy)
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
     (when (and msheet (sheet-mirror msheet))
       (%draw-image (sheet-mirror msheet)
@@ -271,21 +271,26 @@
 	 (to-sheet (medium-sheet to-drawable))
 	 (to-transformation (sheet-native-transformation to-sheet)))
     (when (and msheet (sheet-mirror msheet))
-      (with-transformed-position (from-transformation from-x from-y)
-	(with-transformed-position (to-transformation to-x to-y)
-	  (multiple-value-bind (width height)
-	      (transform-distance (medium-transformation from-drawable)
-				  width height)
-	    (format *debug-io* "## COPY_AREA 1 ~A ~A ~A ~%"
-		    (list to-x to-y)
-		    (list width height)
-		    (list from-x from-y))
-	    (%medium-draw-image to-drawable
-				(medium-sheet from-drawable)
-				to-x to-y
-				width height
-				from-x from-y 
-				)))))))
+      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+	  (region-intersection
+	   (climi::medium-device-region to-drawable)
+	   (transform-region
+	    (sheet-native-transformation (medium-sheet to-drawable))
+	    (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
+	(multiple-value-bind (x1 y1)
+	    (transform-position
+	     (sheet-native-transformation (medium-sheet to-drawable))
+	     to-x to-y)
+	  (multiple-value-bind (x2 y2)
+	    (transform-position
+	     (sheet-native-transformation (medium-sheet from-drawable))
+	     from-x from-y)
+	  (%medium-draw-image to-drawable
+			      (medium-sheet from-drawable)
+			      min-x min-y
+			      (- max-x min-x) (- max-y min-y)
+			      (- x2 x1) (- y2 y1))))))))
+    
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable image-sheet-mixin) to-x to-y)
@@ -294,15 +299,26 @@
 	 (from-sheet (medium-sheet from-drawable))
 	 (from-transformation (sheet-native-transformation from-sheet)))
     (when (and msheet (sheet-mirror msheet))
-      (with-transformed-position (from-transformation from-x from-y)
-	(climi::with-pixmap-medium (to-medium to-drawable)
-	   (format *debug-io* "## COPY_AREA 2~A  ~A ~A ~%"
-		    (list to-x to-y)
-		    (list width height)
-		    (list from-x from-y))
-	  (%medium-draw-image (sheet-medium to-drawable)
-			      (medium-sheet from-drawable)
-			      from-x from-y width height to-x to-y))))))
+      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+	  (region-intersection
+	   (climi::sheet-native-region to-drawable)
+	   (transform-region
+	    (sheet-native-transformation to-drawable)
+	    (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
+	(multiple-value-bind (x1 y1)
+	    (transform-position
+	     (sheet-native-transformation to-drawable)
+	     to-x to-y)
+	  (multiple-value-bind (x2 y2)
+	      (transform-position
+	       (sheet-native-transformation (medium-sheet from-drawable))
+	       from-x from-y)
+	    (climi::with-pixmap-medium (to-medium to-drawable)
+	      (%medium-draw-image (sheet-medium to-drawable)
+				  (medium-sheet from-drawable)
+				  min-x min-y
+				  (- max-x min-x) (- max-y min-y)
+				  (- x2 x1) (- y2 y1)))))))))
 
 (defmethod medium-copy-area ((from-drawable image-sheet-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
@@ -312,18 +328,14 @@
     (when (and msheet (sheet-mirror msheet))
       (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 	  (region-intersection
-	   (sheet-native-region (medium-sheet to-drawable))
+	   (climi::medium-device-region to-drawable)
 	   (transform-region
 	    (sheet-native-transformation (medium-sheet to-drawable))
 	    (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
 	(multiple-value-bind (x1 y1)
 	    (transform-position
 	     (sheet-native-transformation (medium-sheet to-drawable))
-	     from-x from-y)
-	  (format *debug-io* "## COPY_AREA 3 ~A  ~A ~A ~%"
-		  (list to-x to-y)
-		  (list width height)
-		  (list from-x from-y))
+	     to-x to-y)
 	  (%medium-draw-image to-drawable
 			      from-drawable
 			      min-x min-y
