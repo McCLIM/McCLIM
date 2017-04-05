@@ -10,12 +10,12 @@
 ;;;
 ;;; For at quick test, you can use this code snippet:
 ;;;
-;;; (let ((*debugger-hook* #'clim-debugger:debugger))
+;;; (clim-debugger:with-debugger
 ;;;   (+ 3 'abc))
 ;;;
 ;;; This is also nice :-)
 ;;;
-;;; (let ((*debugger-hook* #'clim-debugger:debugger))
+;;; (clim-debugger:with-debugger
 ;;;   (clim-listener:run-listener :new-process t))
 
 ;;;
@@ -127,7 +127,7 @@
   ((condition-info :reader condition-info :initarg :condition-info)))
 
 ;; FIXME - These two variables should be removed!
-;; Used to return the chosen reatart in the debugger.
+;; Used to return the chosen restart in the debugger.
 (defparameter *returned-restart* nil)
 
 ;; Used to provide the clim frame with the condition info that
