@@ -104,45 +104,51 @@
 	(call-next-method)))))
 
 (defmethod %draw-image ((mirror image-mirror-mixin)
-			image x y width height x-dest y-dest clip-region)
-  (let ((region (rgb-image-copy
+			image x y width height
+			dst-dx dst-dy
+			clip-region)
+  (let ((region #+nil(rgb-image-copy
 		 image
 		 (image-mirror-image mirror)
 		 :x x :y y :width width :height height :x-dst x-dest :y-dst y-dest
-		 :clip-region clip-region)))
+		 :clip-region clip-region)
+		(copy-image
+		 (image-mirror-image mirror)
+		 image
+		 :x x :y y :width width :height height
+		 ;;:x-dst x-dest :y-dst y-dest
+		 :src-dx dst-dx
+		 :src-dy dst-dy
+		 ;;:clip-region clip-region
+		 )
+		))
     (%notify-image-updated mirror region)))
 
 (defmethod %fill-image-mask ((mirror image-mirror-mixin)
 			     image-mask x y width height x-dest y-dest clip-region ink background foreground)
+  (let ((*background-design* background)
+	(*foreground-design* foreground))
     (let ((region
-	   #+nil(rgb-image-fill
+	   (fill-image
 	    (image-mirror-image mirror)
+	    (make-rgba-design ink)
 	    image-mask
-	    :x x :y y :width width :height height :x-dst x-dest :y-dst y-dest
-	    :clip-region clip-region
-	    :ink ink
-	    :background background
-	    :foreground foreground)
-	   (image-fill
-	    (image-mirror-image mirror)
 	    :x x :y y :width width :height height
-	    :mask image-mask
 	    :mask-dx x-dest :mask-dy y-dest
 	    ;;:clip-region clip-region
-	    :ink ink
-	    :background background
-	    :foreground foreground)))
-      (%notify-image-updated mirror region)))
+	    )))
+      (%notify-image-updated mirror region))))
 
 (defmethod %fill-image ((mirror image-mirror-mixin)
 			x y width height ink background foreground)
-  (let ((region (image-fill
-		 (image-mirror-image mirror)
-		 :x x :y y :width width :height height 
-		 :ink ink
-		 :background background
-		 :foreground foreground)))
-    (%notify-image-updated mirror region)))
+  (let ((*background-design* background)
+	(*foreground-design* foreground))
+    (let ((region (fill-image
+		   (image-mirror-image mirror)
+		   (make-rgba-design ink)
+		   nil
+		   :x x :y y :width width :height height)))
+    (%notify-image-updated mirror region))))
 
 
 (defmethod %draw-paths ((mirror image-mirror-mixin) paths transformation region ink background foreground)

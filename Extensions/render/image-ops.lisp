@@ -97,260 +97,203 @@
 		(copy-ff))
 	    (make-rectangle* (+ x-min dx) (+ y-min dy) (+ x-max dx) (+ y-max dy))))))))
 
-(defun rgb-image-fill (image mask-image &key (x 0) (y 0)
-				    (width (climi::image-width image))
-				    (height (climi::image-height image))
-				    (x-dst 0)
-				    (y-dst 0)
-				    (clip-region nil)
-				    (ink clim:+foreground-ink+)
-				    (background clim:+yellow+)
-				    (foreground clim:+blue+))
-  (declare ;;(optimize speed)
-	   (type fixnum x y width height x-dst y-dst))
-  (let ((clip-region  (if clip-region
-			  (region-intersection clip-region
-					       (make-rectangle* 0 0 (1- (image-width image))
-								(1- (image-height image))))
-			  (make-rectangle* 0 0 (1- (image-width image)) (1- (image-height image))))))
-    (clim:with-bounding-rectangle* (min-x-dst min-y-dst max-x-dst max-y-dst)
-	clip-region
-      (let ((dx (- x-dst x))
-	    (dy (- y-dst y))
-	    (min-x-dst (round-coordinate min-x-dst))
-	    (min-y-dst (round-coordinate min-y-dst))
-	    (max-x-dst (round-coordinate max-x-dst))
-	    (max-y-dst (round-coordinate max-y-dst))
-	    (data-image (image-data image))
-	    (data-mask (image-data mask-image))
-	    (mask (if (rectanglep clip-region)
-		      nil
-		      clip-region)))
-	(declare (type fixnum dx dy)
-		 (type rgba-image-data data-image)
-		 (type mask-image-data data-mask))
-	(let ((x-min (max 0 x (- min-x-dst dx)))
-	      (y-min (max 0 y (- min-y-dst dy)))
-	      (x-max (min (+ x width) (1- (image-width mask-image)) (- max-x-dst dx)))
-	      (y-max (min (+ y height) (1- (image-height mask-image)) (- max-y-dst dy))))
-	  (let ((*background-design* background)
-		(*foreground-design* foreground))
-	    (let* ((rgba-design (make-rgba-design ink))
-		   (source-fn (make-rgba-design-fn rgba-design)))
-	      (declare (type design-fn source-fn))
-	      (flet ((fill-color ()
-		       (let ((s-red (uniform-rgba-design-red rgba-design))
-			     (s-green (uniform-rgba-design-green rgba-design))
-			     (s-blue (uniform-rgba-design-blue rgba-design))
-			     (s-alpha (uniform-rgba-design-alpha rgba-design)))
-			 (loop
-			    for j from y-min to y-max
-			    do
-			      (loop
-				 for i from x-min to x-max
-				 do
-				   (multiple-value-bind (r.bg g.bg b.bg a.bg)
-				       (rgba-image-data-get-pixel-octet data-image (+ dx i) (+ dy j))
-				     (multiple-value-bind (a.m)
-					 (mask-image-data-get-alpha-octet data-mask i j)
-				       (multiple-value-bind (red green blue alpha)	  
-					   (octet-blend r.bg g.bg b.bg a.bg s-red s-green s-blue s-alpha a.m)
-					 (rgba-image-data-set-pixel-octet data-image (+ dx i) (+ dy j)
-								    red green blue alpha))))))))
-		     (fill-function ()
-		       (loop
-			  for j from y-min to y-max
-			  do
-			    (loop
-			       for i from x-min to x-max
-			       do
-				 (multiple-value-bind (r.bg g.bg b.bg a.bg)
-				     (rgba-image-data-get-pixel-octet data-image (+ dx i) (+ dy j))
-				   (multiple-value-bind (a.m)
-				       (mask-image-data-get-alpha-octet data-mask i j)
-				     (multiple-value-bind (r.fg g.fg b.fg a.fg)
-					 (funcall source-fn i j)
-				       (multiple-value-bind (red green blue alpha)	  
-					   (octet-blend r.bg g.bg b.bg a.bg r.fg
-							g.fg b.fg
-							a.fg a.m)
-					 (rgba-image-data-set-pixel-octet data-image (+ dx i) (+ dy j)
-								    red green blue alpha)))))))))
-		(when mask
-		  (warn "mask not implemented"))
-		(if (typep rgba-design 'uniform-rgba-design)
-		    (fill-color)
-		    (fill-function))
-		(make-rectangle* (+ x-min dx) (+ y-min dy) (+ x-max dx) (+ y-max dy))))))))))
-  
-(defun rgb-image-fill2 (image &key (x 0) (y 0)
-				(width (climi::image-width image))
-				(height (climi::image-height image))
-				(ink clim:+foreground-ink+)
-				(background clim:+yellow+)
-				(foreground clim:+blue+))
-  (declare ;;(optimize speed)
-	   (type fixnum x y width height))
+;;;
+;;; copy image
+;;;
+
+(defmacro make-copy-image-function (self src-dx src-dy image-get-code image-set-code)
+  `(flet ((copy-ff ()
+	    (when (and (> width 0)
+		       (> height 0))
+	      (let ((max-y (+ y height))
+		    (max-x (+ x width)))
+		(loop for j from y to max-y do
+		     (loop for i from x to max-x do
+			  (multiple-value-bind (red green blue alpha)
+			      ,image-get-code
+			    ,image-set-code))))))
+	  (copy-bf ()
+	    (when (and (> width 0)
+		       (> height 0))
+	      (let ((max-y (+ y height))
+		    (max-x (+ x width)))
+		(loop for j from y to max-y do
+		     (loop for i from max-x downto x do
+			  (multiple-value-bind (red green blue alpha)
+			      ,image-get-code
+			    ,image-set-code))))))
+	  (copy-fb ()
+	    (when (and (> width 0)
+		       (> height 0))
+	      (let ((max-y (+ y height))
+		    (max-x (+ x width)))
+		(loop for j from max-y downto y do
+		     (loop for i from x to max-x do
+			  (multiple-value-bind (red green blue alpha)
+			      ,image-get-code
+			    ,image-set-code))))))
+	  (copy-bb ()
+	    (when (and (> width 0)
+		       (> height 0))
+	      (let ((max-y (+ y height))
+		    (max-x (+ x width)))
+		(loop for j from max-y downto y do
+		     (loop for i from max-x downto x do
+			  (multiple-value-bind (red green blue alpha)
+			      ,image-get-code
+			    ,image-set-code)))))))
+     (if ,self
+	 (cond
+	   ((and (> src-dx 0) (> src-dy 0))
+	    (copy-bb))
+	   ((and (> src-dx 0) (< src-dy 0))
+	    (copy-bf))
+	   ((and (< src-dx 0) (> src-dy 0))
+	    (copy-fb))
+	   ((and (< src-dx 0) (< src-dy 0))
+	    (copy-ff)))
+	 (copy-ff))))
+
+(defgeneric copy-image (image src-image &key x y 
+					  width 
+					  height 
+					  src-dx
+					  src-dy))
+
+(defmethod copy-image ((image rgba-image)
+		       (src-image rgba-image)
+		       &key (x 0) (y 0)
+			 (width (climi::image-width image))
+			 (height (climi::image-height image))
+			 (src-dx 0)
+			 (src-dy 0))
+  (declare (type fixnum x y width height src-dx src-dy))
+  (format *debug-io* "## COPY: ~A ~A ~A [~A] [~A]~%"
+	  (list x y) (list width height) (list src-dx src-dy)
+	  (list (climi::image-width image) (climi::image-height image))
+	  (list (climi::image-width src-image) (climi::image-height src-image))
+	  )
+  (let ((data-image (image-data image))
+	(src-image (image-data src-image)))
+    (declare (type rgba-image-data data-image src-image))
+    (make-copy-image-function
+     (eql image src-image)
+     src-dx src-dy
+     (rgba-image-data-get-pixel-octet src-image (+ src-dx i) (+ src-dy j))
+     (rgba-image-data-set-pixel-octet data-image i j red green blue alpha)))
+  (make-rectangle* x y (+ x width) (+ y height)))
+
+;;;
+;;; fill image
+;;;
+
+(defmacro make-fill-image-function (image-get-code image-set-code design-get-code aa-alpha-code)
+  `(when (and (> width 0)
+	      (> height 0))
+     (let ((max-y (+ y height))
+	   (max-x (+ x width)))
+       (loop for j from y to max-y do
+	    (loop for i from x to max-x do
+		 (multiple-value-bind (red green blue alpha)
+		     ,design-get-code
+		   (let ((aa-alpha ,aa-alpha-code))
+		     (if (> (imult aa-alpha alpha) 250)
+			 ,image-set-code
+			 (multiple-value-bind (r.bg g.bg b.bg a.bg)
+			     ,image-get-code
+			   (multiple-value-bind (red green blue alpha)	  
+			       (octet-blend r.bg g.bg b.bg a.bg red green blue alpha aa-alpha)
+			     ,image-set-code))))))))))
+		      
+(defgeneric fill-image (image design mask &key x y 
+					    width 
+					    height 
+					    mask-dx
+					    mask-dy))
+
+(defmethod fill-image ((image rgba-image) (rgba-design uniform-rgba-design) (mask (eql nil))
+		       &key
+			 (x 0) (y 0)
+			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (mask-dx 0) (mask-dy 0))
+  (declare (type fixnum x y width height mask-dx mask-dy)
+	   (ignore mask-dx mask-dy))
+  ;;(format *debug-io* "## UN: ~A ~A ~A~%" (list x y) (list width height) (list mask-dx mask-dy))
   (let ((data-image (image-data image)))
     (declare (type rgba-image-data data-image))
-    (let ((*background-design* background)
-	  (*foreground-design* foreground))
-      (let* ((rgba-design (make-rgba-design ink))
-	     (source-fn (make-rgba-design-fn rgba-design))
-	     (max-y (+ y height))
-	     (max-x (+ x width)))
-	(declare (type design-fn source-fn))
-	(flet ((fill-color ()
-		 (let ((s-red (uniform-rgba-design-red rgba-design))
-		       (s-green (uniform-rgba-design-green rgba-design))
-		       (s-blue (uniform-rgba-design-blue rgba-design))
-		       (s-alpha (uniform-rgba-design-alpha rgba-design)))
-		   (if (> s-alpha 250)
-		       (loop
-			  for j from y to max-y
-			  do
-			    (loop
-			       for i from x to max-x
-			       do
-				 (rgba-image-data-set-pixel-octet data-image i j
-								  s-red s-green s-blue s-alpha)))
-		       (loop
-			  for j from y to max-y
-			  do
-			    (loop
-			       for i from x to max-x
-			       do
-				 (multiple-value-bind (r.bg g.bg b.bg a.bg)
-				     (rgba-image-data-get-pixel-octet data-image i j)
-				   (multiple-value-bind (red green blue alpha)	  
-				       (octet-blend r.bg g.bg b.bg a.bg s-red s-green s-blue s-alpha 255)
-				     (rgba-image-data-set-pixel-octet data-image i j
-								red green blue alpha))))))))
-	       (fill-function ()
-		 (loop
-		    for j from y to max-y
-		    do
-		      (loop
-			 for i from x to max-x
-			 do
-			   (multiple-value-bind (r.bg g.bg b.bg a.bg)
-			       (rgba-image-data-get-pixel-octet data-image i j)
-			     (multiple-value-bind (r.fg g.fg b.fg a.fg)
-				 (funcall source-fn i j)
-			       (if (> a.fg 250)
-				   (rgba-image-data-set-pixel-octet data-image i j
-								    r.fg g.fg b.fg a.fg)
-				   (multiple-value-bind (red green blue alpha)	  
-				       (octet-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg 255)
-				     (rgba-image-data-set-pixel-octet data-image i j
-								red green blue alpha)))))))))
-	  (if (typep rgba-design 'uniform-rgba-design)
-	      (fill-color)
-	      (fill-function))
-	  (make-rectangle* x y (+ x width) (+ y height)))))))
+    (make-fill-image-function
+     (rgba-image-data-get-pixel-octet data-image i j)
+     (rgba-image-data-set-pixel-octet data-image i j red green blue alpha)
+     (values 
+      (uniform-rgba-design-red rgba-design)
+      (uniform-rgba-design-green rgba-design)
+      (uniform-rgba-design-blue rgba-design)
+      (uniform-rgba-design-alpha rgba-design))
+     255))
+  (make-rectangle* x y (+ x width) (+ y height)))
 
-
-(defgeneric image-fill (image &key x y 
-				width 
-				height 
-				ink 
-				background
-				foreground
-				mask
-				mask-dx
-				mask-dy))
-
-(defmethod image-fill ((image rgba-image) &key
-					    (x 0)
-					    (y 0)
-					    (width (climi::image-width image))
-					    (height (climi::image-height image))
-					    (ink clim:+foreground-ink+)
-					    (background clim:+yellow+)
-					    (foreground clim:+blue+)
-					    (mask nil)
-					    (mask-dx 0)
-					    (mask-dy 0))
-  (declare (type fixnum x y width height mask-dx mask-dy))
+(defmethod fill-image ((image rgba-image) rgba-design (mask (eql nil))
+		       &key
+			 (x 0) (y 0)
+			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (mask-dx 0) (mask-dy 0))
+  (declare (type fixnum x y width height mask-dx mask-dy)
+	   (ignore mask-dx mask-dy))
+  ;;(format *debug-io* "## FN: ~A ~A ~A~%" (list x y) (list width height) (list mask-dx mask-dy))
   (let ((data-image (image-data image))
-	(*background-design* background)
-	(*foreground-design* foreground))
-    (declare (type rgba-image-data data-image))
-    (let* ((rgba-design (make-rgba-design ink))
-	   (source-fn (make-rgba-design-fn rgba-design))
-	   (max-y (+ y height))
-	   (max-x (+ x width)))
-      (declare (type design-fn source-fn))
-      (flet ((fill-color-no-mask ()
-	       (let ((s-red (uniform-rgba-design-red rgba-design))
-		     (s-green (uniform-rgba-design-green rgba-design))
-		     (s-blue (uniform-rgba-design-blue rgba-design))
-		     (s-alpha (uniform-rgba-design-alpha rgba-design)))
-		 (if (> s-alpha 250)
-		     (loop for j from y to max-y do
-			  (loop for i from x to max-x do
-			       (rgba-image-data-set-pixel-octet data-image i j
-								s-red s-green s-blue s-alpha)))
-		     (loop for j from y to max-y do
-			  (loop for i from x to max-x do
-			       (multiple-value-bind (r.bg g.bg b.bg a.bg)
-				   (rgba-image-data-get-pixel-octet data-image i j)
-				 (multiple-value-bind (red green blue alpha)	  
-				     (octet-blend r.bg g.bg b.bg a.bg s-red s-green s-blue s-alpha 255)
-				   (rgba-image-data-set-pixel-octet data-image i j
-								    red green blue alpha))))))))
-	     (fill-function-no-mask ()
-	       (loop for j from y to max-y do
-		    (loop for i from x to max-x do
-			 (multiple-value-bind (r.bg g.bg b.bg a.bg)
-			     (rgba-image-data-get-pixel-octet data-image i j)
-			   (multiple-value-bind (r.fg g.fg b.fg a.fg)
-			       (funcall source-fn i j)
-			     (if (> a.fg 250)
-				 (rgba-image-data-set-pixel-octet data-image i j
-								  r.fg g.fg b.fg a.fg)
-				 (multiple-value-bind (red green blue alpha)	  
-				     (octet-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg 255)
-				   (rgba-image-data-set-pixel-octet data-image i j
-								    red green blue alpha))))))))
-	     (fill-color-mask ()
-	       (let ((data-mask (image-data mask))
-		     (s-red (uniform-rgba-design-red rgba-design))
-		     (s-green (uniform-rgba-design-green rgba-design))
-		     (s-blue (uniform-rgba-design-blue rgba-design))
-		     (s-alpha (uniform-rgba-design-alpha rgba-design)))
-		 (loop for j from y below max-y do
-		      (loop for i from x below max-x do
-			   (multiple-value-bind (r.bg g.bg b.bg a.bg)
-			       (rgba-image-data-get-pixel-octet data-image i j)
-			     (multiple-value-bind (a.m)
-				 (mask-image-data-get-alpha-octet data-mask (+ mask-dx i) (+ mask-dy j))
-			       (multiple-value-bind (red green blue alpha)	  
-				   (octet-blend r.bg g.bg b.bg a.bg s-red s-green s-blue s-alpha a.m)
-				 (rgba-image-data-set-pixel-octet data-image i j
-								  red green blue alpha))))))))
-	     (fill-function-mask ()
-	       (let ((data-mask (image-data mask)))
-		 (loop for j from y below max-y do
-		      (loop for i from x below max-x do
-			   (multiple-value-bind (r.bg g.bg b.bg a.bg)
-			       (rgba-image-data-get-pixel-octet data-image i j)
-			     (multiple-value-bind (r.fg g.fg b.fg a.fg)
-				 (funcall source-fn i j)
-			       (multiple-value-bind (a.m)
-				   (mask-image-data-get-alpha-octet data-mask (+ mask-dx i) (+ mask-dy j))
-				 (multiple-value-bind (red green blue alpha)	  
-				     (octet-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg a.m)
-				   (rgba-image-data-set-pixel-octet data-image i j
-								    red green blue alpha))))))))))
-	(if mask
-	    (if (typep rgba-design 'uniform-rgba-design)
-		(fill-color-mask)
-		(fill-function-mask))
-	    (if (typep rgba-design 'uniform-rgba-design)
-		(fill-color-no-mask)
-		(fill-function-no-mask)))
-	(make-rectangle* x y (+ x width) (+ y height))))))
+	(source-fn (make-rgba-design-fn rgba-design)))
+    (declare (type rgba-image-data data-image)
+	     (type design-fn source-fn))
+    (make-fill-image-function
+     (rgba-image-data-get-pixel-octet data-image i j)
+     (rgba-image-data-set-pixel-octet data-image i j red green blue alpha)
+     (funcall source-fn i j)
+     255))
+  (make-rectangle* x y (+ x width) (+ y height)))
+
+
+(defmethod fill-image ((image rgba-image) (rgba-design uniform-rgba-design) (mask mask-image)
+		       &key
+			 (x 0) (y 0)
+			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (mask-dx 0) (mask-dy 0))
+  (declare (type fixnum x y width height mask-dx mask-dy))
+  ;;(format *debug-io* "## UM: ~A ~A ~A~%" (list x y) (list width height) (list mask-dx mask-dy))
+  (let ((data-image (image-data image))
+	(data-mask (image-data mask)))
+    (declare (type rgba-image-data data-image)
+	     (type mask-image-data data-mask))
+    (make-fill-image-function
+     (rgba-image-data-get-pixel-octet data-image i j)
+     (rgba-image-data-set-pixel-octet data-image i j red green blue alpha)
+     (values 
+      (uniform-rgba-design-red rgba-design)
+      (uniform-rgba-design-green rgba-design)
+      (uniform-rgba-design-blue rgba-design)
+      (uniform-rgba-design-alpha rgba-design))
+     (mask-image-data-get-alpha-octet data-mask (+ mask-dx i) (+ mask-dy j))))
+  (make-rectangle* x y (+ x width) (+ y height)))
+  
+(defmethod fill-image ((image rgba-image) rgba-design (mask mask-image)
+		       &key
+			 (x 0) (y 0)
+			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (mask-dx 0) (mask-dy 0))
+  (declare (type fixnum x y width height mask-dx mask-dy))
+  ;;(format *debug-io* "## FM: ~A ~A ~A~%" (list x y) (list width height) (list mask-dx mask-dy))
+  (let ((data-image (image-data image))
+	(data-mask (image-data mask))
+	(source-fn (make-rgba-design-fn rgba-design)))
+    (declare (type rgba-image-data data-image)
+	     (type mask-image-data data-mask)
+	     (type design-fn source-fn))
+    (make-fill-image-function
+     (rgba-image-data-get-pixel-octet data-image i j)
+     (rgba-image-data-set-pixel-octet data-image i j red green blue alpha)
+     (funcall source-fn i j)
+     (mask-image-data-get-alpha-octet data-mask (+ mask-dx i) (+ mask-dy j))))
+  (make-rectangle* x y (+ x width) (+ y height)))
+
   
 
   
