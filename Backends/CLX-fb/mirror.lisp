@@ -64,7 +64,7 @@
 				       ;; to fix
 				       (let ((img-s (mcclim-render::image-data (mcclim-render::image-mirror-image sheet)))
 					     (img-d clx-image-data))
-					 (declare (type mcclim-render::rgba-image-data img-s)
+					 (declare (type mcclim-render::opticl-image-data img-s)
 						  (type (simple-array (unsigned-byte 32) (* *)) img-d)
 						  (type fixnum min-x max-x min-y max-y))
 					 (loop for y from min-y to (max max-y)

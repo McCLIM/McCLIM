@@ -26,7 +26,7 @@
 ;;; Drawing
 ;;;
 
-(defmethod draw-paths ((render rgb-image-render-engine) (image rgba-image) paths transformation clip-region ink background foreground)
+(defmethod draw-paths ((render rgb-image-render-engine) (image opticl-image) paths transformation clip-region ink background foreground)
   ;;(declare (optimize speed))
   (with-slots (state)
       render
@@ -54,7 +54,7 @@
 					    rgba-design)
 		    (%make-blend-draw-span-fn image current-clip-region
 					      rgba-design)))
-	  (render-cells-sweep/rectangle state
+	  (render-cells-sweep/rectangle (image-data image) state
 				    (floor min-x)
 				    (floor min-y)
 				    (ceiling max-x)

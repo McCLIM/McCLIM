@@ -14,12 +14,6 @@
 (defun color->octet (color)
   (coerce (round (* 255 color)) 'octet))
 
-(declaim (inline float-octet)
-	 (ftype (function (single-float) octet) float-octet))
-(defun float-octet (float)
-  "Convert a float in the range 0.0 - 1.0 to an octet."
-  (round (* float 255.0)))
-
 (declaim (inline float-blend)
 	 (ftype (function (single-float single-float single-float single-float single-float 
 					single-float single-float single-float single-float)

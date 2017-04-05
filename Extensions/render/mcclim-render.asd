@@ -7,11 +7,15 @@
      (:file "color")
      (:file "design")
      (:file "image")
-     (:file "image-ops")
+     (:file "aa")
+    
+     (:file "mask-image")
+     (:file "opticl-image")
+    
      (:file "prim-arc")
      (:file "prim-text")
      (:file "prim-path")
-     (:file "aa")
+    
      (:file "mirrored-sheet")     
      (:file "mirror")
      (:file "pixmap")
