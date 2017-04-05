@@ -170,9 +170,11 @@
 ;;;   Commands   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-clim-debugger-command (com-more :name "More backtraces")
-    ((pane 'more-type))
-  (expand-backtrace (condition-info pane) 10))
+(define-clim-debugger-command (com-more :name "More backtraces"
+					:keystroke :more)
+    ()
+  (let ((pane (clim:find-pane-named *application-frame* 'debugger-pane)))
+    (expand-backtrace (condition-info pane) 10)))
 
 (define-clim-debugger-command (com-invoke-inspector :name "Invoke inspector")
     ((obj 'inspect))
@@ -208,7 +210,7 @@
 (define-presentation-to-command-translator more-backtraces
     (more-type com-more clim-debugger :gesture :select)
     (object)
-  (list object))
+  (list))
 
 (define-presentation-to-command-translator invoke-inspector
     (inspect com-invoke-inspector clim-debugger :gesture :select)
