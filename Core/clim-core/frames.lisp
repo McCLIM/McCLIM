@@ -261,6 +261,8 @@ documentation produced by presentations.")
     ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
     ;; window is mapped and do the space allocation now, so that all
     ;; sheets will have their correct geometry at once. --GB
+    (change-space-requirements (frame-top-level-sheet frame) :width w :height h
+			       :resize-frame t)
     (setf (sheet-region (frame-top-level-sheet frame))
 	  (make-bounding-rectangle 0 0 w h))
     (allocate-space (frame-top-level-sheet frame) w h) ))
