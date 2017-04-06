@@ -36,11 +36,6 @@
 ;;; - Goto source location is not supported, but I think this could be
 ;;;   done through slime.
 ;;;
-;;; - Currently the restart chosen by the clim-debugger is returned
-;;;   through the global variable *returned-restart*, this is not the
-;;;   best solution, but I do not know how of a better way to return a
-;;;   value from a clim frame, when it exits.
-;;;
 ;;; - There need to added keyboard shortcuts. 'q' should exit the
 ;;;   debugger with an abort. '0', '1' and so forth should activate
 ;;;   the restarts, like Slime. Maybe is should be possible to use the
@@ -126,35 +121,23 @@
 (defclass debugger-pane (application-pane)
   ((condition-info :reader condition-info :initarg :condition-info)))
 
-;; FIXME - These two variables should be removed!
-;; Used to return the chosen restart in the debugger.
-(defparameter *returned-restart* nil)
-
-;; Used to provide the clim frame with the condition info that
-;; triggered the debugger.
-(defparameter *condition* nil)
-
 (defun make-debugger-pane ()
   (with-look-and-feel-realization ((frame-manager *application-frame*)
 				   *application-frame*) 
     (make-pane 'debugger-pane 
-	       :condition-info *condition*
+	       :condition-info (the-condition *application-frame*)
 	       :display-function #'display-debugger
 	       :end-of-line-action :allow
 	       :end-of-page-action :scroll)))
 
 (define-application-frame clim-debugger ()
-  ()
+  ((condition        :initform nil :accessor the-condition)
+   (returned-restart :initform nil :accessor returned-restart))
   (:panes
    (debugger-pane (make-debugger-pane)))
   (:layouts
    (default (vertically () (scrolling () debugger-pane))))
   (:geometry :height 480 :width #.(* 480 slim:+golden-ratio+)))
-
-(defun run-debugger-frame ()
-  (run-frame-top-level
-   (make-application-frame 'clim-debugger)))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   Presentation types   ;;;;;;;;;;;;;;;;;;;;;;
@@ -190,7 +173,7 @@
 
 (define-clim-debugger-command (com-invoke-restart :name "Invoke restart")
     ((restart 'restart))
-  (setf *returned-restart* restart)
+  (setf (returned-restart *application-frame*) restart)
   (frame-exit *application-frame*))
 
 (define-clim-debugger-command (com-toggle-stack-frame-view 
@@ -351,30 +334,30 @@
 ;;;   Starting the debugger   ;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun run-debugger-frame ()
+  (run-frame-top-level
+   (make-application-frame 'clim-debugger)))
+
 (defun debugger (condition me-or-my-encapsulation)
-  (swank-backend::call-with-debugging-environment 
-   (lambda ()
-     (unwind-protect
-	  (progn 
-	    (setf 
-	     *condition* 
-	     (make-instance 
-	      'debugger-info
-	      :the-condition        condition
-	      :type-of-condition    (type-of condition)
-	      :condition-message    (swank::safe-condition-message condition)
-	      :condition-extra      (swank::condition-extras       condition)
-	      :restarts             (compute-restarts)
-	      :backtrace            (compute-backtrace
-				     0 +initial-backtrace-length+)))
-	    (run-debugger-frame))
-       (let ((restart *returned-restart*))
-	 (setf *returned-restart* nil)
-	 (setf *condition* nil)
-	 (if restart
-	     (let ((*debugger-hook* me-or-my-encapsulation))
-	       (invoke-restart-interactively restart))
-	     (abort)))))))
+  (let ((debugger-frame (make-application-frame 'clim-debugger)))
+    (swank-backend::call-with-debugging-environment
+     (lambda ()
+       (unwind-protect
+	    (setf (the-condition debugger-frame)
+		  (make-instance
+		   'debugger-info
+		   :the-condition        condition
+		   :type-of-condition    (type-of condition)
+		   :condition-message    (swank::safe-condition-message condition)
+		   :condition-extra      (swank::condition-extras       condition)
+		   :restarts             (compute-restarts)
+		   :backtrace (compute-backtrace 0 +initial-backtrace-length+)))
+	 (run-frame-top-level debugger-frame)
+	 (let ((restart (returned-restart debugger-frame)))
+	   (if restart
+	       (let ((*debugger-hook* me-or-my-encapsulation))
+		 (invoke-restart-interactively restart))
+	       (abort))))))))
 
 (defmacro with-debugger (&body body)
   `(let ((*debugger-hook* #'debugger)
