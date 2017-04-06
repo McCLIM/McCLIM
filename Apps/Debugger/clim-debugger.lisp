@@ -213,14 +213,14 @@
 (defun display-debugger (frame pane)
   (let ((*standard-output* pane))
     (slim:with-table (pane)
-      (slim:row (slim:cell (bold (slim:*table*) (princ "Description:")))
+      (slim:row (slim:cell (bold (pane) (princ "Description:")))
 		(slim:cell (princ (condition-message
 				   (condition-info pane)))))
-      (slim:row (slim:cell (bold (slim:*table*) (princ "Condition:")))
-		(slim:cell (clim:with-drawing-options (slim:*table* :ink clim:+red+)
+      (slim:row (slim:cell (bold (pane) (princ "Condition:")))
+		(slim:cell (clim:with-drawing-options (pane :ink clim:+red+)
 			     (princ (type-of-condition (condition-info pane))))))
       (when (condition-extra (condition-info pane))
-	(slim:row (slim:cell (bold (slim:*table*) (princ "Extra:")))
+	(slim:row (slim:cell (bold (pane) (princ "Extra:")))
 		  (slim:cell
 		    (clim:with-text-family (pane :fix)
 		      (format t "~A" (condition-extra (condition-info pane))))))))
@@ -240,7 +240,7 @@
 	    (bold (pane)
 	      (slim:cell (format t "~A: " n)))
 	    (slim:cell
-	      (clim:with-drawing-options (slim:*table* :ink clim:+dark-violet+)
+	      (clim:with-drawing-options (pane :ink clim:+dark-violet+)
 		(princ (restart-name r))))
 	    (slim:cell (princ r))))))
     (fresh-line)
