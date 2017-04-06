@@ -54,8 +54,6 @@
 ;;;   Misc   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Length of a top of the backtrace
-(defparameter +initial-backtrace-length+ 5)
 
 ;;; Borrowed from Andy Hefner
 (defmacro bold ((stream) &body body)
@@ -109,17 +107,13 @@
 		 :frame-no        frame-no
 		 :frame-variables (swank-backend::frame-locals frame-no))))
 
-(defmethod expand-backtrace ((info debugger-info) (value integer))
-  (with-slots (backtrace) info
-    (setf backtrace (compute-backtrace 0 (+ (length backtrace) 10)))))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   CLIM stuff   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defclass debugger-pane (application-pane)
-  ((condition-info :reader condition-info :initarg :condition-info)))
+  ((condition-info :reader  condition-info :initarg :condition-info)
+   (shown-frames :accessor shown-frames :initform 5)))
 
 (defun make-debugger-pane ()
   (with-look-and-feel-realization ((frame-manager *application-frame*)
@@ -157,7 +151,8 @@
 					:keystroke :more)
     ()
   (let ((pane (clim:find-pane-named *application-frame* 'debugger-pane)))
-    (expand-backtrace (condition-info pane) 10)))
+    (setf #1=(shown-frames pane)
+	  (min (+ #1# 10) (length (backtrace (condition-info pane)))))))
 
 (define-clim-debugger-command (com-invoke-inspector :name "Invoke inspector")
     ((obj 'inspect))
@@ -263,7 +258,14 @@
   (fresh-line pane)
   (format pane "   ")
   (slim:with-table (pane)
-    (dolist (stack-frame (backtrace (condition-info pane)))
+    (do* ((back (backtrace (condition-info pane)) (cdr back))
+	  (stack-frame #1=(car back) #1#))
+	 ((or (null back)
+	      (= (frame-no stack-frame)
+		 (shown-frames pane)))
+	  (when back
+	    (slim:row (slim:cell)
+		      (slim:cell (bold (pane) (present pane 'more-type))))))
       (with-output-as-presentation
 	  (pane stack-frame 'stack-frame :single-box t)
 	(slim:row
@@ -271,14 +273,7 @@
 	    (with-drawing-options (pane :ink clim:+grey41+)
 	      (format pane "~A: " (frame-no stack-frame))))
 	  (slim:cell
-	    (present stack-frame 'stack-frame :view (view stack-frame))))))
-    (when (>= (length (backtrace (condition-info pane)))
-	      +initial-backtrace-length+)
-      (slim:row
-        (slim:cell)
-        (slim:cell
-          (bold (pane)
-            (present pane 'more-type)))))))
+	    (present stack-frame 'stack-frame :view (view stack-frame))))))))
 
 (defun print-stack-frame-header (object stream)
   (let* ((frame-string (frame-string object))
@@ -351,7 +346,7 @@
 		   :condition-message    (swank::safe-condition-message condition)
 		   :condition-extra      (swank::condition-extras       condition)
 		   :restarts             (compute-restarts)
-		   :backtrace (compute-backtrace 0 +initial-backtrace-length+)))
+		   :backtrace (compute-backtrace 0 nil)))
 	 (run-frame-top-level debugger-frame)
 	 (let ((restart (returned-restart debugger-frame)))
 	   (if restart
