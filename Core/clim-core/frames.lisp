@@ -726,12 +726,13 @@ documentation produced by presentations.")
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (let ((*application-frame* frame))
        (with-look-and-feel-realization (fm frame)
-         (setf (frame-panes-for-layout frame)
-               (list
-                ,@(loop
-                     for (name . form) in panes
-                     collect
-                       `(cons ',name ,(do-pane-creation-form name form)))))
+	 (unless (frame-panes-for-layout frame)
+	   (setf (frame-panes-for-layout frame)
+		 (list
+		  ,@(loop
+		       for (name . form) in panes
+		       collect
+			 `(cons ',name ,(do-pane-creation-form name form))))))
          (let ,(loop
                   for (name . form) in panes
                   collect `(,name (alexandria:assoc-value
