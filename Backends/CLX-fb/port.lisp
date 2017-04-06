@@ -120,7 +120,7 @@
 
 (defmethod realize-mirror ((port clx-fb-port) (pixmap mcclim-render::image-pixmap-mixin))
   (setf (sheet-parent pixmap) (graft port))
-  (let ((mirror (make-instance 'mcclim-render::image-mirror-mixin)))
+  (let ((mirror (make-instance 'mcclim-render::rgba-image-mirror-mixin)))
     (port-register-mirror port pixmap mirror)
     (mcclim-render::%make-image mirror pixmap)))
 

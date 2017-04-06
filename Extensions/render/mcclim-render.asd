@@ -11,13 +11,18 @@
     
      (:file "mask-image")
      (:file "opticl-image")
-    
+     (:file "rgba-image")
+     (:file "xlib-image")
+     
      (:file "prim-arc")
      (:file "prim-text")
      (:file "prim-path")
     
      (:file "mirrored-sheet")     
      (:file "mirror")
+     (:file "opticl-mirror")
+     (:file "rgba-mirror")
+   
      (:file "pixmap")
      (:file "render")
      (:file "medium")

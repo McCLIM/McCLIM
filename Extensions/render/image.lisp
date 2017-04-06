@@ -72,7 +72,7 @@
 ;;; copy image
 ;;;
 
-(defmacro make-copy-image-function (self src-dx src-dy image-get-code image-set-code)
+(defmacro make-copy-image-function (image-get-code image-set-code)
   `(flet ((copy-ff ()
 	    (when (and (> width 0)
 		       (> height 0))
@@ -113,7 +113,7 @@
 			  (multiple-value-bind (red green blue alpha)
 			      ,image-get-code
 			    ,image-set-code)))))))
-     (if ,self
+     (if (eq image src-image)
 	 (cond
 	   ((and (<= src-dx 0) (<= src-dy 0))
 	    (copy-bb))
@@ -124,6 +124,17 @@
 	   ((and (> src-dx 0) (> src-dy 0))
 	    (copy-ff)))
 	 (copy-ff))))
+
+(defmacro def-copy-image (image-data-type image-data-set-pixel src-image-data-type image-data-get-pixel)
+  `(progn
+     (let ((data-image (image-data image))
+	 (src-data-image (image-data src-image)))
+     (declare (type ,image-data-type data-image)
+	      (type ,src-image-data-type src-data-image))
+     (make-copy-image-function
+      (,image-data-get-pixel src-data-image (+ src-dx i) (+ src-dy j))
+      (,image-data-set-pixel data-image i j red green blue alpha)))
+     (make-rectangle* x y (+ x width) (+ y height))))
 
 
 ;;;

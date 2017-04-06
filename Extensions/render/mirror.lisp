@@ -50,22 +50,6 @@
 	    (%create-mirror-image mirror (1+ width) (1+ height))
 	    nil)))))
 
-(defmethod %create-mirror-image ((mirror image-mirror-mixin) width height)
-  (with-slots (image) mirror
-    #|
-    (let ((data (make-array (list height width)
-			    :element-type '(unsigned-byte 32)
-			    :initial-element #x00FFFFFF)))
-      (setf image (make-instance 'climi::rgb-image
-				 :width width
-				 :height height
-				 :alphap t
-				 :data data))))
-    |#
-    (setf image (make-opticl-image width height)))
-  (with-slots (dirty-region) mirror
-    (setf dirty-region nil)))
-
 (defmethod %notify-image-updated ((mirror image-mirror-mixin) region)
   (with-slots (dirty-region) mirror
     (if dirty-region
