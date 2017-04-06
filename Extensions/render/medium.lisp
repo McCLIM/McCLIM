@@ -121,16 +121,14 @@
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 	region
       (if (and
-	   ;;nil
 	   filled
 	   (not (typep ink 'standard-flipping-ink))
 	   (clim:rectanglep region)
-	   (< (- min-x (round min-x)) 0.01)
-	   (< (- max-x (round max-x)) 0.01)
-	   (< (- min-y (round min-y)) 0.01)
-	   (< (- max-y (round max-y)) 0.01))
+	   (< (abs (- min-x (round min-x))) 0.01)
+	   (< (abs (- max-x (round max-x))) 0.01)
+	   (< (abs (- min-y (round min-y))) 0.01)
+	   (< (abs (- max-y (round max-y))) 0.01))
 	  (progn
-	    ;;(format *debug-io* ">>> INT!! ~%")
 	    (%medium-fill-image medium min-x min-y (- max-x min-x) (- max-y min-y)))
 	  (let ((path (make-path left top)))
 	    (line-to path right top)
