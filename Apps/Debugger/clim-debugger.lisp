@@ -113,6 +113,7 @@
 
 (defclass debugger-pane (application-pane)
   ((condition-info :reader  condition-info :initarg :condition-info)
+   (active-frame :accessor active-frame :initform 0)
    (shown-frames :accessor shown-frames :initform 5)))
 
 (defun make-debugger-pane ()
@@ -144,6 +145,11 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   Gestures   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-gesture-name :prev    :keyboard (#\p :meta))
+(define-gesture-name :next    :keyboard (#\n :meta))
+(define-gesture-name :exit    :keyboard #\q)
 ;;;   Commands   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -161,9 +167,22 @@
 (define-clim-debugger-command (com-refresh :name "Refresh" :menu t
 					   :keystroke #\r) ()
   (change-space-requirements (frame-panes *application-frame*)))
+(define-clim-debugger-command (com-next :keystroke :next)
+    ()
+  (let ((pane (clim:find-pane-named *application-frame* 'debugger-pane)))
+    (incf (active-frame pane))
+    (when (= (active-frame pane) (shown-frames pane))
+      (com-more))
+    (when (= (active-frame pane) (shown-frames pane))
+      (decf (active-frame pane)))))
+
+(define-clim-debugger-command (com-prev :keystroke :prev)
+    ()
+  (let ((pane (clim:find-pane-named *application-frame* 'debugger-pane)))
+    (setf #1=(active-frame pane) (max (1- #1#) 0))))
 
 (define-clim-debugger-command (com-quit :name "Quit" :menu t
-					:keystroke #\q) ()
+					:keystroke :exit) ()
   (frame-exit *application-frame*))
 
 (define-clim-debugger-command (com-invoke-restart :name "Invoke restart")
@@ -269,11 +288,13 @@
       (with-output-as-presentation
 	  (pane stack-frame 'stack-frame :single-box t)
 	(slim:row
-	  (slim:cell
-	    (with-drawing-options (pane :ink clim:+grey41+)
-	      (format pane "~A: " (frame-no stack-frame))))
-	  (slim:cell
-	    (present stack-frame 'stack-frame :view (view stack-frame))))))))
+	  (with-drawing-options (pane :ink clim:+gray41+)
+	    (slim:cell (format pane "~A: " (frame-no stack-frame))))
+	  (with-drawing-options (pane :ink (if (= (frame-no stack-frame)
+						  (active-frame pane))
+					       clim:+red4+ clim:+blue4+))
+	    (slim:cell (present stack-frame 'stack-frame
+				:view (view stack-frame)))))))))
 
 (defun print-stack-frame-header (object stream)
   (let* ((frame-string (frame-string object))
