@@ -237,11 +237,11 @@ documentation produced by presentations.")
 
 (defmethod (setf frame-command-table) :around (new-command-table frame)
   (flet ((get-menu (x) (slot-value x 'menu)))
-    (let ((prev-menu (get-menu (frame-command-table frame)))
+    (let ((previous-menu (get-menu (frame-command-table frame)))
 	  (current-menu (get-menu new-command-table)))
       (cond
 	((null current-menu) (call-next-method))
-	((null prev-menu) (call-next-method))
+	((null previous-menu) (call-next-method))
 	(t (let ((result (call-next-method)))
 	     (generate-panes *default-frame-manager* *application-frame*)
 	     result))))))
