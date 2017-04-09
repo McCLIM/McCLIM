@@ -237,13 +237,11 @@ documentation produced by presentations.")
 
 (defmethod (setf frame-command-table) :around (new-command-table frame)
   (flet ((get-menu (x) (slot-value x 'menu)))
-    (let ((previous-menu (get-menu (frame-command-table frame)))
-	  (current-menu (get-menu new-command-table)))
-      (cond
-	((null current-menu) (call-next-method))
-	((null previous-menu) (call-next-method))
-	(t (prog1 (call-next-method)
-	     (generate-panes *default-frame-manager* *application-frame*)))))))
+    (if (and (get-menu (frame-command-table frame))
+	     (get-menu new-command-table))
+	(prog1 (call-next-method)
+	  (generate-panes *default-frame-manager* *application-frame*))
+	(call-next-method))))
 
 (defmethod generate-panes :before (fm  (frame application-frame))
   (declare (ignore fm))
