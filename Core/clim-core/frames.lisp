@@ -232,8 +232,16 @@ documentation produced by presentations.")
     (when (frame-manager frame)
       (generate-panes (frame-manager frame) frame)
       (multiple-value-bind (w h) (frame-geometry* frame)
-        (layout-frame frame w h))
+	(layout-frame frame w h))
       (signal 'frame-layout-changed :frame frame))))
+
+(defmethod (setf frame-command-table) :around (new-command-table frame)
+  (flet ((get-menu (x) (slot-value x 'menu)))
+    (if (and (get-menu (frame-command-table frame))
+	     (get-menu new-command-table))
+	(prog1 (call-next-method)
+	  (generate-panes *default-frame-manager* *application-frame*))
+	(call-next-method))))
 
 (defmethod generate-panes :before (fm  (frame application-frame))
   (declare (ignore fm))
@@ -261,6 +269,8 @@ documentation produced by presentations.")
     ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
     ;; window is mapped and do the space allocation now, so that all
     ;; sheets will have their correct geometry at once. --GB
+    (change-space-requirements (frame-top-level-sheet frame) :width w :height h
+			       :resize-frame t)
     (setf (sheet-region (frame-top-level-sheet frame))
 	  (make-bounding-rectangle 0 0 w h))
     (allocate-space (frame-top-level-sheet frame) w h) ))
@@ -726,12 +736,13 @@ documentation produced by presentations.")
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (let ((*application-frame* frame))
        (with-look-and-feel-realization (fm frame)
-         (setf (frame-panes-for-layout frame)
-               (list
-                ,@(loop
-                     for (name . form) in panes
-                     collect
-                       `(cons ',name ,(do-pane-creation-form name form)))))
+	 (unless (frame-panes-for-layout frame)
+	   (setf (frame-panes-for-layout frame)
+		 (list
+		  ,@(loop
+		       for (name . form) in panes
+		       collect
+			 `(cons ',name ,(do-pane-creation-form name form))))))
          (let ,(loop
                   for (name . form) in panes
                   collect `(,name (alexandria:assoc-value
