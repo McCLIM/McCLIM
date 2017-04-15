@@ -323,16 +323,19 @@
   (declare (ignore acceptably for-context-type))
   (print-stack-frame-header object stream)
   (fresh-line stream)
-  (with-text-family (stream :sans-serif)
-    (bold (stream) (format stream "  Locals:")))
-  (fresh-line stream)
-  (format stream "     ")
-  (slim:with-table (stream)
-    (loop for (name n identifier id value val) in (frame-variables object)
-       do (slim:row
-	    (slim:cell (princ n))
-	    (slim:cell (princ "="))
-	    (slim:cell (present val 'inspect)))))
+  (if (null (frame-variables object))
+      (with-text-family (stream :sans-serif) (format stream "  No locals."))
+      (progn
+        (with-text-family (stream :sans-serif)
+          (bold (stream) (format stream "  Locals:")))
+        (fresh-line stream)
+        (format stream "     ")
+        (slim:with-table (stream)
+          (loop for (name n identifier id value val) in (frame-variables object)
+             do (slim:row
+                  (slim:cell (princ n))
+                  (slim:cell (princ "="))
+                  (slim:cell (present val 'inspect)))))))
   (fresh-line stream))
 
 (define-presentation-method present (object (type restart) stream
