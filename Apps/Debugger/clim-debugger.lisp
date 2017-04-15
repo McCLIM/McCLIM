@@ -168,6 +168,7 @@
 (define-clim-debugger-command (com-refresh :name "Refresh" :menu t
 					   :keystroke #\r) ()
   (change-space-requirements (frame-panes *application-frame*)))
+
 (define-clim-debugger-command (com-next :keystroke :next)
     ()
   (let ((pane (clim:find-pane-named *application-frame* 'debugger-pane)))
