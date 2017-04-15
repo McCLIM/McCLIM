@@ -25,11 +25,6 @@
 ;;;   for some reason they don't remember their position when clicking
 ;;;   on a stack-frame or "more".
 ;;;
-;;; - The break function does not use the clim-debugger --> Christophe
-;;;   Rhodes was kind enough to inform me that on SBCL,
-;;;   SB-EXT:*INVOKE-DEBUGGER-HOOK* takes care off this problem. I
-;;;   still don't know if this is a problem with other compilers.
-;;;
 ;;; - "Eval in frame" is not supported. I don't know of a good way to
 ;;;   do this currently.
 ;;;
