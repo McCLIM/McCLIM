@@ -145,6 +145,8 @@
 (define-gesture-name :prev    :keyboard (#\p :meta))
 (define-gesture-name :next    :keyboard (#\n :meta))
 (define-gesture-name :exit    :keyboard #\q)
+(define-gesture-name :toggle  :keyboard #\tab)
+
 ;;;   Commands   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -193,6 +195,13 @@
 	(setf (view stack-frame) +maximized-stack-frame-view+)
 	(setf (view stack-frame) +minimized-stack-frame-view+))
     (change-space-requirements (frame-panes *application-frame*))))
+(define-clim-debugger-command (com-toggle-active-frame-view
+                               :keystroke :toggle
+                               :name "Toggle active")
+    ()
+  (let ((dbg-pane (clim:find-pane-named *application-frame* 'debugger-pane)))
+    (com-toggle-stack-frame-view
+     (nth (active-frame dbg-pane) (backtrace (condition-info dbg-pane))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
