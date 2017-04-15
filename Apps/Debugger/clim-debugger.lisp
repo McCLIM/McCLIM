@@ -160,8 +160,9 @@
     (setf #1=(shown-frames pane)
 	  (min (+ #1# 10) (length (backtrace (condition-info pane)))))))
 
-(define-clim-debugger-command (com-invoke-inspector :name "Invoke inspector")
-    ((obj 'inspect))
+(define-clim-debugger-command (com-invoke-inspector
+			       :name "Invoke inspector")
+    ((obj inspect))
   (clouseau:inspector obj))
 
 (define-clim-debugger-command (com-refresh :name "Refresh" :menu t
