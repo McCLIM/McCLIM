@@ -659,6 +659,7 @@ tables must inherit from @cl{global-command-table}. McCLIM treats a
 
 @include chap-listener.texi
 @include chap-inspector.texi
+@include chap-debugger.texi
 
 @node Auxiliary Material
 @part Auxiliary Material
