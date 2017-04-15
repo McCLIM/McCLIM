@@ -73,7 +73,7 @@ supplied by an underlying implementation allowing to encapsulate or
 supply different debugger for recursive debugger calls.
 @end deffn
 
-@deffn {macro} {with-debugger} \body body
+@deffn {macro} {with-debugger} &body body
 
 Wraps the code in @t{body} to invoke clim debugger when condition is
 signalled (binds @t{*debugger-hook*} to @t{#'debugger}).
