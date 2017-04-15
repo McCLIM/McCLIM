@@ -185,6 +185,13 @@
 					:keystroke :exit) ()
   (frame-exit *application-frame*))
 
+(define-clim-debugger-command (com-eval :name "Eval in frame" :menu t
+					:keystroke :eval) ((form clim:string))
+  (let* ((dbg-pane (clim:find-pane-named *application-frame* 'debugger-pane))
+         (active-frame (active-frame dbg-pane)))
+    (swank:eval-string-in-frame
+     form active-frame (swank-backend:frame-package active-frame))))
+
 (define-clim-debugger-command (com-invoke-restart :name "Invoke restart")
     ((restart 'restart))
   (setf (returned-restart *application-frame*) restart)
