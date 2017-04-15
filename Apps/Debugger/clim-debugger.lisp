@@ -142,9 +142,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   Gestures   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-gesture-name :inspect :keyboard (#\i :control))
+(define-gesture-name :more    :keyboard (#\m :meta))
 (define-gesture-name :prev    :keyboard (#\p :meta))
 (define-gesture-name :next    :keyboard (#\n :meta))
-(define-gesture-name :exit    :keyboard #\q)
+(define-gesture-name :exit    :keyboard (#\q :meta))
+(define-gesture-name :eval    :keyboard (#\e :meta))
 (define-gesture-name :toggle  :keyboard #\tab)
 
 ;;;   Commands   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
