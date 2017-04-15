@@ -182,16 +182,16 @@
   (let ((pane (clim:find-pane-named *application-frame* 'debugger-pane)))
     (setf #1=(active-frame pane) (max (1- #1#) 0))))
 
-(define-clim-debugger-command (com-quit :name "Quit" :menu t
-					:keystroke :exit) ()
-  (frame-exit *application-frame*))
-
 (define-clim-debugger-command (com-eval :name "Eval in frame" :menu t
 					:keystroke :eval) ((form clim:string))
   (let* ((dbg-pane (clim:find-pane-named *application-frame* 'debugger-pane))
          (active-frame (active-frame dbg-pane)))
     (swank:eval-string-in-frame
      form active-frame (swank-backend:frame-package active-frame))))
+
+(define-clim-debugger-command (com-quit :name "Quit" :menu t
+					:keystroke :exit) ()
+  (frame-exit *application-frame*))
 
 (define-clim-debugger-command (com-invoke-restart :name "Invoke restart")
     ((restart 'restart))
@@ -217,7 +217,6 @@
   (let ((dbg-pane (clim:find-pane-named *application-frame* 'debugger-pane)))
     (com-toggle-stack-frame-view
      (nth (active-frame dbg-pane) (backtrace (condition-info dbg-pane))))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   Command translators   ;;;;;;;;;;;;;;;;;;;;;
