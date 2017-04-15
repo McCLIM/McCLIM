@@ -190,11 +190,15 @@
 (define-clim-debugger-command (com-toggle-stack-frame-view 
 			       :name "Toggle stack frame view")
     ((stack-frame 'stack-frame))
-  (progn
-    (if (eq +minimized-stack-frame-view+ (view stack-frame))
-	(setf (view stack-frame) +maximized-stack-frame-view+)
-	(setf (view stack-frame) +minimized-stack-frame-view+))
-    (change-space-requirements (frame-panes *application-frame*))))
+
+  (let ((dbg-pane (clim:find-pane-named *application-frame* 'debugger-pane)))
+    (setf (active-frame dbg-pane) (frame-no stack-frame)))
+
+  (if (eq +minimized-stack-frame-view+ (view stack-frame))
+      (setf (view stack-frame) +maximized-stack-frame-view+)
+      (setf (view stack-frame) +minimized-stack-frame-view+))
+  (change-space-requirements (frame-panes *application-frame*)))
+
 (define-clim-debugger-command (com-toggle-active-frame-view
                                :keystroke :toggle
                                :name "Toggle active")
