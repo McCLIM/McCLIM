@@ -127,3 +127,9 @@
 /Documentation/Specification/thick-lines.pdf
 /Documentation/Specification/thin-lines.pdf
 /Documentation/Specification/two-triangles.pdf
+*.fas
+*.aux
+*.bbl
+*.blg
+*.log
+/Documentation/Papers/Demo-2017/mcclim-demo.pdf
