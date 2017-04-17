@@ -71,6 +71,9 @@
 	    :protocol protocol))))
 
 (defun helpfully-automagic-clx-server-path ()
+  #+windows
+  (parse-clx-server-path '(:clx :host "localhost" :protocol :internet))
+  #-windows
   (restart-case (automagic-clx-server-path)
     (use-localhost ()
       :report "Use local unix display"
