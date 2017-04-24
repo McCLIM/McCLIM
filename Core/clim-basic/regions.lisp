@@ -895,11 +895,17 @@
 
 ;;; -- Intersection of Ellipse vs. Ellipse -----------------------------------
 
+;;; This entire thing is so incomprehensible, that I have to look for
+;;; my notes, to present the derivation for the solution of the
+;;; conic section problem.
+;;; Translated from:
 ;;; Das ganze ist so unverstaendlich, ich muss noch mal nach meinen
 ;;; Notizen fanden, um die Herleitung der Loesung fuer das
 ;;; Schnittproblem praesentieren zu koennen.
 
 (defun intersection-ellipse/ellipse (e1 e2)
+  ;; We reduce one of the two ellipses to the unit circle.
+  ;; Translated from:
   ;; Eine der beiden Ellipsen fuehren wir zuerst auf den Einheitskreis
   ;; zurueck.
   (let ((a (invert-transformation (slot-value e1 'tr))))
@@ -933,6 +939,9 @@
   (+ (* a x x) (* b y y) (* c x y) (* d x) (* e y) f))
 
 (defun elli-polynom (ell)
+  ;; It is rather funny that for two circles we always get a polynomial
+  ;; of degree two.
+  ;; Translated from:
   ;; Was ganz lustig ist, ist dass wir bei Kreisen immer ein Polynom
   ;; vom Grade zwei bekommen.
   (multiple-value-bind (a b c d e f) (ellipse-coefficients ell)
@@ -942,6 +951,19 @@
              (+ (* e e) (* 2 (- b a) (+ a f)) (* -1 c c) (* d d))
              (+ (* 2 e a) (* 2 e f) (* -2 c d))
              (+ (* (+ a f) (+ a f)) (* -1 d d)) ))) )
+
+;;; We just build ourselves a simple newton iteration. Sometimes we fail
+;;; desperately at local minima. But apart from that convergence behaviour for
+;;; our problem is quite good. But we partly still obtain sizable errors by
+;;; dividing at the function roots; I'm trying to alleviate this by executing a
+;;; few newton steps (newton-ziel-gerade, meaning "newton home stretch") with
+;;; the original polynomial after finding a root.
+
+;;; I shouldn't be so lazy and consult the comprehensive literature; there must
+;;; be something better than newton iteration. I vaguely remember a numerics
+;;; lecture ...
+
+;;; Translated from:
 
 ;;; Wir basteln uns mal eine einfache Newtoniteration. Manchmal
 ;;; scheitern wir noch hoffungslos an lokalen Minima. Ansonsten ist
@@ -997,6 +1019,9 @@
         (t pn)))
 
 (defun newton-iteration (polynom x-start)
+  ;; ATTENTION: Adapted specifically to our problem, do not use this without
+  ;; reading!
+  ;; Translated from:
   ;; ACHTUNG: Speziell auf unser problem angepasst, nicht ohne lesen uebernehmen!
   (multiple-value-bind (sol done?) (maybe-solve-polynom-trivially polynom)
     (cond (done?
@@ -1009,7 +1034,9 @@
                  (eps-f 0d0)
                  (eps-f* 0d-16)
                  (eps-x 1d-20)
-                 (m 20)                 ;maximal zahl schritte
+                 (m 20)                 ;maximum number of steps
+                                        ;translated from:
+                                        ;maximal zahl schritte
                  (res nil) )
              (loop
                (cond ((> n m)
@@ -1017,6 +1044,9 @@
                (multiple-value-bind (f p2) (horner-schema pn x)
                  (multiple-value-bind (f*) (horner-schema p2 x)
                    (cond ((<= (abs f*) eps-f*)
+                          ;; We are stuck at an extremum -- continue with random
+                          ;; starting value
+                          ;; Translated from:
                           ;; Wir haengen an einer Extremstelle fest --
                           ;; mit zufaelligem Startwert weiter.
                           (setf x1 (+ 1d0 (random 2d0))))
@@ -1024,10 +1054,15 @@
                           (setf x1 (- x (/ f f*)))
                           (cond ((or (<= (abs f) eps-f) 
                                      (<= (abs (- x1 x)) eps-x))
+                                 ;; a few more steps of newton, to improve
+                                 ;; the result
+                                 ;; Translated from:
                                  ;; noch ein paar newton schritte, um
                                  ;; das ergebnis zu verbessern
                                  (setf x1 (newton-ziel-gerade polynom x1))
                                  (push x1 res)
+                                 ;; divide (roots)
+                                 ;; Translated from:
                                  ;; abdividieren
                                  (multiple-value-bind (f p2) (horner-schema pn x1)
                                    f
@@ -1035,6 +1070,9 @@
                                    (multiple-value-bind (sol done?)
 				       (maybe-solve-polynom-trivially pn)
                                      (when done?
+                                       ;; iterate more nonetheless here -- is
+                                       ;; this a good idea?
+                                       ;; Translated from:
                                        ;; Hier trotzdem noch
                                        ;; nachiterieren -- ist das
                                        ;; eine gute Idee?
@@ -1047,11 +1085,18 @@
                                        (return))))
                                  (setf x1 x-start)
                                  (setq n 0)) ))))
-                 (setf x (min 1d0 (max -1d0 x1)))        ;Darf man das machen?
+                 (setf x (min 1d0 (max -1d0 x1)))        ;Is this allowed?
+                                                         ;Translated from:
+                                                         ;Darf man das machen?
                  (incf n)))
              res)) )))
 
 (defun horner-schema (polynom x)
+  ;; Evaluates the polynomial `polynom' by means of the horner scheme at the
+  ;; place `x'; returns two values:
+  ;; - the value of the function
+  ;; - the last line of the horner scheme (result of division)
+  ;; Translated from:
   ;; Wertet das polynom `polynom' mit Hilfe des Hornerschemas an der
   ;; Stelle `x' aus; Gibt zwei Werte zurueck:
   ;;  - den Funktionswert
@@ -1748,6 +1793,9 @@
      y)
     res))
 
+;;; This CLIM dimensionality rule is inconsistent to the highest degree and
+;;; introduces more problems than it solves
+;;; Translated from:
 ;;; Diese CLIM dimensionality rule ist in hoechsten ma?e inkonsistent
 ;;; und bringt mehr probleme als sie beseitigt.
 
@@ -1757,8 +1805,14 @@
   x1 y1 x2 y2 extra)
 
 (defstruct pg-splitter
-  links                                 ;liste von punkten
-  rechts)                               ; von unten nach oben
+  links                                 ; "links" means "left"
+                                        ;list of points
+                                        ;Translated from:
+                                        ;liste von punkten
+  rechts)                               ; "rechts" means "right"
+                                        ; from the top down
+                                        ; Translated from:
+                                        ; von unten nach oben
 
 (defun make-pg-edge (p1 p2 extra)
   (multiple-value-bind (x1 y1) (point-position p1)
@@ -1827,6 +1881,8 @@
                             (labels
                                 ((add (lo lu ro ru)
                                    (dolist (s sps
+                                             ;; otherwise
+                                             ;; Translated from:
                                              ;; ansonsten
                                              (push (make-pg-splitter
 						    :links  (list lu lo) 
@@ -1990,6 +2046,8 @@
 (defun geraden-schnitt/prim (x1 y1 x12 y12  x2 y2 x22 y22)
   (let ((dx1 (- x12 x1)) (dy1 (- y12 y1))
         (dx2 (- x22 x2)) (dy2 (- y22 y2)))
+    ;; two straights (lines) given as
+    ;; Translated from:
     ;; zwei geraden gegeben als
     ;; g : s -> (x1 + s*dx1, y1 + s*dy1)
     ;; h : t -> (x2 + t*dx2, y2 + t*dy2)
@@ -2055,7 +2113,9 @@
          (t
           (multiple-value-bind (k m) 
               (geraden-schnitt/prim x1 y1 x2 y2 (point-x po) (point-y po) (point-x pn) (point-y pn))
-            (when (and k (<= 0 m 1))                    ;Moegliche numerische Instabilitaet
+            (when (and k (<= 0 m 1))    ;Possible numerical instability
+                                        ;Translated from:
+                                        ;Moegliche numerische Instabilitaet
               (funcall fun k)))))))))
 
 (defun schnitt-gerade/polygon-prim (x1 y1 x2 y2 points)
@@ -2281,6 +2341,8 @@
 (defmethod region-contains-region-p ((a region) (b point))
   (region-contains-position-p a (point-x b) (point-y b)))
 
+;; xxx what about (region-contains-region-p x +nowhere+) ?
+;; Translated from:
 ;; xxx was ist mit (region-contains-region-p x +nowhere+) ?
 
 (defmethod region-contains-region-p ((a everywhere-region) (b region))
@@ -2293,6 +2355,8 @@
   t)
 
 (defmethod region-contains-region-p ((a region) (b everywhere-region))
+  ;; ??? what about (region-union (region-difference +everywhere+ X) X) ???
+  ;; Translated from:
   ;; ??? was ist mit
   ;; (region-union (region-difference +everywhere+ X) X) ???
   nil)
