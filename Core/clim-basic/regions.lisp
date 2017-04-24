@@ -671,8 +671,8 @@
   ;; XXX start/end angle still missing
   (with-slots (tr) region
     (flet ((contact-radius* (x y)
-             "Returns coordinates of the radius of the point, in
-              which the vector field (x y) touches the ellipse."
+             ;; Returns coordinates of the radius of the point, in
+             ;; which the vector field (x y) touches the ellipse.
              (multiple-value-bind (xc yc) (untransform-distance tr x y)
                (let* ((d (sqrt (+ (* xc xc) (* yc yc))))
                       (xn (- (/ yc d)))
@@ -692,9 +692,9 @@
 
 (defun intersection-line/unit-circle (x1 y1 x2 y2)
   "Computes the intersection of the line from (x1,y1) to (x2,y2) and the unit circle.
-   If the intersection is empty, NIL is returned.
-   Otherwise four values are returned: x1, y1, x2, y2; the start and end point of the
-   resulting line."
+If the intersection is empty, NIL is returned.
+Otherwise four values are returned: x1, y1, x2, y2; the start and end
+point of the resulting line."
   (let* ((dx (- x2 x1))
          (dy (- y2 y1))
          (a (+ (expt dx 2) (expt dy 2)))
