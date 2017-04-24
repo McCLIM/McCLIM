@@ -4,7 +4,7 @@
 
 @menu
 * Running the Demos::
-* Applications
+* Applications::
 @end menu
 
 @node Running the Demos

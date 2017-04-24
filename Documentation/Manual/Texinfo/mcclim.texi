@@ -18,7 +18,7 @@ Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
 @end direntry
 
 @titlepage
-@title{McCLIM User's Manual}
+@title McCLIM User's Manual
 
 @sp 5
 @center @titlefont{The Users Guide}
@@ -49,14 +49,13 @@ Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
 @menu
 * Introduction::
 
-Getting started
+User Manual
 * CLIM Demos and Applications::
 * The First Application::
 * Using presentation types::
-
-User Manual
 * Using views::
 * Using command tables::
+* Using menu bar::
 
 Reference Manual
 * Concepts::
@@ -66,7 +65,6 @@ Reference Manual
 * Panes::
 * Output Protocol::
 * Command Processing::
-* Menu bar::
 
 Extensions
 * Output Protocol Extensions::

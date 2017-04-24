@@ -8,7 +8,7 @@
 @end macro
 
 @macro fmacro{MACRO}
-@func{\MACRO\}
+@b{\MACRO\}
 @end macro
 
 @macro genfun{FUN}
