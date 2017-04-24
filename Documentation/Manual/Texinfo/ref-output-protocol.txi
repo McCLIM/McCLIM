@@ -1,0 +1,31 @@
+@node Output Protocol
+@chapter Output Protocol
+
+@menu
+* Protocol Changes::
+@end menu
+
+@node Protocol Changes
+@section Protocol Changes
+
+@include fun-clim-extensions-medium-miter-limit.texi
+@include fun-clim-extensions-line-style-effective-thickness.texi
+@include fun-clim-setf-output-record-parent.texi
+
+@include fun-clim-replay-output-record.texi
+@include fun-clim-map-over-output-records.texi
+@include fun-clim-map-over-output-records-containing-position.texi
+@include fun-clim-map-over-output-records-overlapping-region.texi
+
+@include class-clim-standard-output-recording-stream.texi
+@c XXX {Generic} displayed-output-record-ink for text records
+
+@include fun-clim-add-output-record.texi
+@include fun-clim-delete-output-record.texi
+@include fun-clim-clear-output-record.texi
+
+@include fun-clim-invoke-with-new-output-record.texi
+@include fun-clim-replay-output-record.texi
+
+@include macro-clim-with-new-output-record.texi
+@include macro-clim-with-output-to-output-record.texi
