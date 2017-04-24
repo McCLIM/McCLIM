@@ -114,7 +114,7 @@ Index
 @include ref-panes.txi
 @include ref-output-protocol.txi
 @include ref-command-tables.txi
-@c @include ref-incremental-redisplay.txi
+@include ref-incremental-redisplay.txi
 
 @node Extensions
 @part Extensions
