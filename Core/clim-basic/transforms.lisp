@@ -339,8 +339,6 @@ real numbers, and default to 0."
 
 (defmethod scaling-transformation-p ((transformation standard-transformation))
   ;; Q: what about the translation portion (of the transformation)?
-  ;; Translated from:
-  ;; Q: was ist mit dem translationsanteil?
   ;; what gives (scaling-transformation-p (make-translation-transformation 17 42))
   ;; I think it would be strange if (s-t-p (make-s-t* 2 1 1 0)) is not T. -- APD
   (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation transformation)
@@ -351,9 +349,6 @@ real numbers, and default to 0."
 (defmethod rectilinear-transformation-p ((transformation standard-transformation))
   ;; We just brutally test this
   ;; Is this even correct?
-  ;; Translated from:
-  ;; Das testen wir einfach ganz brutal
-  ;; ist das auch richtig?
   (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
     (or (and (coordinate= mxx 0) (coordinate/= mxy 0)
              (coordinate/= myx 0) (coordinate= myy 0))
@@ -689,9 +684,6 @@ real numbers, and default to 0."
 (defun atan* (x y)
   ;; atan like we need it.
   ;; For us, phi=0 along the x axis and angles are always between 0 and 2pi.
-  ;; Translated from:
-  ;; atan so, wie wir es brauchen.
-  ;; Bei uns ist phi=0 entlang der x-axis und Winkel sind immer zwischen 0 und 2pi.
   (let ((r (atan y x)))
     (if (< r 0) (+ r (* 2 pi)) r)))
 
