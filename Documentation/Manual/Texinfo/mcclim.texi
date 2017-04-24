@@ -65,6 +65,7 @@ Reference Manual
 * Panes::
 * Output Protocol::
 * Command Processing::
+* Menu bar::
 
 Extensions
 * Output Protocol Extensions::
@@ -411,6 +412,7 @@ tables must inherit from @t{global-command-table}. McCLIM treats a
 @t{nil} value of @emph{inherit-from} as specifying
 @t{'(global-command-table)}.
 
+@include usr-menu-bar.txi
 
 @node Reference Manual
 @part Reference Manual

@@ -380,6 +380,7 @@ designator) inherits menu items."
 
 (defun remove-menu-item-from-command-table (command-table string
 					    &key (errorp t))
+  "Removes item from the `command-table'."
   (let ((table (find-command-table command-table))
 	(item (find-menu-item string command-table :errorp nil)))
     (with-slots (menu) table
@@ -436,7 +437,8 @@ designator) inherits menu items."
 				       string type value
 				       &rest args
 				       &key documentation (after :end)
-				       keystroke text-style (errorp t))
+                                         keystroke text-style (errorp t))
+  "Adds menu item to the command table."
   (declare (ignore documentation keystroke text-style))
   (let* ((table (find-command-table command-table))
 	 (old-item (find-menu-item string command-table :errorp nil)))
