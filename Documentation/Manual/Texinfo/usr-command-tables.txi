@@ -1,0 +1,41 @@
+@node Using command tables
+@chapter Using command tables
+@cindex command table
+
+A @emph{command table} is an object that is used to determine what
+commands are available in a particular context and the ways in which
+commands can be executed.
+
+Simple applications do not manage command tables explicitly.  A default
+command table is created as a result of a call to the macro
+@t{define-application-frame} and that command table has the same name as
+the application frame.
+
+Each command table has a @emph{name} and that CLIM manages a global
+@emph{namespace} for command tables.
+
+@defun {find-command-table} name &key (errorp t)
+@findex find-command-table
+
+This function returns the command table with the name @emph{name}.  If
+there is no command table with that name, then what happens depends on
+the value of @emph{errorp}.  If @emph{errorp} is @emph{true}, then an
+error of type @t{command-table-not-found} is signaled.  If @emph{errorp}
+is @emph{false}, otherwise @t{nil} is returned.
+@end defun
+
+@defmac {define-command-table} name &key inherit-from menu inherit-menu
+@end defmac
+
+@defmac {make-command-table} name &key inherit-from menu inherit-menu (errorp t)
+@end defmac
+
+--
+
+By default command tables inherit from
+@t{global-command-table}. According to the CLIM~2.0 specification, a
+command table inherits from no command table if @t{nil} is passed as an
+explicit argument to @t{inherit-from}. In revision~2.2 all command
+tables must inherit from @t{global-command-table}. McCLIM treats a
+@t{nil} value of @emph{inherit-from} as specifying
+@t{'(global-command-table)}.

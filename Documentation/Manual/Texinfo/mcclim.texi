@@ -9,7 +9,7 @@
 @set MCCLIMVERSION 0.9.7-dev
 
 @copying
-Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
+Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 @end copying
 
 @dircategory Common Lisp
@@ -18,7 +18,7 @@ Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
 @end direntry
 
 @titlepage
-@title{McCLIM User's Manual}
+@title McCLIM User's Manual
 
 @sp 5
 @center @titlefont{The Users Guide}
@@ -49,36 +49,40 @@ Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
 @menu
 * Introduction::
 
-Getting started
+User Manual
 * CLIM Demos and Applications::
 * The First Application::
+* Using incremental redisplay::
 * Using presentation types::
-
-User Manual
 * Using views::
 * Using command tables::
+* Using menu bar::
 
 Reference Manual
 * Concepts::
-* Windowing system drawing functions::
-* CLIM drawing functions::
+@c * Sheet hierarchies::
+* Drawing functions::
 * Panes::
 * Output Protocol::
 * Command Processing::
+* Incremental redisplay::
 
 Extensions
 * Output Protocol Extensions::
 * Output Recording Extensions::
+* Text editor substrate::
 * Drawing Two-Dimensional Images::
-* File Selector Gadget::
-* PostScript Backend::
-* Drei::
 * Fonts and Extended Text Styles::
 * Tab Layout::
+
+Backends
+* Raster Image backend::
+* PostScript Backend::
 
 Utility Programs
 * Listener::
 * Inspector::
+* Debugger::
 
 Auxilliary Material
 * Glossary::
@@ -90,577 +94,56 @@ Index
 * Function And Macro Index::
 @end menu
 
-@node Introduction
-@chapter Introduction
+@include introduction.txi
 
-CLIM is a large layered software system that allows the user to
-customize it at each level.  The most simple ways of using CLIM is to
-directly use its top layer, which contains application frames, panes,
-and gadgets, very similar to those of traditional windowing system
-toolkits such as GTK, Tk, and Motif.
-
-But there is much more to using CLIM.  In CLIM, the upper layer with
-panes and gadgets is written on top of a basic layer containing more
-basic functionality in the form of sheets.  Objects in the upper layer
-are typically instances of classes derived from those of the lower
-layer.  Thus, nothing prevents a user from adding new gadgets and panes
-by writing code that uses the sheet layer.
-
-Finally, since CLIM is written in Common Lisp, essentially all parts of
-it can be modified, replaced, or extended.
-
-For that reason, a user's manual for CLIM must contain not only a
-description of the protocols of the upper layer, but also of all
-protocols, classes, functions, macros, etc. that are part of the
-specification.
-
-@menu
-* Standards::
-* How CLIM Is Different::
-@end menu
-
-@node Standards
-@section Standards
-
-This manual documents McCLIM @value{MCCLIMVERSION} which is a mostly
-complete implementation of the CLIM 2.0 specification and its revision
-2.2. To our knowledge version~2.2 of the CLIM specification is only
-documented in the ``CLIM 2 User's Guide'' by Franz. While that document
-is not a formal specification, it does contain many cleanups and is
-often clearer than the official specification; on the other hand, the
-original specification is a useful reference. This manual will note
-where McCLIM has followed the 2.2 API.
-@cindex specification
-
-Also, some protocols mentioned in the 2.0 specification, such as parts
-of the incremental redisplay protocol, are clearly internal to CLIM and
-not well described.  It will be noted here when they are partially
-implemented in McCLIM or not implemented at all.
-
-@node How CLIM Is Different
-@section How CLIM Is Different
-
-Many new users of CLIM have a hard time trying to understand how it
-works and how to use it.  A large part of the problem is that many such
-users are used to more traditional GUI toolkits, and they try to fit
-CLIM into their mental model of how GUI toolkits should work.
-
-But CLIM is much more than just a GUI toolkit, as suggested by its name,
-it is an @emph{interface manager}, i.e. it is a complete mediator
-between application ``business logic'' and the way the user interacts
-with objects of the application.  In fact, CLIM doesn't have to be used
-with graphics output at all, as it contains a large collection of
-functionality to manage text.
-@cindex interface manager
-
-Traditional GUI toolkits have an @emph{event loop}.
-@cindex event loop
-Events are delivered to GUI elements called @emph{gadgets} (or
-@emph{widgets}), and the programmer attaches @emph{event handlers} to
-those gadgets in order to invoke the functionality of the application
-logic.  While this way of structuring code is sometimes presented as a
-virtue (``Event-driven programming''), it has an unfortunate side
-effect, namely that event handlers are executed in a null context, so
-that it becomes hard to even remember two consecutive events.  The
-effect of event-driven programming is that applications written that way
-have very rudimentary interaction policies.
-
-At the lowest level, CLIM also has an event loop, but most application
-programmers never have any reason to program at that level with CLIM.
-Instead, CLIM has a @emph{command loop}
-@cindex command loop
-at a much higher level than the event loop.  At each iteration of the
-command loop:
-
-@enumerate
-@item
- A command is acquired.  You might satisfy this demand by clicking on a
-  menu item, by typing the name of a command, by hitting some kind of
-  keystroke, by pressing a button, or by pressing some visible object
-  with a command associated with it;
-@item
- Arguments that are required by the command are acquired.  Each argument
-    is often associated with a @emph{presentation type}, and visible
-    objects of the right presentation type can be clicked on to satisfy
-    this demand.  You can also type a textual representation of the
-    argument, using completion, or you can use a context menu;
-@item
- The command is called on the arguments, usually resulting in some
-    significant modification of the data structure representing your
-    application logic;
-@item
- A @emph{display routine} is called to update the views of the
-  application logic.  The display routine may use features such as
-  incremental redisplay.
-@end enumerate
-
-Instead of attaching event handlers to gadgets, writing a CLIM
-application therefore consists of:
-
-@itemize @bullet
-@item
- writing CLIM commands that modify the application data structures
-  independently of how those commands are invoked, and which may take
-  application objects as arguments;
-@item
- writing display routines that turn the application data structures (and
-  possibly some "view" object) into a collection of visible
-  representations (having presentation types) of application objects;
-@item
- writing completion routines that allow you to type in application
-  objects (of a certain presentation type) using completions;
-@item
- independently deciding how commands are to be invoked (menus, buttons,
-  presentations, textual commands, etc).
-@end itemize
-
-By using CLIM as a mediator of command invocation and argument
-acquisition, you can obtain some very modular code.  Application logic
-is completely separate from interaction policies, and the two can evolve
-separately and independently.
-
-@node User Manual
+@c @node User Manual
 @part User Manual
 
 @include chap-demos-and-applications.texi
 @include chap-first-application.texi
 
-@node Using presentation types
-@chapter Using presentation types
-@cindex presentation type
+@include usr-incremental-redisplay.txi
+@include usr-presentations.txi
+@include usr-views.txi
+@include usr-command-tables.txi
+@include usr-menu-bar.txi
 
-@menu
-* What is a presentation type::
-* A simple example::
-@end menu
-
-@node What is a presentation type
-@section What is a presentation type
-
-The concept of @emph{presentation types} is central to CLIM.  Client
-code can choose to output graphical or textual representations of
-application objects either as just graphics or text, or to associate
-such output with an arbitrary Common Lisp object and a presentation
-type.  The presentation type is not necessarily related to the idea
-Common Lisp might have of the underlying object.
-
-When a CLIM command or some other client code requests an object (say as
-an argument) of a certain presentation type, the user of the application
-can satisfy the request by clicking on any visible output labeled with a
-compatible presentation type.  The command then receives the underlying
-Common Lisp object as a response to the request.
-
-CLIM presentation types are usually distinct from Common Lisp types.
-The reason is that the Common Lisp type system, although very powerful,
-is not quite powerful enough to represent the kind of relationships
-between types that are required by CLIM.  However, every Common Lisp
-class (except the built-in classes) is automatically a presentation
-type.
-
-A presentation type has a name, but can also have one or more
-@emph{parameters}.  Parameters of presentation types are typically used
-to restrict the type.  For instance, the presentation type @t{integer}
-takes as parameters the low and the high values of an interval.  Such
-parameters allow the application to restrict objects that become
-clickable in certain contexts, for instance if a date in the month of
-March is requested, only integers between 1 and 31 should be clickable.
-
-@node A simple example
-@section A simple example
-
-Consider the following example:
-
-@lisp
-@include ex3.lisp
-@end lisp
-
-In this application, we have two main panes, an application pane and an
-interactor pane.  The application pane is given the option
-@t{:display-time t} which means that it will not be erased before every
-iteration of the command loop.
-
-We have also defined two presentation types: @t{name-of-month} and
-@t{day-of-month}.  The @t{out} command uses
-@t{with-output-as-presentation} in order to associate some output, a
-presentation type, and an underlying object.  In this case, it will show
-the string ``March'' which is considered to be of presentation type
-@t{name-of-month} with the underlying object being the character string
-@t{"The third month"}.  It will also show the string ``fifteen'' which
-is considered to be of presentation type @t{day-of-month} with the
-underlying object being the number 15.  The argument @t{t} to
-@t{with-output-as-presentation} indicates that the stream to present on
-is @t{*standard-output*}.
-
-Thus, if the @t{out} command has been executed, and then the user types
-``Get Date'' in the interactor pane, the @t{get-date} command will try
-to acquire its arguments, the first of presentation type
-@t{name-of-month} and the second of type @t{day-of-month}.  At the first
-prompt, the user can click on the string ``March'' but not on the string
-``fifteen'' in the application pane.  At the second prompt it is the
-string ``fifteen'' that is clickable, whereas ``March'' is not.
-
-The @t{get-date} command will acquire the underlying objects.  What is
-finally displayed (in the interactor pane, which is the standard input
-of the frame), is ``the 15 of The third month''.
-
-@node Using views
-@chapter Using views
-@cindex view
-
-The CLIM specification mentions a concept called a @emph{view}, and also
-lists a number of predefined views to be used in various different
-contexts.
-
-In this chapter we show how the @emph{view} concept can be used in some
-concrete programming examples.  In particular, we show how to use a
-single pane to show different views of the application data structure at
-different times.  To switch between the different views, we supply a set
-of commands that alter the @t{stream-default-view} feature of all CLIM
-extended output streams.
-
-The example shown here has been stripped to a bare minimum in order to
-illustrate the important concepts.  A more complete version can be found
-in @t{Examples/views.lisp} in the McCLIM source tree.
-
-Here is the example:
-
-@lisp
-@include views.lisp
-@end lisp
-
-The example shows a stripped-down example of a simple database of
-members of some organization.
-
-The main trick used in this example is the @t{display-main-pane}
-function that is declared to be the display function of the main pane in
-the application frame.  The @t{display-main-pane} function trampolines
-to a generic function called @t{display-pane-with-view}, and which takes
-an additional argument compared to the display functions of CLIM panes.
-This additional argument is of type @t{view} which allows us to dispatch
-not only on the type of frame and the type of pane, but also on the type
-of the current default view.  In this example the view argument is
-simply taken from the default view of the pane.
-
-A possibility that is not obvious from reading the CLIM specification is
-to have views that contain additional slots.  Our example defines two
-subclasses of the CLIM @t{view} class, namely @t{members-view} and
-@t{person-view}.
-
-The first one of these does not contain any additional slots, and is
-used when a global view of the members of our organization is wanted.
-Since no instance-specific data is required in this view, we follow the
-idea of the examples of the CLIM specification to instantiate a
-singleton of this class and store that singleton in the
-@t{stream-default-view} of our main pane whenever a global view of our
-organization is required.
-
-The @t{person-view} class, on the other hand, is used when we want a
-closer view of a single member of the organization.  This class
-therefore contains an additional slot which holds the particular person
-instance we are interested in.  The method on @t{display-pane-with-view}
-that specializes on @t{person-view} displays the data of the particular
-person that is contained in the view.
-
-To switch between the views, we provide two commands.  The command
-@t{com-show-all} simply changes the default view of the main pane to be
-the singleton instance of the @t{members-view} class.  The command
-@t{com-show-person} is more complicated.  It takes an argument of type
-person, creates an instance of the @t{person-view} class initialized
-with the person that was passed as an argument, and stores the instance
-as the default view of the main pane.
-
-@node Using command tables
-@chapter Using command tables
-@cindex command table
-
-A @emph{command table} is an object that is used to determine what
-commands are available in a particular context and the ways in which
-commands can be executed.
-
-Simple applications do not manage command tables explicitly.  A default
-command table is created as a result of a call to the macro
-@t{define-application-frame} and that command table has the same name as
-the application frame.
-
-Each command table has a @emph{name} and that CLIM manages a global
-@emph{namespace} for command tables.
-
-@defun {find-command-table} name @key (errorp t)
-@findex find-command-table
-
-This function returns the command table with the name @emph{name}.  If
-there is no command table with that name, then what happens depends on
-the value of @emph{errorp}.  If @emph{errorp} is @emph{true}, then an
-error of type @t{command-table-not-found} is signaled.  If @emph{errorp}
-is @emph{false}, otherwise @t{nil} is returned.
-@end defun
-
-@defmac {define-command-table} name @key inherit-from menu inherit-menu
-@end defmac
-
-@defmac {make-command-table} name @key inherit-from menu inherit-menu (errorp t)
-@end defmac
-
---
-
-By default command tables inherit from
-@t{global-command-table}. According to the CLIM~2.0 specification, a
-command table inherits from no command table if @t{nil} is passed as an
-explicit argument to @t{inherit-from}. In revision~2.2 all command
-tables must inherit from @t{global-command-table}. McCLIM treats a
-@t{nil} value of @emph{inherit-from} as specifying
-@t{'(global-command-table)}.
-
-
-@node Reference Manual
+@c @node Reference Manual
 @part Reference Manual
 
-@node Concepts
-@chapter Concepts
+@include ref-concepts.txi
+@c @include ref-sheet-hierarchies.txi
+@include ref-drawing.txi
+@include ref-panes.txi
+@include ref-output-protocol.txi
+@include ref-command-tables.txi
+@include ref-incremental-redisplay.txi
 
-@menu
-* Coordinate systems::
-* Arguments to drawing functions::
-@end menu
-
-@node Coordinate systems
-@section Coordinate systems
-
-CLIM uses a number of different coordinate systems and transformations
-to transform coordinates between them.
-
-The coordinate system used for the arguments of drawing functions is
-called the @gloss{user coordinate system},
-@cindex user coordinate system
- and coordinate values expressed in the user coordinate system are known
-as @gloss{user coordinates}.
-@cindex user coordinates
-
-Each sheet has its own coordinate system called the @gloss{sheet
-coordinate system},
-@cindex sheet coordinate system
- and positions expressed in this coordinate system are said to be
-expressed in @gloss{sheet coordinates}.
-@cindex sheet coordinates
-  User coordinates are translated to @gloss{sheet coordinates} by means
-of the @gloss{user transformation} also called the @gloss{medium
-transformation}.  This transformation is stored in the @gloss{medium}
-used for drawing.  The medium transformation can be composed temporarily
-with a transformation given as an explicit argument to a drawing
-function.  In that case, the user transformation is temporarily modified
-for the duration of the drawing.
-
-Before drawing can occur, coordinates in the sheet coordinate system
-must be transformed to @gloss{native coordinates}, which are coordinates
-of the coordinate system of the native windowing system.  The
-transformation responsible for computing native coordinates from sheet
-coordinates is called the @gloss{native transformation}.  Notice that
-each sheet potentially has its own native coordinate system, so that the
-native transformation is specific for each sheet.  Another way of
-putting it is that each sheet has a mirror, which is a window in the
-underlying windowing system.  If the sheet has its own mirror, it is the
-@emph{direct mirror} of the sheet.  Otherwise its mirror is the direct
-mirror of one of its ancestors.  In any case, the native transformation
-of the sheet determines how sheet coordinates are to be translated to
-the coordinates of that mirror, and the native coordinate system of the
-sheet is that of its mirror.
-
-The composition of the user transformation and the native transformation
-is called the @gloss{device transformation}.  It allows drawing
-functions to transform coordinates only once before obtaining native
-coordinates.
-
-Sometimes, it is useful to express coordinates of a sheet in the
-coordinate of its parent.  The transformation responsible for that is
-called the @gloss{sheet transformation}.
-
-@node Arguments to drawing functions
-@section Arguments to drawing functions
-
-Drawing functions are typically called with a sheet as an argument.
-
-A sheet often, but not always, corresponds to a window in the underlying
-windowing system.
-
-@node Windowing system drawing functions
-@chapter Windowing system drawing functions
-
-A typical windowing system provides a hierarchy of rectangular areas
-called windows.  When a drawing functions is called to draw an object
-(such as a line or a circle) in a window of such a hierarchy, the
-arguments to the drawing function will include at least the window and a
-number of coordinates relative to (usually) the upper left corner of the
-window.
-
-To translate such a request to the actual altering of pixel values in
-the video memory, the windowing system must translate the coordinates
-given as argument to the drawing functions into coordinates relative to
-the upper left corner of the entire screen.  This is done by a
-composition of translation transformations applied to the initial
-coordinates.  These transformations correspond to the position of each
-window in the coordinate system of its parent.
-
-Thus a window in such a system is really just some values indicating its
-height, its width, and its position in the coordinate system of its
-parent, and of course information about background and foreground colors
-and such.
-
-@node CLIM drawing functions
-@chapter CLIM drawing functions
-
-CLIM generalizes the concept of a hierarchy of window in a windowing
-system in several different ways.  A window in a windowing system
-generalizes to a @gloss{sheet} in CLIM.  More precisely, a window in a
-windowing system generalizes to the @gloss{sheet region} of a sheet.  A
-CLIM sheet is an abstract concept with an infinite @gloss{drawing plane}
-and the @gloss{region} of the sheet is the potentially visible part of
-that drawing plane.
-
-CLIM @gloss{sheet region}s don't have to be rectangular the way windows
-in most windowing systems have to be.  Thus, the width and the height of
-a window in a windowing system generalizes to an arbitrary
-@gloss{region} in CLIM.  A CLIM region is simply a set of mathematical
-points in a plane.  CLIM allows this set to be described as a
-combination (union, intersection, difference) of elementary regions made
-up of rectangles, polygons and ellipses.
-
-Even rectangular regions in CLIM are generalizations of the width+height
-concept of windows in most windowing systems.  While the upper left
-corner of a window in a typical windowing system has coordinates (0,0),
-that is not necessarily the case of a CLIM region.  CLIM uses that
-generalization to implement various ways of scrolling the contents of a
-sheet.  To see that, imagine just a slight generalization of the
-width+height concept of a windowing system into a rectangular region
-with x+y+width+height.  Don't confuse the x and y here with the position
-of a window within its parent, they are different.  Instead, imagine
-that the rectangular region is a hole into the (infinite) drawing plane
-defined by all possible coordinates that can be given to drawing
-functions.  If graphical objects appear in the window with respect to
-the origin of some coordinate system, and the upper-left corner of the
-window has coordinates (x,y) in that coordinate system, then changing x
-and y will have the effect of scrolling.
-
-CLIM sheets also generalize windows in that a window typically has
-pixels with integer-value coordinates.  CLIM sheets, on the other hand,
-have infinte resolution.  Drawing functions accept non-integer
-coordinate values which are only translated into integers just before
-the physical rendering on the screen.
-
-The x and y positions of a window in the coordinate system of its parent
-window in a typical windowing system is a translation transformation
-that takes coordinates in a window and transform them into coordinates
-in the parent window.  CLIM generalizes this concepts to arbitrary
-affine transformations (combinations of translations, rotations, and
-scalings).  This generalization makes it possible for points in a sheet
-to be not only translated compared to the parent sheet, but also rotated
-and scaled (including negative scaling, giving mirror images).  A
-typical use for scaling would be for a sheet to be a zoomed version of
-its parent, or for a sheet to have its y-coordinate go the opposite
-direction from that of its parent.
-
-When the shapes of, and relationship between sheets are as simple as
-those of a typical windowing system, each sheet typically has an
-associated window in the underlying windowing system.  In that case,
-drawing on a sheet translates in a relativly straightforward way into
-drawing on the corresponding window.  CLIM sheets that have associated
-windows in the underlying windowing system are called @gloss{mirrored
-sheets} and the system-dependent window object is called the
-@gloss{mirror}.  When shapes and relationships are more complicated,
-CLIM uses its own transformations to transform coordinates from a sheet
-to its parent and to its grandparent, etc., until a @gloss{mirrored
-sheet} is found.  To the user of CLIM, the net effect is to have a
-windowing system with more general shapes of, and relationships between
-windows.
-
-@include chap-panes.texi
-
-@node Output Protocol
-@chapter Output Protocol
-
-@menu
-* Protocol Changes::
-@end menu
-
-@node Protocol Changes
-@section Protocol Changes
-
-@include fun-clim-extensions-line-style-effective-thickness.texi
-
-@deffn {Generic Function} {(setf output-record-parent)} parent record
-
-Additional protocol generic function. @var{parent} may be an output
-record or @cl{nil}.
-
-@end deffn
-
-@include fun-clim-replay-output-record.texi
-@include fun-clim-map-over-output-records-containing-position.texi
-@include fun-clim-map-over-output-records-overlapping-region.texi
-
-@c XXX \defgeneric displayed-output-record-ink for text records
-
-@deffn {Generic Function} {add-output-record} child record
-
-Sets @var{record} to be the parent of @var{child}.
-@end deffn
-
-@deffn {Generic Function} {delete-output-record} child record &optional (errorp t)
-
-If @var{child} is a child of @var{record}, sets the parent of
-@var{child} to @cl{nil}.
-@end deffn
-
-@deffn {Generic Function} {clear-output-record} record
-@end deffn
-
-Sets the parent of all children of @var{record} to @cl{nil}.
-
-@c \defgeneric {invoke-with-new-output-record} :parent key
-
-@include macro-clim-with-new-output-record.texi
-@include macro-clim-with-output-to-output-record.texi
-
-@node Command Processing
-@chapter Command Processing
-@cindex command
-@cindex command processing
-@cindex command tables
-
-@deffn {Macro} {define-command-table} name &key inherit-from menu inherit-menu
-@findex define-command-table
-@end deffn
-@deffn {Function} {make-command-table} {name &key inherit-from inherit-menu (errorp t)}
-@findex make-command-table
-@end deffn
-
-By default command tables inherit from
-@cl{global-command-table}. According to the CLIM~2.0 specification, a
-command table inherits from no command table if \nil\ is passed as an
-explicit argument to @var{inherit-from}. In revision~2.2 all command
-tables must inherit from @cl{global-command-table}. McCLIM treats a
-\nil\ value of @var{inherit-from} as specifying
-@cl{'(global-command-table)}.
-
-@node Extensions
+@c @node Extensions
 @part Extensions
 @cindex extensions
 
 @include ext-output-protocol.texi
 @include ext-output-recording.texi
-@include ext-backend-raster.texi
-@include ext-backend-postscript.texi
+@include ext-text-editor.texi
 @include ext-images.texi
 @include ext-fonts.texi
 @include ext-tab-layout.texi
-@include drei.texi
 
-@node Utility Programs
+@c @node Backends
+@part Backends
+@c @include ext-backend-clx.texi
+@include ext-backend-raster.texi
+@include ext-backend-postscript.texi
+
+@c @node Utility Programs
 @part Utility Programs
 
 @include chap-listener.texi
 @include chap-inspector.texi
+@include chap-debugger.texi
 
-@node Auxiliary Material
+@c @node Auxiliary Material
 @part Auxiliary Material
 
 @node Glossary

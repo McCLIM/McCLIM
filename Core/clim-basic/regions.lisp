@@ -671,8 +671,8 @@
   ;; XXX start/end angle still missing
   (with-slots (tr) region
     (flet ((contact-radius* (x y)
-             "Returns coordinates of the radius of the point, in
-              which the vector field (x y) touches the ellipse."
+             ;; Returns coordinates of the radius of the point, in
+             ;; which the vector field (x y) touches the ellipse.
              (multiple-value-bind (xc yc) (untransform-distance tr x y)
                (let* ((d (sqrt (+ (* xc xc) (* yc yc))))
                       (xn (- (/ yc d)))
@@ -692,9 +692,9 @@
 
 (defun intersection-line/unit-circle (x1 y1 x2 y2)
   "Computes the intersection of the line from (x1,y1) to (x2,y2) and the unit circle.
-   If the intersection is empty, NIL is returned.
-   Otherwise four values are returned: x1, y1, x2, y2; the start and end point of the
-   resulting line."
+If the intersection is empty, NIL is returned.
+Otherwise four values are returned: x1, y1, x2, y2; the start and end
+point of the resulting line."
   (let* ((dx (- x2 x1))
          (dy (- y2 y1))
          (a (+ (expt dx 2) (expt dy 2)))
@@ -895,13 +895,12 @@
 
 ;;; -- Intersection of Ellipse vs. Ellipse -----------------------------------
 
-;;; Das ganze ist so unverstaendlich, ich muss noch mal nach meinen
-;;; Notizen fanden, um die Herleitung der Loesung fuer das
-;;; Schnittproblem praesentieren zu koennen.
+;;; This entire thing is so incomprehensible, that I have to look for
+;;; my notes, to present the derivation for the solution of the
+;;; conic section problem.
 
 (defun intersection-ellipse/ellipse (e1 e2)
-  ;; Eine der beiden Ellipsen fuehren wir zuerst auf den Einheitskreis
-  ;; zurueck.
+  ;; We reduce one of the two ellipses to the unit circle.
   (let ((a (invert-transformation (slot-value e1 'tr))))
     (let ((r (intersection-ellipse/unit-circle (transform-region a e2))))
       (if (atom r)
@@ -933,8 +932,8 @@
   (+ (* a x x) (* b y y) (* c x y) (* d x) (* e y) f))
 
 (defun elli-polynom (ell)
-  ;; Was ganz lustig ist, ist dass wir bei Kreisen immer ein Polynom
-  ;; vom Grade zwei bekommen.
+  ;; It is rather funny that for two circles we always get a polynomial
+  ;; of degree two.
   (multiple-value-bind (a b c d e f) (ellipse-coefficients ell)
     (canonize-polynom
      (vector (+ (* (- b a) (- b a)) (* c c))
@@ -943,18 +942,16 @@
              (+ (* 2 e a) (* 2 e f) (* -2 c d))
              (+ (* (+ a f) (+ a f)) (* -1 d d)) ))) )
 
-;;; Wir basteln uns mal eine einfache Newtoniteration. Manchmal
-;;; scheitern wir noch hoffungslos an lokalen Minima. Ansonsten ist
-;;; das Konvergenzverhalten fuer unsere Aufgabe schon ganz gut. Aber
-;;; wir handeln uns durch das Abdividieren der Nullstellen z.T. noch
-;;; beachtliche Fehler ein; ich versuche das zu mildern in dem ich
-;;; nach Finden einer Nullstell noch eine paar Newtonschritte mit dem
-;;; Original-Polynom mache (newton-ziel-gerade).
+;;; We just build ourselves a simple newton iteration. Sometimes we fail
+;;; desperately at local minima. But apart from that convergence behaviour for
+;;; our problem is quite good. But we partly still obtain sizable errors by
+;;; dividing at the function roots; I'm trying to alleviate this by executing a
+;;; few newton steps (newton-ziel-gerade, meaning "newton home stretch") with
+;;; the original polynomial after finding a root.
 
-;;; Ich sollte man nicht so faul sein und die reichhaltige Literatur
-;;; zu Rate ziehen tun; es muss auch etwas bessers als Newtoniteration
-;;; geben. Ich habe da noch so vage Erinnerungen an die
-;;; Numerik-Vorlesung ...
+;;; I shouldn't be so lazy and consult the comprehensive literature; there must
+;;; be something better than newton iteration. I vaguely remember a numerics
+;;; lecture ...
 
 (defun newton-ziel-gerade (pn x &optional (n 4))
   (cond ((= n 0) x)
@@ -997,7 +994,8 @@
         (t pn)))
 
 (defun newton-iteration (polynom x-start)
-  ;; ACHTUNG: Speziell auf unser problem angepasst, nicht ohne lesen uebernehmen!
+  ;; ATTENTION: Adapted specifically to our problem, do not use this without
+  ;; reading!
   (multiple-value-bind (sol done?) (maybe-solve-polynom-trivially polynom)
     (cond (done?
            sol)
@@ -1009,7 +1007,7 @@
                  (eps-f 0d0)
                  (eps-f* 0d-16)
                  (eps-x 1d-20)
-                 (m 20)                 ;maximal zahl schritte
+                 (m 20)                 ;maximum number of steps
                  (res nil) )
              (loop
                (cond ((> n m)
@@ -1017,27 +1015,26 @@
                (multiple-value-bind (f p2) (horner-schema pn x)
                  (multiple-value-bind (f*) (horner-schema p2 x)
                    (cond ((<= (abs f*) eps-f*)
-                          ;; Wir haengen an einer Extremstelle fest --
-                          ;; mit zufaelligem Startwert weiter.
+                          ;; We are stuck at an extremum -- continue with random
+                          ;; starting value
                           (setf x1 (+ 1d0 (random 2d0))))
                          (t
                           (setf x1 (- x (/ f f*)))
                           (cond ((or (<= (abs f) eps-f) 
                                      (<= (abs (- x1 x)) eps-x))
-                                 ;; noch ein paar newton schritte, um
-                                 ;; das ergebnis zu verbessern
+                                 ;; a few more steps of newton, to improve
+                                 ;; the result
                                  (setf x1 (newton-ziel-gerade polynom x1))
                                  (push x1 res)
-                                 ;; abdividieren
+                                 ;; divide (roots)
                                  (multiple-value-bind (f p2) (horner-schema pn x1)
                                    f
                                    (setq pn (canonize-polynom p2))
                                    (multiple-value-bind (sol done?)
 				       (maybe-solve-polynom-trivially pn)
                                      (when done?
-                                       ;; Hier trotzdem noch
-                                       ;; nachiterieren -- ist das
-                                       ;; eine gute Idee?
+                                       ;; iterate more nonetheless here -- is
+                                       ;; this a good idea?
                                        (setf sol
 					     (mapcar (lambda (x)
 						       (newton-ziel-gerade
@@ -1047,15 +1044,15 @@
                                        (return))))
                                  (setf x1 x-start)
                                  (setq n 0)) ))))
-                 (setf x (min 1d0 (max -1d0 x1)))        ;Darf man das machen?
+                 (setf x (min 1d0 (max -1d0 x1)))        ;Is this allowed?
                  (incf n)))
              res)) )))
 
 (defun horner-schema (polynom x)
-  ;; Wertet das polynom `polynom' mit Hilfe des Hornerschemas an der
-  ;; Stelle `x' aus; Gibt zwei Werte zurueck:
-  ;;  - den Funktionswert
-  ;;  - die letzte Zeile des Hornerschemas (Divisionsergebnis)
+  ;; Evaluates the polynomial `polynom' by means of horner's method at the
+  ;; place `x'; returns two values:
+  ;; - the value of the function
+  ;; - the last line of horner's method (result of division)
   (let ((n (length polynom)))
     (cond ((= n 0) (values 0))
           ((= n 1) (values (aref polynom 0) '#()))
@@ -1748,8 +1745,8 @@
      y)
     res))
 
-;;; Diese CLIM dimensionality rule ist in hoechsten ma?e inkonsistent
-;;; und bringt mehr probleme als sie beseitigt.
+;;; This CLIM dimensionality rule is inconsistent to the highest degree and
+;;; introduces more problems than it solves
 
 ;;; -- Set operations on polygons --------------------------------------------
 
@@ -1757,8 +1754,10 @@
   x1 y1 x2 y2 extra)
 
 (defstruct pg-splitter
-  links                                 ;liste von punkten
-  rechts)                               ; von unten nach oben
+  links                                 ; "links" means "left"
+                                        ;list of points
+  rechts)                               ; "rechts" means "right"
+                                        ; from the top down
 
 (defun make-pg-edge (p1 p2 extra)
   (multiple-value-bind (x1 y1) (point-position p1)
@@ -1827,7 +1826,7 @@
                             (labels
                                 ((add (lo lu ro ru)
                                    (dolist (s sps
-                                             ;; ansonsten
+                                             ;; otherwise
                                              (push (make-pg-splitter
 						    :links  (list lu lo) 
 						    :rechts (list ru ro))
@@ -1990,7 +1989,7 @@
 (defun geraden-schnitt/prim (x1 y1 x12 y12  x2 y2 x22 y22)
   (let ((dx1 (- x12 x1)) (dy1 (- y12 y1))
         (dx2 (- x22 x2)) (dy2 (- y22 y2)))
-    ;; zwei geraden gegeben als
+    ;; two straights (lines) given as
     ;; g : s -> (x1 + s*dx1, y1 + s*dy1)
     ;; h : t -> (x2 + t*dx2, y2 + t*dy2)
     ;; -> NIL | (s ; t)
@@ -2055,7 +2054,7 @@
          (t
           (multiple-value-bind (k m) 
               (geraden-schnitt/prim x1 y1 x2 y2 (point-x po) (point-y po) (point-x pn) (point-y pn))
-            (when (and k (<= 0 m 1))                    ;Moegliche numerische Instabilitaet
+            (when (and k (<= 0 m 1))    ;Possible numerical instability
               (funcall fun k)))))))))
 
 (defun schnitt-gerade/polygon-prim (x1 y1 x2 y2 points)
@@ -2281,7 +2280,7 @@
 (defmethod region-contains-region-p ((a region) (b point))
   (region-contains-position-p a (point-x b) (point-y b)))
 
-;; xxx was ist mit (region-contains-region-p x +nowhere+) ?
+;; xxx what about (region-contains-region-p x +nowhere+) ?
 
 (defmethod region-contains-region-p ((a everywhere-region) (b region))
   t)
@@ -2293,8 +2292,7 @@
   t)
 
 (defmethod region-contains-region-p ((a region) (b everywhere-region))
-  ;; ??? was ist mit
-  ;; (region-union (region-difference +everywhere+ X) X) ???
+  ;; ??? what about (region-union (region-difference +everywhere+ X) X) ???
   nil)
 
 (defmethod region-contains-region-p ((a region) (b nowhere-region))

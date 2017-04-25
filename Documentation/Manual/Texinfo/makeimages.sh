@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Go through a list of image files and make sure that a version of
 # each image exists in every format specified by a list of file

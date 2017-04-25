@@ -149,6 +149,21 @@
 (define-gesture-name :eval    :keyboard (#\e :meta))
 (define-gesture-name :toggle  :keyboard #\tab)
 
+;;; restart keyboard shortcuts
+(macrolet ((invoke-x (x)
+             (let* ((char (aref (format nil "~A" x) 0))
+                    (name (alexandria:symbolicate "INVOKE-RESTART-" char)))
+               `(progn
+                  (define-clim-debugger-command (,name :keystroke (,char :meta)) ()
+                    (let* ((pane (clim:find-pane-named
+                                  *application-frame* 'debugger-pane))
+                           (restart (nth ,x (restarts (condition-info pane)))))
+                      (when restart
+                        (com-invoke-restart restart))))))))
+  (invoke-x 0) (invoke-x 1) (invoke-x 2) (invoke-x 3) (invoke-x 4)
+  (invoke-x 5) (invoke-x 6) (invoke-x 7) (invoke-x 8) (invoke-x 9))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   Commands   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -162,7 +177,7 @@
 (define-clim-debugger-command (com-invoke-inspector
 			       :name "Invoke inspector")
     ((obj inspect))
-  (clouseau:inspector obj))
+  (clouseau:inspector obj :new-process t))
 
 (define-clim-debugger-command (com-refresh :name "Refresh" :menu t
 					   :keystroke #\r) ()

@@ -1,14 +1,41 @@
-@c This is part of the McCLIM manual and included during the building
-@c process.
-@node Drei
-@chapter Drei
+
+\input texinfo
+
+@setfilename drei
+@settitle McCLIM Drei editor substrate Manual
+
+@copying
+Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
+@end copying
+
+@dircategory Common Lisp
+@direntry
+* Drei editor substrate: (mcclim drei). Documentation and reference manual.
+@end direntry
+
+@titlepage
+@title Drei Manual
+
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@iftex
+@contents
+@end iftex
+
+@include macros.texi
+
+@ifnottex
+@node Top
+@top Drei Manual
+@insertcopying
+@end ifnottex
+
 @cindex drei
 @cindex input-editor
 @cindex text-editor
 @cindex text-field
-
-Drei - an acronym for @i{Drei Replaces EINE's Inheritor} - is one of the
-editor substrates provided by McCLIM. Drei is activated by default.
 
 @menu
 * Drei Concepts::               The core Drei concepts and design philosophy.
@@ -17,10 +44,18 @@ editor substrates provided by McCLIM. Drei is activated by default.
 * Standard Drei Variants::      How to use the predefined Drei variants.
 * Protocols::                   Description of protocols used by Drei.
 * Defining Drei Commands::      Information about defining commands for Drei
+
+@c Index
+* Concept Index::
+* Variable Index::
+* Function And Macro Index::
 @end menu
 
+Drei - an acronym for @i{Drei Replaces EINE's Inheritor} - is one of the
+editor substrates provided by McCLIM. Drei is activated by default.
+
 @node Drei Concepts
-@section Drei Concepts
+@chapter Drei Concepts
 
 The reason for many of Drei's design decisions, and the complexity of
 some of the code, is due to the flexibility that Drei is meant to
@@ -76,12 +111,12 @@ these special variables themselves, or Drei commands are likely to
 malfunction.
 
 @menu
-* Special Variables::
 * Access Functions::
+* Special Variables::
 @end menu
 
 @node Access Functions
-@subsection Access Functions
+@section Access Functions
 
 The access functions are the primary interface to Drei state, and should
 be used to access the various parts. It is not recommended to save the
@@ -96,7 +131,7 @@ may change over the course of a command.
 @include fun-drei-current-syntax.texi
 
 @node Special Variables
-@subsection Special Variables
+@section Special Variables
 
 Drei uses only a few special variables to provide access to data
 structures.
@@ -109,7 +144,7 @@ Additionally, a number of ESA special variables are used in Drei.
 @include var-esa-star-previous-command-star.texi
 
 @node External API
-@section External API
+@chapter External API
 
 @include class-drei-drei.texi
 
@@ -140,7 +175,7 @@ an attempt is made to insert a newline character.
 @include fun-drei-execute-drei-command.texi
 
 @node Standard Drei Variants
-@section Standard Drei Variants
+@chapter Standard Drei Variants
 
 Because the standard @class{drei} class doesn't implement
 immediately-usable editor behavior, three subclasses have been defined
@@ -149,7 +184,7 @@ the input-editor-oriented Drei variant, the pane-oriented Drei variant
 and the gadget-oriented Drei variant.
 
 @node Protocols
-@section Protocols
+@chapter Protocols
 @cindex Drei protocols
 @cindex text-editor protocols
 @cindex text-editor API
@@ -171,7 +206,7 @@ protocols. This section lists some of them.
 @end menu
 
 @node Buffer Protocol
-@subsection Buffer Protocol
+@section Buffer Protocol
 
 The Drei buffer is what holds textual and other objects to be
 edited and displayed.  Conceptually, the buffer is a potentially
@@ -196,7 +231,7 @@ mark.
 @end menu
 
 @node General Buffer Protocol Parts
-@subsubsection General Buffer Protocol Parts
+@subsection General Buffer Protocol Parts
 
 @include class-drei-buffer-buffer.texi
 
@@ -233,7 +268,7 @@ mark.
 @include fun-drei-buffer-number-of-lines.texi
 
 @node Operations Related To The Offset Of Marks
-@subsubsection Operations Related To The Offset Of Marks
+@subsection Operations Related To The Offset Of Marks
 
 @include fun-drei-buffer-forward-object.texi
 
@@ -274,7 +309,7 @@ mark.
 @include fun-drei-buffer-column-number.texi
 
 @node Inserting And Deleting Objects
-@subsubsection Inserting And Deleting Objects
+@subsection Inserting And Deleting Objects
 
 @include fun-drei-buffer-insert-buffer-object.texi
 
@@ -291,7 +326,7 @@ mark.
 @include fun-drei-buffer-delete-region.texi
 
 @node Getting Objects Out Of The Buffer
-@subsubsection Getting Objects Out Of The Buffer
+@subsection Getting Objects Out Of The Buffer
 
 @include fun-drei-buffer-buffer-object.texi
 
@@ -306,7 +341,7 @@ mark.
 @include fun-drei-buffer-region-to-sequence.texi
 
 @node Implementation Hints
-@subsubsection Implementation Hints
+@subsection Implementation Hints
 
 The buffer is implemented as lines organized in a 2-3-tree.  The
 leaves of the tree contain the lines, and the internal nodes contain
@@ -354,7 +389,7 @@ opened and the threshold is reached, the least recently used line is
 closed.
 
 @node Buffer Modification Protocol
-@subsection Buffer Modification Protocol
+@section Buffer Modification Protocol
 
 The buffer modification protocol is based on the ESA observer/observable
 facility, which is in return a fairly ordinary Model-View
@@ -367,7 +402,7 @@ needs to be reparsed. This automatically happens whenever a request is
 made for information that might depend on outdated parsing data.
 
 @node DREI-BASE Package
-@subsection DREI-BASE Package
+@section DREI-BASE Package
 
 The buffer protocol has been designed to be reasonably efficient with a
 variety of different implementation strategies (single gap buffer or
@@ -398,7 +433,7 @@ expected by the @package{DREI-BASE} package.
 @end menu
 
 @node Efficiency Considerations
-@subsubsection Efficiency considerations
+@subsection Efficiency considerations
 
 In this section, we give a list of rules that implementors of
 additional functionality should follow in order to make sure that such
@@ -477,7 +512,7 @@ implementations may implement it fairly efficiently, say O(log n)
 where n is the number of lines in the buffer.
 
 @node Syntax Protocol
-@subsection Syntax Protocol
+@section Syntax Protocol
 
 A syntax module is an object that can be associated with a buffer. The
 syntax module usually consists of an incremental parser that analyzes
@@ -494,7 +529,7 @@ redisplay module and by user commands.
 @end menu
 
 @node General Syntax Protocol
-@subsubsection General Syntax Protocol
+@subsection General Syntax Protocol
 
 @include class-drei-syntax-syntax.texi
 
@@ -561,7 +596,7 @@ sure that the view of the syntax is notified of any reparses.
 @include fun-drei-syntax-update-parse.texi
 
 @node Incremental Parsing Framework
-@subsubsection Incremental Parsing Framework
+@subsection Incremental Parsing Framework
 
 @include class-drei-syntax-parse-tree.texi
 
@@ -581,7 +616,7 @@ The start offset and the end offset may be NIL which is typically the
 case when a parse tree is derived from the empty sequence of lexemes.
 
 @node Lexical Analysis
-@subsubsection Lexical analysis
+@subsection Lexical analysis
 
 @include class-drei-syntax-lexer.texi
 
@@ -607,7 +642,7 @@ lexemes are indexed by a position starting from zero.
 @include fun-drei-syntax-next-lexeme.texi
 
 @node Earley Parser
-@subsubsection Earley Parser
+@subsection Earley Parser
 
 Drei contains an incremental parser that uses the Earley
 algorithm.  This algorithm accepts the full set of context-free
@@ -620,7 +655,7 @@ the grammar is sufficiently complicated, in particular if the grammar
 is ambiguous.
 
 @node Specifying A Grammar
-@subsubsection Specifying A Grammar
+@subsection Specifying A Grammar
 
 An incremental parser is created from a grammar.
 
@@ -689,7 +724,7 @@ a symbol.  These forms typically contain initargs, and will be passed as
 additional arguments to @code{(make-instance '@var{symbol})}.
 
 @node View Protocol
-@subsection View Protocol
+@section View Protocol
 @cindex view protocol
 @cindex views
 
@@ -723,7 +758,7 @@ functionality.
 @include fun-drei-synchronize-view.texi
 
 @node Unit Protocol
-@subsection Unit Protocol
+@section Unit Protocol
 @cindex Drei unit protocol
 @cindex Drei motion protocol
 @cindex Drei editing protocol
@@ -783,7 +818,7 @@ argument. Therefore, all @cl{@var{frob}-object} functions and commands
 @end menu
 
 @node Motors And Limit Actions
-@subsubsection Motors And Limit Actions
+@subsection Motors And Limit Actions
 
 A limit action is a function usually named
 @cl{@var{mumble}-limit-action} of the signature @cl{(@var{mark}
@@ -824,7 +859,7 @@ the expression tree and tries again.
 @include fun-drei-motion-make-diligent-motor.texi
 
 @node Motion Protocol
-@subsubsection Motion Protocol
+@subsection Motion Protocol
 
 The concept of a @i{basic motion function} was introduced in @ref{Unit
 Protocol}. A general motion function is a function named
@@ -837,7 +872,7 @@ action if it could not, or returns @cl{NIL} if the limit action is
 @cl{NIL}.
 
 @node Editing Protocol
-@subsubsection Editing Protocol
+@subsection Editing Protocol
 
 An editing function is a function named
 @cl{forward-@var{frob}-@var{unit}} or
@@ -850,10 +885,10 @@ motion protocol has been implemented, this can be trivially done by
 using the macro @cl{define-motion-commands} (@pxref{Generator Macros}).
 
 @node Generator Macros
-@subsubsection Generator Macros
+@subsection Generator Macros
 
 @node Redisplay Protocol
-@subsection Redisplay Protocol
+@section Redisplay Protocol
 @cindex Drei redisplay
 @cindex text-editor redisplay
 
@@ -878,7 +913,7 @@ these, you do not need to define them yourself.
 @include fun-drei-display-drei-view-cursor.texi
 
 @node Undo Protocol
-@subsection Undo Protocol
+@section Undo Protocol
 
 Undo is the facility by which previous modifications to the buffer can
 be undone, returning the buffer state to what it was prior to some
@@ -906,7 +941,7 @@ generic function that client code must supply a method for.
 @end menu
 
 @node Protocol Specification
-@subsubsection Protocol Specification
+@subsection Protocol Specification
 
 @include condition-drei-undo-no-more-undo.texi
 
@@ -925,7 +960,7 @@ generic function that client code must supply a method for.
 @include fun-drei-undo-redo.texi
 
 @node Implementation
-@subsubsection Implementation
+@subsection Implementation
 
 Application states have no explicit representation, only undo records
 do.  The current state is a pointer to an undo record (meaning, the
@@ -934,7 +969,7 @@ the undo tree itself if the current state is the initial state of the
 application.
 
 @node How The Buffer Handles Undo
-@subsubsection How The Buffer Handles Undo
+@subsection How The Buffer Handles Undo
 
 @include class-drei-undo-mixin.texi
 
@@ -994,7 +1029,7 @@ finally destructively reverses the list.
 @include class-drei-compound-record.texi
 
 @node Kill Ring Protocol
-@subsection Kill Ring Protocol
+@section Kill Ring Protocol
 
 During the process of text editing it may become necessary for regions
 of text to be manipulated non-sequentially.  The kill ring and its
@@ -1027,7 +1062,7 @@ start position.
 @end menu
 
 @node Kill Ring Protocol Specification
-@subsubsection Kill Ring Protocol Specification
+@subsection Kill Ring Protocol Specification
 
 @include class-drei-kill-ring-kill-ring.texi
 
@@ -1048,7 +1083,7 @@ start position.
 @include fun-drei-kill-ring-kill-ring-yank.texi
 
 @node Kill Ring Implementation
-@subsubsection Kill Ring Implementation
+@subsection Kill Ring Implementation
 
 The kill ring structure is built mainly of two parts: the stack like
 ring portion, which is a cursorchain, and the yank point, which is a
@@ -1068,7 +1103,7 @@ flexichain protocols, but are pertinent to the kill ring implementation.
 @include fun-drei-kill-ring-kill-ring-cursor.texi
 
 @node Defining Drei Commands
-@section Defining Drei Commands
+@chapter Defining Drei Commands
 
 Drei commands are standard CLIM commands that are stored in standard
 CLIM command tables. Drei uses a number of distinct command tables, some
@@ -1087,7 +1122,7 @@ are called syntax-specific commands.
 @end menu
 
 @node Drei Command Tables
-@subsection Drei Command Tables
+@section Drei Command Tables
 
 Here is a list of the command tables that are always active, along with
 a note describing what they are used for:
@@ -1150,7 +1185,7 @@ When you define keybindings for your commands, you should put the
 keybindings in the same command table as the command itself.
 
 @node Numeric Argument In Drei
-@subsection Numeric Argument In Drei
+@section Numeric Argument In Drei
 @cindex numeric argument
 
 The numeric argument state is currently not directly accessible from
@@ -1166,7 +1201,7 @@ inserted. Note that you must write your commands to accept arguments
 before you can do this (@pxref{Examples Of Defining Drei Commands}).
 
 @node Examples Of Defining Drei Commands
-@subsection Examples Of Defining Drei Commands
+@section Examples Of Defining Drei Commands
 @cindex Drei command defining
 @cindex defining Drei commands
 
@@ -1233,7 +1268,7 @@ argument is always an integer, and we are guaranteed that the
 not explicitly provide a numeric argument.
 
 @node Drei's Syntax Command Table Protocol
-@subsection Drei's Syntax Command Table Protocol
+@section Drei's Syntax Command Table Protocol
 @cindex syntax command table
 
 In order to provide conditionally active command tables, Drei defines
@@ -1263,3 +1298,20 @@ of the syntax command table will be used for the syntax.
 @include fun-drei-syntax-additional-command-tables.texi
 
 @include macro-drei-syntax-define-syntax-command-table.texi
+
+@node Concept Index
+@unnumbered Concept Index
+
+@printindex cp
+
+@node Variable Index
+@unnumbered Variable Index
+
+@printindex vr
+
+@node Function And Macro Index
+@unnumbered Function And Macro Index
+
+@printindex fn
+
+@bye

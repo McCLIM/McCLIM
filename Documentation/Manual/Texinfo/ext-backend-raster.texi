@@ -1,7 +1,7 @@
 @node Raster Image backend
 @chapter Raster Image backend
 
-Raster image backend includes a medium that supports:
+Raster image backend includes a medium that implements:
 @itemize @bullet
 @item CLIM's medium protocol, 
 @item CLIM's output stream protocol, and
@@ -34,10 +34,7 @@ pairs.  These are the supported keywords:
   @code{:height} --- specifies the height of the image. Its default value is 1000. 
 @end itemize
 
-@anchor{Macro mcclim-render:with-output-to-raster-image-stream}
-@deffn {Macro} {mcclim-render:with-output-to-raster-image-stream} (stream-var file-stream format &rest options) &body body
-@findex mcclim-render:with-output-to-raster-image-stream
-@end deffn
+@heading mcclim-render:with-output-to-raster-image-stream
 
 An image describing the output to the @code{stream-var} stream will be
 written to the stream @code{file-stream} using the format
@@ -46,13 +43,12 @@ image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
 @code{tiff}, @code{tif}, @code{gif}, @code{pbm}, @code{pgm}, and
 @code{ppm}. Its default value is @code{:png}.
 
-@anchor{Macro mcclim-render:with-output-to-rgb-pattern}
-@deffn {Macro} {mcclim-render:with-output-to-rgb-pattern} (stream-var image &rest options) &body body
-@findex mcclim-render:with-output-to-raster-image-stream
-@end deffn
+@heading mcclim-render:with-output-to-rgb-pattern
 
 An image describing the output to the @code{stream-var} stream will be
 returned as an rgb-pattern (of class @code{climi::rgb-pattern}).
+
+--
 
 To run an example:
 
