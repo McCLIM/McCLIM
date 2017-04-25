@@ -1,7 +1,7 @@
 @node Using menu bar
 @chapter Using menu bar
 
-@cindex{menu bar}
+@cindex menu bar
 
 @menu
 * Creating Menu bar::
@@ -11,8 +11,8 @@
 Menu bar has become essential part of every GUI system, including
 McClim. Ideally, McClim should try to use the menu bar provided by
 host window system via McClim backends, but the current
-\texttt{clx-backend} doesn't supports native menu bars. That's why It
-has some quirks of its own, like you need to keep mouse button pressed
+@t{clx-backend} doesn't supports native menu bars. That's why It has
+some quirks of its own, like you need to keep mouse button pressed
 while accessing the sub-menus.
 
 @node Creating Menu bar
@@ -40,13 +40,13 @@ McCLIM won't provide the menu bar.
 
 @item command-table
 If you provide a named command table as argument, that command table
-is used to provide the menu bar (@xref{using-command-tables}).
+is used to provide the menu bar (@xref{Using command tables}).
 @end table
 
-@cindex{Adding sub-menu to menu bar}
+@cindex Adding sub-menu to menu bar
 
 To add a sub-menu to menu bar, you need to change the type of
-menu-item from @t{:command} to Wt{:menu} (which requires another
+menu-item from @t{:command} to @t{:menu} (which requires another
 @t{command-table} as argument) what is described in the next section.
 
 @node Modifying Menu bar

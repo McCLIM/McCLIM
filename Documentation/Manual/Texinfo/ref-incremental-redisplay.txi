@@ -1,7 +1,7 @@
 @node Incremental redisplay
 @chapter Incremental redisplay
 
-@cindex{incremental redisplay}
+@cindex incremental redisplay
 
 CLIM applications are most often structured around the @emph{command
 loop}.  The various steps that such an application follow are:

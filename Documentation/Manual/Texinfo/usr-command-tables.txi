@@ -14,7 +14,7 @@ the application frame.
 Each command table has a @emph{name} and that CLIM manages a global
 @emph{namespace} for command tables.
 
-@defun {find-command-table} name @key (errorp t)
+@defun {find-command-table} name &key (errorp t)
 @findex find-command-table
 
 This function returns the command table with the name @emph{name}.  If
@@ -24,10 +24,10 @@ error of type @t{command-table-not-found} is signaled.  If @emph{errorp}
 is @emph{false}, otherwise @t{nil} is returned.
 @end defun
 
-@defmac {define-command-table} name @key inherit-from menu inherit-menu
+@defmac {define-command-table} name &key inherit-from menu inherit-menu
 @end defmac
 
-@defmac {make-command-table} name @key inherit-from menu inherit-menu (errorp t)
+@defmac {make-command-table} name &key inherit-from menu inherit-menu (errorp t)
 @end defmac
 
 --

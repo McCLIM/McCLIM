@@ -52,6 +52,7 @@ Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
 User Manual
 * CLIM Demos and Applications::
 * The First Application::
+* Using incremental redisplay::
 * Using presentation types::
 * Using views::
 * Using command tables::
@@ -60,25 +61,26 @@ User Manual
 Reference Manual
 * Concepts::
 @c * Sheet hierarchies::
-* Windowing system drawing functions::
-* CLIM drawing functions::
+* Drawing functions::
 * Panes::
 * Output Protocol::
 * Command Processing::
+* Incremental redisplay::
 
 Extensions
 * Output Protocol Extensions::
 * Output Recording Extensions::
+* Text editor substrate::
 * Drawing Two-Dimensional Images::
-* File Selector Gadget::
-* PostScript Backend::
-* Drei::
 * Fonts and Extended Text Styles::
 * Tab Layout::
 
 Utility Programs
+* Raster Image backend::
+* PostScript Backend::
 * Listener::
 * Inspector::
+* Debugger::
 
 Auxilliary Material
 * Glossary::
@@ -98,6 +100,7 @@ Index
 @include chap-demos-and-applications.texi
 @include chap-first-application.texi
 
+@include usr-incremental-redisplay.txi
 @include usr-presentations.txi
 @include usr-views.txi
 @include usr-command-tables.txi
@@ -120,14 +123,15 @@ Index
 
 @include ext-output-protocol.texi
 @include ext-output-recording.texi
-@include ext-backend-raster.texi
-@include ext-backend-postscript.texi
+@include ext-text-editor.texi
+@c @include drei.texi
 @include ext-images.texi
 @include ext-fonts.texi
 @include ext-tab-layout.texi
-@include drei.texi
 
 @node Utility Programs
+@include ext-backend-raster.texi
+@include ext-backend-postscript.texi
 @part Utility Programs
 
 @include chap-listener.texi

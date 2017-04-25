@@ -8,7 +8,6 @@
 @node Protocol Changes
 @section Protocol Changes
 
-@include fun-clim-extensions-medium-miter-limit.texi
 @include fun-clim-extensions-line-style-effective-thickness.texi
 @include fun-clim-setf-output-record-parent.texi
 
@@ -25,7 +24,6 @@
 @include fun-clim-clear-output-record.texi
 
 @include fun-clim-invoke-with-new-output-record.texi
-@include fun-clim-replay-output-record.texi
 
 @include macro-clim-with-new-output-record.texi
 @include macro-clim-with-output-to-output-record.texi

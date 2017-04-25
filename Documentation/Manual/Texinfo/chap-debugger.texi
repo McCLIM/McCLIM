@@ -12,7 +12,7 @@ examining backtrace and choosing available restarts.
 @menu
 * Debugger usage::
 * Keyboard shortcuts::
-* API::
+* Debugger API::
 @end menu
 
 @node Debugger usage

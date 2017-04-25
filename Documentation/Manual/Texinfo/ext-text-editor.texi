@@ -1,0 +1,17 @@
+@node Text editor substrate
+@chapter Text editor substrate
+@cindex drei
+@cindex input-editor
+@cindex text-editor
+@cindex text-field
+
+For brievity only basic topics common to all substrates are covered in
+the manual. Drei documentation is provided as a separate document.
+
+@menu
+* Text field gadget::
+* Text editor pane::
+@end menu
+
+@node Text field gadget
+@node Text editor pane

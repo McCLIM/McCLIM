@@ -12,7 +12,7 @@
 @end macro
 
 @macro genfun{FUN}
-@func{\FUN\}
+@b{\FUN\}
 @end macro
 
 @alias gloss = i

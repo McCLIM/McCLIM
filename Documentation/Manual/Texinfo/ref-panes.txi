@@ -77,22 +77,20 @@ using that option results in a pane hierarchy being created with the
 topmost pane being a pane of type @cl{scroller-pane}.
 
 As far as McCLIM is concerned, this option to @cl{make-pane} is
-obsolete.
-@footnote{In the specification, there is no example of the use of this
-  option to @code{make-pane} or to the equivalent keywords in the
-  @code{:panes} section of @code{define-application-frame}.  There is
-  however one instance where the @code{:scroll-bars} option is mention
-  for pane creation.  We consider this to be an error in the
-  specification.}
-The same goes for using this option together with the equivalent
-keyword, i.e., @code{:application} or @code{interactor}, in the
-@code{:panes} section of @code{define-application-frame}.
+obsolete. @footnote{In the specification, there is no example of the
+use of this option to @code{make-pane} or to the equivalent keywords
+in the @code{:panes} section of @code{define-application-frame}.
+There is however one instance where the @code{:scroll-bars} option is
+mention for pane creation.  We consider this to be an error in the
+specification.}  The same goes for using this option together with the
+equivalent keyword, i.e., @code{:application} or @code{interactor}, in
+the @code{:panes} section of @code{define-application-frame}.
 
 Instead, we recommend following the examples of the specification, where
 scroll bars are added in the @code{layouts} section of
 @code{define-application-frame}.
 
-@cindex{Panes order}
+@cindex Panes order
 
 When specification talks about panes in a fashion implying some order
 (i.e ``first application-pane'') McCLIM assumes order of definition, not
