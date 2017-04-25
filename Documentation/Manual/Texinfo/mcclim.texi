@@ -9,7 +9,7 @@
 @set MCCLIMVERSION 0.9.7-dev
 
 @copying
-Copyright @copyright{} 2004,2005,2006,2007,2008 the McCLIM hackers.
+Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 @end copying
 
 @dircategory Common Lisp

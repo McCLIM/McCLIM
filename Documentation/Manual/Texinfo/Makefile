@@ -3,9 +3,9 @@ MCCLIMTEXI:=mcclim.texi
 DOCFILES:=*.texi
 TMPTYPES:=aux cp cps fn fns ky log pg toc tp tps vr vrs
 TMPFILES:=$(foreach target,mcclim,$(foreach type,$(TMPTYPES),$(target).$(type)))
-PSFILES=mcclim.ps
-PDFFILES=mcclim.pdf
-INFOFILE=mcclim.info
+PSFILES=mcclim.ps drei.ps
+PDFFILES=mcclim.pdf drei.pdf
+INFOFILE=mcclim.info drei.info
 HTMLDIRS=$(basename $(MCCLIMTEXI))
 IMAGES=ex2.eps inspect-as-cells.eps inspect-object-1.eps \
 inspect-object-2.eps inspect-object-3.eps native.fig
