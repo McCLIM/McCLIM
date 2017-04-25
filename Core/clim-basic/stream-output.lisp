@@ -45,7 +45,7 @@
    (x :initform 0 :initarg :x-position)
    (y :initform 0 :initarg :y-position)
    (width :initform 8)
-   (appearance :type (member :solid :hollow) 
+   (appearance :type (member :solid :hollow)
                :initarg :appearance :initform :hollow
                :accessor cursor-appearance)
    ;; XXX what does "cursor is active" mean?
@@ -132,7 +132,7 @@
 			  (+ x width) (+ y height)
 			  :filled (ecase (cursor-appearance cursor)
 				    (:solid t) (:hollow nil))
-			  :ink +foreground-ink+))       
+			  :ink +foreground-ink+))
         (:erase
 	 ;; This is how I'd like this to work, as painting over with
 	 ;; the background ink is repugnant. I leave this disabled
@@ -199,7 +199,7 @@
 (defmethod compose-space ((pane standard-extended-output-stream)
 			  &key width height)
   (declare (ignorable width height))
-  
+
   (with-slots (seos-current-width seos-current-height) pane
     (make-space-requirement :width seos-current-width
                             :height seos-current-height)))
@@ -310,7 +310,7 @@
                  ;; Let's prevent infinite recursion if there isn't
                  ;; room for even a single character.
 		 (setq split (max (find-split (- margin cx))
-                                  (1+ start)))) 
+                                  (1+ start))))
 		(:scroll
 		 (scroll-horizontal stream width))
 		(:allow)))
@@ -319,7 +319,7 @@
 				   string
                                    nil
 				   start split)
-	      (setq cx (+ cx width))	      
+	      (setq cx (+ cx width))
           (with-slots (x y) (stream-text-cursor stream)
                 (setf x cx y cy)))
 	    (when (/= split end)
@@ -333,7 +333,7 @@
 	(%view-height (bounding-rectangle-height
 		       (or (pane-viewport stream)
 			   stream)))
-	(view-height  (bounding-rectangle-height stream)))    
+	(view-height  (bounding-rectangle-height stream)))
     (with-slots (baseline height vspace) stream
       (multiple-value-bind (cx cy) (stream-cursor-position stream)
 	(setf height (max height (text-style-height (medium-text-style medium) medium)))
@@ -385,7 +385,7 @@ STREAM-STRING-WIDTH will be called."))
 		   :start start :end end))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
-  (with-cursor-off stream  
+  (with-cursor-off stream
    (if (char= #\Newline char)
        (seos-write-newline stream)
      (seos-write-string stream (string char)))))
@@ -484,7 +484,7 @@ STREAM-STRING-WIDTH will be called."))
       (medium-beep medium)
       (when (sheetp *standard-output*)
         (medium-beep (sheet-medium *standard-output*)))))
-  
+
 (defgeneric scroll-quantum (pane)
   (:documentation "Returns the number of pixels respresenting a 'line', used
 to computed distance to scroll in response to mouse wheel events."))
