@@ -75,9 +75,11 @@ Extensions
 * Fonts and Extended Text Styles::
 * Tab Layout::
 
-Utility Programs
+Backends
 * Raster Image backend::
 * PostScript Backend::
+
+Utility Programs
 * Listener::
 * Inspector::
 * Debugger::
@@ -94,7 +96,7 @@ Index
 
 @include introduction.txi
 
-@node User Manual
+@c @node User Manual
 @part User Manual
 
 @include chap-demos-and-applications.texi
@@ -106,7 +108,7 @@ Index
 @include usr-command-tables.txi
 @include usr-menu-bar.txi
 
-@node Reference Manual
+@c @node Reference Manual
 @part Reference Manual
 
 @include ref-concepts.txi
@@ -117,28 +119,31 @@ Index
 @include ref-command-tables.txi
 @include ref-incremental-redisplay.txi
 
-@node Extensions
+@c @node Extensions
 @part Extensions
 @cindex extensions
 
 @include ext-output-protocol.texi
 @include ext-output-recording.texi
 @include ext-text-editor.texi
-@c @include drei.texi
 @include ext-images.texi
 @include ext-fonts.texi
 @include ext-tab-layout.texi
 
-@node Utility Programs
+@c @node Backends
+@part Backends
+@c @include ext-backend-clx.texi
 @include ext-backend-raster.texi
 @include ext-backend-postscript.texi
+
+@c @node Utility Programs
 @part Utility Programs
 
 @include chap-listener.texi
 @include chap-inspector.texi
 @include chap-debugger.texi
 
-@node Auxiliary Material
+@c @node Auxiliary Material
 @part Auxiliary Material
 
 @node Glossary
