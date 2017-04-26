@@ -14,11 +14,11 @@
       (let (red green blue)
         (ecase (array-rank img)
           (3
-           (setq red (aref img x y 0))
-           (setq green (aref img x y 1))
-           (setq blue (aref img x y 2)))
+           (setq red (aref img y x 0))
+           (setq green (aref img y x 1))
+           (setq blue (aref img y x 2)))
           (2
-           (let ((v (aref img x y)))
+           (let ((v (aref img y x)))
              (setq red v)
              (setq green v)
              (setq blue v))))
