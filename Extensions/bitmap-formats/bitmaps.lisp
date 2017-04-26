@@ -11,9 +11,17 @@
          (array (make-array (list height width)
                             :element-type '(unsigned-byte 32))))
     (opticl:do-pixels (y x) img
-      (let ((red (aref img y x 0))
-            (green (aref img y x 1))
-            (blue (aref img y x 2)))
+      (let (red green blue)
+        (ecase (array-rank img)
+          (3
+           (setq red (aref img x y 0))
+           (setq green (aref img x y 1))
+           (setq blue (aref img x y 2)))
+          (2
+           (let ((v (aref img x y)))
+             (setq red v)
+             (setq green v)
+             (setq blue v))))
         (setf (aref array y x)
               (dpb red (byte 8 0)
                    (dpb green (byte 8 8)
