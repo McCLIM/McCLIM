@@ -173,6 +173,29 @@ the action of updating the pane contents is referred to as
 \emph{replaying} the output history.  The remainder of this section is
 entirely dedicated to the \emph{redisplay} action.
 
+It is occasionally necessary for the application to redisplay a pane
+explicitly, as opposed to letting the command loop handle it.  For
+example, if the application data structure is updated in some way, but
+this update is not the result of a command, then after such an update,
+the redisplay function needs to be executed explicitly.  Such an
+update could be the result of a timer event, or of communication with
+an external process.
+
+\Defgeneric {redisplay-frame-pane} {frame pane \key force-p}
+
+Calling this generic function causes an immediate redisplay of
+\textit{pane}.  When \textit{force-p} is false and the incremental
+redisplay facility is in use for \textit{pane}, then output records are
+reused as appropriate.  Supplying a true value for \textit{force-p}
+causes the entire output history to be recomputed from scratch.
+
+Notice that this function does not check whether the pane has been
+marked to need redisplay, as indicated by a call to the generic
+function \texttt{pane-needs-redisplay}.  It results in an
+unconditional redisplay of \textit{pane}.
+
+\Defgeneric {redisplay-frame-pane} {frame \key force-p}
+
 \section{Layout protocol}
 \index{layout protocol}
 
