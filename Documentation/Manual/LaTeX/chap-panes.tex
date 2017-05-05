@@ -194,7 +194,27 @@ marked to need redisplay, as indicated by a call to the generic
 function \texttt{pane-needs-redisplay}.  It results in an
 unconditional redisplay of \textit{pane}.
 
-\Defgeneric {redisplay-frame-pane} {frame \key force-p}
+\Defgeneric {redisplay-frame-panes} {frame \key force-p}
+
+Calling this generic function causes an immediate redisplay of all the
+panes of \textit{frame} that are visible in the current layout.  This
+function simply calls \texttt{redisplay-frame-pane} for each visible
+pane of \textit{frame}.
+
+Again, notice that no check is being made as to whether the visible
+panes have been marked as needing redisplay.  This function calls
+\texttt{redisplay-frame-pane} unconditionally for each visible pane,
+and since \texttt{redisplay-frame-pane} redisplays the pane
+unconditionally, it follows that all visible panes are unconditionally
+redisplayed.
+
+Also notice that the implication of this unconditional behavior on the
+part of \texttt{redisplay-frame-panes} means that this is not the
+function called by the standard command loop.  The standard command
+loop only redisplays panes that have been marked as needing redisplay,
+though when the value of the \texttt{:display-time} option is
+\texttt{:command-loop} for some pane, then it is always marked as
+needing redisplay in each iteration of the command loop.
 
 \section{Layout protocol}
 \index{layout protocol}
