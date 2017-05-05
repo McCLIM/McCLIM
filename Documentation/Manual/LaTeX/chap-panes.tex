@@ -141,6 +141,38 @@ We reserve the right to modify this behavior in the future.
 Application code should respect the advice given in
 \refSec{sec-panes-creating}.
 
+\section{Redisplaying panes}
+
+Recall that \emph{redisplay} refers to the creation of the output
+history of a pane.  There are two typical ways of creating this output
+history:
+
+\begin{itemize}
+\item The application maintains some data structure that needs to be
+  reflected in the text and graphics of the pane.  In this case,
+  a pane of type \texttt{application-pane} is typically used, and the
+  default value of the \texttt{:display-time} option is used, which
+  means that some kind of application-supplied \emph{display function}
+  is executed at the end of each iteration of the command loop.  In
+  this situation, the output history is either recomputed from scratch
+  in each iteration, or the programmer can use the \emph{incremental
+    redisplay} facility to reuse some of the existing output records
+  in the history.
+\item The application does not keep any data structure, and instead
+  generates output incrementally, either as a result of some user
+  action, or of some data arriving from an external source.  In this
+  case, the \texttt{:display-time} option is either going to be
+  \texttt{t} or \texttt{nil}.  With both of these options, the output
+  history is maintained intact after each iteration of the command
+  loop.  Instead, when user actions are issued, more output records
+  are simply added to the existing output history.
+\end{itemize}
+
+For the second possibility, the pane is never redisplayed.  Instead,
+the action of updating the pane contents is referred to as
+\emph{replaying} the output history.  The remainder of this section is
+entirely dedicated to the \emph{redisplay} action.
+
 \section{Layout protocol}
 \index{layout protocol}
 
