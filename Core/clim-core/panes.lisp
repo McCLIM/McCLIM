@@ -2758,41 +2758,32 @@ current background message was set."))
                          clim-stream-pane)
   ())
 
-(defmethod close ((stream window-stream)
-		  &key abort)
-  (declare (ignore abort))
-  (let ((frame (pane-frame stream)))
-    (when frame
-      (disown-frame (frame-manager frame) frame)))
-  (when (next-method-p)
-    (call-next-method)))
-
 (define-application-frame a-window-stream (standard-encapsulating-stream
                                            standard-extended-input-stream
                                            fundamental-character-output-stream
                                            standard-application-frame)
-  ((stream)
-   (scroll-bars :initform :vertical
+  ((scroll-bars :initform :vertical
                 :initarg :scroll-bars)
-   (foreground :initarg :foreground)
-   (background :initarg :background))
-  (:panes
-   (io
-    (scrolling (:height 400 :width 700
-                :scroll-bar (slot-value *application-frame* 'scroll-bars))
-      (let ((color-args
-             `(,@(and (slot-boundp *application-frame* 'foreground)
-                      `(:foreground ,(slot-value *application-frame*
-                                                 'foreground)))
-               ,@(and (slot-boundp *application-frame* 'background)
-                      `(:background ,(slot-value *application-frame*
-                                                 'background))))))
-        (setf (slot-value *application-frame* 'stream)
-              (apply #'make-pane 'window-stream :width 700 :height 2000
-                     color-args))))))
-  
-  (:layouts
-   (:default io)))
+   stream
+   pane)
+  (:pane
+   (with-slots (stream pane scroll-bars) *application-frame*
+     (multiple-value-setq (pane stream)
+       (make-clim-stream-pane
+	:name 'a-window-stream-pane
+	:display-time nil
+	:type 'application-pane
+	:scroll-bars scroll-bars
+	:height 400 :width 700))
+     pane)))
+
+(defmethod close ((stream a-window-stream)
+		  &key abort)
+  (declare (ignore abort))
+  (alexandria:when-let ((fm (frame-manager stream)))
+    (disown-frame fm stream))
+  (when (next-method-p)
+    (call-next-method)))
 
 (defun open-window-stream (&key port
                                 left top right bottom width height
@@ -2845,13 +2836,13 @@ current background message was set."))
       (enable-frame frame))
     ;; Start a new thread to run the event loop, if necessary.
     (let ((*application-frame* frame))
-      (stream-set-input-focus (slot-value frame 'stream)))
+      (stream-set-input-focus (encapsulating-stream-stream frame)))
     #+clim-mp
     (unless input-buffer
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
 					  (redisplay-frame-panes frame :force-p t)
                                           (standalone-event-loop)))))
-    (slot-value frame 'stream)))
+    frame))
 
 (defun standalone-event-loop ()
   "An simple event loop for applications that want all events to be handled by
