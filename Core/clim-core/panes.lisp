@@ -2717,10 +2717,11 @@ current background message was set."))
          finally (progn
                    (setq user-sr space-options)
                    (setq pane-options other-options)))
-      (let ((pane (apply #'make-pane type (append pane-options
-						  (unless (or scroll-bars
-							      borders)
-						    user-sr)))))
+      (let* ((pane (apply #'make-pane type (append pane-options
+						   (unless (or scroll-bars
+							       borders)
+						     user-sr))))
+	     (stream pane))
 	(when scroll-bars
 	  (setq pane (apply #'make-pane 'scroller-pane
 			    :scroll-bar scroll-bars
@@ -2735,7 +2736,7 @@ current background message was set."))
                                               borders)
                             :contents (list pane)
                             user-sr)))
-	pane))))
+	(values pane stream)))))
 
 (defun make-clim-interactor-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'interactor-pane options))
