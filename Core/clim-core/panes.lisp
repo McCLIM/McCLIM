@@ -2691,11 +2691,11 @@ current background message was set."))
                      (parse-error () nil)))
     (window-clear pane)))
 
+
+;;;
 ;;; CONSTRUCTORS
+;;;
 
-;;; XXX: `scroll-bars' and `borders' parameters are at least
-;;; troublesome – shouldn't `make-clim-stream-pane' return a
-;;; `clim-stream-pane' of requested type?
 (defun make-clim-stream-pane (&rest options
                               &key (type 'clim-stream-pane)
                                 (scroll-bars :vertical)
@@ -2746,7 +2746,11 @@ current background message was set."))
 (defun make-clim-pointer-documentation-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'pointer-documentation-pane options))
 
+
+;;;
 ;;; 29.4.5 Creating a Standalone CLIM Window
+;;; WINDOW STREAM
+;;;
 
 (defclass window-stream (cut-and-paste-mixin
                          mouse-wheel-scroll-mixin
@@ -2859,6 +2863,7 @@ current background message was set."))
             do (handle-event (event-sheet event) event)))
       (frame-exit () (disown-frame (frame-manager frame) frame)))))
 
+
 ;;; These below were just hot fixes, are there still needed? Are even
 ;;; half-way correct? --GB
 ;;;
