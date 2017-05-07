@@ -414,13 +414,7 @@ order to produce a double-click")
 (defmethod window-clear ((pane pane))
   nil)
 
-;;; WINDOW STREAM
-
-;; ???
-(defclass window-stream (standard-extended-output-stream
-			 standard-extended-input-stream)
-  () )
-
+
 ;;;
 ;;; Utilities 
 ;;;
