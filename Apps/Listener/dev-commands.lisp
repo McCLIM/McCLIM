@@ -1421,12 +1421,13 @@ if you are interested in fixing this."))
 		   
 
 (defun show-file (pathname)
-  (let ((*standard-output* (open-window-stream :scroll-bars :both)) )
+  (let ((*standard-output* (open-window-stream :scroll-bars :both
+					       :label (namestring pathname))))
     (with-open-file (in pathname)
       (loop for line = (read-line in nil)
-	while line
-	do (progn (princ line)
-		  (terpri))))))
+	 while line
+	 do (progn (princ line)
+		   (terpri))))))
 
 ;;; Eval
 
