@@ -87,7 +87,7 @@
 (defclass bezier-design-output-record (standard-graphics-displayed-output-record)
   ((stream :initarg :stream)
    (design :initarg :design)
-   (output-record-translation :accessor output-record-translation)))
+   (output-record-translation :accessor output-record-translation :initform nil)))
 
 (defmethod initialize-instance :after ((record bezier-design-output-record) &key)
   (with-slots (design) record
