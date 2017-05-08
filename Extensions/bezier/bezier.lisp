@@ -80,15 +80,14 @@
      (* (imagpart z) (point-x v))))
 
 (defclass bezier-design (design) 
-  ((%or :accessor original-region :initform nil)
-   (output-record-translation :accessor design-output-record-translation :initform nil)))
+  ((%or :accessor original-region :initform nil)))
 
 (defgeneric medium-draw-bezier-design* (stream design))
 
 (defclass bezier-design-output-record (standard-graphics-displayed-output-record)
   ((stream :initarg :stream)
    (design :initarg :design)
-   (translation :accessor output-record-translation)))
+   (output-record-translation :accessor output-record-translation)))
 
 (defmethod initialize-instance :after ((record bezier-design-output-record) &key)
   (with-slots (design) record
@@ -110,16 +109,11 @@
 
 (defmethod medium-draw-bezier-design* :around 
     ((medium transform-coordinates-mixin) design)
-  ;; does it matter in which order we do these translations?
-  (let* ((dtr (design-output-record-translation design))
-         (design (if dtr
-                     (transform-region dtr design)
+  (let* ((mtr (medium-transformation medium))
+         (design (if mtr
+                     (transform-region mtr design)
                      design)))
-    (let* ((mtr (medium-transformation medium))
-           (design (if mtr
-                       (transform-region mtr design)
-                       design)))
-      (call-next-method medium design))))
+    (call-next-method medium design)))
 
 (defmethod replay-output-record ((record bezier-design-output-record) stream
 				 &optional
@@ -127,13 +121,12 @@
 				   (x-offset 0)
 				   (y-offset 0))
   (declare (ignore x-offset y-offset region))
-  (with-slots (design) record
-    (let ((medium (sheet-medium stream)))
-      (setf (design-output-record-translation design)
-            (output-record-translation record))
-      (medium-draw-bezier-design* medium design)
-      (setf (design-output-record-translation design)
-            nil))))
+  (with-slots (design output-record-translation) record
+    (let ((medium (sheet-medium stream))
+          (design (if output-record-translation
+                      (transform-region output-record-translation design)
+                      design)))
+      (medium-draw-bezier-design* medium design))))
 
 (defmethod* (setf output-record-position) :around
             (nx ny (record bezier-design-output-record))
