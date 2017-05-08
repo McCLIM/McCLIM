@@ -81,8 +81,9 @@
 		 (cp-y1 (or cp-y1 y1))
 		 (cp-x2 (or cp-x2 x1))
 		 (cp-y2 (or cp-y2 y))
-		 (design (mcclim-bezier:make-bezier-area*
-			  (list x y cp-x1 cp-y1 cp-x2 cp-y2 x y))))
+		 (design (mcclim-bezier::make-bezier-thing*
+                          'mcclim-bezier:bezier-area
+			  (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1))))
             (unless (or (= x cp-x1 x1 cp-x2)
                         (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
               (mcclim-bezier:draw-bezier-design* pane design)
