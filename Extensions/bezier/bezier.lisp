@@ -844,6 +844,9 @@
 ;;; FIXME: need these to stop the default method attempting to do
 ;;; pixmaps, which it appears the null backend doesn't support yet.
 (defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium null-medium) (design mcclim-bezier:bezier-curve))
+  nil)
+(defmethod mcclim-bezier:medium-draw-bezier-design*
     ((medium null-medium) (design mcclim-bezier:bezier-area))
   nil)
 (defmethod mcclim-bezier:medium-draw-bezier-design*
