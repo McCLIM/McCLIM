@@ -181,8 +181,8 @@
 	      (declare (ignore ,cont-arg))
 	      ,@body))
        #-clisp (declare (dynamic-extent #',gcontinuation))
-       (apply #'invoke-with-drawing-options
-	      ,medium #',gcontinuation (list ,@drawing-options)))))
+       (invoke-with-drawing-options
+        ,medium #',gcontinuation ,@drawing-options))))
 
 (defmethod invoke-with-drawing-options ((medium medium) continuation
                                         &rest drawing-options
