@@ -96,7 +96,7 @@
 	(border (climi::graphics-state-line-style-border climi::graphic medium)))
     (declare (ignore border))
     (setf design transformed-design)
-    (compute-bounding-rectangle* design)))
+    (bounding-rectangle* design)))
 
 (climi::defmethod* (setf climi::output-record-position) :around
             (nx ny (record draw-bezier-design-output-record))
