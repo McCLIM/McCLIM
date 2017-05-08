@@ -84,56 +84,38 @@
 
 (defgeneric medium-draw-bezier-design* (stream design))
 
-(defclass bezier-design-output-record (climi::standard-graphics-displayed-output-record)
-  ((stream :initarg :stream)
-   (design :initarg :design)
-   (output-record-translation :accessor output-record-translation :initform nil)))
 
-(defmethod initialize-instance :after ((record bezier-design-output-record) &key)
-  (with-slots (design) record
-    (setf (rectangle-edges* record)
-	  (bounding-rectangle* design))))
+;;; recording
 
-(defmethod medium-draw-bezier-design* :around
-    ((stream output-recording-stream) design)
-  (with-sheet-medium (medium stream)
-    (let ((transformed-design
-	    (transform-region (medium-transformation medium) design)))
-      (when (stream-recording-p stream)
-	(let ((record (make-instance 'bezier-design-output-record
-			:stream stream
-			:design transformed-design)))
-	  (stream-add-output-record stream record)))
-      (when (stream-drawing-p stream)
-	(medium-draw-bezier-design* medium design)))))
+(defclass translatable-record-mixin ()
+  ((output-record-translation :accessor output-record-translation :initform nil)))
 
-(defmethod medium-draw-bezier-design* :around 
-    ((medium climi::transform-coordinates-mixin) design)
-  (let* ((mtr (medium-transformation medium))
-         (design (if mtr
-                     (transform-region mtr design)
-                     design)))
-    (call-next-method medium design)))
-
-(defmethod replay-output-record ((record bezier-design-output-record) stream
-				 &optional
-				   (region +everywhere+)
-				   (x-offset 0)
-				   (y-offset 0))
-  (declare (ignore x-offset y-offset region))
-  (with-slots (design output-record-translation) record
-    (let ((medium (sheet-medium stream))
-          (design (if output-record-translation
-                      (transform-region output-record-translation design)
-                      design)))
-      (medium-draw-bezier-design* medium design))))
+(climi::def-grecording draw-bezier-design ((climi::gs-line-style-mixin translatable-record-mixin)
+                                           design) ()
+  (let ((transformed-design (transform-region (medium-transformation medium) design))
+	(border (climi::graphics-state-line-style-border climi::graphic medium)))
+    (declare (ignore border))
+    (setf design transformed-design)
+    (compute-bounding-rectangle* design)))
 
 (climi::defmethod* (setf climi::output-record-position) :around
-            (nx ny (record bezier-design-output-record))
+            (nx ny (record draw-bezier-design-output-record))
   (let ((tr (make-instance 'climi::standard-translation :dx nx :dy ny)))
     (multiple-value-prog1
         (call-next-method))
     (setf (output-record-translation record) tr)))
+
+(defmethod replay-output-record :around ((record draw-bezier-design-output-record) stream
+                                         &optional region x-offset y-offset)
+  (declare (ignore x-offset y-offset region))
+  (with-slots (design output-record-translation) record
+    (let ((old-design design))
+      (setf design (if output-record-translation
+                       (transform-region output-record-translation design)
+                       design))
+      (prog1
+          (call-next-method)
+        (setf design old-design)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
