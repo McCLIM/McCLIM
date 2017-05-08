@@ -862,6 +862,20 @@
 
 ;;; Bezier support
 
+(defun %draw-bezier-curve (stream area)
+  (format stream "newpath~%")
+  (let ((segments (mcclim-bezier:segments area)))
+    (let ((p0 (slot-value (car segments) 'mcclim-bezier:p0)))
+      (write-coordinates stream (point-x p0) (point-y p0))
+      (format stream "moveto~%"))
+    (loop for segment in segments
+          do (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
+               (write-coordinates stream (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1))
+               (write-coordinates stream (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2))
+               (write-coordinates stream (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))
+               (format stream "curveto~%")))
+    (format stream "stroke~%")))
+
 (defun %draw-bezier-area (stream area)
   (format stream "newpath~%")
   (let ((segments (mcclim-bezier:segments area)))
@@ -877,17 +891,24 @@
     (format stream "fill~%")))
 
 (defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium postscript-medium) (design mcclim-bezier:bezier-curve))
+  (let ((stream (postscript-medium-file-stream medium))
+        (*transformation* (sheet-native-transformation (medium-sheet medium))))
+    (postscript-actualize-graphics-state stream medium :color :line-style)
+    (%draw-bezier-curve stream design)))
+
+(defmethod mcclim-bezier:medium-draw-bezier-design*
     ((medium postscript-medium) (design mcclim-bezier:bezier-area))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
+    (postscript-actualize-graphics-state stream medium :color :line-style)
     (%draw-bezier-area stream design)))
 
 (defmethod mcclim-bezier:medium-draw-bezier-design*
     ((medium postscript-medium) (design mcclim-bezier:bezier-union))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
+    (postscript-actualize-graphics-state stream medium :color :line-style)
     (let ((tr (climi::transformation design)))
       (dolist (area (mcclim-bezier::areas design))
         (%draw-bezier-area stream (transform-region tr area))))))
@@ -896,11 +917,11 @@
     ((medium postscript-medium) (design mcclim-bezier:bezier-difference))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
+    (postscript-actualize-graphics-state stream medium :color :line-style)
     (dolist (area (mcclim-bezier:positive-areas design))
       (%draw-bezier-area stream area))
     (with-drawing-options (medium :ink +background-ink+)
-      (postscript-actualize-graphics-state stream medium :color)
+      (postscript-actualize-graphics-state stream medium :color :line-style)
       (dolist (area (mcclim-bezier:negative-areas design))
         (%draw-bezier-area stream area)))))
 
