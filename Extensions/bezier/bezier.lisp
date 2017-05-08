@@ -260,11 +260,11 @@
 (defmethod transform-region (transformation (design bezier-design))
   (let* ((tr (transformation design))
          (result (if (translation-transformation-p transformation)
-                     (make-instance (class-of bezier-design)
+                     (make-instance (class-of design)
 		       :segments (%segments design)
 		       :transformation 
 		       (compose-transformations transformation tr))
-                     (make-instance (class-of bezier-design)
+                     (make-instance (class-of design)
 		       :segments (mapcar (lambda (s)
 					   (transform-segment transformation s))
 				  (segments design))))))
