@@ -86,7 +86,8 @@
 
 (defclass bezier-design-output-record (standard-graphics-displayed-output-record)
   ((stream :initarg :stream)
-   (design :initarg :design)))
+   (design :initarg :design)
+   (output-record-translation :accessor output-record-translation :initform nil)))
 
 (defmethod initialize-instance :after ((record bezier-design-output-record) &key)
   (with-slots (design) record
@@ -108,8 +109,10 @@
 
 (defmethod medium-draw-bezier-design* :around 
     ((medium transform-coordinates-mixin) design)
-  (let* ((tr (medium-transformation medium))
-         (design (transform-region tr design)))
+  (let* ((mtr (medium-transformation medium))
+         (design (if mtr
+                     (transform-region mtr design)
+                     design)))
     (call-next-method medium design)))
 
 (defmethod replay-output-record ((record bezier-design-output-record) stream
@@ -118,8 +121,19 @@
 				   (x-offset 0)
 				   (y-offset 0))
   (declare (ignore x-offset y-offset region))
-  (with-slots (design) record
-    (medium-draw-bezier-design* (sheet-medium stream) design)))
+  (with-slots (design output-record-translation) record
+    (let ((medium (sheet-medium stream))
+          (design (if output-record-translation
+                      (transform-region output-record-translation design)
+                      design)))
+      (medium-draw-bezier-design* medium design))))
+
+(defmethod* (setf output-record-position) :around
+            (nx ny (record bezier-design-output-record))
+  (let ((tr (make-instance 'standard-translation :dx nx :dy ny)))
+    (multiple-value-prog1
+        (call-next-method))
+    (setf (output-record-translation record) tr)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -840,18 +854,69 @@
 (defmethod medium-draw-bezier-design* (medium design)
   (render-through-pixmap design medium))
 
-#|
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Test cases
 
-(defparameter *r1* (make-bezier-area* '(10 10 20 20 30 20 40 10 30 5 20 5 10 10)))
+;;; NULL backend support
 
-(defparameter *r2* (make-bezier-area* '(15 10 20 12 30 15 35 10 30 8 20 8 15 10)))
+(in-package :clim-null)
 
-(defparameter *r3* (region-difference *r1* *r2*))
+;;; FIXME: need these to stop the default method attempting to do
+;;; pixmaps, which it appears the null backend doesn't support yet.
+(defmethod climi::medium-draw-bezier-design*
+    ((medium null-medium) (design climi::bezier-area))
+  nil)
+(defmethod climi::medium-draw-bezier-design*
+    ((medium null-medium) (design climi::bezier-union))
+  nil)
+(defmethod climi::medium-draw-bezier-design*
+    ((medium null-medium) (design climi::bezier-difference))
+  nil)
 
-(defparameter *r4* (make-bezier-curve* '(100 100 120 150 160 160 170 160)))
+;;; Postscript backend
 
-(defparameter *r5* (convolute-regions *r2* *r4*))
-|#
+(in-package :clim-postscript)
+
+;;; Bezier support
+
+(defun %draw-bezier-area (stream area)
+  (format stream "newpath~%")
+  (let ((segments (climi::segments area)))
+    (let ((p0 (slot-value (car segments) 'climi::p0)))
+      (write-coordinates stream (point-x p0) (point-y p0))
+      (format stream "moveto~%"))
+    (loop for segment in segments
+          do (with-slots (climi::p1 climi::p2 climi::p3) segment
+               (write-coordinates stream (point-x climi::p1) (point-y climi::p1))
+               (write-coordinates stream (point-x climi::p2) (point-y climi::p2))
+               (write-coordinates stream (point-x climi::p3) (point-y climi::p3))
+               (format stream "curveto~%")))
+    (format stream "fill~%")))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium postscript-medium) (design climi::bezier-area))
+  (let ((stream (postscript-medium-file-stream medium))
+        (*transformation* (sheet-native-transformation (medium-sheet medium))))
+    (postscript-actualize-graphics-state stream medium :color)
+    (%draw-bezier-area stream design)))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium postscript-medium) (design climi::bezier-union))
+  (let ((stream (postscript-medium-file-stream medium))
+        (*transformation* (sheet-native-transformation (medium-sheet medium))))
+    (postscript-actualize-graphics-state stream medium :color)
+    (let ((tr (climi::transformation design)))
+      (dolist (area (climi::areas design))
+        (%draw-bezier-area stream (transform-region tr area))))))
+
+(defmethod climi::medium-draw-bezier-design*
+    ((medium postscript-medium) (design climi::bezier-difference))
+  (let ((stream (postscript-medium-file-stream medium))
+        (*transformation* (sheet-native-transformation (medium-sheet medium))))
+    (postscript-actualize-graphics-state stream medium :color)
+    (dolist (area (climi::positive-areas design))
+      (%draw-bezier-area stream area))
+    (with-drawing-options (medium :ink +background-ink+)
+      (postscript-actualize-graphics-state stream medium :color)
+      (dolist (area (climi::negative-areas design))
+        (%draw-bezier-area stream area)))))
+
+

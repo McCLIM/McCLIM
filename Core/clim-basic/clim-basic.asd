@@ -40,5 +40,4 @@
    (:file "text-selection" :depends-on ("decls" "protocol-classes" "multiprocessing" "X11-colors" "medium" "output"
                                                 "transforms" "sheets" "stream-output"
                                                 "ports" "recording" "regions"
-                                                "events"))
-   (:file "bezier" :depends-on ("recording"))))
+                                                "events"))))
