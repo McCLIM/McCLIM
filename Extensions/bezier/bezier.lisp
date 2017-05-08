@@ -80,7 +80,10 @@
      (* (imagpart z) (point-x v))))
 
 (defclass bezier-design (climi::design)
-  ((%or :accessor original-region :initform nil)))
+  ((%or :accessor original-region :initform nil)
+   (%trans :initarg :transformation
+	   :reader transformation
+	   :initform +identity-transformation+)))
 
 (defgeneric medium-draw-bezier-design* (stream design))
 
@@ -166,7 +169,7 @@
 	    max-y computed-max-y))))
 
 ;;; A path defined as a sequence of Bezier curve segments.
-(defclass bezier-curve (path segments-mixin bounding-rectangle-mixin) ())
+(defclass bezier-curve (path bezier-design segments-mixin bounding-rectangle-mixin) ())
 
 (defun make-bezier-thing (class point-seq)
   (assert (= (mod (length point-seq) 3) 1))
@@ -223,10 +226,7 @@
 	(call-next-method))))
 
 ;;; an area defined as a closed path of Bezier curve segments
-(defclass bezier-area (area bezier-design segments-mixin bounding-rectangle-mixin) 
-  ((%trans :initarg :transformation
-	   :reader transformation
-	   :initform +identity-transformation+)))
+(defclass bezier-area (area bezier-design segments-mixin bounding-rectangle-mixin) ())
 
 (defgeneric close-path (path))
 
@@ -251,30 +251,30 @@
 	       (climi::coordinate= (cadr coord-seq) (car (last coord-seq)))))
   (make-bezier-thing* 'bezier-area coord-seq))
 
-(defgeneric segments (area))
+(defgeneric segments (design))
 
-(defmethod segments ((area bezier-area))
-  (let ((tr (transformation area)))
-    (mapcar (lambda (s) (transform-segment tr s)) (%segments area))))
+(defmethod segments ((design bezier-design))
+  (let ((tr (transformation design)))
+    (mapcar (lambda (s) (transform-segment tr s)) (%segments design))))
 
-(defmethod transform-region (transformation (area bezier-area))
-  (let* ((tr (transformation area))
+(defmethod transform-region (transformation (design bezier-design))
+  (let* ((tr (transformation design))
          (result (if (translation-transformation-p transformation)
-                     (make-instance 'bezier-area
-		       :segments (%segments area)
+                     (make-instance (class-of bezier-design)
+		       :segments (%segments design)
 		       :transformation 
 		       (compose-transformations transformation tr))
-                     (make-instance 'bezier-area 
+                     (make-instance (class-of bezier-design)
 		       :segments (mapcar (lambda (s)
 					   (transform-segment transformation s))
-				  (segments area))))))
+				  (segments design))))))
     (when (translation-transformation-p transformation)
-      (setf (original-region result) (or (original-region area) area)))
+      (setf (original-region result) (or (original-region design) design)))
     result))
 
-(defmethod compute-bounding-rectangle* ((area bezier-area))
+(defmethod compute-bounding-rectangle* ((design bezier-design))
   (multiple-value-bind (lx ly ux uy) (call-next-method)
-    (let ((tr (transformation area)))
+    (let ((tr (transformation design)))
       (transform-rectangle* tr lx ly ux uy))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -720,7 +720,7 @@
 
 (defgeneric positive-negative-areas (design))
 
-(defmethod positive-negative-areas ((design bezier-area))
+(defmethod positive-negative-areas ((design bezier-design))
   (values (list design) '()))
 
 (defmethod positive-negative-areas ((design bezier-union))
