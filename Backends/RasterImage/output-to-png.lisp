@@ -54,7 +54,7 @@
 	    (,enter-fn (sheet stream)
 	      (declare (ignore stream))
 	      (when ,image
-		(setf (mcclim-render::image-sheet-image sheet) ,image))))
+                (setf (mcclim-render::image-mirror-image sheet) ,image))))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
 					   :rgb-image
