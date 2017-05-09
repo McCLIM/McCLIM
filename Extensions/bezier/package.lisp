@@ -1,6 +1,6 @@
 
 (defpackage :mcclim-bezier
-  (:use #:clim #:clim-lisp #:climi)
+  (:use #:clim #:clim-lisp)
   (:export #:bezier-design
            #:bezier-curve
            #:bezier-area
