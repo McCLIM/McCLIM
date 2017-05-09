@@ -61,6 +61,7 @@ than 1.
 @menu
 * Creating panes::
 * Pane names::
+* Redisplaying panes::
 * Layout protocol::
 @end menu
 
@@ -147,6 +148,88 @@ expression that defines a pane in the @code{:panes} option is
 We reserve the right to modify this behavior in the future.  Application
 code should respect the advice given in @ref{Creating panes}.
 
+@node Redisplaying panes
+@section Redisplaying panes
+@cindex redisplaying panes
+
+Recall that @emph{redisplay} refers to the creation of the output
+history of a pane.  There are two typical ways of creating this output
+history:
+
+@itemize
+@item
+  The application maintains some data structure that needs to be
+  reflected in the text and graphics of the pane.  In this case, a
+  pane of type @t{application-pane} is typically used, and the default
+  value of the @t{:display-time} option is used, which means that some
+  kind of application-supplied @emph{display function} is executed at
+  the end of each iteration of the command loop.  In this situation,
+  the output history is either recomputed from scratch in each
+  iteration, or the programmer can use the @emph{incremental
+  redisplay} facility to reuse some of the existing output records in
+  the history.
+@item The application does not keep any data structure, and instead
+  generates output incrementally, either as a result of some user
+  action, or of some data arriving from an external source.  In this
+  case, the @t{:display-time} option is either going to be @t{t} or
+  @t{nil}.  With both of these options, the output history is
+  maintained intact after each iteration of the command loop.
+  Instead, when user actions are issued, more output records are
+  simply added to the existing output history.
+@end itemize
+
+For the second possibility, the pane is never redisplayed.  Instead,
+the action of updating the pane contents is referred to as
+@emph{replaying} the output history.  The remainder of this section is
+entirely dedicated to the @emph{redisplay} action.
+
+It is occasionally necessary for the application to redisplay a pane
+explicitly, as opposed to letting the command loop handle it.  For
+example, if the application data structure is updated in some way, but
+this update is not the result of a command, then after such an update,
+the redisplay function needs to be executed explicitly.  Such an
+update could be the result of a timer event, or of communication with
+an external process.
+
+@anchor{Generic-Function clim:redisplay-frame-pane}
+@deffn {Generic Function} {clim:redisplay-frame-pane} frame pane &key force-p
+@findex clim:redisplay-frame-pane
+@end deffn
+
+Calling this generic function causes an immediate redisplay of
+@var{pane}.  When @var{force-p} is false and the incremental redisplay
+facility is in use for @var{pane}, then output records are reused as
+appropriate.  Supplying a true value for @var{force-p} causes the
+entire output history to be recomputed from scratch.
+
+Notice that this function does not check whether the pane has been
+marked to need redisplay, as indicated by a call to the generic
+function @t{pane-needs-redisplay}.  It results in an unconditional
+redisplay of @var{pane}.
+
+@anchor{Generic-Function clim:redisplay-frame-panes}
+@deffn {Generic Function} {clim:redisplay-frame-panes} frame &key force-p
+@findex clim:redisplay-frame-panes
+@end deffn
+
+Calling this generic function causes an immediate redisplay of all the
+panes of @var{frame} that are visible in the current layout.  This
+function simply calls @t{redisplay-frame-pane} for each visible pane
+of @var{frame}.
+
+Again, notice that no check is being made as to whether the visible
+panes have been marked as needing redisplay.  This function calls
+@code{redisplay-frame-pane} unconditionally for each visible pane, and
+since @code{redisplay-frame-pane} redisplays the pane unconditionally,
+it follows that all visible panes are unconditionally redisplayed.
+
+Also notice that the implication of this unconditional behavior on the
+part of @code{redisplay-frame-panes} means that this is not the
+function called by the standard command loop.  The standard command
+loop only redisplays panes that have been marked as needing redisplay,
+though when the value of the @t{:display-time} option is
+@t{:command-loop} for some pane, then it is always marked as needing
+redisplay in each iteration of the command loop.
 
 @node Layout protocol
 @section Layout protocol
