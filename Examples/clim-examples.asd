@@ -14,7 +14,7 @@
      (:file "puzzle")
      (:file "transformations-test")
      (:file "town-example")
-     (:file "demodemo" :depends-on ("tabdemo" "town-example"))
+     (:file "demodemo" :depends-on ("tabdemo" "town-example" "sliderdemo"))
      (:file "stream-test")
      (:file "presentation-test")
      (:file "dragndrop")
