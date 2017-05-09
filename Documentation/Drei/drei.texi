@@ -661,7 +661,7 @@ An incremental parser is created from a grammar.
 
 @include macro-drei-syntax-grammar.texi
 
-@deftp {Rule} {} symbol -> (&rest arguments) &optional body
+@deftp {Rule} symbol -> (&rest arguments) &optional body
 
 Each rule is a list of this form.
 @end deftp
@@ -669,7 +669,7 @@ Each rule is a list of this form.
 Here @var{symbol} is the target symbol of the rule, and should be the
 name of a CLOS class.
 
-@deftp {Rule argument} {} (var type test)
+@deftp {Rule argument} (var type test)
 
 The most general form of a rule argument.
 @end deftp
@@ -683,7 +683,7 @@ rule applies only of the @var{type} of the object contain in var is of
 that type.  The @var{test} contains arbitrary Common Lisp code for
 additional checks as to the applicability of the rule.
 
-@deftp {Rule argument} {} (var type)
+@deftp {Rule argument} (var type)
 
 Abbreviated form of a rule argument.
 @end deftp
@@ -692,7 +692,7 @@ Abbreviated form of a rule argument.
 Here, @var{type} must be a symbol typically the name of a CLOS class.
 This form is an abbreviation for @code{(@var{var} @var{type} t)}.
 
-@deftp {Rule argument} {} (var test)
+@deftp {Rule argument} (var test)
 
 Abbreviated form of a rule argument.
 @end deftp
@@ -702,7 +702,7 @@ Here, @var{test} must not be a symbol.  This form is an abbreviation
 of @code{(@var{var} @var{var} @var{test})}, i.e., the name of the
 variable is also the name of a type, typically a CLOS class.
 
-@deftp {Rule argument} {} var
+@deftp {Rule argument} var
 
 Abbreviated form of a rule argument.
 @end deftp
