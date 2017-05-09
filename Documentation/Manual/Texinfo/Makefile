@@ -8,7 +8,7 @@ mcclim.info: $(SOURCES)
 	makeinfo mcclim.texi -I docstrings --output mcclim.info
 mcclim.pdf: $(SOURCES)
 	texi2pdf mcclim.texi -I docstrings
-mcclim.html: $(SOURCES)
+mcclim: $(SOURCES)
 	makeinfo mcclim.texi -I docstrings --html
 clean:
 	rm -rf mcclim.cp mcclim.cps mcclim.fn mcclim.fns mcclim.toc \
