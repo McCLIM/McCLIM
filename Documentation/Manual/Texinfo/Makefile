@@ -3,7 +3,7 @@ SOURCES=mcclim.texi docstrings
 
 .PHONY: all clean distclean
 
-all: mcclim.pdf mcclim.info mcclim.html
+all: mcclim.pdf mcclim.info mcclim
 mcclim.info: $(SOURCES)
 	makeinfo mcclim.texi -I docstrings --output mcclim.info
 mcclim.pdf: $(SOURCES)
