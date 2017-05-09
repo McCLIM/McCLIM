@@ -79,7 +79,7 @@
   (- (* (realpart z) (point-y v))
      (* (imagpart z) (point-x v))))
 
-(defclass bezier-design (climi::design)
+(defclass bezier-design (design)
   ((%or :accessor original-region :initform nil)
    (%trans :initarg :transformation
 	   :reader transformation
@@ -101,7 +101,7 @@
     (setf design transformed-design)
     (bounding-rectangle* design)))
 
-(climi::defmethod* (setf climi::output-record-position) :around
+(clim-sys:defmethod* (setf output-record-position) :around
             (nx ny (record draw-bezier-design-output-record))
   (let ((tr (make-instance 'climi::standard-translation :dx nx :dy ny)))
     (multiple-value-prog1
@@ -909,7 +909,7 @@
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
-    (let ((tr (climi::transformation design)))
+    (let ((tr (transformation design)))
       (dolist (area (mcclim-bezier::areas design))
         (%draw-bezier-area stream (transform-region tr area))))))
 
