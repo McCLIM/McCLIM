@@ -4,8 +4,18 @@
 
 (in-package :clim-internals)
 
+(define-condition unsupported-bitmap-format (simple-error) ()
+  (:report (lambda (condition stream)
+	     (declare (ignore condition))
+	     (format stream "Unsupported bitmap format")))
+  (:documentation "This condition is signaled when trying to read a
+  bitmap file whose format is not supported." ))
+
 (defun opticl-read-bitmap-file (image-pathname)
-  (let* ((img (opticl:read-image-file image-pathname))
+  (let* ((img (handler-case
+                  (opticl:read-image-file image-pathname)
+                (error ()
+                  (error 'unsupported-bitmap-format))))
          (height (array-dimension img 0))
          (width (array-dimension img 1))
          (array (make-array (list height width)
