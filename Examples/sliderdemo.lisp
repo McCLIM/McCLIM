@@ -19,7 +19,11 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :clim-demo)
+(defpackage :sliderdemo
+  (:use :clim :clim-lisp :clim-tab-layout)
+  (:export :sliderdemo))
+
+(in-package :sliderdemo)
 
 (defparameter *calc* '(0))
 (defvar *text-field* nil)
@@ -75,6 +79,11 @@
 (defun find-text-field (frame)
   (first (member-if #'(lambda (gadget) (typep gadget 'text-field))
 		    (frame-current-panes frame))))
+
+(defgeneric sliderdemo-frame-top-level (frame &key command-parser
+                                                   command-unparser
+                                                   partial-command-parser
+                                                   prompt))
 
 (defmethod sliderdemo-frame-top-level
     ((frame application-frame)
