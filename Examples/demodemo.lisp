@@ -78,7 +78,7 @@
 					(select-font))))
                    (make-demo-button "Tab Layout" 'tabdemo:tabdemo)
                    (make-demo-button "Summation" 'summation)
-                   (make-demo-button "Slider demo" 'sliderdemo)
+                   (make-demo-button "Slider demo" 'sliderdemo:sliderdemo)
                    (make-demo-button "German Towns"
                                      'town-example:town-example)
                    ;; this demo invokes the debugger
