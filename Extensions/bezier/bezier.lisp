@@ -1,4 +1,4 @@
-(in-package :clim-internals)
+(in-package :mcclim-bezier)
 
 ;;;  (c) copyright 2014 by
 ;;;           Robert Strandh (robert.strandh@gmail.com)
@@ -79,61 +79,46 @@
   (- (* (realpart z) (point-y v))
      (* (imagpart z) (point-x v))))
 
-(defclass bezier-design (design) 
-  ((%or :accessor original-region :initform nil)))
+(defclass bezier-design (design)
+  ((%or :accessor original-region :initform nil)
+   (%trans :initarg :transformation
+	   :reader transformation
+	   :initform +identity-transformation+)))
 
 (defgeneric medium-draw-bezier-design* (stream design))
 
-(defclass bezier-design-output-record (standard-graphics-displayed-output-record)
-  ((stream :initarg :stream)
-   (design :initarg :design)
-   (output-record-translation :accessor output-record-translation :initform nil)))
 
-(defmethod initialize-instance :after ((record bezier-design-output-record) &key)
-  (with-slots (design) record
-    (setf (rectangle-edges* record)
-	  (bounding-rectangle* design))))
+;;; recording
 
-(defmethod medium-draw-bezier-design* :around
-    ((stream output-recording-stream) design)
-  (with-sheet-medium (medium stream)
-    (let ((transformed-design
-	    (transform-region (medium-transformation medium) design)))
-      (when (stream-recording-p stream)
-	(let ((record (make-instance 'bezier-design-output-record
-			:stream stream
-			:design transformed-design)))
-	  (stream-add-output-record stream record)))
-      (when (stream-drawing-p stream)
-	(medium-draw-bezier-design* medium design)))))
+(defclass translatable-record-mixin ()
+  ((output-record-translation :accessor output-record-translation :initform nil)))
 
-(defmethod medium-draw-bezier-design* :around 
-    ((medium transform-coordinates-mixin) design)
-  (let* ((mtr (medium-transformation medium))
-         (design (if mtr
-                     (transform-region mtr design)
-                     design)))
-    (call-next-method medium design)))
+(climi::def-grecording draw-bezier-design ((climi::gs-line-style-mixin translatable-record-mixin)
+                                           design) ()
+  (let ((transformed-design (transform-region (medium-transformation medium) design))
+	(border (climi::graphics-state-line-style-border climi::graphic medium)))
+    (declare (ignore border))
+    (setf design transformed-design)
+    (bounding-rectangle* design)))
 
-(defmethod replay-output-record ((record bezier-design-output-record) stream
-				 &optional
-				   (region +everywhere+)
-				   (x-offset 0)
-				   (y-offset 0))
-  (declare (ignore x-offset y-offset region))
-  (with-slots (design output-record-translation) record
-    (let ((medium (sheet-medium stream))
-          (design (if output-record-translation
-                      (transform-region output-record-translation design)
-                      design)))
-      (medium-draw-bezier-design* medium design))))
-
-(defmethod* (setf output-record-position) :around
-            (nx ny (record bezier-design-output-record))
-  (let ((tr (make-instance 'standard-translation :dx nx :dy ny)))
+(clim-sys:defmethod* (setf output-record-position) :around
+            (nx ny (record draw-bezier-design-output-record))
+  (let ((tr (make-instance 'climi::standard-translation :dx nx :dy ny)))
     (multiple-value-prog1
         (call-next-method))
     (setf (output-record-translation record) tr)))
+
+(defmethod replay-output-record :around ((record draw-bezier-design-output-record) stream
+                                         &optional region x-offset y-offset)
+  (declare (ignore x-offset y-offset region))
+  (with-slots (design output-record-translation) record
+    (let ((old-design design))
+      (setf design (if output-record-translation
+                       (transform-region output-record-translation design)
+                       design))
+      (prog1
+          (call-next-method)
+        (setf design old-design)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -184,7 +169,7 @@
 	    max-y computed-max-y))))
 
 ;;; A path defined as a sequence of Bezier curve segments.
-(defclass bezier-curve (path segments-mixin bounding-rectangle-mixin) ())
+(defclass bezier-curve (path bezier-design segments-mixin bounding-rectangle-mixin) ())
 
 (defun make-bezier-thing (class point-seq)
   (assert (= (mod (length point-seq) 3) 1))
@@ -241,10 +226,7 @@
 	(call-next-method))))
 
 ;;; an area defined as a closed path of Bezier curve segments
-(defclass bezier-area (area bezier-design segments-mixin bounding-rectangle-mixin) 
-  ((%trans :initarg :transformation
-	   :reader transformation
-	   :initform +identity-transformation+)))
+(defclass bezier-area (area bezier-design segments-mixin bounding-rectangle-mixin) ())
 
 (defgeneric close-path (path))
 
@@ -265,34 +247,34 @@
   (make-bezier-thing 'bezier-area point-seq))
 
 (defun make-bezier-area* (coord-seq)
-  (assert (and (coordinate= (car coord-seq) (car (last coord-seq 2)))
-	       (coordinate= (cadr coord-seq) (car (last coord-seq)))))
+  (assert (and (climi::coordinate= (car coord-seq) (car (last coord-seq 2)))
+	       (climi::coordinate= (cadr coord-seq) (car (last coord-seq)))))
   (make-bezier-thing* 'bezier-area coord-seq))
 
-(defgeneric segments (area))
+(defgeneric segments (design))
 
-(defmethod segments ((area bezier-area))
-  (let ((tr (transformation area)))
-    (mapcar (lambda (s) (transform-segment tr s)) (%segments area))))
+(defmethod segments ((design bezier-design))
+  (let ((tr (transformation design)))
+    (mapcar (lambda (s) (transform-segment tr s)) (%segments design))))
 
-(defmethod transform-region (transformation (area bezier-area))
-  (let* ((tr (transformation area))
+(defmethod transform-region (transformation (design bezier-design))
+  (let* ((tr (transformation design))
          (result (if (translation-transformation-p transformation)
-                     (make-instance 'bezier-area
-		       :segments (%segments area)
+                     (make-instance (class-of design)
+		       :segments (%segments design)
 		       :transformation 
 		       (compose-transformations transformation tr))
-                     (make-instance 'bezier-area 
+                     (make-instance (class-of design)
 		       :segments (mapcar (lambda (s)
 					   (transform-segment transformation s))
-				  (segments area))))))
+				  (segments design))))))
     (when (translation-transformation-p transformation)
-      (setf (original-region result) (or (original-region area) area)))
+      (setf (original-region result) (or (original-region design) design)))
     result))
 
-(defmethod compute-bounding-rectangle* ((area bezier-area))
+(defmethod compute-bounding-rectangle* ((design bezier-design))
   (multiple-value-bind (lx ly ux uy) (call-next-method)
-    (let ((tr (transformation area)))
+    (let ((tr (transformation design)))
       (transform-rectangle* tr lx ly ux uy))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -738,7 +720,7 @@
 
 (defgeneric positive-negative-areas (design))
 
-(defmethod positive-negative-areas ((design bezier-area))
+(defmethod positive-negative-areas ((design bezier-design))
   (values (list design) '()))
 
 (defmethod positive-negative-areas ((design bezier-union))
@@ -861,14 +843,17 @@
 
 ;;; FIXME: need these to stop the default method attempting to do
 ;;; pixmaps, which it appears the null backend doesn't support yet.
-(defmethod climi::medium-draw-bezier-design*
-    ((medium null-medium) (design climi::bezier-area))
+(defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium null-medium) (design mcclim-bezier:bezier-curve))
   nil)
-(defmethod climi::medium-draw-bezier-design*
-    ((medium null-medium) (design climi::bezier-union))
+(defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium null-medium) (design mcclim-bezier:bezier-area))
   nil)
-(defmethod climi::medium-draw-bezier-design*
-    ((medium null-medium) (design climi::bezier-difference))
+(defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium null-medium) (design mcclim-bezier:bezier-union))
+  nil)
+(defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium null-medium) (design mcclim-bezier:bezier-difference))
   nil)
 
 ;;; Postscript backend
@@ -877,46 +862,67 @@
 
 ;;; Bezier support
 
-(defun %draw-bezier-area (stream area)
+(defun %draw-bezier-curve (stream area)
   (format stream "newpath~%")
-  (let ((segments (climi::segments area)))
-    (let ((p0 (slot-value (car segments) 'climi::p0)))
+  (let ((segments (mcclim-bezier:segments area)))
+    (let ((p0 (slot-value (car segments) 'mcclim-bezier:p0)))
       (write-coordinates stream (point-x p0) (point-y p0))
       (format stream "moveto~%"))
     (loop for segment in segments
-          do (with-slots (climi::p1 climi::p2 climi::p3) segment
-               (write-coordinates stream (point-x climi::p1) (point-y climi::p1))
-               (write-coordinates stream (point-x climi::p2) (point-y climi::p2))
-               (write-coordinates stream (point-x climi::p3) (point-y climi::p3))
+          do (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
+               (write-coordinates stream (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1))
+               (write-coordinates stream (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2))
+               (write-coordinates stream (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))
+               (format stream "curveto~%")))
+    (format stream "stroke~%")))
+
+(defun %draw-bezier-area (stream area)
+  (format stream "newpath~%")
+  (let ((segments (mcclim-bezier:segments area)))
+    (let ((p0 (slot-value (car segments) 'mcclim-bezier:p0)))
+      (write-coordinates stream (point-x p0) (point-y p0))
+      (format stream "moveto~%"))
+    (loop for segment in segments
+          do (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
+               (write-coordinates stream (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1))
+               (write-coordinates stream (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2))
+               (write-coordinates stream (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))
                (format stream "curveto~%")))
     (format stream "fill~%")))
 
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-area))
+(defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium postscript-medium) (design mcclim-bezier:bezier-curve))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
+    (postscript-actualize-graphics-state stream medium :color :line-style)
+    (%draw-bezier-curve stream design)))
+
+(defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium postscript-medium) (design mcclim-bezier:bezier-area))
+  (let ((stream (postscript-medium-file-stream medium))
+        (*transformation* (sheet-native-transformation (medium-sheet medium))))
+    (postscript-actualize-graphics-state stream medium :color :line-style)
     (%draw-bezier-area stream design)))
 
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-union))
+(defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium postscript-medium) (design mcclim-bezier:bezier-union))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
-    (let ((tr (climi::transformation design)))
-      (dolist (area (climi::areas design))
+    (postscript-actualize-graphics-state stream medium :color :line-style)
+    (let ((tr (transformation design)))
+      (dolist (area (mcclim-bezier::areas design))
         (%draw-bezier-area stream (transform-region tr area))))))
 
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-difference))
+(defmethod mcclim-bezier:medium-draw-bezier-design*
+    ((medium postscript-medium) (design mcclim-bezier:bezier-difference))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
-    (dolist (area (climi::positive-areas design))
+    (postscript-actualize-graphics-state stream medium :color :line-style)
+    (dolist (area (mcclim-bezier:positive-areas design))
       (%draw-bezier-area stream area))
     (with-drawing-options (medium :ink +background-ink+)
-      (postscript-actualize-graphics-state stream medium :color)
-      (dolist (area (climi::negative-areas design))
+      (postscript-actualize-graphics-state stream medium :color :line-style)
+      (dolist (area (mcclim-bezier:negative-areas design))
         (%draw-bezier-area stream area)))))
 
 

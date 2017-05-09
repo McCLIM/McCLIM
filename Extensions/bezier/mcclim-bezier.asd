@@ -11,4 +11,5 @@
 (defsystem #:mcclim-bezier
   :description "Support for various bezier curves in McCLIM."
   :depends-on (#:clim-basic)
-  :components ((:file "bezier")))
+  :components ((:file "package")
+               (:file "bezier")))

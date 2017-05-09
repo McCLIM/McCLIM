@@ -1393,5 +1393,36 @@
       (with-translation (stream 50 0)
 	(draw-pattern* stream pattern 200 300)))))
 
-    
+;;;
+;;; Bezier curves
+;;;
+
+;;; FIXME! The bezier-curve stuff (as opposed to the bezier-area) is
+;;; currently broken and the test case is commented out for now.
+(define-drawing-test "16) Bezier Area" (stream)
+    "Draws a single bezier-area. Currently this is quite slow and needs to be optimized. Also, the shape of the drawn bezier area is not particularly attractive."
+  (let* ((r1 (mcclim-bezier:make-bezier-area* '(100 100 200 200 300 200 400 100 300 50 200 50 100 100))))
+    (mcclim-bezier:draw-bezier-design* stream r1)))
+
+(define-drawing-test "16) Bezier Curve" (stream)
+    "Draws a single bezier curve. This is currently broken as it should just draw the stroke of the bezier and instead renders the design as a bezier area."
+  (let* ((r4 (mcclim-bezier:make-bezier-curve* (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
+    (mcclim-bezier:draw-bezier-design* stream r4
+                                       :line-thickness 12
+                                       :ink +orange+)))
+
+(define-drawing-test "16) More Bezier Stuff" (stream)
+    "Some more complicated bezier design drawings. We draw two overlapping bezier areas, the difference between these two areas, a bezier curve, and a convolution of a curve and an area."
+  (let* ((r1 (mcclim-bezier:make-bezier-area* '(100 100 200 200 300 200 400 100 300 50 200 50 100 100)))
+         (r2 (mcclim-bezier:make-bezier-area* '(150 100 200 120 300 150 350 100 300 80 200 80 150 100)))
+         (r3 (mcclim-bezier:region-difference r1 r2))
+         (r4 (mcclim-bezier:make-bezier-curve* (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140)))
+         (r5 (mcclim-bezier:convolve-regions r2 r4)))
+    (mcclim-bezier:draw-bezier-design* stream r1)
+    (mcclim-bezier:draw-bezier-design* stream r2)
+    (mcclim-bezier:draw-bezier-design* stream r3)
+    (mcclim-bezier:draw-bezier-design* stream r4
+                                       :line-thickness 12
+                                       :ink +orange+)
+    (mcclim-bezier:draw-bezier-design* stream r5)))
 
