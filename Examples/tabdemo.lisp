@@ -73,10 +73,10 @@
 ;; FIND-PANE-NAMED.  Ignoring the symbol identity and case works
 ;; around that.
 (defun sane-find-pane-named (frame name)
-  (find name
-	(climi::frame-named-panes frame)
-	:key #'pane-name
-	:test #'string-equal))
+  (map-over-sheets #'(lambda (p)
+                       (when (string-equal name (pane-name p))
+                         (return-from sane-find-pane-named p)))
+                   (frame-panes frame)))
 
 (defun tabdemo-layout ()
   (sane-find-pane-named *application-frame* 'tabdemo-layout))
