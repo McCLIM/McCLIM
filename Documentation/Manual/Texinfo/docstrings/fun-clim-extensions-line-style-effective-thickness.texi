@@ -1,0 +1,6 @@
+@anchor{Generic-Function clim-extensions:line-style-effective-thickness}
+@deffn {Generic Function} {clim-extensions:line-style-effective-thickness} line-style medium
+@findex clim-extensions:line-style-effective-thickness
+Returns the thickness in device units of a line,
+rendered on MEDIUM with the style LINE-STYLE.
+@end deffn

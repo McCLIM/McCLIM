@@ -1,0 +1,15 @@
+@anchor{Class clim:standard-output-recording-stream}
+@deftp {Class} {clim:standard-output-recording-stream}
+@tindex clim:standard-output-recording-stream
+Class precedence list: @code{@w{standard-output-recording-stream}, @w{output-recording-stream}, @w{standard-object}, @w{slot-object}, @w{t}}
+
+Slots:
+@itemize
+@item @code{local-record-p} 
+
+This flag is used for dealing with streams outputting strings char-by-char.
+@end itemize
+
+This class is mixed into some other stream class to
+add output recording facilities. It is not instantiable.
+@end deftp

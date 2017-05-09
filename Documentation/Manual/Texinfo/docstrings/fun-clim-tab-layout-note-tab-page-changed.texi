@@ -1,0 +1,8 @@
+@anchor{Generic-Function clim-tab-layout:note-tab-page-changed}
+@deffn {Generic Function} {clim-tab-layout:note-tab-page-changed} layout page
+@findex clim-tab-layout:note-tab-page-changed
+This internal function is called by the @code{setf} methods
+for @code{tab-page-title} and -DRAWING-OPTIONS to inform the page's tab-layout
+about the changes, allowing it to update its display.  Only called by
+the @code{tab-layout} implementation and specialized by its subclasses.
+@end deffn
