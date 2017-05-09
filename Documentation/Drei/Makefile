@@ -1,7 +1,7 @@
 
 SOURCES=drei.texi docstrings
 
-.PHONY: all clean
+.PHONY: all clean distclean
 
 all: drei.pdf drei.info drei.html
 drei.info: $(SOURCES)
