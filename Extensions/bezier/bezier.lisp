@@ -209,6 +209,8 @@
 			(transform-segment transformation segment))
 	       (%segments path))))
 
+;;; FIXME! This overrides region-equal in Core/clim-basic/regions.lisp
+;;; -- we probably don't want that!
 (defmethod region-equal ((p1 point) (p2 point))
   (let ((coordinate-epsilon (* #.(expt 2 10) double-float-epsilon)))
     (and (<= (abs (- (point-x p1) (point-x p2))) coordinate-epsilon)
@@ -611,7 +613,6 @@
     (transform-region transformation area)))
 
 (defun convolve-polygon-and-segment (area polygon segment first)
-  (declare (optimize debug))
   (let* ((points (polygon-points polygon))
 	 (sides (loop for (p0 p1) on (append (last points) points)
 		      until (null p1)
@@ -751,6 +752,9 @@
 		   (render-polygon result polygon 1 min-x min-y)))
 	result))))
 
+;;; FIXME this is bad -- we store the pixmap every time we draw it and
+;;; this becomes a huge leak if we draw a lot of bezier designs. OTOH,
+;;; this is only for the CLX backend right now. Still, should fix.
 (defparameter *pixmaps* (make-hash-table :test #'equal))
 
 (defun resolve-ink (medium)
