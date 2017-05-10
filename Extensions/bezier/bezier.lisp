@@ -843,8 +843,6 @@
 
 ;;; NULL backend support
 
-(in-package :clim-null)
-
 ;;; FIXME: need these to stop the default method attempting to do
 ;;; pixmaps, which it appears the null backend doesn't support yet.
 (defmethod mcclim-bezier:medium-draw-bezier-design*
@@ -862,9 +860,16 @@
 
 ;;; Render backend
 
-(in-package :mcclim-render)
+(defvar *bezier-draw-control-lines* nil)
+(defvar *bezier-draw-location-labels* nil)
 
-(defmethod %medium-draw-bezier-design ((medium render-medium-mixin) design filled)
+(defgeneric %medium-draw-bezier-design (medium design filled
+                                        &key bezier-draw-control-lines
+                                             bezier-draw-location-labels))
+
+(defmethod %medium-draw-bezier-design ((medium render-medium-mixin) design filled
+                                       &key (bezier-draw-control-lines *bezier-draw-control-lines*)
+                                            (bezier-draw-location-labels *bezier-draw-location-labels*))
   (let ((segments (mcclim-bezier:segments design)))
     (let ((p0 (slot-value (car segments) 'mcclim-bezier:p0)))
       (let ((path (make-path (point-x p0) (point-y p0))))
@@ -876,96 +881,116 @@
                           (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))))
         (if filled
             (%medium-fill-paths medium (list path))
-            (%medium-stroke-paths medium (list path)))))))
+            (%medium-stroke-paths medium (list path)))
+        (when (or bezier-draw-control-lines
+                  bezier-draw-location-labels)
+          (loop for segment in (mcclim-bezier:segments design)
+             for i from 1
+             do (with-slots ((p0 mcclim-bezier:p0)
+                             (p1 mcclim-bezier:p1)
+                             (p2 mcclim-bezier:p2)
+                             (p3 mcclim-bezier:p3))
+                    segment
+                  (when bezier-draw-control-lines
+                    (draw-point medium p0 :ink +blue+ :line-thickness 6)
+                    (draw-point medium p1 :ink +red+ :line-thickness 6)
+                    (draw-line  medium p0 p1 :ink +green+ :line-thickness 2)
+                    (draw-point medium p2 :ink +red+ :line-thickness 6)
+                    (draw-line  medium p1 p2 :ink +green+ :line-thickness 2)
+                    (draw-point medium p3 :ink +blue+ :line-thickness 6)
+                    (draw-line  medium p2 p3 :ink +green+ :line-thickness 2))
+                  (when bezier-draw-location-labels
+                    (draw-text medium (format nil "P~D ~D ~D" i (point-x p0) (point-y p0)) p0)
+                    (draw-text medium (format nil "C~D ~D ~D" i (point-x p1) (point-y p1)) p1)
+                    (draw-text medium (format nil "C~D ~D ~D" (1+ i) (point-x p2) (point-y p2)) p2)
+                    (draw-text medium (format nil "P~D ~D ~D" (1+ i) (point-x p3) (point-y p3)) p3)))))))))
 
-(defmethod mcclim-bezier:medium-draw-bezier-design* ((medium render-medium-mixin)
-                                                     (design mcclim-bezier:bezier-curve))
+(defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
+                                       (design bezier-curve))
   (%medium-draw-bezier-design medium design nil))
 
-(defmethod mcclim-bezier:medium-draw-bezier-design* ((medium render-medium-mixin)
-                                                     (design mcclim-bezier:bezier-area))
+(defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
+                                                     (design bezier-area))
   (%medium-draw-bezier-design medium design t))
 
-(defmethod mcclim-bezier:medium-draw-bezier-design* ((medium render-medium-mixin)
-                                                     (design mcclim-bezier:bezier-union))
+(defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
+                                                     (design bezier-union))
   (let ((tr (transformation design)))
-    (dolist (area (mcclim-bezier::areas design))
+    (dolist (area (areas design))
       (%medium-draw-bezier-design medium (transform-region tr area) t))))
 
-(defmethod mcclim-bezier:medium-draw-bezier-design* ((medium render-medium-mixin)
-                                                     (design mcclim-bezier:bezier-difference))
+(defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
+                                                     (design bezier-difference))
   (let ((tr (transformation design)))
-    (dolist (area (mcclim-bezier:positive-areas design))
+    (dolist (area (positive-areas design))
       (%medium-draw-bezier-design medium (transform-region tr area) t))
-    (dolist (area (mcclim-bezier:negative-areas design))
+    (dolist (area (negative-areas design))
       (with-drawing-options (medium :ink +background-ink+)
         (%medium-draw-bezier-design medium (transform-region tr area) t)))))
 
 ;;; Postscript backend
 
-(in-package :clim-postscript)
-
 (defun %draw-bezier-curve (stream area)
   (format stream "newpath~%")
-  (let ((segments (mcclim-bezier:segments area)))
-    (let ((p0 (slot-value (car segments) 'mcclim-bezier:p0)))
+  (let ((segments (segments area)))
+    (let ((p0 (slot-value (car segments) 'p0)))
       (write-coordinates stream (point-x p0) (point-y p0))
       (format stream "moveto~%"))
     (loop for segment in segments
-          do (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
-               (write-coordinates stream (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1))
-               (write-coordinates stream (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2))
-               (write-coordinates stream (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))
+          do (with-slots (p1 p2 p3) segment
+               (write-coordinates stream (point-x p1) (point-y p1))
+               (write-coordinates stream (point-x p2) (point-y p2))
+               (write-coordinates stream (point-x p3) (point-y p3))
                (format stream "curveto~%")))
     (format stream "stroke~%")))
 
 (defun %draw-bezier-area (stream area)
   (format stream "newpath~%")
-  (let ((segments (mcclim-bezier:segments area)))
-    (let ((p0 (slot-value (car segments) 'mcclim-bezier:p0)))
+  (let ((segments (segments area)))
+    (let ((p0 (slot-value (car segments) 'p0)))
       (write-coordinates stream (point-x p0) (point-y p0))
       (format stream "moveto~%"))
     (loop for segment in segments
-          do (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
-               (write-coordinates stream (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1))
-               (write-coordinates stream (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2))
-               (write-coordinates stream (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))
+          do (with-slots (p1 p2 p3) segment
+               (write-coordinates stream (point-x p1) (point-y p1))
+               (write-coordinates stream (point-x p2) (point-y p2))
+               (write-coordinates stream (point-x p3) (point-y p3))
                (format stream "curveto~%")))
     (format stream "fill~%")))
 
-(defmethod mcclim-bezier:medium-draw-bezier-design*
-    ((medium postscript-medium) (design mcclim-bezier:bezier-curve))
+(defmethod medium-draw-bezier-design*
+    ((medium postscript-medium) (design bezier-curve))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
     (%draw-bezier-curve stream design)))
 
-(defmethod mcclim-bezier:medium-draw-bezier-design*
-    ((medium postscript-medium) (design mcclim-bezier:bezier-area))
+(defmethod medium-draw-bezier-design*
+    ((medium postscript-medium) (design bezier-area))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
     (%draw-bezier-area stream design)))
 
-(defmethod mcclim-bezier:medium-draw-bezier-design*
-    ((medium postscript-medium) (design mcclim-bezier:bezier-union))
+(defmethod medium-draw-bezier-design*
+    ((medium postscript-medium) (design bezier-union))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
     (let ((tr (transformation design)))
-      (dolist (area (mcclim-bezier::areas design))
+      (dolist (area (areas design))
         (%draw-bezier-area stream (transform-region tr area))))))
 
-(defmethod mcclim-bezier:medium-draw-bezier-design*
-    ((medium postscript-medium) (design mcclim-bezier:bezier-difference))
+(defmethod medium-draw-bezier-design*
+    ((medium postscript-medium) (design bezier-difference))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
-    (dolist (area (mcclim-bezier:positive-areas design))
+    (dolist (area (positive-areas design))
       (%draw-bezier-area stream area))
     (with-drawing-options (medium :ink +background-ink+)
       (postscript-actualize-graphics-state stream medium :color :line-style)
-      (dolist (area (mcclim-bezier:negative-areas design))
+      (dolist (area (negative-areas design))
         (%draw-bezier-area stream area)))))
 
 
