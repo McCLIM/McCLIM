@@ -9,6 +9,7 @@
 * Output Protocol::
 * Command Processing::
 * Incremental redisplay::
+* Extensions::
 @end menu
 
 @node Concepts
@@ -690,6 +691,13 @@ still being able to benefit in terms of performance.
 @node Extensions
 @section Extensions
 
+@menu
+* Text editor substrate::
+* Drawing Two-Dimensional Images::
+* Fonts and Extended Text Styles::
+* Tab Layout::
+@end menu
+
 @node Text editor substrate
 @subsection Text editor substrate
 @cindex drei
@@ -709,7 +717,7 @@ the manual. Drei documentation is provided as a separate document.
 @node Text editor pane
 
 @node Drawing Two-Dimensional Images
-@section Drawing Two-Dimensional Images
+@subsection Drawing Two-Dimensional Images
 
 @menu
 * Images::
@@ -718,7 +726,7 @@ the manual. Drei documentation is provided as a separate document.
 @end menu
 
 @node Images
-@subsection Images
+@subsubsection Images
 
 Images are all rectangular arrangements of pixels.  The type of a pixel
 depends on the exact type of the image.  In addition, a pixel has a
@@ -865,7 +873,7 @@ one-valued bits.
 @end deftp
 
 @node Utility Functions
-@subsection Utility Functions
+@subsubsection Utility Functions
 
 @deffn {Generic Function} {rotate-image} image angle &key (antialias t)
 @end deffn
@@ -878,7 +886,7 @@ one-valued bits.
 @end deffn
 
 @node Reading Image Files
-@subsection Reading Image Files
+@subsubsection Reading Image Files
 
 @deffn {Generic Function} {read-image} source &key type width height
 
@@ -902,7 +910,7 @@ desired image quality (for formats with lossy compression).
 
 
 @node Fonts and Extended Text Styles
-@section Fonts and Extended Text Styles
+@subsection Fonts and Extended Text Styles
 
 @menu
 * Extended Text Styles::
@@ -910,7 +918,7 @@ desired image quality (for formats with lossy compression).
 @end menu
 
 @node Extended Text Styles
-@subsection Extended Text Styles
+@subsubsection Extended Text Styles
 
 McCLIM extends the legal values for the @cl{family} and @cl{face}
 arguments to @cl{make-text-style} to include strings (in additional to
@@ -939,7 +947,7 @@ documentation for details on the syntax of face names.  Example:
 @end lisp
 
 @node Listing Fonts
-@subsection Listing Fonts
+@subsubsection Listing Fonts
 
 McCLIM's font listing functions allow applications to list all
 available fonts available on a @class{port} and create text style
@@ -982,7 +990,7 @@ T
 @include fun-clim-extensions-font-face-text-style.texi
 
 @node Tab Layout
-@section Tab Layout
+@subsection Tab Layout
 
 The tab layout is a composite pane arranging its children so that
 exactly one child is visible at any time, with a row of buttons
