@@ -1,5 +1,5 @@
 
-SOURCES=mcclim.texi docstrings
+SOURCES=mcclim.texi user-manual.txi reference-manual.txi docstrings
 
 .PHONY: all clean distclean
 

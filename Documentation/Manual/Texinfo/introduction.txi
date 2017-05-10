@@ -1,5 +1,3 @@
-@node Introduction
-@chapter Introduction
 
 CLIM is a large layered software system that allows the user to
 customize it at each level.  The most simple ways of using CLIM is to
