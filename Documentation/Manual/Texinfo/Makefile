@@ -1,5 +1,5 @@
 
-SOURCES=mcclim.texi user-manual.txi reference-manual.txi docstrings
+SOURCES=mcclim.texi user-manual.txi reference-manual.txi developer-manual.txi extensions.txi auxiliary-material.txi chap-debugger.texi chap-inspector.texi chap-listener.texi docstrings
 
 .PHONY: all clean distclean
 
@@ -14,4 +14,4 @@ clean:
 	rm -rf mcclim.cp mcclim.cps mcclim.fn mcclim.fns mcclim.toc \
 		mcclim.tp mcclim.tps mcclim.vr mcclim.vrs mcclim.aux mcclim.log
 distclean: clean
-	rm -rf mcclim.info mcclim.pdf mcclim.html
+	rm -rf mcclim.info mcclim.pdf mcclim

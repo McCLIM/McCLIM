@@ -51,6 +51,8 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 * User manual::
 * Reference manual::
 * Developer manual::
+* Extensions::
+* Applications::
 * Auxiliary material::
 * Concept index::
 * Variable index::
@@ -69,11 +71,23 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 @c @chapter Reference manual
 @include reference-manual.txi
 
-@node Developer manual
-@chapter Developer manual
+@c @node Developer manual
+@c @chapter Developer manual
+@include developer-manual.txi
 
-@node Auxiliary material
-@unnumbered Auxiliary material
+@c @node Extensions
+@c @chapter Extensions
+@include extensions.txi
+
+@node Applications
+@chapter Applications
+@include chap-debugger.texi
+@include chap-inspector.texi
+@include chap-listener.texi
+
+@c @node Auxiliary material
+@c @unnumbered Auxiliary material
+@include auxiliary-material.txi
 
 @node Concept index
 @unnumbered Concept index
@@ -89,7 +103,5 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 @unnumbered Function and macro index
 
 @printindex fn
-
-@c LocalWords:  viewport scroller mixin PostScript
 
 @bye

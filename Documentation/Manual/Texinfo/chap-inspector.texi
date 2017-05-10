@@ -1,6 +1,5 @@
-
 @node Inspector
-@chapter Inspector
+@section Inspector
 @cindex inspector
 @cindex Clouseau
 
@@ -18,7 +17,7 @@ programs, similar to the way the Lisp printer can be extended with
 @end menu
 
 @node Usage
-@section Usage
+@subsection Usage
 
 @menu
 * Quick Start::
@@ -27,7 +26,7 @@ programs, similar to the way the Lisp printer can be extended with
 @end menu
 
 @node Quick Start
-@subsection Quick Start
+@subsubsection Quick Start
 
 To get up and running quickly with Clouseau:
 
@@ -50,7 +49,7 @@ To get up and running quickly with Clouseau:
 @end enumerate
 
 @node The Basics
-@subsection The Basics
+@subsubsection The Basics
 
 Once you inspect something, you will see a full representation of the
 object you are inspecting and short representations of objects contained
@@ -64,52 +63,38 @@ That's really all you need to know to get started. The best way to learn
 how to use Clouseau is to start inspecting your own objects.
 
 @node Handling of Specific Data Types
-@subsection Handling of Specific Data Types
-
-@menu
-* Standard Objects::
-* Structures::
-* Generic Functions::
-* Functions::
-* Symbols::
-* Lists and Conses::
-@end menu
+@subsubsection Handling of Specific Data Types
 
 Clouseau can handle numerous data types in different ways. Here are some
 handy features you might miss if you don't know to look for them:
 
-@node Standard Objects
-@subsubsection Standard Objects
+@table @asis
+@item Standard Objects
 
 Standard objects have their slots shown, and by left-clicking on the
 name of a slot you can change the slot's value. You can see various slot
 attributes by middle clicking on a slot name.
 
-@node Structures
-@subsubsection Structures
+@item Structures
 
 Structures are inspected the same way as standard objects.
 
-@node Generic Functions
-@subsubsection Generic Functions
+@item Generic Functions
 
 You can remove methods from generic functions with the @t{Remove Method}
 command.
 
-@node Functions
-@subsubsection Functions
+@item Functions
 
 You can disassemble functions with the @t{Toggle Disassembly}
 command. If the disassembly is already shown, this command hides it.
 
-@node Symbols
-@subsubsection Symbols
+@item Symbols
 
 If a symbol is fbound, you can use the @t{Trace} and @t{Untrace}
 commands to trace and untrace the function bound to it.
 
-@node Lists and Conses
-@subsubsection Lists and Conses
+@item Lists and Conses
 
 Lists and conses can be displayed in either the classic format (such as
 @t{(1 3 (4 . 6) "Hello" 42)}) or a more graphical cons-cell diagram
@@ -119,9 +104,10 @@ the @t{Toggle Show List Cells} command.
 The new cons cell diagram format looks like this:
 
 @center @image{inspect-as-cells}
+@end table
 
 @node Extending Clouseau
-@section Extending Clouseau
+@subsection Extending Clouseau
 
 Sometimes Clouseau's built-in inspection abilities aren't enough, and
 you want to be able to extend it to inspect one of your own classes in a
@@ -355,7 +341,7 @@ For more examples of how to extend the inspector, you can look at
 @t{inspector.lisp}.
 
 @node API
-@section API
+@subsection API
 
 The following symbols are exported from the @cl{clouseau} package:
 
