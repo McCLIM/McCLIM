@@ -856,11 +856,50 @@
     ((medium null-medium) (design mcclim-bezier:bezier-difference))
   nil)
 
+;;; Render backend
+
+(in-package :mcclim-render)
+
+(defmethod %medium-draw-bezier-design ((medium render-medium-mixin) design filled)
+  (let ((segments (mcclim-bezier:segments design)))
+    (let ((p0 (slot-value (car segments) 'mcclim-bezier:p0)))
+      (let ((path (make-path (point-x p0) (point-y p0))))
+        (loop for segment in segments
+           do (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
+                (curve-to path
+                          (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1)
+                          (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2)
+                          (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))))
+        (if filled
+            (%medium-fill-paths medium (list path))
+            (%medium-stroke-paths medium (list path)))))))
+
+(defmethod mcclim-bezier:medium-draw-bezier-design* ((medium render-medium-mixin)
+                                                     (design mcclim-bezier:bezier-curve))
+  (%medium-draw-bezier-design medium design nil))
+
+(defmethod mcclim-bezier:medium-draw-bezier-design* ((medium render-medium-mixin)
+                                                     (design mcclim-bezier:bezier-area))
+  (%medium-draw-bezier-design medium design t))
+
+(defmethod mcclim-bezier:medium-draw-bezier-design* ((medium render-medium-mixin)
+                                                     (design mcclim-bezier:bezier-union))
+  (let ((tr (transformation design)))
+    (dolist (area (mcclim-bezier::areas design))
+      (%medium-draw-bezier-design medium (transform-region tr area) t))))
+
+(defmethod mcclim-bezier:medium-draw-bezier-design* ((medium render-medium-mixin)
+                                                     (design mcclim-bezier:bezier-difference))
+  (let ((tr (transformation design)))
+    (dolist (area (mcclim-bezier:positive-areas design))
+      (%medium-draw-bezier-design medium (transform-region tr area) t))
+    (dolist (area (mcclim-bezier:negative-areas design))
+      (with-drawing-options (medium :ink +background-ink+)
+        (%medium-draw-bezier-design medium (transform-region tr area) t)))))
+
 ;;; Postscript backend
 
 (in-package :clim-postscript)
-
-;;; Bezier support
 
 (defun %draw-bezier-curve (stream area)
   (format stream "newpath~%")
