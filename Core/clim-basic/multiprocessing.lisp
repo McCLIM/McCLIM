@@ -194,7 +194,12 @@ equivalent to progn."
   (bt:make-condition-variable))
 
 (defun condition-wait (cv lock &optional timeout)
-  (bt:condition-wait cv lock :timeout timeout))
+  ;; Some implementations have interface for condition wait with
+  ;; timeout, but raise an error when this function is called. When
+  ;; not necessary, we provide working variant.
+  (if timeout
+      (bt:condition-wait cv lock :timeout timeout)
+      (bt:condition-wait cv lock)))
 
 (defun condition-notify (cv)
   (bt:condition-notify cv))
