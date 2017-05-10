@@ -1,0 +1,6 @@
+@anchor{Generic-Function clim-extensions:port-all-font-families}
+@deffn {Generic Function} {clim-extensions:port-all-font-families} port &key invalidate-cache &allow-other-keys
+@findex clim-extensions:port-all-font-families
+Returns the list of all @code{font-family} instances known by PORT.
+With INVALIDATE-CACHE, cached font family information is discarded, if any.
+@end deffn

@@ -39,7 +39,6 @@
 /Documentation/Manual/LaTeX/fig-inspect-object-3.pdf
 /Documentation/Manual/LaTeX/fig-inspect-object-3.pdf_t
 /Documentation/Manual/native.png
-/Documentation/Manual/docstrings
 /Documentation/Manual/ex2.gif
 /Documentation/Manual/ex2.png
 /Documentation/Manual/inspect-as-cells.gif
@@ -54,7 +53,6 @@
 /Documentation/Manual/inspect-object-3.gif
 /Documentation/Manual/inspect-object-3.pdf
 /Documentation/Manual/Texinfo/tempfiles-stamp
-/Documentation/Manual/Texinfo/docstrings/
 /Documentation/Manual/Texinfo/ex2.gif
 /Documentation/Manual/Texinfo/ex2.pdf
 /Documentation/Manual/Texinfo/ex2.png
@@ -163,3 +161,4 @@
 /Documentation/Drei/drei.toc
 /Documentation/Drei/drei.tp
 /Documentation/Drei/drei.tps
+/Documentation/Manual/Texinfo/mcclim/

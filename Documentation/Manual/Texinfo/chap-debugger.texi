@@ -1,5 +1,5 @@
 @node Debugger
-@chapter Debugger
+@section Debugger
 @cindex Lisp Debugger
 @cindex CLIM Debugger
 @cindex Debugger
@@ -16,7 +16,7 @@ examining backtrace and choosing available restarts.
 @end menu
 
 @node Debugger usage
-@section Debugger usage
+@subsection Debugger usage
 
 To get up and running quickly with Debugger:
 
@@ -42,7 +42,7 @@ color. @t{Eval in frame} command evaluates expression in the active
 frame.
 
 @node Keyboard shortcuts
-@section Keyboard shortcuts
+@subsection Keyboard shortcuts
 
 Warning: these key accelerators may change in the future.
 
@@ -64,7 +64,7 @@ Warning: these key accelerators may change in the future.
 @end table
 
 @node Debugger API
-@section Debugger API
+@subsection Debugger API
 
 @deffn {Function} {debugger} condition me-or-my-encapsulation
 
