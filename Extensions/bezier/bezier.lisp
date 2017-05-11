@@ -209,13 +209,6 @@
 			(transform-segment transformation segment))
 	       (%segments path))))
 
-;;; FIXME! This overrides region-equal in Core/clim-basic/regions.lisp
-;;; -- we probably don't want that!
-(defmethod region-equal ((p1 point) (p2 point))
-  (let ((coordinate-epsilon (* #.(expt 2 10) double-float-epsilon)))
-    (and (<= (abs (- (point-x p1) (point-x p2))) coordinate-epsilon)
-	 (<= (abs (- (point-y p1) (point-y p2))) coordinate-epsilon))))	 
-
 (defmethod region-union ((r1 bezier-curve) (r2 bezier-curve))
   (let ((p (slot-value (car (last (%segments r1))) 'p3))
 	(seg (car (%segments r2))))
