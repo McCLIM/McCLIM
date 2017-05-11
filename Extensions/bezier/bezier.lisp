@@ -175,6 +175,21 @@
 ;;; A path defined as a sequence of Bezier curve segments.
 (defclass bezier-curve (path bezier-design segments-mixin bounding-rectangle-mixin) ())
 
+(defun relative-to-absolute-coord-seq (coord-seq)
+  "Takes a coord-seq of the form x0 y0 {x1 y1 x2 y2 x3 y3}+ and adds
+x0 to each x value and y0 to each y value. This is useful for
+representing a bezier curve where the positions of the control points
+are relative to x0 and y0."
+  (list* (first coord-seq)
+         (second coord-seq)
+         (loop for (x0 y0 x1 y1 x2 y2 x3 y3)
+            on coord-seq by #'(lambda (x) (nthcdr 6 x))
+            until (null x1)
+            append (list
+                    (+ x0 x1) (+ y0 y1)
+                    (+ x0 x2) (+ y0 y2)
+                    (+ x0 x3) (+ y0 y3)))))
+
 (defun make-bezier-thing (class point-seq)
   (assert (= (mod (length point-seq) 3) 1))
   (make-instance class
