@@ -200,7 +200,7 @@ are relative to x0 and y0."
 (defun make-bezier-thing* (class coord-seq)
   (assert (= (mod (length coord-seq) 6) 2))
   (make-instance class
-    :segments (loop for (x0 y0 x1 y1 x2 y2 x3 y3 x4 y4)
+    :segments (loop for (x0 y0 x1 y1 x2 y2 x3 y3)
 		      on coord-seq by #'(lambda (x) (nthcdr 6 x))
 		    until (null x1)
 		    collect (make-bezier-segment
