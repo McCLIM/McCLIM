@@ -2,9 +2,104 @@
 @chapter Developer manual
 
 @menu
+* Writing backends::
 * PostScript Backend::
 * Raster Image backend::
 @end menu
+
+@node Writing backends
+@section Writing backends
+
+@menu
+* Different types of backends::
+* Backend protocol::
+* Event handling::
+* Graft protocol::
+* Medium drawing::
+* Medium operations::
+* Port protocol::
+* Frame manager::
+* Pointer protocol (events?)::
+* Text size::
+* Text selection::
+* Miscellaneous::
+* Obsolete::
+@end menu
+
+@node Different types of backends
+@subsection Different types of backends
+
+Backend provides platform specific API for low level drawing
+operations, getting events, managing window geometry properties and
+providing native look-and-feel to the application.
+
+There are three types of backends:
+
+@table @asis
+@item Draw-only backend
+
+This type doesn't implement any kind of events and allows only drawing
+on it. A good example of it is the @xref{PostScript Backend} which is
+part of @emph{CLIM II} specification.
+
+@item Basic backend
+
+OpenGL, X, or HTML 5 canvas are resources which provide only drawing
+and event handling primitives. In this case we need to wrap their APIs
+for McCLIM to use. McCLIM will then use these drawing and windowing
+primitives to implement portable widgets.
+
+@item Native backend
+
+Native backend is based on already complete GUI library which provides
+a rich set of widgets (for example Cocoa or Win32 API). Additionally
+to the things needed to be implement in the first two cases, we can
+also map these native look and feel widgets in McCLIM.
+@end table
+
+The @code{clim-null} backend can be used as a template to start with a
+new backend. If the underlying library you write backend for manages
+window hierarchy, positioning and events, it is possible to base new
+pane types on
+@code{clim-standard:standard-full-mirrored-sheet-mixin}. Otherwise
+@code{clim-standard:standard-single-mirrored-sheet-mixin} provides
+calculation to support that hierarchy in Lisp side.
+
+@node Backend protocol
+@subheading Backend protocol
+
+@node Event handling
+@subheading Event handling
+
+@node Graft protocol
+@subheading Graft protocol
+
+@node Medium drawing
+@subheading Medium drawing
+
+@node Medium operations
+@subheading Medium operations
+
+@node Port protocol
+@subheading Port protocol
+
+@node Frame manager
+@subheading Frame manager, panes and gadgets
+
+@node Pointer protocol (events?)
+@subheading Pointer protocol (events?)
+
+@node Text size
+@subheading Text size
+
+@node Text selection
+@subheading Text selection
+
+@node Miscellaneous
+@subheading Miscellaneous
+
+@node Obsolete
+@subheading Obsolete
 
 @node PostScript Backend
 @section PostScript Backend
