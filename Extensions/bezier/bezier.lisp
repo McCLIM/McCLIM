@@ -176,19 +176,38 @@
 (defclass bezier-curve (path bezier-design segments-mixin bounding-rectangle-mixin) ())
 
 (defun relative-to-absolute-coord-seq (coord-seq)
-  "Takes a coord-seq of the form x0 y0 {x1 y1 x2 y2 x3 y3}+ and adds
-x0 to each x value and y0 to each y value. This is useful for
-representing a bezier curve where the positions of the control points
-are relative to x0 and y0."
+  "Takes a coord-seq of the form p0x p0y {c0x c0y c1x c1y p1x
+p1y}+. The first point on the curve, p0, is specified in absolute
+coordinates. The first control point, c0, is specified in coordinates
+relative to p0. Next comes the second control point, c1, which is
+specified in relative coordinates to the next point on the curve, p1,
+which itself is specified in coordinates relative to p0. If there are
+more than two points on the curve, the pattern repeats, with the
+coordinates of point n being relative to point n-1. As an example, the
+form (relative-to-absolute-coord-seq '(100 100 0 -50 0 -50 100 0))
+would yield the following coord-seq: '(100 100 100 50 200 50 200
+100). The first curve point is specified in absolute coordinates: (100
+100). The second point is offset (0 -50) from the first point, to
+yield (100 50). The second curve point is offset (100 0) from the
+first point, yielding (200 100) and the second control point (which
+appears before the curve point) is specified to be (0 -50) from the
+second curve point, yielding (200 50)."
   (list* (first coord-seq)
          (second coord-seq)
-         (loop for (x0 y0 x1 y1 x2 y2 x3 y3)
+         (loop for (p0x p0y c0x c0y c1x c1y p1x p1y)
             on coord-seq by #'(lambda (x) (nthcdr 6 x))
-            until (null x1)
-            append (list
-                    (+ x0 x1) (+ y0 y1)
-                    (+ x0 x2) (+ y0 y2)
-                    (+ x0 x3) (+ y0 y3)))))
+            for x-offset = p0x then x-offset
+            for y-offset = p0y then y-offset
+            until (null c0x)
+            do (setf c0x (+ c0x x-offset)
+                     c0y (+ c0y y-offset)
+                     p1x (+ p1x x-offset)
+                     p1y (+ p1y y-offset)
+                     c1x (+ c1x p1x)
+                     c1y (+ c1y p1y)
+                     x-offset p1x
+                     y-offset p1y)
+            append  (list c0x c0y c1x c1y p1x p1y))))
 
 (defun make-bezier-thing (class point-seq)
   (assert (= (mod (length point-seq) 3) 1))
