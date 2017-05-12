@@ -560,7 +560,7 @@ position for the character."
 		   &key ink clipping-region transformation
 		     line-style line-thickness
 		     line-unit line-dashes line-cap-shape
-		     (to-head t) from-head (head-length 10) (head-width 5))
+		     (to-head t) from-head (head-length 10) (head-width 5) angle)
   (declare (ignore ink clipping-region transformation
 		   line-style line-thickness
 		   line-unit line-dashes line-cap-shape
@@ -574,14 +574,14 @@ position for the character."
 		    &key ink clipping-region transformation
 		      line-style line-thickness
 		      line-unit line-dashes line-cap-shape
-		      (to-head t) from-head (head-length 10) (head-width 5))
+                      (to-head t) from-head (head-length 10) (head-width 5) angle)
   (declare (ignore ink clipping-region transformation
 		   line-style line-thickness
 		   line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
     (with-translation (sheet x2 y2)
-      (with-rotation (sheet (atan* (- x1 x2)
-                                   (- y1 y2)))
+      (with-rotation (sheet (or angle (atan* (- x1 x2)
+                                             (- y1 y2))))
         (let* ((end 0.0)
                (start (sqrt (+ (expt (- x2 x1) 2)
 			       (expt (- y2 y1) 2))))
