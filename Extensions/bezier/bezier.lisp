@@ -79,11 +79,7 @@
   (- (* (realpart z) (point-y v))
      (* (imagpart z) (point-x v))))
 
-(defclass bezier-design (design)
-  ((%or :accessor original-region :initform nil)
-   (%trans :initarg :transformation
-	   :reader transformation
-	   :initform +identity-transformation+)))
+(defclass bezier-design (design) ())
 
 (defgeneric medium-draw-bezier-design* (stream design))
 
@@ -287,28 +283,16 @@ second curve point, yielding (200 50)."
 (defgeneric segments (design))
 
 (defmethod segments ((design bezier-design))
-  (let ((tr (transformation design)))
-    (mapcar (lambda (s) (transform-segment tr s)) (%segments design))))
+  (%segments design))
 
 (defmethod transform-region (transformation (design bezier-design))
-  (let* ((tr (transformation design))
-         (result (if (translation-transformation-p transformation)
-                     (make-instance (class-of design)
-		       :segments (%segments design)
-		       :transformation 
-		       (compose-transformations transformation tr))
-                     (make-instance (class-of design)
-		       :segments (mapcar (lambda (s)
-					   (transform-segment transformation s))
-				  (segments design))))))
-    (when (translation-transformation-p transformation)
-      (setf (original-region result) (or (original-region design) design)))
-    result))
+  (make-instance (class-of design)
+                 :segments (mapcar (lambda (s)
+                                     (transform-segment transformation s))
+                                   (segments design))))
 
 (defmethod compute-bounding-rectangle* ((design bezier-design))
-  (multiple-value-bind (lx ly ux uy) (call-next-method)
-    (let ((tr (transformation design)))
-      (transform-rectangle* tr lx ly ux uy))))
+  (call-next-method))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -316,24 +300,12 @@ second curve point, yielding (200 50)."
 
 ;;; A union of bezier areas.  This is not itself a bezier area.
 (defclass bezier-union (area bezier-design)
-  ((%trans :initarg :transformation
-	   :reader transformation
-	   :initform +identity-transformation+)
-   (%areas :initarg :areas :initform '() :reader areas)))
+  ((%areas :initarg :areas :initform '() :reader areas)))
 
 (defmethod transform-region (transformation (union bezier-union))
-  (let* ((tr (transformation union))
-         (new-tr (compose-transformations transformation tr))
-         (result (if (translation-transformation-p transformation)
-                     (make-instance 'bezier-union
-		       :areas (areas union)
-		       :transformation new-tr)
-                     (make-instance 'bezier-union
-		       :areas (loop for area in (areas union)
-				    collect (transform-region new-tr area))))))
-    (when (translation-transformation-p transformation)
-      (setf (original-region result) (or (original-region union) union)))
-    result))
+  (make-instance 'bezier-union
+                 :areas (loop for area in (areas union)
+                           collect (transform-region transformation area))))
 
 (defun bounding-rectangle-of-areas (areas)
   (multiple-value-bind (final-min-x final-min-y final-max-x final-max-y)
@@ -348,41 +320,22 @@ second curve point, yielding (200 50)."
     (values final-min-x final-min-y final-max-x final-max-y)))
 
 (defmethod bounding-rectangle* ((design bezier-union))
-  (multiple-value-bind (lx ly ux uy)
-      (bounding-rectangle-of-areas (areas design))
-    (transform-rectangle* (transformation design) lx ly ux uy)))
+  (bounding-rectangle-of-areas (areas design)))
 
 (defmethod region-union ((r1 bezier-area) (r2 bezier-area))
   (make-instance 'bezier-union :areas (list r1 r2)))
 
 (defmethod region-union ((r1 bezier-union) (r2 bezier-area))
-  (let ((tr (transformation r1)))
-    (make-instance 'bezier-union 
-      :areas (cons (untransform-region tr r2) (areas r1))
-      :transformation tr)))
+  (make-instance 'bezier-union
+                 :areas (cons r2 (areas r1))))
 
 (defmethod region-union ((r1 bezier-area) (r2 bezier-union))
-  (let ((tr (transformation r2)))
-    (make-instance 'bezier-union 
-      :areas (cons (untransform-region tr r1) (areas r2))
-      :transformation tr)))
+  (make-instance 'bezier-union
+                 :areas (cons r1 (areas r2))))
 
 (defmethod region-union ((r1 bezier-union) (r2 bezier-union))
-  (let ((tr1 (transformation r1))
-        (tr2 (transformation r2)))
-    (if (transformation-equal tr1 tr2)
-        (make-instance 'bezier-union 
-	  :areas (append (areas r1) (areas r2))
-	  :transformation tr1)
-        (let ((len1 (length (areas r1)))
-              (len2 (length (areas r2))))
-          (if (> len2 len1)
-              (make-instance 'bezier-union
-		:areas (append (mapcar (lambda (r) (untransform-region tr2 (transform-region tr1 r))) (areas r1)) (areas r2))
-		:transformation tr2)
-              (make-instance 'bezier-union
-		:areas (append (mapcar (lambda (r) (untransform-region tr1 (transform-region tr2 r))) (areas r2)) (areas r1))
-                             :transformation tr1))))))
+  (make-instance 'bezier-union
+                 :areas (append (areas r1) (areas r2))))
 
 (defclass bezier-difference (area bezier-design)
   ((%positive-areas :initarg :positive-areas :initform '() :reader positive-areas)
@@ -392,13 +345,10 @@ second curve point, yielding (200 50)."
   (let* ((pareas (loop for area in (positive-areas area)
                        collect (transform-region transformation area)))
          (nareas (loop for area in (negative-areas area)
-                       collect (transform-region transformation area)))
-         (result (make-instance 'bezier-difference
-		   :positive-areas pareas
-		   :negative-areas nareas)))
-    (when (translation-transformation-p transformation)
-      (setf (original-region result) (or (original-region area) area)))
-    result))
+                    collect (transform-region transformation area))))
+    (make-instance 'bezier-difference
+                   :positive-areas pareas
+                   :negative-areas nareas)))
 
 (defmethod bounding-rectangle* ((design bezier-difference))
   (bounding-rectangle-of-areas (positive-areas design)))
@@ -409,23 +359,19 @@ second curve point, yielding (200 50)."
     :negative-areas (list r2)))
 
 (defmethod region-difference ((r1 bezier-area) (r2 bezier-union))
-  (let ((tr (transformation r2)))
-    (make-instance 'bezier-difference
-      :positive-areas (list r1)
-      :negative-areas (mapcar (lambda (r) (transform-region tr r)) (areas r2)))))
+  (make-instance 'bezier-difference
+                 :positive-areas (list r1)
+                 :negative-areas (areas r2)))
 
 (defmethod region-difference ((r1 bezier-union) (r2 bezier-area))
-  (let ((tr (transformation r1)))
-    (make-instance 'bezier-difference
-      :positive-areas (mapcar (lambda (r) (transform-region tr r)) (areas r1))
-      :negative-areas (list r2))))
+  (make-instance 'bezier-difference
+                 :positive-areas (areas r1)
+                 :negative-areas (list r2)))
 
 (defmethod region-difference ((r1 bezier-union) (r2 bezier-union))
-  (let ((tr1 (transformation r1))
-        (tr2 (transformation r2)))
-    (make-instance 'bezier-difference
-      :positive-areas (mapcar (lambda (r) (transform-region tr1 r)) (areas r1))
-      :negative-areas (mapcar (lambda (r) (transform-region tr2 r)) (areas r2)))))
+  (make-instance 'bezier-difference
+                 :positive-areas (areas r1)
+                 :negative-areas (areas r2)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -481,12 +427,8 @@ second curve point, yielding (200 50)."
 
 (defmethod reverse-path ((path bezier-area))
   (make-instance 'bezier-area
-    :segments (reverse (mapcar #'reverse-segment (%segments path)))
-    :transformation (transformation path)))
+    :segments (reverse (mapcar #'reverse-segment (%segments path)))))
 
-;;; slanting transformation are used by Metafont
-(defun make-slanting-transformation (slant)
-  (make-transformation 1.0 slant 0.0 1.0 0.0 0.0))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -803,9 +745,8 @@ second curve point, yielding (200 50)."
 
 (defgeneric ensure-pixmap (medium design))
 
-(defmethod ensure-pixmap (medium rdesign)
-  (let* ((design (or (original-region rdesign) rdesign))
-         (pixmap (gethash (list (medium-sheet medium) (resolve-ink medium) design)
+(defmethod ensure-pixmap (medium design)
+  (let* ((pixmap (gethash (list (medium-sheet medium) (resolve-ink medium) design)
 			 *pixmaps*)))
     (when (null pixmap)
       (let* ((picture (render-to-array design))
@@ -946,18 +887,16 @@ second curve point, yielding (200 50)."
 
 (defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
                                                      (design bezier-union))
-  (let ((tr (transformation design)))
-    (dolist (area (areas design))
-      (%medium-draw-bezier-design medium (transform-region tr area) t))))
+  (dolist (area (areas design))
+    (%medium-draw-bezier-design medium area t)))
 
 (defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
                                                      (design bezier-difference))
-  (let ((tr (transformation design)))
-    (dolist (area (positive-areas design))
-      (%medium-draw-bezier-design medium (transform-region tr area) t))
-    (dolist (area (negative-areas design))
-      (with-drawing-options (medium :ink +background-ink+)
-        (%medium-draw-bezier-design medium (transform-region tr area) t)))))
+  (dolist (area (positive-areas design))
+    (%medium-draw-bezier-design medium area t))
+  (dolist (area (negative-areas design))
+    (with-drawing-options (medium :ink +background-ink+)
+      (%medium-draw-bezier-design medium area t))))
 
 ;;; Postscript backend
 
@@ -1008,9 +947,8 @@ second curve point, yielding (200 50)."
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
-    (let ((tr (transformation design)))
-      (dolist (area (areas design))
-        (%draw-bezier-area stream (transform-region tr area))))))
+    (dolist (area (areas design))
+      (%draw-bezier-area stream area))))
 
 (defmethod medium-draw-bezier-design*
     ((medium postscript-medium) (design bezier-difference))
