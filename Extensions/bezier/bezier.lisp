@@ -291,9 +291,6 @@ second curve point, yielding (200 50)."
                                      (transform-segment transformation s))
                                    (segments design))))
 
-(defmethod compute-bounding-rectangle* ((design bezier-design))
-  (call-next-method))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Special cases of combined Bezier areas
