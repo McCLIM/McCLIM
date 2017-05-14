@@ -147,16 +147,21 @@
 (defgeneric compute-bounding-rectangle* (object))
 
 (defmethod compute-bounding-rectangle* ((segments-mixin segments-mixin))
-  (multiple-value-bind (final-min-x final-min-y final-max-x final-max-y)
-      (segment-bounding-rectangle (car (%segments segments-mixin)))
-    (loop for segment in (cdr (%segments segments-mixin))
-	  do (multiple-value-bind (min-x min-y max-x max-y)
-		 (segment-bounding-rectangle segment)
-	       (setf final-min-x (min final-min-x min-x)
-		     final-min-y (min final-min-y min-y)
-		     final-max-x (max final-max-x max-x)
-		     final-max-y (max final-max-y max-y))))
-    (values final-min-x final-min-y final-max-x final-max-y)))
+  (values-list
+   (reduce (lambda (extrema segment)
+             (multiple-value-bind (minx miny maxx maxy)
+                 (segment-bounding-rectangle segment)
+               (if extrema
+                   (destructuring-bind (fminx fminy fmaxx fmaxy)
+                       extrema
+                     (list
+                      (min minx fminx)
+                      (min miny fminy)
+                      (max maxx fmaxx)
+                      (max maxy fmaxy)))
+                   (list minx miny maxx maxy))))
+           (segments segments-mixin)
+           :initial-value nil)))
 
 (defmethod initialize-instance :after ((region segments-mixin) &rest args)
   (declare (ignore args))
