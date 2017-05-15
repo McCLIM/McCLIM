@@ -480,10 +480,8 @@
 	  (dolist (lt '(2 7))
 	    (with-drawing-options (stream :line-thickness lt :line-joint-shape lj :line-dashes ld)
 	      (draw-text* stream (format nil "~A ~A ~A" ld lj lt) 20 y)
-	      (let ((x-positions '(150 300)))
-                (declare (ignore x-positions))
-                (draw-rectangle* stream 200 (+ 10 y) 450 (+ 35 y)
-				   :filled nil))
+	      (draw-rectangle* stream 200 (+ 10 y) 450 (+ 35 y)
+                               :filled nil)
 	      (setf y (+ 40 y))))))))
 
 (define-drawing-test "04) Rectangle Clipping" (stream)
@@ -542,14 +540,12 @@
 	(dolist (lt '(2 7 10))
 	  (with-drawing-options (stream :line-thickness lt :line-dashes ld)
 	    (draw-text* stream (format nil "~A ~A" ld lt) 20 y)
-	    (let ((x-positions '(150 300)))
-              (declare (ignore x-positions))
-	      (draw-ellipse* stream 150 (+ 10 y) 0 30 50 0
-			     :filled nil)
-	      (draw-ellipse* stream 270 (+ 10 y) 0 30 50 0 :start-angle (/ pi 2) :end-angle pi
-			     :filled nil)
-	      (draw-ellipse* stream 390 (+ 10 y) 0 30 50 0 :start-angle (- (/ pi 2)) :end-angle pi
-			     :filled nil))
+	    (draw-ellipse* stream 150 (+ 10 y) 0 30 50 0
+                           :filled nil)
+            (draw-ellipse* stream 270 (+ 10 y) 0 30 50 0 :start-angle (/ pi 2) :end-angle pi
+                           :filled nil)
+            (draw-ellipse* stream 390 (+ 10 y) 0 30 50 0 :start-angle (- (/ pi 2)) :end-angle pi
+                           :filled nil)
 	    (setf y (+ 80 y)))))))
 
 (define-drawing-test "05) Ellipse Clipping" (stream)
@@ -609,14 +605,12 @@
 	(dolist (lt '(2 7 10))
 	  (with-drawing-options (stream :line-thickness lt :line-dashes ld)
 	    (draw-text* stream (format nil "~A ~A" ld lt) 20 y)
-	    (let ((x-positions '(150 300)))
-              (declare (ignore x-positions))
-	      (draw-circle* stream 200 (+ 10 y) 30
-			    :filled nil)
-	      (draw-circle* stream 290 (+ 10 y) 30 :start-angle (/ pi 2) :end-angle pi
-			    :filled nil)
-	      (draw-circle* stream 380 (+ 10 y) 30 :start-angle (- (/ pi 2)) :end-angle pi
-			    :filled nil))
+	    (draw-circle* stream 200 (+ 10 y) 30
+                          :filled nil)
+            (draw-circle* stream 290 (+ 10 y) 30 :start-angle (/ pi 2) :end-angle pi
+                          :filled nil)
+            (draw-circle* stream 380 (+ 10 y) 30 :start-angle (- (/ pi 2)) :end-angle pi
+                          :filled nil)
 	    (setf y (+ 80 y)))))))
 
 (define-drawing-test "06) Circle Clipping" (stream)
