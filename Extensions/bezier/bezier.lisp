@@ -79,10 +79,6 @@
   (- (* (realpart z) (point-y v))
      (* (imagpart z) (point-x v))))
 
-(defun ensure-list (sequence)
-  (if (listp sequence)
-      sequence
-      (map 'list #'identity sequence)))
 
 
 (defclass bezier-design (design) ())
@@ -202,7 +198,7 @@ second curve point, yielding (200 50)."
   (list* (first coord-seq)
          (second coord-seq)
          (loop for (p0x p0y c0x c0y c1x c1y p1x p1y)
-            on (ensure-list coord-seq) by #'(lambda (x) (nthcdr 6 x))
+            on (coerce coord-seq 'list) by #'(lambda (x) (nthcdr 6 x))
             for x-offset = p0x then x-offset
             for y-offset = p0y then y-offset
             until (null c0x)
@@ -289,9 +285,9 @@ second curve point, yielding (200 50)."
     (if (region-equal p (slot-value seg 'p0))
 	(with-slots (p1 p2 p3) seg
 	  (make-instance 'bezier-curve
-                         :segments (append (ensure-list (%segments r1))
+                         :segments (append (coerce (%segments r1) 'list)
                                            (cons (make-bezier-segment p p1 p2 p3)
-                                                 (cdr (ensure-list (%segments r2)))))))
+                                                 (cdr (coerce (%segments r2) 'list))))))
 	(call-next-method))))
 
 ;;; an area defined as a closed path of Bezier curve segments
@@ -631,7 +627,7 @@ second curve point, yielding (200 50)."
 		      collect (- (point-to-complex p1) (point-to-complex p0))))
 	 (split-points (find-split-points sides segment))
 	 (segments (split-segment segment split-points)))
-    (loop for segment in (ensure-list segments)
+    (loop for segment in (coerce segments 'list)
 	  if first collect (area-at-point area (slot-value segment 'p0))
 	  collect (convert-primitive-segment-to-bezier-area 
 		   (polygon-points polygon) segment)
@@ -643,7 +639,7 @@ second curve point, yielding (200 50)."
   (let ((polygon (polygonalize area)))
     (make-instance 'bezier-union
       :areas 
-      (loop for segment in (ensure-list (%segments path))
+      (loop for segment in (coerce (%segments path) 'list)
 	    for first = t then nil
 	    append (convolve-polygon-and-segment area polygon segment first)))))
 
