@@ -79,7 +79,7 @@
 (defmacro tracking-pointer
     ((sheet &rest args
             &key pointer multiple-window transformp context-type
-            (highlight nil highlight-p))
+            highlight)
      &body body)
   (declare (ignorable multiple-window pointer transformp context-type highlight))
   (setq sheet (stream-designator-symbol sheet '*standard-output*))
