@@ -90,12 +90,8 @@
 
 ;;; coordinate is defined in coordinates.lisp
 
-(defconstant +everywhere+ (make-instance 'everywhere-region))
-(defconstant +nowhere+ (make-instance 'nowhere-region))
-
-(setf everywhere* +everywhere+)
-(setf nowhere* +nowhere+)
-
+(setf +everywhere+ (make-instance 'everywhere-region))
+(setf +nowhere+ (make-instance 'nowhere-region))
 
 (defmethod bounding-rectangle* ((x nowhere-region))
   (values 0 0 0 0))
