@@ -564,7 +564,7 @@ position for the character."
   (declare (ignore ink clipping-region transformation
 		   line-style line-thickness
 		   line-unit line-dashes line-cap-shape
-                   to-head from-head head-length head-width))
+                   to-head from-head head-length head-width angle))
   (multiple-value-bind (x1 y1) (point-position point-1)
     (multiple-value-bind (x2 y2) (point-position point-2)
       (apply #'draw-arrow* sheet x1 y1 x2 y2 args))))
