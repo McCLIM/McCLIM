@@ -102,7 +102,7 @@ pointer-exit and grab-pointer for non mirrored sheets"))
 (defmethod climi::distribute-event ((port standard-handled-event-port-mixin) (event pointer-event))
   (let* ((sheet (port-pointer-sheet port))
 	 (grab-sheet (pointer-grab-sheet port))
-	 (destination (or (pointer-grab-sheet port) sheet)))
+	 (destination (or grab-sheet sheet)))
     (when sheet
       (cond ((eq sheet (event-sheet event))
 	     (dispatch-event sheet event))
