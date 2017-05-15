@@ -1,0 +1,7 @@
+@anchor{Generic-Function clim-extensions:medium-miter-limit}
+@deffn {Generic Function} {clim-extensions:medium-miter-limit} medium
+@findex clim-extensions:medium-miter-limit
+If LINE-STYLE-JOINT-SHAPE is :MITER and the angle between two
+   consequent lines is less than the values return by
+   @code{medium-miter-limit}, :BEVEL is used instead.
+@end deffn

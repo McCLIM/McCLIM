@@ -22,9 +22,9 @@
 (in-package :clim-internals)
 
 ;;; Note: in the methods defined on output streams, I often use
-;;;	  the sheet's medium as the argument to the draw-* routines.
-;;;	  This is so that they don't get recorded if the stream also
-;;;	  happens to be an output-recording-stream. - MikeMac 1/7/99
+;;;       the sheet's medium as the argument to the draw-* routines.
+;;;       This is so that they don't get recorded if the stream also
+;;;       happens to be an output-recording-stream. - MikeMac 1/7/99
 
 ;;; Standard-Output-Stream class
 
@@ -41,11 +41,11 @@
 ;;; Cursor-Mixin class
 (defclass cursor-mixin ()
   ((sheet :initarg :sheet
-	  :reader cursor-sheet)
+          :reader cursor-sheet)
    (x :initform 0 :initarg :x-position)
    (y :initform 0 :initarg :y-position)
    (width :initform 8)
-   (appearance :type (member :solid :hollow) 
+   (appearance :type (member :solid :hollow)
                :initarg :appearance :initform :hollow
                :accessor cursor-appearance)
    ;; XXX what does "cursor is active" mean?
@@ -102,21 +102,21 @@
   (with-slots (x y) cursor
     (letf (((cursor-state cursor) nil))
       (multiple-value-prog1
-	  (setf (values x y) (values nx ny))))
+          (setf (values x y) (values nx ny))))
     (when (and (cursor-active cursor)
-	       (output-recording-stream-p (cursor-sheet cursor)))
+               (output-recording-stream-p (cursor-sheet cursor)))
       (stream-close-text-output-record (cursor-sheet cursor)))))
 
 (defmethod flip-screen-cursor ((cursor cursor-mixin))
   (when (stream-drawing-p (cursor-sheet cursor))
     (with-slots (x y sheet width) cursor
       (let ((height (cursor-height cursor)))
-	(draw-rectangle* (sheet-medium (cursor-sheet cursor))
-			 x y
-			 (+ x width) (+ y height)
-			 :filled (ecase (cursor-appearance cursor)
+        (draw-rectangle* (sheet-medium (cursor-sheet cursor))
+                         x y
+                         (+ x width) (+ y height)
+                         :filled (ecase (cursor-appearance cursor)
                                    (:solid t) (:hollow nil))
-			 :ink +flipping-ink+)))))
+                         :ink +flipping-ink+)))))
 
 (defgeneric display-cursor (cursor state))
 
@@ -126,27 +126,27 @@
   (with-slots (x y sheet width) cursor
     (let ((height (cursor-height cursor)))
       (case state
-	(:draw
-	 (draw-rectangle* (sheet-medium (cursor-sheet cursor))
-			  x y
-			  (+ x width) (+ y height)
-			  :filled (ecase (cursor-appearance cursor)
-				    (:solid t) (:hollow nil))
-			  :ink +foreground-ink+))       
+        (:draw
+         (draw-rectangle* (sheet-medium (cursor-sheet cursor))
+                          x y
+                          (+ x width) (+ y height)
+                          :filled (ecase (cursor-appearance cursor)
+                                    (:solid t) (:hollow nil))
+                          :ink +foreground-ink+))
         (:erase
-	 ;; This is how I'd like this to work, as painting over with
-	 ;; the background ink is repugnant. I leave this disabled
-	 ;; because I'm concerned about infinite recursion if
-	 ;; replay-output-record calls here. --Hefner
-	 #+nil (repaint-sheet (cursor-sheet cursor)
-			      (make-bounding-rectangle x y (+ 1 x width)
-						       (+ 1 y height)))
-	 (draw-rectangle* (sheet-medium (cursor-sheet cursor))
-			  x y
-			  (+ x width) (+ y height)
-			  :filled (ecase (cursor-appearance cursor)
-				    (:solid t) (:hollow nil))
-			  :ink +background-ink+))))))
+         ;; This is how I'd like this to work, as painting over with
+         ;; the background ink is repugnant. I leave this disabled
+         ;; because I'm concerned about infinite recursion if
+         ;; replay-output-record calls here. --Hefner
+         #+nil (repaint-sheet (cursor-sheet cursor)
+                              (make-bounding-rectangle x y (+ 1 x width)
+                                                       (+ 1 y height)))
+         (draw-rectangle* (sheet-medium (cursor-sheet cursor))
+                          x y
+                          (+ x width) (+ y height)
+                          :filled (ecase (cursor-appearance cursor)
+                                    (:solid t) (:hollow nil))
+                          :ink +background-ink+))))))
 
 ;;; Standard-Text-Cursor class
 
@@ -197,9 +197,9 @@
     (medium-finish-output medium)))
 
 (defmethod compose-space ((pane standard-extended-output-stream)
-			  &key width height)
+                          &key width height)
   (declare (ignorable width height))
-  
+
   (with-slots (seos-current-width seos-current-height) pane
     (make-space-requirement :width seos-current-width
                             :height seos-current-height)))
@@ -208,7 +208,7 @@
     ((stream standard-extended-output-stream) &rest args)
   (declare (ignore args))
   (setf (stream-text-cursor stream)
-	(make-instance 'standard-text-cursor :sheet stream))
+        (make-instance 'standard-text-cursor :sheet stream))
   (setf (cursor-active (stream-text-cursor stream)) t))
 
 
@@ -229,9 +229,9 @@
     ((stream standard-extended-output-stream) dx dy)
   (multiple-value-bind (x y) (cursor-position (stream-text-cursor stream))
     (let ((dx (or dx 0))
-	  (dy (or dy 0)))
+          (dy (or dy 0)))
     (setf (cursor-position (stream-text-cursor stream))
-	  (values (+ x dx) (+ y dy))))))
+          (values (+ x dx) (+ y dy))))))
 
 ;;;
 
@@ -240,14 +240,14 @@
   (declare (ignorable region))
   (let ((cursor (stream-text-cursor stream)))
     (if (cursor-state cursor)
-	;; Erase the cursor so that the subsequent flip operation will
-	;; make a cursor, whether or not the next-method erases the
-	;; location of the cursor.
-	;; XXX clip to region?  No one else seems to...
-	;; Sure clip to region! --GB
-	(letf (((cursor-state cursor) nil))
-	  (call-next-method))
-	(call-next-method))))
+        ;; Erase the cursor so that the subsequent flip operation will
+        ;; make a cursor, whether or not the next-method erases the
+        ;; location of the cursor.
+        ;; XXX clip to region?  No one else seems to...
+        ;; Sure clip to region! --GB
+        (letf (((cursor-state cursor) nil))
+          (call-next-method))
+        (call-next-method))))
 
 (defgeneric scroll-vertical (stream dy))
 
@@ -273,95 +273,95 @@
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
       (declare (ignore cx))
       (draw-rectangle* (sheet-medium stream) margin cy (+ margin 4)
-		       (+ cy (slot-value stream 'height))
-		       :ink +foreground-ink+
-		       :filled t)))
+                       (+ cy (slot-value stream 'height))
+                       :ink +foreground-ink+
+                       :filled t)))
   (stream-write-char stream #\newline))
 
 (defun seos-write-string (stream string &optional (start 0) end)
   (let* ((medium       (sheet-medium stream))
-	 (text-style   (medium-text-style medium))
-	 (new-baseline (text-style-ascent text-style medium))
-	 (new-height   (text-style-height text-style medium))
-	 (margin       (stream-text-margin stream))
-	 (end          (or end (length string))))
+         (text-style   (medium-text-style medium))
+         (new-baseline (text-style-ascent text-style medium))
+         (new-height   (text-style-height text-style medium))
+         (margin       (stream-text-margin stream))
+         (end          (or end (length string))))
     (flet ((find-split (delta)  ;; FIXME: This can be done smarter.
-	     (loop for i from (1+ start) upto end
-		   as sub-width = (stream-string-width stream string
-						       :start start :end i
-						       :text-style text-style)
-		   while (<= sub-width delta)
-		   finally (return (1- i)))))
+             (loop for i from (1+ start) upto end
+                   as sub-width = (stream-string-width stream string
+                                                       :start start :end i
+                                                       :text-style text-style)
+                   while (<= sub-width delta)
+                   finally (return (1- i)))))
       (when (eql end 0)
         (return-from seos-write-string))
       (with-slots (baseline height vspace) stream
-	(multiple-value-bind (cx cy) (stream-cursor-position stream)
-	  (when (> new-baseline baseline)
-	    (setq baseline new-baseline))
-	  (if (> new-height height)
-	      (setq height new-height))
-	  (let ((width (stream-string-width stream string
-					    :start start :end end
-					    :text-style text-style))
-		(split end))
-	    (when (>= (+ cx width) margin)
-	      (ecase (stream-end-of-line-action stream)
-		(:wrap
+        (multiple-value-bind (cx cy) (stream-cursor-position stream)
+          (when (> new-baseline baseline)
+            (setq baseline new-baseline))
+          (if (> new-height height)
+              (setq height new-height))
+          (let ((width (stream-string-width stream string
+                                            :start start :end end
+                                            :text-style text-style))
+                (split end))
+            (when (>= (+ cx width) margin)
+              (ecase (stream-end-of-line-action stream)
+                (:wrap
                  ;; Let's prevent infinite recursion if there isn't
                  ;; room for even a single character.
-		 (setq split (max (find-split (- margin cx))
-                                  (1+ start)))) 
-		(:scroll
-		 (scroll-horizontal stream width))
-		(:allow)))
-	    (unless (= start split)
-	      (stream-write-output stream
-				   string
+                 (setq split (max (find-split (- margin cx))
+                                  (1+ start))))
+                (:scroll
+                 (scroll-horizontal stream width))
+                (:allow)))
+            (unless (= start split)
+              (stream-write-output stream
+                                   string
                                    nil
-				   start split)
-	      (setq cx (+ cx width))	      
+                                   start split)
+              (setq cx (+ cx width))
           (with-slots (x y) (stream-text-cursor stream)
                 (setf x cx y cy)))
-	    (when (/= split end)
-	      (let ((current-baseline baseline))
-		(setf baseline current-baseline))		
-	      (stream-wrap-line stream)
-	      (seos-write-string stream string split end))))))))
+            (when (/= split end)
+              (let ((current-baseline baseline))
+                (setf baseline current-baseline))               
+              (stream-wrap-line stream)
+              (seos-write-string stream string split end))))))))
 
 (defun seos-write-newline (stream)
   (let ((medium       (sheet-medium stream))
-	(%view-height (bounding-rectangle-height
-		       (or (pane-viewport stream)
-			   stream)))
-	(view-height  (bounding-rectangle-height stream)))    
+        (%view-height (bounding-rectangle-height
+                       (or (pane-viewport stream)
+                           stream)))
+        (view-height  (bounding-rectangle-height stream)))
     (with-slots (baseline height vspace) stream
       (multiple-value-bind (cx cy) (stream-cursor-position stream)
-	(setf height (max height (text-style-height (medium-text-style medium) medium)))
-	(setf cx 0
-	      cy (+ cy height vspace))
-	(when (> cy view-height)
-	  (ecase (stream-end-of-page-action stream)
-	    ((:scroll :allow)
+        (setf height (max height (text-style-height (medium-text-style medium) medium)))
+        (setf cx 0
+              cy (+ cy height vspace))
+        (when (> cy view-height)
+          (ecase (stream-end-of-page-action stream)
+            ((:scroll :allow)
              (change-space-requirements stream
                                         :width  (bounding-rectangle-width stream)
                                         :height cy))
-	    (:wrap
-	     (setq cy 0))))
-	(unless (eq :allow (stream-end-of-page-action stream))
-	  (scroll-extent stream 0 (max 0 (-  cy  %view-height))))
-	;; mikemac says that this "erase the new line" behavior is
-	;; required by the stream text protocol, but I don't see
-	;; it.  I'm happy to put this back in again, but in the
-	;; meantime it makes debugging of updating-output a bit easier
-	;; not to have "extra" records laying around.  If/When it goes
-	;; back in... the draw-rectangle has to happen on the stream,
-	;; not the medium. -- moore
-	#+nil(draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
-			      :ink +background-ink+
-			      :filled t)
-	(setq baseline 0
-	      height   0)
-	(setf (stream-cursor-position stream) (values cx cy))))))
+            (:wrap
+             (setq cy 0))))
+        (unless (eq :allow (stream-end-of-page-action stream))
+          (scroll-extent stream 0 (max 0 (-  cy  %view-height))))
+        ;; mikemac says that this "erase the new line" behavior is
+        ;; required by the stream text protocol, but I don't see
+        ;; it.  I'm happy to put this back in again, but in the
+        ;; meantime it makes debugging of updating-output a bit easier
+        ;; not to have "extra" records laying around.  If/When it goes
+        ;; back in... the draw-rectangle has to happen on the stream,
+        ;; not the medium. -- moore
+        #+nil(draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
+                              :ink +background-ink+
+                              :filled t)
+        (setq baseline 0
+              height   0)
+        (setf (stream-cursor-position stream) (values cx cy))))))
 
 
 
@@ -375,17 +375,17 @@ STREAM-STRING-WIDTH will be called."))
 
 ;;; The cursor is in stream coordinates.
 (defmethod stream-write-output (stream line string-width
-				&optional (start 0) end)
+                                &optional (start 0) end)
   (declare (ignore string-width))
   (with-slots (baseline vspace) stream
      (multiple-value-bind (cx cy) (stream-cursor-position stream)
        (draw-text* (sheet-medium stream) line
                    cx (+ cy baseline)
-		   :transformation +identity-transformation+
-		   :start start :end end))))
+                   :transformation +identity-transformation+
+                   :start start :end end))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
-  (with-cursor-off stream  
+  (with-cursor-off stream
    (if (char= #\Newline char)
        (seos-write-newline stream)
      (seos-write-string stream (string char)))))
@@ -397,27 +397,27 @@ STREAM-STRING-WIDTH will be called."))
 ;;; down. Using SUBSEQ does fix this interaction that's been here
 ;;; since 4/16/03 - Mikemac 12/6/2003
 (defmethod stream-write-string ((stream standard-extended-output-stream) string
-				&optional (start 0) end)
+                                &optional (start 0) end)
   (let ((seg-start start)
-	(end (or end (length string))))
+        (end (or end (length string))))
     (with-cursor-off stream
      (loop for i from start below end do
        (when (char= #\Newline
-		    (char string i))
-	 (seos-write-string stream (subseq string seg-start i))
-	 (seos-write-newline stream)
-	 (setq seg-start (1+ i))))
+                    (char string i))
+         (seos-write-string stream (subseq string seg-start i))
+         (seos-write-newline stream)
+         (setq seg-start (1+ i))))
      (seos-write-string stream (subseq string seg-start end)))))
 
 (defmethod stream-character-width ((stream standard-extended-output-stream) char
-				   &key (text-style nil))
+                                   &key (text-style nil))
   (with-sheet-medium (medium stream)
     (text-style-character-width (or text-style (medium-text-style medium))
                                 medium
                                 char)))
 
 (defmethod stream-string-width ((stream standard-extended-output-stream) string
-				&key (start 0) (end nil) (text-style nil))
+                                &key (start 0) (end nil) (text-style nil))
   (with-sheet-medium (medium stream)
     (if (null text-style)
         (setq text-style (medium-text-style (sheet-medium stream))))
@@ -430,14 +430,14 @@ STREAM-STRING-WIDTH will be called."))
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
     (or margin
-	(- (bounding-rectangle-width (or (pane-viewport stream)
+        (- (bounding-rectangle-width (or (pane-viewport stream)
                                          stream))
-	   (text-size stream "O")))))
+           (text-size stream "O")))))
 
 (defmethod stream-line-height ((stream standard-extended-output-stream)
                                &key (text-style nil))
   (+ (text-style-height (or text-style (medium-text-style (sheet-medium stream)))
-			(sheet-medium stream))
+                        (sheet-medium stream))
      (stream-vertical-spacing stream)))
 
 (defmethod stream-line-column ((stream standard-extended-output-stream))
@@ -452,7 +452,7 @@ STREAM-STRING-WIDTH will be called."))
 
 (defmacro with-room-for-graphics ((&optional (stream t)
                                    &rest arguments
-				   &key (first-quadrant t)
+                                   &key (first-quadrant t)
                                         height
                                         (move-cursor t)
                                         (record-type ''standard-sequence-output-record))
@@ -484,7 +484,7 @@ STREAM-STRING-WIDTH will be called."))
       (medium-beep medium)
       (when (sheetp *standard-output*)
         (medium-beep (sheet-medium *standard-output*)))))
-  
+
 (defgeneric scroll-quantum (pane)
   (:documentation "Returns the number of pixels respresenting a 'line', used
 to computed distance to scroll in response to mouse wheel events."))

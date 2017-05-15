@@ -121,7 +121,6 @@ that this might be different from the sheet's native region."
   (dispatch-repaint child (sheet-region child)))
 
 (defmethod %note-mirrored-sheet-child-disabled :after ((sheet standard-mirrored-sheet-mixin) child)
-  (declare (ignore sheet))
   (dispatch-repaint sheet (sheet-native-region child)))
 
 (defmethod %note-mirrored-sheet-child-region-changed :after

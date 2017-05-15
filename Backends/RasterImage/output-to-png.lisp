@@ -12,9 +12,10 @@
     `(flet ((,cont (,stream-var)
               ,@body)
 	    (,exit-fn (sheet stream)
+              (declare (ignorable stream))
 	      (save-image-to-stream (image-mirror-image (sheet-mirror sheet)) ,stream ,format))
 	    (,enter-fn (sheet stream)
-	      (declare (ignore sheet))
+	      (declare (ignore sheet stream))
 	      nil))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
@@ -32,6 +33,7 @@
       `(flet ((,cont (,stream-var)
 		,@body)
 	      (,exit-fn (sheet stream)
+		(declare (ignore stream))
 		(save-image-to-file (image-mirror-image (sheet-mirror sheet) ,file (extract-format ,file))))
 	      (,enter-fn (sheet stream)
 		(declare (ignore sheet stream))
@@ -39,7 +41,7 @@
 	 (declare (dynamic-extent #',cont))
 	 (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn
 					     :rgb-image
-					     (extract-format ,file)
+					     ,(extract-format file)
 					     ,@options)))))
 
 (defmacro with-output-to-rgb-image ((stream-var image &rest options)
@@ -50,11 +52,12 @@
     `(flet ((,cont (,stream-var)
               ,@body)
 	    (,exit-fn (sheet stream)
+	      (declare (ignore stream))
 	      (mcclim-render::coerce-to-clim-rgb-image (mcclim-render::image-mirror-image (sheet-mirror sheet))))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore stream))
 	      (when ,image
-		(setf (mcclim-render::image-sheet-image sheet) ,image))))
+                (setf (mcclim-render::image-mirror-image sheet) ,image))))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
 					   :rgb-image

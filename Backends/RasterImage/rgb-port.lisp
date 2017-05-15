@@ -35,6 +35,6 @@
     pixmap))
 
 (defmethod port-deallocate-pixmap ((port rgb-image-port) pixmap)
-  (when (port-lookup-mirror port pixmap)
+  (when (climi::port-lookup-mirror port pixmap)
     (destroy-mirror port pixmap)))
 

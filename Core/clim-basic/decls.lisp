@@ -557,11 +557,15 @@ Only those records that overlap REGION are displayed."))
 
 (defgeneric output-record-children (record))
 
-(defgeneric add-output-record (child record))
+(defgeneric add-output-record (child record)
+  (:documentation "Sets RECORD to be the parent of CHILD."))
 
-(defgeneric delete-output-record (child record &optional errorp))
+(defgeneric delete-output-record (child record &optional errorp)
+  (:documentation "If CHILD is a child of RECORD, sets the parent of
+CHILD to NIL."))
 
-(defgeneric clear-output-record (record))
+(defgeneric clear-output-record (record)
+  (:documentation "Sets the parent of all children of RECORD to NIL."))
 
 (defgeneric output-record-count (record))
 
@@ -645,7 +649,8 @@ unspecified. "))
 ;;; in the Allegro CLIM 2 User Guide and appears to exist in other 'classic'
 ;;; CLIM implementations. I'm assuming it's an omission from the spec.
 (defgeneric invoke-with-new-output-record
-    (stream continuation record-type constructor &key &allow-other-keys))
+    (stream continuation record-type constructor &key &allow-other-keys)
+  (:documentation "Same as in CLIM 2.2 (missing CONSTRUCTOR added)."))
 
 ;;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
 (defgeneric invoke-with-output-to-output-record 

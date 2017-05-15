@@ -46,7 +46,8 @@ Rainer Joswig
 Robert Goldman
 Robert Strandh
 Rudi Schlatte
-Timothy Moore"
+Timothy Moore
+Daniel Kochmański"
   :license "LGPL-2.1+"
   :version "0.9.7"
   :description "McCLIM is an implementation of the CLIM 2.0 specification."
@@ -71,7 +72,8 @@ interface management system."
 (defsystem #:mcclim/extensions
   :depends-on (#:mcclim-bitmaps
                #:conditional-commands
-               #:mcclim-layouts/tab))
+               #:mcclim-layouts/tab
+               #:mcclim-bezier))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.

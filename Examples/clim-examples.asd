@@ -2,6 +2,7 @@
 ;;; CLIM-Examples depends on having at least one backend loaded.
 (asdf:defsystem #:clim-examples
     :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image)
+    :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image #:mcclim-bezier)
     :components
     ((:file "package")
      (:file "calculator")
@@ -14,7 +15,7 @@
      (:file "puzzle")
      (:file "transformations-test")
      (:file "town-example")
-     (:file "demodemo" :depends-on ("tabdemo" "town-example"))
+     (:file "demodemo" :depends-on ("tabdemo" "town-example" "sliderdemo"))
      (:file "stream-test")
      (:file "presentation-test")
      (:file "dragndrop")

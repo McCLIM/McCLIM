@@ -43,11 +43,15 @@
       "no"))
    (print-ps :push-button
 	     :label "Print All (/tmp/*.ps)"
-	     :activate-callback #'(lambda (x) (print-all-postscript-tests)))
+	     :activate-callback #'(lambda (x)
+                                    (declare (ignore x))
+                                    (print-all-postscript-tests)))
    
    (print-png :push-button
 	      :label "Print All (/tmp/*.png)"
-	      :activate-callback #'(lambda (x) (print-all-raster-image-tests :png))))
+	      :activate-callback #'(lambda (x)
+                                     (declare (ignore x))
+                                     (print-all-raster-image-tests :png))))
   (:layouts
    (default
      (spacing (:thickness 3)
@@ -392,7 +396,9 @@
     ""
     (test-simple-clipping-region stream
 				 #'(lambda (stream)
-				     (let ((v (mapcan #'(lambda (x) (list (random *width*) (random *height*)))
+				     (let ((v (mapcan #'(lambda (x)
+                                                          (declare (ignore x))
+                                                          (list (random *width*) (random *height*)))
 						      '(1 2 3))))
 				       (clim:draw-polygon* stream v
 							   :closed t
@@ -474,9 +480,8 @@
 	  (dolist (lt '(2 7))
 	    (with-drawing-options (stream :line-thickness lt :line-joint-shape lj :line-dashes ld)
 	      (draw-text* stream (format nil "~A ~A ~A" ld lj lt) 20 y)
-	      (let ((x-positions '(150 300)))
-		  (draw-rectangle* stream 200 (+ 10 y) 450 (+ 35 y)
-				   :filled nil))
+	      (draw-rectangle* stream 200 (+ 10 y) 450 (+ 35 y)
+                               :filled nil)
 	      (setf y (+ 40 y))))))))
 
 (define-drawing-test "04) Rectangle Clipping" (stream)
@@ -535,13 +540,12 @@
 	(dolist (lt '(2 7 10))
 	  (with-drawing-options (stream :line-thickness lt :line-dashes ld)
 	    (draw-text* stream (format nil "~A ~A" ld lt) 20 y)
-	    (let ((x-positions '(150 300)))
-	      (draw-ellipse* stream 150 (+ 10 y) 0 30 50 0
-			     :filled nil)
-	      (draw-ellipse* stream 270 (+ 10 y) 0 30 50 0 :start-angle (/ pi 2) :end-angle pi
-			     :filled nil)
-	      (draw-ellipse* stream 390 (+ 10 y) 0 30 50 0 :start-angle (- (/ pi 2)) :end-angle pi
-			     :filled nil))
+	    (draw-ellipse* stream 150 (+ 10 y) 0 30 50 0
+                           :filled nil)
+            (draw-ellipse* stream 270 (+ 10 y) 0 30 50 0 :start-angle (/ pi 2) :end-angle pi
+                           :filled nil)
+            (draw-ellipse* stream 390 (+ 10 y) 0 30 50 0 :start-angle (- (/ pi 2)) :end-angle pi
+                           :filled nil)
 	    (setf y (+ 80 y)))))))
 
 (define-drawing-test "05) Ellipse Clipping" (stream)
@@ -601,13 +605,12 @@
 	(dolist (lt '(2 7 10))
 	  (with-drawing-options (stream :line-thickness lt :line-dashes ld)
 	    (draw-text* stream (format nil "~A ~A" ld lt) 20 y)
-	    (let ((x-positions '(150 300)))
-	      (draw-circle* stream 200 (+ 10 y) 30
-			    :filled nil)
-	      (draw-circle* stream 290 (+ 10 y) 30 :start-angle (/ pi 2) :end-angle pi
-			    :filled nil)
-	      (draw-circle* stream 380 (+ 10 y) 30 :start-angle (- (/ pi 2)) :end-angle pi
-			    :filled nil))
+	    (draw-circle* stream 200 (+ 10 y) 30
+                          :filled nil)
+            (draw-circle* stream 290 (+ 10 y) 30 :start-angle (/ pi 2) :end-angle pi
+                          :filled nil)
+            (draw-circle* stream 380 (+ 10 y) 30 :start-angle (- (/ pi 2)) :end-angle pi
+                          :filled nil)
 	    (setf y (+ 80 y)))))))
 
 (define-drawing-test "06) Circle Clipping" (stream)
@@ -1393,5 +1396,156 @@
       (with-translation (stream 50 0)
 	(draw-pattern* stream pattern 200 300)))))
 
-    
+;;;
+;;; Bezier curves
+;;;
 
+;;; FIXME! The bezier-curve stuff (as opposed to the bezier-area) is
+;;; currently broken and the test case is commented out for now.
+(define-drawing-test "16) Bezier Area" (stream)
+    "Draws a single bezier-area. Currently this is quite slow and needs to be optimized. Also, the shape of the drawn bezier area is not particularly attractive."
+  (let* ((r1 (mcclim-bezier:make-bezier-area* '(120 160 35 200 220 280 220 40 180 160 160 180 120 160))))
+    (mcclim-bezier:draw-bezier-design* stream r1 :ink +cyan2+)))
+
+(define-drawing-test "16) Bezier Curve" (stream)
+    "Draws a single bezier curve. This is currently broken as it should just draw the stroke of the bezier and instead renders the design as a bezier area."
+  (let* ((r4 (mcclim-bezier:make-bezier-curve* (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
+    (mcclim-bezier:draw-bezier-design* stream r4
+                                       :line-thickness 12
+                                       :ink +orange+)))
+
+(define-drawing-test "16) Bezier Test 3" (stream)
+    "Some more complicated bezier design drawings. We draw two overlapping bezier areas, the difference between these two areas, a bezier curve, and a convolution of a curve and an area."
+  (let* ((r1 (mcclim-bezier:make-bezier-area* '(100 100 200 200 300 200 400 100 300 50 200 50 100 100)))
+         (r2 (mcclim-bezier:make-bezier-area* '(150 100 200 120 300 150 350 100 300 80 200 80 150 100)))
+         (r3 (mcclim-bezier:region-difference r1 r2))
+         (r4 (mcclim-bezier:make-bezier-curve* (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140)))
+         (r5 (mcclim-bezier:convolve-regions r2 r4)))
+    (mcclim-bezier:draw-bezier-design* stream r1)
+    (mcclim-bezier:draw-bezier-design* stream r2)
+    (mcclim-bezier:draw-bezier-design* stream r3)
+    (mcclim-bezier:draw-bezier-design* stream r4
+                                       :line-thickness 12
+                                       :ink +orange+)
+    (mcclim-bezier:draw-bezier-design* stream r5)))
+
+(define-drawing-test "16) Bezier Test 4" (stream)
+    "Some more complicated bezier design drawings."
+  (formatting-table (stream :x-spacing 20
+                            :y-spacing 20)
+    (formatting-row (stream)
+      (formatting-cell (stream :align-x :center
+                               :align-y :bottom
+                               :min-height 110)
+        (draw-text* stream "Bezier Test" 170 30
+                    :text-style (make-text-style :fix :bold :normal))))
+    (formatting-row (stream)
+      (formatting-cell (stream :align-x :left :align-y :center)
+        (let ((line-thickness 4))
+          (draw-circle* stream 30 30 20
+                        :start-angle (/ pi 2)
+                        :end-angle (+ (/ pi 2) pi)
+                        :filled nil
+                        :line-thickness line-thickness)
+          (draw-circle* stream 60 30 20
+                        :start-angle (+ (/ pi 2) pi)
+                        :end-angle (/ pi 2)
+                        :filled nil
+                        :line-thickness line-thickness)
+          (draw-rectangle* stream 0 0 10 10 :ink +green+)
+          (draw-rectangle* stream 3 3 13 13 :ink +red+)
+          (draw-rectangle* stream 34 44 247 256 :ink +yellow+)
+          (draw-polygon* stream '(10 200 50 120 120 200) :ink +blue+)
+          (let ((design
+                 (mcclim-bezier:make-bezier-area*
+                  (list 34 44 34 128 147 44 247 256 34 128 50 50 34 44))))
+            (mcclim-bezier:draw-bezier-design* stream design
+                                               :line-thickness line-thickness
+                                               :ink +black+))
+          (let ((design
+                 (mcclim-bezier:make-bezier-curve*
+                  (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
+            (mcclim-bezier:draw-bezier-design* stream design
+                                               :line-thickness line-thickness
+                                               :ink +royal-blue+))))
+      (formatting-cell (stream :align-x :left
+                               :align-y :center)
+        (let ((line-thickness 4))
+          (draw-circle* stream 30 30 20
+                        :start-angle (/ pi 2)
+                        :end-angle (+ (/ pi 2) pi)
+                        :filled nil
+                        :line-thickness line-thickness)
+          (draw-circle* stream 60 30 20
+                        :start-angle (+ (/ pi 2) pi)
+                        :end-angle (/ pi 2)
+                        :filled nil
+                        :line-thickness line-thickness)
+          (draw-rectangle* stream 0 0 10 10 :ink +green+)
+          (draw-rectangle* stream 3 3 13 13 :ink +red+)
+          (draw-rectangle* stream 34 44 247 256 :ink +pink+)
+          (draw-polygon* stream '(10 200 50 120 120 200) :ink +blue+)
+          (let ((design
+                 (mcclim-bezier:make-bezier-area*
+                  (list 34 44 34 128 147 44 247 256 34 128 50 50 34 44))))
+            (mcclim-bezier:draw-bezier-design* stream design
+                                               :line-thickness 8
+                                               :ink +sea-green+))
+          (let ((design (mcclim-bezier:make-bezier-curve*
+                         (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
+            (mcclim-bezier:draw-bezier-design* stream design
+                                               :line-thickness 16
+                                               :ink +orange+)))))))
+
+(define-drawing-test "16) Bezier Test 5" (stream)
+    "Some more complicated bezier design drawings."
+  (formatting-table (stream :x-spacing 20 :y-spacing 20)
+    (formatting-row (stream)
+      (formatting-cell (stream :min-height 80)))
+    (formatting-row (stream)
+      (formatting-cell (stream :align-x :left
+                               :align-y :top)
+        (loop for i from 0 to 300 by 10
+           do
+             (draw-line* stream i 0 i 300 :line-thickness 2 :ink +black+)
+             (draw-line* stream 0 i 300 i :line-thickness 2 :ink +black+))
+        (draw-rectangle* stream 100 100 200 200 :ink +blue+)
+        (draw-text* stream "Bogus" 200 200
+                    :text-style (make-text-style :sans-serif :roman :normal))
+        (draw-rectangle* stream 200 200 210 210)
+        (let ((design
+               (mcclim-bezier:make-bezier-curve*
+                (mapcar (lambda (x) (+ x 10))
+                        (list 100 100 20 80 90 110 90 170 90 220 140 210 140 140)))))
+          (mcclim-bezier:draw-bezier-design* stream design
+                                             :line-thickness 16
+                                             :ink +green+))
+        (draw-line* stream 110 110 150 150 :line-thickness 2 :ink +green+)
+        (let ((design
+               (mcclim-bezier:make-bezier-curve*
+                (list 100 100 20 80 90 110 90 170 90 220 140 210 140 140))))
+          (mcclim-bezier:draw-bezier-design* stream design
+                                             :line-thickness 16
+                                             :ink +orange+))
+        (let* ((coords (mcclim-bezier:relative-to-absolute-coord-seq (list 200 200 0 -50 80 -50 100 -20)))
+               (c1 (mcclim-bezier:make-bezier-curve* coords)))
+          (mcclim-bezier:draw-bezier-design* stream c1 :line-thickness 5 :ink +blue+)
+          (destructuring-bind (arrow-y arrow-x &rest args)
+              (reverse coords)
+            (declare (ignore args))
+            (draw-arrow* stream arrow-x arrow-y arrow-x arrow-y)))
+        (let ((design
+               (mcclim-bezier:make-bezier-curve*
+                (mapcar (lambda (x) (+ x 25))
+                        (list 100 100 20 80 90 110 90 170 90 220 140 210 140 140)))))
+          (mcclim-bezier:draw-bezier-design* stream design
+                                             :line-thickness 16
+                                             :ink +pink+))))))
+
+(defun convert-postscript-file (file &key svg)
+  (let ((result (uiop:run-program `( "ps2pdf" ,(uiop:unix-namestring file)))))
+    (when svg
+      (unless result
+        (uiop:run-program `( "pdf2svg"
+                            ,(uiop:unix-namestring (merge-pathnames (make-pathname :type "pdf") file))
+                            ,(uiop:unix-namestring (merge-pathnames (make-pathname :type "svg") file))))))))

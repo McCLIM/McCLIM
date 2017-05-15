@@ -1,0 +1,10 @@
+@anchor{Class clim-extensions:font-family}
+@deftp {Class} {clim-extensions:font-family}
+@tindex clim-extensions:font-family
+Class precedence list: @code{@w{font-family}, @w{standard-object}, @w{slot-object}, @w{t}}
+
+The protocol class for font families.  Each backend
+defines a subclass of font-family and implements its accessors.  Font
+family instances are never created by user code.  Use port-all-font-families
+to list all instances available on a port.
+@end deftp

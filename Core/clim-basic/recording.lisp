@@ -71,7 +71,8 @@
 ;;; 16.2.1. The Basic Output Record Protocol (extras)
 
 (defgeneric (setf output-record-parent) (parent record)
-  (:documentation "Non-standard function."))
+  (:documentation "Additional protocol generic function. PARENT may be
+an output record or NIL."))
 
 ;;; 16.2.2. Output Record "Database" Protocol (extras)
 ;;; From the Franz CLIM user's guide but not in the spec... clearly necessary.
@@ -80,10 +81,12 @@
     (continuation record continuation-args))
 
 (defun map-over-output-records
-    (continuation record &optional (x-offset 0) (y-offset 0)
-     &rest continuation-args)
+    (function record &optional (x-offset 0) (y-offset 0) &rest function-args)
+  "Maps over all of the children of the RECORD, calling FUNCTION on
+each one. It is a function of one or more arguments and called with
+all of FUNCTION-ARGS as APPLY arguments."
   (declare (ignore x-offset y-offset))
-  (map-over-output-records-1 continuation record continuation-args))
+  (map-over-output-records-1 function record function-args))
 
 ;;; Forward definition
 (defclass stream-output-history-mixin ()
@@ -1983,7 +1986,9 @@ were added."
    (current-text-output-record :initform nil
                                :accessor stream-current-text-output-record)
    (local-record-p :initform t
-                   :documentation "This flag is used for dealing with streams outputting strings char-by-char.")))
+                   :documentation "This flag is used for dealing with streams outputting strings char-by-char."))
+  (:documentation "This class is mixed into some other stream class to
+add output recording facilities. It is not instantiable."))
 
 (defmethod initialize-instance :after
     ((stream standard-output-recording-stream) &rest args)

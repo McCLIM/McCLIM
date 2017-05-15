@@ -1421,12 +1421,11 @@ if you are interested in fixing this."))
 		   
 
 (defun show-file (pathname)
-  (let ((*standard-output* (open-window-stream :scroll-bars :both)) )
-    (with-open-file (in pathname)
-      (loop for line = (read-line in nil)
-	while line
-	do (progn (princ line)
-		  (terpri))))))
+  (let ((content (alexandria:read-file-into-string pathname))
+	(*standard-output* (open-window-stream :scroll-bars :both
+					       :label (namestring pathname))))
+    (princ content)
+    (terpri)))
 
 ;;; Eval
 

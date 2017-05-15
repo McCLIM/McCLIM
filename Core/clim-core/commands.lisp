@@ -123,6 +123,12 @@ designator) inherits menu items."
 
 (defparameter *command-tables* (make-hash-table :test #'eq))
 
+(defparameter *command-parser-table* (make-hash-table)
+  "Mapping from command names to argument parsing functions.")
+
+(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
+(defvar *numeric-argument-marker* '%numeric-argument-marker%)
+
 (define-condition command-table-error (simple-error)
   ((command-table-name :reader error-command-table-name
                        :initform nil
@@ -380,6 +386,7 @@ designator) inherits menu items."
 
 (defun remove-menu-item-from-command-table (command-table string
 					    &key (errorp t))
+  "Removes item from the `command-table'."
   (let ((table (find-command-table command-table))
 	(item (find-menu-item string command-table :errorp nil)))
     (with-slots (menu) table
@@ -436,7 +443,8 @@ designator) inherits menu items."
 				       string type value
 				       &rest args
 				       &key documentation (after :end)
-				       keystroke text-style (errorp t))
+                                         keystroke text-style (errorp t))
+  "Adds menu item to the command table."
   (declare (ignore documentation keystroke text-style))
   (let* ((table (find-command-table command-table))
 	 (old-item (find-menu-item string command-table :errorp nil)))
@@ -667,12 +675,6 @@ examine the type of the command menu item to see if it is
   
   (:documentation "A container for a command's parsing functions and
   data for unparsing"))
-
-(defparameter *command-parser-table* (make-hash-table)
-  "Mapping from command names to argument parsing functions.")
-
-(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
-(defvar *numeric-argument-marker* '%numeric-argument-marker%)
 
 (defvar *command-name-delimiters* '(command-delimiter))
 

@@ -232,8 +232,16 @@ documentation produced by presentations.")
     (when (frame-manager frame)
       (generate-panes (frame-manager frame) frame)
       (multiple-value-bind (w h) (frame-geometry* frame)
-        (layout-frame frame w h))
+	(layout-frame frame w h))
       (signal 'frame-layout-changed :frame frame))))
+
+(defmethod (setf frame-command-table) :around (new-command-table frame)
+  (flet ((get-menu (x) (slot-value x 'menu)))
+    (if (and (get-menu (frame-command-table frame))
+	     (get-menu new-command-table))
+	(prog1 (call-next-method)
+	  (generate-panes *default-frame-manager* *application-frame*))
+	(call-next-method))))
 
 (defmethod generate-panes :before (fm  (frame application-frame))
   (declare (ignore fm))
@@ -261,6 +269,8 @@ documentation produced by presentations.")
     ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
     ;; window is mapped and do the space allocation now, so that all
     ;; sheets will have their correct geometry at once. --GB
+    (change-space-requirements (frame-top-level-sheet frame) :width w :height h
+			       :resize-frame t)
     (setf (sheet-region (frame-top-level-sheet frame))
 	  (make-bounding-rectangle 0 0 w h))
     (allocate-space (frame-top-level-sheet frame) w h) ))
@@ -590,7 +600,7 @@ documentation produced by presentations.")
 (defmethod make-pane-1 :around (fm (frame standard-application-frame) type
 				&rest args
 				&key (input-buffer nil input-buffer-p)
-				(name nil namep)
+                                     name
 				&allow-other-keys)
   (declare (ignore name input-buffer))
   "Default input-buffer to the frame event queue."
@@ -726,12 +736,13 @@ documentation produced by presentations.")
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (let ((*application-frame* frame))
        (with-look-and-feel-realization (fm frame)
-         (setf (frame-panes-for-layout frame)
-               (list
-                ,@(loop
-                     for (name . form) in panes
-                     collect
-                       `(cons ',name ,(do-pane-creation-form name form)))))
+	 (unless (frame-panes-for-layout frame)
+	   (setf (frame-panes-for-layout frame)
+		 (list
+		  ,@(loop
+		       for (name . form) in panes
+		       collect
+			 `(cons ',name ,(do-pane-creation-form name form))))))
          (let ,(loop
                   for (name . form) in panes
                   collect `(,name (alexandria:assoc-value
@@ -1154,6 +1165,10 @@ frames and will not have focus.
 
 (defgeneric frame-print-pointer-documentation
     (frame input-context stream state event))
+
+(defvar *background-message-minimum-lifetime* 1
+  "The amount of seconds a background message will be kept
+alive.")
 
 (defmethod frame-print-pointer-documentation
     ((frame standard-application-frame) input-context stream state event)

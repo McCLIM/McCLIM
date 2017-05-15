@@ -1,6 +1,6 @@
 
 (defsystem #:clim-basic
-  :depends-on (#:clim-lisp #:spatial-trees (:version "flexichain" "1.5.1") #:bordeaux-threads #:trivial-garbage)
+  :depends-on (#:clim-lisp #:spatial-trees (:version "flexichain" "1.5.1") #:bordeaux-threads #:trivial-garbage #:trivial-features)
   :components
   ((:file "setf-star")
    (:file "decls" :depends-on ("setf-star"))
@@ -40,5 +40,4 @@
    (:file "text-selection" :depends-on ("decls" "protocol-classes" "multiprocessing" "X11-colors" "medium" "output"
                                                 "transforms" "sheets" "stream-output"
                                                 "ports" "recording" "regions"
-                                                "events"))
-   (:file "bezier" :depends-on ("recording"))))
+                                                "events"))))

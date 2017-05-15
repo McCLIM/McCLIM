@@ -294,6 +294,7 @@
   (defmethod clim-clx::font-draw-glyphs ((font truetype-font) mirror gc x y string
                                          #|x0 y0 x1 y1|# &key start end translate size)
     (declare (optimize (speed 3))
+             (ignore size translate)
              (type #-sbcl (integer 0 #.array-dimension-limit)
                    #+sbcl sb-int:index
                    start end)
@@ -304,6 +305,7 @@
                                :adjustable nil :fill-pointer nil)))
     (let ((display (xlib:drawable-display mirror)))
       (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
+        (declare (ignore source-pixmap))
         (let* ((cache (slot-value font 'glyph-id-cache))
                (glyph-ids buffer))
           

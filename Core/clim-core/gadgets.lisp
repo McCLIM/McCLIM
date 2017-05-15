@@ -721,12 +721,10 @@ and must never be nil."))
    "Mixin class for gadgets, whose appearence depends on its activatated state."))
 
 (defmethod activate-gadget :after ((gadget activate/deactivate-repaint-mixin))
-  (declare (ignore client id))
   (dispatch-repaint gadget (or (pane-viewport-region gadget)
                                (sheet-region gadget))))
 
 (defmethod deactivate-gadget :after ((gadget activate/deactivate-repaint-mixin))
-  (declare (ignore client id))
   (dispatch-repaint gadget (or (pane-viewport-region gadget)
                                (sheet-region gadget))))
 

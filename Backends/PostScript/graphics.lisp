@@ -39,6 +39,11 @@
 
 (in-package :clim-postscript)
 
+;;;
+(defvar *transformation* nil
+  "Native transformation")
+
+
 ;;; Postscript output utilities
 (defun write-number (stream number)
   (format stream "~,3F " (coerce number 'single-float)))
@@ -165,9 +170,6 @@ setmatrix")
       (format stream "pe~%"))))
 
 ;;;;
-(defvar *transformation* nil
-  "Native transformation")
-
 ;;; Postscript output utilities
 (defmacro with-graphics-state ((stream) &body body)
   `(invoke-with-graphics-state ,stream
@@ -548,46 +550,3 @@ setmatrix")
         (format file-stream "(~A) show~%" (postscript-escape-string string))))))
 
 
-;;; Bezier support
-
-(defun %draw-bezier-area (stream area)
-  (format stream "newpath~%")
-  (let ((segments (climi::segments area)))
-    (let ((p0 (slot-value (car segments) 'climi::p0)))
-      (write-coordinates stream (point-x p0) (point-y p0))
-      (format stream "moveto~%"))
-    (loop for segment in segments
-          do (with-slots (climi::p1 climi::p2 climi::p3) segment
-               (write-coordinates stream (point-x climi::p1) (point-y climi::p1))
-               (write-coordinates stream (point-x climi::p2) (point-y climi::p2))
-               (write-coordinates stream (point-x climi::p3) (point-y climi::p3))
-               (format stream "curveto~%")))
-    (format stream "fill~%")))
-
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-area))
-  (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
-    (%draw-bezier-area stream design)))
-
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-union))
-  (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
-    (let ((tr (climi::transformation design)))
-      (dolist (area (climi::areas design))
-        (%draw-bezier-area stream (transform-region tr area))))))
-
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-difference))
-  (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
-    (dolist (area (climi::positive-areas design))
-      (%draw-bezier-area stream area))
-    (with-drawing-options (medium :ink +background-ink+)
-      (postscript-actualize-graphics-state stream medium :color)
-      (dolist (area (climi::negative-areas design))
-        (%draw-bezier-area stream area)))))

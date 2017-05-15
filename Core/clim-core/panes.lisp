@@ -179,23 +179,6 @@
 
 
 
-;;; Default Color Scheme Options
-
-#||
-;; Motif-ish
-(defparameter *3d-dark-color*   (make-gray-color .45))
-(defparameter *3d-normal-color* (make-gray-color .75))
-(defparameter *3d-light-color*  (make-gray-color .92))
-(defparameter *3d-inner-color*  (make-gray-color .65))
-||#
-
-;; Gtk-ish
-
-(defparameter *3d-dark-color*   (make-gray-color .59))
-(defparameter *3d-normal-color* (make-gray-color .84))
-(defparameter *3d-light-color*  (make-gray-color 1.0))
-(defparameter *3d-inner-color*  (make-gray-color .75))
-
 ;;; Gadget "Feel"
 
 (defparameter *double-click-delay* 0.25
@@ -414,13 +397,7 @@ order to produce a double-click")
 (defmethod window-clear ((pane pane))
   nil)
 
-;;; WINDOW STREAM
-
-;; ???
-(defclass window-stream (standard-extended-output-stream
-			 standard-extended-input-stream)
-  () )
-
+
 ;;;
 ;;; Utilities 
 ;;;
@@ -1311,7 +1288,7 @@ order to produce a double-click")
 		   `(list ',(car content) ,(cadr content))
 		   content))))
 
-(macrolet ((frob (macro-name box rack equalize-arg equalize-key)
+(macrolet ((frob (macro-name box rack equalize-arg)
 	     (let ((equalize-key (make-keyword equalize-arg)))
 	       `(defmacro ,macro-name ((&rest options
 					      &key (,equalize-arg t)
@@ -1324,8 +1301,8 @@ order to produce a double-click")
 				,@options
 				:contents (list ,@(make-box-macro-contents
 						   contents))))))))
-  (frob horizontally hbox-pane hrack-pane equalize-height :equalize-height)
-  (frob vertically vbox-pane vrack-pane equalize-width :equalize-width))
+  (frob horizontally hbox-pane hrack-pane equalize-height)
+  (frob vertically vbox-pane vrack-pane equalize-width))
 
 (defclass box-pane (box-layout-mixin
 		    composite-pane
@@ -2654,9 +2631,6 @@ order to produce a double-click")
 
 (defparameter *default-pointer-documentation-background* +black+)
 (defparameter *default-pointer-documentation-foreground* +white+)
-(defvar *background-message-minimum-lifetime* 1
-  "The amount of seconds a background message will be kept
-alive.")
 
 (defclass pointer-documentation-pane (clim-stream-pane)
   ((background-message :initform nil
@@ -2697,11 +2671,11 @@ current background message was set."))
                      (parse-error () nil)))
     (window-clear pane)))
 
+
+;;;
 ;;; CONSTRUCTORS
+;;;
 
-;;; XXX: `scroll-bars' and `borders' parameters are at least
-;;; troublesome – shouldn't `make-clim-stream-pane' return a
-;;; `clim-stream-pane' of requested type?
 (defun make-clim-stream-pane (&rest options
                               &key (type 'clim-stream-pane)
                                 (scroll-bars :vertical)
@@ -2723,10 +2697,11 @@ current background message was set."))
          finally (progn
                    (setq user-sr space-options)
                    (setq pane-options other-options)))
-      (let ((pane (apply #'make-pane type (append pane-options
-						  (unless (or scroll-bars
-							      borders)
-						    user-sr)))))
+      (let* ((pane (apply #'make-pane type (append pane-options
+						   (unless (or scroll-bars
+							       borders)
+						     user-sr))))
+	     (stream pane))
 	(when scroll-bars
 	  (setq pane (apply #'make-pane 'scroller-pane
 			    :scroll-bar scroll-bars
@@ -2741,7 +2716,7 @@ current background message was set."))
                                               borders)
                             :contents (list pane)
                             user-sr)))
-	pane))))
+	(values pane stream)))))
 
 (defun make-clim-interactor-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'interactor-pane options))
@@ -2752,48 +2727,43 @@ current background message was set."))
 (defun make-clim-pointer-documentation-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'pointer-documentation-pane options))
 
+
+;;;
 ;;; 29.4.5 Creating a Standalone CLIM Window
+;;; WINDOW STREAM
+;;;
 
 (defclass window-stream (cut-and-paste-mixin
                          mouse-wheel-scroll-mixin
                          clim-stream-pane)
   ())
 
-(defmethod close ((stream window-stream)
-		  &key abort)
-  (declare (ignore abort))
-  (let ((frame (pane-frame stream)))
-    (when frame
-      (disown-frame (frame-manager frame) frame)))
-  (when (next-method-p)
-    (call-next-method)))
-
 (define-application-frame a-window-stream (standard-encapsulating-stream
                                            standard-extended-input-stream
                                            fundamental-character-output-stream
                                            standard-application-frame)
-  ((stream)
-   (scroll-bars :initform :vertical
+  ((scroll-bars :initform :vertical
                 :initarg :scroll-bars)
-   (foreground :initarg :foreground)
-   (background :initarg :background))
-  (:panes
-   (io
-    (scrolling (:height 400 :width 700
-                :scroll-bar (slot-value *application-frame* 'scroll-bars))
-      (let ((color-args
-             `(,@(and (slot-boundp *application-frame* 'foreground)
-                      `(:foreground ,(slot-value *application-frame*
-                                                 'foreground)))
-               ,@(and (slot-boundp *application-frame* 'background)
-                      `(:background ,(slot-value *application-frame*
-                                                 'background))))))
-        (setf (slot-value *application-frame* 'stream)
-              (apply #'make-pane 'window-stream :width 700 :height 2000
-                     color-args))))))
-  
-  (:layouts
-   (:default io)))
+   stream
+   pane)
+  (:pane
+   (with-slots (stream pane scroll-bars) *application-frame*
+     (multiple-value-setq (pane stream)
+       (make-clim-stream-pane
+	:name 'a-window-stream-pane
+	:display-time nil
+	:type 'application-pane
+	:scroll-bars scroll-bars
+	:height 400 :width 700))
+     pane)))
+
+(defmethod close ((stream a-window-stream)
+		  &key abort)
+  (declare (ignore abort))
+  (alexandria:when-let ((fm (frame-manager stream)))
+    (disown-frame fm stream))
+  (when (next-method-p)
+    (call-next-method)))
 
 (defun open-window-stream (&key port
                                 left top right bottom width height
@@ -2846,13 +2816,13 @@ current background message was set."))
       (enable-frame frame))
     ;; Start a new thread to run the event loop, if necessary.
     (let ((*application-frame* frame))
-      (stream-set-input-focus (slot-value frame 'stream)))
+      (stream-set-input-focus (encapsulating-stream-stream frame)))
     #+clim-mp
     (unless input-buffer
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
 					  (redisplay-frame-panes frame :force-p t)
                                           (standalone-event-loop)))))
-    (slot-value frame 'stream)))
+    frame))
 
 (defun standalone-event-loop ()
   "An simple event loop for applications that want all events to be handled by
@@ -2865,6 +2835,7 @@ current background message was set."))
             do (handle-event (event-sheet event) event)))
       (frame-exit () (disown-frame (frame-manager frame) frame)))))
 
+
 ;;; These below were just hot fixes, are there still needed? Are even
 ;;; half-way correct? --GB
 ;;;
