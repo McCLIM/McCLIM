@@ -30,6 +30,7 @@
 		    :display-time t)))
 
 (defun generate-graph (frame pane)
+  (declare (ignore frame))
   (format-graph-from-roots
    (list (find-class 'number))
    (lambda (object stream)
@@ -114,10 +115,8 @@
 (define-presentation-to-command-translator record-dragging-translator
     (t com-drag-node draggable-graph-demo
        :tester ((object presentation)
-                (declare (ignore object))
                 (find-graph-node presentation)))
     (object presentation x y)
-  (declare (ignore object))
   (list presentation x y))
 
 ;;; (CSR) This demo code is quite cool; visually, it's a little

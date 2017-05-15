@@ -252,6 +252,14 @@
 ;;; appropriate ink/region class pairs, we can reduce the number
 ;;; of methods necessary. 
 
+;;;
+;;; define these variables here so we can use them here in
+;;; design.lisp, but don't set them to their eventual values until we
+;;; get to region.lisp. Note that these are named as constants, but
+;;; aren't truly constants.
+(defvar +everywhere+)
+(defvar +nowhere+)
+
 (defclass everywhere-mixin () ())
 (defclass nowhere-mixin    () ()) 
 ;;;;

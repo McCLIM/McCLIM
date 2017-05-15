@@ -37,6 +37,7 @@
 	   doc)))))
 
 (defun av-test-display-screen (frame pane)
+  (declare (ignore frame))
   (with-text-size (pane :large)
     (fresh-line pane)
     (present '(com-accepting-interval) 'command :stream pane)

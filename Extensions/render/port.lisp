@@ -10,11 +10,10 @@
 ;;; change geometry
 
 (defmethod port-set-mirror-region :after ((port render-port-mixin) mirror region)
-  (declare (ignore port mirror transformation))
   (let ((sheet (port-lookup-sheet port mirror)))
     (%set-image-region (sheet-mirror sheet) region)))
 
-(defmethod port-set-mirror-transformation :after ((port render-port-mixin) mirror transrormation)
+(defmethod port-set-mirror-transformation :after ((port render-port-mixin) mirror transformation)
   (declare (ignore port mirror transformation))
   nil)
 
@@ -69,6 +68,7 @@
 
 (defmethod clim-extensions:port-all-font-families :around
     ((port mcclim-render::render-port-mixin) &key invalidate-cache)
+  (declare (ignore invalidate-cache))
   (register-all-ttf-fonts port)
   (append (call-next-method) (font-families port)))
 

@@ -1305,7 +1305,7 @@ order to produce a double-click")
 		   `(list ',(car content) ,(cadr content))
 		   content))))
 
-(macrolet ((frob (macro-name box rack equalize-arg equalize-key)
+(macrolet ((frob (macro-name box rack equalize-arg)
 	     (let ((equalize-key (make-keyword equalize-arg)))
 	       `(defmacro ,macro-name ((&rest options
 					      &key (,equalize-arg t)
@@ -1318,8 +1318,8 @@ order to produce a double-click")
 				,@options
 				:contents (list ,@(make-box-macro-contents
 						   contents))))))))
-  (frob horizontally hbox-pane hrack-pane equalize-height :equalize-height)
-  (frob vertically vbox-pane vrack-pane equalize-width :equalize-width))
+  (frob horizontally hbox-pane hrack-pane equalize-height)
+  (frob vertically vbox-pane vrack-pane equalize-width))
 
 (defclass box-pane (box-layout-mixin
 		    composite-pane

@@ -331,7 +331,6 @@
                          (declare (ignore object))
                          (typep window 'canvas-pane)))
     (object x y)
-  (declare (ignore object))
   (list x y))
 
 (define-presentation-to-command-translator move-figure

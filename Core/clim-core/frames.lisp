@@ -600,7 +600,7 @@ documentation produced by presentations.")
 (defmethod make-pane-1 :around (fm (frame standard-application-frame) type
 				&rest args
 				&key (input-buffer nil input-buffer-p)
-				(name nil namep)
+                                     name
 				&allow-other-keys)
   (declare (ignore name input-buffer))
   "Default input-buffer to the frame event queue."
