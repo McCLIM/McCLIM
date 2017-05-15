@@ -57,7 +57,6 @@
     (blank-area com-add-circle dragndrop
                 :documentation "Add a circle")
     (object x y)
-  (declare (ignore object))
   (list x y 50))
 
 (define-dragndrop-command (com-clone-circle)
