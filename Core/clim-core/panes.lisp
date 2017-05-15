@@ -2648,9 +2648,6 @@ order to produce a double-click")
 
 (defparameter *default-pointer-documentation-background* +black+)
 (defparameter *default-pointer-documentation-foreground* +white+)
-(defvar *background-message-minimum-lifetime* 1
-  "The amount of seconds a background message will be kept
-alive.")
 
 (defclass pointer-documentation-pane (clim-stream-pane)
   ((background-message :initform nil
