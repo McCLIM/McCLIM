@@ -70,7 +70,7 @@
   (declare (ignore port mirror region))
   nil)
 
-(defmethod port-set-mirror-transformation ((port raster-image-port) mirror transrormation)
+(defmethod port-set-mirror-transformation ((port raster-image-port) mirror transformation)
   (declare (ignore port mirror transformation))
   nil)
 
