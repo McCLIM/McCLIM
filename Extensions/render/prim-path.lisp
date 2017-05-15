@@ -28,16 +28,17 @@
   (setf (paths::path-type path) :closed-polyline))
 
 (defun stroke-path (path line-style)
-  (when (line-style-dashes line-style)
-    (setf path (paths:dash-path path
-				(ctypecase (line-style-dashes line-style)
-				  (simple-array
-				   (line-style-dashes line-style))
-				  (cons
-				   (map 'vector #'(lambda (x) x)
-					(line-style-dashes line-style)))
-				  (t
-				   #(2 1))))))
+  (let ((dashes (climi::line-style-dashes line-style)))
+    (when dashes
+        (setf path (paths:dash-path path
+                                    (ctypecase dashes
+                                      (simple-array
+                                       dashes)
+                                      (cons
+                                       (map 'vector #'(lambda (x) x)
+                                            dashes))
+                                      (t
+                                       #(2 1)))))))
   (setf path (paths:stroke-path path
 				(max 1 (line-style-thickness line-style))
 				:joint (funcall #'(lambda (c)
