@@ -123,6 +123,12 @@ designator) inherits menu items."
 
 (defparameter *command-tables* (make-hash-table :test #'eq))
 
+(defparameter *command-parser-table* (make-hash-table)
+  "Mapping from command names to argument parsing functions.")
+
+(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
+(defvar *numeric-argument-marker* '%numeric-argument-marker%)
+
 (define-condition command-table-error (simple-error)
   ((command-table-name :reader error-command-table-name
                        :initform nil
@@ -669,12 +675,6 @@ examine the type of the command menu item to see if it is
   
   (:documentation "A container for a command's parsing functions and
   data for unparsing"))
-
-(defparameter *command-parser-table* (make-hash-table)
-  "Mapping from command names to argument parsing functions.")
-
-(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
-(defvar *numeric-argument-marker* '%numeric-argument-marker%)
 
 (defvar *command-name-delimiters* '(command-delimiter))
 

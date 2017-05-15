@@ -1166,6 +1166,10 @@ frames and will not have focus.
 (defgeneric frame-print-pointer-documentation
     (frame input-context stream state event))
 
+(defvar *background-message-minimum-lifetime* 1
+  "The amount of seconds a background message will be kept
+alive.")
+
 (defmethod frame-print-pointer-documentation
     ((frame standard-application-frame) input-context stream state event)
   (unless state
