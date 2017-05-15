@@ -132,7 +132,7 @@
                  :orientation :vertical
                  :current-color +black+
                  :value 0)
-     #+nil
+     #+(or)
      (slider-v1  :slider
                  :min-value 0
                  :max-value 100
@@ -152,7 +152,7 @@
                  :orientation :vertical
                  :current-color +black+
                  :value 0)
-     #+nil
+     #+(or)
      (radar      (make-pane 'radar-pane :name 'radar))
      (push-btn   (lowering (:border-width 3 :background +Gray83+)
                    (horizontally ()
