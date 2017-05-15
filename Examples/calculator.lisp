@@ -20,7 +20,11 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package #:clim-demo)
+(defpackage :calculator-demo
+  (:use :clim :clim-lisp)
+  (:export :calculator-app))
+
+(in-package :calculator-demo)
 
 (defparameter *calculator-text-style*
   (make-text-style :sans-serif :roman :large))
@@ -37,40 +41,45 @@
 (defun queue-number (number)
   (lambda (gadget)
     (declare (ignore gadget))
-    (with-slots (state) *application-frame*
-      (if (numberp (first state))
-	  (setf (first state) (+ (* 10 (first state)) number))
-	  (push number state))
-      (show (first state)))))
+    (with-slots (calc-state) *application-frame*
+      (if (numberp (first calc-state))
+	  (setf (first calc-state) (+ (* 10 (first calc-state)) number))
+	  (push number calc-state))
+      (show (first calc-state)))))
 
 (defun queue-operator (operator)
   (lambda (gadget)
     (declare (ignore gadget))
     (do-operation t)
-    (with-slots (state) *application-frame*
-      (if (functionp (first state))
-	  (setf (first state) operator)
-	  (push operator state)))))
+    (with-slots (calc-state) *application-frame*
+      (if (functionp (first calc-state))
+	  (setf (first calc-state) operator)
+	  (push operator calc-state)))))
 
 (defun do-operation (gadget)
   (declare (ignore gadget))
-  (with-slots (state) *application-frame*
-    (when (= 3 (length state))
-      (setf state (list (funcall (second state) (third state) (first state))))
-      (show (first state)))))
+  (with-slots (calc-state) *application-frame*
+    (when (= 3 (length calc-state))
+      (setf calc-state (list (funcall (second calc-state) (third calc-state) (first calc-state))))
+      (show (first calc-state)))))
 
 (defun initac (gadget)
   (declare (ignore gadget))
-  (with-slots (state) *application-frame*
-    (setf state (list 0)))
+  (with-slots (calc-state) *application-frame*
+    (setf calc-state (list 0)))
   (show 0))
 
 (defun initce (gadget)
   (declare (ignore gadget))
-  (with-slots (state) *application-frame*
-    (when (numberp (first state))
-      (pop state))
+  (with-slots (calc-state) *application-frame*
+    (when (numberp (first calc-state))
+      (pop calc-state))
     (show 0)))
+
+(defgeneric calculator-frame-top-level (frame &key command-parser
+                                                   command-unparser
+                                                   partial-command-parser
+                                                   prompt))
 
 (defmethod calculator-frame-top-level
     ((frame application-frame)
@@ -93,9 +102,9 @@
 	     :max-width  max-width :min-width min-width
 	     :max-height max-height :min-height min-height))
 
-(define-application-frame calculator ()
+(define-application-frame calculator-app ()
   ((text-field :initform nil)
-   (state :initform (list 0)))
+   (calc-state :initform (list 0)))
   (:panes
    (plus     (make-button "+" (queue-operator #'+)))
    (dash     (make-button "-" (queue-operator #'-)))

@@ -57,7 +57,7 @@
                (labelling (:label "Demos")
                  (vertically (:equalize-width t)
                    (make-demo-button "CLIM-Fig"  'clim-fig)
-                   (make-demo-button "Calculator"  'calculator)
+                   (make-demo-button "Calculator"  'calculator-demo:calculator-app)
                    (make-demo-button "Method Browser" 'method-browser)
                    (make-demo-button "Address Book"  'address-book)
                    (make-demo-button "Puzzle"  'puzzle)
