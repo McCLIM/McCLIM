@@ -33,14 +33,15 @@
       `(flet ((,cont (,stream-var)
 		,@body)
 	      (,exit-fn (sheet stream)
-		(save-mirror-image-to-file (sheet-mirror sheet) ,file (extract-format ,file)))
+                (declare (ignore stream))
+		(save-mirror-image-to-file (sheet-mirror sheet) ,file ,(extract-format file)))
 	      (,enter-fn (sheet stream)
 		(declare (ignore sheet stream))
 		nil))
 	 (declare (dynamic-extent #',cont))
 	 (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn
 					     :opticl-image
-					     (extract-format ,file)
+					     ,(extract-format file)
 					     ,@options)))))
 
 (defmacro with-output-to-rgb-image ((stream-var image &rest options)
