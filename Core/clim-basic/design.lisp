@@ -252,6 +252,9 @@
 ;;; appropriate ink/region class pairs, we can reduce the number
 ;;; of methods necessary. 
 
+(defvar everywhere*)
+(defvar nowhere*)
+
 (defclass everywhere-mixin () ())
 (defclass nowhere-mixin    () ()) 
 ;;;;
@@ -304,7 +307,7 @@
 (defun make-opacity (value)
   (setf value (clamp value 0 1))        ;defensive programming
   (cond ((= value 0) +transparent-ink+)
-        ((= value 1) +everywhere+)      ; used to say +foreground-ink+
+        ((= value 1) everywhere*)      ; used to say +foreground-ink+
         (t
          (make-instance 'standard-opacity :value value))))
 
@@ -650,7 +653,7 @@
 
 (defmethod compose-in ((design design) (mask nowhere-mixin))
   (declare (ignore design mask))
-  +nowhere+)
+  nowhere*)
 
 ;;; IN-COMPOSITUM
 
@@ -763,7 +766,7 @@
 
 (defmethod compose-out ((design design) (mask everywhere-mixin))
   (declare (ignore design mask))
-  +nowhere+)
+  nowhere*)
 
 (defmethod compose-out ((design design) (mask nowhere-mixin))
   (declare (ignore mask))
@@ -771,7 +774,7 @@
 
 (defmethod compose-out ((design design) (mask color))
   (declare (ignore design mask))
-  +nowhere+)
+  nowhere*)
 
 (defmethod compose-out ((design design) (mask uniform-compositum))
   (compose-in design (make-opacity (- 1.0 (compositum-mask (opacity-value mask))))))
