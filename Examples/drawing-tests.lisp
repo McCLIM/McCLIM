@@ -43,11 +43,15 @@
       "no"))
    (print-ps :push-button
 	     :label "Print All (/tmp/*.ps)"
-	     :activate-callback #'(lambda (x) (print-all-postscript-tests)))
+	     :activate-callback #'(lambda (x)
+                                    (declare (ignore x))
+                                    (print-all-postscript-tests)))
    
    (print-png :push-button
 	      :label "Print All (/tmp/*.png)"
-	      :activate-callback #'(lambda (x) (print-all-raster-image-tests :png))))
+	      :activate-callback #'(lambda (x)
+                                     (declare (ignore x))
+                                     (print-all-raster-image-tests :png))))
   (:layouts
    (default
      (spacing (:thickness 3)
@@ -392,7 +396,9 @@
     ""
     (test-simple-clipping-region stream
 				 #'(lambda (stream)
-				     (let ((v (mapcan #'(lambda (x) (list (random *width*) (random *height*)))
+				     (let ((v (mapcan #'(lambda (x)
+                                                          (declare (ignore x))
+                                                          (list (random *width*) (random *height*)))
 						      '(1 2 3))))
 				       (clim:draw-polygon* stream v
 							   :closed t
@@ -475,7 +481,8 @@
 	    (with-drawing-options (stream :line-thickness lt :line-joint-shape lj :line-dashes ld)
 	      (draw-text* stream (format nil "~A ~A ~A" ld lj lt) 20 y)
 	      (let ((x-positions '(150 300)))
-		  (draw-rectangle* stream 200 (+ 10 y) 450 (+ 35 y)
+                (declare (ignore x-positions))
+                (draw-rectangle* stream 200 (+ 10 y) 450 (+ 35 y)
 				   :filled nil))
 	      (setf y (+ 40 y))))))))
 
@@ -536,6 +543,7 @@
 	  (with-drawing-options (stream :line-thickness lt :line-dashes ld)
 	    (draw-text* stream (format nil "~A ~A" ld lt) 20 y)
 	    (let ((x-positions '(150 300)))
+              (declare (ignore x-positions))
 	      (draw-ellipse* stream 150 (+ 10 y) 0 30 50 0
 			     :filled nil)
 	      (draw-ellipse* stream 270 (+ 10 y) 0 30 50 0 :start-angle (/ pi 2) :end-angle pi
@@ -602,6 +610,7 @@
 	  (with-drawing-options (stream :line-thickness lt :line-dashes ld)
 	    (draw-text* stream (format nil "~A ~A" ld lt) 20 y)
 	    (let ((x-positions '(150 300)))
+              (declare (ignore x-positions))
 	      (draw-circle* stream 200 (+ 10 y) 30
 			    :filled nil)
 	      (draw-circle* stream 290 (+ 10 y) 30 :start-angle (/ pi 2) :end-angle pi
