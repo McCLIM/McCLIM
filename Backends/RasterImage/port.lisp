@@ -18,6 +18,7 @@
 				    (num-pages 1)
 				    (width 1000) (height 1000))
       server-path
+    (declare (ignore raster-image num-pages))
     (setf (slot-value port 'width) width)
     (setf (slot-value port 'height) height)
     (make-graft port)))
