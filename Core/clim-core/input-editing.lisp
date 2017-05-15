@@ -278,7 +278,7 @@ defaulting to T for `*standard-output*'."
 (defmacro with-input-editing ((&optional (stream t)
 			       &rest args
 			       &key input-sensitizer (initial-contents "")
-			       (class ''standard-input-editing-stream class-provided-p))
+			       (class ''standard-input-editing-stream))
 			      &body body)
   "Establishes a context in which the user can edit the input
 typed in on the interactive stream `stream'. `Body' is then
