@@ -1310,6 +1310,7 @@ and used to ensure that presentation-translators-caches are up to date.")
               ,@body)))
         (t
          `(lambda (,(car args) &key ,@(cdr args) &allow-other-keys)
+            (declare (ignorable ,(car args)))
             ,@body))))
 
 (defun make-documentation-fun (doc-arg)
