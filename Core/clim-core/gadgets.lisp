@@ -1771,7 +1771,7 @@ and must never be nil."))
   (with-special-choices (pane)
     (let ((position (convert-value-to-position pane))
           (slider-button-half-short-dim (ash slider-button-short-dim -1))
-          (slider-button-half-long-dim  (ash slider-button-long-dim -1))
+          ;(slider-button-half-long-dim  (ash slider-button-long-dim -1))
           (background-color (pane-background pane))
           (inner-color (gadget-current-color pane)))
       (flet ((draw-thingy (x y)
@@ -2083,7 +2083,6 @@ selection via the control modifier.")
      :documentation "Index of the first item to be rendered. This changes in
 response to scroll wheel events.")
    (visible-items :initarg :visible-items ; Clim 2.0 compatibility
-                  :accessor visible-items
                   :documentation "Maximum number of visible items in list"))
   (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
                      :background +white+ :foreground +black+))
@@ -2137,9 +2136,7 @@ response to scroll wheel events.")
               last-index
               (reduce #'max
                       (mapcar #'(lambda (item) (position item (generic-list-pane-item-values gadget) :test test))
-                              (gadget-value gadget)))))))
-  (unless (slot-boundp gadget 'visible-items)
-    (setf (visible-items gadget) (generic-list-pane-items-length gadget))))
+                              (gadget-value gadget))))))))
 
 (defgeneric generic-list-pane-item-strings (generic-list-pane))
 
@@ -2186,6 +2183,15 @@ response to scroll wheel events.")
 (defmethod generic-list-pane-item-height ((pane generic-list-pane))
   (+ (text-style-ascent  (pane-text-style pane) pane)
      (text-style-descent (pane-text-style pane) pane)))
+
+(defmethod visible-items ((pane generic-list-pane))
+  (if (slot-boundp pane 'visible-items)
+      (visible-items pane)
+      (generic-list-pane-items-length pane)))
+
+(defmethod (setf visible-items) (new-value (pane generic-list-pane))
+  (check-type new-value fixnum)
+  (setf (slot-value pane 'visible-items) new-value))
 
 (defmethod compose-space ((pane generic-list-pane) &key width height)
   (declare (ignore width height))
