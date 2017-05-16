@@ -2083,6 +2083,7 @@ selection via the control modifier.")
      :documentation "Index of the first item to be rendered. This changes in
 response to scroll wheel events.")
    (visible-items :initarg :visible-items ; Clim 2.0 compatibility
+                  :initform nil
                   :documentation "Maximum number of visible items in list"))
   (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
                      :background +white+ :foreground +black+))
@@ -2185,12 +2186,10 @@ response to scroll wheel events.")
      (text-style-descent (pane-text-style pane) pane)))
 
 (defmethod visible-items ((pane generic-list-pane))
-  (if (slot-boundp pane 'visible-items)
-      (visible-items pane)
+  (or (slot-value pane 'visible-items)
       (generic-list-pane-items-length pane)))
 
 (defmethod (setf visible-items) (new-value (pane generic-list-pane))
-  (check-type new-value fixnum)
   (setf (slot-value pane 'visible-items) new-value))
 
 (defmethod compose-space ((pane generic-list-pane) &key width height)
