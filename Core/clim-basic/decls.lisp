@@ -909,7 +909,7 @@ panes."))
 (defgeneric frame-find-innermost-applicable-presentation
     (frame input-context stream x y &key event))
 (defgeneric frame-input-context-button-press-handler 
-    (frame stream button-prees-event))
+    (frame stream button-press-event))
 (defgeneric frame-document-highlighted-presentation
     (frame presentation input-context window-context x y stream))
 (defgeneric frame-drag-and-drop-feedback
