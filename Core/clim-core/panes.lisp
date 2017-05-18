@@ -179,23 +179,6 @@
 
 
 
-;;; Default Color Scheme Options
-
-#||
-;; Motif-ish
-(defparameter *3d-dark-color*   (make-gray-color .45))
-(defparameter *3d-normal-color* (make-gray-color .75))
-(defparameter *3d-light-color*  (make-gray-color .92))
-(defparameter *3d-inner-color*  (make-gray-color .65))
-||#
-
-;; Gtk-ish
-
-(defparameter *3d-dark-color*   (make-gray-color .59))
-(defparameter *3d-normal-color* (make-gray-color .84))
-(defparameter *3d-light-color*  (make-gray-color 1.0))
-(defparameter *3d-inner-color*  (make-gray-color .75))
-
 ;;; Gadget "Feel"
 
 (defparameter *double-click-delay* 0.25
@@ -1305,7 +1288,7 @@ order to produce a double-click")
 		   `(list ',(car content) ,(cadr content))
 		   content))))
 
-(macrolet ((frob (macro-name box rack equalize-arg equalize-key)
+(macrolet ((frob (macro-name box rack equalize-arg)
 	     (let ((equalize-key (make-keyword equalize-arg)))
 	       `(defmacro ,macro-name ((&rest options
 					      &key (,equalize-arg t)
@@ -1318,8 +1301,8 @@ order to produce a double-click")
 				,@options
 				:contents (list ,@(make-box-macro-contents
 						   contents))))))))
-  (frob horizontally hbox-pane hrack-pane equalize-height :equalize-height)
-  (frob vertically vbox-pane vrack-pane equalize-width :equalize-width))
+  (frob horizontally hbox-pane hrack-pane equalize-height)
+  (frob vertically vbox-pane vrack-pane equalize-width))
 
 (defclass box-pane (box-layout-mixin
 		    composite-pane
@@ -2648,9 +2631,6 @@ order to produce a double-click")
 
 (defparameter *default-pointer-documentation-background* +black+)
 (defparameter *default-pointer-documentation-foreground* +white+)
-(defvar *background-message-minimum-lifetime* 1
-  "The amount of seconds a background message will be kept
-alive.")
 
 (defclass pointer-documentation-pane (clim-stream-pane)
   ((background-message :initform nil

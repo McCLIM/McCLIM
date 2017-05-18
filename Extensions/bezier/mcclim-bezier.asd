@@ -10,6 +10,6 @@
 
 (defsystem #:mcclim-bezier
   :description "Support for various bezier curves in McCLIM."
-  :depends-on (#:clim-basic #:mcclim-render)
+  :depends-on (#:clim #:mcclim-null #:mcclim-render)
   :components ((:file "package")
                (:file "bezier")))

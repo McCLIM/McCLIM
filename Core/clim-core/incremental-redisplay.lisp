@@ -332,6 +332,8 @@ spatially organized data structure.
        (or (not y-supplied-p)
 	   (coordinate= (slot-value state 'cursor-y) cursor-y))))
 
+(defgeneric set-medium-cursor-position (state stream))
+
 (defmethod set-medium-cursor-position
     ((state updating-stream-state) (stream updating-output-stream-mixin))
   (setf (stream-cursor-position stream)

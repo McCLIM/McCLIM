@@ -57,7 +57,7 @@
                (labelling (:label "Demos")
                  (vertically (:equalize-width t)
                    (make-demo-button "CLIM-Fig"  'clim-fig)
-                   (make-demo-button "Calculator"  'calculator)
+                   (make-demo-button "Calculator"  'calculator-demo:calculator-app)
                    (make-demo-button "Method Browser" 'method-browser)
                    (make-demo-button "Address Book"  'address-book)
                    (make-demo-button "Puzzle"  'puzzle)
@@ -202,6 +202,7 @@
 (defmethod handle-repaint ((pane foo-pane) region)
   (draw-line* pane 50 50 200 50)
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+    (declare (ignore x1 x2))
     (let ((k 20))
       (loop for y from (* k (floor (- y1 10) k)) below (+ y2 10) by k do
             (draw-text* pane (format nil "~D" y) 20 y)))))

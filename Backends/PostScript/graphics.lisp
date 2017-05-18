@@ -39,6 +39,11 @@
 
 (in-package :clim-postscript)
 
+;;;
+(defvar *transformation* nil
+  "Native transformation")
+
+
 ;;; Postscript output utilities
 (defun write-number (stream number)
   (format stream "~,3F " (coerce number 'single-float)))
@@ -165,9 +170,6 @@ setmatrix")
       (format stream "pe~%"))))
 
 ;;;;
-(defvar *transformation* nil
-  "Native transformation")
-
 ;;; Postscript output utilities
 (defmacro with-graphics-state ((stream) &body body)
   `(invoke-with-graphics-state ,stream

@@ -83,7 +83,6 @@
      :pointer-documentation "Describe Presentation"
      :menu presentation-debugging)
     (object presentation)
-  (declare (ignore object))
   (list presentation))
 
 ;;; Default presentation translator; translates an object to itself.

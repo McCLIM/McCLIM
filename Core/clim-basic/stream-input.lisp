@@ -37,6 +37,10 @@
 
 (defvar *accelerator-gestures* nil)
 
+(defvar *input-wait-test* nil)
+(defvar *input-wait-handler* nil)
+(defvar *pointer-button-press-handler* nil)
+
 (define-condition abort-gesture (condition)
   ((event :reader %abort-gesture-event :initarg :event)))
 
@@ -183,10 +187,6 @@ keys read."))
     :documentation "Holds the last gesture returned by
   stream-read-gesture (not peek-p), untransformed, so it can easily be
   unread.")))
-
-(defvar *input-wait-test* nil)
-(defvar *input-wait-handler* nil)
-(defvar *pointer-button-press-handler* nil)
 
 (defmacro with-input-focus ((stream) &body body)
   (when (eq stream t)

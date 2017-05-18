@@ -79,6 +79,8 @@
   (- (* (realpart z) (point-y v))
      (* (imagpart z) (point-x v))))
 
+
+
 (defclass bezier-design (design) ())
 
 (defgeneric medium-draw-bezier-design* (stream design))
@@ -147,16 +149,21 @@
 (defgeneric compute-bounding-rectangle* (object))
 
 (defmethod compute-bounding-rectangle* ((segments-mixin segments-mixin))
-  (multiple-value-bind (final-min-x final-min-y final-max-x final-max-y)
-      (segment-bounding-rectangle (car (%segments segments-mixin)))
-    (loop for segment in (cdr (%segments segments-mixin))
-	  do (multiple-value-bind (min-x min-y max-x max-y)
-		 (segment-bounding-rectangle segment)
-	       (setf final-min-x (min final-min-x min-x)
-		     final-min-y (min final-min-y min-y)
-		     final-max-x (max final-max-x max-x)
-		     final-max-y (max final-max-y max-y))))
-    (values final-min-x final-min-y final-max-x final-max-y)))
+  (values-list
+   (reduce (lambda (extrema segment)
+             (multiple-value-bind (minx miny maxx maxy)
+                 (segment-bounding-rectangle segment)
+               (if extrema
+                   (destructuring-bind (fminx fminy fmaxx fmaxy)
+                       extrema
+                     (list
+                      (min minx fminx)
+                      (min miny fminy)
+                      (max maxx fmaxx)
+                      (max maxy fmaxy)))
+                   (list minx miny maxx maxy))))
+           (segments segments-mixin)
+           :initial-value nil)))
 
 (defmethod initialize-instance :after ((region segments-mixin) &rest args)
   (declare (ignore args))
@@ -191,7 +198,7 @@ second curve point, yielding (200 50)."
   (list* (first coord-seq)
          (second coord-seq)
          (loop for (p0x p0y c0x c0y c1x c1y p1x p1y)
-            on coord-seq by #'(lambda (x) (nthcdr 6 x))
+            on (coerce coord-seq 'list) by #'(lambda (x) (nthcdr 6 x))
             for x-offset = p0x then x-offset
             for y-offset = p0y then y-offset
             until (null c0x)
@@ -205,24 +212,51 @@ second curve point, yielding (200 50)."
                      y-offset p1y)
             append  (list c0x c0y c1x c1y p1x p1y))))
 
+(defun point-seq-to-segment-seq (point-seq)
+  (destructuring-bind (leftover segment-seq)
+   (reduce (lambda (acc point)
+             (destructuring-bind (build vec)
+                 acc
+               (if (= (length build) 3)
+                   (progn
+                     (vector-push-extend
+                      (make-instance 'mcclim-bezier::bezier-segment
+                                     :p0 (third build)
+                                     :p1 (second build)
+                                     :p2 (first build)
+                                     :p3 point)
+                      vec)
+                     (list (list point) vec))
+                   (list (cons point build) vec))))
+           point-seq
+           :initial-value (list nil (make-array 4 :fill-pointer 0)))
+    (unless (equal (length leftover) 1)
+      (error "Invalid point-seq: ~S ~S" point-seq leftover))
+    segment-seq))
+
+(defun coord-seq-to-point-seq (coord-seq)
+  (destructuring-bind (leftover coord-seq)
+   (reduce (lambda (acc coord)
+             (destructuring-bind (build vec)
+                 acc
+               (if (= (length build) 1)
+                   (progn
+                     (vector-push-extend (make-point (car build) coord) vec)
+                     (list nil vec))
+                   (list (cons coord build) vec))))
+           coord-seq
+           :initial-value (list nil (make-array 4 :fill-pointer 0)))
+   (if leftover
+       (error "Invalid coord-seq: ~S" coord-seq)
+       coord-seq)))
+
 (defun make-bezier-thing (class point-seq)
   (assert (= (mod (length point-seq) 3) 1))
-  (make-instance class
-    :segments (loop for (p0 p1 p2 p3) on point-seq by #'cdddr
-		    until (null p1)
-		    collect (make-bezier-segment p0 p1 p2 p3))))
+  (make-instance class :segments (point-seq-to-segment-seq point-seq)))
 
 (defun make-bezier-thing* (class coord-seq)
   (assert (= (mod (length coord-seq) 6) 2))
-  (make-instance class
-    :segments (loop for (x0 y0 x1 y1 x2 y2 x3 y3)
-		      on coord-seq by #'(lambda (x) (nthcdr 6 x))
-		    until (null x1)
-		    collect (make-bezier-segment
-			     (make-point x0 y0)
-			     (make-point x1 y1)
-			     (make-point x2 y2)
-			     (make-point x3 y3)))))
+  (make-bezier-thing class (coord-seq-to-point-seq coord-seq)))
 
 (defun make-bezier-curve (point-seq)
   (make-bezier-thing 'bezier-curve point-seq))
@@ -239,9 +273,11 @@ second curve point, yielding (200 50)."
 
 (defmethod transform-region (transformation (path bezier-curve))
   (make-instance 'bezier-curve
-    :segments (mapcar (lambda (segment)
-			(transform-segment transformation segment))
-	       (%segments path))))
+                 :segments (let ((segments (%segments path)))
+                             (map (type-of segments)
+                                  (lambda (segment)
+                                    (transform-segment transformation segment))
+                                  (%segments path)))))
 
 (defmethod region-union ((r1 bezier-curve) (r2 bezier-curve))
   (let ((p (slot-value (car (last (%segments r1))) 'p3))
@@ -249,9 +285,9 @@ second curve point, yielding (200 50)."
     (if (region-equal p (slot-value seg 'p0))
 	(with-slots (p1 p2 p3) seg
 	  (make-instance 'bezier-curve
-	    :segments (append (%segments r1)
-		       (cons (make-bezier-segment p p1 p2 p3)
-			     (cdr (%segments r2))))))
+                         :segments (append (coerce (%segments r1) 'list)
+                                           (cons (make-bezier-segment p p1 p2 p3)
+                                                 (cdr (coerce (%segments r2) 'list))))))
 	(call-next-method))))
 
 ;;; an area defined as a closed path of Bezier curve segments
@@ -261,8 +297,8 @@ second curve point, yielding (200 50)."
 
 (defmethod close-path ((path bezier-curve))
   (let ((segments (%segments path)))
-    (assert (region-equal (slot-value (car segments) 'p0)
-			  (slot-value (car (last segments)) 'p3)))
+    (assert (region-equal (slot-value (elt segments 0) 'p0)
+			  (slot-value (elt segments (1- (length segments))) 'p3)))
     (make-instance 'bezier-area :segments segments)))
 
 (defun path-start (path)
@@ -287,9 +323,11 @@ second curve point, yielding (200 50)."
 
 (defmethod transform-region (transformation (design bezier-design))
   (make-instance (class-of design)
-                 :segments (mapcar (lambda (s)
-                                     (transform-segment transformation s))
-                                   (segments design))))
+                 :segments (let ((segments (segments design)))
+                             (map (type-of segments)
+                                  (lambda (s)
+                                    (transform-segment transformation s))
+                                  segments))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -401,12 +439,12 @@ second curve point, yielding (200 50)."
 (defmethod polygonalize ((path bezier-curve))
   (let ((segments (%segments path)))
     (make-polyline
-     (cons (slot-value (car segments) 'p0)
-	   (mapcan #'polygonalize segments)))))
+     (apply #'append (list (slot-value (elt segments 0) 'p0))
+             (map 'list #'polygonalize segments)))))
 
 (defmethod polygonalize ((area bezier-area))
   (let ((segments (segments area)))
-    (make-polygon (mapcan #'polygonalize segments))))
+    (make-polygon (apply #'append (map 'list #'polygonalize segments)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -420,11 +458,11 @@ second curve point, yielding (200 50)."
 
 (defmethod reverse-path ((path bezier-curve))
   (make-instance 'bezier-curve
-    :segments (reverse (mapcar #'reverse-segment (%segments path)))))
+                 :segments (reverse (map (type-of (%segments path)) #'reverse-segment (%segments path)))))
 
 (defmethod reverse-path ((path bezier-area))
   (make-instance 'bezier-area
-    :segments (reverse (mapcar #'reverse-segment (%segments path)))))
+                 :segments (reverse (map (type-of (%segments path)) #'reverse-segment (%segments path)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -589,7 +627,7 @@ second curve point, yielding (200 50)."
 		      collect (- (point-to-complex p1) (point-to-complex p0))))
 	 (split-points (find-split-points sides segment))
 	 (segments (split-segment segment split-points)))
-    (loop for segment in segments 
+    (loop for segment in (coerce segments 'list)
 	  if first collect (area-at-point area (slot-value segment 'p0))
 	  collect (convert-primitive-segment-to-bezier-area 
 		   (polygon-points polygon) segment)
@@ -601,7 +639,7 @@ second curve point, yielding (200 50)."
   (let ((polygon (polygonalize area)))
     (make-instance 'bezier-union
       :areas 
-      (loop for segment in (%segments path)
+      (loop for segment in (coerce (%segments path) 'list)
 	    for first = t then nil
 	    append (convolve-polygon-and-segment area polygon segment first)))))
 
@@ -840,39 +878,42 @@ second curve point, yielding (200 50)."
                                        &key (bezier-draw-control-lines *bezier-draw-control-lines*)
                                             (bezier-draw-location-labels *bezier-draw-location-labels*))
   (let ((segments (mcclim-bezier:segments design)))
-    (let ((p0 (slot-value (car segments) 'mcclim-bezier:p0)))
+    (let ((p0 (slot-value (elt segments 0) 'mcclim-bezier:p0)))
       (let ((path (make-path (point-x p0) (point-y p0))))
-        (loop for segment in segments
-           do (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
-                (curve-to path
-                          (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1)
-                          (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2)
-                          (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))))
+        (map nil (lambda (segment)
+                   (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
+                     (curve-to path
+                               (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1)
+                               (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2)
+                               (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))))
+             segments)
         (if filled
             (%medium-fill-paths medium (list path))
             (%medium-stroke-paths medium (list path)))
         (when (or bezier-draw-control-lines
                   bezier-draw-location-labels)
-          (loop for segment in (mcclim-bezier:segments design)
-             for i from 1
-             do (with-slots ((p0 mcclim-bezier:p0)
-                             (p1 mcclim-bezier:p1)
-                             (p2 mcclim-bezier:p2)
-                             (p3 mcclim-bezier:p3))
-                    segment
-                  (when bezier-draw-control-lines
-                    (draw-point medium p0 :ink +blue+ :line-thickness 6)
-                    (draw-point medium p1 :ink +red+ :line-thickness 6)
-                    (draw-line  medium p0 p1 :ink +green+ :line-thickness 2)
-                    (draw-point medium p2 :ink +red+ :line-thickness 6)
-                    (draw-line  medium p1 p2 :ink +green+ :line-thickness 2)
-                    (draw-point medium p3 :ink +blue+ :line-thickness 6)
-                    (draw-line  medium p2 p3 :ink +green+ :line-thickness 2))
-                  (when bezier-draw-location-labels
-                    (draw-text medium (format nil "P~D ~D ~D" i (point-x p0) (point-y p0)) p0)
-                    (draw-text medium (format nil "C~D ~D ~D" i (point-x p1) (point-y p1)) p1)
-                    (draw-text medium (format nil "C~D ~D ~D" (1+ i) (point-x p2) (point-y p2)) p2)
-                    (draw-text medium (format nil "P~D ~D ~D" (1+ i) (point-x p3) (point-y p3)) p3)))))))))
+          (let ((i 0))
+            (map nil (lambda (segment)
+                       (incf i)
+                       (with-slots ((p0 mcclim-bezier:p0)
+                                    (p1 mcclim-bezier:p1)
+                                    (p2 mcclim-bezier:p2)
+                                    (p3 mcclim-bezier:p3))
+                           segment
+                         (when bezier-draw-control-lines
+                           (draw-point medium p0 :ink +blue+ :line-thickness 6)
+                           (draw-point medium p1 :ink +red+ :line-thickness 6)
+                           (draw-line  medium p0 p1 :ink +green+ :line-thickness 2)
+                           (draw-point medium p2 :ink +red+ :line-thickness 6)
+                           (draw-line  medium p1 p2 :ink +green+ :line-thickness 2)
+                           (draw-point medium p3 :ink +blue+ :line-thickness 6)
+                           (draw-line  medium p2 p3 :ink +green+ :line-thickness 2))
+                         (when bezier-draw-location-labels
+                           (draw-text medium (format nil "P~D ~D ~D" i (point-x p0) (point-y p0)) p0)
+                           (draw-text medium (format nil "C~D ~D ~D" i (point-x p1) (point-y p1)) p1)
+                           (draw-text medium (format nil "C~D ~D ~D" (1+ i) (point-x p2) (point-y p2)) p2)
+                           (draw-text medium (format nil "P~D ~D ~D" (1+ i) (point-x p3) (point-y p3)) p3))))
+                 segments)))))))
 
 (defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
                                        (design bezier-curve))
@@ -900,29 +941,31 @@ second curve point, yielding (200 50)."
 (defun %draw-bezier-curve (stream area)
   (format stream "newpath~%")
   (let ((segments (segments area)))
-    (let ((p0 (slot-value (car segments) 'p0)))
+    (let ((p0 (slot-value (elt segments 0) 'p0)))
       (write-coordinates stream (point-x p0) (point-y p0))
       (format stream "moveto~%"))
-    (loop for segment in segments
-          do (with-slots (p1 p2 p3) segment
-               (write-coordinates stream (point-x p1) (point-y p1))
-               (write-coordinates stream (point-x p2) (point-y p2))
-               (write-coordinates stream (point-x p3) (point-y p3))
-               (format stream "curveto~%")))
+    (map nil (lambda (segment)
+               (with-slots (p1 p2 p3) segment
+                 (write-coordinates stream (point-x p1) (point-y p1))
+                 (write-coordinates stream (point-x p2) (point-y p2))
+                 (write-coordinates stream (point-x p3) (point-y p3))
+                 (format stream "curveto~%")))
+         segments)
     (format stream "stroke~%")))
 
 (defun %draw-bezier-area (stream area)
   (format stream "newpath~%")
   (let ((segments (segments area)))
-    (let ((p0 (slot-value (car segments) 'p0)))
+    (let ((p0 (slot-value (elt segments 0) 'p0)))
       (write-coordinates stream (point-x p0) (point-y p0))
       (format stream "moveto~%"))
-    (loop for segment in segments
-          do (with-slots (p1 p2 p3) segment
-               (write-coordinates stream (point-x p1) (point-y p1))
-               (write-coordinates stream (point-x p2) (point-y p2))
-               (write-coordinates stream (point-x p3) (point-y p3))
-               (format stream "curveto~%")))
+    (map nil (lambda (segment)
+               (with-slots (p1 p2 p3) segment
+                 (write-coordinates stream (point-x p1) (point-y p1))
+                 (write-coordinates stream (point-x p2) (point-y p2))
+                 (write-coordinates stream (point-x p3) (point-y p3))
+                 (format stream "curveto~%")))
+         segments)
     (format stream "fill~%")))
 
 (defmethod medium-draw-bezier-design*

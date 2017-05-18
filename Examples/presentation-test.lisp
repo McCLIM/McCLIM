@@ -31,6 +31,8 @@
 (defun summation-top-level (frame &key
 			    command-parser command-unparser 
 			    partial-command-parser prompt)
+  (declare (ignore command-parser command-unparser
+                   partial-command-parser prompt))
   (let ((*standard-output* (frame-standard-output frame))
 	(*standard-input* (frame-standard-input frame))
 	(*print-pretty* nil))
