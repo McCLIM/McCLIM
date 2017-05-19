@@ -66,8 +66,8 @@
   ;; 42 is SetInputFocus, we ignore match-errors from that.
   (unless (and (eql major 42)
                (eq error-name 'xlib:match-error))
-    (format *error-output* "Received CLX ~A in process ~W~%"
-            error-name (clim-sys:process-name (clim-sys:current-process)))
+    (log:error "Received CLX ~A (~A) in process ~W~%"
+	       error-name major (clim-sys:process-name (clim-sys:current-process)))
     (apply #'xlib:default-error-handler display error-name args)))
 
 
