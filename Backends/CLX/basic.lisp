@@ -79,7 +79,7 @@
 			     :protocol (getf options :protocol)))
     (progn
       (setf (xlib:display-error-handler (clx-port-display port))
-        #'clx-error-handler)
+	    #'clx-error-handler)
       ;; Uncomment this when debugging CLX backend if asynchronous
       ;; errors become troublesome.
       #+nil 
