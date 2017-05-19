@@ -30,7 +30,7 @@
   (make-text-style :sans-serif :roman :large))
 
 (defun calculator ()
-  (let ((frame (make-application-frame 'calculator)))
+  (let ((frame (make-application-frame 'calculator-app)))
     (run-frame-top-level frame)
     frame))
 
