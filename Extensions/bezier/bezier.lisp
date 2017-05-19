@@ -83,7 +83,7 @@
 
 (defclass bezier-design (design) ())
 
-(defgeneric medium-draw-bezier-design* (stream design))
+(defgeneric medium-draw-bezier-design* (stream design options))
 
 
 ;;; recording
@@ -92,7 +92,7 @@
   ((output-record-translation :accessor output-record-translation :initform nil)))
 
 (climi::def-grecording draw-bezier-design ((climi::gs-line-style-mixin translatable-record-mixin)
-                                           design) ()
+                                           design options) ()
   (let ((transformed-design (transform-region (medium-transformation medium) design))
 	(border (climi::graphics-state-line-style-border climi::graphic medium)))
     (declare (ignore border))
@@ -830,7 +830,7 @@ second curve point, yielding (200 50)."
 
 (defun draw-bezier-design* (sheet design &rest options)
   (climi::with-medium-options (sheet options)
-    (medium-draw-bezier-design* sheet design)))
+    (medium-draw-bezier-design* sheet design options)))
 
 (defmethod draw-design (medium (design bezier-design)
 			&rest options
@@ -844,25 +844,110 @@ second curve point, yielding (200 50)."
 
 ;;; Fallback method (suitable for CLX)
 
-(defmethod medium-draw-bezier-design* (medium design)
+(defmethod medium-draw-bezier-design* (medium design options)
   (render-through-pixmap design medium))
+
+
+;;; The real CLX method
+
+(defun my-compute-rgb-image-pixmap (drawable image)
+  (let* ((width (climi::image-width image))
+         (height (climi::image-height image))
+         (depth (xlib:drawable-depth drawable))
+         (im (clim-clx::image-to-ximage-for-drawable drawable image)))
+    (setf width (max width 1))
+    (setf height (max height 1))
+    (let* ((pixmap (xlib:create-pixmap :drawable drawable
+				       :width width
+				       :height height
+				       :depth depth))
+	   (gc (xlib:create-gcontext :drawable pixmap)))
+      (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
+	(xlib:put-image pixmap gc im
+			:src-x 0 :src-y 0
+			:x 0 :y 0
+			:width width :height height))
+      (xlib:free-gcontext gc)
+      pixmap)))
+
+(defun my-compute-rgb-image-mask (drawable image)
+  (let* ((width (climi::image-width image))
+         (height (climi::image-height image))
+         (bitmap (xlib:create-pixmap :drawable drawable
+                                     :width width
+                                     :height height
+                                     :depth 1))
+         (gc (xlib:create-gcontext :drawable bitmap
+				   :foreground 1
+				   :background 0))
+         (idata (climi::image-data image))
+         (xdata (make-array (list height width)
+			    :element-type '(unsigned-byte 1)))
+         (im (xlib:create-image :width width
+                                :height height
+                                :depth 1
+                                :data xdata)) )
+    (dotimes (y width)
+      (dotimes (x height)
+        (if (> (aref idata x y) #x80000000)
+            (setf (aref xdata x y) 0)
+	    (setf (aref xdata x y) 1))
+        ;; (print (aref idata x y) *terminal-io*)
+        (when (= (aref idata x y) #x00FFFFFF)
+          (setf (aref xdata x y) 0))))
+    (unless (or (>= width 2048) (>= height 2048)) ;### CLX breaks here
+      (xlib:put-image bitmap gc im :src-x 0 :src-y 0
+		      :x 0 :y 0 :width width :height height
+		      :bitmap-p nil))
+    (xlib:free-gcontext gc)
+    bitmap))
+
+(defmethod medium-draw-bezier-design* ((medium clim-clx::clx-medium) design options)
+  (multiple-value-bind (positive-areas negative-areas)
+      (positive-negative-areas design)
+    (declare (ignore negative-areas))
+    (multiple-value-bind (min-x min-y max-x max-y)
+	(bounding-rectangle-of-areas positive-areas)
+      (destructuring-bind (&key line-thickness &allow-other-keys)
+          options
+        (when line-thickness
+          (decf min-x line-thickness)
+          (decf min-y line-thickness)
+          (incf max-x line-thickness)
+          (incf max-y line-thickness)))
+      (let ((width (- max-x min-x))
+            (height (- max-y min-y)))
+        (let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
+                           (pixmap-medium :width width :height height)
+                         (climi::with-medium-options (pixmap-medium options)
+                           (let ((old-design design)
+                                 (tr (make-instance 'climi::standard-translation :dx (- min-x) :dy (- min-y))))
+                             (setf design (transform-region tr design))
+                             (medium-draw-bezier-design* pixmap-medium design nil)
+                             (setf design old-design))))))
+          (let ((da (clim-clx::sheet-xmirror (medium-sheet medium)))
+                (image (climi::image pattern)))
+            (let ((pixmap (my-compute-rgb-image-pixmap da image))
+                  (mask (my-compute-rgb-image-mask da image)))
+              (setf (slot-value pattern 'climi::medium-data)
+                    (list pixmap mask))))
+          (draw-pattern* medium pattern min-x min-y))))))
 
 
 ;;; NULL backend support
 
 ;;; FIXME: need these to stop the default method attempting to do
 ;;; pixmaps, which it appears the null backend doesn't support yet.
-(defmethod mcclim-bezier:medium-draw-bezier-design*
-    ((medium null-medium) (design mcclim-bezier:bezier-curve))
+(defmethod medium-draw-bezier-design* ((medium null-medium) (design bezier-curve) options)
   nil)
-(defmethod mcclim-bezier:medium-draw-bezier-design*
-    ((medium null-medium) (design mcclim-bezier:bezier-area))
+
+(defmethod medium-draw-bezier-design* ((medium null-medium) (design bezier-area) options)
   nil)
-(defmethod mcclim-bezier:medium-draw-bezier-design*
-    ((medium null-medium) (design mcclim-bezier:bezier-union))
+
+(defmethod medium-draw-bezier-design* ((medium null-medium) (design bezier-union) options)
   nil)
-(defmethod mcclim-bezier:medium-draw-bezier-design*
-    ((medium null-medium) (design mcclim-bezier:bezier-difference))
+
+(defmethod medium-draw-bezier-design* ((medium null-medium) (design bezier-difference) options)
   nil)
 
 ;;; Render backend
@@ -877,15 +962,15 @@ second curve point, yielding (200 50)."
 (defmethod %medium-draw-bezier-design ((medium render-medium-mixin) design filled
                                        &key (bezier-draw-control-lines *bezier-draw-control-lines*)
                                             (bezier-draw-location-labels *bezier-draw-location-labels*))
-  (let ((segments (mcclim-bezier:segments design)))
-    (let ((p0 (slot-value (elt segments 0) 'mcclim-bezier:p0)))
+  (let ((segments (segments design)))
+    (let ((p0 (slot-value (elt segments 0) 'p0)))
       (let ((path (make-path (point-x p0) (point-y p0))))
         (map nil (lambda (segment)
-                   (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
+                   (with-slots (p1 p2 p3) segment
                      (curve-to path
-                               (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1)
-                               (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2)
-                               (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))))
+                               (point-x p1) (point-y p1)
+                               (point-x p2) (point-y p2)
+                               (point-x p3) (point-y p3))))
              segments)
         (if filled
             (%medium-fill-paths medium (list path))
@@ -895,10 +980,10 @@ second curve point, yielding (200 50)."
           (let ((i 0))
             (map nil (lambda (segment)
                        (incf i)
-                       (with-slots ((p0 mcclim-bezier:p0)
-                                    (p1 mcclim-bezier:p1)
-                                    (p2 mcclim-bezier:p2)
-                                    (p3 mcclim-bezier:p3))
+                       (with-slots ((p0 p0)
+                                    (p1 p1)
+                                    (p2 p2)
+                                    (p3 p3))
                            segment
                          (when bezier-draw-control-lines
                            (draw-point medium p0 :ink +blue+ :line-thickness 6)
@@ -916,20 +1001,24 @@ second curve point, yielding (200 50)."
                  segments)))))))
 
 (defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
-                                       (design bezier-curve))
+                                       (design bezier-curve)
+                                       options)
   (%medium-draw-bezier-design medium design nil))
 
 (defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
-                                                     (design bezier-area))
+                                       (design bezier-area)
+                                       options)
   (%medium-draw-bezier-design medium design t))
 
 (defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
-                                                     (design bezier-union))
+                                       (design bezier-union)
+                                       options)
   (dolist (area (areas design))
     (%medium-draw-bezier-design medium area t)))
 
 (defmethod medium-draw-bezier-design* ((medium render-medium-mixin)
-                                                     (design bezier-difference))
+                                       (design bezier-difference)
+                                       options)
   (dolist (area (positive-areas design))
     (%medium-draw-bezier-design medium area t))
   (dolist (area (negative-areas design))
@@ -969,21 +1058,21 @@ second curve point, yielding (200 50)."
     (format stream "fill~%")))
 
 (defmethod medium-draw-bezier-design*
-    ((medium postscript-medium) (design bezier-curve))
+    ((medium postscript-medium) (design bezier-curve) options)
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
     (%draw-bezier-curve stream design)))
 
 (defmethod medium-draw-bezier-design*
-    ((medium postscript-medium) (design bezier-area))
+    ((medium postscript-medium) (design bezier-area) options)
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
     (%draw-bezier-area stream design)))
 
 (defmethod medium-draw-bezier-design*
-    ((medium postscript-medium) (design bezier-union))
+    ((medium postscript-medium) (design bezier-union) options)
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
@@ -991,7 +1080,7 @@ second curve point, yielding (200 50)."
       (%draw-bezier-area stream area))))
 
 (defmethod medium-draw-bezier-design*
-    ((medium postscript-medium) (design bezier-difference))
+    ((medium postscript-medium) (design bezier-difference) options)
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)

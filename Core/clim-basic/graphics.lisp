@@ -895,7 +895,9 @@ position for the character."
       (when medium
 	(medium-free-image-design medium design))
       (setf medium current-medium)
-      (setf medium-data nil))))
+      #+nil
+      (when medium-data
+        (setf (car medium-data) nil)))))
 
 (defmethod medium-draw-image-design*
     ((medium sheet-with-medium-mixin) design x y)
