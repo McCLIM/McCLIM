@@ -46,9 +46,8 @@
 (define-presentation-method highlight-presentation ((type puzzle-cell) record stream state)
   state
   (multiple-value-bind (xoff yoff)
-      (#+mcclim climi::convert-from-relative-to-absolute-coordinates ;; Legacy CLIM 1.0 function..
-       #-mcclim clim:convert-from-relative-to-absolute-coordinates
-	stream (output-record-parent record))
+      (climi::convert-from-relative-to-absolute-coordinates
+       stream (output-record-parent record))
     (with-bounding-rectangle* (left top right bottom) record
       (draw-rectangle* stream
 		       (+ left xoff) (+ top yoff)
