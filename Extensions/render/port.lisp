@@ -5,7 +5,7 @@
 ;;;
 
 (defclass render-port-mixin (basic-port)
-  ((font-families :initform nil :accessor font-families)))
+  ((all-font-families :initform nil :accessor all-font-families)))
 
 ;;; change geometry
 
@@ -70,7 +70,7 @@
     ((port mcclim-render::render-port-mixin) &key invalidate-cache)
   (declare (ignore invalidate-cache))
   (register-all-ttf-fonts port)
-  (append (call-next-method) (font-families port)))
+  (append (call-next-method) (all-font-families port)))
 
 (let ((font-loader-cache (make-hash-table :test #'equal))
       (font-families     (make-hash-table :test #'equal))
@@ -98,7 +98,7 @@
                     (make-instance 'render-truetype-font
                                    :face font-face
                                    :size size))))
-        (pushnew family (font-families port))
+        (pushnew family (all-font-families port))
         (ensure-gethash
          (make-text-style family-name face-name size) text-style-cache
          font))))

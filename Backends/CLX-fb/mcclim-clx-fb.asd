@@ -3,7 +3,6 @@
     :depends-on (#:mcclim-clx/basic
 		 #:mcclim-clx/input
 		 #:mcclim-single-mirrored-standard
-		 #:mcclim-render/opticl
 		 #:mcclim-render)
 
   :components

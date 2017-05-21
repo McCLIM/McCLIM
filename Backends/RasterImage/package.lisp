@@ -23,8 +23,8 @@
 		  #:image-sheet-mixin
 		  #:image-mirror-mixin
 		  #:image-pixmap-mixin
-		  #:save-mirror-image-to-file
-		  #:save-mirror-image-to-stream
+		  #:save-image-to-file
+		  #:save-image-to-stream
 		  )
     (:import-from :mcclim-truetype
 		  #:truetype-font-size
