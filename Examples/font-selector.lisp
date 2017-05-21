@@ -160,9 +160,9 @@
              (y2 (+ y1 height))
              (ybase (+ y1 baseline)))
         (when ok
-	  (draw-line* stream 0 ybase pane-width ybase :ink +green+)
-	  (draw-line* stream 0 y1 pane-width y1 :ink +blue+)
-	  (draw-line* stream 0 y2 pane-width y2 :ink +blue+))
+	  (draw-line* stream 0 ybase (1- pane-width) ybase :ink +green+)
+	  (draw-line* stream 0 y1 (1- pane-width) y1 :ink +blue+)
+	  (draw-line* stream 0 y2 (1- pane-width) y2 :ink +blue+))
         (handler-case
 	    (draw-text* stream str x1 ybase :text-style style)
 	  (error (c)
