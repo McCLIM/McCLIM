@@ -402,7 +402,7 @@ that the frame manager can customize the implementation."))
   (draw-line* pane
 	      0
 	      17
-	      (slot-value pane 'climi::current-width)
+              (1- (climi::pane-current-width pane))
 	      17
 	      :ink +black+)
   (mapc (lambda (page)
