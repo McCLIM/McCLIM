@@ -102,10 +102,10 @@
 			(values a a a 255)))))
       optimg)))
 
-
 ;;;
 ;;; copy image
 ;;;
+
 (defmethod copy-image ((image opticl-image)
 		       (src-image opticl-image)
 		       &key (x 0) (y 0)
@@ -160,7 +160,6 @@
      255))
   (make-rectangle* x y (+ x width) (+ y height)))
 
-
 (defmethod fill-image ((image opticl-image) (rgba-design uniform-rgba-design) (mask mask-image)
 		       &key
 			 (x 0) (y 0)
@@ -200,18 +199,6 @@
      (funcall source-fn i j)
      (mask-image-data-get-alpha data-mask (+ mask-dx i) (+ mask-dy j))))
   (make-rectangle* x y (+ x width) (+ y height)))
-
-;;;
-;;;
-;;;
-
-;;;
-;;; macro to build drawing function
-;;;
-
-
-
-
 
 ;;; private protocol
 (defmethod %make-blend-draw-fn ((image opticl-image) clip-region design)
@@ -293,4 +280,3 @@
 	 (opticl-image-data-get-pixel data x y)
 	 (opticl-image-data-set-pixel data x y red green blue alpha)
 	 (values s-red s-green s-blue s-alpha)))))
-

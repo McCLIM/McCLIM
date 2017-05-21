@@ -27,7 +27,7 @@
 ;;;
 
 (defmethod draw-paths ((render rgb-image-render-engine) (image opticl-image) paths transformation clip-region ink background foreground)
-  ;;(declare (optimize speed))
+  (declare (optimize speed))
   (with-slots (state)
       render
     (render-update-state state paths transformation)
@@ -67,7 +67,7 @@
 	  region)))))
 
 (defmethod draw-paths ((render rgb-image-render-engine) (image rgba-image) paths transformation clip-region ink background foreground)
-  ;;(declare (optimize speed))
+  (declare (optimize speed))
   (with-slots (state)
       render
     (render-update-state state paths transformation)

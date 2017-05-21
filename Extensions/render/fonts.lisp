@@ -74,7 +74,7 @@
 (declaim (inline gcache-get))
 
 (defun gcache-get (cache key-number)  
-  (declare ;;(optimize (speed 3))
+  (declare (optimize (speed 3))
            (type (simple-array t (512))))
   (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello.
     (and (= key-number (the fixnum (svref cache hash)))
@@ -86,9 +86,8 @@
           (svref cache (+ 256 hash)) value)))
 
 ;;;
+;;; font to opacity mask image
 ;;;
-;;;
-
 
 (defun font-generate-opacity-image (paths width height dx dy)
   (let* ((image (make-mask-image (1+ (* 1 width))
@@ -100,15 +99,11 @@
 			   (make-translation-transformation
 			    (- dx) dy)
 			   (make-rectangle* 0 0 (* 1 width) (* 1 height))))
-    
-    ;;(save-image-to-file image "/tmp/a.png")
     image))
 
 ;;;
+;;; text geometry
 ;;;
-;;;
-
-
 
 (defgeneric font-text-extents (font string &key start end translate))
 
@@ -154,7 +149,7 @@
 
 (defmethod text-size ((medium render-medium-mixin) string
                       &key text-style (start 0) end)
-  ;;(declare (optimize (speed 3)))
+  (declare (optimize (speed 3)))
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
   (check-type string string)

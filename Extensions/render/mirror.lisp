@@ -56,10 +56,6 @@
 	(setf dirty-region (region-union dirty-region region))
 	(setf dirty-region region))))
 
-;;;
-;;;
-;;;
-
 (defmethod %draw-image :around ((mirror image-mirror-mixin) 
 				image x y width height x-dest y-dest clip-region)
   (when (image-mirror-image mirror)
@@ -91,21 +87,13 @@
 			image x y width height
 			dst-dx dst-dy
 			clip-region)
-  (let ((region #+nil(rgb-image-copy
-		 image
-		 (image-mirror-image mirror)
-		 :x x :y y :width width :height height :x-dst x-dest :y-dst y-dest
-		 :clip-region clip-region)
-		(copy-image
-		 (image-mirror-image mirror)
-		 image
-		 :x x :y y :width width :height height
-		 ;;:x-dst x-dest :y-dst y-dest
-		 :src-dx dst-dx
-		 :src-dy dst-dy
-		 ;;:clip-region clip-region
-		 )
-		))
+  (let ((region
+	 (copy-image
+	  (image-mirror-image mirror)
+	  image
+	  :x x :y y :width width :height height
+	  :src-dx dst-dx
+	  :src-dy dst-dy)))
     (%notify-image-updated mirror region)))
 
 (defmethod %fill-image-mask ((mirror image-mirror-mixin)
@@ -118,9 +106,7 @@
 	    (make-rgba-design ink)
 	    image-mask
 	    :x x :y y :width width :height height
-	    :mask-dx x-dest :mask-dy y-dest
-	    ;;:clip-region clip-region
-	    )))
+	    :mask-dx x-dest :mask-dy y-dest)))
       (%notify-image-updated mirror region))))
 
 (defmethod %fill-image ((mirror image-mirror-mixin)

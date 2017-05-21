@@ -59,10 +59,6 @@
 	(funcall fn stream (coerce-to-opticl-image image))
 	(error "Cannot write image stream: ~S" stream))))
 
-;;;
-;;;
-;;;
-
 (declaim (inline round-coordinate))
 (defun round-coordinate (x)
   (floor (+ x .5)))

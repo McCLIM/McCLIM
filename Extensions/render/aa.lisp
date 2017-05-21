@@ -1,9 +1,6 @@
 (in-package :mcclim-render)
 
 (declaim (optimize speed))
-;;;
-;;;
-;;;
 
 (defgeneric %make-blend-draw-fn (image clip-region rgba-design))
 (defgeneric %make-blend-draw-span-fn (image clip-region ink)) 
@@ -101,8 +98,6 @@
 (declaim (inline render-line-f))
 (defun render-line-f (state mxx mxy myx myy tx ty x1 y1 x2 y2)
   (declare (type coordinate mxx mxy myx myy tx ty))
-  ;;(with-transformed-position (transformation x1 y1)
-  ;;(with-transformed-position (transformation x2 y2)
   (let ((x1 (+ (* mxx x1) (* mxy y1) tx))
 	(y1 (+ (* myx x1) (* myy y1) ty))
 	(x2 (+ (* mxx x2) (* mxy y2) tx))
@@ -139,7 +134,6 @@
 			 (vectors::point-x first-knot) (vectors::point-y first-knot)))))
     state))
 
-;;(declaim (inline render-scanline-sweep))
 (defun render-scanline-sweep (data scanline function function-span &key start end)
   "Call FUNCTION for each pixel on the polygon covered by
 SCANLINE. The pixels are scanned in increasing X. The sweep can

@@ -210,6 +210,25 @@
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
+  (flet ((draw-font-glypse (paths opacity-image dx dy transformation)
+	   (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+	     (when (and msheet (sheet-mirror msheet))
+	       (multiple-value-bind (x1 y1)
+		   (transform-position
+		    (clim:compose-transformations transformation
+						  (sheet-native-transformation
+						   (medium-sheet medium)))
+		    (+ dx ) (-  dy))
+		 (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+		   (region-intersection
+		    (climi::medium-device-region medium)
+		    (make-rectangle* x1 y1 (+ -1 x1 (climi::image-width opacity-image)) (+ -1 y1 (climi::image-height opacity-image))))
+		   (%medium-fill-image-mask
+		    medium
+		    opacity-image
+		    min-x min-y
+		    (- max-x min-x) (- max-y min-y)
+		    (- (round x1)) (- (round y1)))))))))
   (let ((xfont (text-style-to-font (port medium) (medium-text-style medium))))
     (let ((size (text-style-size (medium-text-style medium))))
       (setf size   (or size :normal)
@@ -232,33 +251,8 @@
 				(+ (floor text-height 2))))
 		    (:baseline y)
 		    (:bottom (+ y (- baseline text-height))))))
-	(let ((paths (string-primitive-paths x y string xfont size
-					     (lambda (paths opacity-image dx dy transformation)
-					       (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
-						 (when (and msheet (sheet-mirror msheet))
-						   (multiple-value-bind (x1 y1)
-						       (transform-position
-							(clim:compose-transformations transformation
-										      (sheet-native-transformation
-										       (medium-sheet medium)))
-							(+ dx ) (-  dy))
-						     
-						     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-							 (region-intersection
-							  (climi::medium-device-region medium)
-							  (make-rectangle* x1 y1 (+ -1 x1 (climi::image-width opacity-image)) (+ -1 y1 (climi::image-height opacity-image))))
-						       
-						       (%medium-fill-image-mask
-							medium
-							opacity-image
-							min-x min-y
-							(- max-x min-x) (- max-y min-y)
-							(- (round x1)) (- (round y1))
-							)))))
-					       
-					       #+nil(%medium-fill-paths medium paths t transformation)
-					       )))))))))
-
+	(string-primitive-paths x y string xfont size #'draw-font-glypse))))))
+					 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
   (medium-force-output from-drawable)
@@ -362,9 +356,5 @@
 
 (defmethod medium-force-output ((medium render-medium-mixin))
   )
-
-;;;
-;;;
-;;;
 
 

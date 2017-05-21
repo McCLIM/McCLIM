@@ -51,6 +51,7 @@
 ;;;
 ;;; copy image
 ;;;
+
 (defmethod copy-image ((image xlib-image)
 		       (src-image opticl-image)
 		       &key (x 0) (y 0)

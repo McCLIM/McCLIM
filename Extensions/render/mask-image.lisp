@@ -28,10 +28,8 @@
 	alpha))
 
 ;;;
+;;; drawing methods
 ;;;
-;;;
-
-
 
 (defgeneric %make-mask-image-draw-fn (image clip-region))
 (defgeneric %make-mask-image-draw-span-fn (image clip-region)) 

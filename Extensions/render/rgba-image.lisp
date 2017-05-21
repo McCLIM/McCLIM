@@ -46,7 +46,6 @@
 	     (dpb green (byte 8 8)
 		  (dpb blue (byte 8 16)
 		       (dpb (- 255 alpha) (byte 8 24) 0))))))
-		  
 
 ;;;
 ;;; coerce
@@ -82,7 +81,6 @@
 			  (values r g b a))))))
       optimg)))
 
-
 ;;;
 ;;; copy image
 ;;;
@@ -98,7 +96,6 @@
   (def-copy-image
       rgba-image-data rgba-image-data-set-pixel
     rgba-image-data rgba-image-data-get-pixel))
-
 
 ;;;
 ;;; fill image
@@ -142,7 +139,6 @@
      255))
   (make-rectangle* x y (+ x width) (+ y height)))
 
-
 (defmethod fill-image ((image rgba-image) (rgba-design uniform-rgba-design) (mask mask-image)
 		       &key
 			 (x 0) (y 0)
@@ -182,18 +178,6 @@
      (funcall source-fn i j)
      (mask-image-data-get-alpha data-mask (+ mask-dx i) (+ mask-dy j))))
   (make-rectangle* x y (+ x width) (+ y height)))
-
-;;;
-;;;
-;;;
-
-;;;
-;;; macro to build drawing function
-;;;
-
-
-
-
 
 ;;; private protocol
 (defmethod %make-blend-draw-fn ((image rgba-image) clip-region design)
@@ -275,4 +259,3 @@
 	 (rgba-image-data-get-pixel data x y)
 	 (rgba-image-data-set-pixel data x y red green blue alpha)
 	 (values s-red s-green s-blue s-alpha)))))
-

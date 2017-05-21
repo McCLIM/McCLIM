@@ -3,7 +3,7 @@
 (declaim (optimize speed))
 
 ;;;
-;;; color
+;;; color utility functions
 ;;;
 
 (deftype octet ()
@@ -36,7 +36,7 @@
   (logxor d1 d2))
 
 ;;;
-;;; 
+;;; blend functions
 ;;;
 
 (declaim (inline imult)
@@ -77,7 +77,7 @@
      (prelerp a a.bg a.bg))))
 
 ;;;
-;;;
+;;; image data
 ;;;
 
 (deftype clim-rgb-image-data () '(simple-array (unsigned-byte 32) (* *)))
