@@ -422,17 +422,13 @@ that the frame manager can customize the implementation."))
 
 (defmethod compose-space ((pane tab-layout-pane) &key width height)
   (declare (ignore width height))
-  (let ((q (compose-space (tab-layout-header-pane pane))))
-    (space-requirement+*
-     (reduce (lambda (x y)
-	       (space-requirement-combine #'max x y))
-	     (mapcar #'compose-space (sheet-children pane))
-	     :initial-value
-	     (make-space-requirement :width 0 :min-width 0 :max-width 0
-				     :height 0 :min-height 0 :max-height 0))
-     :height (space-requirement-height q)
-     :min-height (space-requirement-min-height q)
-     :max-height (space-requirement-max-height q))))
+  (space-requirement+*
+   (reduce (lambda (x y)
+             (space-requirement-combine #'max x y))
+           (mapcar #'compose-space (sheet-children pane))
+           :initial-value
+           (make-space-requirement :width 0 :min-width 0 :max-width 0
+                                   :height 0 :min-height 0 :max-height 0))))
 
 (defmethod allocate-space ((pane tab-layout-pane) width height)
   (let* ((header (tab-layout-header-pane pane))
