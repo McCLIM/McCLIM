@@ -239,9 +239,9 @@ be returned."
   "Add PAGE at the left side of TAB-LAYOUT.  When ENABLE is true, move focus
 to the new page.  This function is a convenience wrapper; you can also
 push page objects directly into TAB-LAYOUT-PAGES and enable them using
-(SETF TAB-LAYOUT-ENABLED-PAGE)."
+\(SETF TAB-LAYOUT-ENABLED-PAGE\)."
   (push page (tab-layout-pages tab-layout))
-  (when enable
+  (when (or enable (tab-layout-enabled-page tab-layout))
     (setf (tab-layout-enabled-page tab-layout) page)))
 
 (defun switch-to-page (page)
