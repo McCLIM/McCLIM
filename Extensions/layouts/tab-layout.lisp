@@ -54,7 +54,6 @@
 	   #:with-tab-layout
            #:com-switch-to-tab-page
 	   #:com-remove-tab-page
-	   #:internal-child-p
 	   #:note-tab-page-changed))
 
 (in-package #:clim-tab-layout)
@@ -185,17 +184,17 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
 
 (defmethod sheet-disown-child :before ((parent tab-layout) child &key errorp)
   (declare (ignore errorp))
-  (unless (internal-child-p child parent)
-    (let* ((page (sheet-to-page child))
-	   (current-page (tab-layout-enabled-page parent))
-	   (currentp (equal child (tab-page-pane current-page)))
-	   (successor
-	    (when currentp
-	      (page-successor current-page))))
-      (setf (slot-value parent 'pages) (remove page (tab-layout-pages parent)))
+  (alexandria:when-let ((page (sheet-to-page child)))
+    (setf (slot-value parent 'pages) (remove page (tab-layout-pages parent))
+          (tab-page-tab-layout page) nil)
+    (let* (;; tab-layout-enabled-page may be NIL!
+           (current-page (tab-layout-enabled-page parent))
+           (currentp (equal child (tab-page-pane current-page)))
+           (successor
+            (when currentp
+              (page-successor current-page))))
       (when currentp
-	(setf (tab-layout-enabled-page parent) successor))
-      (setf (tab-page-tab-layout page) nil))))
+        (setf (tab-layout-enabled-page parent) successor)))))
 
 (defun sheet-to-page (sheet)
   "For a SHEET that is a child of a tab layout, return the page corresponding
@@ -225,14 +224,6 @@ be returned."
       (note-tab-page-changed layout page))))
 
 (defmethod note-tab-page-changed ((layout tab-layout) page)
-  nil)
-
-;;; GTK+ distinguishes between children user code creates and wants to
-;;; see, and "internal" children the container creates and mostly hides
-;;; from the user.  Let's steal that concept to ignore the header pane.
-(defgeneric internal-child-p (child parent))
-
-(defmethod internal-child-p (child (parent tab-layout))
   nil)
 
 (defun page-successor (page)
@@ -458,9 +449,6 @@ that the frame manager can customize the implementation."))
       (let ((child (tab-page-pane page)))
 	(move-and-resize-sheet child 0 y width (- height y))
 	(allocate-space child width (- height y))))))
-
-(defmethod internal-child-p (child (parent tab-layout-pane))
-  (eq child (tab-layout-header-pane parent)))
 
 (defmethod clim-tab-layout:note-tab-page-changed
     ((layout tab-layout-pane) page)
