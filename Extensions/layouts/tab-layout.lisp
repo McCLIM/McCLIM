@@ -241,7 +241,7 @@ to the new page.  This function is a convenience wrapper; you can also
 push page objects directly into TAB-LAYOUT-PAGES and enable them using
 \(SETF TAB-LAYOUT-ENABLED-PAGE\)."
   (push page (tab-layout-pages tab-layout))
-  (when (or enable (tab-layout-enabled-page tab-layout))
+  (when (or enable (null (tab-layout-enabled-page tab-layout)))
     (setf (tab-layout-enabled-page tab-layout) page)))
 
 (defun switch-to-page (page)
