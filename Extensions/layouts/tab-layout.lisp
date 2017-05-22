@@ -375,11 +375,9 @@ that the frame manager can customize the implementation."))
   (let ((old-page (tab-layout-enabled-page parent)))
     (unless (equal page old-page)
       (when old-page
-	(setf (sheet-enabled-p (tab-page-pane old-page)) nil))
-      (when page
-	(setf (sheet-enabled-p (tab-page-pane page)) t)))
+	(setf (sheet-enabled-p (tab-page-pane old-page)) nil)))
     (when page
-	(setf (sheet-enabled-p (tab-page-pane page)) t)))
+      (setf (sheet-enabled-p (tab-page-pane page)) t)))
   (call-next-method))
 
 (defun default-display-tab-header (tab-layout pane)
