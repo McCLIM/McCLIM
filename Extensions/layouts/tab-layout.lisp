@@ -184,7 +184,7 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
       (sheet-adopt-child parent (tab-page-pane page)))
     ;; ensure that at least one page is enabled
     (when (null (tab-layout-enabled-page parent))
-      (setf (tab-layout-enabled-page parent) (car add)))))
+      (setf (tab-layout-enabled-page parent) (car (tab-layout-pages parent))))))
 
 (defmethod sheet-disown-child :before ((parent tab-layout) child &key errorp)
   (declare (ignore errorp))
@@ -192,7 +192,7 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
     (setf (slot-value parent 'pages) (remove page (tab-layout-pages parent))
           (tab-page-tab-layout page) nil)
     (when (eq page (tab-layout-enabled-page parent))
-      (setf (tab-layout-enabled-page parent) (page-successor page)))))
+      (setf (tab-layout-enabled-page parent) (car (tab-layout-pages parent))))))
 
 (defun sheet-to-page (sheet)
   "For a SHEET that is a child of a tab layout, return the page corresponding
@@ -223,13 +223,6 @@ be returned."
 
 (defmethod note-tab-page-changed ((layout tab-layout) page)
   nil)
-
-(defun page-successor (page)
-  "The page we should enable when PAGE is currently enabled but gets removed."
-  (loop for (a b c) on (tab-layout-pages (tab-page-tab-layout page)) do
-	(cond
-	  ((eq a page) (return b))
-	  ((eq b page) (return (or c a))))))
 
 (defun note-tab-page-enabled (page)
   (let ((callback (tab-page-enabled-callback page)))
