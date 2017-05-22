@@ -842,10 +842,43 @@ second curve point, yielding (200 50)."
 ;;; Drawing bezier designs to screen
 
 
-;;; Fallback method (suitable for CLX)
+;;; Fallback method
 
 (defmethod medium-draw-bezier-design* (medium design)
   (render-through-pixmap design medium))
+
+;;; CLX Backend
+
+(defun %clx-medium-draw-bezier-design (medium design &key filled)
+  (let* ((tr (sheet-native-transformation (medium-sheet medium)))
+         (design (transform-region tr design))
+         (poly (polygonalize design))
+         (points (polygon-points poly))
+         (coord-vec (make-array 4 :fill-pointer 0)))
+    (map nil (lambda (point)
+               (multiple-value-bind (x y) (point-position point)
+                 (vector-push-extend (clim-clx::round-coordinate x) coord-vec)
+                 (vector-push-extend (clim-clx::round-coordinate y) coord-vec)))
+         points)
+    (clim-clx::with-clx-graphics () medium
+      (xlib:draw-lines clim-clx::mirror clim-clx::gc coord-vec :fill-p filled))))
+
+(defmethod medium-draw-bezier-design* ((medium clim-clx::clx-medium) (design bezier-curve))
+  (%clx-medium-draw-bezier-design medium design))
+
+(defmethod medium-draw-bezier-design* ((medium clim-clx::clx-medium) (design bezier-area))
+  (%clx-medium-draw-bezier-design medium design :filled t))
+
+(defmethod medium-draw-bezier-design* ((medium clim-clx::clx-medium) (design bezier-union))
+  (dolist (area (areas design))
+    (medium-draw-bezier-design* medium area)))
+
+(defmethod medium-draw-bezier-design* ((medium clim-clx::clx-medium) (design bezier-difference))
+  (dolist (area (positive-areas design))
+    (medium-draw-bezier-design* medium area))
+  (with-drawing-options (medium :ink +background-ink+)
+    (dolist (area (negative-areas design))
+      (medium-draw-bezier-design* medium area))))
 
 
 ;;; NULL backend support
