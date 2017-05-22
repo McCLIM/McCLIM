@@ -187,14 +187,8 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
   (alexandria:when-let ((page (sheet-to-page child)))
     (setf (slot-value parent 'pages) (remove page (tab-layout-pages parent))
           (tab-page-tab-layout page) nil)
-    (let* (;; tab-layout-enabled-page may be NIL!
-           (current-page (tab-layout-enabled-page parent))
-           (currentp (equal child (tab-page-pane current-page)))
-           (successor
-            (when currentp
-              (page-successor current-page))))
-      (when currentp
-        (setf (tab-layout-enabled-page parent) successor)))))
+    (when (eq page (tab-layout-enabled-page parent))
+      (setf (tab-layout-enabled-page parent) (page-successor page)))))
 
 (defun sheet-to-page (sheet)
   "For a SHEET that is a child of a tab layout, return the page corresponding
