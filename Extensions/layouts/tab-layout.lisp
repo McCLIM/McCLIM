@@ -180,7 +180,11 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
     ;; add new pages:
     (dolist (page add)
       (setf (tab-page-tab-layout page) parent)
-      (sheet-adopt-child parent (tab-page-pane page)))))
+      (setf (sheet-enabled-p (tab-page-pane page)) nil)
+      (sheet-adopt-child parent (tab-page-pane page)))
+    ;; ensure that at least one page is enabled
+    (when (null (tab-layout-enabled-page parent))
+      (setf (tab-layout-enabled-page parent) (car add)))))
 
 (defmethod sheet-disown-child :before ((parent tab-layout) child &key errorp)
   (declare (ignore errorp))
@@ -241,7 +245,7 @@ to the new page.  This function is a convenience wrapper; you can also
 push page objects directly into TAB-LAYOUT-PAGES and enable them using
 \(SETF TAB-LAYOUT-ENABLED-PAGE\)."
   (push page (tab-layout-pages tab-layout))
-  (when (or enable (null (tab-layout-enabled-page tab-layout)))
+  (when enable
     (setf (tab-layout-enabled-page tab-layout) page)))
 
 (defun switch-to-page (page)
