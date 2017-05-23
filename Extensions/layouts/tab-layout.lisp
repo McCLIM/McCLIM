@@ -440,8 +440,4 @@ that the frame manager can customize the implementation."))
     ((layout tab-layout-pane) page)
   (redisplay-frame-pane (pane-frame layout)
 			(tab-layout-header-pane layout)
-			#+NIL
-			(car (sheet-children
-			      (car (sheet-children
-				    (tab-layout-header-pane layout)))))
 			:force-p t))
