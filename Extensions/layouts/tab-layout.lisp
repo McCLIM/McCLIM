@@ -436,7 +436,7 @@ that the frame manager can customize the implementation."))
 	(move-and-resize-sheet child 0 y width (- height y))
 	(allocate-space child width (- height y))))))
 
-(defmethod clim-tab-layout:note-tab-page-changed
+(defmethod note-tab-page-changed
     ((layout tab-layout-pane) page)
   (redisplay-frame-pane (pane-frame layout)
 			(tab-layout-header-pane layout)
