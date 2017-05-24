@@ -2752,16 +2752,17 @@ current background message was set."))
        (make-clim-stream-pane
 	:name 'a-window-stream-pane
 	:display-time nil
-	:type 'application-pane
+	:type 'window-stream
 	:scroll-bars scroll-bars
 	:height 400 :width 700))
      pane)))
 
-(defmethod close ((stream a-window-stream)
+(defmethod close ((stream window-stream)
 		  &key abort)
   (declare (ignore abort))
-  (alexandria:when-let ((fm (frame-manager stream)))
-    (disown-frame fm stream))
+  (alexandria:when-let* ((frame (pane-frame stream))
+			 (fm (frame-manager frame)))
+    (disown-frame fm frame))
   (when (next-method-p)
     (call-next-method)))
 
@@ -2822,7 +2823,7 @@ current background message was set."))
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
 					  (redisplay-frame-panes frame :force-p t)
                                           (standalone-event-loop)))))
-    frame))
+    (encapsulating-stream-stream frame)))
 
 (defun standalone-event-loop ()
   "An simple event loop for applications that want all events to be handled by
