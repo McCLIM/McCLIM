@@ -54,7 +54,6 @@
 	   #:with-tab-layout
            #:com-switch-to-tab-page
 	   #:com-remove-tab-page
-	   #:internal-child-p
 	   #:note-tab-page-changed))
 
 (in-package #:clim-tab-layout)
@@ -181,21 +180,19 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
     ;; add new pages:
     (dolist (page add)
       (setf (tab-page-tab-layout page) parent)
-      (sheet-adopt-child parent (tab-page-pane page)))))
+      (setf (sheet-enabled-p (tab-page-pane page)) nil)
+      (sheet-adopt-child parent (tab-page-pane page)))
+    ;; ensure that at least one page is enabled
+    (when (null (tab-layout-enabled-page parent))
+      (setf (tab-layout-enabled-page parent) (car (tab-layout-pages parent))))))
 
 (defmethod sheet-disown-child :before ((parent tab-layout) child &key errorp)
   (declare (ignore errorp))
-  (unless (internal-child-p child parent)
-    (let* ((page (sheet-to-page child))
-	   (current-page (tab-layout-enabled-page parent))
-	   (currentp (equal child (tab-page-pane current-page)))
-	   (successor
-	    (when currentp
-	      (page-successor current-page))))
-      (setf (slot-value parent 'pages) (remove page (tab-layout-pages parent)))
-      (when currentp
-	(setf (tab-layout-enabled-page parent) successor))
-      (setf (tab-page-tab-layout page) nil))))
+  (alexandria:when-let ((page (sheet-to-page child)))
+    (setf (slot-value parent 'pages) (remove page (tab-layout-pages parent))
+          (tab-page-tab-layout page) nil)
+    (when (eq page (tab-layout-enabled-page parent))
+      (setf (tab-layout-enabled-page parent) (car (tab-layout-pages parent))))))
 
 (defun sheet-to-page (sheet)
   "For a SHEET that is a child of a tab layout, return the page corresponding
@@ -227,21 +224,6 @@ be returned."
 (defmethod note-tab-page-changed ((layout tab-layout) page)
   nil)
 
-;;; GTK+ distinguishes between children user code creates and wants to
-;;; see, and "internal" children the container creates and mostly hides
-;;; from the user.  Let's steal that concept to ignore the header pane.
-(defgeneric internal-child-p (child parent))
-
-(defmethod internal-child-p (child (parent tab-layout))
-  nil)
-
-(defun page-successor (page)
-  "The page we should enable when PAGE is currently enabled but gets removed."
-  (loop for (a b c) on (tab-layout-pages (tab-page-tab-layout page)) do
-	(cond
-	  ((eq a page) (return b))
-	  ((eq b page) (return (or c a))))))
-
 (defun note-tab-page-enabled (page)
   (let ((callback (tab-page-enabled-callback page)))
     (when callback
@@ -254,7 +236,7 @@ be returned."
   "Add PAGE at the left side of TAB-LAYOUT.  When ENABLE is true, move focus
 to the new page.  This function is a convenience wrapper; you can also
 push page objects directly into TAB-LAYOUT-PAGES and enable them using
-(SETF TAB-LAYOUT-ENABLED-PAGE)."
+\(SETF TAB-LAYOUT-ENABLED-PAGE\)."
   (push page (tab-layout-pages tab-layout))
   (when enable
     (setf (tab-layout-enabled-page tab-layout) page)))
@@ -390,11 +372,9 @@ that the frame manager can customize the implementation."))
   (let ((old-page (tab-layout-enabled-page parent)))
     (unless (equal page old-page)
       (when old-page
-	(setf (sheet-enabled-p (tab-page-pane old-page)) nil))
-      (when page
-	(setf (sheet-enabled-p (tab-page-pane page)) t)))
+	(setf (sheet-enabled-p (tab-page-pane old-page)) nil)))
     (when page
-	(setf (sheet-enabled-p (tab-page-pane page)) t)))
+      (setf (sheet-enabled-p (tab-page-pane page)) t)))
   (call-next-method))
 
 (defun default-display-tab-header (tab-layout pane)
@@ -402,7 +382,7 @@ that the frame manager can customize the implementation."))
   (draw-line* pane
 	      0
 	      17
-	      (slot-value pane 'climi::current-width)
+              (1- (climi::pane-current-width pane))
 	      17
 	      :ink +black+)
   (mapc (lambda (page)
@@ -437,17 +417,14 @@ that the frame manager can customize the implementation."))
 
 (defmethod compose-space ((pane tab-layout-pane) &key width height)
   (declare (ignore width height))
-  (let ((q (compose-space (tab-layout-header-pane pane))))
-    (space-requirement+*
-     (reduce (lambda (x y)
-	       (space-requirement-combine #'max x y))
-	     (mapcar #'compose-space (sheet-children pane))
-	     :initial-value
-	     (make-space-requirement :width 0 :min-width 0 :max-width 0
-				     :height 0 :min-height 0 :max-height 0))
-     :height (space-requirement-height q)
-     :min-height (space-requirement-min-height q)
-     :max-height (space-requirement-max-height q))))
+  (space-requirement+*
+   (reduce (lambda (x y)
+             (space-requirement-combine #'max x y))
+           (mapcar #'compose-space (sheet-children pane))
+           :initial-value
+           (make-space-requirement
+            :min-width  0 :width  1 :max-width  clim:+fill+
+            :min-height 0 :height 1 :max-height clim:+fill+))))
 
 (defmethod allocate-space ((pane tab-layout-pane) width height)
   (let* ((header (tab-layout-header-pane pane))
@@ -459,15 +436,8 @@ that the frame manager can customize the implementation."))
 	(move-and-resize-sheet child 0 y width (- height y))
 	(allocate-space child width (- height y))))))
 
-(defmethod internal-child-p (child (parent tab-layout-pane))
-  (eq child (tab-layout-header-pane parent)))
-
-(defmethod clim-tab-layout:note-tab-page-changed
+(defmethod note-tab-page-changed
     ((layout tab-layout-pane) page)
   (redisplay-frame-pane (pane-frame layout)
 			(tab-layout-header-pane layout)
-			#+NIL
-			(car (sheet-children
-			      (car (sheet-children
-				    (tab-layout-header-pane layout)))))
 			:force-p t))
