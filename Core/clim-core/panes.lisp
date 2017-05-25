@@ -364,7 +364,9 @@ order to produce a double-click")
              (symbol-package :foo))
     (setf type (or (find-symbol (symbol-name type) (find-package :clim))
                    type)))
-  (apply #'make-pane-1 *pane-realizer* *application-frame* type args))
+  (apply #'make-pane-1 (or *pane-realizer*
+			   (frame-manager *application-frame*))
+	 *application-frame* type args))
 
 (defmethod medium-foreground ((pane pane))
   (medium-foreground (sheet-medium pane)))
