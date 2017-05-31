@@ -118,7 +118,7 @@ that this might be different from the sheet's native region."
 
 (defmethod %note-mirrored-sheet-child-enabled :after ((sheet standard-mirrored-sheet-mixin) child)
   (declare (ignore sheet))
-  (dispatch-repaint child (sheet-region child)))
+  (dispatch-repaint sheet (sheet-native-region child)))
 
 (defmethod %note-mirrored-sheet-child-disabled :after ((sheet standard-mirrored-sheet-mixin) child)
   (dispatch-repaint sheet (sheet-native-region child)))
@@ -126,12 +126,12 @@ that this might be different from the sheet's native region."
 (defmethod %note-mirrored-sheet-child-region-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
   (unless (eql sheet *mirrored-sheet-geometry-changed-p*)
-    (dispatch-repaint child (sheet-region child))))
+    (dispatch-repaint sheet (sheet-native-region child))))
 
 (defmethod %note-mirrored-sheet-child-transformation-changed :after
     ((sheet standard-mirrored-sheet-mixin) child)
   (unless (eql sheet *mirrored-sheet-geometry-changed-p*)
-    (dispatch-repaint child (sheet-region child))))
+    (dispatch-repaint sheet (sheet-native-region child))))
 
 (defmethod %note-sheet-pointer-cursor-changed :after ((sheet standard-mirrored-sheet-mixin))
   (set-sheet-pointer-cursor (port sheet) sheet (sheet-pointer-cursor sheet)))
