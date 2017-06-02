@@ -2672,7 +2672,6 @@ if INVOKE-CALLBACK is given."))
                                                    :top (if (eq position :below)
                                                             y1
                                                             (- y0 composed-height 1)))))
-	    (enable-frame menu-frame)
             (values list-pane topmost-pane menu-frame)))))))
 
 (defun popup-list-box (parent)
@@ -2691,7 +2690,7 @@ if INVOKE-CALLBACK is given."))
           (popup-init parent manager frame)
         (setf (slot-value list-pane 'armed) t)
         (adopt-frame manager menu-frame)
-
+	(enable-frame menu-frame)
         (labels ((in-window (window child x y)
                    (and window
                         (sheet-ancestor-p child window)
