@@ -158,7 +158,7 @@
                 :row-wise row-wise))
 
 (defclass menu-pane (clim-stream-pane)
-  ()
+  ((menu-frame))
   (:default-initargs :background *3d-normal-color*))
 
 ;; Spec macro.
@@ -196,6 +196,8 @@
 				     :left nil
 				     :top nil)))
         (adopt-frame fm frame)
+	(setf (slot-value menu-stream 'menu-frame) frame)
+	;;(enable-frame frame)
         (unwind-protect
              (progn
                (setf (stream-end-of-line-action menu-stream) :allow
@@ -247,7 +249,10 @@
           (when text-style
             (setf (medium-text-style menu) text-style))
           (letf (((stream-default-view menu) +textual-menu-view+))
-            (menu-choose-from-drawer menu (or presentation-type 'menu-item)
+	    
+	    
+	    
+		(menu-choose-from-drawer menu (or presentation-type 'menu-item)
                                      #'drawer
                                      :cache cache
                                      :unique-id unique-id
@@ -368,7 +373,10 @@ maximum size according to `frame')."
    menu
    :x-position x-position
    :y-position y-position)
-  
+
+  (enable-frame (slot-value menu 'menu-frame))
+
+
   (let ((*pointer-documentation-output* pointer-documentation))
     (let ((*pointer-documentation-output* pointer-documentation))
       (handler-case
