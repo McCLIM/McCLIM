@@ -2497,6 +2497,10 @@ order to produce a double-click")
     (make-space-requirement :width  w :min-width  w :max-width +fill+
                             :height h :min-height h :max-height +fill+)))
 
+(defmethod stream-add-output-record :after ((pane clim-stream-pane) record)
+  (unless (region-contains-region-p (sheet-region pane) record)
+    (change-space-requirements pane)))
+
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
   (let ((output-history (stream-output-history pane)))
