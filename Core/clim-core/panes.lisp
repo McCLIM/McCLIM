@@ -2498,7 +2498,7 @@ order to produce a double-click")
                             :height h :min-height h :max-height +fill+)))
 
 (defmethod stream-add-output-record :after ((pane clim-stream-pane) record)
-  (unless (region-contains-region-p (sheet-region pane) record)
+  (unless (region-contains-region-p (sheet-region pane) (stream-output-history pane))
     (change-space-requirements pane)))
 
 (defmethod window-clear ((pane clim-stream-pane))
