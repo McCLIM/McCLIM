@@ -158,10 +158,19 @@
                 :row-wise row-wise))
 
 (defclass menu-pane (clim-stream-pane)
-  ()
+  ((menu-frame))
   (:default-initargs :background *3d-normal-color*))
 
+
+;; When the menu frame is created it is disabled.
+;; To make the menu visible it is required to call enable-menu.
+(defgeneric enable-menu (pane))
+
+(defmethod enable-menu ((pane menu-pane))
+  (enable-frame (slot-value pane 'menu-frame)))
+
 ;; Spec macro.
+;; The menu is not visible.
 (defmacro with-menu ((menu &optional associated-window
                            &key (deexpose t) label scroll-bars)
                      &body body)
@@ -196,6 +205,7 @@
 				     :left nil
 				     :top nil)))
         (adopt-frame fm frame)
+	(setf (slot-value menu-stream 'menu-frame) frame)
         (unwind-protect
              (progn
                (setf (stream-end-of-line-action menu-stream) :allow
@@ -368,7 +378,8 @@ maximum size according to `frame')."
    menu
    :x-position x-position
    :y-position y-position)
-  
+  ;; The menu is enabled (make visible) after the size is adjusted.
+  (enable-menu menu)
   (let ((*pointer-documentation-output* pointer-documentation))
     (let ((*pointer-documentation-output* pointer-documentation))
       (handler-case

@@ -2690,7 +2690,7 @@ if INVOKE-CALLBACK is given."))
           (popup-init parent manager frame)
         (setf (slot-value list-pane 'armed) t)
         (adopt-frame manager menu-frame)
-
+	(enable-frame menu-frame)
         (labels ((in-window (window child x y)
                    (and window
                         (sheet-ancestor-p child window)
