@@ -849,10 +849,8 @@ second curve point, yielding (200 50)."
 
 ;;; CLX Backend
 
-(defun %clx-medium-draw-bezier-design (medium design &key filled)
-  (let* ((tr (sheet-native-transformation (medium-sheet medium)))
-         (design (transform-region tr design))
-         (poly (polygonalize design))
+(defun bezier-region-to-coord-vec (region)
+  (let* ((poly (polygonalize region))
          (points (polygon-points poly))
          (coord-vec (make-array 4 :fill-pointer 0)))
     (map nil (lambda (point)
@@ -860,6 +858,12 @@ second curve point, yielding (200 50)."
                  (vector-push-extend (clim-clx::round-coordinate x) coord-vec)
                  (vector-push-extend (clim-clx::round-coordinate y) coord-vec)))
          points)
+    coord-vec))
+
+(defun %clx-medium-draw-bezier-design (medium design &key filled)
+  (let* ((tr (sheet-native-transformation (medium-sheet medium)))
+         (region (transform-region tr design))
+         (coord-vec (bezier-region-to-coord-vec region)))
     (clim-clx::with-clx-graphics () medium
       (xlib:draw-lines clim-clx::mirror clim-clx::gc coord-vec :fill-p filled))))
 
@@ -874,11 +878,63 @@ second curve point, yielding (200 50)."
     (medium-draw-bezier-design* medium area)))
 
 (defmethod medium-draw-bezier-design* ((medium clim-clx::clx-medium) (design bezier-difference))
-  (dolist (area (positive-areas design))
-    (medium-draw-bezier-design* medium area))
-  (with-drawing-options (medium :ink +background-ink+)
-    (dolist (area (negative-areas design))
-      (medium-draw-bezier-design* medium area))))
+  (multiple-value-bind (min-x min-y max-x max-y)
+      (bounding-rectangle* design)
+    (let ((imin-x (floor min-x))
+          (imin-y (floor min-y))
+          (imax-x (ceiling max-x))
+          (imax-y (ceiling max-y)))
+      (let ((tr (make-instance 'climi::standard-translation :dx (- imin-x)  :dy (- imin-y))))
+        (let ((width (- imax-x imin-x))
+              (height (- imax-y imin-y)))
+          (let ((drawable (clim-clx::sheet-xmirror (medium-sheet medium))))
+            (with-slots ((gc clim-clx::gc)) medium
+              ;; 1. save the clipmask, clip-x-origin, and clip-y-origin
+              (let ((old-clip-mask (xlib:gcontext-clip-mask gc))
+                    (old-clip-x (xlib:gcontext-clip-x gc))
+                    (old-clip-y (xlib:gcontext-clip-y gc)))
+                ;; 2. create a 1-bit region that is the size of the bezier
+                ;; difference (the clip-pixmap)
+                (let* ((mask-pixmap (xlib:create-pixmap :drawable drawable
+                                                        :width width 
+                                                        :height height
+                                                        :depth 1))
+                       (mask-gc (xlib:create-gcontext :drawable mask-pixmap
+                                                      :foreground 1
+                                                      :background 0)))
+                  ;; 3. for each of the positive areas, draw 1s in the
+                  ;; clip-pixmap for the corresponding shape
+                  (setf (xlib:gcontext-foreground mask-gc) 1)
+                  (dolist (area (positive-areas design))
+                    (let ((t-area (transform-region tr area)))
+                      (let ((coord-vec (bezier-region-to-coord-vec t-area)))
+                        (xlib:draw-lines mask-pixmap mask-gc coord-vec :fill-p t))))
+                  ;; 4. for each of the negative areas, draw 0s in the
+                  ;; clip-pixmap for the corresponding shape
+                  (setf (xlib:gcontext-foreground mask-gc) 0)
+                  (dolist (area (negative-areas design))
+                    (let ((t-area (transform-region tr area)))
+                      (let ((coord-vec (bezier-region-to-coord-vec t-area)))
+                        (xlib:draw-lines mask-pixmap mask-gc coord-vec :fill-p t))))
+                  ;; 5. set the clipmask, clip-x-origin, and clip-y-origin
+                  (setf (xlib:gcontext-clip-mask gc :unsorted) mask-pixmap
+                        (xlib:gcontext-clip-x gc) imin-x
+                        (xlib:gcontext-clip-y gc) imin-y)
+                  ;; 6. actually do the (masked) drawing
+                  (dolist (area (positive-areas design))
+                    (let* ((tr (sheet-native-transformation (medium-sheet medium)))
+                           (region (transform-region tr area))
+                           (coord-vec (bezier-region-to-coord-vec region)))
+                      (clim-clx::with-clx-graphics () medium
+                        (xlib:draw-lines clim-clx::mirror clim-clx::gc coord-vec :fill-p t))))
+                  ;; 7. restore things on the way back out
+                  ;; reset the clipmask, clip-x-origin, and clip-y-origin to their original values
+                  (setf (xlib:gcontext-clip-mask gc) old-clip-mask
+                        (xlib:gcontext-clip-x gc) old-clip-x
+                        (xlib:gcontext-clip-y gc) old-clip-y)
+                  ;; 8. free the clipmask
+                  (xlib:free-gcontext mask-gc)
+                  (xlib:free-pixmap mask-pixmap))))))))))
 
 
 ;;; NULL backend support
