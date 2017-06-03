@@ -2398,7 +2398,7 @@ order to produce a double-click")
 				 &key force-p)
   (declare (ignore force-p))
   (invoke-display-function frame pane)
-  (fit-pane-to-output pane))
+  (change-space-requirements pane))
 
 (defclass clim-stream-pane (updating-output-stream-mixin
 			    pane-display-mixin
@@ -2888,10 +2888,10 @@ current background message was set."))
       (multiple-value-bind (width min-width max-width 
                             height min-height max-height)
           (space-requirement-components (compose-space stream))
-      (change-space-requirements stream
-                                 :min-width (max fit-width min-width)
-                                 :min-height (max fit-height min-height)
-                                 :width (max fit-width width)
-                                 :height (max fit-height height)
-                                 :max-width max-width
-                                 :max-height max-height)))))
+	(change-space-requirements stream
+				   :min-width (max fit-width min-width)
+				   :min-height (max fit-height min-height)
+				   :width (max fit-width width)
+				   :height (max fit-height height)
+				   :max-width max-width
+				   :max-height max-height)))))

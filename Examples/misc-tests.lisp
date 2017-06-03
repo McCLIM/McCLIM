@@ -56,7 +56,8 @@
                  (window-clear description)
                  (with-text-style (description (make-text-style :sans-serif :roman :normal))
                    (write-string (misc-test-description item) description))
-                 (funcall (misc-test-drawer item) output)))))
+                 (funcall (misc-test-drawer item) output)
+		 (change-space-requirements output)))))
   (:layouts
    (default
      (spacing (:thickness 3)
