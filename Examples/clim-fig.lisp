@@ -115,7 +115,7 @@
               (tracking-pointer (pane)
                 (:pointer-motion (&key window x y)
                                  (declare (ignore window))
-                                 (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)~%"
+                                 (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)"
                                                           (slot-value *application-frame*
                                                                       'drawing-mode)
                                                           (round x1) (round y1)
