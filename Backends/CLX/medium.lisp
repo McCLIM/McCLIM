@@ -1215,7 +1215,7 @@ time an indexed pattern is drawn.")
       (unless pixmap
 	(setf pixmap (compute-rgb-image-pixmap da image))
 	(when (climi::image-alpha-p image)
-	  (setf mask (compute-rgb-image-mask da image)))
+         (setf mask (compute-rgb-image-mask da image)))
 	(setf (slot-value design 'climi::medium-data) (list pixmap mask)))
       (multiple-value-bind (x y)
 	  (transform-position
