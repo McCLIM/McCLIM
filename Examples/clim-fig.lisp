@@ -31,14 +31,6 @@
   (setf (gadget-value (clim-fig-status *application-frame*))
 	string))
 
-(defun bezier-rounded-rectangle-coords (x1 y1 x2 y2 x-radius &optional (y-radius x-radius))
-  (mcclim-bezier:relative-to-absolute-coord-seq
-   (list x1 y1 x-radius (- y-radius)
-         (- x-radius)  (- y-radius) (- x2 x1) 0 x-radius y-radius
-         x-radius (- y-radius) 0 (- y2 y1) (- x-radius) y-radius
-         x-radius y-radius (- x1 x2) 0 (- x-radius) (- y-radius)
-         (- x-radius) y-radius 0 (- y1 y2))))
-
 (defun draw-figure (pane x y x1 y1 &key fastp cp-x1 cp-y1 cp-x2 cp-y2)
   (with-slots (line-style current-color fill-mode constrict-mode)
       *application-frame*
@@ -93,11 +85,7 @@
                 (unless (or (= x cp-x1 x1 cp-x2)
                             (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
                   (let ((design (mcclim-bezier::make-bezier-area*
-                                 (bezier-rounded-rectangle-coords cp-x1 cp-y1
-                                                                  cp-x2 cp-y2
-                                                                  (/ (min (abs (- cp-y2 cp-y1))
-                                                                          (abs (- cp-x2 cp-x1)))
-                                                                     3)))))
+                                 (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1 x1 y1 x y x y))))
                     (mcclim-bezier:draw-bezier-design* pane design :ink current-color))
                   (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
                   (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+)))
