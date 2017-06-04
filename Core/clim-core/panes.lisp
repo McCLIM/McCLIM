@@ -2398,7 +2398,7 @@ order to produce a double-click")
 				 &key force-p)
   (declare (ignore force-p))
   (invoke-display-function frame pane)
-  (fit-pane-to-output pane))
+  (change-space-requirements pane))
 
 (defclass clim-stream-pane (updating-output-stream-mixin
 			    pane-display-mixin
@@ -2496,6 +2496,10 @@ order to produce a double-click")
         (h (bounding-rectangle-height (stream-output-history pane))))
     (make-space-requirement :width  w :min-width  w :max-width +fill+
                             :height h :min-height h :max-height +fill+)))
+
+(defmethod stream-add-output-record :after ((pane clim-stream-pane) record)
+  (unless (region-contains-region-p (sheet-region pane) (stream-output-history pane))
+    (change-space-requirements pane)))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
@@ -2870,28 +2874,3 @@ current background message was set."))
 (defmethod schedule-timer-event ((pane pane) token delay)
   (warn "Are you sure you want to use schedule-timer-event? It probably doesn't work.")
   (schedule-event pane (make-instance 'timer-event :token token :sheet pane) delay))
-
-(defgeneric fit-pane-to-output (pane)
-  (:method (pane) (declare (ignore pane))))
-
-(defmethod fit-pane-to-output ((stream clim-stream-pane))
-  ;; Guard against infinite recursion of size is set to :compute, as
-  ;; this could get called from the display function. We'll call
-  ;; compose-space here, which will invoke the display function
-  ;; again..
-  (when (and (sheet-mirror stream)
-             (not (or (eq (pane-user-width stream) :compute)
-                      (eq (pane-user-height stream) :compute))))
-    (let* ((output (stream-output-history stream))
-           (fit-width  (bounding-rectangle-max-x  output))
-           (fit-height (bounding-rectangle-max-y output)))
-      (multiple-value-bind (width min-width max-width 
-                            height min-height max-height)
-          (space-requirement-components (compose-space stream))
-      (change-space-requirements stream
-                                 :min-width (max fit-width min-width)
-                                 :min-height (max fit-height min-height)
-                                 :width (max fit-width width)
-                                 :height (max fit-height height)
-                                 :max-width max-width
-                                 :max-height max-height)))))

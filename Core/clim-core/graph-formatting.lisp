@@ -188,7 +188,6 @@
 	  (setf (stream-cursor-position stream)
 	    (values (bounding-rectangle-max-x graph-output-record)
 		    (bounding-rectangle-max-y graph-output-record))))
-        (fit-pane-to-output stream)
 	graph-output-record))))
 
 ;;;; Graph Output Records

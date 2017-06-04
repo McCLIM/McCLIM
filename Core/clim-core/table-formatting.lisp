@@ -336,8 +336,7 @@ skips intervening non-table output record structures."))
 		(values (bounding-rectangle-max-x table)
 			(bounding-rectangle-max-y table)))
 	  (setf (stream-cursor-position stream)
-		(values cursor-old-x cursor-old-y)))))
-  (fit-pane-to-output stream))
+		(values cursor-old-x cursor-old-y))))))
 
 ;;; Think about rewriting this using a common superclass for row and
 ;;; column records.
