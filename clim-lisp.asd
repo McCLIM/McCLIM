@@ -7,7 +7,8 @@
                (:module "Lisp-Dep"
                         :components
                         (#+(or cmu scl excl sbcl openmcl lispworks clisp ecl)
-                           (:file   #+cmu       "fix-cmu"
+                           (:file   #+armedbear "fix-abcl"
+                                    #+cmu       "fix-cmu"
                                     #+scl       "fix-scl"
                                     #+excl      "fix-acl"
                                     #+sbcl      "fix-sbcl"
