@@ -85,8 +85,12 @@
 
 (defgeneric medium-draw-bezier-design* (stream design))
 
+(defmethod medium-draw-bezier-design* :around ((medium climi::transform-coordinates-mixin) design)
+  (let ((tr (medium-transformation medium)))
+    (let ((tr-design (transform-region tr design)))
+      (call-next-method medium tr-design))))
 
-;;; recording
+;;; output recording
 
 (defclass translatable-record-mixin ()
   ((output-record-translation :accessor output-record-translation :initform nil)))
@@ -108,19 +112,19 @@
       (let ((tr (make-instance 'climi::standard-translation :dx dx :dy dy)))
         (multiple-value-prog1
             (call-next-method))
-        (setf (output-record-translation record) tr)))))
+        (setf (output-record-translation record) tr))))
+  (values nx ny))
 
 (defmethod replay-output-record :around ((record draw-bezier-design-output-record) stream
                                          &optional region x-offset y-offset)
   (declare (ignore x-offset y-offset region))
   (with-slots (design output-record-translation) record
-    (let ((old-design design))
-      (setf design (if output-record-translation
-                       (transform-region output-record-translation design)
-                       design))
-      (prog1
-          (call-next-method)
-        (setf design old-design)))))
+    (setf design (if output-record-translation
+                     (transform-region output-record-translation design)
+                     design))
+    (prog1
+        (call-next-method)
+      (setf output-record-translation nil))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -270,14 +274,6 @@ second curve point, yielding (200 50)."
 			 (transform-region transformation p1)
 			 (transform-region transformation p2)
 			 (transform-region transformation p3))))
-
-(defmethod transform-region (transformation (path bezier-curve))
-  (make-instance 'bezier-curve
-                 :segments (let ((segments (%segments path)))
-                             (map (type-of segments)
-                                  (lambda (segment)
-                                    (transform-segment transformation segment))
-                                  (%segments path)))))
 
 (defmethod region-union ((r1 bezier-curve) (r2 bezier-curve))
   (let ((p (slot-value (car (last (%segments r1))) 'p3))
