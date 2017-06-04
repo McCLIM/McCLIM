@@ -1421,8 +1421,6 @@
          (r3 (mcclim-bezier:region-difference r1 r2))
          (r4 (mcclim-bezier:make-bezier-curve* (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140)))
          (r5 (mcclim-bezier:convolve-regions r2 r4)))
-    (mcclim-bezier:draw-bezier-design* stream r1)
-    (mcclim-bezier:draw-bezier-design* stream r2)
     (mcclim-bezier:draw-bezier-design* stream r3)
     (mcclim-bezier:draw-bezier-design* stream r4
                                        :line-thickness 12
@@ -1541,6 +1539,13 @@
           (mcclim-bezier:draw-bezier-design* stream design
                                              :line-thickness 16
                                              :ink +pink+))))))
+
+(define-drawing-test "16) Bezier Difference" (stream)
+    "Draws a single bezier difference"
+  (let* ((r1 (mcclim-bezier:make-bezier-area* '(100 100 200 200 300 200 400 100 300 50 200 50 100 100)))
+         (r2 (mcclim-bezier:make-bezier-area* '(150 100 200 120 300 150 350 100 300 80 200 80 150 100)))
+         (r3 (mcclim-bezier:region-difference r1 r2)))
+    (mcclim-bezier:draw-bezier-design* stream r3)))
 
 (defun convert-postscript-file (file &key svg)
   (let ((result (uiop:run-program `( "ps2pdf" ,(uiop:unix-namestring file)))))

@@ -77,18 +77,29 @@
 			"[Use the middle and right mouse button to set control points]"
 			0
 			20))
-	  (let* ((cp-x1 (or cp-x1 x))
-		 (cp-y1 (or cp-y1 y1))
-		 (cp-x2 (or cp-x2 x1))
-		 (cp-y2 (or cp-y2 y))
-		 (design (mcclim-bezier::make-bezier-thing*
-                          'mcclim-bezier:bezier-area
-			  (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1))))
-            (unless (or (= x cp-x1 x1 cp-x2)
-                        (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
-              (mcclim-bezier:draw-bezier-design* pane design)
-              (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
-              (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+))))))))
+          (if fill-mode
+              (let* ((cp-x1 (or cp-x1 x))
+                     (cp-y1 (or cp-y1 y1))
+                     (cp-x2 (or cp-x2 x1))
+                     (cp-y2 (or cp-y2 y)))
+                (unless (or (= x cp-x1 x1 cp-x2)
+                            (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
+                  (let ((design (mcclim-bezier::make-bezier-area*
+                                 (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1 x1 y1 x y x y))))
+                    (mcclim-bezier:draw-bezier-design* pane design :ink current-color))
+                  (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
+                  (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+)))
+              (let* ((cp-x1 (or cp-x1 x))
+                     (cp-y1 (or cp-y1 y1))
+                     (cp-x2 (or cp-x2 x1))
+                     (cp-y2 (or cp-y2 y))
+                     (design (mcclim-bezier::make-bezier-curve*
+                              (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1))))
+                (unless (or (= x cp-x1 x1 cp-x2)
+                            (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
+                  (mcclim-bezier:draw-bezier-design* pane design :ink current-color)
+                  (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
+                  (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+)))))))))
 
 (defun signum-1 (value)
   (if (zerop value)
