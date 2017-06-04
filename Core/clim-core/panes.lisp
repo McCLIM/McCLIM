@@ -1315,6 +1315,12 @@ order to produce a double-click")
 		    initialization common to both."))
 
 (defmethod initialize-instance :after ((pane box-pane) &key contents)
+  (%change-box-pane-contents pane contents))
+
+(defgeneric %change-box-pane-contents (pane contents)) 
+(defmethod %change-box-pane-contents ((pane box-pane) contents)
+  (dolist (child (sheet-children pane))
+    (sheet-disown-child pane child))
   (labels ((parse-box-content (content)
 	     "Parses a box/rack content and returns a BOX-CLIENT instance."
 	     ;; ### we need to parse more
