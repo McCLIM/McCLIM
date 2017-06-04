@@ -795,8 +795,8 @@ and must never be nil."))
            (ds (text-style-descent (pane-text-style gadget) gadget))
            (w  (+ (text-size gadget label :text-style (pane-text-style gadget)) wider))
            (h  (+ as ds higher)))
-      (make-space-requirement :width w  :min-width w  :max-width  w
-                              :height h :min-height h :max-height h))))
+      (make-space-requirement :width w  :min-width w  :max-width  +fill+
+                              :height h :min-height h :max-height +fill+))))
 
 (defgeneric draw-label* (pane x1 y1 x2 y2 &key ink))
 
@@ -1113,16 +1113,14 @@ and must never be nil."))
   (space-requirement+* (space-requirement+* (compose-label-space gadget)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))
-                                            :max-width (* 2 (pane-x-spacing gadget))
+                                            :max-width +fill+
                                             :min-height (* 2 (pane-y-spacing gadget))
                                             :height (* 2 (pane-y-spacing gadget))
-                                            :max-height (* 2 (pane-y-spacing gadget)))
+                                            :max-height +fill+
                        :min-width (* 2 *3d-border-thickness*)
                        :width (* 2 *3d-border-thickness*)
-                       :max-width (* 2 *3d-border-thickness*)
                        :min-height (* 2 *3d-border-thickness*)
-                       :height (* 2 *3d-border-thickness*)
-                       :max-height (* 2 *3d-border-thickness*)))
+                       :height (* 2 *3d-border-thickness*))))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
   (with-slots (pressedp) pane
@@ -1189,15 +1187,13 @@ and must never be nil."))
      (space-requirement+* sr
                           :min-width  (* 3 (pane-x-spacing pane))
                           :width      (* 3 (pane-x-spacing pane))
-                          :max-width  (* 3 (pane-x-spacing pane))
+                          :max-width  +fill+
                           :min-height (* 2 (pane-y-spacing pane))
                           :height     (* 2 (pane-y-spacing pane))
-                          :max-height (* 2 (pane-y-spacing pane)))
+                          :max-height +fill+)
      :min-width (space-requirement-height sr)
      :width     (space-requirement-height sr)
-     :max-width (space-requirement-height sr)
      :min-height 0
-     :max-height 0
      :height 0)))
 
 (defgeneric draw-toggle-button-indicator (gadget type value x1 y1 x2 y2))
@@ -1295,16 +1291,14 @@ and must never be nil."))
   (space-requirement+* (space-requirement+* (compose-label-space gadget)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))
-                                            :max-width (* 2 (pane-x-spacing gadget))
+                                            :max-width +fill+
                                             :min-height (* 2 (pane-y-spacing gadget))
                                             :height (* 2 (pane-y-spacing gadget))
-                                            :max-height (* 2 (pane-y-spacing gadget)))
+                                            :max-height +fill+)
                        :min-width (* 2 *3d-border-thickness*)
                        :width (* 2 *3d-border-thickness*)
-                       :max-width (* 2 *3d-border-thickness*)
                        :min-height (* 2 *3d-border-thickness*)
-                       :height (* 2 *3d-border-thickness*)
-                       :max-height (* 2 *3d-border-thickness*)))
+                       :height (* 2 *3d-border-thickness*)))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.4 The concrete scroll-bar Gadget
@@ -2569,7 +2563,7 @@ if INVOKE-CALLBACK is given."))
                             :max-width +fill+
                             :min-height total-height
                             :height total-height
-                            :max-height total-height)))
+                            :max-height +fill+)))
 
 (defgeneric generic-option-pane-draw-widget (pane))
 
