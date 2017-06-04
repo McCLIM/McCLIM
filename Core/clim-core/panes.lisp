@@ -1315,6 +1315,11 @@ order to produce a double-click")
 		    initialization common to both."))
 
 (defmethod initialize-instance :after ((pane box-pane) &key contents)
+  (setf (%pane-contents pane) contents))
+
+(defgeneric %pane-contests (pane contents))
+
+(defmethod (setf %pane-contents) (contents (pane box-pane))
   (labels ((parse-box-content (content)
 	     "Parses a box/rack content and returns a BOX-CLIENT instance."
 	     ;; ### we need to parse more
@@ -1365,10 +1370,12 @@ order to produce a double-click")
 	       (t
 		(error "~S is not a valid element in the ~S option of ~S."
 		       content :contents pane)) )))
+    ;; remove old children, if any
+    (dolist (child (sheet-children pane))
+      (sheet-disown-child pane child))
 
     (let* ((clients  (mapcar #'parse-box-content contents))
 	   (children (remove nil (mapcar #'box-client-pane clients))))
-      ;;
       (setf (box-layout-mixin-clients pane) clients)
       (mapc (curry #'sheet-adopt-child pane) children))))
 

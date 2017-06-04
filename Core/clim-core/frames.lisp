@@ -113,6 +113,7 @@ input focus. This is a McCLIM extension."))
 		    :reader frame-top-level-sheet)
    (menu-bar :initarg :menu-bar
 	     :initform nil)
+   (menu-bar-pane :initform nil)
    (state :initarg :state
 	  :initform :disowned
 	  :reader frame-state)
@@ -240,7 +241,9 @@ documentation produced by presentations.")
     (if (and (get-menu (frame-command-table frame))
 	     (get-menu new-command-table))
 	(prog1 (call-next-method)
-	  (generate-panes *default-frame-manager* *application-frame*))
+	  (when (slot-value frame 'menu-bar-pane)
+	    (update-menu-bar (slot-value frame 'menu-bar-pane)
+			     new-command-table)))
 	(call-next-method))))
 
 (defmethod generate-panes :before (fm  (frame application-frame))
@@ -759,8 +762,9 @@ documentation produced by presentations.")
                                         (vertically ()
                                           ,@(cond
                                               ((eq menu-bar t)
-                                               `((clim-internals::make-menu-bar
-                                                  ',class-name)))
+                                               `((setf (slot-value frame 'menu-bar-pane)
+						       (clim-internals::make-menu-bar
+							',class-name))))
                                               ((consp menu-bar)
                                                `((clim-internals::make-menu-bar
                                                   (make-command-table
