@@ -170,6 +170,7 @@ account, and create a list of menu buttons."
 	    (setf frame-manager manager
 		  submenu-frame (make-menu-frame raised :left x :top y))
 	    (adopt-frame manager submenu-frame)
+	    (enable-frame submenu-frame)
 	    (with-sheet-medium (medium raised)
 	      (medium-force-output medium))))))))
 

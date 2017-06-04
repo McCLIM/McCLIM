@@ -987,6 +987,9 @@ frames and will not have focus.
    (top-level-sheet :initform nil :reader frame-top-level-sheet)
    (panes :reader frame-panes :initarg :panes)
    (graft :initform nil :accessor graft)
+   (state :initarg :state
+	  :initform :disowned
+	  :reader frame-state)
    (manager :initform nil :accessor frame-manager)))
 
 (defclass menu-unmanaged-top-level-sheet-pane (unmanaged-top-level-sheet-pane)
@@ -997,7 +1000,9 @@ frames and will not have focus.
   (setf (frame-manager frame) fm)
   (let* ((t-l-s (make-pane-1 fm *application-frame*
                              'menu-unmanaged-top-level-sheet-pane
-			     :name 'top-level-sheet)))
+			     :name 'top-level-sheet
+			     ;; enabling should be left to enable-frame
+			     :enabled-p nil)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (sheet-adopt-child t-l-s (frame-panes frame))
     (let ((graft (find-graft :port (port fm))))
@@ -1029,6 +1034,20 @@ frames and will not have focus.
   (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
   (setf (frame-manager frame) nil))
+
+(defmethod enable-frame ((frame menu-frame))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
+  (setf (slot-value frame 'state) :enabled)
+  (note-frame-enabled (frame-manager frame) frame))
+
+(defmethod disable-frame ((frame menu-frame))
+  (let ((t-l-s (frame-top-level-sheet frame)))
+    (setf (sheet-enabled-p t-l-s) nil)
+    (when (port t-l-s)
+      (port-force-output (port t-l-s))))
+  (setf (slot-value frame 'state) :disabled)
+  (note-frame-disabled (frame-manager frame) frame))
+
 
 (defun make-menu-frame (pane &key (left 0) (top 0) (min-width 1))
   (make-instance 'menu-frame :panes pane :left left :top top :min-width min-width))
