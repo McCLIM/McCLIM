@@ -2513,7 +2513,7 @@ order to produce a double-click")
     (when cursor
       (setf (cursor-position cursor) (values 0 0))))
   (scroll-extent pane 0 0)  
-  (change-space-requirements pane :width 0 :height 0))
+  (change-space-requirements pane))
 
 
 (defmethod window-refresh ((pane clim-stream-pane))
