@@ -610,18 +610,17 @@ time an indexed pattern is drawn.")
                                         (line-style 'line-style)
                                         (ink 'ink)
                                         (gcontext 'gc))
-                                medium &body body)
+                                        medium &body body)
   (let ((medium-var (gensym)))
     `(let* ((,medium-var ,medium)
-	    (,mirror (sheet-xmirror (medium-sheet ,medium-var))))
-       (when mirror
-	 (let* ((,line-style (medium-line-style ,medium-var))
-		(,ink        (medium-ink ,medium-var))
-		(,gcontext   (medium-gcontext ,medium-var ink)))
-	   (declare (ignorable ,line-style ,gcontext))
-	   (unwind-protect
-		(unless (eql ,ink +transparent-ink+)
-		  (progn ,@body))))))))
+            (,mirror (sheet-xmirror (medium-sheet ,medium-var))))
+       (when ,mirror
+         (let* ((,line-style (medium-line-style ,medium-var))
+                (,ink (medium-ink ,medium-var))
+                (,gcontext (medium-gcontext ,medium-var ,ink)))
+           (declare (ignorable ,line-style ,gcontext))
+           (unless (eql ,ink +transparent-ink+)
+             ,@body))))))
 
 
 ;;; Pixmaps
