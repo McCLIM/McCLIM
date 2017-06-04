@@ -366,12 +366,14 @@ account, and create a list of menu buttons."
 (defmethod initialize-instance :after ((pane menu-bar)
 				       &rest args
 				       &key
-				       &allow-other-keys)
-  (declare (ignore args))
+				       &allow-other-keys))
+
+(defmethod %change-box-pane-contents :after ((pane menu-bar) new-contents)
+  (declare (ignore new-contents))
   (setf (slot-value pane 'items) (copy-list (sheet-children pane)))
   (loop for child in (menu-children pane)
-	do (setf (gadget-client child) pane)))
-
+     do (setf (gadget-client child) pane)))
+  
 (defmethod menu-children ((menu-bar menu-bar))
   (slot-value menu-bar 'items))
 
@@ -411,6 +413,21 @@ account, and create a list of menu buttons."
 			 :vertical nil
 			 :command-table command-table))
 		  (list +fill+)))))
+
+(defun update-menu-bar (menu-bar-pane command-table)
+  (when command-table
+    (with-slots (menu) command-table
+      (%change-box-pane-contents menu-bar-pane
+		       (append
+			(loop for item in menu
+			   collect 
+			     (make-menu-button-from-menu-item
+			      item nil
+			      :bottomp t
+			      :vertical nil
+			      :command-table command-table))
+			(list +fill+))))
+    (change-space-requirements menu-bar-pane)))
 
 (defmethod handle-repaint ((pane menu-bar) region)
   (declare (ignore region))
