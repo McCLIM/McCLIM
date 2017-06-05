@@ -17,16 +17,22 @@
                          :drawer (lambda ,arglist ,@body))))
 
 (define-application-frame drawing-tests ()
-  ((recording-p :initform t))
+  ((recording-p :initform t)
+   (signal-condition-p :initform nil)
+   (current-selection :initform nil))
   (:panes
    (backend-output :application-pane 
-		   :width *width*
-		   :height *height*
+		   :min-width *width*
+		   :min-height *height*
+                   :display-time nil
+                   :display-function #'display-backend-output
 		   :end-of-line-action :wrap
 		   :end-of-page-action :wrap)
    (render-output :application-pane
-		  :width *width*
-		  :height *height*
+		  :min-width *width*
+		  :min-height *height*
+                  :display-time nil
+                  :display-function #'display-render-output
 		  :end-of-line-action :wrap
 		  :end-of-page-action :wrap)
    (description :application-pane)
@@ -35,12 +41,17 @@
              :name-key #'drawing-test-name
              :items (sort (loop for x being the hash-values of *drawing-tests*
                                 collect x) #'string< :key #'drawing-test-name)
-             :value-changed-callback #'render-images)
+             :value-changed-callback #'%update-selection)
    (recording-option
     (clim:with-radio-box (:orientation :vertical
 				       :value-changed-callback '%update-recording-option)
       (clim:radio-box-current-selection "yes")
       "no"))
+   (condition-option
+    (clim:with-radio-box (:orientation :vertical
+				       :value-changed-callback '%update-condition-option)
+      (clim:radio-box-current-selection "message")
+      "break"))
    (print-ps :push-button
 	     :label "Print All (/tmp/*.ps)"
 	     :activate-callback #'(lambda (x)
@@ -60,8 +71,10 @@
 	   (spacing (:thickness 3)
 	     (clim-extensions:lowering ()
 	       (scrolling (:scroll-bar :vertical :height *height*) selector)))
-	   (labelling (:label "Reder Recording")
-	     recording-option)
+	   (labelling (:label "Recording")
+             recording-option)
+           (labelling (:label "Condition")
+             condition-option)
 	   print-ps
 	   print-png)
          (vertically ()
@@ -84,42 +97,66 @@
     (setf recording-p
 	  (string= (clim:gadget-label selected-gadget) "yes"))))
 
+(defun %update-condition-option (this-gadget selected-gadget)
+  (declare (ignore this-gadget))
+  (with-slots (signal-condition-p) clim:*application-frame*
+    (setf signal-condition-p
+	  (string= (clim:gadget-label selected-gadget) "break"))))
+
+(defun %update-selection (pane item)
+  (declare (ignore this-gadget))
+  (with-slots (current-selection) clim:*application-frame*
+    (setf current-selection item))
+  (window-clear (get-frame-pane *application-frame* 'description))
+  (redisplay-frame-pane *application-frame* (get-frame-pane *application-frame* 'backend-output) :force-p t)
+  (redisplay-frame-pane *application-frame* (get-frame-pane *application-frame* 'render-output) :force-p t))
+
+(defun display-backend-output (frame pane)
+  (let ((output (get-frame-pane frame 'backend-output))
+        (item (slot-value frame 'current-selection)))
+    (let ((description (get-frame-pane *application-frame* 'description)))
+      (when item
+        (with-text-style (description (make-text-style :sans-serif :roman :normal))
+          (write-string (drawing-test-description item) description))
+        (handler-case
+            (clim:with-drawing-options (output :clipping-region
+                                               (clim:make-rectangle* 0 0 *width* *height*))
+              (clim:draw-rectangle* output 0 0 *width* *height* :filled t
+                                    :ink clim:+grey90+)
+              (funcall (drawing-test-drawer item) output))
+          (condition (condition)
+            (clim:with-drawing-options (description :ink +red+)
+              (format description "Backend:~a~%" condition)
+              (when (slot-value *application-frame* 'signal-condition-p)
+                (error condition)))))))))
+
+(defun display-render-output (frame pane)
+  (declare (ignore pane))
+  (let ((output (get-frame-pane frame 'render-output))
+        (item (slot-value frame 'current-selection)))
+    (let ((description (get-frame-pane *application-frame* 'description)))
+      (when item
+         (handler-case
+            (with-slots (recording-p) clim:*application-frame*
+              (let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
+                                 (stream :width *width* :height *height* :border-width *border-width*
+                                         :recording-p recording-p)
+                               (clim:draw-rectangle* stream 0 0 *width* *height* :filled t
+                                                     :ink clim:+grey90+)
+                               (funcall (drawing-test-drawer item) stream))))
+                (draw-pattern* output pattern 0 0)
+                (medium-finish-output (sheet-medium output))))
+          (condition (condition)
+            (clim:with-drawing-options (description :ink +red+)
+              (format description "Render:~a~%" condition)
+              (when (slot-value *application-frame* 'signal-condition-p)
+                (error condition)))))))))
+
 (defun run-drawing-tests ()
   (run-frame-top-level
    (make-application-frame
     'drawing-tests)))
 
-(defun render-images (pane item)
-  (declare (ignore pane))
-  (let ((backend-output (get-frame-pane *application-frame* 'backend-output))
-	(render-output (get-frame-pane *application-frame* 'render-output))
-	(description (get-frame-pane *application-frame* 'description)))
-    (window-clear backend-output)
-    (window-clear render-output)
-    (window-clear description)
-    (with-text-style (description (make-text-style :sans-serif :roman :normal))
-      (write-string (drawing-test-description item) description))
-    (handler-case
-	(clim:with-drawing-options (backend-output :clipping-region
-						   (clim:make-rectangle* 0 0 *width* *height*))
-	  (clim:draw-rectangle* backend-output 0 0 *width* *height* :filled t
-				:ink clim:+grey90+)
-	  (funcall (drawing-test-drawer item) backend-output))
-      (condition (condition)
-	(format t "Backend:~a~%" condition)))
-    ;;(handler-case
-	(with-slots (recording-p) clim:*application-frame*
-	  (let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
-			     (stream :width *width* :height *height* :border-width *border-width*
-				     :recording-p recording-p)
-			   (clim:draw-rectangle* stream 0 0 *width* *height* :filled t
-						 :ink clim:+grey90+)
-			   (funcall (drawing-test-drawer item) stream))))
-	    (draw-pattern* render-output pattern 0 0)
-	    (medium-finish-output (sheet-medium render-output))))
-      ;;(condition (condition)
-	;;(format t "Render:~a~%" condition)))))
-	))
 (defun drawing-test-postscript (test &optional filename)
   (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
          (test-name (drawing-test-name test))
