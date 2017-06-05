@@ -2406,6 +2406,7 @@ order to produce a double-click")
   (declare (ignore force-p))
   (invoke-display-function frame pane)
   (change-space-requirements pane))
+  
 
 (defclass clim-stream-pane (updating-output-stream-mixin
 			    pane-display-mixin
@@ -2474,35 +2475,29 @@ order to produce a double-click")
     (if (or (eq (pane-user-width pane) :compute)
             (eq (pane-user-height pane) :compute))
 	(progn
-	  (with-output-recording-options (pane :record t :draw nil)
-	    ;; multiple-value-letf anyone?
-	    (multiple-value-bind (x y)
-		(stream-cursor-position pane)
-	      (unwind-protect
-		   (invoke-display-function *application-frame* pane)
-		(setf (stream-cursor-position pane) (values x y)))))
-	  (with-bounding-rectangle* (x1 y1 x2 y2)
-	    (stream-output-history pane)
-	    ;; Should we now get rid of the output history?
-            ;; Why should we? --GB 2003-03-16
-            (reset-output-history pane)
-	    (let ((width (- x2 x1))
-		  (height (- y2 y1)))
-              ;; I don't want this letf here --GB 2003-01-23
-	      (letf (((pane-user-width pane) (compute (pane-user-width pane)
-						      width))
-		     ((pane-user-height pane) (compute (pane-user-height pane)
-						       height)))
-		(prog1
-		    (call-next-method))))))
+          (multiple-value-bind (width height)
+              (let ((record
+                     (if (slot-value pane 'incremental-redisplay)
+                         (stream-output-history pane)
+                         (with-output-to-output-record (pane)
+                           (invoke-display-function *application-frame* pane)))))
+                (with-bounding-rectangle* (x1 y1 x2 y2)
+                  record
+                  (values (- x2 (min 0 x1)) (- y2 (min y1)))))
+            (letf (((pane-user-width pane) (compute (pane-user-width pane)
+                                                    width))
+                   ((pane-user-height pane) (compute (pane-user-height pane)
+                                                     height)))
+                  (prog1
+                      (call-next-method)))))
 	(call-next-method))))
 
 (defmethod compose-space ((pane clim-stream-pane) &key width height)
   (declare (ignorable width height))
   (let ((w (bounding-rectangle-width (stream-output-history pane)))
         (h (bounding-rectangle-height (stream-output-history pane))))
-    (make-space-requirement :width  w :min-width  w :max-width +fill+
-                            :height h :min-height h :max-height +fill+)))
+     (make-space-requirement :width  w :min-width  w :max-width +fill+
+                             :height h :min-height h :max-height +fill+)))
 
 (defmethod stream-add-output-record :after ((pane clim-stream-pane) record)
   (unless (region-contains-region-p (sheet-region pane) (stream-output-history pane))
@@ -2519,9 +2514,8 @@ order to produce a double-click")
   (let ((cursor (stream-text-cursor pane)))
     (when cursor
       (setf (cursor-position cursor) (values 0 0))))
-  (scroll-extent pane 0 0)  
-  (change-space-requirements pane))
-
+  (scroll-extent pane 0 0)
+  (change-space-requirements pane :width 0 :height 0))
 
 (defmethod window-refresh ((pane clim-stream-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
