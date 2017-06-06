@@ -25,6 +25,9 @@
            #:bezier-area
            #:bezier-union
            #:bezier-difference
+
+           #:polygonalize
+           #:polygon-points
            
            #:transformation
            #:areas
