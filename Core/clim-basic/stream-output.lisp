@@ -455,7 +455,7 @@ STREAM-STRING-WIDTH will be called."))
                                    &key (first-quadrant t)
                                         height
                                         (move-cursor t)
-                                        (record-type ''standard-sequence-output-record))
+                                        (record-type 'standard-sequence-output-record))
                                   &body body)
   (declare (ignore first-quadrant height move-cursor record-type))
   (let ((cont (gensym "CONT."))
