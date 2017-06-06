@@ -1,13 +1,12 @@
 
 (defpackage :mcclim-bezier-clx
   (:use #:clim #:clim-lisp #:mcclim-bezier)
-  (:import-from #:mcclim-bezier
-                #:polygonalize
-                #:polygon-points)
   (:import-from #:clim-clx
                 #:round-coordinate
                 #:clx-medium
-                #:with-clx-graphics))
+                #:with-clx-graphics)
+  (:import-from #:climi
+                #:standard-translation))
 
 (in-package :mcclim-bezier-clx)
 
@@ -49,7 +48,7 @@
           (imin-y (floor min-y))
           (imax-x (ceiling max-x))
           (imax-y (ceiling max-y)))
-      (let ((tr (make-instance 'climi::standard-translation :dx (- imin-x)  :dy (- imin-y))))
+      (let ((tr (make-instance 'standard-translation :dx (- imin-x)  :dy (- imin-y))))
         (let ((width (- imax-x imin-x))
               (height (- imax-y imin-y)))
           (with-clx-graphics (drawable line-style ink gc)
