@@ -403,8 +403,7 @@
                      :gesture :select
                      :documentation "Room"
                      :pointer-documentation "Room")
-    (object)
-  (declare (ignore object)))
+    (object))
   
 
 (define-presentation-to-command-translator com-show-class-subclasses-translator
@@ -797,6 +796,7 @@ if you are interested in fixing this."))
       (sort methods #'sorter))))
 
 (defun show-specialized-methods (gf stream methods arg-types)
+  (declare (ignore gf))
   (let ((before nil)
 	(after nil)
 	(around nil)
@@ -1138,6 +1138,7 @@ if you are interested in fixing this."))
                                                             nil
                                                             base-pathname))))
            (multiple-value-bind (x y) (stream-cursor-position *standard-output*)
+             (declare (ignore x))
              (setf (stream-cursor-position *standard-output*) (values 0 y))))
           (:list (dolist (ent group)
                    (let ((ent (merge-pathnames ent pathname)))
@@ -1162,8 +1163,8 @@ if you are interested in fixing this."))
   ()
   (let ((parent (parent-directory *default-pathname-defaults*)))
     (when parent
-      (uiop:chdir pathname)
-      (setf *default-pathname-defaults* pathname)
+      (uiop:chdir parent)
+      (setf *default-pathname-defaults* parent)
       (italic (t)
         (format t "~&The current directory is now ")
         (present (truename parent))
@@ -1336,8 +1337,7 @@ if you are interested in fixing this."))
 
 (define-presentation-to-command-translator display-dir-stack-translator
   (directory-stack com-display-directory-stack filesystem-commands :gesture :select)
-    (object)
-  (declare (ignore object)))
+    (object))
 
 (define-command (com-edit-file :name "Edit File"
                                :menu t

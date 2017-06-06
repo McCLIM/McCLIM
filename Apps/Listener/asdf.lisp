@@ -56,7 +56,7 @@
       (mapc (lambda (path)
 	      (when (string-equal (pathname-type path) "asd")
 		(systems (truename path))))
-	    (list-directory (eval reg))))))
+	    (cl-fad:list-directory (eval reg))))))
 
 (defun asdf-system-name (system)
   (slot-value system 'asdf::name))
