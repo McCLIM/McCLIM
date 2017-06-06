@@ -104,7 +104,7 @@
 	  (string= (clim:gadget-label selected-gadget) "break"))))
 
 (defun %update-selection (pane item)
-  (declare (ignore this-gadget))
+  (declare (ignore pane))
   (with-slots (current-selection) clim:*application-frame*
     (setf current-selection item))
   (window-clear (get-frame-pane *application-frame* 'description))
