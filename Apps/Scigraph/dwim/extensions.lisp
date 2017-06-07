@@ -31,27 +31,6 @@ advised of the possiblity of such damages.
 ;;; Lisp Extensions
 ;;;*****************
 
-#-(and)
-(unless (fboundp 'ignore)
-  ;; Define IGNORE to be like our old friend from Genera.
-  ;; This practice is frowned upon because IGNORE is in the
-  ;; common lisp package (it is a declaration) and changing
-  ;; anything about those symbols is frowned upon.  So we
-  ;; should learn to live without this old friend some day.
-  #FEATURE-CASE
-  ((:allegro
-    (excl:without-package-locks 
-     (setf (symbol-function 'ignore)
-       #'(lambda (&rest args)
-	   (declare (ignore args) (dynamic-extent args))
-	   nil))))
-   ((not allegro)
-    (unless (fboundp 'ignore)
-      (setf (symbol-function 'ignore)
-	#'(lambda (&rest args)
-	    (declare (ignore args) (dynamic-extent args))
-	    nil))))))
-
 (defmacro with-rem-keywords ((new-list list keywords-to-remove) &body body)
   `(let ((,new-list (with-rem-keywords-internal ,list ,keywords-to-remove)))
     ,@body))
@@ -74,21 +53,7 @@ advised of the possiblity of such damages.
   (with-rem-keywords (new-list list keywords-to-remove)
     (copy-list new-list)))
 
-;;;Still need Genera
-(eval-when (compile eval load)
-  #+lucid (import '(#-clim-1.0 lcl:*load-pathname* lcl:*source-pathname*))
-  #+allegro (import 'excl:*source-pathname*))
 
-#1feature-case
-((:lucid 
-  (eval-when (compile eval load)
-    ;;Just use the existing Lucid definition
-    (import 'lcl:working-directory)))
- (:allegro
-  (defun working-directory ()
-    (excl:current-directory))
-  (defsetf working-directory excl:chdir)))
-  
 
 
 ;;; **************************
