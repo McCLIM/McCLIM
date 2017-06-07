@@ -169,14 +169,6 @@ advised of the possiblity of such damages.
 	    store-conditional
 	    stack-let
 	    without-interrupts
-	    condition-case
-	    handler-case
-	    handler-bind
-	    ignore-errors
-	    with-simple-restart
-	    restart-case
-	    invoke-restart
-	    find-restart
 	    make-command-table
 	    define-command-table
 	    find-command-table
@@ -270,14 +262,7 @@ advised of the possiblity of such damages.
      :interactive-stream-p
      :ignore
      :loop
-     :ignore-errors
-     :handler-case 
-     :with-simple-restart
      :parse-error
-     :restart-case
-     :find-restart
-     :invoke-restart
-     :handler-bind
      :process-wait
      :process-run-function)
     #+clim-0.9

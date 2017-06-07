@@ -33,9 +33,7 @@ advised of the possiblity of such damages.
 
 (eval-when (compile load eval)
   (defpackage dwim
-   (:shadow ignore-errors handler-case restart-case handler-bind 
-	    invoke-restart find-restart with-simple-restart 
-	    parse-error *default-server-path*)
+   (:shadow parse-error *default-server-path*)
    (:use clim-lisp)))
 
 (eval-when (compile load eval)

@@ -98,13 +98,6 @@ advised of the possiblity of such damages.
 (defmethod abort-protect ((self t) (continuation t))
   ;;(declare (values instance aborted-p))
   (let ((snapshot (snapshot-object-state self)))
-    #-clim
-    (si:condition-case (ERR)
-	 (funcall continuation)
-       (si:abort
-	 (restore-object-state self snapshot)
-	 :abort))
-    #+clim
     (let ((value (funcall continuation)))
       (when (eq value :abort)
 	(restore-object-state self snapshot))
