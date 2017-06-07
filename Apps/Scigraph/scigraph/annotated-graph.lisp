@@ -601,7 +601,7 @@ older classes in favor of cleaned up newer ones.  Someday, ...
 
 (defmethod legend-exists-p ((self annotated-legend-mixin))
   (dolist (ann (annotations self))
-    (if (dwim::typep* ann 'legend-annotation) (return-from legend-exists-p t))) ;;;NLC
+    (if (typep ann 'legend-annotation) (return-from legend-exists-p t))) ;;;NLC
   nil)
 
 (defmethod display-annotations :before ((self annotated-legend-mixin) stream)

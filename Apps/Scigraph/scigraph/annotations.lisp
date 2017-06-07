@@ -389,7 +389,7 @@ advised of the possiblity of such damages.
 		:command-table :graph
 		;; Annotations are covered by a different translator.
 		:tester ((object) 
-			 (not (dwim::typep* object 'basic-annotation))) ; NLC
+			 (not (typep object 'basic-annotation))) ; NLC
 		:gesture :select :menu t :documentation "Move")
   (object &key WINDOW)
   `(,object ,WINDOW))
