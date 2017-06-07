@@ -256,9 +256,8 @@ advised of the possiblity of such damages.
 (defun accept-values (descriptions &key (prompt nil)
 					(stream *query-io*)
 					(own-window nil))
-  (values-list
-   (accepting-values 
-    (stream :own-window own-window :label prompt)
+  (accepting-values
+      (stream :own-window own-window :label prompt)
     (mapcar #'(lambda (description)
 		(destructuring-bind (type &rest options)
 		    description
@@ -267,7 +266,7 @@ advised of the possiblity of such damages.
 				(getf options :query-identifier (car description))
 				options)
 		    (terpri stream))))
-	    descriptions))))
+	    descriptions)))
 
 (defun menu-choose (choices
 		    &key (prompt "Choose:")
