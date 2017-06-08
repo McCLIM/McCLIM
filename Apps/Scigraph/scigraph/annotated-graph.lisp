@@ -1,4 +1,4 @@
-;;; -*- Syntax: Common-lisp; Package: GRAPH -*-
+;; -*- Syntax: Common-lisp; Package: GRAPH -*-
 #|
 Copyright (c) 1987-1993 by BBN Systems and Technologies,
 A Division of Bolt, Beranek and Newman Inc.
@@ -386,25 +386,7 @@ about fonts and pointer sensitivity.  It would be better to either drop the
 older classes in favor of cleaned up newer ones.  Someday, ...
 
 ||#
-#-clim
-(defmethod compute-y-annotation ((self annotated-borders-mixin) STREAM)
-  (with-slots (y-annotation ull vll vur y-label) self
-    (when y-label
-      (when (not y-annotation)
-	(let* ((annotation (make-border-annotation
-			     self STREAM y-label :left
-			     ull vll
-			     'y-label (/ pi 2) nil))
-	       (height nil))
-	  (setf (style annotation) (y-label-text-style self stream))
-	  (setq height (* (length y-label) (stream-line-height stream)))
-	  (set-uv-position annotation
-			   (- ull (* (stream-character-width stream) 3))
-			   (+ (values (truncate (+ vll vur) 2))
-			      (values (truncate height 2))))
-	  (setq y-annotation annotation))))))
 
-#+clim
 (defmethod compute-y-annotation ((self annotated-borders-mixin) STREAM)
   (with-slots (y-annotation ull vll vur y-label y-digits) self
     (when y-label
