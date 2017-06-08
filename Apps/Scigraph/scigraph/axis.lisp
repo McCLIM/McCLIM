@@ -76,14 +76,6 @@ advised of the possiblity of such damages.
     (if (> interval 3600) tick
 	(* (values (ceiling tick interval)) interval))))
 
-
-#+old
-(defun auto-tick (xmin xmax)
-  "Choose a tick interval based on some simple esthetics.
-   The tick interval is a multiple of 2 5 or 10, and there are <= 10 tick
-   marks along the axis."
-  (autotick-internal xmin xmax 1 10 10 5 2))
-
 (defun auto-tick (min max)
   (let* ((range (- max min))
 	 (tick (expt 10 (truncate (log range 10))))
@@ -98,9 +90,7 @@ advised of the possiblity of such damages.
   ;; Cons a new string every time; if you reuse an old string, you get graphics
   ;; turds.
   (make-array size
-	      :element-type
-	      #+lucid 'string-char
-	      #-lucid 'character
+	      :element-type 'character
 	      :adjustable t
 	      :fill-pointer 0))
 
