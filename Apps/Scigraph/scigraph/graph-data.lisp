@@ -52,11 +52,7 @@ Y-LABEL
   ((data :initform () :initarg :data :accessor data))) ; data to display
 
 (defclass BASIC-GRAPH-DATA (named-object)
-  (;; Backpointer to the graph.  (Maybe this should be GRAPHS instead of GRAPH.jpm)
-   ;; KRA 27APR93: Maybe it should be removed
-   #+OLD
-   (graph :initform nil :initarg :graph :accessor graph)
-   ;; The alu is basically a (relatively) internal representation of a color so the
+  (;; The alu is basically a (relatively) internal representation of a color so the
    ;; value here is implementation specific.
    ;; On LISPM it is either a number like tv:alu-xor, a keyword like :DRAW
    ;; In CLIM, it is an ink.
@@ -94,15 +90,10 @@ PROTOCOL:
 
 (defmethod map-data ((dataset t) function (data sequence))
   "Map FUNCTION over each datum."
-  #-(or sbcl cmu)
-  (declare (downward-funarg function))
   (map nil function data))
 
 (defmethod map-data-xy ((dataset ESSENTIAL-GRAPH-DATA-MAP-MIXIN) function data)
   "Map function over each x y pair."
-  #-(or sbcl cmu)
-  (declare (downward-funarg function))
-  (declare (compiled-function function))
   (map-data dataset
 	    #'(lambda (datum)
 		(declare (downward-function))
@@ -112,13 +103,7 @@ PROTOCOL:
 	    data))
 
 (defmacro with-alu ((stream alu) &body body)
-  #+clim `(with-drawing-options (,stream :ink ,alu) ,@body)
-  #-clim `(let ((.old. (scl:send ,stream :char-aluf))
-		(.new. #-clim (if (eq ,alu :draw) tv:alu-ior ,alu)
-		       #+clim ,alu))
-	    (unwind-protect
-		(progn (scl:send-if-handles ,stream :set-char-aluf .new.) ,@body)
-	      (scl:send-if-handles ,stream :set-char-aluf .old.))))
+  `(with-drawing-options (,stream :ink ,alu) ,@body))
 
 (defmethod display-data ((self essential-graph-data-map-mixin) STREAM graph)
   "Display the data on graph GRAPH using DATUM-DISPLAYER."
@@ -137,7 +122,8 @@ PROTOCOL:
 			   (funcall displayer stream x y datum)
 			   ;; Forcing the x buffer is nice here, but it is
 			   ;; extremely expensive.  It slows drawing by 4x.
-			   #+slow (force-output stream)))
+			   ;;  (force-output stream)
+                           ))
 		(data self)))))
 
 (defmethod datum-displayer ((self essential-graph-data-map-mixin) graph)
@@ -276,12 +262,7 @@ PROTOCOL:
   (:documentation "Fancy graphics style."))
 
 (defvar *SCI-GRAPH-AVAILABLE-STIPPLES*
-	(nconc '(("None" :value nil) ("Filled" :value t))
-	       #+(and (not clim) broken)
-	       (loop for STIP in graphics:*STIPPLE-ARRAYS*
-		     collecting (list (graphics:stipple-array-name STIP)
-				      :value
-				      STIP))))
+	(nconc '(("None" :value nil) ("Filled" :value t))))
 
 
 ;;; SYMBOLOGIES
@@ -335,38 +316,6 @@ PROTOCOL:
   ;; hence the consing here.
   (list '("Line" :value :line) '("Line-Symbol" :value :line-symbol)))
 
-#+(and clim-0.9 xlib)
-(DEFMETHOD get-drawing-guts ((MEDIUM ON-X::CLG-MEDIUM))
-  (WITH-SLOTS
-      (on-x::DRAWABLE on-x::GCONTEXT on-x::PORT on-x::DEVICE-TRANSFORMATION)
-      MEDIUM
-    (LET ((GCONTEXT on-x::GCONTEXT))
-      (ON-X::UPDATE-GCONTEXT-INK (MEDIUM-INK MEDIUM) GCONTEXT on-x::PORT MEDIUM)
-      (SETF (XLIB:GCONTEXT-LINE-WIDTH GCONTEXT)
-	    (values (ROUND (OR (LINE-STYLE-THICKNESS (MEDIUM-LINE-STYLE MEDIUM))
-			       0))))
-      (SETF (XLIB:GCONTEXT-LINE-STYLE GCONTEXT)
-	    (IF (LINE-STYLE-DASHED (MEDIUM-LINE-STYLE MEDIUM)) :DASH :SOLID))
-      (values on-x::drawable gcontext on-x::device-transformation))))
-
-;;; first very crude cut, since I don't really understand what the
-;;; previous one does !!
-#+(and clim-1.0 xlib)
-(defmethod get-drawing-guts ((w clim::clx-window))
-  (with-slots  (clim::window  ;drawable
-		clim::foreground-gc  ;gcontext
-		) w ;; do we need any others here?
-;;    (break)
-    (values clim::window clim::foreground-gc t)))
-	
-
-#+(and clim-0.9 xlib)
-(defmethod transformation-offsets ((tr silica::st-transformation))
-  (with-slots (silica::m20 silica::m21) tr
-    ;; why are these floats?
-    (values (values (round silica::m20)) (values (round silica::m21)))))
-
-#+(and clim xlib)
 (defmethod transformation-offsets ((any t)) (values 0 0))
 
 (defmethod dont-record-output-history ((dataset t))
@@ -1092,33 +1041,7 @@ way.  The graph takes the union of the limits returned.
 ;;; Clim 1.0 requires this be defined before any presentation type
 ;;; that depends on it.  Hence moved here from present.lisp.
 
-#+clim-1.0
-(defclass dataset-record-element (clim::displayed-output-record-element-mixin)
-	  ((dataset :initarg :dataset :accessor dataset)
-	   (graph :initarg :graph :accessor graph))
-  (:documentation "Knows how to replay the output history when the
-    output history wasn't recorded."))
-
 (defvar *repainting-dataset* nil)
-
-#+clim-1.0
-(defmethod replay-1 ((self dataset-record-element) stream
-			  &optional region x-off y-off)
-  (declare (ignore region x-off y-off))
-  (let ((*repainting-dataset* t))
-    (display-data (dataset self) stream (graph self))))
-
-#+clim-1.0
-(defun record-dataset-record-element (dataset stream graph)
-  ;; This hack puts an instance of dataset-record-element into the
-  ;; output history.  The element is supposed to handle
-  ;; repaint events (via replay-1) when we aren't recording
-  ;; output history.
-  (unless *repainting-dataset*
-    (with-new-output-record (stream 'dataset-record-element record
-					 :dataset dataset :graph graph)
-				 (declare (ignore record))
-				 :done)))
 
 (defclass presentable-mixin
     ()
@@ -1139,15 +1062,9 @@ way.  The graph takes the union of the limits returned.
 		:object self
 		:type (graph-presentation-type self)
 		:allow-sensitive-inferiors t)
-       (call-next-method SELF stream graph)
-       #+clim-1.0
-       (when (dont-record-output-history self)
-	 (record-dataset-record-element self STREAM graph)))
+       (call-next-method SELF stream graph))
     (progn
-      (call-next-method SELF stream graph)
-      #+clim-1.0
-      (when (dont-record-output-history self)
-	(record-dataset-record-element self STREAM graph)))))
+      (call-next-method SELF stream graph))))
    
 
 (defmethod display-legend-dataset :around ((self presentable-data-mixin) STREAM
