@@ -191,12 +191,6 @@ advised of the possiblity of such damages.
   (with-slots (contour-surface) self
     (funcall contour-surface x y)))
 
-#+obsolete
-(defmethod pop-edit-items ((self contour-data))
-  (with-slots (contour-dx contour-dy) self
-    `((,(ivar-locf contour-dx) "Contour dx"  :number-or-nil)
-      (,(ivar-locf contour-dy) "Contour dy"  :number-or-nil))))
-
 (defmethod contour-setup ((self contour-data) graph)
   (with-slots (contour-surface contour-dx contour-dy) self
     (multiple-value-bind (left right bottom top)
@@ -222,7 +216,6 @@ advised of the possiblity of such damages.
 	  y-max (float y-max 0.0))
     (multiple-value-bind (level-min level-max)
 	(contour-range surface x-min dx x-max y-min dy y-max)
-      #+ig (format *terminal-io* "~% ~A ~A" level-min level-max)
       (multiple-value-bind (major-interval minor-interval)
 	  (major-minor-intervals level-min level-max)
 	(with-slots (alu) self
