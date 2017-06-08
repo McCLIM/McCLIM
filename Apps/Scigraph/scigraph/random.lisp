@@ -131,8 +131,8 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
    the value of S-NEWSEED is updated.  Thus this is a way of
    Keeping several sequences of random numbers with their own seeds."
   `(let ((*random-state* ,s-newseed))
-     (prog1 (progn ,@body) 
-	    (setq ,s-newseed *random-state*))))
+    (prog1 (progn ,@body)
+      (setf ,s-newseed *random-state*))))
 
 (defun uniform ()
   "Returns the next uniform random number in the sequence
