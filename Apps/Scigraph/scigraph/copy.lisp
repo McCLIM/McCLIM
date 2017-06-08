@@ -123,7 +123,6 @@ advised of the possiblity of such damages.
 ;;; Lists
 ;;;**********************************************************************NLC14DEC90
 ;;; The Old, Boring, Common-Lisp compatible Way.
-#-lispm
 (defmethod copy-self ((ORIGINAL-LIST list))
   (and ORIGINAL-LIST (cons nil nil)))
 
@@ -132,46 +131,6 @@ advised of the possiblity of such damages.
   (unless (null ORIGINAL-LIST)
     (setf (car COPY-LIST) (copy (car ORIGINAL-LIST) COPY-HTABLE))
     (setf (cdr COPY-LIST) (copy (cdr ORIGINAL-LIST) COPY-HTABLE))))
-
-;;;NLC15DEC90 - New, improved copy on lists.
-;;; This isn't as "elegant" as the above, but it preserves Cdr-coding.
-#+lispm
-(defmethod copy ((ORIGINAL-LIST list) COPY-HTABLE)
-  (and ORIGINAL-LIST
-       (multiple-value-bind (VALUE FOUND?) (gethash ORIGINAL-LIST COPY-HTABLE)
-	 (if FOUND?
-	     VALUE
-	    (let (COPY-LIST)
-	      (multiple-value-bind (NUM-CDR-NEXT LAST-CONTIG-PART)
-		  (si:contiguous-list-info ORIGINAL-LIST)
-		(if (eq LAST-CONTIG-PART ORIGINAL-LIST)
-		    ;;; THIS CONS (AT LEAST) ISN'T CDR-CODED.
-		    ;;; SO MAKE A COPY OF THIS CONS, AND CACHE IT
-		    ;;; THEN COPY BOTH SIDES OF THE ITS SUB-TREE.
-		    (setf COPY-LIST (cons nil nil)
-			  (gethash ORIGINAL-LIST COPY-HTABLE) COPY-LIST
-			  (car COPY-LIST) (copy (car ORIGINAL-LIST) COPY-HTABLE)
-			  (cdr COPY-LIST) (copy (cdr ORIGINAL-LIST) COPY-HTABLE))
-
-		   ;;; ELSE, THE LIST STARTS WITH (AT LEAST SOME) CDR-CODING.
-		   ;;; SO GET A CDR-CODED COPY OF THE SAME LENGTH
-		   ;;; AND CDR DOWN IT, COPYING EACH ELEMENT.
-		   ;;; NOTE THAT WE NEED TO CACHE EACH CONS.
-		   (prog ((COPY-PNTR (setq COPY-LIST (make-list (1+ NUM-CDR-NEXT)))))
-		      LOOP-TAG
-			 (setf (gethash ORIGINAL-LIST COPY-HTABLE) COPY-PNTR
-			       (car COPY-PNTR) (copy (car ORIGINAL-LIST) COPY-HTABLE))
-			 (unless (eq LAST-CONTIG-PART ORIGINAL-LIST)
-			   (setq COPY-PNTR (cdr COPY-PNTR)
-				 ORIGINAL-LIST (cdr ORIGINAL-LIST))
-			   (go LOOP-TAG))
-
-			 ;;; FINALLY, MAKE SURE THE LAST CDR IS HANDLED RIGHT.
-			 (and (cdr ORIGINAL-LIST)
-			      (setf (cdr COPY-PNTR)
-				    (copy (cdr ORIGINAL-LIST) COPY-HTABLE))))))
-	      COPY-LIST))))
-  )
 
 ;;;********************************************************************************
 ;;; Copy-able Class objects.
@@ -253,13 +212,4 @@ advised of the possiblity of such damages.
 (defmacro WITH-STACK-LIST-COPY ((variable list) &body body)
   "Like `((let ((,variable (copy-list ,list))) ,@body) 
    except that the copy is consed on the stack."
-  #+Genera
-  `(let ((.n. (length ,list))
-	 (.l. ,list))
-     (flet ((.body. (&rest ,variable)
-	      ,@body))
-       (sys:%start-function-call #'.body. return .n. nil)
-       (do () ((null .l.)) (sys:%push (pop .l.)))
-       (sys:%finish-function-call #'.body. return .n. nil)))
-  #-Genera
   `(let ((,variable (copy-list ,list))) ,@body))
