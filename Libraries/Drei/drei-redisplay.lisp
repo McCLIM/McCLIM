@@ -625,9 +625,9 @@ information. Nothing will be done unless `stroke' is dirty."
     (with-accessors ((x1 x1) (y1 y1) (x2 x2) (y2 y2)
                      (center center)) (stroke-dimensions stroke)
       (when (> x2 (bounding-rectangle-width pane))
-        (change-space-requirements pane :width x2))
+        (change-stream-space-requirements pane :width x2))
       (when (> y2 (bounding-rectangle-height pane))
-        (change-space-requirements pane :height y2))
+        (change-stream-space-requirements pane :height y2))
       (funcall (drawing-options-function (stroke-drawing-options stroke))
                pane view stroke cursor-x cursor-y #'stroke-drawing-fn t)
       (when *highlight-strokes*
@@ -1023,7 +1023,7 @@ the end of the buffer."))
                         0)
                     (bounding-rectangle-max-y pane))))
     ;; Embiggen the sheet.
-    (change-space-requirements pane
+    (change-stream-space-requirements pane
      :width (max (bounding-rectangle-max-x cursor)
                  (bounding-rectangle-max-x pane))
      :height (max (if (extend-pane-bottom view)
@@ -1225,7 +1225,7 @@ has `view'."))
     (when (and viewport
                (> pane-width viewport-width)
                (>= viewport-width output-width))
-      (change-space-requirements pane :width output-width))))
+      (change-stream-space-requirements pane :width output-width))))
 
 (defmethod fix-pane-viewport :after ((pane drei-pane) (view point-mark-view))
   (when (and (pane-viewport pane) (active pane))

@@ -590,7 +590,7 @@ order to produce a double-click")
   ;; Now we have two space requirements which need to be 'merged'.
   (setf min-foo (clamp user-min-foo min-foo max-foo)
 	max-foo (clamp user-max-foo min-foo max-foo)
-	foo     (clamp user-foo     min-foo max-foo))
+	foo     (clamp user-foo min-foo max-foo))
   (values foo min-foo max-foo))
 
 (defgeneric merge-user-specified-options (pane sr))
@@ -2404,9 +2404,7 @@ order to produce a double-click")
 				 (pane pane-display-mixin)
 				 &key force-p)
   (declare (ignore force-p))
-  (invoke-display-function frame pane)
-  (change-space-requirements pane))
-  
+  (invoke-display-function frame pane))
 
 (defclass clim-stream-pane (updating-output-stream-mixin
 			    pane-display-mixin
@@ -2439,21 +2437,36 @@ order to produce a double-click")
    (end-of-page-action :initform :scroll
 		       :initarg :end-of-page-action
 		       :reader pane-end-of-page-action)
-   ;; Slots of space-requirement-options-mixin defined with accessors for our
-   ;; convenience
-   (user-width :accessor pane-user-width)
-   (user-min-width :accessor pane-user-min-width)
-   (user-max-width :accessor pane-user-max-width)
-   (user-height :accessor pane-user-height)
-   (user-min-height :accessor pane-user-min-height)
-   (user-max-height :accessor pane-user-max-height))
-  
+   ;; Slots of space-requirement-options-mixin defined with private accessors for our
+   ;; convenience; They are used by the :compute protocol.
+   (user-width :accessor %pane-user-width)
+   (user-min-width :accessor %pane-user-min-width)
+   (user-max-width :accessor %pane-user-max-width)
+   (user-height :accessor %pane-user-height)
+   (user-min-height :accessor %pane-user-min-height)
+   (user-max-height :accessor %pane-user-max-height)
+   ;; size required by the stream
+   (stream-width :initform 0 :accessor stream-width)
+   (stream-height :initform 0 :accessor stream-height))
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
 
 (defmethod interactive-stream-p ((stream clim-stream-pane))
   t)
+
+(defmethod redisplay-frame-pane :after ((frame application-frame)
+				 (pane clim-stream-pane)
+				 &key force-p)
+  (declare (ignore frame force-p))
+  (when (or
+         (eql :compute (pane-user-width pane))
+         (eql :compute (pane-user-min-width pane))
+         (eql :compute (pane-user-max-width pane))
+         (eql :compute (pane-user-height pane))
+         (eql :compute (pane-user-min-height pane))
+         (eql :compute (pane-user-max-height pane)))
+    (change-space-requirements pane)))
 
 (defun invoke-display-function (frame pane)
   (let ((display-function (pane-display-function pane)))
@@ -2464,9 +2477,15 @@ order to produce a double-click")
 	   (funcall display-function frame pane))
 	  (t nil))))
 
-;;; Handle :compute in the space requirement options
-;;; XXX This should be expanded to handle all the options, not just
-;;; height and width.
+(defgeneric change-stream-space-requirements (stream &key width height))
+
+(defmethod change-stream-space-requirements ((pane clim-stream-pane) &key width height)
+    (when width
+      (setf (stream-width pane) width))
+  (when height
+    (setf (stream-height pane) height))
+  (change-space-requirements pane))
+
 (defmethod compose-space :around ((pane clim-stream-pane)
                                   &key width height)
   (declare (ignore width height))
@@ -2484,24 +2503,34 @@ order to produce a double-click")
                 (with-bounding-rectangle* (x1 y1 x2 y2)
                   record
                   (values (- x2 (min 0 x1)) (- y2 (min y1)))))
-            (letf (((pane-user-width pane) (compute (pane-user-width pane)
-                                                    width))
-                   ((pane-user-height pane) (compute (pane-user-height pane)
-                                                     height)))
-                  (prog1
-                      (call-next-method)))))
-	(call-next-method))))
+            (setf (stream-width pane) (compute (pane-user-width pane)
+                                               width))
+            (setf (stream-height pane) (compute (pane-user-height pane)
+                                                height))
+            ;; overwrite the user preferences which value is :compute
+            (letf (((%pane-user-width pane)
+                    (compute (pane-user-width pane) width))
+                   ((%pane-user-min-width pane)
+                    (compute (pane-user-min-width pane) width))
+                   ((%pane-user-max-width pane)
+                    (compute (pane-user-max-width pane) width))
+                   ((%pane-user-height pane)
+                    (compute (pane-user-height pane) height))
+                   ((%pane-user-min-height pane)
+                    (compute (pane-user-min-height pane) height))
+                   ((%pane-user-max-height pane)
+                    (compute (pane-user-max-height pane) height)))
+              (call-next-method))))
+        (call-next-method))))
 
 (defmethod compose-space ((pane clim-stream-pane) &key width height)
   (declare (ignorable width height))
   (let ((w (bounding-rectangle-width (stream-output-history pane)))
         (h (bounding-rectangle-height (stream-output-history pane))))
-     (make-space-requirement :width  w :min-width  w :max-width +fill+
-                             :height h :min-height h :max-height +fill+)))
-
-(defmethod stream-add-output-record :after ((pane clim-stream-pane) record)
-  (unless (region-contains-region-p (sheet-region pane) (stream-output-history pane))
-    (change-space-requirements pane)))
+    (make-space-requirement :width  (max w (stream-width pane))
+                            :min-width  w :max-width +fill+
+                            :height (max h (stream-height pane))
+                            :min-height h :max-height +fill+)))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
@@ -2514,8 +2543,10 @@ order to produce a double-click")
   (let ((cursor (stream-text-cursor pane)))
     (when cursor
       (setf (cursor-position cursor) (values 0 0))))
+  (setf (stream-width pane) 0)
+  (setf (stream-height pane) 0)
   (scroll-extent pane 0 0)
-  (change-space-requirements pane :width 0 :height 0))
+  (change-space-requirements pane))
 
 (defmethod window-refresh ((pane clim-stream-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
@@ -2557,8 +2588,18 @@ order to produce a double-click")
 					pointer-button-press-handler)
   (declare (ignore timeout peek-p input-wait-test input-wait-handler
 		   pointer-button-press-handler))
-  (force-output stream))
-
+  (force-output stream)
+  ;; make the output visible
+  (let ((w (bounding-rectangle-width (stream-output-history stream)))
+        (h (bounding-rectangle-height (stream-output-history stream))))
+    (unless (region-contains-region-p (sheet-region stream)
+                                      (make-rectangle* 0 0 w h))
+      (change-space-requirements stream)
+      (scroll-extent stream 0 (max 0 (-  h
+                                         (bounding-rectangle-height
+                                          (or (pane-viewport stream)
+                                              stream)))))
+      (redisplay-frame-pane *application-frame* stream))))
 
 (defmethod redisplay-frame-pane ((frame application-frame)
 				 (pane symbol)
@@ -2571,14 +2612,14 @@ order to produce a double-click")
     ((type t) (stream clim-stream-pane))
   (funcall-presentation-generic-function presentation-type-history type))
 
-(defmethod change-space-requirements :around ((pane clim-stream-pane)
-                                              &key (width nil)  (max-width nil)
-                                                   (height nil) (max-height nil)
-                                                   &allow-other-keys)  
-  (with-slots (seos-current-width seos-current-height) pane
-    (setf seos-current-width (or max-width width seos-current-width))
-    (setf seos-current-height (or max-height height seos-current-height)))
-  (call-next-method))
+(defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
+  (change-stream-space-requirements stream
+                                    :height new-height)
+  (unless (eq :allow (stream-end-of-page-action stream))
+    (scroll-extent stream 0 (max 0 (-  new-height
+                                       (bounding-rectangle-height
+                                        (or (pane-viewport stream)
+                                            stream)))))))
 
 ;;; INTERACTOR PANES
 
