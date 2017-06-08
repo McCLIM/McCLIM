@@ -142,8 +142,6 @@ advised of the possiblity of such damages.
 	    noting-progress
 	    note-progress
 
-	    frame-manager
-	    find-frame-manager
 	    get-reusable-frame
 	    start-frame
 	    reset-frame

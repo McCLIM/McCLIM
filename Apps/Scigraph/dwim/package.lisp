@@ -41,5 +41,8 @@ advised of the possiblity of such damages.
 
                   #:boolean
                   #:expression
-                  #:command)))
+                  #:command
+
+                  #:frame-manager
+                  #:find-frame-manager)))
 

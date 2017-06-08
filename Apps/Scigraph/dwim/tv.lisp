@@ -174,13 +174,6 @@ advised of the possiblity of such damages.
   "Access the process associated with this frame."
   (climi::frame-process frame))
 
-(defun frame-manager (frame)
-  (clim:frame-manager frame))
-
-(defun find-frame-manager (&key (if-exists :reuse))
-  (declare (ignorable if-exists))
-  (clim:find-frame-manager))
-
 (defun get-reusable-frame (manager type)
   (declare (ignorable manager))
   (let ((choices (clim:frame-manager-frames manager)))
