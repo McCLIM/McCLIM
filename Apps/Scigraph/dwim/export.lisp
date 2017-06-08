@@ -71,7 +71,6 @@ advised of the possiblity of such damages.
 	    read-token
 	    input-position
 	    insertion-pointer
-	    parse-error
 	    input-not-of-required-type
 	    catching-parser-failures
 	    validate-object
@@ -262,7 +261,6 @@ advised of the possiblity of such damages.
      :interactive-stream-p
      :ignore
      :loop
-     :parse-error
      :process-wait
      :process-run-function)
     #+clim-0.9

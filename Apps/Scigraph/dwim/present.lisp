@@ -283,11 +283,8 @@ advised of the possiblity of such damages.
   (when *%%ready-to-catch%%*
       (throw 'catch-parser-failures t))
   (if (eq object :failure)
-      (parse-error "The input read was not of the required type.")
+      (clim:simple-parse-error "The input read was not of the required type.")
       (clim:input-not-of-required-type object type)))
-
-(defun parse-error (format-string &rest args)
-  (apply #'clim:simple-parse-error format-string args))
 
 (defun validate-object (object ptype)
   (let ((p (clim:expand-presentation-type-abbreviation ptype)))

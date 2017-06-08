@@ -33,7 +33,7 @@ advised of the possiblity of such damages.
 
 (eval-when (compile load eval)
   (defpackage dwim
-   (:shadow parse-error *default-server-path*)
+   (:shadow *default-server-path*)
    (:use clim-lisp)))
 
 (eval-when (compile load eval)
