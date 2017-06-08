@@ -45,12 +45,11 @@ advised of the possiblity of such damages.
   `(and (>= ,x ,left) (<= ,x ,right)
 	(>= ,y ,bottom) (<= ,y ,top)))
 
-(eval-when (compile load eval)
-  (proclaim '(inline constrain-point-in-rectangle))
-  (proclaim '(inline constrain-value-between)))
+(declaim (inline constrain-point-in-rectangle))
+(declaim (inline constrain-value-between))
 
 (defun constrain-value-between (min x max)
-  #+wrong (min (max min x) max)
+  ;; this is wrong (min (max min x) max)
   (if (<= min max) (min (max min x) max) (min (max max x) min)))
 
 (defun constrain-point-in-rectangle (x y left bottom right top)
@@ -145,7 +144,7 @@ advised of the possiblity of such damages.
 (defmacro with-graph-coordinates ((graph stream ul ur vb vt xl xr yb yt) &body body)
   `(with-graph-coordinates-1
      ,graph ,stream ,ul ,ur ,vb ,vt ,xl ,xr ,yb ,yt
-     #'(lambda () (declare (downward-function)) ,@body)))
+    #'(lambda () ,@body)))
 
 (defmethod set-xy-inside :after ((self basic-graph-coordinates-mixin)
 				 STREAM left right bottom top)
@@ -244,20 +243,6 @@ advised of the possiblity of such damages.
   (uv-is-inside self x y))
 
 
-#+genera
-(flavor:defflavor GRAPH-SIZE-ERROR (graph message) (error)
-  :initable-instance-variables)
-
-#+genera
-(flavor:defmethod (:PROCEED graph-size-error :abandon) ()
-  "Abandon attempt to change size or margin."
-  :abandon)
-
-#+genera
-(flavor:defmethod (:REPORT graph-size-error) (stream)
-  (format stream "For graph ~a: ~a" graph message))
-
-
 (defclass ESSENTIAL-GRAPH-MARGIN-MIXIN (basic-graph-coordinates-mixin)
   ;; Margin sizes in pixels.
   ((left-margin-size   :initform 0 :reader left-margin-size)
@@ -308,10 +293,7 @@ advised of the possiblity of such damages.
 (defmethod compute-margins ((self essential-graph-margin-mixin) STREAM)
   "Compute the margin sizes.  Whopperize this to add margin size.
   DON'T SIDE EFFECT."		     
-  (declare (ignore STREAM)
-	   #+nil
-	   (values left-margin-size right-margin-size
-		   bottom-margin-size top-margin-size))
+  (declare (ignore STREAM))
   (values 0 0 0 0))
 
 (defmethod uv-outside ((self essential-graph-margin-mixin))
@@ -362,13 +344,7 @@ advised of the possiblity of such damages.
 		left right bottom top
 		left-margin right-margin bottom-margin top-margin)))
     (when (and error complain-p)
-	  #+Genera
-	  (scl:signal-proceed-case (() 'graph-size-error :graph self
-				    :message error) 
-				   (:abandon nil))
-	  #-Genera
-	  (cerror error nil)
-	  )
+	  (cerror error nil))
     ;; BW: return error, rather than success flag
     error))
 
@@ -557,8 +533,6 @@ advised of the possiblity of such damages.
 
 (defmethod graph-with-clipping ((self basic-graph) STREAM inside-p continuation)
   ;; Internal to WITH-CLIPPING-TO-GRAPH macro.
-  #-(or sbcl cmu)
-  (declare (downward-funarg continuation))
   (multiple-value-bind (le re be te)
       (if inside-p (screen-inside self STREAM) (screen-outside self STREAM))
     (with-clipping-screen-rectangle (stream le re te be) 
@@ -575,7 +549,6 @@ advised of the possiblity of such damages.
   `(graph-with-clipping
      ,graph ,STREAM ,inside-p
      #'(lambda ()
-	 (declare (downward-function))
 	 ,@body)))
 
 
