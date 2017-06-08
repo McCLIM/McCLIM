@@ -29,8 +29,7 @@ advised of the possiblity of such damages.
 
 (eval-when (compile load eval)
   (export `(dump-forms with-slot-dumping dump-set-slot dump-slot
-		       dump-slots final-dump #+lispm make-load-form
-		       dumpable-mixin)
+		       dump-slots final-dump dumpable-mixin)
 	  'tool))
 
 (defclass dumpable-mixin
@@ -55,9 +54,8 @@ It should setup its slots as appropriate."))
 (defmethod dump-forms append ((SELF dumpable-mixin))
   nil)
 
-(defmethod make-load-form #-ansi-cl ((SELF dumpable-mixin))
-	                  #+ansi-cl ((SELF dumpable-mixin) &optional env)
-  #+ansi-cl (declare (ignore env))
+(defmethod make-load-form ((SELF dumpable-mixin) &optional env)
+  (declare (ignore env))
   (values `(make-instance ',(class-name (class-of SELF)))
 	  `(progn
 	     ,@(dump-forms SELF)
@@ -96,32 +94,4 @@ It should setup its slots as appropriate."))
 ;;; JPM.  Until the vendors catch up with the spec, implement here
 ;;; some of the dumpers we need for common lisp things.
 
-#-ansi-cl
-(defmethod make-load-form ((any t))
-  (cond ((hash-table-p any)
-	 (let ((entries nil))
-	   (maphash #'(lambda (key val)
-			(push (list key val) entries))
-		    any)
-	   `(let ((h (make-hash-table)))
-	      ,@(mapcar #'(lambda (entry)
-			    `(setf (gethash ',(car entry) h) ',(second entry)))
-			entries)
-	      h)))
-	((stringp any) any)
-	((arrayp any)
-	 (let* ((a any)
-		(dimensions (array-dimensions a))
-		(adjustable (adjustable-array-p a))
-		(type (array-element-type a))
-		(fp (array-has-fill-pointer-p a))
-		(contents (if (cdr dimensions)
-			      (error "don't know how to dump a multidimensional array")
-			      (map 'list #'identity a))))
-	   `(make-array ',(if fp (fill-pointer a) dimensions)
-			:initial-contents ',contents
-			,@(if (not (eq type 't)) `(:element-type ',type))
-			,@(if adjustable `(:adjustable t))
-			,@(if fp `(:fill-pointer ,(fill-pointer a))))))
-	(t any)))
 
