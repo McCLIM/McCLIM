@@ -247,12 +247,6 @@ advised of the possiblity of such damages.
 
 (eval-when (compile load eval)
   (defpackage dwim-lisp
-    #+MCL
-    (:shadowing-import-from ccl type-specifier-p)
-    #+genera
-    (:shadowing-import-from clos setf documentation)
-    #+genera
-    (:shadowing-import-from future-common-lisp dynamic-extent)
     ;; Shadow the things defined in dwim that offer potential name conflicts
     ;; with common lisp.
     (:shadowing-import-from 
@@ -263,32 +257,13 @@ advised of the possiblity of such damages.
      :loop
      :process-wait
      :process-run-function)
-    #+clim-0.9
-    (:shadowing-import-from
-     "CLIM-LISP" "DESCRIBE-OBJECT" "MAKE-LOAD-FORM-SAVING-SLOTS")
-    (:use #-lucid                      common-lisp
-	  #+(and lucid clim-0.9)       clim-lisp
-	  #+(and lucid (not clim-0.9)) lisp
-	  #+(or lucid allegro genera)  clos 
-	  #+mcl                        ccl
-	  dwim)))
+    (:use :common-lisp :dwim)))
 
 (eval-when (load eval)
-
-  #+clim
   (do-external-symbols (symbol (find-package :clim))
     ;; import everything from clim that offers no name conflicts.
     (unless (find-symbol (symbol-name symbol) :dwim-lisp)
       (import symbol :dwim-lisp)))
-
-  #+genera
-  (import '(scl:send scl::self) 'dwim-lisp)
-
   (dwim::export-inherited-symbols (find-package "DWIM-LISP"))
-
-  #+Genera
-  ;; Bless this package as a "reasonable facsimile of LISP"
-  (pushnew (find-package "DWIM-LISP") si:*reasonable-packages*)
-  
   (pushnew :dwim *features*))
 

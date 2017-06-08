@@ -27,21 +27,20 @@ advised of the possiblity of such damages.
 
 (in-package :common-lisp-user)
 
-#+mcclim
 (eval-when (compile load eval)
   (pushnew :clim-2 *features*))
 
 (eval-when (compile load eval)
   (defpackage dwim
-   (:shadow *default-server-path*)
-   (:use clim-lisp)))
+    (:use clim-lisp)
+    (:shadow *default-server-path*)
+    (:import-from #:clim
+                  #:present-to-string
+                  #:presentation-type
+                  #:present
+                  #:port
 
-(eval-when (compile load eval)
-  (import
-   '(clim:present-to-string clim:presentation-type clim:present clim:port)
-   'dwim)
+                  #:boolean
+                  #:expression
+                  #:command)))
 
-  ;;import the presentation types.
-  (import
-   '(clim:boolean clim:expression clim:command)
-   'dwim))
