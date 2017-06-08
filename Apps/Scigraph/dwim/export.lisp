@@ -122,11 +122,6 @@ advised of the possiblity of such damages.
 	    stream-set-cursor-position*
 	    stream-viewport
 	    stream-viewport-size
-	    sheet-inside-size
-	    sheet-inside-width
-	    sheet-inside-height
-	    sheet-left-margin-size
-	    sheet-top-margin-size
 
 	    stream-pointer-position*
 	    stream-set-pointer-position*

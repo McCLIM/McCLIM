@@ -67,11 +67,18 @@ and should be avoided in the future.  JPM 1-29-91.]
 
 |#
 
+(defun stream-height (stream)
+  "Height of the viewport."
+  (multiple-value-bind (ignore height)
+      (stream-viewport-size stream)
+    (declare (ignore ignore))
+    height))
+
 (defmacro uv-to-screen (screen u v)
-  `(values ,u (- (the fixnum (sheet-inside-height ,screen)) (the fixnum ,v))))
+  `(values ,u (- (the fixnum (stream-height ,screen)) (the fixnum ,v))))
 
 (defmacro screen-to-uv (screen u v)
-  `(values ,u (- (the fixnum (sheet-inside-height ,screen)) (the fixnum ,v))))
+  `(values ,u (- (the fixnum (stream-height ,screen)) (the fixnum ,v))))
 
 
 ;;; Clipping:  It is assumed that the underlying graphics system can do real

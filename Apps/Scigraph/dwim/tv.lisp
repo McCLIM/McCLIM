@@ -84,28 +84,6 @@ advised of the possiblity of such damages.
   (multiple-value-bind (left top right bottom) (stream-viewport stream)
       (values (- right left) (- bottom top)))) 
 
-(defmacro sheet-inside-size (stream)
-  `(stream-viewport-size ,stream))
-
-(defun stream-height (stream)
-  "Height of the viewport."
-  (multiple-value-bind (ignore height)
-      (stream-viewport-size stream)
-    (declare (ignore ignore))
-    height))
-
-(defmacro sheet-inside-width (stream) 
-  `(values (stream-viewport-size ,stream)))
-
-(defmacro sheet-inside-height (stream) 
-  `(stream-height ,stream))
-
-(defmacro sheet-left-margin-size (stream)
-  stream 0)
-
-(defmacro sheet-top-margin-size (stream)
-  stream 0)
-
 ;;;
 ;;; Mouse stuff
 ;;;

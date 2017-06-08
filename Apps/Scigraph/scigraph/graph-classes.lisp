@@ -83,7 +83,7 @@ powerful, and you may want to remove some of the mixins.
 	   (thresh (let ((n (missing-data-threshold self)))
 		     (if n (float (abs n)))))
 	   (-thresh (and thresh (- thresh)))
-	   (H (sheet-inside-height stream))
+	   (H (stream-height stream))
 	   (Trans (xy-to-uv-transform graph))
 	   (start (float (xll graph)))
 	   (end (float (xur graph)))

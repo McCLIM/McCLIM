@@ -214,7 +214,7 @@ advised of the possiblity of such damages.
 	 (vll       (slot-value self 'vll))
 	 (x-u-scale (float (slot-value self 'x-u-scale)))
 	 (y-v-scale (float (slot-value self 'y-v-scale)))
-	 (height (the fixnum (sheet-inside-height stream)))
+	 (height (the fixnum (stream-height stream)))
 	 (temp1     (float (- ull (* xll x-u-scale))))
 	 (temp2     (float (- vll (* yll y-v-scale)))))
     (declare (short-float x-u-scale temp1 y-v-scale temp2))

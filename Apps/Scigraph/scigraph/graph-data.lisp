@@ -110,7 +110,7 @@ PROTOCOL:
   (with-alu (stream (alu self))
     ;; Fixup the alu just once, since its the same for every datum.
     (let ((displayer (datum-displayer self graph))
-	  (H (sheet-inside-height stream))
+	  (H (stream-height stream))
 	  (Trans (xy-to-uv-transform graph)))
       (declare (compiled-function displayer Trans)
 	       (fixnum H))
@@ -840,7 +840,7 @@ way.  The graph takes the union of the limits returned.
   (vector-push-extend datum (data self)))
 
 (defmethod display-datum ((self GRAPH-DATA-ADD-DATUM-MIXIN) graph STREAM datum displayer)
-  (let ((H (sheet-inside-height stream)))
+  (let ((H (stream-height stream)))
     (multiple-value-bind (x y) (datum-position self datum)
       (multiple-value-setq (x y) (xy-to-uv graph x y))
       (funcall (the compiled-function displayer) stream x (- H (the fixnum y)) datum))))
