@@ -42,7 +42,9 @@ advised of the possiblity of such damages.
                 #:window-clear
                 #:redisplay-frame-pane
                 #:parse-text-style
-                #:medium-text-style))
+                #:medium-text-style
+                #:stream-string-width
+                #:stream-increment-cursor-position))
 
 (in-package :graph)
 

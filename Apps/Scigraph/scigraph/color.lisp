@@ -136,7 +136,7 @@ advised of the possiblity of such damages.
     (setq color-name (third color-name))
     (terpri stream)
     (draw-color-swatch stream color-name nil nil)
-    (stream-increment-cursor-position* stream 15 0)
+    (stream-increment-cursor-position stream 15 0)
     (format stream " ~A " color-name)))
 
 (defun display-gray-wash (&optional

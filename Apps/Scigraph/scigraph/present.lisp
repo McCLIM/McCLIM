@@ -61,7 +61,7 @@ advised of the possiblity of such damages.
 	  (if (> (+ y1 height) bottom)
 	      (scl:send-if-handles
 	       stream :set-viewport-position left (+ top height)))))
-      (stream-increment-cursor-position* stream 0 height)
+      (stream-increment-cursor-position stream 0 height)
       (multiple-value-bind (u v) (screen-to-uv stream x1 y1)
 	(set-uv-outside graph STREAM u (+ u width) (- v height) v)
 	(display graph stream)))))

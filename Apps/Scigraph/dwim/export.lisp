@@ -120,7 +120,6 @@ advised of the possiblity of such damages.
 	    interactive-stream-p
 	    stream-cursor-position*
 	    stream-set-cursor-position*
-	    stream-increment-cursor-position*
 	    stream-viewport
 	    stream-viewport-size
 	    sheet-inside-size

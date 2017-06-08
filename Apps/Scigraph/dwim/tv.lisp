@@ -49,10 +49,6 @@ advised of the possiblity of such damages.
       (clim:stream-character-width STREAM char)
       8))
 
-(defun stream-string-width (STREAM string &key (start 0) end text-style)
-  (clim:stream-string-width STREAM string :start START :end END
-                            :text-style TEXT-STYLE))
-
 (defmethod stream-cursor-position* (stream)
   (if (clim:extended-output-stream-p stream)
       (multiple-value-bind (x y)
@@ -64,9 +60,6 @@ advised of the possiblity of such damages.
 
 (defmethod stream-set-cursor-position* (stream x y)
   (setf (clim:stream-cursor-position stream) (values x y)))
-
-(defmethod stream-increment-cursor-position* (stream x y)
-  (clim:stream-increment-cursor-position stream x y))
 
 (defmethod stream-viewport (stream)
   ;;(declare (values left top right bottom))
