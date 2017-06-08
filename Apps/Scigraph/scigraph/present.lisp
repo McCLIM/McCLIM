@@ -30,8 +30,7 @@ advised of the possiblity of such damages.
 (define-presentation-type graph ()
   :description "a graph" 
   :printer ((object stream)
-	    (format #+broken redisplayable-format
-	     stream "~A" (name object)))
+	    (format stream "~A" (name object)))
   :parser ((stream)
 	   (read-char stream)
 	   (error "You must select a graph with the mouse.")))
@@ -39,8 +38,7 @@ advised of the possiblity of such damages.
 (define-presentation-type graph-data ()
   :description "a graph dataset" 
   :printer ((object stream)
-	    (format #+broken redisplayable-format
-	     stream "~A" (name object)))
+	    (format stream "~A" (name object)))
   :parser ((stream)
 	   (read-char stream)
 	   (error "You must select a graph dataset with the mouse.")))
@@ -51,8 +49,7 @@ advised of the possiblity of such damages.
 			    (width 500)
 			    (height 300))
   "Displays graph with upper-left corner starting at current cursor position."
-  #+clim (declare (ignore scroll-if-necessary))
-  #-clim (setq stream (si:follow-syn-stream stream))
+  (declare (ignore scroll-if-necessary))
   (let ((*standard-output* stream))
     (multiple-value-bind (x1 y1) (stream-cursor-position* stream)
       (setq width (truncate width))
@@ -71,7 +68,6 @@ advised of the possiblity of such damages.
 
 (defun save-postscript-graph (graph filename &key (width 400) (height 400))
   (with-open-file (s filename :direction :output)
-    #+(or clim-1 clim-2)
     (clim:with-output-to-postscript-stream (stream s)
       (display-graph graph :stream stream :width width :height height))))
 
@@ -219,11 +215,6 @@ advised of the possiblity of such damages.
     (let ((p (presentation-under-pointer stream)))
       (when p (graph-under-presentation p)))))
 
-#+debug
-(defun object-under-mouse ()
-  (let ((stream (window-under-mouse)))
-    (let ((p (presentation-under-pointer stream)))
-      (when p (presentation-object p)))))
 
 
 ;;;
@@ -350,7 +341,6 @@ advised of the possiblity of such damages.
      stream *dash-pattern-alist* object query-identifier
      :drawer #'draw-dash-sample)))
 
-#+clim-2
 (define-presentation-type-abbreviation dash-pattern ()
   `((member ,@(let ((numbers nil))
 		(dotimes (i 7) (push i numbers))
@@ -359,14 +349,12 @@ advised of the possiblity of such damages.
     :printer present-line-style
     :highlighter highlight-line-style))
 
-#+clim-2
 (defun present-line-style (object stream &key acceptably)
   (declare (ignore acceptably))
   (if (stringp object) (setq object (read-from-string object)))
   (with-room-for-graphics (stream)
     (draw-dash-sample stream object (princ-to-string object) nil)))
 
-#+clim-2
 (defun highlight-line-style (continuation object stream)
   (clim:surrounding-output-with-border
    (stream)
@@ -378,7 +366,6 @@ advised of the possiblity of such damages.
 ;;; probably because AND and OR are missing.  Here we kludge up 
 ;;; a solution until CLIM gets better.
 ;;; CLIM IS BETTER NOW (CLIM 2.0.BETA).  LETS GET RID OF THIS.  JPM.
-#+clim
 (define-presentation-type string-or-none ()
   :description "a string or None"
   :printer ((object stream)
@@ -393,11 +380,6 @@ advised of the possiblity of such damages.
 		 (values nil 'string-or-none)
 	       (values string 'string-or-none)))))
 
-#-clim
-(define-presentation-type string-or-none ()
-  :abbreviation-for '(dw:null-or-type string))
-
-#+clim
 (define-presentation-type number-or-none ()
   :description "a number or None"
   :printer ((object stream)
@@ -413,6 +395,3 @@ advised of the possiblity of such damages.
 		       (values number 'number-or-none)
 		       (input-not-of-required-type stream string 'number-or-none)))))))
 
-#-clim
-(define-presentation-type number-or-none ()
-  :abbreviation-for '(dw:null-or-type number))
