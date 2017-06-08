@@ -95,11 +95,8 @@ advised of the possiblity of such damages.
    (object &key presentation window)
   (list object window presentation))
 
-(install-command #+(or clim-0.9 (not clim)) 'accept-values
-		 #+(or clim-1.0 clim-2 mcclim) 'clim::accept-values
-		 'com-pop-edit-dataset)
+(install-command 'clim::accept-values 'com-pop-edit-dataset)
 
-#+(or clim-1.0 clim-2)
 (define-presentation-to-command-translator com-pop-edit-dataset
    (graph-data :command-name com-pop-edit-dataset
 	       :command-table clim::accept-values
@@ -207,12 +204,6 @@ advised of the possiblity of such damages.
     (when (contains-symbology-class symbologies :scatter)
       (popup-accept-forms (MENU-STREAM)
         (pa-slot symbol-height "Symbol Height" 'number)
-	#-clim-2
-	(pa-slot data-symbol "Symbol"
-		 `(graph-symbol :symbols
-		   (:+ :x :* :point :triangle :box :diamond :circle)
-		   :size ,(symbol-height self)))
-	#+clim-2
 	(progn
 	  (setq data-symbol
 	    (accept `(graph-symbol 
@@ -232,10 +223,6 @@ advised of the possiblity of such damages.
 (defmethod pop-accept-items progn ((self graph-data-color-mixin)
 				   MENU-STREAM GRAPH-WINDOW)
   (when (color-stream-p graph-window)
-    #-clim-2
-    (popup-accept-forms (menu-stream)
-			(pa-slot color "Color" 'color-presentation))
-    #+clim-2
     (multiple-value-bind (x y) (stream-cursor-position* menu-stream)
       (setf (slot-value self 'color)
 	(accept 'color-presentation
@@ -368,23 +355,6 @@ advised of the possiblity of such damages.
 						  ("Both" :value :both)
 						  ("None" :value nil))))))
 
-#+ignore
-(defmethod pop-accept-items progn ((self graph-auto-scale-extensions-mixin)
-				   MENU-STREAM GRAPH-WINDOW)
-  (declare (ignore GRAPH-WINDOW))
-  (with-slots (auto-scale auto-scale-extensions) self
-    (when auto-scale
-      (popup-accept-forms (MENU-STREAM)
-	(pa-string "  % Extension:")
-	(when (member auto-scale '(:x :both))
-	  (pa-var (first  auto-scale-extensions) "    Left  " 'number)
-	  (pa-var (second auto-scale-extensions) "    Right " 'number))
-	(when (member auto-scale '(:y :both))
-	  (pa-var (third  auto-scale-extensions) "    Bottom" 'number)
-	  (pa-var (fourth auto-scale-extensions) "    Top   " 'number)
-	  ))))
-  )
-
 (defmethod popup-accept :after ((self equation-data) stream)
   (declare (ignore stream))
   (with-slots (equation) self
@@ -447,13 +417,6 @@ advised of the possiblity of such damages.
   (declare (ignore GRAPH-WINDOW))
   (popup-accept-forms (MENU-STREAM)
     (pa-slot show-legend "Display on legend?" 'boolean)))
-
-#+old
-(defmethod pop-accept-items progn ((self graph-data-legend-slot-mixin)
-				   MENU-STREAM GRAPH-WINDOW)
-  (declare (ignore GRAPH-WINDOW))
-  (popup-accept-forms (MENU-STREAM)
-    (pa-slot legend "  Description for legend" 'string-or-none)))
 
 (defmethod pop-accept-items progn ((self graph-legend-mixin)
 				   MENU-STREAM GRAPH-WINDOW)
