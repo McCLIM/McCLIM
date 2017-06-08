@@ -44,7 +44,8 @@ advised of the possiblity of such damages.
                 #:parse-text-style
                 #:medium-text-style
                 #:stream-string-width
-                #:stream-increment-cursor-position))
+                #:stream-increment-cursor-position
+                #:beep))
 
 (in-package :graph)
 

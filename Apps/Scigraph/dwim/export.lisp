@@ -127,7 +127,6 @@ advised of the possiblity of such damages.
 	    sheet-inside-height
 	    sheet-left-margin-size
 	    sheet-top-margin-size
-	    beep
 
 	    stream-pointer-position*
 	    stream-set-pointer-position*

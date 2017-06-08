@@ -106,9 +106,6 @@ advised of the possiblity of such damages.
 (defmacro sheet-top-margin-size (stream)
   stream 0)
 
-(defun beep ()
-  (clim:beep))
-
 ;;;
 ;;; Mouse stuff
 ;;;

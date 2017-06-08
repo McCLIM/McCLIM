@@ -559,10 +559,10 @@ advised of the possiblity of such damages.
 		     (return (values line char)))
 		    ((eql char #\rubout)
 		     (if (zerop (fill-pointer line))
-			 (beep)
+			 (clim:beep)
 		       (decf (fill-pointer line))))
 		    ((not (characterp char))
-		     (beep))
+		     (clim:beep))
 		    (t
 		     (vector-push-extend char line)))))))))))
 
