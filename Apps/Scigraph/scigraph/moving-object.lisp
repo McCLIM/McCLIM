@@ -347,22 +347,6 @@ advised of the possiblity of such damages.
     (setq u (max 0 (- u (string-size stream nil text))))
     (draw-string text u v :stream stream :alu alu)))
 
-#-clim
-(defmethod DRAW-SLIDER-X-LABEL :around ((self crosshairs) graph STREAM alu value text)
-  ;; Without without-interrupts, writing the text was so slow that
-  ;; that the sliding aspect of the slider was destroyed.
-  ;; This was a crude hammer but it helped a lot.  NLC.
-  ;;
-  ;; But without-interrupts loses in CLIM XLIB.  Draw-text* ultimately tries to
-  ;; get some kind of lock (xlib:draw-glyph) and complains that scheduling was
-  ;; inhibited.  JPM.
-  (without-interrupts (call-next-method self graph stream alu value text)))
-
-#-clim
-(defmethod DRAW-SLIDER-Y-LABEL :around ((self crosshairs) graph STREAM alu value text)
-  ;; ditto
-  (without-interrupts (call-next-method self graph stream alu value text)))
-
 (defmethod DRAW-INTERNAL ((self crosshairs) STREAM x y &optional (labels? t))
   ;; Only draw labels on the "head" graph -- seemed to take to long otherwise (RBR)
   (with-slots (graphs) self
