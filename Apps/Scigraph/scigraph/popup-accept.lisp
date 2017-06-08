@@ -150,9 +150,7 @@ advised of the possiblity of such damages.
    (object &key presentation window)
   (list object window presentation))
 
-(install-command #+(or clim-0.9 (not clim)) :accept-values
-		 #+(or clim-1.0 clim-2 mcclim) 'clim::accept-values
-		 'com-pop-edit)
+(install-command 'clim::accept-values 'com-pop-edit)
 
 
 ;;;
@@ -160,7 +158,7 @@ advised of the possiblity of such damages.
 ;;;
 
 (defgeneric pop-accept-items (self MENU-STREAM GRAPH-WINDOW)
-  (:method-combination progn #-lucid :most-specific-last)) 
+  (:method-combination progn :most-specific-last)) 
 
 ;;; +++ Until lucid gets :most-specific-last, pop-accept-items isn't going to work
 ;;; quite right for the case where display is conditioned on the values of other
@@ -265,13 +263,12 @@ advised of the possiblity of such damages.
 	(TITLE (pop-accept-label SELF))
 	(result self)
 	(*avv-extra-redisplay* t)
-	(own-window #-clim t
-		    ;; Clim/Lucid may lose if you pass a list that the compiler
+	(own-window ;; Clim/Lucid may lose if you pass a list that the compiler
 		    ;; may have assumed was a constant, so copy it at run
 		    ;; time.  ("Segmentation Violation")
-		    #+clim (copy-list '(:left 150 :bottom 150
-					:right-margin 50
-					:bottom-margin 200))))
+                    (copy-list '(:left 150 :bottom 150
+                                 :right-margin 50
+                                 :bottom-margin 200))))
     (loop for FIRST-TIME? = t then nil
 	  do (setq result
 		   (accepting-values (menu-menu-stream
@@ -291,11 +288,3 @@ advised of the possiblity of such damages.
 	  do (progn (beep) (beep)))
     result))
 
-#+clim-0.9
-(defmethod ci::execute-frame-command :after ((frame ci::accept-values) command &optional x)
-   (declare (ignore command x))
-   ;; Force an extra redisplay so things look right (clim extension).
-   (when *avv-extra-redisplay* 
-     (let ((avv (ci::output-record-parent ci::*current-avv-record*)))
-       (when avv
-	 (ci::redisplay avv (slot-value frame 'ci::stream))))))
