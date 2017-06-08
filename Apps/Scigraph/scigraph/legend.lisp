@@ -59,14 +59,6 @@ advised of the possiblity of such damages.
 
 (defmethod show-legend ((any t)) nil)
 
-;;; KRA 27APR93: I removed this because it requires datasets to know what graph
-;;; they are being drawn on, which seems unfair.  Also, the hidden-dataset check
-;;; is make explicitly in (method display (legend-annotation t))
-#+OLD
-(defmethod show-legend :around ((dataset basic-graph-data))
-   (and (call-next-method)
-	(not (member dataset (hidden-datasets (graph dataset))))))
-
 ;;; needs some sort of symbology to work.
 (defclass GRAPH-DATA-LEGEND-MIXIN (basic-graph-datum-symbology-mixin
 				   show-legend-mixin)
