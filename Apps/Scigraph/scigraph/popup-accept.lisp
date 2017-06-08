@@ -64,16 +64,8 @@ advised of the possiblity of such damages.
 (defmethod popup-accept-variables ((self standard-object))
     "Get list of instance variables."
     (let ((slots 
-	   ;; Blech.  What's wrong with my package?
-           #FEATURE-CASE
-           ((:mcclim
-	     (mapcar #'clim-mop:slot-definition-name
-		     (clim-mop:class-slots (class-of self))))
-	    ((and (not :mcclim) (not :mcl))
-             (mapcar #'slot-definition-name (class-slots (class-of self))))
-            ((and (not :mcclim) :mcl)
-             (mapcar #'ccl:slot-definition-name (ccl:class-class-slots (class-of self)))))
-           ))
+           (mapcar #'clim-mop:slot-definition-name
+                   (clim-mop:class-slots (class-of self)))))
       (sort slots #'string-lessp)))
 
 (defconstant *unbound* '%%unbound%%)

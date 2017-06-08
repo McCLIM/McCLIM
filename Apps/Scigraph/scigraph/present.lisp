@@ -84,31 +84,8 @@ advised of the possiblity of such damages.
 
 (defun window-reverse-video (window &optional (fore :white) (back :black))
   "Change the foreground/background colors of the window."
-  #FEATURE-CASE
-  (((not :clim)
-    (progn
-      ;; In Dynamic Windows, fore and back could be *real* colors rather than just
-      ;; black/white, but in practice that seems to cause some problems.  Try for
-      ;; example drawing on a color background using :flip alu.
-      (if (eq back :black)
-	  (setq fore tv:alu-andca back tv:alu-ior)
-	(setq fore tv:alu-ior back tv:alu-andca))
-      (scl:send window :set-char-aluf fore)
-      (scl:send window :set-erase-aluf back)))
-   (:clim-0.9
-    (let ((medium (sheet-medium window))
-	  (viewport (pane-viewport window)))
-      (setq fore (alu-for-stream window fore)
-	    back (alu-for-stream window back))
-      (setf (medium-background medium) back
-	    (medium-foreground medium) fore)
-      ;; This last part shouldn't be required, but it is because
-      ;; of the wierd way that CLIM repaints a window.
-      (setf (slot-value viewport 'windshield::background)
-	back)))
-   ((or :clim-1.0 :clim-2)
-    (setf (medium-foreground window) (alu-for-stream window fore)
-	  (medium-background window) (alu-for-stream window back)))))
+  (setf (medium-foreground window) (alu-for-stream window fore)
+        (medium-background window) (alu-for-stream window back)))
 
 (defun autoscale-graphs (graphs autoscale-type)
   "Let the graphs mutually decide what scaling limits to use.
