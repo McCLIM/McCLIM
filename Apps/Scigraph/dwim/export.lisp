@@ -114,11 +114,7 @@ advised of the possiblity of such damages.
 ;;;from tv.lisp
 (eval-when (compile load eval)
   (export '(window-under-mouse
-	    window-clear
 	    change-size
-	    pane-frame
-	    redisplay-frame-pane
-	    sheet-parent
 	    stream-current-text-style
 	    stream-merged-text-style
 	    stream-line-height

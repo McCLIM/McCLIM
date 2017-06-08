@@ -86,7 +86,7 @@ class.  So you should do the following (in the ws package, 'natch):
   (let* ((*package* (find-package :graph)))
     (loop
       (with-simple-restart (scigraph-top-level "Abort to SCIGRAPH Top Level")
-	(redisplay-frame-pane (get-frame-pane self 'display))
+	(redisplay-frame-pane self (get-frame-pane self 'display))
 	(default-frame-top-level self)))))
 
 (defun redisplay-graphs (self stream)

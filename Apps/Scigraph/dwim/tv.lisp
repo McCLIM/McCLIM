@@ -36,30 +36,11 @@ advised of the possiblity of such damages.
    (clim:port-pointer
     (clim:port clim:*application-frame*))))
 
-(defun window-clear (window)
-  (clim:window-clear window))
-
-(defun pane-frame (pane)
-  (clim:pane-frame pane))
-
-(defun redisplay-frame-pane (pane &optional (force-p t))
-  ;; force-p is probably wrong for redisplayable panes:
-  (clim:redisplay-frame-pane (pane-frame pane) pane :force-p force-p))
-
-(defun sheet-parent (sheet)
-  (clim:sheet-parent sheet))
-
-(defmethod (setf sheet-parent) (new sheet)
-  (sheet-adopt-child sheet new))
-
 (defun stream-current-text-style (STREAM)
   (clim:medium-text-style stream))
 
 (defun stream-merged-text-style (STREAM)
   (clim:medium-merged-text-style stream))
-
-(defun parse-text-style (LIST)
-  (clim:parse-text-style LIST))
 
 (defun stream-line-height (stream &optional TEXT-STYLE)
   (if TEXT-STYLE
@@ -315,9 +296,6 @@ advised of the possiblity of such damages.
 		 :wait-until-done wait-until-done
 		 :master master
 		 :backing-store backing-store)))
-
-(defmethod frame-exit (FRAME)
-  (clim:frame-exit FRAME))
 
 (defmacro for-each-frame ((symbol) &body body)
   "Iteratively bind SYMBOL to all enabled frames."
