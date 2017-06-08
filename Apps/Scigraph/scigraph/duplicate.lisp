@@ -100,15 +100,6 @@ advised of the possiblity of such damages.
 	     (symbol 'self)
 	     (COPY-FORMS? *DUPLICATE-CLASS-FORMS-COPY-FORMS?*)
 	     (DUMP-FORMS? *DUPLICATE-CLASS-FORMS-DUMP-FORMS?*))
-	   SLOT-FORMS &optional FINAL-DUPLICATE-FORMS)
-  #+lispm
-  (declare (zwei:indentation 2 1))
-  `(progn
-     ,(and COPY-FORMS?
-	   (duplicate-class-forms-copy symbol CLASS-NAME SLOT-FORMS))
-     ,(and DUMP-FORMS?
-	   (duplicate-class-forms-dump symbol CLASS-NAME SLOT-FORMS))
-     ,@(duplicate-class-forms-final-duplicate
-	 symbol CLASS-NAME FINAL-DUPLICATE-FORMS COPY-FORMS? DUMP-FORMS?)))
+	   SLOT-FORMS &optional FINAL-DUPLICATE-FORMS))
 
 
