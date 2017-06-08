@@ -540,7 +540,7 @@ advised of the possiblity of such damages.
       (funcall continuation))))
 
 (defmethod default-text-style ((graph basic-graph) stream)
-  (stream-current-text-style stream))
+  (medium-text-style stream))
 
 (defmacro WITH-CLIPPING-TO-GRAPH ((graph STREAM inside-p) &body body)
   "Perform body while constraining clipping to GRAPH.  If INSIDE-P,

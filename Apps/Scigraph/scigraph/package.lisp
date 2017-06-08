@@ -41,7 +41,8 @@ advised of the possiblity of such damages.
   (:import-from #:clim
                 #:window-clear
                 #:redisplay-frame-pane
-                #:parse-text-style))
+                #:parse-text-style
+                #:medium-text-style))
 
 (in-package :graph)
 

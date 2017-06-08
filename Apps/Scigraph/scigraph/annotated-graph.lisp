@@ -565,7 +565,7 @@ older classes in favor of cleaned up newer ones.  Someday, ...
 
 (defmethod legend-text-style ((self annotated-legend-mixin) (stream t))
   (merge-text-styles (parse-text-style '(nil :roman :very-small)) 
-		     (stream-current-text-style stream)))
+		     (medium-text-style stream)))
 
 (defmethod create-legend ((self annotated-legend-mixin) stream)
   "Make a legend annotation and position it."

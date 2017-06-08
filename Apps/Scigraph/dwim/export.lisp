@@ -115,8 +115,6 @@ advised of the possiblity of such damages.
 (eval-when (compile load eval)
   (export '(window-under-mouse
 	    change-size
-	    stream-current-text-style
-	    stream-merged-text-style
 	    stream-line-height
 	    stream-character-width
 	    interactive-stream-p

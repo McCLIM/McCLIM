@@ -64,7 +64,7 @@ advised of the possiblity of such damages.
       ;; Okay, try to display, but let the graph clip me too.
       (with-clipping-to-graph (graph stream nil)
 	;; Move the cursor to shadow clim bugs.
-	(with-character-style ((or style (stream-current-text-style stream))
+	(with-character-style ((or style (medium-text-style stream))
 			       stream)	
 	  (multiple-value-bind (sl st) (uv-for-display self)
 	    (multiple-value-setq (sl st) (uv-to-screen stream sl st))

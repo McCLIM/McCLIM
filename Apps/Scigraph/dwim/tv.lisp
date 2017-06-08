@@ -36,12 +36,6 @@ advised of the possiblity of such damages.
    (clim:port-pointer
     (clim:port clim:*application-frame*))))
 
-(defun stream-current-text-style (STREAM)
-  (clim:medium-text-style stream))
-
-(defun stream-merged-text-style (STREAM)
-  (clim:medium-merged-text-style stream))
-
 (defun stream-line-height (stream &optional TEXT-STYLE)
   (if TEXT-STYLE
       (truncate (clim:stream-line-height stream
