@@ -262,27 +262,31 @@
 	 (from-transformation (sheet-native-transformation from-sheet))
 	 (to-sheet (medium-sheet to-drawable))
 	 (to-transformation (sheet-native-transformation to-sheet)))
-    (when (and msheet (sheet-mirror msheet))
-      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-	  (region-intersection
-	   (climi::medium-device-region to-drawable)
-	   (transform-region
-	    (sheet-native-transformation (medium-sheet to-drawable))
-	    (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
-	(multiple-value-bind (x1 y1)
-	    (transform-position
-	     (sheet-native-transformation (medium-sheet to-drawable))
-	     to-x to-y)
-	  (multiple-value-bind (x2 y2)
-	    (transform-position
-	     (sheet-native-transformation (medium-sheet from-drawable))
-	     from-x from-y)
-	  (%medium-draw-image to-drawable
-			      (medium-sheet from-drawable)
-			      min-x min-y
-			      (- max-x min-x) (- max-y min-y)
-			      (- x2 x1) (- y2 y1))))))))
-    
+    (multiple-value-bind (w2 h2)
+        (untransform-distance (medium-transformation from-drawable)
+                              width height)
+      (multiple-value-bind (w h)
+          (transform-distance (sheet-transformation (medium-sheet to-drawable))
+                              w2 h2)
+        (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+            (region-intersection
+             (climi::medium-device-region to-drawable)
+             (transform-region
+              (sheet-native-transformation (medium-sheet to-drawable))
+              (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
+          (multiple-value-bind (x1 y1)
+              (transform-position
+               (sheet-native-transformation (medium-sheet to-drawable))
+               to-x to-y)
+            (multiple-value-bind (x2 y2)
+                (transform-position
+                 (sheet-native-transformation (medium-sheet from-drawable))
+                 from-x from-y)
+              (%medium-draw-image to-drawable
+                                  (medium-sheet from-drawable)
+                                  min-x min-y
+                                  (- max-x min-x) (- max-y min-y)
+                                  (- x2 x1) (- y2 y1)))))))))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable image-sheet-mixin) to-x to-y)
@@ -291,26 +295,32 @@
 	 (from-sheet (medium-sheet from-drawable))
 	 (from-transformation (sheet-native-transformation from-sheet)))
     (when (and msheet (sheet-mirror msheet))
-      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-	  (region-intersection
-	   (climi::sheet-native-region to-drawable)
-	   (transform-region
-	    (sheet-native-transformation to-drawable)
-	    (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
-	(multiple-value-bind (x1 y1)
-	    (transform-position
-	     (sheet-native-transformation to-drawable)
-	     to-x to-y)
-	  (multiple-value-bind (x2 y2)
-	      (transform-position
-	       (sheet-native-transformation (medium-sheet from-drawable))
-	       from-x from-y)
-	    (climi::with-pixmap-medium (to-medium to-drawable)
-	      (%medium-draw-image (sheet-medium to-drawable)
-				  (medium-sheet from-drawable)
-				  min-x min-y
-				  (- max-x min-x) (- max-y min-y)
-				  (- x2 x1) (- y2 y1)))))))))
+      (multiple-value-bind (w2 h2)
+          (untransform-distance (medium-transformation from-drawable)
+                                width height)
+        (multiple-value-bind (w h)
+            (transform-distance (sheet-transformation to-drawable)
+                                w2 h2)
+          (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+              (region-intersection
+               (climi::sheet-native-region to-drawable)
+               (transform-region
+                (sheet-native-transformation to-drawable)
+                (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
+            (multiple-value-bind (x1 y1)
+                (transform-position
+                 (sheet-native-transformation to-drawable)
+                 to-x to-y)
+              (multiple-value-bind (x2 y2)
+                  (transform-position
+                   (sheet-native-transformation (medium-sheet from-drawable))
+                   from-x from-y)
+                (climi::with-pixmap-medium (to-medium to-drawable)
+                  (%medium-draw-image (sheet-medium to-drawable)
+                                      (medium-sheet from-drawable)
+                                      min-x min-y
+                                      (- max-x min-x) (- max-y min-y)
+                                      (- x2 x1) (- y2 y1)))))))))))
 
 (defmethod medium-copy-area ((from-drawable image-sheet-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
@@ -318,22 +328,32 @@
   (medium-force-output to-drawable)
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet to-drawable))))
     (when (and msheet (sheet-mirror msheet))
-      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-	  (region-intersection
-	   (climi::medium-device-region to-drawable)
-	   (transform-region
-	    (sheet-native-transformation (medium-sheet to-drawable))
-	    (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))
-	(multiple-value-bind (x1 y1)
-	    (transform-position
-	     (sheet-native-transformation (medium-sheet to-drawable))
-	     to-x to-y)
-	  (%medium-draw-image to-drawable
-			      from-drawable
-			      min-x min-y
-			      (- max-x min-x) (- max-y min-y)
-			      (- from-x x1) (- from-y y1)))))
-    (medium-force-output to-drawable)))
+      (multiple-value-bind (w2 h2)
+          (untransform-distance (medium-transformation (sheet-medium from-drawable))
+                                width height)
+        (multiple-value-bind (w h)
+            (transform-distance (sheet-transformation (medium-sheet to-drawable))
+                                w2 h2)
+          (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+              (region-intersection
+               (climi::medium-device-region to-drawable)
+               (transform-region
+                (sheet-native-transformation (medium-sheet to-drawable))
+                (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
+            (multiple-value-bind (x1 y1)
+                (transform-position
+                 (sheet-native-transformation (medium-sheet to-drawable))
+                 to-x to-y)
+              (multiple-value-bind (x2 y2)
+                  (transform-position
+                   (sheet-native-transformation from-drawable)
+                   from-x from-y)
+              (%medium-draw-image to-drawable
+                                  from-drawable
+                                  min-x min-y
+                                  (- max-x min-x) (- max-y min-y)
+                                  (- x2 x1) (- y2 y1))))))
+        (medium-force-output to-drawable)))))
 
 (defmethod medium-draw-image-design* ((medium render-medium-mixin)
 				      (design climi::rgb-image-design) to-x to-y)
