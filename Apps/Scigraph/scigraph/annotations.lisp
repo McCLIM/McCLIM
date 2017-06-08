@@ -52,18 +52,6 @@ advised of the possiblity of such damages.
 
 (defmethod editable ((object t)) nil)
 
-#+clim-0.9
-(defun clim-update-sensitivity (stream)
-  "Fix major CLIM sins"
-  ;; Try living without this function once clim 2.0 arrives.  10 apr 91 jpm.
-  (let ((root (ci::output-recording-stream-output-record stream)))
-    ;; Scroll bars are wrong, so update them.
-    (ci::update-region stream
-		       (bounding-rectangle-width root)
-		       (bounding-rectangle-height root))
-    ;; Annotations get inserted out of order, so sort the records.
-    (ci::sort-coordinate-sorted-set (slot-value root 'ci::coordinate-sorted-set))))
-
 (defmethod annotation-presentation-type ((self basic-annotation)) 'annotation)
 (defmethod annotation-single-box ((self basic-annotation)) nil)
 
@@ -89,8 +77,7 @@ advised of the possiblity of such damages.
 			     :object self
 			     :single-box (annotation-single-box self)
 			     :type (annotation-presentation-type self))
-		  (call-next-method self stream)))))))
-      #+clim-0.9 (clim-update-sensitivity stream))))
+		  (call-next-method self stream))))))))))
 
 (defmethod display-p ((self basic-annotation)) t)
 
@@ -112,8 +99,7 @@ advised of the possiblity of such damages.
   (with-slots (presentation) self
     (when presentation
       (erase-graphics-presentation presentation :stream STREAM)
-      (setq presentation nil)
-      #+clim-0.9 (clim-update-sensitivity stream))))
+      (setq presentation nil))))
 
 (defmethod kill ((self basic-annotation) STREAM)
   "Erase the annotation and resign from the graph."
@@ -194,7 +180,7 @@ advised of the possiblity of such damages.
 	      (setf (width self) (- re le)
 		    (height self) (- be te)))))))))
 
-(defvar *annotation-whitespace* '(#\return #\space #\tab #+genera #\line #\page))
+(defvar *annotation-whitespace* '(#\return #\space #\tab #\page))
 
 (defmethod figure-text-dimensions ((self annotation) STREAM)
   "Compute the width and height that the text will cover on the stream."
@@ -215,7 +201,7 @@ advised of the possiblity of such damages.
       )))
 
 (defgeneric rescale-annotation (SELF)
-  (:method-combination progn #-Lucid :most-specific-last)
+  (:method-combination progn :most-specific-last)
   (:documentation "Called when the graph has been rescaled."))
 
 (defmethod rescale-annotation progn ((self t)) nil)
@@ -728,7 +714,7 @@ advised of the possiblity of such damages.
 ;;; object to compute the  value.
 
 (defgeneric DESCRIPTION-CHOICES (object)
-  (:method-combination append #-lucid :most-specific-first) ; Fixed in 1991?
+  (:method-combination append :most-specific-first) ; Fixed in 1991?
   (:documentation "Returns an association list of descriptive string, function name."))
 
 (defun COMPUTE-DESCRIPTOR (function argument &rest arguments)
