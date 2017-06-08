@@ -759,9 +759,6 @@ advised of the possiblity of such damages.
   "Determine if a presentation is a part of an incremental redisplay."
   (if (not presentation) nil
     (or 
-     #-clim
-     (typep (presentation-object presentation) 'dw::redisplay-piece)
-     #+clim-2
      (typep presentation 'standard-updating-output-record)
      (incrementally-redisplayable-presentation
       (presentation-superior presentation)))))
