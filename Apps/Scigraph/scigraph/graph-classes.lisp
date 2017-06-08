@@ -182,8 +182,7 @@ powerful, and you may want to remove some of the mixins.
       ;; KRA 27JUL93: We don't know how to rotate charaters yet.
       ;; However see CLASS ANNOTATED-GRAPH and
       ;; ANNOTATED-HORIZONTAL-Y-BORDER-MIXIN-KLUDGE
-      #-clim vertical-y-border-mixin
-      #+clim horizontal-y-border-mixin
+      horizontal-y-border-mixin
       graph-datasets-mixin
       graph-border-ob-mixin
       graph-border-mixin
