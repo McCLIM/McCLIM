@@ -61,21 +61,6 @@ advised of the possiblity of such damages.
     `(clim-sys:with-lock-held (*dwim-giant-lock*)
        ,@body)))
 
-(defmacro make-command-table (name &key inherit-from)
-  (when (and (consp inherit-from) (eq (car inherit-from) 'quote))
-    ;; dequotify
-    (setq inherit-from (second inherit-from)))
-  `(clim:define-command-table ,name :inherit-from ,inherit-from))
-
-(defmacro define-command-table (name &key inherit-from)
-  `(make-command-table ,name :inherit-from ,inherit-from))
-
-(defun find-command-table (NAME &key (errorp t))
-  (clim:find-command-table NAME :errorp errorp))
-
-(defmacro command-table-inherit-from (NAME) 
-  `(clim::command-table-inherit-from ,NAME))
-
 (defun command-pretty-name (string)
   "COM-SHOW-FILE -> 'Show File'"
   (cond ((and (> (length string) 4)

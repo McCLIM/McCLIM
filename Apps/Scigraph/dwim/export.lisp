@@ -153,9 +153,6 @@ advised of the possiblity of such damages.
 	    store-conditional
 	    stack-let
 	    without-interrupts
-	    make-command-table
-	    define-command-table
-	    find-command-table
 	    define-command
 	    install-command
 	    define-presentation-to-command-translator

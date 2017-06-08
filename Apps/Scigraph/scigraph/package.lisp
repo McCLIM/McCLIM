@@ -45,7 +45,10 @@ advised of the possiblity of such damages.
                 #:medium-text-style
                 #:stream-string-width
                 #:stream-increment-cursor-position
-                #:beep))
+                #:beep
+                #:make-command-table
+                #:define-command-table
+                #:find-command-table))
 
 (in-package :graph)
 
@@ -54,4 +57,4 @@ advised of the possiblity of such damages.
 		      array-register))
 
 
-(dwim:make-command-table :graph)
+(make-command-table :graph)
