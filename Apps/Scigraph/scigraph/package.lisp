@@ -25,17 +25,16 @@ performance of this software, even if BBN Systems and Technologies is
 advised of the possiblity of such damages.
 |#
 
-(in-package #-ansi-cl :user #+ansi-cl :common-lisp-user)
+(in-package :common-lisp-user)
 
-(defpackage TOOL
-  #+MCL     (:shadow copy)
+(defpackage #:tool
   (:use dwim-lisp))
 
-(defpackage STATISTICS
+(defpackage #:statistics
   (:nicknames stat st)
   (:use dwim-lisp))
 
-(defpackage GRAPH
+(defpackage #:graph
   #-allegro (:nicknames gr)           ; "GR" names something already.
   (:shadow variable)                  ; shouldn't be inherited but is
   #+MCL     (:shadow copy)
