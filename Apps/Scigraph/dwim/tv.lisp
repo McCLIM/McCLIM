@@ -166,10 +166,6 @@ advised of the possiblity of such damages.
 ;;; Frame stuff
 ;;;
 
-(defvar *default-server-path*
-  ;; CLH: should this really be '(:clx) for McCLIM?!?
-  '(:motif))
-
 (defvar *sheet-roots* nil)
 (defvar *deactivated-frames* nil)
 (defvar *activated-frames* nil)

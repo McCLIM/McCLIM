@@ -33,7 +33,6 @@ advised of the possiblity of such damages.
 (eval-when (compile load eval)
   (defpackage dwim
     (:use clim-lisp)
-    (:shadow *default-server-path*)
     (:import-from #:clim
                   #:present-to-string
                   #:presentation-type
