@@ -167,7 +167,6 @@ to 100.
   (format nil "~A" data))
 
 (defmethod auto-scale-limits ((data plain-data) type xll xur yll yur)
-  (declare (ignore xll xur yll yur))
   (list
    (min 0 xll)
    (max 100 xur)
