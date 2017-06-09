@@ -39,9 +39,6 @@ advised of the possiblity of such damages.
   (clim:define-gesture-name :middle :pointer-button :middle)
   (clim:define-gesture-name :right :pointer-button :right))
 
-(defun erase-graphics-presentation (presentation &key (stream *standard-output*))
-  (clim:erase-output-record presentation stream nil))
-
 (defun presentation-under-pointer (stream)
   (multiple-value-bind (x y) (clim:stream-pointer-position stream)
     (clim::find-innermost-applicable-presentation '((t)) stream x y)))
