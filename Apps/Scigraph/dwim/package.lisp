@@ -27,22 +27,21 @@ advised of the possiblity of such damages.
 
 (in-package :common-lisp-user)
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew :clim-2 *features*))
 
-(eval-when (compile load eval)
-  (defpackage dwim
-    (:use clim-lisp)
-    (:import-from #:clim
-                  #:present-to-string
-                  #:presentation-type
-                  #:present
-                  #:port
+(defpackage dwim
+  (:use clim-lisp)
+  (:import-from #:clim
+                #:present-to-string
+                #:presentation-type
+                #:present
+                #:port
 
-                  #:boolean
-                  #:expression
-                  #:command
+                #:boolean
+                #:expression
+                #:command
 
-                  #:frame-manager
-                  #:find-frame-manager)))
+                #:frame-manager
+                #:find-frame-manager))
 
