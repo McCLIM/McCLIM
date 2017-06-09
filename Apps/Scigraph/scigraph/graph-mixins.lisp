@@ -767,7 +767,7 @@ advised of the possiblity of such damages.
   (with-output-truncation (stream)
     (let ((presentation (presentation self)))
       (when presentation
-	(erase-graphics-presentation presentation :stream stream)
+	(clim:erase-output-record presentation stream nil)
 	(setq presentation nil)))))
 
 (defmethod refresh :around ((self presentable-graph-mixin) stream)

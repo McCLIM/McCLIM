@@ -98,7 +98,7 @@ advised of the possiblity of such damages.
   "Erase an annotation by erasing the underlying presentation."
   (with-slots (presentation) self
     (when presentation
-      (erase-graphics-presentation presentation :stream STREAM)
+      (clim:erase-output-record presentation stream nil)
       (setq presentation nil))))
 
 (defmethod kill ((self basic-annotation) STREAM)

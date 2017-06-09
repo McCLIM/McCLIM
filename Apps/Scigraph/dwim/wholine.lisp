@@ -161,7 +161,7 @@ advised of the possiblity of such damages.
 	  (setq presentation (slot-value status-line presentation-name))
 	  (setf (slot-value status-line presentation-name) nil)
 	  (if (and record-p presentation)
-	      (erase-graphics-presentation presentation :stream stream))
+	      (clim:erase-output-record presentation stream nil))
 	  (let* ((minx column)
 		 (maxx (+ column status-width))
 		 (miny top)
