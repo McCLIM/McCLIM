@@ -181,7 +181,6 @@ advised of the possiblity of such damages.
 	     draw-line
 	     axis-number
 	     label)
-  (declare (downward-funarg draw-line axis-number label))
   (if (< umax umin) (rotatef umax umin))
   (if (minusp dtick) (setq dtick (- dtick)))
   (let* ((cos (- xmax xmin))

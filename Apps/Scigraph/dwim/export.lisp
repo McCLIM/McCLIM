@@ -162,7 +162,7 @@ advised of the possiblity of such damages.
 ;;;export the presentation types and declarations.
 (eval-when (compile load eval)
   (export '(boolean alist-member command expression) 'dwim)
-  (export '(downward-funarg downward-function array-register dynamic-extent)
+  (export '(downward-function array-register dynamic-extent)
 	  'dwim))
 
 ;;;************************************************************

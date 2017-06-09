@@ -52,8 +52,7 @@ advised of the possiblity of such damages.
 
 (in-package :graph)
 
-(declaim (declaration downward-funarg
-		      downward-function
+(declaim (declaration downward-function
 		      array-register))
 
 (clim:define-command-table :graph)
