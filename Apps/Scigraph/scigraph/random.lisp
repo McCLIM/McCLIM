@@ -27,20 +27,6 @@ advised of the possiblity of such damages.
 
 (in-package :statistics)
 
-(eval-when (compile load eval)
-  (export 'random-seed)
-  (export 'with-seed)
-  (export 'uniform)
-  (proclaim '(inline uniform))
-  (proclaim '(inline uniform-basic))
-  (proclaim '(inline combined-uniform))
-  (export 'uniform-0-1)
-  (export 'uniform-between)
-  (export 'gaussian-random)
-  (export 'gaussian)
-  (export 'random-yes-no)
-  (export 'erf))
-
 ;;; PORTABLE UNIFORM AND GAUSSIAN RANDOM NUMBERS
 
 #||

@@ -29,7 +29,7 @@
                  (:file "scigraph/popup-accept-methods")
                  (:file "scigraph/duplicate-methods")
                  (:file "scigraph/frame")
-                 (:file "scigraph/export")
+                 #+nil (:file "scigraph/export")
                  (:file "scigraph/demo-frame")))
 
 (defsystem #:scrigraph/dwim
@@ -42,4 +42,4 @@
                (:file "dwim/present")
                (:file "dwim/extensions")
                (:file "dwim/wholine")
-               (:file "dwim/export")))
+               #+nil (:file "dwim/export")))

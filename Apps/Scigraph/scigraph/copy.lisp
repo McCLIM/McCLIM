@@ -27,13 +27,6 @@ advised of the possiblity of such damages.
 
 (in-package :tool)
 
-(eval-when (compile load eval)
-  (export 'with-stack-list-copy 'tool)
-  (export '(with-slot-copying copy-slot copy-set-slot copy-slots) 'tool)
-  (export '(copyable-mixin copy-inner-class) 'tool)
-  (export '(copy-self copy-inner) 'tool)
-  (export '(copy-top-level copy) 'tool))
-
 ;;; COPY-TOP-LEVEL:
 ;;; Copy objects with aribtrarily complex substructure.
 ;;; Objects are kept track of in a HashTable, so only make one copy of each.

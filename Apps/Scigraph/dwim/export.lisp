@@ -114,17 +114,9 @@ advised of the possiblity of such damages.
 	    stream-pointer-position*
 	    stream-set-pointer-position*
 	    pointer-input-rectangle*
-	    noting-progress
-	    note-progress
-
-	    get-reusable-frame
-	    start-frame
-	    reset-frame
 	    make-application-frame
-	    set-frame-layout
 	    window-set-viewport-position*
 	    window-history-limits
-	    select-frame
 	    launch-frame)
 	  'dwim))
 

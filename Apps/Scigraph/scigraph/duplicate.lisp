@@ -31,14 +31,6 @@ advised of the possiblity of such damages.
 ;;; KRA: This needs more documentation
 ;;;
 
-(eval-when (compile load eval)
-  (export '(duplicate-set
-	    duplicate-slots
-	    duplicator-methods
-	    )
-	  'tool
-	  ))
-
 (defun duplicate-class-forms-copy (SYMBOL CLASS-NAME SLOT-FORMS)
   (let ((WITH-SLOTS-SLOTS nil))
     (let ((SLOTS-FORMS (loop for (FORM-KIND FIRST-FORM . RST) in SLOT-FORMS

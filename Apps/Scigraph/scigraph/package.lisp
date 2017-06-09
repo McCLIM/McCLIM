@@ -28,16 +28,302 @@ advised of the possiblity of such damages.
 (in-package :common-lisp-user)
 
 (defpackage #:tool
-  (:use dwim-lisp))
+  (:use #:clim-lisp #:clim)
+  (:export #:named-mixin
+           #:name
+           #:name-string
+           #:make-name
+           #:named-object
+           #:declare-required-method
+
+           #:duplicate-set
+           #:duplicate-slots
+           #:duplicator-methods
+
+           #:dump-forms
+           #:with-slot-dumping
+           #:dump-set-slot
+           #:dump-slot
+           #:dump-slots
+           #:final-dump
+           #:dumpable-mixin
+
+           #:with-stack-list-copy
+           #:with-slot-copying
+           #:copy-slot
+           #:copy-set-slot
+           #:copy-slots
+           #:copyable-mixin
+           #:copy-inner-class
+           #:copy-self
+           #:copy-inner
+           #:copy-top-level
+           #:copy
+
+           #:several-choose
+           #:choose-character-style
+           #:window-edit-text
+           #:string-size)
+  (:shadowing-import-from #:dwim
+                          #:present
+                          #:present-to-string
+                          #:presentation-type
+                          #:menu-choose
+
+                          #:presentation-under-pointer
+                          #:presentation-p
+                          #:presentation-object
+                          #:presentation-subtypep
+                          #:presentation-type-p
+                          #:present-to-string
+                          #:describe-presentation-type
+                          #:bounding-rectangle*
+                          #:redisplay
+                          #:redisplayable-format
+                          #:accept
+                          #:accepting-values
+                          #:accept-values
+                          #:accept-variable-values
+                          #:menu-choose
+                          #:formatting-table
+                          #:formatting-row
+                          #:formatting-column
+                          #:formatting-column-headings
+                          #:formatting-cell
+                          #:formatting-item-list
+                          #:format-item-list
+                          #:read-token
+                          #:input-position
+                          #:insertion-pointer
+                          #:input-not-of-required-type
+                          #:catching-parser-failures
+                          #:validate-object
+                          #:with-accept-activation-chars
+                          #:accept-activation-p
+                          #:with-accept-blip-chars
+                          #:accept-blip-p
+                          #:with-activation-characters
+                          #:with-blip-characters
+                          #:completing-from-suggestions
+                          #:suggest
+                          #:complete-from-sequence
+                          #:with-presentation-input-context
+                          #:with-input-context
+                          #:sheet
+                          #:accept-values-choose-from-sequence
+                          #:alist-subset
+                          #:invisible-object
+
+                          #:color-stream-p
+                          #:with-clipping-from-output
+                          #:with-underlining
+                          #:surrounding-output-with-border
+                          #:%flip
+                          #:%draw
+                          #:%erase
+                          #:%alu
+                          #:draw-point
+                          #:draw-line
+                          #:draw-string
+                          #:draw-string-image
+                          #:draw-polygon
+                          #:draw-triangle
+                          #:draw-circle
+                          #:draw-rectangle
+
+                          #:window-under-mouse
+                          #:change-size
+                          #:stream-line-height
+                          #:stream-character-width
+                          #:stream-cursor-position*
+                          #:stream-set-cursor-position*
+                          #:stream-viewport
+                          #:stream-viewport-size
+
+                          #:stream-pointer-position*
+                          #:stream-set-pointer-position*
+                          #:pointer-input-rectangle*
+                          #:make-application-frame
+                          #:window-set-viewport-position*
+                          #:window-history-limits
+                          #:launch-frame
+
+                          #:printing-random-object
+                          #:with-stack-list
+                          #:define-command
+                          #:install-command
+                          #:define-presentation-to-command-translator
+                          #:define-presentation-translator
+                          #:define-presentation-action
+                          #:define-presentation-type
+                          #:with-output-as-presentation
+                          #:with-output-truncation
+                          #:with-output-recording-enabled
+                          #:with-output-recording-disabled
+                          #:with-redisplayable-output
+                          #:with-character-face
+                          #:with-text-face
+                          #:with-character-style
+                          #:with-character-size
+                          #:with-character-family
+                          #:with-text-style
+
+                          #:alist-member
+                          #:command
+                          #:expression
+
+                          #:status-pane
+                          #:status-line
+                          #:set-status-line
+                          #:mouse-documentation-pane
+                          #:*include-machine-name-in-status-line-p*
+                          #:*frame-for-status-line*
+                          #:*time-type*
+                          #:initialize-status-line
+                          #:make-status-line
+                          #:refresh-status-line
+                          #:noting-progress
+                          #:note-progress))
+
+
 
 (defpackage #:statistics
-  (:nicknames stat st)
-  (:use dwim-lisp))
+  (:nicknames #:stat #:st)
+  (:use #:clim-lisp #:clim)
+  (:export #:random-seed
+           #:with-seed
+           #:uniform
+           #:uniform-0-1
+           #:uniform-between
+           #:gaussian-random
+           #:gaussian
+           #:random-yes-no
+           #:erf)
+  (:shadowing-import-from #:dwim
+                          #:present
+                          #:present-to-string
+                          #:presentation-type
+                          #:menu-choose
+
+                          #:presentation-under-pointer
+                          #:presentation-p
+                          #:presentation-object
+                          #:presentation-subtypep
+                          #:presentation-type-p
+                          #:present-to-string
+                          #:describe-presentation-type
+                          #:bounding-rectangle*
+                          #:redisplay
+                          #:redisplayable-format
+                          #:accept
+                          #:accepting-values
+                          #:accept-values
+                          #:accept-variable-values
+                          #:menu-choose
+                          #:formatting-table
+                          #:formatting-row
+                          #:formatting-column
+                          #:formatting-column-headings
+                          #:formatting-cell
+                          #:formatting-item-list
+                          #:format-item-list
+                          #:read-token
+                          #:input-position
+                          #:insertion-pointer
+                          #:input-not-of-required-type
+                          #:catching-parser-failures
+                          #:validate-object
+                          #:with-accept-activation-chars
+                          #:accept-activation-p
+                          #:with-accept-blip-chars
+                          #:accept-blip-p
+                          #:with-activation-characters
+                          #:with-blip-characters
+                          #:completing-from-suggestions
+                          #:suggest
+                          #:complete-from-sequence
+                          #:with-presentation-input-context
+                          #:with-input-context
+                          #:sheet
+                          #:accept-values-choose-from-sequence
+                          #:alist-subset
+                          #:invisible-object
+
+                          #:color-stream-p
+                          #:with-clipping-from-output
+                          #:with-underlining
+                          #:surrounding-output-with-border
+                          #:%flip
+                          #:%draw
+                          #:%erase
+                          #:%alu
+                          #:draw-point
+                          #:draw-line
+                          #:draw-string
+                          #:draw-string-image
+                          #:draw-polygon
+                          #:draw-triangle
+                          #:draw-circle
+                          #:draw-rectangle
+
+                          #:window-under-mouse
+                          #:change-size
+                          #:stream-line-height
+                          #:stream-character-width
+                          #:stream-cursor-position*
+                          #:stream-set-cursor-position*
+                          #:stream-viewport
+                          #:stream-viewport-size
+
+                          #:stream-pointer-position*
+                          #:stream-set-pointer-position*
+                          #:pointer-input-rectangle*
+                          #:make-application-frame
+                          #:window-set-viewport-position*
+                          #:window-history-limits
+                          #:launch-frame
+
+                          #:printing-random-object
+                          #:with-stack-list
+                          #:define-command
+                          #:install-command
+                          #:define-presentation-to-command-translator
+                          #:define-presentation-translator
+                          #:define-presentation-action
+                          #:define-presentation-type
+                          #:with-output-as-presentation
+                          #:with-output-truncation
+                          #:with-output-recording-enabled
+                          #:with-output-recording-disabled
+                          #:with-redisplayable-output
+                          #:with-character-face
+                          #:with-text-face
+                          #:with-character-style
+                          #:with-character-size
+                          #:with-character-family
+                          #:with-text-style
+
+                          #:alist-member
+                          #:command
+                          #:expression
+
+                          #:status-pane
+                          #:status-line
+                          #:set-status-line
+                          #:mouse-documentation-pane
+                          #:*include-machine-name-in-status-line-p*
+                          #:*frame-for-status-line*
+                          #:*time-type*
+                          #:initialize-status-line
+                          #:make-status-line
+                          #:refresh-status-line
+                          #:noting-progress
+                          #:note-progress))
 
 (defpackage #:graph
   #-allegro (:nicknames gr)           ; "GR" names something already.
   (:shadow variable)                  ; shouldn't be inherited but is
-  (:use dwim-lisp tool statistics)
+  (:use #:clim-lisp #:clim #:tool #:statistics)
   (:import-from #:clim
                 #:window-clear
                 #:redisplay-frame-pane
@@ -48,7 +334,264 @@ advised of the possiblity of such damages.
                 #:beep
                 #:make-command-table
                 #:define-command-table
-                #:find-command-table))
+                #:find-command-table)
+  (:export
+   #:make-demo-frame
+   #:view-graphs
+   #:display-graph
+   #:save-postscript-graph
+   #:display-graphs
+   #:graph-presentation-type
+   #:presentation
+   #:graph-under-presentation
+   #:present-self-p
+   #:fill-window-with-graphs
+   #:graphs-for-slider
+   #:autoscale-graphs
+   #:auto-scale-needed
+   #:auto-scale
+   #:graph-auto-scale-limits
+   #:display-data
+   #:display-datum
+   #:displayed?
+   #:datum-position
+   #:device-draw-line
+   #:line-style
+   #:thickness
+   #:symbologies
+   #:graph-p
+   #:graph-data-p
+   #:map-data
+   #:map-data-xy
+   #:missing-data-threshold
+   #:display
+   #:erase
+   #:move
+   #:refresh
+   #:zoom-stack
+   #:copy
+   #:dump-forms
+   #:final-dump
+   #:duplicator-methods
+   #:duplicate-slots
+   #:pop-accept-items
+   #:pop-accept-label
+   #:popup-accept-forms
+   #:popup-accept
+   #:popup-accept-standard-loop
+   #:graph-under-mouse
+   #:add-dataset
+   #:datasets
+   #:data
+   #:define-graph-command
+   #:duplicator-methods
+   #:xy-inside
+   #:set-xy-inside
+   #:xy-to-uv
+   #:xy-to-stream
+   #:uv-to-xy
+   #:screen-to-uv
+   #:uv-to-screen
+   #:name
+   #:annotation
+   #:point-annotation
+   #:interval-annotation
+   #:annotate
+   #:annotate-graph
+   #:annotate-interval
+   #:annotate-point
+   #:annotate-data-interval
+   #:annotate-data-point
+   #:description-choices
+   #:default-text-style
+   #:x-label
+   #:y-label
+
+   #:color
+   #:color-presentation
+   #:alu
+   #:alu-for-color
+   #:alu-for-stream
+   #:*color-specifications*
+   #:device-draw-aluf
+   #:device-line-thickness
+   #:device-line-end-shape
+   #:device-line-joint-shape
+   #:device-filled-p
+   #:device-fill-pattern
+   #:%draw
+   #:%erase
+   #:%flip
+   #:initialize-color-system
+
+   #:graph-data
+   #:timeseries-data
+   #:presentable-data-mixin
+   #:graph-data-limits-mixin
+   #:graph-data-auto-scale-mixin
+   #:graph-data-color-mixin
+   #:graph-data-symbology-mixin
+   #:graph-data-add-datum-mixin
+   #:presentable-graph-data-legend-mixin
+   #:graph-data-legend-mixin
+   #:basic-list-datum-mixin
+   #:graph-data-list-map-mixin
+   #:essential-graph-data-map-mixin
+   #:basic-graph-data
+   #:equation-data
+   #:sample-data
+   #:histogram-data
+   #:MULTIDIMENSIONAL-DATA
+
+   #:graph
+   #:annotated-graph
+   #:presentable-graph-mixin
+   #:graph-datasets-ob-mixin
+   #:graph-datasets-mixin
+   #:graph-legend-mixin
+   #:graph-relative-size-mixin
+   #:graph-zoom-mixin
+   #:graph-slider-interaction-mixin
+   #:graph-slider-mixin
+   #:graph-handle-mouse-mixin
+   #:graph-mouse-resolution-mixin
+   #:graph-auto-scale-ob-mixin
+   #:graph-auto-scale-extensions-ob-mixin
+   #:graph-auto-scale-extensions-mixin
+   #:graph-limits-mixin
+   #:graph-auto-scale-mixin
+   #:graph-grid-ob-mixin
+   #:graph-grid-mixin
+   #:horizontal-y-border-mixin
+   #:vertical-y-border-mixin
+   #:graph-border-ob-mixin
+   #:graph-border-mixin
+   #:basic-graph-ob-mixin
+   #:basic-graph
+   #:graph-with-reselectable-axes
+   #:named-object
+   #:named-mixin)
+
+  (:shadowing-import-from #:dwim
+                          #:present
+                          #:present-to-string
+                          #:presentation-type
+                          #:menu-choose
+
+                          #:presentation-under-pointer
+                          #:presentation-p
+                          #:presentation-object
+                          #:presentation-subtypep
+                          #:presentation-type-p
+                          #:present-to-string
+                          #:describe-presentation-type
+                          #:bounding-rectangle*
+                          #:redisplay
+                          #:redisplayable-format
+                          #:accept
+                          #:accepting-values
+                          #:accept-values
+                          #:accept-variable-values
+                          #:menu-choose
+                          #:formatting-table
+                          #:formatting-row
+                          #:formatting-column
+                          #:formatting-column-headings
+                          #:formatting-cell
+                          #:formatting-item-list
+                          #:format-item-list
+                          #:read-token
+                          #:input-position
+                          #:insertion-pointer
+                          #:input-not-of-required-type
+                          #:catching-parser-failures
+                          #:validate-object
+                          #:with-accept-activation-chars
+                          #:accept-activation-p
+                          #:with-accept-blip-chars
+                          #:accept-blip-p
+                          #:with-activation-characters
+                          #:with-blip-characters
+                          #:completing-from-suggestions
+                          #:suggest
+                          #:complete-from-sequence
+                          #:with-presentation-input-context
+                          #:with-input-context
+                          #:sheet
+                          #:accept-values-choose-from-sequence
+                          #:alist-subset
+                          #:invisible-object
+
+                          #:color-stream-p
+                          #:with-clipping-from-output
+                          #:with-underlining
+                          #:surrounding-output-with-border
+                          #:%flip
+                          #:%draw
+                          #:%erase
+                          #:%alu
+                          #:draw-point
+                          #:draw-line
+                          #:draw-string
+                          #:draw-string-image
+                          #:draw-polygon
+                          #:draw-triangle
+                          #:draw-circle
+                          #:draw-rectangle
+
+                          #:window-under-mouse
+                          #:change-size
+                          #:stream-line-height
+                          #:stream-character-width
+                          #:stream-cursor-position*
+                          #:stream-set-cursor-position*
+                          #:stream-viewport
+                          #:stream-viewport-size
+
+                          #:stream-pointer-position*
+                          #:stream-set-pointer-position*
+                          #:pointer-input-rectangle*
+                          #:make-application-frame
+                          #:window-set-viewport-position*
+                          #:window-history-limits
+                          #:launch-frame
+
+                          #:printing-random-object
+                          #:with-stack-list
+                          #:define-command
+                          #:install-command
+                          #:define-presentation-to-command-translator
+                          #:define-presentation-translator
+                          #:define-presentation-action
+                          #:define-presentation-type
+                          #:with-output-as-presentation
+                          #:with-output-truncation
+                          #:with-output-recording-enabled
+                          #:with-output-recording-disabled
+                          #:with-redisplayable-output
+                          #:with-character-face
+                          #:with-text-face
+                          #:with-character-style
+                          #:with-character-size
+                          #:with-character-family
+                          #:with-text-style
+
+                          #:alist-member
+                          #:command
+                          #:expression
+
+                          #:status-pane
+                          #:status-line
+                          #:set-status-line
+                          #:mouse-documentation-pane
+                          #:*include-machine-name-in-status-line-p*
+                          #:*frame-for-status-line*
+                          #:*time-type*
+                          #:initialize-status-line
+                          #:make-status-line
+                          #:refresh-status-line
+                          #:noting-progress
+                          #:note-progress))
 
 (in-package :graph)
 

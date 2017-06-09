@@ -27,11 +27,6 @@ advised of the possiblity of such damages.
 
 (in-package :tool)
 
-(eval-when (compile load eval)
-  (export `(dump-forms with-slot-dumping dump-set-slot dump-slot
-		       dump-slots final-dump dumpable-mixin)
-	  'tool))
-
 (defclass dumpable-mixin
 	  ()
     ()

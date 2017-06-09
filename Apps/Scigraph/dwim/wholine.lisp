@@ -27,14 +27,6 @@ advised of the possiblity of such damages.
 
 (in-package :dwim)
 
-(eval-when (compile load eval)
-  (export '(status-pane status-line set-status-line mouse-documentation-pane 
-	    *include-machine-name-in-status-line-p*
-	    *frame-for-status-line* *time-type*
-	    initialize-status-line make-status-line refresh-status-line
-	    noting-progress note-progress)
-	  'dwim))
-
 ;;; The status line is a small pane associated with a frame which provides
 ;;; status information, such as:
 ;;;  1. time of day
@@ -96,7 +88,7 @@ advised of the possiblity of such damages.
 
 
 ;;; frequently used strings:
-(defconstant empty-string " ")
+(defvar empty-string " ")
 (defparameter run-string    "Please Wait")
 (defparameter input-string  "Ready")
 (defparameter error-string  "Unexpected Condition")

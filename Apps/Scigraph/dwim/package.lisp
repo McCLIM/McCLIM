@@ -31,17 +31,248 @@ advised of the possiblity of such damages.
   (pushnew :clim-2 *features*))
 
 (defpackage dwim
-  (:use clim-lisp)
+  (:use #:cl)
   (:import-from #:clim
                 #:present-to-string
                 #:presentation-type
                 #:present
                 #:port
-
                 #:boolean
-                #:expression
-                #:command
-
                 #:frame-manager
-                #:find-frame-manager))
+                #:find-frame-manager
+                #:suggest)
+  (:shadow #:interactive-stream-p
+
+           #:menu-choose
+           #:presentation-under-pointer
+           #:presentation-p
+           #:presentation-object
+           #:presentation-subtypep
+           #:presentation-type-p
+           #:describe-presentation-type
+           #:bounding-rectangle*
+           #:redisplay
+           #:redisplayable-format
+           #:accept
+           #:accepting-values
+           #:accept-values
+           #:accept-variable-values
+           #:menu-choose
+           #:formatting-table
+           #:formatting-row
+           #:formatting-column
+           #:formatting-column-headings
+           #:formatting-cell
+           #:formatting-item-list
+           #:format-item-list
+           #:read-token
+           #:input-position
+           #:insertion-pointer
+           #:input-not-of-required-type
+           #:catching-parser-failures
+           #:validate-object
+           #:with-accept-activation-chars
+           #:accept-activation-p
+           #:with-accept-blip-chars
+           #:accept-blip-p
+           #:with-activation-characters
+           #:with-blip-characters
+           #:completing-from-suggestions
+           #:complete-from-sequence
+           #:with-presentation-input-context
+           #:with-input-context
+           #:sheet
+           #:accept-values-choose-from-sequence
+           #:alist-subset
+           #:invisible-object
+
+           #:color-stream-p
+           #:with-clipping-from-output
+           #:with-underlining
+           #:surrounding-output-with-border
+           #:%flip
+           #:%draw
+           #:%erase
+           #:%alu
+           #:draw-point
+           #:draw-line
+           #:draw-string
+           #:draw-string-image
+           #:draw-polygon
+           #:draw-triangle
+           #:draw-circle
+           #:draw-rectangle
+
+           #:window-under-mouse
+           #:change-size
+           #:stream-line-height
+           #:stream-character-width
+           #:stream-cursor-position*
+           #:stream-set-cursor-position*
+           #:stream-viewport
+           #:stream-viewport-size
+
+           #:stream-pointer-position*
+           #:stream-set-pointer-position*
+           #:pointer-input-rectangle*
+           #:make-application-frame
+           #:window-set-viewport-position*
+           #:window-history-limits
+           #:launch-frame
+
+           #:printing-random-object
+           #:with-stack-list
+           #:define-command
+           #:install-command
+           #:define-presentation-to-command-translator
+           #:define-presentation-translator
+           #:define-presentation-action
+           #:define-presentation-type
+           #:with-output-as-presentation
+           #:with-output-truncation
+           #:with-output-recording-enabled
+           #:with-output-recording-disabled
+           #:with-redisplayable-output
+           #:with-character-face
+           #:with-text-face
+           #:with-character-style
+           #:with-character-size
+           #:with-character-family
+           #:with-text-style
+
+           #:alist-member
+           #:command
+           #:expression
+
+           #:status-pane
+           #:status-line
+           #:set-status-line
+           #:mouse-documentation-pane
+           #:*include-machine-name-in-status-line-p*
+           #:*frame-for-status-line*
+           #:*time-type*
+           #:initialize-status-line
+           #:make-status-line
+           #:refresh-status-line
+           #:noting-progress
+           #:note-progress)
+  (:export #:present
+           #:present-to-string
+           #:presentation-type
+           #:menu-choose
+
+           #:presentation-under-pointer
+           #:presentation-p
+           #:presentation-object
+           #:presentation-subtypep
+           #:presentation-type-p
+           #:present-to-string
+           #:describe-presentation-type
+           #:bounding-rectangle*
+           #:redisplay
+           #:redisplayable-format
+           #:accept
+           #:accepting-values
+           #:accept-values
+           #:accept-variable-values
+           #:menu-choose
+           #:formatting-table
+           #:formatting-row
+           #:formatting-column
+           #:formatting-column-headings
+           #:formatting-cell
+           #:formatting-item-list
+           #:format-item-list
+           #:read-token
+           #:input-position
+           #:insertion-pointer
+           #:input-not-of-required-type
+           #:catching-parser-failures
+           #:validate-object
+           #:with-accept-activation-chars
+           #:accept-activation-p
+           #:with-accept-blip-chars
+           #:accept-blip-p
+           #:with-activation-characters
+           #:with-blip-characters
+           #:completing-from-suggestions
+           #:suggest
+           #:complete-from-sequence
+           #:with-presentation-input-context
+           #:with-input-context
+           #:sheet
+           #:accept-values-choose-from-sequence
+           #:alist-subset
+           #:invisible-object
+
+           #:color-stream-p
+           #:with-clipping-from-output
+           #:with-underlining
+           #:surrounding-output-with-border
+           #:%flip
+           #:%draw
+           #:%erase
+           #:%alu
+           #:draw-point
+           #:draw-line
+           #:draw-string
+           #:draw-string-image
+           #:draw-polygon
+           #:draw-triangle
+           #:draw-circle
+           #:draw-rectangle
+
+           #:window-under-mouse
+           #:change-size
+           #:stream-line-height
+           #:stream-character-width
+           #:stream-cursor-position*
+           #:stream-set-cursor-position*
+           #:stream-viewport
+           #:stream-viewport-size
+
+           #:stream-pointer-position*
+           #:stream-set-pointer-position*
+           #:pointer-input-rectangle*
+           #:make-application-frame
+           #:window-set-viewport-position*
+           #:window-history-limits
+           #:launch-frame
+
+           #:printing-random-object
+           #:with-stack-list
+           #:define-command
+           #:install-command
+           #:define-presentation-to-command-translator
+           #:define-presentation-translator
+           #:define-presentation-action
+           #:define-presentation-type
+           #:with-output-as-presentation
+           #:with-output-truncation
+           #:with-output-recording-enabled
+           #:with-output-recording-disabled
+           #:with-redisplayable-output
+           #:with-character-face
+           #:with-text-face
+           #:with-character-style
+           #:with-character-size
+           #:with-character-family
+           #:with-text-style
+
+           #:alist-member
+           #:command
+           #:expression
+
+           #:status-pane
+           #:status-line
+           #:set-status-line
+           #:mouse-documentation-pane
+           #:*include-machine-name-in-status-line-p*
+           #:*frame-for-status-line*
+           #:*time-type*
+           #:initialize-status-line
+           #:make-status-line
+           #:refresh-status-line
+           #:noting-progress
+           #:note-progress))
 

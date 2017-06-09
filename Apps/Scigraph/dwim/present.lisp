@@ -306,9 +306,6 @@ advised of the possiblity of such damages.
 	 (,stream :partial-completers ,delimiters :allow-any-input ,allow-any-input)
        ,@body)))
 
-(eval-when (compile load eval)
-  (import 'clim:suggest 'dwim))
-
 (defun complete-from-sequence (sequence stream &key type (name-key #'string))
   (declare (ignore type))
   (completing-from-suggestions (stream)

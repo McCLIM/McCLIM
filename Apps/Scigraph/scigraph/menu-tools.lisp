@@ -27,9 +27,6 @@ advised of the possiblity of such damages.
 
 (in-package :tool)
 
-(eval-when (compile load eval)
-  (export '(several-choose choose-character-style window-edit-text string-size)))
-
 (defun string-size (stream style format-string &rest format-args)
   ;; A bad implementation of this can really slow down graph generation.
   (unless (stringp format-string)
@@ -67,7 +64,7 @@ advised of the possiblity of such damages.
 		       (+ y (* offset 2))
 		       :stream stream)))))
 
-(define-presentation-type-abbreviation button-subset (&key alist (test 'equal))
+(clim:define-presentation-type-abbreviation button-subset (&key alist (test 'equal))
   `(subset-alist ,alist :test ,test))
 
 (defun SEVERAL-CHOOSE (ITEM-LIST

@@ -33,12 +33,6 @@ advised of the possiblity of such damages.
 ;;; a menu. If a name is not provided one will be generated automatically like
 ;;; OBJECT-1, OBJECT-2 ....
 
-(eval-when (compile load eval)
-  (export '(named-mixin name name-string make-name))
-  (export '(named-object) 'tool)
-  (export 'declare-required-method)
-  )
-
 (defclass named-mixin
 	  ()
     ((name :initform nil :initarg :name :reader name))
