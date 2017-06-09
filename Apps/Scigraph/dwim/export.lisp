@@ -38,8 +38,7 @@ advised of the possiblity of such damages.
 
 ;;;from present.lisp
 (eval-when (compile load eval)
-  (export '(continuation-output-size
-	    with-room-for-output
+  (export '(with-room-for-output
 	    erase-graphics-presentation
 	    presentation-under-pointer
 	    presentation-p

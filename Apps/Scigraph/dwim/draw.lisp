@@ -61,6 +61,12 @@ advised of the possiblity of such damages.
       (multiple-value-bind (x2 y2) (stream-cursor-position* ,stream)
         (draw-line x y x2 y :stream ,stream)))))
 
+(defun continuation-output-size (continuation stream)
+  (clim:rectangle-size
+   (let ((record (clim:with-output-to-output-record (stream)
+                   (funcall continuation stream))))
+    (clim:bounding-rectangle record))))
+
 (defmacro surrounding-output-with-border
     ((&optional (stream '*standard-output*)
       &key

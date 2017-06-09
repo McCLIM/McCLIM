@@ -30,18 +30,6 @@ advised of the possiblity of such damages.
 ;;; I guess this is as good of a place as any to put this.
 (clim:define-command-table :global)
 
-(defun continuation-output-rectangle (continuation stream)
-  ;; Repositioning the cursor seems to improve the reliability of
-  ;; this computation in clim 0.9.
-  (let ((record (clim:with-output-to-output-record (stream)
-		  (funcall continuation stream))))
-    (clim:bounding-rectangle record)))
-
-(defun continuation-output-size (continuation stream)
-  ;;(declare (values width height))
-  (clim:rectangle-size
-   (continuation-output-rectangle continuation stream)))
-
 ;;;
 ;;; Manipulating presentations
 ;;;
