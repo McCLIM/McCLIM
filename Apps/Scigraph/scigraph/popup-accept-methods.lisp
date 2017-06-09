@@ -114,12 +114,16 @@ advised of the possiblity of such damages.
     (let* ((name (name self))
 	   (name-string (string name)))
       (setq name-string
-	    (accept 'string 
-		    :prompt "Name"
-		    :view
-		    '(text-field-view :width 400)
-		    :stream menu-stream 
-		    :default name-string))
+	    (clim:accept 'string
+                         :stream menu-stream
+                         ;; this used to be text-field-view, but
+                         ;; McCLIM doesn't have an %accept method for
+                         ;; that, so let's use textual-dialog-view for
+                         ;; now. Suggestions welcome on the correct
+                         ;; thing to do here.
+                         :view 'textual-dialog-view
+                         :prompt "Name"
+                         :default name-string))
       (terpri menu-stream)
       (setf (name self) name)))
 
