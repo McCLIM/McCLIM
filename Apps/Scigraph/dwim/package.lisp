@@ -40,7 +40,8 @@ advised of the possiblity of such damages.
                 #:boolean
                 #:frame-manager
                 #:find-frame-manager
-                #:suggest)
+                #:suggest
+                #:expression)
   (:shadow #:interactive-stream-p
 
            #:menu-choose
@@ -142,7 +143,6 @@ advised of the possiblity of such damages.
 
            #:alist-member
            #:command
-           #:expression
 
            #:status-pane
            #:status-line

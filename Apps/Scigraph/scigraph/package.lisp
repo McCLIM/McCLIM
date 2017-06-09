@@ -170,7 +170,6 @@ advised of the possiblity of such damages.
 
                           #:alist-member
                           #:command
-                          #:expression
 
                           #:status-pane
                           #:status-line
@@ -305,7 +304,6 @@ advised of the possiblity of such damages.
 
                           #:alist-member
                           #:command
-                          #:expression
 
                           #:status-pane
                           #:status-line
@@ -578,7 +576,6 @@ advised of the possiblity of such damages.
 
                           #:alist-member
                           #:command
-                          #:expression
 
                           #:status-pane
                           #:status-line
