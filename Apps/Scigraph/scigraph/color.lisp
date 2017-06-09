@@ -85,24 +85,23 @@ advised of the possiblity of such damages.
    can choose from for drawing graphs.")
 
 (defvar *colors* nil "Used for pop-edit.")
+(defvar *color-hash* (make-hash-table :test 'equal))
 
-(let ((colors (make-hash-table)))
-  
-  (defun ALU-FOR-COLOR (color-name)
+(defun alu-for-color (color-name)
     "Translate a color name to an ink/alu"
     (or *colors* (initialize-color-system))
-    (or (gethash color-name colors nil)
-	(gethash :white colors nil)))
+    (or (gethash color-name *color-hash* nil)
+	(gethash :white *color-hash* nil)))
 
-  (defun MAKE-COLOR-CHOICES (color-specifications &optional reinitialize)
+(defun make-color-choices (color-specifications &optional reinitialize)
     "Makes an Alist of colors to choose from."
-    (if reinitialize (setq colors (make-hash-table)))
+    (if reinitialize (setq *color-hash* (make-hash-table)))
     (loop for (name red green blue) in color-specifications
        do
-         (setf (gethash name colors) (clim:make-rgb-color red green blue))
+         (setf (gethash name *color-hash*) (clim:make-rgb-color red green blue))
          (pushnew (list (string-capitalize name) :value name)
                   *colors*
-                  :test #'equal))))
+                  :test #'equal)))
 
 (defun initialize-color-system ()
   "Initialize the color screen if available."
