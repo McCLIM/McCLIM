@@ -145,9 +145,6 @@ advised of the possiblity of such damages.
   (export '(printing-random-object
 	    with-stack-list
 	    with-stack-array
-	    store-conditional
-	    stack-let
-	    without-interrupts
 	    define-command
 	    install-command
 	    define-presentation-to-command-translator
@@ -228,7 +225,6 @@ advised of the possiblity of such damages.
     ;; with common lisp.
     (:shadowing-import-from 
      "DWIM"
-     :without-interrupts
      :interactive-stream-p
      :ignore
      :loop

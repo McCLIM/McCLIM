@@ -110,16 +110,6 @@ advised of the possiblity of such damages.
       (progn (vector-push-extend #\0 string) string)
       (float-to-string-internal number max-digits string)))
 
-#|
-(defun make-test-string ()
-  ;; In genera on a 3600, this can be done 800 times per second.
-  (without-interrupts (time (float-to-string 48.65432 3)))
-  ;; About 25% of the time spent consing the string.
-  (without-interrupts (time (make-adjustable-string 4)))
-  ;; 360 times per second.
-  (without-interrupts (time (format nil "~4,1F" 48.65432))))
-|#
-
 (defun float-to-string-internal (number max-digits string
 				 &aux (exponent 0) ilength flength
 				      elength exponent-p

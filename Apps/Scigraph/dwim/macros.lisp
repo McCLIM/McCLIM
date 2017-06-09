@@ -45,22 +45,6 @@ advised of the possiblity of such damages.
      (declare (dynamic-extent ,var))
      ,@body))
 
-(defmacro store-conditional (place old new)
-  "Atomically change the value of PLACE from OLD to NEW."
-  (declare (ignore old))
-  `(setf ,place ,new))
-
-(defmacro stack-let (forms &body body)
-  (labels ((get-vars (let-vars)
-	     (mapcar #'(lambda (v) (if (symbolp v) v (car v))) let-vars)))
-    `(let ,forms (declare (dynamic-extent ,@(get-vars forms))) ,@body)))
-
-(progn
-  (defparameter *dwim-giant-lock* (clim-sys:make-lock "dwim giant lock"))
-  (defmacro without-interrupts (&body body)
-    `(clim-sys:with-lock-held (*dwim-giant-lock*)
-       ,@body)))
-
 (defun command-pretty-name (string)
   "COM-SHOW-FILE -> 'Show File'"
   (cond ((and (> (length string) 4)

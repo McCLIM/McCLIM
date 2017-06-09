@@ -216,29 +216,8 @@ advised of the possiblity of such damages.
 
 (defmacro with-process-lock ((lock) &body body)
   "Grant current process exclusive access to some resource.  Wait for access if necessary."
-  #+allegro
-  `(progn
-     (or ,lock (setf ,lock (mp:make-process-lock)))
-     (mp:with-process-lock (,lock) ,@body))
-  #+lucid
-  `(lucid::with-process-lock (,lock) ,@body)
-  #+clim-2
   `(clim-sys:with-lock-held (,lock)
-     ,@body)
-  #+genera
-  (let ((me (gensym)))
-    `(let ((,me scl:*current-process*))
-       (if (eq ,lock ,me) (error "Lock already locked by this process."))
-       (unwind-protect
-	   (if (or (si:store-conditional (scl:locf ,lock) nil ,me)
-		   (and (process::safe-to-process-wait-p scl:*current-process*)
-			(scl:process-wait "Lock"
-			  #'(lambda (locative)
-			      (declare (sys:downward-function))
-			      (si:store-conditional locative nil ,me))
-			  (scl:locf ,lock))))
-	       (when (eq ,lock ,me) ,@body))
-	 (si:store-conditional (scl:locf ,lock) ,me nil)))))
+     ,@body))
 
 ;;;Loop unrolling can increase the performance of big loops by 10 to 30% if the body
 ;;;  is fast relative to the price of an iteration.  Here is a portable version of
