@@ -56,5 +56,4 @@ advised of the possiblity of such damages.
 		      downward-function
 		      array-register))
 
-
-(make-command-table :graph)
+(clim:define-command-table :graph)

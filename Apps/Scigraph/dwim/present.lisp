@@ -28,7 +28,7 @@ advised of the possiblity of such damages.
 (in-package :dwim)
 
 ;;; I guess this is as good of a place as any to put this.
-(clim:make-command-table :global)
+(clim:define-command-table :global)
 
 (defun continuation-output-rectangle (continuation stream)
   ;; Repositioning the cursor seems to improve the reliability of
