@@ -136,15 +136,6 @@ advised of the possiblity of such damages.
 	       #+openmcl #'ccl:run-program
 	       command arguments args1)))
      (:genera (not-done)))))
-	      
-
-(defun current-process ()
-  #FEATURE-CASE
-  ((:genera process::*current-process*)
-   (:allegro mp::*current-process*)
-   (:lucid nil)
-   (:clim-1.0 clim-utils::*current-process*)
-   (:clim-2 (clim-sys:current-process))))
 
 (defun process-run-function (name-or-keywords function &rest args)
   (let* ((new-args (copy-list args)) ; in case of stack-allocation

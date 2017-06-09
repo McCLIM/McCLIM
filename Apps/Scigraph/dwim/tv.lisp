@@ -163,7 +163,7 @@ advised of the possiblity of such damages.
 	    :backing-store backing-store)
 	   frame)
 	  (T
-	   (push (list frame (current-process)) *activated-frames*)
+	   (push (list frame (clim-sys:current-process)) *activated-frames*)
 	   (unwind-protect
 	       (progn
 		 (clim:run-frame-top-level frame))
