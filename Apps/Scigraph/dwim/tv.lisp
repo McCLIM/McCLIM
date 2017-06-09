@@ -181,14 +181,6 @@ advised of the possiblity of such damages.
                 parent)))
     frame))
 
-(defmethod size-frame (frame width height)
-  (clim:layout-frame frame width height))
-
-(defmethod move-frame (frame left bottom)
-  ;; CLH: FIXME! What are we supposed to do here?
-  ;; uhh...
-  nil)
-
 (defmethod set-frame-layout (frame new-layout)
   (unless (eq new-layout (clim:frame-current-layout frame))
     (setf (clim:frame-current-layout frame) new-layout)))
@@ -234,16 +226,20 @@ advised of the possiblity of such damages.
 	 (frame (if (not create) (get-reusable-frame manager type))))
     (when frame (reset-frame frame :title title))
     (if frame
-	(size-frame frame width height)
+	(clim:layout-frame frame width height)
       (setq frame (make-application-frame type
 					  ;;:left (max 0 left) :top (max 0 (- height bottom))
 					  :parent manager
 					  :width width :height height
 					  :title title)))
-    (move-frame frame (max 0 left) (max 0 bottom))
+    ;;; CLH: FIXME
+    ;;; This was a noop on CLIM. What should we be doing here?
+    ;;;
+    ;;;   (move-frame frame (max 0 left) (max 0 bottom))
+    ;;;
     (multiple-value-bind (w h) (suggest-frame-size manager width height)
       (when (or (not (eql w width)) (not (eql h height)))
-	 (size-frame frame w h)))
+	 (clim:layout-frame frame w h)))
     (when initializer
       (let* ((application  frame)
 	     (clim:*application-frame* frame))

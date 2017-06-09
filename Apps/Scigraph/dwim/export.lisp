@@ -133,8 +133,6 @@ advised of the possiblity of such damages.
 	    start-frame
 	    reset-frame
 	    make-application-frame
-	    move-frame
-	    size-frame
 	    set-frame-layout
 	    window-set-viewport-position*
 	    window-history-limits
