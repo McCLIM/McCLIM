@@ -141,38 +141,7 @@ advised of the possiblity of such damages.
   (let* ((new-args (copy-list args)) ; in case of stack-allocation
 	 (predicate
 	  (if args #'(lambda () (apply function new-args)) function)))
-    #FEATURE-CASE
-    ((:ALLEGRO
-      (funcall #'mp:process-run-function name-or-keywords predicate))
-     (:GENERA
-      (funcall #'scl:process-run-function name-or-keywords predicate))
-     (:LUCID
-      (flet ((lucid-procees-run-function-hack (NAME-OR-KEYWORDS
-					       &rest FNCT-LIST)
-	       (let ((FNCT-NAME (first FNCT-LIST))
-		     (FNCT-ARGS (copy-list (cdr FNCT-LIST))))
-		 (if (consp NAME-OR-KEYWORDS)
-		     (apply #'lcl::make-process
-			    :function FNCT-NAME
-			    :args FNCT-ARGS
-			    NAME-OR-KEYWORDS)
-		   (lcl::make-process
-		    :name NAME-OR-KEYWORDS
-		    :function FNCT-NAME
-		    :args FNCT-ARGS)))))
-	(apply #'lucid-procees-run-function-hack
-	       name-or-keywords function args)))
-     ((and :MCL (not :openmcl))
-      ;; No multiprocessing.  Fake it.
-      (funcall predicate))
-     (:CLIM-1.0
-      (clim-utils::make-process predicate :name name-or-keywords))
-     ((and :clim-2 :cmu (not :x86))
-      ;; This is a hack for CMUCL
-      (funcall predicate))
-     (:CLIM-2
-      ;; The Spec says that make-process takes a keyword arg... -- moore
-      (CLIM-SYS:make-process predicate #+mcclim :name name-or-keywords)))))
+    (clim-sys:make-process predicate :name name-or-keywords)))
 
 (defun type-specifier-p (object)
   "Determine if OBJECT is a valid type specifier"
