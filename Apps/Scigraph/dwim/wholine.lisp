@@ -141,7 +141,7 @@ advised of the possiblity of such damages.
   ;; Yes, yes, I know I should have a different lock for each status
   ;; pane.  But after all, there is almost always only one of them,
   ;; and the time spent updating a status line is very small indeed.
-  `(with-process-lock (*status-line-sheet-lock*) ,@body))
+  `(clim-sys:with-lock-held (*status-line-sheet-lock*) ,@body))
 
 (defmethod draw-status-element
 	   ((status-line status-line) (element-name t) string x y stream)
@@ -359,7 +359,7 @@ advised of the possiblity of such damages.
   (defun stop-clock ()
     (let ((process clock-process))
       (when process
-	(kill-process process)
+	(clim-sys:destroy-process process)
 	(setq clock-process nil))))
   )
 

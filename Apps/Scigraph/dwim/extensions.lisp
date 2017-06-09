@@ -191,35 +191,6 @@ advised of the possiblity of such damages.
       ;; The Spec says that make-process takes a keyword arg... -- moore
       (CLIM-SYS:make-process predicate #+mcclim :name name-or-keywords)))))
 
-(defun activate-process (p)
-  #FEATURE-CASE
-  ((:lucid (lcl::activate-process p))
-   (:allegro (mp:process-enable p))
-   (:clim-2 (clim-sys:enable-process p))))
-
-(defun deactivate-process (p)
-  #FEATURE-CASE
-  ((:lucid (lcl::deactivate-process p))
-   (:allegro (mp:process-disable p))
-   (:clim-2 (clim-sys:disable-process p))))
-
-(defun process-interrupt (p function &rest args)
-  #FEATURE-CASE
-  ((:allegro (apply #'mp:process-interrupt p function args))))
-
-(defun kill-process (p)
-  #FEATURE-CASE
-  ((:genera (process:kill p))
-   (:clim-0.9 (ci::destroy-process p))
-   (:clim-1.0 (clim-utils:destroy-process p))
-   (:clim-2 (clim-sys:destroy-process p))))
-
-(defmacro with-process-lock ((lock) &body body)
-  "Grant current process exclusive access to some resource.  Wait for access if necessary."
-  `(clim-sys:with-lock-held (,lock)
-     ,@body))
-
-
 (defun type-specifier-p (object)
   "Determine if OBJECT is a valid type specifier"
   ;; A somewhat consful implementation, but entirely portable.
