@@ -172,7 +172,6 @@ advised of the possiblity of such damages.
 	    *source-pathname*
 	    getenv
 	    run-shell-command
-            process-wait
 	    process-run-function
 	    with-process-lock
 	    type-specifier-p
@@ -220,9 +219,6 @@ advised of the possiblity of such damages.
     (:shadowing-import-from 
      "DWIM"
      :interactive-stream-p
-     :ignore
-     :loop
-     :process-wait
      :process-run-function)
     (:use :common-lisp :dwim)))
 

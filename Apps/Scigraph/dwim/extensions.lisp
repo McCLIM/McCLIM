@@ -146,14 +146,6 @@ advised of the possiblity of such damages.
    (:clim-1.0 clim-utils::*current-process*)
    (:clim-2 (clim-sys:current-process))))
 
-(defun process-wait (whostate predicate)
-  #FEATURE-CASE
-  ((genera (scl:process-wait whostate predicate))
-   (lucid (lcl:process-wait whostate predicate))
-   (allegro (mp:process-wait whostate predicate))
-   (clim-1.0 (clim-utils:process-wait whostate predicate))
-   (clim-2   (clim-sys:process-wait whostate predicate))))
-
 (defun process-run-function (name-or-keywords function &rest args)
   (let* ((new-args (copy-list args)) ; in case of stack-allocation
 	 (predicate
