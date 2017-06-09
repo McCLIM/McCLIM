@@ -219,45 +219,6 @@ advised of the possiblity of such damages.
   `(clim-sys:with-lock-held (,lock)
      ,@body))
 
-;;;Loop unrolling can increase the performance of big loops by 10 to 30% if the body
-;;;  is fast relative to the price of an iteration.  Here is a portable version of
-;;;  DOTIMES that unrolls its body.  The argument BLOCKING must be an integer; the
-;;;  compiler unrolls the loop BLOCKING number of times.  A good number to use is 8.
-;;;  Avoid choosing a really big integer because your compiled code will be huge.
-
-(defmacro dotimes-unrolled ((var init countform blocking &optional resultform) &body body)
-  (unless (integerp blocking)
-    (error "To unroll this loop, ~S must be an integer." blocking))
-  `(let ((,var ,init))
-     (dotimes (ignore (floor ,countform ,blocking))
-       ,@(let ((result nil))
-	   (setq body (append body `((incf ,var))))
-	   (dotimes (ignore blocking)
-	     (setq result (nconc (copy-list body) result)))
-	   result))
-     (dotimes (ignore (mod ,countform ,blocking) ,resultform)
-       ,@body)))				
-
-#+test
-(defun roll-test (n)
-  (let ((number 2.1))
-    (multiple-value-bind (val time)
-	(the-time
-	  (dotimes (i n)
-	    (* number number)))
-      (print val)
-      (print time))
-    (multiple-value-bind (val time)
-	(the-time
-	  (dotimes-unrolled (i 0 n 20)
-	    (* number number)))
-      (print val)
-      (print time))
-    ))
-
-;;; Zetalisp function.
-(defmethod instancep ((object t)) nil)
-(defmethod instancep ((object standard-object)) t)
 
 (defun type-specifier-p (object)
   "Determine if OBJECT is a valid type specifier"
@@ -356,8 +317,7 @@ advised of the possiblity of such damages.
 		 (if (tree-search element predicate)
 		     (return-from tree-search t)))))
 	   (need-full-dump (object)
-	     (or (instancep object)
-		 (and (arrayp object) (not (stringp object)))
+	     (or (and (arrayp object) (not (stringp object)))
 		 (hash-table-p object )))
 	   (traverse (form)
 	     (let (index)

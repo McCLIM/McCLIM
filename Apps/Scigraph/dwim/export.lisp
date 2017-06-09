@@ -176,8 +176,6 @@ advised of the possiblity of such damages.
             process-wait
 	    process-run-function
 	    with-process-lock
-	    dotimes-unrolled
-	    instancep
 	    type-specifier-p
 	    file-type-for-binaries
 	    file-type-for-sources
