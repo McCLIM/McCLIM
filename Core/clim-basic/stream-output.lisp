@@ -154,7 +154,7 @@
   ())
 
 (defmethod cursor-height ((cursor standard-text-cursor))
-  (slot-value (cursor-sheet cursor) 'height))
+  (%stream-char-height (cursor-sheet cursor)))
 
 
 ;;; Extended-Output-Stream class
@@ -175,12 +175,8 @@
    (eop :initarg :end-of-page-action :accessor stream-end-of-page-action)
    (view :initarg :default-view :accessor stream-default-view)
    (baseline :initform 0 :reader stream-baseline)
-   ;; What is this? --GB
-   (height :initform 0)
-   ;; When the stream takes part in the space alloction protocol, this
-   ;; remembers our demand:
-   (seos-current-width  :initform 0)
-   (seos-current-height :initform 0))
+   ;; the max char height of the current line
+   (char-height :initform 0 :accessor %stream-char-height))
   (:default-initargs
    :foreground +black+ :background +white+ :text-style *default-text-style*
    :vertical-spacing 2 :text-margin nil :end-of-line-action :wrap
@@ -195,14 +191,6 @@
     ((stream standard-extended-output-stream))
   (with-sheet-medium (medium stream)
     (medium-finish-output medium)))
-
-(defmethod compose-space ((pane standard-extended-output-stream)
-                          &key width height)
-  (declare (ignorable width height))
-
-  (with-slots (seos-current-width seos-current-height) pane
-    (make-space-requirement :width seos-current-width
-                            :height seos-current-height)))
 
 (defmethod initialize-instance :after
     ((stream standard-extended-output-stream) &rest args)
@@ -273,7 +261,7 @@
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
       (declare (ignore cx))
       (draw-rectangle* (sheet-medium stream) margin cy (+ margin 4)
-                       (+ cy (slot-value stream 'height))
+                       (+ cy (%stream-char-height stream))
                        :ink +foreground-ink+
                        :filled t)))
   (stream-write-char stream #\newline))
@@ -294,12 +282,11 @@
                    finally (return (1- i)))))
       (when (eql end 0)
         (return-from seos-write-string))
-      (with-slots (baseline height vspace) stream
+      (with-slots (baseline vspace) stream
         (multiple-value-bind (cx cy) (stream-cursor-position stream)
           (when (> new-baseline baseline)
             (setq baseline new-baseline))
-          (if (> new-height height)
-              (setq height new-height))
+          (setf (%stream-char-height stream) (max (%stream-char-height stream) new-height))
           (let ((width (stream-string-width stream string
                                             :start start :end end
                                             :text-style text-style))
@@ -320,13 +307,16 @@
                                    nil
                                    start split)
               (setq cx (+ cx width))
-          (with-slots (x y) (stream-text-cursor stream)
-                (setf x cx y cy)))
+              (setf (stream-cursor-position stream) (values cx cy)))
             (when (/= split end)
               (let ((current-baseline baseline))
                 (setf baseline current-baseline))               
               (stream-wrap-line stream)
               (seos-write-string stream string split end))))))))
+
+(defgeneric %note-stream-end-of-page (stream action new-height)
+  (:method (stream acrion new-height)
+    nil))
 
 (defun seos-write-newline (stream)
   (let ((medium       (sheet-medium stream))
@@ -334,21 +324,18 @@
                        (or (pane-viewport stream)
                            stream)))
         (view-height  (bounding-rectangle-height stream)))
-    (with-slots (baseline height vspace) stream
+    (with-slots (baseline vspace) stream
       (multiple-value-bind (cx cy) (stream-cursor-position stream)
-        (setf height (max height (text-style-height (medium-text-style medium) medium)))
+        (setf (%stream-char-height stream) (max (%stream-char-height stream) (text-style-height (medium-text-style medium) medium)))
         (setf cx 0
-              cy (+ cy height vspace))
+              cy (+ cy (%stream-char-height stream) vspace))
         (when (> cy view-height)
+          (%note-stream-end-of-page stream (stream-end-of-page-action stream) cy)
           (ecase (stream-end-of-page-action stream)
             ((:scroll :allow)
-             (change-space-requirements stream
-                                        :width  (bounding-rectangle-width stream)
-                                        :height cy))
+             nil)
             (:wrap
              (setq cy 0))))
-        (unless (eq :allow (stream-end-of-page-action stream))
-          (scroll-extent stream 0 (max 0 (-  cy  %view-height))))
         ;; mikemac says that this "erase the new line" behavior is
         ;; required by the stream text protocol, but I don't see
         ;; it.  I'm happy to put this back in again, but in the
@@ -359,8 +346,8 @@
         #+nil(draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
                               :ink +background-ink+
                               :filled t)
-        (setq baseline 0
-              height   0)
+        (setq baseline 0)
+        (setf (%stream-char-height stream) 0)
         (setf (stream-cursor-position stream) (values cx cy))))))
 
 
