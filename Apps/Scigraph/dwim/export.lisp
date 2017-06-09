@@ -157,9 +157,7 @@ advised of the possiblity of such damages.
 
 ;;;export the presentation types and declarations.
 (eval-when (compile load eval)
-  (export '(boolean alist-member command expression) 'dwim)
-  (export '(array-register dynamic-extent)
-	  'dwim))
+  (export '(boolean alist-member command expression) 'dwim))
 
 ;;;************************************************************
 ;;;
