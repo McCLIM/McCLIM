@@ -110,7 +110,6 @@ advised of the possiblity of such damages.
 	    change-size
 	    stream-line-height
 	    stream-character-width
-	    interactive-stream-p
 	    stream-cursor-position*
 	    stream-set-cursor-position*
 	    stream-viewport
@@ -193,7 +192,6 @@ advised of the possiblity of such damages.
     ;; with common lisp.
     (:shadowing-import-from 
      "DWIM"
-     :interactive-stream-p
      :process-run-function)
     (:use :common-lisp :dwim)))
 
