@@ -52,9 +52,11 @@
 (defmethod repaint-sheet ((sheet basic-sheet) region)
   (labels ((effective-native-region (mirrored-sheet child region)
 	     (if (eq mirrored-sheet child)
-		 (region-intersection
-		  (sheet-region mirrored-sheet)
-		  region)
+                 (transform-region
+                    (%%sheet-native-transformation mirrored-sheet)
+                    (region-intersection
+                     (sheet-region mirrored-sheet)
+                     region))
 		 (effective-native-region mirrored-sheet
 					  (sheet-parent child)
 					  (transform-region
