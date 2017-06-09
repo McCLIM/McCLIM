@@ -540,7 +540,6 @@ older classes in favor of cleaned up newer ones.  Someday, ...
     (dolist (dataset (datasets graph))
       (map-data-xy dataset
 		   #'(lambda (x y)
-		       (declare (downward-function))
 		       (when (and (<= left x right)
 				  (<= bottom y top))
 			 (incf count)))

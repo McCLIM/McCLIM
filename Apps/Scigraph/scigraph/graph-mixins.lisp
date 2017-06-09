@@ -207,7 +207,6 @@ advised of the possiblity of such damages.
 	     (drawer (make-optimized-line-displayer %draw 1 t))
 	     (line-drawer
 	      #'(lambda (x1 y1 x2 y2)
-		  (declare (downward-function))
 		  (multiple-value-setq (x1 y1) (uv-to-screen stream x1 y1))
 		  (multiple-value-setq (x2 y2) (uv-to-screen stream x2 y2))
 		  (funcall drawer stream x1 y1 x2 y2))))
@@ -236,7 +235,6 @@ advised of the possiblity of such damages.
 	(linear-axis ull v0 uur v0 xll xur dtick 
 		     tick-size x-tick-numbering line-drawer
 		     #'(lambda (x y number)
-			 (declare (downward-function))
 			 (axis-number-horizontal
 			  self STREAM
 			 (if (zerop number) (+ x (stream-character-width stream)) x)
@@ -254,7 +252,6 @@ advised of the possiblity of such damages.
       (linear-axis ull vll uur vll xll xur dtick 
 		   tick-size x-tick-numbering line-drawer
 		   #'(lambda (x y number)
-		       (declare (downward-function))
 		       (axis-number-horizontal
 			 self STREAM x y
 			 (float-to-string number (x-digits self))
@@ -280,7 +277,6 @@ advised of the possiblity of such damages.
 	(linear-axis u0 vll u0 vur yll yur dtick 
 		     dtick-size y-tick-numbering line-drawer
 		     #'(lambda (x y number)
-			 (declare (downward-function))
 			 (axis-number-vertical
 			  self STREAM
 			  x
@@ -296,7 +292,6 @@ advised of the possiblity of such damages.
       (linear-axis ull vll ull vur yll yur dtick 
 		   dtick-size y-tick-numbering line-drawer
 		   #'(lambda (x y number)
-		       (declare (downward-function))
 		       (axis-number-vertical self STREAM x y
 					     (float-to-string number (y-digits self))
 					     dtick-size))

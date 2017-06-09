@@ -248,7 +248,6 @@ advised of the possiblity of such damages.
 (defun draw-screen-polygon (corners stream alu)
   (map-polygon-edges
     #'(lambda (x1 y1 x2 y2)
-	(declare (downward-function))
 	(draw-line x1 y1 x2 y2 :stream stream :alu alu))
     corners))
 

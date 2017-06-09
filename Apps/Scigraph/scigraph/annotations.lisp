@@ -538,10 +538,8 @@ advised of the possiblity of such damages.
       (closest-point
 	u v
 	#'(lambda (function dataset)
-	    (declare (downward-function))
 	    (map-data dataset
 		      #'(lambda (datum)
-			  (declare (downward-function))
 			  (multiple-value-bind (fric frac) (datum-position dataset datum)
 			    (multiple-value-bind (u1 v1) (xy-to-uv graph fric frac)
 			      (funcall function u1 v1 datum))))
@@ -654,7 +652,6 @@ advised of the possiblity of such damages.
   (or (call-next-method)
       (let ((graph (graph self)))
 	(some #'(lambda (corner)
-		  (declare (downward-function))
 		  (let ((u (first corner))
 			(v (second corner)))
 		    (multiple-value-setq (u v) (xy-to-uv graph u v))

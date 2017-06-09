@@ -144,7 +144,6 @@ advised of the possiblity of such damages.
 	      (let ((displayer (legend-datum-displayer self graph)))
 		(map-data legend-data
 			  #'(lambda (datum)
-			      (declare (downward-function))
 			      (multiple-value-bind (x y)
 				  (datum-position legend-data datum)
 				(multiple-value-setq (x y) (xy-to-uv graph x y))

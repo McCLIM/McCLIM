@@ -86,13 +86,10 @@ advised of the possiblity of such damages.
     (multiple-value-bind (button)
 	(drag-icon stream
 		   #'(lambda (str)
-		       (declare (downward-function))
 		       (draw-at self str stream-x stream-y))
 		   #'(lambda (str)
-		       (declare (downward-function))
 		       (erase-at self str stream-x stream-y))
 		   #'(lambda (dx dy)
-		       (declare (downward-function))
 		       (incf stream-x dx)
 		       (incf stream-y dy))
 		   mouse-line)
@@ -171,7 +168,6 @@ advised of the possiblity of such damages.
     (with-clipping-to-graph (graph stream t)
       (map-polygon-edges
 	#'(lambda (x1 y1 x2 y2)
-	    (declare (downward-function))
 	    (multiple-value-setq (x1 y1) (xy-to-uv graph x1 y1))
 	    (multiple-value-setq (x2 y2) (xy-to-uv graph x2 y2))
 	    (device-draw-line stream x1 y1 x2 y2 :alu alu))
@@ -201,7 +197,6 @@ advised of the possiblity of such damages.
     (let (d0 u0 v0 datum0)
       (funcall mapper
 	       #'(lambda (u1 v1 datum1)
-		   (declare (downward-function))
 		   (let ((d (distance u1 v1 u v)))
 		     (when (or (not d0) (< d d0))
 		       (setq d0 d u0 u1 v0 v1 datum0 datum1))))
@@ -218,7 +213,6 @@ advised of the possiblity of such damages.
 	      (closest-point
 		x y
 		#'(lambda (function points)
-		    (declare (downward-function))
 		    (dolist (point points)
 		      (let ((x0 (car point)) (y0 (cadr point)))
 			(multiple-value-setq (x0 y0) (xy-to-uv graph x0 y0))

@@ -121,7 +121,6 @@ powerful, and you may want to remove some of the mixins.
 					     :filled t
 					     :alu (alu self)))))))))
 	(map-data self #'(lambda (datum)
-			   (declare (downward-function))
 			   (multiple-value-bind (x y) (datum-position self datum)
 			     (or (floatp x) (setq x (float x)))
 			     (or (floatp y) (setq y (float y)))
@@ -152,7 +151,6 @@ powerful, and you may want to remove some of the mixins.
 	(let ((last-datum nil))
 	  (map-data dataset
 		    #'(lambda (datum)
-			(declare (downward-function))
 			(multiple-value-bind (x y) (datum-position dataset datum)
 			  (multiple-value-setq (x y) (xy-to-uv graph x y))
 			  (when (>= x u)
