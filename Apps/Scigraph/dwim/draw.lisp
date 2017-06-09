@@ -39,12 +39,6 @@ advised of the possiblity of such damages.
 (defvar %erase clim:+background-ink+)
 (defvar %alu %draw)
 
-(defun make-color-rgb (red green blue)
-  (clim:make-rgb-color red green blue))
-
-(defun color-exists-p ()
-   t)
-
 (defun color-stream-p (stream)
   "Is STREAM capable of rendering color?"
   (and (clim:extended-output-stream-p stream)

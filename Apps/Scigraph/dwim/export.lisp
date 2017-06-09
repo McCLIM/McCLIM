@@ -89,9 +89,7 @@ advised of the possiblity of such damages.
 
 ;;;from draw.lisp
 (eval-when (compile load eval)
-  (export '(make-color-rgb
-	    color-exists-p
-	    color-stream-p
+  (export '(color-stream-p
 	    with-clipping-from-output
 	    with-underlining
 	    surrounding-output-with-border

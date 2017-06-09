@@ -97,13 +97,12 @@ advised of the possiblity of such damages.
   (defun MAKE-COLOR-CHOICES (color-specifications &optional reinitialize)
     "Makes an Alist of colors to choose from."
     (if reinitialize (setq colors (make-hash-table)))
-    (cond ((color-exists-p)
-	   (loop for (name red green blue) in color-specifications
-		 do
-	     (setf (gethash name colors) (make-color-rgb red green blue))
-	     (pushnew (list (string-capitalize name) :value name)
-		      *colors*
-		      :test #'equal))))))
+    (loop for (name red green blue) in color-specifications
+       do
+         (setf (gethash name colors) (clim:make-rgb-color red green blue))
+         (pushnew (list (string-capitalize name) :value name)
+                  *colors*
+                  :test #'equal))))
 
 (defun initialize-color-system ()
   "Initialize the color screen if available."
@@ -157,7 +156,7 @@ advised of the possiblity of such damages.
 	    bottom (- bottom (* .1 height)))
       (loop
 	(if (> intensity 1.0) (return))
-	(let ((gray (make-color-rgb intensity intensity intensity)))
+	(let ((gray (clim:make-rgb-color intensity intensity intensity)))
 	  (draw-rectangle left right bottom top :stream stream :alu gray :filled t)
 	  (setq left right right (+ right increment))
 	  (incf intensity quantum))))))

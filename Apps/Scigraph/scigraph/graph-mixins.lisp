@@ -384,7 +384,7 @@ advised of the possiblity of such damages.
 (defmethod alu-for-grid ((self graph-grid-mixin) stream)
   (declare (ignore stream))
   ;; a dark gray.
-  (make-color-rgb .4 .4 .4))
+  (clim:make-rgb-color .4 .4 .4))
 
 ;;; find U value of first grid line from left (or bottom)
 (defun FIND-UFIRST (usmall interval)
