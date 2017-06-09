@@ -189,14 +189,8 @@ advised of the possiblity of such damages.
   ;; uhh...
   nil)
 
-(defmethod get-frame-pane (frame pane-name)
-  (clim:get-frame-pane frame pane-name))
-
-(defmethod frame-current-layout (frame)
-  (clim:frame-current-layout frame))
-
 (defmethod set-frame-layout (frame new-layout)
-  (unless (eq new-layout (frame-current-layout frame))
+  (unless (eq new-layout (clim:frame-current-layout frame))
     (setf (clim:frame-current-layout frame) new-layout)))
 
 (defmethod window-set-viewport-position* (stream left top)

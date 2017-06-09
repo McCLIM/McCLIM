@@ -135,8 +135,6 @@ advised of the possiblity of such damages.
 	    make-application-frame
 	    move-frame
 	    size-frame
-	    get-frame-pane
-	    frame-current-layout
 	    set-frame-layout
 	    window-set-viewport-position*
 	    window-history-limits
