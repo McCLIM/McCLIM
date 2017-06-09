@@ -40,11 +40,6 @@ advised of the possiblity of such damages.
 		,@body)
 	  ,@elements))
 
-(defmacro with-stack-array ((var length &rest options) &body body)
-  `(let ((,var (make-array ,length ,@options)))
-     (declare (dynamic-extent ,var))
-     ,@body))
-
 (defun command-pretty-name (string)
   "COM-SHOW-FILE -> 'Show File'"
   (cond ((and (> (length string) 4)

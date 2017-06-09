@@ -144,7 +144,6 @@ advised of the possiblity of such damages.
 (eval-when (compile load eval)
   (export '(printing-random-object
 	    with-stack-list
-	    with-stack-array
 	    define-command
 	    install-command
 	    define-presentation-to-command-translator
