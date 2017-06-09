@@ -101,8 +101,7 @@ advised of the possiblity of such damages.
 	    draw-polygon
 	    draw-triangle
 	    draw-circle
-	    draw-rectangle
-	    draw-ellipse)
+	    draw-rectangle)
 	  'dwim))
 
 ;;;from tv.lisp

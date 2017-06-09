@@ -95,8 +95,7 @@ advised of the possiblity of such damages.
             draw-polygon
             draw-triangle
             draw-rectangle
-            draw-circle
-            draw-ellipse))
+            draw-circle))
 
 (defun DRAW-POINT (x y &key (stream *standard-output*) (alu %alu) &allow-other-keys)
   (clim:draw-point* stream x y :ink alu))
@@ -195,18 +194,5 @@ advised of the possiblity of such damages.
   (clim:draw-rectangle* stream left top (1+ right) (1+ bottom)
                         :ink alu :filled filled :line-thickness thickness))
 
-(defun draw-ellipse (x-center y-center x-radius y-radius &key
-			      (stream *standard-output*)
-			      (filled nil)
-			      (alu %alu)
-			      (start-angle 0)
-			      (end-angle 2pi)
-			      thickness)
-  (clim:draw-ellipse* stream x-center y-center x-radius 0 0 y-radius
-		      :start-angle start-angle
-		      :end-angle end-angle
-		      :ink alu
-		      :line-thickness thickness
-		      :filled filled))
 
 
