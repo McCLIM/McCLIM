@@ -75,7 +75,7 @@ and should be avoided in the future.  JPM 1-29-91.]
     height))
 
 (defmacro uv-to-screen (screen u v)
-  `(values ,u (- (the fixnum (stream-height ,screen)) (the fixnum ,v))))
+  `(values ,u (- (stream-height ,screen) ,v)))
 
 (defmacro screen-to-uv (screen u v)
   `(values ,u (- (the fixnum (stream-height ,screen)) (the fixnum ,v))))
@@ -164,7 +164,6 @@ yb ----------------
 (defun %clip-line (x1 y1 x2 y2 xl xr yb yt)
   ;; After W.M. Newman, and R.F. Sproull, Principles of Interactive Computer
   ;; Graphics, McGraw-hill, 1973, p. 124
-  (declare (type (integer -1000000 1000000) x1 y1 x2 y2 xl xr yb yt))
   ;; Declaring the range of these integers helps inline more of the functions.  JPM.
   (macrolet
     ((code (x y)
@@ -338,7 +337,6 @@ without any way to override them.  So this is commented out.
    Alters instance variables dash-ds and last-style."
   ;; KRA: Currently, we do not use with-clipping-internal here though for thick lines,
   ;; we should.  We also don't draw caps on thick dashed lines yet.
-  (declare (fixnum x1 y1 x2 y2 dash-pattern))
   (let ((end-point-p (flip-alu-p alu)))
     (when transform
       (multiple-value-setq (x1 y1) (uv-to-screen stream x1 y1))
