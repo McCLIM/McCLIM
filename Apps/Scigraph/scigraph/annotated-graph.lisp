@@ -563,7 +563,7 @@ older classes in favor of cleaned up newer ones.  Someday, ...
       (apply #'xy-to-uv graph choice))))
 
 (defmethod legend-text-style ((self annotated-legend-mixin) (stream t))
-  (merge-text-styles (parse-text-style '(nil :roman :very-small)) 
+  (merge-text-styles (parse-text-style '(nil :roman :normal))
 		     (medium-text-style stream)))
 
 (defmethod create-legend ((self annotated-legend-mixin) stream)

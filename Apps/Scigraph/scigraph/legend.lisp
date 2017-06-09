@@ -72,7 +72,7 @@ advised of the possiblity of such damages.
 
 (defvar *legend-symbology-width* 40 "Width of legend symbology, in pixels.")
 (defvar *legend-gap* 10 "Gap between legend symbology and string, in pixels.")
-(defvar *legend-style* '(:fix :roman :very-small))	; the smallest clim font.
+(defvar *legend-style* '(:fix :roman :normal))
 
 (defmethod legend-size ((self graph-data-legend-mixin) stream
 			&optional (style (parse-text-style *legend-style*)))
