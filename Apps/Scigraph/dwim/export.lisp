@@ -160,9 +160,7 @@ advised of the possiblity of such damages.
 	    with-character-style
 	    with-character-size
 	    with-character-family
-	    with-text-style
-	    with-frame
-	    with-program)
+	    with-text-style)
 	  'dwim))
 
 ;;;from extensions.lisp

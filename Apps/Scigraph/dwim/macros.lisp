@@ -319,14 +319,6 @@ advised of the possiblity of such damages.
 (defmacro with-character-family ((family &optional (stream t)) &body body)
   `(clim:with-text-family (,stream ,family) ,@body))
 
-(defmacro with-frame ((symbol) &body body)
-  `(let ((,symbol (if (boundp 'clim:*application-frame*) clim:*application-frame*)))
-    ,@body))
-
-(defmacro with-program ((symbol) &body body)
-  `(with-frame (,symbol) ,@body))
-
-
 (defmacro accepting-values ((stream &key own-window label (abort-value :ABORT)
 				    (exit-boxes ''((:exit "   OK   ")
 						   (:abort "   Cancel   "))))
