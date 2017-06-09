@@ -170,7 +170,6 @@ advised of the possiblity of such damages.
 	    rem-keywords
 	    *load-pathname*
 	    *source-pathname*
-	    working-directory
 	    getenv
 	    run-shell-command
             process-wait
