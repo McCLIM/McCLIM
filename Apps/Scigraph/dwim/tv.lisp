@@ -269,20 +269,6 @@ advised of the possiblity of such damages.
             (when (member (clim:frame-state ,symbol) '(:shrunk :enabled))
               ,@body))))))
 
-(defun find-program-window (name &key
-				 (create-p nil)
-				 (wait-until-done nil)
-				 (width 500)
-				 (height 500))
-  (progn
-    (for-each-frame (f)
-      (when (typep f name)
-        (return-from find-program-window f)))
-    (when create-p
-      (launch-frame name
-                    :title (string name)
-                    :wait-until-done wait-until-done
-                    :width width
-                    :height height))))
+
 
 

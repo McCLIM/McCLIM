@@ -141,7 +141,6 @@ advised of the possiblity of such damages.
 	    window-set-viewport-position*
 	    window-history-limits
 	    select-frame
-	    find-program-window
 	    launch-frame)
 	  'dwim))
 
