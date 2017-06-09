@@ -159,24 +159,6 @@ advised of the possiblity of such damages.
 	    with-text-style)
 	  'dwim))
 
-;;;from extensions.lisp
-(eval-when (compile load eval)
-  (export '(ignore
-	    with-rem-keywords
-	    rem-keywords
-	    *load-pathname*
-	    *source-pathname*
-	    getenv
-	    run-shell-command
-	    process-run-function
-	    with-process-lock
-	    type-specifier-p
-	    file-type-for-binaries
-	    file-type-for-sources
-	    dump-objects-to-file
-	    )
-	  'dwim))
-
 ;;;export the presentation types and declarations.
 (eval-when (compile load eval)
   (export '(boolean alist-member command expression) 'dwim)
