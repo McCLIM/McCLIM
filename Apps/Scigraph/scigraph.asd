@@ -1,6 +1,6 @@
 
 (defsystem #:scigraph
-    :depends-on (#:mcclim #:scrigraph/dwim)
+    :depends-on (#:mcclim #:scigraph/dwim)
     :serial t
     :components ((:file "scigraph/package")
                  (:file "scigraph/copy")
@@ -32,7 +32,7 @@
                  #+nil (:file "scigraph/export")
                  (:file "scigraph/demo-frame")))
 
-(defsystem #:scrigraph/dwim
+(defsystem #:scigraph/dwim
   :depends-on (#:mcclim)
   :components ((:file "dwim/package")
                (:file "dwim/feature-case")
