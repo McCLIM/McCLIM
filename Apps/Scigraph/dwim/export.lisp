@@ -60,10 +60,6 @@ advised of the possiblity of such damages.
 	    formatting-cell
 	    formatting-item-list
 	    format-item-list
-	    read-char-for-accept
-	    peek-char-for-accept
-	    unread-char-for-accept
-	    compare-char-for-accept
 	    read-token
 	    input-position
 	    insertion-pointer
@@ -157,7 +153,7 @@ advised of the possiblity of such damages.
 
 ;;;export the presentation types and declarations.
 (eval-when (compile load eval)
-  (export '(boolean alist-member command expression) 'dwim))
+  (export '(alist-member command expression) 'dwim))
 
 ;;;************************************************************
 ;;;
