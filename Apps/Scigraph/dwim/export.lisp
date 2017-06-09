@@ -40,7 +40,6 @@ advised of the possiblity of such damages.
 (eval-when (compile load eval)
   (export '(presentation-under-pointer
 	    presentation-p
-	    presentation-superior
 	    presentation-object
 	    presentation-subtypep
 	    presentation-type-p

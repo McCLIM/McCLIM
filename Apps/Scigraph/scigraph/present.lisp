@@ -169,21 +169,21 @@ advised of the possiblity of such damages.
   (when (presentation-p presentation)
     (let ((object (presentation-object presentation)))
       (if (graph-p object) object
-	  (let ((superior (presentation-superior presentation)))
+	  (let ((superior (clim:output-record-parent presentation)))
 	    (when superior (graph-under-presentation superior)))))))
 
 (defun dataset-under-presentation (presentation)
   (when (presentation-p presentation)
     (let ((object (presentation-object presentation)))
       (if (graph-data-p object) object
-	  (let ((superior (presentation-superior presentation)))
+	  (let ((superior (clim:output-record-parent presentation)))
 	    (when superior (dataset-under-presentation superior)))))))
 
 (defun graph-under-annotation-under-presentation (presentation)
   (when (presentation-p presentation)
     (let ((object (presentation-object presentation)))
       (if (annotation-p object) (graph object)
-	  (let ((superior (presentation-superior presentation)))
+	  (let ((superior (clim:output-record-parent presentation)))
 	    (when superior
 	      (graph-under-annotation-under-presentation superior)))))))
 

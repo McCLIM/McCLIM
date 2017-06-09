@@ -46,9 +46,6 @@ advised of the possiblity of such damages.
 (defun presentation-p (object)
   (typep object 'clim:presentation))
 
-(defun presentation-superior (presentation)
-  (clim:output-record-parent presentation))
-
 (defun presentation-object (presentation)
   (if (presentation-p presentation) (clim:presentation-object presentation)))
 

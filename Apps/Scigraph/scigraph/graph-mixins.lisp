@@ -761,7 +761,7 @@ advised of the possiblity of such damages.
     (or 
      (typep presentation 'standard-updating-output-record)
      (incrementally-redisplayable-presentation
-      (presentation-superior presentation)))))
+      (clim:output-record-parent presentation)))))
 
 (defmethod erase ((self presentable-graph-mixin) stream)
   (with-output-truncation (stream)
@@ -775,7 +775,7 @@ advised of the possiblity of such damages.
    This breaks incremental redisplay, so watch out!"
   (let ((p (presentation self)))
     (cond ((and p (incrementally-redisplayable-presentation 
-		   (presentation-superior p)))
+		   (clim:output-record-parent p)))
 	   (incf (redisplay-tick self))
 	   ;; Do nothing.  Expect redisplay-frame-panes to do the rest.
 	   nil)
