@@ -732,12 +732,14 @@ stream. Output will be done to its typeout."
                      (print-possibilities possibilities possibility-printer stream)
                      (redraw-input-buffer stream)
                      (let ((possibility
-                            (handler-case
-                                (with-input-context (`(completion ,possibilities) :override nil)
-                                    (object type event)
-                                    (prog1 nil (read-gesture :stream stream :peek-p t))
-                                  (t object))
-                              (abort-gesture () nil))))
+                            (unwind-protect 
+                                 (handler-case
+                                     (with-input-context (`(completion ,possibilities) :override nil)
+                                         (object type event)
+                                         (prog1 nil (read-gesture :stream stream :peek-p t))
+                                       (t object))
+                                   (abort-gesture () nil))
+                              (clear-typeout stream))))
                        (if possibility
                            (setf (values input success object nmatches)
                                  (values (first possibility) t (second possibility) 1))
