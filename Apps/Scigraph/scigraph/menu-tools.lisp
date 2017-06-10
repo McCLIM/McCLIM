@@ -56,7 +56,7 @@ advised of the possiblity of such damages.
       (draw-circle (+ x offset) (+ y offset)
 		   rad :stream stream :filled selected-p)
       (if selected-p
-	  (with-character-face (:bold stream)
+	  (clim:with-text-face (stream :bold)
 	    (draw-string text (+ x (* size 2))
 			 (+ y (* offset 2))
 			 :stream stream))
