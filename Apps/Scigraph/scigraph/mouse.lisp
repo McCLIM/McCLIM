@@ -60,11 +60,6 @@ advised of the possiblity of such damages.
      (post-mouse-documentation ,window " ")))
 
 (defmacro with-pointer-cursor ((sheet cursor) &body body)
-  ;; XXX McCLIM will get pointer-cursors soon... -- moore
-  ;; CLH FIXME! Does mcclim have pointer-cursors now?!?
-  #+(or (not clim-2) mcclim)
-  `(progn ,@body)
-  #+(and clim-2 (not mcclim))
   `(let ((.old. (sheet-pointer-cursor ,sheet)))
      (unwind-protect
 	 (progn (setf (sheet-pointer-cursor ,sheet) ,cursor)
@@ -253,7 +248,6 @@ advised of the possiblity of such damages.
 
 (defun select-screen-polygon (stream &optional (cursor :position))
   "Select a sequence of points in screen coordinates.  Finish by clicking on first point."
-  (declare (ignore cursor))
   (with-output-recording-disabled (stream)
     (multiple-value-bind (lastx lasty) (device-mouse-point stream)
       (when lastx
