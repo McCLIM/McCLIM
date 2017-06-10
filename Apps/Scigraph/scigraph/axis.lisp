@@ -138,7 +138,6 @@ advised of the possiblity of such damages.
   (macrolet
     ((push-digits (number length string)
        `(dotimes (.i. ,length)
-	 (declare (ignore .i.))
 	 (vector-push-extend (digit-char (values (floor ,number))) ,string extension)
 	  (setf ,number (mod (* 10.0 ,number) 10.0)))))
     (push-digits number ilength string)	; Integer part.

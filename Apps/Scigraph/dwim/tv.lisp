@@ -217,6 +217,7 @@ advised of the possiblity of such damages.
      (width 600) (height 400)
      (wait-until-done nil)		; T => spawn its own process
      (initializer nil)			; function of 1 arg
+  (declare (ignorable left bottom))
      &allow-other-keys)
   "The preferred way to make and expose an application frame."
   ;; MASTER is either NIL or another frame.

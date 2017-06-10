@@ -250,6 +250,7 @@ advised of the possiblity of such damages.
     name))
 
 (defun string-for-process-whostate (process)
+  (declare (ignorable process))
   (let ((whostate
 	 #+allegro (mp:process-whostate process)))
     (if (and whostate (search "Input" whostate :test #'equalp))
