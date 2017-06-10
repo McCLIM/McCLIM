@@ -36,30 +36,6 @@ advised of the possiblity of such damages.
            #:named-object
            #:declare-required-method
 
-           #:duplicate-set
-           #:duplicate-slots
-           #:duplicator-methods
-
-           #:dump-forms
-           #:with-slot-dumping
-           #:dump-set-slot
-           #:dump-slot
-           #:dump-slots
-           #:final-dump
-           #:dumpable-mixin
-
-           #:with-stack-list-copy
-           #:with-slot-copying
-           #:copy-slot
-           #:copy-set-slot
-           #:copy-slots
-           #:copyable-mixin
-           #:copy-inner-class
-           #:copy-self
-           #:copy-inner
-           #:copy-top-level
-           #:copy
-
            #:several-choose
            #:choose-character-style
            #:window-edit-text
@@ -367,11 +343,6 @@ advised of the possiblity of such damages.
    #:move
    #:refresh
    #:zoom-stack
-   #:copy
-   #:dump-forms
-   #:final-dump
-   #:duplicator-methods
-   #:duplicate-slots
    #:pop-accept-items
    #:pop-accept-label
    #:popup-accept-forms

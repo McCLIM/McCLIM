@@ -83,8 +83,7 @@ advised of the possiblity of such damages.
 ;;; with the suffix -OB-MIXIN.  This gives you better control over pop-edit etc.
 
 (defclass BASIC-OBJECT
-	  (copyable-mixin
-	    dumpable-mixin)
+    ()
     ()
   (:documentation
     "The base of all scigraph objects.
