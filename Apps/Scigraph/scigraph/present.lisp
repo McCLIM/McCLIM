@@ -128,17 +128,12 @@ advised of the possiblity of such damages.
 				(right-margin 0)
 				(columns 1)
 				(stream *standard-output*)
-				(reverse-video (color-stream-p stream)))
+				(reverse-video :own-color))
   "Fill the window with columns graphs."
-  ;; Ignore reverse-video in clim 2.  Use X resources for that.
-  #-clim-2
-  (when (and (color-stream-p stream) (not (eq reverse-video :own-color)))
-    ;; CLX gets very unhappy if you try to reverse video on a screen that
-    ;; doesn't support color (e.g. Sun 3/50).
+  (when (and (color-stream-p stream) (not (eql reverse-video :own-color)))
     (if reverse-video
 	(window-reverse-video stream :white :black)
-      (window-reverse-video stream :black :white)))
-  reverse-video			; quiet the compiler
+        (window-reverse-video stream :black :white)))
   (if autoscale (autoscale-graphs graphs autoscale))
   (window-clear stream)
   (when graphs

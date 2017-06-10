@@ -101,7 +101,7 @@ class.  So you should do the following (in the ws package, 'natch):
      &key
      (columns 1)
      autoscale
-     (reverse-video t)
+     (reverse-video :own-color)
      (backing-store :when-mapped)
      create
      master
