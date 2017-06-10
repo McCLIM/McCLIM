@@ -64,78 +64,25 @@ advised of the possiblity of such damages.
 (defun getenv (string)
   "Get the value of the environment variable named STRING."
   (assert (stringp string))
-  #FEATURE-CASE
-  ((:lucid (lucid::environment-variable string))
-   (:allegro (system:getenv string))
-   (:genera (let ((symbol (intern string :scl)))
-	      (and (boundp symbol) (symbol-value symbol))))
-   (:openmcl (ccl::getenv string))
-   (:sbcl (sb-ext:posix-getenv string))
-   (:scl (cdr (assoc string ext:*environment-list* :test #'string=)))
-   ))
+  #+lucid
+  (lucid::environment-variable string)
 
-#+allegro
-;;>> Allegro 4.2 supports SYSTEM:GETENV.  How do I set an environment variable?
-;;>> I expected a SETF method or a SETENV function.
-;;Franz sez: Well here's one way of doing it: foreign call putenv from libc.a.
-(progn
-  (load  "" :unreferenced-lib-names
-	 `(,(ff:convert-to-lang "putenv")))
-  (ff:defforeign 'putenv :arguments '(integer)))
+  #+allegro
+  (system:getenv string)
 
-#+sbcl
-(sb-alien:define-alien-routine ("putenv" putenv) sb-alien:int
-  (name sb-alien:c-string))
+  #+genera
+  (let ((symbol (intern string :scl)))
+    (and (boundp symbol) (symbol-value symbol)))
 
-(defsetf getenv (string) (new-value)
-  #FEATURE-CASE
-  ((:allegro `(putenv (ff:string-to-char* (format nil "~A=~A" ,string ,new-value))))
-   (:lucid `(setf (lcl:environment-variable ,string) ,(princ-to-string new-value)))
-   (:genera `(setf (symbol-value ,(intern string :scl)) ,new-value))
-   (:openmcl `(ccl::setenv string new-value))
-   (:sbcl `(putenv (format nil "~A=~A" ,string ,new-value)))))
+  #+openmcl
+  (let ((symbol (intern string :scl)))
+    (and (boundp symbol) (symbol-value symbol)))
 
-(defun run-shell-command (command &rest args &key input output error-output (wait t)
-						  arguments
-						  if-input-does-not-exist 
-						  if-output-exists
-						  if-error-output-exists)
-  "Runs a shell command.  See documentation for Allegro CL version of this for return
-   value details.  Command can include the arguments, or they can be additionally be
-   specified by the :ARGUMENTS keyword arg."
-  (declare (ignore input output error-output if-input-does-not-exist
-		   if-output-exists if-error-output-exists #-lucid wait))
-  (assert (listp arguments)) ;;Should be a list of strings
-  (let ((command-with-arguments (format nil "~A~{ ~A~}" command arguments)))
-    #FEATURE-CASE
-    ((:allegro
-      (with-rem-keywords (args1 args '(:arguments))
-	(apply #'excl:run-shell-command command-with-arguments args1)))
-     (:lucid
-      (let* ((end-of-command-pos 
-	      (position #\space command-with-arguments :test #'char=))
-	     (command-only 
-	      (if end-of-command-pos
-		  (subseq command-with-arguments 0 end-of-command-pos)
-		command-with-arguments))
-	     (real-arguments 
-	      (string-trim " "
-			   (subseq command-with-arguments end-of-command-pos))))
-	(with-rem-keywords (args1 args '(:arguments))
-	  (multiple-value-bind (stream1 stream2 exit-status process-id)
-	      (apply #'lcl:run-program command-only :arguments real-arguments args1)
-	    (if wait
-		exit-status
-	      (values stream1 stream2 process-id))))))
-     ((and :mcl (not :openmcl))
-      (with-rem-keywords (args1 args '(:arguments))
-	(apply #'ccl:run-fred-command command-with-arguments args1)))
-     ((or :openmcl :sbcl)
-      (with-rem-keywords (args1 args '(:arguments))
-	(apply #+sbcl #'sb-ext:run-program
-	       #+openmcl #'ccl:run-program
-	       command arguments args1)))
-     (:genera (not-done)))))
+  #+sbcl
+  (sb-ext:posix-getenv string)
+
+  #+scl
+  (cdr (assoc string ext:*environment-list* :test #'string=)))
 
 (defun process-run-function (name-or-keywords function &rest args)
   (let* ((new-args (copy-list args)) ; in case of stack-allocation

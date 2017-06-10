@@ -30,7 +30,6 @@
 (defsystem #:scigraph/dwim
   :depends-on (#:mcclim)
   :components ((:file "dwim/package")
-               (:file "dwim/feature-case")
                (:file "dwim/macros")
                (:file "dwim/tv")
                (:file "dwim/draw")
