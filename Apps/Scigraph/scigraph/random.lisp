@@ -47,7 +47,7 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 ||#
 
 ;;; Better numbers, see Ecuyer, 1988.
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant *uniform-a* 40692)
   (defconstant *uniform-m* 2147483399))
 
@@ -82,7 +82,7 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 
 (defmacro uniform-internal (seed m a)
   "This version does not cons, but fixnums must be >= m, and (< (expt a 2) m)."
-  (multiple-value-bind (q r) (truncate (eval m) (eval a))
+  (multiple-value-bind (q r) (truncate m a)
     `(multiple-value-bind (sq sr) 
 	 (truncate (the fixnum ,seed) ,q)
        (declare (fixnum sq sr))
@@ -128,7 +128,7 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 (defun make-uniform-1-stream (seed)
   ;; Stream of uniform random numbers between 0 and 1
   #'(lambda ()
-      (setq seed (uniform-internal seed *uniform-m* *uniform-a*))
+      (setq seed (uniform-internal seed #.*uniform-m* #.*uniform-a*))
       (* seed (/ (float *uniform-m*)))))
 
 (defun uniform-0-1 ()
