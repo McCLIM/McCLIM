@@ -50,9 +50,9 @@ advised of the possiblity of such damages.
            ,right)))))
 
 (defmethod post-mouse-documentation (stream string)
-  (locally (declare (ignore stream))
-    (clim-extensions:frame-display-pointer-documentation-string
-     *application-frame* string)))
+  (declare (ignore stream))
+  (clim-extensions:frame-display-pointer-documentation-string
+   *application-frame* string))
 
 (defmacro with-mouse-documentation ((window string) &body body)
   `(unwind-protect
