@@ -59,13 +59,6 @@ advised of the possiblity of such damages.
            #:accept-values
            #:accept-variable-values
            #:menu-choose
-           #:formatting-table
-           #:formatting-row
-           #:formatting-column
-           #:formatting-column-headings
-           #:formatting-cell
-           #:formatting-item-list
-           #:format-item-list
            #:read-token
            #:input-position
            #:insertion-pointer
@@ -175,13 +168,6 @@ advised of the possiblity of such damages.
            #:accept-values
            #:accept-variable-values
            #:menu-choose
-           #:formatting-table
-           #:formatting-row
-           #:formatting-column
-           #:formatting-column-headings
-           #:formatting-cell
-           #:formatting-item-list
-           #:format-item-list
            #:read-token
            #:input-position
            #:insertion-pointer

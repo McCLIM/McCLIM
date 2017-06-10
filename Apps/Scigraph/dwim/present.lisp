@@ -131,41 +131,6 @@ advised of the possiblity of such damages.
                     :label prompt :default-item default-choice))
 
 ;;;
-;;; formatting table etc.
-;;;
-
-(defmacro formatting-table ((stream &key (inter-column-spacing 8)) &body body)
-  `(clim:formatting-table
-       (,stream :x-spacing ,inter-column-spacing)
-     ,@body))
-
-(defmacro formatting-row ((stream) &body body)
-  `(clim:formatting-row (,stream) ,@body))
-
-(defmacro formatting-column ((stream) &body body)
-  `(clim:formatting-column (,stream) ,@body))
-
-(defmacro formatting-column-headings ((stream &key (underline-p nil)) &body body)
-  (if underline-p
-      `(formatting-row (,stream) (with-underlining (,stream) ,@body))
-      `(formatting-row (,stream) ,@body)))
-
-(defmacro formatting-cell ((stream &key (align-x :left) align-y) &body body)
-  `(clim:formatting-cell (,stream ,@(if align-x `(:align-x ,align-x))
-                          ,@(if align-y `(:align-y ,align-y)))
-    ,@body))
-
-(defmacro formatting-item-list ((stream &rest options) &body body)
-  `(clim:formatting-item-list (,stream ,@options) ,@body))
-
-(defmacro format-item-list (list &rest keys)
-  (let ((stream (or (second (member :stream keys)) t)))
-    `(formatting-item-list (,stream)
-       (dolist (item ,list)
-	 (formatting-cell (,stream)
-	   (format ,stream "~A" item))))))
-
-;;;
 ;;; Presentation parser primitives
 ;;;
 
@@ -385,10 +350,10 @@ advised of the possiblity of such damages.
     (setq drawer
       #'(lambda (str obj name selected)
 	  (declare (ignore obj))
-	  (formatting-cell (str)
-			   (if selected
-			       (with-text-face (:bold str) (write-string name str))
-			     (write-string name str))))))
+	  (clim:formatting-cell (str)
+            (if selected
+                (with-text-face (:bold str) (write-string name str))
+                (write-string name str))))))
   (when (not select-action)
     (setq select-action
       #'(lambda (choice default-val)
@@ -411,8 +376,8 @@ advised of the possiblity of such damages.
 					   :documentation pretty-name)
 			  :single-box t)
 		 (clim:with-room-for-graphics (stream)
-		     (formatting-cell (stream)
-		        (funcall drawer stream value pretty-name selected-p)))))
+                   (clim:formatting-cell (stream)
+                     (funcall drawer stream value pretty-name selected-p)))))
 	     (draw-all (sequence stream)
 	       (dolist (item sequence)
 		 (let* ((value (funcall value-key item))
@@ -420,11 +385,10 @@ advised of the possiblity of such damages.
 			(selected-p (funcall selection-test value selected-value)))
 		   (draw-one item value pretty-name selected-p stream)))))
       (with-output-as-presentation (:stream stream :single-box t)
-	(formatting-item-list
-	 (stream :n-columns n-columns
-		 :n-rows n-rows
-                 :x-spacing
-		 '(2 :character))
+	(clim:formatting-item-list
+            (stream :n-columns n-columns
+                    :n-rows n-rows
+                    :x-spacing '(2 :character))
 	 (draw-all sequence stream))))))
 
 (define-presentation-type alist-subset (&key alist)
