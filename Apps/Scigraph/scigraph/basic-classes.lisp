@@ -72,7 +72,7 @@ advised of the possiblity of such damages.
 
 (defmethod print-object ((self named-mixin) stream)
   (if *print-escape*
-      (printing-random-object (self stream :no-pointer)
+      (dwim:printing-random-object (self stream :no-pointer)
 	(format stream "~a ~a" (class-name (class-of self)) (name self)))
       (format stream "~a" (name self))))
 
