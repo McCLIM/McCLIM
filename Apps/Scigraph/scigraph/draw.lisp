@@ -501,7 +501,7 @@ without any way to override them.  So this is commented out.
 	   #'(lambda (stream from-x from-y to-x to-y)
                (unless line-style
                  (setq line-style (make-line-style :thickness thickness)))
-               (clim-internals::draw-line*
-                stream 0 0 from-x from-y to-x to-y :ink alu :line-style line-style))))))
+               (clim:draw-line* stream from-x from-y to-x to-y
+                                :ink alu :line-style line-style))))))
 
 
