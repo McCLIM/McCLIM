@@ -45,9 +45,6 @@ advised of the possiblity of such damages.
   `(and (>= ,x ,left) (<= ,x ,right)
 	(>= ,y ,bottom) (<= ,y ,top)))
 
-(declaim (inline constrain-point-in-rectangle))
-(declaim (inline constrain-value-between))
-
 (defun constrain-value-between (min x max)
   ;; this is wrong (min (max min x) max)
   (if (<= min max) (min (max min x) max) (min (max max x) min)))

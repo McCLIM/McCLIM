@@ -87,16 +87,6 @@ advised of the possiblity of such damages.
 			     :thickness ,thickness
 			     :stream ,stream :filled nil :alu ,alu)))))))
 
-(proclaim '(inline
-            draw-point
-            draw-line
-            draw-string
-            draw-string-image
-            draw-polygon
-            draw-triangle
-            draw-rectangle
-            draw-circle))
-
 (defun DRAW-POINT (x y &key (stream *standard-output*) (alu %alu) &allow-other-keys)
   (clim:draw-point* stream x y :ink alu))
 
