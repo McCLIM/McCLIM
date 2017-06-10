@@ -82,17 +82,6 @@ advised of the possiblity of such damages.
 ;;; methods for the OBJECT protocols are sometimes broken out into separate mixins
 ;;; with the suffix -OB-MIXIN.  This gives you better control over pop-edit etc.
 
-(defclass BASIC-OBJECT
-    ()
-    ()
-  (:documentation
-    "The base of all scigraph objects.
-     Any general capabilites can go here, rather than standard-object."))
-
-(defclass NAMED-OBJECT (named-mixin basic-object)
-    ())
-
-
 ;;; Handy macro.  
 ;;; Make a completely unspecific version of the method.  If this
 ;;; gets called, it's a bug in the setup of the code.

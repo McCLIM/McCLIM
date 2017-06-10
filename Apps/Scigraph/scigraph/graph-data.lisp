@@ -51,7 +51,7 @@ Y-LABEL
 (defclass RAW-GRAPH-DATA ()
   ((data :initform () :initarg :data :accessor data))) ; data to display
 
-(defclass BASIC-GRAPH-DATA (named-object)
+(defclass BASIC-GRAPH-DATA (named-mixin)
   (;; The alu is basically a (relatively) internal representation of a color so the
    ;; value here is implementation specific.
    ;; On LISPM it is either a number like tv:alu-xor, a keyword like :DRAW

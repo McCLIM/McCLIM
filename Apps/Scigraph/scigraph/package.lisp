@@ -33,7 +33,6 @@ advised of the possiblity of such damages.
            #:name
            #:name-string
            #:make-name
-           #:named-object
            #:declare-required-method
 
            #:several-choose

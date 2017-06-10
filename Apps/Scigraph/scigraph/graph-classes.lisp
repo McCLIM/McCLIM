@@ -185,7 +185,7 @@ powerful, and you may want to remove some of the mixins.
       graph-border-ob-mixin
       graph-border-mixin
       basic-graph
-      named-object
+      named-mixin
       )
   ()
   (:documentation "A bordered graph with datasets, and sliders."))

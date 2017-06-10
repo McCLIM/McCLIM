@@ -220,7 +220,7 @@ advised of the possiblity of such damages.
 		(corners self)))))))
 
 
-(defclass basic-slider (moving-object tool::basic-object)
+(defclass basic-slider (moving-object)
     ((bounds :initform nil :initarg :bounds)	;limit range by graph values (!NIL)
      (graphs :initform nil :accessor slider-graphs))
   (:documentation "Base class for crosshairs and rectangle-sliders"))
