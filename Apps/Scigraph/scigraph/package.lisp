@@ -291,7 +291,6 @@ advised of the possiblity of such damages.
                           #:pointer-input-rectangle*
                           #:make-application-frame
                           #:window-set-viewport-position*
-                          #:window-history-limits
                           #:launch-frame
 
                           #:printing-random-object

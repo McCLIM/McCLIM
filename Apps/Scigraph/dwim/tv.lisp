@@ -177,23 +177,8 @@ advised of the possiblity of such damages.
                 parent)))
     frame))
 
-(defmethod set-frame-layout (frame new-layout)
-  (unless (eq new-layout (clim:frame-current-layout frame))
-    (setf (clim:frame-current-layout frame) new-layout)))
-
 (defmethod window-set-viewport-position* (stream left top)
   (setf (clim:window-viewport-position stream) (values left top)))
-
-(defmethod window-history-limits (stream)
-  ;;(declare (values left top right bottom))
-  (let ((history (clim:stream-output-history stream)))
-    (clim:bounding-rectangle* history)))
-
-(defmethod select-frame (frame)
-  (note-frame-deiconified
-   (clim:frame-manager frame) frame)
-  (clim:raise-sheet (clim:frame-top-level-sheet frame))
-  frame)
 
 (defun suggest-frame-size (frame-manager width height)
   (let ((graft (clim:graft (port frame-manager))))
