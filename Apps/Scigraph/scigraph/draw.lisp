@@ -125,11 +125,6 @@ and should be avoided in the future.  JPM 1-29-91.]
     (with-drawing-options (,stream :clipping-region *clim-clip-rectangle*)
       ,@body)))
 
-(eval-when (compile load eval)
-  (proclaim '(inline device-draw-point))
-  (proclaim '(inline POINT-IN-RECTANGLE-P))
-  (proclaim '(inline POINT-IN-CLIP-RECTANGLE-P)))
-
 (defun POINT-IN-RECTANGLE-P (x y left right bottom top)
   (declare (fixnum x y left right bottom top))
   (and (< left x right) (< bottom y top)))
