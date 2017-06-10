@@ -126,42 +126,18 @@ advised of the possiblity of such damages.
 (defun menu-choose (choices
 		    &key (prompt "Choose:")
 		         default-choice)
-  #FEATURE-CASE
-  ((:clim-0.9
-    (prog1 (clim:menu-choose choices
-			     :label prompt
-			     :associated-window *standard-input*
-			     :default-item default-choice
-			     )
-      ;; kludge city.  menu-lose leaves your mouse click in the buffer.
-      (stream-clear-input *standard-input*)))
-   (:clim-1.0
-    (clim:menu-choose choices
-		      :associated-window *standard-input*
-		      :label prompt :default-item default-choice))
-   (:clim-2
-    (clim:menu-choose choices
-		      :associated-window *standard-input*
-		      :label prompt :default-item default-choice))
-   ((not :clim) (dw:menu-choose choices :prompt prompt))))
+  (clim:menu-choose choices
+                    :associated-window *standard-input*
+                    :label prompt :default-item default-choice))
 
 ;;;
 ;;; formatting table etc.
 ;;;
 
 (defmacro formatting-table ((stream &key (inter-column-spacing 8)) &body body)
-  #FEATURE-CASE
-  (((not :clim)
-    `(dw:formatting-table (,stream :dont-snapshot-variables t
-				   :inter-column-spacing ,inter-column-spacing)
-			  ,@body))
-   (:clim-0.9 `(clim:formatting-table (,stream) ,@body))
-   (:clim-1.0 `(clim:formatting-table
-		(,stream :inter-column-spacing ,inter-column-spacing)
-		,@body))
-   (:clim-2 `(clim:formatting-table
-		(,stream :x-spacing ,inter-column-spacing)
-		,@body))))
+  `(clim:formatting-table
+       (,stream :x-spacing ,inter-column-spacing)
+     ,@body))
 
 (defmacro formatting-row ((stream) &body body)
   `(clim:formatting-row (,stream) ,@body))
@@ -510,40 +486,8 @@ advised of the possiblity of such damages.
 (defvar *all-characters* nil)
 
 (defun readline-no-echo (stream)
-  #FEATURE-CASE
-  ((:clim-2 
-    (clim:with-output-recording-options (stream :draw nil :record nil)
-      (accept 'string :stream stream :prompt nil :default nil)))
-   (:clim-1.0
-    (let ((clim::*disable-input-editor-echo* t))
-      (declare (ignorable clim::*disable-input-editor-echo*))
-      ;; This variable is defined in a patch file (echo-patch.lisp)
-      ;; that came from Scott MacKay and has not been made a part of DWIM.
-      ;; You must load it separately.
-      (accept 'string :stream stream :prompt nil :default nil)))
-   ((not :clim)
-    (let ((all-characters (or *all-characters*
-			      (setq *all-characters* (all-characters))))
-	  (return (elt (format nil "~%") 0)))
-      ;; The trick to echo suppression is to define every character as an
-      ;; activation character.
-      (with-accept-activation-chars (all-characters :override t)
-	(let ((line (make-array 1 :fill-pointer 0
-				:adjustable t
-				:element-type 'character)))
-	  (loop
-	    (let ((char (read-char-for-accept stream)))
-	      (if (consp char) (setq char (second char)))
-	      (cond ((eql char return)
-		     (return (values line char)))
-		    ((eql char #\rubout)
-		     (if (zerop (fill-pointer line))
-			 (clim:beep)
-		       (decf (fill-pointer line))))
-		    ((not (characterp char))
-		     (clim:beep))
-		    (t
-		     (vector-push-extend char line)))))))))))
+  (clim:with-output-recording-options (stream :draw nil :record nil)
+    (accept 'string :stream stream :prompt nil :default nil)))
 
 ;;; A hack so the user doesnt have to see some ugly commands get echoed.
 ;;; Also seems like a useful way to read a password.
