@@ -253,6 +253,7 @@ advised of the possiblity of such damages.
 
 (defun select-screen-polygon (stream &optional (cursor :position))
   "Select a sequence of points in screen coordinates.  Finish by clicking on first point."
+  (declare (ignore cursor))
   (with-output-recording-disabled (stream)
     (multiple-value-bind (lastx lasty) (device-mouse-point stream)
       (when lastx
