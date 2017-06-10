@@ -152,25 +152,6 @@ advised of the possiblity of such damages.
 	(declare (ignore v))
 	(not errorp)))))
 
-(defun file-type-for-binaries ()
-  #FEATURE-CASE
-  ((:genera si:*default-binary-file-type*)
-   ((or :allegro :sbcl)
-    #.(if (fboundp 'compile-file-pathname)
-	  (pathname-type (compile-file-pathname "foo"))
-	  "fasl"))
-   (:scl (pathname-type (compile-file-pathname "foo")))
-   (:lucid (car lcl:*load-binary-pathname-types*))
-   (:mcl #.(pathname-type ccl:*.fasl-pathname*))
-   ))
-
-(defun file-type-for-sources ()
-  #FEATURE-CASE
-  ((:genera "LISP")
-   (:unix "lisp")
-   (:mcl  "lisp")
-   ))
-
 ;;;************
 ;;; DUMPER
 ;;;************
