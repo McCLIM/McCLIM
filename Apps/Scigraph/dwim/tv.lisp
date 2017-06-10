@@ -91,10 +91,6 @@ advised of the possiblity of such damages.
 (defun interactive-stream-p (stream)
   (clim:extended-input-stream-p stream))
 
-(defmethod stream-set-pointer-position* (stream x y)
-  "Set position of mouse, in stream coordinates."
-  (setf (clim:stream-pointer-position stream) (values x y)))
-
 (defmethod stream-pointer-position* (stream)
   "Get position of mouse, in stream coordinates."
   (multiple-value-bind (x y)
@@ -217,11 +213,11 @@ advised of the possiblity of such damages.
      (width 600) (height 400)
      (wait-until-done nil)		; T => spawn its own process
      (initializer nil)			; function of 1 arg
-  (declare (ignorable left bottom))
      &allow-other-keys)
   "The preferred way to make and expose an application frame."
   ;; MASTER is either NIL or another frame.
   ;; If it is a frame, the second frame acts as an extension of the first.
+  (declare (ignorable left bottom))
   (let* ((manager (if master (frame-manager master)
 		    (find-frame-manager)))
 	 (frame (if (not create) (get-reusable-frame manager type))))

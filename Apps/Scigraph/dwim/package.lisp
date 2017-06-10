@@ -114,7 +114,6 @@ advised of the possiblity of such damages.
            #:stream-viewport-size
 
            #:stream-pointer-position*
-           #:stream-set-pointer-position*
            #:pointer-input-rectangle*
            #:make-application-frame
            #:window-set-viewport-position*

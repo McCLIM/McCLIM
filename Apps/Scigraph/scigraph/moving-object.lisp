@@ -72,8 +72,13 @@ advised of the possiblity of such damages.
 (defmethod drag-object ((self moving-object) STREAM &optional mouse-line initial-x initial-y)
   "Drag the object around by tracking the mouse."
   ;;(declare (values stream-x stream-y button))
-  (when (and initial-x initial-y)
-    (stream-set-pointer-position* stream initial-x initial-y))
+  ;;
+  ;; we never call this method with initial-x and initial-y, so
+  ;; comment this out as it doesn't seem like
+  ;; stream-set-pointer-position* is supported in current McCLIM
+  ;;
+  ;; (when (and initial-x initial-y)
+  ;;   (stream-set-pointer-position* stream initial-x initial-y))
   (multiple-value-setq (initial-x initial-y)
     ;; Do this even if stream-set-pointer-position* was just called,
     ;; because that doesn't always seem to work (clim 1.0).  jpm.
