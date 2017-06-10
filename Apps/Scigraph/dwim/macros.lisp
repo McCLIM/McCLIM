@@ -60,7 +60,6 @@ advised of the possiblity of such damages.
 					     name menu
 					     (provide-output-destination-keyword t))
 			  arguments &body body)
-  (declare (ignore provide-output-destination-keyword))
   `(clim:define-command (,command-name :command-table ,(eval command-table)
                          :keystroke ,keystroke
                          :menu ,menu
