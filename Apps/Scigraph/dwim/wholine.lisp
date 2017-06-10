@@ -113,11 +113,7 @@ advised of the possiblity of such damages.
   "Used for progress notes, but only for clim 0.9.")
 
 (defun frame-for-status-line ()
-  #FEATURE-CASE
-  ((:clim-0.9 *frame-for-status-line*)
-   ((or :clim-1.0 :clim-2)
-    (and (boundp 'clim:*application-frame*) clim:*application-frame*))
-   ((not :clim) (and (boundp 'dw:*program-frame*) dw:*program-frame*))))
+  (and (boundp 'clim:*application-frame*) clim:*application-frame*))
 
 (defmethod status-pane ((any t)) nil)
 
