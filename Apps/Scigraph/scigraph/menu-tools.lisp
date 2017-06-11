@@ -117,7 +117,7 @@ advised of the possiblity of such damages.
        `(,(apply #'format nil "~A ~A ~A" style)	:value ,style :style ,style))
    (mapcar #'(lambda (face-size) (cons family face-size))
 	   (mapcan #'(lambda (size)
-		       `((:bold-italic ,size)
+		       `(((:bold :italic) ,size)
 			 (:bold ,size)
 			 (:italic ,size)
 			 (:roman ,size)))
