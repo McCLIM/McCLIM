@@ -62,12 +62,14 @@
 
 (defun clx-error-handler (display error-name
 			  &rest args
-			  &key major &allow-other-keys)
+			  &key major asynchronous &allow-other-keys)
+  (log:error "Received CLX ~A (~A) in process ~W for display ~W."
+             error-name major (bt:thread-name (bt:current-thread)) display)
+  ;; We ignore all asynchronous errors to keep the connection.
   ;; 42 is SetInputFocus, we ignore match-errors from that.
-  (unless (and (eql major 42)
-               (eq error-name 'xlib:match-error))
-    (log:error "Received CLX ~A (~A) in process ~W~%"
-	       error-name major (clim-sys:process-name (clim-sys:current-process)))
+  (unless (or asynchronous
+              (and (eql major 42)
+                   (eq error-name 'xlib:match-error)))
     (apply #'xlib:default-error-handler display error-name args)))
 
 
