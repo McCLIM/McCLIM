@@ -2045,27 +2045,28 @@ order to produce a double-click")
            (viewport-sr (sheet-region viewport)))
       ;;
       (when hscrollbar
-	(setf (scroll-bar-values hscrollbar)
-	      (values (bounding-rectangle-min-x scrollee-sr)
-		      (max (- (bounding-rectangle-max-x scrollee-sr)
-			      (bounding-rectangle-width viewport-sr))
-			   (bounding-rectangle-min-x scrollee-sr))
-		      (bounding-rectangle-width viewport-sr)
-		      (- (nth-value 0 (transform-position
-				       (sheet-transformation scrollee) 0 0))))))
+        (let* ((min-value (bounding-rectangle-min-x scrollee-sr))
+               (max-value (max (- (bounding-rectangle-max-x scrollee-sr)
+                                  (bounding-rectangle-width viewport-sr))
+                               (bounding-rectangle-min-x scrollee-sr)))
+               (thumb-size (bounding-rectangle-width viewport-sr))
+               (value (min (- (nth-value 0 (transform-position
+                                            (sheet-transformation scrollee) 0 0)))
+                           max-value)))
+          (setf (scroll-bar-values vscrollbar)
+                (values min-value max-value thumb-size value))))
       ;;
       (when vscrollbar
-	(setf (scroll-bar-values vscrollbar)
-	      (values (bounding-rectangle-min-y scrollee-sr)
-		      (max (- (bounding-rectangle-max-y scrollee-sr)
-			      (bounding-rectangle-height viewport-sr))
-			   (bounding-rectangle-min-y scrollee-sr))
-		      (bounding-rectangle-height viewport-sr)
-		      (- (nth-value 1 (transform-position
-				       (sheet-transformation scrollee)
-				       0
-				       0)))))))))
-
+        (let* ((min-value (bounding-rectangle-min-y scrollee-sr))
+               (max-value (max (- (bounding-rectangle-max-y scrollee-sr)
+                                  (bounding-rectangle-height viewport-sr))
+                               (bounding-rectangle-min-y scrollee-sr)))
+               (thumb-size (bounding-rectangle-height viewport-sr))
+               (value (min (- (nth-value 1 (transform-position
+                                            (sheet-transformation scrollee) 0 0)))
+                           max-value)))
+          (setf (scroll-bar-values vscrollbar)
+                (values min-value max-value thumb-size value)))))))
 
 (defmethod initialize-instance :after ((pane scroller-pane) &key contents &allow-other-keys)
   (sheet-adopt-child pane (first contents))
