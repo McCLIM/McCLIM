@@ -193,9 +193,7 @@
                     (:center (- y (- (/ total-height 2)
                                      baseline)))
                     (:bottom (- y (- total-height baseline))))))
-          (print (list x y))
           (with-transformed-position (tr x y)
-            (print (list x y string))
             (pdf:move-text x y)
             (pdf:draw-text string)))))))
 
