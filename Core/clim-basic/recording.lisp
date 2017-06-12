@@ -1630,16 +1630,16 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-pattern-output-record))
-(with-standard-rectangle* (:x1 x1 :y1 y1)
-    record
-  (with-slots (x y)
+  (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (let ((dx (- nx x1))
-	  (dy (- ny y1)))
-      (multiple-value-prog1
-	  (call-next-method)
-	(incf x dx)
-	(incf y dy))))))
+    (with-slots (x y)
+        record
+      (let ((dx (- nx x1))
+	    (dy (- ny y1)))
+        (multiple-value-prog1
+	    (call-next-method)
+	  (incf x dx)
+	  (incf y dy))))))
 
 (defrecord-predicate draw-pattern-output-record (x y pattern)
   ;; ### I am not so sure about the correct usage of DEFRECORD-PREDICATE
