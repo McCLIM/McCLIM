@@ -1108,7 +1108,7 @@ if you are interested in fixing this."))
             (present query-pathname 'pathname))
            (t
             (format t "Contents of ")
-            (present (directory-namestring query-pathname) 'pathname)))))
+            (present pathname 'pathname)))))
 
       (when (parent-directory pathname)
         (with-output-as-presentation (t (parent-directory pathname)
