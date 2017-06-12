@@ -127,7 +127,7 @@
     (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))
     (format file-stream "~A begin~%" *dictionary-name*)))
 
-(defun new-page (stream)  
+(defmethod new-page ((stream postscript-stream))
   (push (stream-output-history stream) (postscript-pages stream))
   (let ((history (make-instance 'standard-tree-output-history :stream stream)))
     (setf (slot-value stream 'climi::output-history) history
