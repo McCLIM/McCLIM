@@ -1509,6 +1509,33 @@ were added."
                               t
 			      filled))))
 
+(def-grecording draw-rectangles ((gs-line-style-mixin)
+                                 position-seq filled) (:medium-fn nil)
+  (let* ((transform (medium-transformation medium))
+         (border (graphics-state-line-style-border graphic medium)))
+    (let ((transformed-position-seq
+           (map-repeated-sequence 'vector 2
+                                  (lambda (x y)
+                                    (with-transformed-position (transform x y)
+                                      (values x y)))
+                                  position-seq)))
+      (polygon-record-bounding-rectangle transformed-position-seq
+                                         t filled line-style border
+                                         (medium-miter-limit medium)))))
+
+(defmethod medium-draw-rectangles* :around ((stream output-recording-stream) position-seq filled)
+  (let ((tr (medium-transformation stream)))
+    (if (rectilinear-transformation-p tr)
+        (generate-medium-recording-body draw-rectangles-output-record
+					medium-draw-rectangles*
+                                        (position-seq filled))
+	(do-sequence ((left top right bottom) position-seq)
+          (medium-draw-polygon* stream (vector left top
+                                               left bottom
+                                               right bottom
+                                               right top)
+                                t filled)))))
+
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-rectangle-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
