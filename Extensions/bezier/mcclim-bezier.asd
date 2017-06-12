@@ -17,7 +17,7 @@
 
 (defsystem #:mcclim-bezier-core
   :description "core bezier routines"
-  :depends-on (#:clim #:mcclim-null #:mcclim-render)
+  :depends-on (#:clim #:mcclim-null #:mcclim-render #:clim-postscript #:clim-pdf)
   :components ((:file "package")
                (:file "bezier")))
 
