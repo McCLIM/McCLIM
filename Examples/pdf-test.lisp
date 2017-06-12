@@ -40,7 +40,18 @@
                         #(180 150 220 170
                           180 190 220 210)
                         :ink +purple+ :line-thickness 3 :filled nil)
-      ))
+      (let ((design
+             (mcclim-bezier:make-bezier-curve*
+              (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
+        (mcclim-bezier:draw-bezier-design* stream design
+                                           :line-thickness 5
+                                           :ink +orange+))
+      (let ((design
+             (mcclim-bezier:make-bezier-area*
+              (list 34 44 34 128 147 44 47 156 34 128 50 50 34 44))))
+        (mcclim-bezier:draw-bezier-design* stream design
+                                           :line-thickness 4
+                                           :ink +sea-green+))))
   file)
 
 (grid-test-1-ps)
@@ -79,7 +90,30 @@
                         #(180 150 220 170
                           180 190 220 210)
                         :ink +purple+ :line-thickness 3 :filled nil)
-      ))
+      (let ((design
+             (mcclim-bezier:make-bezier-curve*
+              (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
+        (mcclim-bezier:draw-bezier-design* stream design
+                                           :line-thickness 5
+                                           :ink +orange+))
+      (let ((design
+             (mcclim-bezier:make-bezier-area*
+              (list 34 44 34 128 147 44 47 156 34 128 50 50 34 44))))
+        (mcclim-bezier:draw-bezier-design* stream design
+                                           :line-thickness 4
+                                           :ink +sea-green+))))
   file)
 
 (grid-test-1-pdf)
+
+(defun example2 (&optional (file #P"/tmp/b2.pdf"))
+  (pdf:with-document ()
+    (pdf:with-page ()
+      (pdf:with-outline-level ("Example" (pdf:register-page-reference))
+        (pdf:set-rgb-fill 0.5 0.5 0.8)
+        (pdf:set-rgb-stroke 0.9 0.5 0.1)
+        (pdf:move-to 200 400)
+        (pdf:bezier-to 100 100 150 50 200 100)
+        
+        (pdf:close-even-odd-fill-and-stroke)))
+    (pdf:write-document file)))

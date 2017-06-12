@@ -932,9 +932,37 @@ second curve point, yielding (200 50)."
     (with-drawing-options (medium :ink +background-ink+)
       (%medium-draw-bezier-design medium area t))))
 
+;;; PDF backend
+
+(defun %pdf-draw-bezier-curve (area)
+  (let ((segments (segments area)))
+    ;; TODO transform coordinates!
+    (let ((p0 (slot-value (elt segments 0) 'p0)))
+      (pdf:move-to (point-x p0) (point-y p0) ))
+    (map nil (lambda (segment)
+               (with-slots (p1 p2 p3) segment
+                 (pdf:bezier-to (point-x p1) (point-y p1)
+                                (point-x p2) (point-y p2)
+                                (point-x p3) (point-y p3))))
+         segments)))
+
+(defmethod medium-draw-bezier-design*
+    ((medium clim-pdf::pdf-medium) (design bezier-curve))
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
+    (%pdf-draw-bezier-curve (transform-region tr design))
+    (pdf:stroke)))
+
+(defmethod medium-draw-bezier-design*
+    ((medium clim-pdf::pdf-medium) (design bezier-area))
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
+    (%pdf-draw-bezier-curve (transform-region tr design))
+    (pdf:close-fill-and-stroke)))
+
 ;;; Postscript backend
 
-(defun %draw-bezier-curve (stream area)
+(defun %ps-draw-bezier-curve (stream area)
   (format stream "newpath~%")
   (let ((segments (segments area)))
     (let ((p0 (slot-value (elt segments 0) 'p0)))
@@ -949,7 +977,7 @@ second curve point, yielding (200 50)."
          segments)
     (format stream "stroke~%")))
 
-(defun %draw-bezier-area (stream area)
+(defun %ps-draw-bezier-area (stream area)
   (format stream "newpath~%")
   (let ((segments (segments area)))
     (let ((p0 (slot-value (elt segments 0) 'p0)))
@@ -969,14 +997,14 @@ second curve point, yielding (200 50)."
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
-    (%draw-bezier-curve stream design)))
+    (%ps-draw-bezier-curve stream design)))
 
 (defmethod medium-draw-bezier-design*
     ((medium postscript-medium) (design bezier-area))
   (let ((stream (postscript-medium-file-stream medium))
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
-    (%draw-bezier-area stream design)))
+    (%ps-draw-bezier-area stream design)))
 
 (defmethod medium-draw-bezier-design*
     ((medium postscript-medium) (design bezier-union))
@@ -984,7 +1012,7 @@ second curve point, yielding (200 50)."
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
     (dolist (area (areas design))
-      (%draw-bezier-area stream area))))
+      (%ps-draw-bezier-area stream area))))
 
 (defmethod medium-draw-bezier-design*
     ((medium postscript-medium) (design bezier-difference))
@@ -992,10 +1020,10 @@ second curve point, yielding (200 50)."
         (*transformation* (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :color :line-style)
     (dolist (area (positive-areas design))
-      (%draw-bezier-area stream area))
+      (%ps-draw-bezier-area stream area))
     (with-drawing-options (medium :ink +background-ink+)
       (postscript-actualize-graphics-state stream medium :color :line-style)
       (dolist (area (negative-areas design))
-        (%draw-bezier-area stream area)))))
+        (%ps-draw-bezier-area stream area)))))
 
 
