@@ -1,0 +1,16 @@
+
+;;; CLIM-PostScript is not a backend in the normal sense.
+;;; It is an extension (Chap. 35.1 of the spec) and is an
+;;; "included" part of McCLIM. Hence the defsystem is here.
+;;; 
+;;; Move the whole system to the Modules/ directory - dk
+
+(defsystem #:clim-pdf
+  :depends-on (#:clim-basic #:cl-pdf #:flexi-streams)
+  :serial t
+  :components
+  ((:file "package")
+   (:file "paper")
+   (:file "class")
+   (:file "graphics")
+   (:file "sheet")))

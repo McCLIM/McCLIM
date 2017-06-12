@@ -1,0 +1,108 @@
+;;; -*- Mode: Lisp; Package: CLIM-PDF -*-
+
+;;;  (c) copyright 2001 by
+;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
+;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
+;;;  (c) copyright 2002 by
+;;;           Alexey Dejneka (adejneka@comail.ru)
+;;;           Gilbert Baumann (unk6@rz.uni-karlsruhe.de)
+
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Library General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 2 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Library General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Library General Public
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+;;; Boston, MA  02111-1307  USA.
+
+;;; TODO:
+
+;;; Also missing IMO:
+;;;
+;;; - WITH-OUTPUT-TO-PDF-STREAM should offer a :PAPER-SIZE option.
+;;; - NEW-PAGE should also offer to specify the page name.
+;;; - device fonts are missing
+;;;
+;;;--GB
+
+(in-package :clim-pdf)
+
+;;;; Medium
+
+(defclass pdf-medium (basic-medium)
+  ((device-fonts :initform nil
+                 :accessor device-fonts)))
+
+(defmacro pdf-medium-graphics-state (medium)
+  `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
+
+(defun pdf-medium-file-stream (medium)
+  (pdf-stream-file-stream (medium-sheet medium)))
+
+;;;; Stream
+(defvar *default-pdf-title* "")
+
+(defvar *default-pdf-for*
+  #+unix (or (get-environment-variable "USER")
+             "Unknown")
+  #-unix "")
+
+(defclass pdf-stream
+    (basic-sheet
+     sheet-leaf-mixin sheet-mute-input-mixin
+     permanent-medium-sheet-output-mixin sheet-mute-repainting-mixin
+     ;; ?
+     mirrored-sheet-mixin
+     ;; FIXME: Tim Moore suggested (2006-02-06, mcclim-devel) that
+     ;; this might better be a superclass of
+     ;; STANDARD-OUTPUT-RECORDING-STREAM.  This should be revisited
+     ;; when we grow another non-interactive backend (maybe a cl-pdf
+     ;; backend?).  -- CSR.
+     climi::updating-output-stream-mixin
+     standard-extended-output-stream standard-output-recording-stream)
+  ((file-stream :initarg :file-stream :reader pdf-stream-file-stream)
+   (title :initarg :title)
+   (for :initarg :for)
+   (orientation :initarg :orientation)
+   (paper :initarg :paper)
+   (transformation :initarg :transformation
+                   :reader sheet-native-transformation)
+   (current-page :initform 0)
+   (document-fonts :initform '())
+   (graphics-state-stack :initform '())
+   (pages  :initform nil :accessor pdf-pages)))
+
+(defun make-pdf-stream (file-stream port device-type
+                               multi-page scale-to-fit
+                               orientation header-comments)
+  (declare (ignore multi-page scale-to-fit))
+  (unless device-type (setq device-type :a4))
+  (let ((title (or (getf header-comments :title)
+                   *default-pdf-title*))
+        (for (or (getf header-comments :for)
+                 *default-pdf-for*))
+        (region (case device-type
+                  (paper-region device-type orientation)))
+        (transform (make-pdf-transformation device-type orientation)))
+    (make-instance 'clim-pdf::pdf-stream
+                   :file-stream file-stream
+                   :port port
+                   :title title :for for
+                   :orientation orientation
+                   :paper device-type
+                   :native-region region
+                   :region region
+                   :transformation transform)))
+
+;;;; Port
+
+(defclass pdf-port (basic-port)
+  ((stream :reader pdf-port-stream)))
+
