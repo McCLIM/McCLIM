@@ -370,7 +370,7 @@ record} \arg{child}. The parent of \arg{record} must be notified by calling
 \Defgeneric {recompute-extent-for-changed-child} {record child 
                                                   old-min-x old-min-y old-max-x old-max-y} 
 
-This function is called whenever the bounding rectangle of one of the childs of
+This function is called whenever the bounding rectangle of one of the children of
 a record has been changed.  Its contract is to update the bounding rectangle of
 the \term{output record} \arg{record} to be large enough to completely contain
 the new bounding rectangle of the child \term{output record} \arg{child}.  All
