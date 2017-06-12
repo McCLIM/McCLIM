@@ -1610,12 +1610,13 @@ were added."
 	  (incf center-x dx)
 	  (incf center-y dy))))))
 
-(defrecord-predicate draw-ellipse-output-record (center-x center-y)
+(defrecord-predicate draw-ellipse-output-record (center-x center-y filled)
   (and (if-supplied (center-x coordinate)
-	 (coordinate= (slot-value record 'center-x) center-x))
+                    (coordinate= (slot-value record 'center-x) center-x))
        (if-supplied (center-y coordinate)
-	 (coordinate= (slot-value record 'center-y) center-y))))
-
+                    (coordinate= (slot-value record 'center-y) center-y))
+       (if-supplied (filled)
+                    (eql (slot-value record 'filled) filled))))
 ;;;; Patterns
 
 ;;; The Spec says that "transformation only affects the position at
