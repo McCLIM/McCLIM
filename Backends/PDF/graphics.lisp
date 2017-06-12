@@ -107,6 +107,37 @@
                                      (pdf:stroke)))))
                            position-seq)))
 
+(defmethod medium-draw-ellipse* ((medium pdf-medium) center-x center-y
+                                 radius1-dx radius1-dy radius2-dx radius2-dy
+                                 start-angle end-angle filled)
+  (unless (or (= radius2-dx radius1-dy 0) (= radius1-dx radius2-dy 0))
+    (error "PDF Backend MEDIUM-DRAW-ELLIPSE* not yet implemented for
+    non axis-aligned ellipses."))
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (pdf-actualize-graphics-state medium :line-style :color)
+    (with-transformed-position (tr center-x center-y)
+      (let* ((kappa (* 4 (/ (- (sqrt 2) 1) 3.0)))
+             (radius-dx (abs (+ radius1-dx radius2-dx)))
+             (radius-dy (abs (+ radius1-dy radius2-dy))))
+        (pdf:move-to (+ center-x radius-dx) center-y)
+        (pdf:bezier-to (+ center-x radius-dx) (+ center-y (* kappa radius-dy))
+                       (+ center-x (* kappa radius-dx)) (+ center-y radius-dy)
+                       center-x (+ center-y radius-dy))
+        (pdf:bezier-to (- center-x (* kappa radius-dx)) (+ center-y radius-dy)
+                       (- center-x radius-dx) (+ center-y (* kappa radius-dy))
+                       (- center-x radius-dx) center-y)
+        (pdf:bezier-to (- center-x radius-dx) (- center-y (* kappa radius-dy))
+                       (- center-x (* kappa radius-dx)) (- center-y radius-dy)
+                       center-x (- center-y radius-dy))
+        (pdf:bezier-to (+ center-x (* kappa radius-dx)) (- center-y radius-dy)
+                       (+ center-x radius-dx) (- center-y (* kappa radius-dy))
+                       (+ center-x radius-dx) center-y)))
+    (if filled
+        (progn
+          (break)
+          (pdf:close-fill-and-stroke))
+        (pdf:stroke))))
+
 (defmethod text-style-mapping ((port pdf-port) text-style
                                &optional character-set)
   (declare (ignore character-set))

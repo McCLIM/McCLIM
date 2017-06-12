@@ -122,7 +122,9 @@
                                              :ink +sea-green+)))
       (draw-text* stream "Test Page" 170 200
                   :text-style (make-text-style :fix :bold :huge))
-      (draw-text* stream "Bogus" 250 250)))
+      (draw-text* stream "Bogus" 250 250)
+      (draw-ellipse* stream 160 110 30 0 0 10 :filled nil :ink +orange+ :filled nil)
+      (draw-ellipse* stream 160 310 20 0 0 30 :filled nil :ink +blue+ :filled t)))
   file)
 
 (grid-test-1-pdf)
