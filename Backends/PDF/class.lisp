@@ -44,7 +44,7 @@
   `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
 
 (defun pdf-medium-file-stream (medium)
-  (pdf-stream-file-stream (medium-sheet medium)))
+  (clim-pdf-stream-file-stream (medium-sheet medium)))
 
 ;;;; Stream
 (defvar *default-pdf-title* "")
@@ -54,7 +54,7 @@
              "Unknown")
   #-unix "")
 
-(defclass pdf-stream
+(defclass clim-pdf-stream
     (basic-sheet
      sheet-leaf-mixin sheet-mute-input-mixin
      permanent-medium-sheet-output-mixin sheet-mute-repainting-mixin
@@ -67,7 +67,7 @@
      ;; backend?).  -- CSR.
      climi::updating-output-stream-mixin
      standard-extended-output-stream standard-output-recording-stream)
-  ((file-stream :initarg :file-stream :reader pdf-stream-file-stream)
+  ((file-stream :initarg :file-stream :reader clim-pdf-stream-file-stream)
    (title :initarg :title)
    (for :initarg :for)
    (orientation :initarg :orientation)
@@ -79,7 +79,7 @@
    (graphics-state-stack :initform '())
    (pages  :initform nil :accessor pdf-pages)))
 
-(defun make-pdf-stream (file-stream port device-type
+(defun make-clim-pdf-stream (file-stream port device-type
                                multi-page scale-to-fit
                                orientation header-comments)
   (declare (ignore multi-page scale-to-fit))
@@ -91,7 +91,7 @@
         (region (case device-type
                   (paper-region device-type orientation)))
         (transform (make-pdf-transformation device-type orientation)))
-    (make-instance 'clim-pdf::pdf-stream
+    (make-instance 'clim-pdf-stream
                    :file-stream file-stream
                    :port port
                    :title title :for for

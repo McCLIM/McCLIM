@@ -127,7 +127,6 @@
 
 (defun pdf-actualize-graphics-state (medium &rest kinds)
   "Sets graphics parameters named in STATES."
-  (declare (optimize (debug 3)))
   (loop for kind in (cons :clipping-region kinds)
      ;; every drawing function depends on clipping region
      ;;
