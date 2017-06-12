@@ -93,11 +93,10 @@
             (pdf:fill-path)
             (pdf:stroke))))))
 
-;;;
-;;; this is brokem. i don't understand why.
-#+nil
+
 (defmethod medium-draw-rectangles* ((medium pdf-medium) position-seq filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (pdf-actualize-graphics-state medium :line-style :color)
     (map-repeated-sequence 'nil 4
                            (lambda (x1 y1 x2 y2)
                              (with-transformed-position (tr x1 y1)
