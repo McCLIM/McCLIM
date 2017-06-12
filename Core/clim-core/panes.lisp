@@ -2045,27 +2045,28 @@ order to produce a double-click")
            (viewport-sr (sheet-region viewport)))
       ;;
       (when hscrollbar
-	(setf (scroll-bar-values hscrollbar)
-	      (values (bounding-rectangle-min-x scrollee-sr)
-		      (max (- (bounding-rectangle-max-x scrollee-sr)
-			      (bounding-rectangle-width viewport-sr))
-			   (bounding-rectangle-min-x scrollee-sr))
-		      (bounding-rectangle-width viewport-sr)
-		      (- (nth-value 0 (transform-position
-				       (sheet-transformation scrollee) 0 0))))))
+        (let* ((min-value (bounding-rectangle-min-x scrollee-sr))
+               (max-value (max (- (bounding-rectangle-max-x scrollee-sr)
+                                  (bounding-rectangle-width viewport-sr))
+                               (bounding-rectangle-min-x scrollee-sr)))
+               (thumb-size (bounding-rectangle-width viewport-sr))
+               (value (min (- (nth-value 0 (transform-position
+                                            (sheet-transformation scrollee) 0 0)))
+                           max-value)))
+          (setf (scroll-bar-values vscrollbar)
+                (values min-value max-value thumb-size value))))
       ;;
       (when vscrollbar
-	(setf (scroll-bar-values vscrollbar)
-	      (values (bounding-rectangle-min-y scrollee-sr)
-		      (max (- (bounding-rectangle-max-y scrollee-sr)
-			      (bounding-rectangle-height viewport-sr))
-			   (bounding-rectangle-min-y scrollee-sr))
-		      (bounding-rectangle-height viewport-sr)
-		      (- (nth-value 1 (transform-position
-				       (sheet-transformation scrollee)
-				       0
-				       0)))))))))
-
+        (let* ((min-value (bounding-rectangle-min-y scrollee-sr))
+               (max-value (max (- (bounding-rectangle-max-y scrollee-sr)
+                                  (bounding-rectangle-height viewport-sr))
+                               (bounding-rectangle-min-y scrollee-sr)))
+               (thumb-size (bounding-rectangle-height viewport-sr))
+               (value (min (- (nth-value 1 (transform-position
+                                            (sheet-transformation scrollee) 0 0)))
+                           max-value)))
+          (setf (scroll-bar-values vscrollbar)
+                (values min-value max-value thumb-size value)))))))
 
 (defmethod initialize-instance :after ((pane scroller-pane) &key contents &allow-other-keys)
   (sheet-adopt-child pane (first contents))
@@ -2491,8 +2492,13 @@ order to produce a double-click")
   (declare (ignore width height))
   (flet ((compute (val default)
 	   (if (eq val :compute) default val)))
-    (if (or (eq (pane-user-width pane) :compute)
-            (eq (pane-user-height pane) :compute))
+    (if (or
+         (eql :compute (pane-user-width pane))
+         (eql :compute (pane-user-min-width pane))
+         (eql :compute (pane-user-max-width pane))
+         (eql :compute (pane-user-height pane))
+         (eql :compute (pane-user-min-height pane))
+         (eql :compute (pane-user-max-height pane)))
 	(progn
           (multiple-value-bind (width height)
               (let ((record
@@ -2501,12 +2507,12 @@ order to produce a double-click")
                          (with-output-to-output-record (pane)
                            (invoke-display-function *application-frame* pane)))))
                 (with-bounding-rectangle* (x1 y1 x2 y2)
-                  record
+                    record
                   (values (- x2 (min 0 x1)) (- y2 (min y1)))))
-            (setf (stream-width pane) (compute (pane-user-width pane)
-                                               width))
-            (setf (stream-height pane) (compute (pane-user-height pane)
-                                                height))
+            (unless (> width 0) (setf width 1))
+            (unless (> height 0) (setf height 1))
+            (setf (stream-width pane) width)
+            (setf (stream-height pane) height)
             ;; overwrite the user preferences which value is :compute
             (letf (((%pane-user-width pane)
                     (compute (pane-user-width pane) width))
