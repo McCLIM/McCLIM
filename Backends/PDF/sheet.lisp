@@ -44,7 +44,7 @@
                                               (orientation :portrait)
                                               header-comments)
   (let* ((port (find-port :server-path `(:pdf :stream ,file-stream)))
-         (stream (make-pdf-stream file-stream port device-type
+         (stream (make-clim-pdf-stream file-stream port device-type
                                   multi-page scale-to-fit
                                   orientation header-comments))
          translate-x translate-y)
@@ -76,7 +76,7 @@
   (with-slots (file-stream current-page transformation) stream
     ))
 
-(defmethod new-page ((stream pdf-stream))
+(defmethod new-page ((stream clim-pdf-stream))
   (push (stream-output-history stream) (pdf-pages stream))
   (let ((history (make-instance 'standard-tree-output-history :stream stream)))
     (setf (slot-value stream 'climi::output-history) history
@@ -90,45 +90,45 @@
 (defmethod medium-drawable ((medium pdf-medium))
   (pdf-medium-file-stream medium))
 
-(defmethod make-medium ((port pdf-port) (sheet pdf-stream))
+(defmethod make-medium ((port pdf-port) (sheet clim-pdf-stream))
   (make-instance 'pdf-medium :sheet sheet :port port))
 
 (defmethod medium-miter-limit ((medium pdf-medium))
   #.(* pi (/ 11 180))) ; ?
 
 
-(defmethod sheet-direct-mirror ((sheet pdf-stream))
-  (pdf-stream-file-stream sheet))
+(defmethod sheet-direct-mirror ((sheet clim-pdf-stream))
+  (clim-pdf-stream-file-stream sheet))
 
-(defmethod sheet-mirrored-ancestor ((sheet pdf-stream))
+(defmethod sheet-mirrored-ancestor ((sheet clim-pdf-stream))
   sheet)
 
-(defmethod sheet-mirror ((sheet pdf-stream))
+(defmethod sheet-mirror ((sheet clim-pdf-stream))
   (sheet-direct-mirror sheet))
 
-(defmethod realize-mirror ((port pdf-port) (sheet pdf-stream))
+(defmethod realize-mirror ((port pdf-port) (sheet clim-pdf-stream))
   (sheet-direct-mirror sheet))
 
-(defmethod destroy-mirror ((port pdf-port) (sheet pdf-stream))
+(defmethod destroy-mirror ((port pdf-port) (sheet clim-pdf-stream))
   (error "Can't destroy mirror for the pdf stream ~S." sheet))
 
 ;;; Internal methods
 (defmethod climi::port-mirror-width ((port pdf-port)
-                                     (stream pdf-stream))
+                                     (stream clim-pdf-stream))
   (let ((region (sheet-native-region stream)))
     (bounding-rectangle-width region)))
 
 (defmethod climi::port-mirror-height ((port pdf-port)
-                                      (stream pdf-stream))
+                                      (stream clim-pdf-stream))
   (let ((region (sheet-native-region stream)))
     (bounding-rectangle-height region)))
 
 ;;; Some strange functions
 
-(defmethod pane-viewport ((pane pdf-stream))
+(defmethod pane-viewport ((pane clim-pdf-stream))
   nil)
 
-(defmethod scroll-extent ((pane pdf-stream) x y)
+(defmethod scroll-extent ((pane clim-pdf-stream) x y)
   (declare (ignore x y))
   (values))
 

@@ -1,7 +1,7 @@
-;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
+;;; -*- Mode: Lisp; Package: CLIM-PDF -*-
 
-;;;  (c) copyright 2002 by
-;;;           Alexey Dejneka (adejneka@comail.ru)
+;;;  (c) copyright 2017 by
+;;;           Cyrus Harmon (cyrus@bobobeach.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -23,17 +23,8 @@
 (defpackage #:clim-pdf
   (:use #:clim #:clim-extensions #:clim-lisp)
   (:import-from #:clim-internals
-                #:get-environment-variable
                 #:map-repeated-sequence
-                #:atan*
-
-                #:ellipse-normal-radii*
-
-                #:get-transformation
-                #:untransform-angle
                 #:with-transformed-position
-
-                #:maxf
-
-                #:port-text-style-mappings))
+                #:get-environment-variable)
+  )
 
