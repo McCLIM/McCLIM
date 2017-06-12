@@ -25,7 +25,7 @@
 ;;; - Kerning, ligatures.
 ;;; - Full AFM/AMFM/ACFM support.
 
-(in-package :clim-postscript)
+(in-package :clim-postscript-font)
 
 (defun space-char-p (char)
   (member char '(#\Space #\Tab)))

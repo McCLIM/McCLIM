@@ -23,7 +23,13 @@
 ;;; - Kerning, ligatures.
 ;;; - device fonts
 
-(in-package :clim-postscript)
+(in-package :clim-postscript-font)
+
+(defclass postscript-font-medium (basic-medium)
+  ((device-fonts :initform nil
+		 :accessor device-fonts)))
+
+(defclass postscript-font-port (basic-port) ())
 
 (defclass font-info ()
   ((name :type string :initarg :name :reader font-info-name)
@@ -59,12 +65,20 @@
     (cons (car font-name))))
 (defun %font-name-postscript-name (font-name)
   (etypecase font-name
-    (postscript-device-font-name 
+    (postscript-device-font-name
      (let ((font-info (gethash font-name *font-metrics*)))
        (unless font-info
          (error "Unknown font: ~S" font-info))
        (font-info-name font-info)))
     (cons (concatenate 'string (car font-name) "-iso"))))
+(defun %font-name-pdf-name (font-name)
+  (etypecase font-name
+    (postscript-device-font-name
+     (let ((font-info (gethash font-name *font-metrics*)))
+       (unless font-info
+         (error "Unknown font: ~S" font-info))
+       (font-info-name font-info)))
+    (cons (coerce (car font-name) 'string))))
                                   
 
 
@@ -141,7 +155,7 @@
     :very-large 20
     :huge 24))
 
-(defmethod text-style-mapping ((port postscript-port) text-style
+(defmethod text-style-mapping ((port postscript-font-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
   (or (gethash text-style (port-text-style-mappings port))
@@ -157,7 +171,7 @@
           (cons font-name size-number)))))
 
 (defmethod (setf text-style-mapping)
-    (mapping (port postscript-port) (text-style text-style)
+    (mapping (port postscript-font-port) (text-style text-style)
      &optional character-set)
   (declare (ignore character-set))
   (cond 
@@ -178,7 +192,7 @@
 
 ;; The following four functions should be rewritten: AFM contains all
 ;; needed information
-(defmethod text-style-ascent (text-style (medium postscript-medium))
+(defmethod text-style-ascent (text-style (medium postscript-font-medium))
   (let* ((font-name (text-style-mapping (port medium)
 					(merge-text-styles text-style
 							   (medium-merged-text-style medium))))
@@ -189,7 +203,7 @@
     (* (/ size 1000) (font-info-ascent font-info))))
 	 
 
-(defmethod text-style-descent (text-style (medium postscript-medium))
+(defmethod text-style-descent (text-style (medium postscript-font-medium))
   (let* ((font-name (text-style-mapping (port medium)
 					(merge-text-styles text-style
 							   (medium-merged-text-style medium))))
@@ -199,20 +213,20 @@
          (size (%font-name-size font-name)))
     (* (/ size 1000) (font-info-descent font-info))))
 
-(defmethod text-style-height (text-style (medium postscript-medium))
+(defmethod text-style-height (text-style (medium postscript-font-medium))
   (multiple-value-bind (width height final-x final-y baseline)
       (text-size medium "Iq" :text-style text-style)
     (declare (ignore width final-x final-y baseline))
     height))
 
-(defmethod text-style-width (text-style (medium postscript-medium))
+(defmethod text-style-width (text-style (medium postscript-font-medium))
   (multiple-value-bind (width height final-x final-y baseline)
       (text-size medium "M" :text-style text-style)
     (declare (ignore height final-x final-y baseline))
     width))
 
 (defmethod climi::text-bounding-rectangle*
-    ((medium postscript-medium) string
+    ((medium postscript-font-medium) string
      &key text-style (start 0) end)
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
@@ -288,7 +302,7 @@
 
 
 
-(defmethod text-size ((medium postscript-medium) string
+(defmethod text-size ((medium postscript-font-medium) string
                       &key text-style (start 0) end)
   (when (characterp string) (setq string (string string)))
   (unless end (setq end (length string)))
@@ -301,23 +315,14 @@
                        string start (or end (length string)))))
 
 (defmethod invoke-with-text-style :around
-    ((medium postscript-medium)
+    ((medium postscript-font-medium)
      continuation
      (text-style clim-internals::device-font-text-style))
   (unless (member text-style (device-fonts medium))
     (push text-style (device-fonts medium)))
   (call-next-method))
 
-(defun write-font-to-postscript-stream (stream text-style)
-  (with-open-file (font-stream
-		   (postscript-device-font-name-font-file (clim-internals::device-font-name text-style))
-		   :direction :input
-		   :external-format :latin-1)
-    (let ((font (make-string (file-length font-stream))))
-      (read-sequence font font-stream)
-      (write-string font (postscript-medium-file-stream stream)))))
-
-(defmethod make-device-font-text-style ((port postscript-port) font-name)
+(defmethod make-device-font-text-style ((port postscript-font-port) font-name)
   (check-type font-name postscript-device-font-name)
   (let ((text-style (make-instance 'clim-internals::device-font-text-style
 				   :display-device port
@@ -326,7 +331,7 @@
 	(with-open-file (stream (postscript-device-font-name-metrics-file font-name)
                                 :direction :input
                                 :external-format :latin-1)
-	  (clim-postscript::read-afm-stream stream))
-      (clim-postscript::define-font-metrics dict-name ascent descent angle char-infos font-name))
+	  (read-afm-stream stream))
+      (define-font-metrics dict-name ascent descent angle char-infos font-name))
     (setf (text-style-mapping port text-style) font-name)
     text-style))

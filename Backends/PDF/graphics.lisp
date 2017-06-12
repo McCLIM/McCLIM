@@ -107,6 +107,67 @@
                                      (pdf:stroke)))))
                            position-seq)))
 
+(defmethod text-style-mapping ((port pdf-port) text-style
+                               &optional character-set)
+  (declare (ignore character-set))
+  (or (gethash text-style (climi::port-text-style-mappings port))
+      (multiple-value-bind (family face size) (text-style-components text-style)
+        (let* ((family-fonts (or (getf clim-postscript-font::+postscript-fonts+ family)
+                                 (getf clim-postscript-font::+postscript-fonts+ :fix)))
+               (font-name (cdr (or (assoc face family-fonts :test #'equal)
+                                   (assoc :roman family-fonts))))
+               (size-number (if (numberp size)
+                                (round size)
+                                (or (getf clim-postscript-font::+postscript-font-sizes+ size)
+                                    (getf clim-postscript-font::+postscript-font-sizes+ :normal)))))
+          (cons font-name size-number)))))
+
+(defmethod text-size ((medium pdf-medium) string
+                      &key text-style (start 0) end)
+  (when (characterp string) (setq string (string string)))
+  (unless end (setq end (length string)))
+  (let* ((font-name (text-style-mapping (port medium)
+                                        (merge-text-styles text-style
+                                                           (medium-merged-text-style medium))))
+         (size (clim-postscript-font::%font-name-size font-name))
+         (metrics-key (clim-postscript-font::%font-name-metrics-key font-name)))
+    (clim-postscript-font::text-size-in-font metrics-key size
+                       string start (or end (length string)))))
+
+(defun medium-font (medium)
+  (text-style-mapping (port medium) (medium-merged-text-style medium)))
+
+(defmethod medium-draw-text* ((medium pdf-medium) string x y
+                              start end
+                              align-x align-y
+                              
+                              toward-x toward-y transform-glyphs)
+  (pdf:in-text-mode
+    (pdf-actualize-graphics-state medium :text-style :color)
+    (let ((tr (sheet-native-transformation (medium-sheet medium))))
+      (multiple-value-bind (total-width total-height
+                                        final-x final-y baseline)
+          (let* ((font-name (medium-font medium))
+                 (font (clim-postscript-font::%font-name-metrics-key font-name))
+                 (size (clim-postscript-font::%font-name-size font-name)))
+            (clim-postscript-font::text-size-in-font font size string 0 nil))
+        (declare (ignore final-x final-y))
+        (let  ((x (ecase align-x
+                    (:left x)
+                    (:center (- x (/ total-width 2)))
+                    (:right (- x total-width))))
+               (y (ecase align-y
+                    (:baseline y)
+                    (:top (+ y baseline))
+                    (:center (- y (- (/ total-height 2)
+                                     baseline)))
+                    (:bottom (- y (- total-height baseline))))))
+          (print (list x y))
+          (with-transformed-position (tr x y)
+            (print (list x y string))
+            (pdf:move-text x y)
+            (pdf:draw-text string)))))))
+
 ;;; Graphics state
 
 (defgeneric pdf-set-graphics-state (medium kind))
@@ -214,3 +275,12 @@
   ;; and save again GS to obtain an initial CP. It is ugly, but I see
   ;; no other way now. -- APD, 2002-02-11
   (pdf-set-clipping-region (medium-clipping-region medium)))
+
+(defmethod pdf-set-graphics-state (medium (kind (eql :text-style)))
+  (let* ((font-name (medium-font medium))
+         (font (clim-postscript-font::%font-name-pdf-name font-name))
+         (size (clim-postscript-font::%font-name-size font-name)))
+    (pushnew font (slot-value (medium-sheet medium) 'document-fonts)
+             :test #'string=)
+    (let ((font (pdf:get-font font)))
+      (pdf:set-font font size))))

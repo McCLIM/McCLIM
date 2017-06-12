@@ -23,7 +23,7 @@
 ;;; Boston, MA  02111-1307  USA.
  
  
-(in-package :clim-postscript)
+(in-package :clim-postscript-font)
 
 (defvar *iso-latin-1-symbolic-names*
     '#(NIL             NIL             NIL             NIL
@@ -100,44 +100,3 @@
   "A mapping of iso-8859-1 code points to adobe glyph names.")
 
 
-(defun dump-reencode (sink)
-  (format sink "
-% base-font-name new-font-name encoding-vector ReEncode -->
-/ReEncode
-{
-  5 dict 
-  begin
-    /newencoding exch def
-    /newfontname exch def
-    /basefontname exch def
-
-    /basefontdict basefontname findfont def
-    /newfont basefontdict maxlength dict def
-    
-    basefontdict
-    { 
-      exch dup dup /FID ne exch /Encoding ne and 
-      { exch newfont 3 1 roll put }
-      { pop pop }
-      ifelse
-    } forall
-
-    newfont /FontName newfontname put
-    newfont /Encoding newencoding put
-    newfontname newfont definefont pop
-  end
-} def
-
-/R { 2 1 roll 0 rmoveto show } def
-
-/ISOmapping 256 array def
-")
-  (format sink "ISOmapping~%")
-  (dotimes (i 256)
-    (format sink "  dup ~3D /~A put~%" i (or (aref *iso-latin-1-symbolic-names* i) ".notdef")))
-  (format sink "pop~%~%")
-  
-  (dolist (k '("Times-Roman" "Times-Italic" "Times-Bold" "Times-BoldItalic"
-	       "Helvetica" "Helvetica-Oblique" "Helvetica-Bold" "Helvetica-BoldOblique"
-	       "Courier" "Courier-Oblique" "Courier-Bold" "Courier-BoldOblique"))
-    (format sink "/~A /~A-iso ISOmapping ReEncode~%" k k)) )

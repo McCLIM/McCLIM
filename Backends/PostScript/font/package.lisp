@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
 
-;;;  (c) copyright 2002 by
-;;;           Alexey Dejneka (adejneka@comail.ru)
+;;;  (c) copyright 2017 by
+;;;           Cyrus Harmon (cyrus@bobobeach.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -14,15 +14,14 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :cl-user)
 
-(defpackage #:clim-postscript
-  (:use #:clim #:clim-extensions #:clim-lisp #:clim-postscript-font)
-  (:export #:load-afm-file)
+(defpackage #:clim-postscript-font
+  (:use #:clim #:clim-extensions #:clim-lisp)
+  (:export #:postscript-font-medium)
   (:import-from #:clim-internals
                 #:get-environment-variable
                 #:map-repeated-sequence

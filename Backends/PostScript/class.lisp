@@ -36,9 +36,7 @@
 
 ;;;; Medium
 
-(defclass postscript-medium (basic-medium)
-  ((device-fonts :initform nil
-		 :accessor device-fonts)))
+(defclass postscript-medium (postscript-font-medium) ())
 
 (defmacro postscript-medium-graphics-state (medium)
   `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
@@ -106,7 +104,7 @@
 
 ;;;; Port
 
-(defclass postscript-port (basic-port)
+(defclass postscript-port (clim-postscript-font::postscript-font-port)
   ((stream #| :initarg :stream |#
            #| :initform (error "Unspecified stream.") |#
            ;; I think this is right, but BASIC-PORT accepts only

@@ -25,6 +25,6 @@
   (:import-from #:clim-internals
                 #:map-repeated-sequence
                 #:with-transformed-position
-                #:get-environment-variable)
-  )
+                #:get-environment-variable
+                #:port-text-style-mappings))
 
