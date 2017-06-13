@@ -22,6 +22,7 @@
 
 (defpackage #:clim-pdf
   (:use #:clim #:clim-extensions #:clim-lisp)
+  (:export #:with-output-to-pdf-stream)
   (:import-from #:clim-internals
                 #:map-repeated-sequence
                 #:with-transformed-position
