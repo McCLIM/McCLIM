@@ -272,6 +272,8 @@
 (defgeneric pdf-set-clipping-region (region))
 
 (defmethod pdf-set-clipping-region (region)
+  ;; this is not yet implemented!
+  #+(or)
   (pdf-add-path region)
   (pdf:clip-path))
 
