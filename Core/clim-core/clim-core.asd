@@ -1,6 +1,6 @@
 
 (defsystem #:clim-core
-  :depends-on (#:clim-basic #:clim-postscript #:clim-pdf)
+  :depends-on (#:clim-basic #:clim-postscript)
   :components
   ((:file "text-formatting")
    (:file "defresource")
