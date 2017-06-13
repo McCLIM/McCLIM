@@ -29,6 +29,12 @@
       (error "Unknown paper size: ~S." name))
     (values (car size) (cdr size))))
 
+(defun paper-region (paper-size-name orientation)
+  (multiple-value-bind (width height) (paper-size paper-size-name)
+    (when (eq orientation :landscape)
+      (rotatef width height))
+    (make-rectangle* 0 0 width height)))
+
 (defun make-pdf-transformation (paper-size-name orientation)
   (multiple-value-bind (width height) (paper-size paper-size-name)
     (case orientation
