@@ -146,7 +146,7 @@
          (size (clim-postscript-font:font-name-size font-name))
          (metrics-key (clim-postscript-font:font-name-metrics-key font-name)))
     (clim-postscript-font:text-size-in-font metrics-key size
-                       string start (or end (length string)))))
+                                            string start (or end (length string)))))
 
 (defun medium-font (medium)
   (text-style-mapping (port medium) (medium-merged-text-style medium)))
@@ -210,14 +210,14 @@
 
 ;;; Line style
 (defconstant +pdf-line-joints+ '(:miter 0
-                                        :round 1
-                                        :bevel 2
-                                        :none 0))
+                                 :round 1
+                                 :bevel 2
+                                 :none 0))
 
 (defconstant +pdf-line-caps+ '(:butt 0
-                                      :round 1
-                                      :square 2 ; extended butt caps
-                                      :No-end-point 0))
+                               :round 1
+                               :square 2 ; extended butt caps
+                               :No-end-point 0))
 
 (defconstant +pdf-default-line-dashes+ '(30 30))
 
@@ -245,7 +245,7 @@
     (pdf:set-line-join (getf +pdf-line-joints+
                              (line-style-joint-shape line-style)))
     (pdf:set-line-cap (getf +pdf-line-caps+
-                  (line-style-cap-shape line-style)))
+                            (line-style-cap-shape line-style)))
     ;; FIXME!!! dashes not yet implemented!
     ))
 
