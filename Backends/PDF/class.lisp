@@ -85,8 +85,7 @@
                    *default-pdf-title*))
         (for (or (getf header-comments :for)
                  *default-pdf-for*))
-        (region (case device-type
-                  (paper-region device-type orientation)))
+        (region (paper-region device-type orientation))
         (transform (make-pdf-transformation device-type orientation)))
     (make-instance 'clim-pdf-stream
                    :file-stream file-stream
