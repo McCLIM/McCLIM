@@ -76,14 +76,6 @@ advised of the possiblity of such damages.
     (if (> interval 3600) tick
 	(* (values (ceiling tick interval)) interval))))
 
-
-#+old
-(defun auto-tick (xmin xmax)
-  "Choose a tick interval based on some simple esthetics.
-   The tick interval is a multiple of 2 5 or 10, and there are <= 10 tick
-   marks along the axis."
-  (autotick-internal xmin xmax 1 10 10 5 2))
-
 (defun auto-tick (min max)
   (let* ((range (- max min))
 	 (tick (expt 10 (truncate (log range 10))))
@@ -98,9 +90,7 @@ advised of the possiblity of such damages.
   ;; Cons a new string every time; if you reuse an old string, you get graphics
   ;; turds.
   (make-array size
-	      :element-type
-	      #+lucid 'string-char
-	      #-lucid 'character
+	      :element-type 'character
 	      :adjustable t
 	      :fill-pointer 0))
 
@@ -119,16 +109,6 @@ advised of the possiblity of such damages.
       ;; Handle zero as a special case.  float-to-string-internal can't deal with it?
       (progn (vector-push-extend #\0 string) string)
       (float-to-string-internal number max-digits string)))
-
-#|
-(defun make-test-string ()
-  ;; In genera on a 3600, this can be done 800 times per second.
-  (without-interrupts (time (float-to-string 48.65432 3)))
-  ;; About 25% of the time spent consing the string.
-  (without-interrupts (time (make-adjustable-string 4)))
-  ;; 360 times per second.
-  (without-interrupts (time (format nil "~4,1F" 48.65432))))
-|#
 
 (defun float-to-string-internal (number max-digits string
 				 &aux (exponent 0) ilength flength
@@ -158,7 +138,6 @@ advised of the possiblity of such damages.
   (macrolet
     ((push-digits (number length string)
        `(dotimes (.i. ,length)
-	 (declare (ignore .i.))
 	 (vector-push-extend (digit-char (values (floor ,number))) ,string extension)
 	  (setf ,number (mod (* 10.0 ,number) 10.0)))))
     (push-digits number ilength string)	; Integer part.
@@ -201,7 +180,6 @@ advised of the possiblity of such damages.
 	     draw-line
 	     axis-number
 	     label)
-  (declare (downward-funarg draw-line axis-number label))
   (if (< umax umin) (rotatef umax umin))
   (if (minusp dtick) (setq dtick (- dtick)))
   (let* ((cos (- xmax xmin))

@@ -27,20 +27,6 @@ advised of the possiblity of such damages.
 
 (in-package :statistics)
 
-(eval-when (compile load eval)
-  (export 'random-seed)
-  (export 'with-seed)
-  (export 'uniform)
-  (proclaim '(inline uniform))
-  (proclaim '(inline uniform-basic))
-  (proclaim '(inline combined-uniform))
-  (export 'uniform-0-1)
-  (export 'uniform-between)
-  (export 'gaussian-random)
-  (export 'gaussian)
-  (export 'random-yes-no)
-  (export 'erf))
-
 ;;; PORTABLE UNIFORM AND GAUSSIAN RANDOM NUMBERS
 
 #||
@@ -61,21 +47,14 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 ||#
 
 ;;; Better numbers, see Ecuyer, 1988.
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant *uniform-a* 40692)
   (defconstant *uniform-m* 2147483399))
 
 (defun random-seed ()
   "Return a random seed."
-  #-system-random (get-internal-real-time)	; integer
-  #+system-random (make-random-state))		; structure
+  (make-random-state))		; structure
 
-#-system-random
-(eval-when (compile load eval)
-  (when (>= most-positive-fixnum *uniform-m*)
-    (pushnew ':fast-random-numbers *features*)))
-
-#-fast-random-numbers
 (defun uniform-basic (previous-fixnum)
   "Returns a random fixnum between 1 and (1- *uniform-m*)."
   #||
@@ -103,7 +82,7 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 
 (defmacro uniform-internal (seed m a)
   "This version does not cons, but fixnums must be >= m, and (< (expt a 2) m)."
-  (multiple-value-bind (q r) (truncate (eval m) (eval a))
+  (multiple-value-bind (q r) (truncate m a)
     `(multiple-value-bind (sq sr) 
 	 (truncate (the fixnum ,seed) ,q)
        (declare (fixnum sq sr))
@@ -137,39 +116,24 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
   "evaluates body with the seed of the random numbers set to S-NEWSEED.
    the value of S-NEWSEED is updated.  Thus this is a way of
    Keeping several sequences of random numbers with their own seeds."
-  #-system-random
-  `(let ((*uniform-seed* ,s-newseed))
-     (prog1 (progn ,@body) 
-	    (setf ,s-newseed *uniform-seed*)))
-  #+system-random
   `(let ((*random-state* ,s-newseed))
-     (prog1 (progn ,@body) 
-	    (setq ,s-newseed *random-state*))))
+    (prog1 (progn ,@body)
+      (setf ,s-newseed *random-state*))))
 
 (defun uniform ()
   "Returns the next uniform random number in the sequence
    To have your own sequence, use the macro WITH-SEED."
-  #-system-random (setq *uniform-seed* 
-			(uniform-internal *uniform-seed* *uniform-m* *uniform-a*))
-  #+system-random (random *uniform-m* *random-state*))
+  (random *uniform-m* *random-state*))
 
 (defun make-uniform-1-stream (seed)
   ;; Stream of uniform random numbers between 0 and 1
   #'(lambda ()
-      (setq seed (uniform-internal seed *uniform-m* *uniform-a*))
+      (setq seed (uniform-internal seed #.*uniform-m* #.*uniform-a*))
       (* seed (/ (float *uniform-m*)))))
 
 (defun uniform-0-1 ()
   "A uniform random number greater than 0 and less than 1."
   (* (uniform) (/ (float *uniform-m*))))
-
-#+debug
-(defun try (n)
-  (let ((f 
-	  '(lambda (N)
-	     (without-interrupts
-	       (time (dotimes (i N) (uniform)))))))
-    (funcall (compile nil f) N)))
 
 ;;; For speed, you probably want an inline version of uniform-between for your application.
 (defun uniform-between (low-num high-num)
@@ -177,22 +141,11 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
    If low-num and/or high-num are fixnums, a fixnum is returned."
   (if (= low-num high-num)
       low-num
-    #-system-random
-    (if (and (integerp low-num) (integerp high-num))
-	(+ low-num (values (truncate (uniform)
-				     (/ #.(- *uniform-m* 1) (- high-num low-num)))))
-      (+ low-num (* (* (uniform) #.(/ (float *uniform-m*)))
-		    (- high-num low-num))))
-    #+system-random
     (+ low-num (random (- high-num low-num)))  ))
 
 (defun gaussian-random-1 ()
   "Returns a gaussian random variable with mean 0.0 and standard deviation 1.0.
    Good tails."
-  #-system-random 
-  (* (sqrt (* -2.0 (log (uniform-0-1))))
-     (sin (* #.(* 2.0 (coerce pi 'single-float)) (uniform-0-1))))
-  #+system-random
   (* (sqrt (* -2.0 (log (random 1.0))))
      (sin (* #.(* 2.0 (coerce pi 'single-float)) (random 1.0)))))
 
@@ -239,29 +192,6 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 		      (* y (horner y 0.2548296d0 -0.28449672d0 1.4214138d0
 				      -1.4531521d0 1.0614054d0))))
 		    'single-float))))
-#+testing
-(defun erf-int (z dx)
-  (loop for x from 0.0d0 to z by dx
-	sum (* dx (gaussian x)) into sum
-	finally (return sum)))
-
-#+testing
-(defun erf-series (x)
-  "Series erf function 7.1.5 of Abramowitz and Segun."
-  (setq x (float x))
-  (loop for n from 0 by 1 
-	for term = x then (/ (* -1.0d0 term (expt x 2)) n)
-	while (> (abs term) (* 1.e-16 sum))
-	sum (/ term (+ 1.0 n n)) into sum
-	finally (return (/ (* 2.0 sum) #.(sqrt pi)))))
-
-#+testing
-(defun make-it (N)
-  (let ((data ())
-	(last (uniform)))
-    (dotimes (i N)
-      (push (list last (setq last (uniform))) data))
-    (make-instance 'graph::graph-data :data (nreverse data) :data-symbol :point)))
 
 ;;;
 ;;; Numerical Recipes in LISP

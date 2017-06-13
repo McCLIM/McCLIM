@@ -32,7 +32,7 @@ COMPLETION presentation type as a pop-up menu."))
 ;;; presentation type  in this object, we avoid having to dig them
 ;;; out of the presentation type on each call to select-query. That
 ;;; would not be possible if we are accepting a subtype of COMPLETION.
-(defclass av-pop-up-menu-record (standard-updating-output-record)
+(defclass av-pop-up-menu-record (accepting-values-record)
   ((pop-up-sequence :accessor pop-up-sequence :initform nil)
    (pop-up-test :accessor pop-up-test :initform nil)
    (pop-up-value-key :accessor pop-up-value-key :initform nil)

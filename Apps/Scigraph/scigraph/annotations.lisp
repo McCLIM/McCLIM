@@ -52,18 +52,6 @@ advised of the possiblity of such damages.
 
 (defmethod editable ((object t)) nil)
 
-#+clim-0.9
-(defun clim-update-sensitivity (stream)
-  "Fix major CLIM sins"
-  ;; Try living without this function once clim 2.0 arrives.  10 apr 91 jpm.
-  (let ((root (ci::output-recording-stream-output-record stream)))
-    ;; Scroll bars are wrong, so update them.
-    (ci::update-region stream
-		       (bounding-rectangle-width root)
-		       (bounding-rectangle-height root))
-    ;; Annotations get inserted out of order, so sort the records.
-    (ci::sort-coordinate-sorted-set (slot-value root 'ci::coordinate-sorted-set))))
-
 (defmethod annotation-presentation-type ((self basic-annotation)) 'annotation)
 (defmethod annotation-single-box ((self basic-annotation)) nil)
 
@@ -76,7 +64,7 @@ advised of the possiblity of such damages.
       ;; Okay, try to display, but let the graph clip me too.
       (with-clipping-to-graph (graph stream nil)
 	;; Move the cursor to shadow clim bugs.
-	(with-character-style ((or style (stream-current-text-style stream))
+	(with-character-style ((or style (medium-text-style stream))
 			       stream)	
 	  (multiple-value-bind (sl st) (uv-for-display self)
 	    (multiple-value-setq (sl st) (uv-to-screen stream sl st))
@@ -89,8 +77,7 @@ advised of the possiblity of such damages.
 			     :object self
 			     :single-box (annotation-single-box self)
 			     :type (annotation-presentation-type self))
-		  (call-next-method self stream)))))))
-      #+clim-0.9 (clim-update-sensitivity stream))))
+		  (call-next-method self stream))))))))))
 
 (defmethod display-p ((self basic-annotation)) t)
 
@@ -111,9 +98,8 @@ advised of the possiblity of such damages.
   "Erase an annotation by erasing the underlying presentation."
   (with-slots (presentation) self
     (when presentation
-      (erase-graphics-presentation presentation :stream STREAM)
-      (setq presentation nil)
-      #+clim-0.9 (clim-update-sensitivity stream))))
+      (clim:erase-output-record presentation stream nil)
+      (setq presentation nil))))
 
 (defmethod kill ((self basic-annotation) STREAM)
   "Erase the annotation and resign from the graph."
@@ -194,7 +180,7 @@ advised of the possiblity of such damages.
 	      (setf (width self) (- re le)
 		    (height self) (- be te)))))))))
 
-(defvar *annotation-whitespace* '(#\return #\space #\tab #+genera #\line #\page))
+(defvar *annotation-whitespace* '(#\return #\space #\tab #\page))
 
 (defmethod figure-text-dimensions ((self annotation) STREAM)
   "Compute the width and height that the text will cover on the stream."
@@ -215,7 +201,7 @@ advised of the possiblity of such damages.
       )))
 
 (defgeneric rescale-annotation (SELF)
-  (:method-combination progn #-Lucid :most-specific-last)
+  (:method-combination progn :most-specific-last)
   (:documentation "Called when the graph has been rescaled."))
 
 (defmethod rescale-annotation progn ((self t)) nil)
@@ -389,7 +375,7 @@ advised of the possiblity of such damages.
 		:command-table :graph
 		;; Annotations are covered by a different translator.
 		:tester ((object) 
-			 (not (dwim::typep* object 'basic-annotation))) ; NLC
+			 (not (typep object 'basic-annotation))) ; NLC
 		:gesture :select :menu t :documentation "Move")
   (object &key WINDOW)
   `(,object ,WINDOW))
@@ -552,10 +538,8 @@ advised of the possiblity of such damages.
       (closest-point
 	u v
 	#'(lambda (function dataset)
-	    (declare (downward-function))
 	    (map-data dataset
 		      #'(lambda (datum)
-			  (declare (downward-function))
 			  (multiple-value-bind (fric frac) (datum-position dataset datum)
 			    (multiple-value-bind (u1 v1) (xy-to-uv graph fric frac)
 			      (funcall function u1 v1 datum))))
@@ -668,7 +652,6 @@ advised of the possiblity of such damages.
   (or (call-next-method)
       (let ((graph (graph self)))
 	(some #'(lambda (corner)
-		  (declare (downward-function))
 		  (let ((u (first corner))
 			(v (second corner)))
 		    (multiple-value-setq (u v) (xy-to-uv graph u v))
@@ -728,7 +711,7 @@ advised of the possiblity of such damages.
 ;;; object to compute the  value.
 
 (defgeneric DESCRIPTION-CHOICES (object)
-  (:method-combination append #-lucid :most-specific-first) ; Fixed in 1991?
+  (:method-combination append :most-specific-first) ; Fixed in 1991?
   (:documentation "Returns an association list of descriptive string, function name."))
 
 (defun COMPUTE-DESCRIPTOR (function argument &rest arguments)

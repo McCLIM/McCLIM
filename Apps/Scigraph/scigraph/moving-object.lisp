@@ -72,8 +72,13 @@ advised of the possiblity of such damages.
 (defmethod drag-object ((self moving-object) STREAM &optional mouse-line initial-x initial-y)
   "Drag the object around by tracking the mouse."
   ;;(declare (values stream-x stream-y button))
-  (when (and initial-x initial-y)
-    (stream-set-pointer-position* stream initial-x initial-y))
+  ;;
+  ;; we never call this method with initial-x and initial-y, so
+  ;; comment this out as it doesn't seem like
+  ;; stream-set-pointer-position* is supported in current McCLIM
+  ;;
+  ;; (when (and initial-x initial-y)
+  ;;   (stream-set-pointer-position* stream initial-x initial-y))
   (multiple-value-setq (initial-x initial-y)
     ;; Do this even if stream-set-pointer-position* was just called,
     ;; because that doesn't always seem to work (clim 1.0).  jpm.
@@ -86,13 +91,10 @@ advised of the possiblity of such damages.
     (multiple-value-bind (button)
 	(drag-icon stream
 		   #'(lambda (str)
-		       (declare (downward-function))
 		       (draw-at self str stream-x stream-y))
 		   #'(lambda (str)
-		       (declare (downward-function))
 		       (erase-at self str stream-x stream-y))
 		   #'(lambda (dx dy)
-		       (declare (downward-function))
 		       (incf stream-x dx)
 		       (incf stream-y dy))
 		   mouse-line)
@@ -171,7 +173,6 @@ advised of the possiblity of such damages.
     (with-clipping-to-graph (graph stream t)
       (map-polygon-edges
 	#'(lambda (x1 y1 x2 y2)
-	    (declare (downward-function))
 	    (multiple-value-setq (x1 y1) (xy-to-uv graph x1 y1))
 	    (multiple-value-setq (x2 y2) (xy-to-uv graph x2 y2))
 	    (device-draw-line stream x1 y1 x2 y2 :alu alu))
@@ -201,7 +202,6 @@ advised of the possiblity of such damages.
     (let (d0 u0 v0 datum0)
       (funcall mapper
 	       #'(lambda (u1 v1 datum1)
-		   (declare (downward-function))
 		   (let ((d (distance u1 v1 u v)))
 		     (when (or (not d0) (< d d0))
 		       (setq d0 d u0 u1 v0 v1 datum0 datum1))))
@@ -218,7 +218,6 @@ advised of the possiblity of such damages.
 	      (closest-point
 		x y
 		#'(lambda (function points)
-		    (declare (downward-function))
 		    (dolist (point points)
 		      (let ((x0 (car point)) (y0 (cadr point)))
 			(multiple-value-setq (x0 y0) (xy-to-uv graph x0 y0))
@@ -226,7 +225,7 @@ advised of the possiblity of such damages.
 		(corners self)))))))
 
 
-(defclass basic-slider (moving-object tool::basic-object)
+(defclass basic-slider (moving-object)
     ((bounds :initform nil :initarg :bounds)	;limit range by graph values (!NIL)
      (graphs :initform nil :accessor slider-graphs))
   (:documentation "Base class for crosshairs and rectangle-sliders"))
@@ -346,22 +345,6 @@ advised of the possiblity of such damages.
     (multiple-value-setq (u v) (uv-to-screen stream u v))
     (setq u (max 0 (- u (string-size stream nil text))))
     (draw-string text u v :stream stream :alu alu)))
-
-#-clim
-(defmethod DRAW-SLIDER-X-LABEL :around ((self crosshairs) graph STREAM alu value text)
-  ;; Without without-interrupts, writing the text was so slow that
-  ;; that the sliding aspect of the slider was destroyed.
-  ;; This was a crude hammer but it helped a lot.  NLC.
-  ;;
-  ;; But without-interrupts loses in CLIM XLIB.  Draw-text* ultimately tries to
-  ;; get some kind of lock (xlib:draw-glyph) and complains that scheduling was
-  ;; inhibited.  JPM.
-  (without-interrupts (call-next-method self graph stream alu value text)))
-
-#-clim
-(defmethod DRAW-SLIDER-Y-LABEL :around ((self crosshairs) graph STREAM alu value text)
-  ;; ditto
-  (without-interrupts (call-next-method self graph stream alu value text)))
 
 (defmethod DRAW-INTERNAL ((self crosshairs) STREAM x y &optional (labels? t))
   ;; Only draw labels on the "head" graph -- seemed to take to long otherwise (RBR)
