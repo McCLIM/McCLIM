@@ -189,7 +189,6 @@
     (with-open-file (out filename :direction :output :if-exists :supersede
                          :element-type '(unsigned-byte 8))
       (clim-pdf:with-output-to-pdf-stream (stream out)
-        #+nil
         (with-text-style (stream (make-text-style :sans-serif :roman :normal))
           (format stream "~&~a: ~a~%" test-name (drawing-test-description test)))
         (funcall (drawing-test-drawer test) stream)))))
