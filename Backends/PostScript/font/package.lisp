@@ -21,7 +21,8 @@
 
 (defpackage #:clim-postscript-font
   (:use #:clim #:clim-extensions #:clim-lisp)
-  (:export #:postscript-font-medium)
+  (:export #:postscript-font-medium
+           #:*iso-latin-1-symbolic-names*)
   (:import-from #:clim-internals
                 #:get-environment-variable
                 #:map-repeated-sequence
