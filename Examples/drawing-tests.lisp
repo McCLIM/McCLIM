@@ -57,7 +57,11 @@
 	     :activate-callback #'(lambda (x)
                                     (declare (ignore x))
                                     (print-all-postscript-tests)))
-   
+   (print-pdf :push-button
+              :label "Print All (/tmp/*.pdf)"
+              :activate-callback #'(lambda (x)
+                                     (declare (ignore x))
+                                     (print-all-pdf-tests)))
    (print-png :push-button
 	      :label "Print All (/tmp/*.png)"
 	      :activate-callback #'(lambda (x)
@@ -76,6 +80,7 @@
            (labelling (:label "Condition")
              condition-option)
 	   print-ps
+           print-pdf
 	   print-png)
          (vertically ()
 	   (spacing (:thickness 3)
@@ -172,6 +177,26 @@
 (defun print-all-postscript-tests ()
   (loop for test being the hash-values of *drawing-tests* do
        (restart-case (drawing-test-postscript test)
+         (:skip ()
+           :report (lambda (stream) (format stream "skip ~a" (drawing-test-name test)))))))
+
+
+(defun drawing-test-pdf (test &optional filename)
+  (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
+         (test-name (drawing-test-name test))
+         (filename (or filename (format nil "/tmp/~a.pdf"
+                                        test-name))))
+    (with-open-file (out filename :direction :output :if-exists :supersede
+                         :element-type '(unsigned-byte 8))
+      (clim-pdf:with-output-to-pdf-stream (stream out)
+        #+nil
+        (with-text-style (stream (make-text-style :sans-serif :roman :normal))
+          (format stream "~&~a: ~a~%" test-name (drawing-test-description test)))
+        (funcall (drawing-test-drawer test) stream)))))
+
+(defun print-all-pdf-tests ()
+  (loop for test being the hash-values of *drawing-tests* do
+       (restart-case (drawing-test-pdf test)
          (:skip ()
            :report (lambda (stream) (format stream "skip ~a" (drawing-test-name test)))))))
 
@@ -1584,10 +1609,3 @@
          (r3 (mcclim-bezier:region-difference r1 r2)))
     (mcclim-bezier:draw-bezier-design* stream r3)))
 
-(defun convert-postscript-file (file &key svg)
-  (let ((result (uiop:run-program `( "ps2pdf" ,(uiop:unix-namestring file)))))
-    (when svg
-      (unless result
-        (uiop:run-program `( "pdf2svg"
-                            ,(uiop:unix-namestring (merge-pathnames (make-pathname :type "pdf") file))
-                            ,(uiop:unix-namestring (merge-pathnames (make-pathname :type "svg") file))))))))
