@@ -274,8 +274,9 @@
 (defmethod pdf-set-clipping-region (region)
   ;; this is not yet implemented!
   #+(or)
-  (pdf-add-path region)
-  (pdf:clip-path))
+  (progn
+    (pdf-add-path region)
+    (pdf:clip-path)))
 
 (defmethod pdf-set-clipping-region ((region (eql +everywhere+))))
 
