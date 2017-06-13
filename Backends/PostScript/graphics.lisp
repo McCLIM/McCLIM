@@ -507,11 +507,20 @@ setmatrix")
 (defun medium-font (medium)
   (text-style-mapping (port medium) (medium-merged-text-style medium)))
 
+(defun %font-name-postscript-name (font-name)
+  (etypecase font-name
+    (clim-postscript-font:postscript-device-font-name
+     (let ((font-info (clim-postscript-font:get-font-info font-name)))
+       (unless font-info
+         (error "Unknown font: ~S" font-info))
+       (clim-postscript-font:font-info-name font-info)))
+    (cons (concatenate 'string (car font-name) "-iso"))))
+
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :text-style)))
   (let* ((font-name (medium-font medium))
-         (font (clim-postscript-font::%font-name-postscript-name font-name))
-         (size (clim-postscript-font::%font-name-size font-name)))
+         (font (%font-name-postscript-name font-name))
+         (size (clim-postscript-font:font-name-size font-name)))
     (pushnew font (slot-value (medium-sheet medium) 'document-fonts)
              :test #'string=)
     (format stream "/~A findfont ~D scalefont setfont~%"
@@ -573,9 +582,9 @@ setmatrix")
         (multiple-value-bind (total-width total-height
                               final-x final-y baseline)
             (let* ((font-name (medium-font medium))
-                   (font (clim-postscript-font::%font-name-metrics-key font-name))
-                   (size (clim-postscript-font::%font-name-size font-name)))
-              (clim-postscript-font::text-size-in-font font size string 0 nil))
+                   (font (clim-postscript-font:font-name-metrics-key font-name))
+                   (size (clim-postscript-font:font-name-size font-name)))
+              (clim-postscript-font:text-size-in-font font size string 0 nil))
           (declare (ignore final-x final-y))
           ;; Only one line?
           (setq x (ecase align-x

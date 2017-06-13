@@ -39,7 +39,8 @@
 
 (defun write-font-to-postscript-stream (stream text-style)
   (with-open-file (font-stream
-		   (clim-postscript-font::postscript-device-font-name-font-file (clim-internals::device-font-name text-style))
+		   (clim-postscript-font:postscript-device-font-name-font-file
+                    (clim-internals::device-font-name text-style))
 		   :direction :input
 		   :external-format :latin-1)
     (let ((font (make-string (file-length font-stream))))
@@ -105,7 +106,7 @@
              (format file-stream "%%DocumentNeededResources: (atend)~%")
              (format file-stream "%%EndComments~%~%")
              (write-postscript-dictionary file-stream)
-             (dolist (text-style (clim-postscript-font::device-fonts (sheet-medium stream)))
+             (dolist (text-style (clim-postscript-font:device-fonts (sheet-medium stream)))
                (write-font-to-postscript-stream (sheet-medium stream) text-style))
              (start-page stream)
              (format file-stream "~@[~A ~]~@[~A translate~%~]" translate-x translate-y)

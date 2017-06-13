@@ -55,33 +55,18 @@
   (metrics-file (error "missing argument"))
   (size (error "missing argument")))
 
-(defun %font-name-size (font-name)
+(defun get-font-info (font-name)
+  (gethash font-name *font-metrics*))
+
+(defun font-name-size (font-name)
   (etypecase font-name
     (postscript-device-font-name (postscript-device-font-name-size font-name))
     (cons (cdr font-name))))
-(defun %font-name-metrics-key (font-name)
+
+(defun font-name-metrics-key (font-name)
   (etypecase font-name
     (postscript-device-font-name font-name)
     (cons (car font-name))))
-(defun %font-name-postscript-name (font-name)
-  (etypecase font-name
-    (postscript-device-font-name
-     (let ((font-info (gethash font-name *font-metrics*)))
-       (unless font-info
-         (error "Unknown font: ~S" font-info))
-       (font-info-name font-info)))
-    (cons (concatenate 'string (car font-name) "-iso"))))
-(defun %font-name-pdf-name (font-name)
-  (etypecase font-name
-    (postscript-device-font-name
-     (let ((font-info (gethash font-name *font-metrics*)))
-       (unless font-info
-         (error "Unknown font: ~S" font-info))
-       (font-info-name font-info)))
-    (cons (coerce (car font-name) 'string))))
-                                  
-
-
 
 (defun define-font-metrics (name ascent descent angle char-infos &optional (font-name nil))
   (let ((font-info (make-instance 'font-info
@@ -196,10 +181,10 @@
   (let* ((font-name (text-style-mapping (port medium)
 					(merge-text-styles text-style
 							   (medium-merged-text-style medium))))
-	 (font-info (or (gethash (%font-name-metrics-key font-name)
+	 (font-info (or (gethash (font-name-metrics-key font-name)
                                  *font-metrics*)
                         (error "Unknown font ~S." font-name)))
-         (size (%font-name-size font-name)))
+         (size (font-name-size font-name)))
     (* (/ size 1000) (font-info-ascent font-info))))
 	 
 
@@ -207,10 +192,10 @@
   (let* ((font-name (text-style-mapping (port medium)
 					(merge-text-styles text-style
 							   (medium-merged-text-style medium))))
-	 (font-info (or (gethash (%font-name-metrics-key font-name)
+	 (font-info (or (gethash (font-name-metrics-key font-name)
                                  *font-metrics*)
                         (error "Unknown font ~S." font-name)))
-         (size (%font-name-size font-name)))
+         (size (font-name-size font-name)))
     (* (/ size 1000) (font-info-descent font-info))))
 
 (defmethod text-style-height (text-style (medium postscript-font-medium))
@@ -237,8 +222,8 @@
                               (merge-text-styles 
                                text-style
                                (medium-merged-text-style medium))))
-         (metrics-key (%font-name-metrics-key font-name))
-         (size (%font-name-size font-name)))
+         (metrics-key (font-name-metrics-key font-name))
+         (size (font-name-size font-name)))
     (let ((scale (/ size 1000)))
       (cond ((= start end)
              (values 0 0 0 0))
@@ -309,8 +294,8 @@
   (let* ((font-name (text-style-mapping (port medium)
                                         (merge-text-styles text-style
                                                            (medium-merged-text-style medium))))
-         (size (%font-name-size font-name))
-         (metrics-key (%font-name-metrics-key font-name)))
+         (size (font-name-size font-name))
+         (metrics-key (font-name-metrics-key font-name)))
     (text-size-in-font metrics-key size
                        string start (or end (length string)))))
 

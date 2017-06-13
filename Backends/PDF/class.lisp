@@ -36,7 +36,7 @@
 
 ;;;; Medium
 
-(defclass pdf-medium (clim-postscript-font::postscript-font-medium) ())
+(defclass pdf-medium (clim-postscript-font:postscript-font-medium) ())
 
 (defmacro pdf-medium-graphics-state (medium)
   `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
@@ -101,6 +101,6 @@
 
 ;;;; Port
 
-(defclass pdf-port (clim-postscript-font::postscript-font-port)
+(defclass pdf-port (clim-postscript-font:postscript-font-port)
   ((stream :reader pdf-port-stream)))
 

@@ -104,7 +104,7 @@
 
 ;;;; Port
 
-(defclass postscript-port (clim-postscript-font::postscript-font-port)
+(defclass postscript-port (postscript-font-port)
   ((stream #| :initarg :stream |#
            #| :initform (error "Unspecified stream.") |#
            ;; I think this is right, but BASIC-PORT accepts only

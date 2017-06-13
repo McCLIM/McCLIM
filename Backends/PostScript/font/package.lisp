@@ -22,19 +22,17 @@
 (defpackage #:clim-postscript-font
   (:use #:clim #:clim-extensions #:clim-lisp)
   (:export #:postscript-font-medium
+           #:postscript-font-port
+           #:device-fonts
+           #:postscript-device-font-name
+           #:postscript-device-font-name-font-file
+           #:text-size-in-font
+           #:get-font-info
+           #:font-info-name
+           #:font-name-size
+           #:font-name-metrics-key
            #:*iso-latin-1-symbolic-names*)
   (:import-from #:clim-internals
-                #:get-environment-variable
-                #:map-repeated-sequence
-                #:atan*
-
-                #:ellipse-normal-radii*
-
-                #:get-transformation
-                #:untransform-angle
-                #:with-transformed-position
-
                 #:maxf
-
                 #:port-text-style-mappings))
 
