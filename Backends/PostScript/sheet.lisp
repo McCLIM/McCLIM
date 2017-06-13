@@ -37,6 +37,15 @@
 
 (in-package :clim-postscript)
 
+(defun write-font-to-postscript-stream (stream text-style)
+  (with-open-file (font-stream
+		   (clim-postscript-font::postscript-device-font-name-font-file (clim-internals::device-font-name text-style))
+		   :direction :input
+		   :external-format :latin-1)
+    (let ((font (make-string (file-length font-stream))))
+      (read-sequence font font-stream)
+      (write-string font (postscript-medium-file-stream stream)))))
+
 (defmacro with-output-to-postscript-stream ((stream-var file-stream
                                              &rest options)
                                             &body body)
@@ -96,7 +105,7 @@
              (format file-stream "%%DocumentNeededResources: (atend)~%")
              (format file-stream "%%EndComments~%~%")
              (write-postscript-dictionary file-stream)
-             (dolist (text-style (device-fonts (sheet-medium stream)))
+             (dolist (text-style (clim-postscript-font::device-fonts (sheet-medium stream)))
                (write-font-to-postscript-stream (sheet-medium stream) text-style))
              (start-page stream)
              (format file-stream "~@[~A ~]~@[~A translate~%~]" translate-x translate-y)
@@ -127,7 +136,7 @@
     (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))
     (format file-stream "~A begin~%" *dictionary-name*)))
 
-(defun new-page (stream)  
+(defmethod new-page ((stream postscript-stream))
   (push (stream-output-history stream) (postscript-pages stream))
   (let ((history (make-instance 'standard-tree-output-history :stream stream)))
     (setf (slot-value stream 'climi::output-history) history

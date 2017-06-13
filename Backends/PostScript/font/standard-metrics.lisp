@@ -1,5 +1,6 @@
 
-(in-package :clim-postscript) 
+(in-package :clim-postscript-font)
+
 (define-font-metrics '"Times-Roman"
                      '683
                      '217
