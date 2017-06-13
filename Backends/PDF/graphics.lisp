@@ -133,9 +133,7 @@
                        (+ center-x radius-dx) (- center-y (* kappa radius-dy))
                        (+ center-x radius-dx) center-y)))
     (if filled
-        (progn
-          (break)
-          (pdf:close-fill-and-stroke))
+        (pdf:close-fill-and-stroke)
         (pdf:stroke))))
 
 (defmethod text-size ((medium pdf-medium) string
