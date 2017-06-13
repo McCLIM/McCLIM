@@ -48,9 +48,8 @@
 (defvar *default-pdf-title* "")
 
 (defvar *default-pdf-for*
-  #+unix (or (get-environment-variable "USER")
-             "Unknown")
-  #-unix "")
+  (or #+unix (get-environment-variable "USER")
+      "Unknown"))
 
 (defclass clim-pdf-stream
     (basic-sheet
