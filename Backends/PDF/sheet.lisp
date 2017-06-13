@@ -71,7 +71,7 @@
                      (pdf:write-document flexi-stream)))))))
       (destroy-port port))))
 
-
+;; FIXME! Not yet implemented.
 (defun start-page (stream)
   (with-slots (file-stream current-page transformation) stream
     ))
