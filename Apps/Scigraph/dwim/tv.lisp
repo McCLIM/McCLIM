@@ -64,8 +64,10 @@ advised of the possiblity of such damages.
 (defmethod stream-viewport (stream)
   ;;(declare (values left top right bottom))
   (cond ((not (clim:extended-output-stream-p stream)))
-        ((and (type-specifier-p 'clim-postscript::postscript-stream)
-              (typep stream 'clim-postscript::postscript-stream))
+        ((or (and (type-specifier-p 'clim-postscript::postscript-stream)
+                  (typep stream 'clim-postscript::postscript-stream))
+             (and (type-specifier-p 'clim-pdf::clim-pdf-stream)
+                  (typep stream 'clim-pdf::clim-pdf-stream)))
          ;; width  = inches x 72
          ;; height = inches x 72
          (values 0 0 #.(* 72 7) #.(* 72 10)))
