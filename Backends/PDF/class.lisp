@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
+;;; -*- Mode: Lisp; Package: CLIM-PDF -*-
 
 ;;;  (c) copyright 2001 by
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
@@ -26,36 +26,34 @@
 
 ;;; Also missing IMO:
 ;;;
-;;; - WITH-OUTPUT-TO-POSTSCRIPT-STREAM should offer a :PAPER-SIZE option.
+;;; - WITH-OUTPUT-TO-PDF-STREAM should offer a :PAPER-SIZE option.
 ;;; - NEW-PAGE should also offer to specify the page name.
 ;;; - device fonts are missing
 ;;;
 ;;;--GB
 
-(in-package :clim-postscript)
+(in-package :clim-pdf)
 
 ;;;; Medium
 
-(defclass postscript-medium (postscript-font-medium) ())
+(defclass pdf-medium (clim-postscript-font:postscript-font-medium) ())
 
-(defmacro postscript-medium-graphics-state (medium)
+(defmacro pdf-medium-graphics-state (medium)
   `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
 
-(defun postscript-medium-file-stream (medium)
-  (postscript-stream-file-stream (medium-sheet medium)))
+(defun pdf-medium-file-stream (medium)
+  (clim-pdf-stream-file-stream (medium-sheet medium)))
 
-
 ;;;; Stream
-(defvar *default-postscript-title* "")
+(defvar *default-pdf-title* "")
 
-(defvar *default-postscript-for*
-  #+unix (or (get-environment-variable "USER")
-             "Unknown")
-  #-unix "")
+(defvar *default-pdf-for*
+  (or #+unix (get-environment-variable "USER")
+      "Unknown"))
 
-(defclass postscript-stream 
+(defclass clim-pdf-stream
     (basic-sheet
-     sheet-leaf-mixin sheet-mute-input-mixin 
+     sheet-leaf-mixin sheet-mute-input-mixin
      permanent-medium-sheet-output-mixin sheet-mute-repainting-mixin
      ;; ?
      mirrored-sheet-mixin
@@ -66,32 +64,30 @@
      ;; backend?).  -- CSR.
      climi::updating-output-stream-mixin
      standard-extended-output-stream standard-output-recording-stream)
-  ((file-stream :initarg :file-stream :reader postscript-stream-file-stream)
+  ((file-stream :initarg :file-stream :reader clim-pdf-stream-file-stream)
    (title :initarg :title)
    (for :initarg :for)
    (orientation :initarg :orientation)
-   (paper :initarg :paper)   
+   (paper :initarg :paper)
    (transformation :initarg :transformation
                    :reader sheet-native-transformation)
    (current-page :initform 0)
    (document-fonts :initform '())
    (graphics-state-stack :initform '())
-   (pages  :initform nil :accessor postscript-pages)))
+   (pages  :initform nil :accessor pdf-pages)))
 
-(defun make-postscript-stream (file-stream port device-type
+(defun make-clim-pdf-stream (file-stream port device-type
                                multi-page scale-to-fit
                                orientation header-comments)
   (declare (ignore multi-page scale-to-fit))
   (unless device-type (setq device-type :a4))
   (let ((title (or (getf header-comments :title)
-                   *default-postscript-title*))
+                   *default-pdf-title*))
         (for (or (getf header-comments :for)
-                 *default-postscript-for*))
-        (region (case device-type
-                  ((:eps) +everywhere+)
-                  (t (paper-region device-type orientation))))
-        (transform (make-postscript-transformation device-type orientation)))
-    (make-instance 'postscript-stream
+                 *default-pdf-for*))
+        (region (paper-region device-type orientation))
+        (transform (make-pdf-transformation device-type orientation)))
+    (make-instance 'clim-pdf-stream
                    :file-stream file-stream
                    :port port
                    :title title :for for
@@ -101,23 +97,8 @@
                    :region region
                    :transformation transform)))
 
-
 ;;;; Port
 
-(defclass postscript-port (postscript-font-port)
-  ((stream #| :initarg :stream |#
-           #| :initform (error "Unspecified stream.") |#
-           ;; I think this is right, but BASIC-PORT accepts only
-           ;; :SERVER-PATH initarg. -- APD, 2002-06-06
+(defclass pdf-port (clim-postscript-font:postscript-font-port)
+  ((stream :reader pdf-port-stream)))
 
-           :reader postscript-port-stream)))
-
-;;; FIXME!!! The following method should be removed. -- APD, 2002-06-06
-(defmethod initialize-instance :after ((port postscript-port)
-                                       &rest initargs
-                                       &key server-path)
-  (declare (ignore initargs))
-  (destructuring-bind (ps &key stream) server-path
-    (assert (eq ps :ps))
-    (check-type stream stream)
-    (setf (slot-value port 'stream) stream)))

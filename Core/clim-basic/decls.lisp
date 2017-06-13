@@ -1041,6 +1041,10 @@ Returns a SPACE-REQUIREMENT object."))
 (defgeneric stream-pathname (stream))
 (defgeneric stream-truename (stream))
 
+;; E.1
+
+(defgeneric new-page (stream))
+
 ;;;;
 (defgeneric gadget-value (gadget))
 (defgeneric (setf gadget-value) (new-value gadget &key invoke-callback))
