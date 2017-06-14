@@ -1155,7 +1155,7 @@ order to produce a double-click")
      (with-slots (major-spacing) box
        (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr*** box c major))
                                    (box-layout-mixin-clients box)))
-              (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
+              (allot       (mapcar #'space-requirement-major content-srs))
               (wanted      (reduce #'+ allot))
               (excess      (- major wanted
                               (* (1- (length children)) major-spacing))))
@@ -1192,7 +1192,7 @@ order to produce a double-click")
                  (setf allot
                        (mapcar (lambda (allot q)
                                  (let ((q (elt q j)))
-                                   (let ((delta (ceiling (if (zerop sum) 0 (/ (* excess q) sum)))))
+                                   (let ((delta (if (zerop sum) 0 (/ (* excess q) sum))))
                                      (decf excess delta)
                                      (decf sum q)
                                      (+ allot delta))))
@@ -1205,7 +1205,7 @@ order to produce a double-click")
 	     (format *trace-output* "~&;;   new allotment = ~S.~%" allot))
 
            (values allot
-                   (mapcar #'ceiling (mapcar #'space-requirement-minor content-srs))) )))))
+                   (mapcar #'space-requirement-minor content-srs))) ))))
 
  (defmethod box-layout-mixin/xically-allocate-space-aux* :around ((box rack-layout-mixin) width height)
    (declare (ignorable width height))
@@ -1470,7 +1470,7 @@ order to produce a double-click")
                    (let ((n (length qs)))
                      (setf allot
                        (mapcar (lambda (allot q)
-                                 (let ((delta (floor excess n)))
+                                 (let ((delta (/ excess n)))
                                    (decf n)
                                    (decf excess delta)
                                    (decf sum q)
@@ -1479,7 +1479,7 @@ order to produce a double-click")
                   (t
                    (setf allot
                      (mapcar (lambda (allot q)
-                               (let ((delta (ceiling (if (zerop sum) 0 (/ (* excess q) sum)))))
+                               (let ((delta (if (zerop sum) 0 (/ (* excess q) sum))))
                                  (decf excess delta)
                                  (decf sum q)
                                  (+ allot delta)))
@@ -1615,8 +1615,8 @@ order to produce a double-click")
                 for tmp-width = width then (decf tmp-width new-width)
                 for new-width = (/ tmp-width l)
                 for x = 0 then (+ x new-width)
-                do (move-sheet child x y)                  
-                  (allocate-space child (round new-width) (round new-height))))))
+                do (move-sheet child x y)
+		  (allocate-space child new-width new-height)))))
 
 ;;; SPACING PANE
 
@@ -1806,14 +1806,14 @@ order to produce a double-click")
 
       ;; It's not a bug, it's a feature. This requires further thought. -Hefner
       (move-sheet child
-                  (round (- (if (> (+ horizontal-scroll viewport-width)
-                                   child-width)
-                                (- child-width viewport-width)
-                                horizontal-scroll)))
-                  (round (- (if (> (+ vertical-scroll viewport-height)
-                                   child-height)
-                                (- child-height viewport-height)
-                                vertical-scroll))))
+		  (- (if (> (+ horizontal-scroll viewport-width)
+			    child-width)
+			 (- child-width viewport-width)
+			 horizontal-scroll))
+                  (- (if (> (+ vertical-scroll viewport-height)
+			    child-height)
+			 (- child-height viewport-height)
+			 vertical-scroll)))
       (scroller-pane/update-scroll-bars (sheet-parent pane)))))
 
 ;;; SCROLLER PANE
@@ -2018,10 +2018,10 @@ order to produce a double-click")
     (let ((scrollee (first (sheet-children viewport))))
       (when (pane-viewport scrollee)
 	(move-sheet scrollee
-		    (round (if hscrollbar
-			       (- (gadget-value hscrollbar))
-			       0))
-		    (round (- new-value)))))))
+		    (if hscrollbar
+			(- (gadget-value hscrollbar))
+			0)
+		    (- new-value))))))
 
 (defgeneric scroller-pane/horizontal-drag-callback (pane new-value))
 
@@ -2031,10 +2031,10 @@ order to produce a double-click")
     (let ((scrollee (first (sheet-children viewport))))
       (when (pane-viewport scrollee)
 	(move-sheet scrollee
-		    (round (- new-value))
-		    (round (if vscrollbar
-			       (- (gadget-value vscrollbar))
-			       0)))))))
+		    (- new-value)
+		    (if vscrollbar
+			(- (gadget-value vscrollbar))
+			0))))))
     
 (defgeneric scroller-pane/update-scroll-bars (pane))
 
@@ -2199,7 +2199,7 @@ order to produce a double-click")
 
 (defmethod scroll-extent ((pane basic-pane) x y)
   (when (pane-viewport pane)
-    (move-sheet pane (round (- x)) (round (- y)))
+    (move-sheet pane (- x) (- y))
     (when (pane-scroller pane)
       (scroller-pane/update-scroll-bars (pane-scroller pane)))))
 
