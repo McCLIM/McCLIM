@@ -66,7 +66,7 @@
 
 (defmacro with-output-to-rgb-pattern ((stream-var &rest options)
 				      &body body)
-  `(make-instance 'clim-internals::rgb-pattern
+  `(make-instance 'rgb-pattern
 		  :image (with-output-to-rgb-image
 			     (,stream-var nil ,@options)
 			   ,@body)))

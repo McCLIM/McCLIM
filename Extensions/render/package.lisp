@@ -8,8 +8,6 @@
 		  #:destroy-mirror
 		  #:realize-mirror
 		  #:mirrored-pixmap
-		  #:image-width
-		  #:image-height
 		  #:port-register-mirror
 		  #:port-lookup-mirror
 		  #:port-lookup-sheet
@@ -68,6 +66,9 @@
 		  )
     (:import-from :mcclim-image
                   #:image
+                  #:image-width
+                  #:image-height
+                  #:data
                   #:rgb-pattern
                   #:rgb-image
                   #:rgb-image-design

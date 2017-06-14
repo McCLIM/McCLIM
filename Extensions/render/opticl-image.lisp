@@ -109,8 +109,8 @@
 (defmethod copy-image ((image opticl-image)
 		       (src-image opticl-image)
 		       &key (x 0) (y 0)
-			 (width (climi::image-width image))
-			 (height (climi::image-height image))
+			 (width (image-width image))
+			 (height (image-height image))
 			 (src-dx 0)
 			 (src-dy 0))
   (declare (type fixnum x y width height src-dx src-dy))
@@ -125,7 +125,7 @@
 (defmethod fill-image ((image opticl-image) (rgba-design uniform-rgba-design) (mask (eql nil))
 		       &key
 			 (x 0) (y 0)
-			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy)
 	   (ignore mask-dx mask-dy))
@@ -145,7 +145,7 @@
 (defmethod fill-image ((image opticl-image) rgba-design (mask (eql nil))
 		       &key
 			 (x 0) (y 0)
-			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy)
 	   (ignore mask-dx mask-dy))
@@ -163,7 +163,7 @@
 (defmethod fill-image ((image opticl-image) (rgba-design uniform-rgba-design) (mask mask-image)
 		       &key
 			 (x 0) (y 0)
-			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy))
   (let ((data-image (image-data image))
@@ -184,7 +184,7 @@
 (defmethod fill-image ((image opticl-image) rgba-design (mask mask-image)
 		       &key
 			 (x 0) (y 0)
-			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy))
   (let ((data-image (image-data image))

@@ -2,19 +2,19 @@
 
 ;;; RGB-IMAGE support, from Closure
 
-(defmethod climi::medium-draw-image-design*
-    ((medium clx-medium) (design climi::rgb-image-design) x y)
+(defmethod mcclim-image::medium-draw-image-design*
+    ((medium clx-medium) (design mcclim-image:rgb-image-design) x y)
   (let* ((da (sheet-xmirror (medium-sheet medium)))
-	 (image (slot-value design 'climi::image))
-	 (width (climi::image-width image))
-	 (height (climi::image-height image)))
+	 (image (slot-value design 'mcclim-image::image))
+	 (width (mcclim-image:image-width image))
+	 (height (mcclim-image:image-height image)))
     (destructuring-bind (&optional pixmap mask)
-	(slot-value design 'climi::medium-data)
+	(slot-value design 'mcclim-image::medium-data)
       (unless pixmap
 	(setf pixmap (compute-rgb-image-pixmap da image))
-	(when (climi::image-alpha-p image)
+	(when (mcclim-image:image-alpha-p image)
 	  (setf mask (compute-rgb-image-mask da image)))
-	(setf (slot-value design 'climi::medium-data) (list pixmap mask)))
+	(setf (slot-value design 'mcclim-image::medium-data) (list pixmap mask)))
       (multiple-value-bind (x y)
 	  (transform-position
 	   (sheet-device-transformation (medium-sheet medium))
@@ -35,18 +35,18 @@
 			      da x y))))))))
 
 (defmethod climi::medium-free-image-design
-    ((medium clx-medium) (design climi::rgb-image-design))
+    ((medium clx-medium) (design mcclim-image:rgb-image-design))
   (destructuring-bind (&optional pixmap mask)
-      (slot-value design 'climi::medium-data)
+      (slot-value design 'mcclim-image::medium-data)
     (when pixmap
       (xlib:free-pixmap pixmap)
       (when mask
 	(xlib:free-pixmap mask))
-      (setf (slot-value design 'climi::medium-data) nil))))
+      (setf (slot-value design 'mcclim-image::medium-data) nil))))
 
 (defun compute-rgb-image-pixmap (drawable image)
-  (let* ((width (climi::image-width image))
-         (height (climi::image-height image))
+  (let* ((width (mcclim-image:image-width image))
+         (height (mcclim-image:image-height image))
          (depth (xlib:drawable-depth drawable))
          (im (image-to-ximage-for-drawable drawable image)))
     (setf width (max width 1))
@@ -65,8 +65,8 @@
       pixmap)))
 
 (defun compute-rgb-image-mask (drawable image)
-  (let* ((width (climi::image-width image))
-         (height (climi::image-height image))
+  (let* ((width (mcclim-image:image-width image))
+         (height (mcclim-image:image-height image))
          (bitmap (xlib:create-pixmap :drawable drawable
                                      :width width
                                      :height height
@@ -74,7 +74,7 @@
          (gc (xlib:create-gcontext :drawable bitmap
 				   :foreground 1
 				   :background 0))
-         (idata (climi::image-data image))
+         (idata (mcclim-image::image-data image))
          (xdata (make-array (list height width)
 			    :element-type '(unsigned-byte 1)))
          (im (xlib:create-image :width width
@@ -99,9 +99,9 @@
 		   (pixel-translator (xlib:window-colormap drawable))))
 
 (defun image-to-ximage (image depth translator)
-  (let* ((width (climi::image-width image))
-         (height (climi::image-height image))
-         (idata (climi::image-data image))
+  (let* ((width (mcclim-image:image-width image))
+         (height (mcclim-image:image-height image))
+         (idata (mcclim-image::image-data image))
 	 ;; FIXME: this (and the :BITS-PER-PIXEL, below) is a hack on
 	 ;; top of a hack.  At some point in the past, XFree86 and/or
 	 ;; X.org decided that they would no longer support pixmaps
