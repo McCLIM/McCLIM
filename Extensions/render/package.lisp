@@ -8,8 +8,6 @@
 		  #:destroy-mirror
 		  #:realize-mirror
 		  #:mirrored-pixmap
-		  #:image-width
-		  #:image-height
 		  #:port-register-mirror
 		  #:port-lookup-mirror
 		  #:port-lookup-sheet
@@ -30,8 +28,6 @@
 		  #:opacity-value
 		  #:indexed-pattern
 		  #:pattern-designs
-		  #:rgb-pattern
-		  #:image-data
 		  #:rectangular-tile
 		  #:rectangular-tile-design
 		  #:rectangular-tile-width
@@ -39,7 +35,7 @@
 		  #:transformed-design
 		  #:transformed-design-design
 		  #:transformed-design-transformation
-		  #:medium-draw-image-design*
+
 		  )
     (:import-from :clim-backend
 		  #:port-set-mirror-region
@@ -68,6 +64,16 @@
 		  #:truetype-font-descent
 		  #:zpb-ttf-font-units->pixels
 		  )
+    (:import-from :mcclim-image
+                  #:image
+                  #:image-width
+                  #:image-height
+                  #:data
+                  #:rgb-pattern
+                  #:rgb-image
+                  #:rgb-image-design
+                  #:image-data
+                  #:medium-draw-image-design*)
     (:export
      ))
 

@@ -1,6 +1,6 @@
 
 (defsystem #:mcclim-render
-    :depends-on (#:clim-basic #:mcclim-fonts/truetype #:opticl)
+    :depends-on (#:clim-basic #:mcclim-fonts/truetype #:opticl #:mcclim-image)
     :serial t
     :components
     ((:file "package")
