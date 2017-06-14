@@ -30,8 +30,6 @@
 		  #:opacity-value
 		  #:indexed-pattern
 		  #:pattern-designs
-		  #:rgb-pattern
-		  #:image-data
 		  #:rectangular-tile
 		  #:rectangular-tile-design
 		  #:rectangular-tile-width
@@ -39,7 +37,7 @@
 		  #:transformed-design
 		  #:transformed-design-design
 		  #:transformed-design-transformation
-		  #:medium-draw-image-design*
+
 		  )
     (:import-from :clim-backend
 		  #:port-set-mirror-region
@@ -68,6 +66,13 @@
 		  #:truetype-font-descent
 		  #:zpb-ttf-font-units->pixels
 		  )
+    (:import-from :mcclim-image
+                  #:image
+                  #:rgb-pattern
+                  #:rgb-image
+                  #:rgb-image-design
+                  #:image-data
+                  #:medium-draw-image-design*)
     (:export
      ))
 

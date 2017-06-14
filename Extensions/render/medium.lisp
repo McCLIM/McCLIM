@@ -356,7 +356,7 @@
         (medium-force-output to-drawable)))))
 
 (defmethod medium-draw-image-design* ((medium render-medium-mixin)
-				      (design climi::rgb-image-design) to-x to-y)
+				      (design rgb-image-design) to-x to-y)
   (let* ((image (slot-value design 'climi::image))
 	 (width (climi::image-width image))
 	 (height (climi::image-height image))

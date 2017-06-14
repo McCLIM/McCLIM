@@ -51,7 +51,7 @@
     (let ((data (make-array (list height width)
 			    :element-type '(unsigned-byte 32)
 			    :initial-element #x00FFFFFF)))
-      (let ((rgb-image (make-instance 'climi::rgb-image
+      (let ((rgb-image (make-instance 'rgb-image
 				      :width width
 				      :height height
 				      :alphap t
@@ -66,7 +66,7 @@
 						 (dpb (- 255 alpha) (byte 8 24) 0)))))))
 	rgb-image))))
 
-(defmethod coerce-to-opticl-image ((image climi::rgb-image))
+(defmethod coerce-to-opticl-image ((image rgb-image))
   (let ((width (image-width image))
 	(height (image-height image)))
     (let ((optimg (opticl:make-8-bit-rgba-image height width :initial-element 255))
