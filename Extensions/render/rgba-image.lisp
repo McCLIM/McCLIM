@@ -56,7 +56,7 @@
 	(height (image-height image))
 	(pixels (image-data image)))
     (declare (type rgba-image-data pixels))
-    (let ((rgbimage (make-instance 'climi::rgb-image
+    (let ((rgbimage (make-instance 'rgb-image
 				    :width width
 				    :height height
 				    :alphap t
@@ -88,8 +88,8 @@
 (defmethod copy-image ((image rgba-image)
 		       (src-image rgba-image)
 		       &key (x 0) (y 0)
-			 (width (climi::image-width image))
-			 (height (climi::image-height image))
+			 (width (image-width image))
+			 (height (image-height image))
 			 (src-dx 0)
 			 (src-dy 0))
   (declare (type fixnum x y width height src-dx src-dy))
@@ -104,7 +104,7 @@
 (defmethod fill-image ((image rgba-image) (rgba-design uniform-rgba-design) (mask (eql nil))
 		       &key
 			 (x 0) (y 0)
-			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy)
 	   (ignore mask-dx mask-dy))
@@ -124,7 +124,7 @@
 (defmethod fill-image ((image rgba-image) rgba-design (mask (eql nil))
 		       &key
 			 (x 0) (y 0)
-			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy)
 	   (ignore mask-dx mask-dy))
@@ -142,7 +142,7 @@
 (defmethod fill-image ((image rgba-image) (rgba-design uniform-rgba-design) (mask mask-image)
 		       &key
 			 (x 0) (y 0)
-			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy))
   (let ((data-image (image-data image))
@@ -163,7 +163,7 @@
 (defmethod fill-image ((image rgba-image) rgba-design (mask mask-image)
 		       &key
 			 (x 0) (y 0)
-			 (width (climi::image-width image)) (height (climi::image-height image))
+			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
   (declare (type fixnum x y width height mask-dx mask-dy))
   (let ((data-image (image-data image))

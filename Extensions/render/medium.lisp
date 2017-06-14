@@ -222,7 +222,7 @@
 		 (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 		   (region-intersection
 		    (climi::medium-device-region medium)
-		    (make-rectangle* x1 y1 (+ -1 x1 (climi::image-width opacity-image)) (+ -1 y1 (climi::image-height opacity-image))))
+		    (make-rectangle* x1 y1 (+ -1 x1 (image-width opacity-image)) (+ -1 y1 (image-height opacity-image))))
 		   (%medium-fill-image-mask
 		    medium
 		    opacity-image
@@ -356,10 +356,10 @@
         (medium-force-output to-drawable)))))
 
 (defmethod medium-draw-image-design* ((medium render-medium-mixin)
-				      (design climi::rgb-image-design) to-x to-y)
-  (let* ((image (slot-value design 'climi::image))
-	 (width (climi::image-width image))
-	 (height (climi::image-height image))
+				      (design rgb-image-design) to-x to-y)
+  (let* ((image (slot-value design 'image))
+	 (width (image-width image))
+	 (height (image-height image))
 	 (to-sheet (medium-sheet medium)))
     (with-drawing-options (medium :ink (climi::transform-region
 					(make-translation-transformation

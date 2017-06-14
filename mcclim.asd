@@ -74,6 +74,7 @@ interface management system."
                #:conditional-commands
                #:mcclim-layouts/tab
                #:mcclim-bezier
+               #:mcclim-image
                #:clim-pdf))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))

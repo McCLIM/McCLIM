@@ -5,7 +5,6 @@
   ((:file "text-formatting")
    (:file "defresource")
    (:file "presentations")
-   (:file "xpm")
    (:file "bordered-output" :depends-on ("presentations"))
    (:file "table-formatting" :depends-on ("presentations"))
    (:file "input-editing" :depends-on ("presentations" "bordered-output" "table-formatting"))

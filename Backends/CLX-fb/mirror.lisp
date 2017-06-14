@@ -15,14 +15,14 @@
 (defmethod mcclim-render::%create-mirror-image :after ((sheet clx-fb-mirror) w h)
   (with-slots (mcclim-render::dirty-region) sheet
     (setf mcclim-render::dirty-region nil))
-  (let ((data (climi::image-data (image-mirror-image sheet))))
+  (let ((data (image-data (image-mirror-image sheet))))
     (with-slots (width height clx-image xlib-image) sheet
       (setf width w
 	    height h)
       (setf xlib-image (mcclim-render::make-xlib-image width height))
       (setf clx-image
 	    (xlib:create-image :bits-per-pixel 32
-			       :data (mcclim-render::image-data xlib-image)
+			       :data (image-data xlib-image)
 			       :depth 24
 			       :width width
 			       :height height

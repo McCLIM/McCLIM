@@ -3,6 +3,7 @@
   :depends-on (#:mcclim-clx/basic
 	       #:mcclim-clx/input
 	       #:mcclim-clx/output
+               #:mcclim-image/clx
 	       #:mcclim-clx/text-selection)
   :components
   ((:file "port" :depends-on ())
@@ -32,8 +33,7 @@
 (defsystem #:mcclim-clx/output
   :depends-on (#:mcclim-clx/basic)
   :components
-  ((:file "image" :depends-on ())
-   (:file "fonts" :depends-on ())
+  ((:file "fonts" :depends-on ())
    (:file "medium" :depends-on ("fonts"))))
 
 (defsystem #:mcclim-clx/text-selection
