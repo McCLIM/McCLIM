@@ -357,7 +357,7 @@ maximum size according to `frame')."
               (if (null y-position)
                (when (> top max-top)
                  (setf top max-top)))
-              (move-sheet top-level-pane
+              (%move-pane top-level-pane
                           (max left 0) (max top 0)))))))))
 
 (defmethod adjust-menu-size-and-position (menu &key &allow-other-keys)
