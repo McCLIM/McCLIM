@@ -362,7 +362,7 @@ NIL."
       (do-displayed-line-strokes (stroke line)
         (when (and (<= (stroke-start-offset stroke) offset
                        (end-offset (stroke-end-offset stroke))))
-          (return stroke))))))
+          (return-from find-stroke-containing-offset stroke))))))
 
 (defun index-of-displayed-line-containing-offset (view offset)
   "Return the index of the `displayed-line' object containing
