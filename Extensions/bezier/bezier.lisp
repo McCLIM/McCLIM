@@ -949,16 +949,39 @@ second curve point, yielding (200 50)."
 (defmethod medium-draw-bezier-design*
     ((medium clim-pdf::pdf-medium) (design bezier-curve))
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
-    (%pdf-draw-bezier-curve (transform-region tr design))
-    (pdf:stroke)))
+    (cl-pdf:with-saved-state
+      (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
+      (%pdf-draw-bezier-curve (transform-region tr design))
+      (pdf:stroke))))
 
 (defmethod medium-draw-bezier-design*
     ((medium clim-pdf::pdf-medium) (design bezier-area))
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
-    (%pdf-draw-bezier-curve (transform-region tr design))
-    (pdf:close-fill-and-stroke)))
+    (cl-pdf:with-saved-state
+      (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
+      (%pdf-draw-bezier-curve (transform-region tr design))
+      (pdf:close-fill-and-stroke))))
+
+(defmethod medium-draw-bezier-design*
+    ((medium clim-pdf::pdf-medium) (design bezier-union))
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (cl-pdf:with-saved-state
+      (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
+      (dolist (area (areas design))
+        (%pdf-draw-bezier-curve (transform-region tr area))
+        (pdf:close-fill-and-stroke)))))
+
+(defmethod medium-draw-bezier-design*
+    ((medium clim-pdf::pdf-medium) (design bezier-difference))
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (declare (ignore tr))
+    (cl-pdf:with-saved-state
+      (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
+      (dolist (area (negative-areas design))
+        (%pdf-draw-bezier-curve area)
+        (cl-pdf:clip-path))
+      (dolist (area (positive-areas design))
+        (%pdf-draw-bezier-curve area)))))
 
 ;;; Postscript backend
 
