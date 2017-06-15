@@ -34,7 +34,7 @@
 	      (xlib:copy-area pixmap gcontext 0 0 width height
 			      da x y))))))))
 
-(defmethod climi::medium-free-image-design
+(defmethod mcclim-image:medium-free-image-design
     ((medium clx-medium) (design mcclim-image:rgb-image-design))
   (destructuring-bind (&optional pixmap mask)
       (slot-value design 'mcclim-image::medium-data)
