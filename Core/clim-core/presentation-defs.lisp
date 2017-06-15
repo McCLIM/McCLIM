@@ -1286,11 +1286,12 @@ protocol retrieving gestures from a provided string."))
       (princ object stream)))
 
 (define-presentation-method accept ((type symbol) stream (view textual-view)
-                                    &key)
+                                                  &key (default-type type)
+                                                  default)
   (let ((read-result (accept-using-read stream type)))
-    (if (and (null read-result) default)
-	(values default type)
-	(values read-result type))))
+    (if (and (null read-result) default) 
+        (values default type)
+        (values read-result type))))
 
 (define-presentation-type keyword () :inherit-from 'symbol)
 
@@ -1385,13 +1386,14 @@ protocol retrieving gestures from a provided string."))
         (*print-radix* radix))
     (princ object stream)))
 
-(define-presentation-method accept ((type real) stream (view textual-view)
-                                    &key)
+(define-presentation-method accept ((type real) stream (view textual-view) &key 
+                                                (default-type type)
+                                                default)
   (let ((*read-base* base)
-	(read-result (accept-using-read stream type)))
-    (if (and (null read-result) default)
-	(values default type)
-	(values read-result type))))
+         (read-result (accept-using-read stream type)))
+    (if (and (null read-result) default) 
+        (values default type)
+        (values read-result type))))
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of
