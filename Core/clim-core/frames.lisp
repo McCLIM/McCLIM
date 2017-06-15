@@ -293,7 +293,7 @@ documentation produced by presentations.")
     (let ((tpl-sheet (frame-top-level-sheet frame)))
       (unless (and (= width (bounding-rectangle-width tpl-sheet))
                    (= height (bounding-rectangle-height tpl-sheet)))
-        (resize-sheet (frame-top-level-sheet frame) width height)))
+        (%resize-pane (frame-top-level-sheet frame) width height)))
     (allocate-space pane width height)))
 
 (defun find-pane-of-type (parent type)
