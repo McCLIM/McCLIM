@@ -1287,8 +1287,8 @@ protocol retrieving gestures from a provided string."))
 
 (define-presentation-method accept ((type symbol) stream (view textual-view)
                                     &key)
-  (let* ((read-result (accept-using-read stream type)))
-    (if (and (null read-request) default)
+  (let ((read-result (accept-using-read stream type)))
+    (if (and (null read-result) default)
 	(values default type)
 	(values read-result type))))
 
