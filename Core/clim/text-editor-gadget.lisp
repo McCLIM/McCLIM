@@ -142,7 +142,7 @@
                                 width))
                      (height (if nlines
                                  (+ (* nlines line-height))
-                                 height)))
+                                 line-height)))
                  (list
                   :width width :max-width width :min-width width
                   :height height :max-height height :min-height height)))))))
