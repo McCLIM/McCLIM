@@ -224,18 +224,22 @@
     (let ((x0 (point-x (first points)))
           (y0 (point-y (first points))))
       (with-transformed-position (tr x0 y0)
-        (cl-pdf:move-to x0 y0)
+        (pdf:move-to x0 y0)
         (loop for point in (rest points)
            do
              (let ((x1 (point-x point))
                    (y1 (point-y point)))
                (with-transformed-position (tr x1 y1)
-                 (cl-pdf:line-to x1 y1))))))
-    (cl-pdf::end-path-no-op)))
+                 (cl-pdf:line-to x1 y1))))
+        (pdf:clip-path)
+        (pdf:end-path-no-op)))))
 
 (defmethod pdf-add-path (medium (ellipse ellipse))
   #+(or)
-  (put-ellipse medium ellipse t))
+  (progn
+    (put-ellipse medium ellipse t)
+    (pdf:clip-path)
+    (pdf:end-path-no-op)))
 
 (defmethod pdf-add-path (medium (rs climi::standard-rectangle-set))
   (map-over-region-set-regions
@@ -332,27 +336,23 @@
     (pdf:set-rgb-stroke r g b)))
 
 ;;; Clipping region
-(defgeneric pdf-set-clipping-region (region))
+(defgeneric pdf-set-clipping-region (medium region))
 
-(defmethod pdf-set-clipping-region (region)
+(defmethod pdf-set-clipping-region (medium region)
   ;; this is not yet implemented!
-  #+(or)
   (progn
-    (pdf-add-path region)
-    (pdf:clip-path)))
+    #+nil (print region)
+    (pdf-add-path medium region)
+    ))
 
-(defmethod pdf-set-clipping-region ((region (eql +everywhere+))))
+(defmethod pdf-set-clipping-region (medium (region (eql +everywhere+))))
 
-(defmethod pdf-set-clipping-region ((region (eql +nowhere+)))
+(defmethod pdf-set-clipping-region (medium (region (eql +nowhere+)))
   (pdf:basic-rect 0 0 0 0)
   (pdf:clip-path))
 
 (defmethod pdf-set-graphics-state (medium (kind (eql :clipping-region)))
-  ;; FIXME: There is no way to enlarge clipping path. Current code
-  ;; does only one level of saving graphics state, so we can restore
-  ;; and save again GS to obtain an initial CP. It is ugly, but I see
-  ;; no other way now. -- APD, 2002-02-11
-  (pdf-set-clipping-region (medium-clipping-region medium)))
+  (pdf-set-clipping-region medium (medium-clipping-region medium)))
 
 (defun %font-name-pdf-name (font-name)
   (etypecase font-name
