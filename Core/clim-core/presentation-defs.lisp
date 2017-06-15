@@ -1168,15 +1168,17 @@ protocol retrieving gestures from a provided string."))
 
 (defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil))
   (let* ((token (read-token stream)))
-    (let ((result (handler-case (read-from-string token)
-                    (error (c)
-                      (declare (ignore c))
-                      (simple-parse-error "Error parsing ~S for presentation type ~S"
-                                          token
-                                          ptype)))))
-      (if (presentation-typep result ptype)
-          (values result ptype)
-          (input-not-of-required-type result ptype)))))
+    (if (string= "" token)
+	(values nil ptype)
+	(let ((result (handler-case (read-from-string token)
+			   (error (c)
+			     (declare (ignore c))
+			     (simple-parse-error "Error parsing ~S for presentation type ~S"
+						 token
+						 ptype)))))
+	     (if (presentation-typep result ptype)
+		 (values result ptype)
+		 (input-not-of-required-type result ptype))))))
 
 (defun accept-using-completion (type stream func
                                 &rest complete-with-input-key-args)
@@ -1285,7 +1287,10 @@ protocol retrieving gestures from a provided string."))
 
 (define-presentation-method accept ((type symbol) stream (view textual-view)
                                     &key)
-  (accept-using-read stream type))
+  (let* ((read-result (accept-using-read stream type)))
+    (if (and (null read-request) default)
+	(values default type)
+	(values read-result type))))
 
 (define-presentation-type keyword () :inherit-from 'symbol)
 
@@ -1382,8 +1387,11 @@ protocol retrieving gestures from a provided string."))
 
 (define-presentation-method accept ((type real) stream (view textual-view)
                                     &key)
-  (let ((*read-base* base))
-    (accept-using-read stream type)))
+  (let ((*read-base* base)
+	(read-result (accept-using-read stream type)))
+    (if (and (null read-result) default)
+	(values default type)
+	(values read-result type))))
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of
