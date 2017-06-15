@@ -26,7 +26,7 @@
 ;;;
 
 (defgeneric coerce-to-clim-rgb-image (image)
-  (:method ((image climi::rgb-image))
+  (:method ((image rgb-image))
     image))
 
 (defgeneric coerce-to-opticl-image (image))

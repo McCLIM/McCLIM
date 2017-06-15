@@ -143,7 +143,7 @@ Secondly, an rgba design is converted into a function.
 			    (1- (clim:pattern-height ink))))))
 
 (defmethod make-rgba-design ((ink rgb-pattern))
-  (let* ((img (slot-value ink 'climi::image))
+  (let* ((img (slot-value ink 'image))
 	 (data (image-data img)))
     (declare (type clim-rgb-image-data data))
     (make-functional-rgba-design

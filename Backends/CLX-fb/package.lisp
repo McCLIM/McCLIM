@@ -62,6 +62,9 @@
 		  #:image-sheet-mixin
 		  #:image-pixmap-mixin
 		  )
+   (:import-from :mcclim-image
+                 #:image-data
+                 )
    (:import-from :clim-clx
 		 #:CLX-PORT-DISPLAY
 		 #:clx-medium
