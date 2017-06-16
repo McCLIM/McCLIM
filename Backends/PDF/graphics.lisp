@@ -349,7 +349,8 @@
 
 (defmethod pdf-set-clipping-region (medium (region (eql +nowhere+)))
   (pdf:basic-rect 0 0 0 0)
-  (pdf:clip-path))
+  (pdf:clip-path)
+  (pdf:end-path-no-op))
 
 (defmethod pdf-set-graphics-state (medium (kind (eql :clipping-region)))
   (pdf-set-clipping-region medium (medium-clipping-region medium)))
