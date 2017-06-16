@@ -35,13 +35,22 @@
       (rotatef width height))
     (make-rectangle* 0 0 width height)))
 
+(defparameter *pdf-top-margin* 1)
+(defparameter *pdf-left-margin* 1)
+(defparameter *pdf-bottom-margin* 1)
+(defparameter *pdf-right-margin* 1)
+
 (defun make-pdf-transformation (paper-size-name orientation)
   (multiple-value-bind (width height) (paper-size paper-size-name)
     (case orientation
       (:portrait
        (make-3-point-transformation*
-        0 0  0 height  width 0
-        0 height  0 0  width height))
+        0 0
+         0 (- height *pdf-top-margin* *pdf-bottom-margin*)
+          (- width *pdf-left-margin* *pdf-right-margin*) 0
+        *pdf-left-margin* (- height *pdf-top-margin*)
+         *pdf-left-margin* *pdf-bottom-margin*
+          (- width *pdf-right-margin*) (- height *pdf-top-margin*)))
       (:landscape
        (make-3-point-transformation*
         0 0  0 width  height 0
