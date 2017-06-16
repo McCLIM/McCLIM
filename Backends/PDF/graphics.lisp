@@ -31,81 +31,109 @@
 
 (defmethod medium-draw-line* ((medium pdf-medium) x1 y1 x2 y2)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (pdf-actualize-graphics-state medium :line-style :color)
-    (with-transformed-position (tr x1 y1)
-      (with-transformed-position (tr x2 y2)
-        (put-line* x1 y1 x2 y2)))))
+    (pdf:with-saved-state
+      (pdf-actualize-graphics-state medium :line-style :color)
+      (with-transformed-position (tr x1 y1)
+        (with-transformed-position (tr x2 y2)
+          (put-line* x1 y1 x2 y2))))))
 
 (defmethod medium-draw-lines* ((medium pdf-medium) coord-seq)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (pdf-actualize-graphics-state medium :line-style :color)
-    (map-repeated-sequence 'nil 4
-                           (lambda (x1 y1 x2 y2)
-                             (with-transformed-position (tr x1 y1)
-                               (with-transformed-position (tr x2 y2)
-                                 (put-line* x1 y1 x2 y2))))
-                           coord-seq)))
+    (pdf:with-saved-state
+      (pdf-actualize-graphics-state medium :line-style :color)
+      (map-repeated-sequence 'nil 4
+                             (lambda (x1 y1 x2 y2)
+                               (with-transformed-position (tr x1 y1)
+                                 (with-transformed-position (tr x2 y2)
+                                   (put-line* x1 y1 x2 y2))))
+                             coord-seq))))
 
 
 (defmethod medium-draw-point* ((medium pdf-medium) x y)
   (let ((tr (sheet-native-transformation (medium-sheet medium)))
         (radius (/ (medium-line-thickness medium) 2)))
-    (pdf-actualize-graphics-state medium :line-style :color)
-    (with-transformed-position (tr x y)
-      (put-circle* x y radius))))
+    (pdf:with-saved-state
+      (pdf-actualize-graphics-state medium :line-style :color)
+      (with-transformed-position (tr x y)
+        (put-circle* x y radius)))))
 
 (defmethod medium-draw-points* ((medium pdf-medium) coord-seq)
   (let ((tr (sheet-native-transformation (medium-sheet medium)))
         (radius (/ (medium-line-thickness medium) 2)))
-    (pdf-actualize-graphics-state medium :line-style :color)
-    (map-repeated-sequence 'nil 2
-                           (lambda (x y)
-                             (with-transformed-position (tr x y)
-                               (put-circle* x y radius)))
-                           coord-seq)))
+    (pdf:with-saved-state
+      (pdf-actualize-graphics-state medium :line-style :color)
+      (map-repeated-sequence 'nil 2
+                             (lambda (x y)
+                               (with-transformed-position (tr x y)
+                                 (put-circle* x y radius)))
+                             coord-seq))))
 
 (defmethod medium-draw-polygon* ((medium pdf-medium) coord-seq closed filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (pdf-actualize-graphics-state medium :line-style :color)
-    (pdf:polyline
-     (map-repeated-sequence 'list 2
-                            (lambda (x y)
-                              (with-transformed-position (tr x y)
-                                (list x y)))
-                            coord-seq))
-    (cond
-      ((and closed filled)
-       (pdf:close-fill-and-stroke))
-      (closed
-       (pdf:close-and-stroke))
-      (filled
-       (pdf:fill-and-stroke))
-      (t
-       (pdf:stroke)))))
+    (pdf:with-saved-state
+      (pdf-actualize-graphics-state medium :line-style :color)
+      (pdf:polyline
+       (map-repeated-sequence 'list 2
+                              (lambda (x y)
+                                (with-transformed-position (tr x y)
+                                  (list x y)))
+                              coord-seq))
+      (cond
+        ((and closed filled)
+         (pdf:close-fill-and-stroke))
+        (closed
+         (pdf:close-and-stroke))
+        (filled
+         (pdf:fill-and-stroke))
+        (t
+         (pdf:stroke))))))
 
 (defmethod medium-draw-rectangle* ((medium pdf-medium) x1 y1 x2 y2 filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (pdf-actualize-graphics-state medium :line-style :color)
-    (with-transformed-position (tr x1 y1)
-      (with-transformed-position (tr x2 y2)
-        (pdf:rectangle x1 y1 (- x2 x1) (- y2 y1))
-        (if filled
-            (pdf:fill-path)
-            (pdf:stroke))))))
+    (pdf:with-saved-state
+      (pdf-actualize-graphics-state medium :line-style :color)
+      (with-transformed-position (tr x1 y1)
+        (with-transformed-position (tr x2 y2)
+          (pdf:rectangle x1 y1 (- x2 x1) (- y2 y1))
+          (if filled
+              (pdf:fill-path)
+              (pdf:stroke)))))))
 
 
 (defmethod medium-draw-rectangles* ((medium pdf-medium) position-seq filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (pdf-actualize-graphics-state medium :line-style :color)
-    (map-repeated-sequence 'nil 4
-                           (lambda (x1 y1 x2 y2)
-                             (with-transformed-position (tr x1 y1)
-                               (with-transformed-position (tr x2 y2)
-                                 (pdf:rectangle x1 y1 (- x2 x1) (- y2 y1))
-                                 (if filled
-                                     (pdf:fill-path)
-                                     (pdf:stroke)))))
-                           position-seq)))
+    (pdf:with-saved-state
+      (pdf-actualize-graphics-state medium :line-style :color)
+      (map-repeated-sequence 'nil 4
+                             (lambda (x1 y1 x2 y2)
+                               (with-transformed-position (tr x1 y1)
+                                 (with-transformed-position (tr x2 y2)
+                                   (pdf:rectangle x1 y1 (- x2 x1) (- y2 y1))
+                                   (if filled
+                                       (pdf:fill-path)
+                                       (pdf:stroke)))))
+                             position-seq))))
+
+(defun put-ellipse (center-x center-y
+                    radius1-dx radius1-dy radius2-dx radius2-dy
+                    start-angle end-angle filled)
+  (declare (ignore start-angle end-angle filled))
+  (let* ((kappa (* 4 (/ (- (sqrt 2) 1) 3.0)))
+         (radius-dx (abs (+ radius1-dx radius2-dx)))
+         (radius-dy (abs (+ radius1-dy radius2-dy))))
+    (pdf:move-to (+ center-x radius-dx) center-y)
+    (pdf:bezier-to (+ center-x radius-dx) (+ center-y (* kappa radius-dy))
+                   (+ center-x (* kappa radius-dx)) (+ center-y radius-dy)
+                   center-x (+ center-y radius-dy))
+    (pdf:bezier-to (- center-x (* kappa radius-dx)) (+ center-y radius-dy)
+                   (- center-x radius-dx) (+ center-y (* kappa radius-dy))
+                   (- center-x radius-dx) center-y)
+    (pdf:bezier-to (- center-x radius-dx) (- center-y (* kappa radius-dy))
+                   (- center-x (* kappa radius-dx)) (- center-y radius-dy)
+                   center-x (- center-y radius-dy))
+    (pdf:bezier-to (+ center-x (* kappa radius-dx)) (- center-y radius-dy)
+                   (+ center-x radius-dx) (- center-y (* kappa radius-dy))
+                   (+ center-x radius-dx) center-y)))
 
 (defmethod medium-draw-ellipse* ((medium pdf-medium) center-x center-y
                                  radius1-dx radius1-dy radius2-dx radius2-dy
@@ -113,28 +141,16 @@
   (unless (or (= radius2-dx radius1-dy 0) (= radius1-dx radius2-dy 0))
     (error "PDF Backend MEDIUM-DRAW-ELLIPSE* not yet implemented for
     non axis-aligned ellipses."))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (pdf-actualize-graphics-state medium :line-style :color)
-    (with-transformed-position (tr center-x center-y)
-      (let* ((kappa (* 4 (/ (- (sqrt 2) 1) 3.0)))
-             (radius-dx (abs (+ radius1-dx radius2-dx)))
-             (radius-dy (abs (+ radius1-dy radius2-dy))))
-        (pdf:move-to (+ center-x radius-dx) center-y)
-        (pdf:bezier-to (+ center-x radius-dx) (+ center-y (* kappa radius-dy))
-                       (+ center-x (* kappa radius-dx)) (+ center-y radius-dy)
-                       center-x (+ center-y radius-dy))
-        (pdf:bezier-to (- center-x (* kappa radius-dx)) (+ center-y radius-dy)
-                       (- center-x radius-dx) (+ center-y (* kappa radius-dy))
-                       (- center-x radius-dx) center-y)
-        (pdf:bezier-to (- center-x radius-dx) (- center-y (* kappa radius-dy))
-                       (- center-x (* kappa radius-dx)) (- center-y radius-dy)
-                       center-x (- center-y radius-dy))
-        (pdf:bezier-to (+ center-x (* kappa radius-dx)) (- center-y radius-dy)
-                       (+ center-x radius-dx) (- center-y (* kappa radius-dy))
-                       (+ center-x radius-dx) center-y)))
-    (if filled
-        (pdf:close-fill-and-stroke)
-        (pdf:stroke))))
+  (pdf:with-saved-state
+    (let ((tr (sheet-native-transformation (medium-sheet medium))))
+      (pdf-actualize-graphics-state medium :line-style :color)
+      (with-transformed-position (tr center-x center-y)
+        (put-ellipse center-x center-y
+                     radius1-dx radius1-dy radius2-dx radius2-dy
+                     start-angle end-angle filled))
+      (if filled
+          (pdf:close-fill-and-stroke)
+          (pdf:stroke)))))
 
 (defmethod text-size ((medium pdf-medium) string
                       &key text-style (start 0) end)
@@ -156,29 +172,79 @@
                               align-x align-y
                               
                               toward-x toward-y transform-glyphs)
-  (pdf:in-text-mode
-    (pdf-actualize-graphics-state medium :text-style :color)
-    (let ((tr (sheet-native-transformation (medium-sheet medium))))
-      (multiple-value-bind (total-width total-height
-                                        final-x final-y baseline)
-          (let* ((font-name (medium-font medium))
-                 (font (clim-postscript-font:font-name-metrics-key font-name))
-                 (size (clim-postscript-font:font-name-size font-name)))
-            (clim-postscript-font:text-size-in-font font size string 0 nil))
-        (declare (ignore final-x final-y))
-        (let  ((x (ecase align-x
-                    (:left x)
-                    (:center (- x (/ total-width 2)))
-                    (:right (- x total-width))))
-               (y (ecase align-y
-                    (:baseline y)
-                    (:top (+ y baseline))
-                    (:center (- y (- (/ total-height 2)
-                                     baseline)))
-                    (:bottom (- y (- total-height baseline))))))
-          (with-transformed-position (tr x y)
-            (pdf:move-text x y)
-            (pdf:draw-text string)))))))
+  (pdf:with-saved-state
+    (pdf:in-text-mode
+      (pdf-actualize-graphics-state medium :text-style :color)
+      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+        (multiple-value-bind (total-width total-height
+                                          final-x final-y baseline)
+            (let* ((font-name (medium-font medium))
+                   (font (clim-postscript-font:font-name-metrics-key font-name))
+                   (size (clim-postscript-font:font-name-size font-name)))
+              (clim-postscript-font:text-size-in-font font size string 0 nil))
+          (declare (ignore final-x final-y))
+          (let  ((x (ecase align-x
+                      (:left x)
+                      (:center (- x (/ total-width 2)))
+                      (:right (- x total-width))))
+                 (y (ecase align-y
+                      (:baseline y)
+                      (:top (+ y baseline))
+                      (:center (- y (- (/ total-height 2)
+                                       baseline)))
+                      (:bottom (- y (- total-height baseline))))))
+            (with-transformed-position (tr x y)
+              (pdf:move-text x y)
+              (pdf:draw-text string))))))))
+
+
+;;; Postscript path functions
+
+(defgeneric pdf-add-path (medium region)
+  (:documentation
+   "Adds REGION (if it is a path) or its boundary (if it is an area)
+   to the current path of MEDIUM."))
+
+(defmethod pdf-add-path (medium (region (eql +nowhere+)))
+  (declare (ignore medium)))
+
+(defmethod pdf-add-path (medium (region standard-region-union))
+  (map-over-region-set-regions (lambda (region)
+                                 (pdf-add-path medium region))
+                               region))
+
+(defmethod pdf-add-path (medium (region standard-region-intersection))
+  (loop for subregion in (region-set-regions region)
+     do (pdf-add-path medium subregion)))
+
+;;; Primitive paths
+(defmethod pdf-add-path (medium (polygon polygon))
+  (let ((points (polygon-points polygon))
+        (tr (sheet-native-transformation (medium-sheet medium))))
+    (let ((x0 (point-x (first points)))
+          (y0 (point-y (first points))))
+      (with-transformed-position (tr x0 y0)
+        (pdf:move-to x0 y0)
+        (loop for point in (rest points)
+           do
+             (let ((x1 (point-x point))
+                   (y1 (point-y point)))
+               (with-transformed-position (tr x1 y1)
+                 (cl-pdf:line-to x1 y1))))
+        ))))
+
+(defmethod pdf-add-path (medium (ellipse ellipse))
+  #+(or)
+  (progn
+    (put-ellipse medium ellipse t)
+    (pdf:clip-path)
+    (pdf:end-path-no-op)))
+
+(defmethod pdf-add-path (medium (rs climi::standard-rectangle-set))
+  (map-over-region-set-regions
+   (lambda (r) (pdf-add-path medium r))
+   rs))
+
 
 ;;; Graphics state
 
@@ -269,27 +335,22 @@
     (pdf:set-rgb-stroke r g b)))
 
 ;;; Clipping region
-(defgeneric pdf-set-clipping-region (region))
+(defgeneric pdf-set-clipping-region (medium region))
 
-(defmethod pdf-set-clipping-region (region)
-  ;; this is not yet implemented!
-  #+(or)
-  (progn
-    (pdf-add-path region)
-    (pdf:clip-path)))
+(defmethod pdf-set-clipping-region (medium region)
+  (pdf-add-path medium region)
+  (pdf:clip-path)
+  (pdf:end-path-no-op))
 
-(defmethod pdf-set-clipping-region ((region (eql +everywhere+))))
+(defmethod pdf-set-clipping-region (medium (region (eql +everywhere+))))
 
-(defmethod pdf-set-clipping-region ((region (eql +nowhere+)))
+(defmethod pdf-set-clipping-region (medium (region (eql +nowhere+)))
   (pdf:basic-rect 0 0 0 0)
-  (pdf:clip-path))
+  (pdf:clip-path)
+  (pdf:end-path-no-op))
 
 (defmethod pdf-set-graphics-state (medium (kind (eql :clipping-region)))
-  ;; FIXME: There is no way to enlarge clipping path. Current code
-  ;; does only one level of saving graphics state, so we can restore
-  ;; and save again GS to obtain an initial CP. It is ugly, but I see
-  ;; no other way now. -- APD, 2002-02-11
-  (pdf-set-clipping-region (medium-clipping-region medium)))
+  (pdf-set-clipping-region medium (medium-clipping-region medium)))
 
 (defun %font-name-pdf-name (font-name)
   (etypecase font-name

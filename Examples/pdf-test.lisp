@@ -129,3 +129,83 @@
 
 (grid-test-1-pdf)
 
+(defparameter *width* 400)
+(defparameter *height* 400)
+
+(defun test-simple-clipping-region (stream draw-fn)
+  (let ((cr (make-rectangle* 50 50 (- *width* 50) (- *height* 50))))
+    (with-bounding-rectangle* (min-x min-y max-x max-y)
+	cr
+      (draw-rectangle* stream (- min-x 10) (- min-y 10) (+ max-x 10) (+ max-y 10) :line-thickness 2 :filled t :ink +green+)
+      (draw-rectangle* stream min-x min-y max-x max-y :line-thickness 3 :filled nil)
+      (with-drawing-options (stream :clipping-region cr)
+	(draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey60+)
+	(loop repeat 30
+	   do (funcall draw-fn stream))))))
+
+(defun make-random-col ()
+  (clim:make-rgb-color (/ (random 255) 255)
+                       (/ (random 255) 255)
+                       (/ (random 255) 255)))
+
+(defun line-clip-test-ps (&key (file #p"/tmp/line-clip-test.ps"))
+  (format t ";; Creating ~S.~%" file)
+  (with-open-file (file-stream file :direction :output
+                               :if-exists :supersede)
+    (clim-pdf::with-output-to-postscript-stream
+        (stream file-stream
+                :header-comments '(:title "Foo")
+                :scale-to-fit t)
+      (test-simple-clipping-region stream
+                                   #'(lambda (stream)
+				       (let ((x (random *width*))
+					     (y (random *height*)))
+				         (clim:draw-line* stream
+						          x y
+						          (+ (random 100)  x) (+ (random 100) y)
+						          :ink (make-random-col)
+						          :line-thickness (random 10)))))))
+  file)
+
+(defun line-clip-test-pdf (&key (file #p"/tmp/line-clip-test.pdf"))
+  (format t ";; Creating ~S.~%" file)
+  (with-open-file (file-stream file :direction :output
+                               :if-exists :supersede
+                               :element-type '(unsigned-byte 8))
+    (clim-pdf::with-output-to-pdf-stream
+        (stream file-stream
+                :header-comments '(:title "Foo")
+                :scale-to-fit t)
+      (test-simple-clipping-region stream
+                                   #'(lambda (stream)
+				       (let ((x (random *width*))
+					     (y (random *height*)))
+				         (clim:draw-line* stream
+						          x y
+						          (+ (random 100)  x) (+ (random 100) y)
+						          :ink (make-random-col)
+						          :line-thickness (random 10)))))))
+  file)
+
+(defun line-clip-test-1-pdf (&key (file #p"/tmp/line-clip-test-1.pdf"))
+  (format t ";; Creating ~S.~%" file)
+  (with-open-file (file-stream file :direction :output
+                               :if-exists :supersede
+                               :element-type '(unsigned-byte 8))
+    (clim-pdf::with-output-to-pdf-stream
+        (stream file-stream
+                :header-comments '(:title "Foo")
+                :scale-to-fit t)
+      (let ((cr (make-rectangle* 50 50 (- *width* 50) (- *height* 50))))
+    (with-bounding-rectangle* (min-x min-y max-x max-y)
+	cr
+      (draw-rectangle* stream (- min-x 10) (- min-y 10) (+ max-x 10) (+ max-y 10) :line-thickness 2 :filled t :ink +green+)
+      (draw-rectangle* stream min-x min-y max-x max-y :line-thickness 3 :filled nil)
+      (with-drawing-options (stream :clipping-region cr)
+        (draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey60+)
+        (clim:draw-line* stream
+                         0 0
+                         400 600
+                         :ink (make-random-col)
+                         :line-thickness (random 10)))))))
+  file)
