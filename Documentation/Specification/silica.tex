@@ -1249,7 +1249,7 @@ the values of \cl{with-sheet-medium}.
 This macro will signal a runtime error if sheet is not a subclass of
 \cl{sheet-with-medium-mixin}.
 
-The \arg{medium} argument is not evaluated, and must be a symbol that is bound
+The \arg{medium} argument is not evaluated, and must be a symbol that will be bound
 to a medium.  \arg{body} may have zero or more declarations as its first forms.
 
 \Defmacro {with-sheet-medium-bound} {(sheet medium) \body body}
@@ -1292,7 +1292,7 @@ mirrored on a display server, \cl{medium-drawable} returns \cl{nil}.
 
 Programmers can use this function to get a host window system object that can be
 manipulated using the functions of the host window system.  This might be done
-in order to explicitly trade of performance against portability.
+in order to explicitly trade performance against portability.
 
 \Defmethod {port} {(medium \cl{basic-medium})}
 
