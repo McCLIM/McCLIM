@@ -541,7 +541,7 @@ Sheets either participate fully in the input protocol or are mute for input.  If
 any functions in the input protocol are called on a sheet that is mute for
 input, the \cl{sheet-is-mute-for-input} error will be signalled.
 
-In addition to handling input event, a sheet is also responsible for providing
+In addition to handling input events, a sheet is also responsible for providing
 other input services, such as controlling the pointer's appearance, and polling
 for current pointer and keyboard state.
 
@@ -587,7 +587,7 @@ arguments that acts as a predicate; it has dynamic extent.  The predicate should
 wait until one of three conditions occurs:
 
 \begin{itemize}
-\item If an event if received and processed, the predicate should return
+\item If an event was received and processed, the predicate should return
 \term{true}.
 
 \item If a timeout occurs, the predicate should return \term{false}.
@@ -687,7 +687,7 @@ This class of sheet provides a method for \cl{dispatch-event} that calls
 \cl{handle-event} immediately.
 
 The \cl{standard-sheet-input-mixin} class will also provide a
-\cl{sheet-event-queue} method, describe above.
+\cl{sheet-event-queue} method, described above.
 
 \Defclass {immediate-sheet-input-mixin}
 
@@ -695,11 +695,11 @@ This class of sheet provides a method for \cl{dispatch-event} that calls
 \cl{handle-event} immediately for all events.
 
 The \cl{immediate-sheet-input-mixin} class will also provide a
-\cl{sheet-event-queue} method, describe above.
+\cl{sheet-event-queue} method, described above.
 
 \Defclass {sheet-mute-input-mixin}
 
-This is mixed in to any sheet class the does not handle any input events.
+This is mixed in to any sheet class that does not handle any input events.
 
 \Defclass {delegate-sheet-input-mixin}
 
@@ -725,7 +725,7 @@ An \concept{event} is a CLIM object that represents some sort of user gesture
 (such as moving the pointer or pressing a key on the keyboard) or that
 corresponds to some sort of notification from the display server.  Event objects
 store such things as the sheet associated with the event, the $x$ and $y$
-bposition of the pointer within that sheet, the key name or character
+position of the pointer within that sheet, the key name or character
 corresponding to a key on the keyboard, and so forth.
 
 Figure~\ref{event-hier} shows all the event classes.
@@ -998,7 +998,7 @@ host window to be deleted.  This is a subclass of \cl{window-manager-event}.
 
 \Defclass {timer-event}
 
-The instantiable class that corresponds to a timeout event.  This is a subclass
+The instantiable class that corresponds to a timer event.  This is a subclass
 of \cl{event}.
 
 
