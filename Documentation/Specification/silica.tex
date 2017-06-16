@@ -174,7 +174,7 @@ highest ancestor is not a graft.
 participating in the windowing relationship with its parent.  If a sheet is
 enabled and grafted, and all its ancestors are enabled (they are grafted by
 definition), then the sheet will be visible if it occupies a portion of the
-graft region that isn't clipped by its ancestors or ancestor's siblings.
+graft region that isn't clipped by its ancestors or ancestors' siblings.
 
 \item [Disabled] The opposite of enabled is \concept{disabled}.
 \end{description}
@@ -217,7 +217,7 @@ not actually a child of \arg{sheet} and \arg{errorp} is \term{true}, then the
 \Defgeneric {sheet-siblings} {sheet}
 
 Returns a list of all of the siblings of the \term{sheet} \arg{sheet}.  The
-sibling are all of the children of \arg{sheet}'s parent excluding \arg{sheet}
+sibling are all the children of \arg{sheet}'s parent excluding \arg{sheet}
 itself.
 \FreshOutputs
 
@@ -334,7 +334,7 @@ system.  Using \cl{setf} on this accessor will modify the sheet's coordinate
 system, including moving its region in its parent's coordinate system.
 
 When the sheet's transformation is changed,
-\cl{note-sheet-transformation-changed} is called on the to notify the sheet of
+\cl{note-sheet-transformation-changed} is called on the \arg{sheet} to notify the sheet of
 the change.
 
 \defgeneric {sheet-region} {sheet}
@@ -437,7 +437,7 @@ bounding rectangle delimited by the corner points $(x1,y1)$ and $(x2,y2)$
 (represented in \arg{sheet}'s parent's coordinate system), returning the
 bounding rectangle of the transformed region as four values, \arg{min-x},
 \arg{min-y}, \arg{max-x}, and \arg{max-y}.  The arguments \arg{x1}, \arg{y1},
-\arg{x2}, and \arg{y1} are canonicalized in the same way as for
+\arg{x2}, and \arg{y2} are canonicalized in the same way as for
 \cl{make-bounding-rectangle}.
 
 \issue {SWM} {I now think that \cl{map-} in these names is misleading; maybe
