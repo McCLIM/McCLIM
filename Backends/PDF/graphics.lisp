@@ -231,8 +231,7 @@
                    (y1 (point-y point)))
                (with-transformed-position (tr x1 y1)
                  (cl-pdf:line-to x1 y1))))
-        (pdf:clip-path)
-        (pdf:end-path-no-op)))))
+        ))))
 
 (defmethod pdf-add-path (medium (ellipse ellipse))
   #+(or)
@@ -339,11 +338,9 @@
 (defgeneric pdf-set-clipping-region (medium region))
 
 (defmethod pdf-set-clipping-region (medium region)
-  ;; this is not yet implemented!
-  (progn
-    #+nil (print region)
-    (pdf-add-path medium region)
-    ))
+  (pdf-add-path medium region)
+  (pdf:clip-path)
+  (pdf:end-path-no-op))
 
 (defmethod pdf-set-clipping-region (medium (region (eql +everywhere+))))
 
