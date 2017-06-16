@@ -974,14 +974,17 @@ second curve point, yielding (200 50)."
 (defmethod medium-draw-bezier-design*
     ((medium clim-pdf::pdf-medium) (design bezier-difference))
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (declare (ignore tr))
     (cl-pdf:with-saved-state
       (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
       (dolist (area (negative-areas design))
-        (%pdf-draw-bezier-curve area)
-        (cl-pdf:clip-path))
+        (clim-pdf::pdf-add-path medium (medium-clipping-region medium))
+        (pdf::close-path)
+        (%pdf-draw-bezier-curve (transform-region tr area))
+        (cl-pdf:even-odd-clip-path)
+        (pdf:end-path-no-op))
       (dolist (area (positive-areas design))
-        (%pdf-draw-bezier-curve area)))))
+        (%pdf-draw-bezier-curve (transform-region tr area))
+        (pdf:close-fill-and-stroke)))))
 
 ;;; Postscript backend
 
