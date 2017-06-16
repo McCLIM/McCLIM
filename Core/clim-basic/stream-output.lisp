@@ -260,10 +260,11 @@
   (let ((margin (stream-text-margin stream)))
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
       (declare (ignore cx))
-      (draw-rectangle* (sheet-medium stream) margin cy (+ margin 4)
-                       (+ cy (%stream-char-height stream))
-                       :ink +foreground-ink+
-                       :filled t)))
+      (when (stream-drawing-p stream)
+        (draw-rectangle* (sheet-medium stream) margin cy (+ margin 4)
+                         (+ cy (%stream-char-height stream))
+                         :ink +foreground-ink+
+                         :filled t))))
   (stream-write-char stream #\newline))
 
 (defun seos-write-string (stream string &optional (start 0) end)
