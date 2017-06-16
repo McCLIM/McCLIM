@@ -174,7 +174,7 @@ highest ancestor is not a graft.
 participating in the windowing relationship with its parent.  If a sheet is
 enabled and grafted, and all its ancestors are enabled (they are grafted by
 definition), then the sheet will be visible if it occupies a portion of the
-graft region that isn't clipped by its ancestors or ancestor's siblings.
+graft region that isn't clipped by its ancestors or ancestors' siblings.
 
 \item [Disabled] The opposite of enabled is \concept{disabled}.
 \end{description}
@@ -217,7 +217,7 @@ not actually a child of \arg{sheet} and \arg{errorp} is \term{true}, then the
 \Defgeneric {sheet-siblings} {sheet}
 
 Returns a list of all of the siblings of the \term{sheet} \arg{sheet}.  The
-sibling are all of the children of \arg{sheet}'s parent excluding \arg{sheet}
+sibling are all the children of \arg{sheet}'s parent excluding \arg{sheet}
 itself.
 \FreshOutputs
 
@@ -334,7 +334,7 @@ system.  Using \cl{setf} on this accessor will modify the sheet's coordinate
 system, including moving its region in its parent's coordinate system.
 
 When the sheet's transformation is changed,
-\cl{note-sheet-transformation-changed} is called on the to notify the sheet of
+\cl{note-sheet-transformation-changed} is called on the \arg{sheet} to notify the sheet of
 the change.
 
 \defgeneric {sheet-region} {sheet}
@@ -437,7 +437,7 @@ bounding rectangle delimited by the corner points $(x1,y1)$ and $(x2,y2)$
 (represented in \arg{sheet}'s parent's coordinate system), returning the
 bounding rectangle of the transformed region as four values, \arg{min-x},
 \arg{min-y}, \arg{max-x}, and \arg{max-y}.  The arguments \arg{x1}, \arg{y1},
-\arg{x2}, and \arg{y1} are canonicalized in the same way as for
+\arg{x2}, and \arg{y2} are canonicalized in the same way as for
 \cl{make-bounding-rectangle}.
 
 \issue {SWM} {I now think that \cl{map-} in these names is misleading; maybe
@@ -541,7 +541,7 @@ Sheets either participate fully in the input protocol or are mute for input.  If
 any functions in the input protocol are called on a sheet that is mute for
 input, the \cl{sheet-is-mute-for-input} error will be signalled.
 
-In addition to handling input event, a sheet is also responsible for providing
+In addition to handling input events, a sheet is also responsible for providing
 other input services, such as controlling the pointer's appearance, and polling
 for current pointer and keyboard state.
 
@@ -587,7 +587,7 @@ arguments that acts as a predicate; it has dynamic extent.  The predicate should
 wait until one of three conditions occurs:
 
 \begin{itemize}
-\item If an event if received and processed, the predicate should return
+\item If an event was received and processed, the predicate should return
 \term{true}.
 
 \item If a timeout occurs, the predicate should return \term{false}.
@@ -687,7 +687,7 @@ This class of sheet provides a method for \cl{dispatch-event} that calls
 \cl{handle-event} immediately.
 
 The \cl{standard-sheet-input-mixin} class will also provide a
-\cl{sheet-event-queue} method, describe above.
+\cl{sheet-event-queue} method, described above.
 
 \Defclass {immediate-sheet-input-mixin}
 
@@ -695,11 +695,11 @@ This class of sheet provides a method for \cl{dispatch-event} that calls
 \cl{handle-event} immediately for all events.
 
 The \cl{immediate-sheet-input-mixin} class will also provide a
-\cl{sheet-event-queue} method, describe above.
+\cl{sheet-event-queue} method, described above.
 
 \Defclass {sheet-mute-input-mixin}
 
-This is mixed in to any sheet class the does not handle any input events.
+This is mixed in to any sheet class that does not handle any input events.
 
 \Defclass {delegate-sheet-input-mixin}
 
@@ -725,7 +725,7 @@ An \concept{event} is a CLIM object that represents some sort of user gesture
 (such as moving the pointer or pressing a key on the keyboard) or that
 corresponds to some sort of notification from the display server.  Event objects
 store such things as the sheet associated with the event, the $x$ and $y$
-bposition of the pointer within that sheet, the key name or character
+position of the pointer within that sheet, the key name or character
 corresponding to a key on the keyboard, and so forth.
 
 Figure~\ref{event-hier} shows all the event classes.
@@ -998,7 +998,7 @@ host window to be deleted.  This is a subclass of \cl{window-manager-event}.
 
 \Defclass {timer-event}
 
-The instantiable class that corresponds to a timeout event.  This is a subclass
+The instantiable class that corresponds to a timer event.  This is a subclass
 of \cl{event}.
 
 

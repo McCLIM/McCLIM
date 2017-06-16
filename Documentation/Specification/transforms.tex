@@ -136,7 +136,7 @@ All of the arguments to \cl{make-transformation} must be real numbers.
 
 \Defun {make-3-point-transformation} {point-1 point-2 point-3 point-1-image point-2-image point-3-image}
 
-Returns a transformation that takes \term{points} \arg{point-1} into
+Returns a transformation that takes \arg{point-1} into
 \arg{point-1-image}, \arg{point-2} into \arg{point-2-image} and \arg{point-3}
 into \arg{point-3-image}.  Three non-collinear points and their images under the
 transformation are enough to specify any affine transformation.
@@ -310,7 +310,7 @@ scaling, or rotation ``transformation'' is first, followed by
 \arg{transformation}.
 
 \arg{dx} and \arg{dy} are as for \cl{make-translation-transformation}.
-\arg{sx} and \arg{sy} are as for \cl{make-scaling-transformation}.
+\arg{sx}, \arg{sy}, and \arg{origin} are as for \cl{make-scaling-transformation}.
 \arg{angle} and \arg{origin} are as for \cl{make-rotation-transformation}.
 
 Note that these functions could be implemented by using the various constructors
@@ -328,7 +328,7 @@ scaling, or rotation, respectively, with the \term{transformation}
 first, followed by the translation, scaling, or rotation ``transformation''.
 
 \arg{dx} and \arg{dy} are as for \cl{make-translation-transformation}.
-\arg{sx} and \arg{sy} are as for \cl{make-scaling-transformation}.
+\arg{sx}, \arg{sy}, and \arg{origin} are as for \cl{make-scaling-transformation}.
 \arg{angle} and \arg{origin} are as for \cl{make-rotation-transformation}.
 
 Note that these functions could be implemented by using the various constructors
@@ -411,7 +411,7 @@ CLIM provides a default method for \cl{untransform-distance} on the
 
 Applies the \term{transformation} \arg{transformation} to the rectangle
 specified by the four coordinate arguments, which are real numbers.  The
-arguments \arg{x1}, \arg{y1}, \arg{x2}, and \arg{y1} are canonicalized in the
+arguments \arg{x1}, \arg{y1}, \arg{x2}, and \arg{y2} are canonicalized in the
 same way as for \cl{make-bounding-rectangle}.  Returns four values that specify
 the minimum and maximum points of the transformed rectangle in the order
 \arg{min-x}, \arg{min-y}, \arg{max-x}, and \arg{max-y}.
