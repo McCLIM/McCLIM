@@ -889,6 +889,7 @@
    #:make-pane                          ;function
    #:make-pane-1                        ;generic function
    #:make-pattern                       ;function
+   #:make-pattern-from-bitmap-file      ;function
    #:make-point                         ;function
    #:make-polygon                       ;function
    #:make-polygon*                      ;function
@@ -1950,7 +1951,7 @@
    #:rgb-image
    #:rgb-pattern
    #:xpm-parse-file
-   #:make-pattern-from-bitmap-file))
+   #:*xpm-x11-colors*))
 
 ;;; Symbols that must be defined by a backend.
 ;;;

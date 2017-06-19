@@ -35,6 +35,7 @@
    #:sheet-rgb-data
    #:draw-design
    #:xpm-parse-file
+   #:*xpm-x11-colors*
    #:make-pattern-from-bitmap-file
    #:medium-data
    ))
