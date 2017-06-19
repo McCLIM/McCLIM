@@ -46,12 +46,16 @@ Chapter~\ref{color} for a more complete description of designs.
 Any indirect inks are resolved against the foreground and background at the time
 a design is rendered.
 
+\issue {PM} {Next paragraph says that indirect inks are not allowed?!}
+
 \defgeneric {(setf medium-foreground)} {design medium}
 \Defgeneric {(setf medium-background)} {design medium}
 
 Sets the foreground and background ink, respectively, for the \term{medium}
 \arg{medium} to \arg{design}.  You may not set \cl{medium-foreground} or
 \cl{medium-background} to an indirect ink.  
+
+--
 
 \arg{design} is an unbounded design.  If the background design is not completely
 opaque at all points, the consequences are unspecified.
@@ -74,6 +78,7 @@ Sets the current drawing ink for the \term{medium} \arg{medium} to \arg{design}.
 \arg{design} is as for \cl{medium-foreground}, and may be an indirect ink as
 well.
 
+\issue {PM} {\cl{medium-foreground} doesn't allow indirect inks!?}
 
 \Defgeneric {medium-transformation} {medium}
 
