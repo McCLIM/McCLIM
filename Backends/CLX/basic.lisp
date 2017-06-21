@@ -63,8 +63,8 @@
 (defun clx-error-handler (display error-name
 			  &rest args
 			  &key major asynchronous &allow-other-keys)
-  (log:error "Received CLX ~A (~A) in process ~W for display ~W."
-             error-name major (bt:thread-name (bt:current-thread)) display)
+  (warn "Received CLX ~A (~A) in process ~W for display ~W."
+        error-name major (bt:thread-name (bt:current-thread)) display)
   ;; We ignore all asynchronous errors to keep the connection.
   ;; 42 is SetInputFocus, we ignore match-errors from that.
   (unless (or asynchronous
