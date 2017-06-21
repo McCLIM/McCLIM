@@ -75,5 +75,6 @@
                   #:image-data
                   #:medium-draw-image-design*)
     (:export
+     #:%image-paixels
      ))
 

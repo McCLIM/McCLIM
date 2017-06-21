@@ -66,6 +66,7 @@
 				       (ceiling max-x) (ceiling max-y))))
 	  region)))))
 
+#|
 (defmethod draw-paths ((render rgb-image-render-engine) (image rgba-image) paths transformation clip-region ink background foreground)
   (declare (optimize speed))
   (with-slots (state)
@@ -105,7 +106,7 @@
 	(let ((region (make-rectangle* (floor min-x) (floor min-y)
 				       (ceiling max-x) (ceiling max-y))))
 	  region)))))
-
+|#
 
 (defmethod paths->mask-image ((render rgb-image-render-engine) (image mask-image) paths transformation clip-region)
   (with-slots (state)

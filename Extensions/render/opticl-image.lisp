@@ -11,6 +11,12 @@
 (defclass opticl-image (image)
   ((data :type (or null opticl-image-data))))
 
+
+(defgeneric %image-pixels (image))
+
+(defmethod %image-pixels (image)
+  (image-data image))
+
 (defun make-opticl-image (width height)
   (let ((data (opticl:make-8-bit-rgba-image height width :initial-element 255)))
     (make-instance 'opticl-image

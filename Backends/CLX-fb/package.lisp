@@ -61,10 +61,8 @@
 		  #:image-mirror-image
 		  #:image-sheet-mixin
 		  #:image-pixmap-mixin
+                  #:%image-pixels
 		  )
-   (:import-from :mcclim-image
-                 #:image-data
-                 )
    (:import-from :clim-clx
 		 #:CLX-PORT-DISPLAY
 		 #:clx-medium
