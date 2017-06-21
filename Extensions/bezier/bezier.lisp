@@ -317,10 +317,19 @@ second curve point, yielding (200 50)."
 (defmethod segments ((design bezier-design))
   (%segments design))
 
+(defun sequence-type (seq)
+  (let ((type (type-of seq)))
+    (if (and (listp type)
+             (eq (car type) 'vector)
+             (not (equal (third type)
+                         (length seq))))
+        (car type)
+        type)))
+
 (defmethod transform-region (transformation (design bezier-design))
   (make-instance (class-of design)
                  :segments (let ((segments (segments design)))
-                             (map (type-of segments)
+                             (map (sequence-type segments)
                                   (lambda (s)
                                     (transform-segment transformation s))
                                   segments))))
@@ -453,12 +462,14 @@ second curve point, yielding (200 50)."
     (make-bezier-segment p3 p2 p1 p0)))
 
 (defmethod reverse-path ((path bezier-curve))
-  (make-instance 'bezier-curve
-                 :segments (reverse (map (type-of (%segments path)) #'reverse-segment (%segments path)))))
+  (let ((segments (%segments path)))
+    (make-instance 'bezier-curve
+                   :segments (reverse (map (sequence-type segments) #'reverse-segment segments)))))
 
 (defmethod reverse-path ((path bezier-area))
-  (make-instance 'bezier-area
-                 :segments (reverse (map (type-of (%segments path)) #'reverse-segment (%segments path)))))
+  (let ((segments (%segments path)))
+    (make-instance 'bezier-area
+                   :segments (reverse (map (sequence-type segments) #'reverse-segment segments)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
