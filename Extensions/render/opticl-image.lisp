@@ -172,83 +172,116 @@
 ;;; fill image
 ;;;
 
-(defmethod fill-image ((image opticl-image) (rgba-design uniform-rgba-design) (mask (eql nil))
-		       &key
-			 (x 0) (y 0)
-			 (width (image-width image)) (height (image-height image))
-			 (mask-dx 0) (mask-dy 0))
-  (declare (type fixnum x y width height mask-dx mask-dy)
-	   (ignore mask-dx mask-dy))
-  (let ((data-image (image-data image)))
-    (declare (type opticl-image-data data-image))
-    (make-fill-image-function
-     (opticl-image-data-get-pixel data-image i j)
-     (opticl-image-data-set-pixel data-image i j red green blue alpha)
-     (values 
-      (uniform-rgba-design-red rgba-design)
-      (uniform-rgba-design-green rgba-design)
-      (uniform-rgba-design-blue rgba-design)
-      (uniform-rgba-design-alpha rgba-design))
-     255))
+(defgeneric opticl-fill-image (image rgba-design stencil &key x y width height stencil-dx stencil-dy))
+
+(defmethod opticl-fill-image (image (rgba-design uniform-rgba-design) (stencil (eql nil))
+                              &key (x 0) (y 0) (width 0) (height 0) (stencil-dx 0) (stencil-dy 0))
+  (declare (type fixnum x y width height)
+	   (ignore stencil stencil-dx stencil-dy))
+  (declare (type opticl-image-data image))
+  (when (and (> width 0) (> height 0))
+    (let ((max-y (+ y height -1))
+          (max-x (+ x width -1)))
+      (multiple-value-bind (red green blue alpha)
+          (values
+           (uniform-rgba-design-red rgba-design)
+           (uniform-rgba-design-green rgba-design)
+           (uniform-rgba-design-blue rgba-design)
+           (uniform-rgba-design-alpha rgba-design))
+        (if (> alpha 250)
+            (loop for j from y to max-y do
+                 (loop for i from x to max-x do
+                      (setf (opticl:pixel image j i) (values red green blue alpha))))
+            (loop for j from y to max-y do
+                 (loop for i from x to max-x do
+                      (multiple-value-bind (r.bg g.bg b.bg a.bg)
+                          (opticl:pixel image j i)
+                        (multiple-value-bind (red green blue alpha)
+                            (octet-blend r.bg g.bg b.bg a.bg red green blue alpha 255)
+                          (setf (opticl:pixel image j i) (values red green blue alpha))))))))))
   (make-rectangle* x y (+ x width) (+ y height)))
 
-(defmethod fill-image ((image opticl-image) rgba-design (mask (eql nil))
-		       &key
-			 (x 0) (y 0)
-			 (width (image-width image)) (height (image-height image))
-			 (mask-dx 0) (mask-dy 0))
-  (declare (type fixnum x y width height mask-dx mask-dy)
-	   (ignore mask-dx mask-dy))
-  (let ((data-image (image-data image))
-	(source-fn (make-rgba-design-fn rgba-design)))
-    (declare (type opticl-image-data data-image)
-	     (type design-fn source-fn))
-    (make-fill-image-function
-     (opticl-image-data-get-pixel data-image i j)
-     (opticl-image-data-set-pixel data-image i j red green blue alpha)
-     (funcall source-fn i j)
-     255))
+(defmethod opticl-fill-image (image rgba-design (stencil (eql nil))
+                              &key (x 0) (y 0) (width 0) (height 0) (stencil-dx 0) (stencil-dy 0))
+  (declare (type fixnum x y width height)
+	   (ignore stencil stencil-dx stencil-dy))
+  (declare (type opticl-image-data image))
+  (when (and (> width 0) (> height 0))
+    (let ((max-y (+ y height -1))
+          (max-x (+ x width -1)))
+      (let ((source-fn (make-rgba-design-fn rgba-design)))
+        (loop for j from y to max-y do
+             (loop for i from x to max-x do
+                  (multiple-value-bind (red green blue alpha)
+                      (funcall source-fn i j)
+                    (if (> alpha 250)
+                        (setf (opticl:pixel image j i) (values red green blue alpha))
+                        (multiple-value-bind (r.bg g.bg b.bg a.bg)
+                            (opticl:pixel image j i)
+                          (multiple-value-bind (red green blue alpha)
+                              (octet-blend r.bg g.bg b.bg a.bg red green blue alpha 255)
+                            (setf (opticl:pixel image j i) (values red green blue alpha)))))))))))
   (make-rectangle* x y (+ x width) (+ y height)))
 
-(defmethod fill-image ((image opticl-image) (rgba-design uniform-rgba-design) (mask mask-image)
+(defmethod opticl-fill-image (image (rgba-design uniform-rgba-design) stencil
+                              &key (x 0) (y 0) (width 0) (height 0) (stencil-dx 0) (stencil-dy 0))
+  (declare (type fixnum x y width height))
+  (declare (type opticl-image-data image))
+  (declare (type mask-image-data stencil))
+  (when (and (> width 0) (> height 0))
+    (let ((max-y (+ y height -1))
+          (max-x (+ x width -1)))
+      (multiple-value-bind (red green blue alpha)
+          (values 
+           (uniform-rgba-design-red rgba-design)
+           (uniform-rgba-design-green rgba-design)
+           (uniform-rgba-design-blue rgba-design)
+           (uniform-rgba-design-alpha rgba-design))
+        (loop for j from y to max-y do
+             (loop for i from x to max-x do
+                  (let* ((alpha-ste (opticl:pixel stencil (+ stencil-dy j) (+ stencil-dx i)))
+                         (a (imult alpha alpha-ste)))
+                    (if (> a 250)
+                        (setf (opticl:pixel image j i) (values red green blue a))
+                        (multiple-value-bind (r.bg g.bg b.bg a.bg)
+                            (opticl:pixel image j i)
+                          (multiple-value-bind (red green blue alpha)
+                              (octet-blend r.bg g.bg b.bg a.bg red green blue alpha alpha-ste)
+                            (setf (opticl:pixel image j i) (values red green blue alpha)))))))))))
+  (make-rectangle* x y (+ x width) (+ y height)))
+
+(defmethod opticl-fill-image (image rgba-design stencil
+                              &key (x 0) (y 0) (width 0) (height 0) (stencil-dx 0) (stencil-dy 0))
+  (declare (type fixnum x y width height))
+  (declare (type opticl-image-data image))
+  (declare (type mask-image-data stencil))
+  (when (and (> width 0) (> height 0))
+    (let ((max-y (+ y height -1))
+          (max-x (+ x width -1)))
+      (let ((source-fn (make-rgba-design-fn rgba-design)))
+        (loop for j from y to max-y do
+             (loop for i from x to max-x do
+                  (multiple-value-bind (red green blue alpha)
+                      (funcall source-fn i j)
+                    (let* ((alpha-ste (opticl:pixel stencil (+ stencil-dy j) (+ stencil-dx i)))
+                           (a (imult alpha alpha-ste)))
+                      (if (> a 250)
+                          (setf (opticl:pixel image j i) (values red green blue a))
+                          (multiple-value-bind (r.bg g.bg b.bg a.bg)
+                              (opticl:pixel image j i)
+                            (multiple-value-bind (red green blue alpha)
+                                (octet-blend r.bg g.bg b.bg a.bg red green blue alpha alpha-ste)
+                              (setf (opticl:pixel image j i) (values red green blue alpha))))))))))))
+  (make-rectangle* x y (+ x width) (+ y height)))
+
+(defmethod fill-image ((image opticl-image) rgba-design mask
 		       &key
 			 (x 0) (y 0)
 			 (width (image-width image)) (height (image-height image))
 			 (mask-dx 0) (mask-dy 0))
-  (declare (type fixnum x y width height mask-dx mask-dy))
-  (let ((data-image (image-data image))
-	(data-mask (image-data mask)))
-    (declare (type opticl-image-data data-image)
-	     (type mask-image-data data-mask))
-    (make-fill-image-function
-     (opticl-image-data-get-pixel data-image i j)
-     (opticl-image-data-set-pixel data-image i j red green blue alpha)
-     (values 
-      (uniform-rgba-design-red rgba-design)
-      (uniform-rgba-design-green rgba-design)
-      (uniform-rgba-design-blue rgba-design)
-      (uniform-rgba-design-alpha rgba-design))
-     (mask-image-data-get-alpha data-mask (+ mask-dx i) (+ mask-dy j))))
-  (make-rectangle* x y (+ x width) (+ y height)))
-  
-(defmethod fill-image ((image opticl-image) rgba-design (mask mask-image)
-		       &key
-			 (x 0) (y 0)
-			 (width (image-width image)) (height (image-height image))
-			 (mask-dx 0) (mask-dy 0))
-  (declare (type fixnum x y width height mask-dx mask-dy))
-  (let ((data-image (image-data image))
-	(data-mask (image-data mask))
-	(source-fn (make-rgba-design-fn rgba-design)))
-    (declare (type opticl-image-data data-image)
-	     (type mask-image-data data-mask)
-	     (type design-fn source-fn))
-    (make-fill-image-function
-     (opticl-image-data-get-pixel data-image i j)
-     (opticl-image-data-set-pixel data-image i j red green blue alpha)
-     (funcall source-fn i j)
-     (mask-image-data-get-alpha data-mask (+ mask-dx i) (+ mask-dy j))))
-  (make-rectangle* x y (+ x width) (+ y height)))
+  (opticl-fill-image (image-data image) rgba-design (if mask (image-data mask) nil)
+                     :x x :y y :width width :height height :stencil-dx mask-dx :stencil-dy mask-dy))
+
 
 ;;; private protocol
 (defmethod %make-blend-draw-fn ((image opticl-image) clip-region design)
