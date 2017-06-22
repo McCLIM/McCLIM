@@ -1207,12 +1207,8 @@ were added."
 (defmethod match-output-records-1 and ((record coord-seq-mixin)
 				       &key (coord-seq nil coord-seq-p))
   (or (null coord-seq-p)
-      (let* ((my-coord-seq (slot-value record 'coord-seq))
-	     (len (length my-coord-seq)))
-	(and (eql len (length coord-seq))
-	     (loop for elt1 across my-coord-seq
-		   for elt2 across coord-seq
-		   always (coordinate= elt1 elt2))))))
+      (let* ((my-coord-seq (slot-value record 'coord-seq)))
+        (sequence= my-coord-seq coord-seq #'coordinate=))))
 
 (defmacro generate-medium-recording-body (class-name method-name args)
   (let ((arg-list (loop for arg in args
