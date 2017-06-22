@@ -135,6 +135,7 @@ Secondly, an rgba design is converted into a function.
   (let ((designs (map 'vector #'(lambda (ink)
 				  (make-rgba-design-fn ink))
 		      (pattern-designs ink))))
+    (declare (type (simple-array design-fn (*)) designs))
     (make-functional-rgba-design
      :color-fn (lambda (x y)
 		 (funcall (elt designs (aref (pattern-array ink) y x)) x y))
@@ -163,9 +164,11 @@ Secondly, an rgba design is converted into a function.
   (let ((design (make-rgba-design-fn (rectangular-tile-design ink)))
 	(width (rectangular-tile-width ink))
 	(height (rectangular-tile-height ink)))
-    (declare (type design-fn design))
+    (declare (type design-fn design)
+             (type fixnum width height))
     (make-functional-rgba-design
      :color-fn (lambda (x y)
+                 (declare (type fixnum x y))
 		 (funcall design (mod x width) (mod y height))))))
 
 (defmethod make-rgba-design ((ink transformed-design))
@@ -177,12 +180,9 @@ Secondly, an rgba design is converted into a function.
           (declare (type design-fn design-fn))
           (make-functional-rgba-design
            :color-fn (lambda (x y)
+                       (declare (type fixnum x y))
                        (with-transformed-position (transformation x y)
                          (funcall design-fn (floor x) (floor y)))))))))
-
-(defgeneric compose-in-rgba-design (ink mask))
-(defgeneric compose-out-rgba-design (ink mask))
-(defgeneric compose-over-rgba-design (ink mask))
 
 (defgeneric compose-in-rgba-design (ink mask)
   (:method (ink mask)
@@ -196,7 +196,14 @@ Secondly, an rgba design is converted into a function.
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall mask-fn x y)
 		       (declare (ignore r2 g2 b2))
-		       (values r1 g1 b1 (octet-mult a1 a2)))))))))
+		       (values r1 g1 b1 (octet-mult a1 a2))))))))
+  (:method ((ink uniform-rgba-design) (mask uniform-rgba-design))
+    (make-uniform-rgba-design
+     :red (uniform-rgba-design-red ink)
+     :green (uniform-rgba-design-green ink)
+     :blue (uniform-rgba-design-blue ink)
+     :alpha (octet-mult (uniform-rgba-design-alpha ink)
+                        (uniform-rgba-design-alpha mask)))))
 
 (defgeneric compose-out-rgba-design (ink mask)
   (:method (ink mask)
@@ -210,7 +217,14 @@ Secondly, an rgba design is converted into a function.
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall mask-fn x y)
 		       (declare (ignore r2 g2 b2))
-		       (values r1 g1 b1 (octet-mult a1 (- 255 a2))))))))))
+		       (values r1 g1 b1 (octet-mult a1 (- 255 a2)))))))))
+  (:method ((ink uniform-rgba-design) (mask uniform-rgba-design))
+    (make-uniform-rgba-design
+     :red (uniform-rgba-design-red ink)
+     :green (uniform-rgba-design-green ink)
+     :blue (uniform-rgba-design-blue ink)
+     :alpha (octet-mult (uniform-rgba-design-alpha ink)
+                        (- 255 (uniform-rgba-design-alpha mask))))))
 
 (defgeneric compose-over-rgba-design (fore back)
   (:method (fore back)
@@ -219,14 +233,30 @@ Secondly, an rgba design is converted into a function.
       (declare (type design-fn fore-fn back-fn))
       (make-functional-rgba-design
        :color-fn (lambda (x y)
-		   (multiple-value-bind (r1 g1 b1 a1)
+ 		   (multiple-value-bind (r1 g1 b1 a1)
 		       (funcall fore-fn x y)
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall back-fn x y)
 		         (multiple-value-bind (red green blue alpha)
 			     (octet-blend-function 
 			      r1 g1 b1 a1 r2 g2 b2 a2)
-			   (values red green blue alpha)))))))))
+			   (values red green blue alpha))))))))
+  (:method ((fore uniform-rgba-design) (back uniform-rgba-design))
+    (multiple-value-bind (red green blue alpha)
+        (octet-blend-function
+         (uniform-rgba-design-red fore)
+         (uniform-rgba-design-green fore)
+         (uniform-rgba-design-blue fore)
+         (uniform-rgba-design-alpha fore)
+         (uniform-rgba-design-red back)
+         (uniform-rgba-design-green back)
+         (uniform-rgba-design-blue back)
+         (uniform-rgba-design-alpha back))
+      (make-uniform-rgba-design
+       :red red
+       :green green
+       :blue blue
+       :alpha alpha))))
 
 (defmethod make-rgba-design ((ink in-compositum))
   (let ((c-ink (make-rgba-design (compositum-ink ink)))
