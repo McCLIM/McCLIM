@@ -147,18 +147,27 @@ Secondly, an rgba design is converted into a function.
   (let* ((img (slot-value ink 'image))
 	 (data (image-data img)))
     (declare (type clim-rgb-image-data data))
-    (make-functional-rgba-design
-     :color-fn (lambda (x y)
-		 (let ((p (aref data y  x)))
-		   (let ((r.bg (ldb (byte 8 0) p))
-			 (g.bg (ldb (byte 8 8) p))
-			 (b.bg (ldb (byte 8 16) p))
-			 (a.bg (- 255 (ldb (byte 8 24) p))))
-		     (values 
-		      r.bg g.bg b.bg a.bg))))
-     :mask (make-rectangle* 0 0
-			    (1- (clim:pattern-width ink))
-			    (1- (clim:pattern-height ink))))))
+
+        (make-functional-rgba-design
+         :color-fn (if (mcclim-image::image-alpha-p img)
+                       (lambda (x y)
+                         (let ((p (aref data y  x)))
+                           (let ((r.bg (ldb (byte 8 0) p))
+                                 (g.bg (ldb (byte 8 8) p))
+                                 (b.bg (ldb (byte 8 16) p))
+                                 (a.bg (ldb (byte 8 24) p)))
+                             (values
+                              r.bg g.bg b.bg a.bg))))
+                       (lambda (x y)
+                         (let ((p (aref data y  x)))
+                           (let ((r.bg (ldb (byte 8 0) p))
+                                 (g.bg (ldb (byte 8 8) p))
+                                 (b.bg (ldb (byte 8 16) p)))
+                             (values
+                              r.bg g.bg b.bg 255)))))
+         :mask (make-rectangle* 0 0
+                                (1- (clim:pattern-width ink))
+                                (1- (clim:pattern-height ink))))))
 
 (defmethod make-rgba-design ((ink rectangular-tile))
   (let ((design (make-rgba-design-fn (rectangular-tile-design ink)))

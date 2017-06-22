@@ -56,11 +56,11 @@
     (declare (type opticl-image-data pixels))
     (let ((data (make-array (list height width)
 			    :element-type '(unsigned-byte 32)
-			    :initial-element #x00FFFFFF)))
+			    :initial-element #xFFFFFFFF)))
       (let ((rgb-image (make-instance 'rgb-image
 				      :width width
 				      :height height
-				      :alphap t
+				      :alphap nil
 				      :data data)))
 	(opticl:do-pixels (y x) pixels
 			  (multiple-value-bind (red green blue alpha)
@@ -69,7 +69,7 @@
 				  (dpb red (byte 8 0)
 				       (dpb green (byte 8 8)
 					    (dpb blue (byte 8 16)
-						 (dpb (- 255 alpha) (byte 8 24) 0)))))))
+						 (dpb alpha (byte 8 24) 0)))))))
 	rgb-image))))
 
 (defmethod coerce-to-opticl-image ((image rgb-image))
@@ -79,15 +79,24 @@
 	  (data (image-data image)))
       (declare (type clim-rgb-image-data data))
       (declare (type opticl-image-data optimg))
-      (loop for y from 0 to (1- height) do
-	   (loop for x from 0 to (1- width) do
-		(setf (opticl:pixel optimg y x)
-		      (let ((p (aref data y  x)))
-			(let ((r (ldb (byte 8 0) p))
-			      (g (ldb (byte 8 8) p))
-			      (b (ldb (byte 8 16) p))
-			      (a (- 255 (ldb (byte 8 24) p))))
-			  (values r g b a))))))
+      (if (mcclim-image::image-alpha-p image)
+          (loop for y from 0 to (1- height) do
+               (loop for x from 0 to (1- width) do
+                    (setf (opticl:pixel optimg y x)
+                          (let ((p (aref data y  x)))
+                            (let ((r (ldb (byte 8 0) p))
+                                  (g (ldb (byte 8 8) p))
+                                  (b (ldb (byte 8 16) p))
+                                  (a (ldb (byte 8 24) p)))
+                              (values r g b a))))))
+          (loop for y from 0 to (1- height) do
+               (loop for x from 0 to (1- width) do
+                    (setf (opticl:pixel optimg y x)
+                          (let ((p (aref data y  x)))
+                            (let ((r (ldb (byte 8 0) p))
+                                  (g (ldb (byte 8 8) p))
+                                  (b (ldb (byte 8 16) p)))
+                              (values r g b 255)))))))
       optimg)))
 
 (defmethod coerce-to-opticl-image ((image opticl-image))
