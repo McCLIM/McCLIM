@@ -1184,10 +1184,25 @@ were added."
 	  (coords (slot-value record 'coord-seq)))
       (multiple-value-prog1
 	  (call-next-method)
-	(loop for i from 0 below (length coords) by 2
-	      do (progn
-		   (incf (aref coords i) dx)
-		   (incf (aref coords (1+ i)) dy)))))))
+        (let (odd)
+          (map-into coords
+                    (lambda (val)
+                      (prog1
+                          (if odd
+                              (incf val dy)
+                              (incf val dx))
+                        (setf odd (not odd))))
+                    coords))))))
+
+(defun sequence= (seq1 seq2 &optional (test 'equal))
+  (when (eql (length seq1) (length seq2))
+    (map nil
+         (lambda (a b)
+           (unless (funcall test a b)
+             (return-from sequence= nil)))
+         seq1
+         seq2)
+    t))
 
 (defmethod match-output-records-1 and ((record coord-seq-mixin)
 				       &key (coord-seq nil coord-seq-p))
