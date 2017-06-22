@@ -169,13 +169,16 @@ Secondly, an rgba design is converted into a function.
 		 (funcall design (mod x width) (mod y height))))))
 
 (defmethod make-rgba-design ((ink transformed-design))
-  (let ((design (make-rgba-design-fn (transformed-design-design ink)))
-	(transformation (invert-transformation (transformed-design-transformation ink))))
-    (declare (type design-fn design))
-    (make-functional-rgba-design
-     :color-fn (lambda (x y)
-		 (with-transformed-position (transformation x y)
-		   (funcall design (floor x) (floor y)))))))
+  (let ((design (make-rgba-design (transformed-design-design ink)))
+        (transformation (invert-transformation (transformed-design-transformation ink))))
+    (if (typep design 'uniform-rgba-design)
+        design
+        (let ((design-fn (make-rgba-design-fn design)))
+          (declare (type design-fn design-fn))
+          (make-functional-rgba-design
+           :color-fn (lambda (x y)
+                       (with-transformed-position (transformation x y)
+                         (funcall design-fn (floor x) (floor y)))))))))
 
 (defgeneric compose-in-rgba-design (ink mask))
 (defgeneric compose-out-rgba-design (ink mask))
