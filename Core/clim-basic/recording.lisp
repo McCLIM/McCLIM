@@ -1376,8 +1376,8 @@ were added."
 	 (coord-seq-bounds coord-seq 0))
 	((eq (line-style-joint-shape line-style) :round)
 	 (coord-seq-bounds coord-seq border))
-	(t (let* ((x1 (svref coord-seq 0))
-		  (y1 (svref coord-seq 1))
+	(t (let* ((x1 (elt coord-seq 0))
+		  (y1 (elt coord-seq 1))
 		  (min-x x1)
 		  (min-y y1)
 		  (max-x x1)
@@ -1392,13 +1392,13 @@ were added."
 				   final-xn final-yn
 				   initial-index final-index)
 		 (if closed
-		     (values (svref coord-seq (- len 2))
-			     (svref coord-seq (- len 1))
+		     (values (elt coord-seq (- len 2))
+			     (elt coord-seq (- len 1))
 			     x1 y1
 			     0 (- len 2))
 		     (values x1 y1
-			     (svref coord-seq (- len 2))
-			     (svref coord-seq (- len 1))
+			     (elt coord-seq (- len 2))
+			     (elt coord-seq (- len 1))
 			     2 (- len 4)))
 	       (ecase (line-style-joint-shape line-style)
 		 (:miter
@@ -1408,13 +1408,13 @@ were added."
 			for i from initial-index to final-index by 2
 			for xp = initial-xp then x
 			for yp = initial-yp then y
-			for x = (svref coord-seq i)
-			for y = (svref coord-seq (1+ i))
+			for x = (elt coord-seq i)
+			for y = (elt coord-seq (1+ i))
 			do (setf (values xn yn)
 				 (if (eql i final-index)
 				     (values final-xn final-yn)
-				     (values (svref coord-seq (+ i 2))
-					     (svref coord-seq (+ i 3)))))
+				     (values (elt coord-seq (+ i 2))
+					     (elt coord-seq (+ i 3)))))
 			   (multiple-value-bind (ex1 ey1)
 			       (normalize-coords (- x xp) (- y yp))
 			     (multiple-value-bind (ex2 ey2)
@@ -1444,13 +1444,13 @@ were added."
 			for i from initial-index to final-index by 2
 			for xp = initial-xp then x
 			for yp = initial-yp then y
-			for x = (svref coord-seq i)
-			for y = (svref coord-seq (1+ i))
+			for x = (elt coord-seq i)
+			for y = (elt coord-seq (1+ i))
 			do (setf (values xn yn)
 				 (if (eql i final-index)
 				     (values final-xn final-yn)
-				     (values (svref coord-seq (+ i 2))
-					     (svref coord-seq (+ i
+				     (values (elt coord-seq (+ i 2))
+					     (elt coord-seq (+ i
 								 3)))))
 			   (multiple-value-bind (ex1 ey1)
 			       (normalize-coords (- x xp) (- y yp))
@@ -1464,8 +1464,8 @@ were added."
 				 (maxf max-y (+ y ny))))))))
 	       (unless closed
 		 (multiple-value-bind (x y)
-		     (values (svref coord-seq (- len 2))
-			     (svref coord-seq (- len 1)))
+		     (values (elt coord-seq (- len 2))
+			     (elt coord-seq (- len 1)))
 		   (minf min-x (- x border))
 		   (minf min-y (- y border))
 		   (maxf max-x (+ x border))
