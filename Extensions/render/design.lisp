@@ -81,9 +81,9 @@ Secondly, an rgba design is converted into a function.
 (defmethod make-rgba-design ((ink named-color))
   (multiple-value-bind (red green blue) (color-rgb ink)
     (make-uniform-rgba-design
-     :red (color->octet red)
-     :green (color->octet green)
-     :blue (color->octet blue)
+     :red (color-value->octet red)
+     :green (color-value->octet green)
+     :blue (color-value->octet blue)
      :alpha 255)))
 
 (defmethod make-rgba-design ((ink (eql +foreground-ink+)))
@@ -129,7 +129,7 @@ Secondly, an rgba design is converted into a function.
    :red 255
    :green 255
    :blue 255
-   :alpha (color->octet (opacity-value ink))))
+   :alpha (color-value->octet (opacity-value ink))))
 
 (defmethod make-rgba-design ((ink indexed-pattern))
   (let ((designs (map 'vector #'(lambda (ink)
@@ -196,7 +196,7 @@ Secondly, an rgba design is converted into a function.
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall mask-fn x y)
 		       (declare (ignore r2 g2 b2))
-		       (values r1 g1 b1 (imult a1 a2)))))))))
+		       (values r1 g1 b1 (octet-mult a1 a2)))))))))
 
 (defgeneric compose-out-rgba-design (ink mask)
   (:method (ink mask)
@@ -210,7 +210,7 @@ Secondly, an rgba design is converted into a function.
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall mask-fn x y)
 		       (declare (ignore r2 g2 b2))
-		       (values r1 g1 b1 (imult a1 (- 255 a2))))))))))
+		       (values r1 g1 b1 (octet-mult a1 (- 255 a2))))))))))
 
 (defgeneric compose-over-rgba-design (fore back)
   (:method (fore back)
@@ -224,8 +224,8 @@ Secondly, an rgba design is converted into a function.
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall back-fn x y)
 		         (multiple-value-bind (red green blue alpha)
-			     (octet-blend 
-			      r1 g1 b1 a1 r2 g2 b2 a2 255)
+			     (octet-blend-function 
+			      r1 g1 b1 a1 r2 g2 b2 a2)
 			   (values red green blue alpha)))))))))
 
 (defmethod make-rgba-design ((ink in-compositum))

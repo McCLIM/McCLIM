@@ -17,7 +17,7 @@
        (when (plusp alpha)
 	 (multiple-value-bind (r.fg g.fg b.fg a.fg)
 	     ,source-code
-	   (if (> (imult a.fg alpha) 250)
+	   (if (> (octet-mult a.fg alpha) 250)
 	       (multiple-value-bind (red green blue alpha)	  
 		   (values r.fg g.fg b.fg 255)
 		 ,image-set-code
@@ -25,7 +25,7 @@
 	       (multiple-value-bind (r.bg g.bg b.bg a.bg)
 		   ,image-get-code
 		 (multiple-value-bind (red green blue alpha)
-		     (octet-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg alpha)
+		     (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
 		   ,image-set-code
 		   (values red green blue alpha)))))))))
 
@@ -40,7 +40,7 @@
 	    (when (or (null clip-region) (clim:region-contains-position-p clip-region x y))
 	      (multiple-value-bind (r.fg g.fg b.fg a.fg)
 		  ,source-code
-		(if (> (imult a.fg alpha) 250)
+		(if (> (octet-mult a.fg alpha) 250)
 		    (multiple-value-bind (red green blue alpha)	  
 			(values r.fg g.fg b.fg 255)
 		      ,image-set-code
@@ -48,7 +48,8 @@
 		    (multiple-value-bind (r.bg g.bg b.bg a.bg)
 			,image-get-code
 		      (multiple-value-bind (red green blue alpha)	  
-			  (octet-blend r.bg g.bg b.bg a.bg r.fg g.fg b.fg a.fg alpha)
+			  (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg
+                                                (octet-mult a.fg alpha))
 			,image-set-code
 			(values red green blue alpha))))))))))
   
@@ -65,9 +66,9 @@
 	   (multiple-value-bind (r.fg g.fg b.fg a.fg)
 	       ,source-code
 	     (multiple-value-bind (red green blue alpha)
-		 (octet-blend r.bg g.bg b.bg a.bg
-			      (octet-xor-pixel r.bg r.fg) (octet-xor-pixel g.bg g.fg)
-			      (octet-xor-pixel b.bg b.fg) a.fg alpha)
+		 (octet-blend-function r.bg g.bg b.bg a.bg
+                                       (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
+                                       (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha))
 	       ,image-set-code
 	       (values red green blue alpha))))))))
 
@@ -85,9 +86,9 @@
 		(multiple-value-bind (r.fg g.fg b.fg a.fg)
 		    ,source-code
 		  (multiple-value-bind (red green blue alpha)
-		      (octet-blend r.bg g.bg b.bg a.bg
-				   (octet-xor-pixel r.bg r.fg) (octet-xor-pixel g.bg g.fg)
-				   (octet-xor-pixel b.bg b.fg) a.fg alpha)
+		      (octet-blend-function r.bg g.bg b.bg a.bg
+                                            (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
+                                            (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha))
 		    ,image-set-code
 		    (values red green blue alpha)))))))))
 

@@ -77,11 +77,11 @@
 		 (multiple-value-bind (red green blue alpha)
 		     ,design-get-code
 		   (let ((aa-alpha ,aa-alpha-code))
-		     (if (> (imult aa-alpha alpha) 250)
+		     (if (> (octet-mult aa-alpha alpha) 250)
 			 ,image-set-code
 			 (multiple-value-bind (r.bg g.bg b.bg a.bg)
 			     ,image-get-code
 			   (multiple-value-bind (red green blue alpha)	  
-			       (octet-blend r.bg g.bg b.bg a.bg red green blue alpha aa-alpha)
+			       (octet-blend-function r.bg g.bg b.bg a.bg red green blue (octet-mult alpha aa-alpha))
 			     ,image-set-code))))))))))
 

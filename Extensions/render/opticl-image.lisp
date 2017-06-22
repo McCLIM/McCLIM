@@ -197,7 +197,7 @@
                       (multiple-value-bind (r.bg g.bg b.bg a.bg)
                           (opticl:pixel image j i)
                         (multiple-value-bind (red green blue alpha)
-                            (octet-blend r.bg g.bg b.bg a.bg red green blue alpha 255)
+                            (octet-blend-function r.bg g.bg b.bg a.bg red green blue alpha)
                           (setf (opticl:pixel image j i) (values red green blue alpha))))))))))
   (make-rectangle* x y (+ x width) (+ y height)))
 
@@ -219,7 +219,7 @@
                         (multiple-value-bind (r.bg g.bg b.bg a.bg)
                             (opticl:pixel image j i)
                           (multiple-value-bind (red green blue alpha)
-                              (octet-blend r.bg g.bg b.bg a.bg red green blue alpha 255)
+                              (octet-blend-function r.bg g.bg b.bg a.bg red green blue alpha)
                             (setf (opticl:pixel image j i) (values red green blue alpha)))))))))))
   (make-rectangle* x y (+ x width) (+ y height)))
 
@@ -240,13 +240,13 @@
         (loop for j from y to max-y do
              (loop for i from x to max-x do
                   (let* ((alpha-ste (opticl:pixel stencil (+ stencil-dy j) (+ stencil-dx i)))
-                         (a (imult alpha alpha-ste)))
+                         (a (octet-mult alpha alpha-ste)))
                     (if (> a 250)
                         (setf (opticl:pixel image j i) (values red green blue a))
                         (multiple-value-bind (r.bg g.bg b.bg a.bg)
                             (opticl:pixel image j i)
                           (multiple-value-bind (red green blue alpha)
-                              (octet-blend r.bg g.bg b.bg a.bg red green blue alpha alpha-ste)
+                              (octet-blend-function r.bg g.bg b.bg a.bg red green blue a)
                             (setf (opticl:pixel image j i) (values red green blue alpha)))))))))))
   (make-rectangle* x y (+ x width) (+ y height)))
 
@@ -264,13 +264,13 @@
                   (multiple-value-bind (red green blue alpha)
                       (funcall source-fn i j)
                     (let* ((alpha-ste (opticl:pixel stencil (+ stencil-dy j) (+ stencil-dx i)))
-                           (a (imult alpha alpha-ste)))
+                           (a (octet-mult alpha alpha-ste)))
                       (if (> a 250)
                           (setf (opticl:pixel image j i) (values red green blue a))
                           (multiple-value-bind (r.bg g.bg b.bg a.bg)
                               (opticl:pixel image j i)
                             (multiple-value-bind (red green blue alpha)
-                                (octet-blend r.bg g.bg b.bg a.bg red green blue alpha alpha-ste)
+                                (octet-blend-function r.bg g.bg b.bg a.bg red green blue a)
                               (setf (opticl:pixel image j i) (values red green blue alpha))))))))))))
   (make-rectangle* x y (+ x width) (+ y height)))
 
