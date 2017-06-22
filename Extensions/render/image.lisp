@@ -63,76 +63,6 @@
 (defun round-coordinate (x)
   (floor (+ x .5)))
 
-
-;;;
-;;; copy image
-;;;
-
-(defmacro make-copy-image-function (image-get-code image-set-code)
-  `(flet ((copy-ff ()
-	    (when (and (> width 0)
-		       (> height 0))
-	      (let ((max-y (+ y height))
-		    (max-x (+ x width)))
-		(loop for j from y to max-y do
-		     (loop for i from x to max-x do
-			  (multiple-value-bind (red green blue alpha)
-			      ,image-get-code
-			    ,image-set-code))))))
-	  (copy-bf ()
-	    (when (and (> width 0)
-		       (> height 0))
-	      (let ((max-y (+ y height))
-		    (max-x (+ x width)))
-		(loop for j from y to max-y do
-		     (loop for i from max-x downto x do
-			  (multiple-value-bind (red green blue alpha)
-			      ,image-get-code
-			    ,image-set-code))))))
-	  (copy-fb ()
-	    (when (and (> width 0)
-		       (> height 0))
-	      (let ((max-y (+ y height))
-		    (max-x (+ x width)))
-		(loop for j from max-y downto y do
-		     (loop for i from x to max-x do
-			  (multiple-value-bind (red green blue alpha)
-			      ,image-get-code
-			    ,image-set-code))))))
-	  (copy-bb ()
-	    (when (and (> width 0)
-		       (> height 0))
-	      (let ((max-y (+ y height))
-		    (max-x (+ x width)))
-		(loop for j from max-y downto y do
-		     (loop for i from max-x downto x do
-			  (multiple-value-bind (red green blue alpha)
-			      ,image-get-code
-			    ,image-set-code)))))))
-     (if (eq image src-image)
-	 (cond
-	   ((and (<= src-dx 0) (<= src-dy 0))
-	    (copy-bb))
-	   ((and (<= src-dx 0) (> src-dy 0))
-	    (copy-bf))
-	   ((and (> src-dx 0) (<= src-dy 0))
-	    (copy-fb))
-	   ((and (> src-dx 0) (> src-dy 0))
-	    (copy-ff)))
-	 (copy-ff))))
-
-(defmacro def-copy-image (image-data-type image-data-set-pixel src-image-data-type image-data-get-pixel)
-  `(progn
-     (let ((data-image (image-data image))
-	 (src-data-image (image-data src-image)))
-     (declare (type ,image-data-type data-image)
-	      (type ,src-image-data-type src-data-image))
-     (make-copy-image-function
-      (,image-data-get-pixel src-data-image (+ src-dx i) (+ src-dy j))
-      (,image-data-set-pixel data-image i j red green blue alpha)))
-     (make-rectangle* x y (+ x width) (+ y height))))
-
-
 ;;;
 ;;; fill image
 ;;;
@@ -154,4 +84,4 @@
 			   (multiple-value-bind (red green blue alpha)	  
 			       (octet-blend r.bg g.bg b.bg a.bg red green blue alpha aa-alpha)
 			     ,image-set-code))))))))))
-		      
+

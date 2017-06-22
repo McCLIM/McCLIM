@@ -112,6 +112,50 @@
 ;;; copy image
 ;;;
 
+(defun copy-opticl-image (src-img sx sy width height dst-img x y)
+  (declare (type opticl-image-data src-img)
+           (type opticl-image-data dst-img))
+  (let ((max-y (+ y height -1)) ; why -1
+        (max-x (+ x width -1)) ; why -1
+        (dy (- sy y))
+        (dx (- sx x)))
+    (flet ((copy-ff ()
+             (loop for j from y to max-y do
+                  (loop for i from x to max-x do
+                       (multiple-value-bind (r g b a)
+                           (opticl:pixel src-img (+ j dy) (+ i dx))
+                         (setf (opticl:pixel dst-img j i) (values r g b a))))))
+           (copy-bf ()
+             (loop for j from y to max-y do
+                  (loop for i from max-x downto x do
+                       (multiple-value-bind (r g b a)
+                           (opticl:pixel src-img (+ j dy) (+ i dx))
+                         (setf (opticl:pixel dst-img j i) (values r g b a))))))
+           (copy-fb ()
+             (loop for j from max-y downto y do
+                  (loop for i from x to max-x do
+                       (multiple-value-bind (r g b a)
+                           (opticl:pixel src-img (+ j dy) (+ i dx))
+                         (setf (opticl:pixel dst-img j i) (values r g b a))))))
+           (copy-bb ()
+             (loop for j from max-y downto y do
+                  (loop for i from max-x downto x do
+                       (multiple-value-bind (r g b a)
+                           (opticl:pixel src-img (+ j dy) (+ i dx))
+                         (setf (opticl:pixel dst-img j i) (values r g b a)))))))
+      (when (and (> width 0) (> height 0))
+        (if (eq src-img dst-img)
+            (cond
+              ((and (<= sx x) (<= sy y))
+               (copy-bb))
+              ((and (<= sx x) (> sy y))
+               (copy-bf))
+              ((and (> sx x) (<= sy y))
+               (copy-fb))
+              ((and (> sx x) (> sy y))
+               (copy-ff)))
+            (copy-ff))))))
+
 (defmethod copy-image ((image opticl-image)
 		       (src-image opticl-image)
 		       &key (x 0) (y 0)
@@ -120,9 +164,9 @@
 			 (src-dx 0)
 			 (src-dy 0))
   (declare (type fixnum x y width height src-dx src-dy))
-  (def-copy-image
-      opticl-image-data opticl-image-data-set-pixel
-    opticl-image-data opticl-image-data-get-pixel))
+  (copy-opticl-image (%image-pixels src-image) (+ x src-dx) (+ y src-dy) width height
+                     (%image-pixels image) x y)
+  (make-rectangle* x y (+ x width) (+ y height)))
 
 ;;;
 ;;; fill image
