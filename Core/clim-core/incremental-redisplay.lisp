@@ -510,10 +510,11 @@ updating-output-parent above this one in the tree.")
     (map-over-updating-output
      #'(lambda (r)
          (let ((sub-record (sub-record r)))
-           (setf (old-children r) sub-record)
-           (setf (output-record-dirty r) :updating)
-           (setf (rectangle-edges* (old-bounds r))
-                 (rectangle-edges* sub-record))))
+           (when sub-record
+             (setf (old-children r) sub-record)
+             (setf (output-record-dirty r) :updating)
+             (setf (rectangle-edges* (old-bounds r))
+                   (rectangle-edges* sub-record)))))
      record
      nil)
     (force-output stream)
