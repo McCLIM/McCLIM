@@ -120,11 +120,12 @@
   (declare (ignore x-offset y-offset region))
   (with-slots (design output-record-translation) record
     (let ((old-design design))
-      (setf design (if output-record-translation
-                       (transform-region output-record-translation design)
-                       design))
-      (prog1
-          (call-next-method)
+      (unwind-protect
+           (progn
+             (setf design (if output-record-translation
+                              (transform-region output-record-translation design)
+                              design))
+             (call-next-method))
         (setf design old-design)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
