@@ -1184,7 +1184,7 @@ were added."
 	  (coords (slot-value record 'coord-seq)))
       (multiple-value-prog1
 	  (call-next-method)
-        (let (odd)
+        (let ((odd nil))
           (map-into coords
                     (lambda (val)
                       (prog1
@@ -1195,7 +1195,7 @@ were added."
                     coords))))))
 
 (defun sequence= (seq1 seq2 &optional (test 'equal))
-  (when (eql (length seq1) (length seq2))
+  (when (= (length seq1) (length seq2))
     (map nil
          (lambda (a b)
            (unless (funcall test a b)
