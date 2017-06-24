@@ -1195,14 +1195,8 @@ were added."
                     coords))))))
 
 (defun sequence= (seq1 seq2 &optional (test 'equal))
-  (when (= (length seq1) (length seq2))
-    (map nil
-         (lambda (a b)
-           (unless (funcall test a b)
-             (return-from sequence= nil)))
-         seq1
-         seq2)
-    t))
+  (and (= (length seq1) (length seq2))
+       (every test seq1 seq2)))
 
 (defmethod match-output-records-1 and ((record coord-seq-mixin)
 				       &key (coord-seq nil coord-seq-p))
