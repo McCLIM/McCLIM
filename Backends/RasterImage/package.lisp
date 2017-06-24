@@ -59,6 +59,7 @@
     (:export
      #:with-output-to-raster-image-stream
      #:with-output-to-rgb-pattern
+     #:with-output-to-image-pattern
      ))
 
 

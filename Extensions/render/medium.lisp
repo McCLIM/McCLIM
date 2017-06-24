@@ -371,6 +371,21 @@
 			      (+ to-x width) (+ to-y height)
 			      t))))
 
+(defmethod medium-draw-image* ((medium render-medium-mixin)
+                               (image drawable-image) to-x to-y)
+  (let* ((width (image-width image))
+	 (height (image-height image))
+	 (to-sheet (medium-sheet medium)))
+    (with-drawing-options (medium :ink (climi::transform-region
+					(make-translation-transformation
+					 to-x to-y)
+					(make-image-design image)))
+      (medium-draw-rectangle* medium
+			      to-x to-y
+			      (+ to-x width) (+ to-y height)
+			      t))))
+
+
 (defmethod medium-finish-output ((medium render-medium-mixin))
   )
 

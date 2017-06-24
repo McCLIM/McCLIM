@@ -1,6 +1,6 @@
 (in-package :clim-clx-fb)
 
-(defclass clx-fb-mirror (mcclim-render::opticl-image-mirror-mixin)
+(defclass clx-fb-mirror (mcclim-render::opticl-rgb-image-mirror-mixin)
   ((width :initform 0)
    (height :initform 0)
    (xmirror :initform nil
@@ -65,7 +65,7 @@
 (defun image-mirror-pre-put (width height xmirror sheet clx-image xlib-image dirty-r)
   ;;(let ((pixels (mcclim-image::%image-pixels (mcclim-render::image-mirror-image sheet))))
   (let ((pixels (mcclim-render::%image-pixels (mcclim-render::image-mirror-image sheet))))
-    (declare (type mcclim-render::opticl-image-data pixels))
+    (declare (type mcclim-render::opticl-rgb-image-data pixels))
     (map-over-region-set-regions #'(lambda (region)
                                      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 				       (region-intersection region (make-rectangle* 0 0 (1- width) (1- height)))

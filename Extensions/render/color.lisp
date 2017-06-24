@@ -64,8 +64,5 @@
    (%byte-blend-value b.fg b.bg a.fg a.bg)
    (%prelerp a.fg a.bg a.bg)))
 
-;;;
-;;; image data
-;;;
 
 (deftype clim-rgb-image-data () '(simple-array (unsigned-byte 32) (* *)))

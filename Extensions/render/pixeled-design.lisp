@@ -129,6 +129,42 @@
                 (a.bg (ldb (byte 8 24) p)))
             (values
              r.bg g.bg b.bg a.bg)))))))
+;;;
+;;;
+;;;
+
+(defclass pixeled-opticl-image-design (pixeled-design)
+  ((image :initarg :image :initform nil
+          :accessor pixeled-opticl-image-design-image)
+   (dx :initarg :dx :initform 0 :type fixnum
+       :accessor pixeled-opticl-image-design-dx)
+   (dy :initarg :dy :initform 0 :type fixnum
+       :accessor pixeled-opticl-image-design-dy)))
+
+(defun make-pixeled-opticl-image-design (&key (image nil))
+  (make-instance 'pixeled-opticl-image-design
+                 :image image
+                 :region (make-rectangle* 0 0 (1- (image-width image)) (1- (image-height image)))))
+
+(defmethod  make-pixeled-rgba-octets-fn ((design pixeled-opticl-image-design))
+  (with-slots (image dx dy region)
+      design
+    (let ((data (%image-pixels image)))
+      (declare (type opticl-rgb-image-data data))
+      (lambda (x y)
+        (declare (type fixnum x y))
+        (if (clim:region-contains-position-p region x y)
+            (opticl:pixel data y x)
+            (values 0 0 0 0))))))
+
+(defmethod  make-pixeled-rgba-octets-unsafe-fn ((design pixeled-opticl-image-design))
+  (with-slots (image dx dy)
+      design
+    (let ((data (%image-pixels image)))
+      (declare (type opticl-rgb-image-data data))
+      (lambda (x y)
+        (declare (type fixnum x y))
+        (opticl:pixel data y x)))))
 
 ;;;
 ;;; Make a pixeled design
@@ -213,6 +249,10 @@
 (defmethod %make-pixeled-design ((ink rgb-pattern))
   (let* ((img (slot-value ink 'image)))
     (make-pixeled-image-design :image img)))
+
+(defmethod %make-pixeled-design ((ink image-design))
+  (let* ((img (slot-value ink 'image)))
+    (make-pixeled-opticl-image-design :image img)))
 
 (defmethod %make-pixeled-design ((ink rectangular-tile))
   (let ((design (make-pixeled-rgba-octets-fn (%make-pixeled-design (rectangular-tile-design ink))))

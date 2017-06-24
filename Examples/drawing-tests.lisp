@@ -143,7 +143,7 @@
       (when item
          (handler-case
             (with-slots (recording-p) clim:*application-frame*
-              (let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
+              (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
                                  (stream :width *width* :height *height* :border-width *border-width*
                                          :recording-p recording-p)
                                (clim:draw-rectangle* stream 0 0 *width* *height* :filled t

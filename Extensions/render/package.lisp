@@ -35,7 +35,14 @@
 		  #:transformed-design
 		  #:transformed-design-design
 		  #:transformed-design-transformation
-
+                  ;; for recording
+                  #:def-grecording
+                  #:medium-transformation
+                  #:output-record-position
+                  #:defmethod*
+                  #:defrecord-predicate
+                  #:if-supplied
+                  #:coordinate=
 		  )
     (:import-from :clim-backend
 		  #:port-set-mirror-region

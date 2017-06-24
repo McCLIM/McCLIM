@@ -90,12 +90,12 @@
 ;;;
 
 (defun font-generate-opacity-image (paths width height dx dy)
-  (let* ((image (make-mask-image (1+ (* 1 width))
+  (let* ((image (make-opticl-stancil-image (1+ (* 1 width))
 				    (1+ (* 1 height))))
 	 (render (make-instance 'rgb-image-render-engine)))
     (if (= (* width height) 0)
 	nil
-	(paths->mask-image render image paths
+	(paths->opticl-stancil-image render image paths
 			   (make-translation-transformation
 			    (- dx) dy)
 			   (make-rectangle* 0 0 (* 1 width) (* 1 height))))

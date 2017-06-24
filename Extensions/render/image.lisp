@@ -3,85 +3,57 @@
 (declaim (optimize speed))
 
 ;;;
-;;; image base class
+;;; Image
 ;;;
-
 (defclass image ()
   ((width :initform 0 :initarg :width :accessor image-width :type fixnum)
    (height :initform 0 :initarg :height :accessor image-height :type fixnum)
-   (data :initarg :data
-	 :accessor image-data)))
-
-(defgeneric fill-image (image design mask &key x y width height 
-					    mask-dx mask-dy))
-
-(defgeneric copy-image (image src-image &key x y width height 
-					  src-dx src-dy))
-
-(defgeneric save-image-to-file (image file))
-(defgeneric save-image-to-stream (image stream format))
+   (alpha-p :initform nil :initarg :alpha-p :accessor image-alpha-p)))
 
 ;;;
-;;; conversion
+;;; Drawable Image
 ;;;
+(defclass drawable-image (image)
+  ())
 
-(defgeneric coerce-to-clim-rgb-image (image)
-  (:method ((image rgb-image))
-    image))
+(defgeneric map-rgb-color (drawable-image fn))
+(defgeneric map-rgba-color (drawable-image fn))
 
-(defgeneric coerce-to-opticl-image (image))
- 
-;;;
-;;; I/O
-;;;
-
-(defparameter *image-stream-writer-hash-table* (make-hash-table))
-(map nil (lambda (z)
-           (destructuring-bind (x y) z
-             (setf (gethash x *image-stream-writer-hash-table*) y)))
-     '((:tiff opticl:write-tiff-stream)
-       (:tif opticl:write-tiff-stream)
-       (:jpeg opticl:write-jpeg-stream)
-       (:jpg opticl:write-jpeg-stream)
-       (:png opticl:write-png-stream)
-       (:pbm opticl:write-pbm-stream)
-       (:pgm opticl:write-pgm-stream)
-       (:ppm opticl:write-ppm-stream)
-       (:gif opticl:write-gif-stream)))
-
-(defmethod save-image-to-file (image file)
-  (let ((optimg (coerce-to-opticl-image image)))
-    (opticl:write-image-file file optimg)))
-    
-(defmethod save-image-to-stream (image stream format)
-  (let ((fn (gethash format *image-stream-writer-hash-table*)))
-    (if fn
-	(funcall fn stream (coerce-to-opticl-image image))
-	(error "Cannot write image stream: ~S" stream))))
-
-(declaim (inline round-coordinate))
-(defun round-coordinate (x)
-  (floor (+ x .5)))
+(defgeneric draw-image (sheet image &rest args
+                        &key clipping-region transformation))
+(defgeneric medium-draw-image* (medium image x y))
 
 ;;;
-;;; fill image
+;;; Basic Image
 ;;;
+(defclass basic-image (image)
+  ((pixels :initarg :pixels
+           :accessor %image-pixels)))
 
-(defmacro make-fill-image-function (image-get-code image-set-code design-get-code aa-alpha-code)
-  `(when (and (> width 0)
-	      (> height 0))
-     (let ((max-y (+ y height -1))
-	   (max-x (+ x width -1)))
-       (loop for j from y to max-y do
-	    (loop for i from x to max-x do
-		 (multiple-value-bind (red green blue alpha)
-		     ,design-get-code
-		   (let ((aa-alpha ,aa-alpha-code))
-		     (if (> (octet-mult aa-alpha alpha) 250)
-			 ,image-set-code
-			 (multiple-value-bind (r.bg g.bg b.bg a.bg)
-			     ,image-get-code
-			   (multiple-value-bind (red green blue alpha)	  
-			       (octet-blend-function r.bg g.bg b.bg a.bg red green blue (octet-mult alpha aa-alpha))
-			     ,image-set-code))))))))))
+;;;
+;;; Image Design
+;;;
+(defclass image-design (design)
+  ((image :reader image
+          :initarg :image)))
 
+(defun make-image-design (image)
+  (make-instance 'image-design :image image))
+
+(defmethod clim:draw-design
+    (medium (design image-design) &rest options
+     &key (x 0) (y 0) &allow-other-keys)
+  (climi::with-medium-options (medium options)
+    (medium-draw-image* medium design x y)))
+
+;;;
+;;; Image Pattern
+;;;
+(defclass image-pattern (climi::pattern image-design)
+  ())
+
+(defmethod pattern-width ((pattern image-pattern))
+  (image-width (image pattern)))
+
+(defmethod pattern-height ((pattern image-pattern))
+  (image-height (image pattern)))
