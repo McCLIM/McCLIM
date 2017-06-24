@@ -5,7 +5,7 @@
     :components
     ((:file "package")
      (:file "color")
-     (:file "design")
+     (:file "pixeled-design")
      (:file "image")
      (:file "aa")
     

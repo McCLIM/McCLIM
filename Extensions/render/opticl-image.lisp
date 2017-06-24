@@ -183,7 +183,7 @@
 
 (defgeneric opticl-fill-image (image rgba-design stencil &key x y width height stencil-dx stencil-dy))
 
-(defmethod opticl-fill-image (image (rgba-design uniform-rgba-design) (stencil (eql nil))
+(defmethod opticl-fill-image (image (rgba-design pixeled-uniform-design) (stencil (eql nil))
                               &key (x 0) (y 0) (width 0) (height 0) (stencil-dx 0) (stencil-dy 0))
   (declare (type fixnum x y width height)
 	   (ignore stencil stencil-dx stencil-dy))
@@ -193,10 +193,10 @@
           (max-x (+ x width -1)))
       (multiple-value-bind (red green blue alpha)
           (values
-           (uniform-rgba-design-red rgba-design)
-           (uniform-rgba-design-green rgba-design)
-           (uniform-rgba-design-blue rgba-design)
-           (uniform-rgba-design-alpha rgba-design))
+           (pixeled-uniform-design-red rgba-design)
+           (pixeled-uniform-design-green rgba-design)
+           (pixeled-uniform-design-blue rgba-design)
+           (pixeled-uniform-design-alpha rgba-design))
         (if (> alpha 250)
             (loop for j from y to max-y do
                  (loop for i from x to max-x do
@@ -218,7 +218,8 @@
   (when (and (> width 0) (> height 0))
     (let ((max-y (+ y height -1))
           (max-x (+ x width -1)))
-      (let ((source-fn (make-rgba-design-fn rgba-design)))
+      (let ((source-fn (make-pixeled-rgba-octets-fn rgba-design)))
+        (declare (type pixeled-design-fn source-fn))
         (loop for j from y to max-y do
              (loop for i from x to max-x do
                   (multiple-value-bind (red green blue alpha)
@@ -232,7 +233,7 @@
                             (setf (opticl:pixel image j i) (values red green blue alpha)))))))))))
   (make-rectangle* x y (+ x width) (+ y height)))
 
-(defmethod opticl-fill-image (image (rgba-design uniform-rgba-design) stencil
+(defmethod opticl-fill-image (image (rgba-design pixeled-uniform-design) stencil
                               &key (x 0) (y 0) (width 0) (height 0) (stencil-dx 0) (stencil-dy 0))
   (declare (type fixnum x y width height))
   (declare (type opticl-image-data image))
@@ -242,10 +243,10 @@
           (max-x (+ x width -1)))
       (multiple-value-bind (red green blue alpha)
           (values 
-           (uniform-rgba-design-red rgba-design)
-           (uniform-rgba-design-green rgba-design)
-           (uniform-rgba-design-blue rgba-design)
-           (uniform-rgba-design-alpha rgba-design))
+           (pixeled-uniform-design-red rgba-design)
+           (pixeled-uniform-design-green rgba-design)
+           (pixeled-uniform-design-blue rgba-design)
+           (pixeled-uniform-design-alpha rgba-design))
         (loop for j from y to max-y do
              (loop for i from x to max-x do
                   (let* ((alpha-ste (opticl:pixel stencil (+ stencil-dy j) (+ stencil-dx i)))
@@ -267,7 +268,8 @@
   (when (and (> width 0) (> height 0))
     (let ((max-y (+ y height -1))
           (max-x (+ x width -1)))
-      (let ((source-fn (make-rgba-design-fn rgba-design)))
+      (let ((source-fn (make-pixeled-rgba-octets-fn rgba-design)))
+        (declare (type pixeled-design-fn source-fn))
         (loop for j from y to max-y do
              (loop for i from x to max-x do
                   (multiple-value-bind (red green blue alpha)
@@ -294,37 +296,37 @@
 
 ;;; private protocol
 (defmethod %make-blend-draw-fn ((image opticl-image) clip-region design)
-  (let ((source-fn (make-rgba-design-fn design)))
-    (declare (type design-fn source-fn))
+  (let ((source-fn (make-pixeled-rgba-octets-fn design)))
+    (declare (type pixeled-design-fn source-fn))
     (%make-blend-draw-function-macro
-     opticl-image-data 
+     opticl-image-data
      (opticl-image-data-get-pixel data x y)
      (opticl-image-data-set-pixel data x y red green blue alpha)
      (funcall source-fn x y))))
 
 (defmethod %make-blend-draw-span-fn ((image opticl-image) clip-region design)
-  (let ((source-fn (make-rgba-design-fn design)))
-    (declare (type design-fn source-fn))
+  (let ((source-fn (make-pixeled-rgba-octets-fn design)))
+    (declare (type pixeled-design-fn source-fn))
     (%make-blend-draw-span-function-macro
-     opticl-image-data 
+     opticl-image-data
      (opticl-image-data-get-pixel data x y)
      (opticl-image-data-set-pixel data x y red green blue alpha)
      (funcall source-fn x y))))
 
 (defmethod %make-xor-draw-fn ((image opticl-image) clip-region design)
-  (let ((source-fn (make-rgba-design-fn design)))
-    (declare (type design-fn source-fn))
+  (let ((source-fn (make-pixeled-rgba-octets-fn design)))
+    (declare (type pixeled-design-fn source-fn))
     (%make-xor-draw-function-macro
-     opticl-image-data 
+     opticl-image-data
      (opticl-image-data-get-pixel data x y)
      (opticl-image-data-set-pixel data x y red green blue alpha)
      (funcall source-fn x y))))
 
 (defmethod %make-xor-draw-span-fn ((image opticl-image) clip-region design)
-  (let ((source-fn (make-rgba-design-fn design)))
-    (declare (type design-fn source-fn))
+  (let ((source-fn (make-pixeled-rgba-octets-fn design)))
+    (declare (type pixeled-design-fn source-fn))
     (%make-xor-draw-span-function-macro
-     opticl-image-data 
+     opticl-image-data
      (opticl-image-data-get-pixel data x y)
      (opticl-image-data-set-pixel data x y red green blue alpha)
      (funcall source-fn x y))))
@@ -333,42 +335,24 @@
 ;;; Optimization
 ;;;
 
-(defmethod %make-blend-draw-fn ((image opticl-image) clip-region (design uniform-rgba-design))
-  (let ((s-red (uniform-rgba-design-red design))
-	(s-green (uniform-rgba-design-green design))
-	(s-blue (uniform-rgba-design-blue design))
-	(s-alpha (uniform-rgba-design-alpha design))
-	(mask (uniform-rgba-design-mask design)))
-    (if mask
-	(%make-blend-draw-function-macro
-	 opticl-image-data 
-	 (opticl-image-data-get-pixel data x y)
-	 (opticl-image-data-set-pixel data x y red green blue alpha)
-	 (if (region-contains-position-p mask x y)
-	     (values s-red s-green s-blue s-alpha)
-	     (values 0 0 0 0)))
-	(%make-blend-draw-function-macro
-	 opticl-image-data 
-	 (opticl-image-data-get-pixel data x y)
-	 (opticl-image-data-set-pixel data x y red green blue alpha)
-	 (values s-red s-green s-blue s-alpha)))))
+(defmethod %make-blend-draw-fn ((image opticl-image) clip-region (design pixeled-uniform-design))
+  (let ((s-red (pixeled-uniform-design-red design))
+	(s-green (pixeled-uniform-design-green design))
+	(s-blue (pixeled-uniform-design-blue design))
+	(s-alpha (pixeled-uniform-design-alpha design)))
+    (%make-blend-draw-function-macro
+     opticl-image-data
+     (opticl-image-data-get-pixel data x y)
+     (opticl-image-data-set-pixel data x y red green blue alpha)
+     (values s-red s-green s-blue s-alpha))))
 
-(defmethod %make-blend-draw-span-fn ((image opticl-image) clip-region (design uniform-rgba-design))
-  (let ((s-red (uniform-rgba-design-red design))
-	(s-green (uniform-rgba-design-green design))
-	(s-blue (uniform-rgba-design-blue design))
-	(s-alpha (uniform-rgba-design-alpha design))
-	(mask (uniform-rgba-design-mask design)))
-    (if mask
-	(%make-blend-draw-span-function-macro
-	 opticl-image-data 
-	 (opticl-image-data-get-pixel data x y)
-	 (opticl-image-data-set-pixel data x y red green blue alpha)
-	 (if (region-contains-position-p mask x y)
-	     (values s-red s-green s-blue s-alpha)
-	     (values 0 0 0 0)))
-	(%make-blend-draw-span-function-macro
-	 opticl-image-data 
-	 (opticl-image-data-get-pixel data x y)
-	 (opticl-image-data-set-pixel data x y red green blue alpha)
-	 (values s-red s-green s-blue s-alpha)))))
+(defmethod %make-blend-draw-span-fn ((image opticl-image) clip-region (design pixeled-uniform-design))
+  (let ((s-red (pixeled-uniform-design-red design))
+	(s-green (pixeled-uniform-design-green design))
+	(s-blue (pixeled-uniform-design-blue design))
+	(s-alpha (pixeled-uniform-design-alpha design)))
+    (%make-blend-draw-span-function-macro
+     opticl-image-data
+     (opticl-image-data-get-pixel data x y)
+     (opticl-image-data-set-pixel data x y red green blue alpha)
+     (values s-red s-green s-blue s-alpha))))

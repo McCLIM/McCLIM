@@ -98,27 +98,23 @@
 
 (defmethod %fill-image-mask ((mirror image-mirror-mixin)
 			     image-mask x y width height x-dest y-dest clip-region ink background foreground)
-  (let ((*background-design* background)
-	(*foreground-design* foreground))
-    (let ((region
-	   (fill-image
-	    (image-mirror-image mirror)
-	    (make-rgba-design ink)
-	    image-mask
-	    :x x :y y :width width :height height
-	    :mask-dx x-dest :mask-dy y-dest)))
-      (%notify-image-updated mirror region))))
+  (let ((region
+         (fill-image
+          (image-mirror-image mirror)
+          (make-pixeled-design ink :foreground foreground :background background)
+          image-mask
+          :x x :y y :width width :height height
+          :mask-dx x-dest :mask-dy y-dest)))
+    (%notify-image-updated mirror region)))
 
 (defmethod %fill-image ((mirror image-mirror-mixin)
 			x y width height ink background foreground)
-  (let ((*background-design* background)
-	(*foreground-design* foreground))
-    (let ((region (fill-image
-		   (image-mirror-image mirror)
-		   (make-rgba-design ink)
-		   nil
-		   :x x :y y :width width :height height)))
-    (%notify-image-updated mirror region))))
+  (let ((region (fill-image
+                 (image-mirror-image mirror)
+                 (make-pixeled-design ink :background background :foreground foreground)
+                 nil
+                 :x x :y y :width width :height height)))
+    (%notify-image-updated mirror region)))
 
 
 (defmethod %draw-paths ((mirror image-mirror-mixin) paths transformation region ink background foreground)

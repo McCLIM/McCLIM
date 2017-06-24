@@ -31,9 +31,7 @@
   (with-slots (state)
       render
     (render-update-state state paths transformation)
-    (let ((*background-design* background)
-	  (*foreground-design* foreground)
-	  (current-clip-region
+    (let ((current-clip-region
 	   (if (rectanglep clip-region)
 	       nil
 	       clip-region)))
@@ -41,7 +39,7 @@
 	clip-region
 	(let ((draw-function nil)
 	      (draw-span-function nil)
-	      (rgba-design (make-rgba-design ink)))
+	      (rgba-design (make-pixeled-design ink :foreground foreground :background background)))
 	  (setf draw-function
 		(if (typep ink 'standard-flipping-ink)
 		    (%make-xor-draw-fn image current-clip-region
