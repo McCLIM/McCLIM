@@ -37,7 +37,7 @@
    (alpha :initarg :alpha :type octet :initform 0
           :accessor pixeled-uniform-design-alpha)))
 
-(defun make-pixeled-uniform-design (&key (red 0) (green 0) (blue 0) (alpha 0))
+(defun make-pixeled-uniform-design (&key (red 0) (green 0) (blue 0) (alpha 255))
   (make-instance 'pixeled-uniform-design :red red :green green :blue blue :alpha alpha))
 
 (defmethod make-pixeled-rgba-octets-fn ((design pixeled-uniform-design))
@@ -78,9 +78,7 @@
   (with-slots (color-fn region)
       design
     (declare (type pixeled-design-fn color-fn))
-    (lambda (x y)
-      (declare (type fixnum x y))
-      (funcall color-fn x y))))
+    color-fn))
 
 ;;;
 ;;; Image Design
@@ -98,73 +96,18 @@
                  :image image
                  :region (make-rectangle* 0 0 (1- (image-width image)) (1- (image-height image)))))
 
+(defgeneric make-pixeled-image-rgba-octets-fn (image dx dy region))
+(defgeneric make-pixeled-image-rgba-octets-unasafe-fn (image dx dy region))
+
 (defmethod  make-pixeled-rgba-octets-fn ((design pixeled-image-design))
   (with-slots (image dx dy region)
       design
-    (let ((data (image-data image)))
-      (declare (type clim-rgb-image-data data))
-      (lambda (x y)
-        (declare (type fixnum x y))
-        (if (clim:region-contains-position-p region x y)
-            (let ((p (aref data (+ y dy) (+ x dx))))
-              (let ((r.bg (ldb (byte 8 0) p))
-                    (g.bg (ldb (byte 8 8) p))
-                    (b.bg (ldb (byte 8 16) p))
-                    (a.bg (ldb (byte 8 24) p)))
-                (values
-                 r.bg g.bg b.bg a.bg)))
-              (values 0 0 0 0))))))
+    (make-pixeled-image-rgba-octets-fn image dx dy region)))
 
 (defmethod  make-pixeled-rgba-octets-unsafe-fn ((design pixeled-image-design))
-  (with-slots (image dx dy)
-      design
-    (let ((data (image-data image)))
-      (declare (type clim-rgb-image-data data))
-      (lambda (x y)
-        (declare (type fixnum x y))
-        (let ((p (aref data (+ y dy) (+ x dx))))
-          (let ((r.bg (ldb (byte 8 0) p))
-                (g.bg (ldb (byte 8 8) p))
-                (b.bg (ldb (byte 8 16) p))
-                (a.bg (ldb (byte 8 24) p)))
-            (values
-             r.bg g.bg b.bg a.bg)))))))
-;;;
-;;;
-;;;
-
-(defclass pixeled-opticl-image-design (pixeled-design)
-  ((image :initarg :image :initform nil
-          :accessor pixeled-opticl-image-design-image)
-   (dx :initarg :dx :initform 0 :type fixnum
-       :accessor pixeled-opticl-image-design-dx)
-   (dy :initarg :dy :initform 0 :type fixnum
-       :accessor pixeled-opticl-image-design-dy)))
-
-(defun make-pixeled-opticl-image-design (&key (image nil))
-  (make-instance 'pixeled-opticl-image-design
-                 :image image
-                 :region (make-rectangle* 0 0 (1- (image-width image)) (1- (image-height image)))))
-
-(defmethod  make-pixeled-rgba-octets-fn ((design pixeled-opticl-image-design))
   (with-slots (image dx dy region)
       design
-    (let ((data (%image-pixels image)))
-      (declare (type opticl-rgb-image-data data))
-      (lambda (x y)
-        (declare (type fixnum x y))
-        (if (clim:region-contains-position-p region x y)
-            (opticl:pixel data y x)
-            (values 0 0 0 0))))))
-
-(defmethod  make-pixeled-rgba-octets-unsafe-fn ((design pixeled-opticl-image-design))
-  (with-slots (image dx dy)
-      design
-    (let ((data (%image-pixels image)))
-      (declare (type opticl-rgb-image-data data))
-      (lambda (x y)
-        (declare (type fixnum x y))
-        (opticl:pixel data y x)))))
+    (make-pixeled-image-rgba-octets-unsafe-fn image dx dy region)))
 
 ;;;
 ;;; Make a pixeled design
@@ -235,9 +178,16 @@
    :alpha (color-value->octet (opacity-value ink))))
 
 (defmethod %make-pixeled-design ((ink indexed-pattern))
-  (let ((designs (map 'vector #'(lambda (ink)
-				  (make-pixeled-rgba-octets-fn (%make-pixeled-design ink)))
-		      (pattern-designs ink))))
+  (let* ((width (clim:pattern-width ink))
+         (height (clim:pattern-height ink))
+         (designs (map 'vector #'(lambda (ink)
+                                   (let ((pdesign (%make-pixeled-design ink)))
+                                     (if (region-contains-region-p
+                                          (pixeled-design-region pdesign)
+                                          (make-rectangle* 0 0 (1- width) (1- height)))
+                                         (make-pixeled-rgba-octets-unsafe-fn pdesign)
+                                         (make-pixeled-rgba-octets-fn pdesign))))
+                       (pattern-designs ink))))
     (declare (type (simple-array pixeled-design-fn (*)) designs))
     (make-pixeled-functional-design
      :color-fn (lambda (x y)
@@ -246,25 +196,20 @@
                               (1- (clim:pattern-width ink))
                               (1- (clim:pattern-height ink))))))
 
-(defmethod %make-pixeled-design ((ink rgb-pattern))
-  (let* ((img (slot-value ink 'image)))
-    (make-pixeled-image-design :image img)))
-
-(defmethod %make-pixeled-design ((ink image-design))
-  (let* ((img (slot-value ink 'image)))
-    (make-pixeled-opticl-image-design :image img)))
-
 (defmethod %make-pixeled-design ((ink rectangular-tile))
-  (let ((design (make-pixeled-rgba-octets-fn (%make-pixeled-design (rectangular-tile-design ink))))
-	(width (rectangular-tile-width ink))
-	(height (rectangular-tile-height ink)))
-    (declare (type pixeled-design-fn design)
-             (type fixnum width height))
-    ;; TOFIX - use unsafe
+  (let* ((design (%make-pixeled-design (rectangular-tile-design ink)))
+         (width (rectangular-tile-width ink))
+         (height (rectangular-tile-height ink))
+         (design-fn (if (region-contains-region-p
+                         (pixeled-design-region design)
+                         (make-rectangle* 0 0 (1- width) (1- height)))
+                        (make-pixeled-rgba-octets-unsafe-fn design)
+                        (make-pixeled-rgba-octets-fn design))))
     (make-pixeled-functional-design
      :color-fn (lambda (x y)
-                 (declare (type fixnum x y))
-		 (funcall design (mod x width) (mod y height))))))
+                 (declare (type fixnum x y width height)
+                          (type pixeled-design-fn design-fn))
+                 (funcall design-fn (mod x width) (mod y height))))))
 
 (defgeneric %transform-design (design transformation)
   (:method (design transformation)
@@ -306,7 +251,9 @@
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall mask-fn x y)
 		       (declare (ignore r2 g2 b2))
-		       (values r1 g1 b1 (octet-mult a1 a2))))))))
+		       (values r1 g1 b1 (octet-mult a1 a2)))))
+       :region (region-intersection (pixeled-design-region ink)
+                                    (pixeled-design-region mask)))))
   (:method ((ink pixeled-uniform-design) (mask pixeled-uniform-design))
     (make-pixeled-uniform-design
      :red (pixeled-uniform-design-red ink)
@@ -327,7 +274,8 @@
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall mask-fn x y)
 		       (declare (ignore r2 g2 b2))
-		       (values r1 g1 b1 (octet-mult a1 (- 255 a2)))))))))
+		       (values r1 g1 b1 (octet-mult a1 (- 255 a2))))))
+       :region (pixeled-design-region a1))))
   (:method ((ink pixeled-uniform-design) (mask pixeled-uniform-design))
     (make-pixeled-uniform-design
      :red (pixeled-uniform-design-red ink)
@@ -343,12 +291,12 @@
       (declare (type pixeled-design-fn fore-fn back-fn))
       (make-pixeled-functional-design
        :color-fn (lambda (x y)
- 		   (multiple-value-bind (r1 g1 b1 a1)
+                   (multiple-value-bind (r1 g1 b1 a1)
 		       (funcall fore-fn x y)
 		     (multiple-value-bind (r2 g2 b2 a2)
 			 (funcall back-fn x y)
 		         (multiple-value-bind (red green blue alpha)
-			     (octet-blend-function 
+			     (octet-blend-function
 			      r1 g1 b1 a1 r2 g2 b2 a2)
 			   (values red green blue alpha))))))))
   (:method ((fore pixeled-uniform-design) (back pixeled-uniform-design))
@@ -383,6 +331,9 @@
 	(c-back (make-pixeled-design (compositum-background ink))))
     (compose-over-rgba-design c-fore c-back)))
 
+(defmethod %make-pixeled-design ((ink image-design))
+  (let* ((img (slot-value ink 'image)))
+    (make-pixeled-image-design :image img)))
 
 ;;;
 ;;; design fix

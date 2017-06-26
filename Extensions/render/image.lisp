@@ -17,8 +17,6 @@
   ())
 
 (defgeneric map-rgb-color (drawable-image fn))
-(defgeneric map-rgba-color (drawable-image fn))
-
 (defgeneric draw-image (sheet image &rest args
                         &key clipping-region transformation))
 (defgeneric medium-draw-image* (medium image x y))
@@ -28,7 +26,13 @@
 ;;;
 (defclass basic-image (image)
   ((pixels :initarg :pixels
-           :accessor %image-pixels)))
+           :accessor image-pixels)))
+
+(defgeneric image-pixels-type (image-class))
+(defgeneric make-get-rgba-octets-code (image-class pixels-var x-var y-var))
+(defgeneric make-set-rgba-octets-code (image-class pixels-var x-var y-var red-var grren-var blue-var alpha-var))
+(defgeneric make-get-alpha-octets-code (image-class pixels-var x-var y-var))
+(defgeneric make-set-alpha-octets-code (image-class pixels-var x-var y-var red-var grren-var blue-var alpha-var))
 
 ;;;
 ;;; Image Design
@@ -57,3 +61,6 @@
 
 (defmethod pattern-height ((pattern image-pattern))
   (image-height (image pattern)))
+
+(defmethod climi::medium-draw-pattern* (medium (pattern image-pattern) x y)
+  (medium-draw-image* medium (image pattern) x y))

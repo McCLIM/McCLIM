@@ -23,8 +23,8 @@
 		  #:image-sheet-mixin
 		  #:image-mirror-mixin
 		  #:image-pixmap-mixin
-		  #:save-image-to-file
-		  #:save-image-to-stream
+		  ;;#:save-image-to-file
+		  ;;#:save-image-to-stream
 		  )
     (:import-from :mcclim-image
                   #:rgb-pattern

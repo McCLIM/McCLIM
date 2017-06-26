@@ -1,6 +1,8 @@
 (in-package :mcclim-render)
 
 (declaim (optimize speed))
+;; turn off compiler notes (noisy)
+;;#+(or sbcl) (declaim (sb-ext:muffle-conditions sb-ext:compiler-note))
 
 ;;;
 ;;; color utility functions
@@ -63,6 +65,3 @@
    (%byte-blend-value g.fg g.bg a.fg a.bg)
    (%byte-blend-value b.fg b.bg a.fg a.bg)
    (%prelerp a.fg a.bg a.bg)))
-
-
-(deftype clim-rgb-image-data () '(simple-array (unsigned-byte 32) (* *)))

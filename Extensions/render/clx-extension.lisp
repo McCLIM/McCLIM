@@ -4,9 +4,6 @@
 
 ;;; RGB-IMAGE support, from Closure
 
-(defmethod climi::medium-draw-pattern* (medium (pattern image-pattern) x y)
-  (medium-draw-image* medium (image pattern) x y))
-
 (defmethod medium-draw-image*
     ((medium sheet-with-medium-mixin) design x y)
   (medium-draw-image* (sheet-medium medium) design x y))
@@ -16,9 +13,7 @@
   (let* ((da (clim-clx::sheet-xmirror (medium-sheet medium)))
 	 (width (mcclim-render::image-width image))
 	 (height (mcclim-render::image-height image)))
-    (let ((pixmap (compute-rgb-image-pixmap da image))
-          (mask (when (mcclim-render::image-alpha-p image)
-                  (compute-rgb-image-mask da image))))
+    (let ((pixmap (compute-rgb-image-pixmap da image)))
       (multiple-value-bind (x y)
 	  (transform-position
 	   (sheet-device-transformation (medium-sheet medium))
@@ -26,21 +21,9 @@
 	(setf x (round x))
 	(setf y (round y))
 	(let ((gcontext (xlib:create-gcontext :drawable da)))
-	  (cond
-	    (mask
-             (xlib:with-gcontext (gcontext
-                                  :clip-mask mask
-                                  :clip-x x
-                                  :clip-y y)
-               (xlib:copy-area pixmap gcontext 0 0 width height
-                               da x y)))
-	    (t
-             (xlib:copy-area pixmap gcontext 0 0 width height
-                             da x y)))))
-      (when mask
-        (xlib:free-pixmap mask))
-      (when pixmap 
-        (xlib:free-pixmap pixmap)))))
+          (xlib:copy-area pixmap gcontext 0 0 width height
+                          da x y)))
+      (xlib:free-pixmap pixmap))))
 
 (defun compute-rgb-image-pixmap (drawable image)
   (let* ((width (mcclim-image:image-width image))
@@ -62,37 +45,9 @@
       (xlib:free-gcontext gc)
       pixmap)))
 
-(defun compute-rgb-image-mask (drawable image)
-  (let* ((width (mcclim-image:image-width image))
-         (height (mcclim-image:image-height image))
-         (bitmap (xlib:create-pixmap :drawable drawable
-                                     :width width
-                                     :height height
-                                     :depth 1))
-         (gc (xlib:create-gcontext :drawable bitmap
-				   :foreground 1
-				   :background 0))
-         (xdata (make-array (list height width)
-			    :element-type '(unsigned-byte 1)))
-         (im (xlib:create-image :width width
-                                :height height
-                                :depth 1
-                                :data xdata)) )
-    (mcclim-render::map-rgba-color image #'(lambda (x y r g b a)
-                              (declare (ignore x y r g b))
-                              (if (> a #x80000000)
-                                  (setf (aref xdata x y) 0)
-                                  (setf (aref xdata x y) 1))))
-    (unless (or (>= width 2048) (>= height 2048)) ;### CLX breaks here
-      (xlib:put-image bitmap gc im :src-x 0 :src-y 0
-		      :x 0 :y 0 :width width :height height
-		      :bitmap-p nil))
-    (xlib:free-gcontext gc)
-    bitmap))
-
 (defun image-to-ximage-for-drawable (drawable image)
   (image-to-ximage image
-		   (xlib:drawable-depth drawable) 
+		   (xlib:drawable-depth drawable)
 		   (pixel-translator (xlib:window-colormap drawable))))
 
 (defun image-to-ximage (image depth translator)
@@ -120,7 +75,6 @@
   (let ((h (integer-length mask)))
     (let ((l (integer-length (logxor mask (1- (ash 1 h))))))
       (byte (- h l) l))))
-
 
 ;; fixme!  This is not just incomplete, but also incorrect: The original
 ;; true color code knew how to deal with non-linear RGB value

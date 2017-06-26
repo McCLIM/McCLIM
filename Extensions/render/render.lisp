@@ -11,7 +11,7 @@
 ;;; protocol
    
 (defgeneric draw-paths (render image paths transformation clip-region ink backgound foreground))
-(defgeneric paths->opticl-stancil-image (render mask paths transformation clip-region))
+(defgeneric paths->opticl-stencil-image (render mask paths transformation clip-region))
 
 ;;;
 ;;; Locking
@@ -52,7 +52,7 @@
 					    rgba-design)
 		    (%make-blend-draw-span-fn image current-clip-region
 					      rgba-design)))
-	  (render-cells-sweep/rectangle (%image-pixels image) state
+	  (render-cells-sweep/rectangle (image-pixels image) state
 				    (floor min-x)
 				    (floor min-y)
 				    (ceiling max-x)
@@ -106,7 +106,7 @@
 	  region)))))
 |#
 
-(defmethod paths->opticl-stancil-image ((render rgb-image-render-engine) (image opticl-stancil-image) paths transformation clip-region)
+(defmethod paths->opticl-stencil-image ((render rgb-image-render-engine) (image opticl-stencil-image) paths transformation clip-region)
   (with-slots (state)
       render
     (render-update-state state paths transformation)
@@ -117,9 +117,9 @@
       (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 	clip-region
 	(let ((draw-function
-	       (%make-opticl-stancil-image-draw-fn image current-clip-region))
+	       (%make-opticl-stencil-image-draw-fn image current-clip-region))
 	      (draw-span-function
-	       (%make-opticl-stancil-image-draw-span-fn image current-clip-region)))
+	       (%make-opticl-stencil-image-draw-span-fn image current-clip-region)))
 	  (aa:cells-sweep/rectangle state
 				    (floor min-x)
 				    (floor min-y)

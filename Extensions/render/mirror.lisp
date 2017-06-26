@@ -89,11 +89,13 @@
 			clip-region)
   (let ((region
 	 (copy-image
+          image
+          (+ x dst-dx)
+          (+ y dst-dy)
+          width
+          height
 	  (image-mirror-image mirror)
-	  image
-	  :x x :y y :width width :height height
-	  :src-dx dst-dx
-	  :src-dy dst-dy)))
+	  x y)))
     (%notify-image-updated mirror region)))
 
 (defmethod %fill-image-mask ((mirror image-mirror-mixin)
@@ -104,7 +106,7 @@
           (make-pixeled-design ink :foreground foreground :background background)
           image-mask
           :x x :y y :width width :height height
-          :mask-dx x-dest :mask-dy y-dest)))
+          :stencil-dx x-dest :stencil-dy y-dest)))
     (%notify-image-updated mirror region)))
 
 (defmethod %fill-image ((mirror image-mirror-mixin)
