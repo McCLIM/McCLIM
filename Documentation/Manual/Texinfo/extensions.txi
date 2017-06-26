@@ -7,7 +7,7 @@
 * Drawing Two-Dimensional Images::
 * Fonts and Extended Text Styles::
 * Tab Layout::
-* Render::
+* Render Images::
 @end menu
 
 @node Text editor substrate
@@ -337,11 +337,10 @@ McCLIM distribution.  It can be started using demodemo.
 @c com-switch-to-tab-page
 @c com-remove-tab-page
 
-@node Render
-@section Render
+@node Render Images
+@section Render Images
+This extension has the goal to provide a fast and flexible way to display images in the screen. It is not a general purpose image processing library (see opticl).
 
-
-@subsection Image Protocol
 Images are all rectangular arrangements of pixels. The type of a pixel
 depends on the exact type of the image. In addition, a pixel has a
 color which also depends on the exact type of the image. You can think
@@ -371,17 +370,19 @@ respectively.
 This function returns true if the image has an aplha channel.
 @end deffn
 
+@subsection Basic Image
+
 @deftp {Protocol Class} basic-image
 
 This class is a subclass of the image class.
 @end deftp
 
-@deffn {Generic Function} {%image-pixels} basic-image
+@deffn {Generic Function} {image-pixels} basic-image
 
 This function returns the internal representation of the array of pixels. 
 @end deffn
 
-@subsubsection Drawable Images
+@subsection Drawable Images
 
 In order to be drawn in a screen, each pixel must be mapped into its rgb components.
 Each component is represented by an octet.
@@ -417,35 +418,24 @@ This function is analogous to the @code{blend-function} for octet.
 
 @deftp {Protocol Class} drawable-image
 
-This class is a subclass of the image class. All subclasses must implement @code{map-rgb-color} and @code{map-rgba-color}.
+This class is a subclass of the image class. All subclasses must implement @code{map-rgb-color}.
 @end deftp
 
-By default, in order to drawn an image into a screen, the backend calls @code{map-rgb-color} or @code{map-rgba-color}.
+By default, in order to drawn an image into a screen, the backend calls @code{map-rgb-color}.
 
 @deffn {Generic Function} {map-rgb-color} drawable-image fn
 
 This function calls fn for each pixels of the image. Function fn must take 5 arguments: x, y, red, green, and blue.
 @end deffn
 
-@deffn {Generic Function} {map-rgba-color} drawable-image fn
-
-This function calls fn for each pixels of the image. Function fn must take 6 arguments: x, y, red, green, blue, alpha.
-@end deffn
-
 To draw an image you can use @code{draw-image}.
 
 @deffn {Function} {draw-image} sheet image &rest args &key clipping-region transformation
 
-This function draws an image on a sheet. It calls medium-draw-image*.
+This function draws an image on a sheet.
 @end deffn    
 
-@deffn {Generic Function} {medium-draw-image*} medium image
-       
-This function draws an image on a sheet. By default, it calls @code{map-rgb-color}. 
-It is possible specialize this generic function for a specific image class in order to improve its performance.
-@end deffn
-
-@subsubsection McCLIM integration
+@subsection McCLIM integration
 An image can be used as design or pattern. To draw an image you can also use @code{draw-pattern*} or @code{draw-design}.
 
 @deftp {Class} image-design
@@ -498,25 +488,17 @@ Every design can be converted into pixeled-design.
 
 @end deftp
 
-@deftp {Protocol Class} {pixeled-opticl-image-design}
-
-@end deftp
-
-@deftp {Protocol Class} {pixeled-2d-image-design}
-
-@end deftp
-
 @deffn {Feneric Function} {make-pixeled-design} design &key foreground background
 
 @end deffn
 
 
-@subsubsection Opticl Images
+@subsection Opticl Images
 
 @deftp {Protocol Class} opticl-image
 
 This class is a subclass of the basic-image and drawable-image classes. 
-The generic function %image-pixels returns an opticl image.
+The generic function image-pixels returns an opticl image.
 @end deftp
 
 @deftp {Class} opticl-rgb-image
@@ -525,14 +507,14 @@ This class is a subclass of the basic-image and opticl-image classes.
 A pixel is a triple of octets that represents the red, green and blue component, respectively.
 A pixel can have an optional octet that represents its alpha value.
 
-In the current implementation, @code{%image-pixels} returns 
+In the current implementation, @code{image-pixels} returns 
 an array of type @code{opticl:8-bit-rgba-image}.
 @end deftp
 
 @deftp {Class} ocpicl-gray-level-image
 
 This class is a subclass of the basic-image and opticl-image classes. 
-In the current implementation, @code{%image-pixels} returns 
+In the current implementation, @code{image-pixels} returns 
 an array of type @code{8-bit-gray-image}.
 @end deftp
 
@@ -540,15 +522,15 @@ an array of type @code{8-bit-gray-image}.
 
 This class is a subclass of the basic-image and opticl-image classes. 
 This image contains only al alpha channel.
-In the current implementation, @code{%image-pixels} returns 
+In the current implementation, @code{image-pixels} returns 
 an array of type @code{8-bit-gray-image}.
 @end deftp
 
-@subsubsection 2d Images
+@subsection 2d Images
 @deftp {Protocol Class} 2d-image
 
 This class is a subclass of the basic-image and drawable-image classes. 
-The generic function %image-pixels returns a two dimensioanl array of pixels.
+The generic function image-pixels returns a two dimensioanl array of pixels.
 @end deftp
 
 @deftp {Class} 2d-rgb-image
@@ -557,14 +539,14 @@ This class is a subclass of the basic-image and 2d-image classes.
 A pixel is a triple of octets that represents the red, green and blue component, respectively.
 A pixel can have an optional octet that represents its alpha value. 
 
-@code{%image-pixels} returns a (simple-array (unsigned-byte 32) (* *)).
+@code{image-pixels} returns a (simple-array (unsigned-byte 32) (* *)).
 The pixel values directly represent ABRG octet values. 
 @end deftp
 
 @deftp {Class} 2d-gray-level-image
 
 This class is a subclass of the basic-image and 2d-image classes. 
-@code{%image-pixels} returns a (simple-array (unsigned-byte 8) (* *)).
+@code{image-pixels} returns a (simple-array (unsigned-byte 8) (* *)).
 @end deftp
 
 @deftp {Class} 2d-stencil-image
@@ -572,5 +554,42 @@ This class is a subclass of the basic-image and 2d-image classes.
 This class is a subclass of the basic-image and 2d-image classes. 
 This image contains only al alpha channel.
 
-@code{%image-pixels} returns a (simple-array (unsigned-byte 8) (* *)).
+@code{image-pixels} returns a (simple-array (unsigned-byte 8) (* *)).
 @end deftp
+
+@subsection Operations
+
+@deffn {Generic Function} {fill-image} image pixeled-design stencil &key x y width height stencil-dx stencil-dy
+
+@end deffn
+
+@deffn {Generic Function} {copy-image} src-image sx sy width height dst-image x y
+
+@end deffn
+
+@deffn {Generic Function} {coerce-image} image image-class
+
+@end deffn
+
+
+@subsection Reading Image Files
+
+@deffn {Generic Function} {read-image} source &key type width height
+
+Read an image from the source.  The source can be a pathname designator
+(a string or a path), or a stream.  The caller can supply a value for
+type, width, and height for sources that don't indicate these values.  A
+value of nil for type means recognize the type automatically.  Other
+values for type are :truecolor (an array of 3-byte color values)
+:256-gray-level (an array of 1-byte gray-level values) :binary (an array
+of bits).
+@end deffn
+
+@deffn {Generic Function} {write-image} image destination &key (type :pnm) (quality 1)
+
+Write the image to the destination.  The destination can be a pathname
+designator (a string or a path), or a stream.  Valid values of type are
+:pnm (pbm, pgm, or ppm according to the type of image), :png, :jpeg,
+(more...).  The quality argument is a value from 0 to 1 and indicates
+desired image quality (for formats with lossy compression).
+@end deffn
