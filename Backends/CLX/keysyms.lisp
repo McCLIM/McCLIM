@@ -88,28 +88,36 @@
 ;;;    12      4096      button5
 
 (defun x-event-to-key-name-and-modifiers (port event-key keycode state)
-  (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
+  (multiple-value-bind (clim-modifiers caps-lock? mode-switch?)
       (clim-xcommon:x-event-state-modifiers port state)
     (let* ((display (clx-port-display port))
            (shift? (logtest +shift-key+ clim-modifiers))
-           (shift-modifier? (if shift-lock?
-                                (not shift?)
-                                (if caps-lock? t shift?)))
            (shifted-keysym (xlib:keycode->keysym display keycode
                                                  (+ 1 (if mode-switch?
                                                           2 0))))
            (unshifted-keysym (xlib:keycode->keysym display keycode
                                                    (if mode-switch?
                                                        2 0)))
-           (keysym (if shift-modifier?
-                       shifted-keysym
-                       unshifted-keysym)))
+           (keysym-char (xlib:keysym->character display unshifted-keysym
+                                                (if mode-switch? 2 0)))
+           (alpha-char? (and (characterp keysym-char)
+                             (alpha-char-p keysym-char)))
+           (keysym
+            (if shift?
+                ;; Shift + caps lock cancel themselves for alphabetic chars
+                (if (and caps-lock? alpha-char?)
+                    unshifted-keysym
+                    shifted-keysym)
+                (if (and caps-lock? alpha-char?)
+                    shifted-keysym
+                    unshifted-keysym))))
       (let* ((keysym-name (clim-xcommon:keysym-to-keysym-name keysym))
              (char (xlib:keysym->character display keysym
-                                           (+ (if shift-modifier?
+                                           (+ (if shift?
                                                   1 0)
                                               (if mode-switch?
                                                   2 0))))
+             ;; Cache might be updated at this step.
              (modifiers (clim-xcommon:x-keysym-to-clim-modifiers
                          port
                          event-key
