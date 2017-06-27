@@ -26,43 +26,23 @@
 ;;; Drawing
 ;;;
 
-(defmethod draw-paths ((render rgb-image-render-engine) (image opticl-rgb-image) paths transformation clip-region ink background foreground)
-  (declare (optimize speed))
+(defmethod draw-paths ((render rgb-image-render-engine) (image opticl-rgb-image)
+                       paths transformation clip-region ink background foreground)
   (with-slots (state)
       render
     (render-update-state state paths transformation)
-    (let ((current-clip-region
-	   (if (rectanglep clip-region)
-	       nil
-	       clip-region)))
-      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 	clip-region
-	(let ((draw-function nil)
-	      (draw-span-function nil)
-	      (rgba-design (make-pixeled-design ink :foreground foreground :background background)))
-	  (setf draw-function
-		(if (typep ink 'standard-flipping-ink)
-		    (%make-xor-draw-fn image current-clip-region
-				       rgba-design)
-		    (%make-blend-draw-fn image current-clip-region
-					 rgba-design)))
-	  (setf draw-span-function
-		(if (typep ink 'standard-flipping-ink)
-		    (%make-xor-draw-span-fn image current-clip-region
-					    rgba-design)
-		    (%make-blend-draw-span-fn image current-clip-region
-					      rgba-design)))
-	  (render-cells-sweep/rectangle (image-pixels image) state
-				    (floor min-x)
-				    (floor min-y)
-				    (ceiling max-x)
-				    (ceiling max-y)
-				    draw-function
-				    draw-span-function))
-	(vectors::state-reset state)
-	(let ((region (make-rectangle* (floor min-x) (floor min-y)
-				       (ceiling max-x) (ceiling max-y))))
-	  region)))))
+      (cells-sweep/rectangle image
+                             ink
+                             state
+                             clip-region
+                             :foreground foreground
+                             :background background)
+      (vectors::state-reset state)
+      (let ((region (make-rectangle* (floor min-x) (floor min-y)
+                                     (ceiling max-x) (ceiling max-y))))
+        region))))
 
 #|
 (defmethod draw-paths ((render rgb-image-render-engine) (image rgba-image) paths transformation clip-region ink background foreground)
@@ -117,9 +97,9 @@
       (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 	clip-region
 	(let ((draw-function
-	       (%make-opticl-stencil-image-draw-fn image current-clip-region))
+               (make-aa-render-alpha-draw-fn image current-clip-region))
 	      (draw-span-function
-	       (%make-opticl-stencil-image-draw-span-fn image current-clip-region)))
+               (make-aa-render-alpha-draw-span-fn image current-clip-region)))
 	  (aa:cells-sweep/rectangle state
 				    (floor min-x)
 				    (floor min-y)

@@ -59,7 +59,9 @@
     'opticl-stencil-image-data)
 
   (defmethod make-get-alpha-octet-code ((image-class (eql 'opticl-stencil-image)) pixels-var x-var y-var)
-    `(the octet (opticl:pixel ,pixels-var ,y-var ,x-var))))
+    `(the octet (opticl:pixel ,pixels-var ,y-var ,x-var)))
+  (defmethod make-set-alpha-octet-code ((image-class (eql 'opticl-stencil-image)) pixels-var x-var y-var alpha-var)
+    `(setf (opticl:pixel ,pixels-var ,y-var ,x-var) ,alpha-var)))
 
 
 ;;;
@@ -130,6 +132,13 @@
 (make-copy-image 2d-rgb-image opticl-rgb-image)
 (make-fill-image-with-stencil opticl-rgb-image opticl-stencil-image)
 (make-fill-image-without-stencil opticl-rgb-image)
+
+(make-make-aa-render-draw-fn opticl-rgb-image)
+(make-make-aa-render-draw-span-fn opticl-rgb-image)
+(make-make-aa-render-xor-draw-fn opticl-rgb-image)
+(make-make-aa-render-xor-draw-span-fn opticl-rgb-image)
+(make-make-aa-render-alpha-draw-fn opticl-stencil-image)
+(make-make-aa-render-alpha-draw-span-fn opticl-stencil-image)
 
 ;;;
 ;;; I/O

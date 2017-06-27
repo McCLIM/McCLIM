@@ -8,6 +8,7 @@
      (:file "image")
      (:file "pixeled-design")
      (:file "image-ops")
+     (:file "vectors")
      (:file "2d-image")
      (:file "opticl-image")
      (:file "recording")))
@@ -17,7 +18,6 @@
     :serial t
     :components
     ((:file "aa")
-     (:file "render-image-op")
      (:file "prim-arc")
      (:file "prim-text")
      (:file "prim-path")
