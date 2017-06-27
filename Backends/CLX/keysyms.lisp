@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-clx)
@@ -91,14 +91,14 @@
   (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
       (clim-xcommon:x-event-state-modifiers port state)
     (let* ((display (clx-port-display port))
-	   (shift? (logtest +shift-key+ clim-modifiers))
+           (shift? (logtest +shift-key+ clim-modifiers))
            (shift-modifier? (if shift-lock?
                                 (not shift?)
                                 (if caps-lock? t shift?)))
-	   (shifted-keysym (xlib:keycode->keysym display keycode 
+           (shifted-keysym (xlib:keycode->keysym display keycode
                                                  (+ 1 (if mode-switch?
                                                           2 0))))
-           (unshifted-keysym (xlib:keycode->keysym display keycode 
+           (unshifted-keysym (xlib:keycode->keysym display keycode
                                                    (if mode-switch?
                                                        2 0)))
            (keysym (if shift-modifier?
@@ -112,16 +112,16 @@
                                                   2 0))))
              (modifiers (clim-xcommon:x-keysym-to-clim-modifiers
                          port
-			 event-key
-			 char
-			 (clim-xcommon:keysym-to-keysym-name keysym)
+                         event-key
+                         char
+                         (clim-xcommon:keysym-to-keysym-name keysym)
                          state)))
         (values char
-		;; We filter away the shift state if there is a
-		;; difference between the shifted and unshifted
-		;; keysym. This is so eg. #\A will not look like "#\A
-		;; with a Shift modifier", as this makes gesture
-		;; processing more difficult.
+                ;; We filter away the shift state if there is a
+                ;; difference between the shifted and unshifted
+                ;; keysym. This is so eg. #\A will not look like "#\A
+                ;; with a Shift modifier", as this makes gesture
+                ;; processing more difficult.
                 (if (= shifted-keysym unshifted-keysym)
                     modifiers
                     (logandc2 modifiers +shift-key+))
@@ -135,4 +135,3 @@
 
 (defun keysym-to-character (keysym)
   (numeric-keysym-to-character (clim-xcommon:keysym-name-to-keysym keysym)))
-
