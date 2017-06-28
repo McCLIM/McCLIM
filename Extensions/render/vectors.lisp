@@ -2,19 +2,60 @@
 
 (declaim (optimize speed))
 
+;;;
+;;; path utility
+;;;
+(defun make-path (x y)
+  (let ((path (paths:create-path :open-polyline)))
+    (paths:path-reset path (paths:make-point x y))
+    path))
+
+(defun line-to (path x y)
+  (paths:path-extend path (paths:make-straight-line)
+                     (paths:make-point x y)))
+
+(defun close-path (path )
+  (setf (paths::path-type path) :closed-polyline))
+
+(defun stroke-path (path line-style)
+  (let ((dashes (climi::line-style-dashes line-style)))
+    (when dashes
+        (setf path (paths:dash-path path
+                                    (ctypecase dashes
+                                      (simple-array
+                                       dashes)
+                                      (cons
+                                       (map 'vector #'(lambda (x) x)
+                                            dashes))
+                                      (t
+                                       #(2 1)))))))
+  (setf path (paths:stroke-path path
+				(max 1 (line-style-thickness line-style))
+				:joint (funcall #'(lambda (c)
+						    (if (eq c :bevel)
+							:none
+							c))
+						  (line-style-joint-shape line-style))
+				:caps (funcall #'(lambda (c)
+						   (if (eq c :no-end-point)
+						       :butt
+						       c))
+					       (line-style-cap-shape line-style))))
+  path)
+
+
 (defgeneric make-aa-render-draw-fn (image clip-region pixeled-design))
 (defgeneric make-aa-render-draw-span-fn (image clip-region pixeled-design))
 (defgeneric make-aa-render-xor-draw-fn (image clip-region pixeled-design))
 (defgeneric make-aa-render-xor-draw-span-fn (image clip-region pixeled-design))
 
-(defgeneric cells-sweep/rectangle (image design state clip-region
-                                   &key foreground background))
+(defgeneric aa-cells-sweep/rectangle (image design state clip-region))
+(defgeneric aa-stroke-paths (image pixeled-design paths line-style state transformation clip-region))
+(defgeneric aa-fill-paths (image pixeled-design paths state transformation clip-region))
 
-(defmethod cells-sweep/rectangle ((image basic-image) ink state clip-region
-                                  &key foreground background)
+(defmethod aa-cells-sweep/rectangle ((image rgb-image-mixin) (ink pixeled-design) state clip-region)
   (let ((draw-function nil)
         (draw-span-function nil)
-        (rgba-design (make-pixeled-design ink :foreground foreground :background background))
         (current-clip-region
          (if (rectanglep clip-region)
              nil
@@ -22,315 +63,166 @@
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 	clip-region
       (setf draw-function
-            (if (typep ink 'standard-flipping-ink)
-                (make-aa-render-xor-draw-fn image current-clip-region
-                                            rgba-design)
-                (make-aa-render-draw-fn image current-clip-region
-                                        rgba-design)))
+            (if (typep ink 'pixeled-flipping-design)
+                (make-aa-render-xor-draw-fn image current-clip-region ink)
+                (make-aa-render-draw-fn image current-clip-region ink)))
       (setf draw-span-function
-            (if (typep ink 'standard-flipping-ink)
-                (make-aa-render-xor-draw-span-fn image current-clip-region
-                                                 rgba-design)
-                (make-aa-render-draw-span-fn image current-clip-region
-                                             rgba-design)))
-      (aa:cells-sweep/rectangle state
+            (if (typep ink 'pixeled-flipping-design)
+                (make-aa-render-xor-draw-span-fn image current-clip-region ink)
+                (make-aa-render-draw-span-fn image current-clip-region ink)))
+      (%aa-cells-sweep/rectangle state
                                 (floor min-x)
                                 (floor min-y)
                                 (ceiling max-x)
                                 (ceiling max-y)
                                 draw-function
                                 draw-span-function))))
-;;;
-;;; Image operatios
-;;;
-(defmacro make-make-aa-render-draw-fn (image-class)
-  `(progn
-     (defmethod make-aa-render-draw-fn ((image ,image-class) clip-region pixeled-design)
-       (let ((pixels (image-pixels image))
-             (design-fn (make-pixeled-rgba-octets-fn pixeled-design)))
-         (declare (type ,(image-pixels-type image-class) pixels)
-                  (type pixeled-design-fn design-fn))
-         (if clip-region
-             (lambda (x y alpha)
-               (declare (type fixnum x y)
-                        (type fixnum alpha))
-               (when (clim:region-contains-position-p clip-region x y)
-                 (setf alpha (min (abs alpha) 255))
-                 (when (plusp alpha)
-                   (multiple-value-bind (r.fg g.fg b.fg a.fg)
-                       (funcall design-fn x y)
-                     (if (> (octet-mult a.fg alpha) 250)
-                         (multiple-value-bind (red green blue alpha)	  
-                             (values r.fg g.fg b.fg 255)
-                           ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))
-                         (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                             ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                           (multiple-value-bind (red green blue alpha)
-                               (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
-                             ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))))))))
-             (lambda (x y alpha)
-               (declare (type fixnum x y)
-                        (type fixnum alpha))
-               (setf alpha (min (abs alpha) 255))
-               (when (plusp alpha)
-                 (multiple-value-bind (r.fg g.fg b.fg a.fg)
-                     (funcall design-fn x y)
-                   (if (> (octet-mult a.fg alpha) 250)
-                       (multiple-value-bind (red green blue alpha)	  
-                           (values r.fg g.fg b.fg 255)
-                         ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))
-                       (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                           ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                         (multiple-value-bind (red green blue alpha)
-                             (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
-                           ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))))))))))
-     (defmethod make-aa-render-draw-fn ((image ,image-class) clip-region (pixeled-design pixeled-uniform-design))
-       (let ((pixels (image-pixels image)))
-         (declare (type ,(image-pixels-type image-class) pixels))
-         (multiple-value-bind (r.fg g.fg b.fg a.fg)
-             (values
-              (pixeled-uniform-design-red pixeled-design)
-              (pixeled-uniform-design-green pixeled-design)
-              (pixeled-uniform-design-blue pixeled-design)
-              (pixeled-uniform-design-alpha pixeled-design))
-           (if clip-region
-               (lambda (x y alpha)
-                 (declare (type fixnum x y)
-                          (type fixnum alpha))
-                 (when (clim:region-contains-position-p clip-region x y)
-                   (setf alpha (min (abs alpha) 255))
-                   (when (plusp alpha)
-                     (if (> (octet-mult a.fg alpha) 250)
-                         (multiple-value-bind (red green blue alpha)	  
-                             (values r.fg g.fg b.fg 255)
-                           ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))
-                         (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                             ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                           (multiple-value-bind (red green blue alpha)
-                               (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
-                             ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha)))))))
-               (lambda (x y alpha)
-                 (declare (type fixnum x y)
-                          (type fixnum alpha))
-                 (setf alpha (min (abs alpha) 255))
-                 (when (plusp alpha)
-                   (if (> (octet-mult a.fg alpha) 250)
-                       (multiple-value-bind (red green blue alpha)	  
-                           (values r.fg g.fg b.fg 255)
-                         ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))
-                       (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                           ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                         (multiple-value-bind (red green blue alpha)
-                             (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
-                           ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))))))))))))
 
-(defmacro make-make-aa-render-draw-span-fn (image-class)
-  `(progn
-     (defmethod make-aa-render-draw-span-fn ((image ,image-class) clip-region pixeled-design)
-       (let ((pixels (image-pixels image))
-             (design-fn (make-pixeled-rgba-octets-fn pixeled-design)))
-         (declare (type ,(image-pixels-type image-class) pixels)
-                  (type pixeled-design-fn design-fn))
-         (if clip-region
-             (lambda (x1 x2 y alpha)
-               (declare (type fixnum x1 x2 y)
-                        (type fixnum alpha))
-               (loop for x from x1 below x2 do
-                    (when (clim:region-contains-position-p clip-region x y)
-                      (setf alpha (min (abs alpha) 255))
-                      (when (plusp alpha)
-                        (multiple-value-bind (r.fg g.fg b.fg a.fg)
-                            (funcall design-fn x y)
-                          (if (> (octet-mult a.fg alpha) 250)
-                              (multiple-value-bind (red green blue alpha)	  
-                                  (values r.fg g.fg b.fg 255)
-                                ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))
-                              (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                                  ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                                (multiple-value-bind (red green blue alpha)
-                                    (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
-                                  ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha)))))))))
-             (lambda (x1 x2 y alpha)
-               (declare (type fixnum x1 x2 y)
-                        (type fixnum alpha))
-               (setf alpha (min (abs alpha) 255))
-               (when (plusp alpha)
-                 (loop for x from x1 below x2 do
-                      (multiple-value-bind (r.fg g.fg b.fg a.fg)
-                          (funcall design-fn x y)
-                        (if (> (octet-mult a.fg alpha) 250)
-                            (multiple-value-bind (red green blue alpha)	  
-                                (values r.fg g.fg b.fg 255)
-                              ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))
-                            (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                                ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                              (multiple-value-bind (red green blue alpha)
-                                  (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
-                                ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha)))))))))))
-     (defmethod make-aa-render-draw-span-fn ((image ,image-class) clip-region (pixeled-design pixeled-uniform-design))
-       (let ((pixels (image-pixels image)))
-         (declare (type ,(image-pixels-type image-class) pixels))
-         (multiple-value-bind (r.fg g.fg b.fg a.fg)
-             (values
-              (pixeled-uniform-design-red pixeled-design)
-              (pixeled-uniform-design-green pixeled-design)
-              (pixeled-uniform-design-blue pixeled-design)
-              (pixeled-uniform-design-alpha pixeled-design))
-           (if clip-region
-               (lambda (x1 x2 y alpha)
-                 (declare (type fixnum x1 x2 y)
-                          (type fixnum alpha))
-                 (loop for x from x1 below x2 do
-                      (when (clim:region-contains-position-p clip-region x y)
-                        (setf alpha (min (abs alpha) 255))
-                        (when (plusp alpha)
-                          (if (> (octet-mult a.fg alpha) 250)
-                              (multiple-value-bind (red green blue alpha)	  
-                                  (values r.fg g.fg b.fg 255)
-                                ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))
-                              (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                                  ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                                (multiple-value-bind (red green blue alpha)
-                                    (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
-                                  ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))))))))
-               (lambda (x1 x2 y alpha)
-                 (declare (type fixnum x1 x2 y)
-                          (type fixnum alpha))
-                 (setf alpha (min (abs alpha) 255))
-                 (when (plusp alpha)
-                   (loop for x from x1 below x2 do
-                        (if (> (octet-mult a.fg alpha) 250)
-                            (multiple-value-bind (red green blue alpha)	  
-                                (values r.fg g.fg b.fg 255)
-                              ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))
-                            (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                                ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                              (multiple-value-bind (red green blue alpha)
-                                  (octet-blend-function r.bg g.bg b.bg a.bg r.fg g.fg b.fg (octet-mult a.fg alpha))
-                                ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha)))))))))))))
+(defmethod aa-cells-sweep/rectangle ((image stencil-image-mixin) ink state clip-region)
+  (let ((draw-function nil)
+        (draw-span-function nil)
+        (current-clip-region
+         (if (rectanglep clip-region)
+             nil
+             clip-region)))
+    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+	clip-region
+      (setf draw-function
+            (make-aa-render-alpha-draw-fn image current-clip-region))
+      (setf draw-span-function
+            (make-aa-render-alpha-draw-span-fn image current-clip-region))
+      (%aa-cells-sweep/rectangle state
+                                (floor min-x)
+                                (floor min-y)
+                                (ceiling max-x)
+                                (ceiling max-y)
+                                draw-function
+                                draw-span-function))))
 
-(defmacro make-make-aa-render-xor-draw-fn (image-class)
-  `(defmethod make-aa-render-xor-draw-fn ((image ,image-class) clip-region pixeled-design)
-     (let ((pixels (image-pixels image))
-           (design-fn (make-pixeled-rgba-octets-fn pixeled-design)))
-       (declare (type ,(image-pixels-type image-class) pixels)
-                (type pixeled-design-fn design-fn))
-       (if clip-region
-           (lambda (x y alpha)
-             (declare (type fixnum x y)
-                      (type fixnum alpha))
-             (when (clim:region-contains-position-p clip-region x y)
-               (setf alpha (min (abs alpha) 255))
-               (when (plusp alpha)
-                 (multiple-value-bind (r.fg g.fg b.fg a.fg)
-                     (funcall design-fn x y)
-                   (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                       ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                     (multiple-value-bind (red green blue alpha)	  
-                         (octet-blend-function r.bg g.bg b.bg a.bg
-                                               (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
-                                               (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha))
-                       ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha)))))))
-           (lambda (x y alpha)
-             (declare (type fixnum x y)
-                      (type fixnum alpha))
-             (setf alpha (min (abs alpha) 255))
-             (when (plusp alpha)
-               (multiple-value-bind (r.fg g.fg b.fg a.fg)
-                   (funcall design-fn x y)
-                 (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                     ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                   (multiple-value-bind (red green blue alpha)	  
-                       (octet-blend-function r.bg g.bg b.bg a.bg
-                                             (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
-                                             (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha))
-                     ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))))))))))
+(defmethod aa-stroke-paths (image pixeled-design paths line-style state transformation clip-region)
+  (vectors::state-reset state)
+  (let ((paths (car (mapcar (lambda (path)
+                              (stroke-path path line-style))
+                            paths))))
+    (aa-update-state state paths transformation)
+    (aa-cells-sweep/rectangle image
+                              pixeled-design
+                              state
+                              clip-region)))
 
-(defmacro make-make-aa-render-xor-draw-span-fn (image-class)
-  `(defmethod make-aa-render-xor-draw-span-fn ((image ,image-class) clip-region pixeled-design)
-     (let ((pixels (image-pixels image))
-           (design-fn (make-pixeled-rgba-octets-fn pixeled-design)))
-       (declare (type ,(image-pixels-type image-class) pixels)
-                (type pixeled-design-fn design-fn))
-       (if clip-region
-           (lambda (x1 x2 y alpha)
-             (declare (type fixnum x1 x2 y)
-                      (type fixnum alpha))
-             (loop for x from x1 below x2 do
-                  (when (clim:region-contains-position-p clip-region x y)
-                    (setf alpha (min (abs alpha) 255))
-                    (when (plusp alpha)
-                      (multiple-value-bind (r.fg g.fg b.fg a.fg)
-                          (funcall design-fn x y)
-                        (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                            ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                          (multiple-value-bind (red green blue alpha)	  
-                              (octet-blend-function r.bg g.bg b.bg a.bg
-                                                    (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
-                                                    (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha))
-                            ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))))))))
-           (lambda (x1 x2 y alpha)
-             (declare (type fixnum x1 x2 y)
-                      (type fixnum alpha))
-             (setf alpha (min (abs alpha) 255))
-             (when (plusp alpha)
-               (loop for x from x1 below x2 do
-                    (multiple-value-bind (r.fg g.fg b.fg a.fg)
-                        (funcall design-fn x y)
-                      (multiple-value-bind (r.bg g.bg b.bg a.bg)
-                          ,(make-get-rgba-octets-code image-class 'pixels 'x 'y)
-                        (multiple-value-bind (red green blue alpha)	  
-                            (octet-blend-function r.bg g.bg b.bg a.bg
-                                                  (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
-                                                  (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha))
-                          ,(make-set-rgba-octets-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha)))))))))))
+(defmethod aa-fill-paths (image pixeled-design paths state transformation clip-region)
+  (vectors::state-reset state)
+  (dolist (path paths)
+    (setf (paths::path-type path) :closed-polyline))
+  (aa-update-state state paths transformation)
+  (aa-cells-sweep/rectangle image
+                            pixeled-design
+                            state
+                            clip-region))
 
-;;;
-;;; Stencil Operations
-;;;
+(defun %aa-scanline-sweep (scanline function function-span &key start end)
+  "Call FUNCTION for each pixel on the polygon covered by
+SCANLINE. The pixels are scanned in increasing X. The sweep can
+be limited to a range by START (included) or/and END (excluded)."
+  (declare (optimize speed (debug 0) (safety 0) (space 2)))
+  (let ((x-min (aa::cell-x (car scanline)))
+        (x-max (aa::cell-x (car scanline)))
+        (cover 0)
+        (y (aa::scanline-y scanline))
+        (cells scanline)
+        (last-x nil))
+    (when start
+      ;; skip initial cells that are before START
+      (loop while (and cells (< (aa::cell-x (car cells)) start))
+         do (incf cover (aa::cell-cover (car cells)))
+         (setf last-x (aa::cell-x (car cells))
+               cells (cdr cells))))
+    (when cells
+      (dolist (cell cells)
+        (let ((x (aa::cell-x cell)))
+          (when (and last-x (> x (1+ last-x)))
+            (let ((alpha (aa::compute-alpha cover 0)))
+              (unless (zerop alpha)
+                (let ((start-x (if start (max start (1+ last-x)) (1+ last-x)))
+                      (end-x (if end (min end x) x)))
+                  (setf x-min (min x-min start-x))
+                  (setf x-max (max x-max end-x))
+                  (if function-span
+                      (funcall function-span start-x end-x y alpha)
+                      (loop for ix from start-x below end-x
+                         do (funcall function ix y alpha)))))))
+          (when (and end (>= x end))
+            (return (values x-min x-max)))
+          (incf cover (aa::cell-cover cell))
+          (let ((alpha (aa::compute-alpha cover (aa::cell-area cell))))
+            (unless (zerop alpha)
+              (funcall function x y alpha)))
+          (setf last-x x))))
+    (values x-min x-max)))
 
-(defgeneric make-aa-render-alpha-draw-fn (image clip-region))
-(defgeneric make-aa-render-alpha-draw-span-fn (image clip-region))
+(defun %aa-cells-sweep/rectangle (state x1 y1 x2 y2 function &optional function-span)
+  "Call FUNCTION for each pixel on the polygon described by
+previous call to LINE or LINE-F. The pixels are scanned in
+increasing Y, then on increasing X. This is limited to the
+rectangle region specified with (X1,Y1)-(X2,Y2) (where X2 must be
+greater than X1 and Y2 must be greater than Y1, to describe a
+non-empty region.)
 
-(defmacro make-make-aa-render-alpha-draw-fn (image-class)
-  `(defmethod make-aa-render-alpha-draw-fn ((image ,image-class) clip-region)
-     (let ((pixels (image-pixels image)))
-       (declare (type ,(image-pixels-type image-class) pixels))
-       (if clip-region
-           (lambda (x y alpha)
-             (declare (type fixnum x y)
-                      (type fixnum alpha))
-             (when (clim:region-contains-position-p clip-region x y)
-               (setf alpha (min (abs alpha) 255))
-               (when (plusp alpha)
-                 ,(make-set-alpha-octet-code image-class 'pixels 'x 'y 'alpha))))
-           (lambda (x y alpha)
-             (declare (type fixnum x y)
-                      (type fixnum alpha))
-             (setf alpha (min (abs alpha) 255))
-             (when (plusp alpha)
-               ,(make-set-alpha-octet-code image-class 'pixels 'x 'y 'alpha)))))))
+For optimization purpose, the optional FUNCTION-SPAN, if
+provided, is called for a full span of identical alpha pixel. If
+not provided, a call is made to FUNCTION for each pixel in the
+span."
+  (let ((scanlines (aa::freeze-state state))
+        (x-min x2)
+        (x-max x1)
+        (y-min y2)
+        (y-max y1))
+    (dolist (scanline scanlines)
+      (setf y-min (min y-min (aa::scanline-y scanline)))
+      (setf y-max (max y-max (aa::scanline-y scanline)))
+      (when (<= y1 (aa::scanline-y scanline) (1- y2))
+        (multiple-value-bind (xa xb)
+            (%aa-scanline-sweep scanline function function-span :start x1 :end x2)
+          (setf x-min (min x-min xa))
+          (setf x-max (max x-max xb)))))
+    (make-rectangle* x-min y-min x-max y-max)))
 
-(defmacro make-make-aa-render-alpha-draw-span-fn (image-class)
-  `(defmethod make-aa-render-alpha-draw-span-fn ((image ,image-class) clip-region)
-     (let ((pixels (image-pixels image)))
-       (declare (type ,(image-pixels-type image-class) pixels))
-       (if clip-region
-           (lambda (x1 x2 y alpha)
-             (declare (type fixnum x1 x2 y)
-                      (type fixnum alpha))
-             (loop for x from x1 below x2 do
-                  (when (clim:region-contains-position-p clip-region x y)
-                    (setf alpha (min (abs alpha) 255))
-                    (when (plusp alpha)
-                      ,(make-set-alpha-octet-code image-class 'pixels 'x 'y 'alpha)))))
-           (lambda (x1 x2 y alpha)
-             (declare (type fixnum x1 x2 y)
-                      (type fixnum alpha))
-             (setf alpha (min (abs alpha) 255))
-             (loop for x from x1 below x2 do
-                  (when (plusp alpha)
-                    ,(make-set-alpha-octet-code image-class 'pixels 'x 'y 'alpha))))))))
+(declaim (inline aa-line-f))
+(defun aa-line-f (state mxx mxy myx myy tx ty x1 y1 x2 y2)
+  (declare (type coordinate mxx mxy myx myy tx ty))
+  (let ((x1 (+ (* mxx x1) (* mxy y1) tx))
+	(y1 (+ (* myx x1) (* myy y1) ty))
+	(x2 (+ (* mxx x2) (* mxy y2) tx))
+	(y2 (+ (* myx x2) (* myy y2) ty)))
+    (aa::line-f state x1 y1 x2 y2)))
 
+(defun aa-update-state (state paths transformation)
+  (multiple-value-bind (mxx mxy myx myy tx ty)
+      (climi::get-transformation transformation)
+    (if (listp paths)
+	(dolist (path paths)
+	  (%aa-update-state state path mxx mxy myx myy tx ty))
+	(%aa-update-state state paths mxx mxy myx myy tx ty))))
+
+(defun %aa-update-state (state paths mxx mxy myx myy tx ty)
+  (let ((iterator (vectors::path-iterator-segmented paths)))
+    (multiple-value-bind (i1 k1 e1) (vectors::path-iterator-next iterator)
+      (declare (ignore i1))
+      (when (and k1 (not e1))
+	;; at least 2 knots
+	(let ((first-knot k1))
+	  (loop
+	     (multiple-value-bind (i2 k2 e2) (vectors::path-iterator-next iterator)
+	       (declare (ignore i2))
+	       (aa-line-f state mxx mxy myx myy tx ty
+			      (vectors::point-x k1) (vectors::point-y k1)
+			      (vectors::point-x k2) (vectors::point-y k2))
+	       (setf k1 k2)
+	       (when e2
+		 (return))))
+	  (aa-line-f state mxx mxy myx myy tx ty
+			 (vectors::point-x k1) (vectors::point-y k1)
+			 (vectors::point-x first-knot) (vectors::point-y first-knot)))))
+    state))
 
 

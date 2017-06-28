@@ -81,6 +81,15 @@
     color-fn))
 
 ;;;
+;;; Flippend Design
+;;;
+(defclass pixeled-flipping-design (pixeled-functional-design)
+  ())
+
+(defun make-pixeled-flipping-design (&key color-fn (region +everywhere+))
+  (make-instance 'pixeled-flipping-design :color-fn color-fn :region region))
+
+;;;
 ;;; Image Design
 ;;;
 (defclass pixeled-image-design (pixeled-design)
@@ -142,7 +151,7 @@
   (let ((d1 (make-pixeled-rgba-octets-fn (%make-pixeled-design design1)))
 	(d2 (make-pixeled-rgba-octets-fn (%make-pixeled-design design2))))
     (declare (type pixeled-design-fn d1 d2))
-    (make-pixeled-functional-design
+    (make-pixeled-flipping-design
      :color-fn (lambda (x y)
 		 (multiple-value-bind (r.d1 g.d1 b.d1 a.d1)
 		     (funcall d1 x y)
@@ -275,7 +284,7 @@
 			 (funcall mask-fn x y)
 		       (declare (ignore r2 g2 b2))
 		       (values r1 g1 b1 (octet-mult a1 (- 255 a2))))))
-       :region (pixeled-design-region a1))))
+       :region (pixeled-design-region ink))))
   (:method ((ink pixeled-uniform-design) (mask pixeled-uniform-design))
     (make-pixeled-uniform-design
      :red (pixeled-uniform-design-red ink)

@@ -9,6 +9,7 @@
      (:file "pixeled-design")
      (:file "image-ops")
      (:file "vectors")
+     (:file "vectors-image-ops")
      (:file "2d-image")
      (:file "opticl-image")
      (:file "recording")))
@@ -17,12 +18,8 @@
     :depends-on (#:mcclim-render/image)
     :serial t
     :components
-    ((:file "aa")
-     (:file "prim-arc")
-     (:file "prim-text")
-     (:file "prim-path")
-     (:file "render")
-     ))
+    ((:file "prim-arc")
+     (:file "prim-text")))
 
 (defsystem #:mcclim-render/backend
     :depends-on (#:mcclim-render)
@@ -34,8 +31,7 @@
      (:file "pixmap")
      (:file "medium")
      (:file "fonts")
-     (:file "port")
-     ))
+     (:file "port")))
 
 (defsystem #:mcclim-render/clx
     :depends-on (#:mcclim-render/backend)

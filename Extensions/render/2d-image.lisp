@@ -14,7 +14,7 @@
 (deftype 2d-rgb-image-data () '(simple-array (unsigned-byte 32) (* *)))
 (deftype clim-rgb-image-data () '(simple-array (unsigned-byte 32) (* *)))
 
-(defclass 2d-rgb-image (2d-image)
+(defclass 2d-rgb-image (2d-image rgb-image-mixin)
   ((pixels :type (or null 2d-rgb-image-data))))
 
 (defmethod initialize-instance :after ((image 2d-rgb-image)
@@ -60,7 +60,7 @@
 ;;;
 (deftype 2d-stencil-image-data () '(simple-array (unsigned-byte 8) (* *)))
 
-(defclass 2d-stencil-image (2d-image)
+(defclass 2d-stencil-image (2d-image stencil-image-mixin)
   ((pixels :type (or null 2d-stencil-image-data))
    (alpha-p :initform t)))
 
@@ -169,3 +169,9 @@
                        :width (image-width img)
                        :height (image-height img)
                        :data (image-pixels img)))))
+
+(defmethod coerce-image ((image mcclim-image::rgb-image) (image-class (eql '2d-rgb-image)))
+  (make-instance '2d-rgb-image
+                 :width (image-width image)
+                 :height (image-height image)
+                 :pixels (image-data image)))

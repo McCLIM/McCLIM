@@ -13,7 +13,7 @@
 ;;;
 (deftype opticl-rgb-image-data () 'opticl-core:8-bit-rgba-image)
 
-(defclass opticl-rgb-image (opticl-image)
+(defclass opticl-rgb-image (opticl-image rgb-image-mixin)
   ((pixels :type (or null opticl-rgb-image-data))))
 
 (defmethod initialize-instance :after ((image opticl-rgb-image)
@@ -44,7 +44,7 @@
 ;;;
 (deftype opticl-stencil-image-data () 'opticl-core:8-bit-gray-image)
 
-(defclass opticl-stencil-image (opticl-image)
+(defclass opticl-stencil-image (opticl-image stencil-image-mixin)
   ((pixels :type (or null opticl-stencil-image-data))))
 
 (defun make-opticl-stencil-image (width height)
@@ -80,7 +80,7 @@
         (lambda (x y)
           (declare (type fixnum x y))
           (if (clim:region-contains-position-p region x y)
-              (multiple-value-bind (red green blue alpha)
+              (multiple-value-bind (red green blue)
                   (opticl:pixel data (+ y dy) (+ x dx))
                 (values red
                         green
@@ -97,7 +97,7 @@
           (opticl:pixel data (+ y dy) (+ x dx)))
         (lambda (x y)
           (declare (type fixnum x y))
-          (multiple-value-bind (red green blue alpha)
+          (multiple-value-bind (red green blue)
               (opticl:pixel data (+ y dy) (+ x dx))
             (values red
                     green

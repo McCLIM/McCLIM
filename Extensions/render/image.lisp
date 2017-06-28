@@ -10,6 +10,13 @@
    (height :initform 0 :initarg :height :accessor image-height :type fixnum)
    (alpha-p :initform nil :initarg :alpha-p :accessor image-alpha-p)))
 
+
+(defclass stencil-image-mixin ()
+  ())
+
+(defclass rgb-image-mixin ()
+  ())
+
 ;;;
 ;;; Drawable Image
 ;;;

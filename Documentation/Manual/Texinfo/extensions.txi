@@ -370,6 +370,16 @@ respectively.
 This function returns true if the image has an aplha channel.
 @end deffn
 
+@subsection Image Mixins
+
+@deftp {Protocol Class} rgb-image-mixin
+
+@end deftp
+
+@deftp {Protocol Class} stencil-image-mixin
+
+@end deftp
+
 @subsection Basic Image
 
 @deftp {Protocol Class} basic-image
@@ -593,3 +603,34 @@ designator (a string or a path), or a stream.  Valid values of type are
 (more...).  The quality argument is a value from 0 to 1 and indicates
 desired image quality (for formats with lossy compression).
 @end deffn
+
+@subsection CL-Vectors Integration
+
+@deffn {Generic Function} {aa-cells-sweep/rectangle} image pixeled-design state clip-region
+
+@end deffn
+
+@deffn {Function} {aa-update-state} state paths transformation
+
+@end deffn
+
+@deffn {Function} {aa-fill-paths} image pixeled-design paths state transformation clip-region
+
+@end deffn
+
+@deffn {Function} {aa-stroke-paths} image pixeled-design paths line-style state transformation clip-region
+
+@end deffn
+
+@deffn {Function} {make-path} x y
+@end deffn
+
+@deffn {Function} {line-to} path x y
+@end deffn
+
+@deffn {Function} {close-path} path
+@end deffn
+
+@deffn {Function} {stroke-path} path line-style
+@end deffn
+
