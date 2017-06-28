@@ -1,4 +1,3 @@
-
 (in-package :mcclim-render)
 
 (defclass opticl-rgb-image-mirror-mixin (image-mirror-mixin)

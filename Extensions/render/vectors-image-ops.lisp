@@ -1,7 +1,5 @@
 (in-package :mcclim-render)
 
-(declaim (optimize speed))
-
 ;;;
 ;;; Image operatios
 ;;;
@@ -138,6 +136,7 @@
               (pixeled-uniform-design-green pixeled-design)
               (pixeled-uniform-design-blue pixeled-design)
               (pixeled-uniform-design-alpha pixeled-design))
+           (declare (type octet r.fg g.fg b.fg a.fg))
            (if clip-region
                (lambda (x1 x2 y alpha)
                  (declare (type fixnum x1 x2 y)

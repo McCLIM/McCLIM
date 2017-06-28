@@ -1,7 +1,5 @@
 (in-package :mcclim-render)
 
-
-
 (defclass render-medium-mixin (basic-medium)
   ())
 
@@ -90,9 +88,9 @@
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
     (when (and msheet (sheet-mirror msheet))
       (%fill-image (sheet-mirror msheet)
-		   (ceiling x) (ceiling y)
-		   (floor width)
-		   (floor height)
+		   (round x) (round y)
+		   (round width)
+		   (round height)
 		   (transform-region (sheet-native-transformation (medium-sheet medium))
 				     (medium-ink medium))
 		   (medium-background medium)

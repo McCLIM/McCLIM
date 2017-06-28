@@ -61,7 +61,6 @@
    suitable as an alpha mask, and dimensions. This function returns five
    values: alpha mask byte array, x-origin, y-origin (subtracted from
    position before rendering), horizontal and vertical advances."
-  ;;(declare (optimize (debug 3)))
   (climi::with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
       (let* ((units->pixels (zpb-ttf-font-units->pixels font))

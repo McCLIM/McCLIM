@@ -1,7 +1,5 @@
 (in-package :mcclim-render)
 
-(use-package :climi)
-
 ;;;
 ;;; recording for draw-image
 ;;;

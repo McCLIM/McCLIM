@@ -1,7 +1,5 @@
 (in-package :mcclim-render)
 
-(declaim (optimize speed))
-
 ;;;
 ;;; Opticl
 ;;;
@@ -41,6 +39,7 @@
 
 ;;;
 ;;; Opticl Stencil
+
 ;;;
 (deftype opticl-stencil-image-data () 'opticl-core:8-bit-gray-image)
 

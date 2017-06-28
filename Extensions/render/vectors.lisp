@@ -1,7 +1,5 @@
 (in-package :mcclim-render)
 
-(declaim (optimize speed))
-
 ;;;
 ;;; path utility
 ;;;
@@ -124,7 +122,9 @@
   "Call FUNCTION for each pixel on the polygon covered by
 SCANLINE. The pixels are scanned in increasing X. The sweep can
 be limited to a range by START (included) or/and END (excluded)."
-  (declare (optimize speed (debug 0) (safety 0) (space 2)))
+  (declare (optimize speed (debug 0) (safety 0) (space 2))
+           (type (function (fixnum fixnum fixnum) *) function)
+           (type (function (fixnum fixnum fixnum fixnum) *) function-span))
   (let ((x-min (aa::cell-x (car scanline)))
         (x-max (aa::cell-x (car scanline)))
         (cover 0)

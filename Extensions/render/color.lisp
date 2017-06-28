@@ -1,8 +1,6 @@
 (in-package :mcclim-render)
 
 (declaim (optimize speed))
-;; turn off compiler notes (noisy)
-;;#+(or sbcl) (declaim (sb-ext:muffle-conditions sb-ext:compiler-note))
 
 ;;;
 ;;; color utility functions
@@ -14,7 +12,7 @@
 (declaim (inline color-value->octet)
 	 (ftype (function (real) octet) color-value->octet))
 (defun color-value->octet (v)
-  (coerce (round (* 255 v)) 'octet))
+  (round (* 255 v)))
 
 (declaim (inline color-octet->value)
 	 (ftype (function (octet) real) color-octet->value))

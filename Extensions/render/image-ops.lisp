@@ -1,8 +1,5 @@
 (in-package :mcclim-render)
 
-(declaim (optimize speed))
-
-
 (defgeneric fill-image (image design stencil &key x y width height 
                                                stencil-dx stencil-dy))
 (defgeneric copy-image (src-image sx sy width height
@@ -32,6 +29,7 @@
 
 (defmacro make-copy-image (src-image-class dst-image-class)
   `(defmethod copy-image ((src-img ,src-image-class) sx sy width height (dst-img ,dst-image-class) x y)
+     (declare (type fixnum sx sy width height x y))
      (let ((src-pixels (image-pixels src-img))
            (dst-pixels (image-pixels dst-img)))
        (declare (type ,(image-pixels-type src-image-class) src-pixels)
@@ -40,6 +38,7 @@
              (max-x (+ x width -1))
              (dy (- sy y))
              (dx (- sx x)))
+         (declare (type fixnum max-x max-y dx dy))
          (flet ((copy-ff ()
                   (loop for j from y to max-y do
                        (loop for i from x to max-x do
@@ -86,7 +85,7 @@
 (defmacro make-fill-image-with-stencil (image-class stencil-class)
   `(progn
      (defmethod fill-image ((image ,image-class) rgba-design (stencil ,stencil-class)
-                                   &key (x 0) (y 0) (width 0) (height 0) (stencil-dx 0) (stencil-dy 0))
+                            &key (x 0) (y 0) (width 0) (height 0) (stencil-dx 0) (stencil-dy 0))
        (declare (type fixnum x y width height stencil-dx stencil-dy))
        (let ((pixels (image-pixels image))
              (stencil-pixels (image-pixels stencil)))
@@ -127,6 +126,7 @@
                   (pixeled-uniform-design-green rgba-design)
                   (pixeled-uniform-design-blue rgba-design)
                   (pixeled-uniform-design-alpha rgba-design))
+               (declare (type octet red green blue alpha))
                (loop for j from y to max-y do
                     (loop for i from x to max-x do
                          (let* ((alpha-ste ,(make-get-alpha-octet-code stencil-class 'stencil-pixels `(+ stencil-dx i) `(+ stencil-dy j)))
@@ -180,6 +180,7 @@
                   (pixeled-uniform-design-green rgba-design)
                   (pixeled-uniform-design-blue rgba-design)
                   (pixeled-uniform-design-alpha rgba-design))
+               (declare (type octet red green blue alpha))
                (loop for j from y to max-y do
                     (loop for i from x to max-x do
                          (if (> alpha 250)
