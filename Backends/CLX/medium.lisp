@@ -847,14 +847,17 @@ time an indexed pattern is drawn.")
 				(medium-sheet medium))
                                position-seq)
     (with-clx-graphics () medium
-      (loop
-	 for (left top right bottom) on position-seq by #'cddddr
-	 for min-x = (round-coordinate left)
-	 for max-x = (round-coordinate right)
-	 for min-y = (round-coordinate top)
-	 for max-y = (round-coordinate bottom)
-	 nconcing (list min-x min-y (- max-x min-x) (- min-y max-y)) into points
-	 finally (xlib:draw-rectangles mirror gc points filled)))))
+      (let ((points (make-array 4 :fill-pointer 0)))
+        (do-sequence ((left top right bottom) position-seq)
+          (let ((min-x (round-coordinate left))
+                (max-x (round-coordinate right))
+                (min-y (round-coordinate top))
+                (max-y (round-coordinate bottom)))
+            (vector-push-extend min-x points)
+            (vector-push-extend min-y points)
+            (vector-push-extend (- max-x min-x) points)
+            (vector-push-extend (- max-y min-y) points)))
+        (xlib:draw-rectangles mirror gc points filled)))))
 
 ;;; Round the parameters of the ellipse so that it occupies the expected pixels
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
