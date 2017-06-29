@@ -21,8 +21,22 @@
   (setf (slot-value port 'pointer)
 	(make-instance 'clim-clx::clx-basic-pointer :port port))
   (initialize-clx port)
+  (initialize-clx-framebuffer port)
   (clim-extensions:port-all-font-families port))
-  
+
+
+(defun initialize-clx-framebuffer (port)
+  (clim-sys:make-process (lambda ()
+                           (loop
+                              (handler-case
+                                  (maphash #'(lambda (key val)
+                                               (when (typep key 'clx-fb-mirrored-sheet-mixin)
+                                                 (image-mirror-to-x (sheet-mirror key))))
+                                           (slot-value port 'climi::sheet->mirror))
+                                (condition (condition)
+                                  (format *debug-io* "~A~%" condition)))
+                              (sleep 0.001)))
+                         :name (format nil "~S's event process." port)))
 
 (defparameter *event-mask* '(:exposure 
 			     :key-press :key-release
@@ -103,12 +117,12 @@
     (unless (xlib:event-listen display)
       (xlib:display-force-output (clx-port-display port)))
     (let ((event (xlib:process-event (clx-port-display port)
-				     :timeout 0.06
+				     ;;:timeout 0.06
 				     :handler #'clim-clx::event-handler :discard-p t)))
-      (maphash #'(lambda (key val)
-		   (when (typep key 'clx-fb-mirrored-sheet-mixin)
-		     (image-mirror-to-x (sheet-mirror key))))
-	       (slot-value port 'climi::sheet->mirror))
+      #+() (maphash #'(lambda (key val)
+                        (when (typep key 'clx-fb-mirrored-sheet-mixin)
+                          (image-mirror-to-x (sheet-mirror key))))
+                    (slot-value port 'climi::sheet->mirror))
       (if event
 	  event
 	  :timeout))))

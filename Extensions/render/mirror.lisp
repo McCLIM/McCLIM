@@ -6,6 +6,7 @@
    (image-lock :initform (climi::make-lock "image"))
    (resize-image-p :initform t :reader image-mirror-resize-image-p)
    (dirty-region :initform nil)
+   (updating-p :initform nil)
    (state :initform (aa:make-state))))
 
 (defmethod (setf image-mirror-image) (img (mirror image-mirror-mixin))
@@ -52,10 +53,11 @@
 	    nil)))))
 
 (defmethod %notify-image-updated ((mirror image-mirror-mixin) region)
-  (with-slots (dirty-region) mirror
-    (if dirty-region
-	(setf dirty-region (region-union dirty-region region))
-	(setf dirty-region region))))
+  (when region
+    (with-slots (dirty-region) mirror
+      (if dirty-region
+          (setf dirty-region (region-union dirty-region region))
+          (setf dirty-region region)))))
 
 (defmethod %draw-image :around ((mirror image-mirror-mixin) 
 				image x y width height x-dest y-dest clip-region)
