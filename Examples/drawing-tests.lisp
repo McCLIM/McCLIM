@@ -123,17 +123,21 @@
       (when item
         (with-text-style (description (make-text-style :sans-serif :roman :normal))
           (write-string (drawing-test-description item) description))
-        (handler-case
+        (if (slot-value *application-frame* 'signal-condition-p)
             (clim:with-drawing-options (output :clipping-region
                                                (clim:make-rectangle* 0 0 *width* *height*))
               (clim:draw-rectangle* output 0 0 *width* *height* :filled t
                                     :ink clim:+grey90+)
               (funcall (drawing-test-drawer item) output))
-          (condition (condition)
-            (clim:with-drawing-options (description :ink +red+)
-              (format description "Backend:~a~%" condition)
-              (when (slot-value *application-frame* 'signal-condition-p)
-                (error condition)))))))))
+            (handler-case
+                (clim:with-drawing-options (output :clipping-region
+                                                   (clim:make-rectangle* 0 0 *width* *height*))
+                  (clim:draw-rectangle* output 0 0 *width* *height* :filled t
+                                        :ink clim:+grey90+)
+                  (funcall (drawing-test-drawer item) output))
+              (condition (condition)
+                (clim:with-drawing-options (description :ink +red+)
+                  (format description "Backend:~a~%" condition)))))))))
 
 (defun display-render-output (frame pane)
   (declare (ignore pane))
@@ -141,7 +145,7 @@
         (item (slot-value frame 'current-selection)))
     (let ((description (get-frame-pane *application-frame* 'description)))
       (when item
-         (handler-case
+        (if (slot-value *application-frame* 'signal-condition-p)
             (with-slots (recording-p) clim:*application-frame*
               (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
                                  (stream :width *width* :height *height* :border-width *border-width*
@@ -151,11 +155,19 @@
                                (funcall (drawing-test-drawer item) stream))))
                 (draw-pattern* output pattern 0 0)
                 (medium-finish-output (sheet-medium output))))
-          (condition (condition)
-            (clim:with-drawing-options (description :ink +red+)
-              (format description "Render:~a~%" condition)
-              (when (slot-value *application-frame* 'signal-condition-p)
-                (error condition)))))))))
+            (handler-case
+                (with-slots (recording-p) clim:*application-frame*
+                  (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
+                                     (stream :width *width* :height *height* :border-width *border-width*
+                                             :recording-p recording-p)
+                                   (clim:draw-rectangle* stream 0 0 *width* *height* :filled t
+                                                         :ink clim:+grey90+)
+                                   (funcall (drawing-test-drawer item) stream))))
+                    (draw-pattern* output pattern 0 0)
+                    (medium-finish-output (sheet-medium output))))
+              (condition (condition)
+                (clim:with-drawing-options (description :ink +red+)
+                  (format description "Render:~a~%" condition)))))))))
 
 (defun run-drawing-tests ()
   (run-frame-top-level
