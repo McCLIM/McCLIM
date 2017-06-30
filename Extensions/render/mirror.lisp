@@ -7,6 +7,7 @@
    (resize-image-p :initform t :reader image-mirror-resize-image-p)
    (dirty-region :initform nil)
    (updating-p :initform nil)
+   (finished-output :initform nil)
    (state :initform (aa:make-state))))
 
 (defmethod (setf image-mirror-image) (img (mirror image-mirror-mixin))
@@ -29,6 +30,8 @@
 (defgeneric %stroke-paths (mirror paths line-style transformation clip-region ink background foreground))
 (defgeneric %fill-image-mask (mirror image-mask x y width height x-dest y-dest clip-region ink background foreground))
 (defgeneric %fill-image (mirror x y width height ink background foreground clip-region))
+
+(defgeneric %force-output (mirror))
 
 ;;;
 ;;; implementation
@@ -161,3 +164,9 @@
           reg
         (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
                                                        (ceiling max-x) (ceiling max-y)))))))
+
+(defmethod %force-output ((mirror image-mirror-mixin))
+  (with-slots (image-lock finished-output)
+      mirror
+    (climi::with-lock-held (image-lock)
+      (setf finished-output t))))

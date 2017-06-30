@@ -8,7 +8,8 @@
    (xlib-image :initform nil)
    (dirty-xr :initform +nowhere+)
    (clx-image :initform nil)
-   (gcontext :initform nil)))
+   (gcontext :initform nil)
+   (skip-count :initform 0)))
 
 
 ;;; for port
@@ -55,6 +56,8 @@
 							  :width  (max 0 (- width (min 0 (- min-x))))
 							  :height (max 0 (- height (min 0 (- min-y)))))))))
 			       dirty-r))
+
+(declaim (inline xlib-image-data-set-pixel))
 (defun xlib-image-data-set-pixel (data x y red green blue alpha)
   (setf (aref data y x)
 	(dpb blue (byte 8 0)
@@ -82,10 +85,34 @@
 (defmethod image-mirror-to-x ((sheet clx-fb-mirror))
   (declare (optimize speed))
   (with-slots (xmirror clx-image xlib-image mcclim-render::image-lock gcontext
-		       mcclim-render::dirty-region updating-p
-		       width height dirty-xr)
+		       mcclim-render::dirty-region  mcclim-render::finished-output MCCLIM-RENDER::updating-p
+		       width height dirty-xr skip-count)
       sheet
-    #+() (climi::with-lock-held (mcclim-render::image-lock)
+    (if (and mcclim-render::finished-output (> skip-count 10))
+        (climi::with-lock-held (mcclim-render::image-lock)
+          (when mcclim-render::dirty-region
+            (setf dirty-xr (region-union dirty-xr mcclim-render::dirty-region))
+            (image-mirror-pre-put width height xmirror sheet clx-image xlib-image dirty-xr))
+          (setf mcclim-render::finished-output nil)
+          (setf mcclim-render::dirty-region nil)
+          (setf skip-count 0))
+        (when mcclim-render::dirty-region
+          (if (< skip-count 30)
+              (incf skip-count)
+              (climi::with-lock-held (mcclim-render::image-lock)
+                (setf mcclim-render::finished-output t)))))
+    #+(or) (when (and #+() (not mcclim-render::updating-p) mcclim-render::dirty-region)
+      (if (and mcclim-render::updating-p (< skip-count 100))
+          (incf skip-count)
+          (if (< skip-count 20)
+              (incf skip-count)
+              (progn
+                (setf skip-count 0)
+                (climi::with-lock-held (mcclim-render::image-lock)
+                  (setf dirty-xr (region-union dirty-xr mcclim-render::dirty-region))
+                  (image-mirror-pre-put width height xmirror sheet clx-image xlib-image dirty-xr)
+                  (setf mcclim-render::dirty-region nil))))))
+    #+(or) (climi::with-lock-held (mcclim-render::image-lock)
       (when (and (mcclim-render::image-mirror-image sheet)
                  clx-image
                  xmirror
@@ -96,8 +123,8 @@
     (when (not (region-equal dirty-xr +nowhere+))
       (let ((reg))
         (climi::with-lock-held (mcclim-render::image-lock)
-                               (setf reg dirty-xr)
-                               (setf dirty-xr +nowhere+))
+          (setf reg dirty-xr)
+          (setf dirty-xr +nowhere+))
         (image-mirror-put width height xmirror gcontext clx-image reg)))))
 
 
@@ -112,7 +139,7 @@
   (with-slots (mcclim-render::updating-p dirty-xr mcclim-render::dirty-region width height clx-image
                           xlib-image xmirror)
       mirror
-    (when (and (not mcclim-render::updating-p) mcclim-render::dirty-region)
+    #+() (when (and (not mcclim-render::updating-p) mcclim-render::dirty-region)
       (setf dirty-xr (region-union dirty-xr mcclim-render::dirty-region))
       (image-mirror-pre-put width height xmirror mirror clx-image xlib-image dirty-xr)
       (setf mcclim-render::dirty-region nil))))

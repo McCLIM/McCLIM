@@ -418,9 +418,9 @@
                                     t))))))
 
 (defmethod medium-finish-output ((medium render-medium-mixin))
-  )
+  (when (sheet-mirror (medium-sheet medium))
+    (%force-output (sheet-mirror (medium-sheet medium)))))
 
 (defmethod medium-force-output ((medium render-medium-mixin))
-  )
-
-
+  (when (sheet-mirror (medium-sheet medium))
+    (%force-output (sheet-mirror (medium-sheet medium)))))
