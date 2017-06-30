@@ -6,7 +6,6 @@
    (image-lock :initform (climi::make-lock "image"))
    (resize-image-p :initform t :reader image-mirror-resize-image-p)
    (dirty-region :initform nil)
-   (updating-p :initform nil)
    (state :initform (aa:make-state))))
 
 (defmethod (setf image-mirror-image) (img (mirror image-mirror-mixin))
@@ -29,6 +28,8 @@
 (defgeneric %stroke-paths (mirror paths line-style transformation clip-region ink background foreground))
 (defgeneric %fill-image-mask (mirror image-mask x y width height x-dest y-dest clip-region ink background foreground))
 (defgeneric %fill-image (mirror x y width height ink background foreground clip-region))
+
+(defgeneric %mirror-force-output (mirror))
 
 ;;;
 ;;; implementation
@@ -161,3 +162,6 @@
           reg
         (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
                                                        (ceiling max-x) (ceiling max-y)))))))
+
+(defmethod %mirror-force-output ((mirror image-mirror-mixin))
+  nil)

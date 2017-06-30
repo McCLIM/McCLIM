@@ -254,7 +254,6 @@
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
   (medium-force-output from-drawable)
-  (medium-force-output to-drawable)
   (multiple-value-bind (w2 h2)
       (untransform-distance (medium-transformation from-drawable)
                             width height)
@@ -313,13 +312,11 @@
                                       (+ x2 (- min-x x1))
                                       (+ y2 (- min-y y1))
                                       (- max-x min-x) (- max-y min-y)
-                                      min-x min-y)))))
-          (medium-force-output (sheet-medium to-drawable)))))))
+                                      min-x min-y))))))))))
 
 (defmethod medium-copy-area ((from-drawable image-sheet-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
   (medium-force-output (sheet-medium from-drawable))
-  (medium-force-output to-drawable)
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet to-drawable))))
     (when (and msheet (sheet-mirror msheet))
       (multiple-value-bind (w2 h2)
@@ -347,8 +344,7 @@
                                     (+ x2 (- min-x x1))
                                     (+ y2 (- min-y y1))
                                     (- max-x min-x) (- max-y min-y)
-                                    min-x min-y)))))
-        (medium-force-output to-drawable)))))
+                                    min-x min-y)))))))))
 
 (defmethod medium-draw-image-design* ((medium render-medium-mixin)
 				      (design rgb-image-design) to-x to-y)
@@ -418,9 +414,9 @@
                                     t))))))
 
 (defmethod medium-finish-output ((medium render-medium-mixin))
-  )
+  (when (sheet-mirror (medium-sheet medium))
+    (%mirror-force-output (sheet-mirror (medium-sheet medium)))))
 
 (defmethod medium-force-output ((medium render-medium-mixin))
-  )
-
-
+  (when (sheet-mirror (medium-sheet medium))
+    (%mirror-force-output (sheet-mirror (medium-sheet medium)))))

@@ -35,7 +35,7 @@
                                            (slot-value port 'climi::sheet->mirror))
                                 (condition (condition)
                                   (format *debug-io* "~A~%" condition)))
-                              (sleep 0.001)))
+                              (sleep 0.01)))
                          :name (format nil "~S's event process." port)))
 
 (defparameter *event-mask* '(:exposure 
@@ -108,6 +108,10 @@
 
 
 (defmethod port-force-output ((port clx-fb-port))
+  (maphash #'(lambda (key val)
+               (when (typep key 'clx-fb-mirrored-sheet-mixin)
+                 (mcclim-render::%mirror-force-output (sheet-mirror key))))
+           (slot-value port 'climi::sheet->mirror))
   (xlib:display-force-output (clx-port-display port)))
 
 (defmethod get-next-event ((port clx-fb-port) &key wait-function (timeout nil))
