@@ -108,7 +108,7 @@
 
 (defmethod %fill-image-mask ((mirror image-mirror-mixin)
 			     image-mask x y width height x-dest y-dest clip-region ink background foreground)
-  #+() (when (or (not (rectanglep clip-region))
+  #+(or) (when (or (not (rectanglep clip-region))
             (not (region-contains-region-p clip-region (make-rectangle* x y (+ x width) (+ y height)))))
     (warn "fill image mask not correct [~A -> ~A]" clip-region (make-rectangle* x y (+ x width) (+ y height))))
   (let ((region
@@ -122,7 +122,7 @@
 
 (defmethod %fill-image ((mirror image-mirror-mixin)
 			x y width height ink background foreground clip-region)
-  #+() (when (or (not (rectanglep clip-region))
+  #+(or) (when (or (not (rectanglep clip-region))
             (not (region-contains-region-p clip-region (make-rectangle* x y (+ x width) (+ y height)))))
     (warn "fill image not correct [~A -> ~A]"
           clip-region
