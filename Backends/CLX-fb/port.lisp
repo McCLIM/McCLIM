@@ -35,6 +35,7 @@
                                            (slot-value port 'climi::sheet->mirror))
                                 (condition (condition)
                                   (format *debug-io* "~A~%" condition)))
+                              (xlib:display-force-output (clx-port-display port))
                               (sleep 0.01)))
                          :name (format nil "~S's event process." port)))
 
