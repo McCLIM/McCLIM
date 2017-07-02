@@ -41,7 +41,8 @@ their specific print lengths, if they have one.")
 	:documentation "The object being inspected"))
   (:pointer-documentation t)
   (:panes
-   (app :application :width 600 :height 500
+   (app :application :width 600 :min-height 500
+        :height :compute
 	:scroll-bars nil
 	:text-style (make-text-style :sans-serif :roman :normal)
 	:display-function 'display-app)
