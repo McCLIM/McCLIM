@@ -212,21 +212,21 @@ cause the activate callback to be called."))
   (:default-initargs :activation-gestures '()))
 
 (defmethod initialize-instance :after ((object text-editor-pane)
-                                       &key id client armed-callback
+                                       &key armed-callback
                                          disarmed-callback
                                          activation-gestures activate-callback
                                          scroll-bars
                                          ncolumns nlines
-                                         value value-changed-callback
+                                         value
                                          (editable-p t))
-  ;; Make an editor substrate object for the gadget.
+  ;; Make an editor substrate object for the gadget. Propagate the
+  ;; substrate's value-changed callback to our own
+  ;; `value-changed-callback' method.
   (let* ((minibuffer (when scroll-bars
                        (make-pane 'drei::drei-minibuffer-pane)))
          (substrate (make-pane 'drei-text-editor-substrate
                                :user-gadget object
                                :minibuffer minibuffer
-                               :id id
-                               :client client
                                :text-style (pane-text-style object)
                                :armed-callback armed-callback
                                :disarmed-callback disarmed-callback
@@ -235,8 +235,12 @@ cause the activate callback to be called."))
                                :scroll-bars scroll-bars
                                :ncolumns ncolumns
                                :nlines nlines
-                               :value value
-                               :value-changed-callback value-changed-callback
+                               :value-changed-callback
+                               (lambda (gadget value)
+                                 (declare (ignore gadget))
+                                 (value-changed-callback
+                                  object (gadget-client object) (gadget-id object)
+                                  value))
                                :editable-p editable-p))
          (sheet (cond ((and scroll-bars minibuffer)
                        (vertically ()
@@ -251,6 +255,6 @@ cause the activate callback to be called."))
                          substrate
                          minibuffer))
                       (:otherwise substrate))))
-    (setf (gadget-value substrate) value
-          (substrate object) substrate)
+    (setf (substrate object) substrate
+          (gadget-value substrate) value)
     (sheet-adopt-child object sheet)))
