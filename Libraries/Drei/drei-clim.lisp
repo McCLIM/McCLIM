@@ -214,20 +214,21 @@ command loop completely."))
 
 ;;; The fun is that in the gadget version of Drei, we do not control
 ;;; the application command loop, and in fact, need to operate
-;;; completely independently of it - we can only act when the our port
+;;; completely independently of it - we can only act when our port
 ;;; deigns to bestow an event upon the gadget. So, we basically have
 ;;; to manually take care of reading gestures (asynchronously),
-;;; redisplaying, updating the syntax and all the other fun
-;;; details. On top of this, we have to account for the fact that some
-;;; other part of the application might catch the users fancy, and
-;;; since we do not (and can not) control the command loop, we can not
-;;; prevent the user from "leaving" the gadget at inconvenient times
-;;; (such as in the middle of entering a complex set of gestures, or
-;;; answering questions asked by a command). So, we keep some state
-;;; information in the `drei-gadget-pane' object and use it to cobble
-;;; together our own poor man's version of an ESA command loop. Syntax
-;;; updating is done after a command has been executed, and only then
-;;; (or by commands at their own discretion).
+;;; redisplaying, updating the syntax and all the other fun details.
+;;;
+;;; On top of this, we have to account for the fact that some other
+;;; part of the application might catch the user's fancy, and since we
+;;; do not (and can not) control the command loop, we can not prevent
+;;; the user from "leaving" the gadget at inconvenient times (such as
+;;; in the middle of entering a complex set of gestures, or answering
+;;; questions asked by a command). So, we keep some state information
+;;; in the `drei-gadget-pane' object and use it to cobble together our
+;;; own poor man's version of an ESA command loop. Syntax updating is
+;;; done after a command has been executed, and only then (or by
+;;; commands at their own discretion).
 (defclass drei-gadget-pane (drei-pane value-gadget action-gadget
                                       asynchronous-command-processor
                                       dead-key-merging-command-processor)
@@ -329,12 +330,12 @@ modifier key."))
   ;; Cargo-culted from above:
   (unless (and (currently-processing-p gadget) (directly-processing-p gadget))
     (letf (((currently-processing-p gadget) t))
-      (insert-sequence (point (view gadget)) 
+      (insert-sequence (point (view gadget))
                        (clim-backend:get-selection-from-event (port gadget) event))
       (display-drei gadget :redisplay-minibuffer t)
       (propagate-changed-value gadget))))
 
-(defmethod handle-event :before 
+(defmethod handle-event :before
     ((gadget drei-gadget-pane) (event pointer-button-press-event))
   (let ((previous (stream-set-input-focus gadget)))
     (when (and previous (typep previous 'gadget))
