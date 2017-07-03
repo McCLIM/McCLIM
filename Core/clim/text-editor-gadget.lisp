@@ -173,8 +173,8 @@ editor substrates."))
 (defclass text-field-pane (text-field
                            vrack-pane editor-substrate-user-mixin)
   ((activation-gestures :accessor activation-gestures
-			:initarg :activation-gestures
-			:documentation "A list of gestures that
+                        :initarg :activation-gestures
+                        :documentation "A list of gestures that
 cause the activate callback to be called."))
   (:default-initargs
    :activation-gestures *standard-activation-gestures*))
@@ -183,8 +183,8 @@ cause the activate callback to be called."))
                                        &key id client armed-callback
                                        disarmed-callback
                                        activation-gestures activate-callback
-					 value value-changed-callback
-					 (editable-p t))
+                                         value value-changed-callback
+                                         (editable-p t))
   ;; Make an editor substrate object for the gadget.
   (let ((pane (make-pane 'drei-text-field-substrate
                          :user-gadget object
@@ -214,11 +214,11 @@ cause the activate callback to be called."))
 (defmethod initialize-instance :after ((object text-editor-pane)
                                        &key id client armed-callback
                                          disarmed-callback
-					 activation-gestures activate-callback
-					 scroll-bars
-					 ncolumns nlines
-					 value value-changed-callback
-					 (editable-p t))
+                                         activation-gestures activate-callback
+                                         scroll-bars
+                                         ncolumns nlines
+                                         value value-changed-callback
+                                         (editable-p t))
   ;; Make an editor substrate object for the gadget.
   (let* ((minibuffer (when scroll-bars
                        (make-pane 'drei::drei-minibuffer-pane)))
@@ -254,4 +254,3 @@ cause the activate callback to be called."))
     (setf (gadget-value substrate) value
           (substrate object) substrate)
     (sheet-adopt-child object sheet)))
-
