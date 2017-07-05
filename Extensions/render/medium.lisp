@@ -1,7 +1,5 @@
 (in-package :mcclim-render)
 
-
-
 (defclass render-medium-mixin (basic-medium)
   ())
 
@@ -16,56 +14,59 @@
 
 (defgeneric %medium-stroke-paths (medium paths &optional transform-p))
 (defgeneric %medium-fill-paths (medium paths &optional transform-p transformation))
-(defgeneric %medium-draw-paths (medium paths transformation))
 
 (defmethod %medium-stroke-paths ((medium render-medium-mixin) paths
 				 &optional (transform-p t))
-  (let ((paths (mapcar
-		(lambda (path)
-		  (stroke-path path
-			       (medium-line-style medium)))
-		paths)))
-    (%medium-draw-paths medium (car paths)
-			(if transform-p
-			    (sheet-native-transformation
-			     (medium-sheet medium))
-			    +identity-transformation+))))
+  (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+    (when (and msheet (sheet-mirror msheet))
+      (%stroke-paths (sheet-mirror msheet) paths
+                     (medium-line-style medium)
+                     (if transform-p
+                         (sheet-native-transformation
+                          (medium-sheet medium))
+                         +identity-transformation+)
+                     (climi::medium-device-region medium)
+                     (transform-region (sheet-native-transformation (medium-sheet medium))
+                                       (medium-ink medium))
+                     (medium-background medium)
+                     (medium-foreground medium)))))
 
 (defmethod %medium-fill-paths ((medium render-medium-mixin) paths
 			       &optional (transform-p t) (transformation +identity-transformation+))
-  (let ((paths (mapcar
-		(lambda (path)
-		  (setf (paths::path-type path) :closed-polyline)
-		  path)
-		paths)))
-    (%medium-draw-paths medium paths (if transform-p
-					 (compose-transformations
-					  (sheet-native-transformation
-					   (medium-sheet medium))
-					  transformation)
-					 transformation))))
-
-(defmethod %medium-draw-paths ((medium render-medium-mixin) paths transformation)
+  (declare (ignore transformation))
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
     (when (and msheet (sheet-mirror msheet))
-      (%draw-paths (sheet-mirror msheet) paths transformation
-		   (climi::medium-device-region medium)
-		   (transform-region (sheet-native-transformation (medium-sheet medium))
-				     (medium-ink medium))
-		   (medium-background medium)
-		   (medium-foreground medium)))))
+      (%fill-paths (sheet-mirror msheet) paths
+                   (if transform-p
+                       (sheet-native-transformation
+                        (medium-sheet medium))
+                       +identity-transformation+)
+                   (climi::medium-device-region medium)
+                   (transform-region (sheet-native-transformation (medium-sheet medium))
+                                     (medium-ink medium))
+                   (medium-background medium)
+                   (medium-foreground medium)))))
 
-(defmethod %medium-draw-image ((medium render-medium-mixin) image
-			       to-x to-y width height dst-dx dst-dy)
+(defmethod %medium-draw-image ((medium render-medium-mixin) (image basic-sheet)
+                               x y width height to-x to-y)
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
     (when (and msheet (sheet-mirror msheet))
       (%draw-image (sheet-mirror msheet)
-		   (image-mirror-image (sheet-mirror image))
+                   (image-mirror-image (sheet-mirror image))
+		   (round x) (round y)
+		   (round width) (round height)
 		   (round to-x) (round to-y)
-		   (round width)
-		   (round height)
-		   (round dst-dx)
-		   (round dst-dy)
+		   (climi::medium-device-region medium)))))
+
+(defmethod %medium-draw-image ((medium render-medium-mixin) (image basic-image)
+                               x y width height to-x to-y)
+  (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+    (when (and msheet (sheet-mirror msheet))
+      (%draw-image (sheet-mirror msheet)
+                   image
+		   (round x) (round y)
+		   (round width) (round height)
+		   (round to-x) (round to-y)
 		   (climi::medium-device-region medium)))))
 
 (defmethod %medium-fill-image-mask ((medium render-medium-mixin) image from-x from-y width height to-x to-y)
@@ -73,7 +74,6 @@
     (when (and msheet (sheet-mirror msheet))
       (%fill-image-mask (sheet-mirror msheet)
 			image
-
 			(round from-x) (round from-y)	
 			(round width)
 			(round height)
@@ -94,7 +94,8 @@
 		   (transform-region (sheet-native-transformation (medium-sheet medium))
 				     (medium-ink medium))
 		   (medium-background medium)
-		   (medium-foreground medium)))))
+		   (medium-foreground medium)
+                   (climi::medium-device-region medium)))))
 
 ;;;
 ;;; standard medium protocol
@@ -112,10 +113,9 @@
       (rotatef left right))
   (if (< bottom top)
       (rotatef top bottom))
-  (let* ((clip-region (climi::medium-device-region medium))
-	 (region
+  (let* ((region
 	  (region-intersection
-	   clip-region
+	   (climi::medium-device-region medium)
 	   (transform-region (sheet-native-transformation (medium-sheet medium))
 			     (make-rectangle* left top right bottom)))))
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
@@ -123,11 +123,7 @@
       (if (and
 	   filled
 	   (not (typep ink 'standard-flipping-ink))
-	   (clim:rectanglep region)
-	   (< (abs (- min-x (round min-x))) 0.01)
-	   (< (abs (- max-x (round max-x))) 0.01)
-	   (< (abs (- min-y (round min-y))) 0.01)
-	   (< (abs (- max-y (round max-y))) 0.01))
+	   (clim:rectanglep region))
 	  (progn
 	    (%medium-fill-image medium min-x min-y (- max-x min-x) (- max-y min-y)))
 	  (let ((path (make-path left top)))
@@ -192,6 +188,7 @@
 	 (arc-angle (if (< arc-angle 0)
 			(+ (* pi 2) arc-angle)
 			arc-angle)))
+    (declare (ignore arc-angle))
     ;;; error!!
     (let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
 	   (radius-dy (abs (+ radius-1-dy radius-2-dy))))
@@ -211,6 +208,7 @@
                               align-x align-y
                               toward-x toward-y transform-glyphs)
   (flet ((draw-font-glypse (paths opacity-image dx dy transformation)
+           (declare (ignore paths))
 	   (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
 	     (when (and msheet (sheet-mirror msheet))
 	       (multiple-value-bind (x1 y1)
@@ -256,44 +254,37 @@
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
   (medium-force-output from-drawable)
-  (medium-force-output to-drawable)
-  (let* ((msheet (sheet-mirrored-ancestor (medium-sheet to-drawable)))
-	 (from-sheet (medium-sheet from-drawable))
-	 (from-transformation (sheet-native-transformation from-sheet))
-	 (to-sheet (medium-sheet to-drawable))
-	 (to-transformation (sheet-native-transformation to-sheet)))
-    (multiple-value-bind (w2 h2)
-        (untransform-distance (medium-transformation from-drawable)
-                              width height)
-      (multiple-value-bind (w h)
-          (transform-distance (sheet-transformation (medium-sheet to-drawable))
-                              w2 h2)
-        (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-            (region-intersection
-             (climi::medium-device-region to-drawable)
-             (transform-region
-              (sheet-native-transformation (medium-sheet to-drawable))
-              (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
-          (multiple-value-bind (x1 y1)
+  (multiple-value-bind (w2 h2)
+      (untransform-distance (medium-transformation from-drawable)
+                            width height)
+    (multiple-value-bind (w h)
+        (transform-distance (sheet-transformation (medium-sheet to-drawable))
+                            w2 h2)
+      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+          (region-intersection
+           (climi::medium-device-region to-drawable)
+           (transform-region
+            (sheet-native-transformation (medium-sheet to-drawable))
+            (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
+        (multiple-value-bind (x1 y1)
+            (transform-position
+             (sheet-native-transformation (medium-sheet to-drawable))
+             to-x to-y)
+          (multiple-value-bind (x2 y2)
               (transform-position
-               (sheet-native-transformation (medium-sheet to-drawable))
-               to-x to-y)
-            (multiple-value-bind (x2 y2)
-                (transform-position
-                 (sheet-native-transformation (medium-sheet from-drawable))
-                 from-x from-y)
-              (%medium-draw-image to-drawable
-                                  (medium-sheet from-drawable)
-                                  min-x min-y
-                                  (- max-x min-x) (- max-y min-y)
-                                  (- x2 x1) (- y2 y1)))))))))
+               (sheet-native-transformation (medium-sheet from-drawable))
+               from-x from-y)
+            (%medium-draw-image to-drawable
+                                (medium-sheet from-drawable)
+                                (+ x2 (- min-x x1))
+                                (+ y2 (- min-y y1))
+                                (- max-x min-x) (- max-y min-y)
+                                min-x min-y)))))))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable image-sheet-mixin) to-x to-y)
   (medium-force-output from-drawable)
-  (let* ((msheet (sheet-mirrored-ancestor to-drawable))
-	 (from-sheet (medium-sheet from-drawable))
-	 (from-transformation (sheet-native-transformation from-sheet)))
+  (let* ((msheet (sheet-mirrored-ancestor to-drawable)))
     (when (and msheet (sheet-mirror msheet))
       (multiple-value-bind (w2 h2)
           (untransform-distance (medium-transformation from-drawable)
@@ -318,14 +309,14 @@
                 (climi::with-pixmap-medium (to-medium to-drawable)
                   (%medium-draw-image (sheet-medium to-drawable)
                                       (medium-sheet from-drawable)
-                                      min-x min-y
+                                      (+ x2 (- min-x x1))
+                                      (+ y2 (- min-y y1))
                                       (- max-x min-x) (- max-y min-y)
-                                      (- x2 x1) (- y2 y1)))))))))))
+                                      min-x min-y))))))))))
 
 (defmethod medium-copy-area ((from-drawable image-sheet-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
   (medium-force-output (sheet-medium from-drawable))
-  (medium-force-output to-drawable)
   (let ((msheet (sheet-mirrored-ancestor (medium-sheet to-drawable))))
     (when (and msheet (sheet-mirror msheet))
       (multiple-value-bind (w2 h2)
@@ -348,33 +339,84 @@
                   (transform-position
                    (sheet-native-transformation from-drawable)
                    from-x from-y)
-              (%medium-draw-image to-drawable
-                                  from-drawable
-                                  min-x min-y
-                                  (- max-x min-x) (- max-y min-y)
-                                  (- x2 x1) (- y2 y1))))))
-        (medium-force-output to-drawable)))))
+                (%medium-draw-image to-drawable
+                                    from-drawable
+                                    (+ x2 (- min-x x1))
+                                    (+ y2 (- min-y y1))
+                                    (- max-x min-x) (- max-y min-y)
+                                    min-x min-y)))))))))
 
 (defmethod medium-draw-image-design* ((medium render-medium-mixin)
 				      (design rgb-image-design) to-x to-y)
   (let* ((image (slot-value design 'image))
 	 (width (image-width image))
 	 (height (image-height image))
-	 (to-sheet (medium-sheet medium)))
-    (with-drawing-options (medium :ink (climi::transform-region
-					(make-translation-transformation
-					 to-x to-y)
-					design))
-      
-      (medium-draw-rectangle* medium
-			      to-x to-y
-			      (+ to-x width) (+ to-y height)
-			      t))))
+	 (to-sheet (medium-sheet medium))
+         (region
+          (region-intersection
+           (climi::medium-device-region medium)
+           (transform-region (sheet-native-transformation to-sheet)
+                             (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))))
+    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+        region
+      (if (clim:rectanglep region)
+          (multiple-value-bind (x1 y1)
+              (transform-position
+               (sheet-native-transformation to-sheet)
+               to-x to-y)
+            (%medium-draw-image medium
+                                (coerce-image image '2d-rgb-image)
+                                (+ 0 (- min-x x1))
+                                (+ 0 (- min-y y1))
+                                (- max-x min-x)
+                                (- max-y min-y)
+                                min-x min-y))
+          (with-drawing-options (medium :ink (climi::transform-region
+                                              (make-translation-transformation
+                                               to-x to-y)
+                                              design))
+            (medium-draw-rectangle* medium
+                                    to-x to-y
+                                    (+ to-x width) (+ to-y height)
+                                    t))))))
+
+(defmethod medium-draw-image* ((medium render-medium-mixin)
+                               (image drawable-image) to-x to-y)
+  (let* ((width (image-width image))
+	 (height (image-height image))
+	 (to-sheet (medium-sheet medium))
+         (region
+          (region-intersection
+           (climi::medium-device-region medium)
+           (transform-region (sheet-native-transformation to-sheet)
+                             (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))))
+    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+        region
+      (if (clim:rectanglep region)
+          (multiple-value-bind (x1 y1)
+              (transform-position
+               (sheet-native-transformation to-sheet)
+               to-x to-y)
+            (%medium-draw-image medium
+                                (coerce-image image '2d-rgb-image)
+                                (+ 0 (- min-x x1))
+                                (+ 0 (- min-y y1))
+                                (- max-x min-x)
+                                (- max-y min-y)
+                                min-x min-y))
+          (with-drawing-options (medium :ink (climi::transform-region
+                                              (make-translation-transformation
+                                               to-x to-y)
+                                              (make-image-design image)))
+            (medium-draw-rectangle* medium
+                                    to-x to-y
+                                    (+ to-x width) (+ to-y height)
+                                    t))))))
 
 (defmethod medium-finish-output ((medium render-medium-mixin))
-  )
+  (when (sheet-mirror (medium-sheet medium))
+    (%mirror-force-output (sheet-mirror (medium-sheet medium)))))
 
 (defmethod medium-force-output ((medium render-medium-mixin))
-  )
-
-
+  (when (sheet-mirror (medium-sheet medium))
+    (%mirror-force-output (sheet-mirror (medium-sheet medium)))))

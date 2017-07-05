@@ -21,8 +21,23 @@
   (setf (slot-value port 'pointer)
 	(make-instance 'clim-clx::clx-basic-pointer :port port))
   (initialize-clx port)
+  (initialize-clx-framebuffer port)
   (clim-extensions:port-all-font-families port))
-  
+
+
+(defun initialize-clx-framebuffer (port)
+  (clim-sys:make-process (lambda ()
+                           (loop
+                              (handler-case
+                                  (maphash #'(lambda (key val)
+                                               (when (typep key 'clx-fb-mirrored-sheet-mixin)
+                                                 (image-mirror-to-x (sheet-mirror key))))
+                                           (slot-value port 'climi::sheet->mirror))
+                                (condition (condition)
+                                  (format *debug-io* "~A~%" condition)))
+                              (xlib:display-force-output (clx-port-display port))
+                              (sleep 0.01)))
+                         :name (format nil "~S's event process." port)))
 
 (defparameter *event-mask* '(:exposure 
 			     :key-press :key-release
@@ -94,6 +109,10 @@
 
 
 (defmethod port-force-output ((port clx-fb-port))
+  (maphash #'(lambda (key val)
+               (when (typep key 'clx-fb-mirrored-sheet-mixin)
+                 (mcclim-render::%mirror-force-output (sheet-mirror key))))
+           (slot-value port 'climi::sheet->mirror))
   (xlib:display-force-output (clx-port-display port)))
 
 (defmethod get-next-event ((port clx-fb-port) &key wait-function (timeout nil))
@@ -103,12 +122,7 @@
     (unless (xlib:event-listen display)
       (xlib:display-force-output (clx-port-display port)))
     (let ((event (xlib:process-event (clx-port-display port)
-				     :timeout 0.06
 				     :handler #'clim-clx::event-handler :discard-p t)))
-      (maphash #'(lambda (key val)
-		   (when (typep key 'clx-fb-mirrored-sheet-mixin)
-		     (image-mirror-to-x (sheet-mirror key))))
-	       (slot-value port 'climi::sheet->mirror))
       (if event
 	  event
 	  :timeout))))
@@ -120,7 +134,7 @@
 
 (defmethod realize-mirror ((port clx-fb-port) (pixmap mcclim-render::image-pixmap-mixin))
   (setf (sheet-parent pixmap) (graft port))
-  (let ((mirror (make-instance 'mcclim-render::rgba-image-mirror-mixin)))
+  (let ((mirror (make-instance 'mcclim-render::opticl-rgb-image-mirror-mixin)))
     (port-register-mirror port pixmap mirror)
     (mcclim-render::%make-image mirror pixmap)))
 

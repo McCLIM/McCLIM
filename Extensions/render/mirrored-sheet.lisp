@@ -1,7 +1,7 @@
 (in-package :mcclim-render)
 
 (defclass image-sheet-mixin (mirrored-sheet-mixin design)
-  ())
+  ((updating-p :initform nil)))
 
 (defmethod allocate-space :before ((sheet image-sheet-mixin) width height)
   (when (sheet-mirror sheet)

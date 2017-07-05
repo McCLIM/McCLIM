@@ -3,8 +3,8 @@
     :depends-on (#:mcclim-clx/basic
 		 #:mcclim-clx/input
 		 #:mcclim-single-mirrored-standard
-		 #:mcclim-render)
-
+		 #:mcclim-render
+                 #:mcclim-render/clx)
   :components
   ((:file "package")
    (:file "port" :depends-on ("package" "medium"))
