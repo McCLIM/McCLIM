@@ -34,7 +34,8 @@
      (:file "port")))
 
 (defsystem #:mcclim-render/clx
-    :depends-on (#:mcclim-render/backend)
+    :depends-on (#:mcclim-clx
+                 #:mcclim-render/backend)
     :serial t
     :components
     ((:file "clx-extension")))
