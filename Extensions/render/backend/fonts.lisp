@@ -1,4 +1,4 @@
-(in-package :mcclim-render)
+(in-package :mcclim-render-internals)
 
 ;;;
 ;;; Font utilities. 
@@ -90,11 +90,12 @@
 ;;;
 
 (defun font-generate-opacity-image (paths width height dx dy)
-  (let* ((image (make-opticl-stencil-image (1+ (* 1 width))
-                                           (1+ (* 1 height)))))
+  (let* ((image (make-image :gray
+                            (1+ (* 1 width))
+                            (1+ (* 1 height)) :opticl)))
     (if (= (* width height) 0)
 	nil
-        (aa-fill-paths image nil paths (aa:make-state)
+        (aa-fill-alpha-paths image nil paths (aa:make-state)
                        (make-translation-transformation
                         (- dx) dy)
                        (make-rectangle* 0 0 (* 1 width) (* 1 height))))

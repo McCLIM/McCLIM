@@ -12,9 +12,9 @@
 
 (defmethod realize-mirror ((port rgb-image-port) sheet)
   (setf (sheet-parent sheet) (graft port))
-  (let ((mirror (make-instance 'mcclim-render::opticl-rgb-image-mirror-mixin)))
+  (let ((mirror (make-instance 'opticl-rgb-image-mirror-mixin)))
     (port-register-mirror port sheet mirror)
-    (mcclim-render::%make-image mirror sheet)))
+    (%make-image mirror sheet)))
 
 ;;;
 ;;; Pixmap

@@ -1,5 +1,5 @@
 
-(in-package :mcclim-render)
+(in-package :mcclim-render-internals)
 
 (defclass image-mirror-mixin ()
   ((image :initform nil :reader image-mirror-image)
@@ -101,9 +101,13 @@
             (not (region-contains-region-p clip-region (make-rectangle* to-x to-y (+ to-x width) (+ to-y height)))))
     (warn "copy image not correct"))
   (let ((region
-	 (copy-image image x y width height
-                     (image-mirror-image mirror)
-                     to-x to-y)))
+         (if (typep image 'rgba-image-mixin)
+             (blend-image image x y width height
+                         (image-mirror-image mirror)
+                         to-x to-y :alpha 255)
+             (copy-image image x y width height
+                         (image-mirror-image mirror)
+                         to-x to-y))))
     (%notify-image-updated mirror region)))
 
 (defmethod %fill-image-mask ((mirror image-mirror-mixin)

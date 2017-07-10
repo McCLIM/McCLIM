@@ -27,7 +27,7 @@
 
 ;;; arc.lisp
 
-(in-package :mcclim-render)
+(in-package :mcclim-render-internals)
 ;;; Adapted from Ben Deane's com.elbeno.curve 0.1 library, with
 ;;; permission. See http://www.elbeno.com/lisp/ for the original.
 
