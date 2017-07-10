@@ -25,7 +25,3 @@
                  :width (mcclim-image::image-width image)
                  :height (mcclim-image::image-height image)
                  :pixels (mcclim-image::image-data image)))
-
-(defmethod climi::medium-draw-pattern* (medium (pattern mcclim-image::rgb-pattern) x y)
-  (medium-draw-image* medium
-                      (coerce-image (slot-value pattern 'mcclim-image::image) 'rgb-image) x y))

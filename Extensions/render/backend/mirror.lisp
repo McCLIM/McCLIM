@@ -49,10 +49,13 @@
   (with-slots (image resize-image-p) mirror
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
       region
-      (let ((width (ceiling (- max-x min-x)))
-	    (height (ceiling (- max-y min-y))))
-	(if resize-image-p
-	    (%create-mirror-image mirror (1+ width) (1+ height))
+      (let ((width (1+ (ceiling (- max-x min-x))))
+	    (height (1+ (ceiling (- max-y min-y)))))
+	(if (and resize-image-p
+                 (or (null image)
+                     (/= width (image-width image))
+                     (/= height (image-height image))))
+	    (%create-mirror-image mirror width height)
 	    nil)))))
 
 (defmethod %create-mirror-image ((mirror image-mirror-mixin) width height)
