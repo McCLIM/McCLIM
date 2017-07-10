@@ -65,7 +65,6 @@
                   #:image-pixmap-mixin
                   #:image-mirror-mixin
                   #:opticl-rgb-image-pixels
-                  #:opticl-rgb-image-mirror-mixin
 		  )
    (:import-from :clim-clx
 		 #:CLX-PORT-DISPLAY

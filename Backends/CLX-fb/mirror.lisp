@@ -1,6 +1,6 @@
 (in-package :clim-clx-fb)
 
-(defclass clx-fb-mirror (opticl-rgb-image-mirror-mixin)
+(defclass clx-fb-mirror (image-mirror-mixin)
   ((width :initform 0)
    (height :initform 0)
    (xmirror :initform nil

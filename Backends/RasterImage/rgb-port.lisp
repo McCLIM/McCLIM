@@ -12,7 +12,7 @@
 
 (defmethod realize-mirror ((port rgb-image-port) sheet)
   (setf (sheet-parent sheet) (graft port))
-  (let ((mirror (make-instance 'opticl-rgb-image-mirror-mixin)))
+  (let ((mirror (make-instance 'image-mirror-mixin)))
     (port-register-mirror port sheet mirror)
     (%make-image mirror sheet)))
 

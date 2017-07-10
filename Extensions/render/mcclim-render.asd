@@ -59,7 +59,6 @@
               :serial t
               :components
               ((:file "mirror")
-               (:file "opticl-mirror")
                (:file "mirrored-sheet")
                (:file "pixmap")
                (:file "medium")

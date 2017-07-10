@@ -2,7 +2,9 @@
 (in-package :mcclim-render-internals)
 
 (defclass image-mirror-mixin ()
-  ((image :initform nil :reader image-mirror-image)
+  ((image-family :initarg :image-family :initform :opticl)
+   (image-type :initarg :image-type :initform :rgb)
+   (image :initform nil :reader image-mirror-image)
    (image-lock :initform (climi::make-lock "image"))
    (resize-image-p :initform t :reader image-mirror-resize-image-p)
    (dirty-region :initform nil)
@@ -52,6 +54,12 @@
 	(if resize-image-p
 	    (%create-mirror-image mirror (1+ width) (1+ height))
 	    nil)))))
+
+(defmethod %create-mirror-image ((mirror image-mirror-mixin) width height)
+  (with-slots (image image-family image-type) mirror
+    (setf image (make-image image-type width height image-family)))
+  (with-slots (dirty-region) mirror
+    (setf dirty-region nil)))
 
 (defmethod %notify-image-updated ((mirror image-mirror-mixin) region)
   (when region

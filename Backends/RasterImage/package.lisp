@@ -23,7 +23,6 @@
 		  #:image-sheet-mixin
 		  #:image-mirror-mixin
 		  #:image-pixmap-mixin
-                  #:opticl-rgb-image-mirror-mixin
                   #:%make-image
                   #:image-mirror-image
                   #:image-pattern
