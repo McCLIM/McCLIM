@@ -76,16 +76,18 @@ made to execute an operation that is unavailable for the particular syntax" ))
 (defgeneric update-syntax (syntax unchanged-prefix unchanged-suffix
                                   &optional begin end)
   (:documentation "Inform the syntax module that it must update
-its view of the buffer. `Unchanged-prefix' `unchanged-suffix'
-indicate what parts of the buffer has not been changed. `Begin'
-and `end' are offsets specifying the minimum region of the buffer
-that must have an up-to-date parse, defaulting to 0 and the size
-of the buffer respectively. It is perfectly valid for a syntax to
-ignore these hints and just make sure the entire syntax tree is
-up to date, but it *must* make sure at at least the region
-delimited by `begin' and `end' has an up to date parse. Returns
-two values, offsets into the buffer of the syntax, denoting the
-buffer region thas has an up to date parse.")
+its view of the buffer. `Unchanged-prefix' and `unchanged-suffix'
+indicate what parts of the buffer have not been changed.
+
+`Begin' and `end' are offsets specifying the minimum region of the
+buffer that must have an up-to-date parse, defaulting to 0 and the
+size of the buffer respectively. It is perfectly valid for a syntax to
+ignore these hints and just make sure the entire syntax tree is up to
+date, but it *must* make sure at least the region delimited by `begin'
+and `end' has an up to date parse.
+
+Returns two values, offsets into the buffer of the syntax, denoting
+the buffer region that has an up-to-date parse.")
   (:method-combination values-max-min :most-specific-last))
 
 (defgeneric eval-defun (mark syntax))
@@ -155,11 +157,11 @@ specified in the usual way with :inherit-from."
 ;;; Commenting
 
 (defgeneric syntax-line-comment-string (syntax)
-  (:documentation "string to use at the beginning of a line to 
+  (:documentation "string to use at the beginning of a line to
 indicate a line comment"))
 
 (defgeneric line-comment-region (syntax mark1 mark2)
-  (:documentation "inset a line comment string at the beginning of 
+  (:documentation "inset a line comment string at the beginning of
 every line in the region"))
 
 (defmethod line-comment-region (syntax mark1 mark2)
@@ -174,10 +176,10 @@ every line in the region"))
 	  do (insert-sequence mark (syntax-line-comment-string syntax))
 	     (end-of-line mark)
 	     (unless (end-of-buffer-p mark)
-	       (forward-object mark)))))	  
+	       (forward-object mark)))))
 
 (defgeneric line-uncomment-region (syntax mark1 mark2)
-  (:documentation "inset a line comment string at the beginning of 
+  (:documentation "inset a line comment string at the beginning of
 every line in the region"))
 
 (defmethod line-uncomment-region (syntax mark1 mark2)
@@ -499,7 +501,7 @@ incrementally."))
   (insert* (lexemes lexer) pos lexeme))
 
 (defmethod delete-invalid-lexemes ((lexer incremental-lexer) from to)
-  "delete all lexemes between FROM and TO and return the first invalid 
+  "delete all lexemes between FROM and TO and return the first invalid
 position in the lexemes of LEXER"
   (with-slots (lexemes) lexer
      (let ((start 1)
@@ -515,7 +517,7 @@ position in the lexemes of LEXER"
 		       (mark> (start-mark (element* lexemes start)) to))
 	     do (delete* lexemes start))
        start)))
-	       
+
 (defmethod skip-inter-lexeme-objects ((lexer incremental-lexer) scan)
   (loop until (end-of-buffer-p scan)
 	while (inter-lexeme-object-p lexer (object-after scan))
@@ -594,7 +596,7 @@ position in the lexemes of LEXER"
   (let ((rule (gensym "RULE"))
 	(rules (gensym "RULES"))
 	(result (gensym "RESULT")))
-    `(let* ((,rules (list ,@(loop for rule in body 
+    `(let* ((,rules (list ,@(loop for rule in body
 				  collect `(grammar-rule ,rule))))
 	    (,result (make-instance 'grammar)))
        (dolist (,rule ,rules ,result)
@@ -644,7 +646,7 @@ position in the lexemes of LEXER"
   (format stream " *")
   (loop for i from (dot-position item) below (length (symbols (rule item)))
 	do (format stream " ~a" (aref (symbols (rule item)) i)))
-  (format stream "]"))	  
+  (format stream "]"))
 
 (defun derive-and-handle-item (prev-item parse-tree orig-state to-state)
   (let ((remaining (funcall (suffix prev-item) parse-tree)))
@@ -759,18 +761,18 @@ position in the lexemes of LEXER"
 (defun handle-incomplete-item (item orig-state to-state)
   (declare (optimize speed))
   (cond ((find item (the list (gethash orig-state (incomplete-items to-state)))
- 	       :test #'item-equal)
+               :test #'item-equal)
 	  nil)
- 	(t
- 	 (push item (gethash orig-state (incomplete-items to-state))))))
+        (t
+         (push item (gethash orig-state (incomplete-items to-state))))))
 
 (defun handle-and-predict-incomplete-item (item state tokens)
   (declare (optimize speed))
   (cond ((find item (the list (gethash state (incomplete-items state)))
- 	       :test #'item-equal)
+               :test #'item-equal)
 	  nil)
- 	(t
- 	 (push item (gethash state (incomplete-items state)))
+        (t
+         (push item (gethash state (incomplete-items state)))
 	 (predict item state tokens))))
 
 (defmethod initialize-instance :after ((parser parser) &rest args)
@@ -814,7 +816,7 @@ position in the lexemes of LEXER"
 	       (predict item state tokens)))
 	   (incomplete-items state))
   (let ((new-state (make-instance 'parser-state :parser parser)))
-    (loop for token in tokens 
+    (loop for token in tokens
 	  do (potentially-handle-parse-tree token state new-state))
     (setf (last-nonempty-state new-state)
 	  (if (or (plusp (hash-table-count (incomplete-items new-state)))
@@ -857,7 +859,7 @@ represent a complete parse of the target."
 
 (defun parse-stack-parse-trees (parse-stack)
   "given a parse stack frame, return a list (in the reverse order of
-analysis) of the parse trees recognized.  The return value reveals 
+analysis) of the parse trees recognized.  The return value reveals
 internal state of the parser.  Do not alter it!"
   (assert (not (null parse-stack)))
   (parse-trees parse-stack))
