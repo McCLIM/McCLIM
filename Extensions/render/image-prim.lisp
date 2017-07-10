@@ -159,12 +159,14 @@
        (let ((r (gensym "red"))
              (g (gensym "green"))
              (b (gensym "blue")))
-         `(multiple-value-bind (,r ,g ,b)
-              ,,get-code
-            (multiple-value-bind (,,red-var ,,green-var ,,blue-var)
-                (octet-rgb-blend-function ,,red-var ,,green-var ,,blue-var ,,alpha-var
-                                          ,r ,g ,b)
-              ,,set-code))))
+         `(if (> ,alpha-var 252)
+              ,,set-code
+              (multiple-value-bind (,r ,g ,b)
+                  ,,get-code
+                (multiple-value-bind (,,red-var ,,green-var ,,blue-var)
+                    (octet-rgb-blend-function ,,red-var ,,green-var ,,blue-var ,,alpha-var
+                                              ,r ,g ,b)
+                  ,,set-code)))))
      (defmethod image-rgb-xor-blend-code ((image-class (eql ',image-class)) ,pixels-var ,x-var ,y-var
                                       ,red-var ,green-var ,blue-var ,alpha-var)
        (let ((r (gensym "red"))

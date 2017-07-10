@@ -212,11 +212,9 @@
                   (when (plusp alpha)
                     ,(image-gray-set-code image-class 'pixels 'x 'y 'alpha))))))))
 
-
-#+(or) (progn
-         (def-fast-aa-render-draw-fn opticl-rgb-image)
-         (def-fast-aa-render-draw-span-fn opticl-rgb-image)
-         (def-fast-aa-render-xor-draw-fn opticl-rgb-image)
-         (def-fast-aa-render-xor-draw-span-fn opticl-rgb-image)
-         (def-fast-aa-render-alpha-draw-fn opticl-gray-image)
-         (def-fast-aa-render-alpha-draw-span-fn opticl-gray-image))
+(def-fast-aa-render-draw-fn opticl-rgb-image)
+(def-fast-aa-render-draw-span-fn opticl-rgb-image)
+(def-fast-aa-render-xor-draw-fn opticl-rgb-image)
+(def-fast-aa-render-xor-draw-span-fn opticl-rgb-image)
+(def-fast-aa-render-alpha-draw-fn opticl-gray-image)
+(def-fast-aa-render-alpha-draw-span-fn opticl-gray-image)
