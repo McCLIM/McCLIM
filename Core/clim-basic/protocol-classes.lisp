@@ -35,7 +35,7 @@
        (defclass ,name ,super-classes ,slots ,@options)
 
        (let ((the-class (find-class ',name)))
-	 (setf (documentation the-class 'type) "CLIM protocol class")
+         (setf (documentation the-class 'type) "CLIM protocol class")
          (defmethod initialize-instance :after ((object ,name) &key &allow-other-keys)
            (when (eq (class-of object) the-class)
              (error "~S is a protocol class and thus can't be instantiated" ',name))))
