@@ -5,7 +5,7 @@
   (:import-from #:clim-null
                 #:null-medium)
 
-  (:import-from #:mcclim-render
+  (:import-from #:mcclim-render-internals
                 #:render-medium-mixin
                 #:make-path
                 #:line-to

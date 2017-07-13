@@ -111,7 +111,7 @@
 (defmethod port-force-output ((port clx-fb-port))
   (maphash #'(lambda (key val)
                (when (typep key 'clx-fb-mirrored-sheet-mixin)
-                 (mcclim-render::%mirror-force-output (sheet-mirror key))))
+                 (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
            (slot-value port 'climi::sheet->mirror))
   (xlib:display-force-output (clx-port-display port)))
 
@@ -129,14 +129,14 @@
 
 ;;; Pixmap
 
-(defmethod destroy-mirror ((port clx-fb-port) (pixmap mcclim-render::image-pixmap-mixin))
+(defmethod destroy-mirror ((port clx-fb-port) (pixmap image-pixmap-mixin))
   (call-next-method))
 
-(defmethod realize-mirror ((port clx-fb-port) (pixmap mcclim-render::image-pixmap-mixin))
+(defmethod realize-mirror ((port clx-fb-port) (pixmap image-pixmap-mixin))
   (setf (sheet-parent pixmap) (graft port))
-  (let ((mirror (make-instance 'mcclim-render::opticl-rgb-image-mirror-mixin)))
+  (let ((mirror (make-instance 'image-mirror-mixin)))
     (port-register-mirror port pixmap mirror)
-    (mcclim-render::%make-image mirror pixmap)))
+    (mcclim-render-internals::%make-image mirror pixmap)))
 
 (defmethod port-allocate-pixmap ((port clx-fb-port) sheet width height)
   (let ((pixmap (make-instance 'clx-fb-pixmap

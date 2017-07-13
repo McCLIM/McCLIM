@@ -1,4 +1,4 @@
-(in-package :mcclim-render)
+(in-package :mcclim-render-internals)
 
 (defclass image-sheet-mixin (mirrored-sheet-mixin design)
   ((updating-p :initform nil)))

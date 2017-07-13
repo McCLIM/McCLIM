@@ -1,6 +1,6 @@
 (in-package :clim-clx-fb)
 
-(defclass clx-fb-mirrored-sheet-mixin (mcclim-render::image-sheet-mixin
+(defclass clx-fb-mirrored-sheet-mixin (image-sheet-mixin
 				       standard-single-mirrored-sheet-mixin)
   ())
 
@@ -12,7 +12,7 @@
   (with-slots (xmirror) mirror
     xmirror))
 
-(defmethod sheet-direct-xmirror ((mirror mcclim-render::image-mirror-mixin))
+(defmethod sheet-direct-xmirror ((mirror image-mirror-mixin))
     nil)
 
 ;;;

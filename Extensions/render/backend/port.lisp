@@ -1,4 +1,4 @@
-(in-package :mcclim-render)
+(in-package :mcclim-render-internals)
 
 ;;;
 ;;; Port
@@ -67,7 +67,7 @@
 
 
 (defmethod clim-extensions:port-all-font-families :around
-    ((port mcclim-render::render-port-mixin) &key invalidate-cache)
+    ((port render-port-mixin) &key invalidate-cache)
   (declare (ignore invalidate-cache))
   (register-all-ttf-fonts port)
   (append (call-next-method) (all-font-families port)))

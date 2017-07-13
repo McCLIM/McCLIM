@@ -1,4 +1,4 @@
-(in-package :mcclim-render)
+(in-package :mcclim-render-internals)
 
 ;;;
 ;;; Converting string into paths
@@ -80,9 +80,10 @@
              (max-y (elt bounding-box 3))
              (width  (- (ceiling max-x) (floor min-x)))
              (height (- (ceiling max-y) (floor min-y)))
-             (paths (paths-ttf:paths-from-glyph glyph                                                                                                  :offset (paths:make-point 0 0)
-                                                 :scale-x units->pixels
-                                                 :scale-y (- units->pixels))))
+             (paths (paths-ttf:paths-from-glyph glyph
+                                                :offset (paths:make-point 0 0)
+                                                :scale-x units->pixels
+                                                :scale-y (- units->pixels))))
         (declare (ignore SIZE ASCENT DESCENT LEFT-SIDE-BEARING RIGHT-SIDE-BEARING))
         (values paths
                 (floor min-x)

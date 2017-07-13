@@ -13,8 +13,8 @@
               ,@body)
 	    (,exit-fn (sheet stream)
               (declare (ignorable stream))
-	      (mcclim-render::write-image (image-mirror-image (sheet-mirror sheet)) ,stream
-                           :type ,format))
+	      (write-image (image-mirror-image (sheet-mirror sheet)) ,stream
+                           :format ,format))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore sheet stream))
 	      nil))
@@ -35,8 +35,8 @@
 		,@body)
 	      (,exit-fn (sheet stream)
 		(declare (ignore stream))
-		(mcclim-render::write-image (image-mirror-image (sheet-mirror sheet) ,file
-                                                :type (extract-format ,file))))
+		(write-image (image-mirror-image (sheet-mirror sheet) ,file
+                                                :format (extract-format ,file))))
 	      (,enter-fn (sheet stream)
 		(declare (ignore sheet stream))
 		nil))
@@ -55,13 +55,13 @@
               ,@body)
 	    (,exit-fn (sheet stream)
 	      (declare (ignore stream))
-	      (mcclim-render::coerce-image 
-               (mcclim-render::image-mirror-image (sheet-mirror sheet))
+	      (coerce-image
+               (image-mirror-image (sheet-mirror sheet))
                'mcclim-image::rgb-image))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore stream))
 	      (when ,image
-                (setf (mcclim-render::image-mirror-image sheet) ,image))))
+                (setf (image-mirror-image sheet) ,image))))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
 					   :rgb-image
@@ -84,11 +84,11 @@
               ,@body)
 	    (,exit-fn (sheet stream)
 	      (declare (ignore stream))
-              (mcclim-render::image-mirror-image (sheet-mirror sheet)))
+              (image-mirror-image (sheet-mirror sheet)))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore stream))
 	      (when ,image
-                (setf (mcclim-render::image-mirror-image sheet) ,image))))
+                (setf (image-mirror-image sheet) ,image))))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn
 					   :rgb-image
@@ -97,7 +97,7 @@
 
 (defmacro with-output-to-image-pattern ((stream-var &rest options)
 				      &body body)
-  `(make-instance 'mcclim-render::image-pattern
+  `(make-instance 'image-pattern
 		  :image (with-output-to-image
 			     (,stream-var nil ,@options)
 			   ,@body)))

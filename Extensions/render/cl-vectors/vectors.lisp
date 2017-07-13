@@ -1,4 +1,4 @@
-(in-package :mcclim-render)
+(in-package :mcclim-render-internals)
 
 ;;;
 ;;; path utility
@@ -41,15 +41,18 @@
 					       (line-style-cap-shape line-style))))
   path)
 
-
-(defgeneric make-aa-render-draw-fn (image clip-region pixeled-design))
-(defgeneric make-aa-render-draw-span-fn (image clip-region pixeled-design))
-(defgeneric make-aa-render-xor-draw-fn (image clip-region pixeled-design))
-(defgeneric make-aa-render-xor-draw-span-fn (image clip-region pixeled-design))
+(defgeneric aa-render-draw-fn (image clip-region pixeled-design))
+(defgeneric aa-render-draw-span-fn (image clip-region pixeled-design))
+(defgeneric aa-render-xor-draw-fn (image clip-region pixeled-design))
+(defgeneric aa-render-xor-draw-span-fn (image clip-region pixeled-design))
+(defgeneric aa-render-alpha-draw-fn (image clip-region))
+(defgeneric aa-render-alpha-draw-span-fn (image clip-region))
 
 (defgeneric aa-cells-sweep/rectangle (image design state clip-region))
+(defgeneric aa-cells-alpha-sweep/rectangle (image design state clip-region))
 (defgeneric aa-stroke-paths (image pixeled-design paths line-style state transformation clip-region))
 (defgeneric aa-fill-paths (image pixeled-design paths state transformation clip-region))
+(defgeneric aa-fill-alpha-paths (image pixeled-design paths state transformation clip-region))
 
 (defmethod aa-cells-sweep/rectangle ((image rgb-image-mixin) (ink pixeled-design) state clip-region)
   (let ((draw-function nil)
@@ -62,12 +65,12 @@
 	clip-region
       (setf draw-function
             (if (typep ink 'pixeled-flipping-design)
-                (make-aa-render-xor-draw-fn image current-clip-region ink)
-                (make-aa-render-draw-fn image current-clip-region ink)))
+                (aa-render-xor-draw-fn image current-clip-region ink)
+                (aa-render-draw-fn image current-clip-region ink)))
       (setf draw-span-function
             (if (typep ink 'pixeled-flipping-design)
-                (make-aa-render-xor-draw-span-fn image current-clip-region ink)
-                (make-aa-render-draw-span-fn image current-clip-region ink)))
+                (aa-render-xor-draw-span-fn image current-clip-region ink)
+                (aa-render-draw-span-fn image current-clip-region ink)))
       (%aa-cells-sweep/rectangle state
                                 (floor min-x)
                                 (floor min-y)
@@ -76,7 +79,7 @@
                                 draw-function
                                 draw-span-function))))
 
-(defmethod aa-cells-sweep/rectangle ((image stencil-image-mixin) ink state clip-region)
+(defmethod aa-cells-alpha-sweep/rectangle ((image gray-image-mixin) ink state clip-region)
   (let ((draw-function nil)
         (draw-span-function nil)
         (current-clip-region
@@ -86,9 +89,9 @@
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
 	clip-region
       (setf draw-function
-            (make-aa-render-alpha-draw-fn image current-clip-region))
+            (aa-render-alpha-draw-fn image current-clip-region))
       (setf draw-span-function
-            (make-aa-render-alpha-draw-span-fn image current-clip-region))
+            (aa-render-alpha-draw-span-fn image current-clip-region))
       (%aa-cells-sweep/rectangle state
                                 (floor min-x)
                                 (floor min-y)
@@ -117,6 +120,17 @@
                             pixeled-design
                             state
                             clip-region))
+
+(defmethod aa-fill-alpha-paths (image pixeled-design paths state transformation clip-region)
+  (vectors::state-reset state)
+  (dolist (path paths)
+    (setf (paths::path-type path) :closed-polyline))
+  (aa-update-state state paths transformation)
+  (aa-cells-alpha-sweep/rectangle image
+                                  pixeled-design
+                                  state
+                                  clip-region))
+
 
 (defun %aa-scanline-sweep (scanline function function-span &key start end)
   "Call FUNCTION for each pixel on the polygon covered by
