@@ -5,7 +5,8 @@
                  #:mcclim-render/opticl))
 
 (defsystem #:mcclim-render/core
-  :depends-on (#:clim-basic)
+  :depends-on (#:clim-basic
+               #:mcclim-image)
   :serial t
   :components ((:file "package")
                (:file "color")
