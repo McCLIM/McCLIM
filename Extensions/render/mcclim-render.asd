@@ -6,7 +6,8 @@
 
 (defsystem #:mcclim-render/core
   :depends-on (#:clim-basic
-               #:mcclim-image)
+               #:mcclim-image
+               #:mcclim-fonts/truetype)
   :serial t
   :components ((:file "package")
                (:file "color")
