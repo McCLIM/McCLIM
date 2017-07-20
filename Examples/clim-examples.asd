@@ -36,7 +36,8 @@
      (:file "image-viewer")
      (:file "sliderdemo")
      (:file "accepting-values")
-     (:file "accepting-values-test")))
+     (:file "accepting-values-test")
+     (:file "graph-toy")))
 
 (asdf:defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
