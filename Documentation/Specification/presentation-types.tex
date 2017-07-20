@@ -346,7 +346,7 @@ defined as
     `((integer ,low ,high) :base 8 :description "octal integer"))
 \end{verbatim}
 
-None of the arguments, except \arg{equivalent-type}, is evaluated.
+None of the arguments, except \arg{equivalent-type}, are evaluated.
 
 
 \Defun {expand-presentation-type-abbreviation-1} {type \optional env}
@@ -438,7 +438,7 @@ follows:
    &key acceptably for-context-type))
 \end{verbatim}
 
-None of the arguments is evaluated.
+None of the arguments are evaluated.
 
 
 \Defmacro {define-presentation-method} {name qualifiers* specialized-lambda-list \body body}
@@ -1522,7 +1522,7 @@ translator will be ``echoed'' by \cl{accept}, which will use
 object into the input buffer.  If it is \term{false}, the object will not be
 echoed.
 
-None of \cl{define-presentation-translator}'s arguments is evaluated.
+None of \cl{define-presentation-translator}'s arguments are evaluated.
 
 
 \Defmacro {define-presentation-to-command-translator} {name 
@@ -1555,7 +1555,7 @@ application.  The returned value of the body, appended to the command name, are
 eventually passed to \cl{execute-frame-command}.  \arg{body} may have zero or
 more declarations as its first forms.
 
-None of \cl{define-presentation-to-command-translator}'s arguments is evaluated.
+None of \cl{define-presentation-to-command-translator}'s arguments are evaluated.
 
 
 \Defmacro {define-presentation-action} {name 
@@ -1579,7 +1579,7 @@ The other arguments to \cl{define-presentation-action} are the same as for
 \cl{define-presentation-translator}.  Note that the tester for presentation
 actions is always assumed to be definitive.
 
-None of \cl{define-presentation-action}'s arguments is evaluated.
+None of \cl{define-presentation-action}'s arguments are evaluated.
 
 
 \Defmacro {define-drag-and-drop-translator} {name
