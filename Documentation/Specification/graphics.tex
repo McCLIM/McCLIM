@@ -64,9 +64,9 @@ classes are provided to allow programmers to draw on different sorts of devices,
 such as displays, printers, and virtual devices such as bitmaps.
 
 Many sheets can be used for doing output, so the drawing functions can also take
-a sheet as the output argument.  In this case, drawing function ``trampolines''
+a sheet as the output argument.  In this case, the drawing function ``trampolines''
 to the sheet's medium.  So, while the functions defined here are specified to be
-called on sheets, they can also be called on sheets.
+called on mediums, they can also be called on sheets.
 
 A stream is a special kind of sheet that implements the stream protocol; streams
 include additional state such as the current text cursor (which is some point in
