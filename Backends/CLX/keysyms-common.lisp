@@ -174,7 +174,7 @@
   (defconstant +control-bit+    #b00000100)
   (defparameter *meta-bit*      #b00001000)
   (defparameter *hyper-bit*     #b00100000)
-  (defparameter *super-bit*     #b00100000))
+  (defparameter *super-bit*     #b01000000))
 
 ;;; Given an X11/CLX modifier mask, return a CLIM modifier mask with
 ;;; the relevant bits set.  Recall that the CLIM modifier mask does
