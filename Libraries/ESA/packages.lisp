@@ -27,8 +27,7 @@
   (:shadowing-import-from :clim-lisp #:describe-object)
   (:import-from #:alexandria
 		#:once-only
-		#:with-gensyms
-		)
+		#:with-gensyms)
   (:export #:with-gensyms
 	   #:once-only
            #:unlisted
