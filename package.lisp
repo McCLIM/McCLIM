@@ -2050,7 +2050,10 @@
   #+excl
   (:import-from :excl compile-system load-system)
   (:import-from #:alexandria
-                #:ensure-gethash)
+                #:clamp
+                #:make-keyword
+                #:ensure-gethash
+		#:with-gensyms)
   (:intern #:letf))
 
 (defpackage :clim-user
