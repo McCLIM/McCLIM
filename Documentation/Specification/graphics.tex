@@ -822,7 +822,7 @@ specified above results in the following series of function calls on a
 non-output recording sheet:
 
 \begin{itemize} 
-\item A program calls \cl{draw-line*} on either a sheet or a medium, \arg{x1},
+\item A program calls \cl{draw-line*} on either a sheet or a medium, additionally passing \arg{x1},
 \arg{y1}, \arg{x2}, and \arg{y2}, and perhaps some drawing options.
 
 \item \cl{draw-line*} merges the supplied drawing options into the medium, and
@@ -950,10 +950,10 @@ waiting for the output to complete.  This is used by \cl{force-output}.
 Clears an area on the {medium} \arg{medium} by filling the rectangle whose edges
 are at \arg{left}, \arg{top}, \arg{right}, and \arg{bottom} with the medium's
 background ink.  \arg{left}, \arg{top}, \arg{right}, and \arg{bottom} are in
-thed medium's coordinate system.
+the medium's coordinate system.
 
 The default method on \cl{basic-medium} simply uses \cl{draw-rectangle*} to
-clear the area.  Some host window systems has special functions that are faster
+clear the area.  Some host window systems may have special functions that are faster
 than \cl{draw-rectangle*}.
 
 \Defgeneric {medium-beep} {medium}
