@@ -712,7 +712,7 @@ specified by (\arg{pixmap-x},\arg{pixmap-y}).  A rectangle whose width and
 height is specified by \arg{width} and \arg{height} is copied.  \arg{medium-x}
 and \arg{medium-y} are specified in user coordinates.  (If \arg{medium} is a
 medium or a stream, then \arg{medium-x} and \arg{medium-y} are transformed by the
-user transformation.)  The copying must be done by \cl{medium-copy-copy}.
+user transformation.)  The copying must be done by \cl{medium-copy-area}.
 
 If \arg{pixmap} is not supplied, a new pixmap will be allocated.  Otherwise,
 \arg{pixmap} must be an object returned by \cl{allocate-pixmap} that has the
@@ -729,7 +729,7 @@ position (\arg{medium-x},\arg{medium-y}).  A rectangle whose width and height is
 specified by \arg{width} and \arg{height} is copied.  \arg{medium-x} and
 \arg{medium-y} are specified in user coordinates.  (If \arg{medium} is a medium or
 a stream, then \arg{medium-x} and \arg{medium-y} are transformed by the user
-transformation.)  The copying must be done by \cl{medium-copy-copy}.
+transformation.)  The copying must be done by \cl{medium-copy-area}.
 
 \arg{pixmap} must be an object returned by \cl{allocate-pixmap} that has the
 appropriate characteristics for \arg{medium}.
@@ -744,7 +744,7 @@ on the same medium.  A rectangle whose width and height is specified by
 \arg{width} and \arg{height} is copied.  \arg{from-x}, \arg{from-y}, \arg{to-x},
 and \arg{to-y} are specified in user coordinates.  (If \arg{medium} is a medium
 or a stream, then the $x$ and $y$ values are transformed by the user
-transformation.)  The copying must be done by \cl{medium-copy-copy}.
+transformation.)  The copying must be done by \cl{medium-copy-area}.
 
 
 \Defgeneric {medium-copy-area} {from-drawable from-x from-y width height
