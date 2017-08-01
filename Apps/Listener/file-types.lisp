@@ -224,7 +224,8 @@
     (or (position-if (lambda (c)
                        (and (graphic-char-p c)
                             (not (char= c #\space))))
-                     string :start start :end end) end)))
+                     string :start start :end end)
+        end)))
 
 (defun file-char-p (char)
   (and (graphic-char-p char)
@@ -241,17 +242,18 @@
 (defun read-mime-type (string &optional (start 0))
   (declare (optimize (debug 3)))
   (setf start (skip-whitespace string start))
-  (let* ((pos-slash (position #\/ string  :test #'char= :start start))
-         (pos-end (position-if (lambda (c) (member c '(#\space #\tab)))
-                               string  :start (if pos-slash (1+ pos-slash) start)))
-         (media-type (string-upcase (subseq string start pos-slash)))
-         (media-type-sym (intern media-type (find-package :clim-listener)))
-         (subtype (when pos-slash (string-upcase (subseq string (1+ pos-slash) pos-end))))
-         (full-symbol (intern (if subtype
-                                  (concatenate 'string media-type "/" subtype)
-                                media-type)
-                              (find-package :clim-listener))))
-    (values media-type-sym full-symbol (when subtype (intern subtype)) pos-end)))
+  (when start
+    (let* ((pos-slash (position #\/ string  :test #'char= :start start))
+           (pos-end (position-if (lambda (c) (member c '(#\space #\tab)))
+                                 string  :start (if pos-slash (1+ pos-slash) start)))
+           (media-type (string-upcase (subseq string start pos-slash)))
+           (media-type-sym (intern media-type (find-package :clim-listener)))
+           (subtype (when pos-slash (string-upcase (subseq string (1+ pos-slash) pos-end))))
+           (full-symbol (intern (if subtype
+                                    (concatenate 'string media-type "/" subtype)
+                                    media-type)
+                                (find-package :clim-listener))))
+      (values media-type-sym full-symbol (when subtype (intern subtype)) pos-end))))
 
 ;;; PARSE-NETSCAPE-MIME-TYPE and PARSE-STANDARD-MIME-TYPE return the various
 ;;; properties of each type in a hash table. The primary ones of concern are
