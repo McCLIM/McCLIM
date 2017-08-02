@@ -49,7 +49,8 @@
 (defclass clx-medium (basic-medium)
   ((gc :initform nil)
    (picture :initform nil)
-   (last-medium-device-region :initform nil)
+   (last-medium-device-region :initform nil
+			      :accessor last-medium-device-region)
    (clipping-region-tmp :initform (vector 0 0 0 0)
      :documentation "This object is reused to avoid consing in the
  most common case when configuring the clipping region.")
@@ -834,6 +835,9 @@ time an indexed pattern is drawn.")
                     b (min #xffff (max 0 (round (* #xffff a b))))
                     a (min #xffff (max 0 (round (* #xffff a)))))
               (let ((picture (clx-medium-picture medium)))
+		(xlib::%render-change-picture-clip-rectangles picture
+							      (clipping-region->rect-seq
+							       (last-medium-device-region medium)))
                 (xlib:render-fill-rectangle picture :over (list r g b a)
                                             (max #x-8000 (min #x7FFF x1))
                                             (max #x-8000 (min #x7FFF y1))
