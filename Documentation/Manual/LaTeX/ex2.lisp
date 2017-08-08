@@ -1,8 +1,8 @@
 (in-package :common-lisp-user)
 
-(defpackage "APP"
+(defpackage :app
   (:use :clim :clim-lisp)
-  (:export "APP-MAIN"))
+  (:export run-app))
 
 (in-package :app)
 
@@ -53,5 +53,5 @@
 	      "even")))
 
 
-(defun app-main ()
+(defun run-app ()
   (run-frame-top-level (make-application-frame 'superapp)))

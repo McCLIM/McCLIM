@@ -15,15 +15,21 @@ of panes):
 \item
   An \emph{application frame} is what would usually be called an
   application.
+
 \item
-  At a very high level, panes describe how application components A
-  side bar, a menu bar are panes. But also, panes can be more abstract
-  such as layout panes such as \pane{hbox}, \pane{vbox} to arrange
-  other panes horizontally or vertically, etc.
+  At a very high level, panes describe an application frame's visual
+  building blocks: a side bar, a menu bar, a table displaying a list
+  of items, a text input are all panes. They can be used by
+  application programmers to compose the top-level user interface of
+  their applications, as well as auxiliary components such as menus
+  and dialogs. In addition, panes can be more abstract such as layout
+  panes such as \pane{hbox}, \pane{vbox} to arrange other panes
+  horizontally or vertically, etc.
+
 \item
-  \emph{gadgets} correspond to what other toolkits call
-  \emph{widgets}.  Frequently used CLIM gadgets are \gadget{button}s,
-  \gadget{slider}s, etc.
+  \emph{gadgets} correspond to what other toolkits call \emph{widgets}
+  and \emph{control}.  Frequently used CLIM gadgets are
+  \gadget{button}s, \gadget{slider}s, etc.
 \end{itemize}
 
 
@@ -31,11 +37,11 @@ of panes):
 
 Although it is easy to imagine panes in term of their appearance on
 screen, they are much richer: they are actually the series of
-instructions that produces that appearance. They are not only the end
+operations that produces that appearance. They are not only the end
 product visible on a screen, but they contain all the step-by-step
 information that led to that representation.
 
-More precisely, CLIM panes records the stream of instructions that
+More precisely, CLIM panes record the series of operations that
 produces that generates an output.  This means that such a pane
 maintains a display list, consisting of a sequence of output records,
 ordered chronologically, from the first output record to be drawn to
@@ -64,7 +70,7 @@ fundamentally different ways, each more sophisticated:
       backend.} that result from drawing the new output record.  If
     the pane uses scrolling (which it typically does), then CLIM must
     determine the extent of the pane so as to update the scroll bar
-    after each new output. A static website is a good equivalent.
+    after each new output. 
 
   \item[Application with a static display function:] More complicated
     applications use a display function.  Before the display function
@@ -75,8 +81,7 @@ fundamentally different ways, each more sophisticated:
     application commands can use text or graphics operations to fill
     in the form.  A game of tic-tac-toe could work this way, where the
     display function draws the board and commands draw shapes into the
-    squares. Imagine a quasi-static website where a few elements are
-    generated on the fly (e.g. names,etc.)
+    squares. 
  
   \item[Application with a dynamic display function:] Even more
     complicated applications might have some internal data structure
@@ -156,11 +161,9 @@ the following code in a file:
 \verbatiminput{ex1.lisp}
 
 As we can see in this example, we have put our application in a
-separate package, here a package named
-\texttt{MY-FIRST-APP} \footnote{N.B. the name of the app in quotation
-  marks is written in capitals. The Common Lisp standard requires is
-  and using small cases would result in an error.}. While not
-required, putting the application in its own package is good practice.
+separate package, here a package named \texttt{my-first-app}. While
+not required, putting the application in its own package is good
+practice.
 
 The package for the application uses two packages: \package{CLIM} and
 \package{CLIM-LISP}.  The \package{CLIM} package is the one that
@@ -171,7 +174,7 @@ for CLIM applications.  It is essentially the same as the
 
 In our example, we export the symbol that corresponds to the main
 function to start our application, here called
-\texttt{MY-FIRST-APP-MAIN}.
+\texttt{run-my-first-app}.
 
 The most important part of the code in our example is the definition
 of the application-frame.  In our example, we have defined an

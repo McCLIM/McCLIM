@@ -1,11 +1,11 @@
 (in-package :common-lisp-user)
 
-(defpackage "MY-FIRST-APP"
+(defpackage :my-first-app
   ;; Imports the appropriate CLIM library
   (:use :clim :clim-lisp)
 
   ;; The package will only export a function to run the app
-  (:export "MY-FIRST-APP-MAIN"))
+  (:export run-my-first-app))
 
 ;; Good practice
 (in-package :my-first-app)
@@ -29,6 +29,6 @@
 ;; Now that the structure of the app is defined, need a function
 ;; to launch an instance of this app. (The user could run
 ;; several instances of the same app.)
-(defun my-first-app-main ()
+(defun run-my-first-app ()
   (run-frame-top-level (make-application-frame 'my-first-clim-app)))
 
