@@ -455,7 +455,7 @@ list of initargs"
   (:documentation "A metaclass for defining classes supporting
 changing of modes."))
 
-(defmethod validate-superclass ((c1 modual-class) (c2 standard-class))
+(defmethod c2mop:validate-superclass ((c1 modual-class) (c2 standard-class))
   t)
 
 (defmethod compute-slots ((c modual-class))

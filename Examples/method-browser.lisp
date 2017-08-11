@@ -60,15 +60,15 @@
 (defun compute-gf-specializers (gf)
   "Computes a list of lists of the types for which required argument is
 specialized on, removing duplicates"
-  (let* ((specializers (mapcar #'clim-mop:method-specializers
-                               (clim-mop:generic-function-methods gf))))
+  (let* ((specializers (mapcar #'c2mop:method-specializers
+                               (c2mop:generic-function-methods gf))))
     (loop for index from 0 below (length (first specializers))
          collect (remove-duplicates (mapcar (lambda (specs) (nth index specs))
                                             specializers)))))
 
 ;;; FIXME: why is this necessary?  I'm pretty sure the #+CMU clause
 ;;; here has been superseded by events for quite a while now.  (Should
-;;; clim-mop:class not cater for these implementation differences?)
+;;; c2mop:class not cater for these implementation differences?)
 (defun classp (x)
   (or (typep x 'cl:class)
       #+CMU (typep x 'pcl::class)
@@ -85,16 +85,16 @@ specialized on, removing duplicates"
                               ;; Implementation-dependent whether prototypes for
                               ;; built-in classes (like integer, t) are available.
                               (multiple-value-bind (prot err)
-                                  (ignore-errors (clim-mop:class-prototype s))
+                                  (ignore-errors (c2mop:class-prototype s))
                                 (if err 'no-prototype prot)))
-                             ((typep s 'clim-mop:eql-specializer)
-                              (clim-mop:eql-specializer-object s))
+                             ((typep s 'c2mop:eql-specializer)
+                              (c2mop:eql-specializer-object s))
                              (t
                               (error "Can't compute effective methods, specializer ~A is not understood."
                                      s))))
                      specializers)))
         (unless (member 'no-prototype instances)
-          (clim-mop:compute-applicable-methods gf instances)))))
+          (compute-applicable-methods gf instances)))))
 
 ;; FIXME: Support EQL specializers.
 ;; This is hard to do ideally, and I'm not really trying.
@@ -111,24 +111,24 @@ specialized on, removing duplicates"
                             (classp b))
                        (string< (class-name a)
                                 (class-name b)))
-                      ((and (typep a 'clim-mop:eql-specializer)
-                            (not (typep b 'clim-mop:eql-specializer)))
+                      ((and (typep a 'c2mop:eql-specializer)
+                            (not (typep b 'c2mop:eql-specializer)))
                        nil)
-                      ((and (not (typep a 'clim-mop:eql-specializer))
-                            (typep b 'clim-mop:eql-specializer))
+                      ((and (not (typep a 'c2mop:eql-specializer))
+                            (typep b 'c2mop:eql-specializer))
                        t)
-                      ((and (typep a 'clim-mop:eql-specializer)
-                            (typep b 'clim-mop:eql-specializer))
+                      ((and (typep a 'c2mop:eql-specializer)
+                            (typep b 'c2mop:eql-specializer))
                        (string<
-                        (princ-to-string (clim-mop:eql-specializer-object a))
-                        (princ-to-string (clim-mop:eql-specializer-object b))))
+                        (princ-to-string (c2mop:eql-specializer-object a))
+                        (princ-to-string (c2mop:eql-specializer-object b))))
                       (t (warn "Received specializer of unknown type")
                          nil) ))))
           (compute-gf-specializers gf)))
 
 (defun simple-generic-function-lambda-list (gf)
   "Returns the required arguments of a generic function"
-  (let ((ll (clim-mop:generic-function-lambda-list gf)))
+  (let ((ll (c2mop:generic-function-lambda-list gf)))
     (subseq ll 0 (apply #'min
                         (remove-if #'null
                                    (list
@@ -142,8 +142,8 @@ specialized on, removing duplicates"
   "Pretty print the name of a method specializer"
   (cond ((classp spec)
          (princ-to-string (class-name spec)))
-        ((typep spec 'clim-mop:eql-specializer)
-         (format nil "(EQL '~A)" (clim-mop:eql-specializer-object spec)))
+        ((typep spec 'c2mop:eql-specializer)
+         (format nil "(EQL '~A)" (c2mop:eql-specializer-object spec)))
         (t (princ-to-string spec))))
 
 (defun maybe-find-gf (name)
@@ -307,7 +307,7 @@ available for that argument."
     ; because I'm anal about the formatting.
     (formatting-cell (stream :align-x :right)
       (princ "      (" stream))
-    (dolist (spec (clim-mop:method-specializers method))
+    (dolist (spec (c2mop:method-specializers method))
       (formatting-cell (stream :align-x :center)
         (with-drawing-options (stream :text-style *specializer-text-style*
                                       :ink (ink-for-specializer spec))
@@ -321,8 +321,8 @@ available for that argument."
   (when (gf frame)
     (let* ((gf (gf frame))
            (methods (compute-applicable-methods-from-specializers gf (arg-types frame)))
-           (combination (clim-mop:generic-function-method-combination gf))
-           (effective-methods (clim-mop:compute-effective-method gf combination methods))
+           (combination (c2mop:generic-function-method-combination gf))
+           (effective-methods (c2mop:compute-effective-method gf combination methods))
            (serial-methods (walk-em-form effective-methods)))      
       ;; Print the header
       (fresh-line)

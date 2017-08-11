@@ -222,18 +222,18 @@ is a list of a label and a value."
 
 (defun display-class-superclasses (class pane)
   "Display the superclasses of CLASS with an INSPECTOR-TABLE-ROW"
-  (when (clim-mop:class-direct-superclasses class)
+  (when (c2mop:class-direct-superclasses class)
     (inspector-table-row (pane)
 	(princ "Superclasses" pane)
-      (inspect-vertical-list (clim-mop:class-direct-superclasses class)
+      (inspect-vertical-list (c2mop:class-direct-superclasses class)
 			     pane))))
 
 (defun display-class-subclasses (class pane)
   "Display the subclasses of CLASS with an INSPECTOR-TABLE-ROW"
-  (when (clim-mop:class-direct-subclasses class)
+  (when (c2mop:class-direct-subclasses class)
     (inspector-table-row (pane)
 	(princ "Subclasses" pane)
-      (inspect-vertical-list (clim-mop:class-direct-subclasses class)
+      (inspect-vertical-list (c2mop:class-direct-subclasses class)
 			     pane))))
 
 (defun display-object-slot (object slot pane &key display-lists-vertically)
@@ -241,7 +241,7 @@ is a list of a label and a value."
 inspecting standard objects. SLOT must be a MOP SLOT-DEFINITION
 object. If DISPLAY-LISTS-VERTICALLY is t and the slot value is a list,
 it will be displayed with INSPECT-VERTICAL-LIST."
-  (let ((slot-name (clim-mop:slot-definition-name slot)))
+  (let ((slot-name (c2mop:slot-definition-name slot)))
     (inspector-table-row (pane)
 	(with-output-as-presentation
 	    (pane (cons object slot-name) 'settable-slot)
@@ -266,7 +266,7 @@ structure objects."
       ;; Display superclasses and subclasses
       (display-class-superclasses class pane)
       (display-class-subclasses class pane)
-      (dolist (slot (reverse (clim-mop:class-slots class)))
+      (dolist (slot (reverse (c2mop:class-slots class)))
 	(display-object-slot object slot pane)))))
 
 (defun inspect-standard-class (object pane)
@@ -279,7 +279,7 @@ also be used to inspect BUILD-IN-CLASSes."
       ;; Display superclasses and subclasses
       (display-class-superclasses class pane)
       (display-class-subclasses class pane)
-      (dolist (slot (reverse (clim-mop:class-slots class)))
+      (dolist (slot (reverse (c2mop:class-slots class)))
 	(display-object-slot object slot pane
 			     :display-lists-vertically t)))))
 
@@ -481,21 +481,21 @@ pane. Display a given message, which defaults to 'Usage Graph'."
 (defmethod inspect-object ((object generic-function) pane)
   (inspector-table (object pane)
       (format pane "Generic Function: ~s"
-	      (clim-mop:generic-function-name object))
-    (dolist (method (clim-mop:generic-function-methods object))
+	      (c2mop:generic-function-name object))
+    (dolist (method (c2mop:generic-function-methods object))
       (with-output-as-presentation
 	  (pane method (presentation-type-of method))
 	(formatting-row (pane)
 	  (formatting-cell (pane)
 	    (with-text-family (pane :fix)
-	      (print (clim-mop:method-qualifiers method) pane)))
-	  (loop for specializer in (clim-mop:method-specializers method)
+	      (print (c2mop:method-qualifiers method) pane)))
+	  (loop for specializer in (c2mop:method-specializers method)
 		do (formatting-cell (pane)
-		     (if (typep specializer 'clim-mop:eql-specializer)
+		     (if (typep specializer 'c2mop:eql-specializer)
 			 (progn
 			   (princ "(EQL " pane)
 			   (inspect-object
-			    (clim-mop:eql-specializer-object
+			    (c2mop:eql-specializer-object
 			     specializer)
 			    pane)
 			   (princ ")" pane))
@@ -790,7 +790,7 @@ an error if the given time is not a decodable universal time."
 
 (define-inspector-command (com-remove-method :name t)
     ((obj 'method :gesture :delete :prompt "Remove method"))
-  (remove-method (clim-mop:method-generic-function obj) obj))
+  (remove-method (c2mop:method-generic-function obj) obj))
 
 (define-inspector-command (com-set-slot :name t)
     ((slot 'settable-slot :gesture :select :prompt "Set slot"))
@@ -807,15 +807,15 @@ semi-portable and we can use it. To complicate things even more, some
 implementations have unpleasant oddities in the way they store slot
 documentation. For example, in SBCL slot documentation is only
 available in direct slots."
-  (let ((slot-object (find slot (clim-mop:class-direct-slots class)
-			   :key #'clim-mop:slot-definition-name)))
+  (let ((slot-object (find slot (c2mop:class-direct-slots class)
+			   :key #'c2mop:slot-definition-name)))
     (if slot-object
 	(documentation slot-object t)
-	(when (clim-mop:class-direct-superclasses class)
+	(when (c2mop:class-direct-superclasses class)
 	  (find-if #'identity
 		   (mapcar #'(lambda (class)
 			       (slot-documentation class slot))
-			   (clim-mop:class-direct-superclasses class)))))))
+			   (c2mop:class-direct-superclasses class)))))))
 
 (define-inspector-command (com-describe-slot :name t)
     ((slot 'settable-slot :gesture :describe :prompt "Describe slot"))
@@ -824,28 +824,28 @@ available in direct slots."
 	   (class (class-of object))
 	   (documentation (handler-bind ((warning #'muffle-warning))
 			    (slot-documentation class slot-name)))
-	   (slot-object (or (find slot-name (clim-mop:class-direct-slots class)
-                                  :key #'clim-mop:slot-definition-name)
-                            (find slot-name (clim-mop:class-slots class)
-                                  :key #'clim-mop:slot-definition-name))))
+	   (slot-object (or (find slot-name (c2mop:class-direct-slots class)
+                                  :key #'c2mop:slot-definition-name)
+                            (find slot-name (c2mop:class-slots class)
+                                  :key #'c2mop:slot-definition-name))))
       (when documentation
 	(with-heading-style (stream)
 	  (format stream "~&Documentation: "))
 	(format stream "~A~%" documentation))
       (with-heading-style (stream)
 	(format stream "~&Type: "))
-      (format stream "~S~%" (clim-mop:slot-definition-type slot-object))
+      (format stream "~S~%" (c2mop:slot-definition-type slot-object))
       (with-heading-style (stream)
 	(format stream "~&Allocation: "))
-      (format stream "~S~%" (clim-mop:slot-definition-allocation slot-object))
+      (format stream "~S~%" (c2mop:slot-definition-allocation slot-object))
       ;; slot-definition-{readers,writers} only works for direct slot
       ;; definitions
-      (let ((readers (clim-mop:slot-definition-readers slot-object)))
+      (let ((readers (c2mop:slot-definition-readers slot-object)))
         (when readers
 	  (with-heading-style (stream)
 	    (format stream "~&Readers: "))
           (present readers (presentation-type-of readers) :stream stream)))
-      (let ((writers (clim-mop:slot-definition-writers slot-object)))
+      (let ((writers (c2mop:slot-definition-writers slot-object)))
         (when writers
           (with-heading-style (stream)
 	    (format stream "~&Writers: "))

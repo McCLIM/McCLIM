@@ -145,7 +145,7 @@ fully, including defaulting parameters and options.")))
 (defclass presentation-type-class (presentation-type standard-class)
   ())
 
-(defmethod clim-mop:validate-superclass ((class presentation-type-class)
+(defmethod c2mop:validate-superclass ((class presentation-type-class)
                                          (super standard-class))
   t)
 
@@ -530,15 +530,15 @@ filled in."
       (error "~S is an unknown presentation type" name))
     (when (eq ptype-meta *builtin-t-class*)
       (return-from prototype-or-error *class-t-prototype*))
-    (unless (clim-mop:class-finalized-p ptype-meta)
-      (clim-mop:finalize-inheritance ptype-meta))
-    (or (clim-mop:class-prototype ptype-meta)
+    (unless (c2mop:class-finalized-p ptype-meta)
+      (c2mop:finalize-inheritance ptype-meta))
+    (or (c2mop:class-prototype ptype-meta)
       (error "Couldn't find a prototype for ~S" name))))
 
 (defun safe-cpl (class)
-  (unless (clim-mop:class-finalized-p class)
-    (clim-mop:finalize-inheritance class))
-  (clim-mop:class-precedence-list class))
+  (unless (c2mop:class-finalized-p class)
+    (c2mop:finalize-inheritance class))
+  (c2mop:class-precedence-list class))
 
 (defun get-ptype (name)
   (or (gethash name *presentation-type-table*)
@@ -569,7 +569,7 @@ supertypes of TYPE that are presentation types"))
                        nil)))
                 (t
                  nil)))
-          (clim-mop:class-direct-superclasses type)))
+          (c2mop:class-direct-superclasses type)))
 
 (defmethod presentation-ptype-supers ((type clos-presentation-type))
   (presentation-ptype-supers (clos-class type)))
@@ -658,7 +658,7 @@ supertypes of TYPE that are presentation types"))
                                                          super)
                                                         super))))
                                              supers)))
-                        (apply #'clim-mop:ensure-class fake-name
+                        (apply #'c2mop:ensure-class fake-name
                                :name fake-name
                                :metaclass 'presentation-type-class
                                :direct-superclasses directs
@@ -943,12 +943,12 @@ suitable for SUPER-NAME"))
 
 (defclass presentation-generic-function (standard-generic-function)
   ()
-  (:metaclass clim-mop:funcallable-standard-class))
+  (:metaclass c2mop:funcallable-standard-class))
 
 (defvar *standard-object-class* (find-class 'standard-object))
 
 #-scl
-(defmethod clim-mop:compute-applicable-methods-using-classes :around
+(defmethod c2mop:compute-applicable-methods-using-classes :around
     ((gf presentation-generic-function) classes)
   (multiple-value-bind (methods success)
       (call-next-method)
@@ -957,14 +957,14 @@ suitable for SUPER-NAME"))
               (not (typep ptype-class 'presentation-type-class)))
           (values methods success)
           (values (remove-if #'(lambda (method)
-                                 (eq (car (clim-mop:method-specializers
+                                 (eq (car (c2mop:method-specializers
                                            method))
                                      *standard-object-class*))
                              methods)
                   t)))))
 
 #+scl
-(defmethod clim-mop:compute-applicable-methods-using-classes :around
+(defmethod c2mop:compute-applicable-methods-using-classes :around
     ((gf presentation-generic-function) classes)
   (multiple-value-bind (methods success non-class-positions)
       (call-next-method)
@@ -973,7 +973,7 @@ suitable for SUPER-NAME"))
               (not (typep ptype-class 'presentation-type-class)))
           (values methods non-class-positions non-class-positions)
           (values (remove-if #'(lambda (method)
-                                 (eq (car (clim-mop:method-specializers
+                                 (eq (car (c2mop:method-specializers
                                            method))
                                      *standard-object-class*))
                              methods)
@@ -982,9 +982,9 @@ suitable for SUPER-NAME"))
 
 (defun method-applicable (method arguments)
   (loop for arg in arguments
-        for specializer in (clim-mop:method-specializers method)
-        always (cond ((typep specializer 'clim-mop:eql-specializer)
-                      (eql arg (clim-mop:eql-specializer-object specializer)))
+        for specializer in (c2mop:method-specializers method)
+        always (cond ((typep specializer 'c2mop:eql-specializer)
+                      (eql arg (c2mop:eql-specializer-object specializer)))
                      ((typep arg specializer)
                       t)
                      ((and (not (typep (class-of arg)
@@ -999,7 +999,7 @@ suitable for SUPER-NAME"))
   (let ((methods (call-next-method)))
     (if (typep (class-of (car arguments)) 'presentation-type-class)
         (remove-if #'(lambda (method)
-                       (eq (car (clim-mop:method-specializers method))
+                       (eq (car (c2mop:method-specializers method))
                            *standard-object-class*))
                    methods)
         methods)))
@@ -1022,7 +1022,7 @@ suitable for SUPER-NAME"))
               (let ((ptype (gethash (class-name class)
                                     *presentation-type-table*)))
                 (and ptype (list ptype))))
-          (clim-mop:class-direct-superclasses type)))
+          (c2mop:class-direct-superclasses type)))
 
 (defun translate-specifier-for-type (type-name super-name specifier)
   (when (eq type-name super-name)
