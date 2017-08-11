@@ -9,7 +9,7 @@
                (:file "patch")
                (:module "Lisp-Dep"
                         :components
-                        (#+(or cmu scl excl sbcl openmcl lispworks clisp ecl)
+                        (#+(or excl clisp)
                            (:file   #+excl      "fix-acl"
                                     #+clisp     "fix-clisp")))
                (:file "package")))
