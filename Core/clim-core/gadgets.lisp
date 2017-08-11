@@ -680,15 +680,6 @@ and must never be nil."))
 ;;;;  Mixin Classes for Concrete Gadgets
 ;;;;
 
-(defclass standard-gadget-pane (;;permanent-medium-sheet-output-mixin
-                                ;;immediate-sheet-input-mixin
-                                ;;immediate-repainting-mixin
-                                sheet-leaf-mixin
-                                basic-gadget)
-  ()
-  (:documentation
-   "PANE class to include in gadget pane classes."))
-
 ;;;; Redrawing mixins
 
 (defclass arm/disarm-repaint-mixin ()
@@ -1085,7 +1076,7 @@ and must never be nil."))
                              arm/disarm-repaint-mixin
                              activate/deactivate-repaint-mixin
                              enter/exit-arms/disarms-mixin
-                             standard-gadget-pane)
+                             sheet-leaf-mixin)
   ((pressedp          :initform nil)
    (show-as-default-p :type boolean
                       :initform nil
@@ -1157,7 +1148,7 @@ and must never be nil."))
                               ;; event handling:
                               enter/exit-arms/disarms-mixin
                               ;; other
-                              standard-gadget-pane)
+                              sheet-leaf-mixin)
   ((indicator-type :type (member :one-of :some-of)
                    :initarg :indicator-type
                    :reader toggle-button-indicator-type
@@ -1248,7 +1239,7 @@ and must never be nil."))
 
 (defclass menu-button-pane (menu-button
                             activate/deactivate-repaint-mixin
-                            standard-gadget-pane)
+                            sheet-leaf-mixin)
   ()
   (:default-initargs
     :text-style (make-text-style :sans-serif nil nil)
