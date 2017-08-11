@@ -24,7 +24,7 @@
 (in-package :clim-internals)
 
 ;; example gadget definition
-(defclass gadget-test-pane (standard-gadget) ())
+(defclass gadget-test-pane (basic-gadget) ())
 
 (in-package :clim-demo)
 

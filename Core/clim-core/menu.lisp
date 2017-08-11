@@ -238,7 +238,7 @@ account, and create a list of menu buttons."
 
 ;;; menu-divider-leaf-pane
 
-(defclass menu-divider-leaf-pane (standard-gadget)
+(defclass menu-divider-leaf-pane (basic-gadget)
   ((label :initform nil :initarg :label)))
 
 (defparameter *labelled-divider-text-style* (make-text-style :sans-serif :roman :small))
