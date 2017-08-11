@@ -488,7 +488,7 @@ pane. Display a given message, which defaults to 'Usage Graph'."
 	(formatting-row (pane)
 	  (formatting-cell (pane)
 	    (with-text-family (pane :fix)
-	      (print (c2mop:method-qualifiers method) pane)))
+	      (print (method-qualifiers method) pane)))
 	  (loop for specializer in (c2mop:method-specializers method)
 		do (formatting-cell (pane)
 		     (if (typep specializer 'c2mop:eql-specializer)
