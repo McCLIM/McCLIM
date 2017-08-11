@@ -83,7 +83,7 @@
 				     &key &allow-other-keys)
   (let ((name (c2mop:generic-function-name
 	       (c2mop:method-generic-function object)))
-	(qualifiers (c2mop:method-qualifiers object))
+	(qualifiers (method-qualifiers object))
 	(specializers (c2mop:method-specializers object))
 	(lambda-list (c2mop:method-lambda-list object))
 	(class-of-t (find-class t)))
@@ -107,7 +107,7 @@
 		 (with-output-as-presentation (stream spec 'specializer
                                                       :single-box t)
                    (if (typep spec 'class)
-                       (format stream "~S" (c2mop:class-name spec))
+                       (format stream "~S" (class-name spec))
                        (format stream "~S" `(eql ,(c2mop:eql-specializer-object spec)))))
                  (write-char #\) stream))))
       (when optional
@@ -194,7 +194,7 @@
      :documentation ((object stream) (format stream "Class of ~A" object))
      :gesture t)
   (object)
-  (c2mop:class-name object))
+  (class-name object))
 
 (define-presentation-translator expression-to-function-name
   (expression function-name lisp-dev-commands
@@ -460,10 +460,10 @@
 								   :text-style text-style)
 				       ;; Present class name rather than class here because the printing of the
 				       ;; class object itself is rather long and freaks out the pointer doc pane.
-				       (with-output-as-presentation (stream (c2mop:class-name class) 'class-name
+				       (with-output-as-presentation (stream (class-name class) 'class-name
                                                                             :single-box t)
 					; (surrounding-output-with-border (stream :shape :drop-shadow)
-					 (princ (c2mop:class-name class) stream)))) ;)
+					 (princ (class-name class) stream)))) ;)
 				 inferior-fun
 				 :stream stream
 				 :merge-duplicates t
@@ -652,8 +652,8 @@
      (t (invoke-as-heading
          (lambda ()
            (format t "~&Slots for ")
-           (with-output-as-presentation (t (c2mop:class-name class) 'class-name :single-box t)
-             (princ (c2mop:class-name class)))))
+           (with-output-as-presentation (t (class-name class) 'class-name :single-box t)
+             (princ (class-name class)))))
         (present-the-slots class)))))
 
 (defparameter *ignorable-internal-class-names*
@@ -804,7 +804,7 @@ if you are interested in fixing this."))
 	(primary nil))
     (loop
        for meth in methods
-       for (qualifier) = (c2mop:method-qualifiers meth)
+       for (qualifier) = (method-qualifiers meth)
        do (case qualifier
 	    (:before
 	     (push meth before))
@@ -885,11 +885,11 @@ if you are interested in fixing this."))
 	   for class in class-list
 	   do (progn
 		(with-output-as-presentation (*standard-output*
-					      (c2mop:class-name class)
+					      (class-name class)
 					      'class-name
                                               :single-box t)
 		  (format *standard-output*
-			  "~S~%" (c2mop:class-name class)))))))
+			  "~S~%" (class-name class)))))))
     (when methods
       (let ((args nil)
 	    (arg-types nil))
