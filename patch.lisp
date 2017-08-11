@@ -1,15 +1,12 @@
 (in-package :cl-user)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (unless (find-package :clim-lisp-patch)
-    (make-package :clim-lisp-patch :use nil)))
-
-(export '(clim-lisp-patch::defconstant
-          clim-lisp-patch::defclass
-          clim-lisp-patch::describe
-          clim-lisp-patch::describe-object 
-          clim-lisp-patch::interactive-stream-p) 
-        :clim-lisp-patch)
+(defpackage clim-lisp-patch
+  (:use)
+  (:export #:defconstant
+           #:defclass
+           #:describe
+           #:describe-object
+           #:interactive-stream-p))
 
 (defmacro clim-lisp-patch:defconstant (symbol value &optional docu)
   `(defvar ,symbol ,value ,@(and docu (list docu))))
