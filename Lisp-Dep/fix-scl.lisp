@@ -1,12 +1,5 @@
 ;;;; Support for the Scieneer Common Lisp.
 
-(defpackage :clim-mop
-  (:use :clos))
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (loop for sym being the symbols of :clim-mop
-	do (export sym :clim-mop)))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export '(clim-lisp-patch::defconstant
             clim-lisp-patch::defclass)
@@ -26,5 +19,3 @@
        (setf (gethash ',name clim-lisp-patch::*compile-time-clos-names*) t))
      (eval-when (:compile-toplevel :load-toplevel :execute)
        (cl:defclass ,name ,@args))))
-
-

@@ -16,6 +16,5 @@
                                     #+sbcl      "fix-sbcl"
                                     #+openmcl   "fix-openmcl"
                                     #+lispworks "fix-lispworks"
-                                    #+clisp     "fix-clisp"
-                                    #+ecl       "fix-ecl")))
+                                    #+clisp     "fix-clisp")))
                (:file "package")))
