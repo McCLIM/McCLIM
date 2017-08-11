@@ -1,7 +1,10 @@
 
 (defsystem #:clim-lisp
   :serial t
-  :depends-on (#:alexandria #:trivial-gray-streams #+ (or)#:log4cl)
+  :depends-on (#:alexandria
+               #:trivial-gray-streams
+               #:closer-mop
+               #+(or) #:log4cl)
   :components (;; First possible patches
                (:file "patch")
                (:module "Lisp-Dep"
