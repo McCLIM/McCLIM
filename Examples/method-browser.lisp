@@ -295,9 +295,9 @@ available for that argument."
     ;; Method qualifiers
     (formatting-cell (stream :align-x :center)
       (with-drawing-options (stream :ink *method-qualifier-ink*)
-        (when (clim-mop:method-qualifiers method)
+        (alexandria:when-let ((m-q (method-qualifiers method)))
           (let ((first t))
-          (dolist (symbol (clim-mop:method-qualifiers method))
+          (dolist (symbol m-q)
             (if first
                 (setf first nil)
                 (princ " " stream))
