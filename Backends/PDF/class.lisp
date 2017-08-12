@@ -67,10 +67,11 @@
   ((file-stream :initarg :file-stream :reader clim-pdf-stream-file-stream)
    (title :initarg :title)
    (for :initarg :for)
-   (orientation :initarg :orientation)
+   (orientation :initarg :orientation :accessor orientation)
    (paper :initarg :paper)
    (transformation :initarg :transformation
-                   :reader sheet-native-transformation)
+                   :initform nil
+                   :accessor sheet-native-transformation)
    (current-page :initform 0)
    (document-fonts :initform '())
    (graphics-state-stack :initform '())
