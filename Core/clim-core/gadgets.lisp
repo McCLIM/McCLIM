@@ -29,9 +29,6 @@
 
 ;;;; Notes
 
-;; There is STANDARD-GADGET in this file but not in the spec, where
-;; from? Lispworks?
-
 ;; The spec says ORIENTED-GADGET-MIXIN, we call it ORIENTED-GADGET and
 ;; later define ORIENTED-GADGET-MIXIN with the remark "Try to be
 ;; compatible with Lispworks' CLIM."
@@ -207,19 +204,13 @@
                         gadget)
   ())
 
-
-
-;; Where is this standard-gadget from? --GB
-(defclass standard-gadget (basic-gadget)
-  ())
-
 (defgeneric armed-callback (gadget client gadget-id)
   (:argument-precedence-order client gadget-id gadget))
 
 (defgeneric disarmed-callback (gadget client gadget-id)
   (:argument-precedence-order client gadget-id gadget))
 
-;; "The default methods (on standard-gadget) call the function stored
+;; "The default methods (on basic-gadget) call the function stored
 ;; in gadget-armed-callback or gadget-disarmed-callback with one argument,
 ;; the gadget."
 
@@ -288,7 +279,7 @@
 ;;; Value-gadget
 ;;;
 
-(defclass value-gadget (standard-gadget)
+(defclass value-gadget (basic-gadget)
   ((value :initarg :value
           :reader gadget-value)
    (value-changed-callback :initarg :value-changed-callback
@@ -325,7 +316,7 @@
 ;;; Action-gadget
 ;;;
 
-(defclass action-gadget (standard-gadget)
+(defclass action-gadget (basic-gadget)
   ((activate-callback :initarg :activate-callback
                       :initform nil
                       :reader gadget-activate-callback)))
@@ -689,15 +680,6 @@ and must never be nil."))
 ;;;;  Mixin Classes for Concrete Gadgets
 ;;;;
 
-(defclass standard-gadget-pane (;;permanent-medium-sheet-output-mixin
-                                ;;immediate-sheet-input-mixin
-                                ;;immediate-repainting-mixin
-                                sheet-leaf-mixin
-                                standard-gadget)
-  ()
-  (:documentation
-   "PANE class to include in gadget pane classes."))
-
 ;;;; Redrawing mixins
 
 (defclass arm/disarm-repaint-mixin ()
@@ -762,12 +744,12 @@ and must never be nil."))
   (:documentation
    "Mixin class for gadgets, which want invoke the layout protocol, if the label changes."))
 
-;;;; Common behavior on STANDARD-GADGET-PANE and BASIC-GADGET
+;;;; Common behavior on `basic-gadget'
 
 ;;
 ;; When a gadget is not activated, it receives no device events.
 ;;
-(defmethod handle-event :around ((pane standard-gadget) (event device-event))
+(defmethod handle-event :around ((pane basic-gadget) (event device-event))
   (when (gadget-active-p pane)
     (call-next-method)))
 
@@ -776,7 +758,7 @@ and must never be nil."))
 ;; Glitch: upon re-activation the mouse might happen to be in the
 ;; gadget and thus re-arm it immediately, that is not implemented.
 
-(defmethod note-gadget-deactivated :after (client (gadget standard-gadget))
+(defmethod note-gadget-deactivated :after (client (gadget basic-gadget))
   (declare (ignorable client))
   (disarm-gadget gadget))
 
@@ -1094,7 +1076,7 @@ and must never be nil."))
                              arm/disarm-repaint-mixin
                              activate/deactivate-repaint-mixin
                              enter/exit-arms/disarms-mixin
-                             standard-gadget-pane)
+                             sheet-leaf-mixin)
   ((pressedp          :initform nil)
    (show-as-default-p :type boolean
                       :initform nil
@@ -1166,7 +1148,7 @@ and must never be nil."))
                               ;; event handling:
                               enter/exit-arms/disarms-mixin
                               ;; other
-                              standard-gadget-pane)
+                              sheet-leaf-mixin)
   ((indicator-type :type (member :one-of :some-of)
                    :initarg :indicator-type
                    :reader toggle-button-indicator-type
@@ -1198,7 +1180,7 @@ and must never be nil."))
 
 (defgeneric draw-toggle-button-indicator (gadget type value x1 y1 x2 y2))
 
-(defmethod draw-toggle-button-indicator ((gadget standard-gadget-pane) (type (eql :one-of)) value x1 y1 x2 y2)
+(defmethod draw-toggle-button-indicator ((gadget toggle-button-pane) (type (eql :one-of)) value x1 y1 x2 y2)
   (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
     (let ((radius (/ (- y2 y1) 2)))
       (draw-circle* gadget cx cy radius
@@ -1215,7 +1197,7 @@ and must never be nil."))
         (draw-circle* gadget cx cy (max 1 (- radius 4))
                       :ink (effective-gadget-foreground gadget))))))
 
-(defmethod draw-toggle-button-indicator ((pane standard-gadget-pane) (type (eql :some-of)) value
+(defmethod draw-toggle-button-indicator ((pane toggle-button-pane) (type (eql :some-of)) value
                                          x1 y1 x2 y2)
   (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-input-area-color pane))
   (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :inset)
@@ -1257,7 +1239,7 @@ and must never be nil."))
 
 (defclass menu-button-pane (menu-button
                             activate/deactivate-repaint-mixin
-                            standard-gadget-pane)
+                            sheet-leaf-mixin)
   ()
   (:default-initargs
     :text-style (make-text-style :sans-serif nil nil)
@@ -2907,7 +2889,7 @@ if INVOKE-CALLBACK is given."))
 
 
 (defclass clim-extensions::box-adjuster-gadget
-               (standard-gadget 3d-border-mixin orientation-from-parent-mixin)
+               (basic-gadget 3d-border-mixin orientation-from-parent-mixin)
   ((drag-from :initform nil)
    (left-sr)
    (left-peer)

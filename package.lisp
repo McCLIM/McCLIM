@@ -1616,7 +1616,6 @@
   ;; scroll-bar-drag-up-line-callback
   ;; scroll-bar-drag-up-page-callback
   ;; spacer-pane
-  ;; standard-gadget
   ;; stream-pointers
   ;; stream-primary-pointer
   ;; stream-redisplayable-p
