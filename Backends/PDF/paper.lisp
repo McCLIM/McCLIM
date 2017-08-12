@@ -31,28 +31,36 @@
 
 (defun paper-region (paper-size-name orientation)
   (multiple-value-bind (width height) (paper-size paper-size-name)
-    (when (eq orientation :landscape)
-      (rotatef width height))
     (make-rectangle* 0 0 width height)))
 
-(defparameter *pdf-top-margin* 1)
-(defparameter *pdf-left-margin* 1)
-(defparameter *pdf-bottom-margin* 1)
-(defparameter *pdf-right-margin* 1)
+(defparameter *pdf-top-margin* 0)
+(defparameter *pdf-left-margin* 0)
+(defparameter *pdf-bottom-margin* 0)
+(defparameter *pdf-right-margin* 0)
 
-(defun make-pdf-transformation (paper-size-name orientation)
-  (multiple-value-bind (width height) (paper-size paper-size-name)
-    (case orientation
-      (:portrait
+(defun make-pdf-transformation (region orientation)
+  (case orientation
+    (:portrait
+     (multiple-value-bind (left top right bottom)
+         (bounding-rectangle* region)
        (make-3-point-transformation*
-        0 0
-         0 (- height *pdf-top-margin* *pdf-bottom-margin*)
-          (- width *pdf-left-margin* *pdf-right-margin*) 0
-        *pdf-left-margin* (- height *pdf-top-margin*)
-         *pdf-left-margin* *pdf-bottom-margin*
-          (- width *pdf-right-margin*) (- height *pdf-top-margin*)))
-      (:landscape
+        left top
+        left bottom
+        right top
+
+        *pdf-left-margin* (- bottom *pdf-top-margin*)
+        *pdf-left-margin* *pdf-bottom-margin*
+        (- right *pdf-right-margin*) (- bottom *pdf-top-margin*))))
+
+    (:landscape
+     (multiple-value-bind (left top right bottom)
+         (bounding-rectangle* region)
        (make-3-point-transformation*
-        0 0  0 width  height 0
-        width height  0 height  width 0))
-      (t (error "Unknown orientation")))))
+        left top
+        left bottom
+        right top
+
+        *pdf-left-margin* (- right *pdf-top-margin*)
+        (- bottom *pdf-top-margin*) (- right *pdf-right-margin*)
+        *pdf-left-margin* *pdf-bottom-margin*)))
+    (t (error "Unknown orientation"))))

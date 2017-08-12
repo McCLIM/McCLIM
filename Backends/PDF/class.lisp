@@ -86,8 +86,11 @@
                    *default-pdf-title*))
         (for (or (getf header-comments :for)
                  *default-pdf-for*))
-        (region (paper-region device-type orientation))
-        (transform (make-pdf-transformation device-type orientation)))
+        (region (etypecase device-type
+                  (keyword (paper-region device-type orientation))
+                  (list (destructuring-bind (width height)
+                            device-type
+                          (make-rectangle* 0 0 width height))))))
     (make-instance 'clim-pdf-stream
                    :file-stream file-stream
                    :port port
@@ -95,8 +98,7 @@
                    :orientation orientation
                    :paper device-type
                    :native-region region
-                   :region region
-                   :transformation transform)))
+                   :region region)))
 
 ;;;; Port
 
