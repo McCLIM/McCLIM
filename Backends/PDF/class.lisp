@@ -67,10 +67,11 @@
   ((file-stream :initarg :file-stream :reader clim-pdf-stream-file-stream)
    (title :initarg :title)
    (for :initarg :for)
-   (orientation :initarg :orientation)
+   (orientation :initarg :orientation :accessor orientation)
    (paper :initarg :paper)
    (transformation :initarg :transformation
-                   :reader sheet-native-transformation)
+                   :initform nil
+                   :accessor sheet-native-transformation)
    (current-page :initform 0)
    (document-fonts :initform '())
    (graphics-state-stack :initform '())
@@ -85,8 +86,11 @@
                    *default-pdf-title*))
         (for (or (getf header-comments :for)
                  *default-pdf-for*))
-        (region (paper-region device-type orientation))
-        (transform (make-pdf-transformation device-type orientation)))
+        (region (etypecase device-type
+                  (keyword (paper-region device-type orientation))
+                  (list (destructuring-bind (width height)
+                            device-type
+                          (make-rectangle* 0 0 width height))))))
     (make-instance 'clim-pdf-stream
                    :file-stream file-stream
                    :port port
@@ -94,8 +98,7 @@
                    :orientation orientation
                    :paper device-type
                    :native-region region
-                   :region region
-                   :transformation transform)))
+                   :region region)))
 
 ;;;; Port
 
