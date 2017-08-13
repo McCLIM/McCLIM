@@ -1598,8 +1598,8 @@ protocol retrieving gestures from a provided string."))
   (let ((pathname (if (equal object #.(make-pathname))
                       object
                       (merge-pathnames object (make-pathname :name :wild)))))
-    (princ object stream))
-  )
+    (declare (ignore pathname))
+    (princ object stream)))
 
 (define-presentation-method present ((object string) (type pathname)
                                      stream (view textual-view)
