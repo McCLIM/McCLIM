@@ -1294,7 +1294,7 @@ protocol retrieving gestures from a provided string."))
                                                   default)
   (let ((read-result (accept-using-read stream type)))
     (if (and (null read-result) default) 
-        (values default type)
+        (values default default-type)
         (values read-result type))))
 
 (define-presentation-type keyword () :inherit-from 'symbol)
@@ -1396,7 +1396,7 @@ protocol retrieving gestures from a provided string."))
   (let ((*read-base* base)
          (read-result (accept-using-read stream type)))
     (if (and (null read-result) default) 
-        (values default type)
+        (values default default-type)
         (values read-result type))))
 
 ;;; Define a method that will do the comparision for all real types.  It's
