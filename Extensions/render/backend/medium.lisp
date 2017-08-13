@@ -386,7 +386,7 @@
                                (image drawable-image) to-x to-y)
   (let* ((width (image-width image))
 	 (height (image-height image))
-	 (to-sheet (medium-sheet medium))
+	 ;; (to-sheet (medium-sheet medium))
          (region
           (region-intersection
            (climi::medium-device-region medium)
