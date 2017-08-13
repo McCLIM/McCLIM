@@ -111,6 +111,7 @@
                          (octet-blend-function (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
                                                (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha)
                                                r.bg g.bg b.bg a.bg)
+                       (declare (ignorable alpha))
                        ,(image-rgba-set-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha)))))))
            (lambda (x y alpha)
              (declare (type fixnum x y)
@@ -125,6 +126,7 @@
                        (octet-blend-function (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
                                              (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha)
                                              r.bg g.bg b.bg a.bg)
+                     (declare (ignorable alpha))
                      ,(image-rgba-set-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))))))))))
 
 (defmacro def-fast-aa-render-xor-draw-span-fn (image-class)
@@ -149,6 +151,7 @@
                               (octet-blend-function (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
                                                     (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha)
                                                     r.bg g.bg b.bg a.bg)
+                            (declare (ignorable alpha))
                             ,(image-rgba-set-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha))))))))
            (lambda (x1 x2 y alpha)
              (declare (type fixnum x1 x2 y)
@@ -164,6 +167,7 @@
                             (octet-blend-function (color-octet-xor r.bg r.fg) (color-octet-xor g.bg g.fg)
                                                   (color-octet-xor b.bg b.fg) (octet-mult a.fg alpha)
                                                   r.bg g.bg b.bg a.bg)
+                          (declare (ignorable alpha))
                           ,(image-rgba-set-code image-class 'pixels 'x 'y 'red 'green 'blue 'alpha)))))))))))
 
 ;;;
