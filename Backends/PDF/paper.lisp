@@ -29,7 +29,7 @@
       (error "Unknown paper size: ~S." name))
     (values (car size) (cdr size))))
 
-(defun paper-region (paper-size-name orientation)
+(defun paper-region (paper-size-name)
   (multiple-value-bind (width height) (paper-size paper-size-name)
     (make-rectangle* 0 0 width height)))
 

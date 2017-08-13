@@ -87,7 +87,7 @@
         (for (or (getf header-comments :for)
                  *default-pdf-for*))
         (region (etypecase device-type
-                  (keyword (paper-region device-type orientation))
+                  (keyword (paper-region device-type))
                   (list (destructuring-bind (width height)
                             device-type
                           (make-rectangle* 0 0 width height))))))
