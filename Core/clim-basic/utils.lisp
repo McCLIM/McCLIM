@@ -332,8 +332,8 @@ by the number of variables in VARS."
      collect qualifier-or-ll into qualifiers
      finally (return
                (values qualifiers
-                       (clim-mop:extract-specializer-names qualifier-or-ll)
-                       (clim-mop:extract-lambda-list qualifier-or-ll)
+                       (c2mop:extract-specializer-names qualifier-or-ll)
+                       (c2mop:extract-lambda-list qualifier-or-ll)
                        body))))
 
 (defun get-body-declarations (body)
@@ -351,7 +351,7 @@ by the number of variables in VARS."
 (defun decode-specializer (specializer-name)
   (if (atom specializer-name)
       (find-class specializer-name)
-      (clim-mop:intern-eql-specializer (second specializer-name))))
+      (c2mop:intern-eql-specializer (second specializer-name))))
 
 (defmacro with-method ((name &rest description) &body body)
   "Executes BODY installing the specified method on the generic

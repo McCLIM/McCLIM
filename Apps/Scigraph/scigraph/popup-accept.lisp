@@ -64,8 +64,8 @@ advised of the possiblity of such damages.
 (defmethod popup-accept-variables ((self standard-object))
     "Get list of instance variables."
     (let ((slots 
-           (mapcar #'clim-mop:slot-definition-name
-                   (clim-mop:class-slots (class-of self)))))
+           (mapcar #'c2mop:slot-definition-name
+                   (c2mop:class-slots (class-of self)))))
       (sort slots #'string-lessp)))
 
 (defconstant *unbound* '%%unbound%%)

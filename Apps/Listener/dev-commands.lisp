@@ -81,11 +81,11 @@
 (define-presentation-method present (object (type standard-method)
 				     stream (view textual-view)
 				     &key &allow-other-keys)
-  (let ((name (clim-mop:generic-function-name
-	       (clim-mop:method-generic-function object)))
-	(qualifiers (clim-mop:method-qualifiers object))
-	(specializers (clim-mop:method-specializers object))
-	(lambda-list (clim-mop:method-lambda-list object))
+  (let ((name (c2mop:generic-function-name
+	       (c2mop:method-generic-function object)))
+	(qualifiers (method-qualifiers object))
+	(specializers (c2mop:method-specializers object))
+	(lambda-list (c2mop:method-lambda-list object))
 	(class-of-t (find-class t)))
     (format stream "~S ~{~S ~}(" name qualifiers)
     (multiple-value-bind (required optional rest key allow-other-keys aux key-present)
@@ -107,8 +107,8 @@
 		 (with-output-as-presentation (stream spec 'specializer
                                                       :single-box t)
                    (if (typep spec 'class)
-                       (format stream "~S" (clim-mop:class-name spec))
-                       (format stream "~S" `(eql ,(clim-mop:eql-specializer-object spec)))))
+                       (format stream "~S" (class-name spec))
+                       (format stream "~S" `(eql ,(c2mop:eql-specializer-object spec)))))
                  (write-char #\) stream))))
       (when optional
 	(format stream " &optional ~{~A ~^ ~}" optional))
@@ -130,7 +130,7 @@
 (define-presentation-method present (object (type generic-function)
                                      stream (view textual-view)
                                      &key &allow-other-keys)
-  (princ (clim-mop:generic-function-name object) stream))
+  (princ (c2mop:generic-function-name object) stream))
 
 (define-presentation-method accept
     ((type generic-function) stream (view textual-view) &key)
@@ -194,7 +194,7 @@
      :documentation ((object stream) (format stream "Class of ~A" object))
      :gesture t)
   (object)
-  (clim-mop:class-name object))
+  (class-name object))
 
 (define-presentation-translator expression-to-function-name
   (expression function-name lisp-dev-commands
@@ -460,10 +460,10 @@
 								   :text-style text-style)
 				       ;; Present class name rather than class here because the printing of the
 				       ;; class object itself is rather long and freaks out the pointer doc pane.
-				       (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name
+				       (with-output-as-presentation (stream (class-name class) 'class-name
                                                                             :single-box t)
 					; (surrounding-output-with-border (stream :shape :drop-shadow)
-					 (princ (clim-mop:class-name class) stream)))) ;)
+					 (princ (class-name class) stream)))) ;)
 				 inferior-fun
 				 :stream stream
 				 :merge-duplicates t
@@ -492,7 +492,7 @@
   (let ((class (frob-to-class class-spec)))
     (if (null class)
 	(note "~A is not a defined class." class-spec)
-        (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses
+        (class-grapher *standard-output* class #'c2mop:class-direct-superclasses
                        :orientation orientation))))
 
 (define-command (com-show-class-subclasses :name "Show Class Subclasses"
@@ -504,7 +504,7 @@
      (orientation 'keyword :prompt "orientation" :default :horizontal))     
   (let ((class (frob-to-class class-spec)))    
     (if (not (null class))        
-        (class-grapher *standard-output* class #'clim-mop:class-direct-subclasses
+        (class-grapher *standard-output* class #'c2mop:class-direct-subclasses
                        :orientation orientation)
         (note "~A is not a defined class." class-spec))))
 
@@ -514,20 +514,20 @@
    definitions for this slot in the order they occur along the CPL."
   (mapcan (lambda (cpl-class)
             (copy-list
-             (remove slot-name (clim-mop:class-direct-slots cpl-class)
-                     :key #'clim-mop:slot-definition-name :test-not #'eql)))
-          (clim-mop:class-precedence-list class)))
+             (remove slot-name (c2mop:class-direct-slots cpl-class)
+                     :key #'c2mop:slot-definition-name :test-not #'eql)))
+          (c2mop:class-precedence-list class)))
 
 (defun present-slot (slot class &key (stream *standard-output*))
   "Formats a slot definition into a table row."
-  (let* ((name (clim-mop:slot-definition-name slot))
-         (type (clim-mop:slot-definition-type slot))
-         (initargs (clim-mop:slot-definition-initargs slot))
-         (initfunc (clim-mop:slot-definition-initfunction slot))
-         (initform (clim-mop:slot-definition-initform slot))
+  (let* ((name (c2mop:slot-definition-name slot))
+         (type (c2mop:slot-definition-type slot))
+         (initargs (c2mop:slot-definition-initargs slot))
+         (initfunc (c2mop:slot-definition-initfunction slot))
+         (initform (c2mop:slot-definition-initform slot))
          (direct-slots (direct-slot-definitions class name))         
-         (readers (mapcan (lambda (x) (copy-list (clim-mop:slot-definition-readers x))) direct-slots))
-         (writers (mapcan (lambda (x) (copy-list (clim-mop:slot-definition-writers x))) direct-slots))
+         (readers (mapcan (lambda (x) (copy-list (c2mop:slot-definition-readers x))) direct-slots))
+         (writers (mapcan (lambda (x) (copy-list (c2mop:slot-definition-writers x))) direct-slots))
          (documentation (first (remove nil (mapcar (lambda (x) (documentation x t)) direct-slots))))
          (*standard-output* stream))
 
@@ -577,17 +577,17 @@
 
 (defun earliest-slot-definer (slot class)
   "Returns the earliest class in the CPL of CLASS which defines SLOT."
-  (let ((name (clim-mop:slot-definition-name slot)))
-    (dolist (class (reverse (clim-mop:class-precedence-list class)))
-      (dolist (slot-b (clim-mop:class-direct-slots class))
-        (when (eq name (clim-mop:slot-definition-name slot-b))
+  (let ((name (c2mop:slot-definition-name slot)))
+    (dolist (class (reverse (c2mop:class-precedence-list class)))
+      (dolist (slot-b (c2mop:class-direct-slots class))
+        (when (eq name (c2mop:slot-definition-name slot-b))
           (return-from earliest-slot-definer class)))))
   (error "Slot ~W does not appear to be defined in ~W" slot class))
 
 (defun class-sorted-slots (class)
   "Sort the slots in order of definition within the CPL, superclasses first."
-  (let ((cpl (clim-mop:class-precedence-list class)))
-    (sort (copy-list (clim-mop:class-slots class))
+  (let ((cpl (c2mop:class-precedence-list class)))
+    (sort (copy-list (c2mop:class-slots class))
           (lambda (a b)
             (< (position (earliest-slot-definer a class) cpl)
                (position (earliest-slot-definer b class) cpl))))))
@@ -614,9 +614,9 @@
 
 (defun present-the-slots (class)  
   (let* ((slots (class-sorted-slots class))
-         (instance-slots (remove-if (lambda (x) (not (eq :instance (clim-mop:slot-definition-allocation x)))) slots))
+         (instance-slots (remove-if (lambda (x) (not (eq :instance (c2mop:slot-definition-allocation x)))) slots))
          (other-slots (set-difference slots instance-slots))
-         (allocation-types (remove-duplicates (mapcar #'clim-mop:slot-definition-allocation other-slots))))
+         (allocation-types (remove-duplicates (mapcar #'c2mop:slot-definition-allocation other-slots))))
     (when other-slots
       (underlining (t) (format t "~&Instance Slots~%")))
     (present-slot-list instance-slots class)
@@ -624,7 +624,7 @@
       (underlining (t)
         (format t "~&Allocation: ~A~%" (friendly-slot-allocation-type alloc)))
       (present-slot-list (remove-if (lambda (x)
-                                      (not (eq alloc (clim-mop:slot-definition-allocation x))))
+                                      (not (eq alloc (c2mop:slot-definition-allocation x))))
                                     other-slots)
                          class))))
 
@@ -637,9 +637,9 @@
          (finalized-p (and class
                            (typep class 'standard-class)
                            (progn
-                             (clim-mop:finalize-inheritance class)
-                             (clim-mop:class-finalized-p class))))
-         (slots (and finalized-p (clim-mop:class-slots class))))
+                             (c2mop:finalize-inheritance class)
+                             (c2mop:class-finalized-p class))))
+         (slots (and finalized-p (c2mop:class-slots class))))
     (cond
      ((null class)
       (note "~A is not a defined class.~%" class-name))
@@ -652,8 +652,8 @@
      (t (invoke-as-heading
          (lambda ()
            (format t "~&Slots for ")
-           (with-output-as-presentation (t (clim-mop:class-name class) 'class-name :single-box t)
-             (princ (clim-mop:class-name class)))))
+           (with-output-as-presentation (t (class-name class) 'class-name :single-box t)
+             (princ (class-name class)))))
         (present-the-slots class)))))
 
 (defparameter *ignorable-internal-class-names*
@@ -684,7 +684,7 @@ if you are interested in fixing this."))
    (mapcan 
     (lambda (class) 
       (copy-list (x-specializer-direct-generic-functions class)))
-    (remove-ignorable-classes (clim-mop:class-precedence-list class)))))
+    (remove-ignorable-classes (c2mop:class-precedence-list class)))))
 
 (defun slot-name-sortp (a b)
   (flet ((slot-name-symbol (x)
@@ -715,7 +715,7 @@ if you are interested in fixing this."))
     (if (null class)
         (note "~A is not a defined class." class-spec)
       (let ((funcs (sort (class-funcs class) #'slot-name-sortp
-                         :key #'clim-mop:generic-function-name)))
+                         :key #'c2mop:generic-function-name)))
         (with-text-size (t :small)
           (format-items funcs 
             :printer (lambda (item stream)
@@ -724,15 +724,15 @@ if you are interested in fixing this."))
 
 (defun method-applicable-to-args-p (method args arg-types)
   (loop
-     for specializer in (clim-mop:method-specializers method)
+     for specializer in (c2mop:method-specializers method)
      for arg in args
      for arg-type in arg-types
      unless (cond ((eq arg-type :wild)
 		   t)
-		  ((typep specializer 'clim-mop:eql-specializer)
+		  ((typep specializer 'c2mop:eql-specializer)
 		   (and (not (eq arg arg-type))
 			    (eql arg
-				 (clim-mop:eql-specializer-object
+				 (c2mop:eql-specializer-object
 				  specializer))))
 		  ((eq arg arg-type)
 		   (subtypep arg-type specializer))
@@ -744,31 +744,31 @@ if you are interested in fixing this."))
   (mapcan #'(lambda (method)
 	      (when (method-applicable-to-args-p method args arg-types)
 		(list method)))
-	  (clim-mop:generic-function-methods gf)))
+	  (c2mop:generic-function-methods gf)))
 
 (defun sort-methods-by-args (methods arg-types)
   (let ((cpls (mapcar #'(lambda (type)
 			  (if (eq type :wild)
 			      nil
-			      (clim-mop:class-precedence-list type)))
+			      (c2mop:class-precedence-list type)))
 		      arg-types)))
     (flet ((sorter (meth1 meth2)
 	     (loop
-		for spec1 in (clim-mop:method-specializers meth1)
-		for spec2 in (clim-mop:method-specializers meth2)
+		for spec1 in (c2mop:method-specializers meth1)
+		for spec2 in (c2mop:method-specializers meth2)
 		for arg-type in arg-types
 		for cpl in cpls
-		for spec1-cpl = (unless (typep spec1 'clim-mop:eql-specializer)
-				  (clim-mop:class-precedence-list spec1))
-		for spec2-cpl = (unless (typep spec1 'clim-mop:eql-specializer)
-				  (clim-mop:class-precedence-list spec2))
+		for spec1-cpl = (unless (typep spec1 'c2mop:eql-specializer)
+				  (c2mop:class-precedence-list spec1))
+		for spec2-cpl = (unless (typep spec1 'c2mop:eql-specializer)
+				  (c2mop:class-precedence-list spec2))
 		do (cond ((eq spec1 spec2)) ;Keep going
 			 ((eq arg-type :wild)
-			  (cond ((typep spec1 'clim-mop:eql-specializer)
+			  (cond ((typep spec1 'c2mop:eql-specializer)
 				 (unless (typep spec2
-						'clim-mop:eql-specializer)
+						'c2mop:eql-specializer)
 				   (return-from sorter t)))
-				((typep spec1 'clim-mop:eql-specializer)
+				((typep spec1 'c2mop:eql-specializer)
 				 (return-from sorter nil))
 				((subtypep spec1 spec2)
 				 (return-from sorter t))
@@ -782,9 +782,9 @@ if you are interested in fixing this."))
 					   ((< cpl-len1 cpl-len2)
 					    (return-from sorter nil)))))))
 			 ;; An actual instance
-			 ((typep spec1 'clim-mop:eql-specializer)
+			 ((typep spec1 'c2mop:eql-specializer)
 			  (return-from sorter t))
-			 ((typep spec2 'clim-mop:eql-specializer)
+			 ((typep spec2 'c2mop:eql-specializer)
 			  (return-from sorter nil))
 			 (t (let ((pos1 (position spec1 cpl))
 				  (pos2 (position spec2 cpl)))
@@ -804,7 +804,7 @@ if you are interested in fixing this."))
 	(primary nil))
     (loop
        for meth in methods
-       for (qualifier) = (clim-mop:method-qualifiers meth)
+       for (qualifier) = (method-qualifiers meth)
        do (case qualifier
 	    (:before
 	     (push meth before))
@@ -840,7 +840,7 @@ if you are interested in fixing this."))
     (unless (typep gf 'generic-function)
       (return-from make-gf-specialized-ptype nil))
     (let ((required (alexandria:parse-ordinary-lambda-list
-		     (clim-mop::generic-function-lambda-list gf))))
+		     (c2mop:generic-function-lambda-list gf))))
       (loop
 	 for arg in required
 	 collect (make-presentation-type-specifier
@@ -866,7 +866,7 @@ if you are interested in fixing this."))
   (let ((doc-string (documentation gf t)))
     (with-text-face (*standard-output* :italic)
       (format *standard-output* "Lambda list:~%"))
-    (format *standard-output* "~S~%" (clim-mop:generic-function-lambda-list
+    (format *standard-output* "~S~%" (c2mop:generic-function-lambda-list
 				      gf))
     (when doc-string
       (with-text-face (*standard-output* :italic)
@@ -875,28 +875,28 @@ if you are interested in fixing this."))
       (with-text-face (*standard-output* :italic)
 	(format *standard-output* "Classes:~%"))
       (let ((class-list nil)
-	    (meths (clim-mop:generic-function-methods gf)))
+	    (meths (c2mop:generic-function-methods gf)))
 	(loop
 	   for m in meths
-	   do (loop for arg in (clim-mop:method-specializers m)
-		 unless (typep arg 'clim-mop:eql-specializer)
+	   do (loop for arg in (c2mop:method-specializers m)
+		 unless (typep arg 'c2mop:eql-specializer)
 		 do (pushnew arg class-list)))
 	(loop
 	   for class in class-list
 	   do (progn
 		(with-output-as-presentation (*standard-output*
-					      (clim-mop:class-name class)
+					      (class-name class)
 					      'class-name
                                               :single-box t)
 		  (format *standard-output*
-			  "~S~%" (clim-mop:class-name class)))))))
+			  "~S~%" (class-name class)))))))
     (when methods
       (let ((args nil)
 	    (arg-types nil))
 	(if (null specialized)
 	    (setq args
 		  (mapcar (constantly :wild)
-			  (clim-mop:generic-function-argument-precedence-order
+			  (c2mop:generic-function-argument-precedence-order
 			   gf))
 		  arg-types
 		  args)
@@ -1205,7 +1205,7 @@ if you are interested in fixing this."))
   (values nil nil))
 
 (defmethod mime-type-to-command ((mime-type symbol) pathname)
-  (mime-type-to-command (clim-mop:class-prototype (find-class mime-type nil)) pathname))
+  (mime-type-to-command (c2mop:class-prototype (find-class mime-type nil)) pathname))
 
 ;; Move these elsewhere.
 

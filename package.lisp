@@ -184,6 +184,10 @@
            #:with-output-to-string #:with-package-iterator #:with-simple-restart #:with-slots
            #:with-standard-io-syntax #:write #:write-byte #:write-char #:write-line #:write-sequence
            #:write-string #:write-to-string #:y-or-n-p #:yes-or-no-p #:zerop))
+        ;; XXX: we could use `closer-common-lisp', but some of McCLIM
+        ;; MOP code is not conformant it seems (we have problems with
+        ;; unknown `:default' argument dropping us in the debugger).
+        ;(packages '(:closer-common-lisp))
         (packages '(:common-lisp))
         (gray-symbols
          '(#:fundamental-stream

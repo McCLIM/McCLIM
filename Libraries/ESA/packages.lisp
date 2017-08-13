@@ -23,8 +23,15 @@
 ;;; Package definitions for ESA.
 
 (defpackage :esa-utils
-  (:use :clim-lisp :clim-mop :clim)
+  (:use :clim-lisp :c2mop :clim)
   (:shadowing-import-from :clim-lisp #:describe-object)
+  (:shadowing-import-from :c2mop
+                          #:defclass
+                          #:defgeneric
+                          #:defmethod
+                          #:standard-generic-function
+                          #:standard-method
+                          #:standard-class)
   (:import-from #:alexandria
 		#:once-only
 		#:with-gensyms)

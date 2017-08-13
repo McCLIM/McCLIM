@@ -180,7 +180,7 @@ advised of the possiblity of such damages.
                                ((find-class name nil)
                                 (mapcar #'class-name
                                         (#+mcclim
-                                         clim-mop:class-direct-superclasses
+                                         c2mop:class-direct-superclasses
                                          #-mcclim
                                          class-direct-superclasses
                                          (find-class name)))))))
