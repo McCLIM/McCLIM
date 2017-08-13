@@ -162,11 +162,13 @@ See also the `:delimiter-gestures' and
 	(override-var (gensym)))
     `(let* ((,gestures ,gesture-form) ;Preserve evaluation order of arguments
 	    (,override-var ,override)
-	    (*delimiter-gestures* (make-delimiter-gestures
-				   (if ,override-var
-				       :delimiter-gestures
-				       :additional-delimiter-gestures)
-				   ,gestures)))
+	    (*delimiter-gestures* (if ,override-var
+                                      (make-delimiter-gestures
+                                       :delimiter-gestures
+                                       ,gestures)
+                                      (make-delimiter-gestures
+                                       :additional-delimiter-gestures
+                                       ,gestures))))
        ,@body)))
 
 (defun activation-gesture-p (gesture)
