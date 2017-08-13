@@ -126,23 +126,25 @@ table cell as argument."
    :min-width (parse-space stream min-width :horizontal)
    :min-height (parse-space stream min-height :vertical)))
 
-(defmacro formatting-cell ((&optional (stream t)
-				      &rest more
-				      &key align-x align-y
-				      (min-width 0) (min-height 0)
-				      (record-type ''standard-cell-output-record))
-                           &body body)
-  (declare (ignorable align-x align-y))
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-keywords-removed (more (:record-type :min-width :min-height))
-    (with-gensyms (record)
-      ;; Blow off order-of-evaluation issues for the moment...
-      `(with-new-output-record
-	   (,stream ,record-type ,record ,@more
-		    :min-width (parse-space ,stream ,min-width :horizontal)
-		    :min-height (parse-space ,stream ,min-height :vertical))
-	 (letf (((stream-cursor-position ,stream) (values 0 0)))
-	   ,@body)))))
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defmacro formatting-cell ((&optional (stream t)
+                                        &rest more
+                                        &key align-x align-y
+                                        (min-width 0) (min-height 0)
+                                        (record-type ''standard-cell-output-record))
+                              &body body)
+    (declare (ignorable align-x align-y))
+    (setq stream (stream-designator-symbol stream '*standard-output*))
+    (with-keywords-removed (more (:record-type :min-width :min-height))
+      (with-gensyms (record)
+        ;; Blow off order-of-evaluation issues for the moment...
+        `(with-new-output-record
+             (,stream ,record-type ,record ,@more
+                      :min-width (parse-space ,stream ,min-width :horizontal)
+                      :min-height (parse-space ,stream ,min-height :vertical))
+           (letf (((stream-cursor-position ,stream) (values 0 0)))
+             ,@body))))))
 
 
 ;;; Generic block formatting
@@ -184,15 +186,17 @@ to a table cell within the row."))
                                (row-record standard-row-output-record))
   (map-over-block-cells function row-record))
 
-(defmacro formatting-row ((&optional (stream t)
-			  &rest more
-			  &key (record-type ''standard-row-output-record))
-			  &body body)
-  (setf stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (record)
-    (with-keywords-removed (more (:record-type))
-      `(with-new-output-record (,stream ,record-type ,record ,@more)
-	 ,@body))))
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defmacro formatting-row ((&optional (stream t)
+                                       &rest more
+                                       &key (record-type ''standard-row-output-record))
+                             &body body)
+    (setf stream (stream-designator-symbol stream '*standard-output*))
+    (with-gensyms (record)
+      (with-keywords-removed (more (:record-type))
+        `(with-new-output-record (,stream ,record-type ,record ,@more)
+           ,@body)))))
 
 (defgeneric invoke-formatting-row (stream cont record-type &rest initargs))
 
@@ -221,17 +225,18 @@ corresponding to a table cell within the column."))
 (defmethod map-over-column-cells (function (column-record standard-column-output-record))
   (map-over-block-cells function column-record))
 
-(defmacro formatting-column ((&optional (stream t)
-					&rest more
-                                        &key (record-type
-                                        ''standard-column-output-record))
-			     
-                             &body body)
-  (setf stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (record)
-    (with-keywords-removed (more (:record-type))
-      `(with-new-output-record (,stream ,record-type ,record ,@more)
-	 ,@body))))
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defmacro formatting-column ((&optional (stream t)
+                                          &rest more
+                                          &key (record-type
+                                                ''standard-column-output-record))
+                                &body body)
+    (setf stream (stream-designator-symbol stream '*standard-output*))
+    (with-gensyms (record)
+      (with-keywords-removed (more (:record-type))
+        `(with-new-output-record (,stream ,record-type ,record ,@more)
+           ,@body)))))
 
 (defgeneric invoke-formatting-column (stream cont record-type &rest initargs))
 
@@ -272,23 +277,25 @@ skips intervening non-table output record structures."))
     (setf (slot-value table 'multiple-columns-x-spacing)
           (slot-value table 'x-spacing))))
 
-(defmacro formatting-table ((&optional (stream t)
-                                       &rest args
-                                       &key x-spacing y-spacing
-                                            multiple-columns
-                                            multiple-columns-x-spacing
-                                            equalize-column-widths (move-cursor t)
-                                            (record-type ''standard-table-output-record)
-                                       &allow-other-keys)
-                            &body body)
-  (declare (ignore x-spacing y-spacing multiple-columns
-                   multiple-columns-x-spacing
-                   equalize-column-widths move-cursor record-type))
-  (gen-invoke-trampoline 'invoke-formatting-table
-                         (list (stream-designator-symbol stream
-							 '*standard-output*))
-                         args
-                         body))
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defmacro formatting-table ((&optional (stream t)
+                                         &rest args
+                                         &key x-spacing y-spacing
+                                         multiple-columns
+                                         multiple-columns-x-spacing
+                                         equalize-column-widths (move-cursor t)
+                                         (record-type ''standard-table-output-record)
+                                         &allow-other-keys)
+                               &body body)
+    (declare (ignore x-spacing y-spacing multiple-columns
+                     multiple-columns-x-spacing
+                     equalize-column-widths move-cursor record-type))
+    (gen-invoke-trampoline 'invoke-formatting-table
+                           (list (stream-designator-symbol stream
+                                                           '*standard-output*))
+                           args
+                           body)))
 
 (defun invoke-formatting-table
     (stream continuation
@@ -468,24 +475,26 @@ skips intervening non-table output record structures."))
                       items))
              args))))
 
-(defmacro formatting-item-list ((&optional (stream t)
-                                 &rest args
-                                 &key x-spacing y-spacing n-columns n-rows
-                                      stream-width stream-height
-                                      max-width max-height
-                                      initial-spacing (row-wise t) (move-cursor t)
-                                      record-type &allow-other-keys)
-                                &body body)
-  (declare (ignore x-spacing y-spacing n-columns n-rows
-                   stream-width stream-height
-                   max-width max-height
-                   initial-spacing row-wise move-cursor
-                   record-type))
-  (setf stream (stream-designator-symbol stream '*standard-output*))
-  (gen-invoke-trampoline 'invoke-format-item-list
-                         (list stream)
-                         args
-                         body))
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defmacro formatting-item-list ((&optional (stream t)
+                                             &rest args
+                                             &key x-spacing y-spacing n-columns n-rows
+                                             stream-width stream-height
+                                             max-width max-height
+                                             initial-spacing (row-wise t) (move-cursor t)
+                                             record-type &allow-other-keys)
+                                   &body body)
+    (declare (ignore x-spacing y-spacing n-columns n-rows
+                     stream-width stream-height
+                     max-width max-height
+                     initial-spacing row-wise move-cursor
+                     record-type))
+    (setf stream (stream-designator-symbol stream '*standard-output*))
+    (gen-invoke-trampoline 'invoke-format-item-list
+                           (list stream)
+                           args
+                           body)))
 
 ;;; Helper function
 
