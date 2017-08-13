@@ -29,7 +29,9 @@
                           #:defclass
                           #:defgeneric
                           #:defmethod
-                          #:standard-generic-function)
+                          #:standard-generic-function
+                          #:standard-method
+                          #:standard-class)
   (:import-from #:alexandria
 		#:once-only
 		#:with-gensyms)
