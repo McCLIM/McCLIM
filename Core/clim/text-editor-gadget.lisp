@@ -127,6 +127,7 @@
   (:documentation "The class for Drei-based text editor substrates."))
 
 (defmethod compose-space ((pane drei-text-editor-substrate) &key width height)
+  (declare (ignore height))
   (with-sheet-medium (medium pane)
     (let* ((text-style (medium-text-style medium))
            (line-height (+ (text-style-height text-style medium)
@@ -134,18 +135,17 @@
            (column-width (text-style-width text-style medium)))
       (with-accessors ((ncolumns text-editor-ncolumns)
                        (nlines text-editor-nlines)) pane
-        (apply #'space-requirement-combine* #'(lambda (req1 req2)
-                                                (or req2 req1))
-               (call-next-method)
-               (let ((width (if ncolumns
-                                (+ (* ncolumns column-width))
-                                width))
-                     (height (if nlines
-                                 (+ (* nlines line-height))
-                                 line-height)))
-                 (list
-                  :width width :max-width width :min-width width
-                  :height height :max-height height :min-height height)))))))
+        (let ((width (if ncolumns
+                         (+ (* ncolumns column-width))
+                         width))
+              (height (if nlines
+                          (+ (* nlines line-height))
+                          line-height)))
+          (space-requirement-combine* #'(lambda (req1 req2)
+                                          (or req2 req1))
+                                      (call-next-method)
+                                      :width width :max-width width :min-width width
+                                      :height height :max-height height :min-height height))))))
 
 (defmethod allocate-space ((pane drei-text-editor-substrate) w h)
   (%resize-pane pane w h))
