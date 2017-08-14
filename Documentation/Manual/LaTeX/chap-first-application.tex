@@ -138,15 +138,13 @@ increasing levels of complexity.
 
 \section{Defining Application Frames}
 
-Each CLIM application is defined by an \gloss{application frame}.  An
-application frame is an instance of the class
-\class{application-frame}.  As a CLIM user, you typically define a
-class that inherits from the class \class{application-frame}, and that
-contains additional slots needed by your application.  It is
-considered good style to keep all your application-specific data in
-slots in the application frame (rather than, say, in global
-variables), and to define your application-specific application frame
-in its own package.
+Each CLIM application is defined by an \gloss{application frame}. An application
+frame is an instance of the class \class{application-frame}. As a CLIM user, you
+typically define a class that inherits from the class \class{application-frame},
+and that contains additional slots needed by your application. It is considered
+good style to keep all your application-specific data in slots in the
+application frame (rather than, say, in global variables), and to define your
+application-specific application frame in its own package.
 
 The usual way to define an application frame is to use the macro
 \fmacro{define-application-frame}.  This macro works much like
