@@ -564,6 +564,7 @@
    #:cursor-active                      ;generic function
    #:cursor-focus                       ;generic function
    #:cursor-position                    ;generic function
+   #:cursor-set-position                ;generic function
    #:cursor-sheet                       ;generic function
    #:cursor-state                       ;generic function
    #:cursor-visibility                  ;generic function
