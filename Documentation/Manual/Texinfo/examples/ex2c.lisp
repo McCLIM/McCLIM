@@ -8,26 +8,26 @@
 
 (define-application-frame superapp ()
   ((numbers :initform (loop repeat 20 collect (list (random 100000000)))
-	    :accessor numbers)
+            :accessor numbers)
    (cursor :initform 0 :accessor cursor))
   (:pointer-documentation t)
   (:panes
     (app :application
-	 :height 400 :width 600
-	 :incremental-redisplay t
-	 :display-function 'display-app)
+         :height 400 :width 600
+         :incremental-redisplay t
+         :display-function 'display-app)
     (int :interactor :height 200 :width 600))
   (:layouts
     (default (vertically () app int))))
 
-;; As usual, the displaying code relates to a pane, not the application frame. 
+;; As usual, the displaying code relates to a pane, not the application frame.
 (defun display-app (frame pane)
 
   (loop
      ;; taking items one-by-one from the frame slot 'numbers'
      for current-element in (numbers frame)
 
-     ;; and increasing line-by-line  
+     ;; and increasing line-by-line
      for line from 0
 
      ;; prints a star if the cursor is on that line
@@ -43,10 +43,10 @@
      ;; explained below, but this is why (car current-element) is
      ;; needed.)
      do (updating-output (pane :unique-id   current-element
-			       :id-test     #'eq
-			       :cache-value (car current-element)
-			       :cache-test  #'eql)
-	  (format pane "~a~%" (car current-element)))))
+                               :id-test     #'eq
+                               :cache-value (car current-element)
+                               :cache-test  #'eql)
+          (format pane "~a~%" (car current-element)))))
 
 
 ;;
@@ -56,15 +56,15 @@
 ;; increase the value of the number on the current line
 (define-superapp-command (com-add :name t) ((number 'integer))
   (incf (car (elt (numbers *application-frame*)
-		  (cursor *application-frame*)))
-	number))
+                  (cursor *application-frame*)))
+        number))
 
 ;; move the cursor one line down (increasing the cursor position),
 ;; looping back to the beginning if going too far
 (define-superapp-command (com-next :name t) ()
   (incf (cursor *application-frame*))
   (when (= (cursor *application-frame*)
-	   (length (numbers *application-frame*)))
+           (length (numbers *application-frame*)))
     (setf (cursor *application-frame*) 0)))
 
 ;; move the cursor one line up
@@ -72,14 +72,13 @@
   (decf (cursor *application-frame*))
   (when (minusp (cursor *application-frame*))
     (setf (cursor *application-frame*)
-	  (1- (length (numbers *application-frame*))))))
+          (1- (length (numbers *application-frame*))))))
 
 ;; Command to quit the app
 (define-superapp-command (com-quit :name t) ()
   (frame-exit *application-frame*))
 
 
-;; Exported function to launch an instance of the application frame 
+;; Exported function to launch an instance of the application frame
 (defun app-main ()
   (run-frame-top-level (make-application-frame 'superapp)))
-

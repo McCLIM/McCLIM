@@ -17,9 +17,9 @@
   ;; This app only has 1 pane
   (:panes
    (my-interactor :interactor
-		  :height 400
-		  :width 600))
-  
+                  :height 400
+                  :width 600))
+
   ;; :layouts section describes how the pane is positioned inside
   ;; the application frame.
   ;; With 1 pane, no point getting complicated, Default is fine...
@@ -31,4 +31,3 @@
 ;; several instances of the same app.)
 (defun run-my-first-app ()
   (run-frame-top-level (make-application-frame 'my-first-clim-app)))
-

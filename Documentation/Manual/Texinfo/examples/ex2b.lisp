@@ -9,25 +9,25 @@
 (define-application-frame superapp ()
 
   ;; New addition of a slot to the application frame which
-  ;; defines a application-specific slot.  
+  ;; defines a application-specific slot.
 
   ;; The slot is simply a number.
   ((currrent-number :initform nil
-		    :accessor current-number))
+                    :accessor current-number))
 
   ;; The rest of the application frame is unchanged.
   (:pointer-documentation t)
   (:panes
     (app :application
-	 :height 400
-	 :width 600
-	 :display-function 'display-app)
+         :height 400
+         :width 600
+         :display-function 'display-app)
     (int :interactor
-	 :height 200
-	 :width 600))
+         :height 200
+         :width 600))
   (:layouts
     (default (vertically ()
-	      app int))))
+              app int))))
 
 ;; This is the function that will display the pane app.
 ;; Simply prints the number of the application frame slot
@@ -36,10 +36,10 @@
 (defun display-app (frame pane)
   (let ((number (current-number frame)))
     (format pane "~a is ~a"
-	    number
-	    (cond ((null number) "not a number")
-		  ((oddp number) "odd")
-		  (t "even")))))
+            number
+            (cond ((null number) "not a number")
+                  ((oddp number) "odd")
+                  (t "even")))))
 
 (define-superapp-command (com-quit :name t) ()
   (frame-exit *application-frame*))

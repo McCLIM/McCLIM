@@ -14,23 +14,23 @@
    ;; Let's add an additional pane
    (app :application
 
-	;; When should this pane be displayed in the command loop.
-	;; Note that the refresh is pane-specific, not
-	;; application-wide.
-	:display-time nil
-	:height 400
-	:width 600)
-   
+        ;; When should this pane be displayed in the command loop.
+        ;; Note that the refresh is pane-specific, not
+        ;; application-wide.
+        :display-time nil
+        :height 400
+        :width 600)
+
    (int :interactor
-	:height 200
-	:width 600))
+        :height 200
+        :width 600))
 
   (:layouts
 
    ;; This time we explicitly specify that the 2 defined panes
    ;; should be stacked vertically.
    (default (vertically ()
-	      app int))))
+              app int))))
 
 ;;
 ;; Let's also define commands that will act on the application.
@@ -48,9 +48,9 @@
 ;; to describe some aspect of the command loop. See below.
 (define-superapp-command (com-parity :name t) ((number 'integer))
   (format t "~a is ~a~%" number
-	  (if (oddp number)
-	      "odd"
-	      "even")))
+          (if (oddp number)
+              "odd"
+              "even")))
 
 
 (defun run-app ()
