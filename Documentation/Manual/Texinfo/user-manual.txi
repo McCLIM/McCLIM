@@ -179,7 +179,7 @@ chronological order) to redraw the contents of the area.
 An application can have a pane establish this display list in several
 fundamentally different ways, each more sophisticated:
 
-@table @sample
+@table @samp
 @item Simple application
 Very simple applications have no internal data structure to keep track
 of application objects, and simply produce output to the pane from
