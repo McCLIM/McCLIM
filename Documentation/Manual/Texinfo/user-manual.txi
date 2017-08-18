@@ -29,6 +29,19 @@ Common Lisp implementation.
 Demos are meant to be run after loading the @t{clim-examples} system
 from the frame created with @t{(clim-demo:demodemo)}.
 
+The easiest way to try this is to use @emph{Quicklisp} library
+manager. Assuming that this is already setup, trying out the demos is
+straightforward:
+
+@lisp
+(ql:quickload 'clim-examples)
+(clim-demo:demodemo)
+@end lisp
+
+Alternatively, for the more courageous (which requires separately
+downloading dependencies and setting a local repository), @t{asdf}
+also works well starting from the McCLIM source code directory.
+
 @lisp
 (asdf:load-system 'clim-examples)
 (clim-demo:demodemo)
@@ -90,7 +103,7 @@ Additionally McCLIM has a few bundled applications:
 
 @end table
 
-@c 
+@c
 @c The first application
 @c
 @node The first application
@@ -99,6 +112,7 @@ Additionally McCLIM has a few bundled applications:
 @cindex writing an application
 
 @menu
+* A bit of terminology::
 * How CLIM applications produce output::
 * Panes and Gadgets::
 * Defining Application Frames::
@@ -108,13 +122,52 @@ Additionally McCLIM has a few bundled applications:
 * An application displaying a data structure::
 @end menu
 
+@node A bit of terminology
+@subsection A bit of terminology
+
+CLIM was developed before the GUI toolkits widely used at the moment.
+Qt, GTK and others appeared much later than CLIM and the difference of
+terminology reflects this.
+
+A CLIM application is made up of a hierarchy of an @gloss{application
+  frame}, @gloss{panes} and @gloss{gadgets} (gadgets are special kinds
+  of panes):
+
+@table @samp
+@item application frame
+  An @emph{application frame} is what would usually be called an
+  application.
+
+@item panes
+  At a very high level, panes describe an application frame's visual
+  building blocks: a side bar, a menu bar, a table displaying a list
+  of items, a text input are all panes. They can be used by
+  application programmers to compose the top-level user interface of
+  their applications, as well as auxiliary components such as menus
+  and dialogs. In addition, panes can be more abstract such as layout
+  panes such as @t{hbox}, @t{vbox} to arrange other panes horizontally
+  or vertically, etc.
+
+@item gadgets
+  @emph{gadgets} correspond to what other toolkits call @emph{widgets}
+  and @emph{control}.  Frequently used CLIM gadgets are
+  @gadget{button}s, @gadget{slider}s, etc.
+@end table
+
 @node How CLIM applications produce output
 @subsection How CLIM applications produce output
 
-CLIM stream panes use output recording.  This means that such a pane
+Although it is easy to imagine panes in term of their appearance on
+screen, they are much richer: they are actually the series of
+operations that produces that appearance. They are not only the end
+product visible on a screen, but they contain all the step-by-step
+information that led to that representation.
+
+More precisely, CLIM panes record the series of operations that
+produces that generates an output.  This means that such a pane
 maintains a display list, consisting of a sequence of output records,
 ordered chronologically, from the first output record to be drawn to
-the last.  
+the last.
 
 This display list is used to fill in damaged areas of the pane, for
 instance as a result of the pane being partially or totally covered by
@@ -124,8 +177,10 @@ in common with the exposed area are partially or totally replayed (in
 chronological order) to redraw the contents of the area.
 
 An application can have a pane establish this display list in several
-fundamentally different ways.
+fundamentally different ways, each more sophisticated:
 
+@table @sample
+@item Simple application
 Very simple applications have no internal data structure to keep track
 of application objects, and simply produce output to the pane from
 time to time as a result of running commands, occasionally perhaps
@@ -135,8 +190,9 @@ maintains the display list for the pane, and adds to the end of it,
 each time also producing the pixels that result from drawing the new
 output record.  If the pane uses scrolling (which it typically does),
 then CLIM must determine the extent of the pane so as to update the
-scroll bar after each new output.  
+scroll bar after each new output.
 
+@item Application with a static display function
 More complicated applications use a display function.  Before the
 display function is run, the existing display list is typically
 deleted, so that the purpose of the display function becomes to
@@ -145,8 +201,9 @@ for instance produce some kind of form to be filled in, and
 application commands can use text or graphics operations to fill in
 the form.  A game of tic-tac-toe could work this way, where the
 display function draws the board and commands draw shapes into the
-squares.  
+squares.
 
+@item Application with a dynamic display function
 Even more complicated applications might have some internal data
 structure that has a direct mapping to output, and commands simply
 modify this internal data structure.  In this case, the display
@@ -160,8 +217,9 @@ Consider, for instance, a board game where pieces can be moved (as
 opposed to just added).  A very simple way of structuring such an
 application is to have an internal representation of the board, and to
 make the display function traverse this data structure and produce the
-complete output each time in the command loop.  
+complete output each time in the command loop.
 
+@item Application with an incremental static display function
 Some applications have very large internal data structures to be
 displayed, and it would cause a serious performance problem if the
 display list had to be computer from scratch each time around the
@@ -179,12 +237,14 @@ straightforward, and it is up to CLIM to do the hard work of recycling
 output records.  The disadvantage is that for some very demanding
 applications, this method might not be fast enough.
 
+@item Programmer does it all
 The other way is more complicated and requires the programmer to
 structure the application differently.  Essentially, the application
 has to keep track of the output records in the display list, and
 inform CLIM about modifications to it.  The main disadvantage of this
 method is that the programmer must now write the application to keep
-track of the output records itself, as opposed to leaving it to CLIM. 
+track of the output records itself, as opposed to leaving it to CLIM.
+@end table
 
 @node Panes and Gadgets
 @subsection Panes and Gadgets
@@ -238,12 +298,13 @@ applications.  It is essentially the same as the @package{COMMON-LISP}
 package as far as the user is concerned.
 
 In our example, we export the symbol that corresponds to the main
-function to start our application, here called @t{APP-MAIN}.
+function to start our application, here called @t{run-my-first-app}.
 
-The most important part of the code in our example is the definition of
-the application-frame.  In our example, we have defined an application
-frame called @t{superapp}, which becomes a CLOS class that automatically
-inherits from some standard CLIM application frame class.
+The most important part of the code in our example is the definition
+of the application-frame.  In our example, we have defined an
+application frame called @t{my-first-clim-app}, which becomes a CLOS
+class that automatically inherits from some standard CLIM application
+frame class.
 
 The second argument to @fmacro{define-application-frame} is a list of
 additional superclasses from which you want your application frame to
@@ -306,6 +367,13 @@ this class are in reality also @emph{streams} which can be used in calls
 both to ordinary input and output functions such as @t{format} and
 @t{read} and to CLIM-specific functions such as @t{draw-line}.
 
+Let's consider an improved example, where for sake of efficiency the
+@emph{my-} names have been replaced by shorter versions:
+
+@lisp
+@include ex2.lisp
+@end lisp
+
 In this example we have such an application pane, the name of which is
 @t{app}.  As you can see, we have defined it with an option
 @t{:display-time nil}.  The default value for this option for an
@@ -329,12 +397,6 @@ defined by @t{define-application-frame}.
 
 Let us also add a pane that automatically provides documentation for
 different actions on the pointer device.
-
-Here is our improved example:
-
-@lisp
-@include ex2.lisp
-@end lisp
 
 If you execute this example, you will find that you now have three
 different panes, the application pane, the interactor pane and the

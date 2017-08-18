@@ -70,7 +70,7 @@ fundamentally different ways, each more sophisticated:
       backend.} that result from drawing the new output record.  If
     the pane uses scrolling (which it typically does), then CLIM must
     determine the extent of the pane so as to update the scroll bar
-    after each new output. 
+    after each new output.
 
   \item[Application with a static display function:] More complicated
     applications use a display function.  Before the display function
@@ -81,8 +81,8 @@ fundamentally different ways, each more sophisticated:
     application commands can use text or graphics operations to fill
     in the form.  A game of tic-tac-toe could work this way, where the
     display function draws the board and commands draw shapes into the
-    squares. 
- 
+    squares.
+
   \item[Application with a dynamic display function:] Even more
     complicated applications might have some internal data structure
     that has a direct mapping to output, and commands simply modify
@@ -197,7 +197,7 @@ accessed.  In our example, we do not initially have any further slots.
 The rest of the definition of an application frame contains additional
 elements that CLIM will allow the user to define.  In our example, we
 have two additional (mandatory) elements: \texttt{:panes} and
-\texttt{:layouts}. 
+\texttt{:layouts}.
 
 The \texttt{:panes} element defines a collection of CLIM panes that
 each instance of your application may have.  Each pane has a name, a
@@ -219,7 +219,7 @@ a hierarchy.  In our example, only one layout, named
 \texttt{my-default}, is defined.  The layout called \texttt{default}
 is the one that is used by CLIM at startup.  In our example, the
 corresponding hierarchy is trivial, since it contains only the one
-element \texttt{int}, which is the name of our only pane. 
+element \texttt{int}, which is the name of our only pane.
 
 \section{Executing the Application}
 
@@ -332,7 +332,7 @@ each iteration of the command loop displays the entire data structure
 to the application pane.
 
 Here is a variation of the previous application that shows this
-possibility where the \texttt{parity} is now useful. 
+possibility where the \texttt{parity} is now useful.
 
 \verbatiminput{ex2b.lisp}
 
@@ -462,4 +462,3 @@ we have given the option \texttt{:incremental-redisplay t}.  This
 informs CLIM not to clear the pane after each command-loop iteration,
 but to keep the output records around and compare them to the new ones
 that are produced during the new iteration.
-
