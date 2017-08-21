@@ -256,7 +256,7 @@ This is used to definitively answer hit detection queries, that is, determining
 that the point $(x,y)$ is contained within the output record \arg{record}.  Once
 the position $(x,y)$ has been determined to lie within
 \cl{output-record-hit-detection-rectangle*},
-\cl{output-record-refined-sensitivity-test} is invoked.  Output record
+\cl{output-record-refined-position-test} is invoked.  Output record
 subclasses can provide a method that provides a more precise definition of a
 hit, for example, output records for elliptical rings will implement a method
 that detects whether the pointing device is on the elliptical ring.
