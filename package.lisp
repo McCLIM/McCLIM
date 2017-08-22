@@ -564,6 +564,7 @@
    #:cursor-active                      ;generic function
    #:cursor-focus                       ;generic function
    #:cursor-position                    ;generic function
+   #:cursor-set-position                ;generic function
    #:cursor-sheet                       ;generic function
    #:cursor-state                       ;generic function
    #:cursor-visibility                  ;generic function
@@ -1576,9 +1577,6 @@
   ;; labelled-gadget, through there is a labelled-gadget-mixin
   ;; mute-repainting-mixin, through there is a sheet-mute-repainting-mixin
   ;; oriented-gadget, through there is a oriented-gadget-mixin
-
-  ;; output-record-refined-sensitivity-test:
-  ;; there is mention of this symbol in output-recording.tex. spelling error?
 
   ;; pointer-button-click-event
   ;; this is mentioned in silica.tex. spelling error?

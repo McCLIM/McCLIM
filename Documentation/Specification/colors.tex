@@ -178,6 +178,8 @@ white, and the values in between are shades of gray.  On a white-on-black
 display device, 0 means white, 1 means black, and the values in between are
 shades of gray.
 
+\issue {PM} {Why does the caller need to know the type of display?}
+
 
 The following two functions comprise the color protocol.  Both of them return
 the components of a color.  All subclasses of \cl{color} must implement methods
@@ -396,9 +398,9 @@ drawing plane.
 ${\cal F}$ performs linear interpolation on all four components:
 \[ \begin{array}{rcrcl}
 o_3 & = &        o_1 & + & (1 - o_1) * o_2 \\
-r_3 & = & (o_1 * r_1 & + & (1 - o_1) * o_2 * r_2) / o_3 \\
-g_3 & = & (o_1 * g_1 & + & (1 - o_1) * o_2 * g_2) / o_3 \\
-b_3 & = & (o_1 * b_1 & + & (1 - o_1) * o_2 * b_2) / o_3
+r_3 & = & (r_1 * o_1 & + & (1 - o_1) * o_2 * r_2) / o_3 \\
+g_3 & = & (g_1 * o_1 & + & (1 - o_1) * o_2 * g_2) / o_3 \\
+b_3 & = & (b_1 * o_1 & + & (1 - o_1) * o_2 * b_2) / o_3
 \end{array} \]
 Note that if $o_3$ is zero, these equations would divide zero by zero.
 In that case $r_3$, $g_3$, and $b_3$ are defined to be zero.

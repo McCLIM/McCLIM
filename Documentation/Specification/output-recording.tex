@@ -69,7 +69,7 @@ are also equivalent.
 
 This simplifies the conceptual framework of CLIM, and could eventually simplify
 the implementation as well.  Doing this work now opens the door for later
-unifications, such unifying the pane layout functionality with table formatting.}
+unifications, such as unifying the pane layout functionality with table formatting.}
 
 
 \section {Output Records}
@@ -205,14 +205,14 @@ Returns the output record that is the parent of the \term{output record}
 
 \Defun {replay} {record stream \optional region}
 
-This function bind \cl{stream-recording-p} of \arg{stream} to \term{false}, and
+This function binds \cl{stream-recording-p} of \arg{stream} to \term{false}, and
 then calls \cl{replay-output-record} on the arguments \arg{record},
 \arg{stream}, and \arg{region}.  If \cl{stream-drawing-p} of \arg{stream} is
 \term{false}, \cl{replay} does nothing.  \cl{replay} is typically called during
 scrolling, by repaint handlers, and so on.
 
 CLIM implementations are permitted to default \arg{region} either to \cl{nil} or
-to the region corresponding to viewport of \arg{stream}.
+to the region corresponding to the viewport of \arg{stream}.
 
 \Defgeneric {replay-output-record} {record stream \optional region x-offset y-offset}
 
@@ -244,9 +244,9 @@ is probably that case that \cl{replay} should not affect the cursor position.}
 \Defgeneric {output-record-hit-detection-rectangle*} {record}
 
 This method is used to establish the usual ``effective size'' of \arg{record}
-for hit detection queries.  Four values are returned corresponding to the edges
+for hit detection queries.  Four values are returned, corresponding to the edges
 of the bounding rectangle that is the hit detection rectangle.  The default
-method (on CLIM's standard output record class) is equivalent to calling calling
+method (on CLIM's standard output record class) is equivalent to calling
 \cl{bounding-rectangle*} on \arg{record}, but this method can be specialized to
 return a larger bounding rectangle in order to implement a form of hysteresis.
 
@@ -256,7 +256,7 @@ This is used to definitively answer hit detection queries, that is, determining
 that the point $(x,y)$ is contained within the output record \arg{record}.  Once
 the position $(x,y)$ has been determined to lie within
 \cl{output-record-hit-detection-rectangle*},
-\cl{output-record-refined-sensitivity-test} is invoked.  Output record
+\cl{output-record-refined-position-test} is invoked.  Output record
 subclasses can provide a method that provides a more precise definition of a
 hit, for example, output records for elliptical rings will implement a method
 that detects whether the pointing device is on the elliptical ring.
