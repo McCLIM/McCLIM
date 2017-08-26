@@ -23,7 +23,8 @@
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
 (defsystem :mcclim
-  :author "Alexey Dejneka
+  :author "Alessandro Serra
+Alexey Dejneka
 Andreas Fuchs
 Andy Hefner
 Arnaud Rouanet
@@ -31,7 +32,9 @@ Brian Mastenbrook
 Brian Spilsbury
 Christophe Rhodes
 Clemens Fruhwirth
+Cyrus Harmon
 Daniel Barlow
+Daniel Kochmański
 Duncan Rose
 Edena Pixel
 Frank Buss
@@ -46,8 +49,7 @@ Rainer Joswig
 Robert Goldman
 Robert Strandh
 Rudi Schlatte
-Timothy Moore
-Daniel Kochmański"
+Timothy Moore"
   :license "LGPL-2.1+"
   :version "0.9.7"
   :description "McCLIM is an implementation of the CLIM 2.0 specification."
