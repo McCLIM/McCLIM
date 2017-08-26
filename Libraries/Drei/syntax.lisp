@@ -469,13 +469,6 @@ default method for this generic function increments the scan mark
 until the object after the mark is not an inter-lexeme object, or
 until the end of the buffer has been reached."))
 
-(defgeneric update-lex (lexer start-pos end)
-  (:documentation "This function is called by client code as part
-of the buffer-update protocol to inform the lexer that it needs
-to analyze the contents of the buffer at least up to the `end'
-mark of the buffer.  `start-pos' is the position in the lexeme
-sequence at which new lexemes should be inserted."))
-
 (defgeneric next-lexeme (lexer scan)
   (:documentation "This generic function is called by the
 incremental lexer to get a new lexeme from the buffer.  Client
@@ -522,22 +515,6 @@ position in the lexemes of LEXER"
   (loop until (end-of-buffer-p scan)
 	while (inter-lexeme-object-p lexer (object-after scan))
 	do (forward-object scan)))
-
-(defmethod update-lex ((lexer incremental-lexer) start-pos end)
-  (let ((scan (clone-mark (low-mark (buffer lexer)) :left)))
-    (setf (offset scan)
-	  (end-offset (lexeme lexer (1- start-pos))))
-    (loop do (skip-inter-lexeme-objects lexer scan)
-	  until (if (end-of-buffer-p end)
-		    (end-of-buffer-p scan)
-		    (mark> scan end))
-	  do (let* ((start-mark (clone-mark scan))
-		    (lexeme (next-lexeme lexer scan))
-		    (size (- (offset scan) (offset start-mark))))
-	       (setf (slot-value lexeme 'start-mark) start-mark
-		     (slot-value lexeme 'size) size)
-	       (insert-lexeme lexer start-pos lexeme))
-	     (incf start-pos))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
