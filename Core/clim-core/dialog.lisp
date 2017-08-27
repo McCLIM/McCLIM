@@ -232,7 +232,8 @@ accept of this query")))
              (not (eq align-prompts :left)))
     (setf align-prompts :right))
   (multiple-value-bind (cx cy) (stream-cursor-position stream)
-    (let* ((*accepting-values-stream*
+    (let* ((return-value nil)
+           (*accepting-values-stream*
             (make-instance 'accepting-values-stream
                            :stream stream
                            :align-prompts align-prompts))
@@ -240,8 +241,8 @@ accept of this query")))
                                       :record-type 'accepting-values-record)
                       (if align-prompts
                           (formatting-table (stream)
-                            (funcall body *accepting-values-stream*))
-                          (funcall body *accepting-values-stream*))
+                            (setf return-value (funcall body *accepting-values-stream*)))
+                            (setf return-value (funcall body *accepting-values-stream*)))
                       (display-exit-boxes *application-frame*
                                           stream
                                           (stream-default-view
@@ -306,7 +307,8 @@ accept of this query")))
             (finalize (editing-stream (record query)) nil))
           (erase-output-record arecord stream)
           (setf (stream-cursor-position stream)
-                (values cx cy)))))))
+                (values cx cy))))
+      return-value)))
 
 (defgeneric display-exit-boxes (frame stream view))
 
