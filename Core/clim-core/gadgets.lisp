@@ -503,17 +503,31 @@
 
 ;;; 30.4.5 The abstract slider Gadget
 
-(defclass slider-gadget (labelled-gadget-mixin
-                         value-gadget
-                         oriented-gadget-mixin
-                         range-gadget-mixin
-                         gadget-color-mixin
-                         ;;
-                         value-changed-repaint-mixin
-                         )
-  ()
+(defclass slider (labelled-gadget-mixin
+		  value-gadget
+		  oriented-gadget-mixin
+		  range-gadget-mixin)
+  ((drag-callback  :initform nil
+                   :initarg :drag-callback
+                   :reader slider-drag-callback)
+   (show-value-p   :type boolean
+                   :initform nil
+                   :initarg :show-value-p
+                   :accessor gadget-show-value-p)
+   (decimal-places :initform 0
+                   :initarg :decimal-places
+                   :reader slider-decimal-places)
+   (number-of-quanta :initform nil
+                     :initarg :number-of-quanta
+                     :reader slider-number-of-quanta))
   (:documentation "The value is a real number, and default value for orientation is :vertical,
-and must never be nil."))
+and must never be nil.")
+  (:default-initargs :orientation :vertical))
+
+(defmethod drag-callback ((pane slider) client gadget-id value)
+  (declare (ignore client gadget-id))
+  (when (slider-drag-callback pane)
+    (funcall (slider-drag-callback pane) pane value)))
 
 ;;; 30.4.6 The abstract radio-box and check-box Gadgets
 
@@ -1091,7 +1105,6 @@ and must never be nil."))
     :y-spacing 2))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
-  (declare (ignore width height))
   (space-requirement+* (space-requirement+* (compose-label-space gadget)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))
@@ -1635,20 +1648,12 @@ and must never be nil."))
 (defparameter slider-button-long-dim 30)
 (defparameter slider-button-short-dim 10)
 
-(defclass slider-pane (slider-gadget activate/deactivate-repaint-mixin basic-pane)
-  ((drag-callback  :initform nil
-                   :initarg :drag-callback
-                   :reader slider-drag-callback)
-   (show-value-p   :type boolean
-                   :initform nil
-                   :initarg :show-value-p
-                   :accessor gadget-show-value-p)
-   (decimal-places :initform 0
-                   :initarg :decimal-places
-                   :reader slider-decimal-places)
-   (number-of-quanta :initform nil
-                     :initarg :number-of-quanta
-                     :reader slider-number-of-quanta)))
+(defclass slider-pane (slider
+		       gadget-color-mixin
+		       value-changed-repaint-mixin
+		       activate/deactivate-repaint-mixin
+		       basic-pane)
+  ())
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
@@ -1659,17 +1664,6 @@ and must never be nil."))
                               :min-height major :height major)
     (make-space-requirement :min-width  major :width  major
                             :min-height minor :height minor))))
-
-
-
-(defmethod initialize-instance :before ((pane slider-pane) &rest rest)
-  (declare (ignore rest))
-  (setf (slot-value pane 'orientation) :vertical))
-
-(defmethod drag-callback ((pane slider-pane) client gadget-id value)
-  (declare (ignore client gadget-id))
-  (when (slider-drag-callback pane)
-    (funcall (slider-drag-callback pane) pane value)))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
   (with-slots (armed) pane
