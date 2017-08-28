@@ -81,7 +81,7 @@ syntax should be run.")
   (:name "Lisp")
   (:pathname-types "lisp" "lsp" "cl")
   (:command-table lisp-table)
-  (:default-initargs :initial-state '|initial-state |))
+  (:default-initargs :initial-state |initial-state |))
 
 (defgeneric base (syntax)
   (:documentation "Get the base `syntax' should interpret numbers
