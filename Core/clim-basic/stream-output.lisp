@@ -316,7 +316,7 @@
               (seos-write-string stream string split end))))))))
 
 (defgeneric %note-stream-end-of-page (stream action new-height)
-  (:method (stream acrion new-height)
+  (:method (stream action new-height)
     nil))
 
 (defun seos-write-newline (stream)
