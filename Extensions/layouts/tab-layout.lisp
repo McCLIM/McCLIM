@@ -321,40 +321,37 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 
 (defparameter +tab-bar-view+ (make-instance 'tab-bar-view))
 
+(declaim (inline button-polygon))
+(defun button-polygon (x y top-line-length)
+  (vector x                         (+ y 14)
+          (+ x 6)                   y
+          (+ x 6 top-line-length)   y
+          (+ x 6 top-line-length 6) (+ y 14)))
+
+(defun draw-tab-header (stream page state)
+  (let* ((title (tab-page-title page))
+         (drawing-options (tab-page-drawing-options page))
+         (text-style (getf drawing-options :text-style)))
+    ;; Draw polygon.
+    (multiple-value-bind (x y) (stream-cursor-position stream)
+      (let* ((text-size (text-size stream title :text-style text-style))
+             (polygon (button-polygon x y (+ text-size 4))))
+        (flet ((draw-button (&rest options)
+                 (apply #'draw-polygon* stream polygon options)))
+          (ecase state
+            (:inactive
+             (draw-button :ink +grey+)
+             (draw-button :ink +black+ :filled nil))
+            (:selected
+             (draw-button :ink +black+ :filled nil :closed nil))))
+        ;; Draw label.
+        (apply #'draw-text* stream title (+ x 8) y :align-y :top drawing-options)
+        (stream-increment-cursor-position stream (+ 8 text-size 8) 0)))))
+
 (define-presentation-method present
-    (tab-page (type tab-page) stream (view tab-bar-view) &key)
-  (stream-increment-cursor-position stream 5 0)
-  (multiple-value-bind (x y) (stream-cursor-position stream)
-    (let* ((length-top-line
-            (+ x 6 (text-size stream (tab-page-title tab-page)) 3))
-           (tab-button-polygon
-            (list x (+ y 14)   (+ x 6) y
-                  (+ x 6) y   length-top-line y
-                  length-top-line y   (+ length-top-line 6) (+ y 14))))
-
-      ;; grey-filled polygone for the disabled panes
-      (unless (sheet-enabled-p (tab-page-pane tab-page))
-        (draw-polygon* stream tab-button-polygon :ink +grey+))
-
-      ;; black non-filled polygon
-      (draw-polygon* stream tab-button-polygon :ink +black+ :filled nil)
-
-      ;; "breach" the underline for the enabled pane
-      (when (sheet-enabled-p (tab-page-pane tab-page))
-        (draw-line stream
-                   (apply #'make-point (subseq tab-button-polygon 0 2))
-                   (apply #'make-point
-                          (subseq tab-button-polygon
-                                  (- (length tab-button-polygon) 2)))
-                   :ink +background-ink+))))
-
-  (stream-increment-cursor-position stream 8 0)
-  (apply #'invoke-with-drawing-options stream
-         (lambda (rest)
-           (declare (ignore rest))
-           (write-string (tab-page-title tab-page) stream))
-         (tab-page-drawing-options tab-page))
-  (stream-increment-cursor-position stream 10 0))
+    (object (type tab-page) stream (view tab-bar-view) &key)
+  (let ((enabledp (sheet-enabled-p (tab-page-pane object))))
+    (draw-tab-header stream object (if enabledp :selected :inactive))))
 
 (defclass tab-layout-pane (tab-layout)
   ((header-pane :accessor tab-layout-header-pane
@@ -380,18 +377,21 @@ that the frame manager can customize the implementation."))
 
 (defun default-display-tab-header (tab-layout pane)
   (stream-increment-cursor-position pane 0 3)
-  (draw-line* pane
-              0
-              17
-              (1- (climi::pane-current-width pane))
-              17
-              :ink +black+)
-  (mapc (lambda (page)
-          (with-output-as-presentation
-              (pane (tab-page-pane page)
-                    (tab-page-presentation-type page))
-            (present page 'tab-page :stream pane)))
-        (tab-layout-pages tab-layout)))
+  (flet ((draw-line-and-increment (stream length)
+           (multiple-value-bind (x y) (stream-cursor-position stream)
+             (draw-line* stream x (+ y 14) (+ x length) (+ y 14) :ink +black+)
+             (stream-increment-cursor-position stream length 0))))
+    (draw-line-and-increment pane 5)
+    (dolist (page (tab-layout-pages tab-layout))
+      (let ((presentation-type (tab-page-presentation-type page))
+            (page-pane (tab-page-pane page)))
+        (if (eq presentation-type 'tab-page)
+            (present page 'tab-page :stream pane)
+            (with-output-as-presentation (pane page-pane presentation-type)
+              (present page 'tab-page :stream pane))))
+      (draw-line-and-increment pane 7))
+    (draw-line-and-increment pane (- (climi::pane-current-width pane)
+                                     (stream-cursor-position pane)))))
 
 (defclass tab-bar-pane (application-pane)
   ()
