@@ -1022,44 +1022,47 @@ time an indexed pattern is drawn.")
   (when (= start end)
     (return-from text-size (values 0 0 0 0 0)))
 
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (let ((xfont (text-style-to-X-font (port medium) text-style)))
-    (let ((position-newline
-           (macrolet ((p (type)
-                        `(locally (declare (type ,type string))
-                           (position #\newline string :start start :end end))))
-             (typecase string
-               (simple-base-string (p simple-base-string))
-               #+SBCL (sb-kernel::simple-character-string (p sb-kernel::simple-character-string))
-               #+SBCL (sb-kernel::character-string (p sb-kernel::character-string))
-               (simple-string (p simple-string))
-               (string (p string))))))
-      (cond ((not (null position-newline))
-             (multiple-value-bind (width ascent descent left right
-                                         font-ascent font-descent direction
-                                         first-not-done)
-                 (font-text-extents xfont string
-                                    :start start :end position-newline
-                                    :translate #'translate)
-               (declare (ignorable left right
-                                   font-ascent font-descent
-                                   direction first-not-done))
-               (multiple-value-bind (w h x y baseline)
-                   (text-size medium string :text-style text-style
-                              :start (1+ position-newline) :end end)
-                 (values (max w width) (+ ascent descent h)
-                         x (+ ascent descent y) (+ ascent descent baseline)))))
-            (t
-             (multiple-value-bind (width ascent descent left right
-                                         font-ascent font-descent direction
-                                         first-not-done)
-                 (font-text-extents xfont string
-                                    :start start :end end
-                                    :translate #'translate)
-               (declare (ignorable left right
-                                   font-ascent font-descent
-                                   direction first-not-done))
-               (values width (+ ascent descent) width 0 ascent)) )))) )
+  (let* ((medium-text-style (medium-merged-text-style medium))
+	 (text-style (if text-style
+			 (merge-text-styles text-style medium-text-style)
+			 medium-text-style))
+	 (xfont (text-style-to-X-font (port medium) text-style))
+	 (position-newline
+          (macrolet ((p (type)
+                       `(locally (declare (type ,type string))
+                          (position #\newline string :start start :end end))))
+            (typecase string
+              (simple-base-string (p simple-base-string))
+              #+SBCL (sb-kernel::simple-character-string (p sb-kernel::simple-character-string))
+              #+SBCL (sb-kernel::character-string (p sb-kernel::character-string))
+              (simple-string (p simple-string))
+              (string (p string))))))
+    (cond ((not (null position-newline))
+           (multiple-value-bind (width ascent descent left right
+                                       font-ascent font-descent direction
+                                       first-not-done)
+               (font-text-extents xfont string
+                                  :start start :end position-newline
+                                  :translate #'translate)
+             (declare (ignorable left right
+                                 font-ascent font-descent
+                                 direction first-not-done))
+             (multiple-value-bind (w h x y baseline)
+                 (text-size medium string :text-style text-style
+                            :start (1+ position-newline) :end end)
+               (values (max w width) (+ ascent descent h)
+                       x (+ ascent descent y) (+ ascent descent baseline)))))
+          (t
+           (multiple-value-bind (width ascent descent left right
+                                       font-ascent font-descent direction
+                                       first-not-done)
+               (font-text-extents xfont string
+                                  :start start :end end
+                                  :translate #'translate)
+             (declare (ignorable left right
+                                 font-ascent font-descent
+                                 direction first-not-done))
+             (values width (+ ascent descent) width 0 ascent)) ))) )
 
 (defmethod climi::text-bounding-rectangle*
     ((medium clx-medium) string &key text-style (start 0) end)
