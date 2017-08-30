@@ -36,7 +36,8 @@
 (defpackage #:clim-tab-layout
   (:use #:clim #:clim-lisp)
   (:import-from #:alexandria
-                #:when-let)
+                #:when-let
+                #:first-elt)
   (:export #:tab-layout
            #:tab-layout-pane
            #:tab-layout-pages
@@ -342,6 +343,9 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
             (:inactive
              (draw-button :ink +grey+)
              (draw-button :ink +black+ :filled nil))
+            (:highlighted
+             (draw-button :ink +grey95+)
+             (draw-button :ink +black+ :filled nil))
             (:selected
              (draw-button :ink +black+ :filled nil :closed nil))))
         ;; Draw label.
@@ -352,6 +356,23 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
     (object (type tab-page) stream (view tab-bar-view) &key)
   (let ((enabledp (sheet-enabled-p (tab-page-pane object))))
     (draw-tab-header stream object (if enabledp :selected :inactive))))
+
+(define-presentation-method highlight-presentation
+    ((type tab-page) record stream (state (eql :highlight)))
+  (let* ((page (presentation-object record)))
+    ;; This is slightly tricky: to position the stream cursor
+    ;; correctly before drawing the highlighted header, we obtain the
+    ;; position of the first child output record, corresponding to the
+    ;; filled polygon. This output record has the desired position
+    ;; because it is not offset by the line width of the outline (in
+    ;; contrast to RECORD and its other children).
+    (setf (stream-cursor-position stream)
+          (output-record-position (first-elt (output-record-children record))))
+    (draw-tab-header stream page :highlighted)))
+
+(define-presentation-method highlight-presentation
+    ((type tab-page) record stream (state (eql :unhighlight)))
+  (repaint-sheet stream (bounding-rectangle record)))
 
 (defclass tab-layout-pane (tab-layout)
   ((header-pane :accessor tab-layout-header-pane
