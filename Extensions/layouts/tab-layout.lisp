@@ -36,25 +36,25 @@
 (defpackage #:clim-tab-layout
   (:use #:clim #:clim-lisp)
   (:export #:tab-layout
-	   #:tab-layout-pane
-	   #:tab-layout-pages
-	   #:tab-page
-	   #:tab-page-tab-layout
-	   #:tab-page-title
-	   #:tab-page-pane
-	   #:tab-page-presentation-type
-	   #:tab-page-drawing-options
-	   #:add-page
-	   #:remove-page
-	   #:tab-layout-enabled-page
-	   #:sheet-to-page
-	   #:find-tab-page-named
-	   #:switch-to-page
-	   #:remove-page-named
-	   #:with-tab-layout
+           #:tab-layout-pane
+           #:tab-layout-pages
+           #:tab-page
+           #:tab-page-tab-layout
+           #:tab-page-title
+           #:tab-page-pane
+           #:tab-page-presentation-type
+           #:tab-page-drawing-options
+           #:add-page
+           #:remove-page
+           #:tab-layout-enabled-page
+           #:sheet-to-page
+           #:find-tab-page-named
+           #:switch-to-page
+           #:remove-page-named
+           #:with-tab-layout
            #:com-switch-to-tab-page
-	   #:com-remove-tab-page
-	   #:note-tab-page-changed))
+           #:com-remove-tab-page
+           #:note-tab-page-changed))
 
 (in-package #:clim-tab-layout)
 
@@ -85,16 +85,16 @@ to specify its contents when creating it dynamically using MAKE-PANE."))
    (title :initform nil :accessor tab-page-title :initarg :title)
    (pane :initform nil :accessor tab-page-pane :initarg :pane)
    (presentation-type :initform 'tab-page
-		      :accessor tab-page-presentation-type
-		      :initarg :presentation-type)
+                      :accessor tab-page-presentation-type
+                      :initarg :presentation-type)
    (enabled-callback :initform nil
-		     :accessor tab-page-enabled-callback
-		     :initarg :enabled-callback)
+                     :accessor tab-page-enabled-callback
+                     :initarg :enabled-callback)
    ;; fixme: drawing-options in this generality are a feature of the old
    ;; concrete tab pane.  Gtkairo will only look for the :INK in this list.
    (drawing-options :initform nil
-		    :accessor tab-page-drawing-options
-		    :initarg :drawing-options))
+                    :accessor tab-page-drawing-options
+                    :initarg :drawing-options))
   (:documentation "Instances of TAB-PAGE represent the pages in a TAB-LAYOUT.
 For each child pane, there is a TAB-PAGE providing the page's title and
 additional information about the child.  Valid initialization arguments
@@ -157,20 +157,20 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
   ;; do the call only after the change has been done:
   (let ((old-page (tab-layout-enabled-page parent)))
     (prog1
-	(call-next-method)
+        (call-next-method)
       (when (and page (not (equal page old-page)))
-	(note-tab-page-enabled page)))))
+        (note-tab-page-enabled page)))))
 
 (defmethod (setf tab-layout-pages) (newval (parent tab-layout))
   (unless (equal newval (remove-duplicates newval))
     (error "page list must not contain duplicates: ~A" newval))
   (let* ((oldval (tab-layout-pages parent))
-	 (add (set-difference newval oldval))
-	 (remove (set-difference oldval newval)))
+         (add (set-difference newval oldval))
+         (remove (set-difference oldval newval)))
     ;; check for errors
     (dolist (page add)
       (unless (null (tab-page-tab-layout page))
-	(error "~A has already been added to a different tab layout" page)))
+        (error "~A has already been added to a different tab layout" page)))
     ;; remove old pages first, because sheet-disown-child still needs access
     ;; to the original page list:
     (dolist (page remove)
@@ -204,10 +204,10 @@ to this sheet.  See also TAB-PAGE-PANE, the reverse operation."
 Note that uniqueness of titles is not enforced; the first page found will
 be returned."
   (find name
-	(tab-layout-pages tab-layout)
+        (tab-layout-pages tab-layout)
         :key #'tab-page-title
-	;; fixme: don't we want the case-sensitive STRING= here?
-	:test #'string-equal))
+        ;; fixme: don't we want the case-sensitive STRING= here?
+        :test #'string-equal))
 
 (defmethod (setf tab-page-title) :after (newval (page tab-page))
   (declare (ignore newval))
@@ -252,7 +252,7 @@ can also be called directly."
 SHEET-DISOWN-CHILD, which can also be used directly to remove the page's
 pane with the same effect."
   (sheet-disown-child (tab-page-tab-layout page)
-		      (tab-page-pane page)))
+                      (tab-page-pane page)))
 
 (defun remove-page-named (title tab-layout)
   "Remove the tab page with the specified TITLE from TAB-LAYOUT.
@@ -265,8 +265,8 @@ FIND-TAB-PAGE-NAMED to find and the remove a page yourself."
 ;;; creation macro
 
 (defmacro with-tab-layout ((default-presentation-type &rest initargs
-			     &key name &allow-other-keys)
-			   &body body)
+                             &key name &allow-other-keys)
+                           &body body)
   "Return a TAB-LAYOUT.  Any keyword arguments, including its name, will be
 passed to MAKE-PANE.  Child pages of the TAB-LAYOUT can be specified using
 BODY, using lists of the form (TITLE PANE &KEY PRESENTATION-TYPE
@@ -275,13 +275,13 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
   (let ((ptypevar (gensym)))
     `(let ((,ptypevar ,default-presentation-type))
        (make-pane 'tab-layout
-		  :name ,(or name `',(gensym "tab-layout-"))
-		  :pages (list ,@(mapcar (lambda (spec)
-					   `(make-tab-page ,@spec
-							   :presentation-type
-					     ,ptypevar))
-					 body))
-		  ,@initargs))))
+                  :name ,(or name `',(gensym "tab-layout-"))
+                  :pages (list ,@(mapcar (lambda (spec)
+                                           `(make-tab-page ,@spec
+                                                           :presentation-type
+                                             ,ptypevar))
+                                         body))
+                  ,@initargs))))
 
 (defun make-tab-page
     (title pane &key presentation-type drawing-options enabled-callback)
@@ -296,15 +296,15 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 ;;; presentation/command system integration
 
 (define-command (com-switch-to-tab-page
-		 :command-table clim:global-command-table)
+                 :command-table clim:global-command-table)
     ((page 'tab-page :prompt "Tab page"))
   (switch-to-page page))
 
 (define-presentation-to-command-translator switch-via-tab-button
     (tab-page com-switch-to-tab-page clim:global-command-table
-	      :gesture :select
-	      :documentation "Switch to this page"
-	      :pointer-documentation "Switch to this page")
+              :gesture :select
+              :documentation "Switch to this page"
+              :pointer-documentation "Switch to this page")
     (object)
   (list object))
 
@@ -325,11 +325,11 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
   (stream-increment-cursor-position stream 5 0)
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (let* ((length-top-line
-	    (+ x 6 (text-size stream (tab-page-title tab-page)) 3))
+            (+ x 6 (text-size stream (tab-page-title tab-page)) 3))
            (tab-button-polygon
-	    (list x (+ y 14)   (+ x 6) y
-		  (+ x 6) y   length-top-line y
-		  length-top-line y   (+ length-top-line 6) (+ y 14))))
+            (list x (+ y 14)   (+ x 6) y
+                  (+ x 6) y   length-top-line y
+                  length-top-line y   (+ length-top-line 6) (+ y 14))))
 
       ;; grey-filled polygone for the disabled panes
       (unless (sheet-enabled-p (tab-page-pane tab-page))
@@ -341,11 +341,11 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
       ;; "breach" the underline for the enabled pane
       (when (sheet-enabled-p (tab-page-pane tab-page))
         (draw-line stream
-		   (apply #'make-point (subseq tab-button-polygon 0 2))
-		   (apply #'make-point
-			  (subseq tab-button-polygon
-				  (- (length tab-button-polygon) 2)))
-		   :ink +background-ink+))))
+                   (apply #'make-point (subseq tab-button-polygon 0 2))
+                   (apply #'make-point
+                          (subseq tab-button-polygon
+                                  (- (length tab-button-polygon) 2)))
+                   :ink +background-ink+))))
 
   (stream-increment-cursor-position stream 8 0)
   (apply #'invoke-with-drawing-options stream
@@ -356,12 +356,12 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
   (stream-increment-cursor-position stream 10 0))
 
 (defclass tab-layout-pane (tab-layout)
-    ((header-pane :accessor tab-layout-header-pane
-		  :initarg :header-pane)
-     (header-display-function
-      :accessor header-display-function
-      :initarg :header-display-function
-      :initform 'default-display-tab-header))
+  ((header-pane :accessor tab-layout-header-pane
+                :initarg :header-pane)
+   (header-display-function
+    :accessor header-display-function
+    :initarg :header-display-function
+    :initform 'default-display-tab-header))
   (:documentation "A pure-lisp implementation of the tab-layout, this is
 the generic implementation chosen by the CLX frame manager automatically.
 Users should create panes for type TAB-LAYOUT, not TAB-LAYOUT-PANE, so
@@ -372,7 +372,7 @@ that the frame manager can customize the implementation."))
   (let ((old-page (tab-layout-enabled-page parent)))
     (unless (equal page old-page)
       (when old-page
-	(setf (sheet-enabled-p (tab-page-pane old-page)) nil)))
+        (setf (sheet-enabled-p (tab-page-pane old-page)) nil)))
     (when page
       (setf (sheet-enabled-p (tab-page-pane page)) t)))
   (call-next-method))
@@ -380,17 +380,17 @@ that the frame manager can customize the implementation."))
 (defun default-display-tab-header (tab-layout pane)
   (stream-increment-cursor-position pane 0 3)
   (draw-line* pane
-	      0
-	      17
+              0
+              17
               (1- (climi::pane-current-width pane))
-	      17
-	      :ink +black+)
+              17
+              :ink +black+)
   (mapc (lambda (page)
-	  (with-output-as-presentation
-	      (pane (tab-page-pane page)
-		    (tab-page-presentation-type page))
-	    (present page 'tab-page :stream pane)))
-	(tab-layout-pages tab-layout)))
+          (with-output-as-presentation
+              (pane (tab-page-pane page)
+                    (tab-page-presentation-type page))
+            (present page 'tab-page :stream pane)))
+        (tab-layout-pages tab-layout)))
 
 (defclass tab-bar-pane (application-pane)
   ()
@@ -405,12 +405,12 @@ that the frame manager can customize the implementation."))
     (dolist (page pages)
       (setf (sheet-enabled-p (tab-page-pane page)) (eq page current))))
   (let ((header
-	 (make-pane 'tab-bar-pane
-	  :display-time :command-loop
-	  :display-function
-	  (lambda (frame pane)
-	    (declare (ignore frame))
-	    (funcall (header-display-function instance) instance pane)))))
+         (make-pane 'tab-bar-pane
+          :display-time :command-loop
+          :display-function
+          (lambda (frame pane)
+            (declare (ignore frame))
+            (funcall (header-display-function instance) instance pane)))))
     (setf (tab-layout-header-pane instance) header)
     (sheet-adopt-child instance header)
     (setf (sheet-enabled-p header) t)))
@@ -428,16 +428,16 @@ that the frame manager can customize the implementation."))
 
 (defmethod allocate-space ((pane tab-layout-pane) width height)
   (let* ((header (tab-layout-header-pane pane))
-	 (y (space-requirement-height (compose-space header))))
+         (y (space-requirement-height (compose-space header))))
     (move-and-resize-sheet header 0 0 width y)
     (allocate-space header width y)
     (dolist (page (tab-layout-pages pane))
       (let ((child (tab-page-pane page)))
-	(move-and-resize-sheet child 0 y width (- height y))
-	(allocate-space child width (- height y))))))
+        (move-and-resize-sheet child 0 y width (- height y))
+        (allocate-space child width (- height y))))))
 
 (defmethod note-tab-page-changed
     ((layout tab-layout-pane) page)
   (redisplay-frame-pane (pane-frame layout)
-			(tab-layout-header-pane layout)
-			:force-p t))
+                        (tab-layout-header-pane layout)
+                        :force-p t))
