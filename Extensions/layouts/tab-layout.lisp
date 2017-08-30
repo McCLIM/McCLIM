@@ -35,6 +35,8 @@
 
 (defpackage #:clim-tab-layout
   (:use #:clim #:clim-lisp)
+  (:import-from #:alexandria
+                #:when-let)
   (:export #:tab-layout
            #:tab-layout-pane
            #:tab-layout-pages
@@ -188,7 +190,7 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
 
 (defmethod sheet-disown-child :before ((parent tab-layout) child &key errorp)
   (declare (ignore errorp))
-  (alexandria:when-let ((page (sheet-to-page child)))
+  (when-let ((page (sheet-to-page child)))
     (setf (slot-value parent 'pages) (remove page (tab-layout-pages parent))
           (tab-page-tab-layout page) nil)
     (when (eq page (tab-layout-enabled-page parent))
@@ -211,23 +213,20 @@ be returned."
 
 (defmethod (setf tab-page-title) :after (newval (page tab-page))
   (declare (ignore newval))
-  (let ((layout (tab-page-tab-layout page)))
-    (when layout
-      (note-tab-page-changed layout page))))
+  (when-let ((layout (tab-page-tab-layout page)))
+    (note-tab-page-changed layout page)))
 
 (defmethod (setf tab-page-drawing-options) :after (newval (page tab-page))
   (declare (ignore newval))
-  (let ((layout (tab-page-tab-layout page)))
-    (when layout
-      (note-tab-page-changed layout page))))
+  (when-let ((layout (tab-page-tab-layout page)))
+    (note-tab-page-changed layout page)))
 
 (defmethod note-tab-page-changed ((layout tab-layout) page)
   nil)
 
 (defun note-tab-page-enabled (page)
-  (let ((callback (tab-page-enabled-callback page)))
-    (when callback
-      (funcall callback page))))
+  (when-let ((callback (tab-page-enabled-callback page)))
+    (funcall callback page)))
 
 
 ;;; convenience functions:
