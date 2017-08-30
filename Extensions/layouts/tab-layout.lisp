@@ -302,6 +302,8 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 (define-presentation-to-command-translator switch-via-tab-button
     (tab-page com-switch-to-tab-page clim:global-command-table
               :gesture :select
+              :tester ((object)
+                       (not (sheet-enabled-p (tab-page-pane object))))
               :documentation "Switch to this page"
               :pointer-documentation "Switch to this page")
     (object)
