@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; --------------------------------------------------------------------
@@ -78,10 +78,10 @@ specialized on, removing duplicates"
 ;; class specializer for which no prototype instance is available.
 (defun compute-applicable-methods-from-specializers (gf specializers)
   (if (every #'classp specializers)
-      (compute-applicable-methods-using-classes gf specializers)
+      (c2mop:compute-applicable-methods-using-classes gf specializers)
       (let ((instances
              (mapcar (lambda (s)
-                       (cond ((classp s) 
+                       (cond ((classp s)
                               ;; Implementation-dependent whether prototypes for
                               ;; built-in classes (like integer, t) are available.
                               (multiple-value-bind (prot err)
@@ -148,7 +148,7 @@ specialized on, removing duplicates"
 
 (defun maybe-find-gf (name)
   "Search for the generic function named by the user"
-  (ignore-errors 
+  (ignore-errors
     (let ((sym (read-from-string name)))
       (and sym
            (fboundp sym)
@@ -203,7 +203,7 @@ specialized on, removing duplicates"
                    :background +white+
                    :text-style (make-text-style :sans-serif :roman :large))
    ;; Empty vertical layout pane where option-panes for arguments are added
-    (arg-pane :vrack-pane)    
+    (arg-pane :vrack-pane)
    ;; Blank pane where the program can render output
     (output-pane :application-pane
                  :text-style (make-text-style :sans-serif :roman :normal)
@@ -260,7 +260,7 @@ available for that argument."
     ;; option-panes for each specializer argument.
     (let ((fm (frame-manager *application-frame*)))
       (with-look-and-feel-realization (fm *application-frame*)
-        (sheet-adopt-child container            
+        (sheet-adopt-child container
           (make-pane 'table-pane :spacing 8    ;; McCLIM issue: spacing initarg
             :contents (loop for index from 0 by 1
                             for curval in arg-types
@@ -323,7 +323,7 @@ available for that argument."
            (methods (compute-applicable-methods-from-specializers gf (arg-types frame)))
            (combination (c2mop:generic-function-method-combination gf))
            (effective-methods (c2mop:compute-effective-method gf combination methods))
-           (serial-methods (walk-em-form effective-methods)))      
+           (serial-methods (walk-em-form effective-methods)))
       ;; Print the header
       (fresh-line)
       (with-drawing-options (pane :text-style (make-text-style :sans-serif :bold :large)
