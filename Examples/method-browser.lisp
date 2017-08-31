@@ -78,7 +78,7 @@ specialized on, removing duplicates"
 ;; class specializer for which no prototype instance is available.
 (defun compute-applicable-methods-from-specializers (gf specializers)
   (if (every #'classp specializers)
-      (compute-applicable-methods-using-classes gf specializers)
+      (c2mop:compute-applicable-methods-using-classes gf specializers)
       (let ((instances
              (mapcar (lambda (s)
                        (cond ((classp s)
