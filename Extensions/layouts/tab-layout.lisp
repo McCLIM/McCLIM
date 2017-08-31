@@ -422,8 +422,8 @@ that the frame manager can customize the implementation."))
            (mapcar #'compose-space (sheet-children pane))
            :initial-value
            (make-space-requirement
-            :min-width  0 :width  1 :max-width  clim:+fill+
-            :min-height 0 :height 1 :max-height clim:+fill+))))
+            :min-width  0 :width  1 :max-width  +fill+
+            :min-height 0 :height 1 :max-height +fill+))))
 
 (defmethod allocate-space ((pane tab-layout-pane) width height)
   (let* ((header (tab-layout-header-pane pane))
