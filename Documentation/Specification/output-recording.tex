@@ -866,10 +866,10 @@ All output recording streams must implement a method for
 
 
 \Defmacro {with-output-to-output-record} {(stream \optional record-type record
-                                           \rest initargs))
+                                           \rest initargs)
                                           \body body}
 
-This is identical to \cl{with-new-output-record} except that the new output record
+This is identical to \cl{with-new-output-record}, except that the new output record
 is not inserted into the output record hierarchy, and the text cursor position
 of \arg{stream} is initially bound to $(0,0)$.
 
@@ -878,7 +878,7 @@ of \arg{stream} is initially bound to $(0,0)$.
 passed to \cl{make-instance} when the new output record is created.
 
 If \arg{record} is supplied, it is a variable that will be bound to the new
-output record while body is evaluated.
+output record while \arg{body} is evaluated.
 
 \cl{with-output-to-output-record} returns the output record it creates.
 
