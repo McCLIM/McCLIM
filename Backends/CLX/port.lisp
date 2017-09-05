@@ -213,14 +213,25 @@
                                       :map nil
                                       :width (round-coordinate (space-requirement-width q))
                                       :height (round-coordinate (space-requirement-height q))
-                                      :event-mask '(:key-press :key-release))))
+                                      :event-mask '(:key-press :key-release)))
+	  (name (frame-pretty-name frame)))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
-      (setf (xlib:wm-name window) (frame-pretty-name frame))
-      (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
+      (setf (xlib:wm-name window) name)
+      (unless (exactly-encodable-as-string-p name)
+        (xlib:change-property window
+                              :_NET_WM_NAME
+                              (utf8-string-encode (map 'vector #'char-code name))
+                              :UTF8_STRING 8))
+      (setf (xlib:wm-icon-name window) name)
+      (unless (exactly-encodable-as-string-p name)
+        (xlib:change-property window
+                              :_NET_WM_ICON_NAME
+                              (utf8-string-encode (map 'vector #'char-code name))
+                              :UTF8_STRING 8))
       (xlib:set-wm-class
        window
        (string-downcase (frame-name frame))
-       (string-capitalize (string-downcase (frame-name frame))))
+       (string-capitalize (frame-name frame)))
       (setf (xlib:wm-protocols window) `(:wm_delete_window))
       (xlib:change-property window
                             :WM_CLIENT_LEADER (list (xlib:window-id window))
