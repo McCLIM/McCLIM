@@ -1,8 +1,6 @@
-
 ;;; CLIM-Examples depends on having at least one backend loaded.
 (asdf:defsystem #:clim-examples
-    :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image)
-    :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image #:mcclim-bezier)
+    :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image #:mcclim-bezier #:closer-mop)
     :components
     ((:file "package")
      (:file "calculator")
@@ -33,10 +31,12 @@
      (:file "bordered-output-examples")
      (:file "misc-tests")
      (:file "drawing-tests")
+     (:file "render-image-tests")
      (:file "image-viewer")
      (:file "sliderdemo")
      (:file "accepting-values")
-     (:file "accepting-values-test")))
+     (:file "accepting-values-test")
+     (:file "graph-toy")))
 
 (asdf:defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)

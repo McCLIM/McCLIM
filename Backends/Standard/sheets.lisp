@@ -117,7 +117,6 @@ that this might be different from the sheet's native region."
    (port-disable-sheet (port sheet) sheet)))
 
 (defmethod %note-mirrored-sheet-child-enabled :after ((sheet standard-mirrored-sheet-mixin) child)
-  (declare (ignore sheet))
   (dispatch-repaint sheet (sheet-native-region child)))
 
 (defmethod %note-mirrored-sheet-child-disabled :after ((sheet standard-mirrored-sheet-mixin) child)

@@ -22,7 +22,7 @@
 (in-package #:clim-internals)
 
 ;;; Example gadget definition.
-(defclass slider-test-pane (standard-gadget) ())
+(defclass slider-test-pane (basic-gadget) ())
 
 (defmethod handle-repaint ((pane slider-test-pane) region)
   (declare (ignore region))

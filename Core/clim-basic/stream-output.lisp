@@ -316,14 +316,11 @@
               (seos-write-string stream string split end))))))))
 
 (defgeneric %note-stream-end-of-page (stream action new-height)
-  (:method (stream acrion new-height)
+  (:method (stream action new-height)
     nil))
 
 (defun seos-write-newline (stream)
   (let ((medium       (sheet-medium stream))
-        (%view-height (bounding-rectangle-height
-                       (or (pane-viewport stream)
-                           stream)))
         (view-height  (bounding-rectangle-height stream)))
     (with-slots (baseline vspace) stream
       (multiple-value-bind (cx cy) (stream-cursor-position stream)

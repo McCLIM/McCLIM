@@ -1,6 +1,6 @@
 (in-package :clim-clx-fb)
 
-(defclass clx-fb-mirrored-sheet-mixin (mcclim-render::image-sheet-mixin
+(defclass clx-fb-mirrored-sheet-mixin (image-sheet-mixin
 				       standard-single-mirrored-sheet-mixin)
   ())
 
@@ -12,28 +12,12 @@
   (with-slots (xmirror) mirror
     xmirror))
 
-(defmethod sheet-direct-xmirror ((mirror mcclim-render::image-mirror-mixin))
+(defmethod sheet-direct-xmirror ((mirror image-mirror-mixin))
     nil)
 
 ;;;
 ;;; Updating
 ;;;
-
-(defmethod repaint-sheet :around ((sheet clx-fb-mirrored-sheet-mixin) region)
-  (when (sheet-mirror sheet)
-    (with-slots (updating-p) (sheet-mirror sheet)
-      (let ((old-updating-p updating-p))
-	(setf updating-p t)
-	(call-next-method)
-	(setf updating-p old-updating-p)))))
-
-(defmethod allocate-space :around ((sheet clx-fb-mirrored-sheet-mixin) width height)
-  (when (sheet-mirror sheet)
-    (with-slots (updating-p) (sheet-mirror sheet)
-      (let ((old-updating-p updating-p))
-	(setf updating-p t)
-	(call-next-method)
-	(setf updating-p old-updating-p)))))
 
 ;;;;; this is evil.
 (defmethod allocate-space :after ((sheet clx-fb-mirrored-sheet-mixin) width height)

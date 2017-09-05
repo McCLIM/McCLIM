@@ -34,10 +34,10 @@
   (format-graph-from-roots
    (list (find-class 'number))
    (lambda (object stream)
-     (present (clim-mop:class-name object)
+     (present (class-name object)
 	      (presentation-type-of object)
 	      :stream stream))
-   #'clim-mop:class-direct-subclasses
+   #'c2mop:class-direct-subclasses
    :stream pane))
 
 (defun record-parent-chain (record)

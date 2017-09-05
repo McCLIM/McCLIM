@@ -1,10 +1,10 @@
 ;;; -*- Mode: Lisp; Package: CLIM-CLX -*-
 
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2014 by 
+;;;  (c) copyright 2000, 2014 by
 ;;;           Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 ;;;  (c) copyright 1998,1999 by Gilbert Baumann
@@ -20,8 +20,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-clx)
@@ -49,7 +49,8 @@
 (defclass clx-medium (basic-medium)
   ((gc :initform nil)
    (picture :initform nil)
-   (last-medium-device-region :initform nil)
+   (last-medium-device-region :initform nil
+			      :accessor last-medium-device-region)
    (clipping-region-tmp :initform (vector 0 0 0 0)
      :documentation "This object is reused to avoid consing in the
  most common case when configuring the clipping region.")
@@ -212,7 +213,7 @@
 
 ;;; From Tagore Smith <tagore@tagoresmith.com>
 
-(defmethod medium-gcontext ((medium clx-medium) 
+(defmethod medium-gcontext ((medium clx-medium)
 			    (ink climi::standard-flipping-ink))
   (let* ((gc (medium-gcontext medium (medium-background medium)))
 	 (port (port medium))
@@ -333,7 +334,7 @@
                             (loop for i from 0 below num-bytes collect i)))))
 
 (defun generate-indexed-converter-expr (rgb-masks byte-order num-bytes)
-  `(lambda (image-array converted-data mask-data width height inks)  
+  `(lambda (image-array converted-data mask-data width height inks)
     (declare (optimize (speed 3)
                        (safety 0)
                        (space 0)
@@ -346,7 +347,7 @@
                         (mask-bitcursor 1))
                    (declare (type (unsigned-byte 9) mask-bitcursor)
                     (type xlib:array-index mask-index index))
-                   
+
                    (multiple-value-bind (red-map green-map blue-map opacity-map) (inks-to-rgb inks)
                      (dotimes (y height)
                        (unless (= 1 mask-bitcursor)
@@ -360,7 +361,7 @@
 					   mask-bitcursor)))
                            (let ((red   (elt red-map ink-index))
                                  (green (elt green-map ink-index))
-                                 (blue  (elt blue-map ink-index)))                             
+                                 (blue  (elt blue-map ink-index)))
                              ,',(generate-pixel-assignments 'converted-data 'index
                                                             (mapcar #'list '(red green blue) rgb-masks)
                                                             num-bytes byte-order))
@@ -391,10 +392,10 @@
                      (mask-bitcursor 1))
                  (declare (type (unsigned-byte 9) mask-bitcursor)
                           (type xlib:array-index mask-index))
-                 
+
                  (multiple-value-bind (red-map green-map blue-map opacity-map) (inks-to-rgb inks)
                    (declare (ignore red-map green-map blue-map))
-                   
+
                    (dotimes (y height)
                      (unless (= 1 mask-bitcursor)
                        (setf mask-bitcursor 1
@@ -429,15 +430,15 @@
                          (xlib:visual-info-blue-mask visual-info))))
     (ensure-indexed-converter rgb-masks byte-order bytes-per-pixel)))
 
-(defparameter *typical-pixel-formats* 
+(defparameter *typical-pixel-formats*
   '(((#xFF0000 #xFF00 #xFF) :LSBFIRST 4)
     ((#xFF0000 #xFF00 #xFF) :MSBFIRST 4))
   "This is a table of the most likely pixel formats. Converters for
-these should be compiled in advance. Compiling the indexed->rgba 
+these should be compiled in advance. Compiling the indexed->rgba
 converter in advance will eliminate the pause observable the first
 time an indexed pattern is drawn.")
 
-(dolist (format *typical-pixel-formats*)  
+(dolist (format *typical-pixel-formats*)
   (apply 'ensure-indexed-converter format))
 
 (defun fill-pixmap-indexed (visual-info depth byte-order array pm pm-gc mask mask-gc w h inks)
@@ -452,16 +453,16 @@ time an indexed pattern is drawn.")
                                 :element-type '(unsigned-byte 8)
                                 :initial-element #xff))
          (pixel-converter nil))
-         
+
     (if (and bytes-per-pixel
              (member byte-order '(:lsbfirst :msbfirst))
-             (setf pixel-converter (visual-get-indexed-converter 
+             (setf pixel-converter (visual-get-indexed-converter
                                     visual-info byte-order bytes-per-pixel)))
         ;; Fast path - Image upload
         (let ((converted-data (make-array (* bytes-per-pixel (array-total-size array)) :element-type 'xlib:card8)))
           ;; Fill the pixel arrays
           (funcall pixel-converter array converted-data mask-data w h inks)
-    
+
           ;; Create an xlib "image" and copy it to our pixmap.
           ;; I do this because I'm not smart enough to operate xlib:put-raw-image.
           (let ((image (xlib:create-image :bits-per-pixel (* 8 bytes-per-pixel) :depth depth
@@ -471,20 +472,20 @@ time an indexed pattern is drawn.")
             (xlib:put-image (pixmap-xmirror pm) pm-gc image
                             :x 0 :y 0
                             :width w :height h)))
-        
+
         ;; Fallback for unsupported visual, plotting pixels
         (progn
           (dotimes (y h)
             (dotimes (x w)
               (let ((ink (elt inks (aref array y x))))
-                (unless (eq ink +transparent-ink+) 
+                (unless (eq ink +transparent-ink+)
                   (draw-point* pm x y :ink ink)))))
           (convert-indexed->mask array mask-data w h inks)))
 
     ;; We can use image upload for the mask in either case.
     (let ((mask-image (xlib:create-image :bits-per-pixel 1 :depth 1
                                          :bit-lsb-first-p t
-                                         :byte-lsb-first-p t                                          
+                                         :byte-lsb-first-p t
                                          :width w :height h
                                          :data mask-data)))
       (xlib:put-image mask mask-gc mask-image
@@ -521,7 +522,7 @@ time an indexed pattern is drawn.")
 
       (xlib:draw-rectangle mask mask-gc 0 0 w h t)
       (setf (xlib:gcontext-foreground mask-gc) 0)
-      
+
       (let ((gc (xlib:create-gcontext :drawable drawable)))
         (setf (xlib:gcontext-fill-style gc) :tiled
               (xlib:gcontext-tile gc) (port-lookup-mirror (port pm) pm)
@@ -534,13 +535,13 @@ time an indexed pattern is drawn.")
         (let ((byte-order (xlib:display-byte-order display))
               ;; Hmm. Pixmaps are not windows, so you can't query their visual.
               ;; We'd like to draw to pixmaps as well as windows, so use the
-              ;; depth and visual of the screen root, and hope this works.              
+              ;; depth and visual of the screen root, and hope this works.
               ;(visual-info (xlib:window-visual-info drawable))
               (visual-info (xlib:visual-info display (xlib:screen-root-visual screen)))
               (depth (xlib:screen-root-depth screen))
               (*print-base* 16))
           (fill-pixmap-indexed visual-info depth byte-order array pm pm-gc mask mask-gc w h inks))
-          
+
         (xlib:free-gcontext mask-gc)
         (xlib:free-gcontext pm-gc)
         gc))))
@@ -597,9 +598,9 @@ time an indexed pattern is drawn.")
 ;;; coming from and kill them at the source...
 #-nil
 (defun clipping-region->rect-seq (clipping-region)
-  (typecase clipping-region 
+  (typecase clipping-region
     (area (multiple-value-list (region->clipping-values clipping-region)))
-    (t (loop 
+    (t (loop
           for region in (nreverse (mapcan
                                    (lambda (v) (unless (eq v +nowhere+) (list v)))
                                    (region-set-regions clipping-region
@@ -676,7 +677,7 @@ time an indexed pattern is drawn.")
                              (to-drawable pixmap) to-x to-y)
   (xlib:copy-area (pixmap-xmirror from-drawable)
                   (medium-gcontext (sheet-medium (slot-value to-drawable 'sheet))
-                                   +background-ink+)              
+                                   +background-ink+)
                   (round-coordinate from-x) (round-coordinate from-y)
                   (round width) (round height)
                   (pixmap-xmirror to-drawable)
@@ -834,6 +835,9 @@ time an indexed pattern is drawn.")
                     b (min #xffff (max 0 (round (* #xffff a b))))
                     a (min #xffff (max 0 (round (* #xffff a)))))
               (let ((picture (clx-medium-picture medium)))
+		(xlib::%render-change-picture-clip-rectangles picture
+							      (clipping-region->rect-seq
+							       (last-medium-device-region medium)))
                 (xlib:render-fill-rectangle picture :over (list r g b a)
                                             (max #x-8000 (min #x7FFF x1))
                                             (max #x-8000 (min #x7FFF y1))
@@ -982,7 +986,7 @@ time an indexed pattern is drawn.")
           (setq char (char-code (char src i)))
           (if (or (< char min-char-index) (> char max-char-index))
               (progn
-                (warn "Character ~S not representable in font ~S" 
+                (warn "Character ~S not representable in font ~S"
                       (char src i) afont)
                 (return i))
               (setf (aref dst j) char)))
@@ -993,9 +997,9 @@ time an indexed pattern is drawn.")
 	     i)
           (declare (type xlib:array-index i j))
           (setq elt (elt src i))
-          (when (characterp elt) 
+          (when (characterp elt)
             (setq elt (char-code elt)))
-          (if (or (not (integerp elt)) 
+          (if (or (not (integerp elt))
                   (< elt min-char-index)
                   (> elt max-char-index))
               (progn
@@ -1018,44 +1022,47 @@ time an indexed pattern is drawn.")
   (when (= start end)
     (return-from text-size (values 0 0 0 0 0)))
 
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (let ((xfont (text-style-to-X-font (port medium) text-style)))
-    (let ((position-newline
-           (macrolet ((p (type)
-                        `(locally (declare (type ,type string))
-                           (position #\newline string :start start :end end))))
-             (typecase string
-               (simple-base-string (p simple-base-string))
-               #+SBCL (sb-kernel::simple-character-string (p sb-kernel::simple-character-string))
-               #+SBCL (sb-kernel::character-string (p sb-kernel::character-string))
-               (simple-string (p simple-string))
-               (string (p string))))))
-      (cond ((not (null position-newline))
-             (multiple-value-bind (width ascent descent left right
-                                         font-ascent font-descent direction
-                                         first-not-done)
-                 (font-text-extents xfont string
-                                    :start start :end position-newline
-                                    :translate #'translate)
-               (declare (ignorable left right
-                                   font-ascent font-descent
-                                   direction first-not-done))
-               (multiple-value-bind (w h x y baseline)
-                   (text-size medium string :text-style text-style
-                              :start (1+ position-newline) :end end)
-                 (values (max w width) (+ ascent descent h)
-                         x (+ ascent descent y) (+ ascent descent baseline)))))
-            (t
-             (multiple-value-bind (width ascent descent left right
-                                         font-ascent font-descent direction
-                                         first-not-done)
-                 (font-text-extents xfont string
-                                    :start start :end end
-                                    :translate #'translate)
-               (declare (ignorable left right
-                                   font-ascent font-descent
-                                   direction first-not-done))
-               (values width (+ ascent descent) width 0 ascent)) )))) )
+  (let* ((medium-text-style (medium-merged-text-style medium))
+	 (text-style (if text-style
+			 (merge-text-styles text-style medium-text-style)
+			 medium-text-style))
+	 (xfont (text-style-to-X-font (port medium) text-style))
+	 (position-newline
+          (macrolet ((p (type)
+                       `(locally (declare (type ,type string))
+                          (position #\newline string :start start :end end))))
+            (typecase string
+              (simple-base-string (p simple-base-string))
+              #+SBCL (sb-kernel::simple-character-string (p sb-kernel::simple-character-string))
+              #+SBCL (sb-kernel::character-string (p sb-kernel::character-string))
+              (simple-string (p simple-string))
+              (string (p string))))))
+    (cond ((not (null position-newline))
+           (multiple-value-bind (width ascent descent left right
+                                       font-ascent font-descent direction
+                                       first-not-done)
+               (font-text-extents xfont string
+                                  :start start :end position-newline
+                                  :translate #'translate)
+             (declare (ignorable left right
+                                 font-ascent font-descent
+                                 direction first-not-done))
+             (multiple-value-bind (w h x y baseline)
+                 (text-size medium string :text-style text-style
+                            :start (1+ position-newline) :end end)
+               (values (max w width) (+ ascent descent h)
+                       x (+ ascent descent y) (+ ascent descent baseline)))))
+          (t
+           (multiple-value-bind (width ascent descent left right
+                                       font-ascent font-descent direction
+                                       first-not-done)
+               (font-text-extents xfont string
+                                  :start start :end end
+                                  :translate #'translate)
+             (declare (ignorable left right
+                                 font-ascent font-descent
+                                 direction first-not-done))
+             (values width (+ ascent descent) width 0 ascent)) ))) )
 
 (defmethod climi::text-bounding-rectangle*
     ((medium clx-medium) string &key text-style (start 0) end)
@@ -1180,7 +1187,7 @@ time an indexed pattern is drawn.")
 			       (max 0 (min #xffff (- max-x min-x)))
 			       (max 0 (min #xffff (- max-y min-y)))
 			       t))))))
-  
+
 (defmethod medium-beep ((medium clx-medium))
   (xlib:bell (clx-port-display (port medium))))
 
@@ -1204,4 +1211,3 @@ time an indexed pattern is drawn.")
 
 (defmethod climi::medium-invoke-with-possible-double-buffering (frame pane (medium clx-medium) continuation)
   (funcall continuation))
-

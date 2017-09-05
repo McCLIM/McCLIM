@@ -1,7 +1,7 @@
 (in-package :common-lisp-user)
 
 (defpackage :mcclim-raster-image
-    (:use :clim :clim-lisp :clim-backend)
+    (:use :clim :clim-lisp :clim-backend :mcclim-render)
     (:import-from :climi
 		  #:port-grafts
 		  #:updating-output-stream-mixin
@@ -16,15 +16,18 @@
 		  #:unmanaged-top-level-sheet-pane
 		  #:vbox-pane
 		  )
-    (:import-from :mcclim-render
+    (:import-from :mcclim-render-internals
 		  #:render-medium-mixin
 		  #:render-port-mixin
 		  #:image-mirror-image
 		  #:image-sheet-mixin
 		  #:image-mirror-mixin
 		  #:image-pixmap-mixin
-		  #:save-image-to-file
-		  #:save-image-to-stream
+                  #:%make-image
+                  #:image-mirror-image
+                  #:image-pattern
+		  ;;#:save-image-to-file
+		  ;;#:save-image-to-stream
 		  )
     (:import-from :mcclim-image
                   #:rgb-pattern
@@ -59,6 +62,7 @@
     (:export
      #:with-output-to-raster-image-stream
      #:with-output-to-rgb-pattern
+     #:with-output-to-image-pattern
      ))
 
 

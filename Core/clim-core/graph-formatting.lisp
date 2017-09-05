@@ -743,7 +743,7 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
   (with-text-style (*query-io* (make-text-style :sans-serif nil 10))
     (let ((*print-case* :downcase))
       (format-graph-from-roots
-       (list (clim-mop:find-class 'climi::basic-output-record))
+       (list (c2mop:find-class 'climi::basic-output-record))
        #'(lambda (x s)
            (progn ;;surrounding-output-with-border (s :shape :oval)
              (with-text-style (s (make-text-style nil
@@ -753,7 +753,7 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
                                                   nil))
                (prin1 (class-name x) s))))
        #'(lambda (x)
-           (clim-mop:class-direct-subclasses x))
+           (c2mop:class-direct-subclasses x))
        :generation-separation '(4 :line)
        :within-generation-separation '(2 :character)
        :stream *query-io*
@@ -783,9 +783,9 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
   (with-text-style (*query-io* (make-text-style :sans-serif nil 10))
     (let ((*print-case* :downcase))
       (format-graph-from-roots
-       (list (clim-mop:find-class 'standard-graph-output-record)
-             ;;(clim-mop:find-class 'climi::basic-output-record)
-             ;;(clim-mop:find-class 'climi::graph-output-record)
+       (list (c2mop:find-class 'standard-graph-output-record)
+             ;;(c2mop:find-class 'climi::basic-output-record)
+             ;;(c2mop:find-class 'climi::graph-output-record)
              
              )
        #'(lambda (x s)
@@ -796,7 +796,7 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
                                                 nil))
              (prin1 (class-name x) s)))
        #'(lambda (x)
-           (reverse(clim-mop:class-direct-superclasses x)))
+           (reverse(c2mop:class-direct-superclasses x)))
        ;; :duplicate-key #'(lambda (x) 't)
        :merge-duplicates t
        :graph-type :tree

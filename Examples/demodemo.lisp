@@ -80,6 +80,7 @@
                    (make-demo-button "Summation" 'summation)
                    (make-demo-button "Slider demo" 'sliderdemo:sliderdemo)
                    (make-demo-button "German Towns" 'town-example:town-example)
+                   (make-demo-button "Data Graph Toy" 'graph-toy)
                    ;; this demo invokes the debugger
                    #+ (or) (make-demo-button "Traffic lights" 'traffic-lights)))
                (labelling (:label "Tests")
@@ -95,6 +96,7 @@
                    (make-demo-button "Drawing Benchmark" 'drawing-benchmark)
                    (make-demo-button "Border Styles Test" 'bordered-output)
                    (make-demo-button "Misc. Tests" 'misc-tests)
+                   (make-demo-button "Render Image Tests" 'render-image-tests)
 		   (make-demo-button "Drawing Tests" 'drawing-tests)
                    (make-demo-button "Accepting Values Test"  'av-test)))))))))
 

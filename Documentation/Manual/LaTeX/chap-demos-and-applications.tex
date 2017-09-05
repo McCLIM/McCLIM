@@ -20,6 +20,21 @@ mentioned in the general installation instructions.
 Demos are meant to be run after loading the \texttt{clim-examples}
 system from the frame created with \texttt{(clim-demo:demodemo)}.
 
+The easiest way to try this is to use \emph{Quicklisp} library
+manager. Assuming that this is already setup, trying out the demos is
+straightforward:
+
+\begin{verbatim}
+(ql:quickload 'clim-examples)
+(clim-demo:demodemo)
+\end{verbatim}
+
+
+Alternatively, for the more courageous (which requires separately
+downloading dependencies and setting a local repository),
+\texttt{asdf} also works well starting from the McCLIM source code
+directory.
+
 \begin{verbatim}
 (asdf:load-system 'clim-examples)
 (clim-demo:demodemo)

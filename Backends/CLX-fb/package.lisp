@@ -3,7 +3,7 @@
 (in-package :common-lisp-user)
 
 (defpackage :clim-clx-fb
-    (:use :clim :clim-lisp :clim-backend :clim-clx)
+    (:use :clim :clim-lisp :clim-backend :clim-clx :mcclim-render-extensions)
   (:import-from :climi
                 #:+alt-key+
                 ;;
@@ -55,16 +55,17 @@
                 ;;
 		#:make-medium
                 )
-   (:import-from :mcclim-render
+   (:import-from :mcclim-render-internals
 		  #:render-medium-mixin
 		  #:render-port-mixin
 		  #:image-mirror-image
 		  #:image-sheet-mixin
 		  #:image-pixmap-mixin
+                  #:image-pixels
+                  #:image-pixmap-mixin
+                  #:image-mirror-mixin
+                  #:opticl-rgb-image-pixels
 		  )
-   (:import-from :mcclim-image
-                 #:image-data
-                 )
    (:import-from :clim-clx
 		 #:CLX-PORT-DISPLAY
 		 #:clx-medium

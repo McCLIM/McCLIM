@@ -120,35 +120,35 @@
 
 
 (labels ((present-instance-slots-text (thing stream)
-           (let* ((slots (clim-mop:class-slots (class-of thing)))
+           (let* ((slots (c2mop:class-slots (class-of thing)))
                   (width (loop for slot in slots
-                               maximizing (length (symbol-name (clim-mop:slot-definition-name slot))))))
+                               maximizing (length (symbol-name (c2mop:slot-definition-name slot))))))
              (loop for slot in slots
                    do (cond
-                        ((slot-boundp thing (clim-mop:slot-definition-name slot))
+                        ((slot-boundp thing (c2mop:slot-definition-name slot))
                          (format stream "      ~v@A: " width
-                                 (clim-mop:slot-definition-name slot))
-                         (clim:present (slot-value thing (clim-mop:slot-definition-name slot))
+                                 (c2mop:slot-definition-name slot))
+                         (clim:present (slot-value thing (c2mop:slot-definition-name slot))
                                        'clim:expression
                                        :stream stream)
                          (terpri stream))
                         (t
                          (format stream "      ~v@A: <unbound>~%" width
-                                 (clim-mop:slot-definition-name slot)))))))
+                                 (c2mop:slot-definition-name slot)))))))
        
          (present-instance-slots-clim (thing stream)
-           (let ((slots (clim-mop:class-slots (class-of thing))))
+           (let ((slots (c2mop:class-slots (class-of thing))))
              (clim:formatting-table (stream)
                (dolist (slot slots)
                  (clim:formatting-row (stream)
                    (clim:formatting-cell (stream :align-x :right)
-                     (clim:present (clim-mop:slot-definition-name slot)
+                     (clim:present (c2mop:slot-definition-name slot)
                                    'clim:symbol
                                    :stream stream)
                      (write-char #\: stream))
                    (clim:formatting-cell (stream)
-                     (if (slot-boundp thing (clim-mop:slot-definition-name slot))
-                         (clim:present (slot-value thing (clim-mop:slot-definition-name slot))
+                     (if (slot-boundp thing (c2mop:slot-definition-name slot))
+                         (clim:present (slot-value thing (c2mop:slot-definition-name slot))
                                        'clim:expression
                                        :stream stream)
                          (format stream "<unbound>"))))))))

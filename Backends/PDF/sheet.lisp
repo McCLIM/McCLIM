@@ -41,6 +41,7 @@
                                          file-stream
                                          &key device-type
                                               multi-page scale-to-fit
+                                              trim-page-to-output-size
                                               (orientation :portrait)
                                               header-comments)
   (let* ((port (find-port :server-path `(:pdf :stream ,file-stream)))
@@ -62,12 +63,24 @@
                (with-output-recording-options (stream :draw t :record nil)
                  (let ((pdf:*compress-streams* nil))
                    (pdf:with-document ()
-                     (pdf:with-page ()
-                       (let ((last-page (first (pdf-pages stream))))
-                         (dolist (page (reverse (pdf-pages stream)))
-                           (replay page stream)
-                           (unless (eql page last-page)
-                             (emit-new-page stream)))))
+                     (let ((last-page (first (pdf-pages stream))))
+                       (dolist (page (reverse (pdf-pages stream)))
+                         (let ((page-region (if trim-page-to-output-size
+                                                page
+                                                (sheet-region stream))))
+                           (let ((transform (make-pdf-transformation page-region
+                                                                     (orientation stream))))
+                             (multiple-value-bind (left top right bottom)
+                                 (bounding-rectangle* page-region)
+                               (pdf:with-page (:bounds
+                                               (if (eq orientation :landscape)
+                                                   (vector top left bottom right)
+                                                   (vector left top right bottom)))
+                                 (climi::letf (((sheet-native-transformation stream)
+                                                transform))
+                                   (replay page stream))))))
+                         (unless (eql page last-page)
+                           (emit-new-page stream))))
                      (pdf:write-document flexi-stream)))))))
       (destroy-port port))))
 

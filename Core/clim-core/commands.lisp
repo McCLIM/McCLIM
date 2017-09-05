@@ -1149,24 +1149,22 @@ examine the type of the command menu item to see if it is
       name-and-options
     (with-keywords-removed (options (:provide-output-destination-keyword))
       (if provide-output-destination-keyword
-	  (multiple-value-bind (required optional rest key key-supplied)
-	      (parse-lambda-list args)
-	    (declare (ignore required optional rest key))
-	    (let* ((destination-arg '(output-destination 'output-destination
-				      :default nil))
-		   (new-args (if key-supplied
-				 `(,@args ,destination-arg)
-				 `(,@args &key ,destination-arg))))
-	      (multiple-value-bind (decls new-body)
-		  (get-body-declarations body)
-		(with-gensyms (destination-continuation)
-		  `(%define-command (,func ,@options) ,new-args
-		     ,@decls
-		     (flet ((,destination-continuation ()
-			      ,@new-body))
-		       (declare (dynamic-extent #',destination-continuation))
-		       (invoke-with-standard-output #',destination-continuation
-						    output-destination)))))))
+          (let ((key-supplied (find '&key args)))
+            (let* ((destination-arg '(output-destination 'output-destination
+                                      :default nil))
+                   (new-args (if key-supplied
+                                 `(,@args ,destination-arg)
+                                 `(,@args &key ,destination-arg))))
+              (multiple-value-bind (decls new-body)
+                  (get-body-declarations body)
+                (with-gensyms (destination-continuation)
+                  `(%define-command (,func ,@options) ,new-args
+                     ,@decls
+                     (flet ((,destination-continuation ()
+                              ,@new-body))
+                       (declare (dynamic-extent #',destination-continuation))
+                       (invoke-with-standard-output #',destination-continuation
+                                                    output-destination)))))))
 	  `(%define-command (,func ,@options)
 			    ,args
 	     ,@body)))))

@@ -2822,12 +2822,12 @@ assoc'd with the things to replace them."
                 ;; I am time and again saved by the MOP as I code
                 ;; myself into a corner.
                 (let ((class (class-of tree)))
-                  (dolist (slotd (clim-mop:class-slots class))
-                    (when (clim-mop:slot-boundp-using-class class tree slotd)
-                      (let* ((old (clim-mop:slot-value-using-class class tree slotd))
+                  (dolist (slotd (c2mop:class-slots class))
+                    (when (c2mop:slot-boundp-using-class class tree slotd)
+                      (let* ((old (c2mop:slot-value-using-class class tree slotd))
                              (new (circle-subst old-new-alist old)))
                         (unless (eq old new)
-                          (setf (clim-mop:slot-value-using-class
+                          (setf (c2mop:slot-value-using-class
                                  class tree slotd)
                                 new)))))))
                ((vectorp tree)
@@ -3303,9 +3303,9 @@ of the `lambda-list' object."
                  ;; Find initargs and values from class. This only
                  ;; works because we know the lambda-list and
                  ;; parameter slots all have initargs.
-                 (loop for slot in (clim-mop:class-slots (class-of object))
-                    for slot-initarg = (first (clim-mop:slot-definition-initargs slot))
-                    for slot-name = (clim-mop:slot-definition-name slot)
+                 (loop for slot in (c2mop:class-slots (class-of object))
+                    for slot-initarg = (first (c2mop:slot-definition-initargs slot))
+                    for slot-name = (c2mop:slot-definition-name slot)
                     for slot-boundp = (slot-boundp object slot-name)
                     when (and slot-initarg slot-boundp)
                     nconc (list slot-initarg (slot-value object slot-name))))))

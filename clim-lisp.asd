@@ -1,18 +1,15 @@
 
 (defsystem #:clim-lisp
   :serial t
-  :depends-on (#:alexandria #:trivial-gray-streams #+ (or)#:log4cl)
+  :depends-on (#:alexandria
+               #:trivial-gray-streams
+               #:closer-mop
+               #+(or) #:log4cl)
   :components (;; First possible patches
                (:file "patch")
                (:module "Lisp-Dep"
                         :components
-                        (#+(or cmu scl excl sbcl openmcl lispworks clisp ecl)
-                           (:file   #+cmu       "fix-cmu"
-                                    #+scl       "fix-scl"
-                                    #+excl      "fix-acl"
-                                    #+sbcl      "fix-sbcl"
-                                    #+openmcl   "fix-openmcl"
-                                    #+lispworks "fix-lispworks"
-                                    #+clisp     "fix-clisp"
-                                    #+ecl       "fix-ecl")))
+                        (#+(or excl clisp)
+                           (:file   #+excl      "fix-acl"
+                                    #+clisp     "fix-clisp")))
                (:file "package")))

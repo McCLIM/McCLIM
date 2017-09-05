@@ -13,7 +13,8 @@
               ,@body)
 	    (,exit-fn (sheet stream)
               (declare (ignorable stream))
-	      (save-image-to-stream (image-mirror-image (sheet-mirror sheet)) ,stream ,format))
+	      (write-image (image-mirror-image (sheet-mirror sheet)) ,stream
+                           :format ,format))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore sheet stream))
 	      nil))
@@ -34,7 +35,8 @@
 		,@body)
 	      (,exit-fn (sheet stream)
 		(declare (ignore stream))
-		(save-image-to-file (image-mirror-image (sheet-mirror sheet) ,file (extract-format ,file))))
+		(write-image (image-mirror-image (sheet-mirror sheet) ,file
+                                                :format (extract-format ,file))))
 	      (,enter-fn (sheet stream)
 		(declare (ignore sheet stream))
 		nil))
@@ -53,11 +55,13 @@
               ,@body)
 	    (,exit-fn (sheet stream)
 	      (declare (ignore stream))
-	      (mcclim-render::coerce-to-clim-rgb-image (mcclim-render::image-mirror-image (sheet-mirror sheet))))
+	      (coerce-image
+               (image-mirror-image (sheet-mirror sheet))
+               'mcclim-image::rgb-image))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore stream))
 	      (when ,image
-                (setf (mcclim-render::image-mirror-image sheet) ,image))))
+                (setf (image-mirror-image sheet) ,image))))
        (declare (dynamic-extent #',cont))
        (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn 
 					   :rgb-image
@@ -68,6 +72,33 @@
 				      &body body)
   `(make-instance 'rgb-pattern
 		  :image (with-output-to-rgb-image
+			     (,stream-var nil ,@options)
+			   ,@body)))
+
+(defmacro with-output-to-image ((stream-var image &rest options)
+                                &body body)
+  (let ((cont (gensym))
+	(exit-fn (gensym))
+	(enter-fn (gensym)))
+    `(flet ((,cont (,stream-var)
+              ,@body)
+	    (,exit-fn (sheet stream)
+	      (declare (ignore stream))
+              (image-mirror-image (sheet-mirror sheet)))
+	    (,enter-fn (sheet stream)
+	      (declare (ignore stream))
+	      (when ,image
+                (setf (image-mirror-image sheet) ,image))))
+       (declare (dynamic-extent #',cont))
+       (invoke-with-output-to-raster-image #',cont #',enter-fn #',exit-fn
+					   :rgb-image
+					   :rgb-image
+					   ,@options))))
+
+(defmacro with-output-to-image-pattern ((stream-var &rest options)
+				      &body body)
+  `(make-instance 'image-pattern
+		  :image (with-output-to-image
 			     (,stream-var nil ,@options)
 			   ,@body)))
 
