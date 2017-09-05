@@ -2067,7 +2067,7 @@ order to produce a double-click")
                (value (min (- (nth-value 0 (transform-position
                                             (sheet-transformation scrollee) 0 0)))
                            max-value)))
-          (setf (scroll-bar-values vscrollbar)
+          (setf (scroll-bar-values hscrollbar)
                 (values min-value max-value thumb-size value))))
       ;;
       (when vscrollbar
