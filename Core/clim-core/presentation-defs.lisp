@@ -380,28 +380,30 @@ otherwise return false."
     (type-key parameters options object type stream view
      &key &allow-other-keys))
 
-(defun present (object &optional (type (presentation-type-of object))
-                &key
-                (stream *standard-output*)
-                (view (stream-default-view stream))
-                modifier
-                acceptably
-                (for-context-type type)
-                single-box
-                (allow-sensitive-inferiors t)
-                (sensitive t)
-                (record-type 'standard-presentation))
-  (let* ((real-type (expand-presentation-type-abbreviation type))
-         (context-type (if (eq for-context-type type)
-                           real-type
-                           (expand-presentation-type-abbreviation
-                            for-context-type))))
-    (stream-present stream object real-type
-                    :view view :modifier modifier :acceptably acceptably
-                    :for-context-type context-type :single-box single-box
-                    :allow-sensitive-inferiors allow-sensitive-inferiors
-                    :sensitive sensitive
-                    :record-type record-type)))
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defun present (object &optional (type (presentation-type-of object))
+                         &key
+                           (stream *standard-output*)
+                           (view (stream-default-view stream))
+                           modifier
+                           acceptably
+                           (for-context-type type)
+                           single-box
+                           (allow-sensitive-inferiors t)
+                           (sensitive t)
+                           (record-type 'standard-presentation))
+    (let* ((real-type (expand-presentation-type-abbreviation type))
+           (context-type (if (eq for-context-type type)
+                             real-type
+                             (expand-presentation-type-abbreviation
+                              for-context-type))))
+      (stream-present stream object real-type
+                      :view view :modifier modifier :acceptably acceptably
+                      :for-context-type context-type :single-box single-box
+                      :allow-sensitive-inferiors allow-sensitive-inferiors
+                      :sensitive sensitive
+                      :record-type record-type))))
 
 (defgeneric stream-present (stream object type
                             &key view modifier acceptably for-context-type
@@ -451,32 +453,34 @@ otherwise return false."
    :acceptably acceptably :for-context-type for-context-type)
   nil)
 
-(defun present-to-string (object &optional (type (presentation-type-of object))
-                          &key (view +textual-view+)
-                          acceptably
-                          (for-context-type type)
-                          (string nil stringp)
-                          (index 0 indexp))
-  (let* ((real-type (expand-presentation-type-abbreviation type))
-         (context-type (if (eq for-context-type type)
-                           real-type
-                           (expand-presentation-type-abbreviation
-                            for-context-type))))
-    (when (and stringp indexp)
-      (setf (fill-pointer string) index))
-    (flet ((do-present (s)
-             (stream-present s object real-type
-                             :view view :acceptably acceptably
-                             :for-context-type context-type)))
-      (declare (dynamic-extent #'do-present))
-      (let ((result (if stringp
-                         (with-output-to-string (stream string)
-                           (do-present stream))
-                         (with-output-to-string (stream)
-                           (do-present stream)))))
-        (if stringp
-            (values string (fill-pointer string))
-            result)))))
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defun present-to-string (object &optional (type (presentation-type-of object))
+                                   &key (view +textual-view+)
+                                        acceptably
+                                        (for-context-type type)
+                                        (string nil stringp)
+                                        (index 0 indexp))
+    (let* ((real-type (expand-presentation-type-abbreviation type))
+           (context-type (if (eq for-context-type type)
+                             real-type
+                             (expand-presentation-type-abbreviation
+                              for-context-type))))
+      (when (and stringp indexp)
+        (setf (fill-pointer string) index))
+      (flet ((do-present (s)
+               (stream-present s object real-type
+                               :view view :acceptably acceptably
+                               :for-context-type context-type)))
+        (declare (dynamic-extent #'do-present))
+        (let ((result (if stringp
+                          (with-output-to-string (stream string)
+                            (do-present stream))
+                          (with-output-to-string (stream)
+                            (do-present stream)))))
+          (if stringp
+              (values string (fill-pointer string))
+              result))))))
 
 ;;; I believe this obsolete... --moore
 (defmethod presentation-replace-input
@@ -1290,7 +1294,7 @@ protocol retrieving gestures from a provided string."))
                                                   default)
   (let ((read-result (accept-using-read stream type)))
     (if (and (null read-result) default) 
-        (values default type)
+        (values default default-type)
         (values read-result type))))
 
 (define-presentation-type keyword () :inherit-from 'symbol)
@@ -1392,7 +1396,7 @@ protocol retrieving gestures from a provided string."))
   (let ((*read-base* base)
          (read-result (accept-using-read stream type)))
     (if (and (null read-result) default) 
-        (values default type)
+        (values default default-type)
         (values read-result type))))
 
 ;;; Define a method that will do the comparision for all real types.  It's
@@ -1594,8 +1598,8 @@ protocol retrieving gestures from a provided string."))
   (let ((pathname (if (equal object #.(make-pathname))
                       object
                       (merge-pathnames object (make-pathname :name :wild)))))
-    (princ object stream))
-  )
+    (declare (ignore pathname))
+    (princ object stream)))
 
 (define-presentation-method present ((object string) (type pathname)
                                      stream (view textual-view)

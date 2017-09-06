@@ -11,6 +11,7 @@
                                               :pixels (mcclim-image::image-data img)))))
 (defmethod coerce-image ((image basic-image)
                          (image-class (eql 'mcclim-image::rgb-image)) &optional image-family)
+  (declare (ignore image-family))
   (if (typep image 'mcclim-image::rgb-image)
       image
       (let ((img (coerce-image image 'rgb-image)))
@@ -21,6 +22,7 @@
 
 (defmethod coerce-image ((image mcclim-image::rgb-image)
                          (image-class (eql 'rgb-image)) &optional image-family)
+  (declare (ignore image-family))
   (make-instance 'rgb-image
                  :width (mcclim-image::image-width image)
                  :height (mcclim-image::image-height image)

@@ -110,4 +110,7 @@
 
 (defmethod fuzzy-completions ((image swank-local-image) symbol-name default-package &optional limit)
   (declare (ignore image))
-  (swank::fuzzy-completions symbol-name (package-name default-package) :limit limit))
+  (let ((fuzzy-completions-symbol
+         (find-symbol (symbol-name '#:fuzzy-completions) :swank)))
+    (when fuzzy-completions-symbol
+      (funcall fuzzy-completions-symbol (package-name default-package) :limit limit))))

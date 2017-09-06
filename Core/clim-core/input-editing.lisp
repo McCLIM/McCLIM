@@ -162,11 +162,13 @@ See also the `:delimiter-gestures' and
 	(override-var (gensym)))
     `(let* ((,gestures ,gesture-form) ;Preserve evaluation order of arguments
 	    (,override-var ,override)
-	    (*delimiter-gestures* (make-delimiter-gestures
-				   (if ,override-var
-				       :delimiter-gestures
-				       :additional-delimiter-gestures)
-				   ,gestures)))
+	    (*delimiter-gestures* (if ,override-var
+                                      (make-delimiter-gestures
+                                       :delimiter-gestures
+                                       ,gestures)
+                                      (make-delimiter-gestures
+                                       :additional-delimiter-gestures
+                                       ,gestures))))
        ,@body)))
 
 (defun activation-gesture-p (gesture)
@@ -185,24 +187,26 @@ gesture, otherwise returns false."
 	do (return t)
 	finally (return nil)))
 
-(defmacro with-input-editor-typeout ((&optional (stream t) &rest args
-                                                &key erase)
-                                     &body body)
-  "Clear space above the input-editing stream `stream' and
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defmacro with-input-editor-typeout ((&optional (stream t) &rest args
+                                                  &key erase)
+                                        &body body)
+    "Clear space above the input-editing stream `stream' and
 evaluate `body', capturing output done to `stream'. Place will be
 obtained above the input-editing area and the output put
 there. Nothing will be displayed until `body' finishes. `Stream'
 is not evaluated and must be a symbol. If T (the default),
 `*standard-input*' will be used. `Stream' will be bound to an
 `extended-output-stream' while `body' is being evaluated."
-  (declare (ignore erase))
-  (check-type stream symbol)
-  (let ((stream (if (eq stream t) '*standard-output* stream)))
-    `(invoke-with-input-editor-typeout
-      ,stream
-      #'(lambda (,stream)
-          ,@body)
-      ,@args)))
+    (declare (ignore erase))
+    (check-type stream symbol)
+    (let ((stream (if (eq stream t) '*standard-output* stream)))
+      `(invoke-with-input-editor-typeout
+        ,stream
+        #'(lambda (,stream)
+            ,@body)
+        ,@args))))
 
 (defgeneric invoke-with-input-editor-typeout (stream continuation &key erase)
   (:documentation "Call `continuation' with a single argument, a
@@ -275,12 +279,14 @@ defaulting to T for `*standard-output*'."
   (with-input-editor-typeout (stream :erase t)
     (declare (ignore stream))))
 
-(defmacro with-input-editing ((&optional (stream t)
-			       &rest args
-			       &key input-sensitizer (initial-contents "")
-			       (class ''standard-input-editing-stream))
-			      &body body)
-  "Establishes a context in which the user can edit the input
+(locally
+    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (defmacro with-input-editing ((&optional (stream t)
+                                           &rest args
+                                           &key input-sensitizer (initial-contents "")
+                                           (class ''standard-input-editing-stream))
+                                 &body body)
+    "Establishes a context in which the user can edit the input
 typed in on the interactive stream `stream'. `Body' is then
 executed in this context, and the values returned by `body' are
 returned as the values of `with-input-editing'. `Body' may have
@@ -306,13 +312,13 @@ is a string, the string will be inserted into the input buffer
 using `replace-input'. If it is a list, the printed
 representation of the object will be inserted into the input
 buffer using `presentation-replace-input'."
-  (setq stream (stream-designator-symbol stream '*standard-input*))
-  (with-keywords-removed (args (:input-sensitizer :initial-contents :class))
-    `(invoke-with-input-editing ,stream
-                                #'(lambda (,stream) ,@body)
-                                ,input-sensitizer ,initial-contents
-                                ,class
-                                ,@args)))
+    (setq stream (stream-designator-symbol stream '*standard-input*))
+    (with-keywords-removed (args (:input-sensitizer :initial-contents :class))
+      `(invoke-with-input-editing ,stream
+                                  #'(lambda (,stream) ,@body)
+                                  ,input-sensitizer ,initial-contents
+                                  ,class
+                                  ,@args))))
 
 (defmacro with-input-position ((stream) &body body)
   (let ((stream-var (gensym "STREAM")))
