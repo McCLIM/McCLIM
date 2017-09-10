@@ -207,13 +207,14 @@
                       :map (sheet-enabled-p sheet)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
-  (let ((q (compose-space sheet)))
-    (let ((frame (pane-frame sheet))
-          (window (realize-mirror-aux port sheet
-                                      :map nil
-                                      :width (round-coordinate (space-requirement-width q))
-                                      :height (round-coordinate (space-requirement-height q))
-                                      :event-mask '(:key-press :key-release)))
+  (let ((q (compose-space sheet))
+        (frame (pane-frame sheet)))
+    (let ((window (realize-mirror-aux
+                   port sheet
+                   :map nil
+                   :width (round-coordinate (space-requirement-width q))
+                   :height (round-coordinate (space-requirement-height q))
+                   :event-mask '(:key-press :key-release)))
 	  (name (frame-pretty-name frame)))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) name)
