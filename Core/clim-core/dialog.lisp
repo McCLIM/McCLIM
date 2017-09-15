@@ -236,7 +236,7 @@ accept of this query")))
              (not (eq align-prompts :left)))
     (setf align-prompts :right))
   (multiple-value-bind (cx cy) (stream-cursor-position stream)
-    (let* ((return-value nil)
+    (let* ((return-values nil)
            (*accepting-values-stream*
             (make-instance 'accepting-values-stream
                            :stream stream
@@ -245,13 +245,13 @@ accept of this query")))
                                       :record-type 'accepting-values-record)
                       (if align-prompts
                           (formatting-table (stream)
-                            (setf return-value (funcall body *accepting-values-stream*)))
-                            (setf return-value (funcall body *accepting-values-stream*)))
+                            #1=(setf return-values (multiple-value-list (funcall body *accepting-values-stream*))))
+                          #1#)
                       (unless (queries *accepting-values-stream*)
                         (cerror "Exit returning body values."
                                 "~s must contain at least one call to ~s."
                                 'accepting-values 'accept)
-                        (return-from invoke-accepting-values return-value))
+                        (return-from invoke-accepting-values return-values))
                       (display-exit-boxes *application-frame*
                                           stream
                                           (stream-default-view
@@ -317,7 +317,7 @@ accept of this query")))
           (erase-output-record arecord stream)
           (setf (stream-cursor-position stream)
                 (values cx cy))))
-      return-value)))
+      (apply 'values return-values))))
 
 (defgeneric display-exit-boxes (frame stream view))
 
