@@ -247,6 +247,11 @@ accept of this query")))
                           (formatting-table (stream)
                             (setf return-value (funcall body *accepting-values-stream*)))
                             (setf return-value (funcall body *accepting-values-stream*)))
+                      (unless (queries *accepting-values-stream*)
+                        (cerror "Exit returning body values."
+                                "~s must contain at least one call to ~s."
+                                'accepting-values 'accept)
+                        (return-from invoke-accepting-values return-value))
                       (display-exit-boxes *application-frame*
                                           stream
                                           (stream-default-view
