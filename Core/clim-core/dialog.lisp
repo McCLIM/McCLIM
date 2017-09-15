@@ -245,7 +245,9 @@ accept of this query")))
                                       :record-type 'accepting-values-record)
                       (if align-prompts
                           (formatting-table (stream)
-                            #1=(setf return-values (multiple-value-list (funcall body *accepting-values-stream*))))
+                            #1=(setf return-values
+                                     (multiple-value-list
+                                      (funcall body *accepting-values-stream*))))
                           #1#)
                       (unless (queries *accepting-values-stream*)
                         (cerror "Exit returning body values."
