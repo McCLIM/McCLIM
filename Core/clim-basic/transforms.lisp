@@ -469,7 +469,7 @@ real numbers, and default to 0."
 (defmacro with-identity-transformation ((medium) &body body)
   ;; I believe this should set the medium transformation to the
   ;; identity transformation. To use WITH-DRAWING-OPTIONS which
-  ;; concatenates the the transformation given to the existing one we
+  ;; concatenates the transformation given to the existing one we
   ;; just pass the inverse.
   ;;
   ;; "Further we don't use LETF since it is a pretty much broken idea

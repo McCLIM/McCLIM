@@ -990,7 +990,7 @@ buffer."))
     (invalidate-strokes-in-region view start-offset end-offset :modified t)))
 
 (defun needs-resynchronization (view)
-  "Return true if the the view of the buffer of `view' is
+  "Return true if the view of the buffer of `view' is
 potentially out of date. Return false otherwise."  
   (not (= (prefix-size view) (suffix-size view)
           (buffer-size view) (size (buffer view)))))

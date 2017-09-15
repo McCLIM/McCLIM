@@ -1865,7 +1865,7 @@ order to produce a double-click")
                ;;
                ;; One might argue that in case of no scroll-bars the
                ;; application programmer can just skip the scroller
-               ;; pane altogether. Bu I think that the then needed
+               ;; pane altogether. But I think that the then needed
                ;; special casing on having a scroller pane or a bare
                ;; viewport at hand is an extra burden, that can be
                ;; avoided.

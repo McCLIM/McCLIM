@@ -228,7 +228,7 @@ Returns a list of those children of the \term{sheet} \arg{sheet} that are enable
 
 \Defgeneric {sheet-ancestor-p} {sheet putative-ancestor}
 
-Returns \term{true} if the the \term{sheet} \arg{putative-ancestor} is in fact
+Returns \term{true} if the \term{sheet} \arg{putative-ancestor} is in fact
 an ancestor of the \term{sheet} \arg{sheet}, otherwise returns \term{false}.
 
 \defgeneric {raise-sheet} {sheet}
@@ -256,13 +256,13 @@ If \arg{new-ordering} does not contain all of the children of \arg{sheet}, the
 
 \Defgeneric {sheet-enabled-p} {sheet}
 
-Returns \term{true} if the the \term{sheet} \arg{sheet} is enabled by its
+Returns \term{true} if the \term{sheet} \arg{sheet} is enabled by its
 parent, otherwise returns \term{false}.  Note that all of a sheet's ancestors
 must be enabled before the sheet is viewable.
 
 \Defgeneric {(setf sheet-enabled-p)} {enabled-p sheet}
 
-When \arg{enabled-p} is \term{true}, this enables the the \term{sheet}
+When \arg{enabled-p} is \term{true}, this enables the \term{sheet}
 \arg{sheet}.  When \arg{enabled-p} is \term{false}, this disables the sheet.
 
 Note that a sheet is not visible unless it and all of its ancestors are enabled.
@@ -752,7 +752,7 @@ XX\=XX\=XX\=XX\=XX\=XX\=  \kill
 \>\>\cl{window-configuration-event} \\
 \>\>\cl{window-repaint-event}       \\
 \>\cl{window-manager-event}           \\
-\>\>\cl{window-manager-delete--event} \\
+\>\>\cl{window-manager-delete-event} \\
 \>\cl{timer-event} \\
 \end{tabbing}
 \caption{\label{event-hier} CLIM event classes.  All classes that appear
@@ -784,7 +784,7 @@ to specify the timestamp for the event.
 
 \Defgeneric {event-timestamp} {event}
 
-Returns an integer that is a monotonically increasing timestamp for the the
+Returns an integer that is a monotonically increasing timestamp for the
 \term{event} \arg{event}.  The timestamp must have at least as many bits of
 precision as a fixnum.
 

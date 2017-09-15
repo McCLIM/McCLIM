@@ -128,7 +128,7 @@ FRAME-MANAGER and standard-pointer for this port type."
 ;;; Another work-alike to the CLX/port.lisp code.
 (defmethod print-object ((object beagle-port) stream)
   "Print an unreadable version of the port to the screen; useful for debugging
-purposes. Note that it doesn't matter the the :screen in the beagle port is
+purposes. Note that it doesn't matter that the :screen in the beagle port is
 not initialised, we'll just get \":screen NIL\" in that case."
 ;;;  (print-unreadable-object (object stream :identity t :type t)
   (print-unreadable-object (object stream :identity nil :type t)
