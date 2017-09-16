@@ -13,8 +13,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-lisp)
@@ -38,19 +38,18 @@
   (defmethod describe-object ((thing t) stream)
     (let ((*print-array* nil))
       (clim:present thing (clim:presentation-type-of thing)
-		    :stream stream)
+                    :stream stream)
       (format stream " is of type ")
       (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
-		    :stream stream)
-      (terpri stream)))
-)
+                    :stream stream)
+      (terpri stream))))
 
 (defmethod describe-object ((thing symbol) stream)
   (clim:present thing (clim:presentation-type-of thing)
-		:stream stream)
+                :stream stream)
   (format stream " is of type ")
   (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
-		:stream stream)
+                :stream stream)
   (terpri stream)
   (cond
    ((not (boundp thing))
@@ -58,11 +57,11 @@
    (t
     (format stream "   it has a value of ")
     (clim:present (symbol-value thing) (clim:presentation-type-of (symbol-value thing))
-		  :stream stream)
+                  :stream stream)
     (terpri)))
   (format stream "   it is in the ")
   (clim:present (symbol-package thing) (clim:presentation-type-of (symbol-package thing))
-		:stream stream)
+                :stream stream)
   (format stream " package~%")
   (when (fboundp thing)
     (format stream "   it has a function definition of ~S~%" (symbol-function thing))
@@ -81,43 +80,42 @@
 
 (defmethod describe-object ((thing number) stream)
   (clim:present thing (clim:presentation-type-of thing)
-		:stream stream)
+                :stream stream)
   (format stream " is a number of type ")
   (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
-		:stream stream)
+                :stream stream)
   (terpri stream))
 
 (defmethod describe-object ((thing string) stream)
   (clim:present thing (clim:presentation-type-of thing)
-		:stream stream)
+                :stream stream)
   (format stream " is of type ")
   (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
-		:stream stream)
+                :stream stream)
   (format stream " with a length of ")
   (clim:present (length thing) 'clim:integer
-		:stream stream)
+                :stream stream)
   (terpri stream))
 
 (defmethod describe-object ((thing package) stream)
   (clim:present thing (clim:presentation-type-of thing)
-		:stream stream)
+                :stream stream)
   (format stream " is a package named ")
   (clim:present (package-name thing) (clim:presentation-type-of (package-name thing))
-		:stream stream)
+                :stream stream)
   (terpri stream)
   (format stream "   it has the nicknames of ")
   (clim:present (package-nicknames thing) 'clim:expression
-		:stream stream)
+                :stream stream)
   (terpri stream)
   (format stream "   it uses these packages: ")
   (clim:present (package-use-list thing) 'clim:expression
-		:stream stream)
+                :stream stream)
   (terpri stream)
   (format stream "   it is used by the packages: ")
   (clim:present (package-used-by-list thing) 'clim:expression
-		:stream stream)
+                :stream stream)
   (terpri stream))
-
 
 (labels ((present-instance-slots-text (thing stream)
            (let* ((slots (c2mop:class-slots (class-of thing)))
@@ -135,7 +133,7 @@
                         (t
                          (format stream "      ~v@A: <unbound>~%" width
                                  (c2mop:slot-definition-name slot)))))))
-       
+
          (present-instance-slots-clim (thing stream)
            (let ((slots (c2mop:class-slots (class-of thing))))
              (clim:formatting-table (stream)
@@ -152,11 +150,11 @@
                                        'clim:expression
                                        :stream stream)
                          (format stream "<unbound>"))))))))
-         
-         (describe-instance (thing a-what stream)  
+
+         (describe-instance (thing a-what stream)
            (clim:present thing (clim:presentation-type-of thing)
                          :stream stream)
-           (format stream " is ~A of type " a-what)          
+           (format stream " is ~A of type " a-what)
            (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
                          :stream stream)
            (terpri stream)
@@ -164,9 +162,9 @@
            (if (typep stream 'clim:output-recording-stream)
                (present-instance-slots-clim thing stream)
                (present-instance-slots-text thing stream))))
-  
+
   (defmethod describe-object ((thing standard-object) stream)
     (describe-instance thing "an instance" stream))
-  
+
   (defmethod describe-object ((thing structure-object) stream)
     (describe-instance thing "a structure" stream)))
