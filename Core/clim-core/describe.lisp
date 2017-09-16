@@ -19,114 +19,113 @@
 
 (in-package :clim-lisp)
 
-(defun describe (thing &optional stream)
-  (if (null stream)
-      (setq stream *standard-output*)
-      (if  (eq stream t)
-           (setq stream *terminal-io*)))
-  (describe-object thing stream)
+(defun describe (object &optional stream)
+  (let ((stream (case stream
+                  ((nil) *standard-output*)
+                  ((t)   *terminal-io*)
+                  (t     stream))))
+    (describe-object object stream))
   (values))
 
-
-(defgeneric describe-object (thing stream))
+(defgeneric describe-object (object stream))
 
 ;;; For these methods, stream should be of type
 ;;; (or EXTENDED-OUTPUT-STREAM OUTPUT-RECORDING-STREAM)
 ;;; but CLIM-STREAM-PANE is used instead.
 
 (clim-internals::with-system-redefinition-allowed
-  (defmethod describe-object ((thing t) stream)
-    (let ((*print-array* nil))
-      (clim:present thing (clim:presentation-type-of thing)
-                    :stream stream)
-      (format stream " is of type ")
-      (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
-                    :stream stream)
-      (terpri stream))))
+    (defmethod describe-object ((object t) stream)
+      (let ((*print-array* nil))
+        (clim:present object (clim:presentation-type-of object)
+                      :stream stream)
+        (format stream " is of type ")
+        (clim:present (type-of object) (clim:presentation-type-of (type-of object))
+                      :stream stream)
+        (terpri stream))))
 
-(defmethod describe-object ((thing symbol) stream)
-  (clim:present thing (clim:presentation-type-of thing)
+(defmethod describe-object ((object symbol) stream)
+  (clim:present object (clim:presentation-type-of object)
                 :stream stream)
   (format stream " is of type ")
-  (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
+  (clim:present (type-of object) (clim:presentation-type-of (type-of object))
                 :stream stream)
   (terpri stream)
   (cond
-   ((not (boundp thing))
+   ((not (boundp object))
     (format stream "   it is unbound~%"))
    (t
     (format stream "   it has a value of ")
-    (clim:present (symbol-value thing) (clim:presentation-type-of (symbol-value thing))
+    (clim:present (symbol-value object) (clim:presentation-type-of (symbol-value object))
                   :stream stream)
     (terpri)))
   (format stream "   it is in the ")
-  (clim:present (symbol-package thing) (clim:presentation-type-of (symbol-package thing))
+  (clim:present (symbol-package object) (clim:presentation-type-of (symbol-package object))
                 :stream stream)
   (format stream " package~%")
-  (when (fboundp thing)
-    (format stream "   it has a function definition of ~S~%" (symbol-function thing))
+  (when (fboundp object)
+    (format stream "   it has a function definition of ~S~%" (symbol-function object))
     (format stream "      which has the argument list ")
-    (let ((arglist #+excl (excl:arglist (symbol-function thing))
-                   #+cmu (kernel:%function-arglist (symbol-function thing))
-                   #+sbcl (sb-introspect:function-lambda-list (symbol-function thing))
-                   #+clisp (ext:arglist (symbol-function thing))
+    (let ((arglist #+excl (excl:arglist (symbol-function object))
+                   #+cmu (kernel:%function-arglist (symbol-function object))
+                   #+sbcl (sb-introspect:function-lambda-list (symbol-function object))
+                   #+clisp (ext:arglist (symbol-function object))
                    #-(or excl cmu sbcl clisp) "( ??? )"))
       (when arglist
         (clim:present arglist
                       (clim:presentation-type-of arglist)
                       :stream stream)))
     (terpri))
-  (format stream "   it has a property list of ~S~%" (symbol-plist thing)))
+  (format stream "   it has a property list of ~S~%" (symbol-plist object)))
 
-(defmethod describe-object ((thing number) stream)
-  (clim:present thing (clim:presentation-type-of thing)
+(defmethod describe-object ((object number) stream)
+  (clim:present object (clim:presentation-type-of object)
                 :stream stream)
   (format stream " is a number of type ")
-  (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
+  (clim:present (type-of object) (clim:presentation-type-of (type-of object))
                 :stream stream)
   (terpri stream))
 
-(defmethod describe-object ((thing string) stream)
-  (clim:present thing (clim:presentation-type-of thing)
+(defmethod describe-object ((object string) stream)
+  (clim:present object (clim:presentation-type-of object)
                 :stream stream)
   (format stream " is of type ")
-  (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
+  (clim:present (type-of object) (clim:presentation-type-of (type-of object))
                 :stream stream)
   (format stream " with a length of ")
-  (clim:present (length thing) 'clim:integer
+  (clim:present (length object) 'clim:integer
                 :stream stream)
   (terpri stream))
 
-(defmethod describe-object ((thing package) stream)
-  (clim:present thing (clim:presentation-type-of thing)
+(defmethod describe-object ((object package) stream)
+  (clim:present object (clim:presentation-type-of object)
                 :stream stream)
   (format stream " is a package named ")
-  (clim:present (package-name thing) (clim:presentation-type-of (package-name thing))
+  (clim:present (package-name object) (clim:presentation-type-of (package-name object))
                 :stream stream)
   (terpri stream)
   (format stream "   it has the nicknames of ")
-  (clim:present (package-nicknames thing) 'clim:expression
+  (clim:present (package-nicknames object) 'clim:expression
                 :stream stream)
   (terpri stream)
   (format stream "   it uses these packages: ")
-  (clim:present (package-use-list thing) 'clim:expression
+  (clim:present (package-use-list object) 'clim:expression
                 :stream stream)
   (terpri stream)
   (format stream "   it is used by the packages: ")
-  (clim:present (package-used-by-list thing) 'clim:expression
+  (clim:present (package-used-by-list object) 'clim:expression
                 :stream stream)
   (terpri stream))
 
-(labels ((present-instance-slots-text (thing stream)
-           (let* ((slots (c2mop:class-slots (class-of thing)))
+(labels ((present-instance-slots-text (object stream)
+           (let* ((slots (c2mop:class-slots (class-of object)))
                   (width (loop for slot in slots
                                maximizing (length (symbol-name (c2mop:slot-definition-name slot))))))
              (loop for slot in slots
                    do (cond
-                        ((slot-boundp thing (c2mop:slot-definition-name slot))
+                        ((slot-boundp object (c2mop:slot-definition-name slot))
                          (format stream "      ~v@A: " width
                                  (c2mop:slot-definition-name slot))
-                         (clim:present (slot-value thing (c2mop:slot-definition-name slot))
+                         (clim:present (slot-value object (c2mop:slot-definition-name slot))
                                        'clim:expression
                                        :stream stream)
                          (terpri stream))
@@ -134,8 +133,8 @@
                          (format stream "      ~v@A: <unbound>~%" width
                                  (c2mop:slot-definition-name slot)))))))
 
-         (present-instance-slots-clim (thing stream)
-           (let ((slots (c2mop:class-slots (class-of thing))))
+         (present-instance-slots-clim (object stream)
+           (let ((slots (c2mop:class-slots (class-of object))))
              (clim:formatting-table (stream)
                (dolist (slot slots)
                  (clim:formatting-row (stream)
@@ -145,26 +144,26 @@
                                    :stream stream)
                      (write-char #\: stream))
                    (clim:formatting-cell (stream)
-                     (if (slot-boundp thing (c2mop:slot-definition-name slot))
-                         (clim:present (slot-value thing (c2mop:slot-definition-name slot))
+                     (if (slot-boundp object (c2mop:slot-definition-name slot))
+                         (clim:present (slot-value object (c2mop:slot-definition-name slot))
                                        'clim:expression
                                        :stream stream)
                          (format stream "<unbound>"))))))))
 
-         (describe-instance (thing a-what stream)
-           (clim:present thing (clim:presentation-type-of thing)
+         (describe-instance (object a-what stream)
+           (clim:present object (clim:presentation-type-of object)
                          :stream stream)
            (format stream " is ~A of type " a-what)
-           (clim:present (type-of thing) (clim:presentation-type-of (type-of thing))
+           (clim:present (type-of object) (clim:presentation-type-of (type-of object))
                          :stream stream)
            (terpri stream)
            (format stream "   it has the following slots:~%")
            (if (typep stream 'clim:output-recording-stream)
-               (present-instance-slots-clim thing stream)
-               (present-instance-slots-text thing stream))))
+               (present-instance-slots-clim object stream)
+               (present-instance-slots-text object stream))))
 
-  (defmethod describe-object ((thing standard-object) stream)
-    (describe-instance thing "an instance" stream))
+  (defmethod describe-object ((object standard-object) stream)
+    (describe-instance object "an instance" stream))
 
-  (defmethod describe-object ((thing structure-object) stream)
-    (describe-instance thing "a structure" stream)))
+  (defmethod describe-object ((object structure-object) stream)
+    (describe-instance object "a structure" stream)))
