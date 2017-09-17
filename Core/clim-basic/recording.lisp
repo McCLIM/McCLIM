@@ -1987,9 +1987,7 @@ were added."
                    :reader stream-output-history)
    (current-output-record :accessor stream-current-output-record)
    (current-text-output-record :initform nil
-                               :accessor stream-current-text-output-record)
-   (local-record-p :initform t
-                   :documentation "This flag is used for dealing with streams outputting strings char-by-char."))
+                               :accessor stream-current-text-output-record))
   (:documentation "This class is mixed into some other stream class to
 add output recording facilities. It is not instantiable."))
 
@@ -2096,18 +2094,15 @@ add output recording facilities. It is not instantiable."))
                                     width height baseline))
 
 ;;; Text output catching methods
-(defmacro without-local-recording (stream &body body)
-  `(letf (((slot-value ,stream 'local-record-p) nil))
-     ,@body))
-
+(defvar *local-record-p* t
+  "This flag is used for dealing with streams outputting strings char-by-char.")
 (defmethod stream-write-output :around
     ((stream standard-output-recording-stream)
      line
      string-width
      &optional (start 0) end)
 
-  (when (and (stream-recording-p stream)
-             (slot-value stream 'local-record-p))
+  (when (and (stream-recording-p stream) *local-record-p*)
     (let* ((medium (sheet-medium stream))
            (text-style (medium-text-style medium))
 	   (height (text-style-height text-style medium))
@@ -2127,7 +2122,7 @@ add output recording facilities. It is not instantiable."))
 				    ascent))))
 
   (when (stream-drawing-p stream)
-    (without-local-recording stream
+    (let ((*local-record-p* nil))
       (call-next-method))))
 
 (defmethod stream-finish-output :after ((stream standard-output-recording-stream))
