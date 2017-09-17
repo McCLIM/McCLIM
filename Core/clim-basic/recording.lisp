@@ -2238,16 +2238,15 @@ according to the flags RECORD and DRAW."
 ;;; FIXME: Use DRAW-DESIGN*, that is fix DRAW-DESIGN*.
 
 (defmethod handle-repaint ((stream output-recording-stream) region)
-  (when (output-recording-stream-p stream)
-    (unless (region-equal region +nowhere+) ; ignore repaint requests for +nowhere+
-      (let ((region (if (region-equal region +everywhere+)
-			;; fallback to the sheet's region for +everwhere+.
-			(sheet-region stream)
-			(bounding-rectangle region))))
-	(with-bounding-rectangle* (x1 y1 x2 y2) region
-	  (with-output-recording-options (stream :record nil)
-	    (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+)))
-	(stream-replay stream region)))))
+  (unless (region-equal region +nowhere+) ; ignore repaint requests for +nowhere+
+    (let ((region (if (region-equal region +everywhere+)
+                      ;; fallback to the sheet's region for +everwhere+.
+                      (sheet-region stream)
+                      (bounding-rectangle region))))
+      (with-bounding-rectangle* (x1 y1 x2 y2) region
+        (with-output-recording-options (stream :record nil)
+          (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+)))
+      (stream-replay stream region))))
 
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
   (declare (ignore x y))
