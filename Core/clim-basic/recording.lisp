@@ -338,24 +338,23 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
 (defun replay (record stream &optional (region (or (pane-viewport-region stream)
                                                    (sheet-region stream))))
-  (if (typep stream 'encapsulating-stream)
-      (replay record (encapsulating-stream-stream stream) region)
-      (progn
-        (stream-close-text-output-record stream)
-        (when (stream-drawing-p stream)
-          (with-cursor-off stream ;;FIXME?
-            (letf (((stream-cursor-position stream) (values 0 0))
-                   ((stream-recording-p stream) nil)
-                   ;; Is there a better value to bind to baseline?
-                   ((slot-value stream 'baseline) (slot-value stream 'baseline)))
-              (with-sheet-medium (medium stream)
-                (let ((transformation (medium-transformation medium)))
-                  (unwind-protect
-                       (progn
-                         (setf (medium-transformation medium)
-                               +identity-transformation+)
-                         (replay-output-record record stream region))
-                    (setf (medium-transformation medium) transformation))))))))))
+  (when (typep stream 'encapsulating-stream)
+    (return-from replay (replay record (encapsulating-stream-stream stream) region)))
+  (stream-close-text-output-record stream)
+  (when (stream-drawing-p stream)
+    (letf (((cursor-visibility (stream-text-cursor stream)) nil) ;; FIXME?
+           ((stream-cursor-position stream) (values 0 0))
+           ((stream-recording-p stream) nil)
+           ;; Is there a better value to bind to baseline?
+           ((slot-value stream 'baseline) (slot-value stream 'baseline)))
+      (with-sheet-medium (medium stream)
+        (let ((transformation (medium-transformation medium)))
+          (unwind-protect
+               (progn
+                 (setf (medium-transformation medium)
+                       +identity-transformation+)
+                 (replay-output-record record stream region))
+            (setf (medium-transformation medium) transformation)))))))
 
 (defmethod replay-output-record ((record compound-output-record) stream
 				 &optional region (x-offset 0) (y-offset 0))
@@ -1826,38 +1825,37 @@ were added."
 				 stream
 				 &optional region (x-offset 0) (y-offset 0))
   (declare (ignore region x-offset y-offset))
-  (with-slots (strings baseline max-height start-y wrapped)
-      record
+  (with-slots (strings baseline max-height start-y wrapped) record
     (with-sheet-medium (medium stream) ;is sheet a sheet-with-medium-mixin? --GB
       ;; FIXME:
       ;; 1. SLOT-VALUE...
       ;; 2. It should also save a "current line".
       (setf (slot-value stream 'baseline) baseline)
       (loop for substring in strings
-	    do (with-slots (start-x string)
-		   substring
-		 (setf (stream-cursor-position stream)
-		       (values start-x start-y))
-                 ;; FIXME: a bit of an abstraction inversion.  Should
-                 ;; the styled strings here not simply be output
-                 ;; records?  Then we could just replay them and all
-                 ;; would be well.  -- CSR, 20060528.
-                 ;; But then we'd have to implement the output record
-                 ;; protocols for them. Are we allowed no internal
-                 ;; structure of our own? -- Hefner, 20080118
+         do (with-slots (start-x string)
+                substring
+              (setf (stream-cursor-position stream)
+                    (values start-x start-y))
+              ;; FIXME: a bit of an abstraction inversion.  Should
+              ;; the styled strings here not simply be output
+              ;; records?  Then we could just replay them and all
+              ;; would be well.  -- CSR, 20060528.
+              ;; But then we'd have to implement the output record
+              ;; protocols for them. Are we allowed no internal
+              ;; structure of our own? -- Hefner, 20080118
 
-                 ;; Some optimization might be possible here. 
-                 (with-drawing-options (stream 
-                                        :ink (graphics-state-ink substring)
-                                        :clipping-region (graphics-state-clip substring)
-                                        :text-style (graphics-state-text-style substring))
-                   (stream-write-output stream string nil))))
-      (when wrapped			; FIXME
-	(draw-rectangle* medium
-			 (+ wrapped 0) start-y
-			 (+ wrapped 4) (+ start-y max-height)
-			 :ink +foreground-ink+
-			 :filled t)))))
+              ;; Some optimization might be possible here.
+              (with-drawing-options
+                  (stream :ink (graphics-state-ink substring)
+                          :clipping-region (graphics-state-clip substring)
+                          :text-style (graphics-state-text-style substring))
+                (stream-write-output stream string nil))))
+      (when wrapped ; FIXME
+        (draw-rectangle* medium
+                         (+ wrapped 0) start-y
+                         (+ wrapped 4) (+ start-y max-height)
+                         :ink +foreground-ink+
+                         :filled t)))))
 
 (defmethod output-record-start-cursor-position
     ((record standard-text-displayed-output-record))

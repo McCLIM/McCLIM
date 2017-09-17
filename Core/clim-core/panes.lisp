@@ -2633,8 +2633,7 @@ order to produce a double-click")
   (funcall-presentation-generic-function presentation-type-history type))
 
 (defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
-  (change-stream-space-requirements stream
-                                    :height new-height)
+  (change-stream-space-requirements stream :height new-height)
   (unless (eq :allow (stream-end-of-page-action stream))
     (scroll-extent stream 0 (max 0 (-  new-height
                                        (bounding-rectangle-height

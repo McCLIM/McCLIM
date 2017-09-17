@@ -34,8 +34,6 @@
 (defmethod stream-recording-p ((stream t)) nil)
 (defmethod stream-drawing-p ((stream t)) t)
 
-;;; Cursor class
-
 (defgeneric* (setf cursor-position) (x y cursor))
 
 ;;; Cursor-Mixin class
@@ -303,10 +301,7 @@
                  (scroll-horizontal stream width))
                 (:allow)))
             (unless (= start split)
-              (stream-write-output stream
-                                   string
-                                   nil
-                                   start split)
+              (stream-write-output stream string nil start split)
               (setq cx (+ cx width))
               (setf (stream-cursor-position stream) (values cx cy)))
             (when (/= split end)
@@ -363,17 +358,17 @@ STREAM-STRING-WIDTH will be called."))
                                 &optional (start 0) end)
   (declare (ignore string-width))
   (with-slots (baseline vspace) stream
-     (multiple-value-bind (cx cy) (stream-cursor-position stream)
-       (draw-text* (sheet-medium stream) line
-                   cx (+ cy baseline)
-                   :transformation +identity-transformation+
-                   :start start :end end))))
+    (multiple-value-bind (cx cy) (stream-cursor-position stream)
+      (draw-text* (sheet-medium stream) line
+                  cx (+ cy baseline)
+                  :transformation +identity-transformation+
+                  :start start :end end))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
   (with-cursor-off stream
-   (if (char= #\Newline char)
-       (seos-write-newline stream)
-     (seos-write-string stream (string char)))))
+    (if (char= #\Newline char)
+        (seos-write-newline stream)
+        (seos-write-string stream (string char)))))
 
 ;;; I added the (subseq string seg-start ...) forms. Under ACL, there
 ;;; is some wierd interaction with FORMAT. This shows up as
