@@ -289,9 +289,9 @@
       (funcall continuation sheet))))
 
 (defmethod invoke-with-text-style ((medium medium) continuation text-style)
-  (letf (((medium-text-style medium)
-          (merge-text-styles text-style (medium-merged-text-style medium))))
-    (funcall continuation medium)))
+  (invoke-with-drawing-options
+   medium continuation
+   :text-style (merge-text-styles text-style (medium-merged-text-style medium))))
 
 ;;; For compatibility with real CLIM, which apparently lets you call this
 ;;; on non-CLIM streams.
