@@ -29,8 +29,8 @@
 ;;; Standard-Output-Stream class
 (defclass standard-output-stream (output-stream) ())
 
-(defmethod stream-recording-p ((stream t)) nil)
-(defmethod stream-drawing-p ((stream t)) t)
+(defmethod stream-recording-p ((stream output-stream)) nil)
+(defmethod stream-drawing-p ((stream output-stream)) t)
 
 (defgeneric* (setf cursor-position) (x y cursor))
 
@@ -352,7 +352,8 @@ non-nil, that is used as the width where needed; otherwise
 STREAM-STRING-WIDTH will be called."))
 
 ;;; The cursor is in stream coordinates.
-(defmethod stream-write-output (stream line string-width
+(defmethod stream-write-output ((stream standard-extended-output-stream)
+                                line string-width
                                 &optional (start 0) end)
   (declare (ignore string-width))
   (with-slots (baseline vspace) stream
