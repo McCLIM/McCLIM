@@ -193,7 +193,7 @@
     `(flet ((,gcontinuation (,cont-arg)
 	      (declare (ignore ,cont-arg))
 	      ,@body))
-       #-clisp (declare (dynamic-extent #',gcontinuation))
+       (declare (dynamic-extent #',gcontinuation))
        (invoke-with-drawing-options
         ,medium #',gcontinuation ,@drawing-options))))
 
