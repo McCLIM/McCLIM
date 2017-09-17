@@ -62,6 +62,11 @@
 	  line-join-shape line-cap-shape
 	  text-style text-family text-face text-size
 	  &allow-other-keys))
+
+;;; The generic function DO-GRAPHICS-WITH-OPTIONS is internal to the
+;;; CLIM-INTERNALS package.  It is used in the expansion of the macro
+;;; WITH-MEDIUM-OPTIONS.
+(defgeneric do-graphics-with-options (medium function &rest options))
 	  
 (defmethod do-graphics-with-options ((sheet sheet) func &rest options)
   (with-sheet-medium (medium sheet)
@@ -173,6 +178,14 @@
         (setf (medium-line-style medium) old-line-style))
       (when changed-text-style 
         (setf (medium-text-style medium) old-text-style)))))
+
+(defmacro with-medium-options ((sheet args)
+			       &body body)
+  `(flet ((graphics-op (medium)
+	    (declare (ignorable medium))
+	    ,@body))
+     (declare (dynamic-extent #'graphics-op))
+     (apply #'do-graphics-with-options ,sheet #'graphics-op ,args)))
 
 (defmacro with-drawing-options ((medium &rest drawing-options) &body body)
   (setq medium (stream-designator-symbol medium '*standard-output*))
