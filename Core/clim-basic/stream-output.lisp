@@ -27,9 +27,7 @@
 ;;;       happens to be an output-recording-stream. - MikeMac 1/7/99
 
 ;;; Standard-Output-Stream class
-
-(defclass standard-output-stream (fundamental-character-output-stream)
-  ())
+(defclass standard-output-stream (output-stream) ())
 
 (defmethod stream-recording-p ((stream t)) nil)
 (defmethod stream-drawing-p ((stream t)) t)

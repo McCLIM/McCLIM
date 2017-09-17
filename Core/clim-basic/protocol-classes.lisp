@@ -117,11 +117,17 @@
 
 
 ;;;; Part V: Extended Stream Output Facilities
+
+;; CLIM Specification says that E-O-S is a subclass of OUTPUT-STREAM,
+;; but it does not says what is it. We infere it is a base class for
+;; all clim output streams (output-recording-stream included).
+(define-protocol-class output-stream
+    (fundamental-character-output-stream)
+  ())
+
 ;;; 15.2 Extended Output Streams
 (define-protocol-class extended-output-stream
-    (fundamental-character-output-stream)
-  ;; CLIM Specification says that E-O-S is a subclass of
-  ;; OUTPUT-STREAM, but it does not says what is it.
+    (output-stream)
   ())
 
 ;;; 15.3 The Text Cursor
@@ -144,7 +150,7 @@
   ())
 
 ;;; 16.4 Output Recording Streams
-(define-protocol-class output-recording-stream ()
+(define-protocol-class output-recording-stream (output-stream)
   ())
 
 ;;; 17.3.1 Table Formatting Protocol
