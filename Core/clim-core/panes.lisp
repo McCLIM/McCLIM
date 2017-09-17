@@ -2887,8 +2887,8 @@ current background message was set."))
       (stream-set-input-focus (encapsulating-stream-stream frame)))
     #+clim-mp
     (unless input-buffer
+      (redisplay-frame-panes frame :force-p t)
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
-					  (redisplay-frame-panes frame :force-p t)
                                           (standalone-event-loop)))))
     (encapsulating-stream-stream frame)))
 
