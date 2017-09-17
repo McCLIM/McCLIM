@@ -163,16 +163,6 @@ evaluated."
          (setf ,@old-values-set-form)
          ,update-form))))
 
-;;; XXX This is currently broken with respect to declarations
-
-(defmacro letf* ((&rest forms) &body body)
-  (if (null forms)
-      `(locally
-	 ,@body)
-      `(letf (,(car forms))
-	 (letf* (,(cdr forms))
-	   ,@body))))
-
 (defun map-repeated-sequence (result-type n function sequence)
   "Like CL:MAP, but applies \\arg{function} to \\arg{n} consecutive
 elements of \\arg{sequence}. All the function's return values will be

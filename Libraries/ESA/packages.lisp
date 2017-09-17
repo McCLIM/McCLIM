@@ -42,7 +42,6 @@
            #:listed
            #:list-aref
            #:letf
-           #:letf*
            #:display-string
            #:object-equal
            #:object=
