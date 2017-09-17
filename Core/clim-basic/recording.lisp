@@ -1205,23 +1205,24 @@ were added."
 
 (defmacro generate-medium-recording-body (class-name method-name args)
   (let ((arg-list (loop for arg in args
-			nconc `(,(intern (symbol-name arg) :keyword) ,arg))))
-    `(with-sheet-medium (medium stream)
-                  (when (stream-recording-p stream)
-                    (let ((record
-                           ;; initialize the output record with a copy
-                           ;; of coord-seq, as the replaying code will
-                           ;; modify it to be positioned relative to
-                           ;; the output-record's position and making
-                           ;; a temporary is (arguably) less bad than
-                           ;; untrasnforming the coords back to how
-                           ;; they were.
-                           (let (,@(when (member 'coord-seq args)
-                                     `((coord-seq (copy-seq coord-seq)))))
-                             (make-instance ',class-name :stream stream ,@arg-list))))
-                      (stream-add-output-record stream record)))
-                  (when (stream-drawing-p stream)
-                    (,method-name medium ,@args)))))
+                     nconc `(,(intern (symbol-name arg) :keyword) ,arg))))
+    `(progn
+       (when (stream-recording-p stream)
+         (let ((record
+                ;; initialize the output record with a copy
+                ;; of coord-seq, as the replaying code will
+                ;; modify it to be positioned relative to
+                ;; the output-record's position and making
+                ;; a temporary is (arguably) less bad than
+                ;; untrasnforming the coords back to how
+                ;; they were.
+                (let (,@(when (member 'coord-seq args)
+                          `((coord-seq (copy-seq coord-seq)))))
+                  (make-instance ',class-name :stream stream ,@arg-list))))
+           (stream-add-output-record stream record)))
+       (when (stream-drawing-p stream)
+         (with-sheet-medium (medium stream)
+           (,method-name medium ,@args))))))
 
 ;;; DEF-GRECORDING: This is the central interface through which
 ;;; recording is implemented for drawing functions. The body provided
