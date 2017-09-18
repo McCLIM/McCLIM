@@ -253,7 +253,7 @@ If the programmer specifies an output record $P$ via the
 record with the matching unique-id in the cache belonging to $P$.  If 
 \arg{parent-cache} is not provided, then CLIM looks for the unique-id in the
 output record created by immediate dynamically enclosing call to
-\cl{updating-output}.  If that fails, CLIM use the unique-id to find an output
+\cl{updating-output}.  If that fails, CLIM uses the unique-id to find an output
 record that is a child of the output history of \arg{stream}.  Once CLIM has
 found an output record that matches the unique-id, it uses the cache value and
 cache test to determine whether the output record has changed.  If the output
@@ -305,7 +305,8 @@ default values for \arg{x} and \arg{y} are \cl{(output-record-start-position
 
 \begin{verbatim}
 (convert-from-relative-to-absolute-coordinates 
-  stream (output-record-parent record))
+    stream
+    (output-record-parent record))
 \end{verbatim}
 
 \arg{record} will usually be an output record created by \cl{updating-output}.
@@ -435,10 +436,10 @@ output record should be notified, and if so, will call
 \cl{propagate-output-record-changes} to create an updated difference set.  If no
 changes need to be propagated to the parent output record, then
 \cl{note-output-record-child-changed} will call \cl{incremental-redisplay} in
-order display the difference set.
+order to display the difference set.
 
 \arg{mode} is one of \cl{:delete}, \cl{:add}, \cl{:change}, \cl{:move}, or
-\cl{:none}
+\cl{:none}.
 
 \arg{old-position} and \arg{old-bounding-rectangle} describe where \arg{child}
 was before it was moved.
