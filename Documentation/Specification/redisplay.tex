@@ -27,11 +27,11 @@ position.
 The second way to do incremental redisplay is for the programmer to manually do the
 updates to the output history, and then call \cl{note-output-record-child-changed}
 on an output record.  This causes CLIM to propagate the changes up the output
-record tree and allows parent output records to readjust themselves to account for
+record tree and allows parent output records to re-adjust themselves to account for
 the changes.
 
 Each style is appropriate under different circumstances.  \cl{redisplay} is
-often easier to use, especially when there might are large numbers of changes
+often easier to use, especially when there might be large numbers of changes
 between two passes, or when the programmer has only a poor idea as to what the
 changes might be.  \cl{note-output-record-child-changed} can be more efficient
 for small changes at the bottom of the output record hierarchy, or in cases
@@ -248,7 +248,7 @@ default for \arg{all-new} is \term{false}.
 
 The output record tree created by \cl{updating-output} defines a caching
 structure where mappings from a unique-id to an output record are maintained.
-If the programmer specifies an output record some output record $P$ via the
+If the programmer specifies an output record $P$ via the
 \arg{parent-cache} argument, then CLIM will try to find a corresponding output
 record with the matching unique-id in the cache belonging to $P$.  If neither
 \arg{parent-cache} is not provided, then CLIM looks for the unique-id in the
