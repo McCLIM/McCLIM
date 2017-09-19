@@ -214,14 +214,11 @@ all of FUNCTION-ARGS as APPLY arguments."
        (multiple-value-bind (bindings m-i-args)
 	   (rebind-arguments initargs)
 	 `(let ,bindings
-	    (flet ((,constructor ()
-		     (make-instance ,record-type ,@m-i-args))
-		   (,continuation (,stream ,record)
+	    (flet ((,continuation (,stream ,record)
 		     ,(declare-ignorable-form* stream record)
 		     ,@body))
-	      (declare (dynamic-extent #',constructor #',continuation))
-	      (,',func-name ,stream #',continuation ,record-type #',constructor
-			    ,@m-i-args)))))))
+	      (declare (dynamic-extent #',continuation))
+	      (,',func-name ,stream #',continuation ,record-type ,@m-i-args)))))))
 
 (define-invoke-with with-new-output-record invoke-with-new-output-record
   standard-sequence-output-record
@@ -2148,27 +2145,9 @@ according to the flags RECORD and DRAW."
 	 ((stream-drawing-p stream) draw))
     (funcall continuation stream)))
 
-(defmethod invoke-with-new-output-record ((stream output-recording-stream)
-                                          continuation record-type
-					  constructor
-                                          &key parent)
-  (declare (ignore record-type))
-  (stream-close-text-output-record stream)
-  (let ((new-record (funcall constructor)))
-    (letf (((stream-current-output-record stream) new-record))
-      ;; Should we switch on recording? -- APD
-      (funcall continuation stream new-record)
-      (force-output stream))
-    (if parent
-	(add-output-record new-record parent)
-	(stream-add-output-record stream new-record))
-    new-record))
-
-(defmethod invoke-with-new-output-record ((stream output-recording-stream)
-                                          continuation record-type
-					  (constructor null)
-					  &rest initargs
-                                          &key parent)
+(defmethod invoke-with-new-output-record
+    ((stream output-recording-stream) continuation record-type
+     &rest initargs &key parent)
   (with-keywords-removed (initargs (:parent))
     (stream-close-text-output-record stream)
     (let ((new-record (apply #'make-instance record-type initargs)))
@@ -2182,20 +2161,7 @@ according to the flags RECORD and DRAW."
       new-record)))
 
 (defmethod invoke-with-output-to-output-record
-    ((stream output-recording-stream) continuation record-type constructor
-     &key)
-  (declare (ignore record-type))
-  (stream-close-text-output-record stream)
-  (let ((new-record (funcall constructor)))
-    (with-output-recording-options (stream :record t :draw nil)
-      (letf (((stream-current-output-record stream) new-record)
-             ((stream-cursor-position stream) (values 0 0)))
-        (funcall continuation stream new-record)
-        (force-output stream)))
-    new-record))
-
-(defmethod invoke-with-output-to-output-record
-    ((stream output-recording-stream) continuation record-type (constructor null)
+    ((stream output-recording-stream) continuation record-type
      &rest initargs)
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
