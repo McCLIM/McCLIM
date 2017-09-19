@@ -1215,8 +1215,7 @@ were added."
                   (make-instance ',class-name :stream stream ,@arg-list))))
            (stream-add-output-record stream record)))
        (when (stream-drawing-p stream)
-         (with-sheet-medium (medium stream)
-           (,method-name medium ,@args))))))
+         (call-next-method)))))
 
 ;;; DEF-GRECORDING: This is the central interface through which
 ;;; recording is implemented for drawing functions. The body provided
