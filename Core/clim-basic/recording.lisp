@@ -2095,15 +2095,13 @@ add output recording facilities. It is not instantiable."))
                                     width height baseline))
 
 ;;; Text output catching methods
-(defvar *local-record-p* t
-  "This flag is used for dealing with streams outputting strings char-by-char.")
 (defmethod stream-write-output :around
     ((stream standard-output-recording-stream)
      line
      string-width
      &optional (start 0) end)
 
-  (when (and (stream-recording-p stream) *local-record-p*)
+  (when (stream-recording-p stream)
     (let* ((medium (sheet-medium stream))
            (text-style (medium-text-style medium))
 	   (height (text-style-height text-style medium))
@@ -2123,8 +2121,7 @@ add output recording facilities. It is not instantiable."))
 				    ascent))))
 
   (when (stream-drawing-p stream)
-    (let ((*local-record-p* nil))
-      (call-next-method))))
+    (call-next-method)))
 
 (defmethod stream-finish-output :after ((stream standard-output-recording-stream))
   (stream-close-text-output-record stream))
