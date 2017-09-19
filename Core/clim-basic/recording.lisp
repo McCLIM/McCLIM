@@ -2117,8 +2117,8 @@ add output recording facilities. It is not instantiable."))
 	  (stream-add-string-output stream line start end text-style
 				    (or string-width
 					(stream-string-width stream line
-							 :start start :end end
-							 :text-style text-style))
+                                                             :start start :end end
+                                                             :text-style text-style))
 				    height
 				    ascent))))
 
