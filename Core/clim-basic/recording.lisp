@@ -1036,16 +1036,13 @@ were added."
 				       &key (stream nil)
 				       (medium (when stream
 						 (sheet-medium stream))))
-  (when medium
-    (with-slots (clip)
-	obj
+  (alexandria:when-let ((medium-clip (and medium (medium-clipping-region medium))))
+    (with-slots (clip) obj
       (let ((clip-region (if (slot-boundp obj 'clip)
-			     (region-intersection (medium-clipping-region
-						   medium)
-						  clip)
-			     (medium-clipping-region medium))))
-	(setq clip (transform-region (medium-transformation medium)
-				     clip-region))))))
+                             (region-intersection medium-clip clip)
+                             medium-clip)))
+        (setq clip (transform-region (medium-transformation medium)
+                                     clip-region))))))
 
 (defmethod replay-output-record :around
     ((record gs-clip-mixin) stream &optional region x-offset y-offset)
