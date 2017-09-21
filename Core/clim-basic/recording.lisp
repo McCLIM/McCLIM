@@ -339,19 +339,14 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (return-from replay (replay record (encapsulating-stream-stream stream) region)))
   (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
-    (letf (((cursor-visibility (stream-text-cursor stream)) nil) ;; FIXME?
-           ((stream-cursor-position stream) (values 0 0))
-           ((stream-recording-p stream) nil)
-           ;; Is there a better value to bind to baseline?
-           ((slot-value stream 'baseline) (slot-value stream 'baseline)))
-      (with-sheet-medium (medium stream)
-        (let ((transformation (medium-transformation medium)))
-          (unwind-protect
-               (progn
-                 (setf (medium-transformation medium)
-                       +identity-transformation+)
-                 (replay-output-record record stream region))
-            (setf (medium-transformation medium) transformation)))))))
+    (with-sheet-medium (medium stream)
+      (letf (((cursor-visibility (stream-text-cursor stream)) nil) ;; FIXME?
+             ((stream-cursor-position stream) (values 0 0))
+             ((stream-recording-p stream) nil)
+             ;; Is there a better value to bind to baseline?
+             ((slot-value stream 'baseline) (slot-value stream 'baseline))
+             ((medium-transformation medium) +identity-transformation+))
+        (replay-output-record record stream region)))))
 
 (defmethod replay-output-record ((record compound-output-record) stream
                                  &optional region (x-offset 0) (y-offset 0))
