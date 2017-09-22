@@ -327,12 +327,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (x y (record basic-output-record))
   (values x y))
 
-;;; Humph. It'd be nice to tie this to the actual definition of a
-;;; medium. -- moore
-(defclass complete-medium-state
-    (gs-ink-mixin gs-clip-mixin gs-line-style-mixin gs-text-style-mixin)
-  ())
-
 (defun replay (record stream &optional (region (or (pane-viewport-region stream)
                                                    (sheet-region stream))))
   (when (typep stream 'encapsulating-stream)
@@ -982,34 +976,6 @@ were added."
 (defmethod match-output-records ((record t) &rest args)
   (apply #'match-output-records-1 record args))
 
-;;; Factor out the graphics state portions of the output records so
-;;; they can be manipulated seperately e.g., by incremental
-;;; display. The individual slots of a graphics state are factored
-;;; into mixin classes so that each output record can capture only the
-;;; state that it needs.
-;;; -- moore
-
-;;; It would be appealing to define a setf method, e.g. (setf
-;;; medium-graphics-state), for setting a medium's state from a
-;;; graphics state object, but that would require us to define a
-;;; medium-graphics-state reader that would cons a state object.  I
-;;; don't want to do that.
-
-(defclass graphics-state ()
-  ()
-  (:documentation "Stores those parts of the medium/stream graphics state
-  that need to be restored when drawing an output record"))
-
-(defclass gs-ink-mixin (graphics-state)
-  ((ink :initarg :ink :accessor graphics-state-ink)))
-
-(defmethod initialize-instance :after ((obj gs-ink-mixin)
-                                       &key (stream nil)
-                                       (medium (when stream
-                                                 (sheet-medium stream))))
-  (when (and medium (not (slot-boundp obj 'ink)))
-    (setf (slot-value obj 'ink) (medium-ink medium))))
-
 (defmethod replay-output-record :around
     ((record gs-ink-mixin) stream &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
@@ -1019,22 +985,6 @@ were added."
 (defrecord-predicate gs-ink-mixin (ink)
   (if-supplied (ink)
     (design-equalp (slot-value record 'ink) ink)))
-
-(defclass gs-clip-mixin (graphics-state)
-  ((clip :initarg :clipping-region :accessor graphics-state-clip
-         :documentation "Clipping region in stream coordinates.")))
-
-(defmethod initialize-instance :after ((obj gs-clip-mixin)
-                                       &key (stream nil)
-                                       (medium (when stream
-                                                 (sheet-medium stream))))
-  (alexandria:when-let ((medium-clip (and medium (medium-clipping-region medium))))
-    (with-slots (clip) obj
-      (let ((clip-region (if (slot-boundp obj 'clip)
-                             (region-intersection medium-clip clip)
-                             medium-clip)))
-        (setq clip (transform-region (medium-transformation medium)
-                                     clip-region))))))
 
 (defmethod replay-output-record :around
     ((record gs-clip-mixin) stream &optional region x-offset y-offset)
@@ -1059,17 +1009,6 @@ were added."
   (:documentation "Implementation class for DISPLAYED-OUTPUT-RECORD.")
   (:default-initargs :stream nil))
 
-(defclass gs-line-style-mixin (graphics-state)
-  ((line-style :initarg :line-style :accessor graphics-state-line-style)))
-
-(defmethod initialize-instance :after ((obj gs-line-style-mixin)
-                                       &key (stream nil)
-                                       (medium (when stream
-                                                 (sheet-medium stream))))
-  (when medium
-    (unless (slot-boundp obj 'line-style)
-      (setf (slot-value obj 'line-style) (medium-line-style medium)))))
-
 (defmethod replay-output-record :around
     ((record gs-line-style-mixin) stream &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
@@ -1079,23 +1018,6 @@ were added."
 (defrecord-predicate gs-line-style-mixin (line-style)
   (if-supplied (line-style)
     (line-style-equalp (slot-value record 'line-style) line-style)))
-
-(defgeneric graphics-state-line-style-border (record medium)
-  (:method ((record gs-line-style-mixin) medium)
-    (/ (line-style-effective-thickness (graphics-state-line-style record)
-                                        medium)
-       2)))
-
-(defclass gs-text-style-mixin (graphics-state)
-  ((text-style :initarg :text-style :accessor graphics-state-text-style)))
-
-(defmethod initialize-instance :after ((obj gs-text-style-mixin)
-                                       &key (stream nil)
-                                       (medium (when stream
-                                                 (sheet-medium stream))))
-  (when medium
-    (unless (slot-boundp obj 'text-style)
-      (setf (slot-value obj 'text-style) (medium-text-style medium)))))
 
 (defmethod replay-output-record :around
     ((record gs-text-style-mixin) stream &optional region x-offset y-offset)
@@ -1241,15 +1163,11 @@ were added."
        ,@(when class
            `((defclass ,class-name (,@mixins standard-graphics-displayed-output-record)
                ,class-vars)
-             (defmethod initialize-instance :after ((graphic ,class-name)
-                                                    &key)
-                        (with-slots (stream ink clipping-region
-                                            line-style text-style ,@args)
-                            graphic
-                          ;; XXX: sheet-with-medium mixin?
-                          (let* ((medium (sheet-medium stream)))
-                            (setf (rectangle-edges* graphic)
-                                  (progn ,@body)))))))
+             (defmethod initialize-instance :after ((graphic ,class-name) &key)
+               (with-slots (stream ink clipping-region line-style text-style ,@args)
+                   graphic
+                 (let ((medium (sheet-medium medium)))
+                   (setf (rectangle-edges* graphic) (progn ,@body)))))))
        ,@(when medium-fn
            `((defmethod ,method-name :around ((stream output-recording-stream) ,@args)
                         ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
