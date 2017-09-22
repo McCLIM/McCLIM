@@ -210,7 +210,7 @@ all of FUNCTION-ARGS as APPLY arguments."
                           &body body)
      ,doc-string
      (setq stream (stream-designator-symbol stream '*standard-output*))
-     (with-gensyms (constructor continuation)
+     (with-gensyms (continuation)
        (multiple-value-bind (bindings m-i-args)
            (rebind-arguments initargs)
          `(let ,bindings
