@@ -342,14 +342,13 @@
 ;;; they can be manipulated seperately e.g., by incremental
 ;;; display. The individual slots of a graphics state are factored
 ;;; into mixin classes so that each output record can capture only the
-;;; state that it needs.
-;;; -- moore
+;;; state that it needs. -- moore
+;;;
+;;; Now graphics-state is an ancestor of both medium and some of
+;;; output-records. Thanks to that we can treat medium as
+;;; graphics-state without consing new objects and assign its state
+;;; from another graphics-state object. -- jd
 
-;;; It would be appealing to define a setf method, e.g. (setf
-;;; medium-graphics-state), for setting a medium's state from a
-;;; graphics state object, but that would require us to define a
-;;; medium-graphics-state reader that would cons a state object.  I
-;;; don't want to do that.
 
 (defclass graphics-state ()
   ()
@@ -410,6 +409,18 @@
 (defclass complete-medium-state
     (gs-ink-mixin gs-clip-mixin gs-line-style-mixin gs-text-style-mixin)
   ())
+
+(defgeneric (setf graphics-state) (new-gs gs)
+  (:method ((new-gs graphics-state) (gs graphics-state))
+    #+(or) "This is a no-op, so :after methods have primary method")
+  (:method :after ((new-gs gs-ink-mixin) (gs gs-ink-mixin))
+    (setf (graphics-state-ink gs) (graphics-state-ink new-gs)))
+  (:method :after ((new-gs gs-clip-mixin) (gs gs-clip-mixin))
+    (setf (graphics-state-clip gs) (graphics-state-clip new-gs)))
+  (:method :after ((new-gs gs-line-style-mixin) (gs gs-line-style-mixin))
+    (setf (graphics-state-line-style gs) (graphics-state-line-style new-gs)))
+  (:method :after ((new-gs gs-text-style-mixin) (gs gs-text-style-mixin))
+    (setf (graphics-state-text-style gs) (graphics-state-text-style new-gs))))
 
 
 ;;; MEDIUM class
