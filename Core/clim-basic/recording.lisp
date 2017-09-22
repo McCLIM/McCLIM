@@ -333,14 +333,14 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (return-from replay (replay record (encapsulating-stream-stream stream) region)))
   (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
-    (with-sheet-medium (medium stream)
-      (letf (((cursor-visibility (stream-text-cursor stream)) nil) ;; FIXME?
-             ((stream-cursor-position stream) (values 0 0))
-             ((stream-recording-p stream) nil)
-             ;; Is there a better value to bind to baseline?
-             ((slot-value stream 'baseline) (slot-value stream 'baseline))
-             ((medium-transformation medium) +identity-transformation+))
-        (replay-output-record record stream region)))))
+    (with-output-recording-options (stream :record nil)
+      (with-sheet-medium (medium stream)
+        (letf (((cursor-visibility (stream-text-cursor stream)) nil) ;; FIXME?
+               ((stream-cursor-position stream) (values 0 0))
+               ;; Is there a better value to bind to baseline?
+               ((slot-value stream 'baseline) (slot-value stream 'baseline))
+               ((medium-transformation medium) +identity-transformation+))
+          (replay-output-record record stream region))))))
 
 (defmethod replay-output-record ((record compound-output-record) stream
                                  &optional region (x-offset 0) (y-offset 0))
@@ -1948,14 +1948,13 @@ add output recording facilities. It is not instantiable."))
 
 (defmethod erase-output-record (record (stream standard-output-recording-stream)
                                 &optional (errorp t))
-  (letf (((stream-recording-p stream)  nil))
+  (with-output-recording-options (stream :record nil)
     (let ((region (rounded-bounding-rectangle record)))
       (with-bounding-rectangle* (x1 y1 x2 y2) region
         (if (output-record-ancestor-p (stream-output-history stream) record)
             (progn
               (delete-output-record record (output-record-parent record))
-              (with-output-recording-options (stream :record nil)
-                (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+))
+              (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+)
               (stream-replay stream region))
             (when errorp
               (error "~S is not contained in ~S." record stream)))))))
@@ -2108,10 +2107,10 @@ according to the flags RECORD and DRAW."
                       ;; fallback to the sheet's region for +everwhere+.
                       (sheet-region stream)
                       (bounding-rectangle region))))
-      (with-bounding-rectangle* (x1 y1 x2 y2) region
-        (with-output-recording-options (stream :record nil)
-          (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+)))
-      (stream-replay stream region))))
+      (with-output-recording-options (stream :record nil)
+        (with-bounding-rectangle* (x1 y1 x2 y2) region
+          (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+))
+        (stream-replay stream region)))))
 
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
   (declare (ignore x y))
