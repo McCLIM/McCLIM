@@ -1192,7 +1192,7 @@ were added."
       (let* ((my-coord-seq (slot-value record 'coord-seq)))
         (sequence= my-coord-seq coord-seq #'coordinate=))))
 
-(defmacro generate-medium-recording-body (class-name method-name args)
+(defmacro generate-medium-recording-body (class-name args)
   (let ((arg-list (loop for arg in args
                      nconc `(,(intern (symbol-name arg) :keyword) ,arg))))
     `(progn
@@ -1253,7 +1253,7 @@ were added."
        ,@(when medium-fn
            `((defmethod ,method-name :around ((stream output-recording-stream) ,@args)
                         ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
-                        (generate-medium-recording-body ,class-name ,method-name ,args))))
+                        (generate-medium-recording-body ,class-name ,args))))
        ,@(when replay-fn
            `((defmethod replay-output-record ((record ,class-name) stream
                                               &optional (region +everywhere+)
@@ -1492,7 +1492,6 @@ were added."
   (let ((tr (medium-transformation stream)))
     (if (rectilinear-transformation-p tr)
         (generate-medium-recording-body draw-rectangle-output-record
-                                        medium-draw-rectangle*
                                         (left top right bottom filled))
         (medium-draw-polygon* stream
                               (expand-rectangle-coords left top right bottom)
@@ -1517,7 +1516,6 @@ were added."
   (let ((tr (medium-transformation stream)))
     (if (rectilinear-transformation-p tr)
         (generate-medium-recording-body draw-rectangles-output-record
-                                        medium-draw-rectangles*
                                         (coord-seq filled))
         (do-sequence ((left top right bottom) coord-seq)
           (medium-draw-polygon* stream (vector left top
