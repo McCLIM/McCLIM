@@ -1259,7 +1259,6 @@ were added."
                                               &optional (region +everywhere+)
                                                 (x-offset 0) (y-offset 0))
                (declare (ignore x-offset y-offset region))
-               (,method-name ,medium)
                (with-slots (,@args) record
                  (let ((,medium (sheet-medium stream)))
                    ;; Graphics state is set up in :around method.
