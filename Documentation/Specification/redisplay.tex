@@ -401,11 +401,6 @@ be erased), \arg{moves} (what output records need to be moved), \arg{draws}
 (what output records need to be freshly replayed), \arg{erase-overlapping}, and
 \arg{move-overlapping}.  Each is a list whose elements are lists of the form:
 
-When \arg{check-overlapping} is \term{false}, this means that CLIM can assume
-that no sibling output records overlap each other at any level.  Supplying a
-\term{false} value for this argument can improve performance of redisplay.
-
-
 \begin{itemize}
 \item \arg{erases} are lists of \cl{(\arg{record} \arg{old-box})}
 
@@ -417,6 +412,11 @@ that no sibling output records overlap each other at any level.  Supplying a
 
 \item \arg{move-overlapping} is a list of \cl{(\arg{record} \arg{old-box} \arg{new-position})}
 \end{itemize}
+
+When \arg{check-overlapping} is \term{false}, this means that CLIM can assume
+that no sibling output records overlap each other at any level.  Supplying a
+\term{false} value for this argument can improve performance of redisplay.
+
 
 \Defgeneric {augment-draw-set} {record erases moves draws erase-overlapping move-overlapping
                                 \optional x-offset y-offset old-x-offset old-y-offset}
