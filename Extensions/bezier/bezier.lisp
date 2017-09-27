@@ -842,9 +842,11 @@ second curve point, yielding (200 50)."
 
 ;;; Fallback method
 
-(defmethod medium-draw-bezier-design* (medium design)
+(defmethod medium-draw-bezier-design* ((medium basic-medium) design)
   (render-through-pixmap design medium))
 
+(defmethod medium-draw-bezier-design* ((sheet basic-sheet) design)
+  (render-through-pixmap design (sheet-medium sheet)))
 
 ;;; NULL backend support
 
