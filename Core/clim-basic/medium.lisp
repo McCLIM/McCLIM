@@ -387,7 +387,7 @@
                                          (medium (when stream
                                                    (sheet-medium stream))))
   (when (and medium (not (slot-boundp obj 'line-style)))
-    (setf (slot-value obj 'line-style) (graphics-state-line medium))))
+    (setf (slot-value obj 'line-style) (graphics-state-line-style medium))))
 
 (defgeneric graphics-state-line-style-border (record medium)
   (:method ((record gs-line-style-mixin) medium)

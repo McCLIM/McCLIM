@@ -1166,7 +1166,7 @@ were added."
              (defmethod initialize-instance :after ((graphic ,class-name) &key)
                (with-slots (stream ink clipping-region line-style text-style ,@args)
                    graphic
-                 (let ((medium (sheet-medium medium)))
+                 (let ((medium (sheet-medium stream)))
                    (setf (rectangle-edges* graphic) (progn ,@body)))))))
        ,@(when medium-fn
            `((defmethod ,method-name :around ((stream output-recording-stream) ,@args)
