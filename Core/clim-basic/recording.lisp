@@ -996,9 +996,9 @@ were added."
         (with-drawing-options (stream :clipping-region (graphics-state-clip record))
           (call-next-method)))))
 
-(defrecord-predicate gs-clip-mixin ((:clipping-region clip))
-  (if-supplied (clip)
-    (region-equal (slot-value record 'clip) clip)))
+(defrecord-predicate gs-clip-mixin ((:clipping-region clipping-region))
+  (if-supplied (clipping-region)
+    (region-equal (graphics-state-clip record) clipping-region)))
 
 ;;; 16.3.2. Graphics Displayed Output Records
 (defclass standard-displayed-output-record (gs-clip-mixin gs-ink-mixin
