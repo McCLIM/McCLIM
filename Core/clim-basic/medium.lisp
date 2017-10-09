@@ -289,9 +289,9 @@
       (funcall continuation sheet))))
 
 (defmethod invoke-with-text-style ((medium medium) continuation text-style)
-  (letf (((medium-text-style medium)
-          (merge-text-styles text-style (medium-merged-text-style medium))))
-    (funcall continuation medium)))
+  (invoke-with-drawing-options
+   medium continuation
+   :text-style (merge-text-styles text-style (medium-merged-text-style medium))))
 
 ;;; For compatibility with real CLIM, which apparently lets you call this
 ;;; on non-CLIM streams.
@@ -336,6 +336,93 @@
                                (make-text-style nil nil ,size)))))
 
 
+;;; GRAPHICS-STATE class
+
+;;; Factor out the graphics state portions of the output records so
+;;; they can be manipulated seperately e.g., by incremental
+;;; display. The individual slots of a graphics state are factored
+;;; into mixin classes so that each output record can capture only the
+;;; state that it needs. -- moore
+;;;
+;;; Now graphics-state is an ancestor of both medium and some of
+;;; output-records. Thanks to that we can treat medium as
+;;; graphics-state without consing new objects and assign its state
+;;; from another graphics-state object. -- jd
+
+
+(defclass graphics-state ()
+  ()
+  (:documentation "Stores those parts of the medium/stream graphics state
+  that need to be restored when drawing an output record"))
+
+(defclass gs-ink-mixin (graphics-state)
+  ((ink :initarg :ink :accessor graphics-state-ink)))
+
+(defmethod initialize-instance :after ((obj gs-ink-mixin)
+                                       &key
+                                         (stream nil)
+                                         (medium (when stream
+                                                   (sheet-medium stream))))
+  (when (and medium (not (slot-boundp obj 'ink)))
+    (setf (slot-value obj 'ink) (graphics-state-ink medium))))
+
+(defclass gs-clip-mixin (graphics-state)
+  ((clipping-region :initarg :clipping-region :accessor graphics-state-clip
+                    :documentation "Clipping region in stream coordinates.")))
+
+(defmethod initialize-instance :after ((obj gs-clip-mixin)
+                                       &key
+                                         (stream nil)
+                                         (medium (when stream
+                                                   (sheet-medium stream))))
+  (when (and medium (not (slot-boundp obj 'clipping-region)))
+    (setf (slot-value obj 'clipping-region) (graphics-state-clip medium))))
+
+(defclass gs-line-style-mixin (graphics-state)
+  ((line-style :initarg :line-style :accessor graphics-state-line-style)))
+
+(defmethod initialize-instance :after ((obj gs-line-style-mixin)
+                                       &key
+                                         (stream nil)
+                                         (medium (when stream
+                                                   (sheet-medium stream))))
+  (when (and medium (not (slot-boundp obj 'line-style)))
+    (setf (slot-value obj 'line-style) (graphics-state-line-style medium))))
+
+(defgeneric graphics-state-line-style-border (record medium)
+  (:method ((record gs-line-style-mixin) medium)
+    (/ (line-style-effective-thickness (graphics-state-line-style record)
+                                        medium)
+       2)))
+
+(defclass gs-text-style-mixin (graphics-state)
+  ((text-style :initarg :text-style :accessor graphics-state-text-style)))
+
+(defmethod initialize-instance :after ((obj gs-text-style-mixin)
+                                       &key
+                                         (stream nil)
+                                         (medium (when stream
+                                                   (sheet-medium stream))))
+  (when (and medium (not (slot-boundp obj 'text-style)))
+    (setf (slot-value obj 'text-style) (graphics-state-text-style medium))))
+
+(defclass complete-medium-state
+    (gs-ink-mixin gs-clip-mixin gs-line-style-mixin gs-text-style-mixin)
+  ())
+
+(defgeneric (setf graphics-state) (new-gs gs)
+  (:method ((new-gs graphics-state) (gs graphics-state))
+    #+(or) "This is a no-op, so :after methods have primary method")
+  (:method :after ((new-gs gs-ink-mixin) (gs gs-ink-mixin))
+    (setf (graphics-state-ink gs) (graphics-state-ink new-gs)))
+  (:method :after ((new-gs gs-clip-mixin) (gs gs-clip-mixin))
+    (setf (graphics-state-clip gs) (graphics-state-clip new-gs)))
+  (:method :after ((new-gs gs-line-style-mixin) (gs gs-line-style-mixin))
+    (setf (graphics-state-line-style gs) (graphics-state-line-style new-gs)))
+  (:method :after ((new-gs gs-text-style-mixin) (gs gs-text-style-mixin))
+    (setf (graphics-state-text-style gs) (graphics-state-text-style new-gs))))
+
+
 ;;; MEDIUM class
 
 (defclass transform-coordinates-mixin ()
@@ -348,7 +435,7 @@
   ;; --GB 2003-05-25
   ())
 
-(defclass basic-medium (transform-coordinates-mixin medium)
+(defclass basic-medium (transform-coordinates-mixin complete-medium-state medium)
   ((foreground :initarg :foreground
                :initform +black+
                :accessor medium-foreground)

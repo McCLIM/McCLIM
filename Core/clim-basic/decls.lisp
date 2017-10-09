@@ -644,18 +644,12 @@ unspecified. "))
     (stream continuation record draw))
 
 ;;; with-new-output-record (stream &optional record-type record &rest initargs) &body body [Macro]
-
-;;; The 'constructor' arg is absent from the CLIM 2.0 spec but is documented
-;;; in the Allegro CLIM 2 User Guide and appears to exist in other 'classic'
-;;; CLIM implementations. I'm assuming it's an omission from the spec.
 (defgeneric invoke-with-new-output-record
-    (stream continuation record-type constructor &key &allow-other-keys)
-  (:documentation "Same as in CLIM 2.2 (missing CONSTRUCTOR added)."))
+    (stream continuation record-type &rest initargs))
 
 ;;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
 (defgeneric invoke-with-output-to-output-record 
-    (stream continuation record-type constructor 
-            &rest initargs &key &allow-other-keys))
+    (stream continuation record-type &rest initargs))
 
 (defgeneric make-design-from-output-record (record))
 

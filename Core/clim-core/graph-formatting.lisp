@@ -167,9 +167,7 @@
 	       (apply #'invoke-with-new-output-record stream
 		      #'cont
 		      (find-graph-type graph-type)
-		      nil
-		      graph-options 
-		      ))))
+		      graph-options))))
 	(setf (output-record-position graph-output-record)
 	  (values cursor-old-x cursor-old-y))
 	(when (and (stream-drawing-p stream)

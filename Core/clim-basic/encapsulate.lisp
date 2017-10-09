@@ -629,30 +629,26 @@ if there is one, or STREAM"
    record
    draw))
   
-(defmethod invoke-with-new-output-record ((stream standard-encapsulating-stream)
-					  continuation record-type constructor
-					  &rest initargs)
+(defmethod invoke-with-new-output-record
+    ((stream standard-encapsulating-stream) continuation record-type
+     &rest initargs)
   (apply #'invoke-with-new-output-record
 	 (slot-value stream 'stream)
 	 #'(lambda (inner-stream output-record)
 	     (declare (ignore inner-stream))
 	     (funcall continuation stream output-record))
 	 record-type
-	 constructor
 	 initargs))
 
 (defmethod invoke-with-output-to-output-record
-    ((stream standard-encapsulating-stream) continuation record-type constructor
-     &rest initargs
-     &key
-     &allow-other-keys)
+    ((stream standard-encapsulating-stream) continuation record-type
+     &rest initargs)
   (apply #'invoke-with-output-to-output-record
 	 (slot-value stream 'stream)
 	 #'(lambda (inner-stream record)
 	     (declare (ignore inner-stream))
 	     (funcall continuation stream record))
 	 record-type
-	 constructor
 	 initargs))
 
 ;;; Presentation type generics

@@ -2633,8 +2633,7 @@ order to produce a double-click")
   (funcall-presentation-generic-function presentation-type-history type))
 
 (defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
-  (change-stream-space-requirements stream
-                                    :height new-height)
+  (change-stream-space-requirements stream :height new-height)
   (unless (eq :allow (stream-end-of-page-action stream))
     (scroll-extent stream 0 (max 0 (-  new-height
                                        (bounding-rectangle-height
@@ -2888,8 +2887,8 @@ current background message was set."))
       (stream-set-input-focus (encapsulating-stream-stream frame)))
     #+clim-mp
     (unless input-buffer
+      (redisplay-frame-panes frame :force-p t)
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
-					  (redisplay-frame-panes frame :force-p t)
                                           (standalone-event-loop)))))
     (encapsulating-stream-stream frame)))
 
