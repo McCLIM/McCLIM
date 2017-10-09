@@ -104,16 +104,6 @@ evaluated."
     #'(lambda ()
         ,@body)))
 
-;;; XXX This is currently broken with respect to declarations
-
-(defmacro letf* ((&rest forms) &body body)
-  (if (null forms)
-      `(locally
-	 ,@body)
-      `(letf (,(car forms))
-	 (letf* (,(cdr forms))
-	   ,@body))))
-
 (defun display-string (string)
   (with-output-to-string (result)
     (loop for char across string

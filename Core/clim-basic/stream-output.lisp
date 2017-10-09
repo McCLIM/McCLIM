@@ -27,14 +27,10 @@
 ;;;       happens to be an output-recording-stream. - MikeMac 1/7/99
 
 ;;; Standard-Output-Stream class
+(defclass standard-output-stream (output-stream) ())
 
-(defclass standard-output-stream (fundamental-character-output-stream)
-  ())
-
-(defmethod stream-recording-p ((stream t)) nil)
-(defmethod stream-drawing-p ((stream t)) t)
-
-;;; Cursor class
+(defmethod stream-recording-p ((stream output-stream)) nil)
+(defmethod stream-drawing-p ((stream output-stream)) t)
 
 (defgeneric* (setf cursor-position) (x y cursor))
 
@@ -303,10 +299,7 @@
                  (scroll-horizontal stream width))
                 (:allow)))
             (unless (= start split)
-              (stream-write-output stream
-                                   string
-                                   nil
-                                   start split)
+              (stream-write-output stream string nil start split)
               (setq cx (+ cx width))
               (setf (stream-cursor-position stream) (values cx cy)))
             (when (/= split end)
@@ -359,40 +352,35 @@ non-nil, that is used as the width where needed; otherwise
 STREAM-STRING-WIDTH will be called."))
 
 ;;; The cursor is in stream coordinates.
-(defmethod stream-write-output (stream line string-width
+(defmethod stream-write-output ((stream standard-extended-output-stream)
+                                line string-width
                                 &optional (start 0) end)
   (declare (ignore string-width))
   (with-slots (baseline vspace) stream
-     (multiple-value-bind (cx cy) (stream-cursor-position stream)
-       (draw-text* (sheet-medium stream) line
-                   cx (+ cy baseline)
-                   :transformation +identity-transformation+
-                   :start start :end end))))
+    (multiple-value-bind (cx cy) (stream-cursor-position stream)
+      (draw-text* (sheet-medium stream) line
+                  cx (+ cy baseline)
+                  :transformation +identity-transformation+
+                  :start start :end end))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
   (with-cursor-off stream
-   (if (char= #\Newline char)
-       (seos-write-newline stream)
-     (seos-write-string stream (string char)))))
+    (if (char= #\Newline char)
+        (seos-write-newline stream)
+        (seos-write-string stream (string char)))))
 
-;;; I added the (subseq string seg-start ...) forms. Under ACL, there
-;;; is some wierd interaction with FORMAT. This shows up as
-;;; overwritten text in the pointer documentation and in menus. It
-;;; acts like a shared buffer is being corrupted but I can't narrow it
-;;; down. Using SUBSEQ does fix this interaction that's been here
-;;; since 4/16/03 - Mikemac 12/6/2003
 (defmethod stream-write-string ((stream standard-extended-output-stream) string
                                 &optional (start 0) end)
   (let ((seg-start start)
         (end (or end (length string))))
     (with-cursor-off stream
-     (loop for i from start below end do
-       (when (char= #\Newline
-                    (char string i))
-         (seos-write-string stream (subseq string seg-start i))
-         (seos-write-newline stream)
-         (setq seg-start (1+ i))))
-     (seos-write-string stream (subseq string seg-start end)))))
+      (loop for i from start below end do
+           (when (char= #\Newline
+                        (char string i))
+             (seos-write-string stream string seg-start i)
+             (seos-write-newline stream)
+             (setq seg-start (1+ i))))
+      (seos-write-string stream string seg-start end))))
 
 (defmethod stream-character-width ((stream standard-extended-output-stream) char
                                    &key (text-style nil))

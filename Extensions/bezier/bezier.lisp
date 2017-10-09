@@ -776,35 +776,34 @@ second curve point, yielding (200 50)."
 		      (+ (* a 1.0) (* 1-a g))
 		      (+ (* a 1.0) (* 1-a b))))))
 
-(defgeneric ensure-pixmap (medium design))
-
-(defmethod ensure-pixmap (medium design)
-  (let* ((pixmap (gethash (list (medium-sheet medium) (resolve-ink medium) design)
-			 *pixmaps*)))
-    (when (null pixmap)
+(defgeneric ensure-pixmap (medium design)
+  (:method ((sheet sheet-with-medium-mixin) design)
+    (ensure-pixmap (sheet-medium sheet) design))
+  (:method ((medium basic-medium) design)
+    (let* ((sheet (medium-sheet medium))
+           (ink (resolve-ink medium))
+           (pixmap (gethash (list sheet ink design) *pixmaps*)))
+      (when pixmap
+        (return-from ensure-pixmap pixmap))
       (let* ((picture (render-to-array design))
-	     (height (array-dimension picture 0))
-	     (width (array-dimension picture 1))
-	     (reduced-picture (make-array (list (/ height 4) (/ width 4)) :initial-element 16)))
-	(loop for l from 0 below height
-	      do (loop for c from 0 below width
-		       do (when (zerop (aref picture l c))
-			    (decf (aref reduced-picture (floor l 4) (floor c 4))))))
-	(setf pixmap
-	      (with-output-to-pixmap (pixmap-medium
-				      (medium-sheet medium)
-				      :width (/ width 4) :height (/ height 4))
-		(loop for l from 0 below (/ height 4)
-		      do (loop for c from 0 below (/ width 4)
-			       do (draw-point*
-				   pixmap-medium c l
-				   :ink (make-ink
-					 medium
-					 (aref reduced-picture l c)))))))
-	(setf (gethash (list (medium-sheet medium) (resolve-ink medium) design)
-		       *pixmaps*)
-	      pixmap)))
-    pixmap))
+             (height (array-dimension picture 0))
+             (width (array-dimension picture 1))
+             (reduced-picture (make-array (list (/ height 4) (/ width 4)) :initial-element 16)))
+        (loop for l from 0 below height
+           do (loop for c from 0 below width
+                 do (when (zerop (aref picture l c))
+                      (decf (aref reduced-picture (floor l 4) (floor c 4))))))
+        (setf (gethash (list sheet ink design) *pixmaps*)
+              (with-output-to-pixmap (pixmap-medium sheet
+                                                    :width (/ width 4)
+                                                    :height (/ height 4))
+                (loop for l from 0 below (/ height 4)
+                   do (loop for c from 0 below (/ width 4)
+                         do (draw-point*
+                             pixmap-medium c l
+                             :ink (make-ink
+                                   medium
+                                   (aref reduced-picture l c)))))))))))
 
 (defun render-through-pixmap (design medium)
   (multiple-value-bind (min-x min-y)
@@ -842,9 +841,11 @@ second curve point, yielding (200 50)."
 
 ;;; Fallback method
 
-(defmethod medium-draw-bezier-design* (medium design)
+(defmethod medium-draw-bezier-design* ((medium basic-medium) design)
   (render-through-pixmap design medium))
 
+(defmethod medium-draw-bezier-design* ((sheet basic-sheet) design)
+  (render-through-pixmap design (sheet-medium sheet)))
 
 ;;; NULL backend support
 

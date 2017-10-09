@@ -49,9 +49,14 @@
 
        ',name)))
 
+;; "Part I: Overview and Conventions" doesn't have any protocol
+;; classes defined, so no need for a separate page for it.
+
+
+;;;; Part II: Geometry Substrate
+
 ;;; 3.1 General Regions
 (define-protocol-class bounding-rectangle ())
-
 
 (define-protocol-class region (design))
 (define-protocol-class path (region bounding-rectangle))
@@ -68,6 +73,9 @@
 ;;; 5.1 Transformations
 (define-protocol-class transformation ())
 
+
+;;;; Part III: Windowing Substrate
+
 ;;; 7.1 Basic Sheet Classes
 (define-protocol-class sheet (bounding-rectangle))
 
@@ -82,6 +90,9 @@
 
 ;;; 9.2 Ports
 (define-protocol-class port ())
+
+
+;;;; Part IV: Sheet and Medium Output Facilities
 
 ;;; 10.3 Line Styles
 
@@ -104,11 +115,19 @@
 
 (define-protocol-class opacity (design))
 
+
+;;;; Part V: Extended Stream Output Facilities
+
+;; CLIM Specification says that E-O-S is a subclass of OUTPUT-STREAM,
+;; but it does not says what is it. We infere it is a base class for
+;; all clim output streams (output-recording-stream included).
+(define-protocol-class output-stream
+    (fundamental-character-output-stream)
+  ())
+
 ;;; 15.2 Extended Output Streams
 (define-protocol-class extended-output-stream
-    (fundamental-character-output-stream)
-  ;; CLIM Specification says that E-O-S is a subclass of
-  ;; OUTPUT-STREAM, but it does not says what is it.
+    (output-stream)
   ())
 
 ;;; 15.3 The Text Cursor
@@ -131,7 +150,7 @@
   ())
 
 ;;; 16.4 Output Recording Streams
-(define-protocol-class output-recording-stream ()
+(define-protocol-class output-recording-stream (output-stream)
   ())
 
 ;;; 17.3.1 Table Formatting Protocol
@@ -155,6 +174,9 @@
 ;;; 21.3 Incremental Redisplay Protocol
 (define-protocol-class updating-output-record (output-record))
 
+
+;;;; Part VI: Extended Stream Input Facilities
+
 ;;; 22.2 Extended Input Streams
 
 (define-protocol-class extended-input-stream 
@@ -174,6 +196,9 @@
 
 ;;; 24.1.1 The Input Editing Stream Protocol
 (define-protocol-class input-editing-stream ())
+
+
+;;;; Part VII: Building Applications
 
 ;;; 27.2 Command Tables
 (define-protocol-class command-table ()
@@ -219,6 +244,9 @@
    (armed               :initform nil)
 
    ))
+
+
+;;;; Part VIII: Appendices
 
 ;;; C.1 Encapsulating Streams
 (define-protocol-class encapsulating-stream ()

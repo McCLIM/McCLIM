@@ -368,19 +368,6 @@
 (defgeneric compose-in (ink mask))
 (defgeneric compose-out (ink mask))
 
-;;; The generic function DO-GRAPHICS-WITH-OPTIONS is internal to the
-;;; CLIM-INTERNALS package.  It is used in the expansion of the macro
-;;; WITH-MEDIUM-OPTIONS.  
-(defgeneric do-graphics-with-options (medium function &rest options))
-
-(defmacro with-medium-options ((sheet args)
-			       &body body)
-  `(flet ((graphics-op (medium)
-	    (declare (ignorable medium))
-	    ,@body))
-     #-clisp (declare (dynamic-extent #'graphics-op))
-     (apply #'do-graphics-with-options ,sheet #'graphics-op ,args)))
-
 ;;; PATTERN is just the an abstract class of all pattern-like design. 
 
 ;;; For performance might consider to sort out pattern, which consists
