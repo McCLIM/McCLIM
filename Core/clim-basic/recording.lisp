@@ -363,15 +363,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 (defun highlight-output-record-rectangle (record stream state)
   (with-identity-transformation (stream)
     (multiple-value-bind (x1 y1 x2 y2)
-        (output-record-hit-detection-rectangle* record)
+        (bounding-rectangle* record)
       (ecase state
         (:highlight
          (draw-rectangle* (sheet-medium stream) (1+ x1) (1+ y1) (1- x2) (1- y2)
                           :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+?
         (:unhighlight
-         ;; FIXME: repaint the hit detection rectangle. It could be
-         ;; bigger than the bounding rectangle.
-         (repaint-sheet stream record)
+         (repaint-sheet stream (bounding-rectangle record))
          ;; Using queue-repaint should be faster in apps (such as
          ;; clouseau) that highlight/unhighlight many bounding
          ;; rectangles at once. The event code should merge these into
@@ -381,13 +379,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
          ;; out shortly after being drawn. So, we aren't ready for
          ;; this yet.  ..Actually, it isn't necessarily
          ;; faster. Depends on the app.
-         #+NIL
-         (queue-repaint stream
-                        (make-instance 'window-repaint-event
-                          :sheet stream
-                          :region (transform-region
-                                   (sheet-native-transformation stream)
-                                   record))))))))
+         #+ (or)
+	       (queue-repaint stream
+			      (make-instance 'window-repaint-event
+                           :sheet stream
+                           :region (bounding-rectangle record))))))))
 
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record output-record) stream state)
