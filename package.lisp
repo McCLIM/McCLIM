@@ -2054,6 +2054,7 @@
                 #:clamp
                 #:make-keyword
                 #:ensure-gethash
+		#:last-elt
 		#:with-gensyms)
   (:intern #:letf))
 

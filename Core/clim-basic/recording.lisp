@@ -1786,13 +1786,13 @@ were added."
   (with-slots (strings baseline width max-height left right start-y end-x end-y medium)
       text-record
     (if (and strings
-             (let ((string (last1 strings)))
+             (let ((string (last-elt strings)))
                (match-output-records string
                                      :text-style text-style
                                      :ink (medium-ink medium)
                                      :clipping-region (medium-clipping-region
                                                        medium))))
-        (vector-push-extend character (slot-value (last1 strings) 'string))
+        (vector-push-extend character (slot-value (last-elt strings) 'string))
         (nconcf strings
                 (list (make-instance
                        'styled-string

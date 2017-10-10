@@ -98,10 +98,6 @@
   `(progn
      ,@body))
 
-(defun last1 (list)
-  "Last element of LIST."
-  (first (last list)))
-
 (defun 2+ (x)
   (+ x 2))
 
