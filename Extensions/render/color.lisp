@@ -35,7 +35,9 @@
 (declaim (inline %lerp)
 	 (ftype (function (octet octet octet) octet) %lerp))
 (defun %lerp (p q a)
-  (logand #xFF (+ p (octet-mult a (- q p)))))
+  (logand #xFF (if (>= q p)
+                   (+ p (octet-mult a (- q p)))
+                   (- p (octet-mult a (- p q))))))
 
 (declaim (inline %prelerp)
 	 (ftype (function (octet octet octet) octet) %prelerp))
