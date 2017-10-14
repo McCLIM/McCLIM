@@ -266,8 +266,7 @@ accept of this query")))
 				  ,(query-identifier 
 				    (first
 				     (queries *accepting-values-stream*))))))
-	   (*accelerator-gestures* (append (compute-inherited-keystrokes command-table)
-					   *accelerator-gestures*)))
+	   (*accelerator-gestures* (compute-inherited-keystrokes command-table)))
       (letf (((frame-command-table *application-frame*)
               (find-command-table command-table)))
         (unwind-protect
