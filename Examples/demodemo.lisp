@@ -223,7 +223,7 @@
      (result-list
       (make-pane 'list-pane
 		 :value 'clim:region-intersection
-		 :items (apropos-list "INTER" :clim t)
+		 :items (apropos-list "INTER" :clim)
 		 :presentation-type-key (constantly 'list-test-symbol)
 		 :name-key (lambda (x) (format nil "~(~S~)" x))))
      (interactor :interactor :height 200))
