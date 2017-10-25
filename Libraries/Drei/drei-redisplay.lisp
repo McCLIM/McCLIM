@@ -1068,7 +1068,7 @@ the end of the buffer."))
       (unless (zerop (* object-width stroke-height))
         (draw-rectangle* stream
                          cursor-x cursor-y
-                         (+ cursor-x object-width) (+ cursor-y stroke-height)
+                         (+ cursor-x 3) (+ cursor-y stroke-height)
                          :ink (ink cursor))))))
 
 (defmethod bounding-rectangle* ((view drei-buffer-view))
