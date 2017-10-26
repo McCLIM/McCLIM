@@ -2849,24 +2849,20 @@ if INVOKE-CALLBACK is given."))
   (let ((gadget-output-record (gensym))
         (x (gensym))
         (y (gensym)))
-    `(multiple-value-bind (,x ,y)(stream-cursor-position ,stream)
+    `(multiple-value-bind (,x ,y) (stream-cursor-position ,stream)
        (flet ((with-output-as-gadget-continuation (,stream record)
                 (flet ((with-output-as-gadget-body (,stream)
                          (declare (ignorable ,stream))
                          (progn ,@body)))
                   (setf (gadget record)
-                        (with-output-as-gadget-body ,stream))))
-              (gadget-output-record-constructor ()
-                (make-instance 'gadget-output-record
-                               ,@options :x ,x :y ,y)))
+                        (with-output-as-gadget-body ,stream)))))
          (declare (dynamic-extent #'with-output-as-gadget-continuation
                                   #'gadget-output-record-constructor))
          (let ((,gadget-output-record
                 (invoke-with-output-to-output-record
                  ,stream
                  #'with-output-as-gadget-continuation
-                 nil
-                 #'gadget-output-record-constructor)))
+                 'gadget-output-record :x ,x :y ,y)))
            (setup-gadget-record ,stream ,gadget-output-record)
            (stream-add-output-record ,stream ,gadget-output-record)
            (values (gadget ,gadget-output-record) ,gadget-output-record))))))
