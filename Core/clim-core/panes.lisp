@@ -2494,8 +2494,8 @@ order to produce a double-click")
 (defgeneric change-stream-space-requirements (stream &key width height))
 
 (defmethod change-stream-space-requirements ((pane clim-stream-pane) &key width height)
-    (when width
-      (setf (stream-width pane) width))
+  (when width
+    (setf (stream-width pane) width))
   (when height
     (setf (stream-height pane) height))
   (change-space-requirements pane))

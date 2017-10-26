@@ -25,30 +25,6 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-;;;; Changes
-
-;;;  When        Who    What
-;;; ----------------------------------------------------------------------------
-;;;  2002-06-27  GB     REGION-INTERSECTS-REGION-P has an :around method on bounding
-;;;                     rectangles.
-;;;  2002-06-04  APD    partially fixed (BOUNDING-RECTANGLE* STANDARD-ELLIPSE)
-;;;  2001-07-16  GB     added (REGION-CONTAINS-POSITION-P STANDARD-ELLIPSE ..)
-;;;                     added (BOUNDING-RECTANGLE* STANDARD-ELLIPSE)
-;;;                     added (REGION-INTERSECTION LINE STANDARD-ELLIPSE) and vice versa
-;;;  2001-07-12  GB     fixed bugs in
-;;;                     (BOUNDING-RECTANGLE* STANDARD-REGION-UNION)
-;;;                     (BOUNDING-RECTANGLE* STANDARD-REGION-INTERSECTION)
-;;;  2001-07-09  GB     maybe fixed a bug in MAP-OVER-SCHNITT-GERADE/POLYGON.
-;;;  2001-03-09  AR     fixed a bug in MAKE-ELLIPICAL-THING
-;;;                     fixed STANDARD-ELLIPTICAL-ARC defclass
-;;;  2001-03-06  AR     fixed bug in (REGION-EQUAL STANDARD-RECTANGLE STANDARD-RECTANGLE)
-;;;                     REGION is now a subclass of DESIGN.
-;;;  2001-01-21  GB     fixed bug in (TRANSFORM-REGION T RECTANGLE-SET)
-;;;                     added some documentation
-
-;;;  GB = Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;  AR = Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
-
 ;;; ---- TODO ------------------------------------------------------------------
 
 ;;; - ellipses: The intersection of two ellipses is there, but
