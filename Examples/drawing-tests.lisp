@@ -135,7 +135,7 @@
                   (clim:draw-rectangle* output 0 0 *width* *height* :filled t
                                         :ink clim:+grey90+)
                   (funcall (drawing-test-drawer item) output))
-              (condition (condition)
+              (simple-error (condition)
                 (clim:with-drawing-options (description :ink +red+)
                   (format description "Backend:~a~%" condition)))))))))
 
@@ -165,7 +165,7 @@
                                    (funcall (drawing-test-drawer item) stream))))
                     (draw-pattern* output pattern 0 0)
                     (medium-finish-output (sheet-medium output))))
-              (condition (condition)
+              (simple-error (condition)
                 (clim:with-drawing-options (description :ink +red+)
                   (format description "Render:~a~%" condition)))))))))
 
@@ -261,7 +261,7 @@
     (with-bounding-rectangle* (min-x min-y max-x max-y)
 	cr
       (draw-rectangle* stream (- min-x 10) (- min-y 10) (+ max-x 10) (+ max-y 10) :line-thickness 2 :filled t :ink +green+)
-      (draw-rectangle* stream min-x min-y max-x max-y :line-thickness 3 :filled nil)
+      (draw-rectangle* stream min-x min-y max-x max-y :line-thickness 1 :filled nil)
       (with-drawing-options (stream :clipping-region cr)
 	(draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey60+)
 	(loop repeat 30
@@ -359,7 +359,8 @@
 
 			 
 (define-drawing-test "01) Point Clipping" (stream)
-    ""
+    #.(format nil "Points should be drawn only inside the green frame. Anything ~
+outside the clipping area should be grey.")
   (test-simple-clipping-region stream
 			       #'(lambda (stream)
 				   (clim:draw-point* stream (random *width*) (random *height*)
@@ -422,7 +423,8 @@
 	  (setf y (+ 50 y)))))))
 
 (define-drawing-test "02) Line Clipping" (stream)
-    ""
+    #.(format nil "Lines should be drawn only inside the green frame. Anything ~
+outside the clipping area should be grey.")
     (test-simple-clipping-region stream
 				 #'(lambda (stream)
 				     (let ((x (random *width*))
@@ -466,7 +468,8 @@
 
 
 (define-drawing-test "03) Polygon Clipping" (stream)
-    ""
+    #.(format nil "Polygons should be drawn only inside the green frame. Anything ~
+outside the clipping area should be grey.")
     (test-simple-clipping-region stream
 				 #'(lambda (stream)
 				     (let ((v (mapcan #'(lambda (x)
@@ -558,7 +561,8 @@
 	      (setf y (+ 40 y))))))))
 
 (define-drawing-test "04) Rectangle Clipping" (stream)
-    ""
+    #.(format nil "Rectangles should be drawn only inside the green frame. Anything ~
+outside the clipping area should be grey.")
     (test-simple-clipping-region stream
 				 #'(lambda (stream)
 				     (let ((x (random *width*))
@@ -622,14 +626,15 @@
 	    (setf y (+ 80 y)))))))
 
 (define-drawing-test "05) Ellipse Clipping" (stream)
-    ""
-    (test-simple-clipping-region stream
-				 #'(lambda (stream)
-				     (draw-ellipse* stream (random *width*) (random *height*)
-						    (+ 1 (random 50)) 0 0 (+ 1 (random 50))
-						    :line-thickness (random 5)
-						    :ink (make-random-col)
-						    :filled t))))
+    #.(format nil "Ellipses should be drawn only inside the green frame. Anything ~
+outside the clipping area should be grey.")
+  (test-simple-clipping-region stream
+                               #'(lambda (stream)
+                                   (draw-ellipse* stream (random *width*) (random *height*)
+                                                  (+ 1 (random 50)) 0 0 (+ 1 (random 50))
+                                                  :line-thickness (random 5)
+                                                  :ink (make-random-col)
+                                                  :filled t))))
 
 (define-drawing-test "05) Ellipse Scale" (stream)
     ""
@@ -687,14 +692,15 @@
 	    (setf y (+ 80 y)))))))
 
 (define-drawing-test "06) Circle Clipping" (stream)
-    ""
-    (test-simple-clipping-region stream
-				 #'(lambda (stream)
-				     (draw-circle* stream (random *width*) (random *height*)
-						   (+ 1 (random 50))
-						   :line-thickness (random 5)
-						   :ink (make-random-col)
-						   :filled t))))
+    #.(format nil "Circles should be drawn only inside the green frame. Anything ~
+outside the clipping area should be grey.")
+  (test-simple-clipping-region stream
+                               #'(lambda (stream)
+                                   (draw-circle* stream (random *width*) (random *height*)
+                                                 (+ 1 (random 50))
+                                                 :line-thickness (random 5)
+                                                 :ink (make-random-col)
+                                                 :filled t))))
 
 (define-drawing-test "06) Circle Scale" (stream)
     ""
@@ -790,7 +796,8 @@
     (clim:draw-text* stream "toward x" 200 200 :toward-x 30)))
 
 (define-drawing-test "07) Text Clipping" (stream)
-    ""
+    #.(format nil "Text should be drawn only inside the green frame. Anything ~
+outside the clipping area should be grey.")
     (test-simple-clipping-region stream
 				 #'(lambda (stream)
 				     (draw-text* stream (format nil "~A" (random 10))
@@ -1127,7 +1134,7 @@
 	      (clim:formatting-cell (stream) (draw a :bevel))
 	      (clim:formatting-cell (stream) (draw a :round)))))))
 
-(define-drawing-test "XXX Danger!! 12) Table dashes" (stream)
+(define-drawing-test "12) Table dashes" (stream)
   ""
   (clim:formatting-table (stream :x-spacing 50
 				 :y-spacing 20)
