@@ -916,7 +916,6 @@ position for the character."
 (defmethod draw-design (medium (design polygon)
 			&rest options &key &allow-other-keys)
   (apply #'draw-polygon medium (polygon-points design)
-         :closed (polyline-closed design)
          :filled t
          options))
 
@@ -935,22 +934,22 @@ position for the character."
 			&rest options &key &allow-other-keys)
   (multiple-value-bind (cx cy) (ellipse-center-point* design)
     (multiple-value-bind (r1x r1y r2x r2y) (ellipse-radii design)
-      (multiple-value-call #'draw-ellipse* medium
-                           cx cy r1x r1y r2x r2y
-                           :start-angle (ellipse-start-angle design)
-                           :end-angle (ellipse-end-angle design)
-                           options))))
+      (apply #'draw-ellipse* medium
+             cx cy r1x r1y r2x r2y
+             :start-angle (or (ellipse-start-angle design) 0.0)
+             :end-angle (or (ellipse-end-angle design) (* 2.0 pi))
+             options))))
 
 (defmethod draw-design (medium (design elliptical-arc)
 			&rest options &key &allow-other-keys)
   (multiple-value-bind (cx cy) (ellipse-center-point* design)
     (multiple-value-bind (r1x r1y r2x r2y) (ellipse-radii design)
-      (multiple-value-call #'draw-ellipse* medium
-                           cx cy r1x r1y r2x r2y
-                           :start-angle (ellipse-start-angle design)
-                           :end-angle (ellipse-end-angle design)
-                           :filled nil
-                           options))))
+      (apply #'draw-ellipse* medium
+             cx cy r1x r1y r2x r2y
+             :start-angle (ellipse-start-angle design)
+             :end-angle (ellipse-end-angle design)
+             :filled nil
+             options))))
 
 (defmethod draw-design (medium (design standard-region-union)
 			&rest options &key &allow-other-keys)
