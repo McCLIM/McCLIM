@@ -355,10 +355,14 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   ;; XXX DC
   (bounding-rectangle* record))
 
-(defmethod output-record-refined-position-test ((record basic-output-record)
-                                                x y)
+(defmethod output-record-refined-position-test
+    ((record basic-output-record) x y)
   (declare (ignore x y))
   t)
+
+(defmethod output-record-refined-position-test
+    ((record gs-clip-mixin) x y)
+  (region-contains-position-p (graphics-state-clip record) x y))
 
 (defun highlight-output-record-rectangle (record stream state)
   (with-identity-transformation (stream)
