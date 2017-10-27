@@ -131,20 +131,16 @@
                (aref tmp 1) y1
                (aref tmp 2) width
                (aref tmp 3) height
-               (xlib:gcontext-clip-mask gc :unsorted) tmp)))
+               (xlib:gcontext-clip-mask gc :yx-banded) tmp)))
+      ((typep clipping-region 'climi::standard-rectangle-set)
+       (alexandria:when-let ((rect-seq (clipping-region->rect-seq clipping-region)))
+         ;; What McCLIM is generating is not :yx-banded in the same
+         ;; sense as CLX requires it. Use :unsorted until we fix it.
+         #+ (or) (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
+         #- (or) (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))
       (t
-        (let ((rect-seq (clipping-region->rect-seq clipping-region)))
-          (when rect-seq
-            #+nil
-            ;; ok, what McCLIM is generating is not :yx-banded...
-            ;; (currently at least)
-            (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
-            #-nil
-            ;; the region code doesn't support yx-banding...
-            ;; or does it? what does y-banding mean in this implementation?
-            ;; well, apparantly it doesn't mean what y-sorted means
-            ;; to clx :] we stick with :unsorted until that can be sorted out
-            (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))))))
+       ;; XXX: what if it is not a set of rectangles? use pixmap!
+       (warn "Non-rectangular clipping area is not supported by CLX backend.")))))
 
 
 (defgeneric medium-gcontext (medium ink))
