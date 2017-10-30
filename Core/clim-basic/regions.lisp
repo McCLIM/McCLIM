@@ -833,6 +833,37 @@
 (defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
   (region-intersection line ellipse))
 
+;;; Ellipse is a convex object. That Implies that if each of the rectangle
+;;; vertexes lies inside it, then whole rectangle fits as well. We take a
+;;; special care for ellipses with start/end angle.
+(defmethod region-contains-region-p ((a standard-ellipse) (b standard-rectangle))
+  (with-standard-rectangle (x1 y1 x2 y2) b
+    (if (null (ellipse-start-angle a))
+        (and (region-contains-position-p a x1 y1)
+             (region-contains-position-p a x2 y1)
+             (region-contains-position-p a x1 y2)
+             (region-contains-position-p a x2 y2))
+        (flet ((fits (l) (region-equal l (region-intersection l a))))
+          (and (fits (make-line* x1 y1 x2 y1))
+               (fits (make-line* x2 y1 x2 y2))
+               (fits (make-line* x2 y2 x1 y2))
+               (fits (make-line* x1 y2 x1 y1)))))))
+
+(defmethod region-contains-region-p ((a standard-ellipse) (polygon standard-polygon))
+  (if (null (ellipse-start-angle a))
+      (map-over-polygon-coordinates
+       #'(lambda (x y)
+           (unless (region-contains-position-p a x y)
+             (return-from region-contains-region-p nil)))
+       polygon)
+      (map-over-polygon-segments
+       #'(lambda (x1 y1 x2 y2
+                  &aux (line (make-line* x1 y1 x2 y2)))
+           (unless (region-equal line (region-intersection line a))
+             (return-from region-contains-region-p nil)))
+       polygon))
+  T)
+
 ;;; -- 2.5.6.2 Accessors for CLIM Elliptical Objects -------------------------
 
 (defmethod ellipse-center-point* ((self elliptical-thing))
