@@ -690,46 +690,135 @@
                    (setf y-max (max cy sa-y ea-y))))))))
         (values x-min y-min x-max y-max)))))
 
-(defun intersection-line/unit-circle (x1 y1 x2 y2)
-  "Computes the intersection of the line from (x1,y1) to (x2,y2) and the unit circle.
-If the intersection is empty, NIL is returned.
-Otherwise four values are returned: x1, y1, x2, y2; the start and end
-point of the resulting line."
-  (let* ((dx (- x2 x1))
-         (dy (- y2 y1))
-         (a (+ (expt dx 2) (expt dy 2)))
-         (b (+ (* 2 x1 dx) (* 2 y1 dy)))
-         (c (+ (expt x1 2) (expt y1 2) -1)))
-    (let ((s1 (- (/ (+ (sqrt (- (expt b 2) (* 4 a c))) b) (* 2 a))))
-          (s2 (- (/ (- b (sqrt (- (expt b 2) (* 4 a c)))) (* 2 a)))))
-      (cond ((and (realp s1) (realp s2)
-                  (not (and (< s1 0) (< s2 0)))
-                  (not (and (> s1 1) (> s2 1))))
-             (let ((s1 (max 0 (min 1 s1)))
-                   (s2 (max 0 (min 1 s2))))
-               (values (+ x1 (* s1 dx))
-                       (+ y1 (* s1 dy))
-                       (+ x1 (* s2 dx))
-                       (+ y1 (* s2 dy)))))
-            (t
-             nil)))))
+(defun intersection-hline/ellipse (el y)
+  "Returns coordinates where ellipse intersects with a horizontal line."
+  (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
+    (let* ((y (- y cy))
+           (cos (cos phi))
+           (sin (sin phi))
+           (a (+ (expt (* v cos) 2)
+                 (expt (* h sin) 2)))
+           (b (* 2 y cos sin
+                 (- (* v v) (* h h))))
+           (c (- (+ (expt (* y v sin) 2)
+                    (expt (* y h cos) 2))
+                 (expt (* h v) 2)))
+           (dc (sqrt (- (* b b) (* 4 a c))))
+           (x1 (/ (- (- b) dc)
+                  (* 2 a)))
+           (x2 (/ (+ (- b) dc)
+                  (* 2 a))))
+      (values (+ cx x1) (+ cy y) (+ cx x2) (+ cy y)))))
+
+(defun intersection-vline/ellipse (el x)
+  "Returns coordinates where ellipse intersects with a vertical line."
+  (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
+    (let* ((x (- x cx))
+           (cos (cos phi))
+           (sin (sin phi))
+           (a (+ (expt (* v sin) 2)
+                 (expt (* h cos) 2)))
+           (b (* 2 x cos sin
+                 (- (* v v) (* h h))))
+           (c (- (+ (expt (* x v cos) 2)
+                    (expt (* x h sin) 2))
+                 (expt (* h v) 2)))
+           (dc (sqrt (- (* b b) (* 4 a c))))
+           (y1 (/ (- (- b) dc)
+                  (* 2 a)))
+           (y2 (/ (+ (- b) dc)
+                  (* 2 a))))
+      (values (+ cx x) (+ cy y1) (+ cx x) (+ cy y2)))))
+
+(defun intersection-line/ellipse (el lx1 ly1 lx2 ly2)
+  "Returns coordinates where ellipse intersects with arbitral line (except vertical)."
+  (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
+    (let* ((lx1 (- lx1 cx)) (ly1 (- ly1 cy)) (lx2 (- lx2 cx)) (ly2 (- ly2 cy))
+           (m-slope (/ (- ly1 ly2) (- lx1 lx2)))
+           (b-slope (- ly1 (* m-slope lx1)))
+           (cos (cos phi))
+           (sin (sin phi))
+           (a (+ (* v v
+                    (+ (* cos cos)
+                       (* 2 m-slope cos sin)
+                       (expt (* m-slope sin) 2)))
+                 (* h h
+                    (+ (expt (* m-slope cos) 2)
+                       (* -2 m-slope cos sin)
+                       (* sin sin)))))
+           (b (+ (* 2 v v b-slope
+                    (+ (* cos sin) (* m-slope sin sin)))
+                 (* 2 h h b-slope
+                    (- (* m-slope cos cos) (* cos sin)))))
+           (c (- (* b-slope b-slope
+                    (+ (expt (* v sin) 2)
+                       (expt (* h cos) 2)))
+                 (* h h v v)))
+           (dc (sqrt (- (* b b) (* 4 a c))))
+           (x1 (/ (- (- b) dc)
+                  (* 2 a)))
+           (y1 (+ (* m-slope x1) b-slope))
+           (x2 (/ (+ (- b) dc)
+                  (* 2 a)))
+           (y2 (+ (* m-slope x2) b-slope)))
+      (values (+ cx x1) (+ cy y1) (+ cx x2) (+ cy y2)))))
 
 (defmethod region-intersection ((line line) (ellipse standard-ellipse))
-  (with-slots (tr) ellipse
-    (multiple-value-bind (x1 y1 x2 y2)
-        (multiple-value-call #'intersection-line/unit-circle
-                             (multiple-value-call #'untransform-position
-			       tr (line-start-point* line))
-                             (multiple-value-call #'untransform-position
-			       tr (line-end-point* line)))
-      (if x1
-          (multiple-value-call #'make-line*
-                               (transform-position tr x1 y1)
-                               (transform-position tr x2 y2))
-        +nowhere+))))
+  (let (p1x p1y p2x p2y)
+    (multiple-value-setq (p1x p1y) (line-start-point* line))
+    (multiple-value-setq (p2x p2y) (line-end-point* line))
+    (let ((region (if (and (region-contains-position-p ellipse p1x p1y)
+                           (region-contains-position-p ellipse p2x p2y))
+                      line
+                      (multiple-value-bind (x1 y1 x2 y2)
+                          (cond ((= p1x p2x) (intersection-vline/ellipse ellipse p1x))
+                                ((= p1y p2y) (intersection-hline/ellipse ellipse p1y))
+                                (t (intersection-line/ellipse ellipse p1x p1y p2x p2y)))
+                        (if (some #'complexp (list x1 y1 x2 y2))
+                            +nowhere+
+                            (make-line* x1 y1 x2 y2))))))
+      (with-slots (start-angle end-angle) ellipse
+        (when (or (null start-angle) (region-equal region +nowhere+))
+          (return-from region-intersection region))
+        (multiple-value-bind (cx cy) (ellipse-center-point* ellipse)
+          (multiple-value-bind (sx sy) (%ellipse-angle->position ellipse start-angle)
+            (multiple-value-bind (ex ey) (%ellipse-angle->position ellipse end-angle)
+              (let* ((start-ray (make-line* cx cy sx sy))
+                     (end-ray (make-line* cx cy ex ey))
+                     (si (region-intersection region start-ray))
+                     (ei (region-intersection region end-ray))
+                     (sip (not (region-equal +nowhere+ si)))
+                     (eip (not (region-equal +nowhere+ ei)))
+                     (p1 (line-start-point region))
+                     (p2 (line-end-point region))
+                     (p1p (multiple-value-call
+                              #'region-contains-position-p ellipse (point-position  p1)))
+                     (p2p (multiple-value-call
+                              #'region-contains-position-p ellipse (point-position  p2))))
+                (cond
+                  ;; line goes through the center. Only in this case line may be
+                  ;; coincident with angle rays, so we don't have to bother with
+                  ;; checking later.
+                  ((region-contains-position-p region cx cy)
+                   (make-line (if p1p p1 (make-point cx cy))
+                              (if p2p p2 (make-point cx cy))))
+                  ;; line doesn't intersect any of angle rays
+                  ((and (not sip) (not eip))
+                   ;; p1p implies p2p here
+                   (if p1p region +nowhere+))
+                  ;; line intersects with both angle rays
+                  ((and sip eip)
+                   ;; region difference may not work here due to float rounding
+                   (let ((guess-line (make-line p1 si)))
+                     (if (not (region-intersects-region-p guess-line end-ray))
+                         (region-union guess-line (make-line p2 ei))
+                         (region-union (make-line p1 ei) (make-line p2 si)))))
+                  ;; line intersect only one angle ray
+                  (t (make-line (if p1p p1 p2)
+                                (if sip si ei))))))))))))
 
 (defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
-  (region-intersection ellipse line))
+  (region-intersection line ellipse))
 
 ;;; -- 2.5.6.2 Accessors for CLIM Elliptical Objects -------------------------
 
@@ -754,8 +843,6 @@ point of the resulting line."
 (defmethod ellipse-end-angle ((self elliptical-thing))
   (with-slots (end-angle) self 
     end-angle))
-
-
 
 (defun ellipse-coefficients (ell)
   ;; Returns the coefficients of the equation specifing the ellipse as in
