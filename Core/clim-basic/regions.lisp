@@ -641,11 +641,6 @@
         :start-angle start-angle*
         :end-angle end-angle*))))
 
-(defmethod region-contains-position-p ((self standard-ellipse) x y)
-  ;; XXX start/end angle still missing
-  (with-slots (tr) self
-    (multiple-value-bind (x y) (untransform-position tr x y)
-      (<= (+ (* x x) (* y y)) 1))))
 (defun %ellipse-angle->position (ellipse angle)
   (with-slots (tr) ellipse
     (let* ((base-angle (untransform-angle tr (- (* 2 pi) angle)))
@@ -657,6 +652,24 @@
   (multiple-value-bind (xc yc) (ellipse-center-point* ellipse)
     ;; remember, that y-axis is reverted
     (coordinate (atan* (- x xc) (- (- y yc))))))
+
+(defun %angle-between-p (angle start-angle end-angle &aux (eps single-float-epsilon))
+  (if (<= start-angle end-angle)
+      (<= (- start-angle eps) angle (+ end-angle eps))
+      (or (<= (- start-angle eps) angle)
+          (<= angle (+ end-angle eps)))))
+
+(defmethod region-contains-position-p ((self standard-ellipse) x-orig y-orig)
+  (with-slots (tr start-angle end-angle) self
+    (multiple-value-bind (x y) (untransform-position tr x-orig y-orig)
+      (and (<= (+ (* x x) (* y y)) (+ 1.0 single-float-epsilon))
+           (or (and (zerop y) (zerop x))
+               ;; start-angle being null implies that end-angle is null as well
+               (null start-angle)
+               ;; we check angle in screen coordinates
+               (%angle-between-p (%ellipse-position->angle self x-orig y-orig)
+                                 start-angle
+                                 end-angle))))))
 
 (defmethod bounding-rectangle* ((region standard-ellipse))
   (with-slots (tr start-angle end-angle) region
