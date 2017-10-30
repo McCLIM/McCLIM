@@ -642,6 +642,18 @@
   (with-slots (tr) self
     (multiple-value-bind (x y) (untransform-position tr x y)
       (<= (+ (* x x) (* y y)) 1))))
+(defun %ellipse-angle->position (ellipse angle)
+  (with-slots (tr) ellipse
+    (let* ((el-angle (untransform-angle tr angle))
+           (x0 (cos el-angle))
+           ;; reverted axis
+           (y0 (sin el-angle)))
+      (transform-position tr x0 (- y0)))))
+
+(defun %ellipse-position->angle (ellipse x y)
+  (multiple-value-bind (xc yc) (ellipse-center-point* ellipse)
+    ;; remember, that y-axis is reverted
+    (coordinate (atan* (- x xc) (- (- y yc))))))
 
 (defmethod bounding-rectangle* ((region standard-ellipse))
   ;; XXX start/end angle still missing
