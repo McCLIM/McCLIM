@@ -2856,13 +2856,12 @@ if INVOKE-CALLBACK is given."))
                          (progn ,@body)))
                   (setf (gadget record)
                         (with-output-as-gadget-body ,stream)))))
-         (declare (dynamic-extent #'with-output-as-gadget-continuation
-                                  #'gadget-output-record-constructor))
+         (declare (dynamic-extent #'with-output-as-gadget-continuation))
          (let ((,gadget-output-record
                 (invoke-with-output-to-output-record
                  ,stream
                  #'with-output-as-gadget-continuation
-                 'gadget-output-record :x ,x :y ,y)))
+                 'gadget-output-record :x ,x :y ,y ,@options)))
            (setup-gadget-record ,stream ,gadget-output-record)
            (stream-add-output-record ,stream ,gadget-output-record)
            (values (gadget ,gadget-output-record) ,gadget-output-record))))))
