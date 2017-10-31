@@ -833,6 +833,17 @@
 (defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
   (region-intersection line ellipse))
 
+(defmethod region-contains-region-p ((a standard-ellipse) (b standard-ellipse))
+  (multiple-value-bind (bcx bcy) (ellipse-center-point* b)
+    (and (region-contains-position-p a bcx bcy)
+         (null (intersection-ellipse/ellipse a b))
+         (or (null (ellipse-start-angle a))
+             (multiple-value-bind (sx sy) (%ellipse-angle->position a (ellipse-start-angle a))
+               (multiple-value-bind (ex ey) (%ellipse-angle->position a (ellipse-end-angle a))
+                 (multiple-value-bind (cx cy) (ellipse-center-point* a)
+                   (and (null (region-intersection b (make-line* sx sy cx cy)))
+                        (null (region-intersection b (make-line* ex ey cx cy)))))))))))
+
 ;;; Ellipse is a convex object. That Implies that if each of the rectangle
 ;;; vertexes lies inside it, then whole rectangle fits as well. We take a
 ;;; special care for ellipses with start/end angle.
