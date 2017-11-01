@@ -95,7 +95,11 @@
 (defgeneric region-set-regions (region &key normalize))
 (defgeneric map-over-region-set-regions (function region &key normalize))
 (defgeneric region-union (region1 region2))
-(defgeneric region-intersection (region1 region2))
+(defgeneric region-intersection (region1 region2)
+  (:method :around ((a region) (b region))
+           (cond ((ignore-errors (region-contains-region-p a b)) b)
+                 ((ignore-errors (region-contains-region-p b a)) a)
+                 (t (call-next-method)))))
 (defgeneric region-difference (region1 region2))
 
 ;;; -- 2.5.2 CLIM Point Objects ----------------------------------------------
@@ -637,75 +641,239 @@
         :start-angle start-angle*
         :end-angle end-angle*))))
 
-(defmethod region-contains-position-p ((self standard-ellipse) x y)
-  ;; XXX start/end angle still missing
-  (with-slots (tr) self
-    (multiple-value-bind (x y) (untransform-position tr x y)
-      (<= (+ (* x x) (* y y)) 1))))
+(defun %ellipse-angle->position (ellipse angle)
+  (with-slots (tr) ellipse
+    (let* ((base-angle (untransform-angle tr (- (* 2 pi) angle)))
+           (x0 (cos base-angle))
+           (y0 (sin base-angle)))
+      (transform-position tr x0 y0))))
+
+(defun %ellipse-position->angle (ellipse x y)
+  (multiple-value-bind (xc yc) (ellipse-center-point* ellipse)
+    ;; remember, that y-axis is reverted
+    (coordinate (atan* (- x xc) (- (- y yc))))))
+
+(defun %angle-between-p (angle start-angle end-angle &aux (eps single-float-epsilon))
+  (if (<= start-angle end-angle)
+      (<= (- start-angle eps) angle (+ end-angle eps))
+      (or (<= (- start-angle eps) angle)
+          (<= angle (+ end-angle eps)))))
+
+(defmethod region-contains-position-p ((self standard-ellipse) x-orig y-orig)
+  (with-slots (tr start-angle end-angle) self
+    (multiple-value-bind (x y) (untransform-position tr x-orig y-orig)
+      (and (<= (+ (* x x) (* y y)) (+ 1.0 single-float-epsilon))
+           (or (and (zerop y) (zerop x))
+               ;; start-angle being null implies that end-angle is null as well
+               (null start-angle)
+               ;; we check angle in screen coordinates
+               (%angle-between-p (%ellipse-position->angle self x-orig y-orig)
+                                 start-angle
+                                 end-angle))))))
 
 (defmethod bounding-rectangle* ((region standard-ellipse))
-  ;; XXX start/end angle still missing
-  (with-slots (tr) region
-    (flet ((contact-radius* (x y)
-             ;; Returns coordinates of the radius of the point, in
-             ;; which the vector field (x y) touches the ellipse.
-             (multiple-value-bind (xc yc) (untransform-distance tr x y)
-               (let* ((d (sqrt (+ (* xc xc) (* yc yc))))
-                      (xn (- (/ yc d)))
-                      (yn (/ xc d)))
-                 (transform-distance tr xn yn)))))
-      (multiple-value-bind (cx cy) (ellipse-center-point* region)
-        (if (zerop (ellipse-radii region))
-            (values cx cy cx cy)
-            (multiple-value-bind (vdx vdy) (contact-radius* 1 0)
-              (declare (ignore vdx))
-              (multiple-value-bind (hdx hdy) (contact-radius* 0 1)
-                (declare (ignore hdy))
-                (let ((rx (abs hdx))
-                      (ry (abs vdy)))
-                  (values (- cx rx) (- cy ry)
-                          (+ cx rx) (+ cy ry))))))))))
+  (with-slots (tr start-angle end-angle) region
+    (multiple-value-bind (cx cy) (ellipse-center-point* region)
+      (when (every #'zerop (multiple-value-list (ellipse-radii region)))
+        (return-from bounding-rectangle* (values cx cy cx cy)))
+      (multiple-value-bind (x-min y-min x-max y-max)
+          (ellipse-bounding-rectangle region)
+        (unless (null start-angle)
+          ;; I'm sure this part may be simplified a little, but I'm running
+          ;; out of steam. -- jd
+          (flet ((rcp* (x1 y1 x2 y2)
+                   (cond ((not (or (complexp x1) (complexp y1)))
+                          (region-contains-position-p region x1 y1))
+                         ((not (or (complexp x2) (complexp y2)))
+                          (region-contains-position-p region x2 y2)))))
+            (multiple-value-bind (sa-x sa-y) (%ellipse-angle->position region start-angle)
+              (multiple-value-bind (ea-x ea-y) (%ellipse-angle->position region end-angle)
+                (let ((eps 0.00001))
+                 (unless (multiple-value-call #'rcp*
+                           (intersection-vline/ellipse region (+ x-min eps)))
+                   (setf x-min (min cx sa-x ea-x)))
+                 (unless (multiple-value-call #'rcp*
+                           (intersection-hline/ellipse region (+ y-min eps)))
+                   (setf y-min (min cy sa-y ea-y)))
+                 (unless (multiple-value-call #'rcp*
+                           (intersection-vline/ellipse region (- x-max eps)))
+                   (setf x-max (max cx sa-x ea-x)))
+                 (unless (multiple-value-call #'rcp*
+                           (intersection-hline/ellipse region (- y-max eps)))
+                   (setf y-max (max cy sa-y ea-y))))))))
+        (values x-min y-min x-max y-max)))))
 
-(defun intersection-line/unit-circle (x1 y1 x2 y2)
-  "Computes the intersection of the line from (x1,y1) to (x2,y2) and the unit circle.
-If the intersection is empty, NIL is returned.
-Otherwise four values are returned: x1, y1, x2, y2; the start and end
-point of the resulting line."
-  (let* ((dx (- x2 x1))
-         (dy (- y2 y1))
-         (a (+ (expt dx 2) (expt dy 2)))
-         (b (+ (* 2 x1 dx) (* 2 y1 dy)))
-         (c (+ (expt x1 2) (expt y1 2) -1)))
-    (let ((s1 (- (/ (+ (sqrt (- (expt b 2) (* 4 a c))) b) (* 2 a))))
-          (s2 (- (/ (- b (sqrt (- (expt b 2) (* 4 a c)))) (* 2 a)))))
-      (cond ((and (realp s1) (realp s2)
-                  (not (and (< s1 0) (< s2 0)))
-                  (not (and (> s1 1) (> s2 1))))
-             (let ((s1 (max 0 (min 1 s1)))
-                   (s2 (max 0 (min 1 s2))))
-               (values (+ x1 (* s1 dx))
-                       (+ y1 (* s1 dy))
-                       (+ x1 (* s2 dx))
-                       (+ y1 (* s2 dy)))))
-            (t
-             nil)))))
+(defun intersection-hline/ellipse (el y)
+  "Returns coordinates where ellipse intersects with a horizontal line."
+  (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
+    (let* ((y (- y cy))
+           (cos (cos phi))
+           (sin (sin phi))
+           (a (+ (expt (* v cos) 2)
+                 (expt (* h sin) 2)))
+           (b (* 2 y cos sin
+                 (- (* v v) (* h h))))
+           (c (- (+ (expt (* y v sin) 2)
+                    (expt (* y h cos) 2))
+                 (expt (* h v) 2)))
+           (dc (sqrt (- (* b b) (* 4 a c))))
+           (x1 (/ (- (- b) dc)
+                  (* 2 a)))
+           (x2 (/ (+ (- b) dc)
+                  (* 2 a))))
+      (values (+ cx x1) (+ cy y) (+ cx x2) (+ cy y)))))
+
+(defun intersection-vline/ellipse (el x)
+  "Returns coordinates where ellipse intersects with a vertical line."
+  (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
+    (let* ((x (- x cx))
+           (cos (cos phi))
+           (sin (sin phi))
+           (a (+ (expt (* v sin) 2)
+                 (expt (* h cos) 2)))
+           (b (* 2 x cos sin
+                 (- (* v v) (* h h))))
+           (c (- (+ (expt (* x v cos) 2)
+                    (expt (* x h sin) 2))
+                 (expt (* h v) 2)))
+           (dc (sqrt (- (* b b) (* 4 a c))))
+           (y1 (/ (- (- b) dc)
+                  (* 2 a)))
+           (y2 (/ (+ (- b) dc)
+                  (* 2 a))))
+      (values (+ cx x) (+ cy y1) (+ cx x) (+ cy y2)))))
+
+(defun intersection-line/ellipse (el lx1 ly1 lx2 ly2)
+  "Returns coordinates where ellipse intersects with arbitral line (except vertical)."
+  (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
+    (let* ((lx1 (- lx1 cx)) (ly1 (- ly1 cy)) (lx2 (- lx2 cx)) (ly2 (- ly2 cy))
+           (m-slope (/ (- ly1 ly2) (- lx1 lx2)))
+           (b-slope (- ly1 (* m-slope lx1)))
+           (cos (cos phi))
+           (sin (sin phi))
+           (a (+ (* v v
+                    (+ (* cos cos)
+                       (* 2 m-slope cos sin)
+                       (expt (* m-slope sin) 2)))
+                 (* h h
+                    (+ (expt (* m-slope cos) 2)
+                       (* -2 m-slope cos sin)
+                       (* sin sin)))))
+           (b (+ (* 2 v v b-slope
+                    (+ (* cos sin) (* m-slope sin sin)))
+                 (* 2 h h b-slope
+                    (- (* m-slope cos cos) (* cos sin)))))
+           (c (- (* b-slope b-slope
+                    (+ (expt (* v sin) 2)
+                       (expt (* h cos) 2)))
+                 (* h h v v)))
+           (dc (sqrt (- (* b b) (* 4 a c))))
+           (x1 (/ (- (- b) dc)
+                  (* 2 a)))
+           (y1 (+ (* m-slope x1) b-slope))
+           (x2 (/ (+ (- b) dc)
+                  (* 2 a)))
+           (y2 (+ (* m-slope x2) b-slope)))
+      (values (+ cx x1) (+ cy y1) (+ cx x2) (+ cy y2)))))
 
 (defmethod region-intersection ((line line) (ellipse standard-ellipse))
-  (with-slots (tr) ellipse
-    (multiple-value-bind (x1 y1 x2 y2)
-        (multiple-value-call #'intersection-line/unit-circle
-                             (multiple-value-call #'untransform-position
-			       tr (line-start-point* line))
-                             (multiple-value-call #'untransform-position
-			       tr (line-end-point* line)))
-      (if x1
-          (multiple-value-call #'make-line*
-                               (transform-position tr x1 y1)
-                               (transform-position tr x2 y2))
-        +nowhere+))))
+  (let (p1x p1y p2x p2y)
+    (multiple-value-setq (p1x p1y) (line-start-point* line))
+    (multiple-value-setq (p2x p2y) (line-end-point* line))
+    (let ((region (if (and (region-contains-position-p ellipse p1x p1y)
+                           (region-contains-position-p ellipse p2x p2y))
+                      line
+                      (multiple-value-bind (x1 y1 x2 y2)
+                          (cond ((= p1x p2x) (intersection-vline/ellipse ellipse p1x))
+                                ((= p1y p2y) (intersection-hline/ellipse ellipse p1y))
+                                (t (intersection-line/ellipse ellipse p1x p1y p2x p2y)))
+                        (if (some #'complexp (list x1 y1 x2 y2))
+                            +nowhere+
+                            (make-line* x1 y1 x2 y2))))))
+      (with-slots (start-angle end-angle) ellipse
+        (when (or (null start-angle) (region-equal region +nowhere+))
+          (return-from region-intersection region))
+        (multiple-value-bind (cx cy) (ellipse-center-point* ellipse)
+          (multiple-value-bind (sx sy) (%ellipse-angle->position ellipse start-angle)
+            (multiple-value-bind (ex ey) (%ellipse-angle->position ellipse end-angle)
+              (let* ((start-ray (make-line* cx cy sx sy))
+                     (end-ray (make-line* cx cy ex ey))
+                     (si (region-intersection region start-ray))
+                     (ei (region-intersection region end-ray))
+                     (sip (not (region-equal +nowhere+ si)))
+                     (eip (not (region-equal +nowhere+ ei)))
+                     (p1 (line-start-point region))
+                     (p2 (line-end-point region))
+                     (p1p (multiple-value-call
+                              #'region-contains-position-p ellipse (point-position  p1)))
+                     (p2p (multiple-value-call
+                              #'region-contains-position-p ellipse (point-position  p2))))
+                (cond
+                  ;; line goes through the center. Only in this case line may be
+                  ;; coincident with angle rays, so we don't have to bother with
+                  ;; checking later.
+                  ((region-contains-position-p region cx cy)
+                   (make-line (if p1p p1 (make-point cx cy))
+                              (if p2p p2 (make-point cx cy))))
+                  ;; line doesn't intersect any of angle rays
+                  ((and (not sip) (not eip))
+                   ;; p1p implies p2p here
+                   (if p1p region +nowhere+))
+                  ;; line intersects with both angle rays
+                  ((and sip eip)
+                   ;; region difference may not work here due to float rounding
+                   (let ((guess-line (make-line p1 si)))
+                     (if (not (region-intersects-region-p guess-line end-ray))
+                         (region-union guess-line (make-line p2 ei))
+                         (region-union (make-line p1 ei) (make-line p2 si)))))
+                  ;; line intersect only one angle ray
+                  (t (make-line (if p1p p1 p2)
+                                (if sip si ei))))))))))))
 
 (defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
-  (region-intersection ellipse line))
+  (region-intersection line ellipse))
+
+(defmethod region-contains-region-p ((a standard-ellipse) (b standard-ellipse))
+  (multiple-value-bind (bcx bcy) (ellipse-center-point* b)
+    (and (region-contains-position-p a bcx bcy)
+         (null (intersection-ellipse/ellipse a b))
+         (or (null (ellipse-start-angle a))
+             (multiple-value-bind (sx sy) (%ellipse-angle->position a (ellipse-start-angle a))
+               (multiple-value-bind (ex ey) (%ellipse-angle->position a (ellipse-end-angle a))
+                 (multiple-value-bind (cx cy) (ellipse-center-point* a)
+                   (and (null (region-intersection b (make-line* sx sy cx cy)))
+                        (null (region-intersection b (make-line* ex ey cx cy)))))))))))
+
+;;; Ellipse is a convex object. That Implies that if each of the rectangle
+;;; vertexes lies inside it, then whole rectangle fits as well. We take a
+;;; special care for ellipses with start/end angle.
+(defmethod region-contains-region-p ((a standard-ellipse) (b standard-rectangle))
+  (with-standard-rectangle (x1 y1 x2 y2) b
+    (if (null (ellipse-start-angle a))
+        (and (region-contains-position-p a x1 y1)
+             (region-contains-position-p a x2 y1)
+             (region-contains-position-p a x1 y2)
+             (region-contains-position-p a x2 y2))
+        (flet ((fits (l) (region-equal l (region-intersection l a))))
+          (and (fits (make-line* x1 y1 x2 y1))
+               (fits (make-line* x2 y1 x2 y2))
+               (fits (make-line* x2 y2 x1 y2))
+               (fits (make-line* x1 y2 x1 y1)))))))
+
+(defmethod region-contains-region-p ((a standard-ellipse) (polygon standard-polygon))
+  (if (null (ellipse-start-angle a))
+      (map-over-polygon-coordinates
+       #'(lambda (x y)
+           (unless (region-contains-position-p a x y)
+             (return-from region-contains-region-p nil)))
+       polygon)
+      (map-over-polygon-segments
+       #'(lambda (x1 y1 x2 y2
+                  &aux (line (make-line* x1 y1 x2 y2)))
+           (unless (region-equal line (region-intersection line a))
+             (return-from region-contains-region-p nil)))
+       polygon))
+  T)
 
 ;;; -- 2.5.6.2 Accessors for CLIM Elliptical Objects -------------------------
 
@@ -730,8 +898,6 @@ point of the resulting line."
 (defmethod ellipse-end-angle ((self elliptical-thing))
   (with-slots (end-angle) self 
     end-angle))
-
-
 
 (defun ellipse-coefficients (ell)
   ;; Returns the coefficients of the equation specifing the ellipse as in
@@ -868,6 +1034,67 @@ point of the resulting line."
 			       (- (* b x2)) (* a x2))
 			    c))))
 	     (values x1 y1 x2 y2))))))
+
+;;; this function is used in `ellipse-simplified-representation' to fixup
+;;; normalized radius lengths. Can't be interchanged with
+;;; `%ellipse-angle->position' because of the rotation inversion.
+(defun %ellipse-simplified-representation/radius (ellipse angle)
+  (declare (optimize (speed 3)) (inline))
+  (with-slots (tr) ellipse
+    (let* ((base-angle (untransform-angle tr angle))
+           (x (cos base-angle))
+           (y (sin base-angle)))
+      (with-slots (mxx mxy myx myy tx ty) tr
+        (values (+ (* mxx x) (* mxy y) tx)
+                (+ (* myx x) (* myy y) ty))))))
+
+(defun ellipse-simplified-representation (el)
+  ;; returns H (horizontal radius), V (vertical radius) and rotation angle in
+  ;; screen coordinates. `ellipse-normal-radii*' returns vectors with correct
+  ;; direction, but radius length is shorter than in reality (verified with
+  ;; experimentation, not analitically), so we compute radius from phi.
+  ;; If the length were right, we'd compute h/v with the following:
+  ;;   (sqrt (+ (expt (* hx (cos phi)) 2) (expt (* hy (sin phi)) 2)))
+  ;;   (sqrt (+ (expt (* vx (sin phi)) 2) (expt (* vy (cos phi)) 2)))
+  (multiple-value-bind (center-x center-y) (ellipse-center-point* el)
+    (multiple-value-bind (hx hy) (ellipse-normal-radii* el)
+      (let* ((phi (atan* hx hy)))
+        ;(multiple-value-bind (hx hy vx vy) (%ellipse-angle->distance el phi))
+        (multiple-value-bind (hx hy)
+            (%ellipse-simplified-representation/radius el phi)
+          (multiple-value-bind (vx vy)
+              (%ellipse-simplified-representation/radius el (+ phi (/ pi 2)))
+           (values center-x
+                   center-y
+                   (sqrt (+ (expt (- center-x hx) 2) (expt (- center-y hy) 2)))
+                   (sqrt (+ (expt (- center-x vx) 2) (expt (- center-y vy) 2)))
+                   phi)))))))
+
+(defun ellipse-bounding-rectangle (el)
+  ;; returns bounding rectangle of ellipse centered at (0, 0) with radii h and v
+  ;; rotated by the angle phi.
+  (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
+    (let* ((sin (sin phi))
+           (cos (cos phi))
+           (ax (+ (expt (* v sin) 2)
+                  (expt (* h cos) 2)))
+           (ay (+ (expt (* v cos) 2)
+                  (expt (* h sin) 2)))
+           (numerator-x (- (* ax h h v v)))
+           (numerator-y (- (* ay h h v v)))
+           (denominator-common (expt (* cos
+                                        sin
+                                        (- (* v v) (* h h)))
+                                     2))
+           (x (sqrt (/ numerator-x
+                       (- denominator-common
+                          (* ax (+ (expt (* v cos) 2)
+                                   (expt (* h sin) 2)))))))
+           (y (sqrt (/ numerator-y
+                       (- denominator-common
+                          (* ay (+ (expt (* v sin) 2)
+                                   (expt (* h cos) 2))))))))
+      (values (- cx x) (- cy y) (+ cx x) (+ cy y)))))
 
 ;;; -- Intersection of Ellipse vs. Ellipse -----------------------------------
 
@@ -1548,6 +1775,24 @@ point of the resulting line."
                    (t
                     ;;paralell -- kein Schnitt
                     nil)))
+            ((or (zerop dx) (zerop du))
+             ;; infinite slope (vertical line) - previous case covers two vlines
+             (let (a b x y)
+               (if (zerop dx)           ; ugly setf - I'm ashamed
+                   (setf a (/ dv du)
+                         b (- v1 (* a u1))
+                         x x1
+                         y (+ (* a x1) b))
+                   (setf a (/ dy dx)
+                         b (- y1 (* a x1))
+                         x u1
+                         y (+ (* a x) b)))
+               (if (and (or (<= x1 x x2) (<= x2 x x1))
+                        (or (<= u1 x u2) (<= u2 x u1))
+                        (or (<= y1 y y2) (<= y2 y y1))
+                        (or (<= v1 y v2) (<= v2 y v1)))
+                   (values :hit x y)
+                   nil)))
             (t
              (let ((x (/ (+ (* dx (- (* u1 dv) (* v1 du)))
 			    (* du (- (* y1 dx) (* x1 dy))))
@@ -2300,7 +2545,10 @@ point of the resulting line."
 (defmethod region-contains-region-p ((a region) (b region))
   (or (eq a b)
       (region-equal +nowhere+ (region-difference b a))))
-  
+
+(defmethod region-contains-region-p ((a standard-rectangle) (b bounding-rectangle))
+  (or (eq a b)
+      (region-equal +nowhere+ (region-difference (bounding-rectangle b) a))))
 ;;;; ===========================================================================
 
 (defmethod bounding-rectangle* ((a standard-line))

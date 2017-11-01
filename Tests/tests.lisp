@@ -445,7 +445,132 @@
   (assert (= (coordinate ea) (coordinate (ellipse-end-angle e1))))
   (assert (null (ellipse-start-angle e3)))
   (assert (null (ellipse-end-angle e3))))
-  
+
+(let* ((xc 200) (yc 200) (xdr1 100) (ydr1 0) (xdr2 0) (ydr2 50) (sa 0) (ea (/ pi 2))
+       (el0 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2))
+       (el1 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle sa :end-angle ea))
+       (el2 (make-ellipse* xc yc xdr2 ydr2 xdr1 ydr1 :start-angle sa :end-angle ea))
+       (el3 (make-ellipse* xc yc (- xdr1) (- ydr1) (- xdr2) (- ydr2) :start-angle sa :end-angle ea))
+       (el4 (make-ellipse* xc yc (- xdr2) (- ydr2) (- xdr1) (- ydr1) :start-angle sa :end-angle ea))
+       (some-el (list el1 el2 el3 el4))
+       (all-el (list* el0 some-el)))
+  (declare (ignorable el0 el1 el2 el3 el4))
+  (flet ((rcpt (xc yc elts)
+           (mapcar (lambda (el) (assert (region-contains-position-p el xc yc))) elts))
+         (rcpn (xc yc elts)
+           (mapcar (lambda (el) (assert (not (region-contains-position-p el xc yc)))) elts)))
+    ;; trivial cases which may be judged based on distance from the center
+    (rcpt xc yc             all-el)
+    (rcpt (+ xc 100) yc     all-el)
+    (rcpn (1+ xc) (- yc 50) all-el)
+    ;; less trivial cases (we accept only 1st quadrent in el1-el4)
+    ;; point between 4th and 1st quadrent (on the start-angle)
+    (rcpt (+ xc 10) yc all-el)
+    ;; point lies in 1st quadrent
+    (rcpt (+ xc 10) (- yc 10) all-el)
+    ;; point between 1st and 2nd quadrent (on the end-angle)
+    (rcpt xc (- yc 50) all-el)
+    ;; point lies in 2nd quadrent
+    (rcpt (- xc 10) (- yc 10) (list el0))
+    (rcpn (- xc 10) (- yc 10) some-el)
+    ;; point between 2nd and 3rd quadrent
+    (rcpt (- xc 10) yc (list el0))
+    (rcpn (- xc 10) yc some-el)
+    ;; point lies in 3rd quadrent
+    (rcpt (- xc 10) (+ yc 10) (list el0))
+    (rcpn (- xc 10) (+ yc 10) some-el)
+    ;; point between 3rd and 4th quadrent
+    (rcpt xc (+ yc 10) (list el0))
+    (rcpn xc (+ yc 10) some-el)
+    ;; point lies in 4th quadrent
+    (rcpt (+ xc 10) (+ yc 10) (list el0))
+    (rcpn (+ xc 10) (+ yc 10) some-el)))
+
+(let* ((xc 200) (yc 200) (xdr1 100) (ydr1 0) (xdr2 0) (ydr2 50)
+       (q1s 0)   (q1m (/ pi 4))    (q1e (/ pi 2))
+       (q2s q1e) (q2m (+ q2s q1m)) (q2e pi)
+       (q3s q2e) (q3m (+ q3s q1m)) (q3e (* 3 q1e))
+       (q4s q3e) (q4m (+ q4s q1m)) (q4e q1s)
+
+       (el0 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2))
+       (el1 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle q1s :end-angle q1e))
+       (el2 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle q2s :end-angle q2e))
+       (el3 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle q3s :end-angle q3e))
+       (el4 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle q4s :end-angle q4e))
+       (el5 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle q1m :end-angle q2m))
+       (el6 (make-ellipse* xc yc xdr1 ydr1 xdr2 ydr2 :start-angle q2m :end-angle q4m))
+       ;; bounds subsequent ellipses
+       (br0 (make-rectangle* (- xc xdr1 10)  (- yc ydr2 10)  (+ xc xdr1 10)  (+ yc ydr2 10)))
+       (br1 (make-rectangle* (1- xc)         (1+ yc)         (+ xc xdr1 10)  (- yc ydr2 10)))
+       (br2 (make-rectangle* (- xc xdr1 10)  (- yc ydr2 10)  (1+ xc)         (1+ yc)))
+       (br3 (make-rectangle* (- xc xdr1 10)  (1- yc)         (+ xc 10)       (+ yc ydr2 10)))
+       (br4 (make-rectangle* (1- xc)         (1- yc)         (+ xc xdr1 10)  (+ yc ydr2 10)))
+       ;; doesn't cover whole 1st and 2nd quadrant but a slice spanning both
+       (br5 (make-rectangle* (- xc xdr1 -10) (- yc ydr2 10)  (+ xc xdr1 -10) (1+ yc)))
+       (br6 (make-rectangle* (- xc xdr1 10)  (- yc ydr2 -1) (+ xc xdr1 -10) (+ yc ydr2 1)))
+       (br* (list br0 br1 br2 br3 br4 br5 br6))
+
+       ;; fits in subsequent ellipses
+       (fr0 (make-rectangle* (- xc 10) (- yc 10) (+ xc 10) (+ yc 10)))
+       (fr1 (make-rectangle* (1+ xc)   (1- yc)   (+ xc 10) (- yc 10)))
+       (fr2 (make-rectangle* (- xc 11) (1- yc)   (1- xc)   (- yc 10)))
+       (fr3 (make-rectangle* (- xc 11) (1+ yc)   (1- xc)   (+ yc 10)))
+       (fr4 (make-rectangle* (1+ xc)   (1+ yc)   (+ xc 10) (+ yc 10)))
+       (fr5 (make-rectangle* (- xc 10) (- yc 20) (+ xc 10) (- yc 10)))
+       (fr6 (make-rectangle* (- xc 20) (- yc 5)  (- xc 10) (+ yc 5)))
+       (fr* (list fr0 fr1 fr2 fr3 fr4 fr5 fr6))
+
+       (all-ellipses   (list el0 el1 el2 el3 el4 el5 el6))
+       (all-rectangles (append fr* br*)))
+  (declare (ignorable q3m))
+  (labels ((rcr-t (a b) (assert (region-contains-region-p a b)))
+           (rcr-n (a b) (assert (not (region-contains-region-p a b))))
+           (ch-br (br &rest elt)
+             "check, if only `elt' ellipses fit in the rectangle."
+             (mapcar (alexandria:curry #'rcr-t br) elt)
+             (mapcar (alexandria:curry #'rcr-n br) (set-difference all-ellipses elt)))
+           (ch-el (el &rest elt)
+             "check, if only `elt' rectangles fit in the rectangle."
+             (mapcar (alexandria:curry #'rcr-t el) elt)
+             (mapcar (alexandria:curry #'rcr-n el) (set-difference all-rectangles elt))))
+
+    (mapcar (alexandria:curry #'rcr-t br0) all-ellipses)
+    (ch-br br1 el1)
+    (ch-br br2 el2)
+    (ch-br br3 el3)
+    (ch-br br4 el4)
+    (ch-br br5 el5)
+    (ch-br br6 el6 el3)
+    (mapcar (alexandria:curry #'rcr-t el0) (set-difference all-rectangles br*))
+    (ch-el el1 fr1)
+    (ch-el el2 fr2)
+    (ch-el el3 fr3)
+    (ch-el el4 fr4)
+    (ch-el el5 fr5)
+    (ch-el el6 fr6 fr3)))
+
+;;; non xy-aligned ellipses (one ellipse put in various coordinates)
+(let* ((el1 (make-ellipse* 200 200 +100 -100 -10 -10 :start-angle (* 3 (/ pi 2)) :end-angle pi))
+       (el2 (make-ellipse* 200 200 +100 -100 +10 +10 :start-angle (* 3 (/ pi 2)) :end-angle pi))
+       (el3 (make-ellipse* 200 200 -100 +100 -10 -10 :start-angle (* 3 (/ pi 2)) :end-angle pi))
+       (el4 (make-ellipse* 200 200 -100 +100 +10 +10 :start-angle (* 3 (/ pi 2)) :end-angle pi))
+       (el5 (make-ellipse* 200 200 -10 -10 +100 -100 :start-angle (* 3 (/ pi 2)) :end-angle pi))
+       (el6 (make-ellipse* 200 200 +10 +10 +100 -100 :start-angle (* 3 (/ pi 2)) :end-angle pi))
+       (el7 (make-ellipse* 200 200 -10 -10 -100 +100 :start-angle (* 3 (/ pi 2)) :end-angle pi))
+       (el8 (make-ellipse* 200 200 +10 +10 -100 +100 :start-angle (* 3 (/ pi 2)) :end-angle pi))
+       (all-ellipses (list el1 el2 el3 el4 el5 el6 el7 el8)))
+  (mapcar (lambda (el)
+            ;; tips of the ellipse
+            (assert (region-contains-position-p el 300 100))
+            (assert (region-contains-position-p el 190 190))
+            (assert (region-contains-position-p el 210 210))
+            (assert (not (region-contains-position-p el 100 300))) ; outside the angle
+            ;; points outside the ellipse
+            (assert (not (region-contains-position-p el 301 101))) ; too far away
+            (assert (not (region-contains-position-p el 200 100))) ; y-aligned tip
+            (assert (not (region-contains-position-p el 300 200))) ; x-aligned tip
+            )
+          all-ellipses))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
