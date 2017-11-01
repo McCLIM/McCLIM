@@ -881,30 +881,55 @@ time an indexed pattern is drawn.")
             (vector-push-extend (- max-y min-y) points)))
         (xlib:draw-rectangles mirror gc points filled)))))
 
+(defun %ellipse-border-p (ellipse x-orig y-orig)
+  (with-slots (climi::tr climi::start-angle climi::end-angle) ellipse
+    (multiple-value-bind (x y) (untransform-position climi::tr x-orig y-orig)
+      (and (<= (- 1.0 .05) (+ (* x x) (* y y)) (+ 1.0 .05))
+           (or (null climi::start-angle)
+               (climi::%angle-between-p
+                (climi::%ellipse-position->angle ellipse x-orig y-orig)
+                climi::start-angle climi::end-angle))))))
+
 ;;; Round the parameters of the ellipse so that it occupies the expected pixels
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
 				 radius-1-dx radius-1-dy
 				 radius-2-dx radius-2-dy
 				 start-angle end-angle filled)
-  (unless (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
-    (error "MEDIUM-DRAW-ELLIPSE* not yet implemented for non axis-aligned ellipses."))
-  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
-                              center-x center-y)
-    (let* ((arc-angle (- end-angle start-angle))
-           (arc-angle (if (< arc-angle 0)
-                          (+ (* pi 2) arc-angle)
-                          arc-angle)))
-      (with-clx-graphics () medium
-        (let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
-	       (radius-dy (abs (+ radius-1-dy radius-2-dy)))
-	       (min-x (round-coordinate (- center-x radius-dx)))
-	       (min-y (round-coordinate (- center-y radius-dy)))
-	       (max-x (round-coordinate (+ center-x radius-dx)))
-	       (max-y (round-coordinate (+ center-y radius-dy))))
-          (xlib:draw-arc mirror gc
-                         min-x min-y (- max-x min-x) (- max-y min-y)
-                         (mod start-angle (* 2 pi)) arc-angle
-                         filled))))))
+  (if (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
+      (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
+                                  center-x center-y)
+        (let* ((arc-angle (- end-angle start-angle))
+               (arc-angle (if (< arc-angle 0)
+                              (+ (* pi 2) arc-angle)
+                              arc-angle)))
+          (with-clx-graphics () medium
+            (let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
+                   (radius-dy (abs (+ radius-1-dy radius-2-dy)))
+                   (min-x (round-coordinate (- center-x radius-dx)))
+                   (min-y (round-coordinate (- center-y radius-dy)))
+                   (max-x (round-coordinate (+ center-x radius-dx)))
+                   (max-y (round-coordinate (+ center-y radius-dy))))
+              (xlib:draw-arc mirror gc
+                             min-x min-y (- max-x min-x) (- max-y min-y)
+                             (mod start-angle (* 2 pi)) arc-angle
+                             filled)))))
+      ;; As a proof of concept we go after slow method which probes for each point
+      ;; in the bounding rectangle if ellipse contains it. Then we draw a
+      ;; pixel. We should optimize it by approximating them with bezier areas.
+      (let ((ellipse (make-ellipse* center-x center-y
+                                    radius-1-dx radius-1-dy
+                                    radius-2-dx radius-2-dy
+                                    :start-angle start-angle :end-angle end-angle))
+            (belongs-p (if filled
+                           #'region-contains-position-p
+                           #'%ellipse-border-p)))
+        (multiple-value-bind (x1 y1 width height)
+            (region->clipping-values (bounding-rectangle ellipse))
+          (with-clx-graphics () medium
+            (loop for x from x1 to (+ x1 width) do
+                 (loop for y from y1 to (+ y1 height) do
+                      (when (funcall belongs-p ellipse x y)
+                        (xlib:draw-point mirror gc x y)))))))))
 
 (defmethod medium-draw-circle* ((medium clx-medium)
 				center-x center-y radius start-angle end-angle
