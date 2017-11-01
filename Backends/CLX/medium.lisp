@@ -54,6 +54,11 @@
    (clipping-region-tmp :initform (vector 0 0 0 0)
      :documentation "This object is reused to avoid consing in the
  most common case when configuring the clipping region.")
+   (clipping-pixmap-cache
+    :initform (cons +everywhere+ nil)
+    :documentation "This object stores cons of the last non-rectangular clipping
+region and its clipping pixmap. This is looked up for optimization with region-equal."
+    :accessor %clipping-pixmap-cache)
    (buffer :initform nil :accessor medium-buffer)))
 
 #+CLX-EXT-RENDER
@@ -139,8 +144,25 @@
          #+ (or) (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
          #- (or) (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))
       (t
-       ;; XXX: what if it is not a set of rectangles? use pixmap!
-       (warn "Non-rectangular clipping area is not supported by CLX backend.")))))
+       (let ((last-clip (%clipping-pixmap-cache medium)))
+         (if (region-equal clipping-region (car last-clip))
+             (setf (xlib:gcontext-clip-mask gc :yx-banded) (cdr last-clip))
+             (multiple-value-bind (x1 y1 width height)
+                 (region->clipping-values (bounding-rectangle clipping-region))
+               (let* ((drawable (sheet-xmirror (medium-sheet medium)))
+                      (mask (xlib:create-pixmap :drawable drawable
+                                                :depth 1
+                                                :width (+ x1 width)
+                                                :height (+ y1 height)))
+                      (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
+                 (setf (xlib:gcontext-foreground mask-gc) 0)
+                 (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
+                 (setf (xlib:gcontext-foreground mask-gc) 1)
+                 (loop for x from x1 to (+ x1 width) do
+                      (loop for y from y1 to (+ y1 height) do
+                           (when (region-contains-position-p clipping-region x y)
+                             (xlib:draw-point mask mask-gc x y))))
+                 (setf (xlib:gcontext-clip-mask gc :yx-banded) mask)))))))))
 
 
 (defgeneric medium-gcontext (medium ink))
