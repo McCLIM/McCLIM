@@ -41,7 +41,7 @@
 		    :errorp nil
 		    :menu '(("Add Extra Pane" :command com-add-extra-pane)
 			    ("Randomize" :command com-randomize-tabdemo)
-			    ("Quit" :command com-quit-tabdemo)))
+			    ("Quit" :command com-quit)))
 
 (make-command-table 'tabdemo-properties-menu
 		    :errorp nil
