@@ -1102,7 +1102,7 @@ and must never be nil.")
     :align-x :center
     :align-y :center
     :x-spacing 4
-    :y-spacing 2))
+    :y-spacing 4))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
   (space-requirement+* (space-requirement+* (compose-label-space gadget)

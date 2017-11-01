@@ -112,13 +112,11 @@
 (defmethod compose-space ((pane drei-text-field-substrate) &key width height)
   (declare (ignore width height))
   (with-sheet-medium (medium pane)
-    (let ((as (text-style-ascent (medium-text-style medium) medium))
-          (ds (text-style-descent (medium-text-style medium) medium))
-          (w  (text-size medium (gadget-value pane))))
-      (let ((width w)
-            (height (+ as ds)))
-        (make-space-requirement :height height :max-height height :min-height height
-                                                                  :min-width width :width width)))))
+    (let ((width (text-size medium (gadget-value pane)))
+	  (height (+ (stream-vertical-spacing pane)
+		     (text-style-height (medium-text-style medium) medium))))
+      (make-space-requirement :height height :min-height height :max-height height
+			      :width width :min-width width))))
 
 (defclass drei-text-editor-substrate (text-editor-substrate-mixin
                                       drei-editor-substrate)
