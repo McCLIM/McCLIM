@@ -95,7 +95,11 @@
 (defgeneric region-set-regions (region &key normalize))
 (defgeneric map-over-region-set-regions (function region &key normalize))
 (defgeneric region-union (region1 region2))
-(defgeneric region-intersection (region1 region2))
+(defgeneric region-intersection (region1 region2)
+  (:method :around ((a region) (b region))
+           (cond ((ignore-errors (region-contains-region-p a b)) b)
+                 ((ignore-errors (region-contains-region-p b a)) a)
+                 (t (call-next-method)))))
 (defgeneric region-difference (region1 region2))
 
 ;;; -- 2.5.2 CLIM Point Objects ----------------------------------------------
