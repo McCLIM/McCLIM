@@ -87,11 +87,11 @@
 	     (clim-extensions:lowering ()
 	       (horizontally ()
 		 (labelling (:label "Backend")
-		   (scrolling (:width *width* :height *height*)
-		     (climi::bordering (:border-width *border-width*)
-		       backend-output)))
+		   (scrolling (:width *width* :height *height* :scroll-bar nil)
+		     backend-output))
 		 (labelling (:label "Render")
-		   (scrolling (:width *width* :height *height*) render-output)))))
+		   (scrolling (:width *width* :height *height* :scroll-bar nil)
+                     render-output)))))
 	   (spacing (:thickness 3)
 	     (clim-extensions:lowering ()
 	       (scrolling (:scroll-bar :vertical :height 200) description)))))))))
@@ -656,8 +656,122 @@ outside the clipping area should be grey.")
 							 :line-thickness 4
 							 :filled nil))))
 
+(define-drawing-test "05) Ellipse slope line intersection" (stream)
+    "Ellipse with rotation and limited angle is surrounded by its bounding
+rectangle. Slope lines go through the sheet and the intersections of lines with
+the ellipse are drawn in different color and thickness."
+  (let* ((cx (/ *width* 2))
+         (cy (/ *height* 2))
+         (start-angle (/ pi 8))
+         (end-angle (+ (* 3 (/ pi 2)) (/ pi 4)))
+         (ellipse (clim:make-ellipse* cx cy
+                                      100 -200
+                                      -100 -50
+                                      :start-angle start-angle
+                                      :end-angle end-angle))
+         (clip-rect (make-rectangle* 0 0 *width* *height*))
+         (line-distance 50))
+    (with-bounding-rectangle* (min-x min-y max-x max-y) ellipse
+      (draw-rectangle* stream min-x min-y max-x max-y
+                       :ink +dark-blue+ :line-thickness 2 :filled nil)
+      (draw-design stream ellipse :ink +gray+)
+      (dotimes (v (round (/ *height* (/ line-distance 2))))
+        (let* ((tr (make-translation-transformation
+                    0 (* (* v line-distance) (sqrt 2))))
+               (line (make-line* 0 (- *height*) *width* 0))
+               (line (transform-region tr line))
+               (line (region-intersection line clip-rect)))
+          (draw-design stream line)
+          (draw-design stream (region-intersection ellipse line)
+                       :ink +dark-red+ :line-thickness 5)))
+      (dotimes (v (round (/ *height* (/ line-distance 2))))
+        (let* ((tr (make-translation-transformation
+                    0 (* (* v line-distance) (sqrt 2))))
+               (line (make-line* 0 0 *width* (- *height*)))
+               (line (transform-region tr line))
+               (line (region-intersection line clip-rect)))
+          (draw-design stream line)
+          (draw-design stream (region-intersection ellipse line)
+                       :ink +dark-green+ :line-thickness 5))))))
 
+(define-drawing-test "05) Ellipse xy-line intersection" (stream)
+    "Ellipse with rotation and limited angle is surrounded by its bounding
+rectangle. Horizontal and vertical lines go through the sheet and the
+intersections of lines with the ellipse are d1rawn in different color and
+thickness."
+  (let* ((cx (/ *width* 2))
+         (cy (/ *height* 2))
+         (start-angle (/ pi 8))
+         (end-angle (+ (* 3 (/ pi 2)) (/ pi 4)))
+         (ellipse (clim:make-ellipse* cx cy
+                                      100 -200
+                                      -100 -50
+                                      :start-angle start-angle
+                                      :end-angle end-angle))
+         (clip-rect (make-rectangle* 0 0 *width* *height*))
+         (line-distance 50))
+    (with-bounding-rectangle* (min-x min-y max-x max-y) ellipse
+      (draw-rectangle* stream min-x min-y max-x max-y
+                       :ink +dark-blue+ :line-thickness 2 :filled nil)
+      (draw-design stream ellipse :ink +gray+)
+      (dotimes (v (round (/ *height* (/ line-distance 2))))
+        (let* ((tr (make-translation-transformation 0 (* v line-distance)))
+               (line (make-line* 0 0 *width* 0))
+               (line (transform-region tr line))
+               (line (region-intersection line clip-rect)))
+          (draw-design stream line)
+          (draw-design stream (region-intersection ellipse line)
+                       :ink +dark-red+ :line-thickness 5)))
+      (dotimes (h (round (/ *width* (/ line-distance 2))))
+        (let* ((tr (make-translation-transformation (* h line-distance) 0))
+               (line (make-line* 0 0 0 *height*))
+               (line (transform-region tr line))
+               (line (region-intersection line clip-rect)))
+          (draw-design stream line)
+          (draw-design stream (region-intersection ellipse line)
+                       :ink +dark-green+ :line-thickness 5))))))
 
+(define-drawing-test "05) Ellipse angle transformations" (stream)
+    "Uses internal interfaces. We should see 6 ellipses with limited
+angle. First four should be filled and should have angle radius drawn. Last two
+should not be filled (and no angle radius is drawn). Each ellipse is bound by
+its bounding rectangle and surrounded by four points marking where min-x, max-x,
+min-y and max-y are (extremum points) BEFORE additional shrinking due to the
+limited angle of the ellipse."
+  (let* ((sa (/ pi 2))
+         (ea (+ pi (* 3 (/ pi 4))))
+         (ellipse-1 (clim:make-ellipse* 0 0 +40 -80 -40 -20 :start-angle sa :end-angle ea))
+         (ellipse-2 (clim:make-ellipse* 0 0 +40 -80 +40 +20 :start-angle sa :end-angle ea))
+         (ellipse-3 (clim:make-ellipse* 0 0 -40 -20 +40 +80 :start-angle sa :end-angle ea))
+         (ellipse-4 (clim:make-ellipse* 0 0 +40 +20 -40 +80 :start-angle sa :end-angle ea)))
+    (flet ((draw-el (el x y rays-p &rest options)
+             (with-translation (stream x y)
+               (multiple-value-bind (x-min y-min x-max y-max)
+                   (climi::ellipse-bounding-rectangle el)
+                 (draw-point* stream x-min 0 :line-thickness 10 :ink +dark-red+)
+                 (draw-point* stream x-max 0 :line-thickness 10 :ink +dark-red+)
+                 (draw-point* stream 0 y-min :line-thickness 10 :ink +dark-blue+)
+                 (draw-point* stream 0 y-max :line-thickness 10 :ink +dark-blue+))
+               (draw-design stream (bounding-rectangle el)
+                            :line-thickness 3 :ink +dark-goldenrod+ :filled nil)
+               (apply #'draw-design stream el options)
+               (when rays-p
+                 (draw-design stream
+                              (multiple-value-call #'make-line*
+                                0 0
+                                (climi::%ellipse-angle->position el sa))
+                              :ink +dark-green+ :line-thickness 3)
+                 (draw-design stream
+                              (multiple-value-call #'make-line*
+                                0 0
+                                (climi::%ellipse-angle->position el ea))
+                              :ink +dark-red+ :line-thickness 3)))))
+      (draw-el ellipse-1 100 100 t :ink +gray+)
+      (draw-el ellipse-2 300 100 t :ink +gray+)
+      (draw-el ellipse-3 100 300 t :ink +gray+)
+      (draw-el ellipse-4 300 300 t :ink +gray+)
+      (draw-el ellipse-1 100 500 nil :ink +red+ :filled nil :line-thickness 10)
+      (draw-el ellipse-3 300 500 nil :ink +red+ :filled nil :line-thickness 10))))
 
 ;;;
 ;;; Circle
@@ -1016,8 +1130,33 @@ outside the clipping area should be grey.")
 ;;; Clipping
 ;;;
 
+(define-drawing-test "10) Clipping region ellipse" (stream)
+    "Non-rectangular clipping region. We should see grey rotated ellipse with
+limited angle drawn inside green border. This ellipse is a clipping region. Then
+we randomly drawn points on the screen which should be clipped to the grey area."
+  (let ((cr (clim:make-ellipse* (/ *width* 2) (/ *height* 2)
+                                (- (/ *width* 2) 50) 100
+                                0 (- (/ *height* 2) 50)
+                                :start-angle (/ pi 8)
+                                :end-angle (* 3 (/ pi 2)))))
+    (with-bounding-rectangle* (min-x min-y max-x max-y)	cr
+      (draw-rectangle* stream (- min-x 10) (- min-y 10) (+ max-x 10) (+ max-y 10)
+                       :line-thickness 2 :filled t :ink +green+)
+      (draw-rectangle* stream min-x min-y max-x max-y
+                       :line-thickness 1 :filled nil)
+      (with-drawing-options (stream :clipping-region cr)
+        (draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey50+)
+        (loop repeat 100
+           do (clim:draw-point* stream (random *width*) (random *height*)
+                                :ink (make-random-col)
+                                :line-thickness (random 100)))))))
+
 (define-drawing-test "10) Clipping Region" (stream)
-    ""
+    "Various clipping regions. We should see seven blue bounding
+rectangles. Each of them host a clipping area: square, rotated rectangle,
+circle, polygon, region intersection, region union and region difference (last
+three are based on rectangles). Randomly drawn points should be clipped to these
+clipping areas. No point should be drawn outside the blue rectangles."
   (dolist (cr (list
 	       (make-rectangle* 20 20 120 120)
 	       (clim:transform-region (clim:make-rotation-transformation
@@ -1033,9 +1172,7 @@ outside the clipping area should be grey.")
 		(make-rectangle* 200 330 270 400))
 	       (clim:region-difference
 		(make-rectangle* 320 300 390 370)
-		(make-rectangle* 350 330 420 400))
-	       )
-	   )
+		(make-rectangle* 350 330 420 400))))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
 	cr
       (draw-rectangle* stream (- min-x 2) (- min-y 2) (+ max-x 2) (+ max-y 2) :line-thickness 4 :filled nil :ink +blue+)
