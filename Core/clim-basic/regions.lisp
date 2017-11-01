@@ -1633,6 +1633,24 @@ point of the resulting line."
                    (t
                     ;;paralell -- kein Schnitt
                     nil)))
+            ((or (zerop dx) (zerop du))
+             ;; infinite slope (vertical line) - previous case covers two vlines
+             (let (a b x y)
+               (if (zerop dx)           ; ugly setf - I'm ashamed
+                   (setf a (/ dv du)
+                         b (- v1 (* a u1))
+                         x x1
+                         y (+ (* a x1) b))
+                   (setf a (/ dy dx)
+                         b (- y1 (* a x1))
+                         x u1
+                         y (+ (* a x) b)))
+               (if (and (or (<= x1 x x2) (<= x2 x x1))
+                        (or (<= u1 x u2) (<= u2 x u1))
+                        (or (<= y1 y y2) (<= y2 y y1))
+                        (or (<= v1 y v2) (<= v2 y v1)))
+                   (values :hit x y)
+                   nil)))
             (t
              (let ((x (/ (+ (* dx (- (* u1 dv) (* v1 du)))
 			    (* du (- (* y1 dx) (* x1 dy))))
