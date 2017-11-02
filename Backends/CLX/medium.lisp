@@ -158,21 +158,27 @@ region and its clipping pixmap. This is looked up for optimization with region-e
                  (setf (xlib:gcontext-foreground mask-gc) 0)
                  (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
                  (setf (xlib:gcontext-foreground mask-gc) 1)
-                 (loop for x from x1 to (+ x1 width) do
-                      (let ((scan-hline
-                             (region-intersection clipping-region
-                                                  (make-line* x y1 x (+ y1 height)))))
-                        (map-over-region-set-regions
-                         (lambda (reg)
-                           (when (linep reg)
-                             (multiple-value-bind (lx1 ly1) (line-start-point* reg)
-                               (multiple-value-bind (lx2 ly2) (line-end-point* reg)
-                                 (xlib:draw-line mask mask-gc
-                                                 (round-coordinate lx1)
-                                                 (round-coordinate ly1)
-                                                 (round-coordinate lx2)
-                                                 (round-coordinate ly2))))))
-                         scan-hline)))
+                 (flet ((%draw-lines (scan-line)
+                          (map-over-region-set-regions
+                           (lambda (reg)
+                             (when (linep reg)
+                               (multiple-value-bind (lx1 ly1) (line-start-point* reg)
+                                 (multiple-value-bind (lx2 ly2) (line-end-point* reg)
+                                   (xlib:draw-line mask mask-gc
+                                                   (round-coordinate lx1)
+                                                   (round-coordinate ly1)
+                                                   (round-coordinate lx2)
+                                                   (round-coordinate ly2))))))
+                           scan-line)))
+                   (if (<= width height)
+                       (loop for x from x1 to (+ x1 width) do
+                            (%draw-lines (region-intersection
+                                          clipping-region
+                                          (make-line* x y1 x (+ y1 height)))))
+                       (loop for y from y1 to (+ y1 height) do
+                            (%draw-lines (region-intersection
+                                          clipping-region
+                                          (make-line* x1 y (+ x1 width) y))))))
                  (setf (xlib:gcontext-clip-mask gc :yx-banded) mask))))))
       (t
        (let ((last-clip (%clipping-pixmap-cache medium)))
