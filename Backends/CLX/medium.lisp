@@ -143,6 +143,37 @@ region and its clipping pixmap. This is looked up for optimization with region-e
          ;; sense as CLX requires it. Use :unsorted until we fix it.
          #+ (or) (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
          #- (or) (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))
+      ((typep clipping-region 'standard-ellipse)
+       (let ((last-clip (%clipping-pixmap-cache medium)))
+         (if (region-equal clipping-region (car last-clip))
+             (setf (xlib:gcontext-clip-mask gc :yx-banded) (cdr last-clip))
+             (multiple-value-bind (x1 y1 width height)
+                 (region->clipping-values (bounding-rectangle clipping-region))
+               (let* ((drawable (sheet-xmirror (medium-sheet medium)))
+                      (mask (xlib:create-pixmap :drawable drawable
+                                                :depth 1
+                                                :width (+ x1 width)
+                                                :height (+ y1 height)))
+                      (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
+                 (setf (xlib:gcontext-foreground mask-gc) 0)
+                 (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
+                 (setf (xlib:gcontext-foreground mask-gc) 1)
+                 (loop for x from x1 to (+ x1 width) do
+                      (let ((scan-hline
+                             (region-intersection clipping-region
+                                                  (make-line* x y1 x (+ y1 height)))))
+                        (map-over-region-set-regions
+                         (lambda (reg)
+                           (when (linep reg)
+                             (multiple-value-bind (lx1 ly1) (line-start-point* reg)
+                               (multiple-value-bind (lx2 ly2) (line-end-point* reg)
+                                 (xlib:draw-line mask mask-gc
+                                                 (round-coordinate lx1)
+                                                 (round-coordinate ly1)
+                                                 (round-coordinate lx2)
+                                                 (round-coordinate ly2))))))
+                         scan-hline)))
+                 (setf (xlib:gcontext-clip-mask gc :yx-banded) mask))))))
       (t
        (let ((last-clip (%clipping-pixmap-cache medium)))
          (if (region-equal clipping-region (car last-clip))
