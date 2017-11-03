@@ -918,14 +918,58 @@ time an indexed pattern is drawn.")
             (vector-push-extend (- max-y min-y) points)))
         (xlib:draw-rectangles mirror gc points filled)))))
 
-(defun %ellipse-border-p (ellipse x-orig y-orig)
-  (with-slots (climi::tr climi::start-angle climi::end-angle) ellipse
-    (multiple-value-bind (x y) (untransform-position climi::tr x-orig y-orig)
-      (and (<= (- 1.0 .05) (+ (* x x) (* y y)) (+ 1.0 .05))
-           (or (null climi::start-angle)
-               (climi::%angle-between-p
-                (climi::%ellipse-position->angle ellipse x-orig y-orig)
-                climi::start-angle climi::end-angle))))))
+(defun %draw-rotated-ellipse (medium center-x center-y
+                              radius-1-dx radius-1-dy
+                              radius-2-dx radius-2-dy
+                              start-angle end-angle filled)
+  (let ((ellipse (make-ellipse* center-x center-y
+                                radius-1-dx radius-1-dy
+                                radius-2-dx radius-2-dy
+                                :start-angle start-angle :end-angle end-angle)))
+    (with-clx-graphics () medium
+      (multiple-value-bind (x1 y1 width height)
+          (region->clipping-values (bounding-rectangle ellipse))
+        (labels ((ellipse-border-p (ellipse x-orig y-orig)
+                   (with-slots (climi::tr climi::start-angle climi::end-angle) ellipse
+                     (multiple-value-bind (x y) (untransform-position climi::tr x-orig y-orig)
+                       (and (<= (- 1.0 .05) (+ (* x x) (* y y)) (+ 1.0 .05))
+                            (or (null climi::start-angle)
+                                (climi::%angle-between-p
+                                 (climi::%ellipse-position->angle ellipse x-orig y-orig)
+                                 climi::start-angle climi::end-angle))))))
+                 (maybe-draw-border-points (line)
+                   (multiple-value-bind (lx1 ly1) (line-start-point* line)
+                     (when (ellipse-border-p ellipse lx1 ly1)
+                       (xlib:draw-point mirror gc
+                                        (round-coordinate lx1)
+                                        (round-coordinate ly1))))
+                   (multiple-value-bind (lx2 ly2) (line-end-point* line)
+                     (when (ellipse-border-p ellipse lx2 ly2)
+                       (xlib:draw-point mirror gc
+                                        (round-coordinate lx2)
+                                        (round-coordinate ly2)))))
+                 (draw-line-1 (line)
+                   (multiple-value-bind (lx1 ly1) (line-start-point* line)
+                     (multiple-value-bind (lx2 ly2) (line-end-point* line)
+                       (xlib:draw-line mirror gc
+                                       (round-coordinate lx1)
+                                       (round-coordinate ly1)
+                                       (round-coordinate lx2)
+                                       (round-coordinate ly2)))))
+                 (draw-lines (scan-line)
+                   (cond
+                     ((region-equal scan-line +nowhere+))
+                     (filled (map-over-region-set-regions #'draw-line-1 scan-line))
+                     (t (map-over-region-set-regions #'maybe-draw-border-points scan-line)))))
+          (if (<= width height)
+              (loop for x from x1 to (+ x1 width) do
+                   (draw-lines (region-intersection
+                                ellipse
+                                (make-line* x y1 x (+ y1 height)))))
+              (loop for y from y1 to (+ y1 height) do
+                   (draw-lines (region-intersection
+                                ellipse
+                                (make-line* x1 y (+ x1 width) y))))))))))
 
 ;;; Round the parameters of the ellipse so that it occupies the expected pixels
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
@@ -950,23 +994,12 @@ time an indexed pattern is drawn.")
                              min-x min-y (- max-x min-x) (- max-y min-y)
                              (mod start-angle (* 2 pi)) arc-angle
                              filled)))))
-      ;; As a proof of concept we go after slow method which probes for each point
-      ;; in the bounding rectangle if ellipse contains it. Then we draw a
-      ;; pixel. We should optimize it by approximating them with bezier areas.
-      (let ((ellipse (make-ellipse* center-x center-y
-                                    radius-1-dx radius-1-dy
-                                    radius-2-dx radius-2-dy
-                                    :start-angle start-angle :end-angle end-angle))
-            (belongs-p (if filled
-                           #'region-contains-position-p
-                           #'%ellipse-border-p)))
-        (multiple-value-bind (x1 y1 width height)
-            (region->clipping-values (bounding-rectangle ellipse))
-          (with-clx-graphics () medium
-            (loop for x from x1 to (+ x1 width) do
-                 (loop for y from y1 to (+ y1 height) do
-                      (when (funcall belongs-p ellipse x y)
-                        (xlib:draw-point mirror gc x y)))))))))
+      ;; Implementation scans for vertial or horizontal lines to get the
+      ;; intersection. That is O(n), which is much better than naive O(n2).
+      (%draw-rotated-ellipse medium center-x center-y
+                             radius-1-dx radius-1-dy
+                             radius-2-dx radius-2-dy
+                             start-angle end-angle filled)))
 
 (defmethod medium-draw-circle* ((medium clx-medium)
 				center-x center-y radius start-angle end-angle
