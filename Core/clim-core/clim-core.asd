@@ -1,6 +1,6 @@
 
 (defsystem #:clim-core
-  :depends-on (#:clim-basic #:clim-postscript)
+  :depends-on (#:clim-basic #:clim-postscript #+sbcl (:require #:sb-introspect))
   :components
   ((:file "text-formatting")
    (:file "defresource")
