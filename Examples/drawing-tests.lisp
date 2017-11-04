@@ -1,8 +1,5 @@
 (in-package :clim-demo)
 
-(defun run-drawing-tests ()
-  (run-frame-top-level (make-instance 'drawing-tests)))
-
 (defparameter *drawing-tests* (make-hash-table :test 'equal))
 
 (defparameter *width* 500)
