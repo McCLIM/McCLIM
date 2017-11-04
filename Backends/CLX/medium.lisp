@@ -961,15 +961,16 @@ time an indexed pattern is drawn.")
                      ((region-equal scan-line +nowhere+))
                      (filled (map-over-region-set-regions #'draw-line-1 scan-line))
                      (t (map-over-region-set-regions #'maybe-draw-border-points scan-line)))))
-          (if (<= width height)
-              (loop for x from x1 to (+ x1 width) do
-                   (draw-lines (region-intersection
-                                ellipse
-                                (make-line* x y1 x (+ y1 height)))))
-              (loop for y from y1 to (+ y1 height) do
-                   (draw-lines (region-intersection
-                                ellipse
-                                (make-line* x1 y (+ x1 width) y))))))))))
+          ;; O(n+m) because otherwise we may skip some points (better drawing quality)
+          (progn ;if (<= width height)
+            (loop for x from x1 to (+ x1 width) do
+                 (draw-lines (region-intersection
+                              ellipse
+                              (make-line* x y1 x (+ y1 height)))))
+            (loop for y from y1 to (+ y1 height) do
+                 (draw-lines (region-intersection
+                              ellipse
+                              (make-line* x1 y (+ x1 width) y))))))))))
 
 ;;; Round the parameters of the ellipse so that it occupies the expected pixels
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
