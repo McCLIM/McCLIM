@@ -662,7 +662,7 @@
 (defmethod region-contains-position-p ((self standard-ellipse) x-orig y-orig)
   (with-slots (tr start-angle end-angle) self
     (multiple-value-bind (x y) (untransform-position tr x-orig y-orig)
-      (and (<= (+ (* x x) (* y y)) (+ 1.0 single-float-epsilon))
+      (and (<= (+ (* x x) (* y y)) (+ 1.0 (* 4 single-float-epsilon)))
            (or (and (zerop y) (zerop x))
                ;; start-angle being null implies that end-angle is null as well
                (null start-angle)
@@ -805,9 +805,9 @@
                      (p1 (line-start-point region))
                      (p2 (line-end-point region))
                      (p1p (multiple-value-call
-                              #'region-contains-position-p ellipse (point-position  p1)))
+                              #'region-contains-position-p ellipse (point-position p1)))
                      (p2p (multiple-value-call
-                              #'region-contains-position-p ellipse (point-position  p2))))
+                              #'region-contains-position-p ellipse (point-position p2))))
                 (cond
                   ;; line goes through the center. Only in this case line may be
                   ;; coincident with angle rays, so we don't have to bother with
@@ -817,8 +817,8 @@
                               (if p2p p2 (make-point cx cy))))
                   ;; line doesn't intersect any of angle rays
                   ((and (not sip) (not eip))
-                   ;; p1p implies p2p here
-                   (if p1p region +nowhere+))
+                   ;; p1p implies p2p here, but rounding may say otherwise
+                   (if (or p1p p2p) region +nowhere+))
                   ;; line intersects with both angle rays
                   ((and sip eip)
                    ;; region difference may not work here due to float rounding
@@ -1775,7 +1775,7 @@
                    (t
                     ;;paralell -- kein Schnitt
                     nil)))
-            ((or (zerop dx) (zerop du))
+            ((or (<= (abs dx) single-float-epsilon) (<= (abs du) single-float-epsilon))
              ;; infinite slope (vertical line) - previous case covers two vlines
              (let (a b x y)
                (if (zerop dx)           ; ugly setf - I'm ashamed
@@ -1787,9 +1787,7 @@
                          b (- y1 (* a x1))
                          x u1
                          y (+ (* a x) b)))
-               (if (and (or (<= x1 x x2) (<= x2 x x1))
-                        (or (<= u1 x u2) (<= u2 x u1))
-                        (or (<= y1 y y2) (<= y2 y y1))
+               (if (and (or (<= y1 y y2) (<= y2 y y1))
                         (or (<= v1 y v2) (<= v2 y v1)))
                    (values :hit x y)
                    nil)))
@@ -1801,9 +1799,7 @@
 			    (* dv (- (* y1 dx) (* x1 dy))))
 			 q)))
                (if (and (or (<= x1 x x2) (<= x2 x x1))
-                        (or (<= u1 x u2) (<= u2 x u1))
-                        (or (<= y1 y y2) (<= y2 y y1))
-                        (or (<= v1 y v2) (<= v2 y v1)))
+                        (or (<= u1 x u2) (<= u2 x u1)))
                    (values :hit x y)
                  nil)) ) )) ))
 
