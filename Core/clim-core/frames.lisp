@@ -1630,10 +1630,12 @@ have a `pointer-documentation-pane' as pointer documentation,
 		   do (return-from find-dest-translator translator))
 	     nil)
 	   (do-feedback (window x y state)
-	     (funcall feedback-fn frame from-presentation window
-			initial-x initial-y x y state))
+	     (when (typep window 'clim-stream-pane)
+	       (funcall feedback-fn frame from-presentation window
+			initial-x initial-y x y state)))
 	   (do-hilite (presentation window state)
-	     (funcall hilite-fn frame presentation window state))
+	     (when (typep window 'clim-stream-pane)
+	       (funcall hilite-fn frame presentation window state)))
 	   (last-window ()
 	     (event-sheet last-event))
 	   (last-x ()
