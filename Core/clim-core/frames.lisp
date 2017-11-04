@@ -1552,6 +1552,10 @@ have a `pointer-documentation-pane' as pointer documentation,
 
 (defmethod frame-drag-and-drop-feedback
     ((frame standard-application-frame) from-presentation stream
+     initial-x initial-y x y state))
+
+(defmethod frame-drag-and-drop-feedback
+    ((frame standard-application-frame) from-presentation (stream output-stream)
      initial-x initial-y x y state)
   (with-bounding-rectangle* (fp-x1 fp-y1 fp-x2 fp-y2)
       from-presentation
@@ -1683,7 +1687,7 @@ have a `pointer-documentation-pane' as pointer documentation,
 		  last-event event)
 	    (return-from do-tracking nil))
 	  #-(and)(:button-press ())
-	  (:button-release (&key event)
+	  (:pointer-button-release (&key event)
 	    (setq last-event event)
 	    (return-from do-tracking nil))))
       ;;
