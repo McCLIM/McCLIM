@@ -1635,7 +1635,7 @@ have a `pointer-documentation-pane' as pointer documentation,
 	     nil)
 	   (do-feedback (window x y state)
 	     (funcall feedback-fn frame from-presentation window
-		        initial-x initial-y x y state))
+			initial-x initial-y x y state))
 	   (do-hilite (presentation window state)
 	     (funcall hilite-fn frame presentation window state))
 	   (last-window ()
