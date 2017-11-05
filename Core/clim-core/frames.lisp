@@ -1634,8 +1634,7 @@ have a `pointer-documentation-pane' as pointer documentation,
 	       (funcall feedback-fn frame from-presentation window
 			initial-x initial-y x y state)))
 	   (do-hilite (presentation window state)
-	     (when (typep window 'clim-stream-pane)
-	       (funcall hilite-fn frame presentation window state)))
+	     (funcall hilite-fn frame presentation window state))
 	   (last-window ()
 	     (event-sheet last-event))
 	   (last-x ()
@@ -1671,8 +1670,7 @@ have a `pointer-documentation-pane' as pointer documentation,
 	      (do-feedback (last-window) (last-x) (last-y) :unhighlight))
 	    (setq feedback-activated t
 		  last-event event)
-	    (when last-presentation
-	      (do-hilite last-presentation (last-window) :unhighlight))
+	    (when last-presentation (do-hilite last-presentation (last-window) :unhighlight))
 	    (setq last-presentation nil)
 	    (do-feedback window x y :highlight)
 	    (document-drag-n-drop translator nil
