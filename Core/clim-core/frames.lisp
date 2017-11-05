@@ -1685,7 +1685,7 @@ have a `pointer-documentation-pane' as pointer documentation,
 		  last-event event)
 	    (return-from do-tracking nil))
 	  #-(and)(:button-press ())
-	  (:button-release (&key event)
+	  (:pointer-button-release (&key event)
 	    (setq last-event event)
 	    (return-from do-tracking nil))))
       ;;
