@@ -1555,7 +1555,13 @@ have a `pointer-documentation-pane' as pointer documentation,
      initial-x initial-y x y state))
 
 (defmethod frame-drag-and-drop-feedback
-    ((frame standard-application-frame) from-presentation (stream output-stream)
+    ((frame standard-application-frame) from-presentation (stream encapsulating-stream)
+     initial-x initial-y x y state)
+  (frame-drag-and-drop-feedback frame from-presentation (encapsulating-stream-stream stream)
+                                initial-x initial-y x y state))
+
+(defmethod frame-drag-and-drop-feedback
+    ((frame standard-application-frame) from-presentation (stream output-recording-stream)
      initial-x initial-y x y state)
   (with-bounding-rectangle* (fp-x1 fp-y1 fp-x2 fp-y2)
       from-presentation
