@@ -1552,6 +1552,10 @@ have a `pointer-documentation-pane' as pointer documentation,
 
 (defmethod frame-drag-and-drop-feedback
     ((frame standard-application-frame) from-presentation stream
+     initial-x initial-y x y state))
+
+(defmethod frame-drag-and-drop-feedback
+    ((frame standard-application-frame) from-presentation (stream output-stream)
      initial-x initial-y x y state)
   (with-bounding-rectangle* (fp-x1 fp-y1 fp-x2 fp-y2)
       from-presentation
@@ -1630,9 +1634,8 @@ have a `pointer-documentation-pane' as pointer documentation,
 		   do (return-from find-dest-translator translator))
 	     nil)
 	   (do-feedback (window x y state)
-	     (when (typep window 'clim-stream-pane)
-	       (funcall feedback-fn frame from-presentation window
-			initial-x initial-y x y state)))
+	     (funcall feedback-fn frame from-presentation window
+		      initial-x initial-y x y state))
 	   (do-hilite (presentation window state)
 	     (funcall hilite-fn frame presentation window state))
 	   (last-window ()
