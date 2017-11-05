@@ -183,25 +183,27 @@
 (defmethod medium-draw-ellipse* ((medium render-medium-mixin) center-x center-y
 				 radius-1-dx radius-1-dy
 				 radius-2-dx radius-2-dy
-				 start-angle end-angle filled)
-  (let* ((arc-angle (- end-angle start-angle))
-	 (arc-angle (if (< arc-angle 0)
-			(+ (* pi 2) arc-angle)
-			arc-angle)))
-    (declare (ignore arc-angle))
-    ;;; error!!
-    (let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
-	   (radius-dy (abs (+ radius-1-dy radius-2-dy))))
-      (let ((path (ellipse-arc center-x center-y radius-dx radius-dy
-			       0 ;;(- end-angle start-angle)
-			       (- end-angle)
-			       (- start-angle)
-			       )))
-	(when filled
-	  (line-to path center-x center-y))
-	(if filled
-	    (%medium-fill-paths medium (list path))
-	    (%medium-stroke-paths medium (list path)))))))
+				 start-angle end-angle filled
+                                 &aux (el (make-ellipse*
+                                           center-x center-y
+                                           radius-1-dx radius-1-dy
+                                           radius-2-dx radius-2-dy
+                                           :start-angle start-angle
+                                           :end-angle end-angle)))
+  (multiple-value-bind (cx cy hx hy theta) (climi::ellipse-simplified-representation el)
+    (declare (ignorable cx cy))
+    ;; XXX: these angles are wrong if theta is not ortogonal to xy. I think that
+    ;; underlying bezier curve approximation distorts them, so distance is not
+    ;; constant. Leaving it as is now.
+    (let* ((sa (- (* 2 pi) end-angle theta))
+           (dalpha (- end-angle start-angle))
+           (path (ellipse-arc center-x center-y hx hy theta
+                              sa (+ sa dalpha))))
+      (when filled
+        (line-to path center-x center-y))
+      (if filled
+          (%medium-fill-paths medium (list path))
+          (%medium-stroke-paths medium (list path))))))
 
 (defmethod medium-draw-text* ((medium render-medium-mixin) string x y
                               start end

@@ -697,6 +697,14 @@
                                                right top)
                                 t filled)))))
 
+(defmethod medium-draw-ellipse* :around (medium center-x center-y
+                                         radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                                         start-angle end-angle filled)
+  (when (<= (abs (- (mod start-angle (* 2 pi)) (mod end-angle (* 2 pi)))) short-float-epsilon)
+    (setf start-angle 0
+          end-angle (* 2 pi)))
+  (call-next-method))
+
 (defmethod medium-draw-ellipse* :around ((medium transform-coordinates-mixin) center-x center-y
                                          radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                                          start-angle end-angle filled)
@@ -716,6 +724,12 @@
                           radius-1-dx radius-1-dy
                           radius-2-dx radius-2-dy
                           start-angle end-angle filled)))))
+
+(defmethod medium-draw-circle* :around (medium center-x center-y
+                                        radius start-angle end-angle filled)
+  (when (<= (abs (- (mod start-angle (* 2 pi)) (mod end-angle (* 2 pi)))) short-float-epsilon)
+    (setf start-angle 0 end-angle (* 2 pi)))
+  (call-next-method))
 
 (defmethod medium-draw-circle* :around ((medium transform-coordinates-mixin) center-x center-y
                                          radius start-angle end-angle filled)
