@@ -1,7 +1,5 @@
 (in-package :mcclim-render-internals)
 
-(use-package :clim-clx)
-
 ;;; RGB-IMAGE support, from Closure
 
 (defmethod medium-draw-image*
