@@ -284,10 +284,32 @@ region and its clipping pixmap. This is looked up for optimization with region-e
 (defgeneric design-gcontext (medium ink))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::indexed-pattern))
-  (design-gcontext medium ink))
+  (multiple-value-bind (mx my)
+      ;; For unmirrored sheet we need to apply the native transformation.
+      ;; May be it is the wrong place to do it.
+      (transform-position (sheet-native-transformation (medium-sheet medium)) 0 0)
+    (let ((gc-x (round-coordinate mx))
+	  (gc-y (round-coordinate my))
+	  (gc (design-gcontext medium ink)))
+      (setf (xlib:gcontext-ts-x gc) gc-x
+	    (xlib:gcontext-ts-y gc) gc-y
+	    (xlib:gcontext-clip-x gc) gc-x
+	    (xlib:gcontext-clip-y gc) gc-y)
+      gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::rectangular-tile))
-  (design-gcontext medium ink))
+  (multiple-value-bind (mx my)
+      ;; For unmirrored sheet we need to apply the native transformation.
+      ;; May be it is the wrong place to do it.
+      (transform-position (sheet-native-transformation (medium-sheet medium)) 0 0)
+    (let ((gc-x (round-coordinate mx))
+	  (gc-y (round-coordinate my))
+	  (gc (design-gcontext medium ink)))
+      (setf (xlib:gcontext-ts-x gc) gc-x
+	    (xlib:gcontext-ts-y gc) gc-y
+	    (xlib:gcontext-clip-x gc) gc-x
+	    (xlib:gcontext-clip-y gc) gc-y)
+      gc)))
 
 ;;;;
 
@@ -628,11 +650,11 @@ time an indexed pattern is drawn.")
 	   (transform-position transformation 0 0)
 	 (let ((gc-x (round-coordinate tx))
 	       (gc-y (round-coordinate ty))
-	       (gc (design-gcontext medium design)))
-	   (setf (xlib:gcontext-ts-x gc) gc-x
-               (xlib:gcontext-ts-y gc) gc-y
-               (xlib:gcontext-clip-x gc) gc-x
-               (xlib:gcontext-clip-y gc) gc-y)
+	       (gc (clim-clx::medium-gcontext medium design)))
+	   (setf (xlib:gcontext-ts-x gc) (+ gc-x (xlib:gcontext-ts-x gc))
+		 (xlib:gcontext-ts-y gc) (+ gc-y (xlib:gcontext-ts-y gc))
+		 (xlib:gcontext-clip-x gc) (+ gc-x (xlib:gcontext-clip-x gc))
+		 (xlib:gcontext-clip-y gc) (+ gc-y (xlib:gcontext-clip-y gc)))
 	   gc)))
       (t
        (error "You lost, we not yet implemented transforming an ~S."

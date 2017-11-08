@@ -5,56 +5,6 @@
 (defclass clxv3-medium (clx-medium)
   ())
 
-(defmethod clim-clx::medium-gcontext ((medium clxv3-medium) (ink climi::indexed-pattern))
-  (multiple-value-bind (mx my)
-      ;; For unmirrored sheet we need to apply the native transformation.
-      ;; May be it is the wrong place to do it.
-      (transform-position (sheet-native-transformation (medium-sheet medium)) 0 0)
-    (let ((gc-x (round-coordinate mx))
-	  (gc-y (round-coordinate my))
-	  (gc (design-gcontext medium ink)))
-      (setf (xlib:gcontext-ts-x gc) gc-x
-	    (xlib:gcontext-ts-y gc) gc-y
-	    (xlib:gcontext-clip-x gc) gc-x
-	    (xlib:gcontext-clip-y gc) gc-y)
-      gc)))
- 
-(defmethod clim-clx::medium-gcontext ((medium clxv3-medium) (ink climi::rectangular-tile))
-  (multiple-value-bind (mx my)
-      ;; For unmirrored sheet we need to apply the native transformation.
-      ;; May be it is the wrong place to do it.
-      (transform-position (sheet-native-transformation (medium-sheet medium)) 0 0)
-    (let ((gc-x (round-coordinate mx))
-	  (gc-y (round-coordinate my))
-	  (gc (design-gcontext medium ink)))
-      (setf (xlib:gcontext-ts-x gc) gc-x
-	    (xlib:gcontext-ts-y gc) gc-y
-	    (xlib:gcontext-clip-x gc) gc-x
-	    (xlib:gcontext-clip-y gc) gc-y)
-      gc)))
-
-(defmethod clim-clx::medium-gcontext ((medium clxv3-medium) (ink climi::transformed-design))
-  (let ((transformation (climi::transformed-design-transformation ink))
-        (design (climi::transformed-design-design ink)))
-    (unless (translation-transformation-p transformation)
-      (error "Sorry, not yet implemented."))
-    ;; Bah!
-    (typecase design
-      ((or climi::indexed-pattern climi::rectangular-tile)
-       (multiple-value-bind (tx ty)
-	   (transform-position transformation 0 0)
-	 (let ((gc-x (round-coordinate tx))
-	       (gc-y (round-coordinate ty))
-	       (gc (clim-clx::medium-gcontext medium design)))
-	   (setf (xlib:gcontext-ts-x gc) (+ gc-x (xlib:gcontext-ts-x gc))
-		 (xlib:gcontext-ts-y gc) (+ gc-y (xlib:gcontext-ts-y gc))
-		 (xlib:gcontext-clip-x gc) (+ gc-x (xlib:gcontext-clip-x gc))
-		 (xlib:gcontext-clip-y gc) (+ gc-y (xlib:gcontext-clip-y gc)))
-	   gc)))
-      (t
-       (error "You lost, we not yet implemented transforming an ~S."
-              (type-of ink))))))
-
 (defmethod medium-draw-rectangle-using-ink* ((medium clxv3-medium) (ink t) left top right bottom filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium)))
 	(clipping-region (medium-device-region medium)))
