@@ -736,8 +736,7 @@ thickness."
 angle. First four should be filled and should have angle radius drawn. Last two
 should not be filled (and no angle radius is drawn). Each ellipse is bound by
 its bounding rectangle and surrounded by four points marking where min-x, max-x,
-min-y and max-y are (extremum points) BEFORE additional shrinking due to the
-limited angle of the ellipse."
+min-y and max-y are (extremum points) are."
   (let* ((sa (/ pi 2))
          (ea (+ pi (* 3 (/ pi 4))))
          (ellipse-1 (clim:make-ellipse* 0 0 +40 -80 -40 -20 :start-angle sa :end-angle ea))

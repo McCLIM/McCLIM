@@ -674,34 +674,9 @@
 (defmethod bounding-rectangle* ((region standard-ellipse))
   (with-slots (tr start-angle end-angle) region
     (multiple-value-bind (cx cy) (ellipse-center-point* region)
-      (when (every #'zerop (multiple-value-list (ellipse-radii region)))
-        (return-from bounding-rectangle* (values cx cy cx cy)))
-      (multiple-value-bind (x-min y-min x-max y-max)
-          (ellipse-bounding-rectangle region)
-        (unless (null start-angle)
-          ;; I'm sure this part may be simplified a little, but I'm running
-          ;; out of steam. -- jd
-          (flet ((rcp* (x1 y1 x2 y2)
-                   (cond ((not (or (complexp x1) (complexp y1)))
-                          (region-contains-position-p region x1 y1))
-                         ((not (or (complexp x2) (complexp y2)))
-                          (region-contains-position-p region x2 y2)))))
-            (multiple-value-bind (sa-x sa-y) (%ellipse-angle->position region start-angle)
-              (multiple-value-bind (ea-x ea-y) (%ellipse-angle->position region end-angle)
-                (let ((eps 0.00001))
-                 (unless (multiple-value-call #'rcp*
-                           (intersection-vline/ellipse region (+ x-min eps)))
-                   (setf x-min (min cx sa-x ea-x)))
-                 (unless (multiple-value-call #'rcp*
-                           (intersection-hline/ellipse region (+ y-min eps)))
-                   (setf y-min (min cy sa-y ea-y)))
-                 (unless (multiple-value-call #'rcp*
-                           (intersection-vline/ellipse region (- x-max eps)))
-                   (setf x-max (max cx sa-x ea-x)))
-                 (unless (multiple-value-call #'rcp*
-                           (intersection-hline/ellipse region (- y-max eps)))
-                   (setf y-max (max cy sa-y ea-y))))))))
-        (values x-min y-min x-max y-max)))))
+      (if (every #'zerop (multiple-value-list (ellipse-radii region)))
+          (values cx cy cx cy)
+          (ellipse-bounding-rectangle region)))))
 
 (defun intersection-hline/ellipse (el y)
   "Returns coordinates where ellipse intersects with a horizontal line."
