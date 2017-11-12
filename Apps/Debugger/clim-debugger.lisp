@@ -1,4 +1,3 @@
-
 ;;; This is the beginning of a Common Lisp debugger implemented in
 ;;; McCLIM. It uses the portable debugger interface developed for the
 ;;; Slime project, and the graphical layout is also heavily inspired
@@ -73,13 +72,13 @@
 	     :initarg :restarts)
    (backtrace :accessor backtrace
 	      :initarg :backtrace)))
-   
+
 (defclass minimized-stack-frame-view (textual-view)())
 (defclass maximized-stack-frame-view (textual-view)())
 
-(defparameter +minimized-stack-frame-view+ 
+(defparameter +minimized-stack-frame-view+
   (make-instance 'minimized-stack-frame-view))
-(defparameter +maximized-stack-frame-view+ 
+(defparameter +maximized-stack-frame-view+
   (make-instance 'maximized-stack-frame-view))
 
 (defclass stack-frame ()
@@ -97,7 +96,7 @@
 	collect (make-instance
 		 'stack-frame
 		 :frame-string    (let ((*print-pretty* nil))
-				    (with-output-to-string (stream) 
+				    (with-output-to-string (stream)
 				      (swank-backend::print-frame frame stream)))
 		 :frame-no        frame-no
 		 :frame-variables (swank-backend::frame-locals frame-no))))
@@ -113,8 +112,8 @@
 
 (defun make-debugger-pane ()
   (with-look-and-feel-realization ((frame-manager *application-frame*)
-				   *application-frame*) 
-    (make-pane 'debugger-pane 
+				   *application-frame*)
+    (make-pane 'debugger-pane
 	       :condition-info (the-condition *application-frame*)
 	       :display-function #'display-debugger
 	       :end-of-line-action :allow
@@ -123,10 +122,10 @@
 (define-application-frame clim-debugger ()
   ((condition        :initform nil :accessor the-condition)
    (returned-restart :initform nil :accessor returned-restart))
-  (:panes
-   (debugger-pane (make-debugger-pane)))
+  (:pointer-documentation t)
+  (:panes (debugger-pane (make-debugger-pane)))
   (:layouts
-   (default (vertically () (scrolling () debugger-pane))))
+   (default (scrolling () debugger-pane)))
   (:geometry :height 480 :width #.(* 480 slim:+golden-ratio+)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -213,7 +212,7 @@
   (setf (returned-restart *application-frame*) restart)
   (frame-exit *application-frame*))
 
-(define-clim-debugger-command (com-toggle-stack-frame-view 
+(define-clim-debugger-command (com-toggle-stack-frame-view
 			       :name "Toggle stack frame view")
     ((stack-frame 'stack-frame))
 
@@ -269,15 +268,17 @@
 		(slim:cell (princ (condition-message
 				   (condition-info pane)))))
       (slim:row (slim:cell (bold (pane) (princ "Condition:")))
-		(slim:cell (clim:with-drawing-options (pane :ink clim:+red+)
-			     (princ (type-of-condition (condition-info pane))))))
+		(slim:cell (with-drawing-options (pane :ink clim:+red+)
+			     (with-output-as-presentation
+                                 (pane (the-condition (condition-info pane)) 'inspect)
+                               (princ (type-of-condition (condition-info pane)))))))
       (when (condition-extra (condition-info pane))
 	(slim:row (slim:cell (bold (pane) (princ "Extra:")))
 		  (slim:cell
 		    (clim:with-text-family (pane :fix)
 		      (format t "~A" (condition-extra (condition-info pane))))))))
     (fresh-line)
-    
+
     (with-text-family (pane :sans-serif)
       (bold (pane) (format t "Restarts:")))
     (fresh-line)
@@ -304,7 +305,7 @@
 
 
 (defun display-backtrace (frame pane)
-  (declare (ignore frame)) 
+  (declare (ignore frame))
   (with-text-family (pane :sans-serif)
     (bold (pane) (format pane "Backtrace:")))
   (fresh-line pane)
@@ -423,7 +424,6 @@
 (defun simple-break ()
   (with-simple-restart  (continue "Continue from interrupt.")
     (with-debugger
-      (invoke-debugger 
-       (make-condition 'simple-error 
+      (invoke-debugger
+       (make-condition 'simple-error
                        :format-control "Debugger test")))))
-
