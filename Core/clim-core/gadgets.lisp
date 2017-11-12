@@ -2861,7 +2861,7 @@ if INVOKE-CALLBACK is given."))
                 (invoke-with-output-to-output-record
                  ,stream
                  #'with-output-as-gadget-continuation
-                 'gadget-output-record :x ,x :y ,y ,@options)))
+                 'gadget-output-record ,@options :x ,x :y ,y)))
            (setup-gadget-record ,stream ,gadget-output-record)
            (stream-add-output-record ,stream ,gadget-output-record)
            (values (gadget ,gadget-output-record) ,gadget-output-record))))))
