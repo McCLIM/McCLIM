@@ -268,8 +268,10 @@
 		(slim:cell (princ (condition-message
 				   (condition-info pane)))))
       (slim:row (slim:cell (bold (pane) (princ "Condition:")))
-		(slim:cell (clim:with-drawing-options (pane :ink clim:+red+)
-			     (princ (type-of-condition (condition-info pane))))))
+		(slim:cell (with-drawing-options (pane :ink clim:+red+)
+			     (with-output-as-presentation
+                                 (pane (the-condition (condition-info pane)) 'inspect)
+                               (princ (type-of-condition (condition-info pane)))))))
       (when (condition-extra (condition-info pane))
 	(slim:row (slim:cell (bold (pane) (princ "Extra:")))
 		  (slim:cell
