@@ -122,10 +122,10 @@
 (define-application-frame clim-debugger ()
   ((condition        :initform nil :accessor the-condition)
    (returned-restart :initform nil :accessor returned-restart))
-  (:panes
-   (debugger-pane (make-debugger-pane)))
+  (:pointer-documentation t)
+  (:panes (debugger-pane (make-debugger-pane)))
   (:layouts
-   (default (vertically () (scrolling () debugger-pane))))
+   (default (scrolling () debugger-pane)))
   (:geometry :height 480 :width #.(* 480 slim:+golden-ratio+)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
