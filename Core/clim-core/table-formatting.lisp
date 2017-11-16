@@ -326,18 +326,15 @@ skips intervening non-table output record structures."))
 	(with-output-recording-options (stream :record t :draw nil)
 	  (funcall continuation stream)
 	  (force-output stream))
+        (setf (stream-cursor-position stream)
+              (values cursor-old-x cursor-old-y))
 	(with-output-recording-options (stream :record nil :draw nil)
 	  (adjust-table-cells table stream)
 	  (when multiple-columns (adjust-multiple-columns table stream))
 	  (setq *table-suppress-update* nil)
 	  (tree-recompute-extent table)))
-      #+NIL
-      (setf (output-record-position table)
-	    (values cursor-old-x cursor-old-y))
       (replay table stream)
       (if move-cursor
-	  ;; FIXME!!!
-	  ;; Yeah, fix me -- what is wrong with that?
 	  (setf (stream-cursor-position stream)
 		(values (bounding-rectangle-max-x table)
 			(bounding-rectangle-max-y table)))
