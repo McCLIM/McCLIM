@@ -834,7 +834,7 @@ documentation produced by presentations.")
 	(frame-arg (gensym "FRAME-ARG")))
     (loop for (prop . values) in options
 	do (case prop
-	     (:pane (setq pane (first values)))
+	     (:pane (setq pane values))
 	     (:panes (setq panes values))
 	     (:layouts (setq layouts values))
 	     (:command-table (setq command-table (first values)))
@@ -859,7 +859,7 @@ documentation produced by presentations.")
       (error ":pane cannot be specified along with either :panes or :layouts"))
 
     (when pane
-      (setq panes `((single-pane ,pane))
+      (setq panes `((single-pane ,@pane))
             layouts `((:default single-pane))))
 
     (setq current-layout (first (first layouts)))
