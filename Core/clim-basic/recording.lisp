@@ -165,8 +165,7 @@ all of FUNCTION-ARGS as APPLY arguments."
          (macrolet ((if-supplied ((var &optional (type t)) &body supplied-body)
                       (declare (ignore var type))
                       `(progn ,@supplied-body)))
-           (with-slots ,slot-names
-               record2
+           (with-slots ,slot-names record2
              ,@body)))
        (defmethod match-output-records-1 and ((record ,record-type)
                                               &key ,@key-args)
@@ -262,8 +261,10 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (setf (rectangle-edges* record)
         (values x-position y-position x-position y-position)))
 
-;;; XXX I'd really like to get rid of the x and y slots. They are
-;;; surely redundant with the bounding rectangle coordinates.
+;;; We need to remember initial record position (hence x,y slots) in case when
+;;; we add children expanding record in top-left direction and then call
+;;; clear-output-record. We want to reposition output record then at its initial
+;;; position. That's why this is not redundant with the bounding-rectangle.
 (defclass compound-output-record (basic-output-record)
   ((x :initarg :x-position
       :initform 0.0d0
@@ -490,7 +491,6 @@ the associated sheet can be determined."
        (output-record-parent record) record x1 y1 x2 y2))))
 
 (defmethod clear-output-record :after ((record compound-output-record))
-  ;; XXX banish x and y
   (with-slots (x y) record
     (setf (rectangle-edges* record) (values x y x y))))
 
@@ -612,7 +612,6 @@ the associated sheet can be determined."
                (maxf new-y2 cy2)))))
      record)
     (if first-time
-        ;; XXX banish x y
         (with-slots (x y) record
           (values x y x y))
         (values new-x1 new-y1 new-x2 new-y2))))
@@ -642,12 +641,10 @@ the associated sheet can be determined."
              (maxf new-x2 cx2)
              (maxf new-y2 cy2))))
      record)
-    (with-slots (x y)
-        record
+    (with-slots (x y) record
       (if first-time			;No children
           (bounding-rectangle* record)
           (progn
-            ;; XXX banish x,y
             (setf  x new-x1 y new-y1)
             (setf (rectangle-edges* record)
                   (values new-x1 new-y1 new-x2 new-y2)))))))
@@ -711,9 +708,7 @@ the associated sheet can be determined."
             ;; children. Without the above optimizations, construction
             ;; becomes O(N^2) due to bounding rectangle calculation.
             (t (%tree-recompute-extent* record)))
-        ;; XXX banish x, y
-        (with-slots (x y)
-            record
+        (with-slots (x y) record
           (setf x nx1 y ny1)
           (setf (rectangle-edges* record) (values  nx1 ny1 nx2 ny2))
           (let ((parent (output-record-parent record)))
@@ -729,11 +724,10 @@ the associated sheet can be determined."
   record)
 
 (defmethod tree-recompute-extent :around ((record compound-output-record))
-  (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2)
-    record
+  (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) record
     (call-next-method)
     (with-bounding-rectangle* (x1 y1 x2 y2)
-      record
+        record
       (let ((parent (output-record-parent record)))
         (when (and parent
                    (not (and (= old-x1 x1)
@@ -1196,8 +1190,7 @@ were added."
     (nx ny (record draw-point-output-record))
     (with-standard-rectangle* (:x1 x1 :y1 y1)
         record
-      (with-slots (point-x point-y)
-          record
+      (with-slots (point-x point-y) record
         (let ((dx (- nx x1))
               (dy (- ny y1)))
           (multiple-value-prog1
@@ -1236,8 +1229,7 @@ were added."
     (nx ny (record draw-line-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (with-slots (point-x1 point-y1 point-x2 point-y2)
-        record
+    (with-slots (point-x1 point-y1 point-x2 point-y2) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
         (multiple-value-prog1
@@ -1446,8 +1438,7 @@ were added."
     (nx ny (record draw-rectangle-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (with-slots (left top right bottom)
-        record
+    (with-slots (left top right bottom) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
         (multiple-value-prog1
@@ -1507,8 +1498,7 @@ were added."
     (nx ny (record draw-ellipse-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (with-slots (center-x center-y)
-        record
+    (with-slots (center-x center-y) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
         (multiple-value-prog1
@@ -1538,8 +1528,7 @@ were added."
     (nx ny (record draw-pattern-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (with-slots (x y)
-        record
+    (with-slots (x y) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
         (multiple-value-prog1
@@ -1597,8 +1586,7 @@ were added."
     (nx ny (record draw-text-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (with-slots (point-x point-y toward-x toward-y)
-        record
+    (with-slots (point-x point-y toward-x toward-y) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
         (multiple-value-prog1
@@ -1710,10 +1698,8 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record standard-text-displayed-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
-    (with-slots (start-x start-y end-x end-y strings baseline)
-        record
+  (with-standard-rectangle* (:x1 x1 :y1 y1) record
+    (with-slots (start-x start-y end-x end-y strings baseline) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
         (multiple-value-prog1
@@ -1736,8 +1722,7 @@ were added."
       ;; 2. It should also save a "current line".
       (setf (slot-value stream 'baseline) baseline)
       (loop for substring in strings
-         do (with-slots (start-x string)
-                substring
+         do (with-slots (start-x string) substring
               (setf (stream-cursor-position stream)
                     (values start-x start-y))
               ;; FIXME: a bit of an abstraction inversion.  Should
@@ -1775,8 +1760,7 @@ were added."
     ((text-record standard-text-displayed-output-record))
   (with-standard-rectangle* (:y1 y1)
       text-record
-    (with-slots (max-height left right)
-        text-record
+    (with-slots (max-height left right) text-record
       (setf (rectangle-edges* text-record)
             (values (coordinate left)
                     y1

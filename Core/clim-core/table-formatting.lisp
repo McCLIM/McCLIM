@@ -54,9 +54,6 @@
 
 (in-package :clim-internals)
 
-(defvar *table-suppress-update* nil
-  "Used to control whether changes to table cells propagate upwards.")
-
 ;;; Cell formatting
 
 ;;; STANDARD-CELL-OUTPUT-RECORD class
@@ -68,39 +65,6 @@
    (min-height :initarg :min-height :reader cell-min-height))
   (:default-initargs
    :align-x :left :align-y :baseline :min-width 0 :min-height 0))
-
-;;; If this were a primary method it wouldn't override the default
-;;; behavior for the parent being a compound-output-record because of
-;;; the order of the argument list.
-(defmethod recompute-extent-for-changed-child :around
-    (record (changed-child standard-cell-output-record)
-     old-min-x old-min-y old-max-x old-max-y)
-  (unless *table-suppress-update*
-    (call-next-method))
-  record)
-
-(defun table-cell-allowed-as-child-of (record)
-  "Internal. A predicate which decides whether 'record' can take a
-table cell as argument."
-  ;; We allow a cell output record here if any ancestor is a
-  ;; table-row, column or list-item. Note: This is probably not 100%
-  ;; correct, as I have no idea what happens when you nest graphs and
-  ;; tables ...
-  (or (row-output-record-p record)
-      (column-output-record-p record)
-      (item-list-output-record-p record)
-      (and (output-record-parent record)
-           (table-cell-allowed-as-child-of (output-record-parent record)))))
-
-(defun assert-table-cell-allowed (record)
-  "Internal. Assert that the a table cell is allowed here and if not
-   barf."
-  (unless (table-cell-allowed-as-child-of record)
-    (error "Sorry ~S not within ~S, ~S or ~S."
-           'formatting-cell
-           'formatting-row
-           'formatting-column
-           'formatting-item-list)))
 
 (defgeneric invoke-formatting-cell (stream cont
                                     &key align-x align-y min-width min-height record-type
@@ -151,11 +115,27 @@ table cell as argument."
   ()
   (:documentation "The class representing one-dimensional blocks of cells."))
 
+(defmethod replay-output-record ((bl block-output-record-mixn) stream
+                                 &optional region (x-offset 0) (y-offset 0))
+  (when (null region)
+    (setq region (or (pane-viewport-region stream) +everywhere+)))
+  (with-drawing-options (stream :clipping-region region)
+    (let (other-records)
+      (map-over-output-records-overlapping-region
+       #'(lambda (record)
+           (if (cell-output-record-p record)
+               (replay-output-record record stream region x-offset y-offset)
+               (push record other-records)))
+       bl region x-offset y-offset)
+      (mapc #'(lambda (record)
+                (replay-output-record record stream region x-offset y-offset))
+            (nreverse other-records)))))
+
 (defgeneric map-over-block-cells (function block)
   (:documentation "Applies the FUNCTION to all cells in the BLOCK."))
 
 (defmethod map-over-block-cells (function (block block-output-record-mixn))
-  ;; ### we need to do better
+  ;; ### we need to do better -- yeah! how?
   (labels ((foo (row-record)
              (map-over-output-records
               (lambda (record)
@@ -276,6 +256,23 @@ skips intervening non-table output record structures."))
     (setf (slot-value table 'multiple-columns-x-spacing)
           (slot-value table 'x-spacing))))
 
+(defmethod replay-output-record ((table standard-table-output-record) stream
+                                 &optional region (x-offset 0) (y-offset 0))
+  (when (null region)
+    (setq region (or (pane-viewport-region stream) +everywhere+)))
+  (with-drawing-options (stream :clipping-region region)
+    (let (other-records)
+      (map-over-output-records-overlapping-region
+       #'(lambda (record)
+           (if (or (column-output-record-p record)
+                   (row-output-record-p record))
+               (replay-output-record record stream region x-offset y-offset)
+               (push record other-records)))
+       table region x-offset y-offset)
+      (mapc #'(lambda (record)
+                (replay-output-record record stream region x-offset y-offset))
+            (nreverse other-records)))))
+
 (locally
     (declare #+sbcl (sb-ext:muffle-conditions style-warning))
   (defmacro formatting-table ((&optional (stream t)
@@ -322,22 +319,17 @@ skips intervening non-table output record structures."))
               :equalize-column-widths equalize-column-widths)
     (multiple-value-bind (cursor-old-x cursor-old-y)
 	(stream-cursor-position stream)
-      (let ((*table-suppress-update* t))
-	(with-output-recording-options (stream :record t :draw nil)
-	  (funcall continuation stream)
-	  (force-output stream))
-	(with-output-recording-options (stream :record nil :draw nil)
-	  (adjust-table-cells table stream)
-	  (when multiple-columns (adjust-multiple-columns table stream))
-	  (setq *table-suppress-update* nil)
-	  (tree-recompute-extent table)))
-      #+NIL
-      (setf (output-record-position table)
-	    (values cursor-old-x cursor-old-y))
+      (with-output-recording-options (stream :record t :draw nil)
+        (funcall continuation stream)
+        (force-output stream))
+      (setf (stream-cursor-position stream)
+            (values cursor-old-x cursor-old-y))
+      (with-output-recording-options (stream :record nil :draw nil)
+        (adjust-table-cells table stream)
+        (when multiple-columns (adjust-multiple-columns table stream))
+        (tree-recompute-extent table))
       (replay table stream)
       (if move-cursor
-	  ;; FIXME!!!
-	  ;; Yeah, fix me -- what is wrong with that?
 	  (setf (stream-cursor-position stream)
 		(values (bounding-rectangle-max-x table)
 			(bounding-rectangle-max-y table)))
@@ -617,9 +609,6 @@ skips intervening non-table output record structures."))
 		for x = cx then (+ x w x-spacing) 
 		for w across widthen do
 		(adjust-cell* cell x y w h ascent))))))))
-
-
-
 
 (defmethod adjust-multiple-columns ((table standard-table-output-record) stream)
   (with-slots (widths heights rows

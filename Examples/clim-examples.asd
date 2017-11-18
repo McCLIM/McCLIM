@@ -13,7 +13,7 @@
      (:file "puzzle")
      (:file "transformations-test")
      (:file "town-example")
-     (:file "demodemo" :depends-on ("tabdemo" "town-example" "sliderdemo"))
+     (:file "demodemo" :depends-on ("tabdemo" "town-example" "sliderdemo" "tabledemo"))
      (:file "stream-test")
      (:file "presentation-test")
      (:file "dragndrop")
@@ -36,7 +36,8 @@
      (:file "sliderdemo")
      (:file "accepting-values")
      (:file "accepting-values-test")
-     (:file "graph-toy")))
+     (:file "graph-toy")
+     (:file "tabledemo")))
 
 (asdf:defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
