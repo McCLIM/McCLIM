@@ -88,6 +88,7 @@
                    (make-demo-button "Stream test" 'stream-test)
                    (make-demo-button "Label Test" 'label-test)
                    (make-demo-button "Table Test" 'table-test)
+                   (make-demo-button "Tables with borders" 'table-demo)
                    (make-demo-button "Scroll Test" 'Scroll-test)
                    (make-demo-button "List Test" 'list-test)
                    (make-demo-button "Option Test" 'option-test)
