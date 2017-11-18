@@ -131,6 +131,36 @@
                                                     :background +gray50+
                                                     :outline-ink +gray40+))))))
 
+(define-misc-test "Moving Borders" (stream)
+    "Tests handling of output record which changes its position and size. If succesful, you will see twelve small circles arranged themselves in a larger circle. Each circle surrounds smaller red circle. A likely failure mode will exhibit the circles being either very big having center near the upper-left corner or being offset with respect to the red circles."
+  (with-room-for-graphics (stream :first-quadrant nil)
+    (with-text-style (stream (make-text-style :sans-serif :roman :small))
+      (loop with outer-radius = 180
+         with inner-radius = 27
+         with n = 12
+         with my-record = nil
+         for i from 0 below n do
+           (setf (stream-cursor-position stream)
+                 (values (* outer-radius (sin (* i 2 pi (/ n))))
+                         (* outer-radius (cos (* i 2 pi (/ n))))))
+           (surrounding-output-with-border (stream :shape :ellipse
+                                                   :circle t
+                                                   :min-radius inner-radius
+                                                   :shadow +gray88+
+                                                   :shadow-offset 7
+                                                   :filled t
+                                                   :line-thickness 1
+                                                   :background +gray50+
+                                                   :outline-ink +gray40+)
+             (with-new-output-record (stream 'standard-sequence-output-record foo)
+               (draw-point* stream
+                            (* outer-radius (sin (* i 2 pi (/ n))))
+                            (* outer-radius (cos (* i 2 pi (/ n))))
+                            :ink +red+ :line-thickness 15)
+               (setf my-record foo)))
+           (multiple-value-bind (x y) (output-record-position my-record)
+             (setf (output-record-position my-record) (values (+ x 100) (+ y 100))))))))
+
 (define-misc-test "Underlining" (stream)
     "Tests the underlining border style. You should see five lines of text, equally spaced, with the second and third lines having the phrase 'all live' underlined, first by a thick black line then by a thin dashed red line. If the lines are broken or the spacing is irregular, the :move-cursor nil key of surrounding-output-with-border may not have behaved as expected. "
   (with-text-family (stream :sans-serif)
