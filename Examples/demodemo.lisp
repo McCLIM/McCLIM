@@ -41,6 +41,13 @@
                         #+nil
                         (destroy-frame frame)))))))
 
+(defun run-demo (name)
+  "Coerces `name' into symbol in package `clim-demo' and runs application
+denoted by this symbol."
+  (run-frame-top-level (make-application-frame
+                        (find-symbol (string-upcase (string name))
+                                     (find-package "CLIM-DEMO")))))
+
 (define-application-frame demodemo 
     () ()
     (:menu-bar nil)

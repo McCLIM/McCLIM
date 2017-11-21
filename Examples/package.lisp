@@ -1,4 +1,4 @@
 
 (defpackage #:clim-demo
   (:use #:clim-extensions #:clim #:clim-lisp)
-  (:export #:demodemo #:run-drawing-tests #:tabledemo #:misc-tests))
+  (:export #:demodemo #:run-demo))
