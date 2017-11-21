@@ -423,3 +423,6 @@
     (notify-user *application-frame*
                  (format nil "~a, ~a, and ~a were selected." abbrev prez vp))))
 
+(defun misc-tests ()
+  (let ((frame (make-application-frame 'misc-tests)))
+    (run-frame-top-level frame)))
