@@ -161,6 +161,34 @@
            (multiple-value-bind (x y) (output-record-position my-record)
              (setf (output-record-position my-record) (values (+ x 100) (+ y 100))))))))
 
+(define-misc-test "Highlighted Borders" (stream)
+    "Tests handling of empty output records by surrounding-output-with-border which is highlighted. If successful, you will see twelve small circles arranged themselves in a larger circle. When you move mouse over them, background color should change, when you move away, it should get back to its normal state. Do not click on the circles, it will remove the drawing (and it is not a bug)."
+  (with-room-for-graphics (stream :first-quadrant nil)
+    (with-text-style (stream (make-text-style :sans-serif :roman :small))
+      (loop with outer-radius = 180
+            with inner-radius = 27
+            with n = 12
+            for i from 0 below n do
+            (setf (stream-cursor-position stream)
+                  (values (* outer-radius (sin (* i 2 pi (/ n))))
+                          (* outer-radius (cos (* i 2 pi (/ n))))))
+           (with-output-as-presentation (stream t 'border-style)
+             (surrounding-output-with-border (stream :shape :ellipse
+                                                     :circle t
+                                                     :min-radius inner-radius
+                                                     :shadow +gray88+
+                                                     :shadow-offset 7
+                                                     :filled t
+                                                     :line-thickness 1
+                                                     :background +gray50+
+                                                     :highlight-background +yellow+
+                                                     :highlight-outline +red+
+                                                     :outline-ink +gray40+)))))))
+
+(define-misc-tests-command (com-do-nothing)
+    ((style border-style :gesture :select))
+  (declare (ignore style)))
+
 (define-misc-test "Underlining" (stream)
     "Tests the underlining border style. You should see five lines of text, equally spaced, with the second and third lines having the phrase 'all live' underlined, first by a thick black line then by a thin dashed red line. If the lines are broken or the spacing is irregular, the :move-cursor nil key of surrounding-output-with-border may not have behaved as expected. "
   (with-text-family (stream :sans-serif)
@@ -395,3 +423,6 @@
     (notify-user *application-frame*
                  (format nil "~a, ~a, and ~a were selected." abbrev prez vp))))
 
+(defun misc-tests ()
+  (let ((frame (make-application-frame 'misc-tests)))
+    (run-frame-top-level frame)))
