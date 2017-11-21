@@ -58,7 +58,7 @@
   ((stream :reader border-stream :initarg :stream)
    (shape :reader shape :initarg :shape)
    (record :reader inner-record :initarg :inner-record)
-   (drawing-options :reader drawing-options
+   (drawing-options :accessor drawing-options
                     :initarg :drawing-options
                     :initform nil)
    under over))
@@ -119,14 +119,14 @@
 (defmethod replay-output-record :before ((border bordered-output-record) stream
                                          &optional region (x-offset 0) (y-offset 0))
   (clear-output-record border)
-  (%prepare-bordered-output-record border (drawing-options border)))
+  (%prepare-bordered-output-record border))
 
 (defmethod tree-recompute-extent-aux :before ((border bordered-output-record))
   (clear-output-record border)
-  (%prepare-bordered-output-record border (drawing-options border)))
+  (%prepare-bordered-output-record border))
 
-(defun %prepare-bordered-output-record (border drawing-options)
-  (with-slots (under record over stream shape) border
+(defun %prepare-bordered-output-record (border)
+  (with-slots (under record over stream shape drawing-options) border
     (with-sheet-medium (medium stream)
       (flet ((capture-border (cont)
                (with-identity-transformation (medium)
@@ -149,7 +149,7 @@
                                :shape shape
                                :inner-record inner-record
                                :drawing-options drawing-options)))
-    (%prepare-bordered-output-record border drawing-options)))
+    (%prepare-bordered-output-record border)))
 
 ;;; This should have been exported by the CLIM package, otherwise you
 ;;; can't apply a computed list of drawing options.
@@ -668,7 +668,9 @@
 
 ;;;; Highlighting of bordered output records
 (defclass highlighting-bordered-output-record (bordered-output-record)
-  ())
+  ((original-drawing-options :initarg :drawing-options
+                             :reader original-drawing-options
+                             :documentation "Preserves unmodified drawing-options which may be changed during highlight.")))
 
 (defmethod highlight-output-record-tree
     ((record highlighting-bordered-output-record)
@@ -679,7 +681,6 @@
                (getf (drawing-options record) :highlight-outline)))
       (highlight-output-record record stream state)
       (call-next-method)))
-
 
 (defmethod highlight-output-record
     ((record highlighting-bordered-output-record) stream state)
@@ -693,8 +694,9 @@
       (if (and (member state '(:highlight :unhighlight))
                (or highlight-background highlight-outline))
           (flet ((redraw (new-drawing-options)
+                   (setf (drawing-options record) new-drawing-options)
                    (clear-output-record record)
-                   (%prepare-bordered-output-record record new-drawing-options)
+                   (%prepare-bordered-output-record record)
                    ;; Great, this again..
                    (queue-repaint stream
                       (make-instance 'window-repaint-event
@@ -704,8 +706,7 @@
                                             record)))))
             (ecase state
               (:highlight
-               (with-keywords-removed
-                   (drawing-options (:background :outline-ink))
+               (with-keywords-removed (drawing-options (:background :outline-ink))
                  (redraw
                   (list* :background
                          (or (and (eql t highlight-background)
@@ -713,18 +714,18 @@
                                    (or background
                                        (getf drawing-options :ink)
                                        +background-ink+)))
-                                    highlight-background
-                                    background)
+                             highlight-background
+                             background)
                          :outline-ink
                          (or (and (eql t highlight-outline)
                                   (highlight-shade
                                    (or outline-ink
                                        (getf drawing-options :ink)
                                        +foreground-ink+)))
-                                    highlight-outline
-                                    outline-ink)
-                                drawing-options))))
-              (:unhighlight (redraw drawing-options))))
+                             highlight-outline
+                             outline-ink)
+                         drawing-options))))
+              (:unhighlight (redraw (original-drawing-options record)))))
           (call-next-method)))))
 
 (defmacro define-default-highlighting-method (shape)
@@ -735,7 +736,7 @@
                                   :shape shape
                                   :drawing-options drawing-options
                                   :inner-record inner-record)))
-       (%prepare-bordered-output-record border drawing-options))))
+       (%prepare-bordered-output-record border))))
 
 (define-default-highlighting-method :rectangle)
 (define-default-highlighting-method :oval)
