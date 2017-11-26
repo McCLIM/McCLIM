@@ -797,6 +797,10 @@ order to produce a double-click")
 
 (defclass basic-pane (standard-space-requirement-options-mixin
                       sheet-parent-mixin ;mirrored-sheet-mixin
+                      ;; UX mixins
+                      cut-and-paste-mixin
+                      mouse-wheel-scroll-mixin
+                      ;; protocol class with million mixins goes last
                       pane)
   ((foreground       :initarg :foreground
                      :reader pane-foreground)
@@ -2371,36 +2375,28 @@ order to produce a double-click")
 	((pane-viewport pane) (values (pane-viewport pane) pane))
 	(t (find-viewport-for-scroll (sheet-parent pane)))))
 
-(defun scroll-sheet (sheet vertical horizontal)
-  (multiple-value-bind (viewport sheet)
-      (find-viewport-for-scroll sheet)
-    (declare (ignore viewport))
-    (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
-      (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
-	(let ((viewport-height (- vy1 vy0))
-	      (viewport-width  (- vx1 vx0))
-	      (delta (* *mouse-scroll-distance*
-			(scroll-quantum sheet))))
-	  ;; The coordinates (x,y) of the new upper-left corner of the viewport
-	  ;; must be "sx0 < x < sx1 - viewport-width"  and
-	  ;;         "sy0 < y < sy1 - viewport-height"
-	  (scroll-extent sheet
-			 (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
-			 (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical))))))))))
+(defun scroll-sheet (sheet horizontal vertical)
+  (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
+    (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
+      (let ((viewport-width  (- vx1 vx0))
+            (viewport-height (- vy1 vy0))
+            (delta (* *mouse-scroll-distance*
+                      (scroll-quantum sheet))))
+        ;; The coordinates (x,y) of the new upper-left corner of the viewport
+        ;; must be "sx0 < x < sx1 - viewport-width"  and
+        ;;         "sy0 < y < sy1 - viewport-height"
+        (scroll-extent sheet
+                       (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
+                       (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical)))))))))
 
-;;; Note that handling this from dispatch-event is evil, and we
-;;; shouldn't.
-(defmethod dispatch-event :around ((sheet mouse-wheel-scroll-mixin)
-                                   (event pointer-button-press-event))
-  (if (find-viewport-for-scroll sheet)
-      (let ((button (pointer-event-button event)))
-	(cond
-	 ((eq button +pointer-wheel-up+)    (scroll-sheet sheet -1  0))
-	 ((eq button +pointer-wheel-down+)  (scroll-sheet sheet  1  0))
-	 ((eq button +pointer-wheel-left+)  (scroll-sheet sheet  0 -1))
-	 ((eq button +pointer-wheel-right+) (scroll-sheet sheet  0  1))
-	 (t (call-next-method))))      ; not a scroll wheel button
-    (call-next-method)))               ; no viewport
+(defmethod handle-event ((sheet mouse-wheel-scroll-mixin)
+                         (event pointer-scroll-event))
+  (multiple-value-bind (viewport sheet) (find-viewport-for-scroll sheet)
+    (when viewport
+      (scroll-sheet sheet
+                    (pointer-event-delta-x event)
+                    (pointer-event-delta-y event)))))
+
 
 ;;;
 ;;; 29.4 CLIM Stream Panes
@@ -2641,9 +2637,7 @@ order to produce a double-click")
 
 ;;; INTERACTOR PANES
 
-(defclass interactor-pane (cut-and-paste-mixin
-                           mouse-wheel-scroll-mixin
-                           clim-stream-pane)
+(defclass interactor-pane (clim-stream-pane)
   ()
   (:default-initargs :display-time nil
                      :end-of-line-action :scroll
@@ -2669,9 +2663,7 @@ order to produce a double-click")
 
 ;;; APPLICATION PANES
 
-(defclass application-pane (cut-and-paste-mixin
-                            mouse-wheel-scroll-mixin
-                            clim-stream-pane)
+(defclass application-pane (clim-stream-pane)
   ()
   (:default-initargs :display-time :command-loop
                      :scroll-bars t))
@@ -2799,9 +2791,7 @@ current background message was set."))
 ;;; WINDOW STREAM
 ;;;
 
-(defclass window-stream (cut-and-paste-mixin
-                         mouse-wheel-scroll-mixin
-                         clim-stream-pane)
+(defclass window-stream (clim-stream-pane)
   ())
 
 (define-application-frame a-window-stream (standard-encapsulating-stream

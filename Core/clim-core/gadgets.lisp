@@ -654,8 +654,7 @@ and must never be nil.")
 
 ;;; 30.4.7 The abstract list-pane and option-pane Gadgets
 
-(defclass list-pane (value-gadget
-                     clim-extensions:mouse-wheel-scroll-mixin)
+(defclass list-pane (value-gadget)
   ()
   (:documentation
    "The instantiable class that implements an abstract list pane, that is, a gadget
@@ -2361,16 +2360,12 @@ Returns two values, the item itself, and the index within the item list."
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-press-event))
   (case (pointer-event-button event)
     (#.+pointer-left-button+
-      (generic-list-pane-handle-click-from-event pane event)
-      (setf (slot-value pane 'armed) nil))
+     (generic-list-pane-handle-click-from-event pane event)
+     (setf (slot-value pane 'armed) nil))
     (#.+pointer-right-button+
-      (generic-list-pane-handle-right-click pane event))
-    (#.+pointer-wheel-up+
-     (generic-list-pane-scroll pane -1))
-    (#.+pointer-wheel-down+
-     (generic-list-pane-scroll pane 1))
+     (generic-list-pane-handle-right-click pane event))
     (t
-      (when (next-method-p) (call-next-method)))))
+     (when (next-method-p) (call-next-method)))))
 
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-release-event))
   (if (eql (pointer-event-button event) +pointer-left-button+)
