@@ -123,8 +123,6 @@
 (define-event-class pointer-event (device-event)
   ((pointer :initarg :pointer
 	    :reader pointer-event-pointer)
-   (button :initarg :button
-	   :reader pointer-event-button)
    (x :reader pointer-event-native-x)
    (y :reader pointer-event-native-y)
    (graft-x :reader pointer-event-native-graft-x)
@@ -168,27 +166,23 @@
   (get-pointer-position ((event-sheet event) event) y))
 
 (define-event-class pointer-button-event (pointer-event)
-  ())
+  ((button :initarg :button
+           :reader pointer-event-button)))
 
+(define-event-class pointer-button-press-event          (pointer-button-event) ())
+(define-event-class pointer-button-release-event        (pointer-button-event) ())
+(define-event-class pointer-button-hold-event           (pointer-button-event) ())
+(define-event-class pointer-button-click-event          (pointer-button-event) ())
+(define-event-class pointer-button-double-click-event   (pointer-button-event) ())
+(define-event-class pointer-button-click-and-hold-event (pointer-button-event) ())
 
-(define-event-class pointer-button-press-event (pointer-button-event) ())
+(define-event-class pointer-scroll-event (pointer-event)
+  ((delta-x :initform 0 :initarg :delta-x
+            :reader pointer-event-delta-x)
+   (delta-y :initform 0 :initarg :delta-y
+            :reader pointer-event-delta-y)))
 
-(define-event-class pointer-button-release-event (pointer-button-event) ())
-
-(define-event-class pointer-button-hold-event (pointer-button-event) ())
-
-
-(define-event-class pointer-button-click-event (pointer-button-event)
-  ())
-
-(define-event-class pointer-button-double-click-event (pointer-button-event)
-  ())
-
-(define-event-class pointer-button-click-and-hold-event (pointer-button-event)
-  ())
-
-(define-event-class pointer-motion-event (pointer-event)
-  ())
+(define-event-class pointer-motion-event (pointer-event) ())
 
 (defclass motion-hint-mixin ()
   ()
