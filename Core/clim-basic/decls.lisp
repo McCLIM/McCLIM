@@ -645,7 +645,7 @@ unspecified. "))
 
 ;;; with-new-output-record (stream &optional record-type record &rest initargs) &body body [Macro]
 (defgeneric invoke-with-new-output-record
-    (stream continuation record-type &rest initargs))
+    (stream continuation record-type &rest initargs &key parent &allow-other-keys))
 
 ;;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
 (defgeneric invoke-with-output-to-output-record 
