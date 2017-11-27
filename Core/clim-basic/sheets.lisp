@@ -564,12 +564,17 @@
 (defmethod sheet-children ((sheet sheet-single-child-mixin))
   (and (sheet-child sheet) (list (sheet-child sheet))))
 
-(define-condition sheet-supports-only-one-child (error) ())
+(define-condition sheet-supports-only-one-child (error)
+  ((sheet :initarg :sheet)))
+
+(defmethod print-object ((object sheet-supports-only-one-child) stream)
+  (format stream "~A~%single-child-composite-pane is allowed to have only one child."
+          (slot-value object 'sheet)))
 
 (defmethod sheet-adopt-child :before ((sheet sheet-single-child-mixin)
 				      (child sheet-parent-mixin))
   (when (sheet-child sheet)
-    (error 'sheet-supports-only-one-child)))
+    (error 'sheet-supports-only-one-child :sheet sheet)))
 
 (defmethod sheet-adopt-child ((sheet sheet-single-child-mixin)
 			      (child sheet-parent-mixin))

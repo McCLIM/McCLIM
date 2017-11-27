@@ -104,9 +104,6 @@
 ;; - The color of a 3Dish border should be derived from a gadget's
 ;;   background.
 
-;; - It seems that 3D-BORDER-MIXIN is only used for the scroll-bar, so
-;;   remove it
-
 ;; - Somehow engrafting the push button's medium does not work. The
 ;;   text-style initarg does not make it to the sheets medium.
 
