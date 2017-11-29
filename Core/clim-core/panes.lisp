@@ -2610,10 +2610,6 @@ order to produce a double-click")
     (unless (region-contains-region-p (sheet-region stream)
                                       (make-rectangle* 0 0 w h))
       (change-space-requirements stream)
-      (scroll-extent stream 0 (max 0 (-  h
-                                         (bounding-rectangle-height
-                                          (or (pane-viewport stream)
-                                              stream)))))
       (redisplay-frame-pane *application-frame* stream))))
 
 (defmethod redisplay-frame-pane ((frame application-frame)
