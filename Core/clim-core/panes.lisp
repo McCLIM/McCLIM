@@ -2538,10 +2538,14 @@ order to produce a double-click")
               (call-next-method))))
         (call-next-method))))
 
+;;; XXX if we decide to handle sheets starting from position different than
+;;; [0,0] in the future we should take here bounding-rectangle-width/height and
+;;; set sheet region to bounding-rectangle-min-x/y. Such approach may require
+;;; change in more places.
 (defmethod compose-space ((pane clim-stream-pane) &key width height)
   (declare (ignorable width height))
-  (let ((w (bounding-rectangle-width (stream-output-history pane)))
-        (h (bounding-rectangle-height (stream-output-history pane))))
+  (let ((w (bounding-rectangle-max-x (stream-output-history pane)))
+        (h (bounding-rectangle-max-y (stream-output-history pane))))
     (make-space-requirement :width  (max w (stream-width pane))
                             :min-width  w :max-width +fill+
                             :height (max h (stream-height pane))
@@ -2605,8 +2609,8 @@ order to produce a double-click")
 		   pointer-button-press-handler))
   (force-output stream)
   ;; make the output visible
-  (let ((w (bounding-rectangle-width (stream-output-history stream)))
-        (h (bounding-rectangle-height (stream-output-history stream))))
+  (let ((w (bounding-rectangle-max-x (stream-output-history stream)))
+        (h (bounding-rectangle-max-y (stream-output-history stream))))
     (unless (region-contains-region-p (sheet-region stream)
                                       (make-rectangle* 0 0 w h))
       (change-space-requirements stream)
