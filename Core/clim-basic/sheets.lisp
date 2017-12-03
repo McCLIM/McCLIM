@@ -249,9 +249,19 @@
             (compose-translation-with-transformation
              transform (- x old-x) (- y old-y))))))
 
+;;; We preserve here the starting point. If sheet starting point is [0,0] then
+;;; this method is no different from:
+;;;
+;;;     (make-rectangle* 0 0 width height)
+;;;
+;;; That behavior may desireable if sheets starting from other coordinate than
+;;; [0,0] are conforming. Even if they are not though, this method is still
+;;; correct (and blame goes on whoever modified the starting position). -- jd
 (defmethod resize-sheet ((sheet basic-sheet) width height)
-  (setf (sheet-region sheet)
-        (make-bounding-rectangle 0 0 width height)))
+  (with-standard-rectangle (x1 y1 x2 y2) (sheet-region sheet)
+    (declare (ignore x2 y2))
+    (setf (sheet-region sheet)
+          (make-bounding-rectangle x1 y1 (+ x1 width) (+ y1 height)))))
 
 (defmethod move-and-resize-sheet ((sheet basic-sheet) x y width height)
   (move-sheet sheet x y)
