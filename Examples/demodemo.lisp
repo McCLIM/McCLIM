@@ -101,6 +101,7 @@ denoted by this symbol."
                    (make-demo-button "Table Test" 'table-test)
                    (make-demo-button "Tables with borders" 'table-demo)
                    (make-demo-button "Scroll Test" 'Scroll-test)
+                   (make-demo-button "Scroll Test 2" 'Scroll-test-2)
                    (make-demo-button "List Test" 'list-test)
                    (make-demo-button "Option Test" 'option-test)
                    (make-demo-button "HBOX Test"  'hbox-test)
@@ -227,6 +228,38 @@ denoted by this symbol."
      (defaults
          (scrolling (:width 400 :height 400)
            (make-pane 'foo-pane)))))
+
+
+;;; Scroll test 2
+(define-application-frame scroll-test-2 ()
+  ()
+  (:geometry :width 1200 :height 400)
+  (:panes (out :application-pane :display-function #'scroll-test-display)
+          (bam :application-pane :display-function #'scroll-test-display)
+          (foo :application-pane :display-function #'scroll-test-display)
+          (qux :application-pane :display-function #'scroll-test-display))
+  (:layouts (default
+                (vertically ()
+                  (horizontally ()
+                    (labelling (:label "bam") (scrolling () bam))
+                    (labelling (:label "foo") (scrolling () foo))
+                    (labelling (:label "qux") (scrolling () qux)))
+                  (labelling (:label "Description") out)))))
+
+(defmethod scroll-test-display ((frame scroll-test-2) pane)
+  (when (member (pane-name pane) '(bam qux))
+    (draw-rectangle* pane -100 -100 +100 +100 :filled nil
+                     :ink +red+ :line-thickness 5 :line-dashes t))
+  (when (member (pane-name pane) '(foo qux))
+    (draw-rectangle* pane +300 +300 +500 +500 :filled nil
+                     :ink +red+ :line-thickness 5 :line-dashes t))
+
+  (when (member (pane-name pane) '(out))
+    (format pane "In this test we draw three panes: bam, foo and qux. You may try resizing the window and see what happens. If viewports are small enough, scroll-bars should appear to show bottom-right rectangle on \"foo\" and \"qux\". Upper-left rectangle has starting point having negative coordinates of its sheet, so scroll-bars won't update to uncover it (this may be supported in the future - in such case please change description of this test). Only bottom-right rectangle must be seen in full.
+
+\"bam\" should have only partially drawn rectangle (upper-left corner).
+\"foo\" is similar, but rectangle is drawn in bottom-right corner. This draw should extend scroll-bars, so user may see whole rectangle.
+\"qux\" combines both previous panes. Part of the rectangle in the upper-left corner and (after scrolling) full rectangle on the bottom-right corner.")))
 
 (define-application-frame list-test
     () ()
