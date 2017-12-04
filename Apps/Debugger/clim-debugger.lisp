@@ -412,7 +412,8 @@
 		 (invoke-restart-interactively restart))
 	       (abort))))))))
 
-(defmacro with-debugger (&body body)
+(defmacro with-debugger (options &body body)
+  (declare (ignore options))
   `(let ((*debugger-hook* #'debugger)
 	 #+sbcl (sb-ext:*invoke-debugger-hook* #'debugger))
      ,@body))
