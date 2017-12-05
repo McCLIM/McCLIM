@@ -2538,12 +2538,17 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 ;;; change in more places.
 (defmethod compose-space ((pane clim-stream-pane) &key width height)
   (declare (ignorable width height))
-  (let ((w (bounding-rectangle-max-x (stream-output-history pane)))
-        (h (bounding-rectangle-max-y (stream-output-history pane))))
-    (make-space-requirement :width  (max w (stream-width pane))
-                            :min-width  w :max-width +fill+
-                            :height (max h (stream-height pane))
-                            :min-height h :max-height +fill+)))
+  (let* ((w (bounding-rectangle-max-x (stream-output-history pane)))
+         (h (bounding-rectangle-max-y (stream-output-history pane)))
+         (width (max w (stream-width pane)))
+         (height (max h (stream-height pane))))
+    (make-space-requirement
+     :min-width (clamp w 0 width)
+     :width width
+     :max-width +fill+
+     :min-height (clamp h 0 height)
+     :height height
+     :max-height +fill+)))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
