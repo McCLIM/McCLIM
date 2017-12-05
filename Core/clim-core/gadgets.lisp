@@ -2366,8 +2366,8 @@ Returns two values, the item itself, and the index within the item list."
 
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-release-event))
   (if (eql (pointer-event-button event) +pointer-left-button+)
-      (and (slot-value pane 'armed)
-           (generic-list-pane-handle-click-from-event pane event))
+      (when (slot-value pane 'armed)
+        (generic-list-pane-handle-click-from-event pane event))
       (when (next-method-p) (call-next-method))))
 
 (defgeneric (setf list-pane-items)
