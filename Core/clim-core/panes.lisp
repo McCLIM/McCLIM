@@ -475,8 +475,8 @@ order to produce a double-click")
                          ((:bottom) (+ y (- height child-height)))
                          ((:expand)  y) )))
     ;; Actually layout the child
-    (%move-pane child child-x child-y)
-    (%resize-pane child child-width child-height)
+    (move-sheet child child-x child-y)
+    (resize-sheet child child-width child-height)
     (allocate-space child child-width child-height)))
 
 
@@ -683,7 +683,7 @@ order to produce a double-click")
   (setf (pane-current-width pane) width
 	(pane-current-height pane) height)
   (unless (top-level-sheet-pane-p pane)
-    (%resize-pane pane width height))
+    (resize-sheet pane width height))
   (call-next-method))
 
 (defmethod compose-space :around ((pane layout-protocol-mixin) &key width height)
@@ -832,20 +832,6 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
         (medium-background medium) (pane-background pane)
         (medium-text-style medium) (pane-text-style pane)))
 
-;;; moving and resizing panes
-(defgeneric %move-pane (pane x y))
-(defgeneric %resize-pane (pane w h))
-(defgeneric %move-and-resize-pane (pane x y w h))
-
-(defmethod %move-pane ((pane basic-pane) x y)
-  (move-sheet pane (round x) (round y)))
-
-(defmethod %resize-pane ((pane basic-pane) w h)
-  (resize-sheet pane (floor w) (floor h)))
-
-(defmethod %move-and-resize-pane ((pane basic-pane) x y w h)
-  (move-and-resize-sheet pane (round x) (round y) (floor w) (floor h)))
-
 ;;;;
 ;;;; Composite Panes
 ;;;;
@@ -976,7 +962,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   (declare (ignore space-req-keys resize-frame))
   (let ((w (space-requirement-width (compose-space pane)))
         (h (space-requirement-height (compose-space pane))))
-    (%resize-pane pane w h)
+    (resize-sheet pane w h)
     (allocate-space pane w h) ))
 
 ;;; Now each child (client) of a box-layout pane is described by the
@@ -1635,7 +1621,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
                 for tmp-width = width then (decf tmp-width new-width)
                 for new-width = (/ tmp-width l)
                 for x = 0 then (+ x new-width)
-                do (%move-pane child x y)
+                do (move-sheet child x y)
 		  (allocate-space child new-width new-height)))))
 
 ;;; SPACING PANE
@@ -1791,17 +1777,17 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
            (child-min-width  (space-requirement-min-width child-space))
            (child-height     (space-requirement-height child-space))
            (child-min-height (space-requirement-min-height child-space)))
-        (%move-and-resize-pane child
-             (if hscrollbar (- (gadget-value hscrollbar)) 0)
-             (if vscrollbar (- (gadget-value vscrollbar)) 0)
-             (max child-width  width)
-             (max child-height height))
+      (move-and-resize-sheet child
+                             (if hscrollbar (- (gadget-value hscrollbar)) 0)
+                             (if vscrollbar (- (gadget-value vscrollbar)) 0)
+                             (max child-width  width)
+                             (max child-height height))
         ; move-and-resize-sheet does not allocate space for the sheet...
         ; so we do it manually for this case, which may be wrong - CHECKME
         ; if this is the right place, reusing the above calculation might be a good idea
-        (allocate-space child
-             (max child-min-width child-width  width)
-             (max child-min-height child-height height)))))
+      (allocate-space child
+                      (max child-min-width child-width  width)
+                      (max child-min-height child-height height)))))
 
 (defmethod note-input-focus-changed ((pane viewport-pane) state)
   (note-input-focus-changed (sheet-child pane) state))
@@ -1825,7 +1811,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
       ;; be fixed.
 
       ;; It's not a bug, it's a feature. This requires further thought. -Hefner
-      (%move-pane child
+      (move-sheet child
 		  (- (if (> (+ horizontal-scroll viewport-width)
 			    child-width)
 			 (- child-width viewport-width)
@@ -1846,7 +1832,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 		      (space-requirement-width sr)))
 	 (height (max (bounding-rectangle-height pane)
 		      (space-requirement-height sr))))
-    (%resize-pane client width height)
+    (resize-sheet client width height)
     (allocate-space client width height)
     (scroller-pane/update-scroll-bars (sheet-parent pane))))
 
@@ -1987,7 +1973,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
            (viewport-width  (- width vsbar-width))
            (viewport-height (- height hsbar-height)))
       (when vscrollbar
-        (%move-pane vscrollbar
+        (move-sheet vscrollbar
                     (ecase vertical-scroll-bar-position
                       (:left 0)
                       (:right (- width vsbar-width)))
@@ -1996,7 +1982,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                         vsbar-width
                         (- height hsbar-height)))
       (when hscrollbar
-        (%move-pane hscrollbar
+        (move-sheet hscrollbar
                     (ecase vertical-scroll-bar-position
                       (:left vsbar-width)
                       (:right 0))
@@ -2032,7 +2018,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                            max))))
 	  (setf (scroll-bar-values hscrollbar) (values min max ts val))))
       (when viewport
-        (%move-pane viewport
+        (move-sheet viewport
                     (+ x-spacing
                        (ecase vertical-scroll-bar-position
                          (:left vsbar-width)
@@ -2050,7 +2036,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (sheet-child viewport)))
       (when (pane-viewport scrollee)
-	(%move-pane scrollee
+	(move-sheet scrollee
 		    (if hscrollbar
 			(- (gadget-value hscrollbar))
 			0)
@@ -2061,7 +2047,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (sheet-child viewport)))
       (when (pane-viewport scrollee)
-	(%move-pane scrollee
+	(move-sheet scrollee
 		    (- new-value)
 		    (if vscrollbar
 			(- (gadget-value vscrollbar))
@@ -2216,7 +2202,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 (defmethod scroll-extent ((pane basic-pane) x y)
   (when (pane-viewport pane)
-    (%move-pane pane (- x) (- y))
+    (move-sheet pane (- x) (- y))
     (when (pane-scroller pane)
       (scroller-pane/update-scroll-bars (pane-scroller pane)))))
 
@@ -2307,7 +2293,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (multiple-value-bind (right top left bottom) (label-pane-margins pane)
     (alexandria:when-let ((child (first (sheet-children pane))))
       (multiple-value-bind (x1 y1 x2 y2) (values 0 0 width height)
-        (%move-pane child (+ x1 left) (+ y1 top))
+        (move-sheet child (+ x1 left) (+ y1 top))
         (allocate-space child
                         (- (- x2 right) (+ x1 left))
                         (- (- y2 bottom) (+ y1 top)))))))
