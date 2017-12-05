@@ -2165,7 +2165,7 @@ response to scroll wheel events.")
          (h (* n (generic-list-pane-item-height pane))))
     (make-space-requirement :width w     :height h
                             :min-width w :min-height h
-                            :max-width +fill+ :max-height +fill+)))
+                            :max-width w :max-height h)))
 
 (defmethod allocate-space ((pane generic-list-pane) w h)
   (resize-sheet pane w h))
