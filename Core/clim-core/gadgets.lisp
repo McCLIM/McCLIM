@@ -104,9 +104,6 @@
 ;; - The color of a 3Dish border should be derived from a gadget's
 ;;   background.
 
-;; - It seems that 3D-BORDER-MIXIN is only used for the scroll-bar, so
-;;   remove it
-
 ;; - Somehow engrafting the push button's medium does not work. The
 ;;   text-style initarg does not make it to the sheets medium.
 
@@ -654,8 +651,7 @@ and must never be nil.")
 
 ;;; 30.4.7 The abstract list-pane and option-pane Gadgets
 
-(defclass list-pane (value-gadget
-                     clim-extensions:mouse-wheel-scroll-mixin)
+(defclass list-pane (value-gadget)
   ()
   (:documentation
    "The instantiable class that implements an abstract list pane, that is, a gadget
@@ -2169,10 +2165,10 @@ response to scroll wheel events.")
          (h (* n (generic-list-pane-item-height pane))))
     (make-space-requirement :width w     :height h
                             :min-width w :min-height h
-                            :max-width +fill+ :max-height +fill+)))
+                            :max-width w :max-height h)))
 
 (defmethod allocate-space ((pane generic-list-pane) w h)
-  (%resize-pane pane w h))
+  (resize-sheet pane w h))
 
 (defmethod scroll-quantum ((pane generic-list-pane))
   (generic-list-pane-item-height pane))
@@ -2361,21 +2357,17 @@ Returns two values, the item itself, and the index within the item list."
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-press-event))
   (case (pointer-event-button event)
     (#.+pointer-left-button+
-      (generic-list-pane-handle-click-from-event pane event)
-      (setf (slot-value pane 'armed) nil))
+     (generic-list-pane-handle-click-from-event pane event)
+     (setf (slot-value pane 'armed) nil))
     (#.+pointer-right-button+
-      (generic-list-pane-handle-right-click pane event))
-    (#.+pointer-wheel-up+
-     (generic-list-pane-scroll pane -1))
-    (#.+pointer-wheel-down+
-     (generic-list-pane-scroll pane 1))
+     (generic-list-pane-handle-right-click pane event))
     (t
-      (when (next-method-p) (call-next-method)))))
+     (when (next-method-p) (call-next-method)))))
 
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-release-event))
   (if (eql (pointer-event-button event) +pointer-left-button+)
-      (and (slot-value pane 'armed)
-           (generic-list-pane-handle-click-from-event pane event))
+      (when (slot-value pane 'armed)
+        (generic-list-pane-handle-click-from-event pane event))
       (when (next-method-p) (call-next-method))))
 
 (defgeneric (setf list-pane-items)
@@ -2799,7 +2791,7 @@ if INVOKE-CALLBACK is given."))
         (transform-position (sheet-transformation (gadget record)) 0 0)
       (unless (and (= x gx)
                    (= y gy))
-        (%move-pane (gadget record) x y)))))
+        (move-sheet (gadget record) x y)))))
 
 (defmethod note-output-record-lost-sheet ((record gadget-output-record) sheet)
   (sheet-disown-child sheet (gadget record)))
@@ -2816,7 +2808,7 @@ if INVOKE-CALLBACK is given."))
         (output-record-position record)
       (if (not (and (= ox gx)
                     (= oy gy)))
-          (%move-pane (gadget record) ox oy)
+          (move-sheet (gadget record) ox oy)
           (repaint-sheet (gadget record) region)))))
 
 (defun setup-gadget-record (sheet record)

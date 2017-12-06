@@ -146,7 +146,7 @@
                                       :height height :max-height height :min-height height))))))
 
 (defmethod allocate-space ((pane drei-text-editor-substrate) w h)
-  (%resize-pane pane w h))
+  (resize-sheet pane w h))
 
 ;;; The class for using these substrates in the gadgets.
 

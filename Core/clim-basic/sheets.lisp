@@ -249,9 +249,19 @@
             (compose-translation-with-transformation
              transform (- x old-x) (- y old-y))))))
 
+;;; We preserve here the starting point. If sheet starting point is [0,0] then
+;;; this method is no different from:
+;;;
+;;;     (make-rectangle* 0 0 width height)
+;;;
+;;; That behavior may desireable if sheets starting from other coordinate than
+;;; [0,0] are conforming. Even if they are not though, this method is still
+;;; correct (and blame goes on whoever modified the starting position). -- jd
 (defmethod resize-sheet ((sheet basic-sheet) width height)
-  (setf (sheet-region sheet)
-        (make-bounding-rectangle 0 0 width height)))
+  (with-standard-rectangle (x1 y1 x2 y2) (sheet-region sheet)
+    (declare (ignore x2 y2))
+    (setf (sheet-region sheet)
+          (make-bounding-rectangle x1 y1 (+ x1 width) (+ y1 height)))))
 
 (defmethod move-and-resize-sheet ((sheet basic-sheet) x y width height)
   (move-sheet sheet x y)
@@ -554,12 +564,17 @@
 (defmethod sheet-children ((sheet sheet-single-child-mixin))
   (and (sheet-child sheet) (list (sheet-child sheet))))
 
-(define-condition sheet-supports-only-one-child (error) ())
+(define-condition sheet-supports-only-one-child (error)
+  ((sheet :initarg :sheet)))
+
+(defmethod print-object ((object sheet-supports-only-one-child) stream)
+  (format stream "~A~%single-child-composite-pane is allowed to have only one child."
+          (slot-value object 'sheet)))
 
 (defmethod sheet-adopt-child :before ((sheet sheet-single-child-mixin)
 				      (child sheet-parent-mixin))
   (when (sheet-child sheet)
-    (error 'sheet-supports-only-one-child)))
+    (error 'sheet-supports-only-one-child :sheet sheet)))
 
 (defmethod sheet-adopt-child ((sheet sheet-single-child-mixin)
 			      (child sheet-parent-mixin))
