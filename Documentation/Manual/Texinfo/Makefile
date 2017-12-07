@@ -5,6 +5,8 @@ SOURCES=mcclim.texi user-manual.txi reference-manual.txi developer-manual.txi ex
 
 INCLUDES=-I docstrings -I examples -I figures
 
+VPATH=./figures
+
 .PHONY: all clean distclean
 
 %.pdf: %.fig
