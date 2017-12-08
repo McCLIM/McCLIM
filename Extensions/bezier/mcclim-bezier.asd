@@ -9,6 +9,7 @@
 ;;;
 ;;; See file 'LICENSE' for the copyright details
 ;;;
+(in-package #:asdf-user)
 
 (defsystem #:mcclim-bezier
   :description "Support for various bezier curves in McCLIM."
@@ -19,7 +20,7 @@
   :description "core bezier routines"
   :depends-on (#:clim #:mcclim-null #:mcclim-render/backend #:clim-postscript #:clim-pdf)
   :components ((:file "package")
-               (:file "bezier")))
+               (:file "bezier" :depends-on ("package"))))
 
 (defsystem #:mcclim-bezier-clx
   :description "CLX bezier drawing routines"
