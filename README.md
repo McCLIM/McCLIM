@@ -16,22 +16,29 @@ enable us to develp a user interface conviniently; including formatted
 output, graphics, windowing and commands that are invoked by typing
 text, keyboard shortcuts or clicking a mouse button.
 
-McCLIM works with CMUCL, SBCL, CLISP, OpenMCL, Allegro CL, LispWorks,
-and the Scieneer CL Common-lisp implementations. Right now the only
-backend supported by McCLIM is CLX, which ties it to the Xserver on
-the host system. Any platform capable of running Xserver may run
-McCLIM applications.
+McCLIM works with Allegro CL, Clozure CL, CLISP, CMUCL, Embeddable CL,
+the Scieneer CL Common-lisp, SBCL and the LispWorks implementations.
+Right now the only backend supported by McCLIM is CLX, which ties it
+to the Xserver on the host system. Any platform capable of running 
+Xserver may run McCLIM applications.
 
 ### Installing McCLIM
 McCLIM is available on
 [`Quicklisp`](https://www.quicklisp.org/beta/). Make sure you have
 installed a supported Common Lisp implementation and `Quicklisp` is
-configured correctly. Then, McCLim can be installed and tested by
-entering the following in your REPL:
+configured correctly. Then, McCLIM can be installed by entering the 
+following in your REPL:
 
 ```lisp
-(ql:quickload "clim-examples")   ; Wait until it loads.
-(clim-demo:demodemo)             ; Runs the Demos.
+(ql:quickload "mcclim")
+```
+
+To see if McCLIM works on your host you may load the system with examples
+and run the example browser application:
+
+```lisp
+(ql:quickload "clim-examples")   ; Load the system with examples.
+(clim-demo:demodemo)             ; Run the example browser application.
 ```
 
 ### An Example
