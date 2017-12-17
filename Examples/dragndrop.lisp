@@ -60,7 +60,12 @@
 
 (define-presentation-to-command-translator translator-draw-circle
     (blank-area com-add-circle dragndrop
-                :documentation "Add a circle")
+                :documentation "Add a circle"
+		:tester
+		((object)
+		 (let ((frame *application-frame*))
+		   (eq (pointer-sheet (port-pointer (port frame)))
+		       (get-frame-pane frame 'scratchpad)))))
     (object)
   (list (get-pointer-position
 	    (get-frame-pane *application-frame* 'scratchpad))
