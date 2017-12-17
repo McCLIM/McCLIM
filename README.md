@@ -1,6 +1,11 @@
-![McClim iteration-9](https://common-lisp.net/project/mcclim/img/mcclim.png)
+<h1 align="center"> <br> 
+<a href="https://common-lisp.net/project/mcclim/">
+<img src="https://common-lisp.net/project/mcclim/img/mcclim.png"
+alt="McCLIM">
+</a> 
+<br> McCLIM 0.9.7-dev post-"St. George's Day"
+<br> </h1>
 
-# McClim iteration-9
 McCLIM, an implementation of the "[Common Lisp Interface Manager CLIM
 II Specification](http://bauhh.dyndns.org:8000/clim-spec/index.html)",
 is a portable and high-level user interface management system toolkit
@@ -11,14 +16,14 @@ enable us to develp a user interface conviniently; including formatted
 output, graphics, windowing and commands that are invoked by typing
 text, keyboard shortcuts or clicking a mouse button.
 
-McCLim works with CMUCL, SBCL, CLISP, OpenMCL, Allegro CL, LispWorks,
+McCLIM works with CMUCL, SBCL, CLISP, OpenMCL, Allegro CL, LispWorks,
 and the Scieneer CL Common-lisp implementations. Right now the only
 backend supported by McCLIM is CLX, which ties it to the Xserver on
 the host system. Any platform capable of running Xserver may run
 McCLIM applications.
 
-## Installing McClim
-McClim is available on
+### Installing McCLIM
+McCLIM is available on
 [`Quicklisp`](https://www.quicklisp.org/beta/). Make sure you have
 installed a supported Common Lisp implementation and `Quicklisp` is
 configured correctly. Then, McCLim can be installed and tested by
@@ -29,8 +34,8 @@ entering the following in your REPL:
 (clim-demo:demodemo)             ; Runs the Demos.
 ```
 
-## An Example
-1) Quickload McClim by running `(ql:quickload "mcclim")`.
+### An Example
+1) Quickload McCLIM by running `(ql:quickload "mcclim")`.
 2) Put the following code in a file `example.lisp`.
 ```lisp
 (in-package :common-lisp-user)
@@ -63,17 +68,16 @@ entering the following in your REPL:
 ```lisp
 (app:app-main)
 ```
-4) You should see the following application frame or window.
 ![example.lisp](https://common-lisp.net/project/mcclim/static/media/cap-superapp.png)
 
-## Documentation
+### Documentation
 You can access the McCLIM manual draft
 [PDF](https://common-lisp.net/project/mcclim/static/documents/mcclim.pdf)
 if you want, but it's still a work in progress. Several other CLIM 2
-resources are listed on [CLiki](http://www.cliki.net/CLIM) and McClim
+resources are listed on [CLiki](http://www.cliki.net/CLIM) and McCLIM
 [homepage](https://common-lisp.net/project/mcclim/).
 
-## Subdirectory Overview
+### Subdirectory Overview
  - **Apps** - sample applicatioins. This includes: 
    1) Apps/Debugger - Peter Mechleborg's debugger (similar to Slime's).
    2) Apps/Functional-Geometry - Frank Buss and Rainer Joswig's functional
@@ -89,15 +93,15 @@ resources are listed on [CLiki](http://www.cliki.net/CLIM) and McClim
    additional Documentation not found in LATEX version).
  - **Examples** - Sources for the examples in `clim-demo` and some
    additional examples. These are of varying quality and style; many
-   of them date from when McClim was quite incomplete.
+   of them date from when McCLIM was quite incomplete.
  - **Extensions** - Contains several extensions to CLIM 2 spec, such
    as fonts, additional layouts, bezier, images etc. Most
-   of them are loaded automatically with McCLim.
+   of them are loaded automatically with McCLIM.
  - **Libraries** - Contains `Drei` and `ESA` Libraries. See
    Documentation for details.   
    
-## Important Links
- - [Mailing List](https://mailman.common-lisp.net/listinfo/mcclim-devel)
+### Important Links
  - [Homepage](https://common-lisp.net/project/mcclim/)
+ - [Mailing List](https://mailman.common-lisp.net/listinfo/mcclim-devel)
  - [IRC](http://webchat.freenode.net/?channels=clim)
  - [Wiki](https://github.com/robert-strandh/McCLIM/wiki)
