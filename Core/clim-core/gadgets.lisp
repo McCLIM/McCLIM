@@ -2165,7 +2165,7 @@ response to scroll wheel events.")
          (h (* n (generic-list-pane-item-height pane))))
     (make-space-requirement :width w     :height h
                             :min-width w :min-height h
-                            :max-width w :max-height h)))
+                            :max-width +fill+ :max-height +fill+)))
 
 (defmethod allocate-space ((pane generic-list-pane) w h)
   (resize-sheet pane w h))
@@ -2395,7 +2395,8 @@ if INVOKE-CALLBACK is given."))
                 (if (find (gadget-value pane) new-values :test test)
                     (gadget-value pane)
                     nil)
-                (intersection (gadget-value pane) new-values :test test))))))
+                (intersection (gadget-value pane) new-values :test test)))))
+  (change-space-requirements pane))
 
 (defmethod (setf list-pane-items)
     (newval (pane generic-list-pane) &key invoke-callback)
