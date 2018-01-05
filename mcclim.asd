@@ -22,6 +22,8 @@
 
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
+(in-package #:asdf-user)
+
 (defsystem :mcclim
   :author "Alessandro Serra
 Alexey Dejneka
