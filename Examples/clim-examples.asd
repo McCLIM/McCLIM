@@ -1,5 +1,7 @@
+(in-package #:asdf-user)
+
 ;;; CLIM-Examples depends on having at least one backend loaded.
-(asdf:defsystem #:clim-examples
+(defsystem #:clim-examples
     :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image #:mcclim-bezier #:closer-mop)
     :components
     ((:file "package")
@@ -13,7 +15,10 @@
      (:file "puzzle")
      (:file "transformations-test")
      (:file "town-example")
-     (:file "demodemo" :depends-on ("tabdemo" "town-example" "sliderdemo" "tabledemo"))
+     (:file "tabdemo")
+     (:file "sliderdemo")
+     (:file "tabledemo")
+     (:file "demodemo")
      (:file "stream-test")
      (:file "presentation-test")
      (:file "dragndrop")
@@ -27,18 +32,15 @@
      (:file "logic-cube")
      (:file "views")
      (:file "font-selector")
-     (:file "tabdemo")
      (:file "bordered-output-examples")
      (:file "misc-tests")
      (:file "drawing-tests")
      (:file "render-image-tests")
      (:file "image-viewer")
-     (:file "sliderdemo")
      (:file "accepting-values")
      (:file "accepting-values-test")
-     (:file "graph-toy")
-     (:file "tabledemo")))
+     (:file "graph-toy")))
 
-(asdf:defsystem #:clim-examples/superapp
+(defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
   :components ((:file "superapp")))

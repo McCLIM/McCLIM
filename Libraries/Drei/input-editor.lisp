@@ -651,7 +651,14 @@ if stuff is inserted after the insertion pointer."
         (input-position stream) (min scan-pointer (input-position stream))))
 
 ;; This has been cribbed from SPLIT-SEQUENCE and lightly modified.
-(defun split-sequence (delimiter seq &key (count nil) (remove-empty-subseqs nil) (start 0) (end nil) (test nil test-supplied) (test-not nil test-not-supplied) (key nil key-supplied))
+(defun split-sequence (delimiter seq &key
+                                       (count nil)
+                                       (remove-empty-subseqs nil)
+                                       (start 0)
+                                       (end nil)
+                                       (test nil test-supplied)
+                                       (test-not nil test-not-supplied)
+                                       (key nil key-supplied))
   "Return a list of subsequences in seq delimited by delimiter.
 
 If :remove-empty-subseqs is NIL, empty subsequences will be

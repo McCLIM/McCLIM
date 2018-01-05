@@ -115,12 +115,14 @@
 (defgeneric port-client-message (sheet time type data))
 
 (defun event-handler (&key display window event-key code state mode time
-		      type width height x y root-x root-y
-		      data override-redirect-p send-event-p hint-p
-                      target property requestor selection
-                      request first-keycode count
-                      &allow-other-keys)
-  (declare (ignore display request first-keycode count))
+                        type width height x y root-x root-y
+                        data override-redirect-p send-event-p hint-p
+                        target property requestor selection
+                        request first-keycode count
+                        &allow-other-keys)
+  (declare (ignore first-keycode count))
+  (when (eql event-key :mapping-notify)
+    (return-from event-handler (xlib:mapping-notify display request 0 0)))
   (let ((sheet (and window (port-lookup-sheet *clx-port* window))))
     (when sheet
       (case event-key
@@ -131,13 +133,13 @@
            (make-instance (if (eq event-key :key-press)
 			      'key-press-event
 			      'key-release-event)
-             :key-name keysym-name
-	     :key-character (and (characterp keyname) keyname)
-	     :x x :y y
-	     :graft-x root-x
-	     :graft-y root-y
-             :sheet (or (frame-properties (pane-frame sheet) 'focus) sheet)
-             :modifier-state modifier-state :timestamp time)))
+                          :key-name keysym-name
+                          :key-character (and (characterp keyname) keyname)
+                          :x x :y y
+                          :graft-x root-x
+                          :graft-y root-y
+                          :sheet (or (frame-properties (pane-frame sheet) 'focus) sheet)
+                          :modifier-state modifier-state :timestamp time)))
 	((:button-press :button-release)
 	 (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port* state))
                (button (decode-x-button-code code)))
@@ -207,11 +209,11 @@
                 ;; Instead, query the new coordinates from the X server,
                 ;; and later the event handler will set the correct
                 ;; native-transformation using those. --Hefner
-;                (multiple-value-bind (x y) (transform-position
-;                                            (compose-transformations
-;                                             (sheet-transformation sheet)
-;                                             (sheet-native-transformation (graft sheet)))
-;                                            0 0)
+;;;                (multiple-value-bind (x y) (transform-position
+;;;                                            (compose-transformations
+;;;                                             (sheet-transformation sheet)
+;;;                                             (sheet-native-transformation (graft sheet)))
+;;;                                            0 0)
 
                 ;; Easier to let X compute the position relative to the root window for us.
                 (multiple-value-bind (x y)
@@ -233,7 +235,7 @@
 								     state)))
 	   (if hint-p
 	       (multiple-value-bind (x y same-screen-p child mask
-				     root-x root-y)
+                                       root-x root-y)
 		   (xlib:query-pointer window)
 		 (declare (ignore mask))
 		 ;; If not same-screen-p or the child is different
@@ -273,28 +275,28 @@
          ;; :display event should be left in.
          ;;
          (make-instance 'window-repaint-event
-           :timestamp time
-           :sheet sheet
-           :region (make-rectangle* x y (+ x width) (+ y height))))
+                        :timestamp time
+                        :sheet sheet
+                        :region (make-rectangle* x y (+ x width) (+ y height))))
         ;;
         (:selection-notify
          (make-instance 'clx-selection-notify-event
-          :sheet sheet
-          :selection selection
-          :target target
-          :property property))
+                        :sheet sheet
+                        :selection selection
+                        :target target
+                        :property property))
         (:selection-clear
          (make-instance 'selection-clear-event
-          :sheet sheet
-          :selection selection))
+                        :sheet sheet
+                        :selection selection))
         (:selection-request
          (make-instance 'clx-selection-request-event
-          :sheet sheet
-          :selection selection
-          :requestor requestor
-          :target target
-          :property property
-          :timestamp time))
+                        :sheet sheet
+                        :selection selection
+                        :requestor requestor
+                        :target target
+                        :property property
+                        :timestamp time))
 	(:client-message
          (port-client-message sheet time type data))
 	(t         
