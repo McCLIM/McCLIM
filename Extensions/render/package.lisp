@@ -114,4 +114,14 @@
                 #:zpb-ttf-font-units->pixels)
   (:import-from :clim-backend
                 #:port-set-mirror-region
-                #:port-set-mirror-transformation))
+                #:port-set-mirror-transformation)
+  (:export #:render-medium-mixin
+           #:render-port-mixin
+           #:image-mirror-image
+           #:image-sheet-mixin
+           #:image-pixmap-mixin
+           #:image-pixels
+           #:image-pixmap-mixin
+           #:image-mirror-mixin
+           #:opticl-rgb-image-pixels
+           ))

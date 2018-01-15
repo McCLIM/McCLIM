@@ -67,10 +67,11 @@ interface management system."
 ;;; platform.
 (defsystem #:mcclim/looks
   :depends-on (#:clim
-               #:mcclim-clx                                 #| raw clim-clx backend |#
-               #:mcclim-clx/truetype                        #| adds truetype        |#
-               #+mcclim-ffi-freetype #:mcclim-clx/freetype  #| adds freetype        |#
-               #:mcclim-clx-fb                              #| experimental backend |#
+               #-(or mcclim-beagle mcclim-ugly mezzano)
+                                #:mcclim-clx/pretty  #| adds truetype        |#
+               #+mcclim-ugly    #:mcclim-clx         #| raw clim-clx backend |#
+               #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure) |#
+               #+mezzano        #:mcclim-mezzano     #| Mezzano (a LISP OS)  |#
 
                ;; null backend
                #:mcclim-null))
@@ -117,7 +118,7 @@ interface management system."
                 :components ((:file "package")
                              (:file "test-page")))))
 
-;;; The fact that our CLIM implementation is McCLIM is already true now.
-;;; This feature is notably used by ESA and DREI, in cases where they need to
-;;; know whether they are compiled with McCLIM or another CLIM implementation.
+;; The fact that our CLIM implementation is McCLIM is already true now.
+;; This feature is notably used by ESA and DREI, in cases where they need to
+;; know whether they are compiled with McCLIM or another CLIM implementation.
 (pushnew :mcclim *features*)
