@@ -833,7 +833,7 @@ examine the type of the command menu item to see if it is
 	 (list* ,@required-arg-names ,key-results)))))
 
 (defun make-partial-parser-fun (name required-args)
-  (with-gensyms (command-table stream partial-command
+  (with-gensyms (command-table stream label partial-command
 		 command-name command-line-name)
     (let* ((required-arg-names (mapcar #'car required-args))
 	   (original-args (mapcar #'(lambda (arg)
@@ -847,16 +847,15 @@ examine the type of the command menu item to see if it is
                (nil)
              (destructuring-bind (,command-name ,@original-args)
                  ,partial-command
-               (let ((,command-line-name (command-line-name-for-command
-                                          ,command-name
-                                          ,command-table
-                                          :errorp nil))
-                     ,@(mapcar #'list required-arg-names original-args))
-                 (accepting-values (,stream :select-first-query t
-                                            :align-prompts t)
-                   (format ,stream
-                           "You are being prompted for arguments to ~S~%"
-                           ,command-line-name)
+               (let* ((,command-line-name (command-line-name-for-command
+                                           ,command-name
+                                           ,command-table
+                                           :errorp nil))
+                      (,label (format nil
+                                      "You are being prompted for arguments to ~S"
+                                      ,command-line-name))
+                      ,@(mapcar #'list required-arg-names original-args))
+                 (accepting-values (,stream :select-first-query t :align-prompts t :label ,label)
                    ,@(loop
                         for var in required-arg-names
                         for original-var in original-args
@@ -866,7 +865,7 @@ examine the type of the command menu item to see if it is
                                      ,(accept-form-for-argument-partial
                                        stream parameter var original-var)
                                    (declare (ignore ,ptype))
-                                    ,@(unless first-arg `((terpri ,stream)))
+                                   ,@(unless first-arg `((terpri ,stream)))
                                    (when ,changedp
                                      (setq ,var ,value)))))
                    (when still-missing

@@ -188,7 +188,7 @@ accept of this query")))
                         text-style))
     (setq stream (stream-designator-symbol stream '*standard-input*))
     (with-gensyms (accepting-values-continuation)
-      (with-keywords-removed (args (:label :foreground :background :text-style))
+      (with-keywords-removed (args (:foreground :background :text-style))
         (let* ((with-text-style-body
                    (if text-style-p
                        `((with-drawing-options (,stream :text-style ,text-style)
@@ -200,14 +200,11 @@ accept of this query")))
                    (invoke-accepting-values ,stream
                                             #',accepting-values-continuation
                                             ,@args)))
-               (true-form `(with-stream-in-own-window (,stream
-                                                       :label ,label
-                                                       ,@(and foregroundp
-                                                              `(:foreground
-                                                                ,foreground))
-                                                       ,@(and backgroundp
-                                                              `(:background
-                                                                ,background)))
+               (true-form `(with-stream-in-own-window
+                               (,stream
+                                :label ,label
+                                ,@(and foregroundp `(:foreground ,foreground))
+                                ,@(and backgroundp `(:background ,background)))
                              (*standard-input* *standard-output*)
                              ,return-form)))
           ;; To avoid unreachable-code warnings, if `own-window' is a
@@ -230,8 +227,7 @@ accept of this query")))
      (command-table 'accept-values)
      (frame-class 'accept-values))
   (declare (ignore own-window exit-boxes modify-initial-query
-    resize-frame label scroll-bars x-position y-position
-    width height frame-class))
+    resize-frame scroll-bars x-position y-position width height frame-class))
   (when (and align-prompts ;; t means the same as :right
              (not (eq align-prompts :left)))
     (setf align-prompts :right))
@@ -241,8 +237,10 @@ accept of this query")))
             (make-instance 'accepting-values-stream
                            :stream stream
                            :align-prompts align-prompts))
-           (arecord (updating-output (stream
-                                      :record-type 'accepting-values-record)
+           (arecord (updating-output (stream :record-type 'accepting-values-record)
+                      (when label
+                        (format stream label)
+                        (terpri))
                       (if align-prompts
                           (formatting-table (stream)
                             #1=(setf return-values
