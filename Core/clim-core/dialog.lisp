@@ -240,7 +240,7 @@ accept of this query")))
            (arecord (updating-output (stream :record-type 'accepting-values-record)
                       (when label
                         (format stream label)
-                        (terpri))
+                        (terpri stream))
                       (if align-prompts
                           (formatting-table (stream)
                             #1=(setf return-values
