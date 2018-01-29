@@ -25,8 +25,6 @@
 ;;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-;;; arc.lisp
-
 (in-package :mcclim-render-internals)
 ;;; Adapted from Ben Deane's com.elbeno.curve 0.1 library, with
 ;;; permission. See http://www.elbeno.com/lisp/ for the original.
@@ -111,7 +109,7 @@ through two control points."
                                                       control-point-2))
                        end-point)))
 
-(defun draw-approximate-arc-single (path cx cy a b theta eta1 eta2)
+(defun approximate-arc-single (path cx cy a b theta eta1 eta2)
   (let* ((etadiff (- eta2 eta1))
          (k (tan (/ etadiff 2)))
          (alpha (* (sin etadiff)
@@ -132,39 +130,35 @@ through two control points."
           qy2 (- py2 (* alpha sy2)))
     (curve-to path qx1 qy1 qx2 qy2 px2 py2)))
 
-(defun draw-approximate-arc (path cx cy a b theta eta1 eta2 err)
+(defun approximate-arc (path cx cy a b theta eta1 eta2 err)
   (cond ((< eta2 eta1)
          (error "approximate-arc: eta2 must be bigger than eta1"))
         ((> eta2 (+ eta1 (/ pi 2) (* eta2 long-float-epsilon)))
          (let ((etamid (+ eta1 (/ pi 2) (* eta2 long-float-epsilon))))
-           (draw-approximate-arc path cx cy a b theta eta1 etamid err)
-           (draw-approximate-arc path cx cy a b theta etamid eta2 err)))
+           (approximate-arc path cx cy a b theta eta1 etamid err)
+           (approximate-arc path cx cy a b theta etamid eta2 err)))
         (t (if (> err (bezier-error a b eta1 eta2))
-	       (draw-approximate-arc-single path cx cy a b theta eta1 eta2)
+	       (approximate-arc-single path cx cy a b theta eta1 eta2)
                (let ((etamid (/ (+ eta1 eta2) 2)))
-                 (draw-approximate-arc path cx cy a b theta eta1 etamid err)
-                 (draw-approximate-arc path cx cy a b theta etamid eta2 err))))))
+                 (approximate-arc path cx cy a b theta eta1 etamid err)
+                 (approximate-arc path cx cy a b theta etamid eta2 err))))))
 
-(defun draw-approximate-elliptical-arc (path cx cy a b theta eta1 eta2
+(defun approximate-elliptical-arc (path cx cy a b theta eta1 eta2
                                    &optional (err 0.5))
-  "Draw an approximate an elliptical arc with a cubic bezier spline into the path."
+  "Approximate an elliptical arc with a cubic bezier spline into the path."
   (if (> b a)
-      (draw-approximate-arc path cx cy b a
+      (approximate-arc path cx cy b a
 			    (+ theta (/ pi 2))
 			    (- eta1 (/ pi 2))
 			    (- eta2 (/ pi 2)) err)
-      (draw-approximate-arc path cx cy a b theta eta1 eta2 err)))
-
-;;;
-;;;
-;;;
+      (approximate-arc path cx cy a b theta eta1 eta2 err)))
 
 (defun arc (cx cy r theta1 theta2)
   (loop while (< theta2 theta1) do (incf theta2 (* 2 pi)))
   (let ((path (paths:create-path :open-polyline)))
     (multiple-value-bind (startx starty) (ellipse-val cx cy r r 0 theta1)
       (paths:path-reset path (paths:make-point startx starty))
-      (draw-approximate-elliptical-arc path cx cy r r 0 theta1 theta2)
+      (approximate-elliptical-arc path cx cy r r 0 theta1 theta2)
       path)))
 
 (defun ellipse-arc (cx cy rx ry theta eta1 eta2)
@@ -172,5 +166,5 @@ through two control points."
   (let ((path (paths:create-path :open-polyline)))
     (multiple-value-bind (startx starty) (ellipse-val cx cy rx ry theta eta1)
       (paths:path-reset path (paths:make-point startx starty))
-      (draw-approximate-elliptical-arc path cx cy rx ry theta eta1 eta2)
+      (approximate-elliptical-arc path cx cy rx ry theta eta1 eta2)
       path)))
