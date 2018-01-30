@@ -161,10 +161,20 @@ through two control points."
       (approximate-elliptical-arc path cx cy r r 0 theta1 theta2)
       path)))
 
-(defun ellipse-arc (cx cy rx ry theta eta1 eta2)
-  (loop while (< eta2 eta1) do (incf eta2 (* 2 pi)))
-  (let ((path (paths:create-path :open-polyline)))
-    (multiple-value-bind (startx starty) (ellipse-val cx cy rx ry theta eta1)
-      (paths:path-reset path (paths:make-point startx starty))
-      (approximate-elliptical-arc path cx cy rx ry theta eta1 eta2)
-      path)))
+(defun ellipse-arc (cx cy rx ry theta lambda1 lambda2)
+  (let ((eta1 (atan (/ (sin lambda1) ry) (/ (cos lambda1) rx)))
+	(eta2 (atan (/ (sin lambda2) ry) (/ (cos lambda2) rx)))
+	(2pi (* 2 pi)))
+    ;; make sure we have eta1 <= eta2 <= eta1 + 2 PI
+    (decf eta2 (* 2pi (floor (- eta2 eta1) 2pi)))
+
+    ;; the preceding correction fails if we have exactly et2 - eta1 = 2 PI
+    ;; it reduces the interval to zero length
+    (when (and (> (- lambda2 lambda1) pi) (< (- eta2 eta1) pi))
+      (incf eta2 2pi))
+
+    (let ((path (paths:create-path :open-polyline)))
+      (multiple-value-bind (startx starty) (ellipse-val cx cy rx ry theta eta1)
+	(paths:path-reset path (paths:make-point startx starty))
+	(approximate-elliptical-arc path cx cy rx ry theta eta1 eta2)
+	path))))

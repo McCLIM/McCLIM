@@ -192,9 +192,6 @@
                                            :end-angle end-angle)))
   (multiple-value-bind (cx cy hx hy theta) (climi::ellipse-simplified-representation el)
     (declare (ignorable cx cy))
-    ;; XXX: these angles are wrong if theta is not ortogonal to xy. I think that
-    ;; underlying bezier curve approximation distorts them, so distance is not
-    ;; constant. Leaving it as is now.
     (let* ((sa (- (* 2 pi) end-angle theta))
            (dalpha (- end-angle start-angle))
            (path (ellipse-arc center-x center-y hx hy theta
