@@ -25,8 +25,6 @@
 ;;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-;;; arc.lisp
-
 (in-package :mcclim-render-internals)
 ;;; Adapted from Ben Deane's com.elbeno.curve 0.1 library, with
 ;;; permission. See http://www.elbeno.com/lisp/ for the original.
@@ -97,13 +95,21 @@
    (+ (* (- a) (sin theta) (sin eta))
       (* b (cos theta) (cos eta)))))
 
-;;; FIXME: The original elbeno code used real abstraction to manage
-;;; points and curves and splines. I ripped it out and replaced it
-;;; with the following ugly mess. Fix, fix, fix. For example, it might
-;;; be possible to use cl-vectors to accumulate the path instead of
-;;; using lists of conses.
+(defun curve-to (path cx1 cy1 cx2 cy2 x y)
+  (%curve-to path cx1 cy1 cx2 cy2 x y))
 
-(defun approximate-arc-single (cx cy a b theta eta1 eta2)
+(defun %curve-to (path cx1 cy1 cx2 cy2 x y)
+  "Draw a cubic Bezier curve from the current point to (x,y)
+through two control points."
+  (let ((control-point-1 (paths:make-point cx1 cy1))
+        (control-point-2 (paths:make-point cx2 cy2))
+        (end-point (paths:make-point x y)))
+    (paths:path-extend path
+                       (paths:make-bezier-curve (list control-point-1
+                                                      control-point-2))
+                       end-point)))
+
+(defun approximate-arc-single (path cx cy a b theta eta1 eta2)
   (let* ((etadiff (- eta2 eta1))
          (k (tan (/ etadiff 2)))
          (alpha (* (sin etadiff)
@@ -122,77 +128,53 @@
           qy1 (+ py1 (* alpha sy1))
           qx2 (- px2 (* alpha sx2))
           qy2 (- py2 (* alpha sy2)))
-    (list (cons px1 py1)
-          (cons qx1 qy1)
-          (cons qx2 qy2)
-          (cons px2 py2))))
+    (curve-to path qx1 qy1 qx2 qy2 px2 py2)))
 
-(defun approximate-arc (cx cy a b theta eta1 eta2 err)
+(defun approximate-arc (path cx cy a b theta eta1 eta2 err)
   (cond ((< eta2 eta1)
          (error "approximate-arc: eta2 must be bigger than eta1"))
         ((> eta2 (+ eta1 (/ pi 2) (* eta2 long-float-epsilon)))
          (let ((etamid (+ eta1 (/ pi 2) (* eta2 long-float-epsilon))))
-           (nconc
-            (approximate-arc cx cy a b theta eta1 etamid err)
-            (approximate-arc cx cy a b theta etamid eta2 err))))
+           (approximate-arc path cx cy a b theta eta1 etamid err)
+           (approximate-arc path cx cy a b theta etamid eta2 err)))
         (t (if (> err (bezier-error a b eta1 eta2))
-               (list (approximate-arc-single cx cy a b theta eta1 eta2))
+	       (approximate-arc-single path cx cy a b theta eta1 eta2)
                (let ((etamid (/ (+ eta1 eta2) 2)))
-                 (nconc
-                  (approximate-arc cx cy a b theta eta1 etamid err)
-                  (approximate-arc cx cy a b theta etamid eta2 err)))))))
+                 (approximate-arc path cx cy a b theta eta1 etamid err)
+                 (approximate-arc path cx cy a b theta etamid eta2 err))))))
 
-(defun approximate-elliptical-arc (cx cy a b theta eta1 eta2
+(defun approximate-elliptical-arc (path cx cy a b theta eta1 eta2
                                    &optional (err 0.5))
-  "Approximate an elliptical arc with a cubic bezier spline."
+  "Approximate an elliptical arc with a cubic bezier spline into the path."
   (if (> b a)
-      (approximate-arc cx cy b a
-                       (+ theta (/ pi 2))
-                       (- eta1 (/ pi 2))
-                       (- eta2 (/ pi 2)) err)
-      (approximate-arc cx cy a b theta eta1 eta2 err)))
-
-;;;
-;;;
-;;;
+      (approximate-arc path cx cy b a
+			    (+ theta (/ pi 2))
+			    (- eta1 (/ pi 2))
+			    (- eta2 (/ pi 2)) err)
+      (approximate-arc path cx cy a b theta eta1 eta2 err)))
 
 (defun arc (cx cy r theta1 theta2)
   (loop while (< theta2 theta1) do (incf theta2 (* 2 pi)))
-  (let ((curves
-         (approximate-elliptical-arc cx cy r r 0 theta1 theta2)))
-    (draw-arc-curves curves)))
-
-
-(defun draw-arc-curves (curves)
-  (destructuring-bind (((startx . starty) &rest ignored-curve)
-                       &rest ignored-curves)
-      curves
-    (declare (ignore ignored-curve ignored-curves))
-    (let ((path (paths:create-path :open-polyline)))
+  (let ((path (paths:create-path :open-polyline)))
+    (multiple-value-bind (startx starty) (ellipse-val cx cy r r 0 theta1)
       (paths:path-reset path (paths:make-point startx starty))
-      (loop for ((x1 . y1)
-		 (cx1 . cy1)
-		 (cx2 . cy2)
-		 (x2 . y2)) in curves
-	 do (curve-to path cx1 cy1 cx2 cy2 x2 y2))
+      (approximate-elliptical-arc path cx cy r r 0 theta1 theta2)
       path)))
 
+(defun ellipse-arc (cx cy rx ry theta lambda1 lambda2)
+  (let ((eta1 (atan (/ (sin lambda1) ry) (/ (cos lambda1) rx)))
+	(eta2 (atan (/ (sin lambda2) ry) (/ (cos lambda2) rx)))
+	(2pi (* 2 pi)))
+    ;; make sure we have eta1 <= eta2 <= eta1 + 2 PI
+    (decf eta2 (* 2pi (floor (- eta2 eta1) 2pi)))
 
-(defun curve-to (path cx1 cy1 cx2 cy2 x y)
-  (%curve-to path cx1 cy1 cx2 cy2 x y))
+    ;; the preceding correction fails if we have exactly et2 - eta1 = 2 PI
+    ;; it reduces the interval to zero length
+    (when (and (> (- lambda2 lambda1) pi) (< (- eta2 eta1) pi))
+      (incf eta2 2pi))
 
-(defun %curve-to (path cx1 cy1 cx2 cy2 x y)
-  "Draw a cubic Bezier curve from the current point to (x,y)
-through two control points."
-  (let ((control-point-1 (paths:make-point cx1 cy1))
-        (control-point-2 (paths:make-point cx2 cy2))
-        (end-point (paths:make-point x y)))
-    (paths:path-extend path
-                       (paths:make-bezier-curve (list control-point-1
-                                                      control-point-2))
-                       end-point)))
-
-(defun ellipse-arc (cx cy rx ry theta eta1 eta2)
-  (loop while (< eta2 eta1) do (incf eta2 (* 2 pi)))
-  (let ((curves (approximate-elliptical-arc cx cy rx ry theta eta1 eta2)))
-    (draw-arc-curves curves)))
+    (let ((path (paths:create-path :open-polyline)))
+      (multiple-value-bind (startx starty) (ellipse-val cx cy rx ry theta eta1)
+	(paths:path-reset path (paths:make-point startx starty))
+	(approximate-elliptical-arc path cx cy rx ry theta eta1 eta2)
+	path))))
