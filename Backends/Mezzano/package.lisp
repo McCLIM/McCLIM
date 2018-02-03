@@ -75,7 +75,18 @@
 		#:*configuration-event-p*
 		#:standard-port
 		#:standard-handled-event-port-mixin
-		))
+		)
+
+  (:import-from :mezzano.gui.compositor
+                #:key-event
+                #:mouse-event
+                #:window-close-event
+                #:window-activation-event
+                #:resize-request-event
+                #:resize-event
+                #:quit-event
+                )
+  )
 
 ;;; TODO removed from CLX-fb version of package - probably need to
 ;;; define these symbols somewhere for Mezzano
