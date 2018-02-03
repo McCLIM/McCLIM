@@ -98,44 +98,25 @@ pointer-exit and grab-pointer for non mirrored sheets"))
 	  (t	 
 	   (call-next-method)))))))
 
-
 (defmethod climi::distribute-event ((port standard-handled-event-port-mixin) (event pointer-event))
-  (let* ((sheet (port-pointer-sheet port))
-	 (grab-sheet (pointer-grab-sheet port))
-	 (destination (or grab-sheet sheet)))
-    (when sheet
-      (cond ((eq sheet (event-sheet event))
-	     (dispatch-event sheet event))
-            ((eq (sheet-mirrored-ancestor sheet) (sheet-mirrored-ancestor (event-sheet event)))
-	     (dispatch-event destination
-			     (make-instance (type-of event)
-					    :pointer (slot-value event 'climi::pointer)
-					    :button (slot-value event 'climi::button)
-					    :x (slot-value event 'climi::x)
-					    :y (slot-value event 'climi::y)
-					    :graft-x (slot-value event 'climi::graft-x)
-					    :graft-y (slot-value event 'climi::graft-y)
-					    :sheet sheet
-					    :modifier-state (slot-value event 'climi::modifier-state)
-					    :timestamp (slot-value event 'climi::timestamp))))
-	    (t
-	     (multiple-value-bind (cx cy)
-		 (untransform-position (sheet-delta-transformation (sheet-mirrored-ancestor sheet) nil)
-				     (slot-value event 'climi::graft-x)
-				     (slot-value event 'climi::graft-y))
-	     (dispatch-event destination
-			     (make-instance (type-of event)
-					    :pointer (slot-value event 'climi::pointer)
-					    :button (slot-value event 'climi::button)
-					    :x cx
-					    :y cy
-					    :graft-x (slot-value event 'climi::graft-x)
-					    :graft-y (slot-value event 'climi::graft-y)
-					    :sheet sheet
-					    :modifier-state (slot-value event 'climi::modifier-state)
-					    :timestamp (slot-value event 'climi::timestamp)))))))))
-
-
+  (alexandria:when-let* ((sheet (port-pointer-sheet port))
+                         (destination (or (pointer-grab-sheet port) sheet)))
+    (if (eq sheet (event-sheet event))
+        (dispatch-event sheet event)
+        ;; events are immutable (explicitly stated in the spec) - that's why we
+        ;; need to make an event copy for single-mirrored sheets - event-sheet
+        ;; is not the same as sheet we want to distribute event to.
+        (let ((new-event (climi::shallow-copy-object event)))
+          (setf (slot-value new-event 'climi::sheet) sheet)
+          (unless (eq (sheet-mirrored-ancestor sheet)
+                      (sheet-mirrored-ancestor (event-sheet event)))
+            (multiple-value-bind (cx cy)
+                (untransform-position (sheet-delta-transformation (sheet-mirrored-ancestor sheet) nil)
+                                      (slot-value new-event 'climi::graft-x)
+                                      (slot-value new-event 'climi::graft-y))
+              (setf (slot-value new-event 'climi::x) cx
+                    (slot-value new-event 'climi::y) cy)))
+          (dispatch-event destination new-event)))))
 
 ;;;
 ;;; selection
@@ -168,9 +149,6 @@ pointer-exit and grab-pointer for non mirrored sheets"))
 ;;; all events
 ;;;
 
-
-
-
 (defun distribute-enter-events (sheet-b sheet-t event)
   (dolist (s
             (do ((s sheet-b (sheet-parent s))
@@ -178,34 +156,22 @@ pointer-exit and grab-pointer for non mirrored sheets"))
                 ((or (null s) (climi::graftp s) (eq s sheet-t)) lis)
               (push s lis)))
     ;;(format *debug-io* "enter ~A ~%" s)
-    (dispatch-event s
-                    (make-instance 'pointer-enter-event
-                                   :pointer (slot-value event 'climi::pointer)
-                                   :button nil
-                                   :x (slot-value event 'climi::x) ;; wrong?
-                                   :y (slot-value event 'climi::y) ;; wrong?
-                                   :graft-x (slot-value event 'climi::graft-x)
-                                   :graft-y (slot-value event 'climi::graft-y)
-                                   :sheet s
-                                   :modifier-state (slot-value event 'climi::modifier-state)
-                                   :timestamp (slot-value event 'climi::timestamp)))))
+    (let ((new-event (climi::shallow-copy-object event)))
+      ;; should we change also `climi::x' and `climi::y'?
+      (setf (slot-value new-event 'climi::sheet) s)
+      (dispatch-event s new-event))))
 
 (defun distribute-exit-events (sheet-b sheet-t event)
   (when (and sheet-t sheet-b)
     (do ((s sheet-b (sheet-parent s)))
         ((or (null s) (climi::graftp s) (eq s sheet-t)))
-      ;;(format *debug-io* "exit ~A ~A ~A~%" s (slot-value event 'climi::x)(slot-value event 'climi::y) )
-      (dispatch-event s
-                      (make-instance 'pointer-exit-event
-                                     :pointer (slot-value event 'climi::pointer)
-                                     :button nil
-                                     :x (slot-value event 'climi::x) ;; wrong?
-                                     :y (slot-value event 'climi::y) ;; wrong?
-                                     :graft-x (slot-value event 'climi::graft-x)
-                                     :graft-y (slot-value event 'climi::graft-y)
-                                     :sheet s
-                                     :modifier-state (slot-value event 'climi::modifier-state)
-                                     :timestamp (slot-value event 'climi::timestamp))))))
+      ;; (format *debug-io* "exit ~A ~A ~A~%"
+      ;;         s
+      ;;         (slot-value event 'climi::x)
+      ;;         (slot-value event 'climi::y))
+      (let ((new-event (climi::shallow-copy-object event)))
+        (setf (slot-value new-event 'climi::sheet) s)
+        (dispatch-event s new-event)))))
 
 
 (defun sheet-common-ancestor (sheet-a sheet-b)
