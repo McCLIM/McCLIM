@@ -1,5 +1,6 @@
 (in-package :clim-mezzano)
 
+(defvar *port* NIL)
 (defvar *current-focus* NIL)
 
 ;;======================================================================
@@ -33,18 +34,26 @@
 		       render-port-mixin
 ;;		       clim-xcommon:keysym-port-mixin
                        standard-port)
-  ((pointer           :reader   port-pointer)
-   (window            :accessor mezzano-port-window)
-   (display-thread    :accessor mezzano-display-thread)
-   (event-thread      :accessor mezzano-event-thread)
-   (cursor-table      :accessor mezzano-cursor-table)
-   (mez-window->sheet :initform (make-hash-table :test #'eq))
-   (fifo              :initform (mezzano.supervisor:make-fifo 50)
-                      :reader   mezzano-event-fifo)))
+  ((pointer            :reader   port-pointer)
+   (window             :accessor mezzano-port-window)
+   (display-thread     :accessor mezzano-display-thread)
+   (event-thread       :accessor mezzano-event-thread)
+   (cursor-table       :accessor mezzano-cursor-table)
+   (mez-window->sheet  :initform (make-hash-table :test #'eq))
+   (mez-window->mirror :initform (make-hash-table :test #'eq))
+   (fifo               :initform (mezzano.supervisor:make-fifo 50)
+                       :reader   mezzano-event-fifo)))
 
 (defmethod port-lookup-sheet ((port mezzano-port)
                               (mez-window mezzano.gui.compositor::window))
   (gethash mez-window (slot-value port 'mez-window->sheet)))
+
+(defun mez-window->sheet (mez-window)
+  (gethash mez-window (slot-value *port* 'mez-window->sheet)))
+
+(defmethod port-lookup-mirror ((port mezzano-port)
+                               (mez-window mezzano.gui.compositor::window))
+  (gethash mez-window (slot-value port 'mez-window->mirror)))
 
 (defun parse-mezzano-server-path (path)
   (declare (ignore path))
@@ -85,7 +94,8 @@
 
 (defmethod initialize-instance :after ((port mezzano-port) &rest args)
   (declare (ignore args))
-  (setf (slot-value port 'pointer) (make-instance 'mezzano-pointer :port port)
+  (setf *port* port
+        (slot-value port 'pointer) (make-instance 'mezzano-pointer :port port)
         (mezzano-port-window port) (mezzano.supervisor:current-framebuffer))
   (push (make-instance 'mezzano-frame-manager :port port)
 	(slot-value port 'frame-managers))
@@ -118,9 +128,15 @@
 			     :pointer-motion :button-motion))
 
 (defun create-mezzano-mirror (port sheet title width height)
-  (let* ((mirror (make-instance 'mezzano-mirror))
+  ;; TODO - get frame size from widgets some how currently hardcoded as
+  ;; (left-border right-border top-border bottom-border) = (1 1 19 1)
+  ;;  in Mezzano/gui/widgets.lisp
+
+  (let* ((fwidth (+ width 2))
+         (fheight (+ height 20))
+         (mirror (make-instance 'mezzano-mirror))
          (fifo (mezzano-event-fifo port))
-         (window (mezzano.gui.compositor:make-window fifo width height))
+         (window (mezzano.gui.compositor:make-window fifo fwidth fheight))
          (surface (mezzano.gui.compositor:window-buffer window))
          (frame (make-instance 'mezzano.gui.widgets:frame
                                :framebuffer surface
@@ -130,14 +146,20 @@
                                :damage-function (mezzano.gui.widgets:default-damage-function window)
                                :set-cursor-function (mezzano.gui.widgets:default-cursor-function window))))
     (setf (slot-value mirror 'mcclim-render-internals::dirty-region) nil
+          (slot-value mirror 'fwidth) fwidth
+          (slot-value mirror 'fheight) fheight
+          (slot-value mirror 'dx) 1
+          (slot-value mirror 'dy) 19
           (slot-value mirror 'width) width
           (slot-value mirror 'height) height
           (slot-value mirror 'mez-pixels) (mezzano.gui::surface-pixels surface)
           (slot-value mirror 'mez-window) window
           (slot-value mirror 'mez-frame) frame)
     (port-register-mirror port sheet mirror)
+    (setf (gethash window (slot-value port 'mez-window->sheet)) sheet
+          (gethash window (slot-value port 'mez-window->mirror)) mirror)
     (mezzano.gui.widgets:draw-frame frame)
-    (mezzano.gui.compositor:damage-window window 0 0 width height)))
+    (mezzano.gui.compositor:damage-window window 0 0 fwidth fheight)))
 
 (defmethod realize-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
   (debug-format "realize-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))")
@@ -219,44 +241,6 @@
    (slot-value port 'climi::sheet->mirror))
   )
 
-;; Test version - only prints events to debug log
-
-;; (defmethod get-next-event ((port mezzano-port) &key wait-function (timeout nil))
-;;   (declare (ignore wait-function timeout))
-;;   (loop
-;;      (let ((event (mezzano.supervisor:fifo-pop (mezzano-event-fifo port) T)))
-;;          (case (type-of event)
-;;            (mezzano.gui.compositor::key-event
-;;             (debug-format "key-event")
-;;             (debug-format "    ~S" (mezzano.gui.compositor::key-scancode event))
-;;             (debug-format "    ~S" (mezzano.gui.compositor::key-releasep event))
-;;             (debug-format "    ~S" (mezzano.gui.compositor::key-key event))
-;;             (debug-format "    ~S"
-;;                           (mezzano.gui.compositor::key-modifier-state event)))
-;;            (T
-;;             (debug-format "event")
-;;             (debug-format "    ~S" event))))))
-
-
-;; Test version - ignores key events only returns mouse events.
-
-;; (defmethod get-next-event ((port mezzano-port) &key wait-function (timeout nil))
-;;   (declare (ignore wait-function timeout))
-;;   (do*  ((event (mezzano.supervisor:fifo-pop *event-queue*)
-;;                 (mezzano.supervisor:fifo-pop *event-queue*))
-;;          (event-type (type-of event) (type-of event)))
-;;         ((not (or (eq event-type 'key-press-event)
-;;                   (eq event-type 'key-release-event))) event)
-;;     ))
-
-;; Test version - ignores all events
-
-;; (defmethod get-next-event ((port mezzano-port) &key wait-function (timeout nil))
-;;   (debug-format "get-next-event ((port mezzano-port) &key wait-function (timeout nil))")
-;;   (debug-format "    ~S ~S ~S" port wait-function timeout)
-;;   (loop
-;;      (mezzano.supervisor:fifo-pop (mezzano-event-fifo port) t)))
-
 ;;
 ;; Polling for events every 10ms
 ;; TODO would be better if we could set a timer and wait on the timer
@@ -268,19 +252,18 @@
     (if (null timeout)
         (loop
            (multiple-value-bind (event validp)
-               (convert-event (mezzano.supervisor:fifo-pop fifo t))
+               (mez-event->mcclim-event (mezzano.supervisor:fifo-pop fifo t))
              (when validp
                (return event))))
-        (loop
-           (multiple-value-bind (event validp)
-               (mezzano.supervisor:fifo-pop fifo NIL)
-             (cond (validp (return (convert-event event)))
-                   ((< timeout 0.005) (return :timeout))
-                   (T (sleep 0.01)
-                      (decf timeout 0.01))))))))
-
-;; (defmethod distribute-event ((port mezzano-port) event)
-;;   (debug-format "port.lisp - distribute-event not implemented ~S ~S~%" event))
+        (mezzano.supervisor:panic "timeout not supported")
+        ;; (loop
+        ;;    (multiple-value-bind (event validp)
+        ;;        (mezzano.supervisor:fifo-pop fifo NIL)
+        ;;      (cond (validp (return (convert-event event)))
+        ;;            ((< timeout 0.005) (return :timeout))
+        ;;            (T (sleep 0.01)
+        ;;               (decf timeout 0.01)))))
+        )))
 
 ;;; Pixmap
 
