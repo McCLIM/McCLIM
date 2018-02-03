@@ -548,3 +548,13 @@ STREAM in the direction DIRECTION."
 (defun keyword-arg-name-from-symbol (symbol)
   (let ((name (symbol-name symbol)))
     (string-capitalize (substitute #\Space #\- name))))
+
+;;; taken from https://stackoverflow.com/questions/11067899/is-there-a-generic-method-for-cloning-clos-objects#11068536, use with care (should work for "ordinary" classes though).
+(defun shallow-copy-object (original)
+  (let* ((class (class-of original))
+         (copy (allocate-instance class)))
+    (dolist (slot (mapcar #'c2mop:slot-definition-name (c2mop:class-slots class)))
+      (when (slot-boundp original slot)
+        (setf (slot-value copy slot)
+              (slot-value original slot))))
+    copy))
