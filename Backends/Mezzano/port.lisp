@@ -24,10 +24,13 @@
 ;;======================================================================
 
 ;;
-;; All mezzano events are piped through a single fifo which is read by
-;; get-next-event. get-next-event translates mezzano events to mcclim
-;; events using mez-window->sheet to figure out which mcclim sheet
-;; corresponds to the mezzano window which received the event
+;; All mezzano events are piped through a single fifo (mez-fifo) which
+;; is read by get-next-event. get-next-event translates mezzano events
+;; to mcclim events using mez-window->sheet to figure out which mcclim
+;; sheet corresponds to the mezzano window which received the
+;; event. The mcclim events are placed in mcclim-fifo because a single
+;; mezzano event can generate multiple mcclim events. get-next-event
+;; then returns the events from mcclim-fifo one at a time.
 ;;
 
 (defclass mezzano-port (standard-handled-event-port-mixin
@@ -41,8 +44,10 @@
    (cursor-table       :accessor mezzano-cursor-table)
    (mez-window->sheet  :initform (make-hash-table :test #'eq))
    (mez-window->mirror :initform (make-hash-table :test #'eq))
-   (fifo               :initform (mezzano.supervisor:make-fifo 50)
-                       :reader   mezzano-event-fifo)))
+   (mez-fifo           :initform (mezzano.supervisor:make-fifo 50)
+                       :reader   mezzano-mez-fifo)
+   (mcclim-fifo        :initform (mezzano.supervisor:make-fifo 10)
+                       :reader   mezzano-mcclim-fifo)))
 
 (defmethod port-lookup-sheet ((port mezzano-port)
                               (mez-window mezzano.gui.compositor::window))
@@ -135,7 +140,7 @@
   (let* ((fwidth (+ width 2))
          (fheight (+ height 20))
          (mirror (make-instance 'mezzano-mirror))
-         (fifo (mezzano-event-fifo port))
+         (fifo (mezzano-mez-fifo port))
          (window (mezzano.gui.compositor:make-window fifo fwidth fheight))
          (surface (mezzano.gui.compositor:window-buffer window))
          (frame (make-instance 'mezzano.gui.widgets:frame
@@ -248,13 +253,23 @@
 ;;
 (defmethod get-next-event ((port mezzano-port) &key wait-function (timeout nil))
   (declare (ignore wait-function))
-  (let ((fifo (mezzano-event-fifo port)))
+  (let ((mez-fifo (mezzano-mez-fifo port))
+        (mcclim-fifo (mezzano-mcclim-fifo port)))
     (if (null timeout)
+        ;; check for a mcclim event - if one is available return
+        ;; it. If none available wait for a mezzano event, which may
+        ;; or may not generate a mcclim event, so check for a mcclim
+        ;; event again.  Don't have to worry about a race condition of
+        ;; a mcclim event arriving after checking while waiting on a
+        ;; mezzano event because only this thread puts events in the
+        ;; mcclim event fifo.
         (loop
            (multiple-value-bind (event validp)
-               (mez-event->mcclim-event (mezzano.supervisor:fifo-pop fifo t))
+               (mezzano.supervisor:fifo-pop mcclim-fifo nil)
              (when validp
-               (return event))))
+               (return event)))
+           (mez-event->mcclim-event
+            mcclim-fifo (mezzano.supervisor:fifo-pop mez-fifo t)))
         (mezzano.supervisor:panic "timeout not supported")
         ;; (loop
         ;;    (multiple-value-bind (event validp)
