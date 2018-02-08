@@ -419,8 +419,10 @@
                  #+sbcl '(sb-ext:*invoke-debugger-hook* . #'debugger)
                  bt:*default-special-bindings*))
          (*debugger-hook* #'debugger)
-         #+sbcl
-         (sb-ext:*invoke-debugger-hook* #'debugger))
+         #+abcl (sys::*invoke-debugger-hook* #'debugger)
+         #+ccl (ccl:*break-hook* #'debugger)
+         #+ecl (ext:*invoke-debugger-hook* #'debugger)
+         #+sbcl (sb-ext:*invoke-debugger-hook* #'debugger))
      ,@body))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
