@@ -9,12 +9,12 @@
 ;;;
 ;;; For at quick test, you can use this code snippet:
 ;;;
-;;; (clim-debugger:with-debugger
+;;; (clim-debugger:with-debugger ()
 ;;;   (+ 3 'abc))
 ;;;
 ;;; This is also nice :-)
 ;;;
-;;; (clim-debugger:with-debugger
+;;; (clim-debugger:with-debugger ()
 ;;;   (clim-listener:run-listener :new-process t))
 
 ;;;
@@ -61,17 +61,17 @@
 
 (defclass debugger-info ()
   ((the-condition :accessor the-condition
-	          :initarg :the-condition)
+                  :initarg :the-condition)
    (condition-message :accessor condition-message
-		      :initarg  :condition-message)
+                      :initarg  :condition-message)
    (type-of-condition :accessor type-of-condition
-	              :initarg  :type-of-condition)
+                      :initarg  :type-of-condition)
    (condition-extra :accessor condition-extra
-	            :initarg  :condition-extra)
+                    :initarg  :condition-extra)
    (restarts :accessor restarts
-	     :initarg :restarts)
+             :initarg :restarts)
    (backtrace :accessor backtrace
-	      :initarg :backtrace)))
+              :initarg :backtrace)))
 
 (defclass minimized-stack-frame-view (textual-view)())
 (defclass maximized-stack-frame-view (textual-view)())
@@ -84,22 +84,22 @@
 (defclass stack-frame ()
   ((clim-view       :accessor view :initform +minimized-stack-frame-view+)
    (frame-string    :accessor frame-string
-		    :initarg  :frame-string)
+                    :initarg  :frame-string)
    (frame-no        :accessor frame-no
-		    :initarg :frame-no)
+                    :initarg :frame-no)
    (frame-variables :accessor frame-variables
-		    :initarg :frame-variables)))
+                    :initarg :frame-variables)))
 
 (defun compute-backtrace (start end)
   (loop for frame    in   (swank-backend::compute-backtrace start end)
-	for frame-no from 0
-	collect (make-instance
-		 'stack-frame
-		 :frame-string    (let ((*print-pretty* nil))
-				    (with-output-to-string (stream)
-				      (swank-backend::print-frame frame stream)))
-		 :frame-no        frame-no
-		 :frame-variables (swank-backend::frame-locals frame-no))))
+     for frame-no from 0
+     collect (make-instance
+              'stack-frame
+              :frame-string    (let ((*print-pretty* nil))
+                                 (with-output-to-string (stream)
+                                   (swank-backend::print-frame frame stream)))
+              :frame-no        frame-no
+              :frame-variables (swank-backend::frame-locals frame-no))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   CLIM stuff   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -112,12 +112,12 @@
 
 (defun make-debugger-pane ()
   (with-look-and-feel-realization ((frame-manager *application-frame*)
-				   *application-frame*)
+                                   *application-frame*)
     (make-pane 'debugger-pane
-	       :condition-info (the-condition *application-frame*)
-	       :display-function #'display-debugger
-	       :end-of-line-action :allow
-	       :end-of-page-action :scroll)))
+               :condition-info (the-condition *application-frame*)
+               :display-function #'display-debugger
+               :end-of-line-action :allow
+               :end-of-page-action :scroll)))
 
 (define-application-frame clim-debugger ()
   ((condition        :initform nil :accessor the-condition)
@@ -167,19 +167,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-clim-debugger-command (com-more :name "More backtraces"
-					:keystroke :more)
+                                        :keystroke :more)
     ()
   (let ((pane (clim:find-pane-named *application-frame* 'debugger-pane)))
     (setf #1=(shown-frames pane)
-	  (min (+ #1# 10) (length (backtrace (condition-info pane)))))))
+          (min (+ #1# 10) (length (backtrace (condition-info pane)))))))
 
 (define-clim-debugger-command (com-invoke-inspector
-			       :name "Invoke inspector")
+                               :name "Invoke inspector")
     ((obj inspect))
   (clouseau:inspector obj :new-process t))
 
 (define-clim-debugger-command (com-refresh :name "Refresh" :menu t
-					   :keystroke #\r) ()
+                                           :keystroke #\r) ()
   (change-space-requirements (frame-panes *application-frame*)))
 
 (define-clim-debugger-command (com-next :keystroke :next)
@@ -197,14 +197,14 @@
     (setf #1=(active-frame pane) (max (1- #1#) 0))))
 
 (define-clim-debugger-command (com-eval :name "Eval in frame" :menu t
-					:keystroke :eval) ((form clim:string))
+                                        :keystroke :eval) ((form clim:string))
   (let* ((dbg-pane (clim:find-pane-named *application-frame* 'debugger-pane))
          (active-frame (active-frame dbg-pane)))
     (swank:eval-string-in-frame
      form active-frame (swank-backend:frame-package active-frame))))
 
 (define-clim-debugger-command (com-quit :name "Quit" :menu t
-					:keystroke :exit) ()
+                                        :keystroke :exit) ()
   (frame-exit *application-frame*))
 
 (define-clim-debugger-command (com-invoke-restart :name "Invoke restart")
@@ -213,7 +213,7 @@
   (frame-exit *application-frame*))
 
 (define-clim-debugger-command (com-toggle-stack-frame-view
-			       :name "Toggle stack frame view")
+                               :name "Toggle stack frame view")
     ((stack-frame 'stack-frame))
 
   (let ((dbg-pane (clim:find-pane-named *application-frame* 'debugger-pane)))
@@ -265,18 +265,18 @@
   (let ((*standard-output* pane))
     (slim:with-table (pane)
       (slim:row (slim:cell (bold (pane) (princ "Description:")))
-		(slim:cell (princ (condition-message
-				   (condition-info pane)))))
+                (slim:cell (princ (condition-message
+                                   (condition-info pane)))))
       (slim:row (slim:cell (bold (pane) (princ "Condition:")))
-		(slim:cell (with-drawing-options (pane :ink clim:+red+)
-			     (with-output-as-presentation
+                (slim:cell (with-drawing-options (pane :ink clim:+red+)
+                             (with-output-as-presentation
                                  (pane (the-condition (condition-info pane)) 'inspect)
                                (princ (type-of-condition (condition-info pane)))))))
       (when (condition-extra (condition-info pane))
-	(slim:row (slim:cell (bold (pane) (princ "Extra:")))
-		  (slim:cell
-		    (clim:with-text-family (pane :fix)
-		      (format t "~A" (condition-extra (condition-info pane))))))))
+        (slim:row (slim:cell (bold (pane) (princ "Extra:")))
+                  (slim:cell
+                    (clim:with-text-family (pane :fix)
+                      (format t "~A" (condition-extra (condition-info pane))))))))
     (fresh-line)
 
     (with-text-family (pane :sans-serif)
@@ -285,17 +285,17 @@
     (format t " ")
     (slim:with-table (pane :x-spacing 10)
       (do* ((restarts (restarts (condition-info pane)) (cdr restarts))
-	    (r #1=(car restarts) #1#)
-	    (n 0 (1+ n)))
-	   ((null restarts) t)
-	(with-output-as-presentation (pane r 'restart :single-box t)
-	  (slim:row
-	    (bold (pane)
-	      (slim:cell (format t "~A: " n)))
-	    (slim:cell
-	      (clim:with-drawing-options (pane :ink clim:+dark-violet+)
-		(princ (restart-name r))))
-	    (slim:cell (princ r))))))
+            (r #1=(car restarts) #1#)
+            (n 0 (1+ n)))
+           ((null restarts) t)
+        (with-output-as-presentation (pane r 'restart :single-box t)
+          (slim:row
+            (bold (pane)
+              (slim:cell (format t "~A: " n)))
+            (slim:cell
+              (clim:with-drawing-options (pane :ink clim:+dark-violet+)
+                (princ (restart-name r))))
+            (slim:cell (princ r))))))
     (fresh-line)
     (display-backtrace frame pane)
     (change-space-requirements
@@ -312,40 +312,40 @@
   (format pane "   ")
   (slim:with-table (pane)
     (do* ((back (backtrace (condition-info pane)) (cdr back))
-	  (stack-frame #1=(car back) #1#))
-	 ((or (null back)
-	      (= (frame-no stack-frame)
-		 (shown-frames pane)))
-	  (when back
-	    (slim:row (slim:cell)
-		      (slim:cell (bold (pane) (present pane 'more-type))))))
+          (stack-frame #1=(car back) #1#))
+         ((or (null back)
+              (= (frame-no stack-frame)
+                 (shown-frames pane)))
+          (when back
+            (slim:row (slim:cell)
+                      (slim:cell (bold (pane) (present pane 'more-type))))))
       (with-output-as-presentation
-	  (pane stack-frame 'stack-frame :single-box t)
-	(slim:row
-	  (with-drawing-options (pane :ink clim:+gray41+)
-	    (slim:cell (format pane "~A: " (frame-no stack-frame))))
-	  (with-drawing-options (pane :ink (if (= (frame-no stack-frame)
-						  (active-frame pane))
-					       clim:+red4+ clim:+blue4+))
-	    (slim:cell (present stack-frame 'stack-frame
-				:view (view stack-frame)))))))))
+          (pane stack-frame 'stack-frame :single-box t)
+        (slim:row
+          (with-drawing-options (pane :ink clim:+gray41+)
+            (slim:cell (format pane "~A: " (frame-no stack-frame))))
+          (with-drawing-options (pane :ink (if (= (frame-no stack-frame)
+                                                  (active-frame pane))
+                                               clim:+red4+ clim:+blue4+))
+            (slim:cell (present stack-frame 'stack-frame
+                                :view (view stack-frame)))))))))
 
 (defun print-stack-frame-header (object stream)
   (let* ((frame-string (frame-string object))
-	 (new-line-pos (position #\newline frame-string)))
+         (new-line-pos (position #\newline frame-string)))
     (if new-line-pos
-	(format stream "~A ..)" (subseq frame-string 0 new-line-pos))
-	(princ frame-string stream))))
+        (format stream "~A ..)" (subseq frame-string 0 new-line-pos))
+        (princ frame-string stream))))
 
 (define-presentation-method present (object (type stack-frame) stream
-				     (view minimized-stack-frame-view)
-				     &key acceptably for-context-type)
+                                            (view minimized-stack-frame-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (print-stack-frame-header object stream))
 
 (define-presentation-method present (object (type stack-frame) stream
-				     (view maximized-stack-frame-view)
-				     &key acceptably for-context-type)
+                                            (view maximized-stack-frame-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (print-stack-frame-header object stream)
   (fresh-line stream)
@@ -365,20 +365,20 @@
   (fresh-line stream))
 
 (define-presentation-method present (object (type restart) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                            (view textual-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (bold (stream) (format stream "~A" (restart-name object))))
 
 (define-presentation-method present (object (type more-type) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                            (view textual-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (bold (stream) (format stream "--- MORE ---")))
 
 (define-presentation-method present (object (type inspect) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                            (view textual-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (format stream "~A" object))
 
@@ -396,26 +396,31 @@
     (swank-backend::call-with-debugging-environment
      (lambda ()
        (unwind-protect
-	    (setf (the-condition debugger-frame)
-		  (make-instance
-		   'debugger-info
-		   :the-condition        condition
-		   :type-of-condition    (type-of condition)
-		   :condition-message    (swank::safe-condition-message condition)
-		   :condition-extra      (swank::condition-extras       condition)
-		   :restarts             (compute-restarts)
-		   :backtrace (compute-backtrace 0 nil)))
-	 (run-frame-top-level debugger-frame)
-	 (let ((restart (returned-restart debugger-frame)))
-	   (if restart
-	       (let ((*debugger-hook* me-or-my-encapsulation))
-		 (invoke-restart-interactively restart))
-	       (abort))))))))
+            (setf (the-condition debugger-frame)
+                  (make-instance
+                   'debugger-info
+                   :the-condition        condition
+                   :type-of-condition    (type-of condition)
+                   :condition-message    (swank::safe-condition-message condition)
+                   :condition-extra      (swank::condition-extras       condition)
+                   :restarts             (compute-restarts)
+                   :backtrace (compute-backtrace 0 nil)))
+         (run-frame-top-level debugger-frame)
+         (let ((restart (returned-restart debugger-frame)))
+           (if restart
+               (let ((*debugger-hook* me-or-my-encapsulation))
+                 (invoke-restart-interactively restart))
+               (abort))))))))
 
 (defmacro with-debugger (options &body body)
-  (declare (ignore options))
-  `(let ((*debugger-hook* #'debugger)
-	 #+sbcl (sb-ext:*invoke-debugger-hook* #'debugger))
+  (assert (null options) nil "Options should be empty.")
+  `(let ((bt:*default-special-bindings*
+          (list* '(*debugger-hook* . #'debugger)
+                 #+sbcl '(sb-ext:*invoke-debugger-hook* . #'debugger)
+                 bt:*default-special-bindings*))
+         (*debugger-hook* #'debugger)
+         #+sbcl
+         (sb-ext:*invoke-debugger-hook* #'debugger))
      ,@body))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -424,7 +429,7 @@
 
 (defun simple-break ()
   (with-simple-restart  (continue "Continue from interrupt.")
-    (with-debugger
+    (with-debugger ()
       (invoke-debugger
        (make-condition 'simple-error
                        :format-control "Debugger test")))))
