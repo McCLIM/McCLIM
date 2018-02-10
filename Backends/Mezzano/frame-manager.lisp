@@ -109,3 +109,30 @@
 	 :manager fm
 	 :port (port frame)
 	 args))
+
+(defmethod adopt-frame :before ((fm mezzano-frame-manager) (frame menu-frame))
+  (multiple-value-bind (buttons mouse-x mouse-y)
+      (mezzano.gui.compositor::global-mouse-state)
+    (declare (ignore buttons))
+    (setf (slot-value frame 'climi::left) (+ mouse-x 10)
+          (slot-value frame 'climi::top) mouse-y)))
+
+  ;; CLX code for adopt-frame :before
+  ;; Temporary kludge.
+  ;; (when (eq (slot-value frame 'climi::top) nil)
+  ;;   (multiple-value-bind (x y)
+  ;;       (xlib:query-pointer (clx-port-window (port fm)))
+  ;;     (incf x 10)
+  ;;     (setf (slot-value frame 'climi::left) x
+  ;;           (slot-value frame 'climi::top) y)))
+
+
+(defmethod adopt-frame :after ((fm mezzano-frame-manager) (frame menu-frame))
+  ;; TODO not sure what to do here - maybe draw frame should be moved
+  ;; here from create-mezzano-mirror? Then need additional cases:
+  ;; application-frame
+  ;; others?
+
+  ;; (when (sheet-enabled-p (slot-value frame 'top-level-sheet))
+  ;;   (xlib:map-window (sheet-direct-xmirror (slot-value frame 'top-level-sheet))))
+  )
