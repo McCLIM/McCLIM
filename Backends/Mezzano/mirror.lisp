@@ -106,6 +106,7 @@
   ;; (port-set-mirror-region port (slot-value mirror 'xmirror) mirror-region)
   )
 
+;; TODO - is this version of the method needed?
 (defmethod clim-backend:port-set-mirror-region
     ((port mezzano-port) mirror mirror-region)
   (debug-format "clim-backend:port-set-mirror-region ((port mezzano-port) mirror mirror-region)")

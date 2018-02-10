@@ -132,7 +132,8 @@
 			     :structure-notify
 			     :pointer-motion :button-motion))
 
-(defun create-mezzano-mirror (port sheet title width height)
+(defun create-mezzano-mirror (port sheet title width height
+                              &key (close-button-p t) (resizablep t))
   ;; TODO - get frame size from widgets some how currently hardcoded as
   ;; (left-border right-border top-border bottom-border) = (1 1 19 1)
   ;;  in Mezzano/gui/widgets.lisp
@@ -146,8 +147,8 @@
          (frame (make-instance 'mezzano.gui.widgets:frame
                                :framebuffer surface
                                :title title
-                               :close-button-p T
-                               :resizeable T
+                               :close-button-p close-button-p
+                               :resizablep resizablep
                                :damage-function (mezzano.gui.widgets:default-damage-function window)
                                :set-cursor-function (mezzano.gui.widgets:default-cursor-function window))))
     (setf (slot-value mirror 'mcclim-render-internals::dirty-region) nil
@@ -195,20 +196,10 @@
                            (round-coordinate (space-requirement-width q))
                            (round-coordinate (space-requirement-height q)))))
 
-;; TODO - pass frame name info to create-mezzano-mirror
-;; (let ((frame (pane-frame sheet)))
-;;   (frame-pretty-name frame)
-;;   (frame-pretty-name frame)
-
 (defmethod %realize-mirror ((port mezzano-port) (sheet unmanaged-top-level-sheet-pane))
-  (debug-format "%realize-mirror ((port mezzano-port) (sheet unmanaged-top-level-sheet-pane))")
-  (debug-format "    ~S ~S" port sheet)
-  (break)
-  ;; (realize-mirror-aux port sheet
-  ;;       	      :event-mask *event-mask*
-  ;;       	      :override-redirect :on
-  ;;       	      :map nil)
-  )
+  (create-mezzano-mirror port sheet "" 300 300
+                         :close-button-p NIL
+                         :resizablep NIL))
 
 (defmethod destroy-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
   ())
