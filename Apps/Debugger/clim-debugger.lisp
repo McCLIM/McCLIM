@@ -24,23 +24,15 @@
 ;;;   for some reason they don't remember their position when clicking
 ;;;   on a stack-frame or "more".
 ;;;
-;;; - "Eval in frame" is not supported. I don't know of a good way to
-;;;   do this currently.
-;;;
 ;;; - Goto source location is not supported, but I think this could be
 ;;;   done through slime.
 ;;;
-;;; - There need to added keyboard shortcuts. 'q' should exit the
-;;;   debugger with an abort. '0', '1' and so forth should activate
-;;;   the restarts, like Slime. Maybe is should be possible to use the
-;;;   arrow keys as well. Then we have to add a notion of the current
-;;;   frame. Would this be useful?
+;;; - Frames could be navigable with arrow keys as well. How to do that?
 ;;;
-
 
 (defpackage "CLIM-DEBUGGER"
   (:use  "CL-USER" "CLIM" "CLIM-LISP")
-  (:export #:debugger #:with-debugger))
+  (:export #:debugger #:with-debugger #:install-debugger))
 
 (in-package :clim-debugger)
 
@@ -141,11 +133,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   Gestures   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define-gesture-name :more    :keyboard (#\m :meta))
 (define-gesture-name :prev    :keyboard (#\p :meta))
 (define-gesture-name :next    :keyboard (#\n :meta))
-(define-gesture-name :exit    :keyboard (#\q :meta))
-(define-gesture-name :eval    :keyboard (#\e :meta))
+(define-gesture-name :more    :keyboard (#\m))
+(define-gesture-name :exit    :keyboard (#\q))
+(define-gesture-name :eval    :keyboard (#\e))
 (define-gesture-name :toggle  :keyboard #\tab)
 
 ;;; restart keyboard shortcuts
@@ -153,7 +145,7 @@
              (let* ((char (aref (format nil "~A" x) 0))
                     (name (alexandria:symbolicate "INVOKE-RESTART-" char)))
                `(progn
-                  (define-clim-debugger-command (,name :keystroke (,char :meta)) ()
+                  (define-clim-debugger-command (,name :keystroke (,char)) ()
                     (let* ((pane (clim:find-pane-named
                                   *application-frame* 'debugger-pane))
                            (restart (nth ,x (restarts (condition-info pane)))))
@@ -200,8 +192,9 @@
                                         :keystroke :eval) ((form clim:string))
   (let* ((dbg-pane (clim:find-pane-named *application-frame* 'debugger-pane))
          (active-frame (active-frame dbg-pane)))
-    (swank:eval-string-in-frame
-     form active-frame (swank-backend:frame-package active-frame))))
+    (format *pointer-documentation-output*
+            (swank:eval-string-in-frame
+             form active-frame (swank-backend:frame-package active-frame)))))
 
 (define-clim-debugger-command (com-quit :name "Quit" :menu t
                                         :keystroke :exit) ()
@@ -328,7 +321,7 @@
                                                   (active-frame pane))
                                                clim:+red4+ clim:+blue4+))
             (slim:cell (present stack-frame 'stack-frame
-                                :view (view stack-frame)))))))))
+                                :view (view stack-frame) :single-box t))))))))
 
 (defun print-stack-frame-header (object stream)
   (let* ((frame-string (frame-string object))
@@ -361,7 +354,7 @@
              do (slim:row
                   (slim:cell (princ n))
                   (slim:cell (princ "="))
-                  (slim:cell (present val 'inspect)))))))
+                  (slim:cell (present val 'inspect :single-box t)))))))
   (fresh-line stream))
 
 (define-presentation-method present (object (type restart) stream
@@ -412,18 +405,32 @@
                  (invoke-restart-interactively restart))
                (abort))))))))
 
+
+(defvar *debugger-bindings*
+  `((*debugger-hook*                      . #'debugger)
+    #+abcl (sys::*invoke-debugger-hook*   . #'debugger)
+    #+ccl  (ccl:*break-hook*              . #'debugger)
+    #+ecl  (ext:*invoke-debugger-hook*    . #'debugger)
+    #+sbcl (sb-ext:*invoke-debugger-hook* . #'debugger)
+    (bt:*default-special-bindings* . *debugger-bindings*)
+    ,@bt:*default-special-bindings*))
+
 (defmacro with-debugger (options &body body)
   (assert (null options) nil "Options should be empty.")
-  `(let ((bt:*default-special-bindings*
-          (list* '(*debugger-hook* . #'debugger)
-                 #+sbcl '(sb-ext:*invoke-debugger-hook* . #'debugger)
-                 bt:*default-special-bindings*))
+  `(let ((bt:*default-special-bindings* *debugger-bindings*)
          (*debugger-hook* #'debugger)
          #+abcl (sys::*invoke-debugger-hook* #'debugger)
          #+ccl (ccl:*break-hook* #'debugger)
          #+ecl (ext:*invoke-debugger-hook* #'debugger)
          #+sbcl (sb-ext:*invoke-debugger-hook* #'debugger))
      ,@body))
+
+(defun install-debugger ()
+  (setf *debugger-hook* #'debugger)
+  #+abcl (setf sys::*invoke-debugger-hook*   #'debugger)
+  #+ccl  (setf ccl:*break-hook*              #'debugger)
+  #+ecl  (setf ext:*invoke-debugger-hook*    #'debugger)
+  #+sbcl (setf sb-ext:*invoke-debugger-hook* #'debugger))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   For testing   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

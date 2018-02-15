@@ -28,7 +28,7 @@ To get up and running quickly with Debugger:
 @item
 Run simple test condition:
 
-  @t{(clim-debugger:with-debugger (error "test"))}
+  @t{(clim-debugger:with-debugger () (error "test"))}
 @end enumerate
 
 Debugger is highly inspired by Slime and uses Swank to gain
@@ -47,34 +47,41 @@ frame.
 Warning: these key accelerators may change in the future.
 
 @table @samp
-@item M-m
- Show more frames
 @item M-p
  Mark previous frame active
 @item M-n
  Mark next frame active
-@item M-e
+@item m
+ Show more frames
+@item e
  Eval in active frame
 @item TAB
  Toggle active frame details
-@item M-[0-9]
+@item [0-9]
  Invoke nth restart
-@item M-q
+@item q
  Quit debugger
 @end table
 
 @node Debugger API
 @subsection Debugger API
 
-@deffn {Function} {debugger} condition me-or-my-encapsulation
+@deffn {function} {debugger} condition me-or-my-encapsulation
 
 Starts debugger with supplied condition. Second argument should be
 supplied by an underlying implementation allowing to encapsulate or
 supply different debugger for recursive debugger calls.
 @end deffn
 
-@deffn {macro} {with-debugger} &body body
+@deffn {macro} {with-debugger} options &body body
 
 Wraps the code in @t{body} to invoke clim debugger when condition is
-signalled (binds @t{*debugger-hook*} to @t{#'debugger}).
+signalled (binds @t{*debugger-hook*} to @t{#'debugger}). Bindings are
+inherited by new threads. @t{options} are not used at the moment.
+@end deffn
+
+@deffn {function} {install-debugger}
+
+Installs @t{clim-debugger} globally (no need to wrap body in
+@t{with-debugger}.
 @end deffn
