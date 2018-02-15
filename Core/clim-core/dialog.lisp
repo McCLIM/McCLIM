@@ -151,12 +151,13 @@ accept of this query")))
 (locally
     (declare #+sbcl (sb-ext:muffle-conditions style-warning))
   (defmacro with-stream-in-own-window ((&optional (stream '*query-io*)
-                                                  &rest window-args
-                                                  &key
-                                                  label foreground background)
-                                                    (&rest further-streams)
-                                        &rest body)
-    (declare (ignorable label foreground background))
+					&rest window-args
+					&key
+					  label foreground background
+					  height width)
+				       (&rest further-streams)
+				       &rest body)
+    (declare (ignorable label foreground background height width))
     `(let* ((,stream (open-window-stream :input-buffer
                                          (climi::frame-event-queue
                                           *application-frame*)
@@ -203,6 +204,8 @@ accept of this query")))
                (true-form `(with-stream-in-own-window
                                (,stream
                                 :label ,label
+				:height ,height
+				:width ,width
                                 ,@(and foregroundp `(:foreground ,foreground))
                                 ,@(and backgroundp `(:background ,background)))
                              (*standard-input* *standard-output*)
@@ -213,8 +216,7 @@ accept of this query")))
                 ((eq own-window nil) return-form)
                 (t `(if ,own-window
                         ,true-form
-                        ,return-form)))))
-      )))
+                        ,return-form))))))))
 
 (defun invoke-accepting-values
     (stream body
