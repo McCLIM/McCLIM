@@ -175,6 +175,7 @@
   (get-frame-pane frame 'interactor))
 
 (defun run-listener (&key (new-process nil)
+                          (debugger t)
                           (width 790)
                           (height 550)
                           port
@@ -188,7 +189,10 @@
                                        :height height)))
     (flet ((run () 
              (let ((*package* (find-package package)))
-               (unwind-protect (run-frame-top-level frame)
+               (unwind-protect
+                    (if debugger
+                        (with-debugger () (run-frame-top-level frame))
+                        (run-frame-top-level frame))
                  (disown-frame fm frame)))))
       (if new-process
           (values (clim-sys:make-process #'run :name process-name)
