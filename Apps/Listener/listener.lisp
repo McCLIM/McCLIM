@@ -191,7 +191,7 @@
              (let ((*package* (find-package package)))
                (unwind-protect
                     (if debugger
-                        (with-debugger () (run-frame-top-level frame))
+                        (clim-debugger:with-debugger () (run-frame-top-level frame))
                         (run-frame-top-level frame))
                  (disown-frame fm frame)))))
       (if new-process
