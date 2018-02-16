@@ -1,7 +1,8 @@
 (defsystem "mcclim-raster-image"
   :depends-on ("clim-basic" ; for CLIMB:FILE-DESTINATION, CLIMB:REGISTER-OUTPUT-DESTINATION-TYPE
                "mcclim-render"
-               "mcclim-backend-common")
+               "mcclim-backend-common"
+	       "mezzano")
   :serial t
   :components ((:file "package")
                (:file "graft")

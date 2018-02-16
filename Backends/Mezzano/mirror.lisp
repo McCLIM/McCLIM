@@ -29,32 +29,30 @@
 (defmethod image-mirror-to-mezzano ((sheet image-mirror-mixin))
   )
 
-(defun image-mirror-put (mez-window fwidth fheight dirty-r)
+(defun image-mirror-put (mez-window dx dy width height dirty-r)
   (when mez-window
     ;; (debug-format "image-mirror-put ~S ~S ~S" mez-window width height)
     (mezzano.gui.compositor:damage-window
      mez-window
-     0
-     0
-     fwidth
-     fheight)
+     dx
+     dy
+     width
+     height)
     ;; (map-over-region-set-regions
     ;;  #'(lambda (region)
-    ;;      TODO must take into account interior offset (dx dy) and
-    ;;      interior size (width height)
     ;;      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
     ;;          (region-intersection region (make-rectangle* 0 0 width height))
     ;;        (let ((width (round (- max-x min-x)))
     ;;              (height (round (- max-y min-y))))
-    ;;          (debug-format "image-mirror-put ~S ~S ~S ~S ~S"
-    ;;                        mez-window
-    ;;                        (max 0 (- width (min 0 (- min-x))))
-    ;;                        (max 0 (- height (min 0 (- min-y))))
-    ;;                        width height)
+    ;;          ;; (debug-format "image-mirror-put ~S ~S ~S ~S ~S"
+    ;;          ;;               mez-window
+    ;;          ;;               (max 0 (- width (min 0 (- min-x))))
+    ;;          ;;               (max 0 (- height (min 0 (- min-y))))
+    ;;          ;;               width height)
     ;;          (mezzano.gui.compositor:damage-window
     ;;           mez-window
-    ;;           (max 0 (- width (min 0 (- min-x))))
-    ;;           (max 0 (- height (min 0 (- min-y))))
+    ;;           (+ dx (max 0 (- width (min 0 (- min-x)))))
+    ;;           (+ dy (max 0 (- height (min 0 (- min-y)))))
     ;;           width
     ;;           height))))
     ;;  dirty-r)
@@ -89,7 +87,8 @@
                mcclim-render-internals::dirty-region
                mcclim-render-internals::finished-output
                MCCLIM-RENDER-INTERNALS::updating-p
-               fwidth fheight
+               dx dy
+               width height
                mez-window
                mez-dirty-region skip-count) sheet
     (when (not (region-equal mez-dirty-region +nowhere+))
@@ -97,7 +96,7 @@
         (climi::with-lock-held (mcclim-render-internals::image-lock)
           (setf reg mez-dirty-region)
           (setf mez-dirty-region +nowhere+))
-        (image-mirror-put mez-window fwidth fheight reg)))))
+        (image-mirror-put mez-window dx dy width height reg)))))
 
 (defmethod clim-backend:port-set-mirror-region
     ((port mezzano-port) (mirror mezzano-mirror) mirror-region)
