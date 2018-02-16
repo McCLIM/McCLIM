@@ -155,22 +155,20 @@ pointer-exit and grab-pointer for non mirrored sheets"))
                  (lis nil))
                 ((or (null s) (climi::graftp s) (eq s sheet-t)) lis)
               (push s lis)))
-    ;;(format *debug-io* "enter ~A ~%" s)
     (let ((new-event (climi::shallow-copy-object event)))
       ;; should we change also `climi::x' and `climi::y'?
       (setf (slot-value new-event 'climi::sheet) s)
+      (change-class new-event 'pointer-enter-event)
       (dispatch-event s new-event))))
 
 (defun distribute-exit-events (sheet-b sheet-t event)
   (when (and sheet-t sheet-b)
     (do ((s sheet-b (sheet-parent s)))
         ((or (null s) (climi::graftp s) (eq s sheet-t)))
-      ;; (format *debug-io* "exit ~A ~A ~A~%"
-      ;;         s
-      ;;         (slot-value event 'climi::x)
-      ;;         (slot-value event 'climi::y))
       (let ((new-event (climi::shallow-copy-object event)))
+        ;; should we change also `climi::x' and `climi::y'?
         (setf (slot-value new-event 'climi::sheet) s)
+        (change-class new-event 'pointer-exit-event)
         (dispatch-event s new-event)))))
 
 
