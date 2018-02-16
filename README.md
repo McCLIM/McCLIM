@@ -3,7 +3,7 @@
 <img src="https://common-lisp.net/project/mcclim/img/mcclim.png"
 alt="McCLIM">
 </a> 
-<br> McCLIM 0.9.7-dev post-"St. George's Day"
+<br> McCLIM 0.9.7 "Imbolc"
 <br> </h1>
 
 McCLIM, an implementation of the "[Common Lisp Interface Manager CLIM
