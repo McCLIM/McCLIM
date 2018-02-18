@@ -85,24 +85,12 @@
                 #:resize-request-event
                 #:resize-event
                 #:quit-event
+                #:window-x
+                #:window-y
+                )
+
+    (:import-from :mezzano.gui.widgets
+                #:in-frame-header-p
+                #:in-frame-border-p
                 )
   )
-
-;;; TODO removed from CLX-fb version of package - probably need to
-;;; define these symbols somewhere for Mezzano
-
-   ;; (:import-from :clim-clx
-   ;;      	 #:CLX-PORT-DISPLAY
-   ;;      	 #:clx-medium
-   ;;      	 #:initialize-clx
-   ;;      	#:design-gcontext
-   ;;      	#:medium-draw-rectangle-using-ink*
-   ;;      	#:REGION->CLIPPING-VALUES
-   ;;      	#:ROUND-COORDINATE
-   ;;      	#:with-clx-graphics
-   ;;      	#:clx-port-screen
-   ;;      	#:clx-graft
-   ;;      	#:clx-port-window
-   ;;      	#:sheet-xmirror
-   ;;      	#:sheet-direct-xmirror
-   ;;      	)

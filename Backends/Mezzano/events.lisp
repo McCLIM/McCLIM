@@ -4,9 +4,14 @@
 (defparameter *minimum-width* 100)
 (defparameter *minimum-height* 100)
 
+;; These x y variables are always in mcclim "units", that is they
+;; always apply to the *last-mouse-sheet*, not the mezzano frame
 (defvar *last-mouse-x* 0)
 (defvar *last-mouse-y* 0)
+(defvar *last-graft-x* 0)
+(defvar *last-graft-y* 0)
 (defvar *last-mouse-sheet* nil)
+
 (defvar *last-modifier-state* 0)
 
 (defvar *char->name* (make-hash-table :test #'eql))
@@ -66,8 +71,8 @@
                     :key-character char
                     :x *last-mouse-x*
                     :y *last-mouse-y*
-                    :graft-x 0
-                    :graft-y 0
+                    :graft-x *last-graft-x*
+                    :graft-y *last-graft-y*
                     :sheet *current-focus*
                     :modifier-state modifier-state)
      mcclim-fifo
@@ -94,8 +99,8 @@
                     :pointer 0
                     :x *last-mouse-x*
                     :y *last-mouse-y*
-                    :graft-x 0
-                    :graft-y 0
+                    :graft-x *last-graft-x*
+                    :graft-y *last-graft-y*
                     :sheet sheet
                     :modifier-state *last-modifier-state*
                     :timestamp time)
@@ -116,8 +121,8 @@
                     :button buttons
                     :x *last-mouse-x*
                     :y *last-mouse-y*
-                    :graft-x 0
-                    :graft-y 0
+                    :graft-x *last-graft-x*
+                    :graft-y *last-graft-y*
                     :sheet sheet
                     :modifier-state *last-modifier-state*
                     :timestamp time)
@@ -133,8 +138,8 @@
                    :pointer 0
                    :x *last-mouse-x*
                    :y *last-mouse-y*
-                   :graft-x 0
-                   :graft-y 0
+                   :graft-x *last-graft-x*
+                   :graft-y *last-graft-y*
                    :sheet sheet
                    :modifier-state *last-modifier-state*
                    :timestamp time)
@@ -150,8 +155,8 @@
                     :pointer 0
                     :x *last-mouse-x*
                     :y *last-mouse-y*
-                    :graft-x 0
-                    :graft-y 0
+                    :graft-x *last-graft-x*
+                    :graft-y *last-graft-y*
                     :sheet sheet
                     :modifier-state *last-modifier-state*
                     :timestamp time)
@@ -184,21 +189,19 @@
          (sheet      (port-lookup-sheet *port* mez-window)))
     (when mez-mirror
       (with-slots (mez-frame dx dy width height) mez-mirror
+        (setf *last-mouse-x* (- mouse-x dx)
+              *last-mouse-y* (- mouse-y dy)
+              *last-graft-x* (+ mouse-x (window-x mez-window))
+              *last-graft-y* (+ mouse-y (window-y mez-window)))
         (cond ((or (null mez-frame)
-                   (mezzano.gui.widgets::in-frame-header-p mez-frame mouse-x mouse-y)
-                   (mezzano.gui.widgets::in-frame-border-p mez-frame mouse-x mouse-y))
-               ;; (<= mouse-x dx) (>= mouse-x width)
-               ;; (<= mouse-y dy) (>= mouse-y height))
-               (setf *last-mouse-x* mouse-x
-                     *last-mouse-y* mouse-y)
+                   (in-frame-header-p mez-frame mouse-x mouse-y)
+                   (in-frame-border-p mez-frame mouse-x mouse-y))
                (when *last-mouse-sheet*
                  (mouse-exit-event mcclim-fifo *last-mouse-sheet* event)
                  (setf *last-mouse-sheet* nil))
                (frame-mouse-event mcclim-fifo sheet mez-frame event))
 
               ((= (mezzano.gui.compositor::mouse-button-change event) 0)
-               (setf *last-mouse-x* (- mouse-x dx)
-                     *last-mouse-y* (- mouse-y dy))
                (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
                         :default)
                (cond ((eq sheet *last-mouse-sheet*)
@@ -209,8 +212,6 @@
                       (mouse-enter-event mcclim-fifo sheet event)
                       (setf *last-mouse-sheet* sheet))))
               (T
-               (setf *last-mouse-x* (- mouse-x dx)
-                     *last-mouse-y* (- mouse-y dy))
                (unless (eq sheet *last-mouse-sheet*)
                  (when *last-mouse-sheet*
                    (mouse-exit-event mcclim-fifo *last-mouse-sheet* event))
@@ -261,34 +262,34 @@
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
          (sheet (mez-window->sheet mez-window))
-         (old-width (mezzano.gui.compositor:width mez-window))
-         (old-height (mezzano.gui.compositor:height mez-window))
-         (new-width (max *minimum-width* (mezzano.gui.compositor:width event)))
-         (new-height (max *minimum-height* (mezzano.gui.compositor:height event))))
+         (fwidth (max *minimum-width* (mezzano.gui.compositor:width event)))
+         (fheight (max *minimum-height* (mezzano.gui.compositor:height event))))
     (when (and mez-frame
-               (or (not (eql old-width new-width))
-                   (not (eql old-height new-height))))
-      (let* ((surface (mezzano.gui:make-surface new-width new-height))
-             (pixels (mezzano.gui::surface-pixels surface)))
+               (or (/= fwidth (mezzano.gui.compositor:width mez-window))
+                   (/= fheight (mezzano.gui.compositor:height mez-window))))
+      (let* ((surface (mezzano.gui:make-surface fwidth fheight))
+             (pixels (mezzano.gui::surface-pixels surface))
+             (width (- fwidth 2))
+             (height(- fheight 20)))
         (mezzano.gui.widgets:resize-frame mez-frame surface)
         (mezzano.gui.compositor:resize-window
          mez-window surface
          :origin (mezzano.gui.compositor:resize-origin event))
 
         (setf (slot-value mez-mirror 'mez-pixels) pixels
-              (slot-value mez-mirror 'fwidth) new-width
-              (slot-value mez-mirror 'fheight) new-height
-              (slot-value mez-mirror 'width) (- new-width 2)
-              (slot-value mez-mirror 'height) (- new-height 20))
+              (slot-value mez-mirror 'fwidth) fwidth
+              (slot-value mez-mirror 'fheight) fheight
+              (slot-value mez-mirror 'width) width
+              (slot-value mez-mirror 'height) height)
 
         (mezzano.supervisor:fifo-push
          (make-instance 'window-configuration-event
                         :sheet sheet
                         :region nil
-                        :width new-width
-                        :height new-height
-                        :x (mezzano.gui.compositor::window-x mez-window)
-                        :y (mezzano.gui.compositor::window-y mez-window))
+                        :width width
+                        :height height
+                        :x (window-x mez-window)
+                        :y (window-y mez-window))
          mcclim-fifo
          nil)
         ))))
