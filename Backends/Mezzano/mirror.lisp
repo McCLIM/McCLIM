@@ -18,11 +18,19 @@
    (mez-dirty-region :initform +nowhere+)
    (skip-count :initform 0)))
 
-(defmethod %create-mirror-image :after ((sheet mezzano-mirror) width height)
-  ;; change mirror image size?
-  (debug-format "%create-mirror-image :after ((sheet mezzano-mirror) width height)")
-  (debug-format "    ~S ~S ~S" sheet width height)
-  )
+(defmethod %create-mirror-image :after ((sheet mezzano-mirror) new-width new-height)
+  (with-slots (fwidth fheight width height mez-frame mez-window) sheet
+    (when (or (/= width new-width) (/= height new-height))
+      (setf fwidth (+ new-width 2)
+            fheight (+ new-height 20)
+            width new-width
+            height new-height)
+      (let* ((surface (mezzano.gui:make-surface fwidth fheight))
+             (pixels (mezzano.gui::surface-pixels surface)))
+        (mezzano.gui.widgets:resize-frame mez-frame surface)
+        (mezzano.gui.compositor:resize-window mez-window surface)
+        (setf (slot-value sheet 'mez-pixels) pixels)
+        (mezzano.gui.widgets:draw-frame mez-frame)))))
 
 (defgeneric image-mirror-to-mezzano (sheet))
 
