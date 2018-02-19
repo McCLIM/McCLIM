@@ -4,21 +4,6 @@
                                         standard-single-mirrored-sheet-mixin)
   ())
 
-(defmethod sheet-direct-xmirror ((sheet mezzano-mirrored-sheet-mixin))
-  (when (sheet-direct-mirror sheet)
-    (sheet-direct-xmirror (sheet-direct-mirror sheet))))
-
-(defmethod sheet-direct-xmirror ((mirror mezzano-mirror))
-  (debug-format "sheet-direct-xmirror ((mirror mezzano-mirror))")
-  (debug-format "    ~S" mirror)
-  (break)
-  ;; (with-slots (xmirror) mirror
-  ;;   xmirror)
-  )
-
-(defmethod sheet-direct-xmirror ((mirror image-mirror-mixin))
-    nil)
-
 ;;;
 ;;; Updating
 ;;;
@@ -49,6 +34,3 @@
 
 (defclass mezzano-pixmap (image-pixmap-mixin permanent-medium-sheet-output-mixin basic-pane)
   ())
-
-(defmethod sheet-direct-xmirror ((sheet mezzano-pixmap))
-  nil)

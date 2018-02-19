@@ -35,7 +35,6 @@
 
 (defclass mezzano-port (standard-handled-event-port-mixin
 		       render-port-mixin
-;;		       clim-xcommon:keysym-port-mixin
                        standard-port)
   ((pointer            :reader   port-pointer)
    (window             :accessor mezzano-port-window)
@@ -52,9 +51,6 @@
 (defmethod port-lookup-sheet ((port mezzano-port)
                               (mez-window mezzano.gui.compositor::window))
   (gethash mez-window (slot-value port 'mez-window->sheet)))
-
-(defun mez-window->sheet (mez-window)
-  (gethash mez-window (slot-value *port* 'mez-window->sheet)))
 
 (defmethod port-lookup-mirror ((port mezzano-port)
                                (mez-window mezzano.gui.compositor::window))
@@ -110,6 +106,9 @@
         ))
 
 (defmethod destroy-port :before ((port mezzano-port))
+  ;; TODO - there's more to clean up here:
+  ;; close any mez-windows/mez-frames
+  ;; destroy the associated frame-manager
   (bt:destroy-thread (mezzano-display-thread port))
   (bt:destroy-thread (mezzano-event-thread port)))
 
@@ -123,14 +122,6 @@
     (focus (port mezzano-port) frame)
   (setf *current-focus* focus)
   (setf (frame-properties frame 'focus) focus))
-
-(defparameter *event-mask* '(:exposure
-			     :key-press :key-release
-			     :button-press :button-release
-			     :owner-grab-button
-			     :enter-window :leave-window
-			     :structure-notify
-			     :pointer-motion :button-motion))
 
 (defun create-mezzano-mirror (port sheet title width height
                               &key (close-button-p t) (resizablep t))
@@ -165,12 +156,10 @@
     (setf (gethash window (slot-value port 'mez-window->sheet)) sheet
           (gethash window (slot-value port 'mez-window->mirror)) mirror)
     (mezzano.gui.widgets:draw-frame frame)
+    ;; TODO - this should only be the interior of the window
     (mezzano.gui.compositor:damage-window window 0 0 fwidth fheight)))
 
 (defmethod realize-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
-  (debug-format "realize-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))")
-  (debug-format "    ~S ~S" port sheet)
-  ;; (break)
   (%realize-mirror port sheet)
   (port-lookup-mirror port sheet)
   )
@@ -182,10 +171,6 @@
   (debug-format "%realize-mirror ((port mezzano-port) (sheet basic-sheet))")
   (debug-format "    ~S ~S" port sheet)
   (break)
-  ;; (realize-mirror-aux port sheet
-  ;;       	      :event-mask *event-mask*
-  ;;                     :border-width 0
-  ;;                     :map (sheet-enabled-p sheet))
   )
 
 (defmethod %realize-mirror ((port mezzano-port) (sheet top-level-sheet-pane))
@@ -298,14 +283,12 @@
 
 (defmethod set-sheet-pointer-cursor
     ((port mezzano-port) (sheet mirrored-sheet-mixin) cursor)
-  (debug-format "set-sheet-pointer-cursor ((port mezzano-port) (sheet mirrored-sheet-mixin) cursor)")
-  (debug-format "    ~S ~S ~S" port sheet cursor)
-  ;; TODO - write this function
-  ;; (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port)))
-  ;;       (mirror (sheet-direct-xmirror sheet)))
-  ;;   (when (and cursor
-  ;;              (typep mirror 'xlib:window))
-  ;;     (setf (xlib:window-cursor (sheet-direct-xmirror sheet)) cursor)))
+  ;; TODO - do we need to do anything here - or is the pointer cursor
+  ;; completely managed by compositor?
+  (unless (eq cursor :default)
+    (debug-format "set-sheet-pointer-cursor ((port mezzano-port) (sheet mirrored-sheet-mixin) cursor)")
+    (debug-format "    ~S ~S ~S" port sheet cursor)
+    (break))
   )
 
 (defmethod mcclim-render-internals::%set-image-region (mirror region)

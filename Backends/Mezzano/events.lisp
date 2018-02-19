@@ -208,7 +208,7 @@
   (let* ((mez-window (mezzano.gui.compositor::window event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
-         (sheet (mez-window->sheet mez-window))
+         (sheet (port-lookup-sheet *port* mez-window))
          (focus (and sheet (frame-query-io (pane-frame sheet)))))
     (when mez-frame
       (setf (mezzano.gui.widgets:activep mez-frame)
@@ -236,7 +236,7 @@
   (let* ((mez-window (mezzano.gui.compositor::window event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
-         (sheet (mez-window->sheet mez-window))
+         (sheet (port-lookup-sheet *port* mez-window))
          (fwidth (max *minimum-width* (mezzano.gui.compositor:width event)))
          (fheight (max *minimum-height* (mezzano.gui.compositor:height event))))
     (when (and mez-frame
