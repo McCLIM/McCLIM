@@ -55,12 +55,6 @@
     (setf *last-modifier-state* modifier)))
 
 (defmethod mez-event->mcclim-event (mcclim-fifo (event key-event))
-  ;; (debug-format "key-event")
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::key-scancode event))
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::key-releasep event))
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::key-key event))
-  ;; (debug-format "    ~S"
-  ;;               (mezzano.gui.compositor::key-modifier-state event))
   (let* ((releasep (mezzano.gui.compositor::key-releasep event))
          (char (mezzano.gui.compositor::key-key event))
          (name (get-name char))
@@ -130,8 +124,6 @@
      nil)))
 
 (defun mouse-exit-event (mcclim-fifo sheet event)
-  ;; (debug-format "mouse-exit-event")
-  ;; (debug-format "    ~S" sheet)
   (let ((time 0))
     (mezzano.supervisor:fifo-push
     (make-instance 'pointer-exit-event
@@ -147,8 +139,6 @@
     nil)))
 
 (defun mouse-enter-event (mcclim-fifo sheet event)
-  ;; (debug-format "mouse-enter-event")
-  ;; (debug-format "    ~S" sheet)
   (let ((time 0))
     (mezzano.supervisor:fifo-push
      (make-instance 'pointer-enter-event
@@ -167,21 +157,12 @@
   (handler-case
       (mezzano.gui.widgets:frame-mouse-event mez-frame event)
     (mezzano.gui.widgets:close-button-clicked ()
-      (debug-format "close button clicked ~S" sheet)
       (mezzano.supervisor:fifo-push
        (make-instance 'window-manager-delete-event :sheet sheet)
        mcclim-fifo
        nil))))
 
 (defmethod mez-event->mcclim-event (mcclim-fifo (event mouse-event))
-  ;; (debug-format "mouse-event")
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::mouse-button-state event))
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::mouse-button-change event))
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::mouse-x-position event))
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::mouse-y-position event))
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::mouse-x-motion event))
-  ;; (debug-format "    ~S" (mezzano.gui.compositor::mouse-y-motion event))
-
   (let* ((mez-window (mezzano.gui.compositor::window event))
          (mouse-x    (mezzano.gui.compositor::mouse-x-position event))
          (mouse-y    (mezzano.gui.compositor::mouse-y-position event))
@@ -229,11 +210,6 @@
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
          (sheet (mez-window->sheet mez-window))
          (focus (and sheet (frame-query-io (pane-frame sheet)))))
-    ;; (debug-format "window-activation-event - not implemented")
-    ;; (debug-format "    ~S" mez-window)
-    ;; (debug-format "    ~S" (mezzano.gui.compositor::state event))
-    ;; (debug-format "    ~S" sheet)
-
     (when mez-frame
       (setf (mezzano.gui.widgets:activep mez-frame)
             (mezzano.gui.compositor::state event))
@@ -241,7 +217,6 @@
     (setf *current-focus* focus)))
 
 (defmethod mez-event->mcclim-event (mcclim-fifo (event quit-event))
-  ;; (debug-format "quit-event")
   (mezzano.supervisor:fifo-push
    (make-instance 'window-destroy-event
                   :sheet *current-focus*
