@@ -684,7 +684,8 @@ if you are interested in fixing this."))
    (mapcan 
     (lambda (class) 
       (copy-list (x-specializer-direct-generic-functions class)))
-    (remove-ignorable-classes (c2mop:class-precedence-list class)))))
+    (remove-ignorable-classes (c2mop:class-precedence-list
+                               (c2mop:ensure-finalized class))))))
 
 (defun slot-name-sortp (a b)
   (flet ((slot-name-symbol (x)
