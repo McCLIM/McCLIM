@@ -17,6 +17,9 @@ experimentation. Present features include:
   and mime.types files)"
   :depends-on (#:mcclim #:clim-debugger #:cl-fad #+sbcl #:sb-posix)
   :serial t
+  :build-operation asdf:program-op
+  :build-pathname "clim-listener"
+  :entry-point "clim-listener:run-listener"
   :components ((:file "package")
                (:file "appearance")
                (:file "util")
