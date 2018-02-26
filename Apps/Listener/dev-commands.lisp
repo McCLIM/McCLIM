@@ -237,9 +237,11 @@
 (define-command (com-run :name "Run" :command-table application-commands :menu t)
   ((program 'string :prompt "Command")
    (args '(sequence string) :default '("") :prompt "Arguments"))
-  (if (zerop (length (car args)))
-      (uiop:run-program program :output *standard-output* :input nil)
-      (uiop:run-program `(,program ,@args) :output *standard-input* :input nil)))
+  (let ((output-stream *standard-output*))
+    (with-text-family (output-stream :fix)
+      (if (zerop (length (car args)))
+	  (uiop:run-program program :output output-stream :input nil)
+	  (uiop:run-program `(,program ,@args) :output output-stream :input nil)))))
 
 ;; I could replace this command with a keyword to COM-RUN..
 (define-command (com-background-run :name "Background Run"
