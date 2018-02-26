@@ -234,20 +234,22 @@
 ;; McCLIM fixme: Shouldn't we be able to activate before the (args) prompt
 ;; since defaults are defined?
 ;; FIXME: Disabled input, as it usually seems to hang.
-(define-command (com-run :name "Run" :command-table application-commands :menu t
-			 :provide-output-destination-keyword t)
+(define-command (com-run :name "Run" :command-table application-commands :menu t)
   ((program 'string :prompt "Command")
-   (args '(sequence string) :default nil :prompt "Arguments"))
-  (run-program program args :wait t :input nil))
+   (args '(sequence string) :default '("") :prompt "Arguments"))
+  (if (zerop (length (car args)))
+      (uiop:run-program program :output *standard-output* :input nil)
+      (uiop:run-program `(,program ,@args) :output *standard-input* :input nil)))
 
 ;; I could replace this command with a keyword to COM-RUN..
 (define-command (com-background-run :name "Background Run"
                                     :menu t
-				    :command-table application-commands
-				    :provide-output-destination-keyword t)
+				    :command-table application-commands)
   ((program 'string :prompt "Command")
    (args '(sequence string) :default nil :prompt "Args"))
-  (run-program program args :wait nil :output nil :input nil))
+  (if (zerop (length (car args)))
+      (uiop:launch-program program)
+      (uiop:launch-program `(,program ,@args))))
 
 (define-command (com-reload-mime-database :name "Reload Mime Database"
                                           :menu t
@@ -256,7 +258,6 @@
   (progn
     (load-mime-types)
     (load-mailcaps)))
-
 
 (add-menu-item-to-command-table (find-command-table 'application-commands) nil :divider nil)
 
