@@ -242,7 +242,7 @@
       (if (zerop (length (car args)))
 	  (progn (heading "Runnig \"~A\"~%" program)
 		 (uiop:run-program program :output output-stream :input nil))
-	  (progn (heading "Running \"~A ~{~A~}\"~%" program args)
+	  (progn (heading "Running \"~A ~{~A ~}\"~%" program args)
 		 (uiop:run-program `(,program ,@args) :output output-stream :input nil))))))
 
 ;; I could replace this command with a keyword to COM-RUN..
