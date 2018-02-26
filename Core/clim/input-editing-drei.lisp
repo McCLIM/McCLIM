@@ -196,9 +196,11 @@ activated with GESTURE"))
 	      (setf quoted-sublists (%quote-sublists object))))
 	  (when (null quoted-sublists)
 	    (setf quoted-sublists object))
-          (presentation-replace-input stream quoted-sublists type (stream-default-view stream)
-                                      :allow-other-keys t
-                                      :accept-result nil))))))
+	  (let ((*print-case* :downcase))
+	    (presentation-replace-input stream quoted-sublists type
+					(stream-default-view stream)
+					:allow-other-keys t
+					:accept-result nil)))))))
 
 (defun history-yank-previous (stream input-buffer gesture numeric-argument)
   (declare (ignore input-buffer gesture numeric-argument))
@@ -215,9 +217,11 @@ activated with GESTURE"))
 	      (setf quoted-sublists (%quote-sublists object))))
 	  (when (null quoted-sublists)
 	    (setf quoted-sublists object))
-          (presentation-replace-input stream quoted-sublists type (stream-default-view stream)
-                                      :allow-other-keys t
-                                      :accept-result nil))))))
+	  (let ((*print-case* :downcase))
+	    (presentation-replace-input stream quoted-sublists type
+					(stream-default-view stream)
+					:allow-other-keys t
+					:accept-result nil)))))))
 
 (add-input-editor-command '((#\n :meta)) 'history-yank-next)
 
