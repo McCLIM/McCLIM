@@ -568,8 +568,8 @@ is called. Used to determine if any editing has been done by user")))
                                :single-box t)
                      (surrounding-output-with-border
                          (stream :shape :rounded
-                                 :radius 3 :background +white+
-                                 :foreground +gray40+
+                                 :radius 3 :background clim:+background-ink+
+                                 :foreground clim:+foreground-ink+
                                  :move-cursor t)
                        ;;; FIXME: In this instance we really want borders that
                        ;;; react to the growth of their children. This should
