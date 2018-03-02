@@ -241,9 +241,12 @@
     (with-text-family (output-stream :fix)
       (if (zerop (length (car args)))
 	  (progn (heading "Runnig \"~A\"~%" program)
-		 (uiop:run-program program :output output-stream :input nil))
+		 (uiop:run-program program :force-shell nil :output output-stream :input nil
+					   :ignore-error-status t :error-output output-stream))
 	  (progn (heading "Running \"~A ~{~A ~}\"~%" program args)
-		 (uiop:run-program `(,program ,@args) :output output-stream :input nil))))))
+		 (uiop:run-program `(,program ,@args) :force-shell nil :output output-stream
+						      :input nil :ignore-error-status t
+						      :error-output output-stream))))))
 
 ;; I could replace this command with a keyword to COM-RUN..
 (define-command (com-background-run :name "Background Run"
