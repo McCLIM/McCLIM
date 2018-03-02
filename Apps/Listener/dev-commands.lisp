@@ -253,7 +253,7 @@
                                     :menu t
 				    :command-table application-commands)
   ((program 'string :prompt "Command")
-   (args '(sequence string) :default nil :prompt "Args"))
+   (args '(sequence string) :default '("") :prompt "Args"))
   (if (zerop (length (car args)))
       (uiop:launch-program program)
       (uiop:launch-program `(,program ,@args))))
