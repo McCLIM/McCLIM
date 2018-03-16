@@ -17,10 +17,6 @@ might be different from the sheet's native region."
 (defmethod sheet-direct-mirror ((sheet standard-mirrored-sheet-mixin))
   (port-lookup-mirror (port sheet) sheet))
 
-(defmethod (setf sheet-direct-mirror) (mirror (sheet standard-mirrored-sheet-mixin))
-  (port-register-mirror (port sheet) sheet mirror))
-
-
 (defparameter *configuration-event-p* nil)
 
 (defmethod handle-event ((sheet standard-mirrored-sheet-mixin)

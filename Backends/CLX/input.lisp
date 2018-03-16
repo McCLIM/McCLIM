@@ -190,34 +190,23 @@
 			:modifier-state (clim-xcommon:x-event-state-modifiers
 					 *clx-port* state)
 			:timestamp time))
-        ;;
 	(:configure-notify
          (cond ((and (eq (sheet-parent sheet) (graft sheet))
                      (graft sheet)
                      (not override-redirect-p)
                      (not send-event-p))
-                ;; this is genuine event for a top-level sheet (with
-                ;; override-redirect off)
+                ;; Genuine top-level-sheet event (with override-redirect off).
                 ;;
-                ;; Since the root window is not our real parent, but
-                ;; there the window managers decoration in between,
-                ;; only the size is correct, so we need to deduce the
-                ;; position from our idea of it.
-
-                ;; I believe the code below is totally wrong, because
-                ;; sheet-native-transformation will not be up to date.
-                ;; Instead, query the new coordinates from the X server,
-                ;; and later the event handler will set the correct
-                ;; native-transformation using those. --Hefner
-;;;                (multiple-value-bind (x y) (transform-position
-;;;                                            (compose-transformations
-;;;                                             (sheet-transformation sheet)
-;;;                                             (sheet-native-transformation (graft sheet)))
-;;;                                            0 0)
-
-                ;; Easier to let X compute the position relative to the root window for us.
+                ;; Since the root window is not our real parent, but there the
+                ;; window managers decoration in between, only the size is
+                ;; correct, so we need to query coordinates from the X
+                ;; server. Note that sheet relative coodinates may be something
+                ;; different than [0,0].
                 (multiple-value-bind (x y)
-                    (xlib:translate-coordinates window 0 0 (clx-port-window *clx-port*))
+                    (xlib:translate-coordinates window
+                                                (xlib:drawable-x window)
+                                                (xlib:drawable-y window)
+                                                (clx-port-window *clx-port*))
                   (make-instance 'window-configuration-event
                                  :sheet sheet
                                  :x x

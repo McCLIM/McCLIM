@@ -5,7 +5,7 @@
    (tab1-active-cell :initform nil :accessor active-cell1)
    (tab2-active-col  :initform nil :accessor active-col2)
    (tab2-active-cell :initform nil :accessor active-cell2))
-  (:pane :application-pane :display-function 'display)
+  (:pane :application :display-function 'display)
   ;; comment this for funny effect
   (:geometry :width 750 :height 400))
 

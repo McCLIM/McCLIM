@@ -242,8 +242,8 @@ order to produce a double-click")
               min-height
               max-height))))
 
-(defun make-space-requirement (&key (width 1) (height 1)
-				    (min-width 0) (min-height 0)
+(defun make-space-requirement (&key (min-width 0) (min-height 0)
+                                    (width min-width) (height min-height)
 				    (max-width +fill+) (max-height +fill+))
   (assert (<= 0 min-width width max-width) (min-width width max-width))
   (assert (<= 0 min-height height max-height) (min-height height max-height))
