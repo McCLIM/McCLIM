@@ -580,6 +580,14 @@ in the following cases:
 
 In either of those cases, @genfun{allocate-space} is called.
 
+@issue{JD, This description is wrong. @genfun{note-space-requirement-change}
+is called by CLIM after the space requirements has changed. Application
+programmer should call @genfun{change-space-requirements} to indicate that
+@genfun{compose-space} may now return something different from the previous
+invocation and/or to update user space requirements options. This may (but
+doesn't have to) trigger @gloss{layout-protocol}.  Macro
+@fmacro{changing-space-requirements} should be described too.}
+
 @node Output Protocol
 @section Output Protocol
 

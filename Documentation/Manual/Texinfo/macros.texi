@@ -15,6 +15,11 @@
 @b{\FUN\}
 @end macro
 
+@macro issue{AUTHOR,COMMENT}
+@noindent
+@b{Issue:} @i{\COMMENT\ --- \AUTHOR\}
+@end macro
+
 @alias gloss = i
 @alias func = code
 @alias class = code
