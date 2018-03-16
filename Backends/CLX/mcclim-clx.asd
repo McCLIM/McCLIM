@@ -11,10 +11,9 @@
    (:file "frame-manager" :depends-on ("mirrored-sheets"))))
 
 (defsystem #:mcclim-clx/basic
-  :depends-on (#:clim
-	       #:mcclim-full-mirrored-standard
-	       #+(or cmu ecl) (:require :clx)
-               #+(or sbcl clozure ecl clisp allegro) #:clx)
+  :depends-on (#:clx
+               #:clim
+               #:mcclim-backend-common)
   :components
   ((:file "package")
    (:file "basic" :depends-on ("package"))
