@@ -24,52 +24,52 @@
       (update-mirror-geometry child old-native-transformation))))
 
 (defmethod sheet-native-region ((sheet standard-full-mirrored-sheet-mixin))
-  (with-slots (native-region) sheet     
-    (unless native-region      
+  (with-slots (native-region) sheet
+    (unless native-region
       (let ((this-region (transform-region (sheet-native-transformation sheet)
-					   (sheet-region sheet)))
-	    (parent (sheet-parent sheet)))
-	(setf native-region
-	      (if parent
-		  (region-intersection this-region
-				       (transform-region
-					(invert-transformation
-					 (%sheet-mirror-transformation sheet))
-					(sheet-native-region parent)))
-		  this-region))))
+                                           (sheet-region sheet)))
+            (parent (sheet-parent sheet)))
+        (setf native-region
+              (if parent
+                  (region-intersection this-region
+                                       (transform-region
+                                        (invert-transformation
+                                         (%sheet-mirror-transformation sheet))
+                                        (sheet-native-region parent)))
+                  this-region))))
     native-region))
 
 (defmethod sheet-native-transformation ((sheet standard-full-mirrored-sheet-mixin))
   (with-slots (native-transformation) sheet
     (unless native-transformation
       (setf native-transformation
-	    (let ((parent (sheet-parent sheet)))
-	      (cond
-		((top-level-sheet-pane-p sheet)
-		 +identity-transformation+)
-		(parent
-		 (compose-transformations
-		  (invert-transformation
-		   (%sheet-mirror-transformation sheet))
-		  (compose-transformations
-		   (sheet-native-transformation parent)
-		   (sheet-transformation sheet))))
-		(t
-		 (compose-transformations
-		  (invert-transformation
-		   (%sheet-mirror-transformation sheet))
-		  (sheet-transformation sheet)))))))
+            (let ((parent (sheet-parent sheet)))
+              (cond
+                ((top-level-sheet-pane-p sheet)
+                 +identity-transformation+)
+                (parent
+                 (compose-transformations
+                  (invert-transformation
+                   (%sheet-mirror-transformation sheet))
+                  (compose-transformations
+                   (sheet-native-transformation parent)
+                   (sheet-transformation sheet))))
+                (t
+                 (compose-transformations
+                  (invert-transformation
+                   (%sheet-mirror-transformation sheet))
+                  (sheet-transformation sheet)))))))
       native-transformation))
 
 
-(defmethod (setf clim:sheet-region) (region (sheet standard-full-mirrored-sheet-mixin))
+(defmethod (setf sheet-region) (region (sheet standard-full-mirrored-sheet-mixin))
   (declare (ignore region))
   (let ((old-native-transformation (%%sheet-native-transformation sheet)))
     (call-next-method)
     ;;(%%set-sheet-native-transformation old-native-transformation sheet)
     (update-mirror-geometry sheet old-native-transformation)))
 
-(defmethod (setf clim:sheet-transformation) (region (sheet standard-full-mirrored-sheet-mixin))
+(defmethod (setf sheet-transformation) (region (sheet standard-full-mirrored-sheet-mixin))
   (declare (ignore region))
   (let ((old-native-transformation (%%sheet-native-transformation sheet)))
     (call-next-method)
@@ -156,7 +156,7 @@
 ;;; . when the native transformation changes, we need to:
 
 ;;;  a. Redraw the mirror's contents since the mapping from the sheet space
-;;;     to the mirror space (that is the native transformation) just changed. 
+;;;     to the mirror space (that is the native transformation) just changed.
 ;;;     Translational changes in the native transformation can be catered by
 ;;;     blittering, but then have a nice synchronization problem: Suppose
 ;;;     a repaint event is underway as we blitter from some region R_1 to
@@ -462,22 +462,14 @@ very hard)."
 ;;;
 ;;; Reflecting a Sheet's Geometry to the Mirror.
 ;;; FIXME: Improve the previous comment.
-(defgeneric sheet-mirror-region (sheet))
-
-(defmethod sheet-mirror-region ((sheet standard-full-mirrored-sheet-mixin))
+(defun sheet-mirror-region (sheet)
+  (check-type sheet (or standard-full-mirrored-sheet-mixin standard-graft))
   (cond
     ;; For grafts or top-level-sheet's always read the mirror region
     ;; from the server, since it is not under our control.
     ((or (null (sheet-parent sheet))
          (null (sheet-parent (sheet-parent sheet))))
-     ;; FIXME: I don't know why we have this following form rather
-     ;; than the next one which is commented out.  One of them should
-     ;; be chosen, and the other one whould be removed.
-     (make-rectangle* 0 0 #x10000 #x10000)
-     #+nil
-     (make-rectangle* 0 0
-                      (port-mirror-width (port sheet) sheet)
-                      (port-mirror-height (port sheet) sheet)))
+     (make-rectangle* 0 0 #x10000 #x10000))
     (t
      ;; For other sheets just use the calculated value, which saves a
      ;; round trip.
@@ -485,11 +477,6 @@ very hard)."
          ;; XXX what to do if the sheet has no idea about its region?
          ;; XXX can we consider calling sheet-mirror-region then an error?
          (make-rectangle* 0 0 #x10000 #x10000) ))))
-
-
-(defmethod sheet-mirror-region ((sheet standard-graft))
-  (make-rectangle* 0 0 #x10000 #x10000))
-
 
 ;;; The generic function EFFECTIVE-MIRROR-REGION is not part of the
 ;;; CLIM II specification.  For that reason, there is no DEFGENERIC
@@ -503,11 +490,10 @@ very hard)."
   (let* ((parent (sheet-parent sheet))
          (ancestor (and parent (sheet-mirrored-ancestor parent))))
     (if ancestor
-        (region-intersection
-	 (sheet-mirror-region sheet)
-	 (untransform-region (%sheet-mirror-transformation sheet)
-			     (effective-mirror-region ancestor)))
-	(sheet-mirror-region sheet))))
+        (region-intersection (sheet-mirror-region sheet)
+                             (untransform-region (%sheet-mirror-transformation sheet)
+                                                 (effective-mirror-region ancestor)))
+        (sheet-mirror-region sheet))))
 
 (defmethod effective-mirror-region ((sheet standard-graft))
   (sheet-mirror-region sheet))

@@ -125,17 +125,6 @@
 (defmethod destroy-mirror ((port pdf-port) (sheet clim-pdf-stream))
   (error "Can't destroy mirror for the pdf stream ~S." sheet))
 
-;;; Internal methods
-(defmethod climi::port-mirror-width ((port pdf-port)
-                                     (stream clim-pdf-stream))
-  (let ((region (sheet-native-region stream)))
-    (bounding-rectangle-width region)))
-
-(defmethod climi::port-mirror-height ((port pdf-port)
-                                      (stream clim-pdf-stream))
-  (let ((region (sheet-native-region stream)))
-    (bounding-rectangle-height region)))
-
 ;;; Some strange functions
 
 (defmethod pane-viewport ((pane clim-pdf-stream))

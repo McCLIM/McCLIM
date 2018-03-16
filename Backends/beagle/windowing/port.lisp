@@ -176,24 +176,6 @@ not initialised, we'll just get \":screen NIL\" in that case."
 			       :alpha (cg-floatify alpha))))
 		(send nsc 'retain)))))
     (gethash color table)))
-	 
-
-;; Returns the width of the mirror in MIRROR coordinate system. Use 'FRAME instead
-;; of 'BOUNDS to get width of mirror in PARENT MIRROR.
-
-;; This method is not ever invoked any longer (used to be from 'sheet-mirror-region'
-;; in sheets.lisp). Should be removed?
-(defmethod port-mirror-width ((port beagle-port) sheet)
-  (let ((mirror (port-lookup-mirror port sheet)))
-    (slet ((frame (send mirror 'bounds)))
-		  (pref frame :<NSR>ect.size.width))))
-
-;; Ditto the above method.
-(defmethod port-mirror-height ((port beagle-port) sheet)
-  (let ((mirror (port-lookup-mirror port sheet)))
-    (slet ((frame (send mirror 'bounds)))
-		  (pref frame :<NSR>ect.size.width))))
-
 
 ;; Hrm... don't think this is ever invoked.
 (defmethod graft ((port beagle-port))

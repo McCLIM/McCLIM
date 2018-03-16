@@ -117,7 +117,7 @@
    (native-region :type (or null region)
 		  :initform nil)
    (device-transformation :type (or null transformation)
-			  :initform nil)
+                          :initform nil)
    (device-region :type (or null region)
 		  :initform nil)
    (pointer-cursor :accessor sheet-pointer-cursor

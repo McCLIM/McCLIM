@@ -78,6 +78,7 @@
     (error "~S called with null ~S" 
            'port-keyboard-input-focus '*application-frame*))
   (port-frame-keyboard-input-focus port *application-frame*))
+
 (defmethod (setf port-keyboard-input-focus) (focus port)
   (when (null *application-frame*)
     (error "~S called with null ~S" 
@@ -199,34 +200,15 @@
   (mapc function *all-ports*))
 
 (defmethod restart-port ((port basic-port))
-  (reset-watcher port :restart)
   nil)
 
 (defmethod destroy-port ((port basic-port))
-  (reset-watcher port :destroy))
+  nil)
 
 (defmethod destroy-port :around ((port basic-port))
   (unwind-protect
        (call-next-method)
     (setf *all-ports* (remove port *all-ports*))))
-
-(defgeneric add-watcher (port watcher))
-
-(defmethod add-watcher ((port basic-port) watcher)
-  (declare (ignore watcher))
-  nil)
-
-(defgeneric delete-watcher (port watcher))
-
-(defmethod delete-watcher ((port basic-port) watcher)
-  (declare (ignore watcher))
-  nil)
-
-(defgeneric reset-watcher (port how))
-
-(defmethod reset-watcher ((port basic-port) how)
-  (declare (ignore how))
-  nil)
 
 (defgeneric make-graft (port &key orientation units))
 

@@ -2,14 +2,14 @@
 
 (defclass standard-mirrored-sheet-mixin (mirrored-sheet-mixin)
   ((mirror-transformation
-    :documentation "Our idea of the current mirror transformation. Might not
-                    be correct if a foreign application changes our mirror's geometry."
+    :documentation "Our idea of the current mirror transformation. Might not be
+correct if a foreign application changes our mirror's geometry."
     :initform +identity-transformation+
     :accessor %sheet-mirror-transformation)
    (mirror-region
-    :documentation "Our idea of the current mirror region. Might not be
-correct if a foreign application changes our mirror's geometry. Also note
-that this might be different from the sheet's native region."
+    :documentation "Our idea of the current mirror region. Might not be correct
+if a foreign application changes our mirror's geometry. Also note that this
+might be different from the sheet's native region."
     :initform nil
     :accessor %sheet-mirror-region)))
 

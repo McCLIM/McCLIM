@@ -908,7 +908,9 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
            (cond (resize-frame
                   (layout-frame frame))
                  (t
-                  (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane))))))))
+                  (layout-frame frame
+                                (bounding-rectangle-width pane)
+                                (bounding-rectangle-height pane))))))))
 
 (defmethod compose-space ((pane top-level-sheet-pane) &key width height)
   (declare (ignore width height))

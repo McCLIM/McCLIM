@@ -179,17 +179,6 @@
 (defmethod destroy-mirror ((port postscript-port) (sheet postscript-stream))
   (error "Can't destroy mirror for the postscript stream ~S." sheet))
 
-;;; Internal methods
-(defmethod climi::port-mirror-width ((port postscript-port)
-                                     (stream postscript-stream))
-  (let ((region (sheet-native-region stream)))
-    (bounding-rectangle-width region)))
-
-(defmethod climi::port-mirror-height ((port postscript-port)
-                                      (stream postscript-stream))
-  (let ((region (sheet-native-region stream)))
-    (bounding-rectangle-height region)))
-
 ;;; Some strange functions
 
 (defmethod pane-viewport ((pane postscript-stream))

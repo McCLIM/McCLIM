@@ -386,26 +386,6 @@ for windows that are not decorated."
 				     (+ (pref frame :<NSR>ect.origin.y)   ; consider flipped coords...
 					(pref frame :<NSR>ect.size.height)))))
 
-
-;; Was invoked from 'sheets.lisp', no longer referenced. ::FIXME:: (remove)
-(defmethod port-set-sheet-region ((port beagle-port) (graft graft) region)
-  (declare (ignore port graft region))
-  (error "port-set-sheet-region (graft) - implement me"))
-
-
-;; Included in 'decls.lisp', but not used in the code. ::FIXME:: (remove)
-(defmethod port-set-sheet-transformation ((port beagle-port) (graft graft) transformation)
-  (declare (ignore port graft transformation))
-  (error "port-set-sheet-transformation (graft) - implement me"))
-
-
-;; Is *this* the missing piece of the puzzle? - apparently not :-(
-;; WAS invoked from 'sheets.lisp' but no longer. ::FIXME:: (remove)
-(defmethod port-set-sheet-region ((port beagle-port) (sheet mirrored-sheet-mixin) region)
-  (declare (ignore port sheet region))
-  (error "port-set-sheet-region (mirror) - implement me"))
-
-
 ;;; I think port-set-mirror-region + port-set-mirror-transformation are indeed the key
 ;;; to scrolling; we can probably confirm this by getting the CLX back end running
 ;;; properly. However, in Cocoa, just changing these makes no difference. We also
