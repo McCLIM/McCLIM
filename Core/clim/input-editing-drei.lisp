@@ -3,7 +3,9 @@
 ;;;  (c) copyright 2001 by 
 ;;;           Tim Moore (moore@bricoworks.com)
 ;;;  (c) copyright 2006 by
-;;           Troels Henriksen (athas@sigkill.dk)
+;;;           Troels Henriksen (athas@sigkill.dk)
+;;;  (c) copyright 2018 by
+;;;           Nisar Ahmad (nisarahmad1324@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -164,31 +166,64 @@ activated with GESTURE"))
 ;;; rely on internal features and implement input-editor support in
 ;;; CLIM-INTERNALS.
 
+;;; When yanking history of commands on the stream, Following helper function
+;;; ensures the sublists are not evaluated by quoting them. They are
+;;; not meant to be evaluated anyway. (See comment on "define-command" in
+;;; Core/clim-core/commands.lisp).
+
+(defun %quote-sublists (list)
+  (let ((result nil))
+    (loop for item in list
+	  do (if (listp item)
+		 (if (eql (car item) 'quote)
+		     (push item result)
+		     (push `(quote ,item) result))
+		 (push item result)))
+    (reverse result)))
+
 (defun history-yank-next (stream input-buffer gesture numeric-argument)
   (declare (ignore input-buffer gesture numeric-argument))
   (let* ((accepting-type *active-history-type*)
+	 (quoted-sublists nil)
          (history (and accepting-type
                        (presentation-type-history accepting-type))))
     (when history
       (multiple-value-bind (object type)
           (presentation-history-next history accepting-type)
         (when type
-          (presentation-replace-input stream object type (stream-default-view stream)
-                                      :allow-other-keys t
-                                      :accept-result nil))))))
+	  (when (and (equal type 'command-or-form)
+		     (listp object)
+		     (alexandria:starts-with-subseq "COM-" (symbol-name `,(car object))))
+	    (setf quoted-sublists (%quote-sublists object)))
+	  (when (null quoted-sublists)
+	    (setf quoted-sublists object))
+	  (let ((*print-case* :downcase))
+	    (presentation-replace-input stream quoted-sublists type
+					(stream-default-view stream)
+					:allow-other-keys t
+					:accept-result nil)))))))
 
 (defun history-yank-previous (stream input-buffer gesture numeric-argument)
   (declare (ignore input-buffer gesture numeric-argument))
   (let* ((accepting-type *active-history-type*)
+	 (quoted-sublists nil)
          (history (and accepting-type
                        (presentation-type-history accepting-type))))
     (when history
       (multiple-value-bind (object type)
           (presentation-history-previous history accepting-type)
         (when type
-          (presentation-replace-input stream object type (stream-default-view stream)
-                                      :allow-other-keys t
-                                      :accept-result nil))))))
+	  (when (and (equal type 'command-or-form)
+		     (listp object)
+		     (alexandria:starts-with-subseq "COM-" (symbol-name `,(car object))))
+	      (setf quoted-sublists (%quote-sublists object)))
+	  (when (null quoted-sublists)
+	    (setf quoted-sublists object))
+	  (let ((*print-case* :downcase))
+	    (presentation-replace-input stream quoted-sublists type
+					(stream-default-view stream)
+					:allow-other-keys t
+					:accept-result nil)))))))
 
 (add-input-editor-command '((#\n :meta)) 'history-yank-next)
 

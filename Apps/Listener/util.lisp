@@ -32,27 +32,6 @@
                                  (defaults *default-pathname-defaults*))
   (native-namestring (enough-namestring pathname defaults)))
 
-;;; A farce of a  "portable" run-program, which grows as I need options from
-;;; the CMUCL run-program.
-;;; This ought to change the current directory to *default-pathname-defaults*..
-;;; (see above)
-
-(defun run-program (program args &key (wait t) (output *standard-output*) (input *standard-input*))    
-  #+(or CMU scl) (ext:run-program program args :input input
-				  :output output :wait wait)
-
-  #+SBCL (sb-ext:run-program program args :input input :search T
-                                          :output output :wait wait)
-  #+lispworks (system:call-system-showing-output       ; Contributed by Neonsquare.
-               (format nil "~A~{ ~A~}" program args)   ; I am uneasy about shell quoting issues here..
-               :shell-type "/bin/sh"
-               :output-stream output
-               :wait wait)
-  #+clisp (ext:run-program program :arguments args :wait wait)
-  #+openmcl (ccl:run-program program args :input input :output output :wait wait)
-  #-(or CMU scl SBCL lispworks clisp openmcl)
-  (format t "~&Sorry, don't know how to run programs in your CL.~%"))
-
 ;;;; CLIM/UI utilities
 
 (defmacro bold ((stream) &body body)

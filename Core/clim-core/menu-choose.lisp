@@ -131,7 +131,8 @@
                                   item
                                   `((,name ,@params)
                                     :description ,(getf (menu-item-options item) :documentation)
-                                    ,@options))
+                                    ,@options)
+                                  :single-box t)
                                (funcall item-printer item stream)))))))
                     (:label
                      ;; This is a static label, it should not be

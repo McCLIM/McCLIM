@@ -234,20 +234,29 @@
 ;; McCLIM fixme: Shouldn't we be able to activate before the (args) prompt
 ;; since defaults are defined?
 ;; FIXME: Disabled input, as it usually seems to hang.
-(define-command (com-run :name "Run" :command-table application-commands :menu t
-			 :provide-output-destination-keyword t)
+(define-command (com-run :name "Run" :command-table application-commands :menu t)
   ((program 'string :prompt "Command")
-   (args '(sequence string) :default nil :prompt "Arguments"))
-  (run-program program args :wait t :input nil))
+   (args '(sequence string) :default '("") :prompt "Arguments"))
+  (let ((output-stream *standard-output*))
+    (with-text-family (output-stream :fix)
+      (if (zerop (length (car args)))
+	  (progn (heading "Runnig \"~A\"~%" program)
+		 (uiop:run-program program :force-shell nil :output output-stream :input nil
+					   :ignore-error-status t :error-output output-stream))
+	  (progn (heading "Running \"~A ~{~A ~}\"~%" program args)
+		 (uiop:run-program `(,program ,@args) :force-shell nil :output output-stream
+						      :input nil :ignore-error-status t
+						      :error-output output-stream))))))
 
 ;; I could replace this command with a keyword to COM-RUN..
 (define-command (com-background-run :name "Background Run"
                                     :menu t
-				    :command-table application-commands
-				    :provide-output-destination-keyword t)
+				    :command-table application-commands)
   ((program 'string :prompt "Command")
-   (args '(sequence string) :default nil :prompt "Args"))
-  (run-program program args :wait nil :output nil :input nil))
+   (args '(sequence string) :default '("") :prompt "Args"))
+  (if (zerop (length (car args)))
+      (uiop:launch-program program)
+      (uiop:launch-program `(,program ,@args))))
 
 (define-command (com-reload-mime-database :name "Reload Mime Database"
                                           :menu t
@@ -256,7 +265,6 @@
   (progn
     (load-mime-types)
     (load-mailcaps)))
-
 
 (add-menu-item-to-command-table (find-command-table 'application-commands) nil :divider nil)
 
@@ -684,7 +692,8 @@ if you are interested in fixing this."))
    (mapcan 
     (lambda (class) 
       (copy-list (x-specializer-direct-generic-functions class)))
-    (remove-ignorable-classes (c2mop:class-precedence-list class)))))
+    (remove-ignorable-classes (c2mop:class-precedence-list
+                               (c2mop:ensure-finalized class))))))
 
 (defun slot-name-sortp (a b)
   (flet ((slot-name-symbol (x)
