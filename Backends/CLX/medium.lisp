@@ -1076,7 +1076,7 @@ time an indexed pattern is drawn.")
   (text-style-character-width text-style medium #\m))
 
 (defmethod text-style-fixed-width-p (text-style (medium clx-medium))
-  (eql (text-style-family text-style) :fix))
+  (eql (text-style-family text-style) :fixed))
 
 (eval-when (:compile-toplevel :execute)
   ;; ASCII / CHAR-CODE compatibility checking

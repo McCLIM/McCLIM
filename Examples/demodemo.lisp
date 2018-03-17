@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-demo)
@@ -52,7 +52,7 @@ denoted by this symbol."
         (run-frame-top-level frame))
     frame))
 
-(define-application-frame demodemo 
+(define-application-frame demodemo
     () ()
     (:menu-bar nil)
     (:layouts
@@ -116,7 +116,7 @@ denoted by this symbol."
 (defun demodemo ()
   (run-frame-top-level (make-application-frame 'demodemo)))
 
-(define-application-frame hbox-test 
+(define-application-frame hbox-test
     () ()
     (:layouts
      (default
@@ -131,7 +131,7 @@ denoted by this symbol."
            5
            ) )))
 
-(define-application-frame table-test 
+(define-application-frame table-test
     () ()
     (:layouts
      (default
@@ -162,7 +162,7 @@ denoted by this symbol."
                      :background +PALETURQUOISE4+
                      :text-style (make-text-style :sans-serif :roman :normal))
     #+nil
-    (make-pane 'push-button :label 
+    (make-pane 'push-button :label
                :text-style (make-text-style :sans-serif :roman :normal)
                :max-width 1000
                :max-height 1000)))
@@ -300,7 +300,7 @@ denoted by this symbol."
   (setf (list-pane-items (find-pane-named *application-frame* 'result-list))
 	(apropos-list (gadget-value
 		       (find-pane-named *application-frame* 'substring))
-		      :clim t)))
+		      :clim #+sbcl t)))
 
 (define-application-frame option-test
     () ()
