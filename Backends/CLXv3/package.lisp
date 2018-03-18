@@ -53,8 +53,7 @@
 		#:pointer-motion-hint-event
                 #:device-font-text-style
                 ;;
-		#:make-medium
-                )
+		#:make-medium)
   (:import-from :clim-clx
 		#:clx-medium
 		#:design-gcontext
@@ -64,9 +63,4 @@
 		#:with-clx-graphics)
   (:import-from :clim-standard
 		#:standard-handled-event-port-mixin
-		#:standard-single-mirrored-sheet-mixin
-		#:%sheet-mirror-region
-                #:%sheet-mirror-transformation
-		#:*configuration-event-p*
-		)
-  )
+		#:standard-single-mirrored-sheet-mixin))

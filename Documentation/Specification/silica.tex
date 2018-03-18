@@ -344,7 +344,7 @@ Returns a region object that represents the set of points to which the
 \term{sheet} \arg{sheet} refers.  The region is in the sheet's coordinate
 system.  Using \cl{setf} on this accessor modifies the sheet's region.
 
-When the sheet's region is changed, \cl{note-sheet-region-region} is called on
+When the sheet's region is changed, \cl{note-sheet-region-changed} is called on
 \arg{sheet} to notify the sheet of the change.
 
 \issue {RSL} {To reshape and move a region, you generally have to manipulate

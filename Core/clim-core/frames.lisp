@@ -31,9 +31,9 @@
 
 ;;; Frame-Manager class
 
-;; FIXME: The spec says the port must "conform to options".
-;; I've added a check that the ports match, but we've no
-;; protocol for testing the other options. -Hefner
+;; FIXME: The spec says the port must "conform to options".  I've added a check
+;; that the ports match, but we've no protocol for testing the other
+;; options. -Hefner
 (defun find-frame-manager (&rest options &key port &allow-other-keys)
   (declare (special *frame-manager*))
   (if (and (boundp '*frame-manager*)
@@ -50,8 +50,7 @@
      (declare (special *frame-manager*))
      (locally ,@body)))
 
-;;; XXX These should force the redisplay of the menu bar. They don't
-;;; yet.
+;;; XXX These should force the redisplay of the menu bar. They don't yet.
 
 (defmethod note-command-enabled (frame-manager frame command-name)
   (declare (ignore frame-manager frame command-name))

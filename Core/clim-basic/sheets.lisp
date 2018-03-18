@@ -117,7 +117,7 @@
    (native-region :type (or null region)
 		  :initform nil)
    (device-transformation :type (or null transformation)
-			  :initform nil)
+                          :initform nil)
    (device-region :type (or null region)
 		  :initform nil)
    (pointer-cursor :accessor sheet-pointer-cursor
@@ -249,19 +249,9 @@
             (compose-translation-with-transformation
              transform (- x old-x) (- y old-y))))))
 
-;;; We preserve here the starting point. If sheet starting point is [0,0] then
-;;; this method is no different from:
-;;;
-;;;     (make-rectangle* 0 0 width height)
-;;;
-;;; That behavior may desireable if sheets starting from other coordinate than
-;;; [0,0] are conforming. Even if they are not though, this method is still
-;;; correct (and blame goes on whoever modified the starting position). -- jd
 (defmethod resize-sheet ((sheet basic-sheet) width height)
-  (with-standard-rectangle (x1 y1 x2 y2) (sheet-region sheet)
-    (declare (ignore x2 y2))
-    (setf (sheet-region sheet)
-          (make-bounding-rectangle x1 y1 (+ x1 width) (+ y1 height)))))
+  (setf (sheet-region sheet)
+        (make-bounding-rectangle 0 0 width height)))
 
 (defmethod move-and-resize-sheet ((sheet basic-sheet) x y width height)
   (move-sheet sheet x y)
@@ -669,17 +659,6 @@
 (defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
   (error "sheet-direct-mirror is not implemented on sheet ~S" sheet))
 
-;;; The generic function (SETF SHEET-DIRECT-MIRROR) is not part of the
-;;; CLIM II specification.  For that reason, there is no DEFGENERIC
-;;; form for it in decls.lisp.  Since some Common Lisp compilers emit
-;;; a warning if there is no explicit DEFGENERIC form, and in order to
-;;; get a clean build, we include the DEFGENERIC form here.
-
-(defgeneric (setf sheet-direct-mirror) (mirror sheet))
-
-(defmethod (setf sheet-direct-mirror) (mirror (sheet mirrored-sheet-mixin))
-  (error "setf sheet-direct-mirror is not implemented on sheet ~S" sheet))
-
 (defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet-mixin))
   sheet)
 
@@ -835,7 +814,9 @@
 	      (invalidate-cached-regions sheet)
 	      (invalidate-cached-transformations sheet)
 	      (%%set-sheet-native-transformation transform sheet)
-	      (setf (slot-value sheet 'region) region)))
+	      (setf (slot-value sheet 'region) region))
+            ((setf sheet-direct-mirror) (new-mirror sheet)
+              (port-register-mirror (port sheet) sheet new-mirror)))
        (let ((,ori-native-transformation (sheet-native-transformation ,mirrored-sheet))
 	     (,ori-region (sheet-region ,mirrored-sheet)))
 	 (letf (((sheet-parent ,mirrored-sheet) nil)

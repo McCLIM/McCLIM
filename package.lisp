@@ -1581,47 +1581,24 @@
   ;; pointer-button-click-event
   ;; this is mentioned in silica.tex. spelling error?
 
-  ;;;; absolutly no mention of the following in the spec:
-  
-  ;; add-watcher
   ;; bordering
   ;; border-pane
-  ;; delete-watcher
+  ;; this is mentioned in LW CLIM documentation
+
+  ;; spacer-pane
+  ;; this is mentioned in our own documentation (!) but absent
+
+  ;;;; absolutly no mention of the following in the spec:
+
   ;; display-cursor
   ;; draw-triangle
   ;; draw-triangle*
-  ;; frame-pane
   ;; gadget-label-text-style
-  ;; gesture-processing-handler
   ;; key-modifier-state-match-p
-  ;; mute-sheet-input-mixin
-  ;; mute-sheet-output-mixin
-  ;; note-frame-state-changed
-  ;; panes-need-redisplay
   ;; pointer-button-click-and-hold-event
   ;; pointer-button-double-click-event
-  ;; pointer-buttons
   ;; pointer-port
-  ;; port-draw-character*
-  ;; port-draw-ellipse*
-  ;; port-draw-line*
-  ;; port-draw-lines*
-  ;; port-draw-point*
-  ;; port-draw-points*
-  ;; port-draw-polygon*
-  ;; port-draw-rectangle*
-  ;; port-draw-string*
   ;; push-button-show-as-default-p
-  ;; reset-watcher
-  ;; scroll-bar-drag-down-line-callback
-  ;; scroll-bar-drag-down-page-callback
-  ;; scroll-bar-drag-up-line-callback
-  ;; scroll-bar-drag-up-page-callback
-  ;; spacer-pane
-  ;; stream-pointers
-  ;; stream-primary-pointer
-  ;; stream-redisplayable-p
-  ;; stream-restore-input-focus
 
   ;;; Vendor extensions which are exported from the CLIM package,
   ;;; including CLIM 2.2 symbols.
@@ -1977,13 +1954,9 @@
    #:port-force-output
    #:port-frame-keyboard-input-focus
    #:port-grab-pointer
-   #:port-mirror-height
-   #:port-mirror-width
    #:port-motion-hints
    #:port-set-mirror-region
    #:port-set-mirror-transformation
-   #:port-set-sheet-region
-   #:port-set-sheet-transformation
    #:port-ungrab-pointer
    #:queue-callback
    #:set-sheet-pointer-cursor

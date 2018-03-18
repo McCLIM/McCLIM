@@ -1,7 +1,7 @@
 
 (defsystem #:mcclim-clxv3
-  :depends-on (#:mcclim-clx
-	       #:mcclim-single-mirrored-standard)
+  :depends-on (#:mcclim-backend-common
+               #:mcclim-clx)
 
   :components
   ((:file "package")

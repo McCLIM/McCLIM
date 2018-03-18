@@ -426,13 +426,9 @@
 ;;; MEDIUM class
 
 (defclass transform-coordinates-mixin ()
-  ;; This class is reponsible for transforming coordinates in an
-  ;; :around method on medium-draw-xyz. It is currently mixed in into
-  ;; basic-medium and clim-stream-pane. This probably is not the right
-  ;; thing todo. Either clim-stream-pane becomes a basic-medium too or
-  ;; the medium of a stream becomes not the stream itself. So consider
-  ;; this as a hotfix.
-  ;; --GB 2003-05-25
+  ;; This class is reponsible for transforming coordinates in an :around method
+  ;; on medium-draw-xyz. It is mixed into basic-medium. Probably we could rid of
+  ;; this indirection and specialize directly on basic-medium.  --JD 2018-03-06
   ())
 
 (defclass basic-medium (transform-coordinates-mixin complete-medium-state medium)

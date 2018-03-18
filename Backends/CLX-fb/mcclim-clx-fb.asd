@@ -1,10 +1,10 @@
 
 (defsystem #:mcclim-clx-fb
-    :depends-on (#:mcclim-clx/basic
-		 #:mcclim-clx/input
-		 #:mcclim-single-mirrored-standard
-		 #:mcclim-render
-                 #:mcclim-render/clx)
+  :depends-on (#:mcclim-backend-common
+               #:mcclim-clx/basic
+               #:mcclim-clx/input
+               #:mcclim-render
+               #:mcclim-render/clx)
   :components
   ((:file "package")
    (:file "port" :depends-on ("package" "medium"))

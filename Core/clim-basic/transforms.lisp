@@ -90,6 +90,14 @@ transformation protocol."))
     (apply #'format sink "~S ~S ~S ~S ~S ~S"
            (multiple-value-list (get-transformation self)))))
 
+(defmethod print-object ((self standard-translation) sink)
+  (print-unreadable-object (self sink :identity nil :type t)
+    (with-slots (dx dy) self
+      (format sink ":DX ~s :DY ~s" dx dy))))
+
+(defmethod print-object ((self standard-identity-transformation) sink)
+  (print-unreadable-object (self sink :identity t :type t)))
+
 (defun make-transformation (mxx mxy myx myy tx ty)
   ;; Make a transformation, which will map a point (x,y) into
   ;;  x' = mxx*x + mxy*y + tx

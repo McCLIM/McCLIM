@@ -166,8 +166,6 @@ port-deallocate-pixmap
 port-disable-sheet
 port-enable-sheet
 port-force-output
-port-mirror-height
-port-mirror-width
 port-set-mirror-region
 port-set-mirror-transformation
 set-sheet-pointer-cursor
@@ -265,8 +263,6 @@ medium-draw-glyph               ; X-specific concept
 port-motion-hints               ; X-specific concept
 queue-callback                  ; moved to clim-core
 medium-clipping-                ; moved to clim-basic
-port-set-sheet-region           ; never used
-port-set-sheet-transformation   ; never used
 mirror-transformation           ; never used
 @end verbatim
 
