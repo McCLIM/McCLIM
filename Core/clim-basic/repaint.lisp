@@ -80,18 +80,18 @@
 (defmethod repaint-sheet :after ((sheet sheet-parent-mixin) region)
   ;; propagate repaint to unmirrored sheets
   (labels ((propagate-repaint-1 (sheet region)
-	   (dolist (child (sheet-children sheet))
-	     (when (and (sheet-enabled-p child)
-			(not (sheet-direct-mirror child)))
-	       (let ((child-region (region-intersection
-				     (untransform-region
-				      (sheet-transformation child)
-				      region)
-				     (sheet-region child))))
-		 (unless (eq child-region +nowhere+)
-		   (%note-sheet-repaint-request child child-region)
-		   (handle-repaint child child-region)
-		   (propagate-repaint-1 child child-region)))))))
+             (dolist (child (sheet-children sheet))
+               (when (and (sheet-enabled-p child)
+                          (not (sheet-direct-mirror child)))
+                 (let ((child-region (region-intersection
+                                      (untransform-region
+                                       (sheet-transformation child)
+                                       region)
+                                      (sheet-region child))))
+                   (unless (eq child-region +nowhere+)
+                     (%note-sheet-repaint-request child child-region)
+                     (handle-repaint child child-region)
+                     (propagate-repaint-1 child child-region)))))))
     (propagate-repaint-1 sheet region)))
 	       
 (defmethod repaint-sheet :after ((sheet sheet-with-medium-mixin) region)

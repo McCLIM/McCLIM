@@ -784,12 +784,16 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
                       (cond (resize-frame
                              (layout-frame frame))
                             (t
-                             (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane)))))
+                             (layout-frame frame
+                                           (bounding-rectangle-width pane)
+                                           (bounding-rectangle-height pane)))))
                      (t
                       (cond (resize-frame-2
                              (layout-frame frame))
                             (t
-                             (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane)))))))) ))))
+                             (layout-frame frame
+                                           (bounding-rectangle-width pane)
+                                           (bounding-rectangle-height pane))))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

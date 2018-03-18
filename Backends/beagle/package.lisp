@@ -16,8 +16,6 @@
                 #:set-sheet-pointer-cursor
                 ;;
                 #:update-mirror-geometry
-                #:%sheet-mirror-region
-                #:%sheet-mirror-transformation
                 ;;
                 #:clamp
                 #:get-environment-variable

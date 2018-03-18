@@ -56,13 +56,10 @@
 		  #:truetype-font-descent
 		  )
     (:import-from :clim-standard
-		  #:standard-single-mirrored-sheet-mixin
-		  #:%sheet-mirror-region
-		  #:%sheet-mirror-transformation)
+		  #:standard-mirrored-sheet-mixin)
     (:export
      #:with-output-to-raster-image-stream
      #:with-output-to-rgb-pattern
-     #:with-output-to-image-pattern
-     ))
+     #:with-output-to-image-pattern))
 
 

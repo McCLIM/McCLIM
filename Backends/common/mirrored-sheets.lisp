@@ -29,7 +29,6 @@ might be different from the sheet's native region."
     :accessor %sheet-mirror-region)))
 
 (defclass standard-full-mirrored-sheet-mixin (standard-mirrored-sheet-mixin) ())
-(defclass standard-single-mirrored-sheet-mixin (standard-mirrored-sheet-mixin) ())
 
 
 ;;; CLIM methods
@@ -82,11 +81,11 @@ might be different from the sheet's native region."
       (call-next-method)
       (update-mirror-geometry child :old-native-transformation old-native-transformation))))
 
-(defmethod note-sheet-transformation-changed :before ((sheet standard-single-mirrored-sheet-mixin))
+(defmethod note-sheet-transformation-changed :before ((sheet standard-mirrored-sheet-mixin))
   (when (sheet-mirror sheet)
     (update-mirror-geometry sheet)))
 
-(defmethod note-sheet-region-changed :before ((sheet standard-single-mirrored-sheet-mixin))
+(defmethod note-sheet-region-changed :before ((sheet standard-mirrored-sheet-mixin))
   (when (sheet-mirror sheet)
     (update-mirror-geometry sheet)))
 
@@ -168,7 +167,7 @@ might be different from the sheet's native region."
 
 ;;; sheet-native-*
 
-(defmethod sheet-native-transformation ((sheet standard-single-mirrored-sheet-mixin))
+(defmethod sheet-native-transformation ((sheet standard-mirrored-sheet-mixin))
   (with-slots (native-transformation) sheet
     (unless native-transformation
       (setf native-transformation +identity-transformation+))
@@ -250,10 +249,9 @@ might be different from the sheet's native region."
         (%sheet-mirror-region* sheet))))
 
 (defgeneric update-mirror-geometry (sheet &key &allow-other-keys)
-  (:documentation "Updates mirror geometry.")
-  (:method ((sheet standard-mirrored-sheet-mixin) &key) nil))
+  (:documentation "Updates mirror geometry."))
 
-(defmethod update-mirror-geometry ((sheet standard-single-mirrored-sheet-mixin) &key)
+(defmethod update-mirror-geometry ((sheet standard-mirrored-sheet-mixin) &key)
   (let* ((parent (sheet-parent sheet))
 	 (sheet-region-in-native-parent
 	  (region-intersection

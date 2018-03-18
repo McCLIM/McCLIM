@@ -6,9 +6,8 @@
                #:mcclim-image/clx
 	       #:mcclim-clx/text-selection)
   :components
-  ((:file "port" :depends-on ())
-   (:file "mirrored-sheets" :depends-on ())
-   (:file "frame-manager" :depends-on ("mirrored-sheets"))))
+  ((:file "port")
+   (:file "frame-manager" :depends-on ("port"))))
 
 (defsystem #:mcclim-clx/basic
   :depends-on (#:clx
