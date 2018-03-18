@@ -56,7 +56,7 @@
                  family (or family :fix)
                  size   (or size :normal)
 		 size (getf *text-sizes* size size))
-                 	   
+
            (when (eq family :fixed)
              (setf family :fix))
            (find-and-make-truetype-font family face size))))
@@ -65,6 +65,11 @@
               (or (find-truetype-font text-style)
                   (invoke-with-truetype-path-restart #'find-font))))))
 
+(defmethod text-style-to-font ((port render-port-mixin) (gs-text-style cons))
+  (text-style-to-font port (apply #'make-text-style gs-text-style)))
+
+(defmethod clim-internals::text-style-size ((gs-text-style cons))
+  (caddr gs-text-style))
 
 (defmethod clim-extensions:port-all-font-families :around
     ((port render-port-mixin) &key invalidate-cache)
