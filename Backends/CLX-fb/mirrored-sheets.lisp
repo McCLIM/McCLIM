@@ -1,7 +1,7 @@
 (in-package :clim-clx-fb)
 
 (defclass clx-fb-mirrored-sheet-mixin (image-sheet-mixin
-				       standard-single-mirrored-sheet-mixin)
+				       standard-mirrored-sheet-mixin)
   ())
 
 (defmethod sheet-direct-xmirror ((sheet clx-fb-mirrored-sheet-mixin))

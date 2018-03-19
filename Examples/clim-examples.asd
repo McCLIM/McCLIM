@@ -39,7 +39,9 @@
      (:file "image-viewer")
      (:file "accepting-values")
      (:file "accepting-values-test")
-     (:file "graph-toy")))
+     (:file "graph-toy")
+     ;; tools
+     (:file "hierarchy-tool")))
 
 (defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)

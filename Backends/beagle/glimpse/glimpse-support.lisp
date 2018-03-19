@@ -196,11 +196,6 @@
   (format output "        SHEET-NATIVE-REGION: ~s~%SHEET-NATIVE-TRANSFORMATION: ~s~%"
 	  (sheet-native-region sheet)
 	  (sheet-native-transformation sheet))
-  ;; sheet-mirror-* is non standard and stands no chance on any non-McCLIM CLIM.
-  #+:mcclim
-  (format output "        SHEET-MIRROR-REGION: ~s~%SHEET-MIRROR-TRANSFORMATION: ~s~%"
-	  (climi::%sheet-mirror-region sheet)
-	  (climi::%sheet-mirror-transformation sheet))
   (format output "It has the parent: ")
   (with-output-as-presentation (output
 				(sheet-parent sheet)

@@ -99,8 +99,8 @@
 	      (intern concrete-mirrored-pane-class :clim-clx))
 	(eval
 	 `(defclass ,concrete-mirrored-pane-class-symbol
-	      (clx-mirrored-sheet-mixin
-	       ,concrete-pane-class-symbol)
+	      (standard-full-mirrored-sheet-mixin
+               ,concrete-pane-class-symbol)
 	    ()
 	    (:metaclass ,(type-of (find-class concrete-pane-class-symbol))))))
       #+(or) (format *debug-io* "create class ~A~%" concrete-mirrored-pane-class-symbol)

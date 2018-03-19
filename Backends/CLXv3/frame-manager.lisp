@@ -25,9 +25,9 @@
 	   (concrete-mirrored-pane-class-symbol (find-symbol concrete-mirrored-pane-class
 							     :clim-clxv3))
 	   (superclasses (if (subtypep concrete-pane-class 'sheet-with-medium-mixin)
-			     (list 'clxv3-mirrored-sheet-mixin
+			     (list 'standard-mirrored-sheet-mixin
 				   concrete-pane-class-symbol)
-			     (list 'clxv3-mirrored-sheet-mixin
+			     (list 'standard-mirrored-sheet-mixin
 				   ;;'temporary-medium-sheet-output-mixin
 				   'permanent-medium-sheet-output-mixin
 				   concrete-pane-class-symbol))))

@@ -83,9 +83,7 @@
 		)
   (:import-from :clim-standard
 		#:standard-handled-event-port-mixin
-		#:standard-single-mirrored-sheet-mixin
-		#:%sheet-mirror-region
-                #:%sheet-mirror-transformation
+		#:standard-mirrored-sheet-mixin
 		#:*configuration-event-p*
 		#:standard-port
 		#:standard-handled-event-port-mixin

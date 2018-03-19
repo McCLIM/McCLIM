@@ -8,6 +8,6 @@
 				       sheet-mute-repainting-mixin
 				       permanent-medium-sheet-output-mixin
 				       image-sheet-mixin
-				       standard-single-mirrored-sheet-mixin
+				       standard-mirrored-sheet-mixin
 				       unmanaged-top-level-sheet-pane)
   ())
