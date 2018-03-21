@@ -9,7 +9,7 @@ VPATH=./figures
 
 .PHONY: all clean distclean
 
-%.pdf: %.fig
+%.pdf: figures/%.fig
 	fig2dev -Lpdftex -m 0.75  $< $@
 
 all: mcclim.pdf mcclim.info mcclim

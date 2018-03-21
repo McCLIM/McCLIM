@@ -164,10 +164,9 @@ product visible on a screen, but they contain all the step-by-step
 information that led to that representation.
 
 More precisely, CLIM panes record the series of operations that
-produces that generates an output.  This means that such a pane
-maintains a display list, consisting of a sequence of output records,
-ordered chronologically, from the first output record to be drawn to
-the last.
+generates an output.  This means that such a pane maintains a display
+list, consisting of a sequence of output records, ordered
+chronologically, from the first output record to be drawn to the last.
 
 This display list is used to fill in damaged areas of the pane, for
 instance as a result of the pane being partially or totally covered by
@@ -329,18 +328,18 @@ have two additional (mandatory) elements: @t{:panes} and @t{:layouts}.
 The @t{:panes} element defines a collection of CLIM panes that each
 instance of your application may have.  Each pane has a name, a type,
 and perhaps some options that are used to instantiate that particular
-type of pane.  Here, we have a pane called @t{int} of type
+type of pane.  Here, we have a pane called @t{my-interactor} of type
 @t{:interactor} with a height of 400 units and a width of 600 units.  In
 McCLIM, the units are initially physical units (number of pixels) of the
 native windowing system.
 
 The @t{:layouts} element defines one or more ways of organizing the
 panes in a hierarchy.  Each layout has a name and a description of a
-hierarchy.  In our example, only one layout, named @t{default}, is
-defined.  The layout called @t{default} is the one that is used by CLIM
-at startup.  In our example, the corresponding hierarchy is trivial,
-since it contains only the one element @t{int}, which is the name of our
-only pane.
+hierarchy.  In our example, only one layout, named @t{my-default}, is
+defined.  The layout called @t{my-default} is the one that is used by
+CLIM at startup.  In our example, the corresponding hierarchy is
+trivial, since it contains only the one element @t{my-interactor},
+which is the name of our only pane.
 
 @node Executing the Application
 @subsection Executing the Application
@@ -354,7 +353,7 @@ you start your CLIM application.
 
 To execute the application, load the file containing your code (possibly
 after compiling it) into your running Lisp system.  Then start the
-application.  Our example can be started by typing @t{(app:app-main)}.
+application.  Our example can be started by typing @t{(my-first-app:run-my-first-app)}.
 
 @node Adding Functionality
 @subsection Adding Functionality
@@ -388,15 +387,16 @@ displayed.  The net result is that we would have seen no visible output.
 With the option @t{:display-time nil}, the pane is never cleared, and
 output is accumulated every time we execute the @t{parity} command.
 
-For this example, let us also add a few @emph{commands}.
+For this example, we also added a few @emph{commands}.
 @cindex command
 Such commands are defined by the use of a macro called
 @fmacro{@t{define-}@i{name}@t{-command}}, where @i{name} is the name of
 the application, in our case @t{superapp}. This macro is automatically
 defined by @t{define-application-frame}.
 
-Let us also add a pane that automatically provides documentation for
-different actions on the pointer device.
+In addition, we added a pane that automatically provides documentation
+for different actions on the pointer device. This was done by
+including @t{(:pointer-documentation t)} in the frame definition.
 
 If you execute this example, you will find that you now have three
 different panes, the application pane, the interactor pane and the
@@ -462,12 +462,13 @@ function that allow us to query and to modify the value.
 
 Observe that in this example, we no longer have the option
 @t{:display-time nil} set in the application pane.  By default, then,
-the @t{:display-time} is @t{:command-loop} which means that the pane is
-erased after each iteration of the command loop.  Also observe the
-option @t{:display-function} which takes a symbol that names a function
-to be called to display the pane after it has been cleared.  In this
-case, the name is @t{display-app}, the name of the function defined
-immediately after the application frame.
+the @t{:display-time} is @t{:command-loop} which means that the pane
+is erased after each iteration of the command loop.  Also observe the
+option @t{:display-function} in the application pane definition which
+takes a symbol that names a function to be called to display the pane
+after it has been cleared.  In this case, the name is @t{display-app},
+the name of the function defined immediately after the application
+frame.
 
 Instead of immediately displaying information about its argument, the
 command @t{com-parity} instead modifies the new slot of the application
@@ -745,7 +746,7 @@ is @emph{false}, otherwise @t{nil} is returned.
 Menu bar has become essential part of every GUI system, including
 McClim. Ideally, McClim should try to use the menu bar provided by
 host window system via McClim backends, but the current
-@t{clx-backend} doesn't supports native menu bars. That's why It has
+@t{clx-backend} doesn't supports native menu bars. That's why it has
 some quirks of its own, like you need to keep mouse button pressed
 while accessing the sub-menus.
 
@@ -781,7 +782,7 @@ is used to provide the menu bar (@xref{Using command tables}).
 
 To add a sub-menu to menu bar, you need to change the type of
 menu-item from @t{:command} to @t{:menu} (which requires another
-@t{command-table} as argument) what is described in the next section.
+@t{command-table} as argument) which is described in the next section.
 
 @node Modifying Menu bar
 @subsection Modifying Menu bar
@@ -857,22 +858,23 @@ command menu item should be drawn with the supplied text style in
 command menus.
 
 @item error-p
-If @t{T}, adding the existing item to the menu will signal error. If
-@t{NIL}, it will overwrite the existing item in the command table.
+If @t{T} and the item already exists in the menu, it signal a
+@t{command-already-present} error. If @t{NIL}, it will first remove
+the existing item and add the new item to the command-table.
 @end table
 
-To remove items from command table, following function is used:
+To remove items from command table, the following function is used:
 
 @include fun-clim-remove-menu-item-from-command-table.texi
 
 Where @t{command-table} is command-table-designator and @t{string} is
-menu item's name (it is case-insensitive). You can provide
+the menu item's name (it is case-insensitive). You can provide
 @code{:error-p nil} to suppress the error if item is not in the
 command-table.
 
-Note that both of above functions @emph{does not} automatically update
-the menu bar. For that you need to replace existing
-@t{frame-command-table} with modified command table using
-@t{setf}. One way to do this is use @t{let} to create the copy of
-@t{frame-command-table}, modify it and at the end call @t{setf} to
-replace the original.
+Note that both of the above functions @emph{do not} automatically
+update the menu bar. For that you need to replace the existing
+@t{frame-command-table} with the modified command table using
+@t{setf}. The typical way to do this is to use @t{let} to create a
+copy of @t{frame-command-table}, modify it and at the end call
+@t{setf} to replace the original.

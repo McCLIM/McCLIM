@@ -42,10 +42,9 @@ product visible on a screen, but they contain all the step-by-step
 information that led to that representation.
 
 More precisely, CLIM panes record the series of operations that
-produces that generates an output.  This means that such a pane
-maintains a display list, consisting of a sequence of output records,
-ordered chronologically, from the first output record to be drawn to
-the last.
+generates an output.  This means that such a pane maintains a display
+list, consisting of a sequence of output records, ordered
+chronologically, from the first output record to be drawn to the last.
 
 This display list is used to fill in damaged areas of the pane, for
 instance as a result of the pane being partially or totally covered by
@@ -216,10 +215,10 @@ times. This section merely defines them.
 The \texttt{:layouts} element defines one or more ways of organizing
 the panes in a hierarchy.  Each layout has a name and a description of
 a hierarchy.  In our example, only one layout, named
-\texttt{my-default}, is defined.  The layout called \texttt{default}
+\texttt{my-default}, is defined.  The layout called \texttt{my-default}
 is the one that is used by CLIM at startup.  In our example, the
 corresponding hierarchy is trivial, since it contains only the one
-element \texttt{int}, which is the name of our only pane.
+element \texttt{my-interactor}, which is the name of our only pane.
 
 \section{Executing the Application}
 
@@ -233,7 +232,7 @@ McCLIM files each time you start your CLIM application.
 To execute the application, load the file containing your code
 (possibly after compiling it) into your running Lisp system.  Then
 start the application.  Our example can be started by typing
-\texttt{(app:app-main)}.
+\texttt{(my-first-app:run-my-first-app)}.
 
 \section{Adding Functionality}
 
@@ -270,15 +269,16 @@ seen no visible output.  With the option \texttt{:display-time nil},
 the pane is never cleared, and output is accumulated every time we
 execute the \texttt{parity} command.
 
-For this example, let us also add a few \emph{commands}.  Such
+For this example, we also added a few \emph{commands}.  Such
 commands are defined by the use of a macro called
 \fmacro{\texttt{define-}\textit{name}\texttt{-command}}, where
 \textit{name} is the name of the application, in our case
 \texttt{superapp}. This macro is automatically defined by
 \texttt{define-application-frame}.
 
-Let us also add a pane that automatically provides documentation for
-different actions on the pointer device.
+In addition, we also added a pane that automatically provides documentation for
+different actions on the pointer device. This was done by
+including \texttt{(:pointer-documentation t)} in the frame definition.
 
 If you execute this example, you will find that you now have three
 different panes, the application pane, the interactor pane and the
@@ -290,14 +290,14 @@ default commands that are automatically proposed by McCLIM plus the
 commands that you defined yourself, in this case \texttt{quit} and
 \texttt{parity}.
 
-%% \refFig{ex2} shows what ought to be visible on the screen.
+\refFig{ex2} shows what ought to be visible on the screen.
 
-%% \begin{figure}
-%%   \begin{center}
-%%     \inputfig{ex2.pdf}
-%%   \end{center}
-%%   \caption{\label{ex2} View of the improved example}
-%% \end{figure}
+\begin{figure}
+\begin{center}
+\inputfig{ex2.pdf_t}
+\end{center}
+\caption{\label{ex2} View of the improved example}
+\end{figure}
 
 Notice that commands, in order to be available from the command line,
 must have an option of \texttt{:name t}.  The reason is that some
@@ -344,10 +344,11 @@ Observe that in this example, we no longer have the option
 \texttt{:display-time nil} set in the application pane.  By default,
 then, the \texttt{:display-time} is \texttt{:command-loop} which means
 that the pane is erased after each iteration of the command loop.
-Also observe the option \texttt{:display-function} which takes a
-symbol that names a function to be called to display the pane after it
-has been cleared.  In this case, the name is \texttt{display-app}, the
-name of the function defined immediately after the application frame.
+Also observe the option \texttt{:display-function} in the application
+pane definition which takes a symbol that names a function to be
+called to display the pane after it has been cleared.  In this case,
+the name is \texttt{display-app}, the name of the function defined
+immediately after the application frame.
 
 Instead of immediately displaying information about its argument, the
 command \texttt{com-parity} instead modifies the new slot of the
