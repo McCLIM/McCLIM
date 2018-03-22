@@ -1,7 +1,7 @@
 
 (defsystem #:mcclim-mezzano
-    :depends-on (#:mcclim-single-mirrored-standard
-		 #:mcclim-render
+    :depends-on (#:mcclim-backend-common
+                 #:mcclim-render
                  #:mcclim-render/backend)
     :serial t
     :components
@@ -12,4 +12,5 @@
      (:file "port")
      (:file "mirror")
      (:file "mirrored-sheets")
-     (:file "frame-manager")))
+     (:file "frame-manager")
+     (:file "text-selection")))
