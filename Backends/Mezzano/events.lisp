@@ -112,7 +112,7 @@
                         'pointer-button-release-event
                         'pointer-button-press-event)
                     :pointer 0
-                    :button buttons
+                    :button change
                     :x *last-mouse-x*
                     :y *last-mouse-y*
                     :graft-x *last-graft-x*
@@ -239,35 +239,36 @@
          (sheet (port-lookup-sheet *port* mez-window))
          (fwidth (max *minimum-width* (mezzano.gui.compositor:width event)))
          (fheight (max *minimum-height* (mezzano.gui.compositor:height event))))
-    (when (and mez-frame
-               (or (/= fwidth (mezzano.gui.compositor:width mez-window))
-                   (/= fheight (mezzano.gui.compositor:height mez-window))))
-      (let* ((surface (mezzano.gui:make-surface fwidth fheight))
-             (pixels (mezzano.gui::surface-pixels surface))
-             (width (- fwidth 2))
-             (height(- fheight 20)))
-        (mezzano.gui.widgets:resize-frame mez-frame surface)
-        (mezzano.gui.compositor:resize-window
-         mez-window surface
-         :origin (mezzano.gui.compositor:resize-origin event))
+    (multiple-value-bind (dw dh) (size-deltas mez-mirror)
+      (when (and mez-frame
+                 (or (/= fwidth (mezzano.gui.compositor:width mez-window))
+                     (/= fheight (mezzano.gui.compositor:height mez-window))))
+        (let* ((surface (mezzano.gui:make-surface fwidth fheight))
+               (pixels (mezzano.gui::surface-pixels surface))
+               (width (- fwidth dw))
+               (height(- fheight dh)))
+          (mezzano.gui.widgets:resize-frame mez-frame surface)
+          (mezzano.gui.compositor:resize-window
+           mez-window surface
+           :origin (mezzano.gui.compositor:resize-origin event))
 
-        (setf (slot-value mez-mirror 'mez-pixels) pixels
-              (slot-value mez-mirror 'fwidth) fwidth
-              (slot-value mez-mirror 'fheight) fheight
-              (slot-value mez-mirror 'width) width
-              (slot-value mez-mirror 'height) height)
+          (setf (slot-value mez-mirror 'mez-pixels) pixels
+                (slot-value mez-mirror 'fwidth) fwidth
+                (slot-value mez-mirror 'fheight) fheight
+                (slot-value mez-mirror 'width) width
+                (slot-value mez-mirror 'height) height)
 
-        (mezzano.supervisor:fifo-push
-         (make-instance 'window-configuration-event
-                        :sheet sheet
-                        :region nil
-                        :width width
-                        :height height
-                        :x (window-x mez-window)
-                        :y (window-y mez-window))
-         mcclim-fifo
-         nil)
-        ))))
+          (mezzano.supervisor:fifo-push
+           (make-instance 'window-configuration-event
+                          :sheet sheet
+                          :region nil
+                          :width width
+                          :height height
+                          :x (window-x mez-window)
+                          :y (window-y mez-window))
+           mcclim-fifo
+           nil)
+          )))))
 
 (defmethod mez-event->mcclim-event (mcclim-fifo (event resize-event))
   ;;; TODO - what needs to happen here anything?

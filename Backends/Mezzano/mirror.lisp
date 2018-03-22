@@ -6,7 +6,8 @@
 ;;; dx/dy are the x and y offsets to the interior available to mcclim
 ;;;
 (defclass mezzano-mirror (image-mirror-mixin)
-  ((fwidth     :initform 0)
+  ((top-levelp :initform nil)
+   (fwidth     :initform 0)
    (fheight    :initform 0)
    (width      :initform 0)
    (height     :initform 0)
@@ -18,11 +19,17 @@
    (mez-dirty-region :initform +nowhere+)
    (skip-count :initform 0)))
 
+(defun size-deltas (mez-mirror)
+  (with-slots (fwidth fheight width height) mez-mirror
+    (values (- fwidth width) (- fheight height))))
+
 (defmethod %create-mirror-image :after ((sheet mezzano-mirror) new-width new-height)
+  (setf new-width (max 5 new-width))
+  (setf new-height (max 5 new-height))
   (with-slots (fwidth fheight width height mez-frame mez-window) sheet
     (when (or (/= width new-width) (/= height new-height))
-      (setf fwidth (+ new-width 2)
-            fheight (+ new-height 20)
+      (setf fwidth (+ new-width (- fwidth width))
+            fheight (+ new-height (- fheight height))
             width new-width
             height new-height)
       (let* ((surface (mezzano.gui:make-surface fwidth fheight))
@@ -82,7 +89,7 @@
            (region-intersection region (make-rectangle* 0 0
                                                         (1- width) (1- height)))
            (when mez-pixels
-             (opticl:do-region-pixels (y x min-y min-x max-y max-x)
+             (opticl:do-region-pixels (y x min-y min-x (1+ max-y) (1+ max-x))
                pixels
                (multiple-value-bind (red green blue)
                    (opticl:pixel pixels y x)
@@ -120,16 +127,15 @@
   (debug-format "    ~S ~S ~S" port mirror mirror-region)
   )
 
-
 (defmethod clim-backend:port-set-mirror-transformation
     ((port mezzano-port) (mirror mezzano-mirror) mirror-transformation)
-  (debug-format "clim-backend:port-set-mirror-transformation ((port mezzano-port) (mirror mezzano-mirror) mirror-transformation)")
-  (debug-format "    ~S ~S ~S" port mirror mirror-transformation)
-  ;; (port-set-mirror-transformation
-  ;;  port
-  ;;  (slot-value mirror 'xmirror)
-  ;;  mirror-transformation)
-  )
+  (unless (slot-value mirror 'top-levelp)
+    (let ((mez-window (slot-value mirror 'mez-window))
+          (mez-frame (slot-value mirror 'mez-frame)))
+      (multiple-value-bind (x y) (transform-position mirror-transformation 0 0)
+        (setf (window-x mez-window) (floor x)
+              (window-y mez-window) (floor y))
+        (mezzano.gui.widgets:draw-frame mez-frame)))))
 
 (defmethod clim-backend:port-set-mirror-transformation
     ((port mezzano-port) mirror mirror-transformation)
@@ -138,13 +144,19 @@
   )
 
 (defmethod destroy-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
-  (when (sheet-mirror sheet)
-    (let ((mez-window (slot-value (sheet-mirror sheet) 'mez-window)))
-      (remhash mez-window (slot-value port 'mez-window->sheet))
-      (remhash mez-window (slot-value port 'mez-window->mirror))
-      (mezzano.gui.compositor:close-window mez-window)))
-  (when (port-lookup-mirror port sheet)
-    (port-unregister-mirror port sheet (sheet-mirror sheet))))
+  (let ((mirror (sheet-mirror sheet)))
+    (when (typep mirror 'mezzano-mirror)
+      (let ((mez-window (slot-value mirror 'mez-window)))
+        (remhash mez-window (slot-value port 'mez-window->sheet))
+        (remhash mez-window (slot-value port 'mez-window->mirror))
+        (mezzano.gui.compositor:close-window mez-window)))
+    (when (port-lookup-mirror port sheet)
+      (port-unregister-mirror port sheet (sheet-mirror sheet)))))
+
+(defmethod port-disable-sheet ((port mezzano-port) (sheet mirrored-sheet-mixin))
+  (let ((mirror (sheet-mirror sheet)))
+    (when (typep mirror 'mezzano-mirror)
+      (mezzano.gui.compositor:close-window (slot-value mirror 'mez-window)))))
 
 (defmethod mcclim-render-internals::%mirror-force-output ((mirror mezzano-mirror))
   (with-slots (mcclim-render-internals::image-lock
