@@ -40,7 +40,7 @@
      (:file "accepting-values")
      (:file "accepting-values-test")
      (:file "graph-toy")
-     ;; tools
+     (:file "coordinate-swizzling")
      (:file "hierarchy-tool")))
 
 (defsystem #:clim-examples/superapp
