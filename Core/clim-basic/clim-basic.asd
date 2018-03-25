@@ -14,6 +14,7 @@
    (:file "dead-keys" :depends-on ("decls"))
    (:file "regions" :depends-on ("decls" "protocol-classes" "multiprocessing" "coordinates" "utils" "transforms" "setf-star" "design"))
    (:file "sheets" :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "transforms" "regions"))
+   (:file "mirrors" :depends-on ("sheets"))
    (:file "pixmap" :depends-on ("decls" "protocol-classes" "multiprocessing" "sheets" "transforms" "regions"))
    (:file "events" :depends-on ("decls" "protocol-classes" "multiprocessing" "transforms" "sheets" "utils"))
    (:file "ports" :depends-on ("decls" "protocol-classes" "multiprocessing" "events" "sheets" "pixmap" "utils"))

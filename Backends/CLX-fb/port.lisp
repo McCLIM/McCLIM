@@ -1,7 +1,6 @@
 (in-package :clim-clx-fb)
 
-(defclass clx-fb-port (standard-handled-event-port-mixin
-		       render-port-mixin
+(defclass clx-fb-port (render-port-mixin
 		       clim-xcommon:keysym-port-mixin
 		       clim-clx::clx-basic-port)
   ())

@@ -55,8 +55,6 @@
 		  #:truetype-font-ascent
 		  #:truetype-font-descent
 		  )
-    (:import-from :clim-standard
-		  #:standard-mirrored-sheet-mixin)
     (:export
      #:with-output-to-raster-image-stream
      #:with-output-to-rgb-pattern

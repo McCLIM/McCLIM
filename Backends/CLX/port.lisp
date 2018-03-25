@@ -31,7 +31,6 @@
   ())
 
 (defclass clx-port (clim-xcommon:keysym-port-mixin
-		    standard-event-port-mixin
 		    clx-text-selection-port-mixin
 		    clx-basic-port)
   ((color-table :initform (make-hash-table :test #'eq))
@@ -124,6 +123,7 @@
 				(event-mask `(:exposure 
 					      :key-press :key-release
 					      :button-press :button-release
+                                              :owner-grab-button
 					      :enter-window :leave-window
 					      :structure-notify
 					      :pointer-motion
@@ -213,8 +213,7 @@
                    port sheet
                    :map nil
                    :width (round-coordinate (space-requirement-width q))
-                   :height (round-coordinate (space-requirement-height q))
-                   :event-mask '(:key-press :key-release)))
+                   :height (round-coordinate (space-requirement-height q))))
 	  (name (frame-pretty-name frame)))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) name)
@@ -242,8 +241,7 @@
   (realize-mirror-aux port sheet
 		      :override-redirect :on
                       :save-under :on
-		      :map nil
-		      :event-mask '(:structure-notify)))
+		      :map nil))
 
 (defmethod %realize-mirror ((port clx-port) (sheet menu-button-pane))
   (realize-mirror-aux port sheet
@@ -356,33 +354,5 @@
              :min-width (round (space-requirement-min-width space-requirement))
              :min-height (round (space-requirement-min-height space-requirement)))))))
 
-
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))
-
-
-        
-
-
-
-;;; XXX CLX in ACL doesn't use local sockets, so here's a fix. This is gross
-;;; and should obviously be included in Franz' clx and portable clx, but I
-;;; believe that enough users will find that their X servers don't listen for
-;;; TCP connections that it is worthwhile to include this code here
-;;; temporarily.
-
-#+allegro
-(defun xlib::open-x-stream (host display protocol)
-  (declare (ignore protocol)) ;; Derive from host
-  (let ((stream (if (or (string= host "") (string= host "unix"))
-		    (socket:make-socket
-		     :address-family :file
-		     :remote-filename (format nil "/tmp/.X11-unix/X~D" display)
-		     :format :binary)
-		    (socket:make-socket :remote-host (string host)
-					:remote-port (+ xlib::*x-tcp-port*
-                                                        display)
-					:format :binary))))
-    (if (streamp stream)
-	stream
-      (error "Cannot connect to server: ~A:~D" host display))))

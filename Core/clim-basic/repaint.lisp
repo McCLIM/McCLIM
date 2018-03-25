@@ -177,4 +177,24 @@
 ;; never repaint the background (only for speed)
 (defclass never-repaint-background-mixin () ())
 
-
+(defun %repaint-background (sheet child region)
+  (labels ((effective-repaint-region (mirrored-sheet child region)
+	     (if (eq mirrored-sheet child)
+		 (region-intersection
+		  (sheet-region mirrored-sheet)
+		  region)
+		 (effective-repaint-region mirrored-sheet
+					   (sheet-parent child)
+					   (transform-region
+					    (sheet-transformation child)
+					    (region-intersection
+					     region
+					     (sheet-region child)))))))
+    (let ((native-child-region (effective-repaint-region sheet child region)))
+      (with-sheet-medium (medium sheet)
+	(with-drawing-options (medium :clipping-region native-child-region
+				      :ink (pane-background child)
+				      :transformation +identity-transformation+)
+	  (with-bounding-rectangle* (left top right bottom)
+              native-child-region
+	    (medium-draw-rectangle* sheet left top right bottom t)))))))

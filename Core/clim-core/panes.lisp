@@ -933,6 +933,19 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (allocate-space pane (- x2 x1) (- y2 y1))))
 
+(defparameter *configuration-event-p* nil
+  "Flag used to inhibit setting mirror region and transformation to prevent
+infinite recursion on (setf sheet-*).")
+
+(defmethod handle-event ((sheet top-level-sheet-pane)
+			 (event window-configuration-event))
+  (let ((x (window-configuration-event-x event))
+	(y (window-configuration-event-y event))
+	(width (window-configuration-event-width event))
+        (height (window-configuration-event-height event)))
+    (let ((*configuration-event-p* sheet))
+      (setf (sheet-transformation sheet) (make-translation-transformation x y))
+      (setf (sheet-region sheet) (make-bounding-rectangle 0 0 width height)))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-manager-delete-event))

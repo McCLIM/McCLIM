@@ -24,9 +24,7 @@
 
 (in-package :clim-clx)
 
-
-
-(defclass clx-basic-port (standard-port)
+(defclass clx-basic-port (standard-event-port-mixin standard-port)
   ((display :initform nil
 	    :accessor clx-port-display)
    (screen :initform nil

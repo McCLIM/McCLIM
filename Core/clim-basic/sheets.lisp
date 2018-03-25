@@ -81,18 +81,7 @@
 ;;; non standard notification protocol
 ;;; a mirrored sheet propagates all notifications to its mirrored ancestor
 
-(defgeneric %note-mirrored-sheet-child-grafted (sheet child))
-(defgeneric %note-mirrored-sheet-child-degrafted (sheet child))
-(defgeneric %note-mirrored-sheet-child-adopted (sheet child))
-(defgeneric %note-mirrored-sheet-child-disowned (sheet child))
-(defgeneric %note-mirrored-sheet-child-enabled (sheet child))
-(defgeneric %note-mirrored-sheet-child-disabled (sheet child))
-(defgeneric %note-mirrored-sheet-child-region-changed (sheet child))
-(defgeneric %note-mirrored-sheet-child-transformation-changed (sheet child))
-(defgeneric %note-sheet-pointer-cursor-changed (sheet))
-(defgeneric %note-mirrored-sheet-child-pointer-cursor-changed (sheet child))
 (defgeneric %note-sheet-repaint-request (sheet region))
-(defgeneric %note-mirrored-sheet-child-repaint-request (sheet child region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -339,10 +328,8 @@
   nil)
 
 (defmethod sheet-mirrored-ancestor ((sheet basic-sheet))
-  (let ((parent (sheet-parent sheet)))
-    (if (null parent)
-	nil
-	(sheet-mirrored-ancestor (sheet-parent sheet)))))
+  (when-let ((parent (sheet-parent sheet)))
+    (sheet-mirrored-ancestor parent)))
 
 (defmethod sheet-mirror ((sheet basic-sheet))
   (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
@@ -385,12 +372,11 @@
   (with-slots (native-transformation) sheet
     (unless native-transformation
       (setf native-transformation
-	    (let ((parent (sheet-parent sheet)))
-	      (if parent
-		  (compose-transformations
-		   (sheet-native-transformation parent)
-		   (sheet-transformation sheet))
-		  +identity-transformation+))))
+	    (if-let ((parent (sheet-parent sheet)))
+	      (compose-transformations
+               (sheet-native-transformation parent)
+               (sheet-transformation sheet))
+              +identity-transformation+)))
     native-transformation))
 
 (defmethod sheet-native-region ((sheet basic-sheet))
@@ -437,27 +423,23 @@
   (with-slots (native-transformation device-transformation) sheet
     (setf native-transformation nil
           device-transformation nil))
-  (loop for child in (sheet-children sheet)
-        do (invalidate-cached-transformations child)))
+  (mapc #'invalidate-cached-transformations (sheet-children sheet)))
 
 (defmethod invalidate-cached-regions ((sheet basic-sheet))
   (with-slots (native-region device-region) sheet
     (setf native-region nil
           device-region nil))
-  (loop for child in (sheet-children sheet)
-        do (invalidate-cached-regions child)))
+  (mapc #'invalidate-cached-regions (sheet-children sheet)))
 
 (defmethod %invalidate-cached-device-transformations ((sheet basic-sheet))
-    (with-slots (device-transformation) sheet
-      (setf device-transformation nil))
-    (loop for child in (sheet-children sheet)
-       do (%invalidate-cached-device-transformations child)))
+  (with-slots (device-transformation) sheet
+    (setf device-transformation nil))
+  (mapc #'%invalidate-cached-device-transformations (sheet-children sheet)))
 
 (defmethod %invalidate-cached-device-regions ((sheet basic-sheet))
-    (with-slots (device-region) sheet
-      (setf device-region nil))
-    (loop for child in (sheet-children sheet)
-       do (%invalidate-cached-device-regions child)))
+  (with-slots (device-region) sheet
+    (setf device-region nil))
+  (mapc #'%invalidate-cached-device-regions (sheet-children sheet)))
 
 (defmethod (setf sheet-transformation) :after
     (transformation (sheet basic-sheet))
@@ -472,7 +454,10 @@
   (note-sheet-region-changed sheet))
 
 (defmethod (setf sheet-pointer-cursor) :after (cursor (sheet basic-sheet))
-  (%note-sheet-pointer-cursor-changed sheet))
+  (unless (sheet-direct-mirror sheet)
+    (let ((msheet (sheet-mirrored-ancestor sheet)))
+      (set-sheet-pointer-cursor (port msheet) msheet (sheet-pointer-cursor msheet)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; sheet parent mixin
@@ -649,15 +634,36 @@
 ;;;
 ;;; mirrored sheet
 
-;;; No limitations
+;;; We assume the following limitations of the host window systems:
 ;;;
+;;;  mirror transformations:
+;;;   . can only be translations
+;;;   . are limited to 16-bit signed integer deltas
+;;;
+;;;  mirror regions:
+;;;   . can only be axis-aligend rectangles
+;;;   . min-x = min-y = 0
+;;;   . max-x, max-y < 2^16
+;;;
+;;; These are the limitations of the X Window System.
 
 (defclass mirrored-sheet-mixin ()
   ((port :initform nil :initarg :port :accessor port)
-   (native-transformation :initform +identity-transformation+)))
+   (native-transformation :initform +identity-transformation+)
+   (mirror-transformation
+    :documentation "Our idea of the current mirror transformation. Might not be
+correct if a foreign application changes our mirror's geometry."
+    :initform +identity-transformation+
+    :accessor %sheet-mirror-transformation)
+   (mirror-region
+    :documentation "Our idea of the current mirror region. Might not be correct
+if a foreign application changes our mirror's geometry. Also note that this
+might be different from the sheet's native region."
+    :initform nil
+    :accessor %sheet-mirror-region)))
 
 (defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
-  (error "sheet-direct-mirror is not implemented on sheet ~S" sheet))
+  (port-lookup-mirror (port sheet) sheet))
 
 (defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet-mixin))
   sheet)
@@ -667,28 +673,88 @@
 
 (defmethod note-sheet-grafted :before ((sheet mirrored-sheet-mixin))
   (unless (port sheet)
-    (error "~S called on sheet ~S, which has no port?!" '
-	   note-sheet-grafted sheet))
+    (error "~S called on sheet ~S, which has no port?!" 'note-sheet-grafted sheet))
   (realize-mirror (port sheet) sheet))
 
 (defmethod note-sheet-degrafted :after ((sheet mirrored-sheet-mixin))
   (destroy-mirror (port sheet) sheet))
 
-;;; Internal interface for enabling/disabling motion hints
-
-(defgeneric sheet-motion-hints (sheet)
-  (:documentation "Returns t if motion hints are enabled for this sheet"))
-
-(defmethod sheet-motion-hints ((sheet mirrored-sheet-mixin))
+(defmethod (setf sheet-enabled-p) :after
+    (new-value (sheet mirrored-sheet-mixin))
   (when (sheet-direct-mirror sheet)
-    (port-motion-hints (port sheet) sheet)))
+    ;; We do this only if the sheet actually has a mirror.
+    (if new-value
+        (port-enable-sheet (port sheet) sheet)
+        (port-disable-sheet (port sheet) sheet))))
 
-(defgeneric (setf sheet-motion-hints) (val sheet))
+(defparameter *mirrored-sheet-geometry-changed-p* nil
+  "Dynamic variable surpassing dispatch-repaint during frequent changed.")
 
-(defmethod (setf sheet-motion-hints) (val (sheet mirrored-sheet-mixin))
-  (when (sheet-direct-mirror sheet)
-    (setf (port-motion-hints (port sheet) sheet) val)))
+(defmethod (setf sheet-region) :around (re (sheet mirrored-sheet-mixin))
+  (when (or (/= (bounding-rectangle-width re) (bounding-rectangle-width (sheet-region sheet)))
+	    (/= (bounding-rectangle-height re) (bounding-rectangle-height (sheet-region sheet))))
+    (let ((*mirrored-sheet-geometry-changed-p* sheet))
+      (call-next-method)
+      (unless (graftp sheet)
+        (dispatch-repaint sheet (sheet-region sheet))))))
 
+(defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
+  (declare (ignore region))
+  ;; FIXME: I don't know why this next form is commented out.  It
+  ;; should either be uncommented or removed.
+  #+nil(port-set-sheet-region (port sheet) sheet region)
+  (update-mirror-geometry sheet))
+
+(defmethod (setf sheet-transformation) :around (tr (sheet mirrored-sheet-mixin))
+  (let ((*mirrored-sheet-geometry-changed-p* sheet))
+    (call-next-method)))
+
+(defmethod note-sheet-transformation-changed ((sheet mirrored-sheet-mixin))
+  (update-mirror-geometry sheet)
+  (mapcar #'(lambda (child)
+              (when (sheet-direct-mirror child)
+                (update-mirror-geometry child)))
+          (sheet-children sheet)))
+
+(defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
+  (with-slots (native-transformation device-transformation) sheet
+    (setf ;;native-transformation nil
+     device-transformation nil))
+  (loop for child in (sheet-children sheet)
+     do (invalidate-cached-transformations child)))
+
+;;; Coordinate swizzling
+(defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
+  (with-slots (native-region) sheet
+    (unless native-region
+      (let ((this-region (transform-region (sheet-native-transformation sheet)
+        				   (sheet-region sheet)))
+            (parent (sheet-parent sheet)))
+        (setf native-region
+              (if parent
+        	  (region-intersection this-region
+        			       (transform-region
+        				(invert-transformation
+        				 (%sheet-mirror-transformation sheet))
+        				(sheet-native-region parent)))
+        	  this-region))))
+    native-region))
+
+#+ (or) ;; XXX: is this needed?
+(defmethod sheet-native-transformation ((sheet mirrored-sheet-mixin))
+  ;; XXX hm...
+  (with-slots (native-transformation) sheet
+    (unless native-transformation
+      (setf native-transformation
+            (compose-transformations
+             (invert-transformation
+              (%sheet-mirror-transformation sheet))
+             (compose-transformations
+              (sheet-native-transformation (sheet-parent sheet))
+              (sheet-transformation sheet)))))
+    native-transformation))
+
+
 ;;; Sheets as bounding rectangles
 
 ;;; Somewhat hidden in the spec, we read (section 4.1.1 "The Bounding
@@ -712,92 +778,43 @@
 ;;; default implementation for notification protocol
 ;;;
 
-
-(defmethod note-sheet-grafted :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-grafted msheet sheet))))
-
-(defmethod note-sheet-degrafted :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-degrafted msheet sheet))))
-
-(defmethod note-sheet-adopted :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-adopted msheet sheet))))
-
-(defmethod note-sheet-disowned :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-disowned msheet sheet))))
-
 (defmethod note-sheet-enabled :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-enabled msheet sheet))))
+  (unless (or (sheet-direct-mirror sheet)
+              *mirrored-sheet-geometry-changed-p*)
+    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
+    ;; coordinates.
+    (dispatch-repaint (sheet-parent sheet) +everywhere+)
+    #+ (or) (dispatch-repaint (sheet-mirror) (sheet-native-region sheet))))
 
 (defmethod note-sheet-disabled :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-disabled msheet sheet))))
+  (unless (or (sheet-direct-mirror sheet)
+              *mirrored-sheet-geometry-changed-p*)
+    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
+    ;; coordinates.
+    (dispatch-repaint (sheet-parent sheet) +everywhere+)
+    #+ (or) (dispatch-repaint (sheet-mirror) (sheet-native-region sheet))))
 
 (defmethod note-sheet-region-changed :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-region-changed  msheet sheet))))
+  (unless (or (sheet-direct-mirror sheet)
+              *mirrored-sheet-geometry-changed-p*)
+    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
+    ;; coordinates.
+    (dispatch-repaint (sheet-parent sheet) +everywhere+)
+    #+ (or) (dispatch-repaint (sheet-mirror) (sheet-native-region sheet))))
 
 (defmethod note-sheet-transformation-changed :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-transformation-changed  msheet sheet))))
+  (unless (or (sheet-direct-mirror sheet)
+              *mirrored-sheet-geometry-changed-p*)
+    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
+    ;; coordinates.
+    (dispatch-repaint (sheet-parent sheet) +everywhere+)
+    #+ (or) (dispatch-repaint msheet (sheet-native-region sheet))))
 
-(defmethod %note-sheet-pointer-cursor-changed ((sheet basic-sheet))
-  )
-
-(defmethod %note-sheet-pointer-cursor-changed :before ((sheet basic-sheet))
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-pointer-cursor-changed  msheet sheet))))
-
-(defmethod %note-mirrored-sheet-child-grafted ((sheet mirrored-sheet-mixin) child)
-  )
-(defmethod %note-mirrored-sheet-child-degrafted ((sheet mirrored-sheet-mixin) child)
-  )
-(defmethod %note-mirrored-sheet-child-adopted ((sheet mirrored-sheet-mixin) child)
-  )
-(defmethod %note-mirrored-sheet-child-disowned ((sheet mirrored-sheet-mixin) child)
-  )
-(defmethod %note-mirrored-sheet-child-enabled ((sheet mirrored-sheet-mixin) child)
-  )
-(defmethod %note-mirrored-sheet-child-disabled ((sheet mirrored-sheet-mixin) child)
-  )
-(defmethod %note-mirrored-sheet-child-region-changed ((sheet mirrored-sheet-mixin) child)
-  )
-(defmethod %note-mirrored-sheet-child-transformation-changed ((sheet mirrored-sheet-mixin) child)
-  )
-(defmethod %note-mirrored-sheet-child-pointer-cursor-changed ((sheet mirrored-sheet-mixin) child)
-  )
 (defmethod %note-sheet-repaint-request ((sheet basic-sheet) region)
-  (let ((msheet (sheet-mirrored-ancestor sheet)))
-    (when (and msheet
-	       (not (eql msheet sheet)))
-      (%note-mirrored-sheet-child-repaint-request msheet sheet region))))
-(defmethod %note-mirrored-sheet-child-repaint-request ((sheet mirrored-sheet-mixin) child region)
-  )
-
-
-
+  (unless (sheet-direct-mirror sheet)
+    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
+    ;; coordinates.
+    (%repaint-background (sheet-mirrored-ancestor sheet) sheet region)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; dangerous codes
