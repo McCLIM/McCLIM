@@ -68,13 +68,10 @@
 	      (untransform-region
 	       (sheet-native-transformation sheet)
 	       (effective-native-region (sheet-mirrored-ancestor sheet) sheet region)))))
-      ;; %note-sheet-repaint-request is responsible for clearing to the background
-      ;; color before repainting
       ;; This causes applications which want to do a double-buffered repaint,
-      ;; such as the logic cube, to flicker. On the other hand, it also
-      ;; stops things such as the listener wholine from overexposing their
-      ;; text.
-      (%note-sheet-repaint-request sheet r)
+      ;; such as the logic cube, to flicker. On the other hand, it also stops
+      ;; things such as the listener wholine from overexposing their text.
+      (%repaint-background (sheet-mirrored-ancestor sheet) sheet r)
       (handle-repaint sheet r))))
 
 (defmethod repaint-sheet :after ((sheet sheet-parent-mixin) region)
@@ -89,7 +86,7 @@
                                        region)
                                       (sheet-region child))))
                    (unless (eq child-region +nowhere+)
-                     (%note-sheet-repaint-request child child-region)
+                     (%repaint-background (sheet-mirrored-ancestor child) child child-region)
                      (handle-repaint child child-region)
                      (propagate-repaint-1 child child-region)))))))
     (propagate-repaint-1 sheet region)))
@@ -177,7 +174,10 @@
 ;; never repaint the background (only for speed)
 (defclass never-repaint-background-mixin () ())
 
+;;; XXX: check if we can reintroduce with-double-buffering..
 (defun %repaint-background (sheet child region)
+  (when (typep child 'never-repaint-background-mixin)
+    (return-from %repaint-background))
   (labels ((effective-repaint-region (mirrored-sheet child region)
 	     (if (eq mirrored-sheet child)
 		 (region-intersection

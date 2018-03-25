@@ -78,13 +78,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; non standard notification protocol
-;;; a mirrored sheet propagates all notifications to its mirrored ancestor
-
-(defgeneric %note-sheet-repaint-request (sheet region))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; non standard protocol
 
 (defgeneric %invalidate-cached-device-transformations (sheet))
@@ -809,12 +802,6 @@ might be different from the sheet's native region."
     ;; coordinates.
     (dispatch-repaint (sheet-parent sheet) +everywhere+)
     #+ (or) (dispatch-repaint msheet (sheet-native-region sheet))))
-
-(defmethod %note-sheet-repaint-request ((sheet basic-sheet) region)
-  (unless (sheet-direct-mirror sheet)
-    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
-    ;; coordinates.
-    (%repaint-background (sheet-mirrored-ancestor sheet) sheet region)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; dangerous codes
