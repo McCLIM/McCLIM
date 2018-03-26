@@ -54,12 +54,12 @@
             (debug-format "Unknown modifier key ~S" key))))
     (setf *last-modifier-state* modifier)))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event key-event))
-  (let* ((releasep (mezzano.gui.compositor::key-releasep event))
-         (char (mezzano.gui.compositor::key-key event))
+(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:key-event))
+  (let* ((releasep (mos:key-releasep event))
+         (char (mos:key-key event))
          (name (get-name char))
-         (modifier-state (compute-modifier-state (mezzano.gui.compositor::key-modifier-state event))))
-    (mezzano.supervisor:fifo-push
+         (modifier-state (compute-modifier-state (mos:key-modifier-state event))))
+    (mos:fifo-push
      (make-instance (if releasep 'key-release-event 'key-press-event)
                     :key-name name
                     :key-character char
@@ -76,19 +76,26 @@
 ;;; Pointer Events
 ;;;======================================================================
 
+(defparameter +button-to-clim-alist+
+  `((,(byte 1 0) . ,+pointer-left-button+)
+    (,(byte 1 1) . ,+pointer-right-button+)
+    (,(byte 1 2) . ,+pointer-middle-button+)
+    (,(byte 1 3) . ,+pointer-wheel-up+)
+    (,(byte 1 4) . ,+pointer-wheel-down+)
+    ;; (,(byte 1 ???) . ,+pointer-wheel-left+)
+    ;; (,(byte 1 ???) . , +pointer-wheel-right+)
+    ))
+
 (defun compute-mouse-buttons (buttons)
   (let ((result 0))
-    ;; bit 0 -> bit 0
-    (setf (ldb (byte 1 0) result) (ldb (byte 1 0) buttons))
-    ;; bit 2 -> bit 1
-    (setf (ldb (byte 1 1) result) (ldb (byte 1 2) buttons))
-    ;; bit 1 -> bit 2
-    (setf (ldb (byte 1 2) result) (ldb (byte 1 1) buttons))
+    (dolist (tr +button-to-clim-alist+)
+      (when (ldb-test (car tr) buttons)
+        (setf result (logior result (cdr tr)))))
     result))
 
 (defun pointer-motion-event (mcclim-fifo sheet event)
   (let ((time 0))
-    (mezzano.supervisor:fifo-push
+    (mos:fifo-push
      (make-instance 'pointer-motion-event
                     :pointer 0
                     :x *last-mouse-x*
@@ -102,12 +109,10 @@
      nil)))
 
 (defun pointer-button-event (mcclim-fifo sheet event)
-  (let* ((buttons (compute-mouse-buttons
-                   (mezzano.gui.compositor::mouse-button-state event)))
-         (change (compute-mouse-buttons
-                  (mezzano.gui.compositor::mouse-button-change event)))
+  (let* ((buttons (compute-mouse-buttons (mos:mouse-button-state event)))
+         (change (compute-mouse-buttons (mos:mouse-button-change event)))
          (time 0))
-    (mezzano.supervisor:fifo-push
+    (mos:fifo-push
      (make-instance (if (= (logand buttons change) 0)
                         'pointer-button-release-event
                         'pointer-button-press-event)
@@ -125,7 +130,7 @@
 
 (defun mouse-exit-event (mcclim-fifo sheet event)
   (let ((time 0))
-    (mezzano.supervisor:fifo-push
+    (mos:fifo-push
     (make-instance 'pointer-exit-event
                    :pointer 0
                    :x *last-mouse-x*
@@ -140,7 +145,7 @@
 
 (defun mouse-enter-event (mcclim-fifo sheet event)
   (let ((time 0))
-    (mezzano.supervisor:fifo-push
+    (mos:fifo-push
      (make-instance 'pointer-enter-event
                     :pointer 0
                     :x *last-mouse-x*
@@ -155,34 +160,34 @@
 
 (defun frame-mouse-event (mcclim-fifo sheet mez-frame event)
   (handler-case
-      (mezzano.gui.widgets:frame-mouse-event mez-frame event)
-    (mezzano.gui.widgets:close-button-clicked ()
-      (mezzano.supervisor:fifo-push
+      (mos:frame-mouse-event mez-frame event)
+    (mos:close-button-clicked ()
+      (mos:fifo-push
        (make-instance 'window-manager-delete-event :sheet sheet)
        mcclim-fifo
        nil))))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event mouse-event))
-  (let* ((mez-window (mezzano.gui.compositor::window event))
-         (mouse-x    (mezzano.gui.compositor::mouse-x-position event))
-         (mouse-y    (mezzano.gui.compositor::mouse-y-position event))
+(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:mouse-event))
+  (let* ((mez-window (mos:window event))
+         (mouse-x    (mos:mouse-x-position event))
+         (mouse-y    (mos:mouse-y-position event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (sheet      (port-lookup-sheet *port* mez-window)))
     (when mez-mirror
       (with-slots (mez-frame dx dy width height) mez-mirror
         (setf *last-mouse-x* (- mouse-x dx)
               *last-mouse-y* (- mouse-y dy)
-              *last-graft-x* (+ mouse-x (window-x mez-window))
-              *last-graft-y* (+ mouse-y (window-y mez-window)))
+              *last-graft-x* (+ mouse-x (mos:window-x mez-window))
+              *last-graft-y* (+ mouse-y (mos:window-y mez-window)))
         (cond ((or (null mez-frame)
-                   (in-frame-header-p mez-frame mouse-x mouse-y)
-                   (in-frame-border-p mez-frame mouse-x mouse-y))
+                   (mos:in-frame-header-p mez-frame mouse-x mouse-y)
+                   (mos:in-frame-border-p mez-frame mouse-x mouse-y))
                (when *last-mouse-sheet*
                  (mouse-exit-event mcclim-fifo *last-mouse-sheet* event)
                  (setf *last-mouse-sheet* nil))
                (frame-mouse-event mcclim-fifo sheet mez-frame event))
 
-              ((= (mezzano.gui.compositor::mouse-button-change event) 0)
+              ((= (mos:mouse-button-change event) 0)
                (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
                         :default)
                (cond ((eq sheet *last-mouse-sheet*)
@@ -204,27 +209,27 @@
 ;;; Activation Events
 ;;;======================================================================
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event window-activation-event))
-  (let* ((mez-window (mezzano.gui.compositor::window event))
+(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:window-activation-event))
+  (let* ((mez-window (mos:window event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
          (sheet (port-lookup-sheet *port* mez-window))
          (focus (and sheet (frame-query-io (pane-frame sheet)))))
     (when mez-frame
-      (setf (mezzano.gui.widgets:activep mez-frame)
-            (mezzano.gui.compositor::state event))
-      (mezzano.gui.widgets:draw-frame mez-frame))
+      (setf (mos:activep mez-frame)
+            (mos:state event))
+      (mos:draw-frame mez-frame))
     (setf *current-focus* focus)))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event quit-event))
-  (mezzano.supervisor:fifo-push
+(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:quit-event))
+  (mos:fifo-push
    (make-instance 'window-destroy-event
                   :sheet *current-focus*
                   :region nil)
    mcclim-fifo
    nil))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event window-close-event))
+(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:window-close-event))
   ;;; TODO - what needs to happen here anything?
   )
 
@@ -232,25 +237,25 @@
 ;;; Resize events
 ;;;======================================================================
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event resize-request-event))
-  (let* ((mez-window (mezzano.gui.compositor::window event))
+(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:resize-request-event))
+  (let* ((mez-window (mos:window event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
          (sheet (port-lookup-sheet *port* mez-window))
-         (fwidth (max *minimum-width* (mezzano.gui.compositor:width event)))
-         (fheight (max *minimum-height* (mezzano.gui.compositor:height event))))
+         (fwidth (max *minimum-width* (mos:width event)))
+         (fheight (max *minimum-height* (mos:height event))))
     (multiple-value-bind (dw dh) (size-deltas mez-mirror)
       (when (and mez-frame
-                 (or (/= fwidth (mezzano.gui.compositor:width mez-window))
-                     (/= fheight (mezzano.gui.compositor:height mez-window))))
-        (let* ((surface (mezzano.gui:make-surface fwidth fheight))
-               (pixels (mezzano.gui::surface-pixels surface))
+                 (or (/= fwidth (mos:width mez-window))
+                     (/= fheight (mos:height mez-window))))
+        (let* ((surface (mos:make-surface fwidth fheight))
+               (pixels (mos:surface-pixels surface))
                (width (- fwidth dw))
                (height(- fheight dh)))
-          (mezzano.gui.widgets:resize-frame mez-frame surface)
-          (mezzano.gui.compositor:resize-window
+          (mos:resize-frame mez-frame surface)
+          (mos:resize-window
            mez-window surface
-           :origin (mezzano.gui.compositor:resize-origin event))
+           :origin (mos:resize-origin event))
 
           (setf (slot-value mez-mirror 'mez-pixels) pixels
                 (slot-value mez-mirror 'fwidth) fwidth
@@ -258,18 +263,18 @@
                 (slot-value mez-mirror 'width) width
                 (slot-value mez-mirror 'height) height)
 
-          (mezzano.supervisor:fifo-push
+          (mos:fifo-push
            (make-instance 'window-configuration-event
                           :sheet sheet
                           :region nil
                           :width width
                           :height height
-                          :x (window-x mez-window)
-                          :y (window-y mez-window))
+                          :x (mos:window-x mez-window)
+                          :y (mos:window-y mez-window))
            mcclim-fifo
            nil)
           )))))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event resize-event))
+(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:resize-event))
   ;;; TODO - what needs to happen here anything?
   )

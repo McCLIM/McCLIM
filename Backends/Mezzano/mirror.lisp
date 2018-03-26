@@ -23,21 +23,24 @@
   (with-slots (fwidth fheight width height) mez-mirror
     (values (- fwidth width) (- fheight height))))
 
-(defmethod %create-mirror-image :after ((sheet mezzano-mirror) new-width new-height)
+(defun resize-mirror (mirror new-width new-height)
   (setf new-width (max 5 new-width))
   (setf new-height (max 5 new-height))
-  (with-slots (fwidth fheight width height mez-frame mez-window) sheet
+  (with-slots (fwidth fheight width height mez-frame mez-window) mirror
     (when (or (/= width new-width) (/= height new-height))
       (setf fwidth (+ new-width (- fwidth width))
             fheight (+ new-height (- fheight height))
             width new-width
             height new-height)
-      (let* ((surface (mezzano.gui:make-surface fwidth fheight))
-             (pixels (mezzano.gui::surface-pixels surface)))
-        (mezzano.gui.widgets:resize-frame mez-frame surface)
-        (mezzano.gui.compositor:resize-window mez-window surface)
-        (setf (slot-value sheet 'mez-pixels) pixels)
-        (mezzano.gui.widgets:draw-frame mez-frame)))))
+      (let* ((surface (mos:make-surface fwidth fheight))
+             (pixels (mos:surface-pixels surface)))
+        (mos:resize-frame mez-frame surface)
+        (mos:resize-window mez-window surface)
+        (setf (slot-value mirror 'mez-pixels) pixels)
+        (mos:draw-frame mez-frame)))))
+
+(defmethod %create-mirror-image :after ((mirror mezzano-mirror) width height)
+  (resize-mirror mirror width height))
 
 (defgeneric image-mirror-to-mezzano (sheet))
 
@@ -47,7 +50,7 @@
 (defun image-mirror-put (mez-window dx dy width height dirty-r)
   (when mez-window
     ;; (debug-format "image-mirror-put ~S ~S ~S" mez-window width height)
-    (mezzano.gui.compositor:damage-window
+    (mos:damage-window
      mez-window
      dx
      dy
@@ -64,7 +67,7 @@
     ;;          ;;               (max 0 (- width (min 0 (- min-x))))
     ;;          ;;               (max 0 (- height (min 0 (- min-y))))
     ;;          ;;               width height)
-    ;;          (mezzano.gui.compositor:damage-window
+    ;;          (mos:damage-window
     ;;           mez-window
     ;;           (+ dx (max 0 (- width (min 0 (- min-x)))))
     ;;           (+ dy (max 0 (- height (min 0 (- min-y)))))
@@ -113,35 +116,26 @@
           (setf mez-dirty-region +nowhere+))
         (image-mirror-put mez-window dx dy width height reg)))))
 
-(defmethod clim-backend:port-set-mirror-region
+(defmethod port-set-mirror-region
     ((port mezzano-port) (mirror mezzano-mirror) mirror-region)
-  (debug-format "clim-backend:port-set-mirror-region ((port mezzano-port) (mirror mezzano-mirror) mirror-region)")
-  (debug-format "    ~S ~S ~S" port mirror mirror-region)
-  ;; (port-set-mirror-region port (slot-value mirror 'xmirror) mirror-region)
-  )
+  (with-bounding-rectangle* (min-x min-y max-x max-y) mirror-region
+    (resize-mirror mirror
+                   (1+ (ceiling (- max-x min-x)))
+                   (1+ (ceiling (- max-y min-y)))))
+  (mos:draw-frame (slot-value mirror 'mez-frame)))
 
-;; TODO - is this version of the method needed?
-(defmethod clim-backend:port-set-mirror-region
-    ((port mezzano-port) mirror mirror-region)
-  (debug-format "clim-backend:port-set-mirror-region ((port mezzano-port) mirror mirror-region)")
-  (debug-format "    ~S ~S ~S" port mirror mirror-region)
-  )
-
-(defmethod clim-backend:port-set-mirror-transformation
+(defmethod port-set-mirror-transformation
     ((port mezzano-port) (mirror mezzano-mirror) mirror-transformation)
   (unless (slot-value mirror 'top-levelp)
     (let ((mez-window (slot-value mirror 'mez-window))
           (mez-frame (slot-value mirror 'mez-frame)))
       (multiple-value-bind (x y) (transform-position mirror-transformation 0 0)
-        (setf (window-x mez-window) (floor x)
-              (window-y mez-window) (floor y))
-        (mezzano.gui.widgets:draw-frame mez-frame)))))
-
-(defmethod clim-backend:port-set-mirror-transformation
-    ((port mezzano-port) mirror mirror-transformation)
-  (debug-format "clim-backend:port-set-mirror-transformation ((port mezzano-port) mirror mirror-transformation)")
-  (debug-format "~S ~S ~S" port mirror mirror-transformation)
-  )
+        ;; Don't know why this delay is required but without it menus
+        ;; are not displayed near the menu bar. 25 Mar. 2018 fittestbits
+        (sleep 0.001)
+        (setf (mos:window-x mez-window) (floor x)
+              (mos:window-y mez-window) (floor y))
+        (mos:draw-frame mez-frame)))))
 
 (defmethod destroy-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
   (let ((mirror (sheet-mirror sheet)))
@@ -149,14 +143,19 @@
       (let ((mez-window (slot-value mirror 'mez-window)))
         (remhash mez-window (slot-value port 'mez-window->sheet))
         (remhash mez-window (slot-value port 'mez-window->mirror))
-        (mezzano.gui.compositor:close-window mez-window)))
+        (mos:close-window mez-window)))
     (when (port-lookup-mirror port sheet)
       (port-unregister-mirror port sheet (sheet-mirror sheet)))))
 
 (defmethod port-disable-sheet ((port mezzano-port) (sheet mirrored-sheet-mixin))
   (let ((mirror (sheet-mirror sheet)))
-    (when (typep mirror 'mezzano-mirror)
-      (mezzano.gui.compositor:close-window (slot-value mirror 'mez-window)))))
+    (when (and (typep mirror 'mezzano-mirror)
+               (eq sheet (port-lookup-sheet port mirror)))
+      ;; disabling a top level sheet - close the window and delete mappings
+      (let ((mez-window (slot-value mirror 'mez-window)))
+        (remhash mez-window (slot-value port 'mez-window->sheet))
+        (remhash mez-window (slot-value port 'mez-window->mirror))
+        (mos:close-window mez-window)))))
 
 (defmethod mcclim-render-internals::%mirror-force-output ((mirror mezzano-mirror))
   (with-slots (mcclim-render-internals::image-lock

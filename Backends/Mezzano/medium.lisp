@@ -5,9 +5,7 @@
 
 (defun debug-format (string &rest args)
   (cond ((eq *debug-format-control* :console)
-         (mezzano.supervisor::debug-serial-write-string
-          (apply #'format nil string args))
-         (mezzano.supervisor::debug-serial-write-char  #\Newline))
+         (mos:debug-print-line (apply #'format nil string args)))
         ((eq *debug-format-control* :list)
          (push (apply #'format nil string args) *debug-format-messages*))))
 

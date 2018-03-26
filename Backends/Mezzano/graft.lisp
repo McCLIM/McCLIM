@@ -35,10 +35,9 @@
 (defmethod initialize-instance :after ((graft mezzano-graft) &rest args)
   (declare (ignore args))
   (debug-format "make-instance mezzano-graft")
-  (setf (slot-value graft 'width) (mezzano.supervisor::framebuffer-width
-                                  mezzano.supervisor::*current-framebuffer*)
-        (slot-value graft 'height) (mezzano.supervisor::framebuffer-height
-                                   mezzano.supervisor::*current-framebuffer*)))
+  (let ((framebuffer (mos:current-framebuffer)))
+    (setf (slot-value graft 'width) (mos:framebuffer-width framebuffer)
+          (slot-value graft 'height) (mos:framebuffer-height framebuffer))))
 
 (defmethod graft-width ((graft mezzano-graft) &key (units :device))
   (ecase units
