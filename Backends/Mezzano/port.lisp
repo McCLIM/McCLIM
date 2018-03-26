@@ -43,17 +43,15 @@
    (cursor-table       :accessor mezzano-cursor-table)
    (mez-window->sheet  :initform (make-hash-table :test #'eq))
    (mez-window->mirror :initform (make-hash-table :test #'eq))
-   (mez-fifo           :initform (mezzano.supervisor:make-fifo 50)
+   (mez-fifo           :initform (mos:make-fifo 50)
                        :reader   mezzano-mez-fifo)
-   (mcclim-fifo        :initform (mezzano.supervisor:make-fifo 10)
+   (mcclim-fifo        :initform (mos:make-fifo 10)
                        :reader   mezzano-mcclim-fifo)))
 
-(defmethod port-lookup-sheet ((port mezzano-port)
-                              (mez-window mezzano.gui.compositor::window))
+(defmethod port-lookup-sheet ((port mezzano-port) (mez-window mos:window))
   (gethash mez-window (slot-value port 'mez-window->sheet)))
 
-(defmethod port-lookup-mirror ((port mezzano-port)
-                               (mez-window mezzano.gui.compositor::window))
+(defmethod port-lookup-mirror ((port mezzano-port) (mez-window mos:window))
   (gethash mez-window (slot-value port 'mez-window->mirror)))
 
 (defun parse-mezzano-server-path (path)
@@ -68,7 +66,7 @@
 (setf (get :mezzano :server-path-parser) 'parse-mezzano-server-path)
 
 (defun initialize-display-thread (port)
-  (mezzano.supervisor:make-thread
+  (mos:make-thread
    (lambda ()
      (loop
         (handler-case
@@ -83,7 +81,7 @@
 
 (defun initialize-event-thread (port)
   (when clim-sys:*multiprocessing-p*
-    (mezzano.supervisor:make-thread
+    (mos:make-thread
      (lambda ()
        (loop
           (with-simple-restart
@@ -97,7 +95,7 @@
   (declare (ignore args))
   (setf *port* port
         (slot-value port 'pointer) (make-instance 'mezzano-pointer :port port)
-        (mezzano-port-window port) (mezzano.supervisor:current-framebuffer))
+        (mezzano-port-window port) (mos:current-framebuffer))
   (push (make-instance 'mezzano-frame-manager :port port)
 	(slot-value port 'frame-managers))
   (clim-extensions:port-all-font-families port)
@@ -133,16 +131,16 @@
          (fheight (+ height 1 top-border))
          (mirror (make-instance 'mezzano-mirror))
          (fifo (mezzano-mez-fifo port))
-         (window (mezzano.gui.compositor:make-window fifo fwidth fheight))
-         (surface (mezzano.gui.compositor:window-buffer window))
-         (frame (make-instance 'mezzano.gui.widgets:frame
+         (window (mos:make-window fifo fwidth fheight))
+         (surface (mos:window-buffer window))
+         (frame (make-instance 'mos:frame
                                :top top-border
                                :framebuffer surface
                                :title title
                                :close-button-p close-button-p
                                :resizablep resizablep
-                               :damage-function (mezzano.gui.widgets:default-damage-function window)
-                               :set-cursor-function (mezzano.gui.widgets:default-cursor-function window))))
+                               :damage-function (mos:default-damage-function window)
+                               :set-cursor-function (mos:default-cursor-function window))))
     (setf (slot-value mirror 'mcclim-render-internals::dirty-region) nil
           (slot-value mirror 'fwidth) fwidth
           (slot-value mirror 'fheight) fheight
@@ -150,7 +148,7 @@
           (slot-value mirror 'dy) top-border
           (slot-value mirror 'width) width
           (slot-value mirror 'height) height
-          (slot-value mirror 'mez-pixels) (mezzano.gui::surface-pixels surface)
+          (slot-value mirror 'mez-pixels) (mos:surface-pixels surface)
           (slot-value mirror 'mez-window) window
           (slot-value mirror 'mez-frame) frame)
     (port-register-mirror port sheet mirror)
@@ -250,7 +248,7 @@
         ;; the mcclim-fifo.
         (loop
            (multiple-value-bind (event validp)
-               (mezzano.supervisor:fifo-pop mcclim-fifo nil)
+               (mos:fifo-pop mcclim-fifo nil)
              (when validp
                ;; ignore keyboard events if there's no event sheet to
                ;; handle them
@@ -258,11 +256,11 @@
                             (null (event-sheet event)))
                  (return event))))
            (mez-event->mcclim-event
-            mcclim-fifo (mezzano.supervisor:fifo-pop mez-fifo t)))
-        (mezzano.supervisor:panic "timeout not supported")
+            mcclim-fifo (mos:fifo-pop mez-fifo t)))
+        (mos:panic "timeout not supported")
         ;; (loop
         ;;    (multiple-value-bind (event validp)
-        ;;        (mezzano.supervisor:fifo-pop fifo NIL)
+        ;;        (mos:fifo-pop fifo NIL)
         ;;      (cond (validp (return (convert-event event)))
         ;;            ((< timeout 0.005) (return :timeout))
         ;;            (T (sleep 0.01)

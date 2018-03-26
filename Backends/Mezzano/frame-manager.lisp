@@ -104,7 +104,7 @@
                         (frame application-frame) type &rest args)
   (apply #'make-instance
 	 (maybe-mirroring (port fm)
-                          (clim-mezzano::find-concrete-pane-class type))
+                          (find-concrete-pane-class type))
 	 :frame frame
 	 :manager fm
 	 :port (port frame)
@@ -112,10 +112,10 @@
 
 (defmethod adopt-frame :before ((fm mezzano-frame-manager) (frame menu-frame))
   (multiple-value-bind (buttons mouse-x mouse-y)
-      (mezzano.gui.compositor::global-mouse-state)
+      (mos:global-mouse-state)
     (declare (ignore buttons))
-    (setf (slot-value frame 'climi::left) (+ mouse-x 10)
-          (slot-value frame 'climi::top) mouse-y)))
+    (setf (slot-value frame 'climi::left) (+ mouse-x 5)
+          (slot-value frame 'climi::top) (+ mouse-y 5))))
 
   ;; CLX code for adopt-frame :before
   ;; Temporary kludge.
