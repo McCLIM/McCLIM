@@ -181,9 +181,9 @@ very hard)."
     ;; parent coordinate system.
     (with-bounding-rectangle* (mx1 my1 mx2 my2)
         sheet-region-in-native-parent
-      (let (;; pw, ph is the width/height of the parent
-            (pw (bounding-rectangle-width (%sheet-mirror-region* parent)))
-            (ph (bounding-rectangle-height (%sheet-mirror-region* parent))))
+      (let (;; pw, ph is the width/height of the mirror containing our sheet
+            (pw (bounding-rectangle-width (%sheet-mirror-region* (sheet-mirrored-ancestor parent))))
+            (ph (bounding-rectangle-height (%sheet-mirror-region* (sheet-mirrored-ancestor parent)))))
         (labels ((choose (MT)
                    ;; -> fits-p mirror-region
                    (multiple-value-bind (x1 y1) (transform-position MT 0 0)
