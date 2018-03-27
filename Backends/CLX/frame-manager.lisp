@@ -24,7 +24,31 @@
 ;;; CLX-FRAME-MANAGER class
 
 (defclass clx-frame-manager (frame-manager)
-  ())
+  ((mirroring-fn :initarg :mirroring
+                 :initform (mirror-factory :random)
+                 :reader mirroring-p)
+   (class-gensym :initarg :class-gensym
+                 :initform (gensym "CLX-")
+                 :reader class-gensym)))
+
+;;; Default mirroring predicates
+(defun mirror-factory (kind)
+  (etypecase kind
+    (null nil)
+    (function kind)
+    ((eql :single)
+     #'(lambda (class)
+         (and (not (subtypep class 'mirrored-sheet-mixin))
+              (subtypep class 'top-level-sheet-pane))))
+    ((eql :full)
+     #'(lambda (class)
+         (and (not (subtypep class 'mirrored-sheet-mixin))
+              (subtypep class 'basic-pane))))
+    ((eql :random) ;; for testing
+     #'(lambda (class)
+         (and (not (subtypep class 'mirrored-sheet-mixin))
+              (or (subtypep class 'top-level-sheet-pane)
+                  (zerop (random 2))))))))
 
 ;; Abstract pane lookup logic
 
@@ -74,28 +98,19 @@
       (find-first-defined-class (find-symbols (generate-clx-pane-specs type)))
       type))
 
-;;; Predicate determining whenever we should add mirror to the class or use it
-;;; as it is. By default we add mirror to each basic-pane which doesn't have one
-;;; already.
-(defun mirroring-p (class)
-  (and (not (subtypep class 'mirrored-sheet-mixin))
-       (subtypep class 'basic-pane)
-       ;; uncomment for single-mirrored pane hierarchy
-       #+ (or) (subtypep class 'top-level-sheet-pane)))
-
 ;;; This is an example of how make-pane-1 might create specialized instances of
 ;;; the generic pane types based upon the type of the frame-manager. However, in
 ;;; the CLX case, we don't expect there to be any CLX specific panes. CLX uses
 ;;; the default generic panes instead.
-(defun maybe-mirroring (concrete-pane-class)
-  (when (mirroring-p concrete-pane-class)
+(defun maybe-mirroring (fm concrete-pane-class)
+  (when (funcall (mirroring-p fm) concrete-pane-class)
     (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
                                           (class-name concrete-pane-class)
                                           concrete-pane-class)))
-      ;; (format *debug-io* "use dummy mirrored class ~A~%" concrete-mirrored-pane-class)
       (multiple-value-bind (class-symbol foundp)
           (alexandria:ensure-symbol
-           (concatenate 'string "CLX-" (symbol-name concrete-pane-class-symbol) "-DUMMY"))
+           (alexandria:symbolicate (class-gensym fm) "-" (symbol-name concrete-pane-class-symbol))
+           :clim-clx)
         (unless foundp
           (eval
            `(defclass ,class-symbol
@@ -105,13 +120,13 @@
                  ,concrete-pane-class-symbol)
               ()
               (:metaclass ,(type-of (find-class concrete-pane-class-symbol))))))
-        ;; (format *debug-io* "create class ~A~%" concrete-mirrored-pane-class-symbol)
+        ;; (format *debug-io* "dummy class mirror ~A: ~A~%" concrete-pane-class-symbol class-symbol)
         (setf concrete-pane-class (find-class class-symbol)))))
   concrete-pane-class)
 
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
   (apply #'make-instance
-	 (maybe-mirroring (find-concrete-pane-class type))
+	 (maybe-mirroring fm (find-concrete-pane-class type))
 	 :frame frame
 	 :manager fm
 	 :port (port frame)

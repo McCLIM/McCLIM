@@ -38,7 +38,7 @@
    (design-cache :initform (make-hash-table :test #'eq))))
 
 
-(defun automagic-clx-server-path ()  
+(defun automagic-clx-server-path (port-type)
   (let ((name (get-environment-variable "DISPLAY")))
     (assert name (name)
             "Environment variable DISPLAY is not set")
@@ -63,30 +63,35 @@
                                    (string-upcase (subseq name 0 slash-i))
                                    :keyword))
                   (t :internet))))
-      (list :clx
+      (list port-type
 	    :host host
 	    :display-id (or display 0)
 	    :screen-id (or screen 0)
 	    :protocol protocol))))
 
-(defun helpfully-automagic-clx-server-path ()
+(defun helpfully-automagic-clx-server-path (port-type)
   #+windows
   (parse-clx-server-path '(:clx :host "localhost" :protocol :internet))
   #-windows
-  (restart-case (automagic-clx-server-path)
+  (restart-case (automagic-clx-server-path port-type)
     (use-localhost ()
       :report "Use local unix display"
-      (parse-clx-server-path '(:clx :host "" :protocol :unix)))))
+      (parse-clx-server-path `(,port-type :host "" :protocol :unix)))))
 
 (defun parse-clx-server-path (path)
-  (pop path)
-  (if path
-      (list :clx
-	    :host       (getf path :host "localhost")
-	    :display-id (getf path :display-id 0)
-	    :screen-id  (getf path :screen-id 0)
-	    :protocol   (getf path :protocol :internet))
-      (helpfully-automagic-clx-server-path)))
+  (let* ((port-type (pop path))
+         (mirroring (mirror-factory (getf path :mirroring))))
+    (remf path :mirroring)
+    (if path
+        `(,port-type
+          :host ,(getf path :host "localhost")
+          :display-id ,(getf path :display-id 0)
+          :screen-id ,(getf path :screen-id 0)
+          :protocol ,(getf path :protocol :internet)
+          ,@(when mirroring (list :mirroring mirroring)))
+        (append (helpfully-automagic-clx-server-path port-type)
+                (when mirroring
+                  (list :mirroring mirroring))))))
 
 (setf (get :x11 :port-type) 'clx-port)
 (setf (get :x11 :server-path-parser) 'parse-clx-server-path)
@@ -97,10 +102,12 @@
 
 (defmethod initialize-instance :after ((port clx-port) &rest args)
   (declare (ignore args))
-  (push (make-instance 'clx-frame-manager :port port)
-	(slot-value port 'frame-managers))
-  (setf (slot-value port 'pointer)
-	(make-instance 'clx-pointer :port port))
+  (let ((options (cdr (port-server-path port))))
+    (push (apply #'make-instance 'clx-frame-manager
+                 :port port options)
+          (slot-value port 'frame-managers))
+    (setf (slot-value port 'pointer)
+          (make-instance 'clx-pointer :port port)))
   (initialize-clx port))
 
 (defmethod print-object ((object clx-port) stream)

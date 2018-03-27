@@ -5,13 +5,8 @@
 		       clim-clx::clx-basic-port)
   ())
 
-(defun parse-clx-fb-server-path (path)
-  (let ((server-path (clim-clx::parse-clx-server-path path)))
-    (pop path)
-    (cons :clx-fb (cdr server-path))))
-
 (setf (get :clx-fb :port-type) 'clx-fb-port)
-(setf (get :clx-fb :server-path-parser) 'parse-clx-fb-server-path)
+(setf (get :clx-fb :server-path-parser) 'clim-clx::parse-clx-server-path)
 
 (defmethod initialize-instance :after ((port clx-fb-port) &rest args)
   (declare (ignore args))
