@@ -66,9 +66,10 @@ interface management system."
 (defsystem #:mcclim/looks
   :depends-on (#:clim
                #-(or mcclim-beagle mcclim-ugly)
-                                #:mcclim-clx/pretty  #| adds truetype        |#
-               #+mcclim-ugly    #:mcclim-clx         #| raw clim-clx backend |#
-               #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure) |#
+               #:mcclim-clx/pretty              #| adds truetype        |#
+               #+mcclim-ugly #:mcclim-clx       #| raw clim-clx backend |#
+               #-mcclim-beagle #:mcclim-clx-fb  #| experimental backend |#
+               #+mcclim-beagle #:mcclim-beagle  #| OSX native (clozure) |#
 
                ;; null backend
                #:mcclim-null))
