@@ -267,7 +267,9 @@ refresh-event to redisplay pane hierarchy when we start new application."
                :width 800 :height 600)
           (buttons
            (vertically ()
-             (mb "Run CLX" :clx)
+             (mb "Run CLX (full)" '(:clx :mirroring :full))
+             (mb "Run CLX (random)" '(:clx :mirroring :random))
+             (mb "Run CLX (single)" '(:clx :mirroring :single))
              (mb "Run CLX-fb" :clx-fb)
              '+fill+
              (make-pane :push-button :label "Inspect this frame"

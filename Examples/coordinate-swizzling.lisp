@@ -20,7 +20,7 @@
 
 (define-coordinate-swizzling-command (com-fill :name t) ()
   (let ((pane (clim:find-pane-named clim:*application-frame* 'app)))
-    (loop for i from 0 to 2200
+    (loop for i from 0 to 4400
           do (format pane "~4,'0d~%" i))))
 
 (define-coordinate-swizzling-command (com-quit :name t) ()
