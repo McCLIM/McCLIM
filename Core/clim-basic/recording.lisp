@@ -1867,7 +1867,8 @@ were added."
   ())
 
 ;;; 16.4. Output Recording Streams
-(defclass standard-output-recording-stream (output-recording-stream)
+(defclass standard-output-recording-stream (output-recording-stream
+                                            always-repaint-background-mixin)
   ((recording-p :initform t :reader stream-recording-p)
    (drawing-p :initform t :accessor stream-drawing-p)
    (output-history :initform (make-instance 'standard-tree-output-history)
@@ -2081,20 +2082,20 @@ according to the flags RECORD and DRAW."
   (with-output-recording-options (stream :record nil)
     (call-next-method)))
 
-;;; FIXME: Change things so the rectangle below is only drawn in response
-;;;        to explicit repaint requests from the user, not exposes from X
-;;; FIXME: Use DRAW-DESIGN*, that is fix DRAW-DESIGN*.
+(defmethod handle-repaint :around ((stream output-recording-stream) region)
+  (with-output-recording-options (stream :record nil)
+    (call-next-method)))
 
+;;; FIXME: Change things so the rectangle below is only drawn in response
+;;;        to explicit repaint requests from the user, not exposes from X.
+;;; FIXME: Use DRAW-DESIGN*, that is fix DRAW-DESIGN*.
 (defmethod handle-repaint ((stream output-recording-stream) region)
   (unless (region-equal region +nowhere+) ; ignore repaint requests for +nowhere+
     (let ((region (if (region-equal region +everywhere+)
                       ;; fallback to the sheet's region for +everwhere+.
                       (sheet-region stream)
                       (bounding-rectangle region))))
-      (with-output-recording-options (stream :record nil)
-        (with-bounding-rectangle* (x1 y1 x2 y2) region
-          (draw-rectangle* stream x1 y1 x2 y2 :filled t :ink +background-ink+))
-        (stream-replay stream region)))))
+      (stream-replay stream region))))
 
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
   (declare (ignore x y))

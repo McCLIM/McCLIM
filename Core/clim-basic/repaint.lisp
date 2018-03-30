@@ -74,7 +74,6 @@
       ;; This causes applications which want to do a double-buffered repaint,
       ;; such as the logic cube, to flicker. On the other hand, it also stops
       ;; things such as the listener wholine from overexposing their text.
-      (%repaint-background (sheet-mirrored-ancestor sheet) sheet r)
       (handle-repaint sheet r))))
 
 (defmethod repaint-sheet :after ((sheet sheet-parent-mixin) region)
@@ -89,7 +88,6 @@
                                        region)
                                       (sheet-region child))))
                    (unless (eq child-region +nowhere+)
-                     (%repaint-background (sheet-mirrored-ancestor child) child child-region)
                      (handle-repaint child child-region)
                      (propagate-repaint-1 child child-region)))))))
     (propagate-repaint-1 sheet region)))
@@ -178,26 +176,29 @@
 (defclass never-repaint-background-mixin () ())
 
 ;;; XXX: check if we can reintroduce with-double-buffering..
-(defun %repaint-background (sheet child region)
-  (when (typep child 'never-repaint-background-mixin)
-    (return-from %repaint-background))
-  (labels ((effective-repaint-region (mirrored-sheet child region)
-	     (if (eq mirrored-sheet child)
-		 (region-intersection
-		  (sheet-region mirrored-sheet)
-		  region)
+(defmethod handle-repaint :before ((sheet always-repaint-background-mixin) region)
+  #+jd-test(sleep 0.1)                  ; we repaint whole thing around four times!
+  (labels ((effective-repaint-region (mirrored-sheet sheet region)
+	     (if (eq mirrored-sheet sheet)
+		 (region-intersection (sheet-region mirrored-sheet) region)
 		 (effective-repaint-region mirrored-sheet
-					   (sheet-parent child)
-					   (transform-region
-					    (sheet-transformation child)
-					    (region-intersection
-					     region
-					     (sheet-region child)))))))
-    (let ((native-child-region (effective-repaint-region sheet child region)))
-      (with-sheet-medium (medium sheet)
-	(with-drawing-options (medium :clipping-region native-child-region
-				      :ink (pane-background child)
+					   (sheet-parent sheet)
+					   (transform-region (sheet-transformation sheet)
+                                                             (region-intersection region
+                                                                                  (sheet-region sheet)))))))
+    (let* ((parent (sheet-mirrored-ancestor sheet))
+           (native-sheet-region (effective-repaint-region parent sheet region)))
+      (with-sheet-medium (medium parent)
+	(with-drawing-options (medium :clipping-region native-sheet-region
+				      :ink
+                                      #-jd-test(pane-background sheet)
+                                      #+jd-test(alexandria:random-elt
+                                                (list +darkmagenta+
+                                                      +darkblue+
+                                                      +darkgreen+
+                                                      +darkorange+
+                                                      +darkolivegreen+))
 				      :transformation +identity-transformation+)
 	  (with-bounding-rectangle* (left top right bottom)
-              native-child-region
-	    (medium-draw-rectangle* sheet left top right bottom t)))))))
+              native-sheet-region
+	    (medium-draw-rectangle* medium left top right bottom t)))))))
