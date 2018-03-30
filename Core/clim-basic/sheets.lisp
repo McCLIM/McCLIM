@@ -91,7 +91,8 @@
   ((region :type region
 	   :initarg :region
 	   :initform (make-bounding-rectangle 0 0 100 100)
-	   :accessor sheet-region)
+	   :accessor sheet-region
+           :writer %%set-sheet-region)
    (native-transformation :type (or null transformation)
 			  :initform nil
                           :writer %%set-sheet-native-transformation
@@ -174,8 +175,8 @@
 
 (defmethod sheet-viewable-p ((sheet basic-sheet))
   (and (sheet-parent sheet)
-       (sheet-viewable-p (sheet-parent sheet))
-       (sheet-enabled-p sheet)))
+       (sheet-enabled-p sheet)
+       (sheet-viewable-p (sheet-parent sheet))))
 
 (defmethod sheet-occluding-sheets ((sheet basic-sheet) (child sheet))
   (labels ((fun (l)
@@ -256,23 +257,23 @@
   (error "Sheet has no parent"))
 
 (defmethod map-over-sheets-containing-position (function (sheet basic-sheet) x y)
-  (mapc #'(lambda (child)
-            (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
-              (when (region-contains-position-p (sheet-region child) tx ty)
-                (funcall function child))))
-        (sheet-children sheet)))
+  (map () #'(lambda (child)
+              (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
+                (when (region-contains-position-p (sheet-region child) tx ty)
+                  (funcall function child))))
+       (sheet-children sheet)))
 
 (defmethod map-over-sheets-overlapping-region (function (sheet basic-sheet) region)
-  (mapc #'(lambda (child)
-            (when (region-intersects-region-p
-                   region
-                   (transform-region
-                    (if (eq child sheet)
-                        +identity-transformation+
-                        (sheet-transformation child))
-                    (sheet-region child)))
-              (funcall function child)))
-        (sheet-children sheet)))
+  (map () #'(lambda (child)
+              (when (region-intersects-region-p
+                     region
+                     (transform-region
+                      (if (eq child sheet)
+                          +identity-transformation+
+                          (sheet-transformation child))
+                      (sheet-region child)))
+                (funcall function child)))
+       (sheet-children sheet)))
 
 (defmethod child-containing-position ((sheet basic-sheet) x y)
   (loop for child in (sheet-children sheet)
@@ -321,8 +322,10 @@
   nil)
 
 (defmethod sheet-mirrored-ancestor ((sheet basic-sheet))
-  (when-let ((parent (sheet-parent sheet)))
-    (sheet-mirrored-ancestor parent)))
+  (let ((parent (sheet-parent sheet)))
+    (if (null parent)
+	nil
+	(sheet-mirrored-ancestor parent))))
 
 (defmethod sheet-mirror ((sheet basic-sheet))
   (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))

@@ -33,7 +33,6 @@
 		#:bind-selection
 		#:release-selection
 		#:request-selection
-                climi::*mirrored-sheet-geometry-changed-p*
                 climi::%sheet-mirror-region
                 climi::%sheet-mirror-transformation
                 climi::%repaint-background

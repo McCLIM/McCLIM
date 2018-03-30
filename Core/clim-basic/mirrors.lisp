@@ -203,9 +203,8 @@ very hard)."
           ;; Try reusing the native transformation:
           (when old-native-transformation
             (let ((MT (compose-transformations
-                       (compose-transformations
-                        (sheet-native-transformation parent)
-                        (sheet-transformation sheet))
+                       (compose-transformations (sheet-native-transformation parent)
+                                                (sheet-transformation sheet))
                        (invert-transformation old-native-transformation))))
               (multiple-value-bind (fits-p MR) (choose MT)
                 (when fits-p
@@ -232,10 +231,9 @@ very hard)."
                       (%%set-sheet-native-transformation native-transformation sheet)
                       (when old-native-transformation
                         ;; Full sheet contents are redrawn.
-                        (climi::dispatch-repaint
-                         sheet
-                         (untransform-region native-transformation
-                                             (%effective-mirror-region sheet))))))
+                        (dispatch-repaint sheet
+                                          (untransform-region native-transformation
+                                                              (%effective-mirror-region sheet))))))
                   (return-from update-mirror-geometry))))))
         ;; Otherwise just choose the geometry
         ;; Conditions to be met:
@@ -256,9 +254,8 @@ very hard)."
                 ;; NT = T o PNT o -MT
                 (compose-transformations
                  (invert-transformation MT)
-                 (compose-transformations
-                  (sheet-native-transformation (sheet-parent sheet))
-                  (sheet-transformation sheet))))
+                 (compose-transformations (sheet-native-transformation (sheet-parent sheet))
+                                          (sheet-transformation sheet))))
                (old-native-transformation
                 (%%sheet-native-transformation sheet)))
 
@@ -275,16 +272,14 @@ very hard)."
                      (port-set-mirror-transformation port mirror MT)))
                  ;; update the native transformation if neccessary.
                  (unless (and old-native-transformation
-                              (transformation-equal
-                               native-transformation
-                               old-native-transformation))
+                              (transformation-equal native-transformation
+                                                    old-native-transformation))
                    (invalidate-cached-transformations sheet)
                    (%%set-sheet-native-transformation native-transformation sheet)
                    (when old-native-transformation
                      ;; native transformation has changed - repaint the sheet
-                     (climi::dispatch-repaint
-                      sheet
-                      (untransform-region native-transformation
-                                          (%effective-mirror-region sheet))))))
+                     (dispatch-repaint sheet
+                                       (untransform-region native-transformation
+                                                           (%effective-mirror-region sheet))))))
                 (t
                  (%set-mirror-geometry sheet :invalidate-transformations t))))))))
