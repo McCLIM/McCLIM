@@ -30,6 +30,9 @@
 ;;;
 ;;; Repaint protocol functions.
 
+(defmethod dispatch-repaint ((sheet graft) region)
+  (declare (ignore sheet region)))
+
 (defmethod queue-repaint ((sheet basic-sheet) (event window-repaint-event))
   (queue-event sheet event))
 

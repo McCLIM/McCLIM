@@ -204,14 +204,36 @@
            (map-over-sheets function child))
        sheets))
 
-(defmethod (setf sheet-enabled-p) :after (enabled-p (sheet basic-sheet))
-  (if enabled-p
-      (note-sheet-enabled sheet)
-      (note-sheet-disabled sheet)))
+(defmethod (setf sheet-enabled-p) :around (enabled-p (sheet basic-sheet))
+   (unless (eql enabled-p (sheet-enabled-p sheet))
+     (call-next-method)
+     (if enabled-p
+         (note-sheet-enabled sheet)
+         (note-sheet-disabled sheet))
+     (dispatch-repaint (sheet-parent sheet)
+                       (transform-region (sheet-transformation sheet)
+                                         (sheet-region sheet)))))
 
 (defmethod (setf sheet-region) :around (region (sheet basic-sheet))
   (unless (region-equal region (sheet-region sheet))
-    (call-next-method)))
+    (let ((old-region (sheet-region sheet)))
+      (call-next-method)
+      (when (sheet-viewable-p sheet)
+        (dispatch-repaint
+         (sheet-parent sheet)
+         (transform-region (sheet-transformation sheet)
+                           (region-union (sheet-region sheet)
+                                                          old-region)))))))
+
+(defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
+  (unless (transformation-equal transformation (sheet-transformation sheet))
+    (let ((old-transformation (sheet-transformation sheet)))
+      (call-next-method)
+      (when (sheet-viewable-p sheet)
+        (let ((new-region (transform-region (sheet-transformation sheet) (sheet-region sheet)))
+              (old-region (transform-region old-transformation (sheet-region sheet))))
+          (dispatch-repaint (sheet-parent sheet)
+                            (region-union new-region old-region)))))))
 
 (defmethod sheet-transformation ((sheet basic-sheet))
   (error "Attempting to get the TRANSFORMATION of a SHEET that doesn't contain one"))
@@ -219,10 +241,6 @@
 (defmethod (setf sheet-transformation) (transformation (sheet basic-sheet))
   (declare (ignore transformation))
   (error "Attempting to set the TRANSFORMATION of a SHEET that doesn't contain one"))
-
-(defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
-  (unless (transformation-equal transformation (sheet-transformation sheet))
-    (call-next-method)))
 
 (defmethod move-sheet ((sheet basic-sheet) x y)
   (let ((transform (sheet-transformation sheet)))
@@ -683,29 +701,15 @@ might be different from the sheet's native region."
         (port-enable-sheet (port sheet) sheet)
         (port-disable-sheet (port sheet) sheet))))
 
-(defparameter *mirrored-sheet-geometry-changed-p* nil
-  "Dynamic variable surpassing dispatch-repaint during frequent changed.")
-
-(defmethod (setf sheet-region) :around (re (sheet mirrored-sheet-mixin))
-  (when (or (/= (bounding-rectangle-width re) (bounding-rectangle-width (sheet-region sheet)))
-	    (/= (bounding-rectangle-height re) (bounding-rectangle-height (sheet-region sheet))))
-    (let ((*mirrored-sheet-geometry-changed-p* sheet))
-      (call-next-method)
-      (unless (graftp sheet)
-        (dispatch-repaint sheet (sheet-region sheet))))))
-
 (defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
   (declare (ignore region))
-  ;; FIXME: I don't know why this next form is commented out.  It
-  ;; should either be uncommented or removed.
-  #+nil(port-set-sheet-region (port sheet) sheet region)
+  ;; Note: this is commented out because of coordinate swizzling.
+  #+(or) (port-set-mirror-region (port sheet) (sheet-direct-mirror sheet) region)
   (update-mirror-geometry sheet))
 
-(defmethod (setf sheet-transformation) :around (tr (sheet mirrored-sheet-mixin))
-  (let ((*mirrored-sheet-geometry-changed-p* sheet))
-    (call-next-method)))
-
-(defmethod note-sheet-transformation-changed ((sheet mirrored-sheet-mixin))
+(defmethod (setf sheet-transformation) :after (tr (sheet mirrored-sheet-mixin))
+  ;; Note: this is commented out because of coordinate swizzling.
+  #+(or) (port-set-mirror-transformation (port sheet) (sheet-direct-mirror sheet) tr)
   (update-mirror-geometry sheet)
   (mapcar #'(lambda (child)
               (when (sheet-direct-mirror child)
@@ -769,42 +773,6 @@ might be different from the sheet's native region."
 ;;; The null sheet
 
 (defclass null-sheet (basic-sheet) ())
-
-;;;
-;;; default implementation for notification protocol
-;;;
-
-(defmethod note-sheet-enabled :before ((sheet basic-sheet))
-  (unless (or (sheet-direct-mirror sheet)
-              *mirrored-sheet-geometry-changed-p*)
-    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
-    ;; coordinates.
-    (dispatch-repaint (sheet-parent sheet) +everywhere+)
-    #+ (or) (dispatch-repaint (sheet-mirror) (sheet-native-region sheet))))
-
-(defmethod note-sheet-disabled :before ((sheet basic-sheet))
-  (unless (or (sheet-direct-mirror sheet)
-              *mirrored-sheet-geometry-changed-p*)
-    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
-    ;; coordinates.
-    (dispatch-repaint (sheet-parent sheet) +everywhere+)
-    #+ (or) (dispatch-repaint (sheet-mirror) (sheet-native-region sheet))))
-
-(defmethod note-sheet-region-changed :before ((sheet basic-sheet))
-  (unless (or (sheet-direct-mirror sheet)
-              *mirrored-sheet-geometry-changed-p*)
-    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
-    ;; coordinates.
-    (dispatch-repaint (sheet-parent sheet) +everywhere+)
-    #+ (or) (dispatch-repaint (sheet-mirror) (sheet-native-region sheet))))
-
-(defmethod note-sheet-transformation-changed :before ((sheet basic-sheet))
-  (unless (or (sheet-direct-mirror sheet)
-              *mirrored-sheet-geometry-changed-p*)
-    ;; XXX: narrow region to sheet-region in parent (not necessarily mirrored)
-    ;; coordinates.
-    (dispatch-repaint (sheet-parent sheet) +everywhere+)
-    #+ (or) (dispatch-repaint msheet (sheet-native-region sheet))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; dangerous codes
