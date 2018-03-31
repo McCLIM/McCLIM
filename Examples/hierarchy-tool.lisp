@@ -322,6 +322,10 @@ refresh-event to redisplay pane hierarchy when we start new application."
     ((sheet pane) (x integer) (y integer))
   (resize-sheet sheet x y))
 
+(define-hierarchy-command (com-move-and-resize-sheet :name t)
+    ((sheet pane) (x integer) (y integer) (width integer) (height integer))
+  (move-and-resize-sheet sheet x y width height))
+
 (define-hierarchy-command (com-disable-sheet :name t)
     ((sheet pane))
   (setf (sheet-enabled-p sheet) nil))

@@ -273,8 +273,13 @@
         (make-bounding-rectangle 0 0 width height)))
 
 (defmethod move-and-resize-sheet ((sheet basic-sheet) x y width height)
-  (move-sheet sheet x y)
-  (resize-sheet sheet width height))
+  (let ((transform (sheet-transformation sheet)))
+    (multiple-value-bind (old-x old-y)
+        (transform-position transform 0 0)
+      (%set-sheet-region-and-transformation
+       sheet
+       (make-bounding-rectangle 0 0 width height)
+       (compose-translation-with-transformation transform (- x old-x) (- y old-y))))))
 
 (defmethod map-sheet-position-to-parent ((sheet basic-sheet) x y)
   (declare (ignore x y))
