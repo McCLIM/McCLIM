@@ -1584,7 +1584,7 @@ clipping areas. No point should be drawn outside the blue rectangles."
 		  (draw-rectangle* m 0 0 200 200 :ink +red+)
 		  (picture01 m))))
     (copy-from-pixmap pixmap 0 0 200 200 stream 0 0)
-    (copy-to-pixmap pixmap 0 0 100 100 pixmap 100 100)
+    (copy-to-pixmap stream 0 0 100 100 pixmap 100 100)
     (copy-from-pixmap pixmap 0 0 200 200 stream 0 200)
     (copy-to-pixmap stream 0 0 50 50 pixmap 100 100)
     (copy-from-pixmap pixmap 0 0 200 200 stream 200 0)))
