@@ -944,8 +944,10 @@ infinite recursion on (setf sheet-*).")
 	(width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
     (let ((*configuration-event-p* sheet))
-      (setf (sheet-transformation sheet) (make-translation-transformation x y))
-      (setf (sheet-region sheet) (make-bounding-rectangle 0 0 width height)))))
+      (%set-sheet-region-and-transformation
+       sheet
+       (make-bounding-rectangle 0 0 width height)
+       (make-translation-transformation x y)))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-manager-delete-event))
