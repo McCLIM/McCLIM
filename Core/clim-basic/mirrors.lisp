@@ -228,12 +228,7 @@ very hard)."
                                  (transformation-equal native-transformation
                                                        old-native-transformation))
                       (invalidate-cached-transformations sheet)
-                      (%%set-sheet-native-transformation native-transformation sheet)
-                      (when old-native-transformation
-                        ;; Full sheet contents are redrawn.
-                        (dispatch-repaint sheet
-                                          (untransform-region native-transformation
-                                                              (%effective-mirror-region sheet))))))
+                      (%%set-sheet-native-transformation native-transformation sheet)))
                   (return-from update-mirror-geometry))))))
         ;; Otherwise just choose the geometry
         ;; Conditions to be met:
@@ -275,11 +270,6 @@ very hard)."
                               (transformation-equal native-transformation
                                                     old-native-transformation))
                    (invalidate-cached-transformations sheet)
-                   (%%set-sheet-native-transformation native-transformation sheet)
-                   (when old-native-transformation
-                     ;; native transformation has changed - repaint the sheet
-                     (dispatch-repaint sheet
-                                       (untransform-region native-transformation
-                                                           (%effective-mirror-region sheet))))))
+                   (%%set-sheet-native-transformation native-transformation sheet)))
                 (t
                  (%set-mirror-geometry sheet :invalidate-transformations t))))))))
