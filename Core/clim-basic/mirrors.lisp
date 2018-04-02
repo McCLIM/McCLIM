@@ -172,8 +172,9 @@ very hard)."
          (sheet-region-in-native-parent
           ;; this now is the wanted sheet mirror region
           (transform-region (sheet-native-transformation parent)
-                            (transform-region (sheet-transformation sheet)
-                                              (sheet-region sheet)))))
+                            (region-intersection (sheet-region parent)
+                                                 (transform-region (sheet-transformation sheet)
+                                                                   (sheet-region sheet))))))
     (when (region-equal sheet-region-in-native-parent +nowhere+)
       (%set-mirror-geometry sheet :invalidate-transformations t)
       (return-from update-mirror-geometry))

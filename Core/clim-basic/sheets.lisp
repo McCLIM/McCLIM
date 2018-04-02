@@ -483,11 +483,19 @@
   (declare (ignore transformation))
   (invalidate-cached-transformations sheet)
   (invalidate-cached-regions sheet)
+  (map-over-sheets #'(lambda (sheet)
+                       (when (sheet-direct-mirror sheet)
+                         (update-mirror-geometry sheet)))
+                   sheet)
   (note-sheet-transformation-changed sheet))
 
 (defmethod (setf sheet-region) :after (region (sheet basic-sheet))
   (declare (ignore region))
   (invalidate-cached-regions sheet)
+  (map-over-sheets #'(lambda (sheet)
+                       (when (sheet-direct-mirror sheet)
+                         (update-mirror-geometry sheet)))
+                   sheet)
   (note-sheet-region-changed sheet))
 
 (defmethod (setf sheet-pointer-cursor) :after (cursor (sheet basic-sheet))
@@ -723,21 +731,6 @@ might be different from the sheet's native region."
     (if new-value
         (port-enable-sheet (port sheet) sheet)
         (port-disable-sheet (port sheet) sheet))))
-
-(defmethod (setf sheet-region) :after (region (sheet mirrored-sheet-mixin))
-  (declare (ignore region))
-  ;; Note: this is commented out because of coordinate swizzling.
-  #+(or) (port-set-mirror-region (port sheet) (sheet-direct-mirror sheet) region)
-  (update-mirror-geometry sheet))
-
-(defmethod (setf sheet-transformation) :after (tr (sheet mirrored-sheet-mixin))
-  ;; Note: this is commented out because of coordinate swizzling.
-  #+(or) (port-set-mirror-transformation (port sheet) (sheet-direct-mirror sheet) tr)
-  (update-mirror-geometry sheet)
-  (mapcar #'(lambda (child)
-              (when (sheet-direct-mirror child)
-                (update-mirror-geometry child)))
-          (sheet-children sheet)))
 
 (defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
   (with-slots (native-transformation device-transformation) sheet
