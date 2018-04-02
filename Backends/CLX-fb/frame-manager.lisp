@@ -21,8 +21,10 @@
 	(unless foundp
           (let ((superclasses (if (subtypep concrete-pane-class 'sheet-with-medium-mixin)
                                   (list 'clx-fb-mirrored-sheet-mixin
+                                        'climi::always-repaint-background-mixin
                                         concrete-pane-class-symbol)
                                   (list 'clx-fb-mirrored-sheet-mixin
+                                        'climi::always-repaint-background-mixin
                                         ;;'temporary-medium-sheet-output-mixin
                                         'permanent-medium-sheet-output-mixin
                                         concrete-pane-class-symbol))))

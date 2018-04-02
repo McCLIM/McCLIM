@@ -189,6 +189,8 @@ want to do the same.")
 ;;; XXX: check if we can reintroduce with-double-buffering..
 (defmethod handle-repaint :before ((sheet always-repaint-background-mixin) region)
   #+jd-test(sleep 0.1)                  ; we repaint whole thing around four times!
+  (when (typep sheet 'never-repaint-background-mixin)
+    (return-from handle-repaint))
   (labels ((effective-repaint-region (mirrored-sheet sheet region)
 	     (if (eq mirrored-sheet sheet)
 		 (region-intersection (sheet-region mirrored-sheet) region)
