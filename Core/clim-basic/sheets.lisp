@@ -478,8 +478,7 @@
     (setf device-region nil))
   (mapc #'%invalidate-cached-device-regions (sheet-children sheet)))
 
-(defmethod (setf sheet-transformation) :after
-    (transformation (sheet basic-sheet))
+(defmethod (setf sheet-transformation) :after (transformation (sheet basic-sheet))
   (declare (ignore transformation))
   (invalidate-cached-transformations sheet)
   (invalidate-cached-regions sheet)

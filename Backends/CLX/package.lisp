@@ -70,5 +70,4 @@
 		#:pointer-grab-sheet
 		#:%sheet-mirror-region
                 #:%sheet-mirror-transformation
-		#:standard-port
-		#:update-mirror-geometry))
+		#:standard-port))

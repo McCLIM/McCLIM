@@ -34,6 +34,4 @@
 		#:release-selection
 		#:request-selection
                 climi::%sheet-mirror-region
-                climi::%sheet-mirror-transformation
-                climi::%repaint-background
-                climi::update-mirror-geometry))
+                climi::%sheet-mirror-transformation))
