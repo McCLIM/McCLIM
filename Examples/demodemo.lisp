@@ -211,7 +211,10 @@ denoted by this symbol."
                    5
                    (make-test-label2 :right :bottom))))))))))
 
-(defclass foo-pane (basic-pane permanent-medium-sheet-output-mixin) ())
+(defclass foo-pane (basic-pane
+                    permanent-medium-sheet-output-mixin
+                    climi::always-repaint-background-mixin)
+  ())
 
 (defmethod compose-space ((pane foo-pane) &key width height)
   (declare (ignore width height))
