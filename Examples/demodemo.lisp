@@ -74,12 +74,9 @@ denoted by this symbol."
                    (make-demo-button "Puzzle"  'puzzle)
                    (make-demo-button "Colorslider" 'colorslider)
                    (make-demo-button "Logic Cube" 'logic-cube)
-                   (make-demo-button "Menu Test"  'menutest:menutest)
                    (make-demo-button "Gadget Test"  'gadget-test)
-                   (make-demo-button "Drag and Drop" 'dragndrop)
                    (make-demo-button "D&D Translator" 'drag-test)
                    (make-demo-button "Draggable Graph" 'draggable-graph-demo)
-                   (make-demo-button "Image viewer" 'image-viewer)
 		   (make-pane 'push-button
 			      :label "Font Selector"
 			      :activate-callback
@@ -99,9 +96,7 @@ denoted by this symbol."
                    (make-demo-button "Stream test" 'stream-test)
                    (make-demo-button "Label Test" 'label-test)
                    (make-demo-button "Table Test" 'table-test)
-                   (make-demo-button "Tables with borders" 'table-demo)
                    (make-demo-button "Scroll Test" 'Scroll-test)
-                   (make-demo-button "Scroll Test 2" 'Scroll-test-2)
                    (make-demo-button "List Test" 'list-test)
                    (make-demo-button "Option Test" 'option-test)
                    (make-demo-button "HBOX Test"  'hbox-test)
@@ -111,7 +106,15 @@ denoted by this symbol."
                    (make-demo-button "Misc. Tests" 'misc-tests)
                    (make-demo-button "Render Image Tests" 'render-image-tests)
 		   (make-demo-button "Drawing Tests" 'drawing-tests)
-                   (make-demo-button "Accepting Values Test"  'av-test)
+                   (make-demo-button "Accepting Values Test"  'av-test)))
+               (labelling (:label "Regression Tests")
+                 (vertically (:equalize-width t)
+                   (make-demo-button "Image viewer" 'image-viewer)
+                   (make-demo-button "Coordinate swizzling" 'coordinate-swizzling)
+                   (make-demo-button "Scroll Test 2" 'Scroll-test-2)
+                   (make-demo-button "Tables with borders" 'table-demo)
+                   (make-demo-button "Menu Test"  'menutest:menutest)
+                   (make-demo-button "Drag and Drop" 'dragndrop)
                    (make-demo-button "Pane hierarchy viewer" 'hierarchy)))))))))
 
 (defun demodemo ()
@@ -208,7 +211,10 @@ denoted by this symbol."
                    5
                    (make-test-label2 :right :bottom))))))))))
 
-(defclass foo-pane (basic-pane permanent-medium-sheet-output-mixin) ())
+(defclass foo-pane (basic-pane
+                    permanent-medium-sheet-output-mixin
+                    climi::always-repaint-background-mixin)
+  ())
 
 (defmethod compose-space ((pane foo-pane) &key width height)
   (declare (ignore width height))

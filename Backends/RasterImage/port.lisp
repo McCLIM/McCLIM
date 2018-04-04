@@ -47,10 +47,10 @@
 			      :units units
 			      :width (raster-image-port-width port)
 			      :height (raster-image-port-height port))))
-    (setf (sheet-region graft)
-	  (make-bounding-rectangle 0 0
-				   (raster-image-port-width port)
-				   (raster-image-port-height port)))
+    (climi::%%set-sheet-region (make-bounding-rectangle 0 0
+                                                        (raster-image-port-width port)
+                                                        (raster-image-port-height port))
+                               graft)
     (push graft (port-grafts port))
     graft))
 

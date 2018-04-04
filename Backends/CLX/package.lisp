@@ -65,13 +65,9 @@
                 ;;
                 )
   (:import-from :clim-standard
-                #:standard-full-mirrored-sheet-mixin
-		#:standard-mirrored-sheet-mixin
 		#:standard-event-port-mixin
 		#:standard-graft
 		#:pointer-grab-sheet
 		#:%sheet-mirror-region
                 #:%sheet-mirror-transformation
-		#:standard-port
-		#:*configuration-event-p*
-		#:update-mirror-geometry))
+		#:standard-port))

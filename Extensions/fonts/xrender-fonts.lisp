@@ -91,7 +91,7 @@
       (font-families     (make-hash-table :test #'equal))
       (font-faces        (make-hash-table :test #'equal))
       (font-cache        (make-hash-table :test #'equal))
-      (text-style-cache  (make-hash-table :test #'eql)))
+      (text-style-cache  (make-hash-table :test #'equal)))
   (defun make-truetype-font (port filename size)
     (climi::with-lock-held (*zpb-font-lock*)
       (let* ((display (clim-clx::clx-port-display port))
@@ -117,11 +117,12 @@
                                    :size size))))
         (pushnew family    (clim-clx::font-families port))
         (ensure-gethash
-         (make-text-style family-name face-name size) text-style-cache
+         (list port (make-text-style family-name face-name size))
+         text-style-cache
          font))))
 
-  (defun find-truetype-font (text-style)
-    (gethash text-style text-style-cache)))
+  (defun find-truetype-font (port text-style)
+    (gethash (list port text-style) text-style-cache)))
 
 
 
@@ -427,7 +428,7 @@ The following files should exist:~&~{  ~A~^~%~}"
 
     (or (text-style-mapping port text-style)
         (setf (climi::text-style-mapping port text-style)
-              (or (find-truetype-font text-style)
+              (or (find-truetype-font port text-style)
                   (invoke-with-truetype-path-restart #'find-font))))))
 
 ;;;;;;

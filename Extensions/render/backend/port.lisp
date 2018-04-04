@@ -62,7 +62,7 @@
            (find-and-make-truetype-font family face size))))
     (or (text-style-mapping port text-style)
         (setf (climi::text-style-mapping port text-style)
-              (or (find-truetype-font text-style)
+              (or (find-truetype-font port text-style)
                   (invoke-with-truetype-path-restart #'find-font))))))
 
 (defmethod text-style-to-font ((port render-port-mixin) (gs-text-style cons))
@@ -105,10 +105,11 @@
                                    :size size))))
         (pushnew family (all-font-families port))
         (ensure-gethash
-         (make-text-style family-name face-name size) text-style-cache
+         (list port (make-text-style family-name face-name size))
+         text-style-cache
          font))))
-  (defun find-truetype-font (text-style)
-    (gethash text-style text-style-cache)))
+  (defun find-truetype-font (port text-style)
+    (gethash (list port text-style) text-style-cache)))
 
 (defun register-all-ttf-fonts (port &optional (dir *truetype-font-path*))
   (when *truetype-font-path*

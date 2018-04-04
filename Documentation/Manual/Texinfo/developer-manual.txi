@@ -59,10 +59,9 @@ also map these native look and feel widgets in McCLIM.
 The @code{clim-null} backend can be used as a template to start with a
 new backend. If the underlying library you write backend for manages
 window hierarchy, positioning and events, it is possible to base new
-pane types on
-@code{clim-standard:standard-full-mirrored-sheet-mixin}. Otherwise
-@code{clim-standard:standard-single-mirrored-sheet-mixin} provides
-calculation to support that hierarchy in Lisp side.
+pane types on @code{mirrored-sheet-mixin} class which provides native
+handles into native windowing system. Mirrored and ``native lisp''
+sheets may be freely mixed in the pane hierarchy.
 
 @node Backend protocol
 @subheading Backend protocol
@@ -84,14 +83,6 @@ foo-pointer
 @verbatim
 EVENT HANDLING (in port.lisp)
 -----------------------------
-;;; Use clim-standard:standard-event-port-mixin with
-;;; clim-standard:standard-full-mirrored-sheet-mixin
-;;;
-;;; Use clim-standard:standard-handled-event-port-mixin with
-;;; clim-standard:standard-single-mirrored-sheet-mixin
-;;;
-;;; and make this event-port-mixin as a subclass of foo-port
-
 ;;; Originally in CLIM-INTERNALS
 get-next-event
 port-frame-keyboard-input-focus

@@ -82,10 +82,6 @@
 		#:sheet-direct-xmirror
 		)
   (:import-from :clim-standard
-		#:standard-handled-event-port-mixin
-		#:standard-mirrored-sheet-mixin
-		#:*configuration-event-p*
-		#:standard-port
-		#:standard-handled-event-port-mixin
-		))
+		#:standard-event-port-mixin
+		#:standard-port))
 

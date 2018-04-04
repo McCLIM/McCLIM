@@ -34,10 +34,10 @@
   (let ((graft (make-instance 'beagle-graft
 			      :port port :mirror (beagle-port-screen port)
 			      :orientation orientation :units units)))
-    (setf (sheet-region graft)
-		  (make-bounding-rectangle 0 0
-					   (get-width (beagle-port-screen port))
-					   (get-height (beagle-port-screen port))))
+    (climi::%%set-sheet-region (make-bounding-rectangle 0 0
+                                                        (get-width (beagle-port-screen port))
+                                                        (get-height (beagle-port-screen port)))
+                               graft)
     (push graft (port-grafts port))
     graft))
 

@@ -2,8 +2,9 @@
 
 
 (defclass standard-event-port-mixin ()
-  ((pointer-grab-sheet :accessor pointer-grab-sheet :initform nil))
-  (:documentation "Standard event distribute for full-mirrored backend"))
+  ((pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)
+   (port-pointer-pressed-sheet :initform nil :accessor port-pointer-pressed-sheet))
+  (:documentation "Standard event distribution."))
 
 (defmethod distribute-event ((port standard-event-port-mixin) event)
   (let ((grab-sheet (pointer-grab-sheet port)))
@@ -25,24 +26,18 @@
       (t
        (error "Unknown event ~S received in DISTRIBUTE-EVENT" event)))))
 
-(defclass standard-handled-event-port-mixin (standard-event-port-mixin)
-  ((port-pointer-pressed-sheet :initform nil :accessor port-pointer-pressed-sheet))
-  (:documentation "Standard event distribute for single-mirrored backend, provides pointer-enter, 
-pointer-exit and grab-pointer for non mirrored sheets"))
-
-
 ;;;
 ;;; pointer events
 ;;;
-(defmethod climi::distribute-event :before ((port standard-handled-event-port-mixin)
-					    (event pointer-button-press-event))
+(defmethod distribute-event :before ((port standard-event-port-mixin)
+                                     (event pointer-button-press-event))
   (setf (port-pointer-pressed-sheet port) (port-pointer-sheet port)))
 
-(defmethod climi::distribute-event :after ((port standard-handled-event-port-mixin)
-					   (event pointer-button-release-event))
+(defmethod distribute-event :after ((port standard-event-port-mixin)
+                                    (event pointer-button-release-event))
   (setf (port-pointer-pressed-sheet port) nil))
 
-(defmethod climi::distribute-event :around ((port standard-handled-event-port-mixin) (event pointer-event))
+(defmethod distribute-event :around ((port standard-event-port-mixin) (event pointer-event))
   (let ((grab-sheet (pointer-grab-sheet port))
         (pointer-pressed-sheet (port-pointer-pressed-sheet port))
         (pointer-sheet (get-pointer-event-sheet (event-sheet event) event))
@@ -56,18 +51,21 @@ pointer-exit and grab-pointer for non mirrored sheets"))
       (pointer-pressed-sheet
        (if (sheet-ancestor-p pointer-sheet pointer-pressed-sheet)
 	   (setf pointer-sheet pointer-pressed-sheet)
-	   (if (sheet-ancestor-p pointer-sheet
-				 (sheet-parent pointer-pressed-sheet))
-	       nil
-	       (unless (or
-			(typep (event-sheet event) 'unmanaged-top-level-sheet-pane)
-			(typep top-level-sheet 'unmanaged-top-level-sheet-pane))
-		 (setf pointer-sheet nil)))))
+	   (let ((parent (sheet-parent pointer-pressed-sheet)))
+             (if (or (null parent)
+                     (sheet-ancestor-p pointer-sheet parent))
+                 nil
+                 (unless (or
+                          (typep (event-sheet event) 'unmanaged-top-level-sheet-pane)
+                          (typep top-level-sheet 'unmanaged-top-level-sheet-pane))
+                   (setf pointer-sheet nil))))))
       (t
        nil))
     (unless grab-sheet
       ;; distribute exit and enter events
-      (let ((common-sheet (sheet-common-ancestor old-pointer-sheet (or pointer-sheet top-level-sheet))))
+      (let ((common-sheet (sheet-common-ancestor old-pointer-sheet
+                                                 (or pointer-sheet
+                                                     top-level-sheet))))
 	(distribute-exit-events old-pointer-sheet common-sheet event)
 	(distribute-enter-events pointer-sheet common-sheet event)
 	(setf (port-pointer-sheet port) pointer-sheet))
@@ -98,7 +96,7 @@ pointer-exit and grab-pointer for non mirrored sheets"))
 	  (t	 
 	   (call-next-method)))))))
 
-(defmethod climi::distribute-event ((port standard-handled-event-port-mixin) (event pointer-event))
+(defmethod distribute-event ((port standard-event-port-mixin) (event pointer-event))
   (alexandria:when-let* ((sheet (port-pointer-sheet port))
                          (destination (or (pointer-grab-sheet port) sheet)))
     (if (eq sheet (event-sheet event))
@@ -123,7 +121,7 @@ pointer-exit and grab-pointer for non mirrored sheets"))
 ;;;
 
 
-(defmethod climi::distribute-event ((port standard-handled-event-port-mixin)
+(defmethod distribute-event ((port standard-event-port-mixin)
 				    (event selection-event))
   (let ((owner (port-selection-owner port)))
     (if owner
@@ -134,7 +132,7 @@ pointer-exit and grab-pointer for non mirrored sheets"))
 			event))))
 
 
-(defmethod climi::distribute-event ((port standard-handled-event-port-mixin)
+(defmethod distribute-event ((port standard-event-port-mixin)
 				    (event selection-notify-event))
   (let ((owner (port-selection-requester port)))
     (if owner

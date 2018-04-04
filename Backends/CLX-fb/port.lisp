@@ -1,18 +1,12 @@
 (in-package :clim-clx-fb)
 
-(defclass clx-fb-port (standard-handled-event-port-mixin
-		       render-port-mixin
+(defclass clx-fb-port (render-port-mixin
 		       clim-xcommon:keysym-port-mixin
 		       clim-clx::clx-basic-port)
   ())
 
-(defun parse-clx-fb-server-path (path)
-  (let ((server-path (clim-clx::parse-clx-server-path path)))
-    (pop path)
-    (cons :clx-fb (cdr server-path))))
-
 (setf (get :clx-fb :port-type) 'clx-fb-port)
-(setf (get :clx-fb :server-path-parser) 'parse-clx-fb-server-path)
+(setf (get :clx-fb :server-path-parser) 'clim-clx::parse-clx-server-path)
 
 (defmethod initialize-instance :after ((port clx-fb-port) &rest args)
   (declare (ignore args))
@@ -99,8 +93,11 @@
 (defmethod make-graft ((port clx-fb-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'clx-graft
 		 :port port :mirror (clx-port-window port)
-		 :orientation orientation :units units)))
-    (setf (sheet-region graft) (make-bounding-rectangle 0 0 (xlib:screen-width (clx-port-screen port)) (xlib:screen-height (clx-port-screen port))))
+		 :orientation orientation :units units))
+        (width (xlib:screen-width (clx-port-screen port)))
+        (height (xlib:screen-height (clx-port-screen port))))
+    (climi::%%set-sheet-region (make-bounding-rectangle 0 0 width height)
+                               graft)
     (push graft (port-grafts port))
     graft))
 

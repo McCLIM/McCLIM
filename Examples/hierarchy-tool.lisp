@@ -111,14 +111,15 @@ really draw a rectangle :-)."
                                         ;:highlight-background +yellow+
                                         :ink ink
                                         :shape :drop-shadow
-                                        :shadow-offset 4
-                                        :padding 4
+                                        :shadow-offset 3
+                                        :padding 0
                                         :padding-bottom 0
                                         :padding-right 0)
-    (clim:with-output-as-presentation (pane sheet 'move-handler)
-      (draw-text* pane label x1 y1 :align-y :top :align-x :left :text-size :small))
-    ;; this point is needed to set the size of the border
+    ;; border size
+    (draw-point* pane x1 y1 :line-thickness 1 :ink +transparent-ink+)
     (draw-point* pane x2 y2 :line-thickness 1 :ink +transparent-ink+))
+  (clim:with-output-as-presentation (pane sheet 'move-handler)
+    (draw-text* pane label x1 y1 :align-y :top :align-x :left :text-size :small))
   (clim:with-output-as-presentation (pane sheet 'resize-handler)
     (draw-point* pane x2 y2 :line-thickness 11 :ink +dark-blue+)))
 
@@ -138,11 +139,11 @@ really draw a rectangle :-)."
 need that if we want to see composite sheets."
   (compose-transformations
    (if (climi::top-level-sheet-pane-p sheet)
-       +identity-transformation+
+       (make-scaling-transformation .8 .8)
        (sheet-transformation sheet))
    (fix-scaling sheet)))
 
-(defun display (frame pane)
+(defun display-hierarchy-tool (frame pane)
   "Takes the inspected frame and draws its pane hierarchy."
   (labels ((draw-sheet (sheet)
              (with-bounding-rectangle* (x1 y1 x2 y2) sheet
@@ -179,18 +180,26 @@ need that if we want to see composite sheets."
                                     (+ y0 height (* deep -5))
                                     :ink color
                                     :filled nil)
-                   (if (clipped-hierarchy frame)
-                       (with-drawing-options
-                           (pane :clipping-region
+                   (with-drawing-options
+                       (pane :clipping-region
+                             (if (null (clipped-hierarchy frame))
+                                 +everywhere+
                                  (make-bounding-rectangle x0 y0 (+ x0 width) (+ y0 height)))
-                         #1=(dolist (s (sheet-children sheet))
-                              (draw-sheet-native s (1+ deep))))
-                       #1#))))))
-    (alexandria:if-let ((fr (inspected-frame frame)))
-      (if (native-hierarchy frame)
-          (draw-sheet-native (frame-top-level-sheet fr))
-          (draw-sheet (frame-top-level-sheet fr)))
-      (format pane "
+                             :transformation
+                             (if (not (typep sheet 'mirrored-sheet-mixin))
+                                 +identity-transformation+
+                                 (sheet-native-transformation sheet)))
+                     (dolist (s (sheet-children sheet))
+                       (draw-sheet-native s (1+ deep)))))))))
+    (let* ((fr (inspected-frame frame))
+           (tp (and fr (frame-top-level-sheet fr))))
+      (cond
+        ((and fr tp (native-hierarchy frame))
+         (draw-sheet-native tp))
+        ((and fr tp)
+         (draw-sheet tp))
+        (t
+         (format pane "
 
 This application is meant to help with debugging CLIM pane hierarchies, mirrors,
 layout protocol and such. It may morth into inspector definitions in the
@@ -218,15 +227,15 @@ time. Actual resize and move point will be a little off (but just a little).
 - Resizing and moving panes doesn't invoke layout protocol. The exception is
 size change of the top-level-sheet-pane (the topmost window).
 
-- To make CLXv3 and CLX-fb buttons working load systems mcclim-clxv3 and
-mcclim-clx-fb. This should load backend definitions. First button should work
-right of the bat if you run on Linux.
+- To make CLX-fb button working load system mcclim-clx-fb. This should load
+backend definitions. First button should work right of the bat if you run on
+Linux.
 
 - Application which starts should react on mouse moving over the panes (circle
 should be yellow if pointer is above the sheet).
 
 - Clip children toggle button is used to limit drawing space to the parent area
-in the representation (this should be the case for \"real\" drawing too."))))
+in the representation (this should be the case for \"real\" drawing too."))))))
 
 (defun mb (name path)
   "Helper creating a button which starts the application and dispatching
@@ -254,13 +263,22 @@ refresh-event to redisplay pane hierarchy when we start new application."
   ((frame :initform nil :initarg :iframe :accessor inspected-frame)
    (clipp :initform nil :accessor clipped-hierarchy)
    (native :initform nil :accessor native-hierarchy))
-  (:panes (app :application :display-function 'display :scroll-bars nil
+  (:panes (app :application :display-function 'display-hierarchy-tool :scroll-bars nil
                :width 800 :height 600)
           (buttons
            (vertically ()
-             (mb "Run CLX" :clx)
-             (mb "Run CLXv3" :clxv3)
+             (mb "Run CLX (full)" '(:clx :mirroring :full))
+             (mb "Run CLX (random)" '(:clx :mirroring :random))
+             (mb "Run CLX (single)" '(:clx :mirroring :single))
              (mb "Run CLX-fb" :clx-fb)
+             '+fill+
+             (make-pane :push-button :label "Inspect this frame"
+                        :activate-callback
+                        #'(lambda (gadget)
+                            (declare (ignore gadget))
+                            (setf (inspected-frame *application-frame*)
+                                  *application-frame*)
+                            (com-refresh)))
              (make-pane :toggle-button :label "Native coordinates"
                         :value-changed-callback
                         #'(lambda (gadget value)
@@ -276,7 +294,9 @@ refresh-event to redisplay pane hierarchy when we start new application."
           (interactor :interactor))
   (:layouts (default
                 (vertically ()
-                  (horizontally () (100 buttons) app)
+                  (horizontally ()
+                    (200 buttons)
+                    (scrolling (:width 1280 :height 800) app))
                   (150 interactor))))
   (:menu-bar nil))
 
@@ -301,6 +321,18 @@ refresh-event to redisplay pane hierarchy when we start new application."
 (define-hierarchy-command (com-resize-sheet :name t)
     ((sheet pane) (x integer) (y integer))
   (resize-sheet sheet x y))
+
+(define-hierarchy-command (com-move-and-resize-sheet :name t)
+    ((sheet pane) (x integer) (y integer) (width integer) (height integer))
+  (move-and-resize-sheet sheet x y width height))
+
+(define-hierarchy-command (com-disable-sheet :name t)
+    ((sheet pane))
+  (setf (sheet-enabled-p sheet) nil))
+
+(define-hierarchy-command (com-enable-sheet :name t)
+    ((sheet pane))
+  (setf (sheet-enabled-p sheet) t))
 
 ;;; Drag&Drop is buggy as hell
 (define-presentation-to-command-translator translator-resize
@@ -334,3 +366,4 @@ refresh-event to redisplay pane hierarchy when we start new application."
             (multiple-value-bind (x y) (stream-pointer-position pane)
               (draw-circle* pane x y 5 :filled t)))
         (com-dx-sheet original (- x init-x) (- y init-y))))))
+

@@ -2028,7 +2028,9 @@
                 #:make-keyword
                 #:ensure-gethash
 		#:last-elt
-		#:with-gensyms)
+		#:with-gensyms
+                #:if-let
+                #:when-let)
   (:intern #:letf))
 
 (defpackage :clim-user

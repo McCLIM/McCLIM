@@ -297,10 +297,11 @@ documentation produced by presentations.")
 
 (defun find-pane-of-type (parent type)
   "Returns a pane of `type' in the forest growing from `parent'."
-  (flet ((return-found-type (pane)
-           (when (typep pane type)
-             (return-from find-pane-of-type pane))))
-    (map-over-sheets #'return-found-type parent)))
+  (map-over-sheets #'(lambda (p)
+                       (when (typep p type)
+                         (return-from find-pane-of-type p)))
+                   parent)
+  nil)
 
 (defmethod get-frame-pane ((frame application-frame) pane-name)
   (let ((pane (find-pane-named frame pane-name)))
@@ -312,7 +313,8 @@ documentation produced by presentations.")
   (map-over-sheets #'(lambda (p)
                        (when (eql pane-name (pane-name p))
                          (return-from find-pane-named p)))
-                   (frame-panes frame)))
+                   (frame-panes frame))
+  nil)
 
 
 #+nil
