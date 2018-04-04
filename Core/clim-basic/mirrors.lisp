@@ -177,14 +177,6 @@ very hard)."
          (sheet-region-in-native-parent
           ;; this now is the wanted sheet mirror region
           (transform-region (sheet-native-transformation parent)
-                            (transform-region (sheet-transformation sheet)
-                                              (sheet-region sheet)))
-          #+ (or) ;; XXX: our viewport implementation doesn't play nice with the
-          ;; following code. Having an intersection with the parent region makes
-          ;; Scroll Test 2 in CLIM-EXAMPLES not update the view when we
-          ;; scroll. Disabled for now until viewport doesn't depend on mirror
-          ;; region but rather on sheet region (what shouldn't be the same).
-          (transform-region (sheet-native-transformation parent)
                             (region-intersection (sheet-region parent)
                                                  (transform-region (sheet-transformation sheet)
                                                                    (sheet-region sheet))))))
