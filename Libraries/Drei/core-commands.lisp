@@ -39,8 +39,8 @@ When overwrite is on, an object entered on the keyboard
 will replace the object after the point. 
 When overwrite is off (the default), objects are inserted at point. 
 In both cases point is positioned after the new object."
-  (with-slots (overwrite-mode) (current-view)
-    (setf overwrite-mode (not overwrite-mode))))
+  (setf (overwrite-mode (current-view))
+        (not (overwrite-mode (current-view)))))
 
 (set-key 'com-overwrite-mode
 	 'editing-table
