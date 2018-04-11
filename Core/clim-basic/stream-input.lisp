@@ -773,17 +773,25 @@ known gestures."
 	  (logandc2 (slot-value pointer 'button-state)
 		    (pointer-event-button event)))))
 
-(defmethod stream-pointer-position ((stream standard-extended-input-stream)
-				    &key (pointer
-					  (port-pointer (port stream))))
+
+(defgeneric sheet-pointer-position (sheet pointer))
+
+(defmethod sheet-pointer-position (sheet pointer)
   (multiple-value-bind (x y)
       (pointer-position pointer)
-    (let ((pointer-sheet (port-pointer-sheet (port stream))))
-      (if (eq stream pointer-sheet)
+    (let ((pointer-sheet (port-pointer-sheet (port stheet))))
+      (if (eq sheet pointer-sheet)
 	  (values x y)
 	  ;; Is this right?
 	  (multiple-value-bind (native-x native-y)
-	      (transform-position (sheet-native-transformation stream) x y)
+	      (transform-position (sheet-native-transformation sheet) x y)
 	    (untransform-position (sheet-native-transformation pointer-sheet)
 				  native-x
 				  native-y))))))
+
+(defmethod stream-pointer-position ((stream standard-extended-input-stream)
+				    &key (pointer
+					  (port-pointer (port stream))))
+  (sheet-pointer-position stream pointer))
+
+

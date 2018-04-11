@@ -72,7 +72,7 @@ and should be avoided in the future.  JPM 1-29-91.]
   (multiple-value-bind (ignore height)
       (stream-viewport-size stream)
     (declare (ignore ignore))
-    height))
+    (truncate height)))
 
 (defmacro uv-to-screen (screen u v)
   `(values ,u (- (stream-height ,screen) ,v)))

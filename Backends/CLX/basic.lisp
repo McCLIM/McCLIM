@@ -118,6 +118,18 @@
 	(when same-screen-p
 	  (untransform-position (sheet-native-transformation sheet) x y))))))
 
+(defmethod clim-internals::sheet-pointer-position (sheet (pointer clx-basic-pointer))
+  (if (sheet-direct-mirror sheet)
+      (multiple-value-bind (native-x native-y) (xlib:query-pointer (sheet-xmirror sheet))
+	(untransform-position (sheet-device-transformation sheet) native-x native-y))
+      (let* ((mirrored-ancestor (sheet-mirrored-ancestor sheet))
+	     (mirror (sheet-direct-xmirror mirrored-ancestor)))
+	(multiple-value-bind (native-x native-y) (xlib:query-pointer mirror)
+	  (multiple-value-bind (parent-x parent-y)
+	      (untransform-position (sheet-device-transformation mirrored-ancestor) native-x native-y)
+	    (untransform-position (sheet-delta-transformation sheet mirrored-ancestor) parent-x parent-y)
+	    )))))
+
 (defmethod set-sheet-pointer-cursor ((port clx-basic-port) (sheet mirrored-sheet-mixin) cursor)
   (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port)))
 	(mirror (sheet-direct-xmirror sheet)))
