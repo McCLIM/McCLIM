@@ -784,7 +784,7 @@ known gestures."
 	  (values x y)
 	  ;; Is this right?
 	  (multiple-value-bind (native-x native-y)
-	      (transform-position (sheet-native-transformation stream) x y)
+	      (transform-position (sheet-native-transformation sheet) x y)
 	    (untransform-position (sheet-native-transformation pointer-sheet)
 				  native-x
 				  native-y))))))
