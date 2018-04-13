@@ -348,8 +348,12 @@
   (options nil)
   (device-name nil))
 
-(defmethod clim-clx::text-style-to-X-font :around
-    ((port clim-clx::clx-port) (text-style climi::device-font-text-style))
+(defclass truetype-font-renderer (clim-clx::font-renderer)
+  ())
+
+(defmethod clim-clx::lookup-text-style-to-X-font ((port clim-clx::clx-port)
+                                           (font-renderer truetype-font-renderer)
+                                           (text-style climi::device-font-text-style))
   (let ((font-name (climi::device-font-name text-style)))
     (when (stringp font-name)
       (setf (climi::device-font-name text-style)
@@ -388,8 +392,9 @@ The following files should exist:~&~{  ~A~^~%~}"
                      *truetype-font-path*
                      (mapcar #'cdr *families/faces*)))))
 
-(defmethod clim-clx::text-style-to-X-font :around
-    ((port clim-clx::clx-port) (text-style standard-text-style))
+(defmethod clim-clx::lookup-text-style-to-X-font ((port clim-clx::clx-port)
+                                                  (font-renderer truetype-font-renderer)
+                                                  (text-style standard-text-style))
   (labels
       ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative

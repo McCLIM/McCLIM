@@ -39,6 +39,10 @@
   :components
   ((:file "text-selection" :depends-on ())))
 
-(defsystem #:mcclim-clx/pretty
+(defsystem #:mcclim-clx/truetype
   :depends-on (#:mcclim-clx
                #:mcclim-fonts/clx-truetype))
+
+(defsystem #:mcclim-clx/freetype
+  :depends-on (#:mcclim-clx
+               #:mcclim-fonts/clx-freetype))

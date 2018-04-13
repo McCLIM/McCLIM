@@ -53,13 +53,21 @@
     ((:sans-serif (:bold :italic)) . "bold-o")
     ((:sans-serif (:italic :bold)) . "bold-o")))
 
+(clim-internals::define-protocol-class font-renderer ())
+
+(defclass clx-standard-font-renderer (font-renderer)
+  ())
+
 (defun open-font (display font-name)
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
     (when fonts
       (xlib:open-font display (first fonts)))))
 
-(defgeneric text-style-to-x-font (port text-style)
-  (:method ((port t) (text-style t))
+(defun text-style-to-x-font (port text-style)
+  (lookup-text-style-to-x-font port (clx-port-font-renderer port) text-style))
+
+(defgeneric lookup-text-style-to-x-font (port font-renderer text-style)
+  (:method ((port t) (font-renderer t) (text-style t))
     (let ((text-style (parse-text-style text-style)))
       (labels
           ((find-and-make-xlib-face (display family face size)
