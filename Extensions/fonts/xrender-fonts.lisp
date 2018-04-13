@@ -452,16 +452,6 @@ The following files should exist:~&~{  ~A~^~%~}"
             )
       gc)))
 
-(defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
-  (with-slots (gc) medium
-    (when gc
-      (let ((old-text-style (medium-text-style medium)))
-	(unless (eq text-style old-text-style)
-          (let ((fn (text-style-to-X-font (port medium) (medium-text-style medium))))
-            (when (typep fn 'xlib:font)
-              (setf (xlib:gcontext-font gc)
-                    fn))))))))
-
 ;;; This fixes the worst offenders making the assumption that drawing
 ;;; would be idempotent.
 ;; moved on basic repaint protocol

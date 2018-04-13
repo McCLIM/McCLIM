@@ -159,6 +159,7 @@
     picture))
 
 (defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string &key start end translate size)
+  (declare (ignore translate size))
   (let* ((char-codes (map 'vector #'char-code string))
          (glyphset (create-glyphset mirror font char-codes)))
     (let ((source (create-pen mirror))
@@ -169,7 +170,7 @@
           (loop with length = (length string)
                 with rx = 0.0
                 and ry = 0.0
-                for i from 0 below length
+                for i from (or start 0) below (or end length)
                 as c1 = (aref string i)
                 as c2 = (if (< i (1- length))
                             (aref string (1+ i))
@@ -216,10 +217,6 @@
   (with-face-from-font (face font)
     (freetype2:face-descender-pixels face)))
 
-(defmethod clim-clx::lookup-text-style-to-x-font (port
-                                                  (renderer freetype-font-renderer)
-                                                  (text-style climi::device-font-text-style)))
-
 (defun find-best-match (family face)
   (let ((family-expr (cond
                        ((eq family :fix) (list (cons "spacing" 100)))
@@ -257,12 +254,18 @@
                                (number size)
                                (null 12)))))))
 
-(defmethod clim-clx::lookup-text-style-to-x-font (port
+(defmethod clim-clx::lookup-text-style-to-x-font ((port clim-clx::clx-port)
                                                   (renderer freetype-font-renderer)
                                                   (text-style clim:standard-text-style))
-  (or (clim:text-style-mapping port text-style)
-      (setf (climi::text-style-mapping port text-style)
-            (find-freetype-font port text-style))))
+  (let ((x (or (clim:text-style-mapping port text-style)
+               (setf (climi::text-style-mapping port text-style)
+                     (find-freetype-font port text-style)))))
+    x))
+
+(defmethod clim-clx::lookup-text-style-to-x-font ((port clim-clx::clx-port)
+                                                  (renderer freetype-font-renderer)
+                                                  (text-style climi::device-font-text-style))
+  nil)
 
 ;;;
 ;;;  Character info
@@ -290,3 +293,20 @@
       (/ (- (freetype2-types:ft-glyph-metrics-width metrics)
             (freetype2-types:ft-glyph-metrics-hori-advance metrics))
          *freetype-font-scale*))))
+
+;;;
+;;;  Needed overrides
+;;;
+
+#+nil
+(defmethod clim::make-medium-gcontext* (medium foreground background line-style text-style (ink color) clipping-region)
+  (let* ((drawable (sheet-mirror (medium-sheet medium)))
+         (port (port medium)))
+    (let ((gc (xlib:create-gcontext :drawable drawable)))
+      (let ((fn (text-style-to-X-font port text-style)))
+        (if (typep fn 'xlib:font)
+            (setf (xlib:gcontext-font gc) fn)))
+      (setf 
+            (xlib:gcontext-foreground gc) (X-pixel port ink)
+            )
+      gc)))

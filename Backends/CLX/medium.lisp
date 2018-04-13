@@ -1356,3 +1356,15 @@ time an indexed pattern is drawn.")
 
 (defmethod climi::medium-invoke-with-possible-double-buffering (frame pane (medium clx-medium) continuation)
   (funcall continuation))
+
+;;;  This hack is really ugly. There really should be a better way to
+;;;  handle this.
+(defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
+  (with-slots (gc) medium
+    (when gc
+      (let ((old-text-style (medium-text-style medium)))
+	(unless (eq text-style old-text-style)
+          (let ((fn (text-style-to-X-font (port medium) (medium-text-style medium))))
+            (when (typep fn 'xlib:font)
+              (setf (xlib:gcontext-font gc)
+                    fn))))))))

@@ -130,7 +130,6 @@
   (xlib:text-width (text-style-to-x-font port text-style)
 		   string :start start :end end))
 
-
 
 
 (defgeneric font-ascent (font)

@@ -17,5 +17,5 @@
     :components ((:file "xrender-fonts")))
 
 (defsystem #:mcclim-fonts/clx-freetype
-  :depends-on (#:mcclim-clx #:cl-freetype2 #:fontconfig)
+  :depends-on (#:mcclim-clx #:cl-freetype2 #:fontconfig #:log4cl)
   :components ((:file "freetype")))
