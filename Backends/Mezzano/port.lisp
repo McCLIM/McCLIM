@@ -33,9 +33,9 @@
 ;; then returns the events from mcclim-fifo one at a time.
 ;;
 
-(defclass mezzano-port (standard-handled-event-port-mixin
-		       render-port-mixin
-                       standard-port)
+(defclass mezzano-port (render-port-mixin
+                        standard-event-port-mixin
+                        standard-port)
   ((pointer            :reader   port-pointer)
    (window             :accessor mezzano-port-window)
    (display-thread     :accessor mezzano-display-thread)
@@ -55,12 +55,15 @@
   (gethash mez-window (slot-value port 'mez-window->mirror)))
 
 (defun parse-mezzano-server-path (path)
-  (declare (ignore path))
-  (list :mezzano
-        :host       :mezzano
-        :display-id 0
-        :screen-id  0
-        :protocol   :native))
+  (let ((mirroring (mirror-factory (getf path :mirroring)))
+        (result (list :mezzano
+                      :host       :mezzano
+                      :display-id 0
+                      :screen-id  0
+                      :protocol   :native)))
+    (if mirroring
+        (nconc result (list :mirroring  mirroring))
+        result)))
 
 (setf (get :mezzano :port-type) 'mezzano-port)
 (setf (get :mezzano :server-path-parser) 'parse-mezzano-server-path)
@@ -96,12 +99,14 @@
   (setf *port* port
         (slot-value port 'pointer) (make-instance 'mezzano-pointer :port port)
         (mezzano-port-window port) (mos:current-framebuffer))
-  (push (make-instance 'mezzano-frame-manager :port port)
+  (push (apply #'make-instance 'mezzano-frame-manager
+               :port port
+               (cdr (port-server-path port)))
 	(slot-value port 'frame-managers))
+  (make-graft port)
   (clim-extensions:port-all-font-families port)
   (setf (mezzano-display-thread port) (initialize-display-thread port)
-        (mezzano-event-thread port) (initialize-event-thread port)
-        ))
+        (mezzano-event-thread port) (initialize-event-thread port)))
 
 (defmethod destroy-port :before ((port mezzano-port))
   ;; TODO - there's more to clean up here:
@@ -153,7 +158,8 @@
           (slot-value mirror 'mez-frame) frame)
     (port-register-mirror port sheet mirror)
     (setf (gethash window (slot-value port 'mez-window->sheet)) sheet
-          (gethash window (slot-value port 'mez-window->mirror)) mirror)))
+          (gethash window (slot-value port 'mez-window->mirror)) mirror)
+    mirror))
 
 (defmethod realize-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
   (%realize-mirror port sheet)
@@ -199,11 +205,9 @@
                               :mirror (mezzano-port-window port)
                               :orientation orientation
                               :units units)))
-    (setf (sheet-region graft)
-          (make-bounding-rectangle
-           0 0
-           (graft-width graft)
-           (graft-height graft)))
+    (climi::%%set-sheet-region
+     (make-bounding-rectangle 0 0 (graft-width graft) (graft-height graft))
+     graft)
     (push graft (port-grafts port))
     graft))
 

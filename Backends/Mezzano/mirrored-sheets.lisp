@@ -1,7 +1,6 @@
 (in-package :clim-mezzano)
 
-(defclass mezzano-mirrored-sheet-mixin (image-sheet-mixin
-                                        standard-mirrored-sheet-mixin)
+(defclass mezzano-mirrored-sheet-mixin (image-sheet-mixin mirrored-sheet-mixin)
   ())
 
 ;;;
