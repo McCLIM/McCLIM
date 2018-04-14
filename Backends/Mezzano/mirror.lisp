@@ -49,7 +49,8 @@
 
 (defun image-mirror-put (mez-window dx dy width height dirty-r)
   (when mez-window
-    ;; (debug-format "image-mirror-put ~S ~S ~S" mez-window width height)
+    ;; (debug-format "image-mirror-put ~S ~S ~S ~S ~S"
+    ;;               mez-window dx dy width height)
     (mos:damage-window
      mez-window
      dx
@@ -170,5 +171,6 @@
           (setf mez-dirty-region
                 (region-union mez-dirty-region
                               mcclim-render-internals::dirty-region))
+;;          (debug-format "dirty regin ~S" mez-dirty-region)
           (image-mirror-pre-put mirror mez-pixels dx dy width height mez-dirty-region)
           (setf mcclim-render-internals::dirty-region nil))))))

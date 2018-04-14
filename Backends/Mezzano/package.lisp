@@ -68,11 +68,8 @@
                   #:opticl-rgb-image-pixels
 		  )
   (:import-from :clim-standard
-		#:standard-handled-event-port-mixin
-		#:standard-mirrored-sheet-mixin
-		#:*configuration-event-p*
+                #:standard-event-port-mixin
 		#:standard-port
-		#:standard-handled-event-port-mixin
 		)
   )
 

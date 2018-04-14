@@ -218,7 +218,15 @@
     (when mez-frame
       (setf (mos:activep mez-frame)
             (mos:state event))
-      (mos:draw-frame mez-frame))
+      (mos:draw-frame mez-frame)
+      (mos:fifo-push
+       (with-slots (width height) mez-mirror
+         (make-instance 'window-repaint-event
+                        :timestamp 0
+                        :sheet sheet
+                        :region (make-rectangle* 0 0 width height)))
+       mcclim-fifo)
+      )
     (setf *current-focus* focus)))
 
 (defmethod mez-event->mcclim-event (mcclim-fifo (event mos:quit-event))
