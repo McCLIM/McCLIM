@@ -106,9 +106,9 @@
             for ptr = (cffi:inc-pointer buffer (* y pitch))
             do (loop
                  for x from 0 below width
-                 for v = (logior (ash (cffi:mem-ref ptr :unsigned-char (+ (* x 3) 2)) 16)
+                 for v = (logior (ash (cffi:mem-ref ptr :unsigned-char (* x 3)) 16)
                                  (ash (cffi:mem-ref ptr :unsigned-char (+ (* x 3) 1)) 8)
-                                 (cffi:mem-ref ptr :unsigned-char (* x 3))
+                                 (cffi:mem-ref ptr :unsigned-char (+ (* x 3) 2))
                                  #xff000000)
                  do (setf (aref array y x) v)))
           array))))
@@ -150,10 +150,14 @@
                               :poly-edge :smooth
                               :poly-mode :precise))
 
-(defun create-pen (drawable)
+(defun create-pen (drawable gc)
   (let* ((pixmap (xlib:create-pixmap :drawable (xlib:drawable-root drawable) :width 1 :height 1 :depth 32))
          (picture (xlib:render-create-picture pixmap :format (find-rgba-format drawable) :repeat :on))
-         (colour '(0 0 0 #xFFFF)))
+         (fg (xlib::gcontext-foreground gc))
+         (colour (list (ash (ldb (byte 8 16) fg) 8)
+                       (ash (ldb (byte 8 8) fg) 8)
+                       (ash (ldb (byte 8 0) fg) 8)
+                       #xFFFF)))
     (xlib:render-fill-rectangle picture :over colour 0 0 1 1)
     (xlib:free-pixmap pixmap)
     picture))
@@ -162,7 +166,7 @@
   (declare (ignore translate size))
   (let* ((char-codes (map 'vector #'char-code string))
          (glyphset (create-glyphset mirror font char-codes)))
-    (let ((source (create-pen mirror))
+    (let ((source (create-pen mirror gc))
           (dest (create-dest-picture mirror)))
       (with-face-from-font (face font)
         (let ((fixed-p (freetype2:fixed-face-p face))
