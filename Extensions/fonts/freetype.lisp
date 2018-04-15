@@ -233,12 +233,14 @@
 
 (defun find-best-match (family face)
   (let ((family-expr (cond
+                       ((typep family 'freetype-font-family) (list (cons "family" (clim-extensions:font-family-name family))))
                        ((eq family :fix) (list (cons "spacing" 100)))
                        ((eq family :serif) (list (cons "family" "DejaVu Serif")))
                        ((eq family :sans-serif) (list (cons "family" "DejaVu Sans")))
                        ((stringp family) (list (cons "family" family)))
                        (t (list (cons "family" "DejaVu Sans")))))
         (face-expr (cond
+                     ((typep face 'freetype-font-face) (list (cons "style" (clim-extensions:font-face-name face))))
                      ((eq face :roman) (list (cons "weight" 80)))
                      ((eq face :bold) (list (cons "weight" 200)))
                      ((eq face :italic) (list (cons "slant" 100)))
