@@ -81,7 +81,7 @@
 (defun parse-clx-server-path (path)
   (let* ((port-type (pop path))
          (mirroring (mirror-factory (getf path :mirroring)))
-         (font-renderer (make-instance (getf path :font-renderer 'clx-standard-font-renderer))))
+         (font-renderer (getf path :font-renderer 'clx-standard-font-renderer)))
     (remf path :mirroring)
     (remf path :font-renderer)
     (if path
