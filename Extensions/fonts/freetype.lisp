@@ -347,20 +347,3 @@
       (/ (- (freetype2-types:ft-glyph-metrics-width metrics)
             (freetype2-types:ft-glyph-metrics-hori-advance metrics))
          *freetype-font-scale*))))
-
-;;;
-;;;  Needed overrides
-;;;
-
-#+nil
-(defmethod clim::make-medium-gcontext* (medium foreground background line-style text-style (ink color) clipping-region)
-  (let* ((drawable (sheet-mirror (medium-sheet medium)))
-         (port (port medium)))
-    (let ((gc (xlib:create-gcontext :drawable drawable)))
-      (let ((fn (text-style-to-X-font port text-style)))
-        (if (typep fn 'xlib:font)
-            (setf (xlib:gcontext-font gc) fn)))
-      (setf 
-            (xlib:gcontext-foreground gc) (X-pixel port ink)
-            )
-      gc)))
