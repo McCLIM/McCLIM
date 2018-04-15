@@ -310,7 +310,7 @@
                           for style being each hash-key using (hash-value file) in style-hash
                           unless (gethash style font-family-styles)
                             do (setf (gethash style font-family-styles)
-                                     (make-instance 'freetype-font-face :name style :family f)))
+                                     (make-instance 'freetype-font-face :name style :family f :file file)))
                         f))))
   (clim-clx::font-families port))
 
