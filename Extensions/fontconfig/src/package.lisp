@@ -8,4 +8,5 @@
            #:make-pattern
            #:pattern-get
            #:config-home
-           #:match-font))
+           #:match-font
+           #:font-list))

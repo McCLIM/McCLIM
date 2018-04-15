@@ -26,6 +26,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(setq clim:*default-server-path* '(:clx :font-renderer mcclim-truetype:truetype-font-renderer))
+
 (let ((lookaside nil))
   (defun display-the-glyph-set (display)
     (if (eq (car lookaside) display)
@@ -79,8 +81,8 @@
                     (make-truetype-font port path size))
              '(8 10 12 14 18 24 48 72))))))
 
-(defmethod clim-extensions:port-all-font-families :around
-    ((port clim-clx::clx-port) &key invalidate-cache)
+(defmethod clim-clx:port-find-all-font-families((port clim-clx::clx-port) (font-renderer truetype-font-renderer)
+                                                &key invalidate-cache)
   (when (or (null (clim-clx::font-families port)) invalidate-cache)
     (setf (clim-clx::font-families port) (clim-clx::reload-font-table port)))
   (register-all-ttf-fonts port)
@@ -348,8 +350,12 @@
   (options nil)
   (device-name nil))
 
-(defclass truetype-font-renderer (clim-clx::font-renderer)
-  ())
+;; Why are we getting an undefined class in the DEFMETHOD of
+;; CLIM-CLX:PORT-FIND-ALL-FONT-FAMILIES if we don't have this
+;; EVAL-WHEN here?
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defclass truetype-font-renderer (clim-clx::font-renderer)
+    ()))
 
 (defmethod clim-clx::lookup-text-style-to-X-font ((port clim-clx::clx-port)
                                            (font-renderer truetype-font-renderer)

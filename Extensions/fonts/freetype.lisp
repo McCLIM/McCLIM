@@ -14,23 +14,33 @@
 (setf (get :clx-freetype :server-path-parser) 'clim-clx::parse-clx-server-path)
 (setf (get :clx-freetype :port-type) 'clx-freetype-port)
 
-(defvar *font-families* (make-hash-table :test 'equal))
-
 (defclass freetype-font-family (clim-extensions:font-family)
   ((faces :initform (make-hash-table :test 'equal)
           :reader freetype-font-family/faces)))
 
 (defun find-font-family (port name)
-  (alexandria:ensure-gethash (list port name) *font-families*
-                             (make-instance 'freetype-font-family :port port :name name)))
+  (let ((family (find name (clim-clx::font-families port) :key #'clim-extensions:font-family-name :test #'equal)))
+    (or family
+        (let ((v (make-instance 'freetype-font-family :port port :name name)))
+          (push v (clim-clx::font-families port))
+          v))))
 
 (defclass cached-picture ()
   ((glyphset :initform nil
              :accessor cached-picture/glyphset)))
 
 (defclass freetype-font-face (clim-extensions:font-face)
-  ((face   :initarg :face
-           :reader freetype-font-face/face)))
+  ((file :initarg :file
+         :reader freetype-font-face/file)
+   (face :initarg :face
+         :initform nil
+         :accessor freetype-font-face/face)))
+
+(defun find-or-load-face (f)
+  (check-type f freetype-font-face)
+  (or (freetype-font-face/face f)
+      (setf (freetype-font-face/face f)
+            (freetype2:new-face (freetype-font-face/file f)))))
 
 (defclass freetype-font ()
   ((face           :initarg :face
@@ -66,7 +76,7 @@
 (defmacro with-face-from-font ((sym font) &body body)
   (alexandria:once-only (font)
     `(bordeaux-threads:with-recursive-lock-held ((freetype-font/lock ,font))
-       (with-size-face (,sym (freetype-font-face/face (freetype-font/face ,font)) (freetype-font/size ,font))
+       (with-size-face (,sym (find-or-load-face (freetype-font/face ,font)) (freetype-font/size ,font))
          ,@body))))
 
 (defmethod clim-extensions:font-face-all-sizes ((face freetype-font-face))
@@ -122,7 +132,7 @@
                            :x-origin (- (freetype2-types:ft-glyphslot-bitmap-left glyph))
                            :y-origin (freetype2-types:ft-glyphslot-bitmap-top glyph)
                            :x-advance (/ (freetype2-types:ft-vector-x advance) 64)
-                           :y-advance 0 ; (/ (freetype2-types:ft-vector-x advance) 64)
+                           :y-advance 0 ; (/ (freetype2-types:ft-vector-y advance) 64)
                            :data (bitmap->array bitmap))))
 
 (defun find-or-create-cached-glyphset (drawable font)
@@ -246,11 +256,10 @@
         (find-best-match family face)
       (let* ((family-obj (find-font-family port found-family))
              (face-obj (alexandria:ensure-gethash found-style (freetype-font-family/faces family-obj)
-                                                  (let ((freetype-face (freetype2:new-face found-file)))
-                                                    (make-instance 'freetype-font-face
-                                                                   :face freetype-face
-                                                                   :family family-obj
-                                                                   :name found-style)))))
+                                                  (make-instance 'freetype-font-face
+                                                                 :family family-obj
+                                                                 :name found-style
+                                                                 :file found-file))))
         (make-instance 'freetype-font
                        :face face-obj
                        :size (etypecase size
@@ -270,6 +279,45 @@
                                                   (renderer freetype-font-renderer)
                                                   (text-style climi::device-font-text-style))
   nil)
+
+;;;
+;;;  List fonts
+;;;
+
+(defmethod clim-clx:port-find-all-font-families ((port clim-clx::clx-port) (font-renderer freetype-font-renderer)
+                                                 &key invalidate-cache)
+  (let ((h (make-hash-table :test 'equal))
+        (existing-families (make-hash-table :test 'equal)))
+    (unless invalidate-cache
+      (loop
+        for fam in (clim-clx::font-families port)
+        do (setf (gethash (clim-extensions:font-family-name fam) existing-families) t)))
+    (loop
+      for font in (fontconfig:font-list)
+      for family = (cdr (assoc :family font))
+      for style = (cdr (assoc :style font))
+      for file = (cdr (assoc :file font))
+      for m = (alexandria:ensure-gethash family h
+                                         (make-hash-table :test 'equal))
+      do (setf (gethash style m) file))
+    (setf (clim-clx::font-families port)
+          (loop
+            for family being each hash-key using (hash-value style-hash) in h
+            unless (gethash family existing-families)
+              collect (let ((f (make-instance 'freetype-font-family :name family :port port)))
+                        (loop
+                          with font-family-styles = (freetype-font-family/faces f)
+                          for style being each hash-key using (hash-value file) in style-hash
+                          unless (gethash style font-family-styles)
+                            do (setf (gethash style font-family-styles)
+                                     (make-instance 'freetype-font-face :name style :family f)))
+                        f))))
+  (clim-clx::font-families port))
+
+(defmethod clim-extensions:font-family-all-faces ((family freetype-font-family))
+  (loop
+    for face being each hash-value in (freetype-font-family/faces family)
+    collect face))
 
 ;;;
 ;;;  Character info

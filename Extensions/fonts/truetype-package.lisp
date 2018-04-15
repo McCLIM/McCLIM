@@ -14,4 +14,5 @@
            :make-fontconfig-font-name
            :truetype-font-size
            :truetype-font-ascent
-           :truetype-font-descent))
+           :truetype-font-descent
+           :truetype-font-renderer))

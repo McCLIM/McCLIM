@@ -66,11 +66,11 @@ interface management system."
 (defsystem #:mcclim/looks
   :depends-on (#:clim
                #-(or mcclim-beagle mcclim-ugly)
-               #+old-fonts #:mcclim-clx/pretty  #| adds truetype        |#
-               #:mcclim-clx/freetype            #| adds freetype        |#
-               #+mcclim-ugly #:mcclim-clx       #| raw clim-clx backend |#
-               #-mcclim-beagle #:mcclim-clx-fb  #| experimental backend |#
-               #+mcclim-beagle #:mcclim-beagle  #| OSX native (clozure) |#
+               #+old-fonts #:mcclim-clx/truetype  #| adds truetype        |#
+               #:mcclim-clx/freetype              #| adds freetype        |#
+               #+mcclim-ugly #:mcclim-clx         #| raw clim-clx backend |#
+               #-mcclim-beagle #:mcclim-clx-fb    #| experimental backend |#
+               #+mcclim-beagle #:mcclim-beagle    #| OSX native (clozure) |#
 
                ;; null backend
                #:mcclim-null))
