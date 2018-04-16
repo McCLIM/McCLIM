@@ -71,7 +71,8 @@
        ((:fc-type-char-set "FcTypeCharSet"))
        ((:fc-type-ft-face "FcTypeFTFace"))
        ((:fc-type-lang-set "FcTypeLangSet"))
-       ((:fc-type-range "FcTypeRange")))
+       ;; Range disabled as it's not available on debian-9
+       #+nil ((:fc-type-range "FcTypeRange")))
 
 (cenum (fc-result)
        ((:fc-result-match "FcResultMatch"))
@@ -96,7 +97,8 @@
          (value-char-set "u.c" :type :pointer)
          (value-ptr "u.f" :type :pointer)
          (value-lang-set "u.l" :type :pointer)
-         (value-range "u.r" :type :pointer))
+         ;; Range disabled as it's not available on debian-9
+         #+nil (value-range "u.r" :type :pointer))
 
 (cstruct fc-font-set "FcFontSet"
          (nfont "nfont" :type :int)
