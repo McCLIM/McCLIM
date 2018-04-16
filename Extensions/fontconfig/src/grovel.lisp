@@ -1,4 +1,4 @@
-(in-package :fontconfig)
+(in-package :mcclim-fontconfig)
 
 (include "fontconfig/fontconfig.h")
 

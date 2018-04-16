@@ -8,8 +8,20 @@
 
 (defparameter *freetype-font-scale* 26.6)
 
+;; The freetype2 library doesn't expose this function, so we add it here.
+(cffi:defcfun ("FT_Property_Set" ft-property-set) freetype2-types:ft-error
+  (library freetype2-types:ft-library)
+  (mod-name :string)
+  (prop-name :string)
+  (value :pointer))
+
 (defclass freetype-font-renderer (clim-clx::font-renderer)
   ())
+
+(defmethod initialize-instance :after ((obj freetype-font-renderer) &key)
+  (cffi:with-foreign-objects ((v :int))
+    (setf (cffi:mem-ref v :int) 1)
+    (ft-property-set freetype2:*library* "autofitter" "warping" v)))
 
 (setf (get :clx-freetype :server-path-parser) 'clim-clx::parse-clx-server-path)
 (setf (get :clx-freetype :port-type) 'clx-freetype-port)
@@ -246,7 +258,7 @@
                      ((eq face :italic) (list (cons "slant" 100)))
                      ((stringp face) (list (cons "style" face)))
                      (t (list (cons "weight" 80))))))
-    (let ((result (fontconfig:match-font (append family-expr face-expr))))
+    (let ((result (mcclim-fontconfig:match-font (append family-expr face-expr))))
       (list (cdr (assoc :family result))
             (cdr (assoc :style result))
             (cdr (assoc :file result))))))
@@ -295,7 +307,7 @@
         for fam in (clim-clx::font-families port)
         do (setf (gethash (clim-extensions:font-family-name fam) existing-families) t)))
     (loop
-      for font in (fontconfig:font-list)
+      for font in (mcclim-fontconfig:font-list)
       for family = (cdr (assoc :family font))
       for style = (cdr (assoc :style font))
       for file = (cdr (assoc :file font))

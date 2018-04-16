@@ -1,4 +1,4 @@
-(in-package :fontconfig)
+(in-package :mcclim-fontconfig)
 
 (cffi:define-foreign-library libfontconfig
   (:unix "libfontconfig.so"))

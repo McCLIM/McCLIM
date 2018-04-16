@@ -1,4 +1,4 @@
-(defpackage :fontconfig
+(defpackage :mcclim-fontconfig
   (:use :cl)
   (:documentation "CFFI interface to Fontconfig")
   (:export #:get-version
