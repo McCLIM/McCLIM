@@ -4,6 +4,8 @@
 
 (in-package :clim-freetype)
 
+(declaim (optimize (speed 0) (safety 3) (debug 3)))
+
 (setq clim:*default-server-path* '(:clx :font-renderer clim-freetype:freetype-font-renderer))
 
 (defparameter *freetype-font-scale* 26.6)
@@ -48,11 +50,11 @@
          :initform nil
          :accessor freetype-font-face/face)))
 
-(defun find-or-load-face (f)
-  (check-type f freetype-font-face)
-  (or (freetype-font-face/face f)
-      (setf (freetype-font-face/face f)
-            (freetype2:new-face (freetype-font-face/file f)))))
+(defun find-or-load-face (font)
+  (check-type font freetype-font)
+  (let ((f (freetype-font/face font)))
+    (or (freetype-font-face/face f)
+        (setf (freetype-font-face/face f) (freetype2:new-face (freetype-font-face/file f))))))
 
 (defclass freetype-font ()
   ((face           :initarg :face
@@ -65,7 +67,10 @@
    (cached-glyphs  :initform (make-hash-table :test 'eql)
                    :reader freetype-font/cached-glyphs)
    (cached-picture :type cached-picture
-                   :reader freetype-font/cached-picture)))
+                   :reader freetype-font/cached-picture)
+   (hb-font        :initarg :hb-font
+                   :initform nil
+                   :accessor freetype-font/hb-font)))
 
 (defmethod initialize-instance :after ((obj freetype-font) &key)
   (let ((cached (make-instance 'cached-picture)))
@@ -88,7 +93,7 @@
 (defmacro with-face-from-font ((sym font) &body body)
   (alexandria:once-only (font)
     `(bordeaux-threads:with-recursive-lock-held ((freetype-font/lock ,font))
-       (with-size-face (,sym (find-or-load-face (freetype-font/face ,font)) (freetype-font/size ,font))
+       (with-size-face (,sym (find-or-load-face ,font) (freetype-font/size ,font))
          ,@body))))
 
 (defmethod clim-extensions:font-face-all-sizes ((face freetype-font-face))
@@ -110,6 +115,7 @@
     (unless format
       (error "Can't find 8-bit RGBA format"))
     format))
+
 
 (defun bitmap->array (bitmap)
   (let* ((width (/ (freetype2-types:ft-bitmap-width bitmap) 3))
@@ -135,12 +141,19 @@
                  do (setf (aref array y x) v)))
           array))))
 
-(defun render-char-to-glyphset (glyphset face code)
-  (freetype2:load-char face code '(:force-autohint))
+(defun find-or-create-hb-font (font)
+  (check-type font freetype-font)
+  (or (freetype-font/hb-font font)
+      (setf (freetype-font/hb-font font)
+            (with-face-from-font (face font)
+              (mcclim-harfbuzz:hb-ft-font-create (freetype2::p* (freetype2::fw-ptr face)) (cffi:null-pointer))))))
+
+(defun render-char-to-glyphset (glyphset face glyph-index)
+  (freetype2:load-glyph face glyph-index '(:force-autohint))
   (let* ((glyph (freetype2-types:ft-face-glyph face))
          (advance (freetype2-types:ft-glyphslot-advance glyph))
          (bitmap (freetype2-types:ft-glyphslot-bitmap (freetype2:render-glyph glyph :lcd))))
-    (xlib:render-add-glyph glyphset code
+    (xlib:render-add-glyph glyphset glyph-index
                            :x-origin (- (freetype2-types:ft-glyphslot-bitmap-left glyph))
                            :y-origin (freetype2-types:ft-glyphslot-bitmap-top glyph)
                            :x-advance (/ (freetype2-types:ft-vector-x advance) 64)
@@ -154,16 +167,16 @@
               (let ((format (find-rgba-format drawable)))
                 (xlib:render-create-glyph-set format))))))
 
-(defun create-glyphset (drawable font char-codes)
+(defun create-glyphset (drawable font index-list)
   (let ((glyphset (find-or-create-cached-glyphset drawable font))
         (cached-glyphs (freetype-font/cached-glyphs font)))
     (with-face-from-font (face font)
       (loop
-        for code across char-codes
-        unless (gethash code cached-glyphs)
+        for glyph-index in index-list
+        unless (gethash glyph-index cached-glyphs)
           do (progn
-               (render-char-to-glyphset glyphset face code)
-               (setf (gethash code cached-glyphs) t))))
+               (render-char-to-glyphset glyphset face glyph-index)
+               (setf (gethash glyph-index cached-glyphs) t))))
     glyphset))
 
 (defun create-dest-picture (drawable)
@@ -184,37 +197,51 @@
     (xlib:free-pixmap pixmap)
     picture))
 
+(defun make-glyph-list (font string)
+  (mcclim-harfbuzz:with-buffer (buf)
+    (let ((hb-font (find-or-create-hb-font font)))
+      (mcclim-harfbuzz:hb-buffer-set-direction buf :hb-direction-ltr)
+      (mcclim-harfbuzz:buffer-add-string buf string)
+      (mcclim-harfbuzz:hb-shape hb-font buf (cffi:null-pointer) 0)
+      (cffi:with-foreign-objects ((num-glyphs :int))
+        (let ((glyph-info (mcclim-harfbuzz:hb-buffer-get-glyph-infos buf num-glyphs))
+              (glyph-pos (mcclim-harfbuzz:hb-buffer-get-glyph-positions buf num-glyphs)))
+          (declare (ignore glyph-pos))
+          (loop
+            for i from 0 below (cffi:mem-ref num-glyphs :int)
+            for info = (cffi:mem-aref glyph-info '(:struct mcclim-harfbuzz::hb-glyph-info-t) i)
+            for codepoint = (getf info 'mcclim-harfbuzz::codepoint)
+            collect codepoint))))))
+
 (defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string &key start end translate size)
   (declare (ignore translate size))
-  (let* ((char-codes (map 'vector #'char-code string))
-         (glyphset (create-glyphset mirror font char-codes)))
-    (let ((source (create-pen mirror gc))
-          (dest (create-dest-picture mirror)))
-      (with-face-from-font (face font)
-        (let ((fixed-p (freetype2:fixed-face-p face))
-              (vec (make-array 1 :element-type 'integer :initial-element 0)))
-          (loop with length = (length string)
-                with rx = 0.0
-                and ry = 0.0
-                for i from (or start 0) below (or end length)
-                as c1 = (aref string i)
-                as c2 = (if (< i (1- length))
-                            (aref string (1+ i))
-                            nil)
-                as kern = (if (and (not fixed-p)
-                                   c2)
-                              (freetype2:get-kerning face c1 c2)
-                              0.0)
-                do (let ((code (char-code c1)))
-                     (freetype2:load-char face code '(:force-autohint))
-                     (let* ((glyph (freetype2-types:ft-face-glyph face))
-                            (advance (freetype2-types:ft-glyphslot-advance glyph))
-                            (advance-pixels (/ (freetype2-types:ft-vector-x advance) 64)))
-                       (let ((x-pos (round (+ rx x)))
-                             (y-pos (round (+ ry  y))))
-                         (setf (aref vec 0) code)
-                         (xlib:render-composite-glyphs dest glyphset source x-pos y-pos vec)
-                         (incf rx (+ advance-pixels kern))))))))
+  (with-face-from-font (face font)
+    (let* ((index-list (make-glyph-list font (subseq string (or start 0) (or end (length string)))))
+           (glyphset (create-glyphset mirror font index-list))
+           (source (create-pen mirror gc))
+           (dest (create-dest-picture mirror))
+           (fixed-p (freetype2:fixed-face-p face))
+           (vec (make-array 1 :element-type 'integer :initial-element 0)))
+      (loop
+        with rx = 0.0
+        and ry = 0.0
+        for current-index on index-list
+        as c1 = (car current-index)
+        as c2 = (cadr current-index)
+        as kern = (if (and (not fixed-p)
+                           c2)
+                      (freetype2:get-kerning face c1 c2)
+                      0.0)
+        do (progn
+             (freetype2:load-char face c1 '(:force-autohint))
+             (let* ((glyph (freetype2-types:ft-face-glyph face))
+                    (advance (freetype2-types:ft-glyphslot-advance glyph))
+                    (advance-pixels (/ (freetype2-types:ft-vector-x advance) 64)))
+               (let ((x-pos (round (+ rx x)))
+                     (y-pos (round (+ ry  y))))
+                 (setf (aref vec 0) c1)
+                 (xlib:render-composite-glyphs dest glyphset source x-pos y-pos vec)
+                 (incf rx (+ advance-pixels kern))))))
       (xlib:render-free-picture source)
       (xlib:render-free-picture dest))))
 
