@@ -9,6 +9,9 @@
 (cffi:defcfun ("hb_buffer_set_direction" hb-buffer-set-direction) :void
   (buffer :pointer)
   (direction hb-direction-t))
+(cffi:defcfun ("hb_buffer_set_script" hb-buffer-set-script) :void
+  (buffer :pointer)
+  (script hb-script-t))
 (cffi:defcfun ("hb_buffer_add_utf8" hb-buffer-add-utf8) :void
   (buffer :pointer)
   (text (:pointer :char))

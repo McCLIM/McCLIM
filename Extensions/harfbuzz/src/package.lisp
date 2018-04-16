@@ -10,4 +10,5 @@
    #:hb-ft-font-create
    #:hb-shape
    #:hb-buffer-get-glyph-positions
-   #:hb-buffer-get-glyph-infos))
+   #:hb-buffer-get-glyph-infos
+   #:hb-buffer-set-script))

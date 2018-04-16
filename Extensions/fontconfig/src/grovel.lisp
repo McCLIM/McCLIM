@@ -1,5 +1,7 @@
 (in-package :mcclim-fontconfig)
 
+(pkg-config-cflags "fontconfig")
+
 (include "fontconfig/fontconfig.h")
 
 (ctype fc-bool "FcBool")

@@ -10,6 +10,8 @@
 
 (defparameter *freetype-font-scale* 26.6)
 
+(defvar *enable-autohint* nil)
+
 ;; The freetype2 library doesn't expose this function, so we add it here.
 (cffi:defcfun ("FT_Property_Set" ft-property-set) freetype2-types:ft-error
   (library freetype2-types:ft-library)
@@ -21,9 +23,9 @@
   ())
 
 (defmethod initialize-instance :after ((obj freetype-font-renderer) &key)
-  (cffi:with-foreign-objects ((v :int))
-    (setf (cffi:mem-ref v :int) 1)
-    (ft-property-set freetype2:*library* "autofitter" "warping" v)))
+  #+nil (cffi:with-foreign-objects ((v :int))
+          (setf (cffi:mem-ref v :int) 1)
+          (ft-property-set freetype2:*library* "autofitter" "warping" v)))
 
 (setf (get :clx-freetype :server-path-parser) 'clim-clx::parse-clx-server-path)
 (setf (get :clx-freetype :port-type) 'clx-freetype-port)
@@ -149,14 +151,13 @@
               (mcclim-harfbuzz:hb-ft-font-create (freetype2::p* (freetype2::fw-ptr face)) (cffi:null-pointer))))))
 
 (defun render-char-to-glyphset (glyphset face glyph-index)
-  (freetype2:load-glyph face glyph-index '(:force-autohint))
+  (freetype2:load-glyph face glyph-index (if *enable-autohint* '(:force-autohint) nil))
   (let* ((glyph (freetype2-types:ft-face-glyph face))
-         (advance (freetype2-types:ft-glyphslot-advance glyph))
          (bitmap (freetype2-types:ft-glyphslot-bitmap (freetype2:render-glyph glyph :lcd))))
     (xlib:render-add-glyph glyphset glyph-index
                            :x-origin (- (freetype2-types:ft-glyphslot-bitmap-left glyph))
                            :y-origin (freetype2-types:ft-glyphslot-bitmap-top glyph)
-                           :x-advance (/ (freetype2-types:ft-vector-x advance) 64)
+                           :x-advance 0 ; (/ (freetype2-types:ft-vector-x advance) 64)
                            :y-advance 0 ; (/ (freetype2-types:ft-vector-y advance) 64)
                            :data (bitmap->array bitmap))))
 
@@ -197,53 +198,52 @@
     (xlib:free-pixmap pixmap)
     picture))
 
+(defstruct glyph-entry codepoint x-advance y-advance x-offset y-offset)
+
 (defun make-glyph-list (font string)
   (mcclim-harfbuzz:with-buffer (buf)
     (let ((hb-font (find-or-create-hb-font font)))
       (mcclim-harfbuzz:hb-buffer-set-direction buf :hb-direction-ltr)
+      (mcclim-harfbuzz:hb-buffer-set-script buf :hb-script-latin)
       (mcclim-harfbuzz:buffer-add-string buf string)
       (mcclim-harfbuzz:hb-shape hb-font buf (cffi:null-pointer) 0)
       (cffi:with-foreign-objects ((num-glyphs :int))
         (let ((glyph-info (mcclim-harfbuzz:hb-buffer-get-glyph-infos buf num-glyphs))
               (glyph-pos (mcclim-harfbuzz:hb-buffer-get-glyph-positions buf num-glyphs)))
-          (declare (ignore glyph-pos))
           (loop
             for i from 0 below (cffi:mem-ref num-glyphs :int)
             for info = (cffi:mem-aref glyph-info '(:struct mcclim-harfbuzz::hb-glyph-info-t) i)
+            for pos = (cffi:mem-aref glyph-pos '(:struct mcclim-harfbuzz::hb-glyph-position-t) i)
             for codepoint = (getf info 'mcclim-harfbuzz::codepoint)
-            collect codepoint))))))
+            for x-advance = (getf pos 'mcclim-harfbuzz::x-advance)
+            for y-advance = (getf pos 'mcclim-harfbuzz::y-advance)
+            for x-offset = (getf pos 'mcclim-harfbuzz::x-offset)
+            for y-offset = (getf pos 'mcclim-harfbuzz::y-offset)
+            collect (make-glyph-entry :codepoint codepoint
+                                      :x-advance x-advance
+                                      :y-advance y-advance
+                                      :x-offset x-offset
+                                      :y-offset y-offset)))))))
 
 (defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string &key start end translate size)
   (declare (ignore translate size))
-  (with-face-from-font (face font)
-    (let* ((index-list (make-glyph-list font (subseq string (or start 0) (or end (length string)))))
-           (glyphset (create-glyphset mirror font index-list))
-           (source (create-pen mirror gc))
-           (dest (create-dest-picture mirror))
-           (fixed-p (freetype2:fixed-face-p face))
-           (vec (make-array 1 :element-type 'integer :initial-element 0)))
-      (loop
-        with rx = 0.0
-        and ry = 0.0
-        for current-index on index-list
-        as c1 = (car current-index)
-        as c2 = (cadr current-index)
-        as kern = (if (and (not fixed-p)
-                           c2)
-                      (freetype2:get-kerning face c1 c2)
-                      0.0)
-        do (progn
-             (freetype2:load-char face c1 '(:force-autohint))
-             (let* ((glyph (freetype2-types:ft-face-glyph face))
-                    (advance (freetype2-types:ft-glyphslot-advance glyph))
-                    (advance-pixels (/ (freetype2-types:ft-vector-x advance) 64)))
-               (let ((x-pos (round (+ rx x)))
-                     (y-pos (round (+ ry  y))))
-                 (setf (aref vec 0) c1)
-                 (xlib:render-composite-glyphs dest glyphset source x-pos y-pos vec)
-                 (incf rx (+ advance-pixels kern))))))
-      (xlib:render-free-picture source)
-      (xlib:render-free-picture dest))))
+  (let* ((index-list (make-glyph-list font (subseq string (or start 0) (or end (length string)))))
+         (glyphset (create-glyphset mirror font (mapcar #'glyph-entry-codepoint index-list)))
+         (source (create-pen mirror gc))
+         (dest (create-dest-picture mirror))
+         (vec (make-array 1 :element-type 'integer :initial-element 0)))
+    (loop
+      with rx = 0
+      with ry = 0
+      for current-index in index-list
+      do (let ((x-pos (round (+ x rx (glyph-entry-x-offset current-index))))
+               (y-pos (round (+ y ry (glyph-entry-y-offset current-index)))))
+           (setf (aref vec 0) (glyph-entry-codepoint current-index))
+           (xlib:render-composite-glyphs dest glyphset source x-pos y-pos vec)
+           (incf rx (/ (glyph-entry-x-advance current-index) 64))
+           (incf ry (/ (glyph-entry-y-advance current-index) 64))))
+    (xlib:render-free-picture source)
+    (xlib:render-free-picture dest)))
 
 (defmethod clim-clx::font-text-extents ((font freetype-font) string &key (start 0) (end (length string)) translate)
   (declare (ignore translate))
