@@ -29,9 +29,10 @@
   ((:file "input" :depends-on ())))
 
 (defsystem #:mcclim-clx/output
-  :depends-on (#:mcclim-clx/basic)
+  :depends-on (#:mcclim-clx/basic #:cl-unicode)
   :components
-  ((:file "fonts" :depends-on ())
+  ((:file "bidi" :depends-on ())
+   (:file "fonts" :depends-on ("bidi"))
    (:file "medium" :depends-on ("fonts"))))
 
 (defsystem #:mcclim-clx/text-selection
