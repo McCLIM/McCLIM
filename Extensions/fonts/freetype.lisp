@@ -58,6 +58,8 @@
     (or (freetype-font-face/face f)
         (setf (freetype-font-face/face f) (freetype2:new-face (freetype-font-face/file f))))))
 
+(defstruct glyph-attributes x-origin y-origin width height)
+
 (defclass freetype-font ()
   ((face           :initarg :face
                    :reader freetype-font/face)
@@ -72,7 +74,9 @@
                    :reader freetype-font/cached-picture)
    (hb-font        :initarg :hb-font
                    :initform nil
-                   :accessor freetype-font/hb-font)))
+                   :accessor freetype-font/hb-font)
+   (port           :initarg :port
+                   :reader freetype-font/port)))
 
 (defmethod initialize-instance :after ((obj freetype-font) &key)
   (let ((cached (make-instance 'cached-picture)))
@@ -99,15 +103,15 @@
          ,@body))))
 
 (defmethod clim-extensions:font-face-all-sizes ((face freetype-font-face))
-  '(8 12 18 20 24 36))
+  '(8 12 18 20 24 36 48 72))
 
 (defmethod clim-extensions:font-face-text-style ((face freetype-font-face) &optional size)
   (clim:make-text-style (clim-extensions:font-face-family face)
                         (clim-extensions:font-face-name face)
                         size))
 
-(defun find-rgba-format (drawable)
-  (let* ((formats (xlib::render-query-picture-formats (xlib:drawable-display drawable)))
+(defun find-rgba-format (display)
+  (let* ((formats (xlib::render-query-picture-formats display))
          (format (find-if (lambda (v)
                             (and (= (car (xlib:picture-format-red-byte v)) 8)
                                  (= (car (xlib:picture-format-green-byte v)) 8)
@@ -153,31 +157,37 @@
 (defun render-char-to-glyphset (glyphset face glyph-index)
   (freetype2:load-glyph face glyph-index (if *enable-autohint* '(:force-autohint) nil))
   (let* ((glyph (freetype2-types:ft-face-glyph face))
-         (bitmap (freetype2-types:ft-glyphslot-bitmap (freetype2:render-glyph glyph :lcd))))
+         (bitmap (freetype2-types:ft-glyphslot-bitmap (freetype2:render-glyph glyph :lcd)))
+         (x-origin (- (freetype2-types:ft-glyphslot-bitmap-left glyph)))
+         (y-origin (freetype2-types:ft-glyphslot-bitmap-top glyph))
+         (bitmap-array (bitmap->array bitmap)))
     (xlib:render-add-glyph glyphset glyph-index
-                           :x-origin (- (freetype2-types:ft-glyphslot-bitmap-left glyph))
-                           :y-origin (freetype2-types:ft-glyphslot-bitmap-top glyph)
+                           :x-origin x-origin
+                           :y-origin y-origin
                            :x-advance 0 ; (/ (freetype2-types:ft-vector-x advance) 64)
                            :y-advance 0 ; (/ (freetype2-types:ft-vector-y advance) 64)
-                           :data (bitmap->array bitmap))))
+                           :data bitmap-array)
+    (make-glyph-attributes :x-origin x-origin
+                           :y-origin y-origin
+                           :width (/ (freetype2-types:ft-bitmap-width bitmap) 3)
+                           :height (freetype2-types:ft-bitmap-rows bitmap))))
 
-(defun find-or-create-cached-glyphset (drawable font)
+(defun find-or-create-cached-glyphset (font)
   (let ((cached (freetype-font/cached-picture font)))
     (or (cached-picture/glyphset cached)
         (setf (cached-picture/glyphset cached)
-              (let ((format (find-rgba-format drawable)))
+              (let ((format (find-rgba-format (clim-clx::clx-port-display (freetype-font/port font)))))
                 (xlib:render-create-glyph-set format))))))
 
-(defun create-glyphset (drawable font index-list)
-  (let ((glyphset (find-or-create-cached-glyphset drawable font))
+(defun ensure-glyphs-loaded (font index-list)
+  (let ((glyphset (find-or-create-cached-glyphset font))
         (cached-glyphs (freetype-font/cached-glyphs font)))
     (with-face-from-font (face font)
       (loop
         for glyph-index in index-list
         unless (gethash glyph-index cached-glyphs)
-          do (progn
-               (render-char-to-glyphset glyphset face glyph-index)
-               (setf (gethash glyph-index cached-glyphs) t))))
+          do (let ((attrs (render-char-to-glyphset glyphset face glyph-index)))
+               (setf (gethash glyph-index cached-glyphs) attrs))))
     glyphset))
 
 (defun create-dest-picture (drawable)
@@ -188,7 +198,7 @@
 
 (defun create-pen (drawable gc)
   (let* ((pixmap (xlib:create-pixmap :drawable (xlib:drawable-root drawable) :width 1 :height 1 :depth 32))
-         (picture (xlib:render-create-picture pixmap :format (find-rgba-format drawable) :repeat :on))
+         (picture (xlib:render-create-picture pixmap :format (find-rgba-format (xlib::drawable-display drawable)) :repeat :on))
          (fg (xlib::gcontext-foreground gc))
          (colour (list (ash (ldb (byte 8 16) fg) 8)
                        (ash (ldb (byte 8 8) fg) 8)
@@ -225,10 +235,11 @@
                                       :x-offset x-offset
                                       :y-offset y-offset)))))))
 
-(defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string &key start end translate size)
+(defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string
+                                       &key (start 0) (end (length string)) translate size)
   (declare (ignore translate size))
-  (let* ((index-list (make-glyph-list font (subseq string (or start 0) (or end (length string)))))
-         (glyphset (create-glyphset mirror font (mapcar #'glyph-entry-codepoint index-list)))
+  (let* ((index-list (make-glyph-list font (subseq string start end)))
+         (glyphset (ensure-glyphs-loaded font (mapcar #'glyph-entry-codepoint index-list)))
          (source (create-pen mirror gc))
          (dest (create-dest-picture mirror))
          (vec (make-array 1 :element-type 'integer :initial-element 0)))
@@ -250,17 +261,38 @@
   ;; Values to return:
   ;;   width ascent descent left right font-ascent font-descent direction first-not-done
   (with-face-from-font (face font)
-    (let* ((s (subseq string start end))
-           (width (freetype2:string-pixel-width face s)))
-      (values width
-              (freetype2:face-ascender-pixels face)
-              (freetype2:face-descender-pixels face)
-              0
-              width
-              (freetype2:face-ascender-pixels face)
-              (freetype2:face-descender-pixels face)
-              0
-              end))))
+    (if (= start end)
+        (values 0 0 0 0 0 (freetype2:face-ascender-pixels face) (freetype2:face-descender-pixels face) 0 end)
+        (let* ((index-list (make-glyph-list font (subseq string start end))))
+          (ensure-glyphs-loaded font (mapcar #'glyph-entry-codepoint index-list))
+          (let ((cached-glyphs (freetype-font/cached-glyphs font)))
+            (multiple-value-bind (width ascender descender)
+                (loop
+                  with rx = 0
+                  with ascender = 0
+                  with descender = 0
+                  for current-index in index-list
+                  for attrs = (gethash (glyph-entry-codepoint current-index) cached-glyphs)
+                  do (progn
+                       (incf rx (/ (glyph-entry-x-advance current-index) 64))
+                       (setf descender (max descender (- (glyph-attributes-height attrs)
+                                                         (glyph-attributes-y-origin attrs))))
+                       (setf ascender (max ascender (glyph-attributes-y-origin attrs))))
+                  finally (return (values rx ascender descender)))
+              (values width
+                      ascender
+                      descender
+                      ;; We're just returning 0 for the left edge here, but the below
+                      ;; version will actually compute a better value. But if we do this,
+                      ;; then we should compute the similar value for the right side as
+                      ;; well and it's not clear as to how to find that value.
+                      0
+                      #+nil (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
+                      width
+                      (freetype2:face-ascender-pixels face)
+                      (freetype2:face-descender-pixels face)
+                      0
+                      end)))))))
 
 (defmethod clim-clx::font-ascent ((font freetype-font))
   (with-face-from-font (face font)
@@ -302,6 +334,7 @@
                                                                  :name found-style
                                                                  :file found-file))))
         (make-instance 'freetype-font
+                       :port port
                        :face face-obj
                        :size (etypecase size
                                (keyword (or (getf clim-clx::*clx-text-sizes* size) 12))
