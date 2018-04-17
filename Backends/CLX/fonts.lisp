@@ -148,18 +148,19 @@
 ;;;
 ;;; (width ascent descent left right font-ascent font-descent
 ;;; direction first-not-done)
-(defgeneric font-text-extents (font string &key start end translate)
+(defgeneric font-text-extents (font string &key start end translate direction)
   (:method (font string
-            &key (start 0) (end (length string)) (translate #'translate))
+            &key (start 0) (end (length string)) (translate #'translate) direction)
+    (declare (ignore direction))
     (xlib:text-extents font string
                        :start start :end end
                        :translate translate)))
 
 (defgeneric font-draw-glyphs (font mirror gc x y string
-                              &key start end translate size)
+                              &key start end translate size direction)
   (:method (font mirror gc x y string
-            &key (start 0) (end (length string)) (translate #'translate) (size 16))
-    (declare (ignore font))
+            &key (start 0) (end (length string)) (translate #'translate) (size 16) direction)
+    (declare (ignore font direction))
     (xlib:draw-glyphs mirror gc x y string
                       :start start :end end :translate translate :size size)))
 

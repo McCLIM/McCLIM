@@ -210,10 +210,12 @@
 
 (defstruct glyph-entry codepoint x-advance y-advance x-offset y-offset)
 
-(defun make-glyph-list (font string)
+(defun make-glyph-list (font string direction)
   (mcclim-harfbuzz:with-buffer (buf)
     (let ((hb-font (find-or-create-hb-font font)))
-      (mcclim-harfbuzz:hb-buffer-set-direction buf :hb-direction-ltr)
+      (mcclim-harfbuzz:hb-buffer-set-direction buf (ecase direction
+                                                     (:ltr :hb-direction-ltr)
+                                                     (:rtl :hb-direction-rtl)))
       (mcclim-harfbuzz:hb-buffer-set-script buf :hb-script-latin)
       (mcclim-harfbuzz:buffer-add-string buf string)
       (mcclim-harfbuzz:hb-shape hb-font buf (cffi:null-pointer) 0)
@@ -236,9 +238,10 @@
                                       :y-offset y-offset)))))))
 
 (defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string
-                                       &key (start 0) (end (length string)) translate size)
+                                       &key (start 0) (end (length string))
+                                         translate size (direction :ltr))
   (declare (ignore translate size))
-  (let* ((index-list (make-glyph-list font (subseq string start end)))
+  (let* ((index-list (make-glyph-list font (subseq string start end) direction))
          (glyphset (ensure-glyphs-loaded font (mapcar #'glyph-entry-codepoint index-list)))
          (source (create-pen mirror gc))
          (dest (create-dest-picture mirror))
@@ -256,14 +259,16 @@
     (xlib:render-free-picture source)
     (xlib:render-free-picture dest)))
 
-(defmethod clim-clx::font-text-extents ((font freetype-font) string &key (start 0) (end (length string)) translate)
+(defmethod clim-clx::font-text-extents ((font freetype-font) string
+                                        &key (start 0) (end (length string))
+                                          translate (direction :ltr))
   (declare (ignore translate))
   ;; Values to return:
   ;;   width ascent descent left right font-ascent font-descent direction first-not-done
   (with-face-from-font (face font)
     (if (= start end)
         (values 0 0 0 0 0 (freetype2:face-ascender-pixels face) (freetype2:face-descender-pixels face) 0 end)
-        (let* ((index-list (make-glyph-list font (subseq string start end))))
+        (let* ((index-list (make-glyph-list font (subseq string start end) direction)))
           (ensure-glyphs-loaded font (mapcar #'glyph-entry-codepoint index-list))
           (let ((cached-glyphs (freetype-font/cached-glyphs font)))
             (multiple-value-bind (width ascender descender)

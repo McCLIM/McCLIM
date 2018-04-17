@@ -363,12 +363,12 @@ direction, those of type L, EN or AN go up one level."
 	   (setq levels (cdr levels))))
     result))
 
-(defun directions (string)
-  (let ((dirdata (bidi-resolve-implicit-levels (bidi-resolve-weak-types (bidi-get-types string) nil))))
+(defun directions (string r2l-context)
+  (let ((dirdata (bidi-resolve-implicit-levels (bidi-resolve-weak-types (bidi-get-types string) r2l-context))))
     (assert (alexandria:length= string dirdata))
     (labels ((number-to-type (n)
                (ecase n
-                 (0 :lrt)
+                 (0 :ltr)
                  (1 :rtl))))
      (let ((result nil))
        (loop

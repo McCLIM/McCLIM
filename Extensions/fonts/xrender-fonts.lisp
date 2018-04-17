@@ -202,12 +202,12 @@
           (svref cache (+ 256 hash)) value)))
 
 (defmethod clim-clx::font-text-extents ((font truetype-font) string
-                                        &key (start 0) (end (length string)) translate)
+                                        &key (start 0) (end (length string)) translate direction)
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
   ;; first-not-done)  
   (declare (optimize (speed 3))
-           (ignore translate))
+           (ignore translate direction))
 
   (let ((width
          ;; We could work a little harder and eliminate generic arithmetic
@@ -295,9 +295,9 @@
 (let ((buffer (make-array 1024 :element-type '(unsigned-byte 16) ; TODO: thread safety
                                :adjustable nil :fill-pointer nil)))
   (defmethod clim-clx::font-draw-glyphs ((font truetype-font) mirror gc x y string
-                                         #|x0 y0 x1 y1|# &key start end translate size)
+                                         #|x0 y0 x1 y1|# &key start end translate size direction)
     (declare (optimize (speed 3))
-             (ignore size translate)
+             (ignore size translate direction)
              (type #-sbcl (integer 0 #.array-dimension-limit)
                    #+sbcl sb-int:index
                    start end)
