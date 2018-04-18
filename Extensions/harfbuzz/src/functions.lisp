@@ -24,6 +24,8 @@
 (cffi:defcfun ("hb_buffer_get_glyph_positions" hb-buffer-get-glyph-positions) (:pointer (:struct hb-glyph-position-t))
   (buffer :pointer)
   (length (:pointer :unsigned-int)))
+(cffi:defcfun ("hb_buffer_guess_segment_properties" hb-buffer-guess-segment-properties) :void
+  (buffer :pointer))
 
 (cffi:defcfun ("hb_ft_font_create" hb-ft-font-create) :pointer
   (face :pointer)

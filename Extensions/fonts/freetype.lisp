@@ -216,26 +216,29 @@
       (mcclim-harfbuzz:hb-buffer-set-direction buf (ecase direction
                                                      (:ltr :hb-direction-ltr)
                                                      (:rtl :hb-direction-rtl)))
-      (mcclim-harfbuzz:hb-buffer-set-script buf :hb-script-latin)
       (mcclim-harfbuzz:buffer-add-string buf string)
+      (mcclim-harfbuzz:hb-buffer-guess-segment-properties buf)
       (mcclim-harfbuzz:hb-shape hb-font buf (cffi:null-pointer) 0)
       (cffi:with-foreign-objects ((num-glyphs :int))
-        (let ((glyph-info (mcclim-harfbuzz:hb-buffer-get-glyph-infos buf num-glyphs))
-              (glyph-pos (mcclim-harfbuzz:hb-buffer-get-glyph-positions buf num-glyphs)))
+        (let* ((glyph-info (mcclim-harfbuzz:hb-buffer-get-glyph-infos buf num-glyphs))
+               (glyph-info-element-size (cffi:foreign-type-size '(:struct mcclim-harfbuzz::hb-glyph-info-t)))
+               (glyph-pos (mcclim-harfbuzz:hb-buffer-get-glyph-positions buf num-glyphs))
+               (glyph-pos-element-size (cffi:foreign-type-size '(:struct mcclim-harfbuzz::hb-glyph-position-t))))
           (loop
             for i from 0 below (cffi:mem-ref num-glyphs :int)
-            for info = (cffi:mem-aref glyph-info '(:struct mcclim-harfbuzz::hb-glyph-info-t) i)
-            for pos = (cffi:mem-aref glyph-pos '(:struct mcclim-harfbuzz::hb-glyph-position-t) i)
-            for codepoint = (getf info 'mcclim-harfbuzz::codepoint)
-            for x-advance = (getf pos 'mcclim-harfbuzz::x-advance)
-            for y-advance = (getf pos 'mcclim-harfbuzz::y-advance)
-            for x-offset = (getf pos 'mcclim-harfbuzz::x-offset)
-            for y-offset = (getf pos 'mcclim-harfbuzz::y-offset)
+            for codepoint = (cffi:foreign-slot-value (cffi:inc-pointer glyph-info (* glyph-info-element-size i))
+                                                     '(:struct mcclim-harfbuzz::hb-glyph-info-t)
+                                                     'mcclim-harfbuzz::codepoint)
+            for pos = (cffi:inc-pointer glyph-pos (* glyph-pos-element-size i))
             collect (make-glyph-entry :codepoint codepoint
-                                      :x-advance x-advance
-                                      :y-advance y-advance
-                                      :x-offset x-offset
-                                      :y-offset y-offset)))))))
+                                      :x-advance (cffi:foreign-slot-value pos '(:struct mcclim-harfbuzz::hb-glyph-position-t)
+                                                                          'mcclim-harfbuzz::x-advance)
+                                      :y-advance (cffi:foreign-slot-value pos '(:struct mcclim-harfbuzz::hb-glyph-position-t)
+                                                                          'mcclim-harfbuzz::y-advance)
+                                      :x-offset (cffi:foreign-slot-value pos '(:struct mcclim-harfbuzz::hb-glyph-position-t)
+                                                                          'mcclim-harfbuzz::x-offset)
+                                      :y-offset (cffi:foreign-slot-value pos '(:struct mcclim-harfbuzz::hb-glyph-position-t)
+                                                                          'mcclim-harfbuzz::y-offset))))))))
 
 (defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string
                                        &key (start 0) (end (length string))

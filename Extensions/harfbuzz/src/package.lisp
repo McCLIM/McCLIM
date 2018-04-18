@@ -11,4 +11,5 @@
    #:hb-shape
    #:hb-buffer-get-glyph-positions
    #:hb-buffer-get-glyph-infos
-   #:hb-buffer-set-script))
+   #:hb-buffer-set-script
+   #:hb-buffer-guess-segment-properties))
