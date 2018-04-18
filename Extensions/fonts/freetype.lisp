@@ -310,25 +310,34 @@
   (with-face-from-font (face font)
     (freetype2:face-descender-pixels face)))
 
+(defun make-family-pattern (family)
+  (cond
+    ((typep family 'freetype-font-family) (list (cons :family (clim-extensions:font-family-name family))))
+    ((eq family :fix) (list (cons :spacing 100)))
+    ((eq family :serif) (list (cons :family "DejaVu Serif")))
+    ((eq family :sans-serif) (list (cons :family "DejaVu Sans")))
+    ((stringp family) (list (cons :family family)))
+    (t (list (cons :family "DejaVu Sans")))))
+
+(defun make-face-pattern (face)
+  (cond
+    ((typep face 'freetype-font-face) (list (cons "style" (clim-extensions:font-face-name face))))
+    ((eq face :roman) (list (cons :weight 80)))
+    ((eq face :bold) (list (cons :weight 200)))
+    ((eq face :italic) (list (cons :slant 100)))
+    ((stringp face) (list (cons :style face)))
+    (t (list (cons :weight 80)))))
+
+(defparameter *main-filter* '((:scalable . :true)))
+
 (defun find-best-match (family face)
-  (let ((family-expr (cond
-                       ((typep family 'freetype-font-family) (list (cons "family" (clim-extensions:font-family-name family))))
-                       ((eq family :fix) (list (cons "spacing" 100)))
-                       ((eq family :serif) (list (cons "family" "DejaVu Serif")))
-                       ((eq family :sans-serif) (list (cons "family" "DejaVu Sans")))
-                       ((stringp family) (list (cons "family" family)))
-                       (t (list (cons "family" "DejaVu Sans")))))
-        (face-expr (cond
-                     ((typep face 'freetype-font-face) (list (cons "style" (clim-extensions:font-face-name face))))
-                     ((eq face :roman) (list (cons "weight" 80)))
-                     ((eq face :bold) (list (cons "weight" 200)))
-                     ((eq face :italic) (list (cons "slant" 100)))
-                     ((stringp face) (list (cons "style" face)))
-                     (t (list (cons "weight" 80))))))
-    (let ((result (mcclim-fontconfig:match-font (append family-expr face-expr))))
-      (list (cdr (assoc :family result))
-            (cdr (assoc :style result))
-            (cdr (assoc :file result))))))
+  (let ((result (mcclim-fontconfig:match-font (append *main-filter*
+                                                      (make-family-pattern family)
+                                                      (make-face-pattern face))
+                                              '(:family :style :file))))
+    (list (cdr (assoc :family result))
+          (cdr (assoc :style result))
+          (cdr (assoc :file result)))))
 
 (defun find-freetype-font (port text-style)
   (multiple-value-bind (family face size)
@@ -375,7 +384,7 @@
         for fam in (clim-clx::font-families port)
         do (setf (gethash (clim-extensions:font-family-name fam) existing-families) t)))
     (loop
-      for font in (mcclim-fontconfig:font-list)
+      for font in (mcclim-fontconfig:font-list *main-filter* '(:family :style :file))
       for family = (cdr (assoc :family font))
       for style = (cdr (assoc :style font))
       for file = (cdr (assoc :file font))

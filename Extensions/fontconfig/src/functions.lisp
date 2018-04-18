@@ -32,6 +32,10 @@
   (pattern :pointer)
   (object :string)
   (value :int))
+(cffi:defcfun ("FcPatternAddBool" fc-pattern-add-bool) fc-bool
+  (pattern :pointer)
+  (object :string)
+  (value fc-bool))
 (cffi:defcfun ("FcPatternDestroy" fc-pattern-destroy) :void
   (pattern :pointer))
 (cffi:defcfun ("FcPatternPrint" fc-pattern-print) :void

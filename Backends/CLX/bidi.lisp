@@ -382,6 +382,6 @@ direction, those of type L, EN or AN go up one level."
                 (setq start i)
                 (setq prev dir))
          do (incf i)
-         finally (when (> (1- i) start)
+         finally (when (> i start)
                    (push (cons (number-to-type prev) (subseq string start i)) result)))
        result))))
