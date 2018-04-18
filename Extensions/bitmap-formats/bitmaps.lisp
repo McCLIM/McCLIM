@@ -11,12 +11,26 @@
   (:documentation "This condition is signaled when trying to read a
   bitmap file whose format is not supported." ))
 
-(defun opticl-read-bitmap-file (image-pathname)
-  (let* ((img (handler-case
-                  (opticl:read-image-file image-pathname)
-                (error ()
-                  (error 'unsupported-bitmap-format))))
-         (height (array-dimension img 0))
+(defmacro define-opticl-reader (name opticl-reader)
+  `(defun ,name (image-pathname)
+     (let* ((img (handler-case
+                     (,opticl-reader image-pathname)
+                   (error ()
+                     (error 'unsupported-bitmap-format)))))
+       (convert-opticl-img img))))
+
+(define-opticl-reader opticl-read-bitmap-file opticl:read-image-file)
+(define-opticl-reader opticl-read-gif-file opticl:read-gif-file)
+(define-opticl-reader opticl-read-jpg-file opticl:read-jpeg-file)
+(define-opticl-reader opticl-read-pbm-file opticl:read-pbm-file)
+(define-opticl-reader opticl-read-pgm-file opticl:read-pgm-file)
+(define-opticl-reader opticl-read-png-file opticl:read-png-file)
+(define-opticl-reader opticl-read-pnm-file opticl:read-pnm-file)
+(define-opticl-reader opticl-read-ppm-file opticl:read-ppm-file)
+(define-opticl-reader opticl-read-tiff-file opticl:read-tiff-file)
+
+(defun convert-opticl-img (img)
+  (let* ((height (array-dimension img 0))
          (width (array-dimension img 1))
          (array (make-array (list height width)
                             :element-type '(unsigned-byte 32))))

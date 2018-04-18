@@ -8,6 +8,14 @@
                 #:pattern-width
                 #:pattern-height
                 #:opticl-read-bitmap-file
+                #:opticl-read-gif-file
+                #:opticl-read-jpg-file
+                #:opticl-read-pbm-file
+                #:opticl-read-pgm-file
+                #:opticl-read-png-file
+                #:opticl-read-pnm-file
+                #:opticl-read-ppm-file
+                #:opticl-read-tiff-file
                 #:medium-draw-pattern*
                 #:def-grecording
                 #:defrecord-predicate
