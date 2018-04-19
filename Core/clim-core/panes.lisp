@@ -802,7 +802,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 (defclass basic-pane (standard-space-requirement-options-mixin
                       sheet-parent-mixin ;mirrored-sheet-mixin
                       ;; UX mixins
-                      cut-and-paste-mixin
+                      ;cut-and-paste-mixin
                       mouse-wheel-scroll-mixin
                       ;; protocol class with million mixins goes last
                       pane)

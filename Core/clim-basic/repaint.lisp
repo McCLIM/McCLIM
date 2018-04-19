@@ -203,8 +203,8 @@ want to do the same.")
            (native-sheet-region (effective-repaint-region parent sheet region)))
       (with-sheet-medium (medium parent)
 	(with-drawing-options (medium :clipping-region native-sheet-region
-				      :ink
-                                      #-jd-test(pane-background sheet)
+				      :ink (medium-background medium)
+                                      #+jd-test(pane-background sheet)
                                       #+jd-test(alexandria:random-elt
                                                 (list +darkmagenta+
                                                       +darkblue+
