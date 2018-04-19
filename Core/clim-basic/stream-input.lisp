@@ -76,9 +76,10 @@
 ;;; what we've got after it returns.
 
 (defclass standard-input-stream (fundamental-character-input-stream
-				 standard-sheet-input-mixin)
+                                 standard-sheet-input-mixin
+                                 cut-and-paste-mixin)
   ((unread-chars :initform nil
-		 :accessor stream-unread-chars)))
+                 :accessor stream-unread-chars)))
 
 (defmethod stream-read-char ((pane standard-input-stream))
   (if (stream-unread-chars pane)

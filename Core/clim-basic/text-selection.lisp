@@ -52,10 +52,10 @@
 
 (defparameter *marking-border* 1)
 
-(defparameter *marked-foreground* +white+
+(defparameter *marked-foreground* +dark-red+
   "Foreground ink to use for marked stuff.")
 
-(defparameter *marked-background* +blue4+
+(defparameter *marked-background* +light-yellow+
   "Background ink to use for marked stuff.")
 
 ;;;; Text Selection Protocol
