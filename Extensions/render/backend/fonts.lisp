@@ -1,7 +1,7 @@
 (in-package :mcclim-render-internals)
 
 ;;;
-;;; Font utilities. 
+;;; Font utilities.
 ;;;
 
 (defstruct (glyph-info (:constructor glyph-info (id width height left right top dx dy paths opacity-image)))
@@ -24,7 +24,7 @@
     (let ((right (+ left width))
 	  (opacity-image (font-generate-opacity-image paths width height left top)))
       (glyph-info 0 dx dy left right top dx dy paths opacity-image))))
-    
+
 (defun font-glyph-info (font character)
   (with-slots (char->glyph-info) font
     (ensure-gethash character char->glyph-info
@@ -73,7 +73,7 @@
 
 (declaim (inline gcache-get))
 
-(defun gcache-get (cache key-number)  
+(defun gcache-get (cache key-number)
   (declare (optimize (speed 3))
            (type (simple-array t (512))))
   (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello.
@@ -111,7 +111,7 @@
                                         &key (start 0) (end (length string)) translate)
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
-  ;; first-not-done)  
+  ;; first-not-done)
   (declare ;;(optimize (speed 3))
            (ignore translate))
   (let ((width
@@ -124,15 +124,16 @@
                           as char = (aref string i)
                           as code = (char-code char)
                           sum (or (gcache-get width-cache code)
-                                  (gcache-set width-cache code (font-glyph-width font char)))
+                                  (gcache-set width-cache code (max (font-glyph-right font char)
+                                                                    (font-glyph-width font char))))
                             #+NIL (clim-clx::font-glyph-width font char))))
            (if (numberp (slot-value font 'fixed-width))
                (* (slot-value font 'fixed-width) (- end start))
-               (typecase string 
-                 (simple-string 
+               (typecase string
+                 (simple-string
                   (locally (declare (type simple-string string))
                     (compute)))
-                 (string 
+                 (string
                   (locally (declare (type string string))
                     (compute)))
                  (t (compute)))))))
@@ -257,4 +258,3 @@
                       ;; * (min 0 left), (max width right)
                       ;; * font-ascent / ascent
                       (values left (- font-ascent) right font-descent)))))))))
-
