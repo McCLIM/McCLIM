@@ -10,7 +10,7 @@
 
 (defparameter *freetype-font-scale* 26.6)
 
-(defvar *enable-autohint* nil)
+(defvar *enable-autohint* t)
 
 ;; The freetype2 library doesn't expose this function, so we add it here.
 (cffi:defcfun ("FT_Property_Set" ft-property-set) freetype2-types:ft-error
