@@ -52,12 +52,6 @@
 
 (defparameter *marking-border* 1)
 
-(defparameter *marked-foreground* +white+
-  "Foreground ink to use for marked stuff.")
-
-(defparameter *marked-background* +blue4+
-  "Background ink to use for marked stuff.")
-
 ;;;; Text Selection Protocol
 
 (defgeneric release-selection (port &optional time)
@@ -150,22 +144,27 @@ the incoming selection."))
 
 (defmethod handle-repaint :around ((pane cut-and-paste-mixin) region)
   (with-slots (markings) pane
-    (cond ((null markings)
-           (call-next-method))
-          (t
-           (let ((marked-region
-                  (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) (slot-value pane 'markings))
-                          :initial-value +nowhere+)))
-             (with-sheet-medium (medium pane)
-               (let ((R (region-difference region marked-region)))
-                 (with-drawing-options (medium :clipping-region R)
-                   (call-next-method pane R))))
-             (with-sheet-medium (medium pane)
-               (let ((R (region-intersection region marked-region)))
-                 (with-drawing-options (medium :clipping-region R)
-                   (letf (((medium-foreground medium) *marked-foreground*)
-                          ((medium-background medium) *marked-background*))
-                     (call-next-method pane R))))))))))
+    (when (null markings)
+      (return-from handle-repaint (call-next-method)))
+    (let ((marked-region
+           (reduce #'region-union (mapcar #'(lambda (x)
+                                              (marking-region pane x))
+                                          (slot-value pane 'markings))
+                   :initial-value +nowhere+)))
+      (with-sheet-medium (medium pane)
+        (let ((R (region-difference region marked-region)))
+          (with-drawing-options (medium :clipping-region R)
+            (call-next-method pane R))))
+      (with-sheet-medium (medium pane)
+        (let ((R (region-intersection region marked-region)))
+          (with-drawing-options (medium :clipping-region R)
+            (let* ((fg (medium-foreground medium))
+                   (bg (medium-background medium))
+                   (new-fg (if (eql fg clim:+black+) +dark-red+ bg))
+                   (new-bg (if (eql bg clim:+white+) +light-yellow+ fg)))
+              (letf (((medium-foreground medium) new-fg)
+                     ((medium-background medium) new-bg))
+                (call-next-method pane R)))))))))
 
 (defgeneric eos/shift-click (pane event))
 
