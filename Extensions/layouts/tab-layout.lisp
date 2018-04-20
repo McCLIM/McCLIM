@@ -183,8 +183,8 @@ the TAB-LAYOUT implementation and specialized by its subclasses."))
     ;; add new pages:
     (dolist (page add)
       (setf (tab-page-tab-layout page) parent)
-      (setf (sheet-enabled-p (tab-page-pane page)) nil)
-      (sheet-adopt-child parent (tab-page-pane page)))
+      (sheet-adopt-child parent (tab-page-pane page))
+      (setf (sheet-enabled-p (tab-page-pane page)) nil))
     ;; ensure that at least one page is enabled
     (when (null (tab-layout-enabled-page parent))
       (setf (tab-layout-enabled-page parent) (car (tab-layout-pages parent))))))
