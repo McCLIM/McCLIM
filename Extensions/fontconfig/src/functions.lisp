@@ -11,11 +11,17 @@
 (cffi:defcfun ("FcInitReinitialize" fc-init-reinitialize) fc-bool)
 (cffi:defcfun ("FcInitBringUptoDate" fc-init-bring-up-to-date) fc-bool)
 (cffi:defcfun ("FcConfigHome" fc-config-home) :pointer)
+(cffi:defcfun ("FcConfigSubstitute" fc-config-substitute) fc-bool
+  (config :pointer)
+  (pattern :pointer)
+  (kind fc-match-kind))
 
 (cffi:defcfun ("FcDefaultSubstitute" fc-default-substitute) :void
   (pattern :pointer))
 (cffi:defcfun ("FcNameParse" fc-name-parse) :pointer
   (name :pointer))
+(cffi:defcfun ("FcNameUnparse" fc-name-unparse) :pointer
+  (pattern :pointer))
 
 (cffi:defcfun ("FcPatternCreate" fc-pattern-create) :pointer)
 #+nil

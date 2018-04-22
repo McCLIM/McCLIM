@@ -81,6 +81,11 @@
        ((:fc-result-no-id "FcResultNoId"))
        ((:fc-result-out-of-memory "FcResultOutOfMemory")))
 
+(cenum (fc-match-kind)
+       ((:fc-match-pattern "FcMatchPattern"))
+       ((:fc-match-font "FcMatchFont"))
+       ((:fc-match-scan "FcMatchScan")))
+
 (cstruct fc-matrix "FcMatrix"
          (xx "xx" :type :double)
          (xy "xy" :type :double)

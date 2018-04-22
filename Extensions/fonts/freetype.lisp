@@ -322,8 +322,8 @@
 (defun make-face-pattern (face)
   (cond
     ((typep face 'freetype-font-face) (list (cons "style" (clim-extensions:font-face-name face))))
-    ((eq face :roman) (list (cons :weight 80)))
-    ((eq face :bold) (list (cons :weight 200)))
+    ((eq face :roman) (list (cons :weight 80) (cons :slant 0)))
+    ((eq face :bold) (list (cons :weight 200) (cons :slant 0)))
     ((eq face :italic) (list (cons :slant 100)))
     ((stringp face) (list (cons :style face)))
     (t (list (cons :weight 80)))))

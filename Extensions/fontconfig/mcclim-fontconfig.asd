@@ -6,8 +6,7 @@
   :license "Apache"
   :serial t
   :depends-on (:cffi
-               :alexandria
-               :trivial-garbage)
+               :alexandria)
   :components ((:module src
                         :serial t
                         :components ((:file "package")
