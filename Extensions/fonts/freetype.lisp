@@ -393,17 +393,19 @@
                                          (make-hash-table :test 'equal))
       do (setf (gethash style m) file))
     (setf (clim-clx::font-families port)
-          (loop
-            for family being each hash-key using (hash-value style-hash) in h
-            unless (gethash family existing-families)
-              collect (let ((f (make-instance 'freetype-font-family :name family :port port)))
-                        (loop
-                          with font-family-styles = (freetype-font-family/faces f)
-                          for style being each hash-key using (hash-value file) in style-hash
-                          unless (gethash style font-family-styles)
-                            do (setf (gethash style font-family-styles)
-                                     (make-instance 'freetype-font-face :name style :family f :file file)))
-                        f))))
+          (sort (loop
+                  for family being each hash-key using (hash-value style-hash) in h
+                  unless (gethash family existing-families)
+                    collect (let ((f (make-instance 'freetype-font-family :name family :port port)))
+                              (loop
+                                with font-family-styles = (freetype-font-family/faces f)
+                                for style being each hash-key using (hash-value file) in style-hash
+                                unless (gethash style font-family-styles)
+                                  do (setf (gethash style font-family-styles)
+                                           (make-instance 'freetype-font-face :name style :family f :file file)))
+                              f))
+                #'string<
+                :key #'clim-extensions:font-family-name)))
   (clim-clx::font-families port))
 
 (defmethod clim-extensions:font-family-all-faces ((family freetype-font-family))
