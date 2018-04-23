@@ -252,11 +252,12 @@
 (define-command (com-background-run :name "Background Run"
                                     :menu t
 				    :command-table application-commands)
-  ((program 'string :prompt "Command")
-   (args '(sequence string) :default '("") :prompt "Args"))
-  (if (zerop (length (car args)))
-      (uiop:launch-program program)
-      (uiop:launch-program `(,program ,@args))))
+    ((program 'string :prompt "Command")
+     (args '(sequence string) :default '("") :prompt "Args"))
+  (bt:make-thread #'(lambda ()
+                      (if (zerop (length (car args)))
+                          (uiop:run-program program)
+                          (uiop:run-program `(,program ,@args))))))
 
 (define-command (com-reload-mime-database :name "Reload Mime Database"
                                           :menu t
