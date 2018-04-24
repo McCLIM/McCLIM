@@ -170,23 +170,50 @@
                            :width (/ (freetype2-types:ft-bitmap-width bitmap) 3)
                            :height (freetype2-types:ft-bitmap-rows bitmap))))
 
+(defun create-glyphset (font)
+  (let ((format (find-rgba-format (clim-clx::clx-port-display (freetype-font/port font)))))
+    (xlib:render-create-glyph-set format)))
+
 (defun find-or-create-cached-glyphset (font)
   (let ((cached (freetype-font/cached-picture font)))
     (or (cached-picture/glyphset cached)
-        (setf (cached-picture/glyphset cached)
-              (let ((format (find-rgba-format (clim-clx::clx-port-display (freetype-font/port font)))))
-                (xlib:render-create-glyph-set format))))))
+        (setf (cached-picture/glyphset cached) (create-glyphset font)))))
 
-(defun ensure-glyphs-loaded (font index-list)
+(defun free-glyphset (glyphset)
+  (xlib:render-free-glyph-set glyphset))
+
+(defun ensure-glyphs-loaded (font index-list glyphset cached-glyphs transform-matrix)
+  "Render all glyphs in INDEX-LIST into the given glyphset.
+CACHED-GLYPHS is a hash table containing information about the glyphs
+that have already been rendered, and will be filled in with any new
+glyphs that were added to the glyphset. If non-NIL, TRANSFORM-MATRIX
+is a 4x4 matrix that will be used to transform the glyphs prior to
+rendering, otherwise the identity matrix will be used instead."
+  (with-face-from-font (face font)
+    (if transform-matrix
+        (freetype2:set-transform face (freetype2-types:make-matrix
+                                       (truncate (* #x10000 (aref transform-matrix 0 0)))
+                                       (truncate (* #x10000 (aref transform-matrix 0 1)))
+                                       (truncate (* #x10000 (aref transform-matrix 1 0)))
+                                       (truncate (* #x10000 (aref transform-matrix 1 1))))
+                                 (freetype2-types:make-vector 0 0))
+        (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer)))
+    (loop
+      for glyph-index in index-list
+      unless (gethash glyph-index cached-glyphs)
+        do (let ((attrs (render-char-to-glyphset glyphset face glyph-index)))
+             (setf (gethash glyph-index cached-glyphs) attrs))))
+  glyphset)
+
+(defun load-cached-glyphset (font index-list)
   (let ((glyphset (find-or-create-cached-glyphset font))
         (cached-glyphs (freetype-font/cached-glyphs font)))
-    (with-face-from-font (face font)
-      (loop
-        for glyph-index in index-list
-        unless (gethash glyph-index cached-glyphs)
-          do (let ((attrs (render-char-to-glyphset glyphset face glyph-index)))
-               (setf (gethash glyph-index cached-glyphs) attrs))))
-    glyphset))
+    (ensure-glyphs-loaded font index-list glyphset cached-glyphs nil)))
+
+(defun load-standalone-glyphset (font index-list transform-matrix)
+  (let ((glyphset (create-glyphset font))
+        (cached-glyphs (make-hash-table :test 'eql)))
+    (ensure-glyphs-loaded font index-list glyphset cached-glyphs transform-matrix)))
 
 (defun create-dest-picture (drawable)
   (xlib:render-create-picture drawable
@@ -238,31 +265,63 @@
                                       :y-offset (cffi:foreign-slot-value pos '(:struct mcclim-harfbuzz::hb-glyph-position-t)
                                                                           'mcclim-harfbuzz::y-offset))))))))
 
+(defun convert-transformation-to-matrix (transformation)
+  "Given a CLIM transformation object, return the appropriate matrix,
+or NIL if the current transformation is the identity transformation."
+  (if (eq transformation 'clim:+identity-transformation+)
+      nil
+      (multiple-value-bind (xx xy)
+          (clim:transform-position transformation 1 0)
+        (multiple-value-bind (yx yy)
+            (clim:transform-position transformation 0 1)
+          (if (and (= xx 1)
+                   (= xy 0)
+                   (= yx 0)
+                   (= yy 1))
+              nil
+              (make-array '(2 2) :initial-contents (list (list xx xy) (list yx yy))))))))
+
+;;; We only cache glyphsets that does not have a transformation
+;;; applied. The assumption is that applying transformation on text is
+;;; rare enough that the lower performance will be acceptable.
+
 (defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string
                                        &key (start 0) (end (length string))
-                                         translate size (direction :ltr))
+                                         translate size (direction :ltr)
+                                         transformation)
   (declare (ignore translate size))
-  (let* ((index-list (make-glyph-list font (subseq string start end) direction))
-         (glyphset (ensure-glyphs-loaded font (mapcar #'glyph-entry-codepoint index-list)))
-         (source (create-pen mirror gc))
-         (dest (create-dest-picture mirror))
-         (vec (make-array 1 :element-type 'integer :initial-element 0)))
-    (unless  (eq (xlib:picture-clip-mask dest)
-                 (xlib:gcontext-clip-mask gc))
-      (setf (xlib:picture-clip-mask dest)
-            (xlib:gcontext-clip-mask gc)))
-    (loop
-      with rx = 0
-      with ry = 0
-      for current-index in index-list
-      do (let ((x-pos (round (+ x rx (glyph-entry-x-offset current-index))))
-               (y-pos (round (+ y ry (glyph-entry-y-offset current-index)))))
-           (setf (aref vec 0) (glyph-entry-codepoint current-index))
-           (xlib:render-composite-glyphs dest glyphset source x-pos y-pos vec)
-           (incf rx (/ (glyph-entry-x-advance current-index) 64))
-           (incf ry (/ (glyph-entry-y-advance current-index) 64))))
-    (xlib:render-free-picture source)
-    (xlib:render-free-picture dest)))
+  ;; If the transformation is the identity matrix, this function will
+  ;; return NIL.
+  (let ((transform-matrix (convert-transformation-to-matrix transformation)))
+    (let* ((index-list (make-glyph-list font (subseq string start end) direction))
+           (codepoints (mapcar #'glyph-entry-codepoint index-list))
+           (glyphset (if transform-matrix
+                         ;; We have a transformation matrix, so let's load the glyphset without caching
+                         (load-standalone-glyphset font codepoints transform-matrix)
+                         ;; ELSE: No transformation, make sure the glyphs are cached
+                         (load-cached-glyphset font codepoints))))
+      (unwind-protect
+           (let ((source (create-pen mirror gc))
+                 (dest (create-dest-picture mirror))
+                 (vec (make-array 1 :element-type 'integer :initial-element 0)))
+             (unless  (eq (xlib:picture-clip-mask dest)
+                          (xlib:gcontext-clip-mask gc))
+               (setf (xlib:picture-clip-mask dest)
+                     (xlib:gcontext-clip-mask gc)))
+             (loop
+               with rx = 0
+               with ry = 0
+               for current-index in index-list
+               do (let ((x-pos (round (+ x rx (glyph-entry-x-offset current-index))))
+                        (y-pos (round (+ y ry (glyph-entry-y-offset current-index)))))
+                    (setf (aref vec 0) (glyph-entry-codepoint current-index))
+                    (xlib:render-composite-glyphs dest glyphset source x-pos y-pos vec)
+                    (incf rx (/ (glyph-entry-x-advance current-index) 64))
+                    (incf ry (/ (glyph-entry-y-advance current-index) 64))))
+             (xlib:render-free-picture source)
+             (xlib:render-free-picture dest))
+        (when transform-matrix
+          (free-glyphset glyphset))))))
 
 (defmethod clim-clx::font-text-extents ((font freetype-font) string
                                         &key (start 0) (end (length string))
@@ -274,7 +333,7 @@
     (if (= start end)
         (values 0 0 0 0 0 (freetype2:face-ascender-pixels face) (freetype2:face-descender-pixels face) 0 end)
         (let* ((index-list (make-glyph-list font (subseq string start end) direction)))
-          (ensure-glyphs-loaded font (mapcar #'glyph-entry-codepoint index-list))
+          (load-cached-glyphset font (mapcar #'glyph-entry-codepoint index-list))
           (let ((cached-glyphs (freetype-font/cached-glyphs font)))
             (multiple-value-bind (width ascender descender)
                 (loop

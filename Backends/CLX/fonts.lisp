@@ -157,10 +157,10 @@
                        :translate translate)))
 
 (defgeneric font-draw-glyphs (font mirror gc x y string
-                              &key start end translate size direction)
+                              &key start end translate size direction transformation)
   (:method (font mirror gc x y string
-            &key (start 0) (end (length string)) (translate #'translate) (size 16) direction)
-    (declare (ignore font direction))
+            &key (start 0) (end (length string)) (translate #'translate) (size 16) direction transformation)
+    (declare (ignore font direction transformation))
     (xlib:draw-glyphs mirror gc x y string
                       :start start :end end :translate translate :size size)))
 

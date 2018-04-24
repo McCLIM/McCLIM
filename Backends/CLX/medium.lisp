@@ -1286,7 +1286,7 @@ time an indexed pattern is drawn.")
              mirror gc x y string
              #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
              :start start :end end
-             :translate #'translate :size 16)))))))
+             :translate #'translate :size 16 :transformation (medium-transformation medium))))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
