@@ -27,9 +27,6 @@
           (setf (cffi:mem-ref v :int) 1)
           (ft-property-set freetype2:*library* "autofitter" "warping" v)))
 
-(setf (get :clx-freetype :server-path-parser) 'clim-clx::parse-clx-server-path)
-(setf (get :clx-freetype :port-type) 'clx-freetype-port)
-
 (defclass freetype-font-family (clim-extensions:font-family)
   ((faces :initform (make-hash-table :test 'equal)
           :reader freetype-font-family/faces)))
