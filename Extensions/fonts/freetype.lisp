@@ -247,6 +247,10 @@
          (source (create-pen mirror gc))
          (dest (create-dest-picture mirror))
          (vec (make-array 1 :element-type 'integer :initial-element 0)))
+    (unless  (eq (xlib:picture-clip-mask dest)
+                 (xlib:gcontext-clip-mask gc))
+      (setf (xlib:picture-clip-mask dest)
+            (xlib:gcontext-clip-mask gc)))
     (loop
       with rx = 0
       with ry = 0
