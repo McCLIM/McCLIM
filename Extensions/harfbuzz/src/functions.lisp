@@ -26,6 +26,11 @@
   (length (:pointer :unsigned-int)))
 (cffi:defcfun ("hb_buffer_guess_segment_properties" hb-buffer-guess-segment-properties) :void
   (buffer :pointer))
+(cffi:defcfun ("hb_buffer_set_cluster_level" hb-buffer-set-cluster-level) :void
+  (buffer :pointer)
+  (cluster-level hb-buffer-cluster-level-t))
+(cffi:defcfun ("hb_buffer_get_cluster_level" hb-buffer-get-cluster-level) hb-buffer-cluster-level-t
+  (buffer :pointer))
 
 (cffi:defcfun ("hb_ft_font_create" hb-ft-font-create) :pointer
   (face :pointer)

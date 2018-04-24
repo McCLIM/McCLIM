@@ -12,4 +12,5 @@
    #:hb-buffer-get-glyph-positions
    #:hb-buffer-get-glyph-infos
    #:hb-buffer-set-script
-   #:hb-buffer-guess-segment-properties))
+   #:hb-buffer-guess-segment-properties
+   #:hb-buffer-set-cluster-level))

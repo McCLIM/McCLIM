@@ -160,6 +160,12 @@
        ((:hb-script-newa "HB_SCRIPT_NEWA"))
        ((:hb-script-invalid "HB_SCRIPT_INVALID")))
 
+(cenum (hb-buffer-cluster-level-t)
+       ((:hb-buffer-cluster-level-monotone-graphemes "HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES"))
+       ((:hb-buffer-cluster-level-monotone-characters "HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS"))
+       ((:hb-buffer-cluster-level-characters "HB_BUFFER_CLUSTER_LEVEL_CHARACTERS"))
+       ((:hb-buffer-cluster-level-default "HB_BUFFER_CLUSTER_LEVEL_DEFAULT")))
+
 (cstruct hb-glyph-info-t "hb_glyph_info_t"
          (codepoint "codepoint" :type hb-codepoint-t)
          (mask "mask" :type hb-mask-t)
