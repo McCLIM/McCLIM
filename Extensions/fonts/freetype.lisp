@@ -288,7 +288,7 @@
               (values width
                       ascender
                       descender
-                      ;; We're just returning 0 for the left edge here, but the below
+                      ;; We're just returning 0 for the left edge here, even though the below
                       ;; version will actually compute a better value. But if we do this,
                       ;; then we should compute the similar value for the right side as
                       ;; well and it's not clear as to how to find that value.
@@ -309,22 +309,25 @@
     (freetype2:face-descender-pixels face)))
 
 (defun make-family-pattern (family)
-  (cond
-    ((typep family 'freetype-font-family) (list (cons :family (clim-extensions:font-family-name family))))
-    ((eq family :fix) (list (cons :spacing 100)))
-    ((eq family :serif) (list (cons :family "DejaVu Serif")))
-    ((eq family :sans-serif) (list (cons :family "DejaVu Sans")))
-    ((stringp family) (list (cons :family family)))
-    (t (list (cons :family "DejaVu Sans")))))
+  (list (cons :family
+              (cond
+                ((typep family 'freetype-font-family) (clim-extensions:font-family-name family))
+                ((stringp family) family)
+                ((eq family :fix) "Source Code Pro")
+                ((eq family :sans-serif) "DejaVu Sans")
+                ((eq family :serif) "DejaVu Serif")
+                (t "DejaVu Sans")))))
 
 (defun make-face-pattern (face)
-  (cond
-    ((typep face 'freetype-font-face) (list (cons "style" (clim-extensions:font-face-name face))))
-    ((eq face :roman) (list (cons :weight 80) (cons :slant 0)))
-    ((eq face :bold) (list (cons :weight 200) (cons :slant 0)))
-    ((eq face :italic) (list (cons :slant 100)))
-    ((stringp face) (list (cons :style face)))
-    (t (list (cons :weight 80)))))
+  (loop
+    for f in (if (listp face) face (list face))
+    append (cond
+             ((typep f 'freetype-font-face) `(("style" . ,(clim-extensions:font-face-name face))))
+             ((stringp face) `((:style . ,face)))
+             ((eq f :roman) '((:weight . 80) (:slant . 0)))
+             ((eq f :bold) '((:weight . 200)))
+             ((eq f :italic) '((:slant . 100)))
+             (t nil))))
 
 (defparameter *main-filter* '((:scalable . :true)))
 
