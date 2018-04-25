@@ -19,6 +19,17 @@
   (prop-name :string)
   (value :pointer))
 
+;; Workaround for https://github.com/rpav/cl-freetype2/issues/11
+(defun freetype-make-vector (x y)
+  "Make an `FT-VECTOR` given `X` and `Y`.  This may be passed directly
+to `SET-TRANSFORM`, and may be more efficient than converting from native
+forms."
+  (let ((vector (freetype2::make-collected-foreign 'freetype2-types:ft-vector
+                                                   '(:struct freetype2-types:foreign-ft-vector))))
+    (setf (freetype2-types:ft-vector-x vector) x)
+    (setf (freetype2-types:ft-vector-y vector) y)
+    vector))
+
 (defclass freetype-font-renderer (clim-clx::font-renderer)
   ())
 
@@ -196,7 +207,7 @@ rendering, otherwise the identity matrix will be used instead."
                                        (truncate (* #x10000 (aref transform-matrix 0 1)))
                                        (truncate (* #x10000 (aref transform-matrix 1 0)))
                                        (truncate (* #x10000 (aref transform-matrix 1 1))))
-                                 (freetype2-types:make-vector 0 0))
+                                 (freetype-make-vector 0 0))
         (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer)))
     (loop
       for glyph-index in index-list
@@ -266,20 +277,26 @@ rendering, otherwise the identity matrix will be used instead."
                                                                           'mcclim-harfbuzz::y-offset))))))))
 
 (defun convert-transformation-to-matrix (transformation)
-  "Given a CLIM transformation object, return the appropriate matrix,
+"Given a CLIM transformation object, return the appropriate matrix,
 or NIL if the current transformation is the identity transformation."
   (if (eq transformation 'clim:+identity-transformation+)
       nil
-      (multiple-value-bind (xx xy)
-          (clim:transform-position transformation 1 0)
-        (multiple-value-bind (yx yy)
-            (clim:transform-position transformation 0 1)
-          (if (and (= xx 1)
-                   (= xy 0)
-                   (= yx 0)
-                   (= yy 1))
-              nil
-              (make-array '(2 2) :initial-contents (list (list xx xy) (list yx yy))))))))
+      (multiple-value-bind (dx dy)
+          (clim:transform-position transformation 0 0)
+        (multiple-value-bind (xx xy)
+            (clim:transform-position transformation 1 0)
+          (multiple-value-bind (yx yy)
+              (clim:transform-position transformation 0 1)
+            (let ((rxx (- xx dx))
+                  (ryx (- yx dx))
+                  (rxy (- xy dy))
+                  (ryy (- yy dy)))
+              (if (and (= rxx 1)
+                       (= ryx 0)
+                       (= rxy 0)
+                       (= ryy 1))
+                  nil
+                  (make-array '(2 2) :initial-contents (list (list rxx rxy) (list rxy ryy))))))))))
 
 ;;; We only cache glyphsets that does not have a transformation
 ;;; applied. The assumption is that applying transformation on text is
@@ -292,7 +309,8 @@ or NIL if the current transformation is the identity transformation."
   (declare (ignore translate size))
   ;; If the transformation is the identity matrix, this function will
   ;; return NIL.
-  (let ((transform-matrix (convert-transformation-to-matrix transformation)))
+  (multiple-value-bind (transform-matrix)
+      (convert-transformation-to-matrix transformation)
     (let* ((index-list (make-glyph-list font (subseq string start end) direction))
            (codepoints (mapcar #'glyph-entry-codepoint index-list))
            (glyphset (if transform-matrix
@@ -315,7 +333,13 @@ or NIL if the current transformation is the identity transformation."
                do (let ((x-pos (round (+ x rx (glyph-entry-x-offset current-index))))
                         (y-pos (round (+ y ry (glyph-entry-y-offset current-index)))))
                     (setf (aref vec 0) (glyph-entry-codepoint current-index))
-                    (xlib:render-composite-glyphs dest glyphset source x-pos y-pos vec)
+                    (multiple-value-bind (transformed-x transformed-y)
+                        (if transform-matrix
+                            (multiple-value-bind (dx dy)
+                                (clim:transform-position transformation x-pos y-pos)
+                              (values (round dx) (round dy)))
+                            (values x-pos y-pos))
+                      (xlib:render-composite-glyphs dest glyphset source transformed-x transformed-y vec))
                     (incf rx (/ (glyph-entry-x-advance current-index) 64))
                     (incf ry (/ (glyph-entry-y-advance current-index) 64))))
              (xlib:render-free-picture source)
