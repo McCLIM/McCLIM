@@ -296,7 +296,7 @@ or NIL if the current transformation is the identity transformation."
                        (= rxy 0)
                        (= ryy 1))
                   nil
-                  (make-array '(2 2) :initial-contents (list (list rxx rxy) (list rxy ryy))))))))))
+                  (make-array '(2 2) :initial-contents (list (list rxx rxy) (list ryx ryy))))))))))
 
 ;;; We only cache glyphsets that does not have a transformation
 ;;; applied. The assumption is that applying transformation on text is
