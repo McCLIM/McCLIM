@@ -13,4 +13,6 @@
    #:hb-buffer-get-glyph-infos
    #:hb-buffer-set-script
    #:hb-buffer-guess-segment-properties
-   #:hb-buffer-set-cluster-level))
+   #:hb-buffer-set-cluster-level
+   #:hb-ft-font-set-load-flags
+   #:hb-ft-font-get-load-flags))

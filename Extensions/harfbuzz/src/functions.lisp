@@ -35,6 +35,11 @@
 (cffi:defcfun ("hb_ft_font_create" hb-ft-font-create) :pointer
   (face :pointer)
   (destroy-func :pointer))
+(cffi:defcfun ("hb_ft_font_set_load_flags" hb-ft-font-set-load-flags) :void
+  (font :pointer)
+  (load-flags :int))
+(cffi:defcfun ("hb_ft_font_get_load_flags" hb-ft-font-get-load-flags) :int
+  (font :pointer))
 
 (cffi:defcfun ("hb_shape" hb-shape) :void
   (font :pointer)

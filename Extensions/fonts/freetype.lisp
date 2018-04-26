@@ -161,7 +161,9 @@ forms."
   (or (freetype-font/hb-font font)
       (setf (freetype-font/hb-font font)
             (with-face-from-font (face font)
-              (mcclim-harfbuzz:hb-ft-font-create (freetype2::p* (freetype2::fw-ptr face)) (cffi:null-pointer))))))
+              (let ((font (mcclim-harfbuzz:hb-ft-font-create (freetype2::p* (freetype2::fw-ptr face)) (cffi:null-pointer))))
+                (mcclim-harfbuzz:hb-ft-font-set-load-flags font (if *enable-autohint* 32 0))
+                font)))))
 
 (defun render-char-to-glyphset (glyphset face glyph-index)
   (freetype2:load-glyph face glyph-index (if *enable-autohint* '(:force-autohint) nil))
