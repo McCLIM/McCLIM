@@ -311,43 +311,44 @@ or NIL if the current transformation is the identity transformation."
   (declare (ignore translate size))
   ;; If the transformation is the identity matrix, this function will
   ;; return NIL.
-  (multiple-value-bind (transform-matrix)
-      (convert-transformation-to-matrix transformation)
-    (let* ((index-list (make-glyph-list font (subseq string start end) direction))
-           (codepoints (mapcar #'glyph-entry-codepoint index-list))
-           (glyphset (if transform-matrix
-                         ;; We have a transformation matrix, so let's load the glyphset without caching
-                         (load-standalone-glyphset font codepoints transform-matrix)
-                         ;; ELSE: No transformation, make sure the glyphs are cached
-                         (load-cached-glyphset font codepoints))))
-      (unwind-protect
-           (let ((source (create-pen mirror gc))
-                 (dest (create-dest-picture mirror))
-                 (vec (make-array 1 :element-type 'integer :initial-element 0)))
-             (unless  (eq (xlib:picture-clip-mask dest)
-                          (xlib:gcontext-clip-mask gc))
-               (setf (xlib:picture-clip-mask dest)
-                     (xlib:gcontext-clip-mask gc)))
-             (loop
-               with rx = 0
-               with ry = 0
-               for current-index in index-list
-               do (let ((x-pos (round (+ x rx (glyph-entry-x-offset current-index))))
-                        (y-pos (round (+ y ry (glyph-entry-y-offset current-index)))))
-                    (setf (aref vec 0) (glyph-entry-codepoint current-index))
-                    (multiple-value-bind (transformed-x transformed-y)
-                        (if transform-matrix
-                            (multiple-value-bind (dx dy)
-                                (clim:transform-position transformation x-pos y-pos)
-                              (values (round dx) (round dy)))
-                            (values x-pos y-pos))
-                      (xlib:render-composite-glyphs dest glyphset source transformed-x transformed-y vec))
-                    (incf rx (/ (glyph-entry-x-advance current-index) 64))
-                    (incf ry (/ (glyph-entry-y-advance current-index) 64))))
-             (xlib:render-free-picture source)
-             (xlib:render-free-picture dest))
-        (when transform-matrix
-          (free-glyphset glyphset))))))
+  (multiple-value-bind (start-x start-y)
+      (clim:untransform-position transformation x y)
+    (multiple-value-bind (transform-matrix)
+        (convert-transformation-to-matrix transformation)
+      (let* ((index-list (make-glyph-list font (subseq string start end) direction))
+             (codepoints (mapcar #'glyph-entry-codepoint index-list))
+             (glyphset (if transform-matrix
+                           ;; We have a transformation matrix, so let's load the glyphset without caching
+                           (load-standalone-glyphset font codepoints transform-matrix)
+                           ;; ELSE: No transformation, make sure the glyphs are cached
+                           (load-cached-glyphset font codepoints))))
+        (unwind-protect
+             (let ((source (create-pen mirror gc))
+                   (dest (create-dest-picture mirror))
+                   (vec (make-array 1 :element-type 'integer :initial-element 0)))
+               (unless  (eq (xlib:picture-clip-mask dest)
+                            (xlib:gcontext-clip-mask gc))
+                 (setf (xlib:picture-clip-mask dest)
+                       (xlib:gcontext-clip-mask gc)))
+               (loop
+                 with rx = 0
+                 with ry = 0
+                 for current-index in index-list
+                 do (let ((x-pos (+ start-x rx (glyph-entry-x-offset current-index)))
+                          (y-pos (+ start-y ry (glyph-entry-y-offset current-index))))
+                      (setf (aref vec 0) (glyph-entry-codepoint current-index))
+                      (multiple-value-bind (transformed-x transformed-y)
+                          (clim:transform-position transformation x-pos y-pos)
+                        (xlib:render-composite-glyphs dest glyphset source
+                                                      (truncate (+ transformed-x 0.5))
+                                                      (truncate (+ transformed-y 0.5))
+                                                      vec))
+                      (incf rx (/ (glyph-entry-x-advance current-index) 64))
+                      (incf ry (/ (glyph-entry-y-advance current-index) 64))))
+               (xlib:render-free-picture source)
+               (xlib:render-free-picture dest))
+          (when transform-matrix
+            (free-glyphset glyphset)))))))
 
 (defmethod clim-clx::font-text-extents ((font freetype-font) string
                                         &key (start 0) (end (length string))
