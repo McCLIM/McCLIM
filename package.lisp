@@ -1874,7 +1874,12 @@
 
 (defpackage :clim-extensions
   (:use)
+  (:nicknames :clime)
   (:export
+   ;; sheets
+   #:always-repaint-background-mixin
+   #:never-repaint-background-mixin
+
    #:line-style-effective-thickness
    #:medium-miter-limit
    #:raised-pane #:raising
