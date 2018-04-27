@@ -313,7 +313,7 @@
           (declare (ignore source-pixmap))
           (let* ((cache (slot-value font 'glyph-id-cache))
                  (glyph-ids buffer))
-            
+
             (loop
               for i from start below end ; TODO: Read optimization notes. Fix. Repeat.
               for i* upfrom 0
@@ -327,7 +327,7 @@
             ;; Debugging - show the text rectangle
                                         ;(setf (xlib:gcontext-foreground gc) #xFF0000)
                                         ;(xlib:draw-rectangle mirror gc x0 y0 (- x1 x0) (- y1 y0))
-            
+
             ;; Sync the picture-clip-mask with that of the gcontext.
             (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
                          (xlib::gcontext-clip-mask gc))

@@ -357,7 +357,7 @@ or NIL if the current transformation is the identity transformation."
   ;; Values to return:
   ;;   width ascent descent left right font-ascent font-descent direction first-not-done
   (with-face-from-font (face font)
-    (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))    
+    (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
     (if (= start end)
         (values 0 0 0 0 0 (freetype2:face-ascender-pixels face) (freetype2:face-descender-pixels face) 0 end)
         (let* ((index-list (make-glyph-list font (subseq string start end) direction)))
