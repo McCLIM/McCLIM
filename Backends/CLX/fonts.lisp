@@ -160,9 +160,11 @@
                               &key start end translate size direction transformation)
   (:method (font mirror gc x y string
             &key (start 0) (end (length string)) (translate #'translate) (size 16) direction transformation)
-    (declare (ignore font direction transformation))
-    (xlib:draw-glyphs mirror gc x y string
-                      :start start :end end :translate translate :size size)))
+    (declare (ignore font direction))
+    (multiple-value-bind (x y)
+        (transform-position transformation x y)
+      (xlib:draw-glyphs mirror gc x y string
+                        :start start :end end :translate translate :size size))))
 
 
 ;;; Font listing implementation

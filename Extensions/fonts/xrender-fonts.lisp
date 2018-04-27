@@ -295,50 +295,52 @@
 (let ((buffer (make-array 1024 :element-type '(unsigned-byte 16) ; TODO: thread safety
                                :adjustable nil :fill-pointer nil)))
   (defmethod clim-clx::font-draw-glyphs ((font truetype-font) mirror gc x y string
-                                         #|x0 y0 x1 y1|# &key start end translate size direction)
+                                         &key start end translate size direction transformation)
     (declare (optimize (speed 3))
              (ignore size translate direction)
              (type #-sbcl (integer 0 #.array-dimension-limit)
                    #+sbcl sb-int:index
                    start end)
              (type string string))
-    (when (< (length buffer) (- end start))
-      (setf buffer (make-array (* 256 (ceiling (- end start) 256))
-                               :element-type '(unsigned-byte 16)
-                               :adjustable nil :fill-pointer nil)))
-    (let ((display (xlib:drawable-display mirror)))
-      (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
-        (declare (ignore source-pixmap))
-        (let* ((cache (slot-value font 'glyph-id-cache))
-               (glyph-ids buffer))
-          
-          (loop
-             for i from start below end ; TODO: Read optimization notes. Fix. Repeat.
-             for i* upfrom 0
-             as char = (aref string i)
-             as code = (char-code char)
-             do (setf (aref buffer i*)
-                      (the (unsigned-byte 16)
-                        (or (gcache-get cache code)
-                            (gcache-set cache code (font-glyph-id font char))))))
+    (multiple-value-bind (x y)
+        (transform-position transformation x y)
+      (when (< (length buffer) (- end start))
+        (setf buffer (make-array (* 256 (ceiling (- end start) 256))
+                                 :element-type '(unsigned-byte 16)
+                                 :adjustable nil :fill-pointer nil)))
+      (let ((display (xlib:drawable-display mirror)))
+        (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
+          (declare (ignore source-pixmap))
+          (let* ((cache (slot-value font 'glyph-id-cache))
+                 (glyph-ids buffer))
+            
+            (loop
+              for i from start below end ; TODO: Read optimization notes. Fix. Repeat.
+              for i* upfrom 0
+              as char = (aref string i)
+              as code = (char-code char)
+              do (setf (aref buffer i*)
+                       (the (unsigned-byte 16)
+                            (or (gcache-get cache code)
+                                (gcache-set cache code (font-glyph-id font char))))))
 
-          ;; Debugging - show the text rectangle
-          ;(setf (xlib:gcontext-foreground gc) #xFF0000)
-          ;(xlib:draw-rectangle mirror gc x0 y0 (- x1 x0) (- y1 y0))
-          
-          ;; Sync the picture-clip-mask with that of the gcontext.
-          (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
-                       (xlib::gcontext-clip-mask gc))
-            (setf (xlib::picture-clip-mask (drawable-picture mirror))
-                  (xlib::gcontext-clip-mask gc)))
+            ;; Debugging - show the text rectangle
+                                        ;(setf (xlib:gcontext-foreground gc) #xFF0000)
+                                        ;(xlib:draw-rectangle mirror gc x0 y0 (- x1 x0) (- y1 y0))
+            
+            ;; Sync the picture-clip-mask with that of the gcontext.
+            (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
+                         (xlib::gcontext-clip-mask gc))
+              (setf (xlib::picture-clip-mask (drawable-picture mirror))
+                    (xlib::gcontext-clip-mask gc)))
 
-          (xlib::render-composite-glyphs
-           (drawable-picture mirror)
-           (display-the-glyph-set display)
-           source-picture
-           x y
-           glyph-ids
-           :end (- end start)))))))
+            (xlib::render-composite-glyphs
+             (drawable-picture mirror)
+             (display-the-glyph-set display)
+             source-picture
+             x y
+             glyph-ids
+             :end (- end start))))))))
 
 (defstruct truetype-device-font-name
   (font-file (error "missing argument"))

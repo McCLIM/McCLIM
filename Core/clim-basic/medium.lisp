@@ -741,10 +741,12 @@
     (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
       (call-next-method medium center-x center-y radius start-angle end-angle filled))))
 
+#+DISABLE-THIS-THING
 (defmethod medium-draw-text* :around ((medium transform-coordinates-mixin) string x y
                                       start end
                                       align-x align-y
-                                      toward-x toward-y transform-glyphs)
+                                      toward-x toward-y transform-glyphs
+                                      transformation)
   ;;!!! FIX ME!
   (let ((tr (medium-transformation medium)))
     (with-transformed-position (tr x y)

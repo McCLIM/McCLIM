@@ -200,7 +200,7 @@ forms."
 CACHED-GLYPHS is a hash table containing information about the glyphs
 that have already been rendered, and will be filled in with any new
 glyphs that were added to the glyphset. If non-NIL, TRANSFORM-MATRIX
-is a 4x4 matrix that will be used to transform the glyphs prior to
+is a 2x2 matrix that will be used to transform the glyphs prior to
 rendering, otherwise the identity matrix will be used instead."
   (with-face-from-font (face font)
     (if transform-matrix
@@ -311,10 +311,10 @@ or NIL if the current transformation is the identity transformation."
   (declare (ignore translate size))
   ;; If the transformation is the identity matrix, this function will
   ;; return NIL.
-  (multiple-value-bind (start-x start-y)
-      (clim:untransform-position transformation x y)
+  (with-face-from-font (face font)
     (multiple-value-bind (transform-matrix)
         (convert-transformation-to-matrix transformation)
+      (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
       (let* ((index-list (make-glyph-list font (subseq string start end) direction))
              (codepoints (mapcar #'glyph-entry-codepoint index-list))
              (glyphset (if transform-matrix
@@ -334,8 +334,8 @@ or NIL if the current transformation is the identity transformation."
                  with rx = 0
                  with ry = 0
                  for current-index in index-list
-                 do (let ((x-pos (+ start-x rx (glyph-entry-x-offset current-index)))
-                          (y-pos (+ start-y ry (glyph-entry-y-offset current-index))))
+                 do (let ((x-pos (+ x rx (glyph-entry-x-offset current-index)))
+                          (y-pos (+ y ry (glyph-entry-y-offset current-index))))
                       (setf (aref vec 0) (glyph-entry-codepoint current-index))
                       (multiple-value-bind (transformed-x transformed-y)
                           (clim:transform-position transformation x-pos y-pos)
@@ -357,6 +357,7 @@ or NIL if the current transformation is the identity transformation."
   ;; Values to return:
   ;;   width ascent descent left right font-ascent font-descent direction first-not-done
   (with-face-from-font (face font)
+    (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))    
     (if (= start end)
         (values 0 0 0 0 0 (freetype2:face-ascender-pixels face) (freetype2:face-descender-pixels face) 0 end)
         (let* ((index-list (make-glyph-list font (subseq string start end) direction)))

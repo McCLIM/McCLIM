@@ -1205,7 +1205,7 @@ time an indexed pattern is drawn.")
              (declare (ignorable left right
                                  font-ascent font-descent
                                  direction first-not-done))
-             (values width (+ ascent descent) width 0 ascent)) ))) )
+             (values width (+ ascent descent) width 0 ascent))))))
 
 (defmethod climi::text-bounding-rectangle*
     ((medium clx-medium) string &key text-style (start 0) end)
@@ -1252,7 +1252,8 @@ time an indexed pattern is drawn.")
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs)
+                              toward-x toward-y transform-glyphs
+                              transformation)
   (declare (ignore toward-x toward-y transform-glyphs))
   (with-transformed-position ((sheet-native-transformation
                                (medium-sheet medium))
@@ -1286,7 +1287,7 @@ time an indexed pattern is drawn.")
              mirror gc x y string
              #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
              :start start :end end
-             :translate #'translate :size 16 :transformation (medium-transformation medium))))))))
+             :translate #'translate :size 16 :transformation transformation)))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)

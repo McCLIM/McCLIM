@@ -1550,37 +1550,34 @@ were added."
 ;;;; Text
 
 (def-grecording draw-text ((gs-text-style-mixin) string point-x point-y start end
-                           align-x align-y toward-x toward-y transform-glyphs) ()
+                           align-x align-y toward-x toward-y transform-glyphs
+                           transformation) ()
   ;; FIXME!!! Text direction.
   ;; FIXME: Multiple lines.
- (let* ((text-style (graphics-state-text-style graphic))
-        (width (if (characterp string)
-                   (stream-character-width stream string :text-style text-style)
-                   (stream-string-width stream string
-                                        :start start :end end
-                                        :text-style text-style)) )
-        (ascent (text-style-ascent text-style (sheet-medium stream)))
-        (descent (text-style-descent text-style (sheet-medium stream)))
-        (transform (medium-transformation medium)))
-   (setf (values point-x point-y)
-         (transform-position transform point-x point-y))
-   (multiple-value-bind (left top right bottom)
-       (text-bounding-rectangle* medium string
-                                 :start start :end end :text-style text-style)
-     (ecase align-x
-       (:left (incf left point-x) (incf right point-x))
-       (:right (incf left (- point-x width)) (incf right (- point-x width)))
-       (:center (incf left (- point-x (round width 2)))
-                (incf right (- point-x (round width 2)))))
-     (ecase align-y
-       (:baseline (incf top point-y) (incf bottom point-y))
-       (:top (incf top (+ point-y ascent))
-             (incf bottom (+ point-y ascent)))
-       (:bottom (incf top (- point-y descent))
-                (incf bottom (- point-y descent)))
-       (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
-                (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
-     (values left top right bottom))))
+  (let* ((text-style (graphics-state-text-style graphic))
+         (width (if (characterp string)
+                    (stream-character-width stream string :text-style text-style)
+                    (stream-string-width stream string
+                                         :start start :end end
+                                         :text-style text-style)) )
+         (ascent (text-style-ascent text-style (sheet-medium stream)))
+         (descent (text-style-descent text-style (sheet-medium stream))))
+    (multiple-value-bind (left top right bottom)
+        (text-bounding-rectangle* medium string :start start :end end :text-style text-style)
+      (ecase align-x
+        (:left (incf left point-x) (incf right point-x))
+        (:right (incf left (- point-x width)) (incf right (- point-x width)))
+        (:center (incf left (- point-x (round width 2)))
+         (incf right (- point-x (round width 2)))))
+      (ecase align-y
+        (:baseline (incf top point-y) (incf bottom point-y))
+        (:top (incf top (+ point-y ascent))
+         (incf bottom (+ point-y ascent)))
+        (:bottom (incf top (- point-y descent))
+         (incf bottom (- point-y descent)))
+        (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
+         (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
+      (values left top right bottom))))
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-text-output-record))
