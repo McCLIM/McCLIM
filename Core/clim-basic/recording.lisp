@@ -1549,6 +1549,23 @@ were added."
 
 ;;;; Text
 
+(defun enclosing-transform-polygon (transformation positions)
+  (when (null positions)
+    (error "Need at least one coordinate"))
+  (loop
+    with min-x = most-positive-fixnum
+    with min-y = most-positive-fixnum
+    with max-x = most-negative-fixnum
+    with max-y = most-negative-fixnum
+    for (xp yp) on positions by #'cddr
+    do (multiple-value-bind (x y)
+           (transform-position transformation xp yp)
+         (setf min-x (min min-x x))
+         (setf min-y (min min-y y))
+         (setf max-x (max max-x x))
+         (setf max-y (max max-y y)))
+    finally (return (values min-x min-y max-x max-y))))
+
 (def-grecording draw-text ((gs-text-style-mixin) string point-x point-y start end
                            align-x align-y toward-x toward-y transform-glyphs
                            transformation) ()
@@ -1577,7 +1594,10 @@ were added."
          (incf bottom (- point-y descent)))
         (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
          (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
-      (values left top right bottom))))
+      (enclosing-transform-polygon transformation (list left top
+                                                        right top
+                                                        left bottom
+                                                        right bottom)))))
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-text-output-record))
