@@ -94,6 +94,20 @@
         collect (list result (cffi:foreign-array-to-lisp bitmap `(:array fc-char32 ,*fc-charset-map-size*)))
         do (setq result (fc-char-set-next-page charset-native bitmap next))))))
 
+(defun str-set->lisp (strset)
+  (let ((str-list (fc-str-list-create strset)))
+    (unwind-protect
+         (progn
+           (fc-str-list-first str-list)
+           (loop
+             for ptr = (fc-str-list-next str-list)
+             until (cffi:null-pointer-p ptr)
+             collect (cffi:foreign-string-to-lisp ptr :encoding :utf-8)))
+      (fc-str-list-done str-list))))
+
+(defun langset->lisp (langset)
+  (str-set->lisp (fc-lang-set-get-langs langset)))
+
 (defun value->lisp (value)
   (labels ((getslot (name)
              (cffi:foreign-slot-value value '(:struct fc-value) name)))
@@ -107,7 +121,7 @@
       (:fc-type-matrix :matrix-not-implemented)
       (:fc-type-char-set (charset->lisp (getslot 'value-char-set)))
       (:fc-type-ft-face :ft-face-not-implemented)
-      (:fc-type-lang-set :lang-set-not-implemented)
+      (:fc-type-lang-set (langset->lisp (getslot 'value-lang-set)))
       (:fc-type-range :range-not-implemented))))
 
 (defun pattern-get-internal (p object index)

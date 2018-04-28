@@ -6,6 +6,7 @@
 
 (ctype fc-bool "FcBool")
 (ctype fc-char32 "FcChar32")
+(ctype fc-char8 "FcChar8")
 
 (constant (*fc-false* "FcFalse"))
 (constant (*fc-true* "FcTrue"))

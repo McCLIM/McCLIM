@@ -90,3 +90,22 @@
   (char-set :pointer)
   (map (:pointer fc-char32))
   (next (:pointer fc-char32)))
+
+(cffi:defcfun ("FcLangSetCreate" fc-lang-set-create) :pointer)
+(cffi:defcfun ("FcLangSetDestroy" fc-lang-set-destroy) :void
+  (lang-set :pointer))
+(cffi:defcfun ("FcGetDefaultLangs" fc-get-default-langs) :pointer)
+(cffi:defcfun ("FcLangSetGetLangs" fc-lang-set-get-langs) :pointer
+  (lang-set :pointer))
+
+(cffi:defcfun ("FcStrSetCreate" fc-str-set-create) :pointer)
+(cffi:defcfun ("FcStrSetDestroy" fc-str-set-destroy) :void
+  (str-set :pointer))
+(cffi:defcfun ("FcStrListCreate" fc-str-list-create) :pointer
+  (str-set :pointer))
+(cffi:defcfun ("FcStrListDone" fc-str-list-done) :void
+  (str-list :pointer))
+(cffi:defcfun ("FcStrListFirst" fc-str-list-first) :void
+  (str-list :pointer))
+(cffi:defcfun ("FcStrListNext" fc-str-list-next) (:pointer fc-char8)
+  (str-list :pointer))
