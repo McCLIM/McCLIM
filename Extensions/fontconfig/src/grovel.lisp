@@ -5,10 +5,13 @@
 (include "fontconfig/fontconfig.h")
 
 (ctype fc-bool "FcBool")
+(ctype fc-char32 "FcChar32")
 
 (constant (*fc-false* "FcFalse"))
 (constant (*fc-true* "FcTrue"))
 (constant (*fc-dontcare* "FcDontCare"))
+(constant (*fc-charset-map-size* "FC_CHARSET_MAP_SIZE"))
+(constant (*fc-charset-done* "FC_CHARSET_DONE"))
 
 (constant (*fc-weight-thin* "FC_WEIGHT_THIN"))
 (constant (*fc-weight-extralight* "FC_WEIGHT_EXTRALIGHT"))

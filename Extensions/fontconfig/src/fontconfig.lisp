@@ -85,6 +85,15 @@
                (:true (fc-pattern-add-bool pattern key 1))
                (:false (fc-pattern-add-bool pattern key 0))))))
 
+(defun charset->lisp (charset-native)
+  (cffi:with-foreign-objects ((bitmap 'fc-char32 *fc-charset-map-size*)
+                              (next 'fc-char32))
+    (let ((result (fc-char-set-first-page charset-native bitmap next)))
+      (loop
+        until (eql result *fc-charset-done*)
+        collect (list result (cffi:foreign-array-to-lisp bitmap `(:array fc-char32 ,*fc-charset-map-size*)))
+        do (setq result (fc-char-set-next-page charset-native bitmap next))))))
+
 (defun value->lisp (value)
   (labels ((getslot (name)
              (cffi:foreign-slot-value value '(:struct fc-value) name)))
@@ -96,7 +105,7 @@
       (:fc-type-string (values (cffi:foreign-string-to-lisp (getslot 'value-fchar8) :encoding :utf-8)))
       (:fc-type-bool (if (zerop (getslot 'value-bool)) nil t))
       (:fc-type-matrix :matrix-not-implemented)
-      (:fc-type-char-set :char-set-not-implemented)
+      (:fc-type-char-set (charset->lisp (getslot 'value-char-set)))
       (:fc-type-ft-face :ft-face-not-implemented)
       (:fc-type-lang-set :lang-set-not-implemented)
       (:fc-type-range :range-not-implemented))))

@@ -76,3 +76,17 @@
   (config :pointer)
   (pattern :pointer)
   (object-set :pointer))
+
+(cffi:defcfun ("FcCharSetCreate" fc-char-set-create) :pointer)
+(cffi:defcfun ("FcCharSetDestroy" fc-char-set-destroy) :void
+  (char-set :pointer))
+(cffi:defcfun ("FcCharSetCount" fc-char-set-count) fc-char32
+  (char-set :pointer))
+(cffi:defcfun ("FcCharSetFirstPage" fc-char-set-first-page) fc-char32
+  (char-set :pointer)
+  (map (:pointer fc-char32))
+  (next (:pointer fc-char32)))
+(cffi:defcfun ("FcCharSetNextPage" fc-char-set-next-page) fc-char32
+  (char-set :pointer)
+  (map (:pointer fc-char32))
+  (next (:pointer fc-char32)))
