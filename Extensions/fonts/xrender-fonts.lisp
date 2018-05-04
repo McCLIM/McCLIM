@@ -26,6 +26,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Why are we getting an undefined class in the DEFMETHOD of
+;; CLIM-CLX:PORT-FIND-ALL-FONT-FAMILIES if we don't have this
+;; EVAL-WHEN here?
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defclass truetype-font-renderer (clim-clx::font-renderer)
+    ()))
+
 (setq clim:*default-server-path* '(:clx :font-renderer mcclim-truetype:truetype-font-renderer))
 
 (let ((lookaside nil))
@@ -351,13 +358,6 @@
   (size   (error "missing argument"))
   (options nil)
   (device-name nil))
-
-;; Why are we getting an undefined class in the DEFMETHOD of
-;; CLIM-CLX:PORT-FIND-ALL-FONT-FAMILIES if we don't have this
-;; EVAL-WHEN here?
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defclass truetype-font-renderer (clim-clx::font-renderer)
-    ()))
 
 (defmethod clim-clx::lookup-text-style-to-X-font ((port clim-clx::clx-port)
                                            (font-renderer truetype-font-renderer)
