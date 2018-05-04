@@ -279,26 +279,18 @@ rendering, otherwise the identity matrix will be used instead."
                                                                           'mcclim-harfbuzz::y-offset))))))))
 
 (defun convert-transformation-to-matrix (transformation)
-"Given a CLIM transformation object, return the appropriate matrix,
+  "Given a CLIM transformation object, return the appropriate matrix,
 or NIL if the current transformation is the identity transformation."
   (if (eq transformation 'clim:+identity-transformation+)
       nil
-      (multiple-value-bind (dx dy)
-          (clim:transform-position transformation 0 0)
-        (multiple-value-bind (xx xy)
-            (clim:transform-position transformation 1 0)
-          (multiple-value-bind (yx yy)
-              (clim:transform-position transformation 0 1)
-            (let ((rxx (- xx dx))
-                  (ryx (- yx dx))
-                  (rxy (- xy dy))
-                  (ryy (- yy dy)))
-              (if (and (= rxx 1)
-                       (= ryx 0)
-                       (= rxy 0)
-                       (= ryy 1))
-                  nil
-                  (make-array '(2 2) :initial-contents (list (list rxx rxy) (list ryx ryy))))))))))
+      (multiple-value-bind (rxx ryx rxy ryy)
+          (climi::get-transformation transformation)
+        (if (and (= rxx 1)
+                 (= ryx 0)
+                 (= rxy 0)
+                 (= ryy 1))
+            nil
+            (make-array '(2 2) :initial-contents (list (list rxx rxy) (list ryx ryy)))))))
 
 ;;; We only cache glyphsets that does not have a transformation
 ;;; applied. The assumption is that applying transformation on text is
@@ -309,8 +301,6 @@ or NIL if the current transformation is the identity transformation."
                                          translate size (direction :ltr)
                                          transformation)
   (declare (ignore translate size))
-  ;; If the transformation is the identity matrix, this function will
-  ;; return NIL.
   (with-face-from-font (face font)
     (multiple-value-bind (transform-matrix)
         (convert-transformation-to-matrix transformation)
