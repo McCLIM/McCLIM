@@ -1255,9 +1255,8 @@ time an indexed pattern is drawn.")
                               toward-x toward-y transform-glyphs
                               transformation)
   (declare (ignore toward-x toward-y transform-glyphs))
-  (with-transformed-position ((sheet-native-transformation
-                               (medium-sheet medium))
-                              x y)
+  (let* ((medium-transform (sheet-native-transformation (medium-sheet medium)))
+         (merged-transform (clim:compose-transformations transformation medium-transform)))
     (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
@@ -1287,7 +1286,7 @@ time an indexed pattern is drawn.")
              mirror gc x y string
              #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
              :start start :end end
-             :translate #'translate :size 16 :transformation transformation)))))))
+             :translate #'translate :size 16 :transformation merged-transform)))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)

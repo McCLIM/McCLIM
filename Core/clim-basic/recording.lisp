@@ -1603,15 +1603,13 @@ were added."
     (nx ny (record draw-text-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (with-slots (point-x point-y toward-x toward-y) record
+    (with-slots (point-x point-y toward-x toward-y transformation) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
         (multiple-value-prog1
             (call-next-method)
-          (incf point-x dx)
-          (incf point-y dy)
-          (incf toward-x dx)
-          (incf toward-y dy))))))
+          (setf transformation (clim:compose-transformations (make-translation-transformation dx dy)
+                                                             transformation)))))))
 
 (defrecord-predicate draw-text-output-record
     (string start end point-x point-y align-x align-y toward-x toward-y
