@@ -460,7 +460,7 @@
 (defgeneric (setf stream-text-cursor) (cursor stream))
 (defgeneric stream-cursor-position (stream))
 ;; (defgeneric (setf* stream-cursor-position) (x y stream)) unsure how to declare this, can somebody help? --GB
-(defgeneric stream-set-cusor-position (stream x y)) ; This is actually in 19.3.1 in CLIM 2.2
+(defgeneric stream-set-cursor-position (stream x y)) ; This is actually in 19.3.1 in CLIM 2.2
 (defgeneric stream-increment-cursor-position (stream dx dy))
 
 ;;; 15.4 Text Protocol [complete]
