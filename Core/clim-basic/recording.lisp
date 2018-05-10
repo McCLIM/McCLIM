@@ -1617,21 +1617,21 @@ were added."
         (incf (draw-text-transform-mixin-transformed-dx record) dx)
         (incf (draw-text-transform-mixin-transformed-dy record) dy)))))
 
- (defmethod replay-output-record
-            ((record draw-text-output-record) stream
-             &optional (region +everywhere+) (x-offset 0) (y-offset 0))
-   (declare (ignore x-offset y-offset region))
-   (with-slots (string point-x point-y start end align-x align-y toward-x
-                       toward-y transform-glyphs transformation)
-       record
-     (let* ((medium (sheet-medium stream))
-            (dx (draw-text-transform-mixin-transformed-dx record))
-            (dy (draw-text-transform-mixin-transformed-dy record))
-            (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
+(defmethod replay-output-record
+    ((record draw-text-output-record) stream
+     &optional (region +everywhere+) (x-offset 0) (y-offset 0))
+  (declare (ignore x-offset y-offset region))
+  (with-slots (string point-x point-y start end align-x align-y toward-x
+               toward-y transform-glyphs transformation)
+      record
+    (let* ((medium (sheet-medium stream))
+           (dx (draw-text-transform-mixin-transformed-dx record))
+           (dy (draw-text-transform-mixin-transformed-dy record))
+           (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
                                                             transformation)))
-       (medium-draw-text* medium string point-x point-y start end align-x
-                          align-y toward-x toward-y transform-glyphs
-                          updated-transform))))
+      (medium-draw-text* medium string point-x point-y start end align-x
+                         align-y toward-x toward-y transform-glyphs
+                         updated-transform))))
 
 (defrecord-predicate draw-text-output-record
     (string start end point-x point-y align-x align-y toward-x toward-y
