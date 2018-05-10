@@ -2141,7 +2141,7 @@ according to the flags RECORD and DRAW."
                 (setf (output-record-position record)
                       (values (max cx (+ cx x1))
                               (if height
-                                  (max cy (+ cy (- height (- y2 y1))))
+                                  (max cy (+ cy (- height (abs y1))))
                                   cy)))
                 (setf (output-record-position record)
                       (values (max cx (+ cx x1)) (max cy (+ cy y1)))))
