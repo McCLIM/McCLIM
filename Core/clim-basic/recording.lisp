@@ -1566,9 +1566,16 @@ were added."
          (setf max-y (max max-y y)))
     finally (return (values min-x min-y max-x max-y))))
 
-(def-grecording draw-text ((gs-text-style-mixin) string point-x point-y start end
+(defclass draw-text-transform-mixin ()
+  ((transformed-dx :initform 0
+                   :accessor draw-text-transform-mixin-transformed-dx)
+   (transformed-dy :initform 0
+                   :accessor draw-text-transform-mixin-transformed-dy)))
+
+(def-grecording draw-text ((gs-text-style-mixin draw-text-transform-mixin) string point-x point-y start end
                            align-x align-y toward-x toward-y transform-glyphs
-                           transformation) ()
+                           transformation)
+    (:replay-fn nil)
   ;; FIXME!!! Text direction.
   ;; FIXME: Multiple lines.
   (let* ((text-style (graphics-state-text-style graphic))
@@ -1600,16 +1607,41 @@ were added."
                                                         right bottom)))))
 
 (defmethod* (setf output-record-position) :around
-    (nx ny (record draw-text-output-record))
+  (nx ny (record draw-text-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (with-slots (point-x point-y toward-x toward-y transformation) record
-      (let ((dx (- nx x1))
-            (dy (- ny y1)))
-        (multiple-value-prog1
-            (call-next-method)
-          (setf transformation (clim:compose-transformations (make-translation-transformation dx dy)
-                                                             transformation)))))))
+    (let ((dx (- nx x1))
+          (dy (- ny y1)))
+      (multiple-value-prog1
+          (call-next-method)
+        (incf (draw-text-transform-mixin-transformed-dx record) dx)
+        (incf (draw-text-transform-mixin-transformed-dy record) dy)))))
+
+ (defmethod replay-output-record
+            ((record draw-text-output-record) stream
+             &optional (region +everywhere+) (x-offset 0) (y-offset 0))
+   (declare (ignore x-offset y-offset region))
+   (with-slots (string point-x point-y start end align-x align-y toward-x
+                       toward-y transform-glyphs transformation)
+       record
+     (let* ((medium (sheet-medium stream))
+            (dx (draw-text-transform-mixin-transformed-dx record))
+            (dy (draw-text-transform-mixin-transformed-dy record))
+            (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
+                                                            transformation)))
+       (medium-draw-text* medium string point-x point-y start end align-x
+                          align-y toward-x toward-y transform-glyphs
+                          updated-transform))))
+
+(defmethod replay-output-record :around ((record draw-text-output-record) stream
+                                         &optional region x-offset y-offset)
+  (declare (ignore region))
+  ;; FIXME: Should we add x-offset and y-offset to these variables?
+  (let ((dx (draw-text-transform-mixin-transformed-dx record))
+        (dy (draw-text-transform-mixin-transformed-dy record)))
+    (let ((tr (medium-transformation stream)))
+      (clim:with-translation (stream dx dy)
+        (call-next-method)))))
 
 (defrecord-predicate draw-text-output-record
     (string start end point-x point-y align-x align-y toward-x toward-y

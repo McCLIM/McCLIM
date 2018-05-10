@@ -741,19 +741,6 @@
     (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
       (call-next-method medium center-x center-y radius start-angle end-angle filled))))
 
-(defmethod medium-draw-text* :around ((medium transform-coordinates-mixin) string x y
-                                      start end
-                                      align-x align-y
-                                      toward-x toward-y transform-glyphs
-                                      transformation)
-  (let* ((medium-transform (medium-transformation medium))
-         (merged-transform (clim:compose-transformations transformation medium-transform)))
-    (call-next-method medium string x y
-                      start end
-                      align-x align-y
-                      toward-x toward-y transform-glyphs
-                      merged-transform)))
-
 (defgeneric medium-draw-glyph
   (medium element x y align-x align-y toward-x toward-y transform-glyphs))
 

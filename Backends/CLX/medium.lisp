@@ -1255,8 +1255,8 @@ time an indexed pattern is drawn.")
                               toward-x toward-y transform-glyphs
                               transformation)
   (declare (ignore toward-x toward-y transform-glyphs))
-  (let* ((medium-transform (sheet-native-transformation (medium-sheet medium)))
-         (merged-transform (clim:compose-transformations transformation medium-transform)))
+  (let* ((native-transform (sheet-native-transformation (medium-sheet medium)))
+         (merged-transform (clim:compose-transformations native-transform transformation)))
     (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
