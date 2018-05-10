@@ -1633,16 +1633,6 @@ were added."
                           align-y toward-x toward-y transform-glyphs
                           updated-transform))))
 
-(defmethod replay-output-record :around ((record draw-text-output-record) stream
-                                         &optional region x-offset y-offset)
-  (declare (ignore region))
-  ;; FIXME: Should we add x-offset and y-offset to these variables?
-  (let ((dx (draw-text-transform-mixin-transformed-dx record))
-        (dy (draw-text-transform-mixin-transformed-dy record)))
-    (let ((tr (medium-transformation stream)))
-      (clim:with-translation (stream dx dy)
-        (call-next-method)))))
-
 (defrecord-predicate draw-text-output-record
     (string start end point-x point-y align-x align-y toward-x toward-y
      transform-glyphs)
