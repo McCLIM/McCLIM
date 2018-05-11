@@ -7,14 +7,6 @@
 
 (in-package :mcclim-bidi)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (unless (find-package "CLIM")
-    (sb-ext:restrict-compiler-policy 'safety 3)
-    (sb-ext:restrict-compiler-policy 'debug 3)
-    (unless (find-package "LOG4CL")
-      (ql:quickload "log4cl"))
-    (ql:quickload "cl-unicode")))
-
 (defun bidi-apply-replacement (list old new)
   "Replace all instances of OLD with NEW in LIST.
 LIST will be modified in place."
