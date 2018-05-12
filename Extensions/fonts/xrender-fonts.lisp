@@ -26,12 +26,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Why are we getting an undefined class in the DEFMETHOD of
-;; CLIM-CLX:PORT-FIND-ALL-FONT-FAMILIES if we don't have this
-;; EVAL-WHEN here?
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defclass truetype-font-renderer (clim-clx::font-renderer)
-    ()))
+(defclass truetype-font-renderer (clim-clx::font-renderer)
+  ())
 
 (setq clim:*default-server-path* '(:clx :font-renderer mcclim-truetype:truetype-font-renderer))
 
@@ -88,8 +84,8 @@
                     (make-truetype-font port path size))
              '(8 10 12 14 18 24 48 72))))))
 
-(defmethod clim-clx:port-find-all-font-families((port clim-clx::clx-port) (font-renderer truetype-font-renderer)
-                                                &key invalidate-cache)
+(defmethod clim-clx:port-find-all-font-families ((port clim-clx::clx-port) (font-renderer truetype-font-renderer)
+                                                 &key invalidate-cache)
   (when (or (null (clim-clx::font-families port)) invalidate-cache)
     (setf (clim-clx::font-families port) (clim-clx::reload-font-table port)))
   (register-all-ttf-fonts port)
@@ -345,7 +341,7 @@
              (drawable-picture mirror)
              (display-the-glyph-set display)
              source-picture
-             x y
+             (truncate (+ 0.5 x)) (truncate (+ y 0.5))
              glyph-ids
              :end (- end start))))))))
 
