@@ -163,7 +163,7 @@
     (declare (ignore font direction))
     (multiple-value-bind (x y)
         (transform-position transformation x y)
-      (xlib:draw-glyphs mirror gc x y string
+      (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
                         :start start :end end :translate translate :size size))))
 
 
