@@ -1,9 +1,7 @@
-(cl:eval-when (:load-toplevel :execute)
-  (asdf:operate 'asdf:load-op 'cffi-grovel))
-
 (asdf:defsystem #:mcclim-fontconfig
   :description "CFFI interface to Fontconfig"
   :license "Apache"
+  :defsystem-depends-on (:cffi-grovel)
   :serial t
   :depends-on (:cffi
                :alexandria)
