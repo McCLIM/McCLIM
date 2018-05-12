@@ -187,11 +187,11 @@
   (:method (port font-renderer &key invalidate-cache)
     (when (or (null (clim-clx::font-families port)) invalidate-cache)
       (setf (font-families port) (reload-font-table port)))
-    (append #+nil (call-next-method)
-            (font-families port))))
+    (font-families port)))
 
 (defmethod clim-extensions:port-all-font-families ((port clx-basic-port) &key invalidate-cache)
-  (port-find-all-font-families port (clx-port-font-renderer port) :invalidate-cache invalidate-cache))
+  (append (call-next-method)
+          (port-find-all-font-families port (clx-port-font-renderer port) :invalidate-cache invalidate-cache)))
 
 (defun split-font-name (name)
   (loop
