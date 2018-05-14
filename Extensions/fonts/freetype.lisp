@@ -231,22 +231,31 @@ rendering, otherwise the identity matrix will be used instead."
     (ensure-glyphs-loaded font index-list glyphset cached-glyphs transform-matrix)))
 
 (defun create-dest-picture (drawable)
-  (xlib:render-create-picture drawable
-                              :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
-                              :poly-edge :smooth
-                              :poly-mode :precise))
+  (or (getf (xlib:window-plist drawable) 'cached-picture)
+      (setf (getf (xlib:window-plist drawable) 'cached-picture)
+            (xlib:render-create-picture drawable
+                                        :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
+                                        :poly-edge :smooth
+                                        :poly-mode :precise))))
 
 (defun create-pen (drawable gc)
-  (let* ((pixmap (xlib:create-pixmap :drawable (xlib:drawable-root drawable) :width 1 :height 1 :depth 32))
-         (picture (xlib:render-create-picture pixmap :format (find-rgba-format (xlib::drawable-display drawable)) :repeat :on))
-         (fg (xlib::gcontext-foreground gc))
-         (colour (list (ash (ldb (byte 8 16) fg) 8)
-                       (ash (ldb (byte 8 8) fg) 8)
-                       (ash (ldb (byte 8 0) fg) 8)
-                       #xFFFF)))
-    (xlib:render-fill-rectangle picture :over colour 0 0 1 1)
-    (xlib:free-pixmap pixmap)
-    picture))
+  (let* ((fg (xlib::gcontext-foreground gc))
+         (cached-pen (getf (xlib:gcontext-plist gc) 'cached-pen)))
+    (cond ((and cached-pen (equal (second cached-pen) fg))
+           (first cached-pen))
+          (t
+           (when cached-pen
+             (xlib:render-free-picture (first cached-pen)))
+           (let* ((pixmap (xlib:create-pixmap :drawable (xlib:drawable-root drawable) :width 1 :height 1 :depth 32))
+                  (picture (xlib:render-create-picture pixmap :format (find-rgba-format (xlib::drawable-display drawable)) :repeat :on))
+                  (colour (list (ash (ldb (byte 8 16) fg) 8)
+                                (ash (ldb (byte 8 8) fg) 8)
+                                (ash (ldb (byte 8 0) fg) 8)
+                                #xFFFF)))
+             (xlib:render-fill-rectangle picture :over colour 0 0 1 1)
+             (xlib:free-pixmap pixmap)
+             (setf (getf (xlib:gcontext-plist gc) 'cached-pen) (list picture fg))
+             picture)))))
 
 (defstruct glyph-entry codepoint x-advance y-advance x-offset y-offset)
 
@@ -336,9 +345,7 @@ or NIL if the current transformation is the identity transformation."
                                                       (truncate (+ transformed-y 0.5))
                                                       vec))
                       (incf rx (/ (glyph-entry-x-advance current-index) 64))
-                      (incf ry (/ (glyph-entry-y-advance current-index) 64))))
-               (xlib:render-free-picture source)
-               (xlib:render-free-picture dest))
+                      (incf ry (/ (glyph-entry-y-advance current-index) 64)))))
           (when transform-matrix
             (free-glyphset glyphset)))))))
 
