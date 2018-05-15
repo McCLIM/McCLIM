@@ -4,8 +4,6 @@
 
 (in-package :clim-freetype)
 
-(declaim (optimize (speed 0) (safety 3) (debug 3)))
-
 (setq clim:*default-server-path* '(:clx :font-renderer clim-freetype:freetype-font-renderer))
 
 (defparameter *freetype-font-scale* 26.6)
