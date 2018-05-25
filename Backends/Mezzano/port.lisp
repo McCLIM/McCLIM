@@ -272,7 +272,8 @@
 ;;; Pixmap
 
 (defmethod destroy-mirror ((port mezzano-port) (pixmap mcclim-render-internals:image-pixmap-mixin))
-  (call-next-method))
+  (when (port-lookup-mirror port pixmap)
+    (port-unregister-mirror port pixmap (port-lookup-mirror port pixmap))))
 
 (defmethod realize-mirror ((port mezzano-port) (pixmap image-pixmap-mixin))
   (setf (sheet-parent pixmap) (graft port))
