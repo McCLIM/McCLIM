@@ -324,7 +324,7 @@ available for that argument."
     (let* ((gf (gf frame))
            (methods (compute-applicable-methods-from-specializers gf (arg-types frame)))
            (combination (c2mop:generic-function-method-combination gf))
-           (effective-methods (c2mop:compute-effective-method gf combination methods))
+           (effective-methods (ignore-errors (c2mop:compute-effective-method gf combination methods)))
            (serial-methods (walk-em-form effective-methods)))
       ;; Print the header
       (fresh-line)
