@@ -390,7 +390,10 @@ documentation produced by presentations.")
 (defmethod frame-exit ((frame standard-application-frame))
   (if (eq *application-frame* frame)
       (signal 'frame-exit :frame frame)
-      (disown-frame (frame-manager frame) frame)))
+      ;; ### Closing a demo too soon can cause this to happen.
+      ;; is this reasonable?
+      (when (frame-manager frame)
+        (disown-frame (frame-manager frame) frame))))
 
 (defmethod frame-exit-frame ((c frame-exit))
   (%frame-exit-frame c))
