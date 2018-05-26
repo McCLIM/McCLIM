@@ -302,9 +302,19 @@
   (unless (eq cursor :default)
     (debug-format "set-sheet-pointer-cursor ((port mezzano-port) (sheet mirrored-sheet-mixin) cursor)")
     (debug-format "    ~S ~S ~S" port sheet cursor)
+    #+(or)
     (break))
   )
 
 (defmethod mcclim-render-internals::%set-image-region (mirror region)
   (debug-format "mcclim-render-internals::%set-image-region (mirror region)")
   (debug-format "    ~S ~S" mirror region))
+
+;; TODO: Theses should show/hide the window, but that needs compositor support.
+;; They're stubbed out because the listener requires them.
+
+(defmethod port-enable-sheet ((port mezzano-port) (mirror mirrored-sheet-mixin))
+  nil)
+
+(defmethod port-disable-sheet ((port mezzano-port) (mirror mirrored-sheet-mixin))
+  nil)
