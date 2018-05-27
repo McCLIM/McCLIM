@@ -85,12 +85,14 @@
   (when clim-sys:*multiprocessing-p*
     (mos:make-thread
      (lambda ()
-       (loop
-          (with-simple-restart
-              (restart-event-loop
-               "Restart CLIM's event loop.")
-            (loop
-               (process-next-event port)))))
+       (let ((*terminal-io* (make-instance 'mezzano.gui.popup-io-stream:popup-io-stream
+                                           :title "McCLIM event loop console")))
+         (loop
+            (with-simple-restart
+                (restart-event-loop
+                 "Restart CLIM's event loop.")
+              (loop
+                 (process-next-event port))))))
      :name "McCLIM Events")))
 
 (defmethod initialize-instance :after ((port mezzano-port) &rest args)

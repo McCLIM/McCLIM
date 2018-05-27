@@ -1,13 +1,15 @@
 (in-package :clim-mezzano)
 
-(defvar *debug-format-control* :console)
+(defvar *debug-format-control* nil)
 (defvar *debug-format-messages* NIL)
 
 (defun debug-format (string &rest args)
   (cond ((eq *debug-format-control* :console)
          (mos:debug-print-line (apply #'format nil string args)))
         ((eq *debug-format-control* :list)
-         (push (apply #'format nil string args) *debug-format-messages*))))
+         (push (apply #'format nil string args) *debug-format-messages*))
+        ((streamp *debug-format-control*)
+         (apply #'format *debug-format-control* string args))))
 
 (declaim (inline round-coordinate))
 (defun round-coordinate (x)
