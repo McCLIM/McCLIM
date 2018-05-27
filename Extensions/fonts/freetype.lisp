@@ -9,30 +9,34 @@
 (defparameter *freetype-font-scale* 26.6)
 
 (defvar *enable-autohint* t)
-(defvar *enable-autofitter-warp* nil)
 
-;; The freetype2 library doesn't expose this function, so we add it here.
-(cffi:defcfun ("FT_Property_Set" ft-property-set) freetype2-types:ft-error
-  (library freetype2-types:ft-library)
-  (mod-name :string)
-  (prop-name :string)
-  (value :pointer))
+#+autofitter-warp-available
+(progn
+  (defvar *enable-autofitter-warp* t)
 
-;; Workaround for https://github.com/rpav/cl-freetype2/issues/11
-(defun freetype-make-vector (x y)
-  "Make an `FT-VECTOR` given `X` and `Y`.  This may be passed directly
+  ;; The freetype2 library doesn't expose this function, so we add it here.
+  (cffi:defcfun ("FT_Property_Set" ft-property-set) freetype2-types:ft-error
+    (library freetype2-types:ft-library)
+    (mod-name :string)
+    (prop-name :string)
+    (value :pointer))
+
+  ;; Workaround for https://github.com/rpav/cl-freetype2/issues/11
+  (defun freetype-make-vector (x y)
+    "Make an `FT-VECTOR` given `X` and `Y`.  This may be passed directly
 to `SET-TRANSFORM`, and may be more efficient than converting from native
 forms."
-  (let ((vector (freetype2::make-collected-foreign 'freetype2-types:ft-vector
-                                                   '(:struct freetype2-types:foreign-ft-vector))))
-    (setf (freetype2-types:ft-vector-x vector) x)
-    (setf (freetype2-types:ft-vector-y vector) y)
-    vector))
+    (let ((vector (freetype2::make-collected-foreign 'freetype2-types:ft-vector
+                                                     '(:struct freetype2-types:foreign-ft-vector))))
+      (setf (freetype2-types:ft-vector-x vector) x)
+      (setf (freetype2-types:ft-vector-y vector) y)
+      vector)))
 
 (defclass freetype-font-renderer (clim-clx::font-renderer)
   ())
 
 (defmethod initialize-instance :after ((obj freetype-font-renderer) &key)
+  #+autofitter-warp-available
   (when *enable-autofitter-warp*
     (cffi:with-foreign-objects ((v :int))
       (setf (cffi:mem-ref v :int) 1)
