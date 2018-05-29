@@ -183,9 +183,9 @@
               *last-mouse-y* (- mouse-y dy)
               *last-graft-x* (+ mouse-x (mos:window-x mez-window))
               *last-graft-y* (+ mouse-y (mos:window-y mez-window)))
-        (cond ((or (null mez-frame)
-                   (mos:in-frame-header-p mez-frame mouse-x mouse-y)
-                   (mos:in-frame-border-p mez-frame mouse-x mouse-y))
+        (cond ((and mez-frame
+                    (or (mos:in-frame-header-p mez-frame mouse-x mouse-y)
+                        (mos:in-frame-border-p mez-frame mouse-x mouse-y)))
                (when *last-mouse-sheet*
                  (mouse-exit-event mcclim-fifo *last-mouse-sheet* event)
                  (setf *last-mouse-sheet* nil))
