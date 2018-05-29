@@ -79,14 +79,17 @@
 
 (declaim (inline mez-pixels-data-set-pixel))
 (defun mez-pixels-data-set-pixel (data x y red green blue)
-  (setf (aref data y x)
-	(dpb blue (byte 8 0)
-	     (dpb green (byte 8 8)
-		  (dpb red (byte 8 16) #xFF000000)))))
+  (declare (type (simple-array (unsigned-byte 32) (* *)) data)
+           (type fixnum x y red green blue))
+  (setf (aref data y x) (logior #xFF000000
+                                (the fixnum (ash red 16))
+                                (the fixnum (ash green 8))
+                                blue)))
 
 (defun image-mirror-pre-put (mirror mez-pixels dx dy width height dirty-r)
   (let ((pixels (image-pixels (image-mirror-image mirror))))
-    (declare (type opticl-rgb-image-pixels pixels))
+    (declare (type opticl-rgb-image-pixels pixels)
+             (optimize speed (safety 0) (debug 0)))
     (map-over-region-set-regions
      #'(lambda (region)
          (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
