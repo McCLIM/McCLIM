@@ -19,18 +19,18 @@
     (library freetype2-types:ft-library)
     (mod-name :string)
     (prop-name :string)
-    (value :pointer))
+    (value :pointer)))
 
-  ;; Workaround for https://github.com/rpav/cl-freetype2/issues/11
-  (defun freetype-make-vector (x y)
-    "Make an `FT-VECTOR` given `X` and `Y`.  This may be passed directly
+;; Workaround for https://github.com/rpav/cl-freetype2/issues/11
+(defun freetype-make-vector (x y)
+  "Make an `FT-VECTOR` given `X` and `Y`.  This may be passed directly
 to `SET-TRANSFORM`, and may be more efficient than converting from native
 forms."
-    (let ((vector (freetype2::make-collected-foreign 'freetype2-types:ft-vector
-                                                     '(:struct freetype2-types:foreign-ft-vector))))
-      (setf (freetype2-types:ft-vector-x vector) x)
-      (setf (freetype2-types:ft-vector-y vector) y)
-      vector)))
+  (let ((vector (freetype2::make-collected-foreign 'freetype2-types:ft-vector
+                                                   '(:struct freetype2-types:foreign-ft-vector))))
+    (setf (freetype2-types:ft-vector-x vector) x)
+    (setf (freetype2-types:ft-vector-y vector) y)
+    vector))
 
 (defclass freetype-font-renderer (clim-clx::font-renderer)
   ())
