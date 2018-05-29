@@ -236,9 +236,8 @@
          (sheet (port-lookup-sheet *port* mez-window)))
     (when sheet
       (mos:fifo-push
-       (make-instance 'window-destroy-event
-                      :sheet sheet
-                      :region nil)
+       (make-instance 'window-manager-delete-event
+                      :sheet sheet)
        mcclim-fifo
        nil))))
 
