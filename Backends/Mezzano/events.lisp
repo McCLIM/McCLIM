@@ -58,19 +58,23 @@
   (let* ((releasep (mos:key-releasep event))
          (char (mos:key-key event))
          (name (get-name char))
-         (modifier-state (compute-modifier-state (mos:key-modifier-state event))))
-    (mos:fifo-push
-     (make-instance (if releasep 'key-release-event 'key-press-event)
-                    :key-name name
-                    :key-character char
-                    :x *last-mouse-x*
-                    :y *last-mouse-y*
-                    :graft-x *last-graft-x*
-                    :graft-y *last-graft-y*
-                    :sheet *current-focus*
-                    :modifier-state modifier-state)
-     mcclim-fifo
-     nil)))
+         (modifier-state (compute-modifier-state (mos:key-modifier-state event)))
+         (mez-window (mos:window event))
+         (sheet (port-lookup-sheet *port* mez-window)))
+    (when sheet
+      (mos:fifo-push
+       (make-instance (if releasep 'key-release-event 'key-press-event)
+                      :key-name name
+                      :key-character char
+                      :x *last-mouse-x*
+                      :y *last-mouse-y*
+                      :graft-x *last-graft-x*
+                      :graft-y *last-graft-y*
+                      :sheet (or (frame-properties (pane-frame sheet) 'focus)
+                                 sheet)
+                      :modifier-state modifier-state)
+       mcclim-fifo
+       nil))))
 
 ;;;======================================================================
 ;;; Pointer Events
@@ -225,17 +229,18 @@
                         :timestamp 0
                         :sheet sheet
                         :region (make-rectangle* 0 0 width height)))
-       mcclim-fifo)
-      )
-    (setf *current-focus* focus)))
+       mcclim-fifo))))
 
 (defmethod mez-event->mcclim-event (mcclim-fifo (event mos:quit-event))
-  (mos:fifo-push
-   (make-instance 'window-destroy-event
-                  :sheet *current-focus*
-                  :region nil)
-   mcclim-fifo
-   nil))
+  (let* ((mez-window (mos:window event))
+         (sheet (port-lookup-sheet *port* mez-window)))
+    (when sheet
+      (mos:fifo-push
+       (make-instance 'window-destroy-event
+                      :sheet sheet
+                      :region nil)
+       mcclim-fifo
+       nil))))
 
 (defmethod mez-event->mcclim-event (mcclim-fifo (event mos:window-close-event))
   ;;; TODO - what needs to happen here anything?
