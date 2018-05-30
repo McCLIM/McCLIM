@@ -77,24 +77,26 @@ specialized on, removing duplicates"
 ;; FIXME: returns nil if there is both an EQL specializer and a
 ;; class specializer for which no prototype instance is available.
 (defun compute-applicable-methods-from-specializers (gf specializers)
-  (if (every #'classp specializers)
+  (multiple-value-bind (applicable-methods validp)
       (c2mop:compute-applicable-methods-using-classes gf specializers)
-      (let ((instances
-             (mapcar (lambda (s)
-                       (cond ((classp s)
-                              ;; Implementation-dependent whether prototypes for
-                              ;; built-in classes (like integer, t) are available.
-                              (multiple-value-bind (prot err)
-                                  (ignore-errors (c2mop:class-prototype s))
-                                (if err 'no-prototype prot)))
-                             ((typep s 'c2mop:eql-specializer)
-                              (c2mop:eql-specializer-object s))
-                             (t
-                              (error "Can't compute effective methods, specializer ~A is not understood."
-                                     s))))
-                     specializers)))
-        (unless (member 'no-prototype instances)
-          (compute-applicable-methods gf instances)))))
+    (if validp
+        applicable-methods
+        (let ((instances
+               (mapcar (lambda (s)
+                         (cond ((classp s)
+                                ;; Implementation-dependent whether prototypes for
+                                ;; built-in classes (like integer, t) are available.
+                                (multiple-value-bind (prot err)
+                                    (ignore-errors (c2mop:class-prototype s))
+                                  (if err 'no-prototype prot)))
+                               ((typep s 'c2mop:eql-specializer)
+                                (c2mop:eql-specializer-object s))
+                               (t
+                                (error "Can't compute effective methods, specializer ~A is not understood."
+                                       s))))
+                       specializers)))
+          (unless (member 'no-prototype instances)
+            (compute-applicable-methods gf instances))))))
 
 ;; FIXME: Support EQL specializers.
 ;; This is hard to do ideally, and I'm not really trying.
@@ -322,7 +324,7 @@ available for that argument."
     (let* ((gf (gf frame))
            (methods (compute-applicable-methods-from-specializers gf (arg-types frame)))
            (combination (c2mop:generic-function-method-combination gf))
-           (effective-methods (c2mop:compute-effective-method gf combination methods))
+           (effective-methods (ignore-errors (c2mop:compute-effective-method gf combination methods)))
            (serial-methods (walk-em-form effective-methods)))
       ;; Print the header
       (fresh-line)

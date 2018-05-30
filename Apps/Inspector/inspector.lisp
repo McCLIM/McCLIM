@@ -573,13 +573,13 @@ use implementation-specific functions to be more informative."
 	(princ "Nicknames:" pane)
       (inspect-vertical-list (package-nicknames object) pane))
     (inspector-table-row (pane)
-	(princ "Used by:")
+	(princ "Used by:" pane)
       (inspect-vertical-list (package-used-by-list object) pane))
     (inspector-table-row (pane)
-	(princ "Uses:")
+	(princ "Uses:" pane)
       (inspect-vertical-list (package-use-list object) pane))
     (inspector-table-row (pane)
-	(princ "Exports:")
+	(princ "Exports:" pane)
       (inspect-vertical-list (package-exported-symbols object) pane))))
 
 (defmethod inspect-object ((object vector) pane)
@@ -598,12 +598,12 @@ use implementation-specific functions to be more informative."
 (defmethod inspect-object-briefly ((object string) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (prin1 object)))
+    (prin1 object pane)))
 
 (defmethod inspect-object-briefly ((object number) pane)
   (with-output-as-presentation
       (pane object (presentation-type-of object))
-    (prin1 object)))
+    (prin1 object pane)))
 
 (defun inspect-complex (object pane)
   "Inspect a complex number. Since complex numbers should be inspected
@@ -694,7 +694,7 @@ an error if the given time is not a decodable universal time."
   (with-output-as-presentation
       (pane object (presentation-type-of object))
     (with-text-family (pane :fix)
-      (prin1 object))))
+      (prin1 object pane))))
 
 (defmethod inspect-object ((object symbol) pane)
   (inspector-table (object pane)

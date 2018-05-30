@@ -30,8 +30,8 @@
 ;;; - Frames could be navigable with arrow keys as well. How to do that?
 ;;;
 
-(defpackage "CLIM-DEBUGGER"
-  (:use  "CL-USER" "CLIM" "CLIM-LISP")
+(defpackage #:clim-debugger
+  (:use #:clim #:clim-lisp #:clim-extensions)
   (:export #:debugger #:with-debugger #:install-debugger))
 
 (in-package :clim-debugger)
