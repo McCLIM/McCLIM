@@ -271,7 +271,12 @@ denoted by this symbol."
 (define-application-frame list-test
     () ()
     (:panes
-     (substring :text-field :value "INTER")
+     (substring :text-field :value "INTER"
+                :value-changed-callback
+                (lambda (pane value)
+                  (declare (ignore value))
+                  (when (find-pane-named *application-frame* 'result-list)
+                    (update-list-test pane))))
      (result-list
       (make-pane 'list-pane
 		 :value 'clim:region-intersection
