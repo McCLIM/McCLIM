@@ -12,7 +12,7 @@ is a portable and high-level user interface management system toolkit
 for Common Lisp. It has a powerful presentation model which allows us
 to directly link the visual representation of an object to its
 semantics. It has several high-level programming capabilities that
-enable us to develp a user interface conviniently; including formatted
+enable us to develop a user interface conveniently; including formatted
 output, graphics, windowing and commands that are invoked by typing
 text, keyboard shortcuts or clicking a mouse button.
 
@@ -85,7 +85,7 @@ resources are listed on [CLiki](http://www.cliki.net/CLIM) and McCLIM
 [homepage](https://common-lisp.net/project/mcclim/).
 
 ### Subdirectory Overview
- - **Apps** - sample applicatioins. This includes: 
+ - **Apps** - sample applications. This includes:
    1) Apps/Debugger - Peter Mechleborg's debugger (similar to Slime's).
    2) Apps/Functional-Geometry - Frank Buss and Rainer Joswig's functional
 	   geometry package for drawing "Escher" tiles.

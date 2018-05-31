@@ -36,20 +36,20 @@
            (max-x (+ ,x ,width -1)))
        (declare (type fixnum max-x max-y))
        (flet ((copy-ff ()
-                (loop for ,j-var from y to max-y do
-                     (loop for ,i-var from x to max-x do
+                (loop for ,j-var fixnum from y to max-y do
+                     (loop for ,i-var fixnum from x to max-x do
                           ,@code)))
               (copy-bf ()
-                  (loop for ,j-var from y to max-y do
-                       (loop for ,i-var from max-x downto x do
+                  (loop for ,j-var fixnum from y to max-y do
+                       (loop for ,i-var fixnum from max-x downto x do
                             ,@code)))
               (copy-fb ()
-                  (loop for ,j-var from max-y downto y do
-                       (loop for ,i-var from x to max-x do
+                  (loop for ,j-var fixnum from max-y downto y do
+                       (loop for ,i-var fixnum from x to max-x do
                             ,@code)))
                 (copy-bb ()
-                  (loop for ,j-var from max-y downto y do
-                       (loop for ,i-var from max-x downto x do
+                  (loop for ,j-var fixnum from max-y downto y do
+                       (loop for ,i-var fixnum from max-x downto x do
                             ,@code))))
          (when (and (> ,width 0) (> ,height 0))
            (if (eq ,src-img ,dst-img)

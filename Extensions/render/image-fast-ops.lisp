@@ -89,8 +89,8 @@
      (let ((,src-fn (pixeled-rgba-fn ,design)))
        (declare (type pixeled-design-fn ,src-fn)
                 (ignorable ,src-fn))
-       (loop for ,j-var from ,y to max-y do
-            (loop for ,i-var from ,x to max-x do
+       (loop for ,j-var fixnum from ,y to max-y do
+            (loop for ,i-var fixnum from ,x to max-x do
                  ,@code)))))
 
 (defmacro def-fast-fill-image-without-stencil (image-class set-code channels)
@@ -143,8 +143,8 @@
              (let ((max-y (+ y height -1))
                    (max-x (+ x width -1)))
                (declare (type fixnum max-x max-y))
-               (loop for j from y to max-y do
-                    (loop for i from x to max-x do
+               (loop for j fixnum from y to max-y do
+                    (loop for i fixnum from x to max-x do
                          (dst-fn i j red green blue a)))))))
        (make-rectangle* x y (+ x width) (+ y height)))))
 
