@@ -1278,15 +1278,13 @@ time an indexed pattern is drawn.")
                     (:bottom (+ y baseline (- text-height)))))))
       (let ((x (round-coordinate x))
             (y (round-coordinate y)))
-        (when (and (<= #x-8000 x #x7FFF)
-                   (<= #x-8000 y #x7FFF))
-          (bt:with-lock-held (*draw-font-lock*)
-            (font-draw-glyphs
-             (text-style-to-X-font (port medium) (medium-text-style medium))
-             mirror gc x y string
-             #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
-             :start start :end end
-             :translate #'translate :size 16 :transformation merged-transform)))))))
+        (bt:with-lock-held (*draw-font-lock*)
+          (font-draw-glyphs
+           (text-style-to-X-font (port medium) (medium-text-style medium))
+           mirror gc x y string
+           #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
+           :start start :end end
+           :translate #'translate :size 16 :transformation merged-transform))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
