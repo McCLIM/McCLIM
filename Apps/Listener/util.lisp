@@ -26,7 +26,8 @@
 (defun native-namestring (pathname-designator)
   #+sbcl (sb-ext:native-namestring pathname-designator)
   #+openmcl  (ccl::native-untranslated-namestring pathname-designator)
-  #-(or sbcl openmcl) (namestring pathname-designator))
+  #+mezzano pathname-designator
+  #-(or sbcl openmcl mezzano) (namestring pathname-designator))
 
 (defun native-enough-namestring (pathname &optional
                                  (defaults *default-pathname-defaults*))
@@ -124,7 +125,9 @@ this point, increment it by SPACING, which defaults to zero."
                (rest dir))
       ;; merge-pathnames merges :back, but not :up
       (strip-filespec
-       (merge-pathnames (make-pathname :directory '(:relative :back))
+       (merge-pathnames (make-pathname :host (pathname-host pathname)
+                                       :device (pathname-device pathname)
+                                       :directory '(:relative :back))
                         (truename pathname))))))
 
 ;;;; Abbreviating item formatter

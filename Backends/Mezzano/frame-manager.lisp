@@ -58,8 +58,6 @@
                 ()
                 (:metaclass
                  ,(type-of (find-class concrete-pane-class-symbol)))))))
-        (format *debug-io* "dummy class mirror ~A: ~A~%"
-                concrete-pane-class-symbol class-symbol)
         (setf concrete-pane-class (find-class class-symbol)))))
   concrete-pane-class)
 
