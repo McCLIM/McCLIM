@@ -1,10 +1,8 @@
-(cl:eval-when (:load-toplevel :execute)
-  (asdf:operate 'asdf:load-op 'cffi-grovel))
-
 (asdf:defsystem #:mcclim-harfbuzz
   :description "CFFI interface to Harfbuzz"
   :license "Apache"
   :serial t
+  :defsystem-depends-on (:cffi-grovel)
   :depends-on (:cffi
                :alexandria
                :trivial-garbage)
