@@ -1,5 +1,34 @@
+;;;; This application is meant to demonstrate output recording at the
+;;;; very lowest level.  Every CLIM stream pane has an OUTPUT HISTORY
+;;;; which is a special type of output record.  Other output records
+;;;; are descendants of the output history.  Output records are used
+;;;; by CLIM so that when a window has been obscured and then exposed,
+;;;; CLIM can draw the contents the way it appeared before the window
+;;;; was obscured.
+;;;;
+;;;; This application is a bit unusual in that we define our own
+;;;; output history class, our own output record type, and our own
+;;;; pane type.  There are several reasons for doing it this way.
+;;;; First, we want to illustrate that the application programmer is
+;;;; not obliged to use the output record types that are supplied by
+;;;; CLIM.  In fact, for high-performance applications for which the
+;;;; contents of a pane can be very large, and for which that contents
+;;;; is edited as part of the application logic, this technique might
+;;;; be the only reasonable one for obtaining the required
+;;;; performance.  Second, we want to show a simplified version of the
+;;;; machinery used by CLIM in order to manage output records.  The
+;;;; built-in machinery is designed for high performance, but it is
+;;;; also much harder to understand than the simplified machinery in
+;;;; this example application.
+
+;;; Make sure we are in the COMMON-LISP-USER package when we start
+;;; defining new classes and new functions.
 (cl:in-package #:common-lisp-user)
 
+;;; Define the package to be used for this application.  Notice that
+;;; we :USE the CLIM-LISP package rather than the COMMON-LISP package.
+;;; Notice also that we do not :USE the CLIM package.  Instead we use
+;;; explicit package prefixes for all CLIM symbols.
 (defpackage #:output-record-example-1
   (:use #:clim-lisp))
 
