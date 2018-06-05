@@ -34,15 +34,30 @@
 
 (in-package #:output-record-example-1)
 
+;;; This is the class that we are going to use for the output history
+;;; of our pane.  It has a simple list of CHILDREN which are going to
+;;; be custom output records.
 (defclass list-output-history (clim:stream-output-history-mixin)
   ((%children :initform '() :accessor children)))
 
+;;; CLIM requires us to define a method on BOUNDING-RECTANGLE,
+;;; specialized to our output-history class.  We just use a fixed
+;;; position and a fixed size for our output history.
 (defmethod clim:bounding-rectangle* ((region list-output-history))
   (values 0 0 100 100))
 
+;;; CLIM requires us to define a method on CLEAR-OUTPUT-RECORD,
+;;; specialized to our output-history class.  We set the list of
+;;; children to be the empty list.
 (defmethod clim:clear-output-record ((record list-output-history))
   (setf (children record) '()))
 
+;;; CLIM requires us to define a method on REPLAY-OUTPUT-RECORD,
+;;; specialized to our output-history class.  For a high-performance
+;;; application, it would be wise to organize the output records by
+;;; position, but we just have an unordered list of children, so we
+;;; just traverse that list and call REPLAY-OUTPUT-RECORD recursively
+;;; on each child.
 (defmethod clim:replay-output-record ((record list-output-history) stream
                                       &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
