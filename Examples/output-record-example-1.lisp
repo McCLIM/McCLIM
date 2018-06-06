@@ -79,10 +79,19 @@
              (when (and (<= min-x x max-x) (<= min-y y max-y))
                (funcall function function-args)))))
 
+;;; For this example application, we define a single type of displayed
+;;; output record.  It is called CIRCLE-OUTPUT-RECORD because it
+;;; corresponds to a red circle with some fixed diameter.  While the
+;;; diameter is fixed, the center of the circle is stored in the
+;;; output record.
 (defclass circle-output-record (clim:graphics-displayed-output-record)
   ((%center-x :initarg :center-x :accessor center-x)
    (%center-y :initarg :center-y :accessor center-y)))
 
+;;; CLIM requires us to define a method on BOUNDING-RECTANGLE,
+;;; specialized to our output-record class.  We just use a fixed size,
+;;; relative to the center of the circle stored in the output-record
+;;; object.
 (defmethod clim:bounding-rectangle* ((region circle-output-record))
   (let ((center-x (center-x region))
         (center-y (center-y region)))
