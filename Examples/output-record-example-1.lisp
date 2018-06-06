@@ -116,6 +116,12 @@
                         :filled t
                         :ink clim:+red+)))
 
+;;; For this example application, we define our own pane type.  The
+;;; main reason for that is so that we can pass default initargs for
+;;; its creation.  In particular, we want the output history to be an
+;;; instance of our own LIST-OUTPUT-HISTORY class.  But we also want
+;;; the display time to be NIL, which means that the output history is
+;;; not cleared before each iteration of the command loop.
 (defclass pane (clim:application-pane)
   ()
   (:default-initargs
