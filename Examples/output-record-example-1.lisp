@@ -100,6 +100,11 @@
             (+ center-x 20)
             (+ center-y 20))))
 
+;;; CLIM requires us to define a method on REPLAY-OUTPUT-RECORD,
+;;; specialized to our output-record class.  This method is
+;;; responsible for drawing the circle.  When this method is called,
+;;; STREAM-RECORDING-P would have returned FALSE, so we don't have to
+;;; set it explicitly.
 (defmethod clim:replay-output-record ((record circle-output-record) stream
                                       &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
