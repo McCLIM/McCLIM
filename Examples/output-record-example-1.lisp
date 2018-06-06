@@ -64,6 +64,11 @@
   (loop for child in (children record)
         do (clim:replay-output-record child stream)))
 
+;;; CLIM requires us to define a method on the generic function
+;;; MAP-OVER-OUTPUT-RECORDS-CONTAINING-POSITION specialized to our
+;;; output-history class.  We just loop over all children, check
+;;; whether the position lies within the bounding rectangle of the
+;;; child, and if so, call the function.
 (defmethod clim:map-over-output-records-containing-position
     (function (record list-output-history) x y
      &optional x-offset y-offset
