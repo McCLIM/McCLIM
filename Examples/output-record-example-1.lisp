@@ -30,7 +30,8 @@
 ;;; Notice also that we do not :USE the CLIM package.  Instead we use
 ;;; explicit package prefixes for all CLIM symbols.
 (defpackage #:output-record-example-1
-  (:use #:clim-lisp))
+  (:use #:clim-lisp)
+  (:export #:output-record-example-1))
 
 (in-package #:output-record-example-1)
 
