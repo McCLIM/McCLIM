@@ -169,10 +169,18 @@
     (setf (center-x first) x
           (center-y first) y)))
 
+;;; Main entry point to start the application.
 (defun output-record-example-1 ()
   (clim:run-frame-top-level
    (clim:make-application-frame 'output-record-example-1)))
   
+;;; When we manipulate the output history manually, it is not
+;;; automatically replayed after each iteration of the command loop.
+;;; For that reason, we define an :AFTER method on
+;;; REDISPLAY-FRAME-PANES.  This method starts by filling the pane
+;;; with background ink in order to erase whatever was there before.
+;;; Then it calls REPLAY with the output history of the application
+;;; pane.
 (defmethod clim:redisplay-frame-panes :after
     ((frame output-record-example-1) &key force-p)
   (declare (ignore force-p))
