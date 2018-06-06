@@ -140,9 +140,14 @@
                        (7/10 application)
                        (3/10 interactor)))))
 
+;;; Define the command QUIT that allows the user to exit gracefully
+;;; from the application.
 (define-output-record-example-1-command (com-quit :name t) ()
   (clim:frame-exit clim:*application-frame*))
 
+;;; Define a command for adding a circle output record to the output
+;;; history of the application pane.  The user is prompted for the X
+;;; and Y coordinates of the new output record.
 (define-output-record-example-1-command (com-insert-circle :name t)
     ((x 'integer) (y 'integer))
   (let ((pane (clim:find-pane-named clim:*application-frame* 'application )))
@@ -152,6 +157,9 @@
             :parent (clim:stream-output-history pane))
           (children (clim:stream-output-history pane)))))
 
+;;; Define a command that moves the first circle (i.e. the one that
+;;; was inserted last) of the list of circle output records on the
+;;; output history of the application pane.
 (define-output-record-example-1-command (com-move :name t)
     ((x 'integer) (y 'integer))
   (let* ((pane (clim:find-pane-named clim:*application-frame* 'application ))
