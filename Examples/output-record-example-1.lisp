@@ -128,6 +128,10 @@
    :output-record (make-instance 'list-output-history)
    :display-time nil))
 
+;;; The application frame of this application has two panes: an
+;;; instance of our own pane class and an interactor for entering
+;;; commands.  We do not want scroll bars on our application pane, so
+;;; we say that explicitly.
 (clim:define-application-frame output-record-example-1 ()
   ()
   (:panes (application (clim:make-pane 'pane :scroll-bars nil))
