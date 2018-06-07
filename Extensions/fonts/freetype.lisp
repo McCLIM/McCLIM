@@ -232,13 +232,21 @@ rendering, otherwise the identity matrix will be used instead."
         (cached-glyphs (make-hash-table :test 'eql)))
     (ensure-glyphs-loaded font index-list glyphset cached-glyphs transform-matrix)))
 
-(defun create-dest-picture (drawable)
-  (or (getf (xlib:window-plist drawable) 'cached-picture)
-      (setf (getf (xlib:window-plist drawable) 'cached-picture)
-            (xlib:render-create-picture drawable
-                                        :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
-                                        :poly-edge :smooth
-                                        :poly-mode :precise))))
+(defun create-picture-from-drawable (drawable)
+  (xlib:render-create-picture drawable
+                              :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
+                              :poly-edge :smooth
+                              :poly-mode :precise))
+
+(defgeneric create-dest-picture (drawable)
+  (:method ((drawable xlib:window))
+    (or (getf (xlib:window-plist drawable) 'cached-picture)
+        (setf (getf (xlib:window-plist drawable) 'cached-picture)
+              (create-picture-from-drawable drawable))))
+  (:method ((drawable xlib:pixmap))
+    (or (getf (xlib:pixmap-plist drawable) 'cached-picture)
+        (setf (getf (xlib:pixmap-plist drawable) 'cached-picture)
+              (create-picture-from-drawable drawable)))))
 
 (defun create-pen (drawable gc)
   (let* ((fg (xlib::gcontext-foreground gc))
