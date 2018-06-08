@@ -9,7 +9,7 @@
 
 (defparameter *freetype-font-scale* 26.6)
 
-(defvar *enable-autohint* t)
+(defvar *enable-autohint* nil)
 
 #+autofitter-warp-available
 (progn
@@ -21,6 +21,14 @@
     (mod-name :string)
     (prop-name :string)
     (value :pointer)))
+
+(cffi:defcfun ("FT_Library_SetLcdFilter" ft-library-set-lcd-filter) freetype2-types:ft-error
+  (library freetype2-types:ft-library)
+  (filter :int))
+
+(cffi:defcfun ("FT_Library_SetLcdFilterWeights" ft-library-set-lcd-filter-weights) freetype2-types:ft-error
+  (library freetype2-types:ft-library)
+  (filter (:pointer :unsigned-char)))
 
 ;; Workaround for https://github.com/rpav/cl-freetype2/issues/11
 (defun freetype-make-vector (x y)
@@ -171,6 +179,7 @@ forms."
                 font)))))
 
 (defun render-char-to-glyphset (glyphset face glyph-index)
+  (ft-library-set-lcd-filter freetype2:*library* 1)
   (freetype2:load-glyph face glyph-index (if *enable-autohint* '(:force-autohint) nil))
   (let* ((glyph (freetype2-types:ft-face-glyph face))
          (bitmap (freetype2-types:ft-glyphslot-bitmap (freetype2:render-glyph glyph :lcd)))
