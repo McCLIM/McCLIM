@@ -464,7 +464,7 @@ or NIL if the current transformation is the identity transformation."
                                                   (renderer freetype-font-renderer)
                                                   (text-style clim:standard-text-style))
   (let ((x (or (clim:text-style-mapping port text-style)
-               (setf (climi::text-style-mapping port text-style)
+               (setf (clim:text-style-mapping port text-style)
                      (find-freetype-font port text-style)))))
     x))
 
