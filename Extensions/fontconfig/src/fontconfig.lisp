@@ -94,15 +94,17 @@
         collect (list result (cffi:foreign-array-to-lisp bitmap `(:array fc-char32 ,*fc-charset-map-size*)))
         do (setq result (fc-char-set-next-page charset-native bitmap next))))))
 
+(defun str-list->lisp (str-list)
+  (fc-str-list-first str-list)
+  (loop
+    for ptr = (fc-str-list-next str-list)
+    until (cffi:null-pointer-p ptr)
+    collect (cffi:foreign-string-to-lisp ptr :encoding :utf-8)))
+
 (defun str-set->lisp (strset)
   (let ((str-list (fc-str-list-create strset)))
     (unwind-protect
-         (progn
-           (fc-str-list-first str-list)
-           (loop
-             for ptr = (fc-str-list-next str-list)
-             until (cffi:null-pointer-p ptr)
-             collect (cffi:foreign-string-to-lisp ptr :encoding :utf-8)))
+         (str-list->lisp str-list)
       (fc-str-list-done str-list))))
 
 (defun langset->lisp (langset)
@@ -210,3 +212,21 @@
           for i from 0 below n
           for font = (cffi:mem-aref fonts-ptr :pointer i)
           collect (pattern-to-lisp font fields))))))
+
+(defun list-font-dirs ()
+  (let ((dirs (fc-config-get-font-dirs (find-config))))
+    (unwind-protect
+         (str-list->lisp dirs)
+      (fc-str-list-done dirs))))
+
+(defun app-font-add-dir (dir)
+  (cffi:with-foreign-string (name (namestring dir) :encoding :utf-8)
+    (let ((result (fc-config-app-font-add-dir (find-config) name)))
+      (when (zerop result)
+        (error "Unable to add font dir: ~s" dir)))))
+
+(defun app-font-add-file (file)
+  (cffi:with-foreign-string (name (namestring file) :encoding :utf-8)
+    (let ((result (fc-config-app-font-add-file (find-config) name)))
+      (when (zerop result)
+        (error "Unable to add font file: ~s" file)))))

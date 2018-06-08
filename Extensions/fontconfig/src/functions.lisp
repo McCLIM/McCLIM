@@ -15,6 +15,14 @@
   (config :pointer)
   (pattern :pointer)
   (kind fc-match-kind))
+(cffi:defcfun ("FcConfigGetFontDirs" fc-config-get-font-dirs) :pointer
+  (config :pointer))
+(cffi:defcfun ("FcConfigAppFontAddDir" fc-config-app-font-add-dir) fc-bool
+  (config :pointer)
+  (dir :string))
+(cffi:defcfun ("FcConfigAppFontAddFile" fc-config-app-font-add-file) fc-bool
+  (config :pointer)
+  (file :string))
 
 (cffi:defcfun ("FcDefaultSubstitute" fc-default-substitute) :void
   (pattern :pointer))

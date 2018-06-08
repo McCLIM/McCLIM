@@ -7,4 +7,6 @@
            #:init-bring-up-to-date
            #:match-font
            #:font-list
-           ))
+           #:list-font-dirs
+           #:app-font-add-dir
+           #:app-font-add-file))
