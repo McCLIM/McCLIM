@@ -1,6 +1,7 @@
 (defpackage :clim-freetype
   (:use :cl)
-  (:export #:freetype-font-renderer))
+  (:export #:freetype-font-renderer
+           #:*enable-autohint*))
 
 (in-package :clim-freetype)
 
