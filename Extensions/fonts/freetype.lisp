@@ -488,12 +488,14 @@ or NIL if the current transformation is the identity transformation."
 
 (defmethod clim-clx:port-find-all-font-families ((port clim-clx::clx-port) (font-renderer freetype-font-renderer)
                                                  &key invalidate-cache)
-  (let ((h (make-hash-table :test 'equal))
-        (existing-families (make-hash-table :test 'equal)))
+  (let* ((h (make-hash-table :test 'equal))
+         (existing-families (make-hash-table :test 'equal))
+         (prev-families nil))
     (unless invalidate-cache
       (loop
         for fam in (clim-clx::font-families port)
-        do (setf (gethash (clim-extensions:font-family-name fam) existing-families) t)))
+        do (setf (gethash (clim-extensions:font-family-name fam) existing-families) t))
+      (setf prev-families (clim-clx::font-families port)))
     (loop
       for font in (mcclim-fontconfig:font-list *main-filter* '(:family :style :file))
       for family = (cdr (assoc :family font))
@@ -502,20 +504,21 @@ or NIL if the current transformation is the identity transformation."
       for m = (alexandria:ensure-gethash family h
                                          (make-hash-table :test 'equal))
       do (setf (gethash style m) file))
-    (setf (clim-clx::font-families port)
-          (sort (loop
-                  for family being each hash-key using (hash-value style-hash) in h
-                  unless (gethash family existing-families)
-                    collect (let ((f (make-instance 'freetype-font-family :name family :port port)))
-                              (loop
-                                with font-family-styles = (freetype-font-family/faces f)
-                                for style being each hash-key using (hash-value file) in style-hash
-                                unless (gethash style font-family-styles)
-                                  do (setf (gethash style font-family-styles)
-                                           (make-instance 'freetype-font-face :name style :family f :file file)))
-                              f))
-                #'string<
-                :key #'clim-extensions:font-family-name)))
+    (let ((new-families (loop
+                          for family being each hash-key using (hash-value style-hash) in h
+                          unless (gethash family existing-families)
+                            collect (let ((f (make-instance 'freetype-font-family :name family :port port)))
+                                      (loop
+                                        with font-family-styles = (freetype-font-family/faces f)
+                                        for style being each hash-key using (hash-value file) in style-hash
+                                        unless (gethash style font-family-styles)
+                                          do (setf (gethash style font-family-styles)
+                                                   (make-instance 'freetype-font-face :name style :family f :file file)))
+                                      f))))
+      (setf (clim-clx::font-families port)
+            (sort (append prev-families new-families)
+                  #'string<
+                  :key #'clim-extensions:font-family-name))))
   (clim-clx::font-families port))
 
 (defmethod clim-extensions:font-family-all-faces ((family freetype-font-family))
