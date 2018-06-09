@@ -34,8 +34,16 @@
    (font-families :initform nil :accessor font-families)
    (cursor-table :initform (make-hash-table :test #'eq)
                  :accessor clx-port-cursor-table)
-   (pointer :reader port-pointer)))
+   (pointer :reader port-pointer)
+   (font-renderer :initarg :font-renderer
+                  :reader clx-port-font-renderer)))
 
+(defmethod initialize-instance :after ((obj clx-basic-port) &key)
+  (let ((renderer (getf (cdr (port-server-path obj)) :font-renderer)))
+    (setf (slot-value obj 'font-renderer)
+          (if (symbolp renderer)
+              (make-instance renderer)
+              renderer))))
 
 (defclass clx-basic-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)))

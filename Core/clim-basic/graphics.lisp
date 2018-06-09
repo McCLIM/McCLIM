@@ -533,7 +533,7 @@
         (medium-draw-text* medium string x y
                            start end
                            align-x align-y
-                           toward-x toward-y transform-glyphs)))))
+                           toward-x toward-y transform-glyphs (medium-transformation medium))))))
 
 (defun draw-text* (sheet string x y
 		   &rest args
@@ -548,7 +548,7 @@
     (medium-draw-text* medium string x y
 		       start end
 		       align-x align-y
-		       toward-x toward-y transform-glyphs)))
+		       toward-x toward-y transform-glyphs (medium-transformation medium))))
 
 ;; This function belong to the extensions package.
 (defun draw-glyph (sheet string x y
@@ -895,7 +895,8 @@ position for the character."
 (def-graphic-op draw-text (string x y
 			       start end
 			       align-x align-y
-			       toward-x toward-y transform-glyphs))
+			       toward-x toward-y transform-glyphs
+                               transformation))
 
 
 ;;;;

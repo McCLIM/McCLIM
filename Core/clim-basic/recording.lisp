@@ -1549,52 +1549,89 @@ were added."
 
 ;;;; Text
 
-(def-grecording draw-text ((gs-text-style-mixin) string point-x point-y start end
-                           align-x align-y toward-x toward-y transform-glyphs) ()
+(defun enclosing-transform-polygon (transformation positions)
+  (when (null positions)
+    (error "Need at least one coordinate"))
+  (loop
+    with min-x = most-positive-fixnum
+    with min-y = most-positive-fixnum
+    with max-x = most-negative-fixnum
+    with max-y = most-negative-fixnum
+    for (xp yp) on positions by #'cddr
+    do (multiple-value-bind (x y)
+           (transform-position transformation xp yp)
+         (setf min-x (min min-x x))
+         (setf min-y (min min-y y))
+         (setf max-x (max max-x x))
+         (setf max-y (max max-y y)))
+    finally (return (values min-x min-y max-x max-y))))
+
+(defclass draw-text-transform-mixin ()
+  ((transformed-dx :initform 0
+                   :accessor draw-text-transform-mixin-transformed-dx)
+   (transformed-dy :initform 0
+                   :accessor draw-text-transform-mixin-transformed-dy)))
+
+(def-grecording draw-text ((gs-text-style-mixin draw-text-transform-mixin) string point-x point-y start end
+                           align-x align-y toward-x toward-y transform-glyphs
+                           transformation)
+    (:replay-fn nil)
   ;; FIXME!!! Text direction.
   ;; FIXME: Multiple lines.
- (let* ((text-style (graphics-state-text-style graphic))
-        (width (if (characterp string)
-                   (stream-character-width stream string :text-style text-style)
-                   (stream-string-width stream string
-                                        :start start :end end
-                                        :text-style text-style)) )
-        (ascent (text-style-ascent text-style (sheet-medium stream)))
-        (descent (text-style-descent text-style (sheet-medium stream)))
-        (transform (medium-transformation medium)))
-   (setf (values point-x point-y)
-         (transform-position transform point-x point-y))
-   (multiple-value-bind (left top right bottom)
-       (text-bounding-rectangle* medium string
-                                 :start start :end end :text-style text-style)
-     (ecase align-x
-       (:left (incf left point-x) (incf right point-x))
-       (:right (incf left (- point-x width)) (incf right (- point-x width)))
-       (:center (incf left (- point-x (round width 2)))
-                (incf right (- point-x (round width 2)))))
-     (ecase align-y
-       (:baseline (incf top point-y) (incf bottom point-y))
-       (:top (incf top (+ point-y ascent))
-             (incf bottom (+ point-y ascent)))
-       (:bottom (incf top (- point-y descent))
-                (incf bottom (- point-y descent)))
-       (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
-                (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
-     (values left top right bottom))))
+  (let* ((text-style (graphics-state-text-style graphic))
+         (width (if (characterp string)
+                    (stream-character-width stream string :text-style text-style)
+                    (stream-string-width stream string
+                                         :start start :end end
+                                         :text-style text-style)) )
+         (ascent (text-style-ascent text-style (sheet-medium stream)))
+         (descent (text-style-descent text-style (sheet-medium stream))))
+    (multiple-value-bind (left top right bottom)
+        (text-bounding-rectangle* medium string :start start :end end :text-style text-style)
+      (ecase align-x
+        (:left (incf left point-x) (incf right point-x))
+        (:right (incf left (- point-x width)) (incf right (- point-x width)))
+        (:center (incf left (- point-x (round width 2)))
+         (incf right (- point-x (round width 2)))))
+      (ecase align-y
+        (:baseline (incf top point-y) (incf bottom point-y))
+        (:top (incf top (+ point-y ascent))
+         (incf bottom (+ point-y ascent)))
+        (:bottom (incf top (- point-y descent))
+         (incf bottom (- point-y descent)))
+        (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
+         (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
+      (enclosing-transform-polygon transformation (list left top
+                                                        right top
+                                                        left bottom
+                                                        right bottom)))))
 
 (defmethod* (setf output-record-position) :around
-    (nx ny (record draw-text-output-record))
+  (nx ny (record draw-text-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
-    (with-slots (point-x point-y toward-x toward-y) record
-      (let ((dx (- nx x1))
-            (dy (- ny y1)))
-        (multiple-value-prog1
-            (call-next-method)
-          (incf point-x dx)
-          (incf point-y dy)
-          (incf toward-x dx)
-          (incf toward-y dy))))))
+    (let ((dx (- nx x1))
+          (dy (- ny y1)))
+      (multiple-value-prog1
+          (call-next-method)
+        (incf (draw-text-transform-mixin-transformed-dx record) dx)
+        (incf (draw-text-transform-mixin-transformed-dy record) dy)))))
+
+(defmethod replay-output-record
+    ((record draw-text-output-record) stream
+     &optional (region +everywhere+) (x-offset 0) (y-offset 0))
+  (declare (ignore x-offset y-offset region))
+  (with-slots (string point-x point-y start end align-x align-y toward-x
+               toward-y transform-glyphs transformation)
+      record
+    (let* ((medium (sheet-medium stream))
+           (dx (draw-text-transform-mixin-transformed-dx record))
+           (dy (draw-text-transform-mixin-transformed-dy record))
+           (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
+                                                            transformation)))
+      (medium-draw-text* medium string point-x point-y start end align-x
+                         align-y toward-x toward-y transform-glyphs
+                         updated-transform))))
 
 (defrecord-predicate draw-text-output-record
     (string start end point-x point-y align-x align-y toward-x toward-y

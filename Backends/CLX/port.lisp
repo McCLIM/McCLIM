@@ -80,18 +80,22 @@
 
 (defun parse-clx-server-path (path)
   (let* ((port-type (pop path))
-         (mirroring (mirror-factory (getf path :mirroring))))
+         (mirroring (mirror-factory (getf path :mirroring)))
+         (font-renderer (getf path :font-renderer 'clx-standard-font-renderer)))
     (remf path :mirroring)
+    (remf path :font-renderer)
     (if path
         `(,port-type
           :host ,(getf path :host "localhost")
           :display-id ,(getf path :display-id 0)
           :screen-id ,(getf path :screen-id 0)
           :protocol ,(getf path :protocol :internet)
+          :font-renderer ,font-renderer
           ,@(when mirroring (list :mirroring mirroring)))
         (append (helpfully-automagic-clx-server-path port-type)
                 (when mirroring
-                  (list :mirroring mirroring))))))
+                  (list :mirroring mirroring))
+                (list :font-renderer font-renderer)))))
 
 (setf (get :x11 :port-type) 'clx-port)
 (setf (get :x11 :server-path-parser) 'parse-clx-server-path)

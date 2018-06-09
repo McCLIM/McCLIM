@@ -3,11 +3,10 @@
 
 (defsystem #:mcclim-fonts/truetype
     :depends-on (#:clim-basic #:zpb-ttf #:cl-vectors #:cl-paths-ttf #:cl-aa #:alexandria)
-    :components
-    ((:static-file "README.md")
-     (:file "truetype-package")
-     (:file "fontconfig" :depends-on ("truetype-package"))
-     (:file "mcclim-native-ttf" :depends-on ("truetype-package"))))
+    :components ((:static-file "README.md")
+                 (:file "truetype-package")
+                 (:file "fontconfig" :depends-on ("truetype-package"))
+                 (:file "mcclim-native-ttf" :depends-on ("truetype-package"))))
 
 (defmethod perform :after ((o load-op)
                            (s (eql (find-system :mcclim-fonts/truetype))))
@@ -15,5 +14,8 @@
 
 (defsystem #:mcclim-fonts/clx-truetype
     :depends-on (#:mcclim-fonts/truetype #:mcclim-clx)
-    :components
-    ((:file "xrender-fonts")))
+    :components ((:file "xrender-fonts")))
+
+(defsystem #:mcclim-fonts/clx-freetype
+  :depends-on (#:mcclim-clx #:cl-freetype2 #:mcclim-fontconfig #:mcclim-harfbuzz)
+  :components ((:file "freetype")))

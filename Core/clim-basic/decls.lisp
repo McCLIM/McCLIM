@@ -362,7 +362,8 @@
 (defgeneric medium-draw-text* (medium string x y
 			       start end
 			       align-x align-y
-			       toward-x toward-y transform-glyphs))
+			       toward-x toward-y transform-glyphs
+                               transformation))
 
 
 ;;; 10.1 Medium Components

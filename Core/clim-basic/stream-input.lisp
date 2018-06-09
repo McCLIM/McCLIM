@@ -780,7 +780,7 @@ known gestures."
 (defmethod sheet-pointer-position (sheet pointer)
   (multiple-value-bind (x y)
       (pointer-position pointer)
-    (let ((pointer-sheet (port-pointer-sheet (port stheet))))
+    (let ((pointer-sheet (port-pointer-sheet (port sheet))))
       (if (eq sheet pointer-sheet)
 	  (values x y)
 	  ;; Is this right?

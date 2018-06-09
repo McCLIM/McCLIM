@@ -53,13 +53,21 @@
     ((:sans-serif (:bold :italic)) . "bold-o")
     ((:sans-serif (:italic :bold)) . "bold-o")))
 
+(clim-internals::define-protocol-class font-renderer ())
+
+(defclass clx-standard-font-renderer (font-renderer)
+  ())
+
 (defun open-font (display font-name)
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
     (when fonts
       (xlib:open-font display (first fonts)))))
 
-(defgeneric text-style-to-x-font (port text-style)
-  (:method ((port t) (text-style t))
+(defun text-style-to-x-font (port text-style)
+  (lookup-text-style-to-x-font port (clx-port-font-renderer port) text-style))
+
+(defgeneric lookup-text-style-to-x-font (port font-renderer text-style)
+  (:method ((port t) (font-renderer t) (text-style t))
     (let ((text-style (parse-text-style text-style)))
       (labels
           ((find-and-make-xlib-face (display family face size)
@@ -122,7 +130,6 @@
   (xlib:text-width (text-style-to-x-font port text-style)
 		   string :start start :end end))
 
-
 
 
 (defgeneric font-ascent (font)
@@ -141,20 +148,23 @@
 ;;;
 ;;; (width ascent descent left right font-ascent font-descent
 ;;; direction first-not-done)
-(defgeneric font-text-extents (font string &key start end translate)
+(defgeneric font-text-extents (font string &key start end translate direction)
   (:method (font string
-            &key (start 0) (end (length string)) (translate #'translate))
+            &key (start 0) (end (length string)) (translate #'translate) direction)
+    (declare (ignore direction))
     (xlib:text-extents font string
                        :start start :end end
                        :translate translate)))
 
 (defgeneric font-draw-glyphs (font mirror gc x y string
-                              &key start end translate size)
+                              &key start end translate size direction transformation)
   (:method (font mirror gc x y string
-            &key (start 0) (end (length string)) (translate #'translate) (size 16))
-    (declare (ignore font))
-    (xlib:draw-glyphs mirror gc x y string
-                      :start start :end end :translate translate :size size)))
+            &key (start 0) (end (length string)) (translate #'translate) (size 16) direction transformation)
+    (declare (ignore font direction))
+    (multiple-value-bind (x y)
+        (transform-position transformation x y)
+      (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
+                        :start start :end end :translate translate :size size))))
 
 
 ;;; Font listing implementation
@@ -173,12 +183,15 @@
    (raw-name :initarg :raw-name
              :reader clx-font-face-raw-name)))
 
-(defmethod clim-extensions:port-all-font-families :around
-    ((port clx-basic-port) &key invalidate-cache)
-  (when (or (null (clim-clx::font-families port)) invalidate-cache)
-    (setf (font-families port) (reload-font-table port)))
+(defgeneric port-find-all-font-families (port font-renderer &key invalidate-cache)
+  (:method (port font-renderer &key invalidate-cache)
+    (when (or (null (clim-clx::font-families port)) invalidate-cache)
+      (setf (font-families port) (reload-font-table port)))
+    (font-families port)))
+
+(defmethod clim-extensions:port-all-font-families ((port clx-basic-port) &key invalidate-cache)
   (append (call-next-method)
-          (font-families port)))
+          (port-find-all-font-families port (clx-port-font-renderer port) :invalidate-cache invalidate-cache)))
 
 (defun split-font-name (name)
   (loop

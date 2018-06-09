@@ -70,4 +70,6 @@
 		#:pointer-grab-sheet
 		#:%sheet-mirror-region
                 #:%sheet-mirror-transformation
-		#:standard-port))
+		#:standard-port)
+  (:export
+   #:port-find-all-font-families))

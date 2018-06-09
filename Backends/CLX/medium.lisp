@@ -1205,7 +1205,7 @@ time an indexed pattern is drawn.")
              (declare (ignorable left right
                                  font-ascent font-descent
                                  direction first-not-done))
-             (values width (+ ascent descent) width 0 ascent)) ))) )
+             (values width (+ ascent descent) width 0 ascent))))))
 
 (defmethod climi::text-bounding-rectangle*
     ((medium clx-medium) string &key text-style (start 0) end)
@@ -1252,11 +1252,11 @@ time an indexed pattern is drawn.")
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs)
+                              toward-x toward-y transform-glyphs
+                              transformation)
   (declare (ignore toward-x toward-y transform-glyphs))
-  (with-transformed-position ((sheet-native-transformation
-                               (medium-sheet medium))
-                              x y)
+  (let* ((native-transform (sheet-native-transformation (medium-sheet medium)))
+         (merged-transform (clim:compose-transformations native-transform transformation)))
     (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
@@ -1278,15 +1278,13 @@ time an indexed pattern is drawn.")
                     (:bottom (+ y baseline (- text-height)))))))
       (let ((x (round-coordinate x))
             (y (round-coordinate y)))
-        (when (and (<= #x-8000 x #x7FFF)
-                   (<= #x-8000 y #x7FFF))
-          (bt:with-lock-held (*draw-font-lock*)
-            (font-draw-glyphs
-             (text-style-to-X-font (port medium) (medium-text-style medium))
-             mirror gc x y string
-             #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
-             :start start :end end
-             :translate #'translate :size 16)))))))
+        (bt:with-lock-held (*draw-font-lock*)
+          (font-draw-glyphs
+           (text-style-to-X-font (port medium) (medium-text-style medium))
+           mirror gc x y string
+           #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
+           :start start :end end
+           :translate #'translate :size 16 :transformation merged-transform))))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
@@ -1356,3 +1354,15 @@ time an indexed pattern is drawn.")
 
 (defmethod climi::medium-invoke-with-possible-double-buffering (frame pane (medium clx-medium) continuation)
   (funcall continuation))
+
+;;;  This hack is really ugly. There really should be a better way to
+;;;  handle this.
+(defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
+  (with-slots (gc) medium
+    (when gc
+      (let ((old-text-style (medium-text-style medium)))
+	(unless (eq text-style old-text-style)
+          (let ((fn (text-style-to-X-font (port medium) (medium-text-style medium))))
+            (when (typep fn 'xlib:font)
+              (setf (xlib:gcontext-font gc)
+                    fn))))))))

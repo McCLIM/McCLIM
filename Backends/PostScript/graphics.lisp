@@ -548,56 +548,59 @@ setmatrix")
 (defmethod medium-draw-text* ((medium postscript-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs)
-  (setq string (if (characterp string)
-                   (make-string 1 :initial-element string)
-                   (subseq string start end)))
-  (let ((*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (let ((file-stream (postscript-medium-file-stream medium)))
-      (postscript-actualize-graphics-state file-stream medium :color :text-style)
-      (with-graphics-state ((medium-sheet medium))
-        #+ignore
-        (when transform-glyphs
-          ;;
-          ;; Now the harder part is that we also want to transform the glyphs,
-          ;; which is rather painless in Postscript. BUT: the x/y coordinates
-          ;; we get are already transformed coordinates, so what I do is
-          ;; untransform them again and simply tell the postscript interpreter
-          ;; our transformation matrix. --GB
-          ;;
-          ;; This code changes both the form of glyphs and the
-          ;; direction of the text, which does not conform to the
-          ;; specification. So I've disabled it. -- APD, 2002-06-03.
-          (multiple-value-setq (x y)
-            (untransform-position (medium-transformation medium) x y))
-          (multiple-value-bind (mxx mxy myx myy tx ty)
-              (get-transformation (medium-transformation medium))
-            (format file-stream "initmatrix [~A ~A ~A ~A ~A ~A] concat~%"
-                    (format-postscript-number mxx)
-                    (format-postscript-number mxy)
-                    (format-postscript-number myx)
-                    (format-postscript-number myy)
-                    (format-postscript-number tx)
-                    (format-postscript-number ty))))
-        (multiple-value-bind (total-width total-height
-                              final-x final-y baseline)
-            (let* ((font-name (medium-font medium))
-                   (font (clim-postscript-font:font-name-metrics-key font-name))
-                   (size (clim-postscript-font:font-name-size font-name)))
-              (clim-postscript-font:text-size-in-font font size string 0 nil))
-          (declare (ignore final-x final-y))
-          ;; Only one line?
-          (setq x (ecase align-x
-                    (:left x)
-                    (:center (- x (/ total-width 2)))
-                    (:right (- x total-width))))
-          (setq y (ecase align-y
-                    (:baseline y)
-                    (:top (+ y baseline))
-                    (:center (- y (- (/ total-height 2)
-                                     baseline)))
-                    (:bottom (- y (- total-height baseline)))))
-          (moveto* file-stream x y))
-        (format file-stream "(~A) show~%" (postscript-escape-string string))))))
+                              toward-x toward-y transform-glyphs
+                              transformation)
+  (multiple-value-bind (x y)
+      (transform-position transformation x y)
+    (setq string (if (characterp string)
+                     (make-string 1 :initial-element string)
+                     (subseq string start end)))
+    (let ((*transformation* (sheet-native-transformation (medium-sheet medium))))
+      (let ((file-stream (postscript-medium-file-stream medium)))
+        (postscript-actualize-graphics-state file-stream medium :color :text-style)
+        (with-graphics-state ((medium-sheet medium))
+          #+ignore
+          (when transform-glyphs
+            ;;
+            ;; Now the harder part is that we also want to transform the glyphs,
+            ;; which is rather painless in Postscript. BUT: the x/y coordinates
+            ;; we get are already transformed coordinates, so what I do is
+            ;; untransform them again and simply tell the postscript interpreter
+            ;; our transformation matrix. --GB
+            ;;
+            ;; This code changes both the form of glyphs and the
+            ;; direction of the text, which does not conform to the
+            ;; specification. So I've disabled it. -- APD, 2002-06-03.
+            (multiple-value-setq (x y)
+              (untransform-position (medium-transformation medium) x y))
+            (multiple-value-bind (mxx mxy myx myy tx ty)
+                (get-transformation (medium-transformation medium))
+              (format file-stream "initmatrix [~A ~A ~A ~A ~A ~A] concat~%"
+                      (format-postscript-number mxx)
+                      (format-postscript-number mxy)
+                      (format-postscript-number myx)
+                      (format-postscript-number myy)
+                      (format-postscript-number tx)
+                      (format-postscript-number ty))))
+          (multiple-value-bind (total-width total-height
+                                final-x final-y baseline)
+              (let* ((font-name (medium-font medium))
+                     (font (clim-postscript-font:font-name-metrics-key font-name))
+                     (size (clim-postscript-font:font-name-size font-name)))
+                (clim-postscript-font:text-size-in-font font size string 0 nil))
+            (declare (ignore final-x final-y))
+            ;; Only one line?
+            (setq x (ecase align-x
+                      (:left x)
+                      (:center (- x (/ total-width 2)))
+                      (:right (- x total-width))))
+            (setq y (ecase align-y
+                      (:baseline y)
+                      (:top (+ y baseline))
+                      (:center (- y (- (/ total-height 2)
+                                       baseline)))
+                      (:bottom (- y (- total-height baseline)))))
+            (moveto* file-stream x y))
+          (format file-stream "(~A) show~%" (postscript-escape-string string)))))))
 
 
