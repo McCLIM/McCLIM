@@ -430,9 +430,6 @@ The following files should exist:~&~{  ~A~^~%~}"
                  size   (or size :normal)
                  size   (getf clim-clx::*clx-text-sizes* size size))
 
-           (when (eq family :fixed)
-             (setf family :fix))
-
            (find-and-make-truetype-font family face size))))
 
     (or (text-style-mapping port text-style)
