@@ -99,9 +99,6 @@
                      size   (or size :normal)
                      size   (round (getf clim-clx::*clx-text-sizes* size size)))
 
-               (when (eq family :fixed)
-                 (setf family :fix))
-
                (when (zerop size)
                  (setf size (getf clim-clx::*clx-text-sizes* :normal)))
 

@@ -90,7 +90,7 @@
 (defun family-key (family)
   (ecase family
     ((nil) 0)
-    ((:fix :fixed) 1)
+    ((:fix) 1)
     ((:serif) 2)
     ((:sans-serif) 3)))
 

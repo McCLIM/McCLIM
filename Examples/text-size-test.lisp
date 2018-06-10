@@ -29,7 +29,7 @@
    (text (make-pane 'text-editor :height 200 :value "ytmM"))
    (family
     (with-radio-box ()
-      (make-pane 'toggle-button :label "Fixed" :id :fixed)
+      (make-pane 'toggle-button :label "Fixed" :id :fix)
       (radio-box-current-selection
        (make-pane 'toggle-button :label "Serif" :id :serif))
       (make-pane 'toggle-button :label "Sans Serif" :id :sans-serif)))

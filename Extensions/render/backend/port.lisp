@@ -57,8 +57,6 @@
                  size   (or size :normal)
 		 size (getf *text-sizes* size size))
 
-           (when (eq family :fixed)
-             (setf family :fix))
            (find-and-make-truetype-font family face size))))
     (or (text-style-mapping port text-style)
         (setf (climi::text-style-mapping port text-style)
