@@ -201,17 +201,10 @@ want to do the same.")
                                                                                   (sheet-region sheet)))))))
     (let* ((parent (sheet-mirrored-ancestor sheet))
            (native-sheet-region (effective-repaint-region parent sheet region)))
-      (with-sheet-medium (medium parent)
-	(with-drawing-options (medium :clipping-region native-sheet-region
-				      :ink (medium-background medium)
-                                      #+jd-test(pane-background sheet)
-                                      #+jd-test(alexandria:random-elt
-                                                (list +darkmagenta+
-                                                      +darkblue+
-                                                      +darkgreen+
-                                                      +darkorange+
-                                                      +darkolivegreen+))
-				      :transformation +identity-transformation+)
-	  (with-bounding-rectangle* (left top right bottom)
-              native-sheet-region
-	    (medium-draw-rectangle* medium left top right bottom t)))))))
+	  (with-sheet-medium (medium parent)
+	    (with-drawing-options (medium :clipping-region native-sheet-region
+					  :ink (pane-background sheet)
+					  :transformation +identity-transformation+)
+	      (with-bounding-rectangle* (left top right bottom)
+		  native-sheet-region
+		(medium-draw-rectangle* medium left top right bottom t)))))))
