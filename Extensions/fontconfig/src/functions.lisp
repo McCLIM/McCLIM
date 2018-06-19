@@ -1,6 +1,7 @@
 (in-package :mcclim-fontconfig)
 
 (cffi:define-foreign-library libfontconfig
+  (:darwin "libfontconfig.dylib")
   (:unix "libfontconfig.so"))
 
 (cffi:use-foreign-library libfontconfig)
