@@ -639,8 +639,9 @@ if stuff is inserted after the insertion pointer."
     (setf (activation-gesture stream) gesture)
     (rescan-if-necessary stream)
     (return-from stream-process-gesture gesture))
-  (let ((*original-stream* (encapsulating-stream-stream stream)))
-    (unread-gesture gesture :stream (encapsulating-stream-stream stream)))
+  (when (proper-gesture-p gesture)
+    (let ((*original-stream* (encapsulating-stream-stream stream)))
+      (unread-gesture gesture :stream (encapsulating-stream-stream stream))))
   (read-gestures-and-act stream gesture type))
 
 (defmethod reset-scan-pointer ((stream drei-input-editing-mixin)

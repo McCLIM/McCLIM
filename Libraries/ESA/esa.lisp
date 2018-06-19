@@ -722,11 +722,13 @@ never refer to a command."))
   (process-gestures command-processor))
 
 (defun esa-read-gesture (&key (command-processor *command-processor*)
-                              (stream *standard-input*))
+                         (stream *standard-input*))
   (unless (null (remaining-keys command-processor))
     (return-from esa-read-gesture
       (pop (remaining-keys command-processor))))
-  (read-gesture :stream stream))
+  (loop for gesture = (read-gesture :stream stream)
+	until (proper-gesture-p gesture)
+	finally (return gesture)))
 
 (defun esa-unread-gesture (gesture &key (command-processor *command-processor*)
                            (stream *standard-input*))
