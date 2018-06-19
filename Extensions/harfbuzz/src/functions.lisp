@@ -1,6 +1,7 @@
 (in-package :mcclim-harfbuzz)
 
 (cffi:define-foreign-library libharfbuzz
+  (:darwin "libharfbuzz.dylib")                             
   (:unix "libharfbuzz.so"))
 
 (cffi:defcfun ("hb_buffer_create" hb-buffer-create) :pointer)
