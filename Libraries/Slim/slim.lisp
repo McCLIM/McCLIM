@@ -1,7 +1,7 @@
 (defpackage slim
   (:use #:clim-lisp)
   (:export #:+golden-ratio+
-	   #:with-table #:row #:cell #:*pane*))
+	   #:with-table #:row #:col #:cell #:*pane*))
 (in-package slim)
 
 (defparameter +golden-ratio+ #. (/ (+ 1 (sqrt 5)) 2)
@@ -25,4 +25,5 @@
        ,@body)))
 
 (defmacro row  (&body body) `(clim:formatting-row  (*pane*) ,@body))
+(defmacro col  (&body body) `(clim:formatting-column  (*pane*) ,@body))
 (defmacro cell (&body body) `(clim:formatting-cell (*pane*) ,@body))
