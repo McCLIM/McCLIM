@@ -11,6 +11,8 @@
 
 (defvar *enable-autohint* nil)
 
+(defvar *lock* (bordeaux-threads:make-recursive-lock))
+
 #+autofitter-warp-available
 (progn
   (defvar *enable-autofitter-warp* t)
@@ -87,8 +89,6 @@ forms."
    (size           :initarg :size
                    :initform 10
                    :reader freetype-font/size)
-   (lock           :initform (bordeaux-threads:make-recursive-lock)
-                   :reader freetype-font/lock)
    (cached-glyphs  :initform (make-hash-table :test 'eql)
                    :reader freetype-font/cached-glyphs)
    (cached-picture :type cached-picture
@@ -119,7 +119,7 @@ forms."
 
 (defmacro with-face-from-font ((sym font) &body body)
   (alexandria:once-only (font)
-    `(bordeaux-threads:with-recursive-lock-held ((freetype-font/lock ,font))
+    `(bordeaux-threads:with-recursive-lock-held (*lock*)
        (with-size-face (,sym (find-or-load-face ,font) (freetype-font/size ,font))
          ,@body))))
 
