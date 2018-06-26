@@ -809,7 +809,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   ((foreground       :initarg :foreground
                      :reader pane-foreground)
    (background       :initarg :background
-                     :reader pane-background)
+                     :accessor pane-background)
    (text-style       :initarg :text-style
                      :reader pane-text-style)
    (align-x          :initarg :align-x
