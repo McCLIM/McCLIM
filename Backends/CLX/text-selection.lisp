@@ -110,7 +110,7 @@
                                    :delete-p t
                                    :result-type '(vector (unsigned-byte 8))))
              (type (case (clim-clx::selection-event-target event)
-                     (:string :iso88519-1)
+                     (:string :iso-88519-1)
                      (:utf8_string :utf-8))))
         (when type
           (babel:octets-to-string v :encoding type)))))
