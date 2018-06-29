@@ -49,6 +49,22 @@
                           (:hash . "hash")
                           (:postscriptname . "postscriptname")))
 
+(defmacro with-new-pattern ((sym) &body body)
+  (alexandria:with-gensyms (pattern)
+    `(let ((,pattern (fc-pattern-create)))
+       (unwind-protect
+            (let ((,sym ,pattern))
+              ,@body)
+         (fc-pattern-destroy ,pattern)))))
+
+(defmacro with-new-char-set ((sym) &body body)
+  (alexandria:with-gensyms (charset)
+    `(let ((,charset (fc-char-set-create)))
+       (unwind-protect
+            (let ((,sym ,charset))
+              ,@body)
+         (fc-char-set-destroy ,charset)))))
+
 (defun find-config ()
   (unless *config*
     (init-fontconfig))
@@ -76,6 +92,15 @@
   (cffi:with-foreign-strings ((s value :encoding :utf-8))
     (error-if-fail (fc-pattern-add-string pattern key s))))
 
+(defun add-list-value-to-pattern (pattern key value)
+  (ecase (car value)
+    (:charset (with-new-char-set (charset)
+                (dolist (ch (cdr value))
+                  (error-if-fail (fc-char-set-add-char charset (etypecase ch
+                                                                 (integer ch)
+                                                                 (character (char-code ch))))))
+                (error-if-fail (fc-pattern-add-char-set pattern key charset))))))
+
 (defun add-value-to-pattern (pattern key value)
   (check-type key string)
   (etypecase value
@@ -83,7 +108,8 @@
     (integer (error-if-fail (fc-pattern-add-integer pattern key value)))
     (keyword (ecase value
                (:true (fc-pattern-add-bool pattern key 1))
-               (:false (fc-pattern-add-bool pattern key 0))))))
+               (:false (fc-pattern-add-bool pattern key 0))))
+    (list (add-list-value-to-pattern pattern key value))))
 
 (defun charset->lisp (charset-native)
   (cffi:with-foreign-objects ((bitmap 'fc-char32 *fc-charset-map-size*)
@@ -138,14 +164,6 @@
 (defun config-home ()
   (let ((result (fc-config-home)))
     (values (cffi:foreign-string-to-lisp result))))
-
-(defmacro with-new-pattern ((sym) &body body)
-  (alexandria:with-gensyms (pattern)
-    `(let ((,pattern (fc-pattern-create)))
-       (unwind-protect
-            (let ((,sym ,pattern))
-              ,@body)
-         (fc-pattern-destroy ,pattern)))))
 
 (defun pattern-to-lisp (pattern fields)
   (loop
@@ -230,3 +248,23 @@
     (let ((result (fc-config-app-font-add-file (find-config) name)))
       (when (zerop result)
         (error "Unable to add font file: ~s" file)))))
+
+(deftype unicode-codepoint () '(integer 0 #.(* (expt 2 16) 17)))
+
+(defun charset-contains-p (charset char)
+  (let ((code (etypecase char
+                (integer char)
+                (character (char-code char)))))
+    (loop
+      for entry in charset
+      for bitmap-start of-type unicode-codepoint = (car entry)
+      for bitmap-end of-type unicode-codepoint = (+ bitmap-start (* (length bitmap) 32))
+      for bitmap = (cadr entry)
+      when (and (>= code bitmap-start)
+                (< code bitmap-end))
+        return (let ((start (- code bitmap-start))
+                     (bitmap (cadr entry)))
+                 (multiple-value-bind (word index)
+                     (truncate start 32)
+                   (plusp (ldb (byte 1 index) (aref bitmap word)))))
+      until (>= code bitmap-end))))
