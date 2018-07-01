@@ -69,11 +69,14 @@ forms."
              :accessor cached-picture/glyphset)))
 
 (defclass freetype-font-face (clim-extensions:font-face)
-  ((file :initarg :file
-         :reader freetype-font-face/file)
-   (face :initarg :face
-         :initform nil
-         :accessor freetype-font-face/face)))
+  ((file    :initarg :file
+            :reader freetype-font-face/file)
+   (charset :initarg :charset
+            :initform nil
+            :reader freetype-font-face/charset)
+   (face    :initarg :face
+            :initform nil
+            :accessor freetype-font-face/face)))
 
 (defun find-or-load-face (font)
   (check-type font freetype-font)
@@ -445,22 +448,24 @@ or NIL if the current transformation is the identity transformation."
   (let ((result (mcclim-fontconfig:match-font (append *main-filter*
                                                       (make-family-pattern family)
                                                       (make-face-pattern face))
-                                              '(:family :style :file))))
+                                              '(:family :style :file :charset))))
     (list (cdr (assoc :family result))
           (cdr (assoc :style result))
-          (cdr (assoc :file result)))))
+          (cdr (assoc :file result))
+          (cdr (assoc :charset result)))))
 
 (defun find-freetype-font (port text-style)
   (multiple-value-bind (family face size)
       (clim:text-style-components text-style)
-    (destructuring-bind (found-family found-style found-file)
+    (destructuring-bind (found-family found-style found-file found-charset)
         (find-best-match family face)
       (let* ((family-obj (find-font-family port found-family))
              (face-obj (alexandria:ensure-gethash found-style (freetype-font-family/faces family-obj)
                                                   (make-instance 'freetype-font-face
                                                                  :family family-obj
                                                                  :name found-style
-                                                                 :file found-file))))
+                                                                 :file found-file
+                                                                 :charset found-charset))))
         (make-instance 'freetype-font
                        :port port
                        :face face-obj
@@ -481,6 +486,10 @@ or NIL if the current transformation is the identity transformation."
                                                   (renderer freetype-font-renderer)
                                                   (text-style climi::device-font-text-style))
   nil)
+
+(defun text-style-contains-p (port text-style char)
+  (let ((font (clim-clx::text-style-to-x-font port text-style)))
+    (mcclim-fontconfig:charset-contains-p (freetype-font-face/charset (freetype-font/face font)) char)))
 
 ;;;
 ;;;  List fonts

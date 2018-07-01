@@ -77,6 +77,10 @@
   (num-sets :int)
   (pattern :pointer)
   (object-set :pointer))
+(cffi:defcfun ("FcFontRenderPrepare" fc-font-render-prepare) :pointer
+  (config :pointer)
+  (pattern :pointer)
+  (fonr :pointer))
 
 (cffi:defcfun ("FcObjectSetCreate" fc-object-set-create) :pointer)
 (cffi:defcfun ("FcObjectSetDestroy" fc-object-set-destroy) :void
@@ -125,3 +129,4 @@
   (str-list :pointer))
 (cffi:defcfun ("FcStrListNext" fc-str-list-next) (:pointer fc-char8)
   (str-list :pointer))
+

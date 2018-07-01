@@ -156,9 +156,9 @@
   (cffi:with-foreign-objects ((value '(:struct fc-value)))
     (let ((result (fc-pattern-get p object index value)))
       (case result
-        (:fc-result-match (values (value->lisp value) :match))
-        (:fc-result-no-match (values nil :no-match))
-        (:fc-result-no-id (values nil :no-id))
+        (:fc-result-match (value->lisp value))
+        (:fc-result-no-match :no-match)
+        (:fc-result-no-id :no-id)
         (t (error 'fontconfig-match-error :status result))))))
 
 (defun config-home ()
@@ -184,10 +184,12 @@
         (cffi:foreign-string-to-lisp result)
       (cffi:foreign-funcall "free" :pointer result :void))))
 
-(defun match-font (values fields)
+(defun match-font (values fields &key (kind :match-pattern))
   (with-new-pattern (pattern)
     (fill-pattern-from-values pattern values)
-    (error-if-fail (fc-config-substitute (find-config) pattern :fc-match-pattern))
+    (error-if-fail (fc-config-substitute (find-config) pattern (ecase kind
+                                                                 (:match-pattern :fc-match-pattern)
+                                                                 (:match-font :fc-match-font))))
     (fc-default-substitute pattern)
     (cffi:with-foreign-objects ((result 'fc-result))
       (let* ((matched (fc-font-match (find-config) pattern result))
@@ -237,6 +239,14 @@
          (str-list->lisp dirs)
       (fc-str-list-done dirs))))
 
+(defun font-render-prepare (pattern font fields)
+  (with-new-pattern (p)
+    (fill-pattern-from-values p pattern)
+    (with-new-pattern (f)
+      (fill-pattern-from-values f font)
+      (let ((result-pattern (fc-font-render-prepare (find-config) p f)))
+        (pattern-to-lisp result-pattern fields)))))
+
 (defun app-font-add-dir (dir)
   (cffi:with-foreign-string (name (namestring dir) :encoding :utf-8)
     (let ((result (fc-config-app-font-add-dir (find-config) name)))
@@ -257,9 +267,9 @@
                 (character (char-code char)))))
     (loop
       for entry in charset
+      for bitmap = (cadr entry)
       for bitmap-start of-type unicode-codepoint = (car entry)
       for bitmap-end of-type unicode-codepoint = (+ bitmap-start (* (length bitmap) 32))
-      for bitmap = (cadr entry)
       when (and (>= code bitmap-start)
                 (< code bitmap-end))
         return (let ((start (- code bitmap-start))
@@ -267,4 +277,5 @@
                  (multiple-value-bind (word index)
                      (truncate start 32)
                    (plusp (ldb (byte 1 index) (aref bitmap word)))))
-      until (>= code bitmap-end))))
+      until (< code bitmap-end))))
+
