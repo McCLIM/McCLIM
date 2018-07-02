@@ -80,7 +80,7 @@
 (cffi:defcfun ("FcFontRenderPrepare" fc-font-render-prepare) :pointer
   (config :pointer)
   (pattern :pointer)
-  (fonr :pointer))
+  (font :pointer))
 
 (cffi:defcfun ("FcObjectSetCreate" fc-object-set-create) :pointer)
 (cffi:defcfun ("FcObjectSetDestroy" fc-object-set-destroy) :void

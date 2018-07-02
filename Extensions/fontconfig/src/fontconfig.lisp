@@ -277,5 +277,4 @@
                  (multiple-value-bind (word index)
                      (truncate start 32)
                    (plusp (ldb (byte 1 index) (aref bitmap word)))))
-      until (< code bitmap-end))))
-
+      until (<= code bitmap-end))))
