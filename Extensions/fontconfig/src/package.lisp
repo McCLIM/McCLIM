@@ -11,4 +11,5 @@
            #:app-font-add-dir
            #:app-font-add-file
            #:charset-contains-p
-           #:font-render-prepare))
+           #:font-render-prepare
+           #:font-render-prepare-match))

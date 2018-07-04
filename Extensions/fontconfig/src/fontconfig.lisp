@@ -184,6 +184,18 @@
         (cffi:foreign-string-to-lisp result)
       (cffi:foreign-funcall "free" :pointer result :void))))
 
+(defun %match-for-pattern (pattern fields)
+  (cffi:with-foreign-objects ((result 'fc-result))
+    (let* ((matched (fc-font-match (find-config) pattern result))
+           (result-obj (cffi:mem-ref result 'fc-result)))
+      (unwind-protect
+           (progn
+             (unless (eq result-obj :fc-result-match)
+               (error 'fontconfig-match-error :status result-obj))
+             (pattern-to-lisp matched fields))
+        (unless (cffi:null-pointer-p matched)
+          (fc-pattern-destroy matched))))))
+
 (defun match-font (values fields &key (kind :match-pattern))
   (with-new-pattern (pattern)
     (fill-pattern-from-values pattern values)
@@ -191,16 +203,7 @@
                                                                  (:match-pattern :fc-match-pattern)
                                                                  (:match-font :fc-match-font))))
     (fc-default-substitute pattern)
-    (cffi:with-foreign-objects ((result 'fc-result))
-      (let* ((matched (fc-font-match (find-config) pattern result))
-             (result-obj (cffi:mem-ref result 'fc-result)))
-        (unwind-protect
-             (progn
-               (unless (eq result-obj :fc-result-match)
-                 (error 'fontconfig-match-error :status result-obj))
-               (pattern-to-lisp matched fields))
-          (unless (cffi:null-pointer-p matched)
-            (fc-pattern-destroy matched)))))))
+    (%match-for-pattern pattern fields)))
 
 (defmacro with-object-set ((sym objects) &body body)
   (alexandria:once-only (objects)
@@ -246,6 +249,18 @@
       (fill-pattern-from-values f font)
       (let ((result-pattern (fc-font-render-prepare (find-config) p f)))
         (pattern-to-lisp result-pattern fields)))))
+
+
+
+(defun font-render-prepare-match (pattern font fields)
+  (with-new-pattern (p)
+    (fill-pattern-from-values p pattern)
+    (with-new-pattern (f)
+      (fill-pattern-from-values f font)
+      (let ((result-pattern (fc-font-render-prepare (find-config) p f)))
+        (unwind-protect
+             (%match-for-pattern result-pattern fields)
+          (fc-pattern-destroy result-pattern))))))
 
 (defun app-font-add-dir (dir)
   (cffi:with-foreign-string (name (namestring dir) :encoding :utf-8)
