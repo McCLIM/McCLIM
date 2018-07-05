@@ -250,8 +250,6 @@
       (let ((result-pattern (fc-font-render-prepare (find-config) p f)))
         (pattern-to-lisp result-pattern fields)))))
 
-
-
 (defun font-render-prepare-match (pattern font fields)
   (with-new-pattern (p)
     (fill-pattern-from-values p pattern)
@@ -261,6 +259,30 @@
         (unwind-protect
              (%match-for-pattern result-pattern fields)
           (fc-pattern-destroy result-pattern))))))
+
+(defun internal-font-render-prepare (matched pattern fields)
+  (with-new-pattern (p)
+    (fill-pattern-from-values p pattern)
+    (let ((result-pattern (fc-font-render-prepare (find-config) p matched)))
+      (unwind-protect
+           (%match-for-pattern result-pattern fields)
+        (fc-pattern-destroy result-pattern)))))
+
+(defun font-render-prepare-match-with-font (font pattern fields)
+  (with-new-pattern (p)
+    (fill-pattern-from-values p font)
+    (error-if-fail (fc-config-substitute (find-config) p :fc-match-font))
+    (fc-default-substitute p)
+    (cffi:with-foreign-objects ((result 'fc-result))
+    (let* ((matched (fc-font-match (find-config) p result))
+           (result-obj (cffi:mem-ref result 'fc-result)))
+      (unwind-protect
+           (progn
+             (unless (eq result-obj :fc-result-match)
+               (error 'fontconfig-match-error :status result-obj))
+             (internal-font-render-prepare matched pattern fields))
+        (unless (cffi:null-pointer-p matched)
+          (fc-pattern-destroy matched)))))))
 
 (defun app-font-add-dir (dir)
   (cffi:with-foreign-string (name (namestring dir) :encoding :utf-8)
