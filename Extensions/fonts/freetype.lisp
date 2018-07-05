@@ -448,7 +448,8 @@ or NIL if the current transformation is the identity transformation."
   (let ((result (mcclim-fontconfig:match-font (append *main-filter*
                                                       (make-family-pattern family)
                                                       (make-face-pattern face))
-                                              '(:family :style :file :charset))))
+                                              '(:family :style :file :charset)
+                                              :kind :match-font)))
     (list (cdr (assoc :family result))
           (cdr (assoc :style result))
           (cdr (assoc :file result))

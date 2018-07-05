@@ -130,3 +130,8 @@
 (cffi:defcfun ("FcStrListNext" fc-str-list-next) (:pointer fc-char8)
   (str-list :pointer))
 
+(cffi:defcfun ("FcFreeTypeQuery" fc-freetype-query) :pointer
+  (file :string)
+  (id :int)
+  (blanks :pointer)
+  (count (:pointer :int)))

@@ -12,4 +12,5 @@
            #:app-font-add-file
            #:charset-contains-p
            #:font-render-prepare
-           #:font-render-prepare-match))
+           #:font-render-prepare-match
+           #:query-freetype))

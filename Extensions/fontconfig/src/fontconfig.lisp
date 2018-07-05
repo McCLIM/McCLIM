@@ -170,7 +170,19 @@
     for field in fields
     for v = (assoc field *propery-names*)
     when v
-      collect (cons field (pattern-get-internal pattern (cdr v) 0))))
+      append (let* ((name (cdr v))
+                    (first-result (pattern-get-internal pattern name 0)))
+               (cond ((eq first-result :no-match)
+                      (list (cons field first-result)))
+                     ((eq first-result :no-id)
+                      nil)
+                     (t
+                      (cons (cons field first-result)
+                            (loop
+                              for i from 1
+                              for result = (pattern-get-internal pattern name i)
+                              until (member result '(:no-id :no-result))
+                              collect (cons field result))))))))
 
 (defun fill-pattern-from-values (pattern values)
   (when values
@@ -283,6 +295,15 @@
              (internal-font-render-prepare matched pattern fields))
         (unless (cffi:null-pointer-p matched)
           (fc-pattern-destroy matched)))))))
+
+(defun query-freetype (file index fields)
+  (cffi:with-foreign-objects ((count :int))
+    (let ((pattern (fc-freetype-query file index (cffi:null-pointer) count)))
+      (when (cffi:null-pointer-p pattern)
+        (error "Unable to load file: ~s" file))
+      (unwind-protect
+           (pattern-to-lisp pattern fields)
+        (fc-pattern-destroy pattern)))))
 
 (defun app-font-add-dir (dir)
   (cffi:with-foreign-string (name (namestring dir) :encoding :utf-8)
