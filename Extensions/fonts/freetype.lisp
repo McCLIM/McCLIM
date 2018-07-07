@@ -612,13 +612,11 @@ or NIL if the current transformation is the identity transformation."
 
 (defun find-best-font (ch)
   (let* ((match (mcclim-fontconfig:match-font `((:charset . (:charset ,ch))) '(:family :style) :kind :match-font)))
-    (log:trace "Match for ~s: ~s" ch match)
     (let ((family (cdr (assoc :family match)))
           (style (cdr (assoc :style match))))
       (cond ((and family style)
              (list family style))
             (t
-             (log:warn "No font found for ~s" ch)
              '(nil nil))))))
 
 (defun text-style-contains-p (port text-style ch)
@@ -631,7 +629,6 @@ or NIL if the current transformation is the identity transformation."
     for fallback in (text-style-fallback-fonts text-style)
     for fallback-family = (first fallback)
     for fallback-style = (second fallback)
-    do (log:info "Checking fallback font: ~s" fallback)
     when (text-style-contains-p port (clim:make-text-style fallback-family fallback-style 10) ch)
       return fallback
     finally (return (find-best-font ch))))
