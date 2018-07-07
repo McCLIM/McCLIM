@@ -1,5 +1,6 @@
 #| dummy system to make Quicklisp happy |#
-(defsystem #:mcclim-fonts)
+(defsystem #:mcclim-fonts
+  :components ((:file "common")))
 
 (defsystem #:mcclim-fonts/truetype
     :depends-on (#:clim-basic #:zpb-ttf #:cl-vectors #:cl-paths-ttf #:cl-aa #:alexandria)
@@ -13,9 +14,9 @@
   (uiop:symbol-call :mcclim-truetype :autoconfigure-fonts))
 
 (defsystem #:mcclim-fonts/clx-truetype
-    :depends-on (#:mcclim-fonts/truetype #:mcclim-clx)
-    :components ((:file "xrender-fonts")))
+  :depends-on (#:mcclim-fonts/truetype #:mcclim-clx)
+  :components ((:file "xrender-fonts")))
 
 (defsystem #:mcclim-fonts/clx-freetype
-  :depends-on (#:mcclim-clx #:cl-freetype2 #:mcclim-fontconfig #:mcclim-harfbuzz)
+  :depends-on (#:mcclim-fonts #:mcclim-clx #:cl-freetype2 #:mcclim-fontconfig #:mcclim-harfbuzz)
   :components ((:file "freetype")))

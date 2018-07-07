@@ -1,7 +1,8 @@
 (defpackage :clim-freetype
   (:use :cl)
   (:export #:freetype-font-renderer
-           #:*enable-autohint*))
+           #:*enable-autohint*
+           #:make-font-replacement-text-style))
 
 (in-package :clim-freetype)
 
@@ -488,10 +489,6 @@ or NIL if the current transformation is the identity transformation."
                                                   (text-style climi::device-font-text-style))
   nil)
 
-(defun text-style-contains-p (port text-style char)
-  (let ((font (clim-clx::text-style-to-x-font port text-style)))
-    (mcclim-fontconfig:charset-contains-p (freetype-font-face/charset (freetype-font/face font)) char)))
-
 ;;;
 ;;;  List fonts
 ;;;
@@ -562,3 +559,102 @@ or NIL if the current transformation is the identity transformation."
       (/ (- (freetype2-types:ft-glyph-metrics-width metrics)
             (freetype2-types:ft-glyph-metrics-hori-advance metrics))
          *freetype-font-scale*))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Font replacement code
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defgeneric text-style-fallback-fonts (text-style)
+  (:method ((text-style clim:standard-text-style))
+    nil))
+
+(defclass font-replacement-text-style (clim:standard-text-style)
+  ((fallback-fonts :initarg :replacement
+                   :reader font-replacement-text-style/replacement)))
+
+(defmethod text-style-fallback-fonts ((text-style font-replacement-text-style))
+  (font-replacement-text-style/replacement text-style))
+
+(defmethod clim:merge-text-styles ((style1 font-replacement-text-style) (style2 clim:standard-text-style))
+  (let ((merged-standard (call-next-method)))
+    (make-font-replacement-text-style (clim:text-style-family merged-standard)
+                                      (clim:text-style-face merged-standard)
+                                      (clim:text-style-size merged-standard)
+                                      (font-replacement-text-style/replacement style1))))
+
+(defmethod clim:merge-text-styles ((style1 clim:standard-text-style) (style2 font-replacement-text-style))
+  (let ((merged-standard (call-next-method)))
+    (make-font-replacement-text-style (clim:text-style-family merged-standard)
+                                      (clim:text-style-face merged-standard)
+                                      (clim:text-style-size merged-standard)
+                                      (font-replacement-text-style/replacement style2))))
+
+;;; The text styles needs to be cached because the implementation of
+;;; CLIM-CLX::LOOKUP-TEXT-STYLE-TO-X-FONT calls
+;;; CLIM:TEXT-STYLE-MAPPING in order to avoid doing a full font
+;;; lookup. The implementation of TEXT-STYLE-MAPPING ends up doing a
+;;; hash lookup on the text-style instance, which for CLOS instances
+;;; uses object identity.
+;;;
+;;; Having this cache effectively interns instances of
+;;; FONT-REPLACEMENT-TEXT-STYLE, allowing the TEXT-STYLE-MAPPING cache
+;;; to work properly.
+(defvar *text-styles* (make-hash-table :test 'equal))
+
+(defun make-font-replacement-text-style (family face size replacement)
+  (alexandria:ensure-gethash (list family face size replacement)
+                             *text-styles*
+                             (make-instance 'font-replacement-text-style
+                                            :text-family family
+                                            :text-face face
+                                            :text-size size
+                                            :replacement replacement)))
+
+(defun find-best-font (ch)
+  (let* ((match (mcclim-fontconfig:match-font `((:charset . (:charset ,ch))) '(:family :style) :kind :match-font)))
+    (log:trace "Match for ~s: ~s" ch match)
+    (let ((family (cdr (assoc :family match)))
+          (style (cdr (assoc :style match))))
+      (cond ((and family style)
+             (list family style))
+            (t
+             (log:warn "No font found for ~s" ch)
+             '(nil nil))))))
+
+(defun text-style-contains-p (port text-style ch)
+  (let* ((font (clim-clx::text-style-to-x-font port text-style))
+         (charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face font))))
+    (mcclim-fontconfig:charset-contains-p charset ch)))
+
+(defun find-best-font-for-fallback (port text-style ch)
+  (loop
+    for fallback in (text-style-fallback-fonts text-style)
+    for fallback-family = (first fallback)
+    for fallback-style = (second fallback)
+    do (log:info "Checking fallback font: ~s" fallback)
+    when (text-style-contains-p port (clim:make-text-style fallback-family fallback-style 10) ch)
+      return fallback
+    finally (return (find-best-font ch))))
+
+(defmethod clim-clx:find-replacement-fonts-from-renderer (port (font-renderer freetype-font-renderer) text-style string)
+  (let* ((default-font (clim-clx::text-style-to-x-font port text-style))
+         (default-charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face default-font)))
+         (result nil)
+         (current-string (make-string-output-stream))
+         (current-text-style nil))
+    (labels ((push-string ()
+               (let ((s (get-output-stream-string current-string)))
+                 (when (plusp (length s))
+                   (push (cons s current-text-style) result))))
+             (collect-result (ch s)
+               (unless (equal current-text-style s)
+                 (push-string)
+                 (setq current-text-style s))
+               (write-char ch current-string)))
+      (loop
+        for ch across string
+        do (collect-result ch (if (mcclim-fontconfig:charset-contains-p default-charset ch)
+                                  '(nil nil)
+                                  (find-best-font-for-fallback port text-style ch))))
+      (push-string)
+      (reverse result))))

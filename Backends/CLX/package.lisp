@@ -72,4 +72,5 @@
                 #:%sheet-mirror-transformation
 		#:standard-port)
   (:export
-   #:port-find-all-font-families))
+   #:port-find-all-font-families
+   #:find-replacement-fonts-from-renderer))
