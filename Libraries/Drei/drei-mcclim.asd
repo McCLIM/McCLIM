@@ -3,7 +3,8 @@
   :description "Drei Replaces EINE's Inheritor – McCLIM editor substrate"
   :depends-on ((:version "flexichain" "1.5.1")
                #:esa-mcclim #:clim-core #-clim-without-swank #:swank
-               #:automaton #:persistent)
+               #:automaton #:persistent
+               #:mcclim-fonts)
   :components
   ((:file "packages")
    (:file "buffer" :depends-on ("packages"))
