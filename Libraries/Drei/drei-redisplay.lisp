@@ -30,6 +30,69 @@
 (in-package :drei)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;  Wrapper around DRAW-TEXT* and TEXT-SIZE that
+;;;  handles font replacement
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun iterate-font-replacement (stream string start end text-style fn)
+  (let* ((blocks (mcclim-font:find-replacement-text-styles stream (subseq string start end) :text-style text-style))
+         (text-style (or text-style (clim:medium-text-style stream)))
+         (size (clim:text-style-size text-style)))
+    (loop
+      with curr-x = 0
+      for (string family style) in blocks
+      for new-text-style = (if family (clim:make-text-style family style size) text-style)
+      do (progn
+           (funcall fn string curr-x new-text-style)
+           (multiple-value-bind (width)
+               (clim:text-size stream string :text-style text-style)
+             (incf curr-x width)))
+      finally (return curr-x))))
+
+(defun font-replacement-draw-text* (stream string x y
+                                    &key
+                                      (start 0) (end (length string))
+                                      text-style ink (align-y :baseline))
+  (iterate-font-replacement stream string start end text-style
+                            (lambda (string curr-x new-text-style)
+                              (clim:draw-text* stream string (+ x curr-x) y :text-style new-text-style :ink ink :align-y align-y))))
+
+(defun xfont-replacement-draw-text* (stream string x y
+                                    &key
+                                      (start 0) (end (length string))
+                                      text-style ink (align-y :baseline))
+  (let* ((blocks (mcclim-font:find-replacement-text-styles stream (subseq string start end) :text-style text-style))
+         (text-style (or text-style (clim:medium-text-style stream)))
+         (size (clim:text-style-size text-style)))
+    (loop
+      with curr-x = x
+      for (string family style) in blocks
+      for new-text-style = (if family (clim:make-text-style family style size) text-style)
+      do (progn
+           (clim:draw-text* stream string curr-x y :text-style new-text-style :ink ink :align-y align-y)
+           (multiple-value-bind (width)
+               (clim:text-size stream string :text-style text-style)
+            (incf curr-x width))))))
+
+(defun font-replacement-text-size (stream string &key (start 0) (end (length string)) text-style)
+  (iterate-font-replacement stream string start end text-style (lambda (string curr-x new-text-style)
+                                                                 (declare (ignore string curr-x new-text-style))
+                                                                 nil)))
+
+(defun xfont-replacement-text-size (stream string &key (start 0) (end (length string)) text-style)
+  (let* ((blocks (mcclim-font:find-replacement-text-styles stream (subseq string start end) :text-style text-style))
+         (text-style (or text-style (clim:medium-text-style stream)))
+         (size (clim:text-style-size text-style)))
+    (loop
+      with curr-width = 0
+      for (string family style) in blocks
+      for new-text-style = (if family (clim:make-text-style family style size) text-style)
+      do (multiple-value-bind (width)
+             (clim:text-size stream string :text-style text-style)
+           (incf curr-width width))
+      finally (return curr-width))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Display of Drei instances.
 ;;;
@@ -517,13 +580,13 @@ of the stroke."
                (vector-push-extend width widths))
               (object
                (multiple-value-bind (w)
-                   (text-size stream object
+                   (font-replacement-text-size stream object
                     :text-style text-style)
                  (incf width w)
                  (vector-push-extend width widths)))
               (t
                (multiple-value-bind (w)
-                   (text-size stream stroke-string
+                   (font-replacement-text-size stream stroke-string
                     :start start :end end
                     :text-style text-style)
                  (incf width w)
@@ -568,23 +631,24 @@ any actual output takes place."
 		(calculate-stroke-width stroke-string merged-text-style stream cursor-x)
 		(values (- x2 x1) parts widths))
           (when draw
-            (loop for (start end object) in stroke-parts
-               for width across part-widths
-               do (cond ((eql object #\Tab)
-                         nil)
-                        (object
-                         (draw-text* stream object (+ cursor-x width)
-                                     cursor-y
-                                     :text-style merged-text-style
-                                     :ink +darkblue+
-                                     :align-y :baseline))
-                        (t
-                         (draw-text* stream stroke-string (+ cursor-x width)
-                                     cursor-y
-                                     :start start :end end
-                                     :text-style merged-text-style
-                                     :ink (face-ink (drawing-options-face drawing-options))
-                                     :align-y :baseline)))))
+            (loop
+              for (start end object) in stroke-parts
+              for width across part-widths
+              do (cond ((eql object #\Tab)
+                        nil)
+                       (object
+                        (font-replacement-draw-text* stream object (+ cursor-x width)
+                                                     cursor-y
+                                                     :text-style merged-text-style
+                                                     :ink +darkblue+
+                                                     :align-y :baseline))
+                       (t
+                        (font-replacement-draw-text* stream stroke-string (+ cursor-x width)
+                                                     cursor-y
+                                                     :start start :end end
+                                                     :text-style merged-text-style
+                                                     :ink (face-ink (drawing-options-face drawing-options))
+                                                     :align-y :baseline)))))
 	  (record-stroke stroke stroke-parts part-widths
                          cursor-x (- cursor-y text-style-ascent)
 			 (+ width cursor-x) (+ cursor-y text-style-descent)
@@ -938,14 +1002,14 @@ is an absolute offset into the buffer of `view',"
 	    do (return (aref (stroke-widths stroke) next))
 	  when (<= start pos end)
 	    do (return (+ width
-			  (text-size stream string
-				     :start start
-				     :end pos
-				     :text-style (merge-text-styles
-						  (face-style
-						   (drawing-options-face
-						    (stroke-drawing-options stroke)))
-						  (medium-merged-text-style (sheet-medium stream)))))))))
+			  (font-replacement-text-size stream string
+				                      :start start
+				                      :end pos
+				                      :text-style (merge-text-styles
+						                   (face-style
+						                    (drawing-options-face
+						                     (stroke-drawing-options stroke)))
+						                   (medium-merged-text-style (sheet-medium stream)))))))))
 
 (defgeneric offset-to-screen-position (pane view offset)
   (:documentation "Returns the position of offset as a screen
