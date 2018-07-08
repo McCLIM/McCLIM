@@ -234,6 +234,7 @@
 ;; McCLIM fixme: Shouldn't we be able to activate before the (args) prompt
 ;; since defaults are defined?
 ;; FIXME: Disabled input, as it usually seems to hang.
+#+(or) ; nonsensical on mezzano
 (define-command (com-run :name "Run" :command-table application-commands :menu t)
   ((program 'string :prompt "Command")
    (args '(sequence string) :default '("") :prompt "Arguments"))
@@ -249,6 +250,7 @@
 						      :error-output output-stream))))))
 
 ;; I could replace this command with a keyword to COM-RUN..
+#+(or) ; nonsensical on mezzano
 (define-command (com-background-run :name "Background Run"
                                     :menu t
 				    :command-table application-commands)
@@ -259,6 +261,7 @@
                           (uiop:run-program program)
                           (uiop:run-program `(,program ,@args))))))
 
+#+(or) ; mimedb not included in demo4
 (define-command (com-reload-mime-database :name "Reload Mime Database"
                                           :menu t
                                           :command-table application-commands)
@@ -736,6 +739,7 @@ if you are interested in fixing this."))
           (string< (princ-to-string a)
                    (princ-to-string b))))))
 
+#+(or) ; x-specializer-direct-generic-functions not implemented
 (define-command (com-show-class-generic-functions
                  :name "Show Class Generic Functions"
                  :command-table show-commands
@@ -1271,13 +1275,22 @@ if you are interested in fixing this."))
                  "Show Directory"
                  (format nil "Show Directory ~A" pathname)))
         (t
-         (multiple-value-bind (command doc pointer-doc)
-             (find-viewspec pathname)
-           (let ((mime-type (pathname-mime-type pathname)))
-             (mv-or
-              (when mime-type (mime-type-to-command mime-type pathname))
-              (when command
-                (values command doc pointer-doc))))))))
+         (let ((canon-type (first (find (pathname-type pathname)
+                                        mezzano.gui.filer::*type-registry*
+                                        :test (lambda (x y) (member x y :test #'string=))
+                                        :key #'rest))))
+           (cond (canon-type
+                  (values `(com-view ,pathname)
+                          "View"
+                          (format nil "View ~A" pathname)))
+                 (t
+                  (multiple-value-bind (command doc pointer-doc)
+                      (find-viewspec pathname)
+                    (let ((mime-type (pathname-mime-type pathname)))
+                      (mv-or
+                       (when mime-type (mime-type-to-command mime-type pathname))
+                       (when command
+                         (values command doc pointer-doc)))))))))))
 
 (define-presentation-translator automagic-pathname-translator
   (clim:pathname clim:command filesystem-commands
@@ -1293,6 +1306,13 @@ if you are interested in fixing this."))
   (values
    (automagic-translator object)
    'command))
+
+(define-command (com-view :name "View")
+  ((pathname 'pathname :prompt "pathname"))
+  (let ((pathname (merge-pathnames pathname)))
+    (mezzano.gui.filer::view (mezzano.gui.filer::canonical-type-from-pathname-type
+                              (pathname-type pathname))
+                             pathname)))
 
 
 ;;; The directory stack.
@@ -1436,6 +1456,7 @@ if you are interested in fixing this."))
             (format t "Image format ~A not recognized" type))))
       (format t "No such file: ~A" image-pathname)))
 
+#+(or) ; disabled for demo4 because source pathname are machine-specific.
 (define-command (com-edit-definition :name "Edit Definition"
 				     :command-table lisp-commands
                                      :menu t

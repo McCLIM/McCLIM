@@ -22,6 +22,9 @@
 ;;; fallback (path may be set in a restart by the user)
 (defparameter *truetype-font-path*
   (find-if #'probe-file
+           #+mezzano
+           '(#p"LOCAL:>Fonts>")
+           #-mezzano
            '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
              #p"/usr/share/fonts/truetype/dejavu/"
              #p"/usr/share/fonts/dejavu/"
