@@ -45,7 +45,7 @@
       do (progn
            (funcall fn string curr-x new-text-style)
            (multiple-value-bind (width)
-               (clim:text-size stream string :text-style text-style)
+               (clim:text-size stream string :text-style new-text-style)
              (incf curr-x width)))
       finally (return curr-x))))
 
@@ -57,40 +57,10 @@
                             (lambda (string curr-x new-text-style)
                               (clim:draw-text* stream string (+ x curr-x) y :text-style new-text-style :ink ink :align-y align-y))))
 
-(defun xfont-replacement-draw-text* (stream string x y
-                                    &key
-                                      (start 0) (end (length string))
-                                      text-style ink (align-y :baseline))
-  (let* ((blocks (mcclim-font:find-replacement-text-styles stream (subseq string start end) :text-style text-style))
-         (text-style (or text-style (clim:medium-text-style stream)))
-         (size (clim:text-style-size text-style)))
-    (loop
-      with curr-x = x
-      for (string family style) in blocks
-      for new-text-style = (if family (clim:make-text-style family style size) text-style)
-      do (progn
-           (clim:draw-text* stream string curr-x y :text-style new-text-style :ink ink :align-y align-y)
-           (multiple-value-bind (width)
-               (clim:text-size stream string :text-style text-style)
-            (incf curr-x width))))))
-
 (defun font-replacement-text-size (stream string &key (start 0) (end (length string)) text-style)
   (iterate-font-replacement stream string start end text-style (lambda (string curr-x new-text-style)
                                                                  (declare (ignore string curr-x new-text-style))
                                                                  nil)))
-
-(defun xfont-replacement-text-size (stream string &key (start 0) (end (length string)) text-style)
-  (let* ((blocks (mcclim-font:find-replacement-text-styles stream (subseq string start end) :text-style text-style))
-         (text-style (or text-style (clim:medium-text-style stream)))
-         (size (clim:text-style-size text-style)))
-    (loop
-      with curr-width = 0
-      for (string family style) in blocks
-      for new-text-style = (if family (clim:make-text-style family style size) text-style)
-      do (multiple-value-bind (width)
-             (clim:text-size stream string :text-style text-style)
-           (incf curr-width width))
-      finally (return curr-width))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
