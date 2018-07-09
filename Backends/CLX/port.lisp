@@ -376,7 +376,7 @@
   (:method (port font-renderer font string)
     (cons string '(nil nil))))
 
-;;; This method can't be defined in ports.lisp, since it relies on
+;;; This method can't be defined in fonts.lisp, since it relies on
 ;;; CLX-PORT which is only defined when this file is loaded.
 (defmethod mcclim-font:find-replacement-fonts-from-port ((port clim-clx::clx-port) text-style string)
   (find-replacement-fonts-from-renderer port (clim-clx::clx-port-font-renderer port) text-style string))

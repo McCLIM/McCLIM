@@ -359,8 +359,8 @@ or NIL if the current transformation is the identity transformation."
                  with rx = 0
                  with ry = 0
                  for current-index in index-list
-                 do (let ((x-pos (+ x rx (glyph-entry-x-offset current-index)))
-                          (y-pos (+ y ry (glyph-entry-y-offset current-index))))
+                 do (let ((x-pos (+ x rx #+nil(glyph-entry-x-offset current-index)))
+                          (y-pos (+ y ry #+nil(glyph-entry-y-offset current-index))))
                       (setf (aref vec 0) (glyph-entry-codepoint current-index))
                       (multiple-value-bind (transformed-x transformed-y)
                           (clim:transform-position transformation x-pos y-pos)
