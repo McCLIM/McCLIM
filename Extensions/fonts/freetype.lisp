@@ -10,7 +10,7 @@
 
 (defparameter *freetype-font-scale* 26.6)
 
-(defvar *enable-autohint* nil)
+(defvar *enable-autohint* t)
 
 (defvar *lock* (bordeaux-threads:make-recursive-lock))
 
