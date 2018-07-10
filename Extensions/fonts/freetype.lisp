@@ -624,7 +624,9 @@ or NIL if the current transformation is the identity transformation."
          (charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face font))))
     (mcclim-fontconfig:charset-contains-p charset ch)))
 
-(defun find-best-font-for-fallback (port text-style ch)
+(defvar *replacement-font-cache* (make-hash-table :test 'equal))
+
+(defun find-best-font-for-fallback-internal (port text-style ch)
   (loop
     for fallback in (text-style-fallback-fonts text-style)
     for fallback-family = (first fallback)
@@ -632,6 +634,13 @@ or NIL if the current transformation is the identity transformation."
     when (text-style-contains-p port (clim:make-text-style fallback-family fallback-style 10) ch)
       return fallback
     finally (return (find-best-font ch))))
+
+(defun find-best-font-for-fallback (port text-style ch)
+  (alexandria:ensure-gethash (list (clim:text-style-family text-style)
+                                   (clim:text-style-face text-style)
+                                   ch)
+                             *replacement-font-cache*
+                             (find-best-font-for-fallback-internal port text-style ch)))
 
 (defmethod clim-clx:find-replacement-fonts-from-renderer (port (font-renderer freetype-font-renderer) text-style string)
   (let* ((default-font (clim-clx::text-style-to-x-font port text-style))
