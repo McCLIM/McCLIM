@@ -152,10 +152,8 @@
 
 (defclass editor-substrate-user-mixin (value-gadget)
   ((substrate :accessor substrate
-              :documentation "The editing substrate used for this
-text field."))
-  (:documentation "A mixin class for creating gadgets using
-editor substrates."))
+              :documentation "The editing substrate used for this text field."))
+  (:documentation "A mixin class for creating gadgets using editor substrates."))
 
 (defmethod gadget-value ((gadget editor-substrate-user-mixin))
   (gadget-value (substrate gadget)))
@@ -169,7 +167,8 @@ editor substrates."))
 ;;;  30.4.8 The concrete text-field Gadget
 
 (defclass text-field-pane (text-field
-                           vrack-pane editor-substrate-user-mixin)
+                           vrack-pane
+                           editor-substrate-user-mixin)
   ((activation-gestures :accessor activation-gestures
                         :initarg :activation-gestures
                         :documentation "A list of gestures that
@@ -205,7 +204,8 @@ cause the activate callback to be called."))
 ;;;  30.4.9 The concrete text-editor Gadget
 
 (defclass text-editor-pane (text-editor
-                            vrack-pane editor-substrate-user-mixin)
+                            vrack-pane
+                            editor-substrate-user-mixin)
   ()
   (:default-initargs :activation-gestures '()))
 

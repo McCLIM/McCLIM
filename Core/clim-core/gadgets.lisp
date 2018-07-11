@@ -367,9 +367,11 @@
 
 (defclass range-gadget ()
   ((min-value :initarg :min-value
-              :accessor gadget-min-value)
+              :accessor gadget-min-value
+              :initform 0)
    (max-value :initarg :max-value
-              :accessor gadget-max-value)))
+              :accessor gadget-max-value
+              :initform 1)))
 
 (defclass range-gadget-mixin (range-gadget)
   ;; Try to be compatible with Lispworks' CLIM.
