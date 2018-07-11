@@ -98,16 +98,11 @@
       (find-first-defined-class (find-symbols (generate-clx-pane-specs type)))
       type))
 
-(defclass clx-pane-mixin ()
-  ()
-  (:documentation "Mixin class for CLX panes. This is needed in order to specialise on CLX panes only."))
-
 ;;; This is an example of how make-pane-1 might create specialized instances of
 ;;; the generic pane types based upon the type of the frame-manager. However, in
 ;;; the CLX case, we don't expect there to be any CLX specific panes. CLX uses
 ;;; the default generic panes instead.
 (defun maybe-mirroring (fm concrete-pane-class)
-  (log:info "mirroring? : ~s" (funcall (mirroring-p fm) concrete-pane-class))
   (when (funcall (mirroring-p fm) concrete-pane-class)
     (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
                                           (class-name concrete-pane-class)
@@ -132,7 +127,6 @@
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
   (let* ((cp (find-concrete-pane-class type))
          (p (maybe-mirroring fm cp)))
-    (log:info "pane type = ~s, cp = ~s, cpn = ~s" (class-name p) cp (type-of cp))
     (apply #'make-instance
 	   p
 	   :frame frame
