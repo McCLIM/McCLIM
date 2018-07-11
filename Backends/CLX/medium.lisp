@@ -1366,3 +1366,114 @@ time an indexed pattern is drawn.")
             (when (typep fn 'xlib:font)
               (setf (xlib:gcontext-font gc)
                     fn))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; xrender
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun find-rgba-format (display)
+  (or (getf (xlib:display-plist display) 'rgba-format)
+      (let* ((formats (xlib::render-query-picture-formats display))
+             (format (find-if (lambda (v)
+                                (and (= (byte-size (xlib:picture-format-red-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-green-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-blue-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-alpha-byte v)) 8)))
+                              formats)))
+        (unless format
+          (error "Can't find 8-bit RGBA format"))
+        (setf (getf (xlib:display-plist display) 'rgba-format) format))))
+
+(defun find-alpha-mask-format (display)
+  (or (getf (xlib:display-plist display) 'alpha-mask-format)
+      (let* ((formats (xlib::render-query-picture-formats display))
+             (format (find-if (lambda (v)
+                                (and (= (byte-size (xlib:picture-format-red-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-green-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-blue-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-alpha-byte v)) 8)))
+                              formats)))
+        (unless format
+          (error "Can't find 8-bit RGBA format"))
+        (setf (getf (xlib:display-plist display) 'alpha-mask-format) format))))
+
+(defun create-picture-from-drawable (drawable)
+  (xlib:render-create-picture drawable
+                              :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
+                              :poly-edge :smooth
+                              :poly-mode :precise))
+
+(defgeneric create-dest-picture (drawable)
+  (:method ((drawable xlib:window))
+    (or (getf (xlib:window-plist drawable) 'cached-picture)
+        (setf (getf (xlib:window-plist drawable) 'cached-picture)
+              (create-picture-from-drawable drawable))))
+  (:method ((drawable xlib:pixmap))
+    (or (getf (xlib:pixmap-plist drawable) 'cached-picture)
+        (setf (getf (xlib:pixmap-plist drawable) 'cached-picture)
+              (create-picture-from-drawable drawable)))))
+
+(defun make-xrender-colour (fg)
+  (list (ash (ldb (byte 8 16) fg) 8)
+        (ash (ldb (byte 8 8) fg) 8)
+        (ash (ldb (byte 8 0) fg) 8)
+        #xFFFF))
+
+(defun create-pen (drawable gc)
+  (let* ((fg (xlib::gcontext-foreground gc))
+         (cached-pen (getf (xlib:gcontext-plist gc) 'cached-pen)))
+    (cond ((and cached-pen (equal (second cached-pen) fg))
+           (first cached-pen))
+          (t
+           (when cached-pen
+             (xlib:render-free-picture (first cached-pen)))
+           (let* ((pixmap (xlib:create-pixmap :drawable (xlib:drawable-root drawable)
+                                              :width 1
+                                              :height 1
+                                              :depth 32))
+                  (picture (xlib:render-create-picture pixmap
+                                                       :format (find-rgba-format (xlib::drawable-display drawable))
+                                                       :repeat :on))
+                  (colour (list (ash (ldb (byte 8 16) fg) 8)
+                                (ash (ldb (byte 8 8) fg) 8)
+                                (ash (ldb (byte 8 0) fg) 8)
+                                #xFFFF)))
+             (xlib:render-fill-rectangle picture :src colour 0 0 1 1)
+             (xlib:free-pixmap pixmap)
+             (setf (getf (xlib:gcontext-plist gc) 'cached-pen) (list picture fg))
+             picture)))))
+
+(defmethod move-sheet ((sheet clx-pane-mixin) x y)
+  (when (and (zerop x) (zerop y))
+    (return-from move-sheet nil))
+  (flet ((update-transform ()
+           (let ((transform (sheet-transformation sheet)))
+             (multiple-value-bind (old-x old-y)
+                 (transform-position transform 0 0)
+               (setf (sheet-transformation sheet)
+                     (compose-translation-with-transformation
+                      transform (- x old-x) (- y old-y)))))))
+    (let ((parent (slot-value sheet 'climi::parent)))
+      (multiple-value-bind (x1 y1 x2 y2)
+          (rectangle-edges* (sheet-region parent))
+        (if (and (typep parent 'clim-extensions:viewport-pane)
+                 (or (and (zerop x) (< (abs y) (- y2 y1)))
+                     (and (zerop y) (< (abs x) (- x2 x1)))))
+            (with-sheet-medium (medium sheet)
+              (with-clx-graphics () medium
+                (let ((dest (create-dest-picture mirror)))
+                  (xlib:render-composite :over dest nil dest
+                                         10 10   ;src x,y
+                                         0 0     ;mask x,y
+                                         50 150  ;dest x,y
+                                         200 100 ;w,h
+                                         )
+                  (update-transform))))
+            #+nil
+            (multiple-value-bind (vp-x1 vp-y1 vp-x2 vp-y2)
+                (rectangle-edges* (sheet-region parent))
+              (multiple-value-bind (s-x1 s-y1 s-x2 s-y2)
+                  (rectangle-edges* (sheet-region sheet))
+                ))
+            ;; ELSE: No overlap, just repaint everything
+            (update-transform))))))

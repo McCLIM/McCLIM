@@ -98,11 +98,16 @@
       (find-first-defined-class (find-symbols (generate-clx-pane-specs type)))
       type))
 
+(defclass clx-pane-mixin ()
+  ()
+  (:documentation "Mixin class for CLX panes. This is needed in order to specialise on CLX panes only."))
+
 ;;; This is an example of how make-pane-1 might create specialized instances of
 ;;; the generic pane types based upon the type of the frame-manager. However, in
 ;;; the CLX case, we don't expect there to be any CLX specific panes. CLX uses
 ;;; the default generic panes instead.
 (defun maybe-mirroring (fm concrete-pane-class)
+  (log:info "mirroring? : ~s" (funcall (mirroring-p fm) concrete-pane-class))
   (when (funcall (mirroring-p fm) concrete-pane-class)
     (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
                                           (class-name concrete-pane-class)
@@ -114,7 +119,7 @@
         (unless foundp
           (eval
            `(defclass ,class-symbol
-                (mirrored-sheet-mixin
+                (clx-pane-mixin mirrored-sheet-mixin
                  ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
                      '(permanent-medium-sheet-output-mixin))
                  ,concrete-pane-class-symbol)
@@ -125,12 +130,15 @@
   concrete-pane-class)
 
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
-  (apply #'make-instance
-	 (maybe-mirroring fm (find-concrete-pane-class type))
-	 :frame frame
-	 :manager fm
-	 :port (port frame)
-	 args))
+  (let* ((cp (find-concrete-pane-class type))
+         (p (maybe-mirroring fm cp)))
+    (log:info "pane type = ~s, cp = ~s, cpn = ~s" (class-name p) cp (type-of cp))
+    (apply #'make-instance
+	   p
+	   :frame frame
+	   :manager fm
+	   :port (port frame)
+	   args)))
 
 
 (defmethod adopt-frame :before ((fm clx-frame-manager) (frame menu-frame))
@@ -203,3 +211,20 @@
 
 (defmethod note-space-requirements-changed :after ((graft clx-graft) pane)
   (tell-window-manager-about-space-requirements pane))
+
+#+nil
+(defmethod (setf clim:sheet-transformation) :around (transformation (sheet clx-pane-mixin))
+  (log:info "transforming clx sheet: ~s" sheet)
+  (unless (transformation-equal transformation (sheet-transformation sheet))
+    (let ((old-transformation (sheet-transformation sheet)))
+      (let ((climi::*inhibit-dispatch-repaint* nil))
+        (call-next-method))
+      #+nil
+      (when (sheet-viewable-p sheet)
+        (let* ((sheet-region (sheet-region sheet))
+               (new-region (transform-region (sheet-transformation sheet) sheet-region))
+               (old-region (transform-region old-transformation sheet-region)))
+          (log:info "OLD: ~s    NEW: ~s" old-region new-region)
+          #+nil
+          (dispatch-repaint (sheet-parent sheet)
+                            (region-union new-region old-region)))))))
