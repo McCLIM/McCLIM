@@ -1522,8 +1522,8 @@ time an indexed pattern is drawn.")
                                              (make-rectangle* (- x) (- y) (- dx x) (- height y))))
                                     (t
                                      (error "Weird, both zero?")))
-                            (let ((width-integer (truncate area-width))
-                                  (height-integer (truncate area-height)))
+                            (let ((width-integer (truncate (+ area-width 0.5)))
+                                  (height-integer (truncate (+ area-height 0.5))))
                               (xlib:render-composite :over src nil temp-buffer
                                                      src-x src-y ;src pos
                                                      0 0 ;mask pos
