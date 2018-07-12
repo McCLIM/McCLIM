@@ -359,8 +359,8 @@ or NIL if the current transformation is the identity transformation."
                  with rx = 0
                  with ry = 0
                  for current-index in index-list
-                 do (let ((x-pos (+ x rx #+nil(glyph-entry-x-offset current-index)))
-                          (y-pos (+ y ry #+nil(glyph-entry-y-offset current-index))))
+                 do (let ((x-pos (+ x rx #+(or) (glyph-entry-x-offset current-index)))
+                          (y-pos (+ y ry #+(or) (glyph-entry-y-offset current-index))))
                       (setf (aref vec 0) (glyph-entry-codepoint current-index))
                       (multiple-value-bind (transformed-x transformed-y)
                           (clim:transform-position transformation x-pos y-pos)
@@ -407,7 +407,7 @@ or NIL if the current transformation is the identity transformation."
                       ;; then we should compute the similar value for the right side as
                       ;; well and it's not clear as to how to find that value.
                       0
-                      #+nil (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
+                      #+(or) (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
                       width
                       (freetype2:face-ascender-pixels face)
                       (freetype2:face-descender-pixels face)
@@ -619,10 +619,10 @@ or NIL if the current transformation is the identity transformation."
             (t
              '(nil nil))))))
 
-(defun text-style-contains-p (port text-style ch)
+(defun text-style-contains-char-p (port text-style ch)
   (let* ((font (clim-clx::text-style-to-x-font port text-style))
          (charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face font))))
-    (mcclim-fontconfig:charset-contains-p charset ch)))
+    (mcclim-fontconfig:charset-contains-char-p charset ch)))
 
 (defvar *replacement-font-cache* (make-hash-table :test 'equal))
 
@@ -631,7 +631,7 @@ or NIL if the current transformation is the identity transformation."
     for fallback in (text-style-fallback-fonts text-style)
     for fallback-family = (first fallback)
     for fallback-style = (second fallback)
-    when (text-style-contains-p port (clim:make-text-style fallback-family fallback-style 10) ch)
+    when (text-style-contains-char-p port (clim:make-text-style fallback-family fallback-style 10) ch)
       return fallback
     finally (return (find-best-font ch))))
 
@@ -659,7 +659,7 @@ or NIL if the current transformation is the identity transformation."
                (write-char ch current-string)))
       (loop
         for ch across string
-        do (collect-result ch (if (mcclim-fontconfig:charset-contains-p default-charset ch)
+        do (collect-result ch (if (mcclim-fontconfig:charset-contains-char-p default-charset ch)
                                   '(nil nil)
                                   (find-best-font-for-fallback port text-style ch))))
       (push-string)

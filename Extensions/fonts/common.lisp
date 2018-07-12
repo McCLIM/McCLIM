@@ -7,7 +7,7 @@
 
 (defgeneric find-replacement-fonts-from-port (port text-style string)
   (:method (port text-style string)
-    (cons string '(nil nil))))
+    (list (cons string '(nil nil)))))
 
 (defun find-replacement-text-styles (stream string &key text-style)
   "Find replacement fonts for characters in STRING if they were drawn on STREAM.
