@@ -1465,6 +1465,15 @@ time an indexed pattern is drawn.")
                                         :poly-mode :precise
                                         :subwindow-mode :include-inferiors))))
 
+(defun create-move-sheet-temp-buffer-picture (drawable)
+  (or (getf (xlib:window-plist drawable) 'temp-buffer-picture)
+      (setf (getf (xlib:window-plist drawable) 'temp-buffer-picture)
+            (let ((pixmap (xlib:create-pixmap :width (xlib:drawable-width drawable)
+                                              :height (xlib:drawable-height drawable)
+                                              :depth (xlib:drawable-depth drawable)
+                                              :drawable drawable)))
+              (create-picture-from-drawable pixmap)))))
+
 (defmethod move-sheet ((sheet clx-pane-mixin) x y)
   (let ((transform (sheet-transformation sheet)))
     (multiple-value-bind (old-x old-y)
@@ -1496,13 +1505,15 @@ time an indexed pattern is drawn.")
                     (with-sheet-medium (medium sheet)
                       (with-clx-graphics () medium
                         (let* ((src (create-move-sheet-src-picture mirror))
-                               (dest (create-move-sheet-dest-picture mirror)))
+                               (temp-buffer (create-move-sheet-temp-buffer-picture mirror)))
                           ;; FIXME: Assume vertical scrolling here
-                          (multiple-value-bind (src-x src-y dest-x dest-y area-width area-height)
+                          (multiple-value-bind (src-x src-y dest-x dest-y area-width area-height updated-rectangle)
                               (cond ((and (zerop dx) (minusp dy))
-                                     (values 0 (- dy) 0 0 width (+ height dy)))
+                                     (values 0 (- dy) 0 0 width (+ height dy)
+                                             (make-rectangle* (- x) (- (+ height dy) y) (- width x) (- height y))))
                                     ((and (zerop dx) (plusp dy))
-                                     (values 0 0 0 dy width (- height dy)))
+                                     (values 0 0 0 dy width (- height dy)
+                                             (make-rectangle* (- x) (- y) (- width x) (- dy y))))
                                     ((and (minusp dx) (zerop dy))
                                      (error "horiz+ not implemented"))
                                     ((and (plusp dx) (zerop dy))
@@ -1512,14 +1523,20 @@ time an indexed pattern is drawn.")
                             (log:info "Copying: ~s to ~s"
                                       '(sx sy dx dy w h)
                                       (list src-x src-y dest-x dest-y area-width area-height))
-                            (xlib:render-composite :over dest nil src
+                            (xlib:render-composite :over src nil temp-buffer
                                                    (truncate src-x) (truncate src-y) ;src pos
                                                    0 0 ;mask pos
-                                                   (truncate dest-x) (truncate dest-y) ;dest pos
+                                                   0 0 ;dest pos
                                                    (truncate area-width) (truncate area-height) ;size
-                                                   ))
-                          (let ((climi::*inhibit-dispatch-repaint* t))
-                            (update-transform))))))
+                                                   )
+                            (xlib:render-composite :over temp-buffer nil src
+                                                   0 0
+                                                   0 0
+                                                   (truncate dest-x) (truncate dest-y)
+                                                   (truncate area-width) (truncate area-height))
+                            (let ((climi::*inhibit-dispatch-repaint* t))
+                              (update-transform))
+                            (repaint-sheet sheet updated-rectangle))))))
                   #+nil
                   (multiple-value-bind (vp-x1 vp-y1 vp-x2 vp-y2)
                       (rectangle-edges* (sheet-region parent))
