@@ -619,7 +619,7 @@ or NIL if the current transformation is the identity transformation."
             (t
              '(nil nil))))))
 
-(defun text-style-contains-p (port text-style ch)
+(defun text-style-contains-char-p (port text-style ch)
   (let* ((font (clim-clx::text-style-to-x-font port text-style))
          (charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face font))))
     (mcclim-fontconfig:charset-contains-char-p charset ch)))
@@ -631,7 +631,7 @@ or NIL if the current transformation is the identity transformation."
     for fallback in (text-style-fallback-fonts text-style)
     for fallback-family = (first fallback)
     for fallback-style = (second fallback)
-    when (text-style-contains-p port (clim:make-text-style fallback-family fallback-style 10) ch)
+    when (text-style-contains-char-p port (clim:make-text-style fallback-family fallback-style 10) ch)
       return fallback
     finally (return (find-best-font ch))))
 
