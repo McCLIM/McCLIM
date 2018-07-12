@@ -108,12 +108,10 @@
                                   (selection-event-property event)
                                   ;; :type :text
                                   :delete-p t
-                                  :result-type '(vector (unsigned-byte 8))))
-            (type (case (clim-clx::selection-event-target event)
-                    (:string :iso-88519-1)
-                    (:utf8_string :utf-8))))
-        (when type
-          (babel:octets-to-string v :encoding type)))))
+                                  :result-type '(vector (unsigned-byte 8)))))
+        (case (clim-clx::selection-event-target event)
+          (:string (babel:octets-to-string v :encoding :iso-88519-1))
+          (:utf8_string (babel:octets-to-string v :encoding :utf-8))))))
 
 ;; Incredibly crappy broken unportable Latin 1 encoder which should be
 ;; replaced by various implementation-specific versions.
