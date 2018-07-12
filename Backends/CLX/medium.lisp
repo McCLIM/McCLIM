@@ -1447,24 +1447,6 @@ time an indexed pattern is drawn.")
              (setf (getf (xlib:gcontext-plist gc) 'cached-pen) (list picture fg))
              picture)))))
 
-(defun create-move-sheet-dest-picture (drawable)
-  (or (getf (xlib:window-plist drawable) 'cached-picture-dest)
-      (setf (getf (xlib:window-plist drawable) 'cached-picture-dest)
-            (xlib:render-create-picture drawable
-                                        :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
-                                        :poly-edge :smooth
-                                        :poly-mode :precise
-                                        :subwindow-mode :include-inferiors))))
-
-(defun create-move-sheet-src-picture (drawable)
-  (or (getf (xlib:window-plist drawable) 'cached-picture-src)
-      (setf (getf (xlib:window-plist drawable) 'cached-picture-src)
-            (xlib:render-create-picture drawable
-                                        :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
-                                        :poly-edge :smooth
-                                        :poly-mode :precise
-                                        :subwindow-mode :include-inferiors))))
-
 (defun create-move-sheet-temp-buffer-picture (drawable)
   (or (getf (xlib:window-plist drawable) 'temp-buffer-picture)
       (setf (getf (xlib:window-plist drawable) 'temp-buffer-picture)
@@ -1504,7 +1486,7 @@ time an indexed pattern is drawn.")
                     ;; Copy the overlapping area
                     (with-sheet-medium (medium sheet)
                       (with-clx-graphics () medium
-                        (let* ((src (create-move-sheet-src-picture mirror))
+                        (let* ((src (create-dest-picture mirror))
                                (temp-buffer (create-move-sheet-temp-buffer-picture mirror)))
                           ;; FIXME: Assume vertical scrolling here
                           (multiple-value-bind (src-x src-y dest-x dest-y area-width area-height updated-rectangle)
