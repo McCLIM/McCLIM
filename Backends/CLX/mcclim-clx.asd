@@ -1,6 +1,7 @@
 
 (defsystem #:mcclim-clx
-  :depends-on (#:mcclim-clx/basic
+  :depends-on (#:mcclim-fonts
+               #:mcclim-clx/basic
 	       #:mcclim-clx/input
 	       #:mcclim-clx/output
                #:mcclim-image/clx

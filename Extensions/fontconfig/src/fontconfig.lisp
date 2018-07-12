@@ -49,6 +49,22 @@
                           (:hash . "hash")
                           (:postscriptname . "postscriptname")))
 
+(defmacro with-new-pattern ((sym) &body body)
+  (alexandria:with-gensyms (pattern)
+    `(let ((,pattern (fc-pattern-create)))
+       (unwind-protect
+            (let ((,sym ,pattern))
+              ,@body)
+         (fc-pattern-destroy ,pattern)))))
+
+(defmacro with-new-char-set ((sym) &body body)
+  (alexandria:with-gensyms (charset)
+    `(let ((,charset (fc-char-set-create)))
+       (unwind-protect
+            (let ((,sym ,charset))
+              ,@body)
+         (fc-char-set-destroy ,charset)))))
+
 (defun find-config ()
   (unless *config*
     (init-fontconfig))
@@ -76,6 +92,15 @@
   (cffi:with-foreign-strings ((s value :encoding :utf-8))
     (error-if-fail (fc-pattern-add-string pattern key s))))
 
+(defun add-list-value-to-pattern (pattern key value)
+  (ecase (car value)
+    (:charset (with-new-char-set (charset)
+                (dolist (ch (cdr value))
+                  (error-if-fail (fc-char-set-add-char charset (etypecase ch
+                                                                 (integer ch)
+                                                                 (character (char-code ch))))))
+                (error-if-fail (fc-pattern-add-char-set pattern key charset))))))
+
 (defun add-value-to-pattern (pattern key value)
   (check-type key string)
   (etypecase value
@@ -83,7 +108,8 @@
     (integer (error-if-fail (fc-pattern-add-integer pattern key value)))
     (keyword (ecase value
                (:true (fc-pattern-add-bool pattern key 1))
-               (:false (fc-pattern-add-bool pattern key 0))))))
+               (:false (fc-pattern-add-bool pattern key 0))))
+    (list (add-list-value-to-pattern pattern key value))))
 
 (defun charset->lisp (charset-native)
   (cffi:with-foreign-objects ((bitmap 'fc-char32 *fc-charset-map-size*)
@@ -130,29 +156,33 @@
   (cffi:with-foreign-objects ((value '(:struct fc-value)))
     (let ((result (fc-pattern-get p object index value)))
       (case result
-        (:fc-result-match (values (value->lisp value) :match))
-        (:fc-result-no-match (values nil :no-match))
-        (:fc-result-no-id (values nil :no-id))
+        (:fc-result-match (value->lisp value))
+        (:fc-result-no-match :no-match)
+        (:fc-result-no-id :no-id)
         (t (error 'fontconfig-match-error :status result))))))
 
 (defun config-home ()
   (let ((result (fc-config-home)))
     (values (cffi:foreign-string-to-lisp result))))
 
-(defmacro with-new-pattern ((sym) &body body)
-  (alexandria:with-gensyms (pattern)
-    `(let ((,pattern (fc-pattern-create)))
-       (unwind-protect
-            (let ((,sym ,pattern))
-              ,@body)
-         (fc-pattern-destroy ,pattern)))))
-
 (defun pattern-to-lisp (pattern fields)
   (loop
     for field in fields
     for v = (assoc field *propery-names*)
     when v
-      collect (cons field (pattern-get-internal pattern (cdr v) 0))))
+      append (let* ((name (cdr v))
+                    (first-result (pattern-get-internal pattern name 0)))
+               (cond ((eq first-result :no-match)
+                      (list (cons field first-result)))
+                     ((eq first-result :no-id)
+                      nil)
+                     (t
+                      (cons (cons field first-result)
+                            (loop
+                              for i from 1
+                              for result = (pattern-get-internal pattern name i)
+                              until (member result '(:no-id :no-result))
+                              collect (cons field result))))))))
 
 (defun fill-pattern-from-values (pattern values)
   (when values
@@ -166,21 +196,26 @@
         (cffi:foreign-string-to-lisp result)
       (cffi:foreign-funcall "free" :pointer result :void))))
 
-(defun match-font (values fields)
+(defun %match-for-pattern (pattern fields)
+  (cffi:with-foreign-objects ((result 'fc-result))
+    (let* ((matched (fc-font-match (find-config) pattern result))
+           (result-obj (cffi:mem-ref result 'fc-result)))
+      (unwind-protect
+           (progn
+             (unless (eq result-obj :fc-result-match)
+               (error 'fontconfig-match-error :status result-obj))
+             (pattern-to-lisp matched fields))
+        (unless (cffi:null-pointer-p matched)
+          (fc-pattern-destroy matched))))))
+
+(defun match-font (values fields &key (kind :match-pattern))
   (with-new-pattern (pattern)
     (fill-pattern-from-values pattern values)
-    (error-if-fail (fc-config-substitute (find-config) pattern :fc-match-pattern))
+    (error-if-fail (fc-config-substitute (find-config) pattern (ecase kind
+                                                                 (:match-pattern :fc-match-pattern)
+                                                                 (:match-font :fc-match-font))))
     (fc-default-substitute pattern)
-    (cffi:with-foreign-objects ((result 'fc-result))
-      (let* ((matched (fc-font-match (find-config) pattern result))
-             (result-obj (cffi:mem-ref result 'fc-result)))
-        (unwind-protect
-             (progn
-               (unless (eq result-obj :fc-result-match)
-                 (error 'fontconfig-match-error :status result-obj))
-               (pattern-to-lisp matched fields))
-          (unless (cffi:null-pointer-p matched)
-            (fc-pattern-destroy matched)))))))
+    (%match-for-pattern pattern fields)))
 
 (defmacro with-object-set ((sym objects) &body body)
   (alexandria:once-only (objects)
@@ -219,6 +254,57 @@
          (str-list->lisp dirs)
       (fc-str-list-done dirs))))
 
+(defun font-render-prepare (pattern font fields)
+  (with-new-pattern (p)
+    (fill-pattern-from-values p pattern)
+    (with-new-pattern (f)
+      (fill-pattern-from-values f font)
+      (let ((result-pattern (fc-font-render-prepare (find-config) p f)))
+        (pattern-to-lisp result-pattern fields)))))
+
+(defun font-render-prepare-match (pattern font fields)
+  (with-new-pattern (p)
+    (fill-pattern-from-values p pattern)
+    (with-new-pattern (f)
+      (fill-pattern-from-values f font)
+      (let ((result-pattern (fc-font-render-prepare (find-config) p f)))
+        (unwind-protect
+             (%match-for-pattern result-pattern fields)
+          (fc-pattern-destroy result-pattern))))))
+
+(defun internal-font-render-prepare (matched pattern fields)
+  (with-new-pattern (p)
+    (fill-pattern-from-values p pattern)
+    (let ((result-pattern (fc-font-render-prepare (find-config) p matched)))
+      (unwind-protect
+           (%match-for-pattern result-pattern fields)
+        (fc-pattern-destroy result-pattern)))))
+
+(defun font-render-prepare-match-with-font (font pattern fields)
+  (with-new-pattern (p)
+    (fill-pattern-from-values p font)
+    (error-if-fail (fc-config-substitute (find-config) p :fc-match-font))
+    (fc-default-substitute p)
+    (cffi:with-foreign-objects ((result 'fc-result))
+    (let* ((matched (fc-font-match (find-config) p result))
+           (result-obj (cffi:mem-ref result 'fc-result)))
+      (unwind-protect
+           (progn
+             (unless (eq result-obj :fc-result-match)
+               (error 'fontconfig-match-error :status result-obj))
+             (internal-font-render-prepare matched pattern fields))
+        (unless (cffi:null-pointer-p matched)
+          (fc-pattern-destroy matched)))))))
+
+(defun query-freetype (file index fields)
+  (cffi:with-foreign-objects ((count :int))
+    (let ((pattern (fc-freetype-query file index (cffi:null-pointer) count)))
+      (when (cffi:null-pointer-p pattern)
+        (error "Unable to load file: ~s" file))
+      (unwind-protect
+           (pattern-to-lisp pattern fields)
+        (fc-pattern-destroy pattern)))))
+
 (defun app-font-add-dir (dir)
   (cffi:with-foreign-string (name (namestring dir) :encoding :utf-8)
     (let ((result (fc-config-app-font-add-dir (find-config) name)))
@@ -230,3 +316,23 @@
     (let ((result (fc-config-app-font-add-file (find-config) name)))
       (when (zerop result)
         (error "Unable to add font file: ~s" file)))))
+
+(deftype unicode-codepoint () '(integer 0 #.(* (expt 2 16) 17)))
+
+(defun charset-contains-char-p (charset char)
+  (let ((code (etypecase char
+                (integer char)
+                (character (char-code char)))))
+    (loop
+      for entry in charset
+      for bitmap = (cadr entry)
+      for bitmap-start of-type unicode-codepoint = (car entry)
+      for bitmap-end of-type unicode-codepoint = (+ bitmap-start (* (length bitmap) 32))
+      when (and (>= code bitmap-start)
+                (< code bitmap-end))
+        return (let ((start (- code bitmap-start))
+                     (bitmap (cadr entry)))
+                 (multiple-value-bind (word index)
+                     (truncate start 32)
+                   (plusp (ldb (byte 1 index) (aref bitmap word)))))
+      until (<= code bitmap-end))))

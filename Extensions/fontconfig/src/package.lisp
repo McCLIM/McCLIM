@@ -9,4 +9,8 @@
            #:font-list
            #:list-font-dirs
            #:app-font-add-dir
-           #:app-font-add-file))
+           #:app-font-add-file
+           #:charset-contains-char-p
+           #:font-render-prepare
+           #:font-render-prepare-match
+           #:query-freetype))

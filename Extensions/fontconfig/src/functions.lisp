@@ -51,6 +51,10 @@
   (pattern :pointer)
   (object :string)
   (value fc-bool))
+(cffi:defcfun ("FcPatternAddCharSet" fc-pattern-add-char-set) fc-bool
+  (pattern :pointer)
+  (object :string)
+  (value :pointer))
 (cffi:defcfun ("FcPatternDestroy" fc-pattern-destroy) :void
   (pattern :pointer))
 (cffi:defcfun ("FcPatternPrint" fc-pattern-print) :void
@@ -73,6 +77,10 @@
   (num-sets :int)
   (pattern :pointer)
   (object-set :pointer))
+(cffi:defcfun ("FcFontRenderPrepare" fc-font-render-prepare) :pointer
+  (config :pointer)
+  (pattern :pointer)
+  (font :pointer))
 
 (cffi:defcfun ("FcObjectSetCreate" fc-object-set-create) :pointer)
 (cffi:defcfun ("FcObjectSetDestroy" fc-object-set-destroy) :void
@@ -89,6 +97,9 @@
 (cffi:defcfun ("FcCharSetCreate" fc-char-set-create) :pointer)
 (cffi:defcfun ("FcCharSetDestroy" fc-char-set-destroy) :void
   (char-set :pointer))
+(cffi:defcfun ("FcCharSetAddChar" fc-char-set-add-char) fc-bool
+  (char-set :pointer)
+  (ch fc-char32))
 (cffi:defcfun ("FcCharSetCount" fc-char-set-count) fc-char32
   (char-set :pointer))
 (cffi:defcfun ("FcCharSetFirstPage" fc-char-set-first-page) fc-char32
@@ -118,3 +129,9 @@
   (str-list :pointer))
 (cffi:defcfun ("FcStrListNext" fc-str-list-next) (:pointer fc-char8)
   (str-list :pointer))
+
+(cffi:defcfun ("FcFreeTypeQuery" fc-freetype-query) :pointer
+  (file :string)
+  (id :int)
+  (blanks :pointer)
+  (count (:pointer :int)))

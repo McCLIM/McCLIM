@@ -1,7 +1,8 @@
 (defpackage :clim-freetype
   (:use :cl)
   (:export #:freetype-font-renderer
-           #:*enable-autohint*))
+           #:*enable-autohint*
+           #:make-font-replacement-text-style))
 
 (in-package :clim-freetype)
 
@@ -9,7 +10,7 @@
 
 (defparameter *freetype-font-scale* 26.6)
 
-(defvar *enable-autohint* nil)
+(defvar *enable-autohint* t)
 
 (defvar *lock* (bordeaux-threads:make-recursive-lock))
 
@@ -69,11 +70,14 @@ forms."
              :accessor cached-picture/glyphset)))
 
 (defclass freetype-font-face (clim-extensions:font-face)
-  ((file :initarg :file
-         :reader freetype-font-face/file)
-   (face :initarg :face
-         :initform nil
-         :accessor freetype-font-face/face)))
+  ((file    :initarg :file
+            :reader freetype-font-face/file)
+   (charset :initarg :charset
+            :initform nil
+            :reader freetype-font-face/charset)
+   (face    :initarg :face
+            :initform nil
+            :accessor freetype-font-face/face)))
 
 (defun find-or-load-face (font)
   (check-type font freetype-font)
@@ -355,8 +359,8 @@ or NIL if the current transformation is the identity transformation."
                  with rx = 0
                  with ry = 0
                  for current-index in index-list
-                 do (let ((x-pos (+ x rx (glyph-entry-x-offset current-index)))
-                          (y-pos (+ y ry (glyph-entry-y-offset current-index))))
+                 do (let ((x-pos (+ x rx #+(or) (glyph-entry-x-offset current-index)))
+                          (y-pos (+ y ry #+(or) (glyph-entry-y-offset current-index))))
                       (setf (aref vec 0) (glyph-entry-codepoint current-index))
                       (multiple-value-bind (transformed-x transformed-y)
                           (clim:transform-position transformation x-pos y-pos)
@@ -403,7 +407,7 @@ or NIL if the current transformation is the identity transformation."
                       ;; then we should compute the similar value for the right side as
                       ;; well and it's not clear as to how to find that value.
                       0
-                      #+nil (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
+                      #+(or) (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
                       width
                       (freetype2:face-ascender-pixels face)
                       (freetype2:face-descender-pixels face)
@@ -445,22 +449,25 @@ or NIL if the current transformation is the identity transformation."
   (let ((result (mcclim-fontconfig:match-font (append *main-filter*
                                                       (make-family-pattern family)
                                                       (make-face-pattern face))
-                                              '(:family :style :file))))
+                                              '(:family :style :file :charset)
+                                              :kind :match-font)))
     (list (cdr (assoc :family result))
           (cdr (assoc :style result))
-          (cdr (assoc :file result)))))
+          (cdr (assoc :file result))
+          (cdr (assoc :charset result)))))
 
 (defun find-freetype-font (port text-style)
   (multiple-value-bind (family face size)
       (clim:text-style-components text-style)
-    (destructuring-bind (found-family found-style found-file)
+    (destructuring-bind (found-family found-style found-file found-charset)
         (find-best-match family face)
       (let* ((family-obj (find-font-family port found-family))
              (face-obj (alexandria:ensure-gethash found-style (freetype-font-family/faces family-obj)
                                                   (make-instance 'freetype-font-face
                                                                  :family family-obj
                                                                  :name found-style
-                                                                 :file found-file))))
+                                                                 :file found-file
+                                                                 :charset found-charset))))
         (make-instance 'freetype-font
                        :port port
                        :face face-obj
@@ -552,3 +559,108 @@ or NIL if the current transformation is the identity transformation."
       (/ (- (freetype2-types:ft-glyph-metrics-width metrics)
             (freetype2-types:ft-glyph-metrics-hori-advance metrics))
          *freetype-font-scale*))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Font replacement code
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defgeneric text-style-fallback-fonts (text-style)
+  (:method ((text-style clim:standard-text-style))
+    nil))
+
+(defclass font-replacement-text-style (clim:standard-text-style)
+  ((fallback-fonts :initarg :replacement
+                   :reader font-replacement-text-style/replacement)))
+
+(defmethod text-style-fallback-fonts ((text-style font-replacement-text-style))
+  (font-replacement-text-style/replacement text-style))
+
+(defmethod clim:merge-text-styles ((style1 font-replacement-text-style) (style2 clim:standard-text-style))
+  (let ((merged-standard (call-next-method)))
+    (make-font-replacement-text-style (clim:text-style-family merged-standard)
+                                      (clim:text-style-face merged-standard)
+                                      (clim:text-style-size merged-standard)
+                                      (font-replacement-text-style/replacement style1))))
+
+(defmethod clim:merge-text-styles ((style1 clim:standard-text-style) (style2 font-replacement-text-style))
+  (let ((merged-standard (call-next-method)))
+    (make-font-replacement-text-style (clim:text-style-family merged-standard)
+                                      (clim:text-style-face merged-standard)
+                                      (clim:text-style-size merged-standard)
+                                      (font-replacement-text-style/replacement style2))))
+
+;;; The text styles needs to be cached because the implementation of
+;;; CLIM-CLX::LOOKUP-TEXT-STYLE-TO-X-FONT calls
+;;; CLIM:TEXT-STYLE-MAPPING in order to avoid doing a full font
+;;; lookup. The implementation of TEXT-STYLE-MAPPING ends up doing a
+;;; hash lookup on the text-style instance, which for CLOS instances
+;;; uses object identity.
+;;;
+;;; Having this cache effectively interns instances of
+;;; FONT-REPLACEMENT-TEXT-STYLE, allowing the TEXT-STYLE-MAPPING cache
+;;; to work properly.
+(defvar *text-styles* (make-hash-table :test 'equal))
+
+(defun make-font-replacement-text-style (family face size replacement)
+  (alexandria:ensure-gethash (list family face size replacement)
+                             *text-styles*
+                             (make-instance 'font-replacement-text-style
+                                            :text-family family
+                                            :text-face face
+                                            :text-size size
+                                            :replacement replacement)))
+
+(defun find-best-font (ch)
+  (let* ((match (mcclim-fontconfig:match-font `((:charset . (:charset ,ch))) '(:family :style) :kind :match-font)))
+    (let ((family (cdr (assoc :family match)))
+          (style (cdr (assoc :style match))))
+      (cond ((and family style)
+             (list family style))
+            (t
+             '(nil nil))))))
+
+(defun text-style-contains-char-p (port text-style ch)
+  (let* ((font (clim-clx::text-style-to-x-font port text-style))
+         (charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face font))))
+    (mcclim-fontconfig:charset-contains-char-p charset ch)))
+
+(defvar *replacement-font-cache* (make-hash-table :test 'equal))
+
+(defun find-best-font-for-fallback-internal (port text-style ch)
+  (loop
+    for fallback in (text-style-fallback-fonts text-style)
+    for fallback-family = (first fallback)
+    for fallback-style = (second fallback)
+    when (text-style-contains-char-p port (clim:make-text-style fallback-family fallback-style 10) ch)
+      return fallback
+    finally (return (find-best-font ch))))
+
+(defun find-best-font-for-fallback (port text-style ch)
+  (alexandria:ensure-gethash (list (clim:text-style-family text-style)
+                                   (clim:text-style-face text-style)
+                                   ch)
+                             *replacement-font-cache*
+                             (find-best-font-for-fallback-internal port text-style ch)))
+
+(defmethod clim-clx:find-replacement-fonts-from-renderer (port (font-renderer freetype-font-renderer) text-style string)
+  (let* ((default-font (clim-clx::text-style-to-x-font port text-style))
+         (default-charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face default-font)))
+         (result nil)
+         (current-string (make-string-output-stream))
+         (current-text-style nil))
+    (labels ((push-string ()
+               (let ((s (get-output-stream-string current-string)))
+                 (when (plusp (length s))
+                   (push (cons s current-text-style) result))))
+             (collect-result (ch s)
+               (unless (equal current-text-style s)
+                 (push-string)
+                 (setq current-text-style s))
+               (write-char ch current-string)))
+      (loop
+        for ch across string
+        do (collect-result ch (if (mcclim-fontconfig:charset-contains-char-p default-charset ch)
+                                  '(nil nil)
+                                  (find-best-font-for-fallback port text-style ch))))
+      (push-string)
+      (reverse result))))

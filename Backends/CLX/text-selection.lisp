@@ -97,20 +97,21 @@
   (setf (selection-timestamp port) nil))
 
 (defmethod request-selection ((port clx-text-selection-port-mixin) requestor time)
-  (xlib:convert-selection :primary :STRING requestor :bounce time))
+  (xlib:convert-selection :primary :UTF8_STRING requestor :bounce time))
 
 (defmethod get-selection-from-event ((port clx-text-selection-port-mixin) (event clx-selection-notify-event))
-  ; (describe event *trace-output*)  
   (if (null (selection-event-property event))
       (progn
         (format *trace-output* "~&;; Oops, selection-notify property is null. Trying the cut buffer instead..~%")
         (xlib:cut-buffer (clx-port-display port)))                
-      (map 'string #'code-char
-           (xlib:get-property (sheet-xmirror (event-sheet event))
-                              (selection-event-property event)
-                              ;; :type :text
-                              :delete-p t
-                              :result-type 'vector))))
+      (let ((v (xlib:get-property (sheet-xmirror (event-sheet event))
+                                  (selection-event-property event)
+                                  ;; :type :text
+                                  :delete-p t
+                                  :result-type '(vector (unsigned-byte 8)))))
+        (case (clim-clx::selection-event-target event)
+          (:string (babel:octets-to-string v :encoding :iso-88519-1))
+          (:utf8_string (babel:octets-to-string v :encoding :utf-8))))))
 
 ;; Incredibly crappy broken unportable Latin 1 encoder which should be
 ;; replaced by various implementation-specific versions.
