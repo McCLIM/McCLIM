@@ -359,8 +359,8 @@ or NIL if the current transformation is the identity transformation."
                  with rx = 0
                  with ry = 0
                  for current-index in index-list
-                 do (let ((x-pos (+ x rx #+nil(glyph-entry-x-offset current-index)))
-                          (y-pos (+ y ry #+nil(glyph-entry-y-offset current-index))))
+                 do (let ((x-pos (+ x rx #+(or) (glyph-entry-x-offset current-index)))
+                          (y-pos (+ y ry #+(or) (glyph-entry-y-offset current-index))))
                       (setf (aref vec 0) (glyph-entry-codepoint current-index))
                       (multiple-value-bind (transformed-x transformed-y)
                           (clim:transform-position transformation x-pos y-pos)
@@ -407,7 +407,7 @@ or NIL if the current transformation is the identity transformation."
                       ;; then we should compute the similar value for the right side as
                       ;; well and it's not clear as to how to find that value.
                       0
-                      #+nil (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
+                      #+(or) (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
                       width
                       (freetype2:face-ascender-pixels face)
                       (freetype2:face-descender-pixels face)
