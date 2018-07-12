@@ -1522,9 +1522,6 @@ time an indexed pattern is drawn.")
                                              (make-rectangle* (- x) (- y) (- dx x) (- height y))))
                                     (t
                                      (error "Weird, both zero?")))
-                            (log:trace "Copying: (~s,~s) to ~s"
-                                       dx dy
-                                       (list src-x src-y dest-x dest-y area-width area-height))
                             (let ((width-integer (truncate area-width))
                                   (height-integer (truncate area-height)))
                               (xlib:render-composite :over src nil temp-buffer
@@ -1542,9 +1539,7 @@ time an indexed pattern is drawn.")
                               (update-transform))
                             (repaint-sheet sheet updated-rectangle))))))
                   ;; ELSE: No overlap, just repaint everything
-                  (progn
-                    (log:info "full repaint: xy: (~s,~s)  dxy: (~s,~s)  hw: (~s,~s)" x y dx dy width height)
-                    (update-transform))))))))))
+                  (update-transform)))))))))
 
 (defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
   (with-sheet-medium (medium sheet)
