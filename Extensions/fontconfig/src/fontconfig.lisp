@@ -319,7 +319,7 @@
 
 (deftype unicode-codepoint () '(integer 0 #.(* (expt 2 16) 17)))
 
-(defun charset-contains-p (charset char)
+(defun charset-contains-char-p (charset char)
   (let ((code (etypecase char
                 (integer char)
                 (character (char-code char)))))

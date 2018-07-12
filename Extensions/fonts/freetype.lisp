@@ -622,7 +622,7 @@ or NIL if the current transformation is the identity transformation."
 (defun text-style-contains-p (port text-style ch)
   (let* ((font (clim-clx::text-style-to-x-font port text-style))
          (charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face font))))
-    (mcclim-fontconfig:charset-contains-p charset ch)))
+    (mcclim-fontconfig:charset-contains-char-p charset ch)))
 
 (defvar *replacement-font-cache* (make-hash-table :test 'equal))
 
@@ -659,7 +659,7 @@ or NIL if the current transformation is the identity transformation."
                (write-char ch current-string)))
       (loop
         for ch across string
-        do (collect-result ch (if (mcclim-fontconfig:charset-contains-p default-charset ch)
+        do (collect-result ch (if (mcclim-fontconfig:charset-contains-char-p default-charset ch)
                                   '(nil nil)
                                   (find-best-font-for-fallback port text-style ch))))
       (push-string)
