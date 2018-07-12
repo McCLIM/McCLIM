@@ -374,7 +374,7 @@
 ;;; Should this method be defined in fonts.lisp?
 (defgeneric find-replacement-fonts-from-renderer (port font-renderer font string)
   (:method (port font-renderer font string)
-    (cons string '(nil nil))))
+    (list (cons string '(nil nil)))))
 
 ;;; This method can't be defined in fonts.lisp, since it relies on
 ;;; CLX-PORT which is only defined when this file is loaded.

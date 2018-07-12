@@ -44,9 +44,7 @@
       for new-text-style = (if family (clim:make-text-style family style size) text-style)
       do (progn
            (funcall fn string curr-x new-text-style)
-           (multiple-value-bind (width)
-               (clim:text-size stream string :text-style new-text-style)
-             (incf curr-x width)))
+           (incf curr-x (clim:text-size stream string :text-style new-text-style)))
       finally (return curr-x))))
 
 (defun font-replacement-draw-text* (stream string x y
