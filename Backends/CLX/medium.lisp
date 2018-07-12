@@ -1478,8 +1478,8 @@ time an indexed pattern is drawn.")
   (let ((transform (sheet-transformation sheet)))
     (multiple-value-bind (old-x old-y)
         (transform-position transform 0 0)
-      (let ((dx (- x old-x))
-            (dy (- y old-y)))
+      (let ((dx (- (truncate (+ x 0.5)) (truncate (+ old-x 0.5))))
+            (dy (- (truncate (+ y 0.5)) (truncate (+ old-y 0.5)))))
         ;;
         (when (and (zerop dx) (zerop dy))
           (return-from move-sheet nil))
@@ -1494,8 +1494,8 @@ time an indexed pattern is drawn.")
             (multiple-value-bind (width height)
                 (bounding-rectangle-size (sheet-region parent))
               (if (and (typep parent 'clim-extensions:viewport-pane)
-                       (or (and (zerop x) (< (abs dy) height))
-                           (and (zerop y) (< (abs dx) width))))
+                       (or (and (zerop dx) (< (abs dy) height))
+                           (and (zerop dy) (< (abs dx) width))))
                   (progn
                     ;; It is assumed that the position of a sheet is always 0,0
                     (multiple-value-bind (x y)
@@ -1515,33 +1515,38 @@ time an indexed pattern is drawn.")
                                      (values 0 0 0 dy width (- height dy)
                                              (make-rectangle* (- x) (- y) (- width x) (- dy y))))
                                     ((and (minusp dx) (zerop dy))
-                                     (error "horiz+ not implemented"))
+                                     (values (- dx) 0 0 0 (+ width dx) height
+                                             (make-rectangle* (- (+ width dx) x) (- y) (- width x) (- height x))))
                                     ((and (plusp dx) (zerop dy))
-                                     (error "horiz- not implemented"))
+                                     (values 0 0 dx 0 (- width dx) height
+                                             (make-rectangle* (- x) (- y) (- dx x) (- height y))))
                                     (t
                                      (error "Weird, both zero?")))
-                            (log:info "Copying: ~s to ~s"
-                                      '(sx sy dx dy w h)
-                                      (list src-x src-y dest-x dest-y area-width area-height))
-                            (xlib:render-composite :over src nil temp-buffer
-                                                   (truncate src-x) (truncate src-y) ;src pos
-                                                   0 0 ;mask pos
-                                                   0 0 ;dest pos
-                                                   (truncate area-width) (truncate area-height) ;size
-                                                   )
-                            (xlib:render-composite :over temp-buffer nil src
-                                                   0 0
-                                                   0 0
-                                                   (truncate dest-x) (truncate dest-y)
-                                                   (truncate area-width) (truncate area-height))
+                            (log:trace "Copying: (~s,~s) to ~s"
+                                       dx dy
+                                       (list src-x src-y dest-x dest-y area-width area-height))
+                            (let ((width-integer (truncate area-width))
+                                  (height-integer (truncate area-height)))
+                              (xlib:render-composite :over src nil temp-buffer
+                                                     src-x src-y ;src pos
+                                                     0 0 ;mask pos
+                                                     0 0 ;dest pos
+                                                     width-integer height-integer ;size
+                                                     )
+                              (xlib:render-composite :over temp-buffer nil src
+                                                     0 0
+                                                     0 0
+                                                     dest-x dest-y
+                                                     width-integer height-integer))
                             (let ((climi::*inhibit-dispatch-repaint* t))
                               (update-transform))
                             (repaint-sheet sheet updated-rectangle))))))
-                  #+nil
-                  (multiple-value-bind (vp-x1 vp-y1 vp-x2 vp-y2)
-                      (rectangle-edges* (sheet-region parent))
-                    (multiple-value-bind (s-x1 s-y1 s-x2 s-y2)
-                        (rectangle-edges* (sheet-region sheet))
-                      ))
                   ;; ELSE: No overlap, just repaint everything
-                  (update-transform)))))))))
+                  (progn
+                    (log:info "full repaint: xy: (~s,~s)  dxy: (~s,~s)  hw: (~s,~s)" x y dx dy width height)
+                    (update-transform))))))))))
+
+(defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
+  (with-sheet-medium (medium sheet)
+    (with-clx-graphics () medium
+      (setf (getf (xlib:window-plist mirror) 'temp-buffer-picture) nil))))
