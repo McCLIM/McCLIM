@@ -3,14 +3,14 @@
 (defmethod port-set-mirror-region ((port clx-basic-port) mirror mirror-region)
   (with-bounding-rectangle* (x1 y1 x2 y2) mirror-region
     (declare (ignore x1 y1))
-    (setf (xlib:drawable-width mirror) (floor x2)
-          (xlib:drawable-height mirror) (floor y2))))
+    (setf (xlib:drawable-width mirror) (round-coordinate x2)
+          (xlib:drawable-height mirror) (round-coordinate y2))))
                                    
 (defmethod port-set-mirror-transformation
     ((port clx-basic-port) mirror mirror-transformation)
   (multiple-value-bind (x y) (transform-position mirror-transformation 0 0)
-    (setf (xlib:drawable-x mirror) (floor x)
-          (xlib:drawable-y mirror) (floor y))))
+    (setf (xlib:drawable-x mirror) (round-coordinate x)
+          (xlib:drawable-y mirror) (round-coordinate y))))
 
 (defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
   (when (sheet-xmirror sheet)
