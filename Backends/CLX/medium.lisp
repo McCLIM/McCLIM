@@ -1407,15 +1407,10 @@ time an indexed pattern is drawn.")
                               :poly-edge :smooth
                               :poly-mode :precise))
 
-(defgeneric create-dest-picture (drawable)
-  (:method ((drawable xlib:window))
-    (or (getf (xlib:window-plist drawable) 'cached-picture)
-        (setf (getf (xlib:window-plist drawable) 'cached-picture)
-              (create-picture-from-drawable drawable))))
-  (:method ((drawable xlib:pixmap))
-    (or (getf (xlib:pixmap-plist drawable) 'cached-picture)
-        (setf (getf (xlib:pixmap-plist drawable) 'cached-picture)
-              (create-picture-from-drawable drawable)))))
+(defun create-dest-picture (drawable)
+  (or (getf (xlib:window-plist drawable) 'cached-picture)
+      (setf (getf (xlib:window-plist drawable) 'cached-picture)
+            (create-picture-from-drawable drawable))))
 
 (defun make-xrender-colour (fg)
   (list (ash (ldb (byte 8 16) fg) 8)
@@ -1456,72 +1451,78 @@ time an indexed pattern is drawn.")
                                               :drawable drawable)))
               (create-picture-from-drawable pixmap)))))
 
+(defun render-scroll-sheet (sheet x y dx dy update-fn)
+  (let ((parent (slot-value sheet 'climi::parent)))
+    (if (null parent)
+        ;; No parent
+        (funcall update-fn)
+        ;; ELSE: Check if we can use optimised scrolling
+        (multiple-value-bind (width height)
+            (bounding-rectangle-size (sheet-region parent))
+          (if (not (and (typep parent 'clim-extensions:viewport-pane)
+                        (or (and (zerop dx) (< (abs dy) height))
+                            (and (zerop dy) (< (abs dx) width)))))
+              ;; If scrolling isn't strictly vertical or horizontal, just to a full update
+              (funcall update-fn)
+              ;; ELSE: We can refresh only part of the content, after copying the overlapping area
+              ;; It is assumed that the position of a sheet is always 0,0
+              (progn
+                (multiple-value-bind (x y)
+                    (bounding-rectangle-position (sheet-region parent))
+                  (assert (and (zerop x) (zerop y))))
+                ;; Copy the overlapping area
+                (with-sheet-medium (medium sheet)
+                  (with-clx-graphics () medium
+                    (let* ((src (create-dest-picture mirror))
+                           (temp-buffer (create-move-sheet-temp-buffer-picture mirror)))
+                      (multiple-value-bind (src-x src-y dest-x dest-y area-width area-height updated-rectangle)
+                          (cond ((and (zerop dx) (minusp dy))
+                                 (values 0 (- dy) 0 0 width (+ height dy)
+                                         (make-rectangle* (- x) (- (+ height dy) y) (- width x) (- height y))))
+                                ((and (zerop dx) (plusp dy))
+                                 (values 0 0 0 dy width (- height dy)
+                                         (make-rectangle* (- x) (- y) (- width x) (- dy y))))
+                                ((and (minusp dx) (zerop dy))
+                                 (values (- dx) 0 0 0 (+ width dx) height
+                                         (make-rectangle* (- (+ width dx) x) (- y) (- width x) (- height x))))
+                                ((and (plusp dx) (zerop dy))
+                                 (values 0 0 dx 0 (- width dx) height
+                                         (make-rectangle* (- x) (- y) (- dx x) (- height y))))
+                                (t
+                                 (error "Unexpected movement coordinates: ~s,~s" dx dy)))
+                        (let ((width-integer (truncate (+ area-width 0.5)))
+                              (height-integer (truncate (+ area-height 0.5))))
+                          (xlib:render-composite :over src nil temp-buffer
+                                                 src-x src-y ;src pos
+                                                 0 0         ;mask pos
+                                                 0 0         ;dest pos
+                                                 width-integer height-integer ;size
+                                                 )
+                          (xlib:render-composite :over temp-buffer nil src
+                                                 0 0
+                                                 0 0
+                                                 dest-x dest-y
+                                                 width-integer height-integer))
+                        (let ((climi::*inhibit-dispatch-repaint* t))
+                          (funcall update-fn))
+                        (repaint-sheet sheet updated-rectangle)))))))))))
+
 (defmethod move-sheet ((sheet clx-pane-mixin) x y)
   (let ((transform (sheet-transformation sheet)))
     (multiple-value-bind (old-x old-y)
         (transform-position transform 0 0)
+      ;;
       (let ((dx (- (truncate (+ x 0.5)) (truncate (+ old-x 0.5))))
             (dy (- (truncate (+ y 0.5)) (truncate (+ old-y 0.5)))))
         ;;
-        (when (and (zerop dx) (zerop dy))
-          (return-from move-sheet nil))
-        ;;
-        (flet ((update-transform ()
-                 (setf (sheet-transformation sheet)
-                       (compose-translation-with-transformation
-                        transform (- x old-x) (- y old-y)))))
+        (unless (and (zerop dx) (zerop dy))
           ;;
-          (let ((parent (slot-value sheet 'climi::parent)))
-            ;; Check if the scrolling is purely horizontal or vertical
-            (multiple-value-bind (width height)
-                (bounding-rectangle-size (sheet-region parent))
-              (if (and (typep parent 'clim-extensions:viewport-pane)
-                       (or (and (zerop dx) (< (abs dy) height))
-                           (and (zerop dy) (< (abs dx) width))))
-                  (progn
-                    ;; It is assumed that the position of a sheet is always 0,0
-                    (multiple-value-bind (x y)
-                        (bounding-rectangle-position (sheet-region parent))
-                      (assert (and (zerop x) (zerop y))))
-                    ;; Copy the overlapping area
-                    (with-sheet-medium (medium sheet)
-                      (with-clx-graphics () medium
-                        (let* ((src (create-dest-picture mirror))
-                               (temp-buffer (create-move-sheet-temp-buffer-picture mirror)))
-                          ;; FIXME: Assume vertical scrolling here
-                          (multiple-value-bind (src-x src-y dest-x dest-y area-width area-height updated-rectangle)
-                              (cond ((and (zerop dx) (minusp dy))
-                                     (values 0 (- dy) 0 0 width (+ height dy)
-                                             (make-rectangle* (- x) (- (+ height dy) y) (- width x) (- height y))))
-                                    ((and (zerop dx) (plusp dy))
-                                     (values 0 0 0 dy width (- height dy)
-                                             (make-rectangle* (- x) (- y) (- width x) (- dy y))))
-                                    ((and (minusp dx) (zerop dy))
-                                     (values (- dx) 0 0 0 (+ width dx) height
-                                             (make-rectangle* (- (+ width dx) x) (- y) (- width x) (- height x))))
-                                    ((and (plusp dx) (zerop dy))
-                                     (values 0 0 dx 0 (- width dx) height
-                                             (make-rectangle* (- x) (- y) (- dx x) (- height y))))
-                                    (t
-                                     (error "Weird, both zero?")))
-                            (let ((width-integer (truncate (+ area-width 0.5)))
-                                  (height-integer (truncate (+ area-height 0.5))))
-                              (xlib:render-composite :over src nil temp-buffer
-                                                     src-x src-y ;src pos
-                                                     0 0 ;mask pos
-                                                     0 0 ;dest pos
-                                                     width-integer height-integer ;size
-                                                     )
-                              (xlib:render-composite :over temp-buffer nil src
-                                                     0 0
-                                                     0 0
-                                                     dest-x dest-y
-                                                     width-integer height-integer))
-                            (let ((climi::*inhibit-dispatch-repaint* t))
-                              (update-transform))
-                            (repaint-sheet sheet updated-rectangle))))))
-                  ;; ELSE: No overlap, just repaint everything
-                  (update-transform)))))))))
+          (flet ((update-transform ()
+                   (setf (sheet-transformation sheet)
+                         (compose-translation-with-transformation
+                          transform (- x old-x) (- y old-y)))))
+            ;;
+            (render-scroll-sheet sheet x y dx dy #'update-transform)))))))
 
 (defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
   (with-sheet-medium (medium sheet)
