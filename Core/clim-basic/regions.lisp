@@ -1019,7 +1019,7 @@
     (let* ((base-angle (untransform-angle tr angle))
            (x (cos base-angle))
            (y (sin base-angle)))
-      (with-slots (mxx mxy myx myy tx ty) tr
+      (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation tr)
         (values (+ (* mxx x) (* mxy y) tx)
                 (+ (* myx x) (* myy y) ty))))))
 
