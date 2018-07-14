@@ -359,10 +359,12 @@ or NIL if the current transformation is the identity transformation."
                       (setf (aref vec 0) (glyph-entry-codepoint current-index))
                       (multiple-value-bind (transformed-x transformed-y)
                           (clim:transform-position transformation x-pos y-pos)
-                        (xlib:render-composite-glyphs dest glyphset source
-                                                      (truncate (+ transformed-x 0.5))
-                                                      (truncate (+ transformed-y 0.5))
-                                                      vec))
+                        (unless (or (> transformed-x #xffff)
+                                    (> transformed-y #xffff))
+                          (xlib:render-composite-glyphs dest glyphset source
+                                                        (truncate (+ transformed-x 0.5))
+                                                        (truncate (+ transformed-y 0.5))
+                                                        vec)))
                       (incf rx (/ (glyph-entry-x-advance current-index) 64))
                       (incf ry (/ (glyph-entry-y-advance current-index) 64)))))
           (when transform-matrix
