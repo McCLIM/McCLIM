@@ -1451,6 +1451,12 @@ time an indexed pattern is drawn.")
                                               :drawable drawable)))
               (create-picture-from-drawable pixmap)))))
 
+(declaim (inline simple-round))
+(defun simple-round (n)
+  (if (minusp n)
+      (truncate (- n 0.5))
+      (truncate (+ n 0.5))))
+
 (defun render-scroll-sheet (sheet x y dx dy update-fn)
   (let ((parent (slot-value sheet 'climi::parent)))
     (if (null parent)
@@ -1512,8 +1518,8 @@ time an indexed pattern is drawn.")
     (multiple-value-bind (old-x old-y)
         (transform-position transform 0 0)
       ;;
-      (let ((dx (- (truncate (+ x 0.5)) (truncate (+ old-x 0.5))))
-            (dy (- (truncate (+ y 0.5)) (truncate (+ old-y 0.5)))))
+      (let ((dx (- (simple-round x) (simple-round old-x)))
+            (dy (- (simple-round y) (simple-round old-y))))
         ;;
         (unless (and (zerop dx) (zerop dy))
           ;;
@@ -1523,6 +1529,15 @@ time an indexed pattern is drawn.")
                           transform (- x old-x) (- y old-y)))))
             ;;
             (render-scroll-sheet sheet x y dx dy #'update-transform)))))))
+
+(defmethod (setf sheet-transformation) (transformation (sheet clx-pane-mixin))
+  ;; Only translation transforms are supported for sheets. Let's just
+  ;; ensure that this is the case.
+  (unless (translation-transformation-p transformation)
+    (error "Attempt to set sheet transformation to a non-translation transformation"))
+  (multiple-value-bind (x y)
+      (transform-position transformation 0 0)
+    (call-next-method (make-translation-transformation (simple-round x) (simple-round y)) sheet)))
 
 (defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
   (with-sheet-medium (medium sheet)
