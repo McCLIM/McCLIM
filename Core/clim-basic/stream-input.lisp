@@ -185,9 +185,14 @@ keys read."))
   ((pointer)
    (cursor :initarg :text-cursor)
    (last-gesture :accessor last-gesture :initform nil
-    :documentation "Holds the last gesture returned by
-  stream-read-gesture (not peek-p), untransformed, so it can easily be
-  unread.")))
+    :documentation "Holds the last gesture returned by stream-read-gesture
+(not peek-p), untransformed, so it can easily be unread.")))
+
+(defmethod stream-set-input-focus ((stream standard-extended-input-stream))
+  (let ((port (or (port stream)
+                  (port *application-frame*))))
+    (prog1 (port-keyboard-input-focus port)
+      (setf (port-keyboard-input-focus port) stream))))
 
 (defmacro with-input-focus ((stream) &body body)
   (when (eq stream t)
