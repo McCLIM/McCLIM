@@ -1518,26 +1518,45 @@ time an indexed pattern is drawn.")
     (multiple-value-bind (old-x old-y)
         (transform-position transform 0 0)
       ;;
-      (let ((dx (- (simple-round x) (simple-round old-x)))
-            (dy (- (simple-round y) (simple-round old-y))))
+      (let ((dx (- x old-x))
+            (dy (- y old-y)))
         ;;
-        (unless (and (zerop dx) (zerop dy))
+        (flet ((update-transform ()
+                 (setf (sheet-transformation sheet)
+                       (compose-translation-with-transformation
+                        transform (- x old-x) (- y old-y)))))
           ;;
-          (flet ((update-transform ()
-                   (setf (sheet-transformation sheet)
-                         (compose-translation-with-transformation
-                          transform (- x old-x) (- y old-y)))))
-            ;;
-            (render-scroll-sheet sheet x y dx dy #'update-transform)))))))
+          (cond ((and (zerop dx) (zerop dy))
+                 ;; No movement, skip update
+                 nil)
+                ((and (zerop (nth-value 1 (truncate dx)))
+                      (zerop (nth-value 1 (truncate dy))))
+                 ;; Ccoordinates are aligned, we can use optimised scrolling
+                 (render-scroll-sheet sheet x y (truncate dx) (truncate dy) #'update-transform))
+                (t
+                 (update-transform))))))))
 
-(defmethod (setf sheet-transformation) (transformation (sheet clx-pane-mixin))
-  ;; Only translation transforms are supported for sheets. Let's just
-  ;; ensure that this is the case.
-  (unless (translation-transformation-p transformation)
-    (error "Attempt to set sheet transformation to a non-translation transformation"))
-  (multiple-value-bind (x y)
-      (transform-position transformation 0 0)
-    (call-next-method (make-translation-transformation (simple-round x) (simple-round y)) sheet)))
+(defun get-translation-from-transform (transformation)
+  (multiple-value-bind (oa ob oc od x y)
+        (get-transformation transformation)
+    (declare (ignore oa ob oc od))
+    (values x y)))
+
+(defun fractions-equals-p (a b)
+  (= (nth-value 1 (truncate a))
+     (nth-value 1 (truncate b))))
+
+(defun can-use-copying-scroll-p (sheet old-x old-y new-x new-y)
+  (let ((parent (slot-value sheet 'climi::parent)))
+    (if (typep parent 'clim-extensions:viewport-pane)
+        (multiple-value-bind (width height)
+            (bounding-rectangle-size (sheet-region parent))
+          (let ((dx (- new-x old-x))
+                (dy (- new-y old-y)))
+            (or (and (zerop dx) (< (abs dy) height))
+                (and (zerop dy) (< (abs dx) width)))))
+        ;; ELSE: The parent is not a viewport
+        nil)))
 
 (defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
   (with-sheet-medium (medium sheet)

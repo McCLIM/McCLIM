@@ -2048,27 +2048,38 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 ;;; Initialization
 
+(defun align-subpixel (pos ref)
+  (+ (truncate pos) (nth-value 1 (truncate ref))))
+
 (defun scroller-pane/vertical-drag-callback (pane new-value)
   "Callback for the vertical scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (sheet-child viewport)))
       (when (pane-viewport scrollee)
-	(move-sheet scrollee
-		    (if hscrollbar
-			(- (gadget-value hscrollbar))
-			0)
-		    (- new-value))))))
+        (let ((transform (sheet-transformation scrollee)))
+          (multiple-value-bind (t1 t2 t3 t4 old-x old-y)
+              (get-transformation transform)
+            (declare (ignore t1 t2 t3 t4))
+	    (move-sheet scrollee
+		        (if hscrollbar
+			    (align-subpixel (- (gadget-value hscrollbar)) old-x)
+			    0)
+		        (align-subpixel (- new-value) old-y))))))))
 
 (defun scroller-pane/horizontal-drag-callback (pane new-value)
   "Callback for the horizontal scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (sheet-child viewport)))
       (when (pane-viewport scrollee)
-	(move-sheet scrollee
-		    (- new-value)
-		    (if vscrollbar
-			(- (gadget-value vscrollbar))
-			0))))))
+        (let ((transform (sheet-transformation scrollee)))
+          (multiple-value-bind (t1 t2 t3 t4 old-x old-y)
+              (get-transformation transform)
+            (declare (ignore t1 t2 t3 t4))
+	    (move-sheet scrollee
+		        (align-subpixel (- new-value) old-x)
+		        (if vscrollbar
+			    (align-subpixel (- (gadget-value vscrollbar)) old-y)
+			    0))))))))
     
 (defun scroller-pane/update-scroll-bars (pane)
   (check-type pane scroller-pane)
