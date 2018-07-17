@@ -1408,8 +1408,8 @@ time an indexed pattern is drawn.")
                               :poly-mode :precise))
 
 (defun create-dest-picture (drawable)
-  (or (getf (xlib:window-plist drawable) 'cached-picture)
-      (setf (getf (xlib:window-plist drawable) 'cached-picture)
+  (or (getf (xlib:drawable-plist drawable) 'cached-picture)
+      (setf (getf (xlib:drawable-plist drawable) 'cached-picture)
             (create-picture-from-drawable drawable))))
 
 (defun make-xrender-colour (fg)
@@ -1531,7 +1531,7 @@ time an indexed pattern is drawn.")
                  nil)
                 ((and (zerop (nth-value 1 (truncate dx)))
                       (zerop (nth-value 1 (truncate dy))))
-                 ;; Ccoordinates are aligned, we can use optimised scrolling
+                 ;; Coordinates are aligned, we can use optimised scrolling
                  (render-scroll-sheet sheet x y (truncate dx) (truncate dy) #'update-transform))
                 (t
                  (update-transform))))))))
