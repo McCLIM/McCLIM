@@ -252,11 +252,6 @@ rendering, otherwise the identity matrix will be used instead."
                               :poly-edge :smooth
                               :poly-mode :precise))
 
-(defun create-dest-picture (drawable)
-  (or (getf (xlib:window-plist drawable) 'cached-picture)
-      (setf (getf (xlib:window-plist drawable) 'cached-picture)
-            (create-picture-from-drawable drawable))))
-
 (defun create-pen (drawable gc)
   (let* ((fg (xlib::gcontext-foreground gc))
          (cached-pen (getf (xlib:gcontext-plist gc) 'cached-pen)))
@@ -344,7 +339,7 @@ or NIL if the current transformation is the identity transformation."
                            (load-cached-glyphset font codepoints))))
         (unwind-protect
              (let ((source (create-pen mirror gc))
-                   (dest (create-dest-picture mirror))
+                   (dest (clim-clx::create-dest-picture mirror))
                    (vec (make-array 1 :element-type 'integer :initial-element 0)))
                (unless  (eq (xlib:picture-clip-mask dest)
                             (xlib:gcontext-clip-mask gc))
