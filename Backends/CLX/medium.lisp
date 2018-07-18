@@ -1458,16 +1458,15 @@ time an indexed pattern is drawn.")
       (truncate (+ n 0.5))))
 
 (defun render-scroll-sheet (sheet x y dx dy update-fn)
-  (let ((parent (slot-value sheet 'climi::parent)))
+  (let ((parent (pane-viewport sheet)))
     (if (null parent)
         ;; No parent
         (funcall update-fn)
         ;; ELSE: Check if we can use optimised scrolling
         (multiple-value-bind (width height)
             (bounding-rectangle-size (sheet-region parent))
-          (if (not (and (typep parent 'clim-extensions:viewport-pane)
-                        (or (and (zerop dx) (< (abs dy) height))
-                            (and (zerop dy) (< (abs dx) width)))))
+          (if (not (or (and (zerop dx) (< (abs dy) height))
+                       (and (zerop dy) (< (abs dx) width))))
               ;; If scrolling isn't strictly vertical or horizontal, just to a full update
               (funcall update-fn)
               ;; ELSE: We can refresh only part of the content, after copying the overlapping area
@@ -1537,16 +1536,19 @@ time an indexed pattern is drawn.")
                 (t
                  (update-transform))))))))
 
+#+nil
 (defun get-translation-from-transform (transformation)
   (multiple-value-bind (oa ob oc od x y)
         (get-transformation transformation)
     (declare (ignore oa ob oc od))
     (values x y)))
 
+#+nil
 (defun fractions-equals-p (a b)
   (= (nth-value 1 (truncate a))
      (nth-value 1 (truncate b))))
 
+#+nil
 (defun can-use-copying-scroll-p (sheet old-x old-y new-x new-y)
   (let ((parent (slot-value sheet 'climi::parent)))
     (if (typep parent 'clim-extensions:viewport-pane)
