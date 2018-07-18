@@ -16,7 +16,7 @@
 (define-command-table lisp-dev-commands :inherit-from nil) ;; Translators live here
 (define-command-table lisp-commands
     :inherit-from (lisp-dev-commands)
-    :menu (("ASDF" :menu asdf-commands)))
+    :menu (#+(or) ("ASDF" :menu asdf-commands)))
 
 (define-command-table show-commands :inherit-from (lisp-dev-commands))
 
