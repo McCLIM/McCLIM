@@ -98,7 +98,7 @@
   (:command-table (listener
                    :inherit-from (application-commands
                                   lisp-commands
-                                  asdf-commands
+                                  #+(or) asdf-commands
                                   filesystem-commands
                                   show-commands)
                    :menu (("Listener"   :menu application-commands)
