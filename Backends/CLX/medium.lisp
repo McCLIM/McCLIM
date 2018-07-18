@@ -1498,6 +1498,7 @@ time an indexed pattern is drawn.")
                                  (error "Unexpected movement coordinates: ~s,~s" dx dy)))
                         (let ((width-integer (truncate (+ area-width 0.5)))
                               (height-integer (truncate (+ area-height 0.5))))
+                          (setf (xlib:picture-clip-mask src) :none)
                           (xlib:render-composite :over src nil temp-buffer
                                                  src-x src-y ;src pos
                                                  0 0         ;mask pos
