@@ -1536,31 +1536,6 @@ time an indexed pattern is drawn.")
                 (t
                  (update-transform))))))))
 
-#+nil
-(defun get-translation-from-transform (transformation)
-  (multiple-value-bind (oa ob oc od x y)
-        (get-transformation transformation)
-    (declare (ignore oa ob oc od))
-    (values x y)))
-
-#+nil
-(defun fractions-equals-p (a b)
-  (= (nth-value 1 (truncate a))
-     (nth-value 1 (truncate b))))
-
-#+nil
-(defun can-use-copying-scroll-p (sheet old-x old-y new-x new-y)
-  (let ((parent (slot-value sheet 'climi::parent)))
-    (if (typep parent 'clim-extensions:viewport-pane)
-        (multiple-value-bind (width height)
-            (bounding-rectangle-size (sheet-region parent))
-          (let ((dx (- new-x old-x))
-                (dy (- new-y old-y)))
-            (or (and (zerop dx) (< (abs dy) height))
-                (and (zerop dy) (< (abs dx) width)))))
-        ;; ELSE: The parent is not a viewport
-        nil)))
-
 (defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
   (with-sheet-medium (medium sheet)
     (with-clx-graphics () medium

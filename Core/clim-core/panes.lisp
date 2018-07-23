@@ -2070,7 +2070,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
             ;; effects are not a problem for static views, but when
             ;; scrolling, the effect is that graphics sightly change
             ;; appearance.
-            ;; 
+            ;;
             ;; In addition, when using optimised scrolling (the
             ;; content of the pane is copied and only the newly
             ;; exposed area is repainted), it is important that the
@@ -2682,7 +2682,16 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
     (unless (eq :allow (stream-end-of-page-action stream))
-      (queue-event stream ;(frame-top-level-sheet *application-frame*)
+      ;; At this point, we might be in the middle of drawing and
+      ;; recording an output record. We can't call SCROLL-EXTENT
+      ;; directly here since it might want to repaint a portion of the
+      ;; pane that has been revealed. However, since the output
+      ;; records won't be added to the stream until later, the repaint
+      ;; will not draw the correct thing.
+      ;;
+      ;; The solution is to queue an event that will trigger the scoll
+      ;; later, at which point the output records are properly setup.
+      (queue-event stream
                    (make-instance 'scroll-extent-event
                                   :sheet stream
                                   :stream stream
