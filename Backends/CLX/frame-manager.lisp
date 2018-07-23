@@ -125,14 +125,12 @@
   concrete-pane-class)
 
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
-  (let* ((cp (find-concrete-pane-class type))
-         (p (maybe-mirroring fm cp)))
-    (apply #'make-instance
-	   p
-	   :frame frame
-	   :manager fm
-	   :port (port frame)
-	   args)))
+  (apply #'make-instance
+	 (maybe-mirroring fm (find-concrete-pane-class type))
+	 :frame frame
+	 :manager fm
+	 :port (port frame)
+	 args))
 
 
 (defmethod adopt-frame :before ((fm clx-frame-manager) (frame menu-frame))
