@@ -83,6 +83,12 @@
   (when (null *application-frame*)
     (error "~S called with null ~S" 
            '(setf port-keyboard-input-focus) '*application-frame*))
+  ;; XXX: pane frame is not defined for all streams (for instance not for
+  ;; CLIM:STANDARD-EXTENDED-INPUT-STREAM), so this sanity check would lead to
+  ;; error on that.
+  ;; XXX: also should we allow reading objects from foreign application frames?
+  ;; This was the case on Genera and is requested by users from time to time...
+  #+ (or)
   (unless (eq *application-frame* (pane-frame focus))
     (error "frame mismatch in ~S" '(setf port-keyboard-input-focus)))
   (setf (port-frame-keyboard-input-focus port *application-frame*) focus))

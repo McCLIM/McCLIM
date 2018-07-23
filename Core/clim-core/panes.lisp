@@ -2629,11 +2629,6 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (scroll-extent pane x y)
   (values x y))
 
-(defmethod stream-set-input-focus ((stream clim-stream-pane))
-  (with-slots (port) stream
-    (prog1 (port-keyboard-input-focus port)
-      (setf (port-keyboard-input-focus port) stream))))
-
 ;;; output any buffered stuff before input
 
 (defmethod stream-read-gesture :before ((stream clim-stream-pane)
