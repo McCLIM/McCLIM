@@ -2060,6 +2060,29 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
           (multiple-value-bind (t1 t2 t3 t4 old-x old-y)
               (get-transformation transform)
             (declare (ignore t1 t2 t3 t4))
+            ;; The call to ALIGN-SUBPIXEL ensures that the subpixel
+            ;; position remains the same before and after a scrollbar
+            ;; drag.
+            ;;
+            ;; When scrolling a viewport, if the decimal portion of
+            ;; any corrdinate changes, the rounding will change. This
+            ;; causes rounding effects on things that are drawn. Such
+            ;; effects are not a problem for static views, but when
+            ;; scrolling, the effect is that graphics sightly change
+            ;; appearance.
+            ;; 
+            ;; In addition, when using optimised scrolling (the
+            ;; content of the pane is copied and only the newly
+            ;; exposed area is repainted), it is important that the
+            ;; rounding remains consistent in order to avoid artifacts
+            ;; between the area that was copied and the part that has
+            ;; been newly updated. Fir this reason, optimised
+            ;; scrolling only takes effect when the decimal portion of
+            ;; the translation remains constant.
+            ;;
+            ;; Because of this, this function ensures that the
+            ;; subpixel positioning (i.e. the decimal part) is
+            ;; preserved after the scrollbar is moved.
 	    (move-sheet scrollee
 		        (if hscrollbar
 			    (align-subpixel (- (gadget-value hscrollbar)) old-x)
