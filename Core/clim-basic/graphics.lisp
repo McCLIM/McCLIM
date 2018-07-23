@@ -1037,7 +1037,6 @@ position for the character."
     ;; identity transformation before drawing the rectangle. -Hefner
     (with-transformed-position ((medium-transformation medium) x y)
       (with-identity-transformation (medium)
-        (log:info "pattern image?")
 	(draw-rectangle* medium x y (+ x width) (+ y height)
 			 :filled t
 			 :ink (transform-region

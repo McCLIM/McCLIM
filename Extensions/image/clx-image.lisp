@@ -23,31 +23,18 @@
 	(setf y (round y))
         (let ((dest (clim-clx::create-dest-picture da))
               (src (clim-clx::create-dest-picture pixmap)))
-	  (let ((gcontext (xlib:create-gcontext :drawable da)))
-	    (cond
-	      (mask
-	       (xlib:with-gcontext (gcontext
-				    :clip-mask mask
-				    :clip-x x
-				    :clip-y y)
-                 (log:info "image design with clip")
-		 (xlib:copy-area pixmap gcontext 0 0 width height
-				 da x y)))
-	      (t
-               (log:info "image design noclip (~s,~s : ~s,~s)" x y width height)
-               (apply #'xlib:render-set-picture-transform
-                      src (mapcar (lambda (v) (truncate (* v #x10000)))
-                                  '(1 0 0 0 1 0 0 0 1)))
-               (setf (xlib:picture-clip-mask dest) :none)
-               (let ((x2 (+ x width))
-                     (y2 (+ y height)))
-                 (xlib:render-triangle-strip dest :over src 0 0 :none (list x y
-                                                                            x y2
-                                                                            x2 y
-                                                                            x2 y2)))
-               #+nil
-	       (xlib:copy-area pixmap gcontext 0 0 width height
-			       da x y)))))))))
+	  (cond
+	    (mask
+	     (setf (xlib:picture-clip-mask dest) mask)
+             (setf (xlib:picture-clip-x-origin dest) x)
+             (setf (xlib:picture-clip-y-origin dest) y))
+	    (t
+             (setf (xlib:picture-clip-mask dest) :none)))
+          (let ((x2 (+ x width))
+                (y2 (+ y height)))
+            (xlib:render-triangle-fan dest :over src 0 0
+                                      (find-alpha-mask-format (xlib:drawable-display da))
+                                      (vector x y x2 y x2 y2 x y2))))))))
 
 (defmethod mcclim-image:medium-free-image-design
     ((medium clx-medium) (design mcclim-image:rgb-image-design))
