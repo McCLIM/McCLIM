@@ -1467,7 +1467,7 @@ time an indexed pattern is drawn.")
             (bounding-rectangle-size (sheet-region parent))
           (if (not (or (and (zerop dx) (< (abs dy) height))
                        (and (zerop dy) (< (abs dx) width))))
-              ;; If scrolling isn't strictly vertical or horizontal, just to a full update
+              ;; If scrolling isn't strictly vertical or horizontal, just do a full update
               (funcall update-fn)
               ;; ELSE: We can refresh only part of the content, after copying the overlapping area
               ;; It is assumed that the position of a sheet is always 0,0
@@ -1525,7 +1525,12 @@ time an indexed pattern is drawn.")
                  (setf (sheet-transformation sheet)
                        (compose-translation-with-transformation
                         transform (- x old-x) (- y old-y)))))
-          ;;
+          ;; The scroll optimisation has been disabled since there are
+          ;; issues when the window is partially obstructed. The
+          ;; solution is to draw to a backing pixmap instead, but this
+          ;; would be part of the larger work to implement double
+          ;; buffering for drawing.
+          #+(or)
           (cond ((and (zerop dx) (zerop dy))
                  ;; No movement, skip update
                  nil)
@@ -1534,7 +1539,9 @@ time an indexed pattern is drawn.")
                  ;; Coordinates are aligned, we can use optimised scrolling
                  (render-scroll-sheet sheet x y (truncate dx) (truncate dy) #'update-transform))
                 (t
-                 (update-transform))))))))
+                 (update-transform)))
+          (unless (and (zerop dx) (zerop dy))
+            (update-transform)))))))
 
 (defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
   (with-sheet-medium (medium sheet)
