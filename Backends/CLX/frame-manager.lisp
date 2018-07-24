@@ -114,7 +114,7 @@
         (unless foundp
           (eval
            `(defclass ,class-symbol
-                (mirrored-sheet-mixin
+                (clx-pane-mixin mirrored-sheet-mixin
                  ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
                      '(permanent-medium-sheet-output-mixin))
                  ,concrete-pane-class-symbol)
@@ -203,3 +203,20 @@
 
 (defmethod note-space-requirements-changed :after ((graft clx-graft) pane)
   (tell-window-manager-about-space-requirements pane))
+
+#+nil
+(defmethod (setf clim:sheet-transformation) :around (transformation (sheet clx-pane-mixin))
+  (log:info "transforming clx sheet: ~s" sheet)
+  (unless (transformation-equal transformation (sheet-transformation sheet))
+    (let ((old-transformation (sheet-transformation sheet)))
+      (let ((climi::*inhibit-dispatch-repaint* nil))
+        (call-next-method))
+      #+nil
+      (when (sheet-viewable-p sheet)
+        (let* ((sheet-region (sheet-region sheet))
+               (new-region (transform-region (sheet-transformation sheet) sheet-region))
+               (old-region (transform-region old-transformation sheet-region)))
+          (log:info "OLD: ~s    NEW: ~s" old-region new-region)
+          #+nil
+          (dispatch-repaint (sheet-parent sheet)
+                            (region-union new-region old-region)))))))

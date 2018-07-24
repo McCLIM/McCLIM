@@ -1366,3 +1366,184 @@ time an indexed pattern is drawn.")
             (when (typep fn 'xlib:font)
               (setf (xlib:gcontext-font gc)
                     fn))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; xrender
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass clx-pane-mixin ()
+  ()
+  (:documentation "Mixin class for CLX panes. This is needed in order to specialise on CLX panes only."))
+
+(defun find-rgba-format (display)
+  (or (getf (xlib:display-plist display) 'rgba-format)
+      (let* ((formats (xlib::render-query-picture-formats display))
+             (format (find-if (lambda (v)
+                                (and (= (byte-size (xlib:picture-format-red-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-green-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-blue-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-alpha-byte v)) 8)))
+                              formats)))
+        (unless format
+          (error "Can't find 8-bit RGBA format"))
+        (setf (getf (xlib:display-plist display) 'rgba-format) format))))
+
+(defun find-alpha-mask-format (display)
+  (or (getf (xlib:display-plist display) 'alpha-mask-format)
+      (let* ((formats (xlib::render-query-picture-formats display))
+             (format (find-if (lambda (v)
+                                (and (= (byte-size (xlib:picture-format-red-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-green-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-blue-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-alpha-byte v)) 8)))
+                              formats)))
+        (unless format
+          (error "Can't find 8-bit RGBA format"))
+        (setf (getf (xlib:display-plist display) 'alpha-mask-format) format))))
+
+(defun create-picture-from-drawable (drawable)
+  (xlib:render-create-picture drawable
+                              :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
+                              :poly-edge :smooth
+                              :poly-mode :precise))
+
+(defun create-dest-picture (drawable)
+  (or (getf (xlib:drawable-plist drawable) 'cached-picture)
+      (setf (getf (xlib:drawable-plist drawable) 'cached-picture)
+            (create-picture-from-drawable drawable))))
+
+(defun make-xrender-colour (fg)
+  (list (ash (ldb (byte 8 16) fg) 8)
+        (ash (ldb (byte 8 8) fg) 8)
+        (ash (ldb (byte 8 0) fg) 8)
+        #xFFFF))
+
+(defun create-pen (drawable gc)
+  (let* ((fg (xlib::gcontext-foreground gc))
+         (cached-pen (getf (xlib:gcontext-plist gc) 'cached-pen)))
+    (cond ((and cached-pen (equal (second cached-pen) fg))
+           (first cached-pen))
+          (t
+           (when cached-pen
+             (xlib:render-free-picture (first cached-pen)))
+           (let* ((pixmap (xlib:create-pixmap :drawable (xlib:drawable-root drawable)
+                                              :width 1
+                                              :height 1
+                                              :depth 32))
+                  (picture (xlib:render-create-picture pixmap
+                                                       :format (find-rgba-format (xlib::drawable-display drawable))
+                                                       :repeat :on))
+                  (colour (list (ash (ldb (byte 8 16) fg) 8)
+                                (ash (ldb (byte 8 8) fg) 8)
+                                (ash (ldb (byte 8 0) fg) 8)
+                                #xFFFF)))
+             (xlib:render-fill-rectangle picture :src colour 0 0 1 1)
+             (xlib:free-pixmap pixmap)
+             (setf (getf (xlib:gcontext-plist gc) 'cached-pen) (list picture fg))
+             picture)))))
+
+(defun create-move-sheet-temp-buffer-picture (drawable)
+  (or (getf (xlib:window-plist drawable) 'temp-buffer-picture)
+      (setf (getf (xlib:window-plist drawable) 'temp-buffer-picture)
+            (let ((pixmap (xlib:create-pixmap :width (xlib:drawable-width drawable)
+                                              :height (xlib:drawable-height drawable)
+                                              :depth (xlib:drawable-depth drawable)
+                                              :drawable drawable)))
+              (create-picture-from-drawable pixmap)))))
+
+(declaim (inline simple-round))
+(defun simple-round (n)
+  (if (minusp n)
+      (truncate (- n 0.5))
+      (truncate (+ n 0.5))))
+
+(defun render-scroll-sheet (sheet x y dx dy update-fn)
+  (let ((parent (pane-viewport sheet)))
+    (if (null parent)
+        ;; No parent
+        (funcall update-fn)
+        ;; ELSE: Check if we can use optimised scrolling
+        (multiple-value-bind (width height)
+            (bounding-rectangle-size (sheet-region parent))
+          (if (not (or (and (zerop dx) (< (abs dy) height))
+                       (and (zerop dy) (< (abs dx) width))))
+              ;; If scrolling isn't strictly vertical or horizontal, just do a full update
+              (funcall update-fn)
+              ;; ELSE: We can refresh only part of the content, after copying the overlapping area
+              ;; It is assumed that the position of a sheet is always 0,0
+              (progn
+                (multiple-value-bind (x y)
+                    (bounding-rectangle-position (sheet-region parent))
+                  (assert (and (zerop x) (zerop y))))
+                ;; Copy the overlapping area
+                (with-sheet-medium (medium sheet)
+                  (with-clx-graphics () medium
+                    (let* ((src (create-dest-picture mirror))
+                           (temp-buffer (create-move-sheet-temp-buffer-picture mirror)))
+                      (multiple-value-bind (src-x src-y dest-x dest-y area-width area-height updated-rectangle)
+                          (cond ((and (zerop dx) (minusp dy))
+                                 (values 0 (- dy) 0 0 width (+ height dy)
+                                         (make-rectangle* (- x) (- (+ height dy) y) (- width x) (- height y))))
+                                ((and (zerop dx) (plusp dy))
+                                 (values 0 0 0 dy width (- height dy)
+                                         (make-rectangle* (- x) (- y) (- width x) (- dy y))))
+                                ((and (minusp dx) (zerop dy))
+                                 (values (- dx) 0 0 0 (+ width dx) height
+                                         (make-rectangle* (- (+ width dx) x) (- y) (- width x) (- height x))))
+                                ((and (plusp dx) (zerop dy))
+                                 (values 0 0 dx 0 (- width dx) height
+                                         (make-rectangle* (- x) (- y) (- dx x) (- height y))))
+                                (t
+                                 (error "Unexpected movement coordinates: ~s,~s" dx dy)))
+                        (let ((width-integer (truncate (+ area-width 0.5)))
+                              (height-integer (truncate (+ area-height 0.5))))
+                          (setf (xlib:picture-clip-mask src) :none)
+                          (xlib:render-composite :over src nil temp-buffer
+                                                 src-x src-y ;src pos
+                                                 0 0         ;mask pos
+                                                 0 0         ;dest pos
+                                                 width-integer height-integer ;size
+                                                 )
+                          (xlib:render-composite :over temp-buffer nil src
+                                                 0 0
+                                                 0 0
+                                                 dest-x dest-y
+                                                 width-integer height-integer))
+                        (let ((climi::*inhibit-dispatch-repaint* t))
+                          (funcall update-fn))
+                        (repaint-sheet sheet updated-rectangle)))))))))))
+
+(defmethod move-sheet ((sheet clx-pane-mixin) x y)
+  (let ((transform (sheet-transformation sheet)))
+    (multiple-value-bind (old-x old-y)
+        (transform-position transform 0 0)
+      ;;
+      (let ((dx (- x old-x))
+            (dy (- y old-y)))
+        ;;
+        (flet ((update-transform ()
+                 (setf (sheet-transformation sheet)
+                       (compose-translation-with-transformation
+                        transform (- x old-x) (- y old-y)))))
+          ;; The scroll optimisation has been disabled since there are
+          ;; issues when the window is partially obstructed. The
+          ;; solution is to draw to a backing pixmap instead, but this
+          ;; would be part of the larger work to implement double
+          ;; buffering for drawing.
+          #+(or)
+          (cond ((and (zerop dx) (zerop dy))
+                 ;; No movement, skip update
+                 nil)
+                ((and (zerop (nth-value 1 (truncate dx)))
+                      (zerop (nth-value 1 (truncate dy))))
+                 ;; Coordinates are aligned, we can use optimised scrolling
+                 (render-scroll-sheet sheet x y (truncate dx) (truncate dy) #'update-transform))
+                (t
+                 (update-transform)))
+          (unless (and (zerop dx) (zerop dy))
+            (update-transform)))))))
+
+(defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
+  (with-sheet-medium (medium sheet)
+    (with-clx-graphics () medium
+      (setf (getf (xlib:window-plist mirror) 'temp-buffer-picture) nil))))

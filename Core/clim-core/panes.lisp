@@ -2048,27 +2048,61 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 ;;; Initialization
 
+(defun align-subpixel (pos ref)
+  (+ (truncate pos) (nth-value 1 (truncate ref))))
+
 (defun scroller-pane/vertical-drag-callback (pane new-value)
   "Callback for the vertical scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (sheet-child viewport)))
       (when (pane-viewport scrollee)
-	(move-sheet scrollee
-		    (if hscrollbar
-			(- (gadget-value hscrollbar))
-			0)
-		    (- new-value))))))
+        (let ((transform (sheet-transformation scrollee)))
+          (multiple-value-bind (t1 t2 t3 t4 old-x old-y)
+              (get-transformation transform)
+            (declare (ignore t1 t2 t3 t4))
+            ;; The call to ALIGN-SUBPIXEL ensures that the subpixel
+            ;; position remains the same before and after a scrollbar
+            ;; drag.
+            ;;
+            ;; When scrolling a viewport, if the decimal portion of
+            ;; any corrdinate changes, the rounding will change. This
+            ;; causes rounding effects on things that are drawn. Such
+            ;; effects are not a problem for static views, but when
+            ;; scrolling, the effect is that graphics sightly change
+            ;; appearance.
+            ;;
+            ;; In addition, when using optimised scrolling (the
+            ;; content of the pane is copied and only the newly
+            ;; exposed area is repainted), it is important that the
+            ;; rounding remains consistent in order to avoid artifacts
+            ;; between the area that was copied and the part that has
+            ;; been newly updated. Fir this reason, optimised
+            ;; scrolling only takes effect when the decimal portion of
+            ;; the translation remains constant.
+            ;;
+            ;; Because of this, this function ensures that the
+            ;; subpixel positioning (i.e. the decimal part) is
+            ;; preserved after the scrollbar is moved.
+	    (move-sheet scrollee
+		        (if hscrollbar
+			    (align-subpixel (- (gadget-value hscrollbar)) old-x)
+			    0)
+		        (align-subpixel (- new-value) old-y))))))))
 
 (defun scroller-pane/horizontal-drag-callback (pane new-value)
   "Callback for the horizontal scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
     (let ((scrollee (sheet-child viewport)))
       (when (pane-viewport scrollee)
-	(move-sheet scrollee
-		    (- new-value)
-		    (if vscrollbar
-			(- (gadget-value vscrollbar))
-			0))))))
+        (let ((transform (sheet-transformation scrollee)))
+          (multiple-value-bind (t1 t2 t3 t4 old-x old-y)
+              (get-transformation transform)
+            (declare (ignore t1 t2 t3 t4))
+	    (move-sheet scrollee
+		        (align-subpixel (- new-value) old-x)
+		        (if vscrollbar
+			    (align-subpixel (- (gadget-value vscrollbar)) old-y)
+			    0))))))))
     
 (defun scroller-pane/update-scroll-bars (pane)
   (check-type pane scroller-pane)
@@ -2624,13 +2658,39 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
     ((type t) (stream clim-stream-pane))
   (funcall-presentation-generic-function presentation-type-history type))
 
+(defclass scroll-extent-event (standard-event)
+  ((stream :initarg :stream
+           :reader scroll-extent-event/stream)
+   (new-height :initarg :new-height
+               :reader scroll-extent-event/new-height)))
+
+(defmethod handle-event ((sheet clim-stream-pane) (event scroll-extent-event))
+  (let ((stream (scroll-extent-event/stream event)))
+    (scroll-extent stream
+                   0
+                   (max 0 (- (scroll-extent-event/new-height event)
+                             (bounding-rectangle-height
+                              (or (pane-viewport stream)
+                                  stream)))))))
+
 (defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
-  (change-stream-space-requirements stream :height new-height)
-  (unless (eq :allow (stream-end-of-page-action stream))
-    (scroll-extent stream 0 (max 0 (-  new-height
-                                       (bounding-rectangle-height
-                                        (or (pane-viewport stream)
-                                            stream)))))))
+  (when (stream-drawing-p stream)
+    (change-stream-space-requirements stream :height new-height)
+    (unless (eq :allow (stream-end-of-page-action stream))
+      ;; At this point, we might be in the middle of drawing and
+      ;; recording an output record. We can't call SCROLL-EXTENT
+      ;; directly here since it might want to repaint a portion of the
+      ;; pane that has been revealed. However, since the output
+      ;; records won't be added to the stream until later, the repaint
+      ;; will not draw the correct thing.
+      ;;
+      ;; The solution is to queue an event that will trigger the scoll
+      ;; later, at which point the output records are properly setup.
+      (queue-event stream
+                   (make-instance 'scroll-extent-event
+                                  :sheet stream
+                                  :stream stream
+                                  :new-height new-height)))))
 
 ;;; INTERACTOR PANES
 

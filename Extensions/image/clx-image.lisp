@@ -21,18 +21,20 @@
 	   x y)
 	(setf x (round x))
 	(setf y (round y))
-	(let ((gcontext (xlib:create-gcontext :drawable da)))
+        (let ((dest (clim-clx::create-dest-picture da))
+              (src (clim-clx::create-dest-picture pixmap)))
 	  (cond
 	    (mask
-	      (xlib:with-gcontext (gcontext
-				   :clip-mask mask
-				   :clip-x x
-				   :clip-y y)
-		(xlib:copy-area pixmap gcontext 0 0 width height
-				da x y)))
+	     (setf (xlib:picture-clip-mask dest) mask)
+             (setf (xlib:picture-clip-x-origin dest) x)
+             (setf (xlib:picture-clip-y-origin dest) y))
 	    (t
-	      (xlib:copy-area pixmap gcontext 0 0 width height
-			      da x y))))))))
+             (setf (xlib:picture-clip-mask dest) :none)))
+          (let ((x2 (+ x width))
+                (y2 (+ y height)))
+            (xlib:render-triangle-fan dest :over src 0 0
+                                      (find-alpha-mask-format (xlib:drawable-display da))
+                                      (vector x y x2 y x2 y2 x y2))))))))
 
 (defmethod mcclim-image:medium-free-image-design
     ((medium clx-medium) (design mcclim-image:rgb-image-design))
