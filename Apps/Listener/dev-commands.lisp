@@ -1124,7 +1124,8 @@ if you are interested in fixing this."))
 
   (let* ((pathname (probe-file pathname))
          (base-pathname (cl-fad:pathname-directory-pathname pathname))
-         (query-pathname (make-pathname :name (or (pathname-name pathname) :wild)
+         (query-pathname (make-pathname :host (pathname-host pathname)
+                                        :name (or (pathname-name pathname) :wild)
                                         :type (or (pathname-type pathname) :wild)
                                         :directory :wild
                                         :version (or (pathname-version pathname) :wild)))
