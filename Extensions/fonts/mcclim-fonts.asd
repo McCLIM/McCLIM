@@ -1,5 +1,6 @@
 #| dummy system to make Quicklisp happy |#
 (defsystem #:mcclim-fonts
+  :depends-on (#:clim-basic)
   :components ((:file "common")))
 
 (defsystem #:mcclim-fonts/truetype
