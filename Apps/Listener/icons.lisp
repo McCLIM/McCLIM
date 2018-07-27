@@ -78,5 +78,6 @@
     (dolist (pn pathnames)
       (standard-icon (format nil "~A.~A" (pathname-name pn) (pathname-type pn))))))
 
+#+(or)
 (eval-when (:load-toplevel :execute)
   (precache-icons))
