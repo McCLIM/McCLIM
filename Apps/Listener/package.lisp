@@ -8,7 +8,5 @@
 (in-package #:clim-listener)
 
 (eval-when (:load-toplevel)
-  (defparameter *icon-path* 
-    (merge-pathnames
-     #P"icons/"
-     (load-time-value (or #.*compile-file-pathname* *load-pathname*)))))
+  (defparameter *icon-path*
+    (asdf:system-relative-pathname "clim-listener" "icons/")))
