@@ -1018,24 +1018,24 @@ position for the character."
   ;; Note: I believe the sample implementation in the spec is incorrect.
   ;; --GB
   (check-type pattern pattern)
-  (cond ((or clipping-region transformation)
-         (with-drawing-options (medium :clipping-region clipping-region
-                                       :transformation transformation)
-           ;; Now this is totally bogus.
-           (medium-draw-pattern* medium pattern x y) ))
-        (t
-         ;; What happens if there is already a transformation
-         ;; applied to the medium?
-         (medium-draw-pattern* medium pattern x y))))
+  (let ((updated-transformation (or transformation (medium-transformation medium))))
+    (cond (clipping-region
+           (with-drawing-options (medium :clipping-region clipping-region)
+             ;; Now this is totally bogus.
+             (medium-draw-pattern* medium pattern x y updated-transformation)))
+          (t
+           ;; What happens if there is already a transformation
+           ;; applied to the medium?
+           (medium-draw-pattern* medium pattern x y updated-transformation)))))
 
-(defmethod medium-draw-pattern* (medium pattern x y)
+(defmethod medium-draw-pattern* (medium pattern x y transformation)
   (let ((width  (pattern-width pattern))
         (height (pattern-height pattern)))
     ;; As I read the spec, the pattern itself is not transformed, so
     ;; we should draw the full (untransformed) pattern at the
     ;; tranformed x/y coordinates. This requires we revert to the
     ;; identity transformation before drawing the rectangle. -Hefner
-    (with-transformed-position ((medium-transformation medium) x y)
+    (with-transformed-position (transformation x y)
       (with-identity-transformation (medium)
 	(draw-rectangle* medium x y (+ x width) (+ y height)
 			 :filled t

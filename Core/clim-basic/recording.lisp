@@ -1515,15 +1515,22 @@ were added."
                     (eql (slot-value record 'filled) filled))))
 ;;;; Patterns
 
-;;; The Spec says that "transformation only affects the position at
-;;; which the pattern is drawn, not the pattern itself"
-(def-grecording draw-pattern (() pattern x y) ()
+(def-grecording draw-pattern ((draw-text-transform-mixin) pattern x y transformation)
+    (:replay-fn nil)
+  (let ((width (pattern-width pattern))
+        (height (pattern-height pattern)))
+    (enclosing-transform-polygon transformation (list x y
+                                                      (+ x width) y
+                                                      (+ x width) (+ y height)
+                                                      x (+ y height))))
+  #+nil
   (let ((width (pattern-width pattern))
         (height (pattern-height pattern))
         (transform (medium-transformation medium)))
     (setf (values x y) (transform-position transform x y))
     (values x y (+ x width) (+ y height))))
 
+#+nil
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-pattern-output-record))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
@@ -1536,6 +1543,7 @@ were added."
           (incf x dx)
           (incf y dy))))))
 
+#+nil
 (defrecord-predicate draw-pattern-output-record (x y pattern)
   ;; ### I am not so sure about the correct usage of DEFRECORD-PREDICATE
   ;; --GB 2003-08-15
@@ -1546,6 +1554,18 @@ were added."
        (if-supplied (pattern pattern)
          (eq (slot-value record 'pattern) pattern))))
 
+(defmethod replay-output-record
+    ((record draw-pattern-output-record) stream
+     &optional (region +everywhere+) (x-offset 0) (y-offset 0))
+  (declare (ignore x-offset y-offset region))
+  (with-slots (pattern x y transformation)
+      record
+    (let* ((medium (sheet-medium stream))
+           (dx (draw-text-transform-mixin-transformed-dx record))
+           (dy (draw-text-transform-mixin-transformed-dy record))
+           (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
+                                                            transformation)))
+      (medium-draw-pattern* medium pattern x y updated-transform))))
 
 ;;;; Text
 
@@ -1607,7 +1627,7 @@ were added."
                                                         right bottom)))))
 
 (defmethod* (setf output-record-position) :around
-  (nx ny (record draw-text-output-record))
+  (nx ny (record draw-text-transform-mixin))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
     (let ((dx (- nx x1))

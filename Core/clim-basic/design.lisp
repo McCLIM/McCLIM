@@ -423,7 +423,7 @@
 ;;; The generic function MEDIUM-DRAW-PATTERN* is a McCLIM invention,
 ;;; and it does not appear in the CLIM II specification.  It is called
 ;;; by DRAW-PATTERN*.  
-(defgeneric medium-draw-pattern* (medium pattern x y))
+(defgeneric medium-draw-pattern* (medium pattern x y transformation))
 
 
 ;;;

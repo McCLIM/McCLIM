@@ -1,7 +1,9 @@
 (in-package :mcclim-image)
 
-(defmethod medium-draw-pattern* (medium (pattern rgb-pattern) x y)
-  (medium-draw-image-design* medium pattern x y))
+(defmethod medium-draw-pattern* (medium (pattern rgb-pattern) x y transformation)
+  (multiple-value-bind (x y)
+      (transform-position transformation x y)
+    (medium-draw-image-design* medium pattern x y)))
 
 (defmethod medium-free-image-design ((sheet sheet-with-medium-mixin) design)
   (medium-free-image-design (sheet-medium sheet) design))

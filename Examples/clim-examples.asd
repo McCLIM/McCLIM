@@ -18,6 +18,7 @@
      (:file "tabdemo")
      (:file "sliderdemo")
      (:file "tabledemo")
+     (:file "image-transform-demo")
      (:file "demodemo")
      (:file "stream-test")
      (:file "presentation-test")
