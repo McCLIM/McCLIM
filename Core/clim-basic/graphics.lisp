@@ -1024,8 +1024,6 @@ position for the character."
              ;; Now this is totally bogus.
              (medium-draw-pattern* medium pattern x y updated-transformation)))
           (t
-           ;; What happens if there is already a transformation
-           ;; applied to the medium?
            (medium-draw-pattern* medium pattern x y updated-transformation)))))
 
 (defmethod medium-draw-pattern* (medium pattern x y transformation)
@@ -1035,7 +1033,8 @@ position for the character."
     ;; we should draw the full (untransformed) pattern at the
     ;; tranformed x/y coordinates. This requires we revert to the
     ;; identity transformation before drawing the rectangle. -Hefner
-    (with-transformed-position (transformation x y)
+    (multiple-value-bind (x y)
+        (transform-position transformation x y)
       (with-identity-transformation (medium)
 	(draw-rectangle* medium x y (+ x width) (+ y height)
 			 :filled t
