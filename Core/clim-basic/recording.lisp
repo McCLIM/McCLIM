@@ -1515,24 +1515,24 @@ were added."
                     (eql (slot-value record 'filled) filled))))
 ;;;; Patterns
 
-(defclass drawing-transform-mixin ()
+(defclass position-transform-mixin ()
   ((transformed-dx :initform 0
-                   :accessor drawing-transform-mixin-transformed-dx)
+                   :accessor transformed-dx)
    (transformed-dy :initform 0
-                   :accessor drawing-transform-mixin-transformed-dy)))
+                   :accessor transformed-dy)))
 
 (defmethod* (setf output-record-position) :around
-  (nx ny (record drawing-transform-mixin))
+  (nx ny (record position-transform-mixin))
   (with-standard-rectangle* (:x1 x1 :y1 y1)
       record
     (let ((dx (- nx x1))
           (dy (- ny y1)))
       (multiple-value-prog1
           (call-next-method)
-        (incf (drawing-transform-mixin-transformed-dx record) dx)
-        (incf (drawing-transform-mixin-transformed-dy record) dy)))))
+        (incf (transformed-dx record) dx)
+        (incf (transformed-dy record) dy)))))
 
-(def-grecording draw-pattern ((drawing-transform-mixin) pattern x y transformation)
+(def-grecording draw-pattern ((position-transform-mixin) pattern x y transformation)
     (:replay-fn nil)
   (let ((width (pattern-width pattern))
         (height (pattern-height pattern)))
@@ -1548,8 +1548,8 @@ were added."
   (with-slots (pattern x y transformation)
       record
     (let* ((medium (sheet-medium stream))
-           (dx (drawing-transform-mixin-transformed-dx record))
-           (dy (drawing-transform-mixin-transformed-dy record))
+           (dx (transformed-dx record))
+           (dy (transformed-dy record))
            (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
                                                             transformation)))
       (medium-draw-pattern* medium pattern x y updated-transform))))
@@ -1573,7 +1573,7 @@ were added."
          (setf max-y (max max-y y)))
     finally (return (values min-x min-y max-x max-y))))
 
-(def-grecording draw-text ((gs-text-style-mixin drawing-transform-mixin) string point-x point-y start end
+(def-grecording draw-text ((gs-text-style-mixin position-transform-mixin) string point-x point-y start end
                            align-x align-y toward-x toward-y transform-glyphs
                            transformation)
     (:replay-fn nil)
@@ -1615,8 +1615,8 @@ were added."
                toward-y transform-glyphs transformation)
       record
     (let* ((medium (sheet-medium stream))
-           (dx (drawing-transform-mixin-transformed-dx record))
-           (dy (drawing-transform-mixin-transformed-dy record))
+           (dx (transformed-dx record))
+           (dy (transformed-dy record))
            (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
                                                             transformation)))
       (medium-draw-text* medium string point-x point-y start end align-x
