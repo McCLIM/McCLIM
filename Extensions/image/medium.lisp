@@ -1,14 +1,12 @@
 (in-package :mcclim-image)
 
 (defmethod medium-draw-pattern* (medium (pattern rgb-pattern) x y transformation)
-  (multiple-value-bind (x y)
-      (transform-position transformation x y)
-    (medium-draw-image-design* medium pattern x y)))
+  (medium-draw-image-design* medium pattern x y transformation))
 
 (defmethod medium-free-image-design ((sheet sheet-with-medium-mixin) design)
   (medium-free-image-design (sheet-medium sheet) design))
 
-(defmethod medium-draw-image-design* :before (current-medium design x y)
+(defmethod medium-draw-image-design* :before (current-medium design x y transformation)
   (with-slots (medium medium-data) design
     (unless (eq medium current-medium)
       (when medium
@@ -17,5 +15,5 @@
       (setf medium-data nil))))
 
 (defmethod medium-draw-image-design*
-    ((medium sheet-with-medium-mixin) design x y)
-  (medium-draw-image-design* (sheet-medium medium) design x y))
+    ((medium sheet-with-medium-mixin) design x y transformation)
+  (medium-draw-image-design* (sheet-medium medium) design x y transformation))

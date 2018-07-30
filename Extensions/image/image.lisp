@@ -38,7 +38,7 @@
 
 ;;; Drawing protocol
 
-(defgeneric medium-draw-image-design* (medium design x y))
+(defgeneric medium-draw-image-design* (medium design x y transformation))
 
 ;;; Fetching protocol
 
@@ -70,7 +70,12 @@
     (medium (design rgb-image-design) &rest options
      &key (x 0) (y 0) &allow-other-keys)
   (with-medium-options (medium options)
-    (medium-draw-image-design* medium design x y)))
+    ;; While adding support for image transforms, another argument was
+    ;; added to MEDIUM-DRAW-IMAGE-DESIGN*, the ability to specify the
+    ;; transformation. For now, the identity transformation is added
+    ;; here, but it seems as though this function never paid any
+    ;; attention to the transformation in the first place.
+    (medium-draw-image-design* medium design x y clim:+identity-transformation+)))
 
 (defclass rgb-pattern (pattern rgb-image-design)
   ())

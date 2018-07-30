@@ -2,12 +2,20 @@
 
 ;;; RGB-IMAGE support, from Closure
 
+(defun transform-pointset (transformation &rest points)
+  (loop
+    for (x y) on points by #'cddr
+    append (multiple-value-list (transform-position transformation x y))))
+
 (defmethod mcclim-image::medium-draw-image-design*
-    ((medium clx-medium) (design mcclim-image:rgb-image-design) x y)
+    ((medium clx-medium) (design mcclim-image:rgb-image-design) x y transformation)
+  (log:info "pos: (~s,~s) tr: ~s" x y transformation)
   (let* ((da (sheet-xmirror (medium-sheet medium)))
 	 (image (slot-value design 'mcclim-image::image))
 	 (width (mcclim-image:image-width image))
-	 (height (mcclim-image:image-height image)))
+	 (height (mcclim-image:image-height image))
+         (native-transform (sheet-native-transformation (medium-sheet medium)))
+         (merged-transform (clim:compose-transformations native-transform transformation)))
     (destructuring-bind (&optional pixmap mask)
 	(slot-value design 'mcclim-image::medium-data)
       (unless pixmap
@@ -15,26 +23,32 @@
 	(when (mcclim-image:image-alpha-p image)
 	  (setf mask (compute-rgb-image-mask da image)))
 	(setf (slot-value design 'mcclim-image::medium-data) (list pixmap mask)))
-      (multiple-value-bind (x y)
-	  (transform-position
-	   (sheet-device-transformation (medium-sheet medium))
-	   x y)
-	(setf x (round x))
-	(setf y (round y))
+      (let ((transformed-points (transform-pointset merged-transform
+                                                    x y
+                                                    (+ x width) y
+                                                    (+ x width) (+ y height)
+                                                    x (+ y height))))
         (let ((dest (clim-clx::create-dest-picture da))
               (src (clim-clx::create-dest-picture pixmap)))
 	  (cond
 	    (mask
 	     (setf (xlib:picture-clip-mask dest) mask)
-             (setf (xlib:picture-clip-x-origin dest) x)
-             (setf (xlib:picture-clip-y-origin dest) y))
+             (setf (xlib:picture-clip-x-origin dest) (truncate (+ (first transformed-points) 0.5)))
+             (setf (xlib:picture-clip-y-origin dest) (truncate (+ (second transformed-points) 0.5))))
 	    (t
              (setf (xlib:picture-clip-mask dest) :none)))
-          (let ((x2 (+ x width))
-                (y2 (+ y height)))
-            (xlib:render-triangle-fan dest :over src 0 0
-                                      (find-alpha-mask-format (xlib:drawable-display da))
-                                      (vector x y x2 y x2 y2 x y2))))))))
+          (multiple-value-bind (rxx rxy ryx ryy)
+              (climi::get-transformation transformation)
+            (apply #'xlib:render-set-picture-transform src
+                   (mapcar (lambda (v)
+                             (truncate (* v #x10000)))
+                           (let ((det (- (* rxx ryy) (* rxy ryx))))
+                             (list (/ ryy det) (- (/ rxy det)) 0
+                                   (- (/ ryx det)) (/ rxx det) 0
+                                   0 0 1)))))
+          (xlib:render-triangle-fan dest :over src 0 0
+                                    (find-alpha-mask-format (xlib:drawable-display da))
+                                    transformed-points))))))
 
 (defmethod mcclim-image:medium-free-image-design
     ((medium clx-medium) (design mcclim-image:rgb-image-design))
