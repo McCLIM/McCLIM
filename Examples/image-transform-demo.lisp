@@ -9,10 +9,11 @@
           :accessor image-transform-demo/image))
   (:panes (image-demo :application
                       :display-function 'display-image-demo
+                      :scroll-bars :both
                       :incremental-redisplay t)
           (rot-slider :slider
                       :value 0
-                      :show-value t
+                      :show-value-p nil
                       :orientation :horizontal
                       :min-value 0
                       :max-value (* pi 2)
@@ -20,7 +21,7 @@
                       :drag-callback #'slider-updated-callback)
           (x-slider :slider
                     :value 0
-                    :show-value t
+                    :show-value-p nil
                     :orientation :horizontal
                     :min-value 0
                     :max-value 200
@@ -28,7 +29,7 @@
                     :drag-callback #'slider-updated-callback)
           (y-slider :slider
                     :value 0
-                    :show-value t
+                    :show-value-p nil
                     :orientation :horizontal
                     :min-value 0
                     :max-value 200
@@ -36,7 +37,7 @@
                     :drag-callback #'slider-updated-callback)
           (scale-slider :slider
                         :value 1
-                        :show-value t
+                        :show-value-p nil
                         :orientation :horizontal
                         :min-value 0.1
                         :max-value 5
@@ -44,7 +45,7 @@
                         :drag-callback #'slider-updated-callback)
           (x-skew-slider :slider
                          :value 0
-                         :show-value t
+                         :show-value-p nil
                          :orientation :horizontal
                          :min-value -1
                          :max-value 1
@@ -52,20 +53,33 @@
                          :drag-callback #'slider-updated-callback)
           (y-skew-slider :slider
                          :value 0
-                         :show-value t
+                         :show-value-p nil
                          :orientation :horizontal
                          :min-value -1
                          :max-value 1
                          :value-changed-callback #'slider-updated-callback
                          :drag-callback #'slider-updated-callback))
-  (:layouts (default (clim:vertically (:width 1000 :height 900)
-                       (14/20 image-demo)
-                       (1/20 rot-slider)
-                       (1/20 x-slider)
-                       (1/20 y-slider)
-                       (1/20 scale-slider)
-                       (1/20 x-skew-slider)
-                       (1/20 y-skew-slider)))))
+  (:layouts (default (clim:vertically ()
+                       (14/20 (clim:labelling (:label "Test Image"
+					       :align-x :center
+					       :label-alignment :top)
+				image-demo))
+		       (clim:horizontally ()
+			 (clim:vertically ()
+			   (1/20 (clim:labelling (:label "Rotate")
+				   rot-slider))
+			   (1/20 (clim:labelling (:label "Translate X")
+				   x-slider)))
+			 (clim:vertically ()
+			   (1/20 (clim:labelling (:label "Translate Y")
+				   y-slider))
+			   (1/20 (clim:labelling (:label "Scale")
+				   scale-slider)))
+			 (clim:vertically ()
+			   (1/20 (clim:labelling (:label "Skew X")
+				   x-skew-slider))
+			   (1/20 (clim:labelling (:label "Skew Y")
+				   y-skew-slider))))))))
 
 (defmethod initialize-instance :after ((obj image-transform-demo) &key)
   (setf (image-transform-demo/image obj)
