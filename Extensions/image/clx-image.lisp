@@ -9,7 +9,6 @@
 
 (defmethod mcclim-image::medium-draw-image-design*
     ((medium clx-medium) (design mcclim-image:rgb-image-design) x y transformation)
-  (log:info "pos: (~s,~s) tr: ~s" x y transformation)
   (let* ((da (sheet-xmirror (medium-sheet medium)))
 	 (image (slot-value design 'mcclim-image::image))
 	 (width (mcclim-image:image-width image))
