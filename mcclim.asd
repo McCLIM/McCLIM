@@ -39,6 +39,7 @@ Daniel Barlow
 Daniel Kochmański
 Duncan Rose
 Edena Pixel
+Elias Mårtenson
 Frank Buss
 Gilbert Baumann
 Iban Hatchondo
