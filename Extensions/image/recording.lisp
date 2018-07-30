@@ -4,7 +4,7 @@
 
 (in-package :mcclim-image)
 
-(def-grecording draw-image-design ((climi::draw-text-transform-mixin) image-design x y transformation)
+(def-grecording draw-image-design ((climi::drawing-transform-mixin) image-design x y transformation)
     (:replay-fn nil)
   (let ((width (image-width (image image-design)))
         (height (image-height (image image-design)))
@@ -29,8 +29,8 @@
   (with-slots (image-design x y transformation)
       record
     (let* ((medium (sheet-medium stream))
-           (dx (climi::draw-text-transform-mixin-transformed-dx record))
-           (dy (climi::draw-text-transform-mixin-transformed-dy record))
+           (dx (climi::drawing-transform-mixin-transformed-dx record))
+           (dy (climi::drawing-transform-mixin-transformed-dy record))
            (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
                                                             transformation)))
       (medium-draw-image-design* medium image-design x y updated-transform))))

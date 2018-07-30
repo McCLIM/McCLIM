@@ -1515,44 +1515,31 @@ were added."
                     (eql (slot-value record 'filled) filled))))
 ;;;; Patterns
 
-(def-grecording draw-pattern ((draw-text-transform-mixin) pattern x y transformation)
+(defclass drawing-transform-mixin ()
+  ((transformed-dx :initform 0
+                   :accessor drawing-transform-mixin-transformed-dx)
+   (transformed-dy :initform 0
+                   :accessor drawing-transform-mixin-transformed-dy)))
+
+(defmethod* (setf output-record-position) :around
+  (nx ny (record drawing-transform-mixin))
+  (with-standard-rectangle* (:x1 x1 :y1 y1)
+      record
+    (let ((dx (- nx x1))
+          (dy (- ny y1)))
+      (multiple-value-prog1
+          (call-next-method)
+        (incf (drawing-transform-mixin-transformed-dx record) dx)
+        (incf (drawing-transform-mixin-transformed-dy record) dy)))))
+
+(def-grecording draw-pattern ((drawing-transform-mixin) pattern x y transformation)
     (:replay-fn nil)
   (let ((width (pattern-width pattern))
         (height (pattern-height pattern)))
     (enclosing-transform-polygon transformation (list x y
                                                       (+ x width) y
                                                       (+ x width) (+ y height)
-                                                      x (+ y height))))
-  #+nil
-  (let ((width (pattern-width pattern))
-        (height (pattern-height pattern))
-        (transform (medium-transformation medium)))
-    (setf (values x y) (transform-position transform x y))
-    (values x y (+ x width) (+ y height))))
-
-#+nil
-(defmethod* (setf output-record-position) :around
-    (nx ny (record draw-pattern-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
-    (with-slots (x y) record
-      (let ((dx (- nx x1))
-            (dy (- ny y1)))
-        (multiple-value-prog1
-            (call-next-method)
-          (incf x dx)
-          (incf y dy))))))
-
-#+nil
-(defrecord-predicate draw-pattern-output-record (x y pattern)
-  ;; ### I am not so sure about the correct usage of DEFRECORD-PREDICATE
-  ;; --GB 2003-08-15
-  (and (if-supplied (x coordinate)
-         (coordinate= (slot-value record 'x) x))
-       (if-supplied (y coordinate)
-         (coordinate= (slot-value record 'y) y))
-       (if-supplied (pattern pattern)
-         (eq (slot-value record 'pattern) pattern))))
+                                                      x (+ y height)))))
 
 (defmethod replay-output-record
     ((record draw-pattern-output-record) stream
@@ -1561,8 +1548,8 @@ were added."
   (with-slots (pattern x y transformation)
       record
     (let* ((medium (sheet-medium stream))
-           (dx (draw-text-transform-mixin-transformed-dx record))
-           (dy (draw-text-transform-mixin-transformed-dy record))
+           (dx (drawing-transform-mixin-transformed-dx record))
+           (dy (drawing-transform-mixin-transformed-dy record))
            (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
                                                             transformation)))
       (medium-draw-pattern* medium pattern x y updated-transform))))
@@ -1586,13 +1573,7 @@ were added."
          (setf max-y (max max-y y)))
     finally (return (values min-x min-y max-x max-y))))
 
-(defclass draw-text-transform-mixin ()
-  ((transformed-dx :initform 0
-                   :accessor draw-text-transform-mixin-transformed-dx)
-   (transformed-dy :initform 0
-                   :accessor draw-text-transform-mixin-transformed-dy)))
-
-(def-grecording draw-text ((gs-text-style-mixin draw-text-transform-mixin) string point-x point-y start end
+(def-grecording draw-text ((gs-text-style-mixin drawing-transform-mixin) string point-x point-y start end
                            align-x align-y toward-x toward-y transform-glyphs
                            transformation)
     (:replay-fn nil)
@@ -1626,17 +1607,6 @@ were added."
                                                         left bottom
                                                         right bottom)))))
 
-(defmethod* (setf output-record-position) :around
-  (nx ny (record draw-text-transform-mixin))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
-    (let ((dx (- nx x1))
-          (dy (- ny y1)))
-      (multiple-value-prog1
-          (call-next-method)
-        (incf (draw-text-transform-mixin-transformed-dx record) dx)
-        (incf (draw-text-transform-mixin-transformed-dy record) dy)))))
-
 (defmethod replay-output-record
     ((record draw-text-output-record) stream
      &optional (region +everywhere+) (x-offset 0) (y-offset 0))
@@ -1645,8 +1615,8 @@ were added."
                toward-y transform-glyphs transformation)
       record
     (let* ((medium (sheet-medium stream))
-           (dx (draw-text-transform-mixin-transformed-dx record))
-           (dy (draw-text-transform-mixin-transformed-dy record))
+           (dx (drawing-transform-mixin-transformed-dx record))
+           (dy (drawing-transform-mixin-transformed-dy record))
            (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
                                                             transformation)))
       (medium-draw-text* medium string point-x point-y start end align-x
