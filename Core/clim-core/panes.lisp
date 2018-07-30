@@ -1609,8 +1609,8 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
           for child in (sheet-children grid)
           and width = 0 then (max width (sr-width child))
           and height = 0 then (max height (sr-height child))
-          and max-width = 5000000 then (min max-width (sr-min-width child))
-          and max-height = 5000000 then (min max-height (sr-max-height child))
+          and max-width = 5000000 then (max width (min max-width (sr-min-width child)))
+          and max-height = 5000000 then (max height (min max-height (sr-max-height child)))
           and min-width = 0 then (max min-width (sr-min-width child))
           and min-height = 0 then (max min-height (sr-min-height child))
           finally (return
