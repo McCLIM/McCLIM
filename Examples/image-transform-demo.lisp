@@ -51,7 +51,7 @@
                          :min-value -1
                          :max-value 1
                          :value-changed-callback #'slider-updated-callback))
-  (:layouts (default (clim:vertically ()
+  (:layouts (default (clim:vertically (:width 1000 :height 900)
                        (14/20 image-demo)
                        (1/20 rot-slider)
                        (1/20 x-slider)

@@ -40,7 +40,7 @@
               (climi::get-transformation transformation)
             (apply #'xlib:render-set-picture-transform src
                    (mapcar (lambda (v)
-                             (truncate (* v #x10000)))
+                             (logand (truncate (* v #x10000)) #xFFFFFFFF))
                            (let ((det (- (* rxx ryy) (* rxy ryx))))
                              (list (/ ryy det) (- (/ rxy det)) 0
                                    (- (/ ryx det)) (/ rxx det) 0
