@@ -359,12 +359,11 @@ or NIL if the current transformation is the identity transformation."
                       (setf (aref vec 0) (glyph-entry-codepoint current-index))
                       (multiple-value-bind (transformed-x transformed-y)
                           (clim:transform-position transformation x-pos y-pos)
-                        (unless (or (> transformed-x #x7fff)
-                                    (> transformed-y #x7fff))
-                          (xlib:render-composite-glyphs dest glyphset source
-                                                        (truncate (+ transformed-x 0.5))
-                                                        (truncate (+ transformed-y 0.5))
-                                                        vec)))
+                        (let ((sx (truncate (+ transformed-x 0.5)))
+                              (sy (truncate (+ transformed-y 0.5))))
+                          (unless (or (> sx #x7fff)
+                                      (> sy #x7fff))
+                            (xlib:render-composite-glyphs dest glyphset source sx sy vec))))
                       (incf rx (/ (glyph-entry-x-advance current-index) 64))
                       (incf ry (/ (glyph-entry-y-advance current-index) 64)))))
           (when transform-matrix
@@ -388,28 +387,27 @@ or NIL if the current transformation is the identity transformation."
                   with rx = 0
                   with ascender = 0
                   with descender = 0
-                  for current-index in index-list
-                  for attrs = (gethash (glyph-entry-codepoint current-index) cached-glyphs)
+                  for current-index on index-list
+                  for e = (car current-index)
+                  for attrs = (gethash (glyph-entry-codepoint e) cached-glyphs)
                   do (progn
-                       (incf rx (/ (glyph-entry-x-advance current-index) 64))
+                       (when (cdr current-index)
+                         (incf rx (/ (glyph-entry-x-advance e) 64)))
                        (setf descender (max descender (- (glyph-attributes-height attrs)
                                                          (glyph-attributes-y-origin attrs))))
                        (setf ascender (max ascender (glyph-attributes-y-origin attrs))))
                   finally (return (values rx ascender descender)))
-              (values width
-                      ascender
-                      descender
-                      ;; We're just returning 0 for the left edge here, even though the below
-                      ;; version will actually compute a better value. But if we do this,
-                      ;; then we should compute the similar value for the right side as
-                      ;; well and it's not clear as to how to find that value.
-                      0
-                      #+(or) (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
-                      width
-                      (freetype2:face-ascender-pixels face)
-                      (freetype2:face-descender-pixels face)
-                      0
-                      end)))))))
+              (let* ((e (car (last index-list)))
+                     (glyph-attrs (gethash (glyph-entry-codepoint e) cached-glyphs)))
+                (values (+ width (/ (glyph-entry-x-advance e) 64))
+                        ascender
+                        descender
+                        (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
+                        (- (+ width (glyph-attributes-width glyph-attrs)) (glyph-attributes-x-origin glyph-attrs))
+                        (freetype2:face-ascender-pixels face)
+                        (freetype2:face-descender-pixels face)
+                        0
+                        end))))))))
 
 (defmethod clim-clx::font-ascent ((font freetype-font))
   (with-face-from-font (face font)
