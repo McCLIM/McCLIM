@@ -837,7 +837,7 @@ in an equalp hash table"))
          ;; moves
          nil
          ;; draws
-         come
+         (reverse come)
          ;; erase overlapping
          (append gone-overlap come-overlap)
          ;; move overlapping
