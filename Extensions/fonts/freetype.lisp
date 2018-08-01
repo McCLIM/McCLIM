@@ -313,14 +313,14 @@ rendering, otherwise the identity matrix will be used instead."
 or NIL if the current transformation is the identity transformation."
   (if (eq transformation 'clim:+identity-transformation+)
       nil
-      (multiple-value-bind (rxx ryx rxy ryy)
+      (multiple-value-bind (rxx rxy ryx ryy)
           (climi::get-transformation transformation)
         (if (and (= rxx 1)
-                 (= ryx 0)
                  (= rxy 0)
+                 (= ryx 0)
                  (= ryy 1))
             nil
-            (make-array '(2 2) :initial-contents (list (list rxx rxy) (list ryx ryy)))))))
+            (make-array '(2 2) :initial-contents (list (list rxx (- rxy)) (list (- ryx) ryy)))))))
 
 ;;; We only cache glyphsets that does not have a transformation
 ;;; applied. The assumption is that applying transformation on text is
