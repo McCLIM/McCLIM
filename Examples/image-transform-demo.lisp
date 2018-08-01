@@ -116,9 +116,7 @@
                   (make-skew-transformation x-skew y-skew))))))
       (clim:with-drawing-options (stream :transformation tr)
         (clim:draw-pattern* stream image 0 0)
-        (clim:draw-rectangle* stream 0 0 (clim:pattern-width image) (clim:pattern-height image) :filled nil :ink clim:+blue+)
-        (clim:with-text-size (stream 60)
-          (clim:draw-text* stream "Foo abcdefgh" 100 100))))))
+        (clim:draw-rectangle* stream 0 0 (clim:pattern-width image) (clim:pattern-height image) :filled nil :ink clim:+blue+)))))
 
 (defun image-transform-demo ()
   (let ((frame (clim:make-application-frame 'image-transform-demo)))
