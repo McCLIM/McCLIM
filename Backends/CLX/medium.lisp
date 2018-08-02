@@ -1546,4 +1546,7 @@ time an indexed pattern is drawn.")
 (defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
   (with-sheet-medium (medium sheet)
     (with-clx-graphics () medium
-      (setf (getf (xlib:window-plist mirror) 'temp-buffer-picture) nil))))
+      (let ((p (getf (xlib:window-plist mirror) 'temp-buffer-picture)))
+        (when p
+          (xlib:render-free-picture p)
+          (setf (getf (xlib:window-plist mirror) 'temp-buffer-picture) nil))))))
