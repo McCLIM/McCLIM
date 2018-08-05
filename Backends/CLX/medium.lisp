@@ -315,10 +315,7 @@ region and its clipping pixmap. This is looked up for optimization with region-e
 
 (defmethod design-gcontext :around ((medium clx-medium) (ink climi::indexed-pattern))
   (let ((design-cache (slot-value (port medium) 'design-cache)))
-    (let ((cached (gethash ink design-cache)))
-      (or cached
-          (setf (gethash ink design-cache)
-                (call-next-method))))))
+    (alexandria:ensure-gethash ink design-cache (call-next-method))))
 
 (defun st3 (x y z)
   (values (logand (truncate (* x 255)) 255)
@@ -657,8 +654,7 @@ time an indexed pattern is drawn.")
 		 (xlib:gcontext-clip-y gc) (+ gc-y (xlib:gcontext-clip-y gc)))
 	   gc)))
       (t
-       (error "You lost, we not yet implemented transforming an ~S."
-              (type-of ink))))))
+       (error "You lost, we not yet implemented transforming an ~S." (type-of ink))))))
 
 ;;;;
 
@@ -1252,11 +1248,11 @@ time an indexed pattern is drawn.")
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs
-                              transformation)
+                              toward-x toward-y transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs))
-  (let* ((native-transform (sheet-native-transformation (medium-sheet medium)))
-         (merged-transform (clim:compose-transformations native-transform transformation)))
+  (let* ((medium-transform (medium-transformation medium))
+         (native-transform (sheet-native-transformation (medium-sheet medium)))
+         (merged-transform (clim:compose-transformations native-transform medium-transform)))
     (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))

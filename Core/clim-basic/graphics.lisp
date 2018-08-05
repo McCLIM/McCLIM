@@ -533,7 +533,7 @@
         (medium-draw-text* medium string x y
                            start end
                            align-x align-y
-                           toward-x toward-y transform-glyphs (medium-transformation medium))))))
+                           toward-x toward-y transform-glyphs)))))
 
 (defun draw-text* (sheet string x y
 		   &rest args
@@ -548,7 +548,7 @@
     (medium-draw-text* medium string x y
 		       start end
 		       align-x align-y
-		       toward-x toward-y transform-glyphs (medium-transformation medium))))
+		       toward-x toward-y transform-glyphs)))
 
 ;; This function belong to the extensions package.
 (defun draw-glyph (sheet string x y
@@ -895,8 +895,7 @@ position for the character."
 (def-graphic-op draw-text (string x y
 			       start end
 			       align-x align-y
-			       toward-x toward-y transform-glyphs
-                               transformation))
+			       toward-x toward-y transform-glyphs))
 
 
 ;;;;
@@ -1011,36 +1010,63 @@ position for the character."
 
 (defmethod draw-design (medium (pattern pattern)
 			&key clipping-region transformation &allow-other-keys)
-  (draw-pattern* medium pattern 0 0
-   :clipping-region clipping-region :transformation transformation))
+  ;; It is said, that DRAW-PATTERN* performs only translation from the supplied
+  ;; transformation. If we draw pattern with a DRAW-DESIGN we do apply full
+  ;; transformation. That way we have open door for easy drawing transformed
+  ;; patterns without compromising the specification.
+  (let ((width (pattern-width pattern))
+        (height (pattern-height pattern)))
+    (if (or clipping-region transformation)
+        (with-drawing-options (medium :clipping-region clipping-region :transformation transformation)
+          #1=(draw-rectangle* medium 0 0 width height
+                              :filled t
+                              :ink pattern))
+        #1#)))
+
+(defmethod draw-design (medium (pattern transformed-pattern)
+                        &key clipping-region transformation &allow-other-keys)
+  (let ((width (pattern-width pattern))
+        (height (pattern-height pattern))
+        (design-transformation (transformed-design-transformation pattern)))
+    (if (or clipping-region transformation)
+        (with-drawing-options (medium :clipping-region clipping-region :transformation transformation)
+          #1=(draw-rectangle* medium 0 0 width height
+                              :transformation design-transformation
+                              :filled t
+                              :ink pattern))
+        #1#)))
 
 (defun draw-pattern* (medium pattern x y &key clipping-region transformation)
-  ;; Note: I believe the sample implementation in the spec is incorrect.
-  ;; --GB
+  ;; Note: I believe the sample implementation in the spec is incorrect. --GB
+  ;; Note: It is slightly incorrect with regard to identity transformation (it
+  ;; doesn't apply it after transforming position). Other than that it is
+  ;; correct - patterns are rectangular objects aligned with XY axis, they are
+  ;; like squares in a graph-ruled notebook. For drawing transformed designs we
+  ;; need to use DRAW-DESIGN or transform pattern ourself. -- jd 2018-08-08
   (check-type pattern pattern)
-  (let ((updated-transformation (or transformation (medium-transformation medium))))
-    (cond (clipping-region
-           (with-drawing-options (medium :clipping-region clipping-region)
-             ;; Now this is totally bogus.
-             (medium-draw-pattern* medium pattern x y updated-transformation)))
-          (t
-           (medium-draw-pattern* medium pattern x y updated-transformation)))))
-
-(defmethod medium-draw-pattern* (medium pattern x y transformation)
-  (let ((width  (pattern-width pattern))
-        (height (pattern-height pattern)))
-    ;; As I read the spec, the pattern itself is not transformed, so
-    ;; we should draw the full (untransformed) pattern at the
-    ;; tranformed x/y coordinates. This requires we revert to the
-    ;; identity transformation before drawing the rectangle. -Hefner
-    (multiple-value-bind (x y)
-        (transform-position transformation x y)
-      (with-identity-transformation (medium)
-	(draw-rectangle* medium x y (+ x width) (+ y height)
-			 :filled t
-			 :ink (transform-region
-			       (make-translation-transformation x y)
-			       pattern))))))
+  (let* ((width (pattern-width pattern))
+         (height (pattern-height pattern))
+         (x2 (+ x width))
+         (y2 (+ y height)))
+    (if (or clipping-region transformation)
+        (with-drawing-options (medium :clipping-region clipping-region :transformation transformation)
+          ;; As I read the spec, the pattern itself is not transformed, so we
+          ;; should draw the full (untransformed) pattern at the tranformed x/y
+          ;; coordinates. This requires we revert to the identity transformation
+          ;; before drawing the rectangle. -Hefner
+          ;;
+          ;; We need to transform bottom-right corner too because transformation
+          ;; may revert axis (like in with-room-for-graphics). I'm not certain
+          ;; if it is the right thing, however without that results get little
+          ;; counterintuitive on the screen. -- jd 2018-08-14
+          #1=(with-transformed-position ((medium-transformation medium) x y)
+               (with-transformed-position ((medium-transformation medium) x2 y2)
+                 (with-identity-transformation (medium)
+                   (let* ((x (min x x2))
+                          (y (min y y2))
+                          (tr (make-translation-transformation x y)))
+                     (draw-design medium (transform-region tr pattern)))))))
+        #1#)))
 
 (defun draw-rounded-rectangle* (sheet x1 y1 x2 y2
                                       &rest args &key

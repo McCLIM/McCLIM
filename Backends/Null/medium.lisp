@@ -161,13 +161,8 @@
 (defmethod medium-draw-text* ((medium null-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs
-                              transformation)
-  (declare (ignore string x y
-		   start end
-		   align-x align-y
-		   toward-x toward-y transform-glyphs
-                   transformation))
+                              toward-x toward-y transform-glyphs)
+  (declare (ignore string x y start end align-x align-y toward-x toward-y transform-glyphs))
   nil)
 
 #+nil

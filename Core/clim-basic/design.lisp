@@ -420,11 +420,6 @@
         (setf (aref designs i) (make-opacity (row-major-aref array i))))
       array)))
 
-;;; The generic function MEDIUM-DRAW-PATTERN* is a McCLIM invention,
-;;; and it does not appear in the CLIM II specification.  It is called
-;;; by DRAW-PATTERN*.  
-(defgeneric medium-draw-pattern* (medium pattern x y transformation))
-
 
 ;;;
 
@@ -441,8 +436,17 @@
                  :transformation transformation
                  :design design))
 
+(defclass transformed-pattern (pattern transformed-design)
+  ())
+
+(defmethod pattern-width ((pattern transformed-pattern))
+  (pattern-width (transformed-design-design pattern)))
+
+(defmethod pattern-height ((pattern transformed-pattern))
+  (pattern-height (transformed-design-design pattern)))
+
 (defmethod transform-region (transformation (design pattern))
-  (make-instance 'transformed-design
+  (make-instance 'transformed-pattern
                  :transformation transformation
                  :design design))
 

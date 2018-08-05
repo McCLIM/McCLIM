@@ -170,12 +170,12 @@
 (defmethod medium-draw-text* ((medium pdf-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs
-                              transformation)
+                              toward-x toward-y transform-glyphs)
   (pdf:with-saved-state
     (pdf:in-text-mode
       (pdf-actualize-graphics-state medium :text-style :color)
-      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+      (let ((sheet-transformation (sheet-native-transformation (medium-sheet medium)))
+            (medium-transformation (medium-transformation medium)))
         (multiple-value-bind (total-width total-height
                                           final-x final-y baseline)
             (let* ((font-name (medium-font medium))
@@ -195,13 +195,11 @@
                       (:bottom (- y (- total-height baseline))))))
             (multiple-value-bind (mxx mxy myx myy tx ty)
                 (climi::get-transformation
-                 (clim:compose-transformations
-                  tr
-                  transformation))
+                 (clim:compose-transformations sheet-transformation
+                                               medium-transformation))
               (pdf:set-transform-matrix mxx mxy myx myy tx ty))
             (pdf:set-text-matrix 1 0 0 -1 x y)
             (pdf:draw-text string)))))))
-
 
 ;;; Postscript path functions
 

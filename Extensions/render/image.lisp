@@ -79,11 +79,6 @@
 (defmethod pattern-height ((pattern image-pattern))
   (image-height (image pattern)))
 
-(defmethod climi::medium-draw-pattern* (medium (pattern image-pattern) x y transformation)
-  (multiple-value-bind (x y)
-      (transform-position transformation x y)
-    (medium-draw-image* medium (image pattern) x y)))
-
 ;;;
 ;;; Basic Image
 ;;;

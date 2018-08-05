@@ -205,53 +205,51 @@
 (defmethod medium-draw-text* ((medium render-medium-mixin) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs
-                              transformation)
-  (multiple-value-bind (x y)
-      (transform-position transformation x y)
+                              toward-x toward-y transform-glyphs)
+  (with-transformed-position ((medium-transformation medium) x y)
     (flet ((draw-font-glypse (paths opacity-image dx dy transformation)
              (declare (ignore paths))
-	     (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
-	       (when (and msheet (sheet-mirror msheet))
-	         (multiple-value-bind (x1 y1)
-		     (transform-position
-		      (clim:compose-transformations transformation
-						    (sheet-native-transformation
-						     (medium-sheet medium)))
-		      (+ dx ) (-  dy))
-		   (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-		       (region-intersection
-		        (climi::medium-device-region medium)
-		        (make-rectangle* x1 y1 (+ -1 x1 (image-width opacity-image)) (+ -1 y1 (image-height opacity-image))))
-		     (%medium-fill-image-mask
-		      medium
-		      opacity-image
-		      min-x min-y
-		      (- max-x min-x) (- max-y min-y)
-		      (- (round x1)) (- (round y1)))))))))
+             (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+               (when (and msheet (sheet-mirror msheet))
+                 (multiple-value-bind (x1 y1)
+                     (transform-position
+                      (clim:compose-transformations transformation
+                                                    (sheet-native-transformation
+                                                     (medium-sheet medium)))
+                      (+ dx ) (-  dy))
+                   (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+                       (region-intersection
+                        (climi::medium-device-region medium)
+                        (make-rectangle* x1 y1 (+ -1 x1 (image-width opacity-image)) (+ -1 y1 (image-height opacity-image))))
+                     (%medium-fill-image-mask
+                      medium
+                      opacity-image
+                      min-x min-y
+                      (- max-x min-x) (- max-y min-y)
+                      (- (round x1)) (- (round y1)))))))))
       (let ((xfont (text-style-to-font (port medium) (medium-text-style medium))))
         (let ((size (text-style-size (medium-text-style medium))))
           (setf size   (or size :normal)
-	        size (getf *text-sizes* size size))
+                size (getf *text-sizes* size size))
           (when (characterp string)
-	    (setq string (make-string 1 :initial-element string)))
+            (setq string (make-string 1 :initial-element string)))
           (when (null end) (setq end (length string)))
           (multiple-value-bind (text-width text-height x-cursor y-cursor baseline)
-	      (text-size medium string :start start :end end)
-	    (declare (ignore x-cursor y-cursor))
-	    (unless (and (eq align-x :left) (eq align-y :baseline))
-	      (setq x (- x (ecase align-x
-			     (:left 0)
-			     (:center (round text-width 2))
-			     (:right text-width))))
-	      (setq y (ecase align-y
-		        (:top (+ y (- baseline text-height)
-			         (+ text-height)))
-		        (:center (+ y (- baseline text-height)
-				    (+ (floor text-height 2))))
-		        (:baseline y)
-		        (:bottom (+ y (- baseline text-height))))))
-	    (string-primitive-paths x y string xfont size #'draw-font-glypse)))))))
+              (text-size medium string :start start :end end)
+            (declare (ignore x-cursor y-cursor))
+            (unless (and (eq align-x :left) (eq align-y :baseline))
+              (setq x (- x (ecase align-x
+                             (:left 0)
+                             (:center (round text-width 2))
+                             (:right text-width))))
+              (setq y (ecase align-y
+                        (:top (+ y (- baseline text-height)
+                                 (+ text-height)))
+                        (:center (+ y (- baseline text-height)
+                                    (+ (floor text-height 2))))
+                        (:baseline y)
+                        (:bottom (+ y (- baseline text-height))))))
+            (string-primitive-paths x y string xfont size #'draw-font-glypse)))))))
 					 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
@@ -349,43 +347,40 @@
                                     min-x min-y)))))))))
 
 (defmethod mcclim-image::medium-draw-image-design* ((medium render-medium-mixin)
-                                                    (design mcclim-image::rgb-image-design) to-x to-y
-                                                    transformation)
-  (multiple-value-bind (to-x to-y)
-      (transform-position transformation to-x to-y)
-    (let* ((image (slot-value design 'mcclim-image::image))
-	   (width (mcclim-image::image-width image))
-	   (height (mcclim-image::image-height image))
-	   (to-sheet (medium-sheet medium))
-           (region
-             (region-intersection
-              (climi::medium-device-region medium)
-              (transform-region (sheet-native-transformation to-sheet)
-                                (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))))
-      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-          region
-        (if (clim:rectanglep region)
-            (multiple-value-bind (x1 y1)
-                (transform-position
-                 (sheet-native-transformation to-sheet)
-                 to-x to-y)
-              (%medium-draw-image medium
-                                  (if (typep image 'image)
-                                      image
-                                      (coerce-image image 'rgb-image))
-                                  (+ 0 (- min-x x1))
-                                  (+ 0 (- min-y y1))
-                                  (- max-x min-x)
-                                  (- max-y min-y)
-                                  min-x min-y))
-            (with-drawing-options (medium :ink (climi::transform-region
-                                                (make-translation-transformation
-                                                 to-x to-y)
-                                                design))
-              (medium-draw-rectangle* medium
-                                      to-x to-y
-                                      (+ to-x width) (+ to-y height)
-                                      t)))))))
+                                                    (design mcclim-image::rgb-image-design) to-x to-y)
+  (let* ((image (slot-value design 'mcclim-image::image))
+	 (width (mcclim-image::image-width image))
+	 (height (mcclim-image::image-height image))
+	 (to-sheet (medium-sheet medium))
+         (region
+          (region-intersection
+           (climi::medium-device-region medium)
+           (transform-region (sheet-native-transformation to-sheet)
+                             (make-rectangle* to-x to-y (+ to-x width) (+ to-y height))))))
+    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+        region
+      (if (clim:rectanglep region)
+          (multiple-value-bind (x1 y1)
+              (transform-position
+               (sheet-native-transformation to-sheet)
+               to-x to-y)
+            (%medium-draw-image medium
+                                (if (typep image 'image)
+                                    image
+                                    (coerce-image image 'rgb-image))
+                                (+ 0 (- min-x x1))
+                                (+ 0 (- min-y y1))
+                                (- max-x min-x)
+                                (- max-y min-y)
+                                min-x min-y))
+          (with-drawing-options (medium :ink (climi::transform-region
+                                              (make-translation-transformation
+                                               to-x to-y)
+                                              design))
+            (medium-draw-rectangle* medium
+                                    to-x to-y
+                                    (+ to-x width) (+ to-y height)
+                                    t))))))
 
 (defmethod medium-draw-image* ((medium render-medium-mixin)
                                (image drawable-image) to-x to-y)
