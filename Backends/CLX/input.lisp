@@ -143,8 +143,10 @@
 	((:button-press :button-release)
 	 (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port* state))
                (button (decode-x-button-code code)))
-           (if (member button '(#.+pointer-wheel-up+ #.+pointer-wheel-down+
-                                #.+pointer-wheel-left+ #.+pointer-wheel-right+))
+           (if (and
+                (member button '(#.+pointer-wheel-up+ #.+pointer-wheel-down+
+                                 #.+pointer-wheel-left+ #.+pointer-wheel-right+))
+                (eq event-key :button-press))
                (make-instance 'climi::pointer-scroll-event
                               :pointer 0
                               :button button :x x :y y
