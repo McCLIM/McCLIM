@@ -619,7 +619,11 @@
 ;;; sheet multiple child mixin
 
 (defclass sheet-multiple-child-mixin ()
-  ((children :initform nil :initarg :children :accessor sheet-children)))
+  ((children :initform nil :accessor sheet-children)))
+
+(defmethod initialize-instance :after ((sheet sheet-multiple-child-mixin) &key contents)
+  (dolist (child contents)
+    (sheet-adopt-child sheet child)))
 
 (defmethod sheet-adopt-child ((sheet sheet-multiple-child-mixin)
 			      (child sheet-parent-mixin))
