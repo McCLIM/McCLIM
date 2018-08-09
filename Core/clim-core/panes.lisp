@@ -1767,7 +1767,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 (defclass bboard-pane (composite-pane) ())
 
 (defmethod initialize-instance :after ((sheet bboard-pane) &key contents)
-  (dolist (child contents)
+  (dolist (child (alexandria:ensure-list contents))
     (sheet-adopt-child sheet child)))
 
 (defmethod compose-space ((bboard bboard-pane) &key width height)
