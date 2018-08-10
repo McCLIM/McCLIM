@@ -2662,21 +2662,6 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
     ((type t) (stream clim-stream-pane))
   (funcall-presentation-generic-function presentation-type-history type))
 
-(defclass scroll-extent-event (standard-event)
-  ((stream :initarg :stream
-           :reader scroll-extent-event/stream)
-   (new-height :initarg :new-height
-               :reader scroll-extent-event/new-height)))
-
-(defmethod handle-event ((sheet clim-stream-pane) (event scroll-extent-event))
-  (let ((stream (scroll-extent-event/stream event)))
-    (scroll-extent stream
-                   0
-                   (max 0 (- (scroll-extent-event/new-height event)
-                             (bounding-rectangle-height
-                              (or (pane-viewport stream)
-                                  stream)))))))
-
 (defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
@@ -2690,11 +2675,12 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
       ;;
       ;; The solution is to queue an event that will trigger the scoll
       ;; later, at which point the output records are properly setup.
-      (queue-event stream
-                   (make-instance 'scroll-extent-event
-                                  :sheet stream
-                                  :stream stream
-                                  :new-height new-height)))))
+      (scroll-extent stream
+                   0
+                   (max 0 (- new-height
+                             (bounding-rectangle-height
+                              (or (pane-viewport stream)
+                                  stream))))))))
 
 ;;; INTERACTOR PANES
 
