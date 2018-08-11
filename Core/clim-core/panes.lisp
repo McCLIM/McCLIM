@@ -2666,21 +2666,12 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
     (unless (eq :allow (stream-end-of-page-action stream))
-      ;; At this point, we might be in the middle of drawing and
-      ;; recording an output record. We can't call SCROLL-EXTENT
-      ;; directly here since it might want to repaint a portion of the
-      ;; pane that has been revealed. However, since the output
-      ;; records won't be added to the stream until later, the repaint
-      ;; will not draw the correct thing.
-      ;;
-      ;; The solution is to queue an event that will trigger the scoll
-      ;; later, at which point the output records are properly setup.
       (scroll-extent stream
-                   0
-                   (max 0 (- new-height
-                             (bounding-rectangle-height
-                              (or (pane-viewport stream)
-                                  stream))))))))
+                     0
+                     (max 0 (- new-height
+                               (bounding-rectangle-height
+                                (or (pane-viewport stream)
+                                    stream))))))))
 
 ;;; INTERACTOR PANES
 
