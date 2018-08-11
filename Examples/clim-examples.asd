@@ -42,7 +42,10 @@
      (:file "accepting-values-test")
      (:file "graph-toy")
      (:file "coordinate-swizzling")
-     (:file "hierarchy-tool")))
+     (:file "hierarchy-tool")
+     (:file "patterns")
+     (:file "flipping-ink")
+     (:file "patterns-overlap")))
 
 (defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)

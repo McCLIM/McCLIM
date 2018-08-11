@@ -36,7 +36,7 @@
        (surrounding-output-with-border ,options ,@body)
        (progn ,@body)))
 
-(defun display (frame pane)
+(defmethod display ((frame table-demo) pane)
   (declare (ignorable frame))
   (setf (stream-cursor-position pane) (values 100 100))
   (with-text-family (pane :fix)
