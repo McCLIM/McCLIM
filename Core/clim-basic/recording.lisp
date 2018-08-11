@@ -2119,8 +2119,12 @@ according to the flags RECORD and DRAW."
   (when (stream-drawing-p stream)
     (call-next-method)))
 
+;;; FIXME: think about merging behavior by using WITH-LOCAL-COORDINATES and
+;;; WITH-FIRST-QUADRANT-COORDINATES which both work on both mediums and
+;;; streams. Also write a documentation chapter describing behavior and
+;;; providing some examples.
 (defgeneric invoke-with-room-for-graphics
-  (cont stream &key first-quadrant height move-cursor record-type))
+    (cont stream &key first-quadrant height move-cursor record-type))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Complicated, underspecified...
@@ -2129,18 +2133,31 @@ according to the flags RECORD and DRAW."
 ;;; with-room-for-graphics is supposed to set the medium transformation to
 ;;; give the desired coordinate system; i.e., it doesn't preserve any
 ;;; rotation, scaling or translation in the current medium transformation.
-(defmethod invoke-with-room-for-graphics (cont stream
+(defmethod invoke-with-room-for-graphics (cont (stream extended-output-stream)
                                           &key (first-quadrant t)
                                           height
                                           (move-cursor t)
                                           (record-type
                                            'standard-sequence-output-record))
-  ;; I am not sure what exactly :height should do.
-  ;; --GB 2003-05-25
-  ;; The current behavior is consistent with 'classic' CLIM
-  ;; --Hefner 2004-06-19
-  ;; Don't know if it still is :)
-  ;; -- Moore 2005-01-26
+  ;; I am not sure what exactly :height should do.           ; [avengers pun]
+  ;; --GB 2003-05-25                                         ; -----------------
+  ;; The current behavior is consistent with 'classic' CLIM  ; where is genera?
+  ;; --Hefner 2004-06-19                                     ;
+  ;; Don't know if it still is :)                            ;  what is genera?
+  ;; -- Moore 2005-01-26                                     ;
+  ;; I think that it doesn't matter ;)                       ;   why is genera?
+  ;; -- jd 2018-08-11                                        ; -----------------
+  ;;
+  ;; More seriously though (comments left for giggles), HEIGHT defaults to the
+  ;; output-record height unless specified by the programmer. In that case
+  ;; output is clipped to that height and exactly that amount of space is
+  ;; reserved for drawing (so if the output-record is smaller we have some empty
+  ;; space, if it is bigger it is clipped). In case of panes which does not
+  ;; record it will be the only means to assure space in case of the
+  ;; FIRST-QUADRANT = T (Y-axis inverted). -- jd
+  ;;
+  ;; FIXME: clip the output record to HEIGHT if the argument is supplied.
+  ;; ADDME: add width argument for clipping (McCLIM extension)
   (multiple-value-bind (cx cy)
       (stream-cursor-position stream)
     (with-sheet-medium (medium stream)
@@ -2178,6 +2195,26 @@ according to the flags RECORD and DRAW."
                                                record-height))))))
                 (setf (stream-cursor-position stream) (values cx cy)))
             record))))))
+
+;;; FIXME: add clipping to HEIGHT and think of how MOVE-CURSOR could be
+;;; implemented (so i-w-r-f-g returns an imaginary cursor progress).
+(defmethod invoke-with-room-for-graphics (cont stream
+                                          &key (first-quadrant t)
+                                            height
+                                            (move-cursor t)
+                                            (record-type nil))
+  (declare (ignore move-cursor record-type))
+  (with-sheet-medium (medium stream)
+    (multiple-value-bind (dx dy)
+        (transform-position (medium-transformation medium) 0 0)
+      (letf (((medium-transformation medium) (compose-translation-with-transformation
+                                              (if first-quadrant
+                                                  (make-scaling-transformation 1 -1)
+                                                  +identity-transformation+)
+                                              dx (if first-quadrant
+                                                     (+ dy (or height 100))
+                                                     dy))))
+        (funcall cont stream)))))
 
 ;;; ----------------------------------------------------------------------------
 ;;;  Baseline
