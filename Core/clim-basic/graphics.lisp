@@ -1044,6 +1044,16 @@ position for the character."
   ;; like squares in a graph-ruled notebook. For drawing transformed designs we
   ;; need to use DRAW-DESIGN or transform pattern ourself. -- jd 2018-08-08
   (check-type pattern pattern)
+
+  ;; XXX: this is just a temporary hack.
+  ;; (typecase pattern
+  ;;   (CLIM-EXTENSIONS:RGB-PATTERN
+  ;;    (clim-render:medium-draw-image* medium pattern 0 0)
+  ;;    (return-from draw-pattern* nil))
+  ;;   (MCCLIM-RENDER-INTERNALS::IMAGE-DESIGN
+  ;;    (clim-render:medium-draw-image* medium (MCCLIM-RENDER-INTERNALS::IMAGE pattern) 0 0)
+  ;;    (return-from draw-pattern* nil)))
+
   (let* ((width (pattern-width pattern))
          (height (pattern-height pattern))
          (x2 (+ x width))

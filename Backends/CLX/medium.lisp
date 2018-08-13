@@ -202,7 +202,11 @@ region and its clipping pixmap. This is looked up for optimization with region-e
                  (setf (xlib:gcontext-clip-mask gc :yx-banded) mask)))))))))
 
 
-(defgeneric medium-gcontext (medium ink))
+(defgeneric medium-gcontext (medium ink)
+  (:documentation "MEDIUM-GCONTEXT is responsible for creating graphics context
+for foreground drawing. It sets properties like a line-style, sets ink etc. Inks
+which are not uniform should be delegated to DESIGN-GCONTEXT which is
+responsible for setting graphical context mask."))
 
 (defmethod medium-gcontext :before ((medium clx-medium) ink)
   (let* ((port (port medium))
@@ -289,10 +293,10 @@ region and its clipping pixmap. This is looked up for optimization with region-e
     (let ((gc-x (round-coordinate mx))
           (gc-y (round-coordinate my))
           (gc (design-gcontext medium ink)))
-      (setf (xlib:gcontext-ts-x gc) gc-x
-            (xlib:gcontext-ts-y gc) gc-y
-            (xlib:gcontext-clip-x gc) gc-x
-            (xlib:gcontext-clip-y gc) gc-y)
+      (incf (xlib:gcontext-ts-x gc) gc-x)
+      (incf (xlib:gcontext-ts-y gc) gc-y)
+      (incf (xlib:gcontext-clip-x gc) gc-x)
+      (incf (xlib:gcontext-clip-y gc) gc-y)
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::rectangular-tile))
@@ -316,24 +320,40 @@ region and its clipping pixmap. This is looked up for optimization with region-e
       (error "Sorry, not yet implemented. ~s" transformation))
     ;; Bah!
     (typecase design
-      ((or climi::indexed-pattern climi::rectangular-tile)
+      ((or climi::indexed-pattern climi::rectangular-tile climi::transformed-design)
        (multiple-value-bind (tx ty)
            (transform-position transformation 0 0)
          (let ((gc-x (round-coordinate tx))
                (gc-y (round-coordinate ty))
-               (gc (clim-clx::medium-gcontext medium design)))
-           (setf (xlib:gcontext-ts-x gc) (+ gc-x (xlib:gcontext-ts-x gc))
-                 (xlib:gcontext-ts-y gc) (+ gc-y (xlib:gcontext-ts-y gc))
-                 (xlib:gcontext-clip-x gc) (+ gc-x (xlib:gcontext-clip-x gc))
-                 (xlib:gcontext-clip-y gc) (+ gc-y (xlib:gcontext-clip-y gc)))
+               (gc (medium-gcontext medium (if (typep design 'climi::transformed-design)
+                                               (climi::transformed-design-design design)
+                                               design))))
+           (incf (xlib:gcontext-ts-x gc) gc-x)
+           (incf (xlib:gcontext-ts-y gc) gc-y)
+           (incf (xlib:gcontext-clip-x gc) gc-x)
+           (incf (xlib:gcontext-clip-y gc) gc-y)
            gc)))
+      (climi::indirect-ink
+       (medium-gcontext medium design))
       (t
        (error "You lost, we not yet implemented transforming an ~S." (type-of design))))))
 
 
 ;;;;
-(defgeneric design-gcontext (medium ink))
+(defgeneric design-gcontext (medium ink)
+  (:documentation "DESIGN-GCONTEXT is called from MEDIUM-GCONTEXT as means to
+set up appropriate mask in order to draw with non-uniform ink. It may be a
+pattern, rectangular tile etc. If someone plans to add new kinds of not uniform
+inks this is the method to specialize. Note, that MEDIUM-GCONTEXT must be
+specialized on class too. Keep in mind, that inks may be transformed (i.e
+translated, so they begin at different position than [0,0])."))
 
+#+ (or) ;; When used for transformed pattern it simply doesn't work. We either
+        ;; should create design-gcontext for transformed-pattern, guard its
+        ;; invalidation with a dynamic variable or do not cache at all. For now
+        ;; we disable it and we'll re-enable it when we implement
+        ;; design-gcontext for transformed patterns (which is needed
+        ;; anyway). Then maybe we will reuse cached gcontext.
 (defmethod design-gcontext :around ((medium clx-medium) (ink climi::indexed-pattern))
   (let ((design-cache (slot-value (port medium) 'design-cache)))
     (alexandria:ensure-gethash ink design-cache (call-next-method))))
@@ -609,7 +629,6 @@ time an indexed pattern is drawn.")
                                      :height h))
            (pm-gc (xlib:create-gcontext :drawable (pixmap-xmirror pm)))
            (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
-
       (xlib:draw-rectangle mask mask-gc 0 0 w h t)
       (setf (xlib:gcontext-foreground mask-gc) 0)
 
