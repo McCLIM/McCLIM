@@ -31,11 +31,11 @@
 (defmethod X-pixel ((port clx-basic-port) color)
   (let ((table (slot-value port 'color-table)))
     (or (gethash color table)
-	(setf (gethash color table)
-	      (multiple-value-bind (r g b) (color-rgb color)
-		(xlib:alloc-color (xlib:screen-default-colormap
+        (setf (gethash color table)
+              (multiple-value-bind (r g b) (color-rgb color)
+                (xlib:alloc-color (xlib:screen-default-colormap
                                    (clx-port-screen port))
-				  (xlib:make-color :red r :green g :blue b)))))))
+                                  (xlib:make-color :red r :green g :blue b)))))))
 
 ;;; Needed changes:
 
@@ -50,7 +50,7 @@
   ((gc :initform nil)
    (picture :initform nil)
    (last-medium-device-region :initform nil
-			      :accessor last-medium-device-region)
+                              :accessor last-medium-device-region)
    (clipping-region-tmp :initform (vector 0 0 0 0)
      :documentation "This object is reused to avoid consing in the
  most common case when configuring the clipping region.")
@@ -75,52 +75,52 @@ region and its clipping pixmap. This is looked up for optimization with region-e
   (with-slots (gc) medium
     (when gc
       (let ((old-text-style (medium-text-style medium)))
-	(unless (eq text-style old-text-style)
-	  (setf (xlib:gcontext-font gc)
-		(text-style-to-X-font (port medium) (medium-text-style medium))))))))
+        (unless (eq text-style old-text-style)
+          (setf (xlib:gcontext-font gc)
+                (text-style-to-X-font (port medium) (medium-text-style medium))))))))
 
 ;;; Translate from CLIM styles to CLX styles.
 (defconstant +cap-shape-map+ '((:butt . :butt)
-			       (:square . :projecting)
-			       (:round . :round)
-			       (:no-end-point . :not-last)))
+                               (:square . :projecting)
+                               (:round . :round)
+                               (:no-end-point . :not-last)))
 
 (defun translate-cap-shape (clim-shape)
   (let ((clx-shape (cdr (assoc clim-shape +cap-shape-map+))))
     (if clx-shape
-	clx-shape
-	(progn
-	  (warn "Unknown cap style ~S, using :round" clim-shape)
-	  :round))))
+        clx-shape
+        (progn
+          (warn "Unknown cap style ~S, using :round" clim-shape)
+          :round))))
 
 (defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
   (with-slots (gc) medium
     (when gc
       (let ((old-line-style (medium-line-style medium)))
-	(unless (eql (line-style-thickness line-style)
-		     (line-style-thickness old-line-style))
-	  ;; this is kind of false, since the :unit should be taken
-	  ;; into account -RS 2001-08-24
-	  (setf (xlib:gcontext-line-width gc)
-		(round (line-style-thickness line-style))))
-	(unless (eq (line-style-cap-shape line-style)
-		    (line-style-cap-shape old-line-style))
-	  (setf (xlib:gcontext-cap-style gc)
-		(translate-cap-shape (line-style-cap-shape line-style))))
-	(unless (eq (line-style-joint-shape line-style)
-		    (line-style-joint-shape old-line-style))
-	  (setf (xlib:gcontext-join-style gc)
-		(line-style-joint-shape line-style)))
-	;; we could do better here by comparing elements of the vector
-	;; -RS 2001-08-24
-	(unless (eq (line-style-dashes line-style)
-		    (line-style-dashes old-line-style))
-	  (setf (xlib:gcontext-line-style gc)
-		(if (line-style-dashes line-style) :dash :solid)
-		(xlib:gcontext-dashes gc)
-		(case (line-style-dashes line-style)
-		  ((t nil) 3)
-		  (otherwise (line-style-dashes line-style)))))))))
+        (unless (eql (line-style-thickness line-style)
+                     (line-style-thickness old-line-style))
+          ;; this is kind of false, since the :unit should be taken
+          ;; into account -RS 2001-08-24
+          (setf (xlib:gcontext-line-width gc)
+                (round (line-style-thickness line-style))))
+        (unless (eq (line-style-cap-shape line-style)
+                    (line-style-cap-shape old-line-style))
+          (setf (xlib:gcontext-cap-style gc)
+                (translate-cap-shape (line-style-cap-shape line-style))))
+        (unless (eq (line-style-joint-shape line-style)
+                    (line-style-joint-shape old-line-style))
+          (setf (xlib:gcontext-join-style gc)
+                (line-style-joint-shape line-style)))
+        ;; we could do better here by comparing elements of the vector
+        ;; -RS 2001-08-24
+        (unless (eq (line-style-dashes line-style)
+                    (line-style-dashes old-line-style))
+          (setf (xlib:gcontext-line-style gc)
+                (if (line-style-dashes line-style) :dash :solid)
+                (xlib:gcontext-dashes gc)
+                (case (line-style-dashes line-style)
+                  ((t nil) 3)
+                  (otherwise (line-style-dashes line-style)))))))))
 
 (defun %set-gc-clipping-region (medium gc)
   (declare (type clx-medium medium))
@@ -206,7 +206,7 @@ region and its clipping pixmap. This is looked up for optimization with region-e
 
 (defmethod medium-gcontext :before ((medium clx-medium) ink)
   (let* ((port (port medium))
-	 (mirror (port-lookup-mirror port (medium-sheet medium))))
+         (mirror (port-lookup-mirror port (medium-sheet medium))))
     (with-slots (gc) medium
       (unless gc
         (setq gc (xlib:create-gcontext :drawable mirror))
@@ -216,25 +216,25 @@ region and its clipping pixmap. This is looked up for optimization with region-e
 (defmethod medium-gcontext ((medium clx-medium) (ink color))
   (declare (optimize (debug 3)))
   (let* ((port (port medium))
-	 (mirror (port-lookup-mirror port (medium-sheet medium)))
-	 (line-style (medium-line-style medium)))
+         (mirror (port-lookup-mirror port (medium-sheet medium)))
+         (line-style (medium-line-style medium)))
     (with-slots (gc last-medium-device-region) medium
       (unless gc
-	(setq gc (xlib:create-gcontext :drawable mirror))
-	;; this is kind of false, since the :unit should be taken
-	;; into account -RS 2001-08-24
-	(setf (xlib:gcontext-line-width gc) (line-style-thickness line-style)
-	      (xlib:gcontext-cap-style gc) (translate-cap-shape
-					    (line-style-cap-shape line-style))
-	      (xlib:gcontext-join-style gc) (line-style-joint-shape line-style))
-	(let ((dashes (line-style-dashes line-style)))
-	  (unless (null dashes)
-	    (setf (xlib:gcontext-line-style gc) :dash
-		  (xlib:gcontext-dashes gc) (if (eq dashes t) 3
-						dashes)))))
+        (setq gc (xlib:create-gcontext :drawable mirror))
+        ;; this is kind of false, since the :unit should be taken
+        ;; into account -RS 2001-08-24
+        (setf (xlib:gcontext-line-width gc) (line-style-thickness line-style)
+              (xlib:gcontext-cap-style gc) (translate-cap-shape
+                                            (line-style-cap-shape line-style))
+              (xlib:gcontext-join-style gc) (line-style-joint-shape line-style))
+        (let ((dashes (line-style-dashes line-style)))
+          (unless (null dashes)
+            (setf (xlib:gcontext-line-style gc) :dash
+                  (xlib:gcontext-dashes gc) (if (eq dashes t) 3
+                                                dashes)))))
       (setf (xlib:gcontext-function gc) boole-1)
       (setf (xlib:gcontext-foreground gc) (X-pixel port ink)
-	    (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
+            (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
       (let ((fn (text-style-to-X-font port (medium-text-style medium))))
         (when (typep fn 'xlib:font)
           (setf (xlib:gcontext-font gc) fn)))
@@ -256,9 +256,9 @@ region and its clipping pixmap. This is looked up for optimization with region-e
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +flipping-ink+)))
   (let* ((gc (medium-gcontext medium (medium-background medium)))
-	 (port (port medium))
-	 (flipper (logxor (X-pixel port (medium-foreground medium))
-			  (X-pixel port (medium-background medium)))))
+         (port (port medium))
+         (flipper (logxor (X-pixel port (medium-foreground medium))
+                          (X-pixel port (medium-background medium)))))
     ;; Now, (logxor flipper foreground) => background
     ;; (logxor flipper background) => foreground
     (setf (xlib:gcontext-function gc) boole-xor)
@@ -269,19 +269,17 @@ region and its clipping pixmap. This is looked up for optimization with region-e
 ;;; From Tagore Smith <tagore@tagoresmith.com>
 
 (defmethod medium-gcontext ((medium clx-medium)
-			    (ink climi::standard-flipping-ink))
+                            (ink climi::standard-flipping-ink))
   (let* ((gc (medium-gcontext medium (medium-background medium)))
-	 (port (port medium))
-	 (color1 (slot-value ink 'climi::design1))
-	 (color2 (slot-value ink 'climi::design2))
-	 (flipper (logxor (X-pixel port color1)
-			  (X-pixel port color2))))
+         (port (port medium))
+         (color1 (slot-value ink 'climi::design1))
+         (color2 (slot-value ink 'climi::design2))
+         (flipper (logxor (X-pixel port color1)
+                          (X-pixel port color2))))
     (setf (xlib:gcontext-function gc) boole-xor)
     (setf (xlib:gcontext-foreground gc) flipper)
     (setf (xlib:gcontext-background gc) flipper)
     gc))
-
-(defgeneric design-gcontext (medium ink))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::indexed-pattern))
   (multiple-value-bind (mx my)
@@ -289,12 +287,12 @@ region and its clipping pixmap. This is looked up for optimization with region-e
       ;; May be it is the wrong place to do it.
       (transform-position (sheet-native-transformation (medium-sheet medium)) 0 0)
     (let ((gc-x (round-coordinate mx))
-	  (gc-y (round-coordinate my))
-	  (gc (design-gcontext medium ink)))
+          (gc-y (round-coordinate my))
+          (gc (design-gcontext medium ink)))
       (setf (xlib:gcontext-ts-x gc) gc-x
-	    (xlib:gcontext-ts-y gc) gc-y
-	    (xlib:gcontext-clip-x gc) gc-x
-	    (xlib:gcontext-clip-y gc) gc-y)
+            (xlib:gcontext-ts-y gc) gc-y
+            (xlib:gcontext-clip-x gc) gc-x
+            (xlib:gcontext-clip-y gc) gc-y)
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::rectangular-tile))
@@ -303,24 +301,42 @@ region and its clipping pixmap. This is looked up for optimization with region-e
       ;; May be it is the wrong place to do it.
       (transform-position (sheet-native-transformation (medium-sheet medium)) 0 0)
     (let ((gc-x (round-coordinate mx))
-	  (gc-y (round-coordinate my))
-	  (gc (design-gcontext medium ink)))
+          (gc-y (round-coordinate my))
+          (gc (design-gcontext medium ink)))
       (setf (xlib:gcontext-ts-x gc) gc-x
-	    (xlib:gcontext-ts-y gc) gc-y
-	    (xlib:gcontext-clip-x gc) gc-x
-	    (xlib:gcontext-clip-y gc) gc-y)
+            (xlib:gcontext-ts-y gc) gc-y
+            (xlib:gcontext-clip-x gc) gc-x
+            (xlib:gcontext-clip-y gc) gc-y)
       gc)))
 
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::transformed-design))
+  (let ((transformation (climi::transformed-design-transformation ink))
+        (design (climi::transformed-design-design ink)))
+    (unless (translation-transformation-p transformation)
+      (error "Sorry, not yet implemented. ~s" transformation))
+    ;; Bah!
+    (typecase design
+      ((or climi::indexed-pattern climi::rectangular-tile)
+       (multiple-value-bind (tx ty)
+           (transform-position transformation 0 0)
+         (let ((gc-x (round-coordinate tx))
+               (gc-y (round-coordinate ty))
+               (gc (clim-clx::medium-gcontext medium design)))
+           (setf (xlib:gcontext-ts-x gc) (+ gc-x (xlib:gcontext-ts-x gc))
+                 (xlib:gcontext-ts-y gc) (+ gc-y (xlib:gcontext-ts-y gc))
+                 (xlib:gcontext-clip-x gc) (+ gc-x (xlib:gcontext-clip-x gc))
+                 (xlib:gcontext-clip-y gc) (+ gc-y (xlib:gcontext-clip-y gc)))
+           gc)))
+      (t
+       (error "You lost, we not yet implemented transforming an ~S." (type-of design))))))
+
+
 ;;;;
+(defgeneric design-gcontext (medium ink))
 
 (defmethod design-gcontext :around ((medium clx-medium) (ink climi::indexed-pattern))
   (let ((design-cache (slot-value (port medium) 'design-cache)))
     (alexandria:ensure-gethash ink design-cache (call-next-method))))
-
-(defun st3 (x y z)
-  (values (logand (truncate (* x 255)) 255)
-          (logand (truncate (* y 255)) 255)
-          (logand (truncate (* z 255)) 255)))
 
 (declaim (ftype (function (sequence)
                   (values (simple-array (unsigned-byte 8) 1)
@@ -431,8 +447,8 @@ region and its clipping pixmap. This is looked up for optimization with region-e
                          (let ((ink-index (aref image-array y x)))
                            (when (< (elt opacity-map ink-index) #x40)  ; FIXME? Arbitrary threshold.
                              (setf (elt mask-data mask-index)
-				   (logxor (elt mask-data mask-index)
-					   mask-bitcursor)))
+                                   (logxor (elt mask-data mask-index)
+                                           mask-bitcursor)))
                            (let ((red   (elt red-map ink-index))
                                  (green (elt green-map ink-index))
                                  (blue  (elt blue-map ink-index)))
@@ -635,26 +651,6 @@ time an indexed pattern is drawn.")
               (xlib:gcontext-ts-y gc) 0)
         gc))))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink climi::transformed-design))
-  (let ((transformation (climi::transformed-design-transformation ink))
-        (design (climi::transformed-design-design ink)))
-    (unless (translation-transformation-p transformation)
-      (error "Sorry, not yet implemented."))
-    ;; Bah!
-    (typecase design
-      ((or climi::indexed-pattern climi::rectangular-tile)
-       (multiple-value-bind (tx ty)
-	   (transform-position transformation 0 0)
-	 (let ((gc-x (round-coordinate tx))
-	       (gc-y (round-coordinate ty))
-	       (gc (clim-clx::medium-gcontext medium design)))
-	   (setf (xlib:gcontext-ts-x gc) (+ gc-x (xlib:gcontext-ts-x gc))
-		 (xlib:gcontext-ts-y gc) (+ gc-y (xlib:gcontext-ts-y gc))
-		 (xlib:gcontext-clip-x gc) (+ gc-x (xlib:gcontext-clip-x gc))
-		 (xlib:gcontext-clip-y gc) (+ gc-y (xlib:gcontext-clip-y gc)))
-	   gc)))
-      (t
-       (error "You lost, we not yet implemented transforming an ~S." (type-of ink))))))
 
 ;;;;
 
@@ -669,7 +665,7 @@ time an indexed pattern is drawn.")
 
 ;;; This seems to work, but find out why all of these +nowhere+s are
 ;;; coming from and kill them at the source...
-#-nil
+#-(or)
 (defun clipping-region->rect-seq (clipping-region)
   (typecase clipping-region
     (area (multiple-value-list (region->clipping-values clipping-region)))
@@ -704,36 +700,36 @@ time an indexed pattern is drawn.")
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
   (let* ((from-sheet (medium-sheet from-drawable))
-	 (from-transformation (sheet-native-transformation from-sheet))
-	 (to-sheet (medium-sheet to-drawable))
-	 (to-transformation (sheet-native-transformation to-sheet)))
+         (from-transformation (sheet-native-transformation from-sheet))
+         (to-sheet (medium-sheet to-drawable))
+         (to-transformation (sheet-native-transformation to-sheet)))
     (with-transformed-position (from-transformation from-x from-y)
       (with-transformed-position (to-transformation to-x to-y)
-	(multiple-value-bind (width height)
-	    (transform-distance (medium-transformation from-drawable)
-				width height)
-	  (xlib:copy-area (sheet-xmirror (medium-sheet from-drawable))
-			  ;; why using the context of from-drawable?
-			  (medium-gcontext from-drawable +background-ink+)
-			  (round-coordinate from-x) (round-coordinate from-y)
-			  (round width) (round height)
-			  (or (medium-buffer to-drawable)
-			      (sheet-xmirror (medium-sheet to-drawable)))
-			  (round-coordinate to-x) (round-coordinate to-y)))))))
+        (multiple-value-bind (width height)
+            (transform-distance (medium-transformation from-drawable)
+                                width height)
+          (xlib:copy-area (sheet-xmirror (medium-sheet from-drawable))
+                          ;; why using the context of from-drawable?
+                          (medium-gcontext from-drawable +background-ink+)
+                          (round-coordinate from-x) (round-coordinate from-y)
+                          (round width) (round height)
+                          (or (medium-buffer to-drawable)
+                              (sheet-xmirror (medium-sheet to-drawable)))
+                          (round-coordinate to-x) (round-coordinate to-y)))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
   (let* ((from-sheet (medium-sheet from-drawable))
-	 (from-transformation (sheet-native-transformation from-sheet)))
+         (from-transformation (sheet-native-transformation from-sheet)))
     (with-transformed-position (from-transformation from-x from-y)
       (climi::with-pixmap-medium (to-medium to-drawable)
-	(xlib:copy-area (sheet-xmirror (medium-sheet from-drawable))
-			;; we can not use from-drawable
-			(medium-gcontext to-medium +background-ink+)
-			(round-coordinate from-x) (round-coordinate from-y)
-			(round width) (round height)
-			(pixmap-xmirror to-drawable)
-			(round-coordinate to-x) (round-coordinate to-y))))))
+        (xlib:copy-area (sheet-xmirror (medium-sheet from-drawable))
+                        ;; we can not use from-drawable
+                        (medium-gcontext to-medium +background-ink+)
+                        (round-coordinate from-x) (round-coordinate from-y)
+                        (round width) (round height)
+                        (pixmap-xmirror to-drawable)
+                        (round-coordinate to-x) (round-coordinate to-y))))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
@@ -742,7 +738,7 @@ time an indexed pattern is drawn.")
     (xlib:copy-area (pixmap-xmirror from-drawable)
                     (medium-gcontext to-drawable +background-ink+)
                     (round-coordinate from-x) (round-coordinate from-y)
-		    (round width) (round height)
+                    (round width) (round height)
                     (or (medium-buffer to-drawable) (sheet-xmirror (medium-sheet to-drawable)))
                     (round-coordinate to-x) (round-coordinate to-y))))
 
@@ -772,15 +768,15 @@ time an indexed pattern is drawn.")
                  (xlib:draw-point mirror gc x y))))
             (t
              (let* ((radius (/ (line-style-thickness line-style) 2))
-		    (min-x (round-coordinate (- x radius)))
-		    (min-y (round-coordinate (- y radius)))
-		    (max-x (round-coordinate (+ x radius)))
-		    (max-y (round-coordinate (+ y radius))))
-	       (when (and (typep min-x '(signed-byte 16))
-			  (typep min-y '(signed-byte 16)))
+                    (min-x (round-coordinate (- x radius)))
+                    (min-y (round-coordinate (- y radius)))
+                    (max-x (round-coordinate (+ x radius)))
+                    (max-y (round-coordinate (+ y radius))))
+               (when (and (typep min-x '(signed-byte 16))
+                          (typep min-y '(signed-byte 16)))
                    (xlib:draw-arc mirror gc min-x min-y
-				  (- max-x min-x) (- max-y min-y)
-				  0 (* 2 pi) t))))))))
+                                  (- max-x min-x) (- max-y min-y)
+                                  0 (* 2 pi) t))))))))
 
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
@@ -799,14 +795,14 @@ time an indexed pattern is drawn.")
              (let ((radius (/ (line-style-thickness line-style) 2)))
                (do-sequence ((x y) coord-seq)
                  (let ((min-x (round-coordinate (- x radius)))
-		       (min-y (round-coordinate (- y radius)))
-		       (max-x (round-coordinate (+ x radius)))
-		       (max-y (round-coordinate (+ y radius))))
+                       (min-y (round-coordinate (- y radius)))
+                       (max-x (round-coordinate (+ x radius)))
+                       (max-y (round-coordinate (+ y radius))))
                    (when (and (typep min-x '(signed-byte 16))
                               (typep min-y '(signed-byte 16)))
                      (xlib:draw-arc mirror gc min-x min-y
-				    (- max-x min-x) (- max-y min-y)
-				    0 (* 2 pi) t))))))))))
+                                    (- max-x min-x) (- max-y min-y)
+                                    0 (* 2 pi) t))))))))))
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
@@ -873,16 +869,14 @@ time an indexed pattern is drawn.")
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
         (with-clx-graphics () medium
-          (if (< right left)
-              (rotatef left right))
-          (if (< bottom top)
-              (rotatef top bottom))
+          (when (< right left) (rotatef left right))
+          (when (< bottom top) (rotatef top bottom))
           (let ((left   (round-coordinate left))
                 (top    (round-coordinate top))
                 (right  (round-coordinate right))
                 (bottom (round-coordinate bottom)))
             ;; To clip rectangles, we just need to clamp the
-	    ;; coordinates
+            ;; coordinates
             (xlib:draw-rectangle mirror gc
                                  (max #x-8000 (min #x7FFF left))
                                  (max #x-8000 (min #x7FFF top))
@@ -908,9 +902,9 @@ time an indexed pattern is drawn.")
                     b (min #xffff (max 0 (round (* #xffff a b))))
                     a (min #xffff (max 0 (round (* #xffff a)))))
               (let ((picture (clx-medium-picture medium)))
-		(xlib::%render-change-picture-clip-rectangles picture
-							      (clipping-region->rect-seq
-							       (last-medium-device-region medium)))
+                (xlib::%render-change-picture-clip-rectangles picture
+                                                              (clipping-region->rect-seq
+                                                               (last-medium-device-region medium)))
                 (xlib:render-fill-rectangle picture :over (list r g b a)
                                             (max #x-8000 (min #x7FFF x1))
                                             (max #x-8000 (min #x7FFF y1))
@@ -921,7 +915,7 @@ time an indexed pattern is drawn.")
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (assert (evenp (length position-seq)))
   (with-transformed-positions ((sheet-native-transformation
-				(medium-sheet medium))
+                                (medium-sheet medium))
                                position-seq)
     (with-clx-graphics () medium
       (let ((points (make-array 4 :fill-pointer 0)))
@@ -999,9 +993,9 @@ time an indexed pattern is drawn.")
 
 ;;; Round the parameters of the ellipse so that it occupies the expected pixels
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
-				 radius-1-dx radius-1-dy
-				 radius-2-dx radius-2-dy
-				 start-angle end-angle filled)
+                                 radius-1-dx radius-1-dy
+                                 radius-2-dx radius-2-dy
+                                 start-angle end-angle filled)
   (if (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
       (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                                   center-x center-y)
@@ -1028,19 +1022,19 @@ time an indexed pattern is drawn.")
                              start-angle end-angle filled)))
 
 (defmethod medium-draw-circle* ((medium clx-medium)
-				center-x center-y radius start-angle end-angle
-				filled)
+                                center-x center-y radius start-angle end-angle
+                                filled)
   (with-transformed-position ((sheet-native-transformation (medium-sheet
-							    medium))
+                                                            medium))
                               center-x center-y)
     (let* ((arc-angle (- end-angle start-angle))
            (arc-angle (if (< arc-angle 0)
                           (+ (* pi 2) arc-angle)
                           arc-angle))
-	   (min-x (round-coordinate (- center-x radius)))
-	   (min-y (round-coordinate (- center-y radius)))
-	   (max-x (round-coordinate (+ center-x radius)))
-	   (max-y (round-coordinate (+ center-y radius))))
+           (min-x (round-coordinate (- center-x radius)))
+           (min-y (round-coordinate (- center-y radius)))
+           (max-x (round-coordinate (+ center-x radius)))
+           (max-y (round-coordinate (+ center-y radius))))
       (with-clx-graphics () medium
         (xlib:draw-arc mirror gc
                        min-x min-y
@@ -1109,18 +1103,18 @@ time an indexed pattern is drawn.")
 ;;; lose in other cases.
 (defun translate (src src-start src-end afont dst dst-start)
   (declare (type sequence src)
-	   (type xlib:array-index src-start src-end dst-start)
-	   (type (or null xlib:font) afont)
-	   (type vector dst))
+           (type xlib:array-index src-start src-end dst-start)
+           (type (or null xlib:font) afont)
+           (type vector dst))
   ;; FIXME: what if AFONT is null?
   (let ((min-char-index (xlib:font-min-char afont))
-	(max-char-index (xlib:font-max-char afont)))
+        (max-char-index (xlib:font-max-char afont)))
     (if (stringp src)
-	(do ((i src-start (xlib::index+ i 1))
-	     (j dst-start (xlib::index+ j 1))
-	     (char))
-	    ((xlib::index>= i src-end)
-	     i)
+        (do ((i src-start (xlib::index+ i 1))
+             (j dst-start (xlib::index+ j 1))
+             (char))
+            ((xlib::index>= i src-end)
+             i)
           (declare (type xlib:array-index i j))
           (setq char (char-code (char src i)))
           (if (or (< char min-char-index) (> char max-char-index))
@@ -1130,10 +1124,10 @@ time an indexed pattern is drawn.")
                 (return i))
               (setf (aref dst j) char)))
         (do ((i src-start (xlib::index+ i 1))
-	     (j dst-start (xlib::index+ j 1))
-	     (elt))
-	    ((xlib::index>= i src-end)
-	     i)
+             (j dst-start (xlib::index+ j 1))
+             (elt))
+            ((xlib::index>= i src-end)
+             i)
           (declare (type xlib:array-index i j))
           (setq elt (elt src i))
           (when (characterp elt)
@@ -1162,11 +1156,11 @@ time an indexed pattern is drawn.")
     (return-from text-size (values 0 0 0 0 0)))
 
   (let* ((medium-text-style (medium-merged-text-style medium))
-	 (text-style (if text-style
-			 (merge-text-styles text-style medium-text-style)
-			 medium-text-style))
-	 (xfont (text-style-to-X-font (port medium) text-style))
-	 (position-newline
+         (text-style (if text-style
+                         (merge-text-styles text-style medium-text-style)
+                         medium-text-style))
+         (xfont (text-style-to-X-font (port medium) text-style))
+         (position-newline
           (macrolet ((p (type)
                        `(locally (declare (type ,type string))
                           (position #\newline string :start start :end end))))
@@ -1228,7 +1222,7 @@ time an indexed pattern is drawn.")
                           (climi::text-bounding-rectangle*
                            medium string :text-style text-style
                            :start (1+ position-newline) :end end)
-			(declare (ignore miny))
+                        (declare (ignore miny))
                         (values (min minx left) (- ascent)
                                 (max maxx right) (+ descent maxy)))))
                    (t
@@ -1238,7 +1232,7 @@ time an indexed pattern is drawn.")
                         (font-text-extents
                          xfont string :start start :end end :translate #'translate)
                       (declare (ignore width ascent descent)
-			       (ignore direction first-not-done))
+                               (ignore direction first-not-done))
                       ;; FIXME: Potential style points:
                       ;; * (min 0 left), (max width right)
                       ;; * font-ascent / ascent
@@ -1289,14 +1283,14 @@ time an indexed pattern is drawn.")
   buffer-p)
 
 (defmethod medium-draw-glyph ((medium clx-medium) element x y
-			      align-x align-y toward-x toward-y
-			      transform-glyphs)
+                              align-x align-y toward-x toward-y
+                              transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs align-x align-y))
   (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
                               x y)
     (with-clx-graphics () medium
       (xlib:draw-glyph mirror gc (round-coordinate x) (round-coordinate y)
-		       element
+                       element
                        :size 16
                        :translate #'translate))))
 
@@ -1313,19 +1307,19 @@ time an indexed pattern is drawn.")
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
-	(let ((min-x (round-coordinate (min left right)))
-	      (min-y (round-coordinate (min top bottom)))
-	      (max-x (round-coordinate (max left right)))
-	      (max-y (round-coordinate (max top bottom))))
-	  (xlib:draw-rectangle (or (medium-buffer medium)
-				   (port-lookup-mirror (port medium)
-						       (medium-sheet medium)))
-			       (medium-gcontext medium (medium-background medium))
-			       (max #x-8000 (min #x7fff min-x))
-			       (max #x-8000 (min #x7fff min-y))
-			       (max 0 (min #xffff (- max-x min-x)))
-			       (max 0 (min #xffff (- max-y min-y)))
-			       t))))))
+        (let ((min-x (round-coordinate (min left right)))
+              (min-y (round-coordinate (min top bottom)))
+              (max-x (round-coordinate (max left right)))
+              (max-y (round-coordinate (max top bottom))))
+          (xlib:draw-rectangle (or (medium-buffer medium)
+                                   (port-lookup-mirror (port medium)
+                                                       (medium-sheet medium)))
+                               (medium-gcontext medium (medium-background medium))
+                               (max #x-8000 (min #x7fff min-x))
+                               (max #x-8000 (min #x7fff min-y))
+                               (max 0 (min #xffff (- max-x min-x)))
+                               (max 0 (min #xffff (- max-y min-y)))
+                               t))))))
 
 (defmethod medium-beep ((medium clx-medium))
   (xlib:bell (clx-port-display (port medium))))
@@ -1357,7 +1351,7 @@ time an indexed pattern is drawn.")
   (with-slots (gc) medium
     (when gc
       (let ((old-text-style (medium-text-style medium)))
-	(unless (eq text-style old-text-style)
+        (unless (eq text-style old-text-style)
           (let ((fn (text-style-to-X-font (port medium) (medium-text-style medium))))
             (when (typep fn 'xlib:font)
               (setf (xlib:gcontext-font gc)
