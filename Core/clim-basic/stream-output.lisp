@@ -233,19 +233,6 @@
           (call-next-method))
         (call-next-method))))
 
-(defgeneric scroll-vertical (stream dy))
-
-(defmethod scroll-vertical ((stream standard-extended-output-stream) dy)
-  (multiple-value-bind (tx ty)
-      (bounding-rectangle-position (sheet-region stream))
-    (scroll-extent stream tx (+ ty dy))))
-
-(defgeneric scroll-horizontal (stream dx))
-
-(defmethod scroll-horizontal ((stream standard-extended-output-stream) dx)
-  (multiple-value-bind (tx ty) (bounding-rectangle-position (sheet-region stream))
-    (scroll-extent stream (+ tx dx) ty)))
-
 (defmacro with-cursor-off (stream &body body)
   `(letf (((cursor-visibility (stream-text-cursor ,stream)) nil))
      ,@body))
@@ -296,7 +283,9 @@
                  (setq split (max (find-split (- margin cx))
                                   (1+ start))))
                 (:scroll
-                 (scroll-horizontal stream width))
+                 (multiple-value-bind (tx ty)
+                     (bounding-rectangle-position (sheet-region stream))
+                   (scroll-extent stream (+ tx width) ty)))
                 (:allow)))
             (unless (= start split)
               (stream-write-output stream string nil start split)

@@ -2099,16 +2099,6 @@ according to the flags RECORD and DRAW."
 
 
 ;;; Additional methods
-(defmethod scroll-vertical :around ((stream output-recording-stream) dy)
-  (declare (ignore dy))
-  (with-output-recording-options (stream :record nil)
-    (call-next-method)))
-
-(defmethod scroll-horizontal :around ((stream output-recording-stream) dx)
-  (declare (ignore dx))
-  (with-output-recording-options (stream :record nil)
-    (call-next-method)))
-
 (defmethod handle-repaint :around ((stream output-recording-stream) region)
   (with-output-recording-options (stream :record nil)
     (call-next-method)))
