@@ -1900,6 +1900,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                ;; --GB 2005-11-29
                :initform t
                :initarg :scroll-bar
+               :initarg :scroll-bars
                :accessor scroller-pane-scroll-bar)
    (viewport   :initform nil)
    (vscrollbar :initform nil)
@@ -2470,6 +2471,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   ((redisplay-needed :initarg :display-time) 
    (scroll-bars :type scroll-bar-spec ; (member t :vertical :horizontal nil)
 		:initform nil
+                :initarg :scroll-bar
 		:initarg :scroll-bars
 		:accessor pane-scroll-bars)
   
@@ -2774,10 +2776,11 @@ current background message was set."))
 
 (defun make-clim-stream-pane (&rest options
                               &key (type 'clim-stream-pane)
-                                (scroll-bars :vertical)
+                                (scroll-bar :vertical)
+                                (scroll-bars scroll-bar)
                                 (borders t)
                                 &allow-other-keys)
-  (with-keywords-removed (options (:type :scroll-bars :borders))
+  (with-keywords-removed (options (:type :scroll-bar :scroll-bars :borders))
     ;; The user space requirement options belong to the scroller ..
     (let* ((space-keys '(:width :height :max-width :max-height
 			 :min-width :min-height))
