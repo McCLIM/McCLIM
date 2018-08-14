@@ -452,10 +452,10 @@
 
 ;;;
 
-(defclass rectangular-tile (design)
-  ((width  :initarg :width      :reader rectangular-tile-width)
-   (height :initarg :height     :reader rectangular-tile-height)
-   (design :initarg :design     :reader rectangular-tile-design)))
+(defclass rectangular-tile (pattern)
+  ((width  :initarg :width   :reader rectangular-tile-width   :reader pattern-width)
+   (height :initarg :height  :reader rectangular-tile-height  :reader pattern-height)
+   (design :initarg :design  :reader rectangular-tile-design)))
 
 (defun make-rectangular-tile (design width height)
   (make-instance 'rectangular-tile
