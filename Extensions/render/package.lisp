@@ -56,6 +56,10 @@
    #:opticl-rgb-image
    #:opticl-rgba-image
    #:opticl-gray-image
+   ;; utilities using opticl
+   #:scale-image
+   #:rotate-image*
+   #:flip-image
    ))
 
 (defpackage :mcclim-render-extensions

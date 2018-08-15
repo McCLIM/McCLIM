@@ -183,3 +183,12 @@
 (define-opticl-image-file-writer :pbm #'opticl:write-pbm-stream)
 (define-opticl-image-file-writer :pgm #'opticl:write-pgm-stream)
 (define-opticl-image-file-writer :gif #'opticl:write-gif-stream)
+
+
+;;;
+;;;utilities function including scale, rotate, flip, translate
+;;;
+
+(defgeneric scale-image (image new-width new-height))
+(defgeneric rotate-image* (image angle center-x center-y))
+(defgeneric flip-image (image direction))

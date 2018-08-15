@@ -52,7 +52,8 @@
   :components ((:module "opticl"
                         :serial t
                         :components
-                        ((:file "opticl-image")))))
+                        ((:file "opticl-image")
+                         (:file "opticl-image-utilities")))))
 
 (defsystem #:mcclim-render/backend
     :depends-on (#:mcclim-render/cl-vectors)
