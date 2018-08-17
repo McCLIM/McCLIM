@@ -1617,8 +1617,6 @@
    #:+list-pane-view+                   ;constant
    #:option-pane-view                   ;class
    #:+option-pane-view+                 ;constant
-   #:pattern-array                      ;generic function (in franz user guide)
-   #:pattern-designs                    ;generic function (in franz user guide)
    #:pointer-input-rectangle            ;function (in franz user guide)
    #:pointer-input-rectangle*           ;function (in franz user guide)
    #:pointer-place-rubber-band-line*    ;function (in franz user guide)
@@ -1931,8 +1929,8 @@
 
    #:find-frame-type
    ;; images
+   #:image-pattern
    #:rgb-image
-   #:rgb-pattern
    #:xpm-parse-file
    #:*xpm-x11-colors*))
 

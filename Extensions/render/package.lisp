@@ -153,8 +153,6 @@
                 #:indexed-pattern
                 #:rectangular-tile
                 #:rectangular-tile-design
-                #:rectangular-tile-width
-                #:rectangular-tile-height
                 #:transformed-design
                 #:transformed-design-design
                 #:transformed-design-transformation

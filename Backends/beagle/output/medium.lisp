@@ -346,12 +346,8 @@ for non-tiled designs."
   ;; Just a stub for now. ::FIXME:: Need to ask on the list about this...
   #.(cg-floatify 1.0))
 
-
 (defmethod %clim-colour-from-design ((medium beagle-medium) (design climi::indirect-ink))
-  (if (eql design +foreground-ink+)
-      (medium-foreground medium)
-    (medium-background medium)))
-
+  (climi::design-ink ink 0 0))
 
 (defmethod %clim-colour-from-design ((medium beagle-medium) (design climi::standard-flipping-ink))
   ;; Currently it's not clear how to deal with flipping ink. When I've upgraded to Tiger (10.4)

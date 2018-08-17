@@ -83,6 +83,7 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
 (defgeneric color-rgb (color))
+(defgeneric design-ink (design x y))
 
 (defmethod print-object ((color color) stream)
   (print-unreadable-object (color stream :identity nil :type t)
@@ -104,6 +105,10 @@
 (defmethod color-rgb ((color standard-color))
   (with-slots (red green blue) color
     (values red green blue)))
+
+(defmethod design-ink ((color standard-color) x y)
+  (declare (ignore x y))
+  color)
 
 (defclass named-color (standard-color)
   ((name :initarg :name
@@ -261,23 +266,37 @@
 (defvar +nowhere+)
 
 (defclass everywhere-mixin () ())
-(defclass nowhere-mixin    () ()) 
+(defclass nowhere-mixin    () ())
+
+;;; The two default colors
+
+(defconstant +white+ (make-named-color "white" 1.0000 1.0000 1.0000))
+(defconstant +black+ (make-named-color "black" 0.0000 0.0000 0.0000))
+
 ;;;;
 ;;;; 13.6 Indirect Inks
 ;;;;
 
-(defclass indirect-ink (design) ())
+(defclass indirect-ink (design)
+  ((dynamic-variable-symbol :initarg :symbol  :initform (error "required"))
+   (default-ink             :initarg :default :initform (error "required"))))
+
+(defmethod design-ink ((ink indirect-ink) x y)
+  (with-slots (dynamic-variable-symbol default-ink) ink
+    (let ((ink (if (boundp dynamic-variable-symbol)
+                   (symbol-value dynamic-variable-symbol)
+                   default-ink)))
+      (design-ink ink x y))))
 
 (defclass %foreground-ink (indirect-ink everywhere-mixin) ())
 
-(defvar +foreground-ink+ (make-instance '%foreground-ink))
-(defvar +background-ink+ (make-instance 'indirect-ink))
+(defvar *foreground-ink*)
+(defvar +foreground-ink+
+  (make-instance '%foreground-ink :symbol '*foreground-ink* :default +black+))
 
-(defmethod print-object ((ink (eql +foreground-ink+)) stream)
-  (format stream "#.~S" '+foreground-ink+))
-
-(defmethod print-object ((ink (eql +background-ink+)) stream)
-  (format stream "#.~S" '+background-ink+))
+(defvar *background-ink*)
+(defvar +background-ink+
+  (make-instance 'indirect-ink :symbol '*background-ink* :default +white+))
 
 ;;;;
 ;;;; 13.4 Opacity
@@ -293,6 +312,10 @@
   ((value :initarg :value
           :type (real 0 1)
           :reader opacity-value)))
+
+(defmethod design-ink ((opacity standard-opacity) x y)
+  (declare (ignore x y))
+  opacity)
 
 (defclass %transparent-ink (standard-opacity nowhere-mixin)
   ()
@@ -325,6 +348,10 @@
             :type design)
    (design2 :initarg :design2
             :type design)))
+
+(defmethod design-ink ((flipping-ink standard-flipping-ink) x y)
+  (declare (ignore x y))
+  flipping-ink)
 
 (defvar +flipping-ink+ (make-instance 'standard-flipping-ink 
                          :design1 +foreground-ink+
@@ -368,58 +395,8 @@
 (defgeneric compose-in (ink mask))
 (defgeneric compose-out (ink mask))
 
-;;; PATTERN is just the an abstract class of all pattern-like design. 
-
-;;; For performance might consider to sort out pattern, which consists
-;;; of uniform designs only and convert them to an RGBA-image.
-
-(define-protocol-class pattern (design))
-
-(defclass indexed-pattern (pattern)
-  ((array   :initarg :array :reader pattern-array)
-   (designs :initarg :designs :reader pattern-designs)))
-   
-(defun make-pattern (array designs)
-  (make-instance 'indexed-pattern :array array :designs designs))
-
-(defmethod pattern-width ((pattern indexed-pattern))
-  (array-dimension (pattern-array pattern) 1))
-
-(defmethod pattern-height ((pattern indexed-pattern))
-  (array-dimension (pattern-array pattern) 0))
-
-(defclass stencil (pattern)
-  ((array :initarg :array)))
-
-(defun make-stencil (array)
-  (make-instance 'stencil :array array))
-
-(defmethod pattern-width ((pattern stencil))
-  (with-slots (array) pattern
-    (array-dimension array 1)))
-
-(defmethod pattern-height ((pattern stencil))
-  (with-slots (array) pattern
-    (array-dimension array 0)))
-
-;;; These methods are included mostly for completeness and are likely
-;;; of little use in practice.
-(defmethod pattern-array ((pattern stencil))
-  (let ((array (make-array (list (pattern-height pattern)
-                                 (pattern-width pattern)))))
-    (dotimes (i (pattern-height pattern))
-      (dotimes (j (pattern-width pattern))
-        (setf (aref array i j) (+ (* i (array-dimension array 1)) j))))
-    array))
-
-(defmethod pattern-designs ((pattern stencil))
-  (with-slots (array) pattern
-    (let ((designs (make-array (* (pattern-height pattern)
-                                  (pattern-width pattern)))))
-      (dotimes (i (length designs))
-        (setf (aref designs i) (make-opacity (row-major-aref array i))))
-      array)))
-
+;;;
+;;; For patterns look in pattern.lisp
 
 ;;;
 
@@ -431,37 +408,21 @@
     :initarg :design
     :reader transformed-design-design)))
 
+(defmethod transform-region :around (transformation (design design))
+  (if (or (identity-transformation-p transformation)
+          (typep design '(or color opacity uniform-compositum standard-flipping-ink indirect-ink)))
+      design
+      (call-next-method)))
+
 (defmethod transform-region (transformation (design design))
-  (make-instance 'transformed-design
-                 :transformation transformation
-                 :design design))
+  (let ((old-transformation (transformed-design-transformation design)))
+    (if (and (translation-transformation-p transformation)
+             (translation-transformation-p old-transformation))
+        (make-instance 'transformed-design
+                       :design (transformed-design-design design)
+                       :transformation (compose-transformations old-transformation transformation))
+        (make-instance 'transformed-design :design design :transformation transformation))))
 
-(defclass transformed-pattern (pattern transformed-design)
-  ())
-
-(defmethod pattern-width ((pattern transformed-pattern))
-  (pattern-width (transformed-design-design pattern)))
-
-(defmethod pattern-height ((pattern transformed-pattern))
-  (pattern-height (transformed-design-design pattern)))
-
-(defmethod transform-region (transformation (design pattern))
-  (make-instance 'transformed-pattern
-                 :transformation transformation
-                 :design design))
-
-;;;
-
-(defclass rectangular-tile (pattern)
-  ((width  :initarg :width   :reader rectangular-tile-width   :reader pattern-width)
-   (height :initarg :height  :reader rectangular-tile-height  :reader pattern-height)
-   (design :initarg :design  :reader rectangular-tile-design)))
-
-(defun make-rectangular-tile (design width height)
-  (make-instance 'rectangular-tile
-    :width  width
-    :height height
-    :design design))
 
 ;;;
 
@@ -501,6 +462,10 @@
 (defclass uniform-compositum (in-compositum)
   ;; we use this class to represent rgbo values
   ())
+
+(defmethod design-ink ((compositum uniform-compositum) x y)
+  (declare (ignore x y))
+  compositum)
 
 ;;;
 ;;; color
@@ -904,11 +869,6 @@
       (and (= r1 r2)
 	   (= g1 g2)
 	   (= b1 b2)))))
-
-;;; The two default colors
-
-(defconstant +white+ (make-named-color "white" 1.0000 1.0000 1.0000))
-(defconstant +black+ (make-named-color "black" 0.0000 0.0000 0.0000))
 
 ;;; Color utilities
 

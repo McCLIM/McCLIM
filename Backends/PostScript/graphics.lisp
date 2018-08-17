@@ -359,11 +359,8 @@ setmatrix")
 ;;; Color
 (defgeneric medium-color-rgb (medium ink))
 
-(defmethod medium-color-rgb (medium (ink (eql +foreground-ink+)))
-  (medium-color-rgb medium (medium-foreground medium)))
-
-(defmethod medium-color-rgb (medium (ink (eql +background-ink+)))
-  (medium-color-rgb medium (medium-background medium)))
+(defmethod medium-color-rgb (medium (ink climi::indirect-ink))
+  (medium-color-rgb medium (climi::design-ink ink 0 0)))
 
 (defmethod medium-color-rgb (medium (ink color))
   (declare (ignore medium))

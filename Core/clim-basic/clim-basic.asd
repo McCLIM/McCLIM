@@ -13,7 +13,8 @@
    (:file "protocol-classes" :depends-on ("decls"))
    (:file "multiprocessing" :depends-on ("decls")) ; legacy mp backends are in Lisp-Dep/mp-*.lisp
    (:file "utils" :depends-on ("decls" "multiprocessing"))
-   (:file "design" :depends-on ("decls" "protocol-classes" "multiprocessing" "utils"))
+   (:file "design" :depends-on ("decls" "protocol-classes" "utils"))
+   (:file "pattern" :depends-on ("decls" "protocol-classes" "utils" "design"))
    (:file "X11-colors" :depends-on ("decls" "protocol-classes" "multiprocessing" "design"))
    (:file "coordinates" :depends-on ("decls" "protocol-classes" "multiprocessing"))
    (:file "transforms" :depends-on ("decls" "protocol-classes" "multiprocessing" "coordinates" "utils"))

@@ -20,7 +20,7 @@
          (2-designs  (list +dark-blue+ +dark-red+))
          (2-designs* (list +dark-salmon+ +dark-slate-grey+))
          (4-designs  (list +orange+ +dark-green+ +red+ +blue+))
-         (4-designs* (list +white+ +black+ +slate-grey+ +black+))
+         (4-designs* (list +purple+ +blue+ +red+ +grey+))
          (x-designs  (list (make-rectangular-tile (make-pattern array2 4-designs) 25 25)
                            (make-rectangular-tile (make-pattern array2 4-designs*) 25 25))))
     ;; set array for 4x4 checkboard
@@ -53,9 +53,7 @@
        ;; 30x30 checkboard indexed rectangular-tile (ink is 50x50)
        (make-rectangular-tile (make-pattern array 2-designs*) 30 30)
        ;; 50x50 checkboard stencil
-       ;; But #: medium-gcontext doesn't support stencil pattern, add placeholder.
-       (make-pattern array (list (make-opacity 0.5) (make-opacity 0.1)))
-       #+ (or) (make-stencil array3)))))
+       (make-stencil array3)))))
 
 (defparameter *general-description*
   "In this demo we explore draw-pattern* and draw-design capabilities when used
@@ -91,7 +89,7 @@ Space: redisplay application")
 
 (define-application-frame pattern-design-test ()
   ()
-  (:geometry :width 1920 :height 635)
+  (:geometry :width 1440 :height 635)
   (:panes (info1 :application
                  :display-function #'(lambda (frame pane)
                                        (declare (ignore frame))
@@ -108,8 +106,6 @@ Space: redisplay application")
                                                        20 220)))))
           (pane1 :application :display-function #'display :scroll-bars :vertical)
           (pane2 :application :display-function #'display :scroll-bars nil)
-          (pane3 :application :display-function #'display :scroll-bars nil
-                 :display-time nil)
           ;; Bug #7: clx-fb backend doesn't work with panes like this one.
           (pane4 (make-pane 'my-basic-pane :height *total-height*)))
   (:layouts (default (clim:vertically ()
@@ -121,8 +117,6 @@ Space: redisplay application")
                          (1/4 (labelling (:label "Application")
                                 (scrolling (:scroll-bars :vertical)
                                   pane2)))
-                         (1/4 (labelling (:label "Application :DISPLAY-TIME NIL")
-                                (scrolling (:scroll-bars :vertical) pane3)))
                          ;; Bug #4: if basic-pane has its own scroll-bars, ink
                          ;; doesn't follow the scroll what gives a weird
                          ;; result. Fixing that for applicatioin pane broken
@@ -132,7 +126,10 @@ Space: redisplay application")
 
 (defun draw-patterns (pane)
   (draw-rectangle* pane 5 5 (+ (* 60 (length *patterns*)) 5) 65
-                   :ink +dark-red+ :filled nil :line-dashes t :line-thickness 3)
+                   :filled nil :line-dashes t :line-thickness 3 :ink +dark-red+
+                   ;; Bug # medium-gcontext has no primary method for
+                   ;; uniform-compositum on CLX
+                   :filled t :ink (climi::make-uniform-compositum +dark-red+ 0.5))
   (do* ((i 0 (1+ i))
         (x 10 (+ 60 x))
         (p* *patterns* (cdr p*))
@@ -140,11 +137,12 @@ Space: redisplay application")
        ((endp p*))
     (draw-pattern* pane pattern x 10)
     (draw-rectangle* pane x 10 (+ x (pattern-width pattern)) (+ 10 (pattern-height pattern))
-                     :filled nil :line-dashes nil :line-thickness 2 :ink +grey42+)))
+                     :filled nil)))
 
 (defun draw-designs (pane)
   (draw-rectangle* pane 5 5 (+ (* 60 (length *patterns*)) 5) 65
-                   :ink +dark-blue+ :filled nil :line-dashes t :line-thickness 3)
+                   :filled nil :line-dashes t :line-thickness 3 :ink +dark-blue+
+                   :filled t :ink (climi::make-uniform-compositum +dark-blue+ 0.5))
   (do* ((i 0 (1+ i))
         (x 10 (+ 60 x))
         (p* *patterns* (cdr p*))
@@ -156,7 +154,8 @@ Space: redisplay application")
 
 (defun draw-rects (pane)
   (draw-rectangle* pane 5 5 (+ (* 60 (length *patterns*)) 5) 65
-                   :ink +dark-green+ :filled nil :line-dashes t :line-thickness 3)
+                   :filled nil :line-dashes t :line-thickness 3 :ink +dark-green+
+                   :filled t :ink (climi::make-uniform-compositum +dark-green+ 0.5))
   (do* ((i 0 (1+ i))
         (x 10 (+ 60 x))
         (p* *patterns* (cdr p*))
@@ -329,9 +328,9 @@ right-trimmed for spaces."
       ((and (> i max-i)
             (> j max-j)))
     (when (<= i max-i)
-      (draw-line* pane i 0 i max-j :ink +light-grey+))
+      (draw-line* pane i 0 i max-j :ink +grey+))
     (when (<= j max-j)
-      (draw-line* pane 0 j max-i j :ink +light-grey+)))
+      (draw-line* pane 0 j max-i j :ink +grey+)))
   ;; Bug #1: width/height is not translated correctly (if we have anything
   ;; before the pattern this height/width is substituted from the rest).
   (draw-line* pane

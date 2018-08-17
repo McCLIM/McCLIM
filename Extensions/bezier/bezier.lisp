@@ -763,10 +763,8 @@ second curve point, yielding (200 50)."
 ;;; this is only for the CLX backend right now. Still, should fix.
 (defparameter *pixmaps* (make-hash-table :test #'equal))
 
-(defun resolve-ink (medium)
-  (if (eq (medium-ink medium) +foreground-ink+)
-      (medium-foreground medium)
-      (medium-ink medium)))
+(defmethod resolve-ink (medium)
+  (climi::design-ink (medium-ink medium) 0 0))
 
 (defun make-ink (medium transparency)
   (let* ((a (/ transparency 16.0))

@@ -252,11 +252,8 @@ responsible for setting graphical context mask."))
     (with-slots (gc) medium
       (or gc (setf gc (xlib:create-gcontext :drawable drawable))))))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink (eql +foreground-ink+)))
-  (medium-gcontext medium (medium-foreground medium)))
-
-(defmethod medium-gcontext ((medium clx-medium) (ink (eql +background-ink+)))
-  (medium-gcontext medium (medium-background medium)))
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::indirect-ink))
+  (medium-gcontext medium (climi::design-ink ink 0 0)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +flipping-ink+)))
   (let* ((gc (medium-gcontext medium (medium-background medium)))
@@ -285,7 +282,7 @@ responsible for setting graphical context mask."))
     (setf (xlib:gcontext-background gc) flipper)
     gc))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink climi::indexed-pattern))
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::pattern))
   (multiple-value-bind (mx my)
       ;; For unmirrored sheet we need to apply the native transformation.
       ;; May be it is the wrong place to do it.
@@ -299,20 +296,6 @@ responsible for setting graphical context mask."))
       (incf (xlib:gcontext-clip-y gc) gc-y)
       gc)))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink climi::rectangular-tile))
-  (multiple-value-bind (mx my)
-      ;; For unmirrored sheet we need to apply the native transformation.
-      ;; May be it is the wrong place to do it.
-      (transform-position (sheet-native-transformation (medium-sheet medium)) 0 0)
-    (let ((gc-x (round-coordinate mx))
-          (gc-y (round-coordinate my))
-          (gc (design-gcontext medium ink)))
-      (setf (xlib:gcontext-ts-x gc) gc-x
-            (xlib:gcontext-ts-y gc) gc-y
-            (xlib:gcontext-clip-x gc) gc-x
-            (xlib:gcontext-clip-y gc) gc-y)
-      gc)))
-
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::transformed-design))
   (let ((transformation (climi::transformed-design-transformation ink))
         (design (climi::transformed-design-design ink)))
@@ -320,7 +303,10 @@ responsible for setting graphical context mask."))
       (error "Sorry, not yet implemented. ~s" transformation))
     ;; Bah!
     (typecase design
-      ((or climi::indexed-pattern climi::rectangular-tile climi::transformed-design)
+      ((or climi::%rgba-pattern
+           climi::indexed-pattern
+           climi::rectangular-tile
+           climi::transformed-design)
        (multiple-value-bind (tx ty)
            (transform-position transformation 0 0)
          (let ((gc-x (round-coordinate tx))
@@ -336,7 +322,7 @@ responsible for setting graphical context mask."))
       (climi::indirect-ink
        (medium-gcontext medium design))
       (t
-       (error "You lost, we not yet implemented transforming an ~S." (type-of design))))))
+       (error "You lost, we have not yet implemented transforming an ~S." (type-of design))))))
 
 
 ;;;;
@@ -358,318 +344,20 @@ translated, so they begin at different position than [0,0])."))
   (let ((design-cache (slot-value (port medium) 'design-cache)))
     (alexandria:ensure-gethash ink design-cache (call-next-method))))
 
-(declaim (ftype (function (sequence)
-                  (values (simple-array (unsigned-byte 8) 1)
-                          (simple-array (unsigned-byte 8) 1)
-                          (simple-array (unsigned-byte 8) 1)
-                          (simple-array (unsigned-byte 8) 1)))
-                inks-to-rgb))
-
-(defun inks-to-rgb (inks)
-  "Returns four values: byte arrays for the red, green, blue, and opacity components [0,255] of a sequence of inks"
-  (let ((red-map (make-array (length inks) :element-type '(unsigned-byte 8)
-                             :initial-element 255))
-        (green-map (make-array (length inks) :element-type '(unsigned-byte 8)
-                             :initial-element 0))
-        (blue-map (make-array (length inks) :element-type '(unsigned-byte 8)
-                             :initial-element 255))
-        (opacity-map (make-array (length inks) :element-type '(unsigned-byte 8)
-                             :initial-element 255))
-        (length (length inks)))
-    (loop for index from 0 below length
-          as ink = (elt inks index)
-          do (flet ((transform (parameter) (logand (truncate (* parameter 255)) 255)))
-               (cond
-                 ((colorp ink)
-                  (multiple-value-bind (r g b) (color-rgb ink)
-                    (setf (elt red-map   index) (transform r)
-                          (elt green-map index) (transform g)
-                          (elt blue-map  index) (transform b)
-                          (elt opacity-map index) 255)))
-                 ((eq ink +transparent-ink+)
-                  (setf (elt opacity-map index) 0)))))
-    (values red-map green-map blue-map opacity-map)))
-
-(defun integer-count-bits (integer)
-  (loop for i from 0 below (integer-length integer)
-        sum (ldb (byte 1 i) integer)))
-
-(defun compute-channel-fields (mask num-bytes)
-  (loop with counted-bits = 0
-        with output-width = (integer-count-bits mask)
-        for index from (1- num-bytes) downto 0
-        as submask = (ldb (byte 8 (* 8 index)) mask)
-        as submask-bits = (integer-count-bits submask)
-        as output-shift-left = (- (integer-length submask) submask-bits)
-        as input-position = (+ (- 8 counted-bits submask-bits))
-        collect (if (zerop submask)
-                    nil
-                    (prog1
-                        (list output-shift-left submask-bits input-position)
-                      (assert (<= output-width 8))
-                      (incf counted-bits submask-bits)))))
-
-(defun compute-channel-expressions (channel-mask-specs num-bytes)
-  (labels ((single-channel-expressions (mask channel-name)
-             (mapcar (lambda (fieldspec)
-                       (and fieldspec
-                            (destructuring-bind (output-shift-left submask-bits input-position)
-                                fieldspec
-                              `(ash (ldb (byte ,submask-bits ,input-position) ,channel-name) ,output-shift-left))))
-                     (compute-channel-fields mask num-bytes) )))
-    (reduce (lambda (left-exprs right-exprs)
-              (mapcar (lambda (left-expr right-expr)
-                        (if right-expr
-                            (cons right-expr left-expr)
-                            left-expr))
-                      left-exprs
-                      right-exprs))
-            channel-mask-specs
-            :key (lambda (channel-mask-spec)
-                   (destructuring-bind (var-name mask) channel-mask-spec
-                   (single-channel-expressions mask var-name)))
-            :initial-value (map 'list #'identity (make-array num-bytes :initial-element nil)))))
-
-(defun generate-pixel-assignments (array-var index-var channel-mask-specs num-bytes byte-order)
-  `(setf ,@(mapcan (lambda (byte-exprs byte-index)
-                     (and byte-exprs
-                          (list `(elt ,array-var (+ ,index-var ,byte-index))
-                                (if (= 1 (length byte-exprs))
-                                    (first byte-exprs)
-                                    `(logior ,@byte-exprs)))))
-                   (compute-channel-expressions channel-mask-specs num-bytes)
-                   (funcall (ecase byte-order
-                              (:lsbfirst #'reverse)
-                              (:msbfirst #'identity))
-                            (loop for i from 0 below num-bytes collect i)))))
-
-(defun generate-indexed-converter-expr (rgb-masks byte-order num-bytes)
-  `(lambda (image-array converted-data mask-data width height inks)
-    (declare (optimize (speed 3)
-                       (safety 0)
-                       (space 0)
-                       (debug 0))
-     (type xlib:card16 width height)
-     (type (simple-array xlib:card8 1) converted-data mask-data))
-    (macrolet ((conversion-body ()
-                 `(let ((index 0)
-                        (mask-index 0)
-                        (mask-bitcursor 1))
-                   (declare (type (unsigned-byte 9) mask-bitcursor)
-                    (type xlib:array-index mask-index index))
-
-                   (multiple-value-bind (red-map green-map blue-map opacity-map) (inks-to-rgb inks)
-                     (dotimes (y height)
-                       (unless (= 1 mask-bitcursor)
-                         (setf mask-bitcursor 1
-                               mask-index (1+ mask-index)))
-                       (dotimes (x width)
-                         (let ((ink-index (aref image-array y x)))
-                           (when (< (elt opacity-map ink-index) #x40)  ; FIXME? Arbitrary threshold.
-                             (setf (elt mask-data mask-index)
-                                   (logxor (elt mask-data mask-index)
-                                           mask-bitcursor)))
-                           (let ((red   (elt red-map ink-index))
-                                 (green (elt green-map ink-index))
-                                 (blue  (elt blue-map ink-index)))
-                             ,',(generate-pixel-assignments 'converted-data 'index
-                                                            (mapcar #'list '(red green blue) rgb-masks)
-                                                            num-bytes byte-order))
-                           (setf index (+ ,',num-bytes index)
-                                 mask-bitcursor (ash mask-bitcursor 1)
-                                 mask-index (+ mask-index (ash mask-bitcursor -8))
-                                 mask-bitcursor (logand (logior mask-bitcursor
-                                                                (ash mask-bitcursor -8))
-                                                        #xff)))))))))
-      ;; We win big if we produce several specialized versions of this according
-      ;; to the type of array holding the color indexes.
-    (typecase image-array
-      ((simple-array xlib:card8 2)      ; 256-color images
-       (locally (declare (type (simple-array xlib:card8 2) image-array)) (conversion-body)))
-      ((simple-array fixnum 2)          ; High-color index images (XPM reader produces these..)
-       (locally (declare (type (simple-array fixnum 2) image-array)) (conversion-body)))
-      (t (conversion-body))))))
-
-(defun convert-indexed->mask (image-array mask-data width height inks)
-  (declare (optimize (speed 3)
-                     (safety 0)
-                     (space 0)
-                     (debug 0))
-           (type xlib:card16 width height)
-           (type (simple-array xlib:card8 1) mask-data))
-  (macrolet ((conversion-body ()
-              '(let ((mask-index 0)
-                     (mask-bitcursor 1))
-                 (declare (type (unsigned-byte 9) mask-bitcursor)
-                          (type xlib:array-index mask-index))
-
-                 (multiple-value-bind (red-map green-map blue-map opacity-map) (inks-to-rgb inks)
-                   (declare (ignore red-map green-map blue-map))
-
-                   (dotimes (y height)
-                     (unless (= 1 mask-bitcursor)
-                       (setf mask-bitcursor 1
-                             mask-index (1+ mask-index)))
-                     (dotimes (x width)
-                       (let ((ink-index (aref image-array y x)))
-                         (when (< (elt opacity-map ink-index) #x40)  ; FIXME? Arbitrary threshold.
-                           (setf (elt mask-data mask-index) (logxor (elt mask-data mask-index) mask-bitcursor)))
-                         (setf mask-bitcursor (ash mask-bitcursor 1)
-                               mask-index (+ mask-index (ash mask-bitcursor -8))
-                               mask-bitcursor (logand (logior mask-bitcursor
-                                                              (ash mask-bitcursor -8))
-                                                      #xff)))))))))
-    ;; Again, we win big if we produce several specialized versions of this.
-    (typecase image-array
-      ((simple-array xlib:card8 2)      ; 256-color images
-       (locally (declare (type (simple-array xlib:card8 2) image-array)) (conversion-body)))
-      ((simple-array fixnum 2)          ; High-color index images (XPM reader produces these..)
-       (locally (declare (type (simple-array fixnum 2) image-array)) (conversion-body)))
-      (t (conversion-body)))))
-
-(defparameter *pixel-converter-cache* (make-hash-table :test 'equal))
-
-(defun ensure-indexed-converter (rgb-masks byte-order bytes-per-pixel)
-  (let ((key (list rgb-masks byte-order bytes-per-pixel)))
-    (symbol-macrolet ((fn (gethash key *pixel-converter-cache*)))
-        (or fn (setf fn (compile nil (generate-indexed-converter-expr rgb-masks byte-order bytes-per-pixel)))))))
-
-(defun visual-get-indexed-converter (visual-info byte-order bytes-per-pixel)
-  (let ((rgb-masks (list (xlib:visual-info-red-mask visual-info)
-                         (xlib:visual-info-green-mask visual-info)
-                         (xlib:visual-info-blue-mask visual-info))))
-    (ensure-indexed-converter rgb-masks byte-order bytes-per-pixel)))
-
-(defparameter *typical-pixel-formats*
-  '(((#xFF0000 #xFF00 #xFF) :LSBFIRST 4)
-    ((#xFF0000 #xFF00 #xFF) :MSBFIRST 4))
-  "This is a table of the most likely pixel formats. Converters for
-these should be compiled in advance. Compiling the indexed->rgba
-converter in advance will eliminate the pause observable the first
-time an indexed pattern is drawn.")
-
-(dolist (format *typical-pixel-formats*)
-  (apply 'ensure-indexed-converter format))
-
-(defun fill-pixmap-indexed (visual-info depth byte-order array pm pm-gc mask mask-gc w h inks)
-  (assert (= (array-total-size array) (* w h)))
-  (let* ((ceil-w-8 (ceiling w 8))
-         (bytes-per-pixel
-          (case depth
-            ((24 32) 4)
-            ((15 16) 2)
-            (otherwise nil)))
-         (mask-data (make-array (* ceil-w-8 h)
-                                :element-type '(unsigned-byte 8)
-                                :initial-element #xff))
-         (pixel-converter nil))
-
-    (if (and bytes-per-pixel
-             (member byte-order '(:lsbfirst :msbfirst))
-             (setf pixel-converter (visual-get-indexed-converter
-                                    visual-info byte-order bytes-per-pixel)))
-        ;; Fast path - Image upload
-        (let ((converted-data (make-array (* bytes-per-pixel (array-total-size array)) :element-type 'xlib:card8)))
-          ;; Fill the pixel arrays
-          (funcall pixel-converter array converted-data mask-data w h inks)
-
-          ;; Create an xlib "image" and copy it to our pixmap.
-          ;; I do this because I'm not smart enough to operate xlib:put-raw-image.
-          (let ((image (xlib:create-image :bits-per-pixel (* 8 bytes-per-pixel) :depth depth
-                                          :width w :height h
-                                          :format :z-pixmap
-                                          :data converted-data)))
-            (xlib:put-image (pixmap-xmirror pm) pm-gc image
-                            :x 0 :y 0
-                            :width w :height h)))
-
-        ;; Fallback for unsupported visual, plotting pixels
-        (progn
-          (dotimes (y h)
-            (dotimes (x w)
-              (let ((ink (elt inks (aref array y x))))
-                (unless (eq ink +transparent-ink+)
-                  (draw-point* pm x y :ink ink)))))
-          (convert-indexed->mask array mask-data w h inks)))
-
-    ;; We can use image upload for the mask in either case.
-    (let ((mask-image (xlib:create-image :bits-per-pixel 1 :depth 1
-                                         :bit-lsb-first-p t
-                                         :byte-lsb-first-p t
-                                         :width w :height h
-                                         :data mask-data)))
-      (xlib:put-image mask mask-gc mask-image
-                      :x 0 :y 0
-                      :width w :height h))))
-
-(defmethod design-gcontext ((medium clx-medium) (ink climi::indexed-pattern))
-  (let* ((array (slot-value ink 'climi::array))
-         (inks  (map 'vector
-                     (lambda (ink)
-                       (cond
-                         ((eql ink +foreground-ink+) (medium-foreground medium))
-                         ((eql ink +background-ink+) (medium-background medium))
-                         ((eql ink +flipping-ink+)
-                          (error "Flipping ink within patterns is not supported."))
-                         (t ink)))
-                     (slot-value ink 'climi::designs)))
-         (w     (array-dimension array 1))
-         (h     (array-dimension array 0)))
-    (assert (not (zerop w)))
-    (assert (not (zerop h)))
-
-    ;; Establish color and mask pixmaps
-    (let* ((display (clx-port-display (port medium)))
-           (screen  (clx-port-screen  (port medium)))
-           (drawable (port-lookup-mirror (port medium) (medium-sheet medium)))
-           (pm   (allocate-pixmap (first (port-grafts (port medium))) w h))
-           (mask (xlib:create-pixmap :drawable drawable
-                                     :depth 1
-                                     :width w
-                                     :height h))
-           (pm-gc (xlib:create-gcontext :drawable (pixmap-xmirror pm)))
-           (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
-      (xlib:draw-rectangle mask mask-gc 0 0 w h t)
-      (setf (xlib:gcontext-foreground mask-gc) 0)
-
+(defmethod design-gcontext ((medium clx-medium) (ink climi::pattern))
+  (let* ((drawable (sheet-xmirror (medium-sheet medium)))
+         (rgba-pattern (climi::%collapse-pattern ink)))
+    (let ((pm (compute-rgb-image-pixmap drawable rgba-pattern))
+          (mask (compute-rgb-image-mask drawable rgba-pattern)))
       (let ((gc (xlib:create-gcontext :drawable drawable)))
         (setf (xlib:gcontext-fill-style gc) :tiled
-              (xlib:gcontext-tile gc) (port-lookup-mirror (port pm) pm)
+              (xlib:gcontext-tile gc) pm
               (xlib:gcontext-clip-x gc) 0
               (xlib:gcontext-clip-y gc) 0
               (xlib:gcontext-ts-x gc) 0
               (xlib:gcontext-ts-y gc) 0
               (xlib:gcontext-clip-mask gc) mask)
-
-        (let ((byte-order (xlib:display-byte-order display))
-              ;; Hmm. Pixmaps are not windows, so you can't query their visual.
-              ;; We'd like to draw to pixmaps as well as windows, so use the
-              ;; depth and visual of the screen root, and hope this works.
-              ;(visual-info (xlib:window-visual-info drawable))
-              (visual-info (xlib:visual-info display (xlib:screen-root-visual screen)))
-              (depth (xlib:screen-root-depth screen))
-              (*print-base* 16))
-          (fill-pixmap-indexed visual-info depth byte-order array pm pm-gc mask mask-gc w h inks))
-
-        (xlib:free-gcontext mask-gc)
-        (xlib:free-gcontext pm-gc)
         gc))))
-
-(defmethod design-gcontext ((medium clx-medium) (ink climi::rectangular-tile))
-  (let* ((design (slot-value ink 'climi::design))
-         (w      (slot-value ink 'climi::width))
-         (h      (slot-value ink 'climi::height)))
-    (let ((pm (allocate-pixmap (first (port-grafts (port medium))) w h))) ;dito
-      (draw-rectangle* pm 0 0 w h :ink design)
-      (let ((gc (xlib:create-gcontext :drawable (port-lookup-mirror (port medium) (medium-sheet medium)))))
-        (setf (xlib:gcontext-fill-style gc) :tiled
-              (xlib:gcontext-tile gc) (port-lookup-mirror (port pm) pm)
-              (xlib:gcontext-clip-x gc) 0
-              (xlib:gcontext-clip-y gc) 0
-              (xlib:gcontext-ts-x gc) 0
-              (xlib:gcontext-ts-y gc) 0)
-        gc))))
-
 
 ;;;;
 

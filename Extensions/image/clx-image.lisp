@@ -90,8 +90,8 @@
       (setf (slot-value design 'mcclim-image::medium-data) nil))))
 
 (defun compute-rgb-image-pixmap (drawable image)
-  (let* ((width (mcclim-image:image-width image))
-         (height (mcclim-image:image-height image))
+  (let* ((width (pattern-width image))
+         (height (pattern-height image))
          (depth (xlib:drawable-depth drawable))
          (im (image-to-ximage-for-drawable drawable image)))
     (setf width (max width 1))
@@ -110,8 +110,8 @@
       pixmap)))
 
 (defun compute-rgb-image-mask (drawable image)
-  (let* ((width (mcclim-image:image-width image))
-         (height (mcclim-image:image-height image))
+  (let* ((width (pattern-width image))
+         (height (pattern-height image))
          (bitmap (xlib:create-pixmap :drawable drawable
                                      :width width
                                      :height height
@@ -119,7 +119,7 @@
          (gc (xlib:create-gcontext :drawable bitmap
 				   :foreground 1
 				   :background 0))
-         (idata (mcclim-image::image-data image))
+         (idata (climi::pattern-array image))
          (xdata (make-array (list height width)
 			    :element-type '(unsigned-byte 1)))
          (im (xlib:create-image :width width
@@ -128,7 +128,7 @@
                                 :data xdata)) )
     (dotimes (y width)
       (dotimes (x height)
-        (if (> (aref idata x y) #x80000000)
+        (if (< (ldb (byte 8 0) (aref idata x y)) #x80)
             (setf (aref xdata x y) 0)
 	    (setf (aref xdata x y) 1))))
     (unless (or (>= width 2048) (>= height 2048)) ;### CLX breaks here
@@ -139,14 +139,12 @@
     bitmap))
 
 (defun image-to-ximage-for-drawable (drawable image)
-  (image-to-ximage image
-		   (xlib:drawable-depth drawable) 
-		   (pixel-translator (xlib:window-colormap drawable))))
+  (image-to-ximage image (xlib:drawable-depth drawable)))
 
-(defun image-to-ximage (image depth translator)
-  (let* ((width (mcclim-image:image-width image))
-         (height (mcclim-image:image-height image))
-         (idata (mcclim-image::image-data image))
+(defun image-to-ximage (image depth)
+  (let* ((width (pattern-width image))
+         (height (pattern-height image))
+         (idata (climi::pattern-array image))
 	 ;; FIXME: this (and the :BITS-PER-PIXEL, below) is a hack on
 	 ;; top of a hack.  At some point in the past, XFree86 and/or
 	 ;; X.org decided that they would no longer support pixmaps
@@ -161,47 +159,5 @@
     (declare (type (simple-array (unsigned-byte 32) (* *)) idata))
     (loop for x fixnum from 0 below width do
 	  (loop for y fixnum from 0 below height do
-		(setf (aref xdata y x)
-		      (funcall translator
-			       x y
-			       (ldb (byte 24 0) (aref idata y x))))))
+		(setf (aref xdata y x) (ash (aref idata y x) -8))))
     ximage))
-
-(defun mask->byte (mask)
-  (let ((h (integer-length mask)))
-    (let ((l (integer-length (logxor mask (1- (ash 1 h))))))
-      (byte (- h l) l))))
-
-
-;; fixme!  This is not just incomplete, but also incorrect: The original
-;; true color code knew how to deal with non-linear RGB value
-;; allocation.
-
-(defvar *translator-cache-lock* (clim-sys:make-lock "translator cache lock"))
-(defvar *translator-cache* (make-hash-table :test #'equal))
-
-(defun pixel-translator (colormap)
-  (unless (eq (xlib:visual-info-class (xlib:colormap-visual-info colormap))
-	      :true-color)
-    (error "sorry, cannot draw rgb image for non-true-color drawable yet"))
-  (let* ((info (xlib:colormap-visual-info colormap))
-	 (rbyte (mask->byte (xlib:visual-info-red-mask info)))
-	 (gbyte (mask->byte (xlib:visual-info-green-mask info)))
-	 (bbyte (mask->byte (xlib:visual-info-blue-mask info)))
-         (key (list rbyte gbyte bbyte)))
-    (clim-sys:with-lock-held (*translator-cache-lock*)
-      (or (gethash key *translator-cache*)
-          ;; COMPILE instead of a closure, because out-of-line byte specifiers
-          ;; are universally slow. Getting them inline like this is *much*
-          ;; faster.
-          (setf (gethash key *translator-cache*)
-                (compile nil
-                         `(lambda (x y sample)
-                            (declare (ignore x y))
-                            (dpb (the (unsigned-byte 8) (ldb (byte 8 0) sample))
-                                 ',rbyte
-                                 (dpb (the (unsigned-byte 8) (ldb (byte 8 8) sample))
-                                      ',gbyte
-                                      (dpb (the (unsigned-byte 8) (ldb (byte 8 16) sample))
-                                           ',bbyte
-                                           0))))))))))
