@@ -1,10 +1,10 @@
 (in-package :mcclim-render-internals)
 
 (defclass image-pixmap-mixin (image-sheet-mixin
-			      mirrored-sheet-mixin
-			      mirrored-pixmap
-			      basic-sheet
-			      design)
+                              mirrored-sheet-mixin
+                              mirrored-pixmap
+                              basic-sheet
+                              design)
   ())
 
 (defmethod sheet-medium ((pixmap image-pixmap-mixin))

@@ -4,14 +4,4 @@
   :depends-on (#:clim-basic #:opticl #:mcclim-bitmaps)
   :serial t
   :components ((:file "package")
-               (:file "image")
-               (:file "medium")
-               (:file "recording")
-               (:file "xpm")
-               (:file "bitmap")))
-
-
-(defsystem #:mcclim-image/clx
-  :depends-on (#:mcclim-image #:mcclim-clx/output)
-  :serial t
-  :components ((:file "clx-image")))
+               (:file "image")))

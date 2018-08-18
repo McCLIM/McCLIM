@@ -18,15 +18,14 @@
   nil)
 
 ;;; realize/destroy mirrors
-(defmethod realize-mirror ((port render-port-mixin) (sheet image-sheet-mixin))
-    )
+(defmethod realize-mirror ((port render-port-mixin) (sheet image-sheet-mixin)))
 
 ;;;
 ;;; Fonts
 ;;;
 
 (defmethod text-style-to-font ((port render-port-mixin)
-			       (text-style standard-text-style))
+                               (text-style standard-text-style))
   (labels
       ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative
@@ -41,13 +40,13 @@
                                     font-path-maybe-relative
                                     (or *truetype-font-path* "")))))))
            (if (and font-path (probe-file font-path))
-	       (make-truetype-font port font-path size)
+               (make-truetype-font port font-path size)
                ;; We could error here, but we want to fallback to
                ;; fonts provided by CLX server. Its better to have
                ;; ugly fonts than none at all.
-	       (error 'missing-font
-		      :filename font-path
-		      :text-style text-style))))
+               (error 'missing-font
+                      :filename font-path
+                      :text-style text-style))))
        (find-font ()
          (multiple-value-bind (family face size)
              (clim:text-style-components text-style)
@@ -55,7 +54,7 @@
            (setf face   (or face :roman)
                  family (or family :fix)
                  size   (or size :normal)
-		 size (getf *text-sizes* size size))
+                 size (getf *text-sizes* size size))
 
            (find-and-make-truetype-font family face size))))
     (or (text-style-mapping port text-style)
@@ -96,7 +95,7 @@
                                         :family family
                                         :name (zpb-ttf:subfamily-name loader)
                                         :loader loader)))
-	     (font (ensure-gethash
+             (font (ensure-gethash
                     (list loader size) font-cache
                     (make-instance 'render-truetype-font
                                    :face font-face

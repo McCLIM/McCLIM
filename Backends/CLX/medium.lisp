@@ -39,9 +39,8 @@
 
 ;;; Needed changes:
 
-;; The gc slot in clx-medium must be either thread local, or
-;; [preferred] we should have a unified drawing options -> gcontext
-;; cache.
+;; The gc slot in clx-medium must be either thread local, or [preferred] we
+;; should have a unified drawing options -> gcontext cache.
 ;; --GB
 
 ;;; CLX-MEDIUM class
@@ -65,8 +64,8 @@ region and its clipping pixmap. This is looked up for optimization with region-e
 (defun clx-medium-picture (clx-medium)
   (with-slots (picture) clx-medium
     (or picture
-        (setf picture
-              (xlib:render-create-picture (port-lookup-mirror (port clx-medium) (medium-sheet clx-medium)))))))
+        (let ((mirror (port-lookup-mirror (port clx-medium) (medium-sheet clx-medium))))
+          (setf picture (xlib:render-create-picture mirror))))))
 
 
 ;;; secondary methods for changing text styles and line styles
@@ -344,11 +343,57 @@ translated, so they begin at different position than [0,0])."))
   (let ((design-cache (slot-value (port medium) 'design-cache)))
     (alexandria:ensure-gethash ink design-cache (call-next-method))))
 
+;;; XXX: both PM and MM pixmaps should be freed with (xlib:free-pixmap pixmap)
+;;; when not used. We do not do that right now.
+(defun compute-rgb-image-pixmap-and-mask (drawable image)
+  (let* ((width (pattern-width image))
+         (height (pattern-height image))
+         (depth (xlib:drawable-depth drawable))
+         (idata (climi::pattern-array image)))
+    (let* ((pm (xlib:create-pixmap :drawable drawable
+                                   :width width
+                                   :height height
+                                   :depth depth))
+           (mm (xlib:create-pixmap :drawable drawable
+                                   :width width
+                                   :height height
+                                   :depth 1))
+           (pm-gc (xlib:create-gcontext :drawable pm))
+           (mm-gc (xlib:create-gcontext :drawable mm
+                                        :foreground 1
+                                        :background 0))
+           (pdata (make-array (list height width) :element-type '(unsigned-byte 32)))
+           (mdata (make-array (list height width) :element-type '(unsigned-byte 1)))
+           (pm-image (xlib:create-image :width  width
+                                        :height height
+                                        :depth  depth
+                                        :bits-per-pixel 32
+                                        :data   pdata))
+           (mm-image (xlib:create-image :width  width
+                                        :height height
+                                        :depth  1
+                                        :data   mdata)))
+      (declare (type (simple-array (unsigned-byte 32) (* *)) idata))
+      (loop for x fixnum from 0 below width do
+           (loop for y fixnum from 0 below height do
+                (setf (aref pdata y x) (ash (aref idata y x) -8))
+                (if (< (ldb (byte 8 0) (aref idata y x)) #x80)
+                    (setf (aref mdata y x) 0)
+                    (setf (aref mdata y x) 1))))
+      (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
+	(xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
+                        :width width :height height)
+        (xlib:put-image mm mm-gc mm-image :src-x 0 :src-y 0 :x 0 :y 0
+                        :width width :height height :bitmap-p nil))
+      (xlib:free-gcontext pm-gc)
+      (xlib:free-gcontext mm-gc)
+      (values pm mm))))
+
 (defmethod design-gcontext ((medium clx-medium) (ink climi::pattern))
   (let* ((drawable (sheet-xmirror (medium-sheet medium)))
          (rgba-pattern (climi::%collapse-pattern ink)))
-    (let ((pm (compute-rgb-image-pixmap drawable rgba-pattern))
-          (mask (compute-rgb-image-mask drawable rgba-pattern)))
+    (multiple-value-bind (pm mask)
+        (compute-rgb-image-pixmap-and-mask drawable rgba-pattern)
       (let ((gc (xlib:create-gcontext :drawable drawable)))
         (setf (xlib:gcontext-fill-style gc) :tiled
               (xlib:gcontext-tile gc) pm
@@ -582,8 +627,7 @@ translated, so they begin at different position than [0,0])."))
                 (top    (round-coordinate top))
                 (right  (round-coordinate right))
                 (bottom (round-coordinate bottom)))
-            ;; To clip rectangles, we just need to clamp the
-            ;; coordinates
+            ;; To clip rectangles, we just need to clamp the coordinates
             (xlib:draw-rectangle mirror gc
                                  (max #x-8000 (min #x7FFF left))
                                  (max #x-8000 (min #x7FFF top))

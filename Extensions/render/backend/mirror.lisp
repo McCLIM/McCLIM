@@ -1,10 +1,7 @@
-
 (in-package :mcclim-render-internals)
 
 (defclass image-mirror-mixin ()
-  ((image-family :initarg :image-family :initform :opticl)
-   (image-type :initarg :image-type :initform :rgb)
-   (image :initform nil :reader image-mirror-image)
+  ((image :initform nil :reader image-mirror-image)
    (image-lock :initform (climi::make-lock "image"))
    (resize-image-p :initform t :reader image-mirror-resize-image-p)
    (dirty-region :initform nil)
@@ -16,167 +13,100 @@
       (setf resize-image-p nil)
       (setf image img))))
 
-;;;
-;;; protocols
-;;;
-
-(defgeneric %make-image (mirror sheet))
-(defgeneric %set-image-region (mirror region))
-(defgeneric %create-mirror-image (mirror width height))
-(defgeneric %notify-image-updated (mirror region))
-
-(defgeneric %draw-image (mirror image x y width height x-dest y-dest clip-region))
-(defgeneric %fill-paths (mirror paths transformation clip-region ink background foreground))
-(defgeneric %stroke-paths (mirror paths line-style transformation clip-region ink background foreground))
-(defgeneric %fill-image-mask (mirror image-mask x y width height x-dest y-dest clip-region ink background foreground))
-(defgeneric %fill-image (mirror x y width height ink background foreground clip-region))
-
-(defgeneric %mirror-force-output (mirror))
+(defgeneric %mirror-force-output (mirror)
+  (:method ((mirror image-mirror-mixin)) nil))
 
 ;;;
 ;;; implementation
 ;;;
 
-(defmethod %make-image ((mirror image-mirror-mixin) sheet)
+(defun %make-image (mirror sheet)
+  (check-type mirror image-mirror-mixin)
   (with-slots (image resize-image-p) mirror
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-	(sheet-region sheet)
+        (sheet-region sheet)
       (let ((width (ceiling (- max-x min-x)))
-	    (height (ceiling (- max-y min-y))))
-	(%create-mirror-image mirror (1+ width) (1+ height))))))
+            (height (ceiling (- max-y min-y))))
+        (%create-mirror-image mirror (1+ width) (1+ height))))))
 
-(defmethod %set-image-region ((mirror image-mirror-mixin) region)
+(defun %set-image-region (mirror region)
+  (check-type mirror image-mirror-mixin)
   (with-slots (image resize-image-p) mirror
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-      region
+        region
       (let ((width (1+ (ceiling (- max-x min-x))))
-	    (height (1+ (ceiling (- max-y min-y)))))
-	(if (and resize-image-p
+            (height (1+ (ceiling (- max-y min-y)))))
+        (if (and resize-image-p
                  (or (null image)
-                     (/= width (image-width image))
-                     (/= height (image-height image))))
-	    (%create-mirror-image mirror width height)
-	    nil)))))
+                     (/= width (pattern-width image))
+                     (/= height (pattern-height image))))
+            (%create-mirror-image mirror width height)
+            nil)))))
 
-(defmethod %create-mirror-image ((mirror image-mirror-mixin) width height)
-  (with-slots (image image-family image-type) mirror
-    (setf image (make-image image-type width height image-family)))
+(defmethod %create-mirror-image (mirror width height)
+  (check-type mirror image-mirror-mixin)
+  (with-slots (image) mirror
+    (setf image (make-image width height)))
   (with-slots (dirty-region) mirror
     (setf dirty-region nil)))
 
-(defmethod %notify-image-updated ((mirror image-mirror-mixin) region)
+(defun %notify-image-updated (mirror region)
+  (check-type mirror image-mirror-mixin)
   (when region
     (with-slots (dirty-region) mirror
       (if dirty-region
           (setf dirty-region (region-union dirty-region region))
           (setf dirty-region region)))))
 
-(defmethod %draw-image :around ((mirror image-mirror-mixin) 
-				image x y width height x-dest y-dest clip-region)
-  (when (image-mirror-image mirror)
+;;; XXX: this is used for scroll
+(defun %draw-image (mirror dest-image x y width height to-x to-y clip-region)
+  (check-type mirror image-mirror-mixin)
+  (alexandria:when-let ((image (image-mirror-image mirror)))
+    (unless (and (rectanglep clip-region)
+                 (region-contains-region-p clip-region
+                                           (make-rectangle* to-x
+                                                            to-y
+                                                            (+ to-x width)
+                                                            (+ to-y height))))
+      (warn "copy image not correct"))
     (with-slots (image-lock) mirror
       (climi::with-lock-held (image-lock)
-	(call-next-method)))))
+        (let* ((image (image-mirror-image mirror))
+               (region  (copy-image dest-image x y width height image to-x to-y)))
+          (%notify-image-updated mirror region))))))
 
-(defmethod %fill-image-mask :around ((mirror image-mirror-mixin) 
-				     image-mask x y width height x-dest y-dest clip-region ink background foreground)
-  (when (image-mirror-image mirror)
+(defun %fill-image (mirror x y width height ink clip-region
+                    &optional stencil (x-dest 0) (y-dest 0))
+  (check-type mirror image-mirror-mixin)
+  (alexandria:when-let ((image (image-mirror-image mirror)))
+    #+(or) ;; XXX: clip-region is not correct hance warnings
+    (when (or (not (rectanglep clip-region))
+              (not (region-contains-region-p clip-region (make-rectangle* x y (+ x width) (+ y height)))))
+      (warn "fill image mask not correct [~A -> ~A]" clip-region (make-rectangle* x y (+ x width) (+ y height))))
     (with-slots (image-lock) mirror
       (climi::with-lock-held (image-lock)
-	(call-next-method)))))
+        (let ((region (fill-image image ink
+                                  :x x :y y :width width :height height
+                                  :stencil stencil
+                                  :stencil-dx x-dest :stencil-dy y-dest)))
+          (%notify-image-updated mirror region))))))
 
-(defmethod %fill-image :around ((mirror image-mirror-mixin) 
-				x y width height ink background foreground clip-region)
-  (when (image-mirror-image mirror)
-    (with-slots (image-lock) mirror
+(defun %fill-paths (mirror paths transformation region ink)
+  (check-type mirror image-mirror-mixin)
+  (alexandria:when-let ((image (image-mirror-image mirror)))
+    (with-slots (image-lock state) mirror
       (climi::with-lock-held (image-lock)
-	(call-next-method)))))
+        (let ((reg (aa-fill-paths image ink paths state transformation region)))
+          (clim:with-bounding-rectangle* (min-x min-y max-x max-y) reg
+            (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
+                                                           (ceiling max-x) (ceiling max-y)))))))))
 
-(defmethod %fill-paths :around ((mirror image-mirror-mixin) paths transformation region ink background foreground)
-  (when (image-mirror-image mirror)
-    (with-slots (image-lock) mirror
+(defun %stroke-paths (mirror paths line-style transformation region ink)
+  (check-type mirror image-mirror-mixin)
+  (alexandria:when-let ((image (image-mirror-image mirror)))
+    (with-slots (image-lock state) mirror
       (climi::with-lock-held (image-lock)
-	(call-next-method)))))
-
-(defmethod %stroke-paths :around ((mirror image-mirror-mixin) paths line-style transformation region ink background foreground)
-  (when (image-mirror-image mirror)
-    (with-slots (image-lock) mirror
-      (climi::with-lock-held (image-lock)
-	(call-next-method)))))
-
-(defmethod %draw-image ((mirror image-mirror-mixin)
-			image x y width height
-			to-x to-y
-			clip-region)
-  (when (or (not (rectanglep clip-region))
-            (not (region-contains-region-p clip-region (make-rectangle* to-x to-y (+ to-x width) (+ to-y height)))))
-    (warn "copy image not correct"))
-  (let ((region
-         (if (typep image 'rgba-image-mixin)
-             (blend-image image x y width height
-                         (image-mirror-image mirror)
-                         to-x to-y :alpha 255)
-             (copy-image image x y width height
-                         (image-mirror-image mirror)
-                         to-x to-y))))
-    (%notify-image-updated mirror region)))
-
-(defmethod %fill-image-mask ((mirror image-mirror-mixin)
-			     image-mask x y width height x-dest y-dest clip-region ink background foreground)
-  #+(or) (when (or (not (rectanglep clip-region))
-            (not (region-contains-region-p clip-region (make-rectangle* x y (+ x width) (+ y height)))))
-    (warn "fill image mask not correct [~A -> ~A]" clip-region (make-rectangle* x y (+ x width) (+ y height))))
-  (let ((region
-         (fill-image
-          (image-mirror-image mirror)
-          (make-pixeled-design ink :foreground foreground :background background)
-          image-mask
-          :x x :y y :width width :height height
-          :stencil-dx x-dest :stencil-dy y-dest)))
-    (%notify-image-updated mirror region)))
-
-(defmethod %fill-image ((mirror image-mirror-mixin)
-			x y width height ink background foreground clip-region)
-  #+(or) (when (or (not (rectanglep clip-region))
-            (not (region-contains-region-p clip-region (make-rectangle* x y (+ x width) (+ y height)))))
-    (warn "fill image not correct [~A -> ~A]"
-          clip-region
-          (make-rectangle* x y (+ x width) (+ y height))))
-  (let ((region (fill-image
-                 (image-mirror-image mirror)
-                 (make-pixeled-design ink :background background :foreground foreground)
-                 nil
-                 :x x :y y :width width :height height)))
-    (%notify-image-updated mirror region)))
-
-(defmethod %fill-paths ((mirror image-mirror-mixin) paths transformation region ink background foreground)
-  (with-slots (state) mirror
-    (let ((reg
-           (aa-fill-paths (image-mirror-image mirror)
-                          (and ink (make-pixeled-design ink :foreground foreground :background background))
-                          paths
-                          state
-                          transformation
-                          region)))
-      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-          reg
-        (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
-                                                       (ceiling max-x) (ceiling max-y)))))))
-
-(defmethod %stroke-paths ((mirror image-mirror-mixin) paths line-style transformation region ink background foreground)
-  (with-slots (state) mirror
-    (let ((reg
-           (aa-stroke-paths (image-mirror-image mirror)
-                            (and ink (make-pixeled-design ink :foreground foreground :background background))
-                            paths
-                            line-style
-                            state
-                            transformation
-                            region)))
-      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-          reg
-        (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
-                                                       (ceiling max-x) (ceiling max-y)))))))
-
-(defmethod %mirror-force-output ((mirror image-mirror-mixin))
-  nil)
+        (let ((reg (aa-stroke-paths image ink paths line-style state transformation region)))
+          (clim:with-bounding-rectangle* (min-x min-y max-x max-y) reg
+            (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
+                                                           (ceiling max-x) (ceiling max-y)))))))))

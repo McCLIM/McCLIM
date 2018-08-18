@@ -3,136 +3,168 @@
 ;;;
 ;;; Image
 ;;;
-(defclass image ()
-  ((width :initform 0 :initarg :width :accessor image-width :type fixnum)
-   (height :initform 0 :initarg :height :accessor image-height :type fixnum)))
-
-;;;
-;;; Image mixins
-;;;
-(defclass image-mixin ()
-  ())
-
-(defclass rgba-image-mixin (image-mixin)
-  ())
-
-(defclass rgb-image-mixin (image-mixin)
-  ())
-
-(defclass gray-image-mixin (image-mixin)
-  ())
-
-(defgeneric image-type (image)
-  (:method ((image rgba-image-mixin))
-    :rgba)
-  (:method ((image rgb-image-mixin))
-    :rgb)
-  (:method ((image gray-image-mixin))
-    :gray))
-
-(defvar *default-image-family* :two-dim-array)
-(defgeneric image-family (image))
-(defgeneric find-image-class (family type))
-
-;;;
-;;; Drawable Image
-;;;
-(defclass drawable-image (image)
-  ())
-
-(defgeneric map-rgb-color (drawable-image fn &key x y width height))
 
 (defun draw-image* (medium image x y
                     &rest args
                     &key clipping-region transformation)
   (declare (ignorable clipping-region transformation args))
   (climi::with-medium-options (medium args)
-    (medium-draw-image* medium image x y)))
+    (draw-pattern* medium image x y)))
 
 (clim-internals::def-graphic-op draw-image* (image x y))
-
-;;;
-;;; Image Design
-;;;
-(defclass image-design (design)
-  ((image :reader image
-          :initarg :image)))
-
-(defun make-image-design (image)
-  (make-instance 'image-design :image image))
-
-(defmethod clim:draw-design
-    (medium (design image-design) &rest options
-     &key (x 0) (y 0) &allow-other-keys)
-  (climi::with-medium-options (medium options)
-    (medium-draw-image* medium (slot-value design 'image) x y)))
-
-;;;
-;;; Image Pattern
-;;;
-(defclass image-pattern (pattern image-design)
-  ())
-
-(defmethod pattern-width ((pattern image-pattern))
-  (image-width (image pattern)))
-
-(defmethod pattern-height ((pattern image-pattern))
-  (image-height (image pattern)))
-
-;;;
-;;; Basic Image
-;;;
-(defclass basic-image (image)
-  ((pixels :initarg :pixels
-           :accessor image-pixels)))
-
-;;;
-;;; image I/O
-;;;
-(defgeneric read-image (source &key format image-class image-family))
-(defgeneric write-image (image destination &key format quality))
-
-(defvar *image-file-readers* (make-hash-table :test 'equalp)
-  "A hash table mapping keyword symbols naming image
-formats to a function that can read an image of that format. The
-functions will be called with one argument, the pathname of the
-file to be read.")
-
-(defvar *image-file-writer* (make-hash-table :test 'equalp)
-  "A hash table mapping keyword symbols naming image
-formats to a function that can write an image of that format. The
-functions will be called with two arguments, the image and the pathname of the
-file to be read.")
-
-(defmacro define-image-file-reader (format (&rest args) &body body)
-  `(setf (gethash ,format *image-file-readers*)
-         #'(lambda (,@args)
-             ,@body)))
-
-(defun image-format-read-supported-p (format)
-  "Return true if FORMAT is supported by `read-image'."
-  (not (null (gethash format *image-file-readers*))))
-
-(defmacro define-image-file-writer (format (&rest args) &body body)
-  `(setf (gethash ,format *image-file-writer*)
-         #'(lambda (,@args)
-             ,@body)))
-
-(defun image-format-write-supported-p (format)
-  "Return true if FORMAT is supported by `write-image'."
-  (not (null (gethash format *image-file-writer*))))
 
 ;;;
 ;;; Image operations
 ;;;
 
-(defgeneric make-image (image-class-or-type width height &optional image-family))
-(defgeneric coerce-image (image image-class-or-type &optional image-family))
-(defgeneric clone-image (image image-class-or-type  &optional image-family))
-(defgeneric copy-image (src-image sx sy width height dst-image x y))
-(defgeneric blend-image (src-image sx sy width height dst-image x y &key alpha))
-(defgeneric crop-image (image sx sy width height &optional image-class-or-type image-family))
-(defgeneric coerce-alpha-channel (image &optional image-class-or-type image-family))
-(defgeneric clone-alpha-channel (image &optional image-class-or-type image-family))
-(defgeneric copy-alpha-channel (src-image sx sy width height dst-image x y))
-(defgeneric fill-image (image design stencil &key x y width height stencil-dx stencil-dy))
+(defun make-image (width height)
+  "Create an empty transparent image of size WIDTH x HEIGHT."
+  ;; XXX: something in text rendering depends image being transparent by
+  ;; default. This should be fixed.
+  (make-instance 'clime:image-pattern :array (make-array (list height width)
+                                                         :element-type '(unsigned-byte 32)
+                                                         :initial-element #xFFFFFF00)))
+
+;;; Unsafe versions of COPY-IMAGE. Caller must ensure that all arguments are
+;;; valid and arrays are of proper type.
+(defun %copy-image (src-array dst-array x1s y1s x1d y1d x2 y2)
+  (declare (type fixnum x1s y1s x1d y1d x2 y2)
+           (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
+           (optimize (speed 3) (safety 0)))
+  (do-regions ((src-j dest-j y1s y1d y2)
+               (src-i dest-i x1s x1d x2))
+    (setf (aref dst-array dest-j dest-i)
+          (aref src-array src-j src-i))))
+
+(defun %copy-image* (src-array dst-array x1s y1s x1d y1d x2 y2)
+  (declare (type fixnum x1s y1s x1d y1d x2 y2)
+           (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
+           (optimize (speed 3) (safety 0)))
+  (do-regions ((src-j dest-j y1s y1d y2)
+               (src-i dest-i x1s x1d x2) :backward t)
+    (setf (aref dst-array dest-j dest-i)
+          (aref src-array src-j src-i))))
+
+(declaim (inline %copy-image %copy-image*))
+
+;;; XXX: We should unify it with COPY-AREA and MEDIUM-COPY-AREA. That means that
+;;; raster images should be mediums on their own rights (aren't they?).
+(defun copy-image (src-image sx sy width height dst-image dx dy
+                   &aux
+                     (sx (round sx))
+                     (sy (round sy))
+                     (dx (round dx))
+                     (dy (round dy))
+                     (width (round width))
+                     (height (round height))
+                     (src-array (climi::pattern-array src-image))
+                     (dst-array (climi::pattern-array dst-image)))
+  "Copies SRC-IMAGE to DST-IMAGE region-wise. Both may be the same image."
+  (unless (%check-coords src-array dst-array sx sy dx dy width height)
+    (return-from copy-image nil))
+  (let ((max-x (+ dx width -1))
+        (max-y (+ dy height -1)))
+    (declare (fixnum max-x max-y))
+    (if (eq src-array dst-array)
+        (cond ((> sy dy) #1=(%copy-image src-array dst-array sx sy dx dy max-x max-y))
+              ((< sy dy) #2=(%copy-image* src-array dst-array sx sy dx dy max-x max-y))
+              ((> sx dx) #1#)
+              ((< sx dx) #2#)
+              (T NIL))
+        #1#))
+  (make-rectangle* dx dy (+ dx width) (+ dy height)))
+
+(defun %blend-image (src-array dst-array x1s y1s x1d y1d x2 y2)
+  (declare (type fixnum x1s y1s x1d y1d x2 y2)
+           (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
+           (optimize (speed 3) (safety 0)))
+  (do-regions ((src-j dest-j y1s y1d y2)
+               (src-i dest-i x1s x1d x2))
+    (let-rgba ((r.fg g.fg b.fg a.fg) (aref src-array src-j src-i))
+      (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array dest-j dest-i))
+        (setf (aref dst-array dest-j dest-i)
+              (octet-blend-function* r.fg g.fg b.fg a.fg
+                                     r.bg g.bg b.bg a.bg))))))
+
+(defun %blend-image* (src-array dst-array x1s y1s x1d y1d x2 y2)
+  (declare (type fixnum x1s y1s x1d y1d x2 y2)
+           (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
+           (optimize (speed 3) (safety 0)))
+  (do-regions ((src-j dest-j y1s y1d y2)
+               (src-i dest-i x1s x1d x2) :backward t)
+    (let-rgba ((r.fg g.fg b.fg a.fg) (aref src-array src-j src-i))
+      (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array dest-j dest-i))
+        (setf (aref dst-array dest-j dest-i)
+              (octet-blend-function* r.fg g.fg b.fg a.fg
+                                     r.bg g.bg b.bg a.bg))))))
+
+(declaim (inline %blend-image %blend-image*))
+
+(defun blend-image (src-image sx sy width height dst-image dx dy
+                    &aux
+                      (sx (round sx))
+                      (sy (round sy))
+                      (dx (round dx))
+                      (dy (round dy))
+                      (width (round width))
+                      (height (round height))
+                      (src-array (climi::pattern-array src-image))
+                      (dst-array (climi::pattern-array dst-image)))
+  "Copies SRC-IMAGE to DST-IMAGE region-wise. Both may be the same image."
+  (unless (%check-coords src-array dst-array sx sy dx dy width height)
+    (return-from blend-image nil))
+  (let ((max-x (+ dx width -1))
+        (max-y (+ dy height -1)))
+    (if (eq src-array dst-array)
+        (cond ((> sy dy) #1=(%blend-image src-array dst-array sx sy dx dy max-x max-y))
+              ((< sy dy) #2=(%blend-image* src-array dst-array sx sy dx dy max-x max-y))
+              ((> sx dx) #1#)
+              ((< sx dx) #2#)
+              (T NIL))
+        #1#))
+  (make-rectangle* dx dy (+ dx width) (+ dy height)))
+
+(defun clone-image (image)
+  (let ((src-array (climi::pattern-array image)))
+    (declare (type (simple-array (unsigned-byte 32) 2) src-array))
+    (make-instance 'climi::%rgba-pattern :array (alexandria:copy-array src-array))))
+
+(defun fill-image (image design &key (x 0) (y 0)
+                                  (width (pattern-width image))
+                                  (height (pattern-height image))
+                                  stencil (stencil-dx 0) (stencil-dy 0)
+                   &aux
+                     (dst-array (climi::pattern-array image))
+                     (x2 (+ x width -1))
+                     (y2 (+ y height -1)))
+  "Blends DESIGN onto IMAGE with STENCIL."
+  (do-regions ((src-j j y y y2)
+               (src-i i x x x2))
+    (let ((alpha (if (null stencil)
+                     #xff
+                     (ldb (byte 8 0)
+                          (climi::%rgba-value (climi::design-ink stencil
+                                                                 (+ stencil-dx i)
+                                                                 (+ stencil-dy j))))))
+          ;; XXX: problems comes from lack of knowledge where is
+          ;; medium's [0,0]. In most cases it is not [x,y]!
+          (ink (climi::design-ink design src-i src-j)))
+      (if (typep ink 'standard-flipping-ink)
+          (let-rgba ((r.fg g.fg b.fg a.fg) (let ((d1 (slot-value ink 'climi::design1))
+                                                 (d2 (slot-value ink 'climi::design2)))
+                                             (logior (logxor (climi::%rgba-value d1)
+                                                             (climi::%rgba-value d2))
+                                                     #xff)))
+            (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
+              (setf (aref dst-array j i)
+                    (octet-blend-function* (color-octet-xor r.fg r.bg)
+                                           (color-octet-xor g.fg g.bg)
+                                           (color-octet-xor b.fg b.bg)
+                                           (%octet-mult a.fg alpha)
+                                           r.bg g.bg b.bg a.bg))))
+          (let-rgba ((r.fg g.fg b.fg a.fg) (climi::%rgba-value ink))
+            (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
+              (setf (aref dst-array j i)
+                    (octet-blend-function* r.fg g.fg b.fg (%octet-mult a.fg alpha)
+                                           r.bg g.bg b.bg a.bg)))))))
+  (make-rectangle* x y (+ x width) (+ y height)))

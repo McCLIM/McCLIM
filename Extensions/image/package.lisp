@@ -27,7 +27,6 @@
   (:export
    #:image
    #:rgb-image
-   #:rgb-pattern
    #:image-width
    #:image-height
    #:image-data

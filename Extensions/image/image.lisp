@@ -1,86 +1,97 @@
 (in-package :mcclim-image)
 
-;;; RGB image designs, efficient support for truecolor images. ARGB
-;;; image data represented as an (unsigned-byte 32) array
+#+ (or) ;; pixmap caching is implemented ehre
+(defun draw-image-design (medium design x y)
+  (let* ((da (sheet-xmirror (medium-sheet medium)))
+	 (image (slot-value design 'mcclim-image::image))
+	 (width (mcclim-image:image-width image))
+	 (height (mcclim-image:image-height image)))
+    (destructuring-bind (&optional pixmap mask)
+	(slot-value design 'mcclim-image::medium-data)
+      (unless pixmap
+	(setf pixmap (compute-rgb-image-pixmap da image))
+	(when (mcclim-image:image-alpha-p image)
+	  (setf mask (compute-rgb-image-mask da image)))
+	(setf (slot-value design 'mcclim-image::medium-data) (list pixmap mask)))
+      (multiple-value-bind (x y)
+	  (transform-position
+	   (sheet-device-transformation (medium-sheet medium))
+	   x y)
+	(setf x (round x))
+	(setf y (round y))
+	(let ((gcontext (xlib:create-gcontext :drawable da)))
+	  (cond
+	    (mask
+             (xlib:with-gcontext (gcontext
+                                  :clip-mask mask
+                                  :clip-x x
+                                  :clip-y y)
+               (xlib:copy-area pixmap gcontext 0 0 width height
+                               da x y)))
+	    (t
+             (xlib:copy-area pixmap gcontext 0 0 width height
+                             da x y))))))))
 
-(defclass rgb-image ()
-    ((width :initarg :width :accessor image-width)
-     (height :initarg :height :accessor image-height)
-     (data :initarg :data
-	   :accessor image-data
-	   :type (or null (simple-array (unsigned-byte 32) (* *))))
-     (alphap :initarg :alphap
-	     :initform nil
-	     :accessor image-alpha-p)))
+#+ (or) ;; free was only used here in fact
+(defmethod medium-draw-image-design* :before (current-medium design x y)
+  (with-slots (medium medium-data) design
+    (unless (eq medium current-medium)
+      (when medium
+	(medium-free-image-design medium design))
+      (setf medium current-medium)
+      (setf medium-data nil))))
 
-;;; Applications (closure in particular) might want to cache any
-;;; backend-specific data required to draw an RGB-IMAGE.
-;;;
-;;; To implement this caching, designs must be created separately for
-;;; each medium, so that mediums can put their own data into them.
-
-(defclass rgb-image-design (design)
-    ((medium :initform nil :initarg :medium)
-     (image :reader image
-            :initarg :image)
-     (medium-data :initform nil)))
-
-(defun make-rgb-image-design (image)
-  (make-instance 'rgb-image-design :image image))
-
-;;; Protocol to free cached data
-
-(defgeneric medium-free-image-design (medium design))
-
+#+ (or) ;; freeing up the cache
 (defun free-image-design (design)
-  (medium-free-image-design (slot-value design 'medium) design))
+  (destructuring-bind (&optional pixmap mask)
+      (slot-value design 'mcclim-image::medium-data)
+    (when pixmap
+      (xlib:free-pixmap pixmap)
+      (when mask
+	(xlib:free-pixmap mask))
+      (setf (slot-value design 'mcclim-image::medium-data) nil))))
 
+#+transformed-version
+(progn
+  (defun transform-pointset (transformation &rest points)
+    (loop
+       for (x y) on points by #'cddr
+       append (multiple-value-list (transform-position transformation x y))))
 
-;;; Drawing protocol
-
-(defgeneric medium-draw-image-design* (medium design x y))
-
-;;; Fetching protocol
-
-(defun sheet-rgb-image (sheet &key x y width height)
-  (multiple-value-bind (data alphap)
-      (sheet-rgb-data (port sheet)
-		      sheet
-		      :x x
-		      :y y
-		      :width width
-		      :height height)
-    (destructuring-bind (height width)
-	(array-dimensions data)
-      (make-instance 'rgb-image
-	:width width
-	:height height
-	:data data
-	:alphap alphap))))
-
-(defgeneric sheet-rgb-data (port sheet &key x y width height))
-
-;;; Most usages of WITH-MEDIUM-OPTIONS are in the file graphics.lisp,
-;;; but it is also used in the method on DRAW-DESIGN specialized for
-;;; RGB-IMAGE-DESIGN below.  For that reason, we need to define it
-;;; here, so that it will not be considered to be an undefined
-;;; function by default.
-
-(defmethod draw-design
-    (medium (design rgb-image-design) &rest options
-     &key (x 0) (y 0) &allow-other-keys)
-  (with-medium-options (medium options)
-    (medium-draw-image-design* medium design x y)))
-
-(defclass rgb-pattern (pattern rgb-image-design)
-  ())
-
-(defmethod pattern-width ((pattern rgb-pattern))
-  (image-width (image pattern)))
-
-(defmethod pattern-height ((pattern rgb-pattern))
-  (image-height (image pattern)))
-
-
-
-
+  (defmethod mcclim-image::medium-draw-image-design*
+      ((medium clx-medium) (design mcclim-image:rgb-image-design) transformation)
+    (let* ((da (sheet-xmirror (medium-sheet medium)))
+           (image (slot-value design 'mcclim-image::image))
+           (width (mcclim-image:image-width image))
+           (height (mcclim-image:image-height image))
+           (native-transform (sheet-native-transformation (medium-sheet medium)))
+           (merged-transform (clim:compose-transformations native-transform transformation)))
+      (destructuring-bind (&optional pixmap mask)
+          (slot-value design 'mcclim-image::medium-data)
+        (unless pixmap
+          (setf pixmap (compute-rgb-image-pixmap da image))
+          (when (mcclim-image:image-alpha-p image)
+            (setf mask (compute-rgb-image-mask da image)))
+          (setf (slot-value design 'mcclim-image::medium-data) (list pixmap mask)))
+        (let ((transformed-points (transform-pointset merged-transform 0 0 width 0 width height 0 height)))
+          (let ((dest (clim-clx::create-dest-picture da))
+                (src (clim-clx::create-dest-picture pixmap)))
+            (cond
+              (mask
+               (setf (xlib:picture-clip-mask dest) mask)
+               (setf (xlib:picture-clip-x-origin dest) (truncate (+ (first transformed-points) 0.5)))
+               (setf (xlib:picture-clip-y-origin dest) (truncate (+ (second transformed-points) 0.5))))
+              (t
+               (setf (xlib:picture-clip-mask dest) :none)))
+            (multiple-value-bind (rxx rxy ryx ryy)
+                (climi::get-transformation transformation)
+              (apply #'xlib:render-set-picture-transform src
+                     (mapcar (lambda (v)
+                               (logand (truncate (* v #x10000)) #xFFFFFFFF))
+                             (let ((det (- (* rxx ryy) (* rxy ryx))))
+                               (list (/ ryy det) (- (/ rxy det)) 0
+                                     (- (/ ryx det)) (/ rxx det) 0
+                                     0 0 1)))))
+            (xlib:render-triangle-fan dest :over src 0 0
+                                      (find-alpha-mask-format (xlib:drawable-display da))
+                                      transformed-points)))))))

@@ -4,7 +4,6 @@
                #:mcclim-clx/basic
 	       #:mcclim-clx/input
 	       #:mcclim-clx/output
-               #:mcclim-image/clx
 	       #:mcclim-clx/text-selection)
   :components
   ((:file "port")
