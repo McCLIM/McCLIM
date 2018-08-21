@@ -101,11 +101,11 @@
           (draw-text* stream "Text alignment test" 170 20
                       :text-family :sans-serif
                       :text-face :bold)
-          (with-scaling (stream 50)
+          (with-scaling (stream 2)
             (loop for align-y in '(:bottom :center :top)
-               and y from 1
+               and y from 200 by 50
                do (loop for align-x in '(:right :center :left)
-                     and x from 1
+                     and x from 100 by 50
                      do (draw-text* stream (format nil "~A~A"
                                                    (elt (symbol-name align-x) 0)
                                                    (elt (symbol-name align-y) 0))
