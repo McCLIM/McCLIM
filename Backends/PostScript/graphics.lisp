@@ -39,11 +39,6 @@
 
 (in-package :clim-postscript)
 
-;;;
-(defvar *transformation* nil
-  "Native transformation")
-
-
 ;;; Postscript output utilities
 (defun write-number (stream number)
   (format stream "~,3F " (coerce number 'single-float)))
@@ -52,9 +47,8 @@
   (write-number stream (* angle (/ 180 pi))))
 
 (defun write-coordinates (stream x y)
-  (with-transformed-position (*transformation* x y)
-    (write-number stream x)
-    (write-number stream y)))
+  (write-number stream x)
+  (write-number stream y))
 
 (defun write-transformation* (stream mxx mxy myx myy tx ty)
   (write-char #\[ stream)
@@ -236,44 +230,52 @@ setmatrix")
 
 ;;; Postscript path functions
 
-(defgeneric postscript-add-path (stream region)
+(defgeneric postscript-add-path (stream medium region)
   (:documentation
    "Adds REGION (if it is a path) or its boundary (if it is an area)
    to the current path of STREAM."))
 
-(defmethod postscript-add-path (stream (region (eql +nowhere+)))
+(defmethod postscript-add-path (stream medium (region (eql +nowhere+)))
   (declare (ignore stream)))
 
-(defmethod postscript-add-path (stream (region standard-region-union))
+(defmethod postscript-add-path (stream medium (region standard-region-union))
   (map-over-region-set-regions (lambda (region)
-                                 (postscript-add-path stream region))
+                                 (postscript-add-path stream medium region))
                                region))
 
-(defmethod postscript-add-path (stream (region standard-region-intersection))
+(defmethod postscript-add-path (stream medium (region standard-region-intersection))
   (format stream "gsave~%")
   (loop for subregion in (region-set-regions region)
         do (format stream "newpath~%")
-        (postscript-add-path stream subregion)
+        (postscript-add-path stream medium subregion)
         (format stream "clip~%"))
   (format stream "clippath false upath~%")
   (format stream "grestore~%")
   (format stream "uappend~%"))
 
 ;;; Primitive paths
-(defmethod postscript-add-path (stream (polygon polygon))
-  (let ((points (polygon-points polygon)))
-    (moveto* stream (point-x (first points)) (point-y (first points)))
+(defmethod postscript-add-path (stream medium (polygon polygon))
+  (let ((points (polygon-points polygon))
+        (tr (sheet-native-transformation (medium-sheet medium))))
+    (let ((x0 (point-x (first points)))
+          (y0 (point-y (first points))))
+      (with-transformed-position (tr x0 y0)
+        (moveto* stream x0 y0)))
     (loop for point in (rest points)
-          do (lineto* stream (point-x point) (point-y point)))
+       do (let ((x1 (point-x point))
+                (y1 (point-y point)))
+            (with-transformed-position (tr x1 y1)
+              (lineto* stream x1 y1))))
     (format stream "closepath~%")))
 
-(defmethod postscript-add-path (stream (ellipse ellipse))
-  (let ((ellipse (transform-region *transformation* ellipse)))
+(defmethod postscript-add-path (stream medium (ellipse ellipse))
+  (let* ((tr (sheet-native-transformation (medium-sheet medium)))
+         (ellipse (transform-region tr ellipse)))
     (put-ellipse stream ellipse t)))
 
-(defmethod postscript-add-path (stream (rs climi::standard-rectangle-set))
+(defmethod postscript-add-path (stream medium (rs climi::standard-rectangle-set))
   (map-over-region-set-regions
-   (lambda (r) (postscript-add-path stream r))
+   (lambda (r) (postscript-add-path stream medium r))
    rs))
 
 ;;; Graphics state
@@ -376,17 +378,17 @@ setmatrix")
     (format stream "setrgbcolor~%")))
 
 ;;; Clipping region
-(defgeneric postscript-set-clipping-region (stream region))
+(defgeneric postscript-set-clipping-region (stream medium region))
 
-(defmethod postscript-set-clipping-region (stream region)
+(defmethod postscript-set-clipping-region (stream medium region)
   (format stream "newpath~%")
-  (postscript-add-path stream region)
+  (postscript-add-path stream medium region)
   (format stream "clip~%"))
 
-(defmethod postscript-set-clipping-region (stream (region (eql +everywhere+)))
+(defmethod postscript-set-clipping-region (stream medium (region (eql +everywhere+)))
   (declare (ignore stream)))
 
-(defmethod postscript-set-clipping-region (stream (region (eql +nowhere+)))
+(defmethod postscript-set-clipping-region (stream medium (region (eql +nowhere+)))
   (format stream "newpath 0 0 moveto closepath clip~%"))
 
 (defmethod postscript-set-graphics-state (stream medium
@@ -398,6 +400,7 @@ setmatrix")
   (postscript-restore-graphics-state (medium-sheet medium))
   (postscript-save-graphics-state (medium-sheet medium))
   (postscript-set-clipping-region stream
+                                  medium
                                   (medium-clipping-region medium)))
 
 
@@ -407,102 +410,122 @@ setmatrix")
 
 (defmethod medium-draw-point* ((medium postscript-medium) x y)
   (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium)))
+        (tr (sheet-native-transformation (medium-sheet medium)))
         (radius (/ (medium-line-thickness medium) 2)))
-    (postscript-actualize-graphics-state stream medium :color)
-    (format stream "newpath~%")
-    (write-coordinates stream x y)
-    (write-number stream radius)
-    (format stream "0 360 arc~%")
-    (format stream "fill~%")))
+    (with-graphics-state ((medium-sheet medium))
+      (postscript-actualize-graphics-state stream medium :color)
+      (format stream "newpath~%")
+      (with-transformed-position (tr x y)
+        (write-coordinates stream x y))
+      (write-number stream radius)
+      (format stream "0 360 arc~%")
+      (format stream "fill~%"))))
 
 (defmethod medium-draw-points* ((medium postscript-medium) coord-seq)
   (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium)))
+        (tr (sheet-native-transformation (medium-sheet medium)))
         (radius (/ (medium-line-thickness medium) 2)))
-    (postscript-actualize-graphics-state stream medium :color)
-    (map-repeated-sequence 'nil 2
-                           (lambda (x y)
-                             (format stream "newpath~%")
-                             (write-coordinates stream x y)
-                             (write-number stream radius)
-                             (format stream "0 360 arc~%")
-                             (format stream "fill~%"))
-                           coord-seq)))
+    (with-graphics-state ((medium-sheet medium))
+      (postscript-actualize-graphics-state stream medium :color)
+      (map-repeated-sequence 'nil 2
+                             (lambda (x y)
+                               (format stream "newpath~%")
+                               (with-transformed-position (tr x y)
+                                 (write-coordinates stream x y))
+                               (write-number stream radius)
+                               (format stream "0 360 arc~%")
+                               (format stream "fill~%"))
+                             coord-seq))))
 
 (defmethod medium-draw-line* ((medium postscript-medium) x1 y1 x2 y2)
   (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
+        (tr (sheet-native-transformation (medium-sheet medium))))
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath ")
-    (put-line* stream x1 y1 x2 y2)
+    (with-transformed-position (tr x1 y1)
+      (with-transformed-position (tr x2 y2)
+        (put-line* stream x1 y1 x2 y2)))
     (format stream "stroke~%")))
 
 (defmethod medium-draw-lines* ((medium postscript-medium) coord-seq)
   (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :line-style :color)
-    (format stream "newpath~%")
-    (map-repeated-sequence 'nil 4
-                           (lambda (x1 y1 x2 y2) (put-line* stream x1 y1 x2 y2))
-                           coord-seq)
-    (format stream "stroke~%")))
+        (tr (sheet-native-transformation (medium-sheet medium))))
+    (with-graphics-state ((medium-sheet medium))
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
+      (map-repeated-sequence 'nil 4
+                             (lambda (x1 y1 x2 y2)
+                               (with-transformed-position (tr x1 y1)
+                                 (with-transformed-position (tr x2 y2)
+                                   (put-line* stream x1 y1 x2 y2))))
+                             coord-seq)
+      (format stream "stroke~%"))))
 
 (defmethod medium-draw-polygon*
     ((medium postscript-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
   (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :line-style :color)
-    (format stream "newpath~%")
-    (let ((command "moveto"))
-      (map-repeated-sequence 'nil 2
-                             (lambda (x y)
-                               (write-coordinates stream x y)
-                               (format stream "~A~%"
-                                       command)
-                               (setq command "lineto"))
-                             coord-seq))
-    (when closed
-      (format stream "closepath~%"))
-    (format stream (if filled "fill~%" "stroke~%"))))
+        (tr (sheet-native-transformation (medium-sheet medium))))
+    (with-graphics-state ((medium-sheet medium))
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
+      (let ((command "moveto"))
+        (map-repeated-sequence 'nil 2
+                               (lambda (x y)
+                                 (with-transformed-position (tr x y)
+                                   (write-coordinates stream x y))
+                                 (format stream "~A~%"
+                                         command)
+                                 (setq command "lineto"))
+                               coord-seq))
+      (when closed
+        (format stream "closepath~%"))
+      (format stream (if filled "fill~%" "stroke~%")))))
 
 (defmethod medium-draw-rectangle*
     ((medium postscript-medium) x1 y1 x2 y2 filled)
   (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :line-style :color)
-    (format stream "newpath~%")
-    (put-rectangle* stream x1 y1 x2 y2)
-    (format stream (if filled "fill~%" "stroke~%"))))
+        (tr (sheet-native-transformation (medium-sheet medium))))
+    (with-graphics-state ((medium-sheet medium))
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
+      (with-transformed-position (tr x1 y1)
+        (with-transformed-position (tr x2 y2)
+          (put-rectangle* stream x1 y1 x2 y2)))
+      (format stream (if filled "fill~%" "stroke~%")))))
 
 (defmethod medium-draw-rectangles*
     ((medium postscript-medium) position-seq filled)
   (assert (evenp (length position-seq)))
   (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :line-style :color)
-    (format stream "newpath~%")
-    (map-repeated-sequence 'nil 4
-        (lambda (x1 y1 x2 y2) (put-rectangle* stream x1 y1 x2 y2))
-         position-seq)
-    (format stream (if filled "fill~%" "stroke~%"))))
+        (tr (sheet-native-transformation (medium-sheet medium))))
+    (with-graphics-state ((medium-sheet medium))
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
+      (map-repeated-sequence 'nil 4
+                             (lambda (x1 y1 x2 y2)
+                               (with-transformed-position (tr x1 y1)
+                                 (with-transformed-position (tr x2 y2)
+                                   (put-rectangle* stream x1 y1 x2 y2))))
+                             position-seq)
+      (format stream (if filled "fill~%" "stroke~%")))))
 
 (defmethod medium-draw-ellipse* ((medium postscript-medium) center-x center-y
 				 radius1-dx radius1-dy radius2-dx radius2-dy
 				 start-angle end-angle filled)
   (let* ((stream (postscript-medium-file-stream medium))
-         (*transformation* (sheet-native-transformation (medium-sheet medium)))
+         (tr (sheet-native-transformation (medium-sheet medium)))
          (ellipse (transform-region
-                   *transformation*
+                   tr
                    (make-ellipse* center-x center-y
                                   radius1-dx radius1-dy radius2-dx radius2-dy
                                   :start-angle start-angle
                                   :end-angle end-angle))))
-    (postscript-actualize-graphics-state stream medium :line-style :color)
-    (format stream "newpath~%")
-    (put-ellipse stream ellipse filled)
-    (format stream (if filled "fill~%" "stroke~%"))))
+    (with-graphics-state ((medium-sheet medium))
+      (postscript-actualize-graphics-state stream medium :line-style :color)
+      (format stream "newpath~%")
+      (put-ellipse stream ellipse filled)
+      (format stream (if filled "fill~%" "stroke~%")))))
 
 (defun medium-font (medium)
   (text-style-mapping (port medium) (medium-merged-text-style medium)))
@@ -550,57 +573,39 @@ setmatrix")
                               align-x align-y
                               toward-x toward-y transform-glyphs
                               transformation)
-  (multiple-value-bind (x y)
-      (transform-position transformation x y)
-    (setq string (if (characterp string)
-                     (make-string 1 :initial-element string)
-                     (subseq string start end)))
-    (let ((*transformation* (sheet-native-transformation (medium-sheet medium))))
-      (let ((file-stream (postscript-medium-file-stream medium)))
-        (postscript-actualize-graphics-state file-stream medium :color :text-style)
-        (with-graphics-state ((medium-sheet medium))
-          #+ignore
-          (when transform-glyphs
-            ;;
-            ;; Now the harder part is that we also want to transform the glyphs,
-            ;; which is rather painless in Postscript. BUT: the x/y coordinates
-            ;; we get are already transformed coordinates, so what I do is
-            ;; untransform them again and simply tell the postscript interpreter
-            ;; our transformation matrix. --GB
-            ;;
-            ;; This code changes both the form of glyphs and the
-            ;; direction of the text, which does not conform to the
-            ;; specification. So I've disabled it. -- APD, 2002-06-03.
-            (multiple-value-setq (x y)
-              (untransform-position (medium-transformation medium) x y))
+  (setq string (if (characterp string)
+                   (make-string 1 :initial-element string)
+                   (subseq string start end)))
+  (let* ((sheet-transformation (sheet-native-transformation (medium-sheet medium))))
+    (let ((file-stream (postscript-medium-file-stream medium)))
+      (postscript-actualize-graphics-state file-stream medium :color :text-style)
+      (with-graphics-state ((medium-sheet medium))
+        (multiple-value-bind (total-width total-height
+                                          final-x final-y baseline)
+            (let* ((font-name (medium-font medium))
+                   (font (clim-postscript-font:font-name-metrics-key font-name))
+                   (size (clim-postscript-font:font-name-size font-name)))
+              (clim-postscript-font:text-size-in-font font size string 0 nil))
+          (declare (ignore final-x final-y))
+          ;; Only one line?
+          (let ((x (ecase align-x
+                     (:left x)
+                     (:center (- x (/ total-width 2)))
+                     (:right (- x total-width))))
+                (y (ecase align-y
+                     (:top (+ y baseline))
+                     (:center (+ y baseline (- (/ total-height 2))))
+                     (:baseline y)
+                     (:bottom (+ y (- total-height baseline))))))
             (multiple-value-bind (mxx mxy myx myy tx ty)
-                (get-transformation (medium-transformation medium))
-              (format file-stream "initmatrix [~A ~A ~A ~A ~A ~A] concat~%"
-                      (format-postscript-number mxx)
-                      (format-postscript-number mxy)
-                      (format-postscript-number myx)
-                      (format-postscript-number myy)
-                      (format-postscript-number tx)
-                      (format-postscript-number ty))))
-          (multiple-value-bind (total-width total-height
-                                final-x final-y baseline)
-              (let* ((font-name (medium-font medium))
-                     (font (clim-postscript-font:font-name-metrics-key font-name))
-                     (size (clim-postscript-font:font-name-size font-name)))
-                (clim-postscript-font:text-size-in-font font size string 0 nil))
-            (declare (ignore final-x final-y))
-            ;; Only one line?
-            (setq x (ecase align-x
-                      (:left x)
-                      (:center (- x (/ total-width 2)))
-                      (:right (- x total-width))))
-            (setq y (ecase align-y
-                      (:baseline y)
-                      (:top (+ y baseline))
-                      (:center (- y (- (/ total-height 2)
-                                       baseline)))
-                      (:bottom (- y (- total-height baseline)))))
-            (moveto* file-stream x y))
-          (format file-stream "(~A) show~%" (postscript-escape-string string)))))))
+                (climi::get-transformation (clim:compose-transformations
+                                            sheet-transformation
+                                            transformation))
+              (format file-stream "[~,3F ~,3F ~,3F ~,3F ~,3F ~,3F] concat~%"
+                      mxx mxy myx myy tx ty))
+            (moveto* file-stream x y)
+            (format file-stream "[~,3F ~,3F ~,3F ~,3F ~,3F ~,3F] concat~%"
+                    1 0 0 -1 0 0)
+            (format file-stream "(~A) show~%" (postscript-escape-string string))))))))
 
 
