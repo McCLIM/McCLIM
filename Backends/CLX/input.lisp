@@ -207,8 +207,8 @@
                 ;; different than [0,0].
                 (multiple-value-bind (x y)
                     (xlib:translate-coordinates window
-                                                (xlib:drawable-x window)
-                                                (xlib:drawable-y window)
+                                                0
+                                                0
                                                 (clx-port-window *clx-port*))
                   (make-instance 'window-configuration-event
                                  :sheet sheet
