@@ -172,32 +172,35 @@
                               align-x align-y
                               toward-x toward-y transform-glyphs
                               transformation)
-  (multiple-value-bind (x y)
-      (transform-position transformation x y)
-    (pdf:with-saved-state
-      (pdf:in-text-mode
-        (pdf-actualize-graphics-state medium :text-style :color)
-        (let ((tr (sheet-native-transformation (medium-sheet medium))))
-          (multiple-value-bind (total-width total-height
-                                final-x final-y baseline)
-              (let* ((font-name (medium-font medium))
-                     (font (clim-postscript-font:font-name-metrics-key font-name))
-                     (size (clim-postscript-font:font-name-size font-name)))
-                (clim-postscript-font:text-size-in-font font size string 0 nil))
-            (declare (ignore final-x final-y))
-            (let  ((x (ecase align-x
-                        (:left x)
-                        (:center (- x (/ total-width 2)))
-                        (:right (- x total-width))))
-                   (y (ecase align-y
-                        (:baseline y)
-                        (:top (+ y baseline))
-                        (:center (- y (- (/ total-height 2)
-                                         baseline)))
-                        (:bottom (- y (- total-height baseline))))))
-              (with-transformed-position (tr x y)
-                (pdf:move-text x y)
-                (pdf:draw-text string)))))))))
+  (pdf:with-saved-state
+    (pdf:in-text-mode
+      (pdf-actualize-graphics-state medium :text-style :color)
+      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+        (multiple-value-bind (total-width total-height
+                                          final-x final-y baseline)
+            (let* ((font-name (medium-font medium))
+                   (font (clim-postscript-font:font-name-metrics-key font-name))
+                   (size (clim-postscript-font:font-name-size font-name)))
+              (clim-postscript-font:text-size-in-font font size string 0 nil))
+          (declare (ignore final-x final-y))
+          (let  ((x (ecase align-x
+                      (:left x)
+                      (:center (- x (/ total-width 2)))
+                      (:right (- x total-width))))
+                 (y (ecase align-y
+                      (:baseline y)
+                      (:top (+ y baseline))
+                      (:center (- y (- (/ total-height 2)
+                                       baseline)))
+                      (:bottom (- y (- total-height baseline))))))
+            (multiple-value-bind (mxx mxy myx myy tx ty)
+                (climi::get-transformation
+                 (clim:compose-transformations
+                  tr
+                  transformation))
+              (pdf:set-transform-matrix mxx mxy myx myy tx ty))
+            (pdf:set-text-matrix 1 0 0 -1 x y)
+            (pdf:draw-text string)))))))
 
 
 ;;; Postscript path functions
