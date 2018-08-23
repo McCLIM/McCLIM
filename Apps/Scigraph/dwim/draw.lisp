@@ -150,9 +150,10 @@ advised of the possiblity of such damages.
 	 ;; Ideally, we would want to draw on a bitmap here and rotate the bitmap.
 	 ;; In CLIM, however, you can't do that.  And in Dynamic Windows, that is
 	 ;; an extremely expensive operation.  So forget it.
-	 (draw-vertical-text string stream u v
-			     :rotation rotation
-			     :alu alu :style character-style))))
+         (climi::with-rotation (stream rotation (clim:make-point u v))
+           (draw-string string u v :alu alu :stream stream
+		        :attachment-y attachment-y
+		        :character-style character-style)))))
 
 (defun draw-polygon (points &key (stream *standard-output*) (alu %alu) (filled nil)
 		     &allow-other-keys)

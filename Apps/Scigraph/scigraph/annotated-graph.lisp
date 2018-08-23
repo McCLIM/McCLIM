@@ -394,14 +394,14 @@ older classes in favor of cleaned up newer ones.  Someday, ...
 	(let* ((annotation (make-border-annotation
 			     self STREAM y-label :left
 			     ull vll
-			     'y-label (/ pi 2) nil))
+			     'y-label #.(/ pi -2) nil))
 	       (height nil))
 	  (setf (style annotation) (y-label-text-style self stream))
 	  (setq height (* (length y-label) (stream-line-height stream)))
 	  (set-uv-position annotation
 			   (- ull (* (stream-character-width stream)
 				     (+ y-digits 2)))
-			   (+ (values (truncate (+ vll vur) 2))
+			   (- (values (truncate (+ vll vur) 2))
 			      (values (truncate height 2))))
 	  (setq y-annotation annotation))))))
 
