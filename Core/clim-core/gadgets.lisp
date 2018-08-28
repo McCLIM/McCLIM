@@ -190,8 +190,7 @@
               :text-style (gadget-label-text-style pane)))
 ||#
 
-(defclass basic-gadget (permanent-medium-sheet-output-mixin
-                        ;; sheet-leaf-mixin ; <- this cannot go here...
+(defclass basic-gadget (;; sheet-leaf-mixin ; <- this cannot go here...
                         gadget-color-mixin
                         ;; These are inherited from pane, via
                         ;; clim-sheet-input-mixin and clim-repainting-mixin

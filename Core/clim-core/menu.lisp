@@ -359,8 +359,7 @@ account, and create a list of menu buttons."
 ;;
 (defclass menu-button-hrack-pane (hrack-pane) ())
 
-(defclass menu-bar (menu-button-hrack-pane
-                    permanent-medium-sheet-output-mixin)
+(defclass menu-bar (menu-button-hrack-pane)
   ((items :initform nil)
    (armed :initform nil)))
 
