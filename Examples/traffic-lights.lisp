@@ -61,8 +61,7 @@
   (let ((time-left-window (find-pane-named *application-frame* 'time-left)))
     (flet ((show-time (left)
              (setf (gadget-value time-left-window)
-                   (format nil "~D" left))
-             (repaint-sheet time-left-window +everywhere+)))
+                   (format nil "~D" left))))
       (loop for left from time downto 1
          do (show-time left)
             (sleep 1))
@@ -92,6 +91,10 @@
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
 	  (clim-internals::gadget-pushed-and-highlighted-color (slot-value *application-frame* 'light))))
   (repaint-all-sheets))
+
+(defun callback-time-left (gadget value)
+  (declare (ignore value))
+  (repaint-sheet gadget +everywhere+))
 
 ;;; test functions
 
@@ -136,7 +139,8 @@
                 (make-color-chooser-toggle-button 'green +green+ "G" 'callback-green)))
    (time-left text-field
               :editable-p nil
-              :value "0"))
+              :value "0"
+              :value-changed-callback 'callback-time-left))
   (:layouts
    (default (horizontally () (vertically (:spacing 10) radio-box time-left) light)))
   (:top-level (traffic-lights-frame-top-level . nil)))
