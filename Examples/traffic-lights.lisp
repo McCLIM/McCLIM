@@ -30,13 +30,13 @@
 (in-package :clim-demo)
 
 ;;; example gadget definition
-(defclass light-pane (basic-gadget) ())
+(defclass light-pane (basic-gadget)
+  ((light-color :initform +green+ :accessor light-color :initarg :light-color)))
 
 (defmethod handle-repaint ((pane light-pane) region)
   (declare (ignore region))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (climi::display-gadget-background
-     pane (climi::gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))))
+    (draw-rectangle* pane x1 y1 x2 y2 :ink (light-color pane) :filled t)))
 
 ;;; callback functions
 
@@ -74,22 +74,22 @@
 (defun callback-red (gadget value)
   (declare (ignore gadget))
   (when value
-    (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-normal-color (slot-value *application-frame* 'light))))
+    (let ((pane (find-pane-named *application-frame* 'light)))
+      (setf (light-color pane) +red+)))
   (repaint-all-sheets))
 
 (defun callback-yellow (gadget value)
   (declare (ignore gadget))
   (when value
-    (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-highlighted-color (slot-value *application-frame* 'light))))
+      (let ((pane (find-pane-named *application-frame* 'light)))
+        (setf (light-color pane) +gold1+)))
   (repaint-all-sheets))
 
 (defun callback-green (gadget value)
   (declare (ignore gadget))
   (when value
-    (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-pushed-and-highlighted-color (slot-value *application-frame* 'light))))
+      (let ((pane (find-pane-named *application-frame* 'light)))
+        (setf (light-color pane) +green+)))
   (repaint-all-sheets))
 
 (defun callback-time-left (gadget value)
@@ -99,9 +99,6 @@
 ;;; test functions
 
 (defun traffic-lights ()
-  (loop for port in climi::*all-ports*
-	do (destroy-port port))
-  (setq climi::*all-ports* nil)
   (run-frame-top-level (make-application-frame 'traffic-lights)))
 
 (defmethod traffic-lights-frame-top-level ((frame application-frame))
@@ -109,34 +106,26 @@
         (slot-value frame 'radio-box) (find-pane-named frame 'radio-box))
   (clim-extensions:simple-event-loop))
 
-(defmacro make-color-chooser-toggle-button (name color label callback)
-  (let ((color-name (gensym "COLOR")))
-    `(let ((,color-name ,color))
-       (make-pane 'toggle-button
-                  :name ,name
-                  :label ,label
-                  :indicator-type :one-of
-                  :width 30
-                  :height 30
-                  :normal ,color-name
-                  :highlighted ,color-name
-                  :pushed-and-highlighted ,color-name
-                  :value-changed-callback ,callback))))
+(defmacro make-color-chooser-toggle-button (name label callback)
+  `(make-pane 'toggle-button
+              :name ,name
+              :label ,label
+              :indicator-type :one-of
+              :width 30
+              :height 30
+              :value-changed-callback ,callback))
 
 (define-application-frame traffic-lights ()
   ((radio-box :initform nil)
    (light :initform nil))
   (:panes
-   (light     light-pane
-	      :width 30
-	      :normal +red+
-	      :highlighted +gold1+
-	      :pushed-and-highlighted +green+)
+   (light light-pane
+	  :width 30)
    (radio-box (with-radio-box ()
                 (radio-box-current-selection
-                 (make-color-chooser-toggle-button 'red +red+ "R" 'callback-red))
-                (make-color-chooser-toggle-button 'yellow +gold1+ "Y" 'callback-yellow)
-                (make-color-chooser-toggle-button 'green +green+ "G" 'callback-green)))
+                 (make-color-chooser-toggle-button 'red "R" 'callback-red))
+                (make-color-chooser-toggle-button 'yellow "Y" 'callback-yellow)
+                (make-color-chooser-toggle-button 'green "G" 'callback-green)))
    (time-left text-field
               :editable-p nil
               :value "0"
