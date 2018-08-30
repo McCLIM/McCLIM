@@ -49,7 +49,7 @@
   (declare (ignorable event))
   (let ((label (gadget-label (radio-box-current-selection
                               (slot-value *application-frame* 'radio-box)))))
-    (cond ((string= label "O")
+    (cond ((string= label "Y")
            (traffic-pause 2)
            (simulate-action (find-pane-named *application-frame* 'red)))
 	  ((string= label "G")
@@ -67,23 +67,34 @@
             (sleep 1))
       (show-time 0))))
 
+(defun repaint-all-sheets ()
+  (map-over-sheets (lambda (sheet) (repaint-sheet sheet +everywhere+))
+                   (frame-top-level-sheet *application-frame*)))
+
 (defun callback-red (gadget value)
-  (declare (ignorable gadget))
+  (declare (ignore gadget))
   (when value
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-normal-color (slot-value *application-frame* 'light)))))
+	  (clim-internals::gadget-normal-color (slot-value *application-frame* 'light))))
+  (repaint-all-sheets))
 
 (defun callback-yellow (gadget value)
   (declare (ignore gadget))
   (when value
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-highlighted-color (slot-value *application-frame* 'light)))))
+	  (clim-internals::gadget-highlighted-color (slot-value *application-frame* 'light))))
+  (repaint-all-sheets))
 
 (defun callback-green (gadget value)
   (declare (ignore gadget))
   (when value
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-pushed-and-highlighted-color (slot-value *application-frame* 'light)))))
+	  (clim-internals::gadget-pushed-and-highlighted-color (slot-value *application-frame* 'light))))
+  (repaint-all-sheets))
+
+(defun callback-time-left (gadget value)
+  (declare (ignore value))
+  (repaint-sheet gadget +everywhere+))
 
 ;;; test functions
 
@@ -128,7 +139,8 @@
                 (make-color-chooser-toggle-button 'green +green+ "G" 'callback-green)))
    (time-left text-field
               :editable-p nil
-              :value "0"))
+              :value "0"
+              :value-changed-callback 'callback-time-left))
   (:layouts
    (default (horizontally () (vertically (:spacing 10) radio-box time-left) light)))
   (:top-level (traffic-lights-frame-top-level . nil)))
