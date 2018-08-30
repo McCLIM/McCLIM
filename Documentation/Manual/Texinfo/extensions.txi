@@ -4,10 +4,9 @@
 
 @menu
 * Text editor substrate::
-* Drawing Two-Dimensional Images::
 * Fonts and Extended Text Styles::
 * Tab Layout::
-* Render Images::
+* Raster Images::
 @end menu
 
 @node Text editor substrate
@@ -28,198 +27,41 @@ the manual. Drei documentation is provided as a separate document.
 @node Text field gadget
 @node Text editor pane
 
-@node Drawing Two-Dimensional Images
-@section Drawing Two-Dimensional Images
+@node Tab Layout
+@section Tab Layout
 
-@menu
-* Images::
-* Utility Functions::
-* Reading Image Files::
-@end menu
+The tab layout is a composite pane arranging its children so that
+exactly one child is visible at any time, with a row of buttons
+allowing the user to choose between them.
 
-@node Images
-@subsection Images
+See also the tabdemo.lisp example code located under Examples/ in the
+McCLIM distribution.  It can be started using demodemo.
 
-Images are all rectangular arrangements of pixels.  The type of a pixel
-depends on the exact type of the image.  In addition, a pixel has a
-color which also depends on the exact type of the image.  You can think
-of the color as an interpretation of the pixel value by the type of
-image.
+@include class-clim-tab-layout-tab-layout.texi
+@include class-clim-tab-layout-tab-layout-pane.texi
+@include class-clim-tab-layout-tab-page.texi
+@include macro-clim-tab-layout-with-tab-layout.texi
 
-The coordinate system of an image has (0,0) in its upper-left corner.
-The x coordinate grows to the right and the y coordinate downwards.
+@include fun-clim-tab-layout-tab-layout-pages.texi
 
-@deftp {Protocol Class} image
+@include fun-clim-tab-layout-tab-page-tab-layout.texi
+@include fun-clim-tab-layout-tab-page-title.texi
+@include fun-clim-tab-layout-tab-page-pane.texi
+@include fun-clim-tab-layout-tab-page-presentation-type.texi
+@include fun-clim-tab-layout-tab-page-drawing-options.texi
 
-This class is the base class for all images.
-@end deftp
+@include fun-clim-tab-layout-add-page.texi
+@include fun-clim-tab-layout-remove-page.texi
+@include fun-clim-tab-layout-tab-layout-enabled-page.texi
+@include fun-clim-tab-layout-sheet-to-page.texi
+@include fun-clim-tab-layout-find-tab-page-named.texi
+@include fun-clim-tab-layout-switch-to-page.texi
+@include fun-clim-tab-layout-remove-page-named.texi
 
-@deffn {Generic Function} {image-width} image
-@end deffn
-@deffn {Generic Function} {image-height} image
+@include fun-clim-tab-layout-note-tab-page-changed.texi
 
-This function returns the width and the height of the image
-respectively.
-@end deffn
-
-@deffn {Generic Function} {image-pixels} image
-
-This function returns a two-dimensional array of pixels, whose element
-type depends on the exact subtype of the image.
-@end deffn
-
-@deffn {Generic Function} {image-pixel} image x y
-
-This function returns the pixel at the coordinate indicated by the
-values of x and y.  The type of the return value depends on the exact
-image type.
-@end deffn
-
-@deffn {Generic Function} {(setf image-pixel)} x y pixel image
-
-Set the value of the pixel at the coordinate indicated by the values of
-x and y.  The exact type acceptable for the pixel argument depends on
-the exact subtype of the image.  If x or y are not within the values of
-the width and height of the image, an error is signaled.
-@end deffn
-
-@deffn {Generic Function} {image-color} image x y
-
-This function returns the color value of the pixel indicated by the
-values of x and y.  The exact type of the return value depends on the
-specific subtype of the image.
-@end deffn
-
-@deffn {Generic Function} {(setf image-color)} x y color image
-
-Set the color value of the pixel at the coordinate indicated by the
-values of x and y.  The exact type acceptable for the color argument
-depends on the exact subtype of the image.  In addition, the exact color
-given to the pixel may be an approximation of the value of the color
-argument.  For instance, if the image is a gray-level image, then the
-color given will correspond to the intensity value of the color
-argument.  If x or y are not within the values of the width and height
-of the image, an error is signaled.
-@end deffn
-
-@deftp {Protocol Class} spectral-image
-
-This class is a subclass of the image class.  It is the root of a
-subhiearchy for manipulating images represented in various spectral
-formats, other than RGB.  [This subhierarchy will be elaborated later in
-the context of the color model of Strandh and Braquelaire].
-@end deftp
-
-@deftp {Protocol Class} rgb-image
-
-This class is a subclass of the image class.  It is the root of a
-subhierarchy for manipulating images whose pixel colors are represented
-as RGB coordinates.  The function image-color always returns a value of
-type (unsigned-byte 24) for images of this type, representing three
-different intensity values of 0-255.
-@end deftp
-
-@deftp {Protocol Class} truecolor-image
-
-This class is a subclass of the rgb-image class.  Images of this class
-have pixel values of type (unsigned-byte 24).  The pixel values directly
-represent RGB values.
-@end deftp
-
-@deftp {Protocol Class} colormap-image
-
-This class is a subclass of the rgb-image class.  Images of this class
-have pixel values that don't directly indicate the color of the pixel.
-The translation between pixel value and color may be implicit (as is the
-case of gray-level images) or explicit with a colormap stored in the
-image object.
-@end deftp
-
-@deftp {Protocol Class} gray-level-image
-
-This class is a subclass of the colormap-image class.  Images of this
-type have pixel values that implicitely represent a gray-level.  The
-function pixel-color always returns an RGB value that corresponds to the
-identical intensities for red, green, and blue, according to the pixel
-value.
-@end deftp
-
-@deffn {Generic Function} {gray-image-max-levels} gray-level-image
-
-This function returns the maximum number of levels of gray that can be
-represented by the image.  The value returned by this function minus one
-would yield a color value of 255,255,255 if it were the value of a
-pixel.
-@end deffn
-
-@deffn {Generic Function} {gray-image-max-level} gray-level-image
-
-This function returns the maximum level currently present in the image.
-This function may be very costly to compute, as it might have to scan
-the entire image.
-@end deffn
-
-@deffn {Generic Function} {gray-image-min-level} gray-level-image
-
-This function returns the minimum level currently present in the image.
-This function may be very costly to compute, as it might have to scan
-the entire image.
-@end deffn
-
-@deftp {Class} {256-gray-level-image}
-
-This class is a subclass of the gray-level-image class.  Images of this
-type have pixels represented as 8-bit unsigned pixels.  The function
-image-pixel always returns a value of type (unsigned-byte 8) for images
-of this type.  The function gray-image-max-levels returns 256 for all
-instances of this class.
-@end deftp
-
-@deftp {Class} {binary-image}
-
-This class is a subclass of the gray-level-image class.  Images of this
-type have pixel values of type bit.  The function image-pixel returns
-values of type bit when applied to an image of this type.  The function
-pixel-color returns 0,0,0 for zero-valued bits and 255,255,255 for
-one-valued bits.
-@end deftp
-
-@node Utility Functions
-@subsection Utility Functions
-
-@deffn {Generic Function} {rotate-image} image angle &key (antialias t)
-@end deffn
-@deffn {Generic Function} {flip-image} {image ...}
-@end deffn
-@deffn {Generic Function} {translate-image} {image ...}
-@end deffn
-@deffn {Generic Function} {scale-image} {image ...}
- ...
-@end deffn
-
-@node Reading Image Files
-@subsection Reading Image Files
-
-@deffn {Generic Function} {read-image} source &key type width height
-
-Read an image from the source.  The source can be a pathname designator
-(a string or a path), or a stream.  The caller can supply a value for
-type, width, and height for sources that don't indicate these values.  A
-value of nil for type means recognize the type automatically.  Other
-values for type are :truecolor (an array of 3-byte color values)
-:256-gray-level (an array of 1-byte gray-level values) :binary (an array
-of bits).
-@end deffn
-
-@deffn {Generic Function} {write-image} image destination &key (type :pnm) (quality 1)
-
-Write the image to the destination.  The destination can be a pathname
-designator (a string or a path), or a stream.  Valid values of type are
-:pnm (pbm, pgm, or ppm according to the type of image), :png, :jpeg,
-(more...).  The quality argument is a value from 0 to 1 and indicates
-desired image quality (for formats with lossy compression).
-@end deffn
-
+@c com-switch-to-tab-page
+@c com-remove-tab-page
 
 @node Fonts and Extended Text Styles
 @section Fonts and Extended Text Styles
@@ -301,336 +143,82 @@ T
 @include fun-clim-extensions-font-face-all-sizes.texi
 @include fun-clim-extensions-font-face-text-style.texi
 
-@node Tab Layout
-@section Tab Layout
+@node Raster Images
+@section Raster Images
 
-The tab layout is a composite pane arranging its children so that
-exactly one child is visible at any time, with a row of buttons
-allowing the user to choose between them.
+This extension has the goal to provide a fast and flexible way to
+display images in the screen. An image is a rectangular object and is
+represented as a rectangular pattern and follows pattern
+protocol. Pixel values are represented as 32-bit RGBA numbers.
 
-See also the tabdemo.lisp example code located under Examples/ in the
-McCLIM distribution.  It can be started using demodemo.
+collapse-pattern
+make-pattern-from-bitmap-file
 
-@include class-clim-tab-layout-tab-layout.texi
-@include class-clim-tab-layout-tab-layout-pane.texi
-@include class-clim-tab-layout-tab-page.texi
-@include macro-clim-tab-layout-with-tab-layout.texi
+define-bitmap-file-reader
+define-bitmap-file-writer
+bitmap-format-supported-p
+bitmap-output-supported-p
+read-bitmap-file
+write-bitmap-file
 
-@include fun-clim-tab-layout-tab-layout-pages.texi
+Images are read with @code{read-bitmap-file}.
+Images are wrote with @code{write-bitmap-file}.
 
-@include fun-clim-tab-layout-tab-page-tab-layout.texi
-@include fun-clim-tab-layout-tab-page-title.texi
-@include fun-clim-tab-layout-tab-page-pane.texi
-@include fun-clim-tab-layout-tab-page-presentation-type.texi
-@include fun-clim-tab-layout-tab-page-drawing-options.texi
+Images are created with @code{make-image}.
+Images are cloned with @code{clone-image}.
+Images are copied with @code{copy-image}.
+Images are blended with @code{blend-image}.
+Images are filled with @code{fill-image}.
 
-@include fun-clim-tab-layout-add-page.texi
-@include fun-clim-tab-layout-remove-page.texi
-@include fun-clim-tab-layout-tab-layout-enabled-page.texi
-@include fun-clim-tab-layout-sheet-to-page.texi
-@include fun-clim-tab-layout-find-tab-page-named.texi
-@include fun-clim-tab-layout-switch-to-page.texi
-@include fun-clim-tab-layout-remove-page-named.texi
+Operations having source and destination image as arguments may use
+the same image without copying it.
 
-@include fun-clim-tab-layout-note-tab-page-changed.texi
+To draw an image use @code{draw-pattern*} or @code{draw-design}. Image
+may be also used as an ink in other drawing functions.
 
-@c com-switch-to-tab-page
-@c com-remove-tab-page
+@section Raster image as a medium
 
-@node Render Images
-@section Render Images
-This extension has the goal to provide a fast and flexible way to display images in the screen. It is not a general purpose image processing library (see opticl).
+Raster image backend includes a medium that implements:
+@itemize @bullet
+@item CLIM's medium protocol,
+@item CLIM's output stream protocol, and
+@item CLIM's Pixmap protocol.
+@end itemize
 
-Images are all rectangular arrangements of pixels. The type of a pixel
-depends on the exact type of the image. In addition, a pixel has a
-color which also depends on the exact type of the image. You can think
-of the color as an interpretation of the pixel value by the type of
-the image.
-
-The coordinate system of an image has (0,0) in its upper-left corner.
-The x coordinate grows to the right and the y coordinate downwards.
-
-An image can have an additional alpha channel.
-
-@deftp {Protocol Class} image
-
-This class is the base class for all images.
-@end deftp
-
-@deffn {Generic Function} {image-width} image
-@end deffn
-@deffn {Generic Function} {image-height} image
-
-This function returns the width and the height of the image
-respectively.
+@anchor{Macro clime:with-output-to-image-stream}
+@deffn {Macro} {clime:with-output-to-image-stream} (stream-var file-stream format &rest options) &body body
+@findex clime:with-output-to-raster-image-stream
 @end deffn
 
-@deffn {Generic Function} {image-alpha-p} image
-
-This function returns true if the image has an aplha channel.
+@anchor{Macro clime:with-output-to-rgba-pattern}
+@deffn {Macro} {clime:with-output-to-rgba-pattern} (stream-var image &rest options) &body body
+@findex clime:with-output-to-rgba-pattern
 @end deffn
 
-@subsection Image Mixins
-
-@deftp {Protocol Class} rgb-image-mixin
-
-@end deftp
-
-@deftp {Protocol Class} stencil-image-mixin
-
-@end deftp
-
-@subsection Basic Image
-
-@deftp {Protocol Class} basic-image
-
-This class is a subclass of the image class.
-@end deftp
-
-@deffn {Generic Function} {image-pixels} basic-image
-
-This function returns the internal representation of the array of pixels. 
-@end deffn
-
-@subsection Drawable Images
-
-In order to be drawn in a screen, each pixel must be mapped into its rgb components.
-Each component is represented by an octet.
-
-In McCLIM a rgb color is represented as a triple of real number between 0 and 1. 
-Differently, in the image library, when we want drawn an image, a rgb color must be represented as a triple of octet (integer number between 0 and 255).
-In addition, the opacity is represented by an octet (0 - full transparent, 255 - opaque).
-
-@deftp {Type} {octect}
-
-@code{'(unsigned-byte 8))}
-@end deftp
-
-@deffn {Function} {color-octet->value} v
-
-This function returns @code{(/ v 255)}.
-@end deffn
-
-@deffn {Function} {color-value->octet} color
-
-This function returns @code{(coerce (round (* 255 color)) 'octet))}.
-@end deffn
-
-@deffn {Function} {octet-mult} (o1 o2)
-
-This function returns a rusult equals to @code{(round (* (/ o1 255) (/ o2 255) 255))}.
-@end deffn
-
-@deffn {Function} {octet-blend-function} (r1 g1 b1 o1  r2 g2 b2 o2)
-
-This function is analogous to the @code{blend-function} for octet.
-@end deffn
-
-@deftp {Protocol Class} drawable-image
-
-This class is a subclass of the image class. All subclasses must implement @code{map-rgb-color}.
-@end deftp
-
-By default, in order to drawn an image into a screen, the backend calls @code{map-rgb-color}.
-
-@deffn {Generic Function} {map-rgb-color} drawable-image fn
-
-This function calls fn for each pixels of the image. Function fn must take 5 arguments: x, y, red, green, and blue.
-@end deffn
-
-To draw an image you can use @code{draw-image}.
-
-@deffn {Function} {draw-image} sheet image &rest args &key clipping-region transformation
-
-This function draws an image on a sheet.
-@end deffn    
-
-@subsection McCLIM integration
-An image can be used as design or pattern. To draw an image you can also use @code{draw-pattern*} or @code{draw-design}.
-
-@deftp {Class} image-design
-
-This class is a subclass of the design class.
-@end deftp
-
-@deffn {Function} {make-image-design} image
-
-This function returns an image-design of the image @code{image}.
-@end deffn
-
-@deftp {Class} image-pattern (pattern image-design)
-
-This class is a subclass of the pattern and image-design classes.
-@end deftp
-
-@deffn {Function} {make-image-pattern} image
-
-This function returns an image-pattern of the image @code{image}.
-@end deffn
-
-Every design can be converted into pixeled-design.
-
-@deftp {Protocol Class} {pixeled-design}
-
-@end deftp
-
-@deffn {Generic Function} {pixeled-design-region} pixeled-design
-
-@end deffn
-
-@deffn {Generic Function} {make-pixeled-rgba-octets-fn} pixeled-design
-
-@end deffn
-
-@deffn {Generic Function} {make-pixeled-rgba-octets-unsafe-fn} pixeled-design
-
-@end deffn
-
-@deftp {Protocol Class} {pixeled-uniform-design}
-
-@end deftp
-
-@deftp {Protocol Class} {pixeled-functional-design}
-
-@end deftp
-
-@deftp {Protocol Class} {pixeled-image-design}
-
-@end deftp
-
-@deffn {Feneric Function} {make-pixeled-design} design &key foreground background
-
-@end deffn
-
-
-@subsection Opticl Images
-
-@deftp {Protocol Class} opticl-image
-
-This class is a subclass of the basic-image and drawable-image classes. 
-The generic function image-pixels returns an opticl image.
-@end deftp
-
-@deftp {Class} opticl-rgb-image
-
-This class is a subclass of the basic-image and opticl-image classes. 
-A pixel is a triple of octets that represents the red, green and blue component, respectively.
-A pixel can have an optional octet that represents its alpha value.
-
-In the current implementation, @code{image-pixels} returns 
-an array of type @code{opticl:8-bit-rgba-image}.
-@end deftp
-
-@deftp {Class} ocpicl-gray-level-image
-
-This class is a subclass of the basic-image and opticl-image classes. 
-In the current implementation, @code{image-pixels} returns 
-an array of type @code{8-bit-gray-image}.
-@end deftp
-
-@deftp {Class} opticl-stencil-image
-
-This class is a subclass of the basic-image and opticl-image classes. 
-This image contains only al alpha channel.
-In the current implementation, @code{image-pixels} returns 
-an array of type @code{8-bit-gray-image}.
-@end deftp
-
-@subsection 2d Images
-@deftp {Protocol Class} 2d-image
-
-This class is a subclass of the basic-image and drawable-image classes. 
-The generic function image-pixels returns a two dimensioanl array of pixels.
-@end deftp
-
-@deftp {Class} 2d-rgb-image
-
-This class is a subclass of the basic-image and 2d-image classes. 
-A pixel is a triple of octets that represents the red, green and blue component, respectively.
-A pixel can have an optional octet that represents its alpha value. 
-
-@code{image-pixels} returns a (simple-array (unsigned-byte 32) (* *)).
-The pixel values directly represent ABRG octet values. 
-@end deftp
-
-@deftp {Class} 2d-gray-level-image
-
-This class is a subclass of the basic-image and 2d-image classes. 
-@code{image-pixels} returns a (simple-array (unsigned-byte 8) (* *)).
-@end deftp
-
-@deftp {Class} 2d-stencil-image
-
-This class is a subclass of the basic-image and 2d-image classes. 
-This image contains only al alpha channel.
-
-@code{image-pixels} returns a (simple-array (unsigned-byte 8) (* *)).
-@end deftp
-
-@subsection Operations
-
-@deffn {Generic Function} {fill-image} image pixeled-design stencil &key x y width height stencil-dx stencil-dy
-
-@end deffn
-
-@deffn {Generic Function} {copy-image} src-image sx sy width height dst-image x y
-
-@end deffn
-
-@deffn {Generic Function} {coerce-image} image image-class
-
-@end deffn
-
-
-@subsection I/O Images
-
-@deffn {Generic Function} {read-image} source &key type width height
-
-Read an image from the source.  The source can be a pathname designator
-(a string or a path), or a stream.  The caller can supply a value for
-type, width, and height for sources that don't indicate these values.  A
-value of nil for type means recognize the type automatically.  Other
-values for type are :truecolor (an array of 3-byte color values)
-:256-gray-level (an array of 1-byte gray-level values) :binary (an array
-of bits).
-@end deffn
-
-@deffn {Generic Function} {write-image} image destination &key (type :pnm) (quality 1)
-
-Write the image to the destination.  The destination can be a pathname
-designator (a string or a path), or a stream.  Valid values of type are
-:pnm (pbm, pgm, or ppm according to the type of image), :png, :jpeg,
-(more...).  The quality argument is a value from 0 to 1 and indicates
-desired image quality (for formats with lossy compression).
-@end deffn
-
-@subsection CL-Vectors Integration
-
-@deffn {Generic Function} {aa-cells-sweep/rectangle} image pixeled-design state clip-region
-
-@end deffn
-
-@deffn {Function} {aa-update-state} state paths transformation
-
-@end deffn
-
-@deffn {Function} {aa-fill-paths} image pixeled-design paths state transformation clip-region
-
-@end deffn
-
-@deffn {Function} {aa-stroke-paths} image pixeled-design paths line-style state transformation clip-region
-
-@end deffn
-
-@deffn {Function} {make-path} x y
-@end deffn
-
-@deffn {Function} {line-to} path x y
-@end deffn
-
-@deffn {Function} {close-path} path
-@end deffn
-
-@deffn {Function} {stroke-path} path line-style
-@end deffn
-
+Within @code{body}, @code{stream-var} is bound to a stream that produces
+a raster image.  This stream is suitable as a stream or medium argument
+to any CLIM output utility, such as @code{draw-line*} or
+@code{write-string}.
+
+The value of @code{options} is a list consisting of alternating keyword and value
+pairs.  These are the supported keywords:
+@itemize @bullet
+@item
+  @code{:width} --- specifies the width of the image. Its default value is 1000.
+@item
+  @code{:height} --- specifies the height of the image. Its default value is 1000.
+@end itemize
+
+@defmac {clime:with-output-to-raster-image-stream}
+An image describing the output to the @code{stream-var} stream will be
+written to the stream @code{file-stream} using the format
+@code{format}. @code{format} is a symbol that names the type of the
+image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
+@code{tiff}, @code{tif}, @code{gif}, @code{pbm}, @code{pgm}, and
+@code{ppm}. Its default value is @code{:png}.
+@end defmac
+
+@defmac {clime:with-output-to-rgba-pattern}
+An image describing the output to the @code{stream-var} stream will be
+returned as an rgba pattern (of class @code{clime:image-pattern}).
+@end defmac
