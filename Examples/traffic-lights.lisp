@@ -72,21 +72,24 @@
                    (frame-top-level-sheet *application-frame*)))
 
 (defun callback-red (gadget value)
-  (let ((pane (find-pane-named *application-frame* 'light)))
-    (when value
+  (declare (ignore gadget))
+  (when value
+    (let ((pane (find-pane-named *application-frame* 'light)))
       (setf (light-color pane) +red+)))
   (repaint-all-sheets))
 
 (defun callback-yellow (gadget value)
-  (let ((pane (find-pane-named *application-frame* 'light)))
-    (when value
-      (setf (light-color pane) +gold1+)))
+  (declare (ignore gadget))
+  (when value
+      (let ((pane (find-pane-named *application-frame* 'light)))
+        (setf (light-color pane) +gold1+)))
   (repaint-all-sheets))
 
 (defun callback-green (gadget value)
-  (let ((pane (find-pane-named *application-frame* 'light)))
-    (when value
-      (setf (light-color pane) +green+)))
+  (declare (ignore gadget))
+  (when value
+      (let ((pane (find-pane-named *application-frame* 'light)))
+        (setf (light-color pane) +green+)))
   (repaint-all-sheets))
 
 (defun callback-time-left (gadget value)
