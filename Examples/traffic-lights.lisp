@@ -51,39 +51,42 @@
                               (slot-value *application-frame* 'radio-box)))))
     (cond ((string= label "Y")
            (traffic-pause 2)
-           (simulate-action (find-pane-named *application-frame* 'red)))
+           (simulate-action (find-pane-named *application-frame* 'red))
+           (repaint-sheet pane +everywhere+))
 	  ((string= label "G")
            (traffic-pause 3)
-           (simulate-action (find-pane-named *application-frame* 'yellow)))
+           (simulate-action (find-pane-named *application-frame* 'yellow))
+           (repaint-sheet pane +everywhere+))
 	  (t nil))))
 
 (defun traffic-pause (time)
   (let ((time-left-window (find-pane-named *application-frame* 'time-left)))
     (flet ((show-time (left)
              (setf (gadget-value time-left-window)
-                   (format nil "~D" left))))
+                   (format nil "~D" left))
+             (repaint-sheet time-left-window +everywhere+)))
       (loop for left from time downto 1
          do (show-time left)
             (sleep 1))
       (show-time 0))))
 
 (defun callback-red (gadget value)
-  (declare (ignorable gadget))
   (when value
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-normal-color (slot-value *application-frame* 'light)))))
+	  (clim-internals::gadget-normal-color (slot-value *application-frame* 'light))))
+  (repaint-sheet gadget +everywhere+))
 
 (defun callback-yellow (gadget value)
-  (declare (ignore gadget))
   (when value
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-highlighted-color (slot-value *application-frame* 'light)))))
+	  (clim-internals::gadget-highlighted-color (slot-value *application-frame* 'light))))
+  (repaint-sheet gadget +everywhere+))
 
 (defun callback-green (gadget value)
-  (declare (ignore gadget))
   (when value
     (setf (clim-internals::gadget-current-color (slot-value *application-frame* 'light))
-	  (clim-internals::gadget-pushed-and-highlighted-color (slot-value *application-frame* 'light)))))
+	  (clim-internals::gadget-pushed-and-highlighted-color (slot-value *application-frame* 'light))))
+  (repaint-sheet gadget +everywhere+))
 
 ;;; test functions
 
