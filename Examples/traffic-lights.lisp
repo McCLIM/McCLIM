@@ -49,7 +49,7 @@
   (declare (ignorable event))
   (let ((label (gadget-label (radio-box-current-selection
                               (slot-value *application-frame* 'radio-box)))))
-    (cond ((string= label "O")
+    (cond ((string= label "Y")
            (traffic-pause 2)
            (simulate-action (find-pane-named *application-frame* 'red)))
 	  ((string= label "G")
