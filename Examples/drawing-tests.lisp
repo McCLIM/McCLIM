@@ -113,8 +113,10 @@
   (with-slots (current-selection) clim:*application-frame*
     (setf current-selection item))
   (window-clear (get-frame-pane *application-frame* 'description))
-  (redisplay-frame-pane *application-frame* (get-frame-pane *application-frame* 'backend-output) :force-p t)
-  (redisplay-frame-pane *application-frame* (get-frame-pane *application-frame* 'render-output) :force-p t))
+  (redisplay-frame-pane *application-frame*
+                        (get-frame-pane *application-frame* 'backend-output) :force-p t)
+  (redisplay-frame-pane *application-frame*
+                        (get-frame-pane *application-frame* 'render-output) :force-p t))
 
 (defun display-backend-output (frame pane)
   (declare (ignore pane))
@@ -149,9 +151,12 @@
         (if (slot-value *application-frame* 'signal-condition-p)
             (with-slots (recording-p) clim:*application-frame*
               (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
-                                 (stream :width *width* :height *height* :border-width *border-width*
+                                 (stream :width *width*
+                                         :height *height*
+                                         :border-width *border-width*
                                          :recording-p recording-p)
-                               (clim:draw-rectangle* stream 0 0 *width* *height* :filled t
+                               (clim:draw-rectangle* stream 0 0 *width* *height*
+                                                     :filled t
                                                      :ink clim:+grey90+)
                                (funcall (drawing-test-drawer item) stream))))
                 (draw-pattern* output pattern 0 0)
@@ -159,9 +164,12 @@
             (handler-case
                 (with-slots (recording-p) clim:*application-frame*
                   (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
-                                     (stream :width *width* :height *height* :border-width *border-width*
+                                     (stream :width *width*
+                                             :height *height*
+                                             :border-width *border-width*
                                              :recording-p recording-p)
-                                   (clim:draw-rectangle* stream 0 0 *width* *height* :filled t
+                                   (clim:draw-rectangle* stream 0 0 *width* *height*
+                                                         :filled t
                                                          :ink clim:+grey90+)
                                    (funcall (drawing-test-drawer item) stream))))
                     (draw-pattern* output pattern 0 0)
@@ -230,7 +238,8 @@
    (loop for test being the hash-values of *drawing-tests* do
         (restart-case (drawing-test-raster-image test format)
           (:skip ()
-            :report (lambda (stream) (format stream "skip ~a" (drawing-test-name test))))))))
+            :report (lambda (stream)
+                      (format stream "skip ~a" (drawing-test-name test))))))))
 
 ;;;
 ;;; utility functions
@@ -261,7 +270,8 @@
   (let ((cr (make-rectangle* 50 50 (- *width* 50) (- *height* 50))))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
         cr
-      (draw-rectangle* stream (- min-x 10) (- min-y 10) (+ max-x 10) (+ max-y 10) :line-thickness 2 :filled t :ink +green+)
+      (draw-rectangle* stream (- min-x 10) (- min-y 10) (+ max-x 10) (+ max-y 10)
+                       :line-thickness 2 :filled t :ink +green+)
       (draw-rectangle* stream min-x min-y max-x max-y :line-thickness 1 :filled nil)
       (with-drawing-options (stream :clipping-region cr)
         (draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey60+)
@@ -362,7 +372,8 @@
 outside the clipping area should be grey.")
   (test-simple-clipping-region stream
                                #'(lambda (stream)
-                                   (clim:draw-point* stream (random *width*) (random *height*)
+                                   (clim:draw-point* stream
+                                                     (random *width*) (random *height*)
                                                      :ink (make-random-col)
                                                      :line-thickness (random 100)))))
 
@@ -400,7 +411,9 @@ outside the clipping area should be grey.")
     (dolist (lc '(:round :butt :square))
       (dolist (ld '( (5 3) (8 8) (5 3 3 5)))
         (dolist (lt '(1 3 5))
-          (with-drawing-options (stream :line-thickness lt :line-dashes ld :line-cap-shape lc)
+          (with-drawing-options (stream :line-thickness lt
+                                        :line-dashes ld
+                                        :line-cap-shape lc)
             (draw-text* stream (format nil "~A ~A ~A" ld lt lc) 20 y)
             (draw-line* stream 170 y 450 y))
           (setf y (+ 20 y)))))))
@@ -499,7 +512,8 @@ outside the clipping area should be grey.")
                                  #'(lambda (stream)
                                      (let ((v (mapcan #'(lambda (x)
                                                           (declare (ignore x))
-                                                          (list (random *width*) (random *height*)))
+                                                          (list (random *width*)
+                                                                (random *height*)))
                                                       '(1 2 3))))
                                        (clim:draw-polygon* stream v
                                                            :closed t
@@ -599,7 +613,8 @@ outside the clipping area should be grey.")
     (test-simple-scale-region stream
                               #'(lambda (stream cx cy)
                                   (clim:draw-rectangle* stream
-                                                        (- cx 50) (- cy 50) (+ cx 50) (+ cy 50)
+                                                        (- cx 50) (- cy 50)
+                                                        (+ cx 50) (+ cy 50)
                                                         :line-thickness 4
                                                         :filled nil))))
 
@@ -608,7 +623,8 @@ outside the clipping area should be grey.")
     (test-simple-rotation-region stream
                               #'(lambda (stream cx cy)
                                   (clim:draw-rectangle* stream
-                                                        (- cx 50) (- cy 50) (+ cx 50) (+ cy 50)
+                                                        (- cx 50) (- cy 50)
+                                                        (+ cx 50) (+ cy 50)
                                                         :line-thickness 4
                                                         :filled nil))))
 
@@ -624,10 +640,14 @@ outside the clipping area should be grey.")
       (dolist (lt '(1 3 7))
         (with-drawing-options (stream :line-thickness lt :line-cap-shape lc)
           (draw-text* stream (format nil "~A ~A" lc lt) 20 y)
-          (draw-ellipse* stream 150 y 30 0 0 10 :filled nil :start-angle 0 :end-angle (/ (* 6 pi) 4))
-          (draw-ellipse* stream 230 y 30 0 0 10 :filled t :start-angle 0 :end-angle (/ (* 6 pi) 4))
-          (draw-ellipse stream (make-point 310 y) 30 0 0 10 :filled nil :start-angle 0 :end-angle (/ (* 6 pi) 4))
-          (draw-ellipse stream (make-point 390 y) 30 0 0 10 :filled t :start-angle 0 :end-angle (/ (* 6 pi) 4)))
+          (draw-ellipse* stream 150 y 30 0 0 10 :filled nil
+                         :start-angle 0 :end-angle (/ (* 6 pi) 4))
+          (draw-ellipse* stream 230 y 30 0 0 10 :filled t
+                         :start-angle 0 :end-angle (/ (* 6 pi) 4))
+          (draw-ellipse stream (make-point 310 y) 30 0 0 10 :filled nil
+                        :start-angle 0 :end-angle (/ (* 6 pi) 4))
+          (draw-ellipse stream (make-point 390 y) 30 0 0 10 :filled t
+                        :start-angle 0 :end-angle (/ (* 6 pi) 4)))
         (setf y (+ 60 y))))))
 
 (define-drawing-test "05) Ellipse Dashes" (stream)
@@ -803,10 +823,14 @@ min-y and max-y are (extremum points) are."
       (dolist (lt '(1 3 7))
         (with-drawing-options (stream :line-thickness lt :line-cap-shape lc)
           (draw-text* stream (format nil "~A ~A" lc lt) 20 y)
-          (draw-circle* stream 150 y 25 :filled nil :start-angle 0 :end-angle (/ (* 6 pi) 4))
-          (draw-circle* stream 230 y 25 :filled t :start-angle 0 :end-angle (/ (* 6 pi) 4))
-          (draw-circle stream (make-point 310 y) 25 :filled nil :start-angle 0 :end-angle (/ (* 6 pi) 4))
-          (draw-circle stream (make-point 390 y) 25 :filled t :start-angle 0 :end-angle (/ (* 6 pi) 4)))
+          (draw-circle* stream 150 y 25 :filled nil
+                        :start-angle 0 :end-angle (/ (* 6 pi) 4))
+          (draw-circle* stream 230 y 25 :filled t
+                        :start-angle 0 :end-angle (/ (* 6 pi) 4))
+          (draw-circle stream (make-point 310 y) 25 :filled nil
+                       :start-angle 0 :end-angle (/ (* 6 pi) 4))
+          (draw-circle stream (make-point 390 y) 25 :filled t
+                       :start-angle 0 :end-angle (/ (* 6 pi) 4)))
         (setf y (+ 70 y))))))
 
 (define-drawing-test "06) Circle Dashes" (stream)
@@ -1196,7 +1220,8 @@ clipping areas. No point should be drawn outside the blue rectangles."
                 (make-rectangle* 350 330 420 400))))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
         cr
-      (draw-rectangle* stream (- min-x 2) (- min-y 2) (+ max-x 2) (+ max-y 2) :line-thickness 4 :filled nil :ink +blue+)
+      (draw-rectangle* stream (- min-x 2) (- min-y 2) (+ max-x 2) (+ max-y 2)
+                       :line-thickness 4 :filled nil :ink +blue+)
       ;;(draw-design  stream cr :ink +red+)
       (with-drawing-options (stream :clipping-region cr)
         (draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey50+)
@@ -1339,7 +1364,9 @@ clipping areas. No point should be drawn outside the blue rectangles."
     ;; Draw some junk to make sure the transparent ink is really transparent,
     ;; and not just matching the background:
     (dotimes (i 200)
-      (draw-circle* stream (- (random 500) 100) (- (random 500) 100) (1+ (* 30 (random 1.0) (random 1.0))) :ink +blue+))
+      (draw-circle* stream
+                    (- (random 500) 100) (- (random 500) 100) (1+ (* 30 (random 1.0) (random 1.0)))
+                    :ink +blue+))
     ;; Draw two tables:
     (format-items '(0 2) :stream stream :printer
       (lambda (foo stream)
@@ -1382,7 +1409,9 @@ clipping areas. No point should be drawn outside the blue rectangles."
     ;; Draw some junk to make sure the transparent ink is really transparent,
     ;; and not just matching the background:
     (dotimes (i 200)
-      (draw-circle* stream (- (random 500) 100) (- (random 500) 100) (1+ (* 30 (random 1.0) (random 1.0))) :ink +blue+))
+      (draw-circle* stream
+                    (- (random 500) 100) (- (random 500) 100) (1+ (* 30 (random 1.0) (random 1.0)))
+                    :ink +blue+))
     ;; Draw two tables:
     (format-items '(0 2) :stream stream :printer
       (lambda (foo stream)
@@ -1641,23 +1670,34 @@ clipping areas. No point should be drawn outside the blue rectangles."
 ;;; FIXME! The bezier-curve stuff (as opposed to the bezier-area) is
 ;;; currently broken and the test case is commented out for now.
 (define-drawing-test "16) Bezier Area" (stream)
-    "Draws a single bezier-area. Currently this is quite slow and needs to be optimized. Also, the shape of the drawn bezier area is not particularly attractive."
-  (let* ((r1 (mcclim-bezier:make-bezier-area* '(120 160 35 200 220 280 220 40 180 160 160 180 120 160))))
+    "Draws a single bezier-area. Currently this is quite slow and
+needs to be optimized. Also, the shape of the drawn bezier area is not
+particularly attractive."
+  (let* ((r1 (mcclim-bezier:make-bezier-area*
+              '(120 160 35 200 220 280 220 40 180 160 160 180 120 160))))
     (mcclim-bezier:draw-bezier-design* stream r1 :ink +cyan2+)))
 
 (define-drawing-test "16) Bezier Curve" (stream)
-    "Draws a single bezier curve. This is currently broken as it should just draw the stroke of the bezier and instead renders the design as a bezier area."
-  (let* ((r4 (mcclim-bezier:make-bezier-curve* (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
+    "Draws a single bezier curve. This is currently broken as it
+should just draw the stroke of the bezier and instead renders the
+design as a bezier area."
+  (let* ((r4 (mcclim-bezier:make-bezier-curve*
+              (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
     (mcclim-bezier:draw-bezier-design* stream r4
                                        :line-thickness 12
                                        :ink +orange+)))
 
 (define-drawing-test "16) Bezier Test 3" (stream)
-    "Some more complicated bezier design drawings. We draw two overlapping bezier areas, the difference between these two areas, a bezier curve, and a convolution of a curve and an area."
-  (let* ((r1 (mcclim-bezier:make-bezier-area* '(100 100 200 200 300 200 400 100 300 50 200 50 100 100)))
-         (r2 (mcclim-bezier:make-bezier-area* '(150 100 200 120 300 150 350 100 300 80 200 80 150 100)))
+    "Some more complicated bezier design drawings. We draw two
+overlapping bezier areas, the difference between these two areas, a
+bezier curve, and a convolution of a curve and an area."
+  (let* ((r1 (mcclim-bezier:make-bezier-area*
+              '(100 100 200 200 300 200 400 100 300 50 200 50 100 100)))
+         (r2 (mcclim-bezier:make-bezier-area*
+              '(150 100 200 120 300 150 350 100 300 80 200 80 150 100)))
          (r3 (mcclim-bezier:region-difference r1 r2))
-         (r4 (mcclim-bezier:make-bezier-curve* (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140)))
+         (r4 (mcclim-bezier:make-bezier-curve*
+              (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140)))
          (r5 (mcclim-bezier:convolve-regions r2 r4)))
     (mcclim-bezier:draw-bezier-design* stream r3)
     (mcclim-bezier:draw-bezier-design* stream r4
@@ -1763,7 +1803,8 @@ clipping areas. No point should be drawn outside the blue rectangles."
           (mcclim-bezier:draw-bezier-design* stream design
                                              :line-thickness 16
                                              :ink +orange+))
-        (let* ((coords (mcclim-bezier:relative-to-absolute-coord-seq (list 200 200 0 -50 80 -50 100 -20)))
+        (let* ((coords (mcclim-bezier:relative-to-absolute-coord-seq
+                        (list 200 200 0 -50 80 -50 100 -20)))
                (c1 (mcclim-bezier:make-bezier-curve* coords)))
           (mcclim-bezier:draw-bezier-design* stream c1 :line-thickness 5 :ink +blue+)
           (destructuring-bind (arrow-y arrow-x &rest args)
@@ -1780,8 +1821,10 @@ clipping areas. No point should be drawn outside the blue rectangles."
 
 (define-drawing-test "16) Bezier Difference" (stream)
     "Draws a single bezier difference"
-  (let* ((r1 (mcclim-bezier:make-bezier-area* '(100 100 200 200 300 200 400 100 300 50 200 50 100 100)))
-         (r2 (mcclim-bezier:make-bezier-area* '(150 100 200 120 300 150 350 100 300 80 200 80 150 100)))
+  (let* ((r1 (mcclim-bezier:make-bezier-area*
+              '(100 100 200 200 300 200 400 100 300 50 200 50 100 100)))
+         (r2 (mcclim-bezier:make-bezier-area*
+              '(150 100 200 120 300 150 350 100 300 80 200 80 150 100)))
          (r3 (mcclim-bezier:region-difference r1 r2)))
     (mcclim-bezier:draw-bezier-design* stream r3)))
 
