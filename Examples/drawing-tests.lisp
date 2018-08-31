@@ -117,6 +117,7 @@
   (redisplay-frame-pane *application-frame* (get-frame-pane *application-frame* 'render-output) :force-p t))
 
 (defun display-backend-output (frame pane)
+  (declare (ignore pane))
   (let ((output (get-frame-pane frame 'backend-output))
         (item (slot-value frame 'current-selection)))
     (let ((description (get-frame-pane *application-frame* 'description)))
