@@ -449,7 +449,6 @@ outside the clipping area should be grey.")
                          :filled filled-val
                          :closed closed-val)
 	  (incf y 40))))
-
     (dolist (filled-val '(nil t))
       (dolist (closed-val '(nil t))
 	(with-drawing-options (stream :line-thickness 4)
@@ -457,7 +456,6 @@ outside the clipping area should be grey.")
                          :filled filled-val
                          :closed closed-val)
 	  (incf y 45))))
-
     (dolist (filled-val '(nil t))
       (dolist (closed-val '(nil t))
 	(with-drawing-options (stream :line-thickness 10 :ink +red+)
