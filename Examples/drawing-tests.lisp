@@ -974,12 +974,14 @@ outside the clipping area should be grey.")
 	  (apply #'draw-line* stream 2 y* 35 y* (cdr entry)))
 	(draw-text* stream (car entry) 40 y :text-style style)))))
 
+(defparameter *drawing-test-07-rectangle* :text-size)
+
 (define-drawing-test "07) Text Size" (stream)
     ""
   (let* ((pane-width (rectangle-width (sheet-region stream)))
 	 (pane-height (rectangle-height (sheet-region stream)))
 	 (str "Ciao")
-         (rectangle :text-size)
+         (rectangle *drawing-test-07-rectangle*)
 	 (style (make-text-style :sans-serif :roman 100))
 	 (medium (sheet-medium stream)))
     (multiple-value-bind (width height final-x final-y baseline)
