@@ -439,6 +439,34 @@ outside the clipping area should be grey.")
 ;;; Polygon
 ;;;
 
+(define-drawing-test "03) Polygon Basic" (stream)
+    ""
+  (let ((y 20))
+    (dolist (filled-val '(nil t))
+      (dolist (closed-val '(nil t))
+	(with-drawing-options (stream :line-thickness 1)
+	  (draw-polygon* stream `(50 ,y 100 ,y 90 ,(+ y 30) 70 ,(+ y 35) 60 ,(+ y 30))
+                         :filled filled-val
+                         :closed closed-val)
+	  (incf y 40))))
+
+    (dolist (filled-val '(nil t))
+      (dolist (closed-val '(nil t))
+	(with-drawing-options (stream :line-thickness 4)
+	  (draw-polygon* stream `(50 ,y 100 ,y 90 ,(+ y 30) 70 ,(+ y 35) 60 ,(+ y 30))
+                         :filled filled-val
+                         :closed closed-val)
+	  (incf y 45))))
+
+    (dolist (filled-val '(nil t))
+      (dolist (closed-val '(nil t))
+	(with-drawing-options (stream :line-thickness 10 :ink +red+)
+	  (draw-polygon* stream `(50 ,y 100 ,y 90 ,(+ y 30) 70 ,(+ y 35) 60 ,(+ y 30))
+                         :filled filled-val
+                         :closed closed-val)
+	  (incf y 50))))))
+
+
 (define-drawing-test "03) Polygon Cap Shape"  (stream)
   ""
   (flet ((draw (angle line-joint-shape)
