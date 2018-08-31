@@ -107,7 +107,7 @@
 
 (defun face-changed (pane value)
   (declare (ignore pane))
-  (let ((sizes (if value (font-face-all-sizes value) nil)))
+  (let ((sizes (and value (font-face-all-sizes value))))
     (reset-list-pane (find-pane-named *application-frame* 'size)
 		     sizes
 		     (or (position-if (lambda (x) (>= x 20)) sizes) 0))))
@@ -117,9 +117,8 @@
   (setf (font-selector-text-style *application-frame*)
 	(let ((face
 	       (gadget-value (find-pane-named *application-frame* 'face))))
-	  (if (and face value)
-	      (font-face-text-style face value)
-	      nil)))
+	  (when (and face value)
+            (font-face-text-style face value))))
   (display-font-preview *application-frame*
 		  (frame-standard-output *application-frame*)))
 
@@ -130,9 +129,8 @@
   (setf (gadget-value pane :invoke-callback t)
 	(or (and (slot-boundp pane 'climi::value) (gadget-value pane))
 	    (let ((values (climi::generic-list-pane-item-values pane)))
-	      (if (plusp (length values))
-		  (elt values index)
-		  nil)))))
+	      (when (plusp (length values))
+                (elt values index))))))
 
 (defmethod display-font-preview (frame stream)
   (window-clear stream)
