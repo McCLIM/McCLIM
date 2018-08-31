@@ -285,7 +285,6 @@
 (defun test-simple-rotation-region (stream draw-fn)
     (let ((y 100))
       (dolist (sc (list 0 (/ pi 8) (/ pi 6) (/ pi 4)))
-        
         (draw-text* stream (format nil "~2$" sc) 20 y)
         (draw-rectangle* stream 140 (- y 60) 260 (+ y 60) :ink +grey20+ :filled nil)
         (draw-rectangle* stream 290 (- y 60) 410 (+ y 60) :ink +grey20+ :filled nil)
@@ -352,13 +351,12 @@
           (draw-line* stream 230 (- y 10) 310 (- y 10) :line-thickness 1 :ink +grey22+)
           (draw-text* stream (format nil "~A ~A" tr ro) 20 y)
           (with-translation (stream (car tr) (cdr tr))
-            (with-rotation (stream ro (make-point 250 y)) 
+            (with-rotation (stream ro (make-point 250 y))
               (let ((x-positions '(250 260 270 280 290)))
                 (dolist (x-pos x-positions)
                   (draw-point* stream x-pos y)))))
           (setf y (+ 50 y)))))))
 
-                         
 (define-drawing-test "01) Point Clipping" (stream)
     #.(format nil "Points should be drawn only inside the green frame. Anything ~
 outside the clipping area should be grey.")
@@ -419,7 +417,7 @@ outside the clipping area should be grey.")
           (draw-line* stream 230 (- y 10) 310 (- y 10) :line-thickness 1 :ink +grey22+)
           (draw-text* stream (format nil "~A ~A" tr ro) 20 y)
           (with-translation (stream (car tr) (cdr tr))
-            (with-rotation (stream ro (make-point 220 y)) 
+            (with-rotation (stream ro (make-point 220 y))
               (draw-line* stream 220 y 330 y)))
           (setf y (+ 50 y)))))))
 
@@ -537,7 +535,6 @@ outside the clipping area should be grey.")
                                                          :filled nil
                                                          :line-thickness 4))))
 
-                     
 
 ;;;
 ;;; Rectangle
@@ -555,7 +552,6 @@ outside the clipping area should be grey.")
                    (mapcan #'(lambda (x) (list x y (+ x 100) (+ 15 y)))
                            x-positions)))
               (draw-rectangles* stream position-seq :ink +yellow+))
-            
             (dolist (x-pos x-positions)
               (draw-rectangle* stream x-pos (+ 25 y) (+ x-pos 100) (+ 40 y)
                                :ink +green+
@@ -564,15 +560,12 @@ outside the clipping area should be grey.")
                                                          (make-point (+ x 100) (+ 65 y))))
                                      x-positions)))
               (draw-rectangles stream point-seq :ink +blue+))
-            
             (dolist (x-pos x-positions)
               (draw-rectangle stream
                               (make-point x-pos (+ 75 y))
                               (make-point (+ x-pos 100) (+ 90 y))
                               :ink +red+
-                              :filled nil))
-            
-            )
+                              :filled nil)))
           (setf y (+ 115 y)))))))
 
 (define-drawing-test "04) Rectangle Dashes" (stream)
@@ -848,7 +841,7 @@ outside the clipping area should be grey.")
                               #'(lambda (stream cx cy)
                                   (clim:draw-circle* stream
                                                       cx cy
-                                                      50 
+                                                      50
                                                       :line-thickness 4
                                                       :filled nil))))
 ;;;
