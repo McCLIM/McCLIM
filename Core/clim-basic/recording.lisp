@@ -973,11 +973,17 @@ were added."
 (defmethod replay-output-record :around
     ((record gs-ink-mixin) stream &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
-  (multiple-value-bind (x y) (output-record-position record)
-    (let* ((ink (graphics-state-ink record))
-           (ink (transform-region (make-translation-transformation x y) ink)))
-      (with-drawing-options (stream :ink ink)
-        (call-next-method)))))
+  (with-drawing-options (stream :ink (graphics-state-ink record))
+    (call-next-method)))
+
+(defmethod* (setf output-record-position) :before
+    (nx ny (record gs-ink-mixin))
+    (with-standard-rectangle* (:x1 x1 :y1 y1) record
+      (let* ((dx (- nx x1))
+             (dy (- ny y1))
+             (tr (make-translation-transformation dx dy)))
+        (with-slots (ink) record
+          (setf ink (transform-region tr ink))))))
 
 (defrecord-predicate gs-ink-mixin (ink)
   (if-supplied (ink)
