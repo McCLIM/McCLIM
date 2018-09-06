@@ -355,8 +355,9 @@ real numbers, and default to 0."
          (coordinate/= 0 mxx) (coordinate/= 0 myy)))) ; ?
 
 (defmethod rectilinear-transformation-p ((transformation standard-transformation))
-  ;; We just brutally test this
-  ;; Is this even correct?
+  ;; We just brutally test this;
+  ;; Q: Is this even correct?
+  ;; A: It is not for rotations by Pi/2
   (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
     (or (and (coordinate= mxx 0) (coordinate/= mxy 0)
              (coordinate/= myx 0) (coordinate= myy 0))
