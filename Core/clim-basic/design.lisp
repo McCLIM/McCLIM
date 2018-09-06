@@ -423,6 +423,8 @@
                        :transformation (compose-transformations old-transformation transformation))
         (make-instance 'transformed-design :design design :transformation transformation))))
 
+(defmethod transformed-design-transformation ((design design)) +identity-transformation+)
+(defmethod transformed-design-design ((design design)) design)
 
 ;;;
 
