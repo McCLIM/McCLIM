@@ -295,7 +295,8 @@ responsible for setting graphical context mask."))
       (incf (xlib:gcontext-clip-y gc) gc-y)
       gc)))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink climi::transformed-design))
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::transformed-design)
+                            &aux (ink (climi::effective-transformed-pattern ink)))
   (let ((transformation (climi::transformed-design-transformation ink))
         (design (climi::transformed-design-design ink)))
     (unless (translation-transformation-p transformation)
@@ -304,15 +305,13 @@ responsible for setting graphical context mask."))
     (typecase design
       ((or climi::%rgba-pattern
            climi::indexed-pattern
-           climi::rectangular-tile
-           climi::transformed-design)
+           climi::stencil
+           climi::rectangular-tile)
        (multiple-value-bind (tx ty)
            (transform-position transformation 0 0)
          (let ((gc-x (round-coordinate tx))
                (gc-y (round-coordinate ty))
-               (gc (medium-gcontext medium (if (typep design 'climi::transformed-design)
-                                               (climi::transformed-design-design design)
-                                               design))))
+               (gc (medium-gcontext medium design)))
            (incf (xlib:gcontext-ts-x gc) gc-x)
            (incf (xlib:gcontext-ts-y gc) gc-y)
            (incf (xlib:gcontext-clip-x gc) gc-x)
