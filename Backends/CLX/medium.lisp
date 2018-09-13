@@ -207,6 +207,14 @@ for foreground drawing. It sets properties like a line-style, sets ink etc. Inks
 which are not uniform should be delegated to DESIGN-GCONTEXT which is
 responsible for setting graphical context mask."))
 
+(defgeneric design-gcontext (medium ink)
+  (:documentation "DESIGN-GCONTEXT is called from MEDIUM-GCONTEXT as means to
+set up appropriate mask in order to draw with non-uniform ink. It may be a
+pattern, rectangular tile etc. If someone plans to add new kinds of not uniform
+inks this is the method to specialize. Note, that MEDIUM-GCONTEXT must be
+specialized on class too. Keep in mind, that inks may be transformed (i.e
+translated, so they begin at different position than [0,0])."))
+
 (defmethod medium-gcontext :before ((medium clx-medium) ink)
   (let* ((port (port medium))
          (mirror (port-lookup-mirror port (medium-sheet medium))))
@@ -252,7 +260,7 @@ responsible for setting graphical context mask."))
       (or gc (setf gc (xlib:create-gcontext :drawable drawable))))))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::indirect-ink))
-  (medium-gcontext medium (climi::design-ink ink 0 0)))
+  (medium-gcontext medium (climi::indirect-ink-ink ink)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +flipping-ink+)))
   (let* ((gc (medium-gcontext medium (medium-background medium)))
@@ -324,13 +332,6 @@ responsible for setting graphical context mask."))
 
 
 ;;;;
-(defgeneric design-gcontext (medium ink)
-  (:documentation "DESIGN-GCONTEXT is called from MEDIUM-GCONTEXT as means to
-set up appropriate mask in order to draw with non-uniform ink. It may be a
-pattern, rectangular tile etc. If someone plans to add new kinds of not uniform
-inks this is the method to specialize. Note, that MEDIUM-GCONTEXT must be
-specialized on class too. Keep in mind, that inks may be transformed (i.e
-translated, so they begin at different position than [0,0])."))
 
 #+ (or) ;; When used for transformed pattern it simply doesn't work. We either
         ;; should create design-gcontext for transformed-pattern, guard its

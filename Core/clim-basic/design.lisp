@@ -281,12 +281,16 @@
   ((dynamic-variable-symbol :initarg :symbol  :initform (error "required"))
    (default-ink             :initarg :default :initform (error "required"))))
 
+(defun indirect-ink-ink (design)
+  (check-type design indirect-ink)
+  (with-slots (dynamic-variable-symbol default-ink) design
+    (if (boundp dynamic-variable-symbol)
+        (symbol-value dynamic-variable-symbol)
+        default-ink)))
+
 (defmethod design-ink ((ink indirect-ink) x y)
-  (with-slots (dynamic-variable-symbol default-ink) ink
-    (let ((ink (if (boundp dynamic-variable-symbol)
-                   (symbol-value dynamic-variable-symbol)
-                   default-ink)))
-      (design-ink ink x y))))
+  (let ((ink (indirect-ink-ink ink)))
+    (design-ink ink x y)))
 
 (defclass %foreground-ink (indirect-ink everywhere-mixin) ())
 
