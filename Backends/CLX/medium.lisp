@@ -305,30 +305,17 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::transformed-design)
                             &aux (ink (climi::effective-transformed-pattern ink)))
-  (let ((transformation (climi::transformed-design-transformation ink))
-        (design (climi::transformed-design-design ink)))
-    (unless (translation-transformation-p transformation)
-      (error "Sorry, not yet implemented. ~s" transformation))
-    ;; Bah!
-    (typecase design
-      ((or climi::%rgba-pattern
-           climi::indexed-pattern
-           climi::stencil
-           climi::rectangular-tile)
-       (multiple-value-bind (tx ty)
-           (transform-position transformation 0 0)
-         (let ((gc-x (round-coordinate tx))
-               (gc-y (round-coordinate ty))
-               (gc (medium-gcontext medium design)))
-           (incf (xlib:gcontext-ts-x gc) gc-x)
-           (incf (xlib:gcontext-ts-y gc) gc-y)
-           (incf (xlib:gcontext-clip-x gc) gc-x)
-           (incf (xlib:gcontext-clip-y gc) gc-y)
-           gc)))
-      (climi::indirect-ink
-       (medium-gcontext medium design))
-      (t
-       (error "You lost, we have not yet implemented transforming an ~S." (type-of design))))))
+  (with-bounding-rectangle* (x1 y1 x2 y2) ink
+    (declare (ignore x2 y2))
+    (with-transformed-position ((sheet-native-transformation (medium-sheet medium)) x1 y1)
+      (let ((gc-x (round-coordinate x1))
+            (gc-y (round-coordinate y1))
+            (gc (design-gcontext medium ink)))
+        (incf (xlib:gcontext-ts-x gc) gc-x)
+        (incf (xlib:gcontext-ts-y gc) gc-y)
+        (incf (xlib:gcontext-clip-x gc) gc-x)
+        (incf (xlib:gcontext-clip-y gc) gc-y)
+        gc))))
 
 
 ;;;;
@@ -376,10 +363,11 @@ translated, so they begin at different position than [0,0])."))
       (declare (type (simple-array (unsigned-byte 32) (* *)) idata))
       (loop for x fixnum from 0 below width do
            (loop for y fixnum from 0 below height do
-                (setf (aref pdata y x) (ash (aref idata y x) -8))
-                (if (< (ldb (byte 8 0) (aref idata y x)) #x80)
-                    (setf (aref mdata y x) 0)
-                    (setf (aref mdata y x) 1))))
+                (let ((elt (aref idata y x)))
+                  (setf (aref pdata y x) (ash elt -8))
+                  (if (< (ldb (byte 8 0) elt) #x80)
+                      (setf (aref mdata y x) 0)
+                      (setf (aref mdata y x) 1)))))
       (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
 	(xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
                         :width width :height height)
