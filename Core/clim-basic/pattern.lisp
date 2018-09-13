@@ -429,13 +429,13 @@ identity-transformation) then source pattern is returned."
 
 (defmethod %collapse-pattern ((pattern transformed-pattern))
   (with-bounding-rectangle* (x1 y1 x2 y2) pattern
+    (declare (ignore x2 y2))
     (let* ((x1 (round x1))
            (y1 (round y1))
            (height (round (pattern-height pattern)))
            (width  (round (pattern-width pattern)))
-           (array  (make-array (list height width)
-                               :element-type '(unsigned-byte 32))))
-      (dotimes (i height)
-        (dotimes (j width)
-          (setf (aref array i j) (%rgba-value (design-ink pattern (+ i x1) (+ j y1))))))
+           (array  (make-array (list height width) :element-type '(unsigned-byte 32))))
+      (dotimes (i width)
+        (dotimes (j height)
+          (setf (aref array j i) (%rgba-value (design-ink pattern (+ i x1) (+ j y1))))))
       (make-instance '%rgba-pattern :array array))))
