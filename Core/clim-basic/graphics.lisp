@@ -1034,8 +1034,7 @@ position for the character."
                   (ink-tr (compose-transformations (medium-transformation medium) pattern-tr))
                   (width (pattern-width pattern-ds))
                   (height (pattern-height pattern-ds))
-                  (region (transform-region pattern-tr
-                                            (make-rectangle* 0 0 width height))))
+                  (region (transform-region pattern-tr (make-rectangle* 0 0 width height))))
              (draw-design medium region :ink (transform-region ink-tr pattern-ds))))
       #1#))
 
