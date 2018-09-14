@@ -115,7 +115,7 @@
                                                       (/ (clim:pattern-height image) 2))
                   (make-skew-transformation x-skew y-skew))))))
       (clim:with-drawing-options (stream :transformation tr)
-        (clim:draw-pattern* stream image 0 0)
+        (clim:draw-design stream image)
         (clim:draw-rectangle* stream 0 0 (clim:pattern-width image) (clim:pattern-height image) :filled nil :ink clim:+blue+)
         ;; We don't display text here if using the Truetype font
         ;; renderer, since other font renderers doesn't support text
