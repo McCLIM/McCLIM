@@ -1130,24 +1130,22 @@ examine the type of the command menu item to see if it is
   ;; the spec annotation we require keywords being macroexpand-time
   ;; constant). We allow two custom key arguments, but we should fix ESA
   ;; instead. -- jd 2018-09-14
-  (block nil
-    (mapc (lambda (argument-description)
-            ;; Keyword arguments are normally processed.
-            (when (eq argument-description '&key) (return))
+  (mapc (lambda (argument-description)
+          (unless (eq argument-description '&key)
             ;; Ensure correct structure and valid keywords.
             (destructuring-bind (parameter type &key
-                                 default default-type display-default mentioned-default
-                                 prompt documentation when gesture
-                                 ;; These two are not standard, but ESA uses them.
-                                 prompt-mode insert-default)
+                                default default-type display-default mentioned-default
+                                prompt documentation when gesture
+                                ;; These two are not standard, but ESA uses them.
+                                prompt-mode insert-default)
                 argument-description
               (declare (ignore parameter default default-type display-default mentioned-default
                                prompt documentation when gesture
                                prompt-mode insert-default))
               ;; Quote atomic types to reassemble defmethod more.
               (when (atom type)
-                (setf (second argument-description) `(quote ,type)))))
-          args))
+                (setf (second argument-description) `(quote ,type))))))
+        args)
   (destructuring-bind (func &rest options
 		       &key (provide-output-destination-keyword nil)
 		       &allow-other-keys)
