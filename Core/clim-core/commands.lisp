@@ -1122,26 +1122,30 @@ examine the type of the command menu item to see if it is
 (defmacro define-command (name-and-options args &body body)
   (unless (listp name-and-options)
     (setq name-and-options (list name-and-options)))
-
-  ;; Argument types shouldn't be evaluated. Unfortunately in McCLIM
-  ;; they are, and in all McCLIM applications up to day types are
-  ;; quoted. To preserve backward compatibility we honor this, but we
-  ;; don't evaluate types which are not quoted, but rather add the
-  ;; quotation ourself.
-  ;;
-  ;; Thanks to that we should achieve compatibility with other CLIMs
-  ;; without breaking already existing applications (unless they did
-  ;; some fancy computation in `define-command' macro which isn't
-  ;; conforming anyway).
-  (map () (lambda (arg)
-            ;; we need to sanitize against &key which is atom
-            (unless (atom arg)
-              (let ((type (second arg)))
-                (unless (and (listp type)
-                             (eql (car type) 'quote))
-                  (setf (second arg) `',type)))))
-       args)
-
+  ;; According to the specification all argument description elements except the
+  ;; parameter name are evaluated. We lax this requirement a little and evaluate
+  ;; only type specifier *if* it is a list. Atom types are not evaluated to
+  ;; reasemble method specialization. Moreover we validate here argument
+  ;; description keyword arguments in destructuring-bind (as suggested by Xof in
+  ;; the spec annotation we require keywords being macroexpand-time
+  ;; constant). We allow two custom key arguments, but we should fix ESA
+  ;; instead. -- jd 2018-09-14
+  (mapc (lambda (argument-description)
+          (unless (eq argument-description '&key)
+            ;; Ensure correct structure and valid keywords.
+            (destructuring-bind (parameter type &key
+                                default default-type display-default mentioned-default
+                                prompt documentation when gesture
+                                ;; These two are not standard, but ESA uses them.
+                                prompt-mode insert-default)
+                argument-description
+              (declare (ignore parameter default default-type display-default mentioned-default
+                               prompt documentation when gesture
+                               prompt-mode insert-default))
+              ;; Quote atomic types to reassemble defmethod more.
+              (when (atom type)
+                (setf (second argument-description) `(quote ,type))))))
+        args)
   (destructuring-bind (func &rest options
 		       &key (provide-output-destination-keyword nil)
 		       &allow-other-keys)
