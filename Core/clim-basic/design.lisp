@@ -465,6 +465,25 @@
     :foreground foreground
     :background background))
 
+;;; Inefficient fallback method.
+;;; FIXME we forward-reference %rgba-value.
+(defmethod design-ink ((ink over-compositum) x y)
+  (flet ((rgba->values (rgba)
+           (declare (type (unsigned-byte 32) rgba)
+                    (optimize (speed 3) (safety 0)))
+           (values (/ (ldb (byte 8 24) rgba) 255)
+                   (/ (ldb (byte 8 16) rgba) 255)
+                   (/ (ldb (byte 8 08) rgba) 255)
+                   (/ (ldb (byte 8 00) rgba) 255))))
+    (declare (inline rgba->values))
+    (let ((fg (%rgba-value (design-ink (compositum-foreground ink) x y)))
+          (bg (%rgba-value (design-ink (compositum-background ink) x y))))
+      (multiple-value-bind (r g b o)
+          (multiple-value-call #'color-blend-function
+            (rgba->values fg)
+            (rgba->values bg))
+        (make-uniform-compositum (make-rgb-color r g b) o)) )))
+
 (defclass uniform-compositum (in-compositum)
   ;; we use this class to represent rgbo values
   ())
