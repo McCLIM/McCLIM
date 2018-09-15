@@ -220,29 +220,13 @@ translated, so they begin at different position than [0,0])."))
          (mirror (port-lookup-mirror port (medium-sheet medium))))
     (with-slots (gc) medium
       (unless gc
-        (setq gc (xlib:create-gcontext :drawable mirror))
-        (and gc
-             (setf (xlib:gcontext-fill-style gc) :solid))))))
+        (setf gc (xlib:create-gcontext :drawable mirror)
+              (xlib:gcontext-fill-style gc) :solid)))))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink color))
   (declare (optimize (debug 3)))
-  (let* ((port (port medium))
-         (mirror (port-lookup-mirror port (medium-sheet medium)))
-         (line-style (medium-line-style medium)))
+  (let* ((port (port medium)))
     (with-slots (gc last-medium-device-region) medium
-      (unless gc
-        (setq gc (xlib:create-gcontext :drawable mirror))
-        ;; this is kind of false, since the :unit should be taken
-        ;; into account -RS 2001-08-24
-        (setf (xlib:gcontext-line-width gc) (line-style-thickness line-style)
-              (xlib:gcontext-cap-style gc) (translate-cap-shape
-                                            (line-style-cap-shape line-style))
-              (xlib:gcontext-join-style gc) (line-style-joint-shape line-style))
-        (let ((dashes (line-style-dashes line-style)))
-          (unless (null dashes)
-            (setf (xlib:gcontext-line-style gc) :dash
-                  (xlib:gcontext-dashes gc) (if (eq dashes t) 3
-                                                dashes)))))
       (setf (xlib:gcontext-function gc) boole-1)
       (setf (xlib:gcontext-foreground gc) (X-pixel port ink)
             (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
@@ -254,10 +238,20 @@ translated, so they begin at different position than [0,0])."))
         (%set-gc-clipping-region medium gc))
       gc)))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink (eql +transparent-ink+)))
-  (let ((drawable (port-lookup-mirror (port medium) (medium-sheet medium))))
-    (with-slots (gc) medium
-      (or gc (setf gc (xlib:create-gcontext :drawable drawable))))))
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::uniform-compositum))
+  (let ((opacity (climi::compositum-mask ink))
+        (ink (climi::compositum-ink ink)))
+    (if (< (opacity-value opacity) 0.5)
+        (slot-value medium 'gc)
+        (medium-gcontext medium ink))))
+
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::over-compositum))
+  (medium-gcontext medium (climi::compositum-foreground ink)))
+
+(defmethod medium-gcontext ((medium clx-medium) (ink climi::opacity))
+  (if (< (opacity-value ink) 0.5)
+      (slot-value medium 'gc)
+      (medium-gcontext medium +background-ink+)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::indirect-ink))
   (medium-gcontext medium (climi::indirect-ink-ink ink)))
@@ -318,44 +312,20 @@ translated, so they begin at different position than [0,0])."))
         gc))))
 
 
-;;;;
-
-#+ (or) ;; When used for transformed pattern it simply doesn't work. We either
-        ;; should create design-gcontext for transformed-pattern, guard its
-        ;; invalidation with a dynamic variable or do not cache at all. For now
-        ;; we disable it and we'll re-enable it when we implement
-        ;; design-gcontext for transformed patterns (which is needed
-        ;; anyway). Then maybe we will reuse cached gcontext.
-(defmethod design-gcontext :around ((medium clx-medium) (ink climi::indexed-pattern))
-  (let ((design-cache (slot-value (port medium) 'design-cache)))
-    (alexandria:ensure-gethash ink design-cache (call-next-method))))
-
 ;;; XXX: both PM and MM pixmaps should be freed with (xlib:free-pixmap pixmap)
 ;;; when not used. We do not do that right now.
-(defun compute-rgb-image-pixmap-and-mask (drawable image)
+(defun compute-rgb-mask (drawable image)
   (let* ((width (pattern-width image))
          (height (pattern-height image))
-         (depth (xlib:drawable-depth drawable))
          (idata (climi::pattern-array image)))
-    (let* ((pm (xlib:create-pixmap :drawable drawable
-                                   :width width
-                                   :height height
-                                   :depth depth))
-           (mm (xlib:create-pixmap :drawable drawable
+    (let* ((mm (xlib:create-pixmap :drawable drawable
                                    :width width
                                    :height height
                                    :depth 1))
-           (pm-gc (xlib:create-gcontext :drawable pm))
            (mm-gc (xlib:create-gcontext :drawable mm
                                         :foreground 1
                                         :background 0))
-           (pdata (make-array (list height width) :element-type '(unsigned-byte 32)))
            (mdata (make-array (list height width) :element-type '(unsigned-byte 1)))
-           (pm-image (xlib:create-image :width  width
-                                        :height height
-                                        :depth  depth
-                                        :bits-per-pixel 32
-                                        :data   pdata))
            (mm-image (xlib:create-image :width  width
                                         :height height
                                         :depth  1
@@ -364,33 +334,61 @@ translated, so they begin at different position than [0,0])."))
       (loop for x fixnum from 0 below width do
            (loop for y fixnum from 0 below height do
                 (let ((elt (aref idata y x)))
-                  (setf (aref pdata y x) (ash elt -8))
                   (if (< (ldb (byte 8 0) elt) #x80)
                       (setf (aref mdata y x) 0)
                       (setf (aref mdata y x) 1)))))
       (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
-	(xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
-                        :width width :height height)
         (xlib:put-image mm mm-gc mm-image :src-x 0 :src-y 0 :x 0 :y 0
                         :width width :height height :bitmap-p nil))
-      (xlib:free-gcontext pm-gc)
       (xlib:free-gcontext mm-gc)
-      (values pm mm))))
+      mm)))
 
-(defmethod design-gcontext ((medium clx-medium) (ink climi::pattern))
+(defun compute-rgb-image (drawable image)
+  (let* ((width (pattern-width image))
+         (height (pattern-height image))
+         (depth (xlib:drawable-depth drawable))
+         (idata (climi::pattern-array image)))
+    (let* ((pm (xlib:create-pixmap :drawable drawable
+                                   :width width
+                                   :height height
+                                   :depth depth))
+           (pm-gc (xlib:create-gcontext :drawable pm))
+           (pdata (make-array (list height width) :element-type '(unsigned-byte 32)))
+           (pm-image (xlib:create-image :width  width
+                                        :height height
+                                        :depth  depth
+                                        :bits-per-pixel 32
+                                        :data   pdata)))
+      (declare (type (simple-array (unsigned-byte 32) (* *)) idata))
+      (loop for x fixnum from 0 below width do
+           (loop for y fixnum from 0 below height do
+                (let ((elt (aref idata y x)))
+                  (setf (aref pdata y x) (ash elt -8)))))
+      (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
+	(xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
+                        :width width :height height))
+      (xlib:free-gcontext pm-gc)
+      pm)))
+
+(defmethod design-gcontext ((medium clx-medium) (ink climi::pattern)
+                            &aux (ink* (climi::transformed-design-design
+                                        (climi::effective-transformed-pattern ink))))
   (let* ((drawable (sheet-xmirror (medium-sheet medium)))
-         (rgba-pattern (climi::%collapse-pattern ink)))
-    (multiple-value-bind (pm mask)
-        (compute-rgb-image-pixmap-and-mask drawable rgba-pattern)
-      (let ((gc (xlib:create-gcontext :drawable drawable)))
-        (setf (xlib:gcontext-fill-style gc) :tiled
-              (xlib:gcontext-tile gc) pm
-              (xlib:gcontext-clip-x gc) 0
-              (xlib:gcontext-clip-y gc) 0
-              (xlib:gcontext-ts-x gc) 0
-              (xlib:gcontext-ts-y gc) 0
-              (xlib:gcontext-clip-mask gc) mask)
-        gc))))
+         (rgba-pattern (climi::%collapse-pattern ink))
+         (pm (compute-rgb-image drawable rgba-pattern))
+         (mask (if (typep ink* 'climi::rectangular-tile)
+                   nil
+                   (compute-rgb-mask drawable rgba-pattern))))
+    (let ((gc (xlib:create-gcontext :drawable drawable)))
+      (setf (xlib:gcontext-fill-style gc) :tiled
+            (xlib:gcontext-tile gc) pm
+            (xlib:gcontext-clip-x gc) 0
+            (xlib:gcontext-clip-y gc) 0
+            (xlib:gcontext-ts-x gc) 0
+            (xlib:gcontext-ts-y gc) 0)
+      (when mask
+        (setf (xlib:gcontext-clip-mask gc) mask))
+      gc)))
 
 ;;;;
 
