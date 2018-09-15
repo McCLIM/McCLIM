@@ -341,6 +341,7 @@ translated, so they begin at different position than [0,0])."))
         (xlib:put-image mm mm-gc mm-image :src-x 0 :src-y 0 :x 0 :y 0
                         :width width :height height :bitmap-p nil))
       (xlib:free-gcontext mm-gc)
+      (push #'(lambda () (xlib:free-pixmap mm)) ^cleanup)
       mm)))
 
 (defun compute-rgb-image (drawable image)
@@ -368,6 +369,7 @@ translated, so they begin at different position than [0,0])."))
 	(xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
                         :width width :height height))
       (xlib:free-gcontext pm-gc)
+      (push #'(lambda () (xlib:free-pixmap pm)) ^cleanup)
       pm)))
 
 (defmethod design-gcontext ((medium clx-medium) (ink climi::pattern)
@@ -388,6 +390,7 @@ translated, so they begin at different position than [0,0])."))
             (xlib:gcontext-ts-y gc) 0)
       (when mask
         (setf (xlib:gcontext-clip-mask gc) mask))
+      (push #'(lambda () (xlib:free-gcontext gc)) ^cleanup)
       gc)))
 
 ;;;;
@@ -414,21 +417,25 @@ translated, so they begin at different position than [0,0])."))
                                                        :normalize :y-banding)))
           nconcing (multiple-value-list (region->clipping-values region))))))
 
+;; Variable is used to deallocate lingering resources after the operation.
+(defvar ^cleanup)
 (defmacro with-clx-graphics ((&optional (mirror 'mirror)
                                         (line-style 'line-style)
                                         (ink 'ink)
                                         (gcontext 'gc))
-                                        medium &body body)
+                                medium &body body)
   (let ((medium-var (gensym)))
     `(let* ((,medium-var ,medium)
-            (,mirror (sheet-xmirror (medium-sheet ,medium-var))))
+            (,mirror (sheet-xmirror (medium-sheet ,medium-var)))
+            (^cleanup nil))
        (when ,mirror
-         (let* ((,line-style (medium-line-style ,medium-var))
-                (,ink (medium-ink ,medium-var))
-                (,gcontext (medium-gcontext ,medium-var ,ink)))
-           (declare (ignorable ,line-style ,gcontext))
-           (unless (eql ,ink +transparent-ink+)
-             ,@body))))))
+         (unwind-protect (let* ((,line-style (medium-line-style ,medium-var))
+                                (,ink (medium-ink ,medium-var))
+                                (,gcontext (medium-gcontext ,medium-var ,ink)))
+                           (declare (ignorable ,line-style ,gcontext))
+                           (unless (eql ,ink +transparent-ink+)
+                             ,@body))
+           (mapc #'funcall ^cleanup))))))
 
 
 ;;; Pixmaps
