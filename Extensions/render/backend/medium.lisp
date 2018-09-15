@@ -26,7 +26,7 @@
   (alexandria:when-let* ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
                          (mirror (sheet-mirror msheet))
                          (image (etypecase image
-                                  (basic-sheet (image-mirror-image mirror))
+                                  (basic-sheet (image-mirror-image (sheet-mirror image)))
                                   (clime:image-pattern image))))
     (%draw-image mirror image
                  (round x) (round y)

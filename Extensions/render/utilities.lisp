@@ -16,10 +16,10 @@ top-left. Useful when we iterate over the same array and mutate its state."
                 for ,dest-i fixnum from ,x1d to ,x2
                 do (progn ,@body)))
       `(loop
-          for ,src-j fixnum from ,y2 downto ,y1s
+          for ,src-j fixnum from (+ ,y1s (- ,y2 ,y1d)) downto ,y1s
           for ,dest-j fixnum from ,y2 downto ,y1d
           do (loop
-                for ,src-i fixnum from ,x2 downto ,x1s
+                for ,src-i fixnum from (+ ,x1s (- ,x2 ,x1d)) downto ,x1s
                 for ,dest-i fixnum from ,x2 downto ,x1d
                 do (progn ,@body)))))
 

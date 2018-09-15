@@ -59,7 +59,7 @@
           (setf dirty-region region)))))
 
 ;;; XXX: this is used for scroll
-(defun %draw-image (mirror dest-image x y width height to-x to-y clip-region)
+(defun %draw-image (mirror src-image x y width height to-x to-y clip-region)
   (check-type mirror image-mirror-mixin)
   (alexandria:when-let ((image (image-mirror-image mirror)))
     (unless (and (rectanglep clip-region)
@@ -72,7 +72,7 @@
     (with-slots (image-lock) mirror
       (climi::with-lock-held (image-lock)
         (let* ((image (image-mirror-image mirror))
-               (region  (copy-image dest-image x y width height image to-x to-y)))
+               (region  (copy-image src-image x y width height image to-x to-y)))
           (%notify-image-updated mirror region))))))
 
 (defun %fill-image (mirror x y width height ink clip-region
@@ -88,7 +88,8 @@
         (let ((region (fill-image image ink
                                   :x x :y y :width width :height height
                                   :stencil stencil
-                                  :stencil-dx x-dest :stencil-dy y-dest)))
+                                  :stencil-dx x-dest :stencil-dy y-dest
+                                  :clip-region clip-region)))
           (%notify-image-updated mirror region))))))
 
 (defun %fill-paths (mirror paths transformation region ink)
