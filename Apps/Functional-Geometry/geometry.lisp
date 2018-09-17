@@ -277,7 +277,8 @@
 (defun clim-plot-in-window (p &optional (stream *standard-output*))
   (clim-plot p stream))
 
-(defun clim-plot-to-postscript (p &optional (pathname "/Users/joswig/Desktop/test-clim.ps"))
+(defun clim-plot-to-postscript (p &optional (pathname (merge-pathnames "functional-geometry-test.ps"
+							     (user-homedir-pathname))))
   (with-open-file (file-stream pathname
                                :direction :output
                                :if-exists :supersede
