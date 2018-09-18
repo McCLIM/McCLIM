@@ -818,7 +818,8 @@ type (found via `presentation-type-of') to generate output."
            (old-height (- y2 y1))
            (start-offset (offset (beginning-of-line (top view))))
            (pump-state (pump-state-for-offset view start-offset))
-           (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane))))
+           (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane)))
+           (current-line-height 0))
       ;; For invalidation of the parts of the display that have
       ;; changed.
       (synchronize-view view :begin (offset (top view)) :end (max (offset (bot view))
@@ -828,18 +829,19 @@ type (found via `presentation-type-of') to generate output."
       (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
         (with-output-recording-options (pane :record nil :draw t)
           (loop for line = (line-information view (displayed-lines-count view))
-                do (multiple-value-bind (new-pump-state line-height)
-                       (draw-line-strokes pane view pump-state start-offset
-                                          cursor-x cursor-y old-width)
-                     (setf pump-state new-pump-state
-                           start-offset (1+ (line-end-offset line)))
-                     (incf cursor-y (+ line-height (stream-vertical-spacing pane))))
-                when (or (and (not (extend-pane-bottom view))
-                              (>= (y2 (line-dimensions line)) pane-height))
-                         (= (line-end-offset line) (size (buffer view))))
-                return (progn
-                         (setf (offset (bot view)) (line-end-offset line))
-                         (clear-stale-lines pane view old-width old-height))))))))
+             do (multiple-value-bind (new-pump-state line-height)
+                    (draw-line-strokes pane view pump-state start-offset
+                                       cursor-x cursor-y old-width)
+                  (setf pump-state new-pump-state
+                        start-offset (1+ (line-end-offset line))
+                        current-line-height line-height)
+                  (incf cursor-y (+ line-height (stream-vertical-spacing pane))))
+             when (or (and (not (extend-pane-bottom view))
+                           (>= (y2 (line-dimensions line)) (- pane-height current-line-height)))
+                      (= (line-end-offset line) (size (buffer view))))
+             return (progn
+                      (setf (offset (bot view)) (line-end-offset line))
+                      (clear-stale-lines pane view old-width old-height))))))))
 
 ;;; A default redisplay implementation that should work for subclasses
 ;;; of `drei-buffer-view'. Syntaxes that don't want to implement their
