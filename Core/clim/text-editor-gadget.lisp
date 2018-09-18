@@ -125,7 +125,6 @@
   (:documentation "The class for Drei-based text editor substrates."))
 
 (defmethod compose-space ((pane drei-text-editor-substrate) &key width height)
-  (declare (ignore height))
   (with-sheet-medium (medium pane)
     (let* ((text-style (medium-text-style medium))
            (line-height (+ (text-style-height text-style medium)
@@ -138,7 +137,7 @@
                          width))
               (height (if nlines
                           (+ (* nlines line-height))
-                          line-height)))
+                          height)))
           (space-requirement-combine* #'(lambda (req1 req2)
                                           (or req2 req1))
                                       (call-next-method)
