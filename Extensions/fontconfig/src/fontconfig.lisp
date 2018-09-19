@@ -2,7 +2,7 @@
 
 (defvar *config* nil)
 
-(defvar *propery-names* '((:family . "family")
+(defvar *property-names* '((:family . "family")
                           (:familylang . "familylang")
                           (:style . "style")
                           (:stylelang . "stylelang")
@@ -168,7 +168,7 @@
 (defun pattern-to-lisp (pattern fields)
   (loop
     for field in fields
-    for v = (assoc field *propery-names*)
+    for v = (assoc field *property-names*)
     when v
       append (let* ((name (cdr v))
                     (first-result (pattern-get-internal pattern name 0)))
@@ -231,7 +231,7 @@
            (fc-object-set-destroy ,object-set))))))
 
 (defun prop-to-name (prop)
-  (let ((d (assoc prop *propery-names*)))
+  (let ((d (assoc prop *property-names*)))
     (unless d
       (error "Unknown property: ~s" prop))
     (cdr d)))
