@@ -503,22 +503,22 @@ record."))
 (defmethod rectangle-edges* ((rectangle drei-area))
   (bounding-rectangle* rectangle))
 
-(defmethod region-union ((region1 drei-area) region2)
+(defmethod region-union ((region1 drei-area) (region2 region))
   (region-union (bounding-rectangle region1) region2))
 
-(defmethod region-union (region1 (region2 drei-area))
+(defmethod region-union ((region1 region) (region2 drei-area))
   (region-union region1 (bounding-rectangle region2)))
 
-(defmethod region-intersection ((region1 drei-area) region2)
+(defmethod region-intersection ((region1 drei-area) (region2 region))
   (region-intersection (bounding-rectangle region1) region2))
 
-(defmethod region-intersection (region1 (region2 drei-area))
+(defmethod region-intersection ((region1 region) (region2 drei-area))
   (region-intersection region1 (bounding-rectangle region2)))
 
-(defmethod region-difference ((region1 drei-area) region2)
+(defmethod region-difference ((region1 drei-area) (region2 region))
   (region-difference (bounding-rectangle region1) region2))
 
-(defmethod region-difference (region1 (region2 drei-area))
+(defmethod region-difference ((region1 region) (region2 drei-area))
   (region-difference region1 (bounding-rectangle region2)))
 
 (defmethod transform-region (transformation (region drei-area))
