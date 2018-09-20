@@ -170,7 +170,6 @@ function that calls `visible-1' with `cursor' and the view of
    :background *background-color*
    :foreground *foreground-color*
    :display-function 'display-drei-pane
-   :width 900
    :active nil)
   (:metaclass modual-class)
   (:documentation "An actual, instantiable Drei pane that
