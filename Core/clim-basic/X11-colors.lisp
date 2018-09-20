@@ -771,4 +771,12 @@
 (defconstant +light-green+ (make-named-color "light-green" 0.5647 0.9333 0.5647))
 (defconstant +LightGreen+ (make-named-color "LightGreen" 0.5647 0.9333 0.5647))
 
-(defconstant +contrasting-colors+ (vector +black+ +red+ +green+ +blue+ +cyan+ +magenta+ +yellow+ +white+))
+(defconstant +contrasting-colors+
+  (vector (make-named-color "Contrasting1" 0.0 0.44705883 0.7411765)
+          (make-named-color "Contrasting2" 0.8509804 0.3254902 0.09803922)
+          (make-named-color "Contrasting3" 0.92941177 0.69411767 0.1254902)
+          (make-named-color "Contrasting4" 0.49411765 0.18431373 0.5568628)
+          (make-named-color "Contrasting5" 0.46666667 0.6745098 0.1882353)
+          (make-named-color "Contrasting6" 0.3019608 0.74509805 0.93333334)
+          (make-named-color "Contrasting7" 0.63529414 0.078431375 0.18431373)
+          (make-named-color "Contrasting8" 0.53529414 0.378431375 0.38431373)))
