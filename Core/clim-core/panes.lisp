@@ -243,17 +243,20 @@ order to produce a double-click")
               max-height))))
 
 (defun make-space-requirement (&key (min-width 0) (min-height 0)
-                                    (width min-width) (height min-height)
-				    (max-width +fill+) (max-height +fill+))
-  (assert (<= 0 min-width width max-width) (min-width width max-width))
-  (assert (<= 0 min-height height max-height) (min-height height max-height))
+                                 (width min-width) (height min-height)
+                                 (max-width +fill+) (max-height +fill+))
+  ;; Defensive programming. space-requierment-+ may double max-width=+fill+.
+  (clampf min-width  0 +fill+) (clampf max-width  0 +fill+) (clampf width  min-width  max-width)
+  (clampf min-height 0 +fill+) (clampf max-height 0 +fill+) (clampf height min-height max-height)
+  (assert (<= min-width  max-width)  (min-width  max-width))
+  (assert (<= min-height max-height) (min-height max-height))
   (make-instance 'standard-space-requirement
-    :width width
-    :max-width max-width
-    :min-width min-width
-    :height height
-    :max-height max-height
-    :min-height min-height))
+                 :width width
+                 :max-width max-width
+                 :min-width min-width
+                 :height height
+                 :max-height max-height
+                 :min-height min-height))
 
 (defmethod space-requirement-components ((space-req standard-space-requirement))
   (with-slots (width min-width max-width height min-height max-height) space-req

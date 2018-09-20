@@ -298,7 +298,7 @@ by the number of variables in VARS."
 (define-modify-macro minf (&rest args) min)
 (define-modify-macro nconcf (&rest args) nconc)
 (define-modify-macro orf (&rest args) or)
-
+(define-modify-macro clampf (min max) clamp)
 
 ;;; Move this early so it can be used in presentations.lisp, which
 ;;; comes before commands.lisp.
@@ -558,3 +558,4 @@ STREAM in the direction DIRECTION."
         (setf (slot-value copy slot)
               (slot-value original slot))))
     copy))
+
