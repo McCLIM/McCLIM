@@ -441,7 +441,7 @@ list as interactive as you would expect."
 (defun show-hash-table-status (hash pane &key (message "Usage Graph"))
   "Show a hash table's status graphically on a given
 pane. Display a given message, which defaults to 'Usage Graph'."
-  (with-room-for-graphics (pane :height 20)
+  (with-room-for-graphics (pane :height 20 :first-quadrant nil)
     (let* ((my-beige (make-rgb-color 0.9372549 0.8862745 0.8862745))
 	   (used-color (make-rgb-color 0.43529412 0.7921569 0.87058824))
 	   (text-color (make-rgb-color 0.7176471 0.29803923 0.2))
