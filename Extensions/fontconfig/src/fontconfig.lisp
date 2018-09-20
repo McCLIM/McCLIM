@@ -2,7 +2,7 @@
 
 (defvar *config* nil)
 
-(defvar *propery-names* '((:family . "family")
+(defvar *property-names* '((:family . "family")
                           (:familylang . "familylang")
                           (:style . "style")
                           (:stylelang . "stylelang")
@@ -112,12 +112,12 @@
     (list (add-list-value-to-pattern pattern key value))))
 
 (defun charset->lisp (charset-native)
-  (cffi:with-foreign-objects ((bitmap 'fc-char32 *fc-charset-map-size*)
+  (cffi:with-foreign-objects ((bitmap 'fc-char32 +fc-charset-map-size+)
                               (next 'fc-char32))
     (let ((result (fc-char-set-first-page charset-native bitmap next)))
       (loop
-        until (eql result *fc-charset-done*)
-        collect (list result (cffi:foreign-array-to-lisp bitmap `(:array fc-char32 ,*fc-charset-map-size*)))
+        until (eql result +fc-charset-done+)
+        collect (list result (cffi:foreign-array-to-lisp bitmap `(:array fc-char32 ,+fc-charset-map-size+)))
         do (setq result (fc-char-set-next-page charset-native bitmap next))))))
 
 (defun str-list->lisp (str-list)
@@ -168,7 +168,7 @@
 (defun pattern-to-lisp (pattern fields)
   (loop
     for field in fields
-    for v = (assoc field *propery-names*)
+    for v = (assoc field *property-names*)
     when v
       append (let* ((name (cdr v))
                     (first-result (pattern-get-internal pattern name 0)))
@@ -231,7 +231,7 @@
            (fc-object-set-destroy ,object-set))))))
 
 (defun prop-to-name (prop)
-  (let ((d (assoc prop *propery-names*)))
+  (let ((d (assoc prop *property-names*)))
     (unless d
       (error "Unknown property: ~s" prop))
     (cdr d)))
