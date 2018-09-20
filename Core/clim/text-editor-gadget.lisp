@@ -141,8 +141,8 @@
           (space-requirement-combine* #'(lambda (req1 req2)
                                           (or req2 req1))
                                       (call-next-method)
-                                      :width width :max-width width :min-width width
-                                      :height height :max-height height :min-height height))))))
+                                      :width width :max-width width :min-width column-width
+                                      :height height :max-height height :min-height line-height))))))
 
 (defmethod allocate-space ((pane drei-text-editor-substrate) w h)
   (resize-sheet pane w h))
