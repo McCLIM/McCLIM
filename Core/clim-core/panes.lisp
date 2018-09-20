@@ -245,7 +245,9 @@ order to produce a double-click")
 (defun make-space-requirement (&key (min-width 0) (min-height 0)
                                  (width min-width) (height min-height)
                                  (max-width +fill+) (max-height +fill+))
-  ;; Defensive programming. space-requierment-+ may double max-width=+fill+.
+  ;; Defensive programming. For instance SPACE-REQUIREMENT-+ may cause
+  ;; max-{width,height} to be (+ +fill+ +fill+), what exceeds our biggest
+  ;; allowed values. We fix that here.
   (clampf min-width  0 +fill+) (clampf max-width  0 +fill+) (clampf width  min-width  max-width)
   (clampf min-height 0 +fill+) (clampf max-height 0 +fill+) (clampf height min-height max-height)
   (assert (<= min-width  max-width)  (min-width  max-width))
