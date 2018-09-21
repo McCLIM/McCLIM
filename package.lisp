@@ -1908,7 +1908,10 @@
    #:highlight-output-record-tree
    #:cut-and-paste-mixin
    #:mouse-wheel-scroll-mixin
-   
+   ;; designs
+   #:indirect-ink
+   #:indirect-ink-p
+   #:indirect-ink-ink
    ;; Font listing extension:
    #:font-family
    #:font-face

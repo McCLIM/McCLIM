@@ -321,7 +321,7 @@
 ;;; Color
 (defgeneric medium-color-rgb (medium ink))
 
-(defmethod medium-color-rgb (medium (ink climi::indirect-ink))
+(defmethod medium-color-rgb (medium (ink clime:indirect-ink))
   (medium-color-rgb medium (climi::design-ink ink 0 0)))
 
 (defmethod medium-color-rgb (medium (ink color))

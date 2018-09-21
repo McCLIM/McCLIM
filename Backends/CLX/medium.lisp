@@ -253,8 +253,8 @@ translated, so they begin at different position than [0,0])."))
       (slot-value medium 'gc)
       (medium-gcontext medium +background-ink+)))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink climi::indirect-ink))
-  (medium-gcontext medium (climi::indirect-ink-ink ink)))
+(defmethod medium-gcontext ((medium clx-medium) (ink clime:indirect-ink))
+  (medium-gcontext medium (clime:indirect-ink-ink ink)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +flipping-ink+)))
   (let* ((gc (medium-gcontext medium (medium-background medium)))

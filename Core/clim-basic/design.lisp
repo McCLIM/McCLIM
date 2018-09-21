@@ -281,6 +281,9 @@
   ((dynamic-variable-symbol :initarg :symbol  :initform (error "required"))
    (default-ink             :initarg :default :initform (error "required"))))
 
+(defun indirect-ink-p (design)
+  (typep design 'indirect-ink))
+
 (defun indirect-ink-ink (design)
   (check-type design indirect-ink)
   (with-slots (dynamic-variable-symbol default-ink) design
