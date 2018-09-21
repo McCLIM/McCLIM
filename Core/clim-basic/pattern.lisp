@@ -113,24 +113,15 @@ pattern, stencil, image etc)."))
            (logand (logand (truncate (* parameter 255)) 255))))
     (etypecase element
       ((unsigned-byte 32) element)
-      (color (with-slots (red green blue) element
-               (logior (ash (transform red)   24)
-                       (ash (transform green) 16)
-                       (ash (transform blue)   8)
-                       255)))
-      ;; If no color is supplied, we assume black
-      (opacity (logior #x00 (transform (opacity-value element))))
       ;; Uniform-compositium is a masked-compositum rgb + opacity
-      (uniform-compositum
-       (let ((ink (compositum-ink element))
-             (opacity (compositum-mask element)))
-         (with-slots (red green blue) ink
-           (let ((opacity-value (opacity-value opacity)))
-             (logior (ash (transform red)   24)
-                     (ash (transform green) 16)
-                     (ash (transform blue)   8)
-                     (transform opacity-value))))))
-      (indirect-ink (%rgba-value (design-ink element 0 0))))))
+      ((or color opacity uniform-compositum)
+       (multiple-value-bind (red green blue opacity)
+           (color-rgba element)
+         (logior (ash (transform red)   24)
+                 (ash (transform green) 16)
+                 (ash (transform blue)   8)
+                 (transform opacity))))
+      (indirect-ink (%rgba-value (indirect-ink-ink element))))))
 
 (defgeneric %pattern-rgba-value (pattern x y)
   (:documentation "Returns a collapsed RGBA value for position [X, Y].")
