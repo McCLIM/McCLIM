@@ -83,6 +83,7 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
 (defgeneric color-rgb (color))
+(defgeneric color-rgba (color))
 (defgeneric design-ink (design x y))
 
 (defmethod print-object ((color color) stream)
@@ -105,6 +106,10 @@
 (defmethod color-rgb ((color standard-color))
   (with-slots (red green blue) color
     (values red green blue)))
+
+(defmethod color-rgba ((color standard-color))
+  (with-slots (red green blue) color
+    (values red green blue 1.0)))
 
 (defmethod design-ink ((color standard-color) x y)
   (declare (ignore x y))
@@ -346,6 +351,11 @@
         (t
          (make-instance 'standard-opacity :value value))))
 
+(defmethod color-rgba ((color opacity))
+  (multiple-value-call #'values
+    (color-rgb (indirect-ink-ink +foreground-ink+))
+    (opacity-value color)))
+
 ;;;;
 ;;;; 13.7 Flipping Ink
 ;;;;
@@ -471,25 +481,21 @@
 ;;; Inefficient fallback method.
 ;;; FIXME we forward-reference %rgba-value.
 (defmethod design-ink ((ink over-compositum) x y)
-  (flet ((rgba->values (rgba)
-           (declare (type (unsigned-byte 32) rgba)
-                    (optimize (speed 3) (safety 0)))
-           (values (/ (ldb (byte 8 24) rgba) 255)
-                   (/ (ldb (byte 8 16) rgba) 255)
-                   (/ (ldb (byte 8 08) rgba) 255)
-                   (/ (ldb (byte 8 00) rgba) 255))))
-    (declare (inline rgba->values))
-    (let ((fg (%rgba-value (design-ink (compositum-foreground ink) x y)))
-          (bg (%rgba-value (design-ink (compositum-background ink) x y))))
-      (multiple-value-bind (r g b o)
-          (multiple-value-call #'color-blend-function
-            (rgba->values fg)
-            (rgba->values bg))
-        (make-uniform-compositum (make-rgb-color r g b) o)) )))
+  (let ((fg (design-ink (compositum-foreground ink) x y))
+        (bg (design-ink (compositum-background ink) x y)))
+    (multiple-value-bind (r g b o)
+        (multiple-value-call #'color-blend-function
+          (color-rgba fg)
+          (color-rgba bg))
+      (make-uniform-compositum (make-rgb-color r g b) o)) ))
 
 (defclass uniform-compositum (in-compositum)
   ;; we use this class to represent rgbo values
   ())
+
+(defmethod color-rgba ((color uniform-compositum))
+  (with-slots (ink mask) color
+    (multiple-value-call #'values (color-rgb ink) (opacity-value mask))))
 
 (defmethod design-ink ((compositum uniform-compositum) x y)
   (declare (ignore x y))

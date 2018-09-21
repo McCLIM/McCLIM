@@ -1912,6 +1912,8 @@
    #:indirect-ink
    #:indirect-ink-p
    #:indirect-ink-ink
+   #:color-rgba
+   #:design-ink
    ;; Font listing extension:
    #:font-family
    #:font-face
