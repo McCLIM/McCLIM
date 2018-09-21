@@ -355,6 +355,18 @@
   (:documentation "Stores those parts of the medium/stream graphics state
   that need to be restored when drawing an output record"))
 
+(defclass gs-transformation-mixin (graphics-state)
+  ((transformation :initarg :transformation :accessor graphics-state-transformation
+                   :documentation "Medium transformation.")))
+
+(defmethod initialize-instance :after ((obj gs-transformation-mixin)
+                                       &key
+                                         (stream nil)
+                                         (medium (when stream
+                                                   (sheet-medium stream))))
+  (when (and medium (not (slot-boundp obj 'transformation)))
+    (setf (slot-value obj 'transformation) (graphics-state-transformation medium))))
+
 (defclass gs-ink-mixin (graphics-state)
   ((ink :initarg :ink :accessor graphics-state-ink)))
 
@@ -407,7 +419,7 @@
     (setf (slot-value obj 'text-style) (graphics-state-text-style medium))))
 
 (defclass complete-medium-state
-    (gs-ink-mixin gs-clip-mixin gs-line-style-mixin gs-text-style-mixin)
+    (gs-ink-mixin gs-clip-mixin gs-line-style-mixin gs-text-style-mixin gs-transformation-mixin)
   ())
 
 (defgeneric (setf graphics-state) (new-gs gs)
@@ -420,15 +432,18 @@
   (:method :after ((new-gs gs-line-style-mixin) (gs gs-line-style-mixin))
     (setf (graphics-state-line-style gs) (graphics-state-line-style new-gs)))
   (:method :after ((new-gs gs-text-style-mixin) (gs gs-text-style-mixin))
-    (setf (graphics-state-text-style gs) (graphics-state-text-style new-gs))))
+    (setf (graphics-state-text-style gs) (graphics-state-text-style new-gs)))
+  (:method :after ((new-gs gs-transformation-mixin) (gs gs-transformation-mixin))
+    (setf (graphics-state-transformation gs) (graphics-state-transformation new-gs))))
 
 
 ;;; MEDIUM class
 
 (defclass transform-coordinates-mixin ()
   ;; This class is reponsible for transforming coordinates in an :around method
-  ;; on medium-draw-xyz. It is mixed into basic-medium. Probably we could rid of
-  ;; this indirection and specialize directly on basic-medium.  --JD 2018-03-06
+  ;; on medium-draw-xyz. It is mixed into basic-medium. We should document it
+  ;; and mix it in the appropriate downstream backend-specific medium.  Mixing
+  ;; in basic-medium makes hardware-based transformations hard. -- jd 2018-03-06
   ())
 
 (defclass basic-medium (transform-coordinates-mixin complete-medium-state medium)

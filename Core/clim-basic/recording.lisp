@@ -1536,12 +1536,9 @@ were added."
          (setf max-y (max max-y y)))
     finally (return (values min-x min-y max-x max-y))))
 
-(defclass draw-text-transform-mixin ()
-  ((transformation :initform +identity-transformation+
-                   :accessor draw-text-transformation)))
-
-(def-grecording draw-text ((gs-text-style-mixin draw-text-transform-mixin) string point-x point-y start end
-                           align-x align-y toward-x toward-y transform-glyphs)
+(def-grecording draw-text ((gs-text-style-mixin gs-transformation-mixin)
+                           string point-x point-y start end align-x align-y
+                           toward-x toward-y transform-glyphs)
     (:replay-fn nil)
   ;; FIXME!!! Text direction.
   ;; FIXME: Multiple lines.
@@ -1554,7 +1551,7 @@ were added."
                                          :text-style text-style)) )
          (ascent (text-style-ascent text-style (sheet-medium stream)))
          (descent (text-style-descent text-style (sheet-medium stream))))
-    (setf (draw-text-transformation graphic) transformation)
+    (setf (graphics-state-transformation graphic) transformation)
     (multiple-value-bind (left top right bottom)
         (text-bounding-rectangle* medium string :start start :end end :text-style text-style)
       (ecase align-x
@@ -1582,7 +1579,7 @@ were added."
     (let ((dx (- nx x1))
           (dy (- ny y1)))
       (multiple-value-prog1 (call-next-method)
-        (setf #1=(draw-text-transformation record)
+        (setf #1=(graphics-state-transformation record)
               (compose-translation-with-transformation #1# dx dy))))))
 
 (defmethod replay-output-record
@@ -1601,8 +1598,8 @@ were added."
     (string start end point-x point-y align-x align-y toward-x toward-y transform-glyphs)
   (and (if-supplied (string)
          (string= (slot-value record 'string) string))
-       (transformation-equal (draw-text-transformation record)
-                             (draw-text-transformation record))
+       (transformation-equal (graphics-state-transformation record)
+                             (graphics-state-transformation record))
        (if-supplied (start)
          (eql (slot-value record 'start) start))
        (if-supplied (end)
