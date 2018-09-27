@@ -96,7 +96,7 @@ pattern, stencil, image etc)."))
     (values 0 0 width height)))
 
 (defclass %rgba-pattern (%array-pattern)
-  ((array :type '(simple-array (unsigned-byte 32) 2)))
+  ((array :type (simple-array (unsigned-byte 32) 2)))
   (:documentation "Helper class of RGBA result of another pattern."))
 
 (defun %rgba-value (element)
@@ -187,7 +187,7 @@ pattern, stencil, image etc)."))
         element)))
 
 (defclass stencil (%array-pattern)
-  ((array :type '(simple-array (single-float 0.0 1.0) 2)))
+  ((array :type (simple-array (single-float 0.0 1.0) 2)))
   (:documentation "Stencil pattern provides opacity mask."))
 
 (defun make-stencil (array)
