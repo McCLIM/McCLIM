@@ -193,10 +193,11 @@ all of FUNCTION-ARGS as APPLY arguments."
               ,(declare-ignorable-form* stream)
               ,@body))
        (declare (dynamic-extent #',continuation))
-       (invoke-with-output-recording-options
-        ,stream #',continuation
-        ,(if record-supplied-p record `(stream-recording-p ,stream))
-        ,(if draw-supplied-p draw `(stream-drawing-p ,stream))))))
+       (with-drawing-options (,stream)
+         (invoke-with-output-recording-options
+          ,stream #',continuation
+          ,(if record-supplied-p record `(stream-recording-p ,stream))
+          ,(if draw-supplied-p draw `(stream-drawing-p ,stream)))))))
 
 ;;; Macro masturbation...
 

@@ -254,6 +254,13 @@ translated, so they begin at different position than [0,0])."))
       (medium-gcontext medium +background-ink+)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink clime:indirect-ink))
+  ;; If foreground/background doesn't resolve properly it is a bug in core
+  ;; system. We could have masked it with the following code. --jd 2018-09-27
+  #+ (or)
+  (alexandria:switch (ink)
+    (+foreground-ink+ (medium-gcontext medium (medium-foreground medium)))
+    (+background-ink+ (medium-gcontext medium (medium-background medium)))
+    (otherwise (medium-gcontext medium (clime:indirect-ink-ink ink))))
   (medium-gcontext medium (clime:indirect-ink-ink ink)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink (eql +flipping-ink+)))

@@ -70,7 +70,9 @@
 	  
 (defmethod do-graphics-with-options ((sheet sheet) func &rest options)
   (with-sheet-medium (medium sheet)
-    (apply #'do-graphics-with-options-internal medium sheet func options)))
+    (let ((*foreground-ink* (medium-foreground medium))
+          (*background-ink* (medium-background medium)))
+      (apply #'do-graphics-with-options-internal medium sheet func options))))
 
 (defmethod do-graphics-with-options ((medium medium) func &rest options)
   (let ((*foreground-ink* (medium-foreground medium))
