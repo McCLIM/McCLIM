@@ -52,28 +52,26 @@
 
 (defun menu-draw-highlighted (gadget)
   (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
-    (with-special-choices (gadget)
-      (with-slots (label) gadget
-        (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
-          (let ((w (- x2 x1))
-                (h (- y2 y1)))
-            (draw-rectangle* gadget -1 -1 x2 y2
-                             :ink (gadget-highlighted-color gadget)
-                             :filled t)
-            (draw-edges-lines* gadget +white+ 0 0 +black+ (1- w) (1- h))
-            (draw-label* gadget x1 y1 x2 y2)))))))
+    (with-slots (label) gadget
+      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
+        (let ((w (- x2 x1))
+              (h (- y2 y1)))
+          (draw-rectangle* gadget -1 -1 x2 y2
+                           :ink (gadget-highlighted-color gadget)
+                           :filled t)
+          (draw-edges-lines* gadget +white+ 0 0 +black+ (1- w) (1- h))
+          (draw-label* gadget x1 y1 x2 y2))))))
 
 (defun menu-draw-unhighlighted (gadget)
   (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
-    (with-special-choices (gadget)
-      (with-slots (label) gadget
-        (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
-          (let ((w (- x2 x1))
-                (h (- y2 y1)))
-            (draw-rectangle* gadget -1 -1 w h ;-1 -1 x2 y2
-                             :ink +background-ink+
-                             :filled t)
-            (draw-label* gadget x1 y1 x2 y2)))))))
+    (with-slots (label) gadget
+      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
+        (let ((w (- x2 x1))
+              (h (- y2 y1)))
+          (draw-rectangle* gadget -1 -1 w h ;-1 -1 x2 y2
+                           :ink +background-ink+
+                           :filled t)
+          (draw-label* gadget x1 y1 x2 y2))))))
 
 (defgeneric arm-branch (pane))
 

@@ -54,7 +54,6 @@
                 #:coordinate=
                 #:get-transformation
                 ;;
-                #:invoke-with-special-choices
                 #:medium-miter-limit
                 ;; classes:
                 #:mirrored-pixmap

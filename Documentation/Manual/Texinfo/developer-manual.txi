@@ -236,9 +236,6 @@ get-selection-from-event
 @verbatim
 MISC
 ----
-;;; Originally in CLIM-INTERNALS
-invoke-with-special-choices ; not sure, seems just a funcall
-
 ;;; Originally in CLIM-EXTENSIONS
 medium-miter-limit          ; determine a draw for miter < sina/2
 @end verbatim

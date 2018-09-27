@@ -1070,19 +1070,6 @@ translated, so they begin at different position than [0,0])."))
 
 ;;;;
 
-; With-double-buffering is broken, so I remove it for now - BTS
-#+nil
-(defmethod invoke-with-special-choices (continuation (medium clx-medium))
-  (let ((sheet (medium-sheet medium)))
-    (with-double-buffering (sheet)
-      (funcall continuation (sheet-medium sheet)))))
-
-(defmethod invoke-with-special-choices (continuation (medium clx-medium))
-  (let ((sheet (medium-sheet medium)))
-    (funcall continuation (sheet-medium sheet))))
-
-;;;;
-
 (defmethod medium-miter-limit ((medium clx-medium))
   #.(* pi (/ 11 180)))
 
@@ -1100,66 +1087,3 @@ translated, so they begin at different position than [0,0])."))
             (when (typep fn 'xlib:font)
               (setf (xlib:gcontext-font gc)
                     fn))))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; xrender
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defclass clx-pane-mixin ()
-  ()
-  (:documentation "Mixin class for CLX panes. This is needed in order to specialise on CLX panes only."))
-
-(defun find-rgba-format (display)
-  (or (getf (xlib:display-plist display) 'rgba-format)
-      (let* ((formats (xlib::render-query-picture-formats display))
-             (format (find-if (lambda (v)
-                                (and (= (byte-size (xlib:picture-format-red-byte v)) 8)
-                                     (= (byte-size (xlib:picture-format-green-byte v)) 8)
-                                     (= (byte-size (xlib:picture-format-blue-byte v)) 8)
-                                     (= (byte-size (xlib:picture-format-alpha-byte v)) 8)))
-                              formats)))
-        (unless format
-          (error "Can't find 8-bit RGBA format"))
-        (setf (getf (xlib:display-plist display) 'rgba-format) format))))
-
-(defun find-alpha-mask-format (display)
-  (or (getf (xlib:display-plist display) 'alpha-mask-format)
-      (let* ((formats (xlib::render-query-picture-formats display))
-             (format (find-if (lambda (v)
-                                (and (= (byte-size (xlib:picture-format-red-byte v)) 0)
-                                     (= (byte-size (xlib:picture-format-green-byte v)) 0)
-                                     (= (byte-size (xlib:picture-format-blue-byte v)) 0)
-                                     (= (byte-size (xlib:picture-format-alpha-byte v)) 8)))
-                              formats)))
-        (unless format
-          (error "Can't find 8-bit RGBA format"))
-        (setf (getf (xlib:display-plist display) 'alpha-mask-format) format))))
-
-(defun create-picture-from-drawable (drawable)
-  (xlib:render-create-picture drawable
-                              :format (xlib:find-window-picture-format (xlib:drawable-root drawable))
-                              :poly-edge :smooth
-                              :poly-mode :precise))
-
-(defun create-dest-picture (drawable)
-  (or (getf (xlib:drawable-plist drawable) 'cached-picture)
-      (setf (getf (xlib:drawable-plist drawable) 'cached-picture)
-            (create-picture-from-drawable drawable))))
-
-(defmethod move-sheet ((sheet clx-pane-mixin) x y)
-  (let ((transform (sheet-transformation sheet)))
-    (multiple-value-bind (old-x old-y)
-        (transform-position transform 0 0)
-      (let ((dx (- x old-x))
-            (dy (- y old-y)))
-        (unless (and (zerop dx) (zerop dy))
-          (setf (sheet-transformation sheet)
-                (compose-translation-with-transformation
-                 transform (- x old-x) (- y old-y))))))))
-
-(defmethod resize-sheet :before ((sheet clx-pane-mixin) width height)
-  (with-sheet-medium (medium sheet)
-    (with-clx-graphics () medium
-      (alexandria:when-let ((p (getf (xlib:window-plist mirror) 'temp-buffer-picture)))
-        (xlib:render-free-picture p)
-        (setf (getf (xlib:window-plist mirror) 'temp-buffer-picture) nil)))))

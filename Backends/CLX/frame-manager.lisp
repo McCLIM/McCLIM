@@ -114,7 +114,7 @@
         (unless foundp
           (eval
            `(defclass ,class-symbol
-                (clx-pane-mixin mirrored-sheet-mixin
+                (mirrored-sheet-mixin
                  ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
                      '(permanent-medium-sheet-output-mixin))
                  ,concrete-pane-class-symbol)

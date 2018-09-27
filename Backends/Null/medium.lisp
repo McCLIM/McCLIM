@@ -194,10 +194,6 @@
 (defmethod medium-beep ((medium null-medium))
   nil)
 
-(defmethod invoke-with-special-choices (continuation (medium null-medium))
-  (let ((sheet (medium-sheet medium)))
-    (funcall continuation (sheet-medium sheet))))
-
 (defmethod medium-miter-limit ((medium null-medium))
   0)
 

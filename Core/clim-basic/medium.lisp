@@ -843,18 +843,3 @@
 (defmethod graft ((medium basic-medium))
   (and (medium-sheet medium)
        (graft (medium-sheet medium))))
-
-
-(defmacro with-special-choices ((medium) &body body)
-  "Macro for optimizing drawing with graphical system dependant mechanisms."
-  (with-gensyms (fn)
-    `(flet ((,fn (,medium)
-              ,(declare-ignorable-form* medium)
-              ,@body))
-       (declare (dynamic-extent #',fn))
-       (invoke-with-special-choices #',fn ,medium))))
-
-(defgeneric invoke-with-special-choices (continuation sheet))
-
-(defmethod invoke-with-special-choices (continuation (medium t))
-  (funcall continuation medium))

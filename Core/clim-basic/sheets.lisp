@@ -264,9 +264,12 @@
   (let ((transform (sheet-transformation sheet)))
     (multiple-value-bind (old-x old-y)
         (transform-position transform 0 0)
-      (setf (sheet-transformation sheet)
-            (compose-translation-with-transformation
-             transform (- x old-x) (- y old-y))))))
+      (let ((dx (- x old-x))
+            (dy (- y old-y)))
+        (unless (and (zerop dx) (zerop dy))
+          (setf (sheet-transformation sheet)
+                (compose-translation-with-transformation
+                 transform (- x old-x) (- y old-y))))))))
 
 (defmethod resize-sheet ((sheet basic-sheet) width height)
   (setf (sheet-region sheet)

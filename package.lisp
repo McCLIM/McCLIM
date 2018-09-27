@@ -1965,7 +1965,6 @@
   (:export
    ;; Originally in CLIM-INTERNALS
    #:get-next-event
-   #:invoke-with-special-choices
    #:make-graft
    #:medium-draw-circle*
    #:medium-draw-glyph

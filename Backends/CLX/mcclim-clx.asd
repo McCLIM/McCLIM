@@ -1,3 +1,4 @@
+(in-package #:asdf-user)
 
 (defsystem #:mcclim-clx
   :depends-on (#:mcclim-fonts

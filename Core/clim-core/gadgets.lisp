@@ -1220,23 +1220,22 @@ and must never be nil.")
 (defmethod handle-repaint ((pane toggle-button-pane) region)
   (declare (ignore region))
   (when (sheet-grafted-p pane)
-    (with-special-choices (pane)
-      (with-slots (armed) pane
-        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-          (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
-          (let* ((as (text-style-ascent (pane-text-style pane) pane))
-                 (ds (text-style-descent (pane-text-style pane) pane)) )
-            (multiple-value-bind (tx1 ty1 tx2 ty2)
-                (values (+ x1 (pane-x-spacing pane))
-                        (- (/ (+ y1 y2) 2) (/ (+ as ds) 2))
-                        (+ x1 (pane-x-spacing pane) (+ as ds))
-                        (+ (/ (+ y1 y2) 2) (/ (+ as ds) 2)))
-              (draw-toggle-button-indicator pane (toggle-button-indicator-type pane) (gadget-value pane)
-                                            tx1 ty1 tx2 ty2)
-              (if (gadget-active-p pane)
-                  (draw-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2
-                               :ink (effective-gadget-foreground pane))
-                  (draw-engraved-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2)))))))))
+    (with-slots (armed) pane
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+        (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
+        (let* ((as (text-style-ascent (pane-text-style pane) pane))
+               (ds (text-style-descent (pane-text-style pane) pane)) )
+          (multiple-value-bind (tx1 ty1 tx2 ty2)
+              (values (+ x1 (pane-x-spacing pane))
+                      (- (/ (+ y1 y2) 2) (/ (+ as ds) 2))
+                      (+ x1 (pane-x-spacing pane) (+ as ds))
+                      (+ (/ (+ y1 y2) 2) (/ (+ as ds) 2)))
+            (draw-toggle-button-indicator pane (toggle-button-indicator-type pane) (gadget-value pane)
+                                          tx1 ty1 tx2 ty2)
+            (if (gadget-active-p pane)
+                (draw-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2
+                             :ink (effective-gadget-foreground pane))
+                (draw-engraved-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2))))))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
@@ -1262,21 +1261,20 @@ and must never be nil.")
 (defmethod handle-repaint ((pane menu-button-pane) region)
   (declare (ignore region))
   (with-slots (x-spacing y-spacing) pane
-    (with-special-choices (pane)
-      (let ((region (sheet-region pane)))
-        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-          (draw-rectangle* pane x1 y1 x2 y2
-                           :ink (effective-gadget-background pane)
-                           :filled t)
-          (cond ((slot-value pane 'armed)
-                 (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :outset :border-width *3d-border-thickness*))
-                (t))
-          (multiple-value-bind (x1 y1 x2 y2)
-              (values (+ x1 x-spacing) (+ y1 y-spacing)
-                      (- x2 x-spacing) (- y2 y-spacing))
-            (if (gadget-active-p pane)
-                (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
-                (draw-engraved-label* pane x1 y1 x2 y2))))))))
+    (let ((region (sheet-region pane)))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+        (draw-rectangle* pane x1 y1 x2 y2
+                         :ink (effective-gadget-background pane)
+                         :filled t)
+        (cond ((slot-value pane 'armed)
+               (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :outset :border-width *3d-border-thickness*))
+              (t))
+        (multiple-value-bind (x1 y1 x2 y2)
+            (values (+ x1 x-spacing) (+ y1 y-spacing)
+                    (- x2 x-spacing) (- y2 y-spacing))
+          (if (gadget-active-p pane)
+              (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
+              (draw-engraved-label* pane x1 y1 x2 y2)))))))
 
 (defmethod compose-space ((gadget menu-button-pane) &key width height)
   (declare (ignore width height))
@@ -1735,101 +1733,99 @@ and must never be nil.")
 
 (defmethod handle-repaint ((pane slider-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
-    (let ((position (convert-value-to-position pane))
-          (slider-button-half-short-dim (ash slider-button-short-dim -1))
-          ;(slider-button-half-long-dim  (ash slider-button-long-dim -1))
-          (background-color (pane-background pane))
-          (inner-color (gadget-current-color pane)))
-      (flet ((draw-thingy (x y)
+  (let ((position (convert-value-to-position pane))
+        (slider-button-half-short-dim (ash slider-button-short-dim -1))
+                                        ;(slider-button-half-long-dim  (ash slider-button-long-dim -1))
+        (background-color (pane-background pane))
+        (inner-color (gadget-current-color pane)))
+    (flet ((draw-thingy (x y)
+             (if (gadget-active-p pane)
+                 (progn
+                   (draw-circle* pane x y 8.0 :filled t :ink inner-color)
+                   (draw-circle* pane x y 8.0 :filled nil :ink +black+)
+                   (draw-circle* pane x y 7.0
+                                 :filled nil :ink +white+
+                                 :start-angle (* 0.25 pi)
+                                 :end-angle   (* 1.25 pi))
+                   (draw-circle* pane x y 7.0
+                                 :filled nil :ink +black+
+                                 :start-angle (* 1.25 pi)
+                                 :end-angle   (* 2.25 pi)))
+                 (progn
+                   (draw-circle* pane (1+ x) (1+ y) 8.0 :filled t :ink *3d-light-color*)
+                   (draw-circle* pane x y 8.0 :filled t :ink *3d-dark-color*))))
+           (draw-value (x y)
+             (let ((text (format-value (gadget-value pane)
+                                       (slider-decimal-places pane))))
                (if (gadget-active-p pane)
+                   (draw-text* pane text x y)
                    (progn
-                     (draw-circle* pane x y 8.0 :filled t :ink inner-color)
-                     (draw-circle* pane x y 8.0 :filled nil :ink +black+)
-                     (draw-circle* pane x y 7.0
-                                   :filled nil :ink +white+
-                                   :start-angle (* 0.25 pi)
-                                   :end-angle   (* 1.25 pi))
-                     (draw-circle* pane x y 7.0
-                                   :filled nil :ink +black+
-                                   :start-angle (* 1.25 pi)
-                                   :end-angle   (* 2.25 pi)))
-                   (progn
-                     (draw-circle* pane (1+ x) (1+ y) 8.0 :filled t :ink *3d-light-color*)
-                     (draw-circle* pane x y 8.0 :filled t :ink *3d-dark-color*))))
-             (draw-value (x y)
-               (let ((text (format-value (gadget-value pane)
-                                         (slider-decimal-places pane))))
-                 (if (gadget-active-p pane)
-                     (draw-text* pane text x y)
-                     (progn
-                       (draw-text* pane text (1+ x) (1+ y)
-                                   :ink *3d-light-color*)
-                       (draw-text* pane text x y
-                                   :ink *3d-dark-color*))))))
-        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-          (display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
-          (case (gadget-orientation pane)
-            ((:vertical)
-             (let ((middle (round (- x2 x1) 2)))
-               (draw-bordered-polygon pane
-                                      (polygon-points
-                                       (make-rectangle*
-                                        (- middle 2) (+ y1 slider-button-half-short-dim)
-                                        (+ middle 2) (- y2 slider-button-half-short-dim)))
-                                      :style :inset
-                                      :border-width 2)
-               (draw-thingy middle (- position slider-button-half-short-dim))
-               (when (gadget-show-value-p pane)
-                 (draw-value
-                  (+ middle 10.0)
-                  (- y2 (* 2 slider-button-half-short-dim))))))
-            ((:horizontal)
-             (let ((middle (round (- y2 y1) 2)))
-               (draw-bordered-polygon pane
-                                      (polygon-points
-                                       (make-rectangle*
-                                        (+ x1 slider-button-half-short-dim) (- middle 2)
-                                        (- x2 slider-button-half-short-dim) (+ middle 2)))
-                                      :style :inset
-                                      :border-width 2)
-               (draw-thingy (- position slider-button-half-short-dim) middle)
-               (when (gadget-show-value-p pane)
-                 (draw-value (+ x1 (* 2 slider-button-half-short-dim))
-                             (- middle 10.0)))))))))))
+                     (draw-text* pane text (1+ x) (1+ y)
+                                 :ink *3d-light-color*)
+                     (draw-text* pane text x y
+                                 :ink *3d-dark-color*))))))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+        (display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
+        (case (gadget-orientation pane)
+          ((:vertical)
+           (let ((middle (round (- x2 x1) 2)))
+             (draw-bordered-polygon pane
+                                    (polygon-points
+                                     (make-rectangle*
+                                      (- middle 2) (+ y1 slider-button-half-short-dim)
+                                      (+ middle 2) (- y2 slider-button-half-short-dim)))
+                                    :style :inset
+                                    :border-width 2)
+             (draw-thingy middle (- position slider-button-half-short-dim))
+             (when (gadget-show-value-p pane)
+               (draw-value
+                (+ middle 10.0)
+                (- y2 (* 2 slider-button-half-short-dim))))))
+          ((:horizontal)
+           (let ((middle (round (- y2 y1) 2)))
+             (draw-bordered-polygon pane
+                                    (polygon-points
+                                     (make-rectangle*
+                                      (+ x1 slider-button-half-short-dim) (- middle 2)
+                                      (- x2 slider-button-half-short-dim) (+ middle 2)))
+                                    :style :inset
+                                    :border-width 2)
+             (draw-thingy (- position slider-button-half-short-dim) middle)
+             (when (gadget-show-value-p pane)
+               (draw-value (+ x1 (* 2 slider-button-half-short-dim))
+                           (- middle 10.0))))))))))
 
 
 #|
 (defmethod handle-repaint ((pane slider-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
-    (let ((position (convert-value-to-position pane))
-          (slider-button-half-short-dim (ash slider-button-short-dim -1))
-          (slider-button-half-long-dim (ash slider-button-long-dim -1)))
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-        (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
-        (if (eq (gadget-orientation pane) :vertical)
-            ; vertical case
-            (let ((middle (round (- x2 x1) 2)))
-              (draw-line* pane
-                          middle (+ y1 slider-button-half-short-dim)
-                          middle (- y2 slider-button-half-short-dim)
-                          :ink +black+
-              (draw-rectangle* pane
-                               (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
-                               (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim)
-                               :ink +gray85+ :filled t)
-              (draw-edges-lines* pane
-                                 +white+
-                                 (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
-                                 +black+
-                                 (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim))
-              (when (gadget-show-value-p pane)
-                (draw-text* pane (format-value (gadget-value pane)
-                                               (slider-decimal-places pane))
-                            5 ;(- middle slider-button-half-short-dim)
-                            10))) ;(- position slider-button-half-long-dim)
-            ; horizontal case
+  (let ((position (convert-value-to-position pane))
+        (slider-button-half-short-dim (ash slider-button-short-dim -1))
+        (slider-button-half-long-dim (ash slider-button-long-dim -1)))
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+      (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
+      (if (eq (gadget-orientation pane) :vertical)
+            ; vertical case             ;
+          (let ((middle (round (- x2 x1) 2)))
+            (draw-line* pane
+                        middle (+ y1 slider-button-half-short-dim)
+                        middle (- y2 slider-button-half-short-dim)
+                        :ink +black+
+                        (draw-rectangle* pane
+                                         (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
+                                         (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim)
+                                         :ink +gray85+ :filled t)
+                        (draw-edges-lines* pane
+                                           +white+
+                                           (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
+                                           +black+
+                                           (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim))
+                        (when (gadget-show-value-p pane)
+                          (draw-text* pane (format-value (gadget-value pane)
+                                                         (slider-decimal-places pane))
+                                      5 ;(- middle slider-button-half-short-dim)
+                                      10))) ;(- position slider-button-half-long-dim)
+            ; horizontal case           ;
             (let ((middle (round (- y2 y1) 2)))
               (draw-line* pane
                           (+ x1 slider-button-half-short-dim) middle
