@@ -47,7 +47,6 @@
 
 (defclass clx-medium (basic-medium)
   ((gc :initform nil)
-   (picture :initform nil)
    (last-medium-device-region :initform nil
                               :accessor last-medium-device-region)
    (clipping-region-tmp :initform (vector 0 0 0 0)
@@ -59,13 +58,6 @@
 region and its clipping pixmap. This is looked up for optimization with region-equal."
     :accessor %clipping-pixmap-cache)
    (buffer :initform nil :accessor medium-buffer)))
-
-#+CLX-EXT-RENDER
-(defun clx-medium-picture (clx-medium)
-  (with-slots (picture) clx-medium
-    (or picture
-        (let ((mirror (port-lookup-mirror (port clx-medium) (medium-sheet clx-medium))))
-          (setf picture (xlib:render-create-picture mirror))))))
 
 
 ;;; secondary methods for changing text styles and line styles
@@ -634,14 +626,15 @@ translated, so they begin at different position than [0,0])."))
                            coord-seq)
                        :fill-p filled))))
 
-(defgeneric medium-draw-rectangle-using-ink*
-    (medium ink left top right bottom filled))
+(defmethod medium-draw-rectangle* :around ((medium clx-medium) left top right bottom filled
+                                           &aux (ink (medium-ink medium)))
+  (if (clime:indirect-ink-p ink)
+      (with-drawing-options (medium :ink (clime:indirect-ink-ink ink))
+        (call-next-method))
+      (call-next-method)))
 
-(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
-  (medium-draw-rectangle-using-ink* medium (medium-ink medium)
-                                    left top right bottom filled))
-
-(defmethod medium-draw-rectangle-using-ink* ((medium clx-medium) (ink t) left top right bottom filled)
+(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled
+                                   &aux (ink (medium-ink medium)))
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
@@ -659,34 +652,6 @@ translated, so they begin at different position than [0,0])."))
                                  (max 0 (min #xFFFF (- right left)))
                                  (max 0 (min #xFFFF (- bottom top)))
                                  filled)))))))
-
-#+CLX-EXT-RENDER
-(defmethod medium-draw-rectangle-using-ink* ((medium clx-medium) (ink climi::uniform-compositum)
-                                             x1 y1 x2 y2 filled)
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (with-transformed-position (tr x1 y1)
-      (with-transformed-position (tr x2 y2)
-        (let ((x1 (round-coordinate x1))
-              (y1 (round-coordinate y1))
-              (x2 (round-coordinate x2))
-              (y2 (round-coordinate y2)))
-          (multiple-value-bind (r g b) (color-rgb (slot-value ink 'climi::ink))
-            (let ((a (opacity-value (slot-value ink 'climi::mask))))
-              ;; Hmm, XRender uses pre-multiplied alpha, how useful!
-              (setf r (min #xffff (max 0 (round (* #xffff a r))))
-                    g (min #xffff (max 0 (round (* #xffff a g))))
-                    b (min #xffff (max 0 (round (* #xffff a b))))
-                    a (min #xffff (max 0 (round (* #xffff a)))))
-              (let ((picture (clx-medium-picture medium)))
-                (xlib::%render-change-picture-clip-rectangles picture
-                                                              (clipping-region->rect-seq
-                                                               (last-medium-device-region medium)))
-                (xlib:render-fill-rectangle picture :over (list r g b a)
-                                            (max #x-8000 (min #x7FFF x1))
-                                            (max #x-8000 (min #x7FFF y1))
-                                            (max 0 (min #xFFFF (- x2 x1)))
-                                            (max 0 (min #xFFFF (- y2 y1))))))))))))
-
 
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (assert (evenp (length position-seq)))
