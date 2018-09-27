@@ -49,15 +49,9 @@
   ((gc :initform nil)
    (last-medium-device-region :initform nil
                               :accessor last-medium-device-region)
-   (clipping-region-tmp :initform (vector 0 0 0 0)
-     :documentation "This object is reused to avoid consing in the
- most common case when configuring the clipping region.")
-   (clipping-pixmap-cache
-    :initform (cons +everywhere+ nil)
-    :documentation "This object stores cons of the last non-rectangular clipping
-region and its clipping pixmap. This is looked up for optimization with region-equal."
-    :accessor %clipping-pixmap-cache)
-   (buffer :initform nil :accessor medium-buffer)))
+   ;; CLIPPING-REGION-TMP is reused to avoid consing in the most common case
+   ;; when configuring the clipping region.n
+   (clipping-region-tmp :initform (vector 0 0 0 0))))
 
 
 ;;; secondary methods for changing text styles and line styles
@@ -159,62 +153,56 @@ region and its clipping pixmap. This is looked up for optimization with region-e
          #+ (or) (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
          #- (or) (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))
       ((typep clipping-region 'standard-ellipse)
-       (let ((last-clip (%clipping-pixmap-cache medium)))
-         (if (region-equal clipping-region (car last-clip))
-             (setf (xlib:gcontext-clip-mask gc :yx-banded) (cdr last-clip))
-             (multiple-value-bind (x1 y1 width height)
-                 (region->clipping-values (bounding-rectangle clipping-region))
-               (let* ((drawable (sheet-xmirror (medium-sheet medium)))
-                      (mask (xlib:create-pixmap :drawable drawable
-                                                :depth 1
-                                                :width (+ x1 width)
-                                                :height (+ y1 height)))
-                      (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
-                 (setf (xlib:gcontext-foreground mask-gc) 0)
-                 (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
-                 (setf (xlib:gcontext-foreground mask-gc) 1)
-                 (flet ((%draw-lines (scan-line)
-                          (map-over-region-set-regions
-                           (lambda (reg)
-                             (when (linep reg)
-                               (multiple-value-bind (lx1 ly1) (line-start-point* reg)
-                                 (multiple-value-bind (lx2 ly2) (line-end-point* reg)
-                                   (xlib:draw-line mask mask-gc
-                                                   (round-coordinate lx1)
-                                                   (round-coordinate ly1)
-                                                   (round-coordinate lx2)
-                                                   (round-coordinate ly2))))))
-                           scan-line)))
-                   (if (<= width height)
-                       (loop for x from x1 to (+ x1 width) do
-                            (%draw-lines (region-intersection
-                                          clipping-region
-                                          (make-line* x y1 x (+ y1 height)))))
-                       (loop for y from y1 to (+ y1 height) do
-                            (%draw-lines (region-intersection
-                                          clipping-region
-                                          (make-line* x1 y (+ x1 width) y))))))
-                 (setf (xlib:gcontext-clip-mask gc :yx-banded) mask))))))
-      (t
-       (let ((last-clip (%clipping-pixmap-cache medium)))
-         (if (region-equal clipping-region (car last-clip))
-             (setf (xlib:gcontext-clip-mask gc :yx-banded) (cdr last-clip))
-             (multiple-value-bind (x1 y1 width height)
-                 (region->clipping-values (bounding-rectangle clipping-region))
-               (let* ((drawable (sheet-xmirror (medium-sheet medium)))
-                      (mask (xlib:create-pixmap :drawable drawable
-                                                :depth 1
-                                                :width (+ x1 width)
-                                                :height (+ y1 height)))
-                      (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
-                 (setf (xlib:gcontext-foreground mask-gc) 0)
-                 (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
-                 (setf (xlib:gcontext-foreground mask-gc) 1)
+       (multiple-value-bind (x1 y1 width height)
+           (region->clipping-values (bounding-rectangle clipping-region))
+         (let* ((drawable (sheet-xmirror (medium-sheet medium)))
+                (mask (xlib:create-pixmap :drawable drawable
+                                          :depth 1
+                                          :width (+ x1 width)
+                                          :height (+ y1 height)))
+                (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
+           (setf (xlib:gcontext-foreground mask-gc) 0)
+           (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
+           (setf (xlib:gcontext-foreground mask-gc) 1)
+           (flet ((%draw-lines (scan-line)
+                    (map-over-region-set-regions
+                     (lambda (reg)
+                       (when (linep reg)
+                         (multiple-value-bind (lx1 ly1) (line-start-point* reg)
+                           (multiple-value-bind (lx2 ly2) (line-end-point* reg)
+                             (xlib:draw-line mask mask-gc
+                                             (round-coordinate lx1)
+                                             (round-coordinate ly1)
+                                             (round-coordinate lx2)
+                                             (round-coordinate ly2))))))
+                     scan-line)))
+             (if (<= width height)
                  (loop for x from x1 to (+ x1 width) do
-                      (loop for y from y1 to (+ y1 height) do
-                           (when (region-contains-position-p clipping-region x y)
-                             (xlib:draw-point mask mask-gc x y))))
-                 (setf (xlib:gcontext-clip-mask gc :yx-banded) mask)))))))))
+                      (%draw-lines (region-intersection
+                                    clipping-region
+                                    (make-line* x y1 x (+ y1 height)))))
+                 (loop for y from y1 to (+ y1 height) do
+                      (%draw-lines (region-intersection
+                                    clipping-region
+                                    (make-line* x1 y (+ x1 width) y))))))
+           (setf (xlib:gcontext-clip-mask gc :yx-banded) mask))))
+      (t
+       (multiple-value-bind (x1 y1 width height)
+           (region->clipping-values (bounding-rectangle clipping-region))
+         (let* ((drawable (sheet-xmirror (medium-sheet medium)))
+                (mask (xlib:create-pixmap :drawable drawable
+                                          :depth 1
+                                          :width (+ x1 width)
+                                          :height (+ y1 height)))
+                (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
+           (setf (xlib:gcontext-foreground mask-gc) 0)
+           (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
+           (setf (xlib:gcontext-foreground mask-gc) 1)
+           (loop for x from x1 to (+ x1 width) do
+                (loop for y from y1 to (+ y1 height) do
+                     (when (region-contains-position-p clipping-region x y)
+                       (xlib:draw-point mask mask-gc x y))))
+           (setf (xlib:gcontext-clip-mask gc :yx-banded) mask)))))))
 
 
 (defgeneric medium-gcontext (medium ink)
@@ -482,8 +470,7 @@ translated, so they begin at different position than [0,0])."))
                           (medium-gcontext from-drawable +background-ink+)
                           (round-coordinate from-x) (round-coordinate from-y)
                           (round width) (round height)
-                          (or (medium-buffer to-drawable)
-                              (sheet-xmirror (medium-sheet to-drawable)))
+                          (sheet-xmirror (medium-sheet to-drawable))
                           (round-coordinate to-x) (round-coordinate to-y)))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
@@ -508,7 +495,7 @@ translated, so they begin at different position than [0,0])."))
                     (medium-gcontext to-drawable +background-ink+)
                     (round-coordinate from-x) (round-coordinate from-y)
                     (round width) (round height)
-                    (or (medium-buffer to-drawable) (sheet-xmirror (medium-sheet to-drawable)))
+                    (sheet-xmirror (medium-sheet to-drawable))
                     (round-coordinate to-x) (round-coordinate to-y))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
@@ -1056,9 +1043,8 @@ translated, so they begin at different position than [0,0])."))
               (min-y (round-coordinate (min top bottom)))
               (max-x (round-coordinate (max left right)))
               (max-y (round-coordinate (max top bottom))))
-          (xlib:draw-rectangle (or (medium-buffer medium)
-                                   (port-lookup-mirror (port medium)
-                                                       (medium-sheet medium)))
+          (xlib:draw-rectangle (port-lookup-mirror (port medium)
+                                                   (medium-sheet medium))
                                (medium-gcontext medium (medium-background medium))
                                (max #x-8000 (min #x7fff min-x))
                                (max #x-8000 (min #x7fff min-y))
