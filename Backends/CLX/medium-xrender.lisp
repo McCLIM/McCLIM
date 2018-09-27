@@ -10,10 +10,18 @@
 
 (defun clx-render-medium-picture (medium)
   (with-slots (picture) medium
-    (or picture
-        (let* ((mirror (port-lookup-mirror (port medium) (medium-sheet medium)))
-               (format (xlib:find-window-picture-format (xlib:drawable-root mirror))))
-          (setf picture (xlib:render-create-picture mirror :format format))))))
+    (alexandria:when-let* ((mirror (port-lookup-mirror (port medium) (medium-sheet medium)))
+                           (format (xlib:find-window-picture-format (xlib:drawable-root mirror))))
+      (cond
+        ((null picture)
+         (setf picture (xlib:render-create-picture mirror :format format)))
+        ;; We need this comparison to mitigate a rogue mirror swaps with a
+        ;; pixmap, i.e in WITH-TEMP-MIRROR%%% for double buffering.
+        ((eq mirror (xlib:picture-drawable picture))
+         picture)
+        (T ;; mirror has been swapped!
+         (xlib:render-free-picture picture)
+         (setf picture (xlib:render-create-picture mirror :format format)))))))
 
 
 (defmethod clim:medium-copy-area ((from-drawable clx-render-medium) from-x from-y
@@ -65,7 +73,9 @@
                   g (min #xffff (max 0 (round (* #xffff a g))))
                   b (min #xffff (max 0 (round (* #xffff a b))))
                   a (min #xffff (max 0 (round (* #xffff a)))))
-            (let ((picture (clx-render-medium-picture medium)))
+            ;; If there is no picture that means that sheet does not have a
+            ;; registered mirror. Happens with DREI panes during the startup..
+            (alexandria:when-let ((picture (clx-render-medium-picture medium)))
               (setf (xlib:picture-clip-mask picture) (clipping-region->rect-seq
                                                       (or (last-medium-device-region medium)
                                                           (medium-device-region medium))))
