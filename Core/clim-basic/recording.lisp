@@ -1128,10 +1128,9 @@ were added."
                 ;; the output-record's position and making a temporary is
                 ;; (arguably) less bad than untrasnforming the coords back to
                 ;; how they were.
-                ,(if (member 'coord-seq args)
-                     `(let ((coord-seq (copy-seq coord-seq)))
-                        #1=(make-instance ',class-name :stream stream ,@arg-list))
-                     `#1#)))
+                (let (,@(when (member 'coord-seq args)
+                          `((coord-seq (copy-seq coord-seq)))))
+                  (make-instance ',class-name :stream stream ,@arg-list))))
            (stream-add-output-record stream record)))
        (when (stream-drawing-p stream)
          (call-next-method)))))
