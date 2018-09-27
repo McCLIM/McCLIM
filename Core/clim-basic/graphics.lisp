@@ -1028,7 +1028,7 @@ position for the character."
 			&key clipping-region transformation &allow-other-keys)
   (if (or clipping-region transformation)
       (with-drawing-options (medium :clipping-region clipping-region :transformation transformation)
-        #1=(let* ((effective-pattern (effective-transformed-pattern pattern))
+        #1=(let* ((effective-pattern (effective-transformed-design pattern))
                   (pattern-tr (transformed-design-transformation effective-pattern))
                   (pattern-ds (transformed-design-design effective-pattern))
                   (ink-tr (compose-transformations (medium-transformation medium) pattern-tr))
@@ -1056,7 +1056,7 @@ position for the character."
           #1=(with-bounding-rectangle* (x1 y1 x2 y2)
                  (transform-region (medium-transformation medium) region)
                (declare (ignore x2 y2))
-               (let* ((effective-pattern (effective-transformed-pattern pattern))
+               (let* ((effective-pattern (effective-transformed-design pattern))
                       (pattern-tr (compose-transformations
                                    (make-translation-transformation x1 y1)
                                    (transformed-design-transformation effective-pattern)))

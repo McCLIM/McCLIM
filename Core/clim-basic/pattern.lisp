@@ -19,14 +19,6 @@
 ;;;      Represents a pattern which was transformed. May be recursive - pattern
 ;;;      which is transformed may be another transformed-pattern.
 ;;;
-;;;   EFFECTIVE-TRANSFORMED-PATTERN                                   [function]
-;;;
-;;;      Returns a transformed pattern with all transformations collapset into a
-;;;      single transformation and a design being the source pattern. If
-;;;      resulting transformation is an identity returns source pattern
-;;;      itself. If function is called with a pattern which is not transformed
-;;;      that pattern is returned.
-;;;
 ;;;   RECTANGULAR-TILE-DESIGN tile                                      [method]
 ;;;
 ;;;      Returns a design used in the rectangular tile.
@@ -64,7 +56,7 @@
 ;;;
 ;;;      Takes an arbitrary pattern and returns a %RGBA-PATTERN.
 ;;;
-;;; Note: rectangular-tile is (an "infinite") pattern which has a special
+;;; Note: rectangular-tile is an "infinite" pattern which has a special
 ;;; treatment for drawing. That is a consequence of wording in 14.2: "To create
 ;;; an infinite pattern, apply make-rectangular-tile to a pattern".
 ;;;
@@ -345,35 +337,9 @@ Returns a pattern representing this file."
 
 (defclass transformed-pattern (transformed-design pattern) ())
 
-;;; This may be cached in a transformed-pattern slot. Same applies to a region
-;;; of the pattern. -- jd 2018-09-10
-(defun effective-transformed-pattern (pattern &aux source-pattern)
-  "Merges all transformations along the way and returns a shallow, transformed
-pattern. If pattern is not transformed (or effective transformation is an
-identity-transformation) then source pattern is returned."
-  (labels ((effective-transformation (p)
-             (let* ((pattern* (transformed-design-design p))
-                    (transformation (transformed-design-transformation p)))
-               (typecase pattern*
-                 (transformed-design
-                  (compose-transformations transformation
-                                           (effective-transformation pattern*)))
-                 (otherwise
-                  (setf source-pattern pattern*)
-                  transformation)))))
-    (typecase pattern
-      (transformed-design
-       (if (identity-transformation-p (transformed-design-transformation pattern))
-           (effective-transformed-pattern (transformed-design-design pattern))
-           (make-instance 'transformed-pattern
-                          ;; Argument order matters: EFFECTIVE-TRANSFORMATION
-                          ;; sets SOURCE-PATTERN.
-                          :transformation (effective-transformation pattern)
-                          :design source-pattern)))
-      (otherwise pattern))))
-
+;;; This may be cached in a transformed-pattern slot. -- jd 2018-09-24
 (defmethod bounding-rectangle* ((pattern transformed-pattern))
-  (let* ((pattern* (effective-transformed-pattern pattern))
+  (let* ((pattern* (effective-transformed-design pattern))
          (source-pattern (transformed-design-design pattern*))
          (transformation (transformed-design-transformation pattern*))
          (width (pattern-width source-pattern))
@@ -383,7 +349,7 @@ identity-transformation) then source pattern is returned."
 
 (defmethod pattern-width ((pattern transformed-pattern)
                           &aux
-                            (pattern (effective-transformed-pattern pattern))
+                            (pattern (effective-transformed-design pattern))
                             (pattern* (transformed-design-design pattern))
                             (transformation (transformed-design-transformation pattern))
                             (width (pattern-width pattern*))
@@ -393,7 +359,7 @@ identity-transformation) then source pattern is returned."
 
 (defmethod pattern-height ((pattern transformed-pattern)
                            &aux
-                             (pattern (effective-transformed-pattern pattern))
+                             (pattern (effective-transformed-design pattern))
                              (pattern* (transformed-design-design pattern))
                              (transformation (transformed-design-transformation pattern))
                              (width (pattern-width pattern*))
@@ -411,7 +377,7 @@ identity-transformation) then source pattern is returned."
         (make-instance 'transformed-pattern :design design :transformation transformation))))
 
 (defmethod design-ink ((design transformed-design) x y)
-  (let* ((effective-pattern (effective-transformed-pattern design))
+  (let* ((effective-pattern (effective-transformed-design design))
          (source-pattern (transformed-design-design effective-pattern))
          (transformation (transformed-design-transformation effective-pattern))
          (inv-tr (invert-transformation transformation)))

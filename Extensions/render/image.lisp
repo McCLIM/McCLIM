@@ -146,10 +146,10 @@
       (let ((alpha (if (null stencil)
                        #xff
                        (ldb (byte 8 0)
-                            (climi::%rgba-value (climi::design-ink stencil
-                                                                   (+ stencil-dx i)
-                                                                   (+ stencil-dy j))))))
-            (ink (climi::design-ink design src-i src-j)))
+                            (climi::%rgba-value (clime:design-ink stencil
+                                                                  (+ stencil-dx i)
+                                                                  (+ stencil-dy j))))))
+            (ink (clime:design-ink design src-i src-j)))
         (if (typep ink 'standard-flipping-ink)
             (let-rgba ((r.fg g.fg b.fg a.fg) (let ((d1 (slot-value ink 'climi::design1))
                                                    (d2 (slot-value ink 'climi::design2)))

@@ -1879,7 +1879,11 @@
    #:never-repaint-background-mixin
 
    #:line-style-effective-thickness
+   ;; medium
    #:medium-miter-limit
+   #:medium-draw-glyph
+   #:medium-draw-circle*
+   ;; panes
    #:raised-pane #:raising
    #:lowered-pane #:lowering
    #:viewport-pane
@@ -1908,7 +1912,19 @@
    #:highlight-output-record-tree
    #:cut-and-paste-mixin
    #:mouse-wheel-scroll-mixin
-   ;; designs
+   ;; designs and patterns
+   #:pattern
+   #:image-pattern
+   #:rectangular-tile
+   #:transformed-design
+   #:transformed-pattern
+   #:effective-transformed-design
+   #:rectangular-tile-design
+   ;; readers
+   #:pattern-array
+   #:transformed-design-design
+   #:transformed-design-transformation
+   ;; inks
    #:indirect-ink
    #:indirect-ink-p
    #:indirect-ink-ink
@@ -1934,7 +1950,6 @@
 
    #:find-frame-type
    ;; images
-   #:image-pattern
    #:rgb-image
    #:xpm-parse-file
    #:*xpm-x11-colors*))
@@ -2024,7 +2039,9 @@
    #:send-selection
    #:get-selection-from-event
    ;; CLIM-EXTENSIONS
-   #:medium-miter-limit))
+   #:medium-miter-limit
+   #:medium-draw-glyph
+   #:medium-draw-circle*))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)

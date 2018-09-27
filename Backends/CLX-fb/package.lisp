@@ -68,7 +68,6 @@
 		 #:clx-medium
 		 #:initialize-clx
 		#:design-gcontext
-		#:medium-draw-rectangle-using-ink*
 		#:REGION->CLIPPING-VALUES
 		#:ROUND-COORDINATE
 		#:with-clx-graphics

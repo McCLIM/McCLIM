@@ -283,7 +283,7 @@ translated, so they begin at different position than [0,0])."))
     (setf (xlib:gcontext-background gc) flipper)
     gc))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink climi::pattern))
+(defmethod medium-gcontext ((medium clx-medium) (ink clime:pattern))
   (multiple-value-bind (mx my)
       ;; For unmirrored sheet we need to apply the native transformation.
       ;; May be it is the wrong place to do it.
@@ -297,8 +297,8 @@ translated, so they begin at different position than [0,0])."))
       (incf (xlib:gcontext-clip-y gc) gc-y)
       gc)))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink climi::transformed-design)
-                            &aux (ink (climi::effective-transformed-pattern ink)))
+(defmethod medium-gcontext ((medium clx-medium) (ink clime:transformed-design)
+                            &aux (ink (clime:effective-transformed-design ink)))
   (with-bounding-rectangle* (x1 y1 x2 y2) ink
     (declare (ignore x2 y2))
     (with-transformed-position ((sheet-native-transformation (medium-sheet medium)) x1 y1)
@@ -372,13 +372,13 @@ translated, so they begin at different position than [0,0])."))
       (push #'(lambda () (xlib:free-pixmap pm)) ^cleanup)
       pm)))
 
-(defmethod design-gcontext ((medium clx-medium) (ink climi::pattern)
+(defmethod design-gcontext ((medium clx-medium) (ink clime:pattern)
                             &aux (ink* (climi::transformed-design-design
-                                        (climi::effective-transformed-pattern ink))))
+                                        (clime:effective-transformed-design ink))))
   (let* ((drawable (sheet-xmirror (medium-sheet medium)))
          (rgba-pattern (climi::%collapse-pattern ink))
          (pm (compute-rgb-image drawable rgba-pattern))
-         (mask (if (typep ink* 'climi::rectangular-tile)
+         (mask (if (typep ink* 'clime:rectangular-tile)
                    nil
                    (compute-rgb-mask drawable rgba-pattern))))
     (let ((gc (xlib:create-gcontext :drawable drawable)))

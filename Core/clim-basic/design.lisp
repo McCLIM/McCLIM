@@ -72,11 +72,52 @@
 ;;; --GB
 
 ;;;; Design Protocol
-
 ;;;
 ;;; DRAW-DESIGN already is all you need for a design protocol.
 ;;;
 ;;; --GB
+;;;
+;;;
+
+;;;
+;;;   EFFECTIVE-TRANSFORMED-DESIGN design                             [function]
+;;;
+;;;      Returns a transformed design with all transformations collapset into a
+;;;      single transformation and a design being the source pattern. If
+;;;      resulting transformation is an identity returns source pattern
+;;;      itself. If function is called with a pattern which is not transformed
+;;;      that pattern is returned.
+;;;
+;;;
+;;;   DESIGN-INK design x y                                           [method]
+;;;
+;;;      Returns ink at position X, Y. If DESIGN is uniform then it is
+;;;      returned. If DESIGN is not defined for the specified coordinates (i.e
+;;;      for array pattern they are out of bounds), +TRANSPARENT-INK+ is
+;;;      returned.
+;;;
+;;;
+;;;   COLOR-RGBA design                                               [method]
+;;;
+;;;      Like COLOR-RGB but works also on UNIFORM-COMPOSITUM and OPACITY.
+;;;      Returns four values: red, green, blue and opacity. Each is a float
+;;;      between 0.0 and 1.0.
+;;;
+;;;
+;;;   INDIRECT-INK                                                    [class]
+;;;   INDIRECT-INK-P ink                                              [predicate]
+;;;   INDIRECT-INK-INK ink                                            [function]
+;;;
+;;;      Indirect inks are underspecified in the standard. Class is exported for
+;;;      specialization. Predicate INDIRECT-INK-P is defined. Initargs:
+;;;
+;;;      SYMBOL is dynamically read with SYMBOL-VALUE when function
+;;;       INDIRECT-INK-INK is called. It should be bound to an ink. This is
+;;;       internal interface. There is no guarantee for infinite recursion
+;;;       protection, so if dynamic variable is bound to ink referring results
+;;;       are not specified.
+;;;
+;;;      DEFAULT ink used if symbol is not bound.
 
 (in-package :clim-internals)
 
@@ -424,6 +465,33 @@
    (design
     :initarg :design
     :reader transformed-design-design)))
+
+;;; This may be cached in a transformed-design slot. -- jd 2018-09-24
+(defun effective-transformed-design (design &aux source-design)
+  "Merges all transformations along the way and returns a shallow, transformed
+desgin. If design is not transformed (or effective transformation is an
+identity-transformation) then source design is returned."
+  (check-type design design)
+  (labels ((effective-transformation (p)
+             (let* ((design* (transformed-design-design p))
+                    (transformation (transformed-design-transformation p)))
+               (typecase design*
+                 (transformed-design
+                  (compose-transformations transformation
+                                           (effective-transformation design*)))
+                 (otherwise
+                  (setf source-design design*)
+                  transformation)))))
+    (typecase design
+      (transformed-design
+       (if (identity-transformation-p (transformed-design-transformation design))
+           (effective-transformed-design (transformed-design-design design))
+           (make-instance (type-of design)
+                          ;; Argument order matters: EFFECTIVE-TRANSFORMATION
+                          ;; sets SOURCE-DESIGN.
+                          :transformation (effective-transformation design)
+                          :design source-design)))
+      (otherwise design))))
 
 (defmethod transform-region :around (transformation (design design))
   (if (or (identity-transformation-p transformation)
