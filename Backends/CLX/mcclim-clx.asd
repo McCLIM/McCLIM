@@ -34,7 +34,8 @@
   :components
   ((:file "bidi" :depends-on ())
    (:file "fonts" :depends-on ("bidi"))
-   (:file "medium" :depends-on ("fonts"))))
+   (:file "medium" :depends-on ("fonts"))
+   (:file "medium-xrender" :depends-on ("medium"))))
 
 (defsystem #:mcclim-clx/text-selection
   :depends-on (#:mcclim-clx/input)
