@@ -81,10 +81,10 @@
 
 (defun ellipse-val (cx cy a b theta eta)
   (values
-   (+ cx 
+   (+ cx
       (* a (cos theta) (cos eta))
       (* (- b) (sin theta) (sin eta)))
-   (+ cy 
+   (+ cy
       (* a (sin theta) (cos eta))
       (* b (cos theta) (sin eta)))))
 
@@ -138,7 +138,7 @@ through two control points."
            (approximate-arc path cx cy a b theta eta1 etamid err)
            (approximate-arc path cx cy a b theta etamid eta2 err)))
         (t (if (> err (bezier-error a b eta1 eta2))
-	       (approximate-arc-single path cx cy a b theta eta1 eta2)
+               (approximate-arc-single path cx cy a b theta eta1 eta2)
                (let ((etamid (/ (+ eta1 eta2) 2)))
                  (approximate-arc path cx cy a b theta eta1 etamid err)
                  (approximate-arc path cx cy a b theta etamid eta2 err))))))
@@ -148,9 +148,9 @@ through two control points."
   "Approximate an elliptical arc with a cubic bezier spline into the path."
   (if (> b a)
       (approximate-arc path cx cy b a
-			    (+ theta (/ pi 2))
-			    (- eta1 (/ pi 2))
-			    (- eta2 (/ pi 2)) err)
+                            (+ theta (/ pi 2))
+                            (- eta1 (/ pi 2))
+                            (- eta2 (/ pi 2)) err)
       (approximate-arc path cx cy a b theta eta1 eta2 err)))
 
 (defun arc (cx cy r theta1 theta2)
@@ -163,8 +163,8 @@ through two control points."
 
 (defun ellipse-arc (cx cy rx ry theta lambda1 lambda2)
   (let ((eta1 (atan (/ (sin lambda1) ry) (/ (cos lambda1) rx)))
-	(eta2 (atan (/ (sin lambda2) ry) (/ (cos lambda2) rx)))
-	(2pi (* 2 pi)))
+        (eta2 (atan (/ (sin lambda2) ry) (/ (cos lambda2) rx)))
+        (2pi (* 2 pi)))
     ;; make sure we have eta1 <= eta2 <= eta1 + 2 PI
     (decf eta2 (* 2pi (floor (- eta2 eta1) 2pi)))
 
@@ -175,6 +175,6 @@ through two control points."
 
     (let ((path (paths:create-path :open-polyline)))
       (multiple-value-bind (startx starty) (ellipse-val cx cy rx ry theta eta1)
-	(paths:path-reset path (paths:make-point startx starty))
-	(approximate-elliptical-arc path cx cy rx ry theta eta1 eta2)
-	path))))
+        (paths:path-reset path (paths:make-point startx starty))
+        (approximate-elliptical-arc path cx cy rx ry theta eta1 eta2)
+        path))))

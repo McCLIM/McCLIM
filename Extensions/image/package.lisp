@@ -16,7 +16,6 @@
                 #:opticl-read-pnm-file
                 #:opticl-read-ppm-file
                 #:opticl-read-tiff-file
-                #:medium-draw-pattern*
                 #:def-grecording
                 #:defrecord-predicate
                 #:output-record-position
@@ -24,12 +23,10 @@
                 #:coordinate=
                 #:if-supplied
                 #:record
-                #:with-standard-rectangle*
-                )
+                #:with-standard-rectangle*)
   (:export
    #:image
    #:rgb-image
-   #:rgb-pattern
    #:image-width
    #:image-height
    #:image-data

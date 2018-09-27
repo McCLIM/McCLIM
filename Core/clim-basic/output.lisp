@@ -137,9 +137,3 @@
                   (funcall continuation new-medium))
              (setf (%sheet-medium sheet) old-medium)
              (degraft-medium new-medium (port sheet) sheet) )))))
-
-(defmethod invoke-with-special-choices
-    (continuation (sheet sheet-with-medium-mixin))
-  (with-sheet-medium (medium sheet)
-    (with-special-choices (medium)
-      (funcall continuation sheet))))

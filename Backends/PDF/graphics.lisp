@@ -170,12 +170,12 @@
 (defmethod medium-draw-text* ((medium pdf-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs
-                              transformation)
+                              toward-x toward-y transform-glyphs)
   (pdf:with-saved-state
     (pdf:in-text-mode
       (pdf-actualize-graphics-state medium :text-style :color)
-      (let ((tr (sheet-native-transformation (medium-sheet medium))))
+      (let ((sheet-transformation (sheet-native-transformation (medium-sheet medium)))
+            (medium-transformation (medium-transformation medium)))
         (multiple-value-bind (total-width total-height
                                           final-x final-y baseline)
             (let* ((font-name (medium-font medium))
@@ -195,13 +195,11 @@
                       (:bottom (- y (- total-height baseline))))))
             (multiple-value-bind (mxx mxy myx myy tx ty)
                 (climi::get-transformation
-                 (clim:compose-transformations
-                  tr
-                  transformation))
+                 (clim:compose-transformations sheet-transformation
+                                               medium-transformation))
               (pdf:set-transform-matrix mxx mxy myx myy tx ty))
             (pdf:set-text-matrix 1 0 0 -1 x y)
             (pdf:draw-text string)))))))
-
 
 ;;; Postscript path functions
 
@@ -323,11 +321,15 @@
 ;;; Color
 (defgeneric medium-color-rgb (medium ink))
 
-(defmethod medium-color-rgb (medium (ink (eql +foreground-ink+)))
-  (medium-color-rgb medium (medium-foreground medium)))
-
-(defmethod medium-color-rgb (medium (ink (eql +background-ink+)))
-  (medium-color-rgb medium (medium-background medium)))
+(defmethod medium-color-rgb (medium (ink clime:indirect-ink))
+  ;; If foreground/background doesn't resolve properly it is a bug in core
+  ;; system. We could have masked it with the following code. --jd 2018-09-27
+  #+ (or)
+  (alexandria:switch (ink)
+    (+foreground-ink+ (medium-color-rgb (medium-foreground medium)))
+    (+background-ink+ (medium-color-rgb (medium-background medium)))
+    (otherwise (medium-color-rgb (clime:indirect-ink-ink ink))))
+  (medium-color-rgb (clime:indirect-ink-ink ink)))
 
 (defmethod medium-color-rgb (medium (ink color))
   (declare (ignore medium))

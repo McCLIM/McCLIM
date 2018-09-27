@@ -359,11 +359,15 @@ setmatrix")
 ;;; Color
 (defgeneric medium-color-rgb (medium ink))
 
-(defmethod medium-color-rgb (medium (ink (eql +foreground-ink+)))
-  (medium-color-rgb medium (medium-foreground medium)))
-
-(defmethod medium-color-rgb (medium (ink (eql +background-ink+)))
-  (medium-color-rgb medium (medium-background medium)))
+(defmethod medium-color-rgb (medium (ink clime:indirect-ink))
+  ;; If foreground/background doesn't resolve properly it is a bug in core
+  ;; system. We could have masked it with the following code. --jd 2018-09-27
+  #+ (or)
+  (alexandria:switch (ink)
+    (+foreground-ink+ (medium-color-rgb (medium-foreground medium)))
+    (+background-ink+ (medium-color-rgb (medium-background medium)))
+    (otherwise (medium-color-rgb (clime:indirect-ink-ink ink))))
+  (medium-color-rgb (clime:indirect-ink-ink ink)))
 
 (defmethod medium-color-rgb (medium (ink color))
   (declare (ignore medium))
@@ -571,12 +575,12 @@ setmatrix")
 (defmethod medium-draw-text* ((medium postscript-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs
-                              transformation)
+                              toward-x toward-y transform-glyphs)
   (setq string (if (characterp string)
                    (make-string 1 :initial-element string)
                    (subseq string start end)))
-  (let* ((sheet-transformation (sheet-native-transformation (medium-sheet medium))))
+  (let ((sheet-transformation (sheet-native-transformation (medium-sheet medium)))
+        (medium-transformation (medium-transformation medium)))
     (let ((file-stream (postscript-medium-file-stream medium)))
       (postscript-actualize-graphics-state file-stream medium :color :text-style)
       (with-graphics-state ((medium-sheet medium))
@@ -600,12 +604,10 @@ setmatrix")
             (multiple-value-bind (mxx mxy myx myy tx ty)
                 (climi::get-transformation (clim:compose-transformations
                                             sheet-transformation
-                                            transformation))
+                                            medium-transformation))
               (format file-stream "[~,3F ~,3F ~,3F ~,3F ~,3F ~,3F] concat~%"
                       mxx mxy myx myy tx ty))
             (moveto* file-stream x y)
             (format file-stream "[~,3F ~,3F ~,3F ~,3F ~,3F ~,3F] concat~%"
                     1 0 0 -1 0 0)
             (format file-stream "(~A) show~%" (postscript-escape-string string))))))))
-
-

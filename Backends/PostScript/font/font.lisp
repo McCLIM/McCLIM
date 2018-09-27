@@ -258,6 +258,8 @@
                                 (* scale descent)))))))))))
 
 (defun psfont-text-extents (metrics-key string &key (start 0) (end (length string)))
+  (unless (< start (length string))
+    (psfont-text-extents metrics-key ""))
   (let* ((font-info (or (gethash metrics-key *font-metrics*)
 			(error "Unknown font ~S." metrics-key)))
 	 (char-metrics (font-info-char-infos font-info))

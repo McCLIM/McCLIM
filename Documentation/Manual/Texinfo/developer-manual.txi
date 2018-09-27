@@ -4,7 +4,6 @@
 @menu
 * Writing backends::
 * PostScript Backend::
-* Raster Image backend::
 @end menu
 
 @node Writing backends
@@ -237,9 +236,6 @@ get-selection-from-event
 @verbatim
 MISC
 ----
-;;; Originally in CLIM-INTERNALS
-invoke-with-special-choices ; not sure, seems just a funcall
-
 ;;; Originally in CLIM-EXTENSIONS
 medium-miter-limit          ; determine a draw for miter < sina/2
 @end verbatim
@@ -282,64 +278,3 @@ Package @cl{clim-postscript} exports the following functions:
 @end deffn
 
 Loads a description of a font from the specified AFM file.
-
-@node Raster Image backend
-@section Raster Image backend
-
-Raster image backend includes a medium that implements:
-@itemize @bullet
-@item CLIM's medium protocol,
-@item CLIM's output stream protocol, and
-@item CLIM's Pixmap protocol.
-@end itemize
-
-Package @code{mcclim-raster-image} exports the following macros:
-
-@anchor{Macro mcclim-render:with-output-to-raster-image-stream}
-@deffn {Macro} {mcclim-render:with-output-to-raster-image-stream} (stream-var file-stream format &rest options) &body body
-@findex mcclim-render:with-output-to-raster-image-stream
-@end deffn
-
-@anchor{Macro mcclim-render:with-output-to-rgb-pattern}
-@deffn {Macro} {mcclim-render:with-output-to-rgb-pattern} (stream-var image &rest options) &body body
-@findex mcclim-render:with-output-to-rgb-pattern
-@end deffn
-
-Within @code{body}, @code{stream-var} is bound to a stream that produces
-a raster image.  This stream is suitable as a stream or medium argument
-to any CLIM output utility, such as @code{draw-line*} or
-@code{write-string}.
-
-The value of @code{options} is a list consisting of alternating keyword and value
-pairs.  These are the supported keywords:
-@itemize @bullet
-@item
-  @code{:width} --- specifies the width of the image. Its default value is 1000.
-@item
-  @code{:height} --- specifies the height of the image. Its default value is 1000.
-@end itemize
-
-@defmac {mcclim-render:with-output-to-raster-image-stream}
-
-An image describing the output to the @code{stream-var} stream will be
-written to the stream @code{file-stream} using the format
-@code{format}. @code{format} is a symbol that names the type of the
-image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
-@code{tiff}, @code{tif}, @code{gif}, @code{pbm}, @code{pgm}, and
-@code{ppm}. Its default value is @code{:png}.
-@end defmac
-
-@defmac {mcclim-render:with-output-to-rgb-pattern}
-
-An image describing the output to the @code{stream-var} stream will be
-returned as an rgb-pattern (of class @code{climi::rgb-pattern}).
-@end defmac
-
---
-To run an example:
-
-@lisp
-(ql:quickload :clim-examples)
-(load "Examples/drawing-tests")
-(clim-demo::run-drawing-tests)
-@end lisp

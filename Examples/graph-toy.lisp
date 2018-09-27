@@ -100,17 +100,16 @@
 (defclass refresh-event (window-manager-event) ())
 
 (defmethod handle-event ((frame graph-toy) (event new-value-event))
-  (with-application-frame (frame)
-    (vector-push-extend (val event) (val-array frame))
-    (let ((val-array-len (length (val-array frame)))
-          (xval-count (max-xvals frame)))
-      (when (>= val-array-len (* xval-count 2))
-        (loop
-           for i from 0 to (- xval-count 1)
-           for j from (- val-array-len xval-count)
-           do (setf (elt (val-array frame) i) (elt (val-array frame) j)))
-        (setf (fill-pointer (val-array frame)) xval-count))
-      (redisplay-frame-pane frame 'main-display))))
+  (vector-push-extend (val event) (val-array frame))
+  (let ((val-array-len (length (val-array frame)))
+        (xval-count (max-xvals frame)))
+    (when (>= val-array-len (* xval-count 2))
+      (loop
+         for i from 0 to (- xval-count 1)
+         for j from (- val-array-len xval-count)
+         do (setf (elt (val-array frame) i) (elt (val-array frame) j)))
+      (setf (fill-pointer (val-array frame)) xval-count))
+    (redisplay-frame-pane frame 'main-display)))
 
 (defmethod handle-event ((frame graph-toy) (event refresh-event))
   (with-application-frame (frame)

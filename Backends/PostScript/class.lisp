@@ -55,8 +55,9 @@
 
 (defclass postscript-stream 
     (basic-sheet
-     sheet-leaf-mixin sheet-mute-input-mixin 
-     permanent-medium-sheet-output-mixin sheet-mute-repainting-mixin
+     sheet-leaf-mixin sheet-mute-input-mixin
+     permanent-medium-sheet-output-mixin
+     sheet-mute-repainting-mixin
      ;; ?
      mirrored-sheet-mixin
      ;; FIXME: Tim Moore suggested (2006-02-06, mcclim-devel) that

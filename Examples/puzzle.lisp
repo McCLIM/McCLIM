@@ -12,7 +12,7 @@
   (:panes
     (display :application
 	     :display-function 'draw-puzzle
-	     :text-style '(:fix :bold :very-large)
+	     :text-style (make-text-style :fix :bold :very-large)
 	     :incremental-redisplay t
 	     :text-cursor nil
 	     :width :compute :height :compute

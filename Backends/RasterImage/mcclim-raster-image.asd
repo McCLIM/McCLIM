@@ -1,8 +1,7 @@
 
 (defsystem #:mcclim-raster-image
   :depends-on (#:mcclim-render
-               #:mcclim-backend-common
-               #:mcclim-render/clx)
+               #:mcclim-backend-common)
     :serial t
     :components
     ((:file "package")

@@ -193,10 +193,11 @@ all of FUNCTION-ARGS as APPLY arguments."
               ,(declare-ignorable-form* stream)
               ,@body))
        (declare (dynamic-extent #',continuation))
-       (invoke-with-output-recording-options
-        ,stream #',continuation
-        ,(if record-supplied-p record `(stream-recording-p ,stream))
-        ,(if draw-supplied-p draw `(stream-drawing-p ,stream))))))
+       (with-drawing-options (,stream)
+         (invoke-with-output-recording-options
+          ,stream #',continuation
+          ,(if record-supplied-p record `(stream-recording-p ,stream))
+          ,(if draw-supplied-p draw `(stream-drawing-p ,stream)))))))
 
 ;;; Macro masturbation...
 
@@ -976,6 +977,15 @@ were added."
   (with-drawing-options (stream :ink (graphics-state-ink record))
     (call-next-method)))
 
+(defmethod* (setf output-record-position) :before
+    (nx ny (record gs-ink-mixin))
+    (with-standard-rectangle* (:x1 x1 :y1 y1) record
+      (let* ((dx (- nx x1))
+             (dy (- ny y1))
+             (tr (make-translation-transformation dx dy)))
+        (with-slots (ink) record
+          (setf ink (transform-region tr ink))))))
+
 (defrecord-predicate gs-ink-mixin (ink)
   (if-supplied (ink)
     (design-equalp (slot-value record 'ink) ink)))
@@ -1114,13 +1124,11 @@ were added."
     `(progn
        (when (stream-recording-p stream)
          (let ((record
-                ;; initialize the output record with a copy
-                ;; of coord-seq, as the replaying code will
-                ;; modify it to be positioned relative to
-                ;; the output-record's position and making
-                ;; a temporary is (arguably) less bad than
-                ;; untrasnforming the coords back to how
-                ;; they were.
+                ;; initialize the output record with a copy of coord-seq, as the
+                ;; replaying code will modify it to be positioned relative to
+                ;; the output-record's position and making a temporary is
+                ;; (arguably) less bad than untrasnforming the coords back to
+                ;; how they were.
                 (let (,@(when (member 'coord-seq args)
                           `((coord-seq (copy-seq coord-seq)))))
                   (make-instance ',class-name :stream stream ,@arg-list))))
@@ -1515,45 +1523,6 @@ were added."
                     (eql (slot-value record 'filled) filled))))
 ;;;; Patterns
 
-(defclass position-transform-mixin ()
-  ((transformed-dx :initform 0
-                   :accessor transformed-dx)
-   (transformed-dy :initform 0
-                   :accessor transformed-dy)))
-
-(defmethod* (setf output-record-position) :around
-  (nx ny (record position-transform-mixin))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
-    (let ((dx (- nx x1))
-          (dy (- ny y1)))
-      (multiple-value-prog1
-          (call-next-method)
-        (incf (transformed-dx record) dx)
-        (incf (transformed-dy record) dy)))))
-
-(def-grecording draw-pattern ((position-transform-mixin) pattern x y transformation)
-    (:replay-fn nil)
-  (let ((width (pattern-width pattern))
-        (height (pattern-height pattern)))
-    (enclosing-transform-polygon transformation (list x y
-                                                      (+ x width) y
-                                                      (+ x width) (+ y height)
-                                                      x (+ y height)))))
-
-(defmethod replay-output-record
-    ((record draw-pattern-output-record) stream
-     &optional (region +everywhere+) (x-offset 0) (y-offset 0))
-  (declare (ignore x-offset y-offset region))
-  (with-slots (pattern x y transformation)
-      record
-    (let* ((medium (sheet-medium stream))
-           (dx (transformed-dx record))
-           (dy (transformed-dy record))
-           (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
-                                                            transformation)))
-      (medium-draw-pattern* medium pattern x y updated-transform))))
-
 ;;;; Text
 
 (defun enclosing-transform-polygon (transformation positions)
@@ -1573,13 +1542,14 @@ were added."
          (setf max-y (max max-y y)))
     finally (return (values min-x min-y max-x max-y))))
 
-(def-grecording draw-text ((gs-text-style-mixin position-transform-mixin) string point-x point-y start end
-                           align-x align-y toward-x toward-y transform-glyphs
-                           transformation)
+(def-grecording draw-text ((gs-text-style-mixin gs-transformation-mixin)
+                           string point-x point-y start end align-x align-y
+                           toward-x toward-y transform-glyphs)
     (:replay-fn nil)
   ;; FIXME!!! Text direction.
   ;; FIXME: Multiple lines.
-  (let* ((text-style (graphics-state-text-style graphic))
+  (let* ((transformation (medium-transformation medium))
+         (text-style (graphics-state-text-style graphic))
          (width (if (characterp string)
                     (stream-character-width stream string :text-style text-style)
                     (stream-string-width stream string
@@ -1587,6 +1557,7 @@ were added."
                                          :text-style text-style)) )
          (ascent (text-style-ascent text-style (sheet-medium stream)))
          (descent (text-style-descent text-style (sheet-medium stream))))
+    (setf (graphics-state-transformation graphic) transformation)
     (multiple-value-bind (left top right bottom)
         (text-bounding-rectangle* medium string :start start :end end :text-style text-style)
       (ecase align-x
@@ -1607,6 +1578,16 @@ were added."
                                                         left bottom
                                                         right bottom)))))
 
+(defmethod* (setf output-record-position) :around
+  (nx ny (record draw-text-output-record))
+  (with-standard-rectangle* (:x1 x1 :y1 y1)
+      record
+    (let ((dx (- nx x1))
+          (dy (- ny y1)))
+      (multiple-value-prog1 (call-next-method)
+        (setf #1=(graphics-state-transformation record)
+              (compose-translation-with-transformation #1# dx dy))))))
+
 (defmethod replay-output-record
     ((record draw-text-output-record) stream
      &optional (region +everywhere+) (x-offset 0) (y-offset 0))
@@ -1614,20 +1595,17 @@ were added."
   (with-slots (string point-x point-y start end align-x align-y toward-x
                toward-y transform-glyphs transformation)
       record
-    (let* ((medium (sheet-medium stream))
-           (dx (transformed-dx record))
-           (dy (transformed-dy record))
-           (updated-transform (clim:compose-transformations (clim:make-translation-transformation dx dy)
-                                                            transformation)))
-      (medium-draw-text* medium string point-x point-y start end align-x
-                         align-y toward-x toward-y transform-glyphs
-                         updated-transform))))
+    (let ((medium (sheet-medium stream)))
+      (with-drawing-options (medium :transformation transformation)
+        (medium-draw-text* medium string point-x point-y start end align-x
+                           align-y toward-x toward-y transform-glyphs)))))
 
 (defrecord-predicate draw-text-output-record
-    (string start end point-x point-y align-x align-y toward-x toward-y
-     transform-glyphs)
+    (string start end point-x point-y align-x align-y toward-x toward-y transform-glyphs)
   (and (if-supplied (string)
          (string= (slot-value record 'string) string))
+       (transformation-equal (graphics-state-transformation record)
+                             (graphics-state-transformation record))
        (if-supplied (start)
          (eql (slot-value record 'start) start))
        (if-supplied (end)

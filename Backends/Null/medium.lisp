@@ -161,13 +161,8 @@
 (defmethod medium-draw-text* ((medium null-medium) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs
-                              transformation)
-  (declare (ignore string x y
-		   start end
-		   align-x align-y
-		   toward-x toward-y transform-glyphs
-                   transformation))
+                              toward-x toward-y transform-glyphs)
+  (declare (ignore string x y start end align-x align-y toward-x toward-y transform-glyphs))
   nil)
 
 #+nil
@@ -198,10 +193,6 @@
 
 (defmethod medium-beep ((medium null-medium))
   nil)
-
-(defmethod invoke-with-special-choices (continuation (medium null-medium))
-  (let ((sheet (medium-sheet medium)))
-    (funcall continuation (sheet-medium sheet))))
 
 (defmethod medium-miter-limit ((medium null-medium))
   0)

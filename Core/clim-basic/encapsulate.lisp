@@ -449,8 +449,7 @@ if there is one, or STREAM"
 (def-stream-method medium-draw-text*
     ((stream standard-encapsulating-stream)
       string x y start end align-x align-y
-     toward-x toward-y transform-glyphs
-     transformation))
+     toward-x toward-y transform-glyphs))
 
 (def-stream-method medium-finish-output
     ((stream standard-encapsulating-stream)))

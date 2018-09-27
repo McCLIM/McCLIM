@@ -224,8 +224,7 @@ facilities will automatically adapt to use whatever toolkit is
 available on and appropriate for the host environment. In addition,
 portable Lisp-based implementations of the abstract gadget pane
 protocols are provided.\footnote{\mcclim{} does not support look and
-  feel adaptiveness at the moment except for the experimental beagle
-  backend for Mac OS X's Cocoa platform. Hence, \mcclim{} mostly uses
+  feel adaptiveness at the moment. Hence, \mcclim{} mostly uses
   this portable Lisp-based implementation.}
 
 \paragraph*{Application Building} \CLIM{} provides a set of tools for
@@ -464,8 +463,7 @@ portable windowing model that insulates higher levels of \CLIM{} and
 the perspective of a \CLIM{} programmer, talking to the window system
 is equal to talking to this abstraction layer. The implementation
 details are hidden in \concept{backends}, like in \mcclim{} the CLX
-backend, which hides X11 details, or the beagle backend, which hides
-details for Mac OS X's toolkit. These backends will use the services
+backend, which hides X11 details. These backends will use the services
 of a host window system to provide efficient windowing, input and
 output facilities. Thanks to this middleware, \CLIM{} is portable
 across different host windowing systems.
@@ -774,8 +772,7 @@ requests them to draw themselves onto specific screen regions.
 push-button, toggle-button, slider, radio-box, text-field, text-editor
 panes ready for use by the \CLIM{} application programmer. These
 gadgets might be remapped to native system gadgets by the frame
-manager, so a native look and feel is possible.\footnote{Only possible
-  in \mcclim{} with the experimental beagle backend for Mac OS X.}
+manager, so a native look and feel is possible.
 
 Each gadget pane class is associated with a set of generic functions
 that act as callbacks do in traditional toolkits. For example, a pushbutton
@@ -1705,8 +1702,7 @@ interfaces not anticipated by the \CLIM{} designers.
 A free \CLIM{} implementation is available as \mcclim{}, found at
 \url{http://common-lisp.net/project/mcclim/}. In addition to the
 caveats in this document, note that \mcclim{} only works with an X
-windows backend as of January 2006.  An experimental port called
-beagle to the native toolkit of Mac OS X is in progress.
+windows backend as of January 2006.
 
 \section*{Acknowledgments}
 

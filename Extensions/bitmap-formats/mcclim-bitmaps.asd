@@ -7,12 +7,13 @@
 ;;; See file 'LICENSE' for the copyright details
 ;;;
 
-(defsystem #:mcclim-bitmaps
+(asdf:defsystem #:mcclim-bitmaps
   :description "Support for various image formats in McCLIM."
   :long-description "Support for various image formats in McCLIM
 bitmap reading functions.
 
 Currently supported formats are the formats covered by opticl
-library."
+library and XPM format."
   :depends-on (#:clim-basic #:opticl)
-  :components ((:file "bitmaps")))
+  :components ((:file "xpm")
+               (:file "bitmaps" :depends-on ("xpm"))))

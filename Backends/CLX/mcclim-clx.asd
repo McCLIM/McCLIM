@@ -1,10 +1,10 @@
+(in-package #:asdf-user)
 
 (defsystem #:mcclim-clx
   :depends-on (#:mcclim-fonts
                #:mcclim-clx/basic
 	       #:mcclim-clx/input
 	       #:mcclim-clx/output
-               #:mcclim-image/clx
 	       #:mcclim-clx/text-selection)
   :components
   ((:file "port")

@@ -335,9 +335,9 @@
     (values)))
 
 (defmethod destroy-mirror ((port clx-port) (pixmap pixmap))
-  (when (port-lookup-mirror port pixmap)
-    (xlib:free-pixmap (port-lookup-mirror port pixmap))
-    (port-unregister-mirror port pixmap (port-lookup-mirror port pixmap))))
+  (alexandria:when-let ((mirror (port-lookup-mirror port pixmap)))
+    (xlib:free-pixmap mirror)
+    (port-unregister-mirror port pixmap mirror)))
 
 (defmethod port-allocate-pixmap ((port clx-port) sheet width height)
   (let ((pixmap (make-instance 'mirrored-pixmap

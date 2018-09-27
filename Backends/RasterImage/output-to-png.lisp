@@ -13,8 +13,8 @@
               ,@body)
 	    (,exit-fn (sheet stream)
               (declare (ignorable stream))
-	      (write-image (image-mirror-image (sheet-mirror sheet)) ,stream
-                           :format ,format))
+	      (climi::write-bitmap-file (image-mirror-image (sheet-mirror sheet))
+                                        ,stream :format ,format))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore sheet stream))
 	      nil))
@@ -35,8 +35,8 @@
 		,@body)
 	      (,exit-fn (sheet stream)
 		(declare (ignore stream))
-		(write-image (image-mirror-image (sheet-mirror sheet) ,file
-                                                :format (extract-format ,file))))
+		(climi::write-bitmap-file (image-mirror-image (sheet-mirror sheet) ,file
+                                                              :format (extract-format ,file))))
 	      (,enter-fn (sheet stream)
 		(declare (ignore sheet stream))
 		nil))
@@ -46,7 +46,7 @@
 					     ,(extract-format file)
 					     ,@options)))))
 
-(defmacro with-output-to-rgb-image ((stream-var image &rest options)
+(defmacro with-output-to-rgba-image ((stream-var image &rest options)
 				       &body body)
   (let ((cont (gensym))
 	(exit-fn (gensym))
@@ -55,9 +55,7 @@
               ,@body)
 	    (,exit-fn (sheet stream)
 	      (declare (ignore stream))
-	      (coerce-image
-               (image-mirror-image (sheet-mirror sheet))
-               'mcclim-image::rgb-image))
+              (image-mirror-image (sheet-mirror sheet)))
 	    (,enter-fn (sheet stream)
 	      (declare (ignore stream))
 	      (when ,image
@@ -68,12 +66,10 @@
 					   :rgb-image
 					   ,@options))))
 
-(defmacro with-output-to-rgb-pattern ((stream-var &rest options)
+(defmacro with-output-to-rgba-pattern ((stream-var &rest options)
 				      &body body)
-  `(make-instance 'rgb-pattern
-		  :image (with-output-to-rgb-image
-			     (,stream-var nil ,@options)
-			   ,@body)))
+  `(with-output-to-rgba-image (,stream-var nil ,@options)
+     ,@body))
 
 (defmacro with-output-to-image ((stream-var image &rest options)
                                 &body body)
@@ -97,10 +93,8 @@
 
 (defmacro with-output-to-image-pattern ((stream-var &rest options)
 				      &body body)
-  `(make-instance 'image-pattern
-		  :image (with-output-to-image
-			     (,stream-var nil ,@options)
-			   ,@body)))
+  `(with-output-to-image (,stream-var nil ,@options)
+     ,@body))
 
 (defun invoke-with-output-to-raster-image (continuation enter-fn exit-fn server format
 					   &key (width 1000) (height 1000)
@@ -119,16 +113,9 @@
 	(realize-mirror port top-level-sheet)
 	(setf (sheet-region top-level-sheet)
 	      (clim:make-rectangle* 0 0 width height))
-	(if recording-p
-	    (progn
-	      (with-output-recording-options (stream :record t :draw nil)
-		(funcall continuation stream)
-		(medium-finish-output (sheet-medium stream)))
-	      (with-output-recording-options (stream :draw t :record nil)
-		(stream-replay stream)))
-	    (with-output-recording-options (stream :record nil :draw t)
-	      (funcall continuation stream)
-	      (medium-finish-output (sheet-medium stream))))
+        (with-output-recording-options (stream :record recording-p :draw t)
+              (funcall continuation stream)
+              (medium-finish-output (sheet-medium stream)))
 	(setf result (funcall exit-fn top-level-sheet stream))))
     (destroy-port port)
     result))

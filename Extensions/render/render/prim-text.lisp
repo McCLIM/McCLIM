@@ -5,13 +5,13 @@
 ;;;
 
 ;;; Font's utilities
-(defparameter *text-sizes* '(:normal         14
-			     :tiny            8
-			     :very-small     10
-			     :small          12
-			     :large          18
-			     :very-large     20
-			     :huge           24))
+(defparameter *text-sizes* '(:normal         12
+                             :tiny            8
+                             :very-small      8
+                             :small          10
+                             :large          14
+                             :very-large     18
+                             :huge           24))
 
 
 (defun string-primitive-paths (x y string font size fn)
@@ -19,16 +19,16 @@
   (let ((scale (zpb-ttf-font-units->pixels font)))
     (declare (ignore scale))
     (paths-from-string font string fn
-		       :offset (paths:make-point x y))))
+                       :offset (paths:make-point x y))))
 
 
 (defun paths-from-string (font text fn &key (offset (make-point 0 0))
-					 (scale-x 1.0) (scale-y 1.0)
-					 (kerning t) (auto-orient nil))
+                                         (scale-x 1.0) (scale-y 1.0)
+                                         (kerning t) (auto-orient nil))
   "Extract paths from a string."
   (declare (ignore scale-x scale-y auto-orient))
-  (let ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))	
-	(scale (zpb-ttf-font-units->pixels font)))
+  (let ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))
+        (scale (zpb-ttf-font-units->pixels font)))
     (loop
        for previous-char = nil then char
        for char across text
@@ -52,9 +52,8 @@
                                                                       0))))
                                                    0))))
          (funcall fn paths opacity-image dx dy
-                  (make-translation-transformation
-                   (paths:point-x offset)
-                   (paths:point-y offset))))))
+                  (make-translation-transformation (paths:point-x offset)
+                                                   (paths:point-y offset))))))
 
 (defun glyph-paths (font char)
   "Render a character of 'face', returning a 2D (unsigned-byte 8) array
@@ -64,10 +63,10 @@
   (climi::with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
       (let* ((units->pixels (zpb-ttf-font-units->pixels font))
-	     (size  (truetype-font-size font))
-	     (ascent (truetype-font-ascent font))
-	     (descent (truetype-font-descent font))
-	     (glyph (zpb-ttf:find-glyph char (zpb-ttf-font-loader
+             (size  (truetype-font-size font))
+             (ascent (truetype-font-ascent font))
+             (descent (truetype-font-descent font))
+             (glyph (zpb-ttf:find-glyph char (zpb-ttf-font-loader
                                               (truetype-font-face font))))
              (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
              (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
@@ -88,7 +87,7 @@
         (values paths
                 (floor min-x)
                 (ceiling max-y)
-		width
-		height
+                width
+                height
                 (round advance-width)
                 0)))))

@@ -1643,13 +1643,13 @@ clipping areas. No point should be drawn outside the blue rectangles."
 ;;;
 
 (define-drawing-test "RGB Design" (stream)
-    ""
-  (let ((pattern (mcclim-raster-image:with-output-to-rgb-pattern
-                     (stream :width 200 :height 200)
-                   (clim:draw-rectangle* stream 0 0 200 200 :filled t
-                                         :ink clim:+grey90+)
-                   (draw-rectangle* stream 0 0 200 200 :ink +yellow+)
-                   (picture01 stream))))
+  ""
+  (let ((pattern (mcclim-raster-image::with-output-to-rgba-pattern
+		     (stream :width 200 :height 200)
+		   (clim:draw-rectangle* stream 0 0 200 200 :filled t
+					 :ink clim:+grey90+)
+		   (draw-rectangle* stream 0 0 200 200 :ink +yellow+)
+		   (picture01 stream))))
     (draw-pattern* stream pattern 0 0)
     (clim:draw-rectangle* stream 50 50 150 150 :filled nil :line-thickness 5 :ink clim:+blue+)
     (with-drawing-options (stream :clipping-region (make-rectangle* 250 50 350 150))

@@ -48,9 +48,14 @@ denoted by this symbol."
                 (find-symbol (string-upcase (string name))
                              (find-package "CLIM-DEMO")))))
     (if background
-        (bt:make-thread (lambda () (run-frame-top-level frame)))
+        (bt:make-thread #'(lambda () (run-frame-top-level frame))
+                        :initial-bindings `((*default-server-path* . ',*default-server-path*)))
         (run-frame-top-level frame))
     frame))
+
+(defgeneric display (frame pane)
+  (:documentation "Generic method meant to be specialized at least on hte first
+argument to avoid creating too many functions with similar name."))
 
 (define-application-frame demodemo
     () ()
@@ -115,7 +120,10 @@ denoted by this symbol."
                    (make-demo-button "Tables with borders" 'table-demo)
                    (make-demo-button "Menu Test"  'menutest:menutest)
                    (make-demo-button "Drag and Drop" 'dragndrop)
-                   (make-demo-button "Pane hierarchy viewer" 'hierarchy)))))))))
+                   (make-demo-button "Pane hierarchy viewer" 'hierarchy)
+                   (make-demo-button "Patterns, designs and inks" 'pattern-design-test)
+                   (make-demo-button "Flipping ink" 'flipping-ink)
+                   (make-demo-button "Overlapping patterns" 'patterns-overlap)))))))))
 
 (defun demodemo ()
   (run-frame-top-level (make-application-frame 'demodemo)))
@@ -211,9 +219,7 @@ denoted by this symbol."
                    5
                    (make-test-label2 :right :bottom))))))))))
 
-(defclass foo-pane (basic-pane
-                    permanent-medium-sheet-output-mixin
-                    climi::always-repaint-background-mixin)
+(defclass foo-pane (basic-pane climi::always-repaint-background-mixin)
   ())
 
 (defmethod compose-space ((pane foo-pane) &key width height)

@@ -22,7 +22,7 @@
 (defun font-generate-glyph (font glyph-index)
   (multiple-value-bind (paths left top width height dx dy) (glyph-paths font (code-char glyph-index))
     (let ((right (+ left width))
-	  (opacity-image (font-generate-opacity-image paths width height left top)))
+          (opacity-image (font-generate-opacity-image paths width height left top)))
       (glyph-info 0 dx dy left right top dx dy paths opacity-image))))
 
 (defun font-glyph-info (font character)
@@ -90,11 +90,10 @@
 ;;;
 
 (defun font-generate-opacity-image (paths width height dx dy)
-  (let* ((image (make-image :gray
-                            (1+ (* 1 width))
-                            (1+ (* 1 height)) :opticl)))
+  (let* ((image (make-image (1+ (* 1 width))
+                            (1+ (* 1 height)))))
     (if (= (* width height) 0)
-	nil
+        nil
         (aa-fill-alpha-paths image nil paths (aa:make-state)
                        (make-translation-transformation
                         (- dx) dy)
@@ -118,7 +117,7 @@
          ;; We could work a little harder and eliminate generic arithmetic
          ;; here. It might shave a few percent off a draw-text benchmark.
          ;; Rather silly to obsess over the array access considering that.
-	 (macrolet ((compute ()
+         (macrolet ((compute ()
                       `(loop with width-cache = (slot-value font 'glyph-width-cache)
                           for i from start below end
                           as char = (aref string i)
@@ -143,7 +142,7 @@
      (font-descent font)
      (font-glyph-left font (char string start))
      (- width (- (font-glyph-width font (char string (1- end)))
-		 (font-glyph-right font (char string (1- end)))))
+                 (font-glyph-right font (char string (1- end)))))
      (font-ascent font)
      (font-descent font)
      0 end)))
@@ -243,7 +242,7 @@
                           (climi::text-bounding-rectangle*
                            medium string :text-style text-style
                            :start (1+ position-newline) :end end)
-			(declare (ignore miny))
+                        (declare (ignore miny))
                         (values (min minx left) (- ascent)
                                 (max maxx right) (+ descent maxy)))))
                    (t
@@ -253,7 +252,7 @@
                         (font-text-extents
                          xfont string :start start :end end)
                       (declare (ignore width ascent descent)
-			       (ignore direction first-not-done))
+                               (ignore direction first-not-done))
                       ;; FIXME: Potential style points:
                       ;; * (min 0 left), (max width right)
                       ;; * font-ascent / ascent

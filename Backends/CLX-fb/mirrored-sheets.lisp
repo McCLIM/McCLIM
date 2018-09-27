@@ -49,7 +49,7 @@
     (setf gcontext nil
 	  clx-image nil)))
 
-(defclass clx-fb-pixmap (image-pixmap-mixin permanent-medium-sheet-output-mixin basic-pane)
+(defclass clx-fb-pixmap (image-pixmap-mixin basic-pane)
   ())
 
 (defmethod sheet-direct-xmirror ((sheet clx-fb-pixmap))
