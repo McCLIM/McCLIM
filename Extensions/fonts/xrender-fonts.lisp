@@ -60,10 +60,11 @@
   (or (pop (display-free-glyph-ids display))
       (incf (display-free-glyph-id-counter display))))
 
-(defstruct (glyph-info (:constructor glyph-info (id width height left right top)))
+(defstruct (glyph-info (:constructor glyph-info (id width height left right top advance-width advance-height)))
   id                                    ; FIXME: Types?
   width height
-  left right top)
+  left right top
+  advance-width advance-height)
 
 
 ;;;;;;; mcclim interface
@@ -159,7 +160,7 @@
                               :x-advance dx
                               :y-advance dy)
       (let ((right (+ left (array-dimension arr 1))))
-        (glyph-info glyph-id width height left right top)))))
+        (glyph-info glyph-id width height left right top dx dy)))))
 
 (defun font-glyph-info (font character)
   (with-slots (char->glyph-info) font
