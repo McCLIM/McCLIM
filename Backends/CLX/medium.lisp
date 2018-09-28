@@ -319,6 +319,9 @@ translated, so they begin at different position than [0,0])."))
         gc))))
 
 
+;; Variable is used to deallocate lingering resources after the operation.
+(defvar ^cleanup)
+
 ;;; XXX: both PM and MM pixmaps should be freed with (xlib:free-pixmap pixmap)
 ;;; when not used. We do not do that right now.
 (defun compute-rgb-mask (drawable image)
@@ -424,8 +427,6 @@ translated, so they begin at different position than [0,0])."))
                                                        :normalize :y-banding)))
           nconcing (multiple-value-list (region->clipping-values region))))))
 
-;; Variable is used to deallocate lingering resources after the operation.
-(defvar ^cleanup)
 (defmacro with-clx-graphics ((&optional (mirror 'mirror)
                                         (line-style 'line-style)
                                         (ink 'ink)
