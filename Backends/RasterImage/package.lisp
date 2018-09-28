@@ -28,7 +28,6 @@
 		  ;;#:save-image-to-file
 		  ;;#:save-image-to-stream
 		  )
-    (:import-from :mcclim-image)
     (:import-from :mcclim-truetype
 		  #:truetype-font-size
 		  #:truetype-font-face
