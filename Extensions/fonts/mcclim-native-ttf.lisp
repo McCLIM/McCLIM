@@ -89,10 +89,10 @@
               size ascent descent units->pixels))))
 
 (defun glyph-pixarray (font char)
-  "Render a character of 'face', returning a 2D (unsigned-byte 8) array
-   suitable as an alpha mask, and dimensions. This function returns five
-   values: alpha mask byte array, x-origin, y-origin (subtracted from
-   position before rendering), horizontal and vertical advances."
+  "Render a character of 'face', returning a 2D (unsigned-byte 8) array suitable
+   as an alpha mask, and dimensions. This function returns seven values: alpha
+   mask byte array, x-origin, y-origin (subtracted from position before
+   rendering), glyph width and height, horizontal and vertical advances."
   (declare (optimize (debug 3)))
   (climi::with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
@@ -101,6 +101,7 @@
              (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
              (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
              (advance-width (* units->pixels (zpb-ttf:advance-width glyph)))
+             (advance-height 0)
              (bounding-box (map 'vector (lambda (x) (float (* x units->pixels)))
                                 (zpb-ttf:bounding-box glyph)))
              (min-x (elt bounding-box 0))
@@ -141,13 +142,22 @@
                                                  (* alpha 255))
                                               256)
                                        0 255)))))
-        (values array 
-                (floor min-x)
-                (ceiling max-y)
+        (values array
+                (floor min-x)             ; left
+                (ceiling max-y)           ; top
+                (ceiling (- max-y min-y)) ; glyph width
+                (ceiling (- max-y min-y)) ; glyph height
+                ;; X uses horizontal/vertical advance between letters. That way
+                ;; transformed glyph sequence may be rendered. This should not
+                ;; be confused with font width/height! -- jd 2018-09-28
                 (round advance-width)
-                ;; Bah! Why does X add the vertical advance when we are rendering horizontally?
-                ;; Is this considered a property of the font and glyphs rather than a particular drawing call?
-                0 #+NIL (round (+ ascent descent)))))))
+                (round advance-height))))))
+
+(defun font-text-width (font string)
+  (let ((bb (zpb-ttf:string-bounding-box string
+                                         (zpb-ttf-font-loader (truetype-font-face font))
+                                         :kerning nil)))
+    (* (slot-value font 'units->pixels) (- (zpb-ttf:xmax bb) (zpb-ttf:xmin bb)))))
 
 (defun font-fixed-width-p (truetype-font)
   (declare (ignore truetype-font))
