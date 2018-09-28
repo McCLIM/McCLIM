@@ -121,15 +121,6 @@
                                                  :scale-y (- units->pixels))))
         (assert (<= (elt bounding-box 0) (elt bounding-box 2)))
         (assert (<= (elt bounding-box 1) (elt bounding-box 3)))
-        ;; Oops. I think the other mcclim-truetype code expects that the rendered glyph
-        ;; includes the left and right bearing, as it computes right = width - left.
-        ;; Fix that. (Do we even use 'right' anywhere?)
-        ;(assert (= left-side-bearing (elt bounding-box 0))) ; Doesn't hold.
-        #+NIL
-        (assert (= advance-width 
-                   (+ left-side-bearing right-side-bearing 
-                      (elt bounding-box 2) (- (elt bounding-box 0)))))
-
         (dolist (path paths)
           (vectors:update-state state path))
         (aa:cells-sweep state
@@ -154,10 +145,22 @@
                 (round advance-height))))))
 
 (defun font-text-width (font string)
-  (let ((bb (zpb-ttf:string-bounding-box string
-                                         (zpb-ttf-font-loader (truetype-font-face font))
-                                         :kerning nil)))
-    (* (slot-value font 'units->pixels) (- (zpb-ttf:xmax bb) (zpb-ttf:xmin bb)))))
+  ;; This last-* manging is meant for adjusting ZPB (and Freetype) behavior
+  ;; (which is probably correcty in light of TTF specification) to the one
+  ;; expected by McCLIM - namely even if last glyph has zero width we still want
+  ;; advance-width here. This is important for glueing strings with trailing
+  ;; spaces in FORMAT (like in "Text Underlining" example). -- jd 2018-09-28
+  (flet ((bb-width (bb) (- (zpb-ttf:xmax bb) (zpb-ttf:xmin bb))))
+   (let* ((units->pixels (slot-value font 'units->pixels))
+          (last-glyph (zpb-ttf:find-glyph (alexandria:last-elt string)
+                                          (zpb-ttf-font-loader (truetype-font-face font))))
+          (last-advance-width (zpb-ttf:advance-width last-glyph))
+          (last-glyph-width (bb-width (zpb-ttf:bounding-box last-glyph)))
+          (total-width      (bb-width (zpb-ttf:string-bounding-box
+                                       string
+                                       (zpb-ttf-font-loader (truetype-font-face font))
+                                       :kerning nil))))
+     (* units->pixels (+ (- total-width last-glyph-width) last-advance-width )))))
 
 (defun font-fixed-width-p (truetype-font)
   (declare (ignore truetype-font))
