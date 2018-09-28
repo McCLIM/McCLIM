@@ -187,7 +187,7 @@ pattern, stencil, image etc)."))
         element)))
 
 (defclass stencil (%array-pattern)
-  ((array :type (simple-array (single-float 0.0 1.0) 2)))
+  ((array :type (simple-array (single-float 0.0f0 1.0f0) 2)))
   (:documentation "Stencil pattern provides opacity mask."))
 
 (defun make-stencil (array)
