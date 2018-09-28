@@ -66,11 +66,7 @@
 		 #:CLX-PORT-DISPLAY
 		 #:clx-medium
 		 #:initialize-clx
-		#:design-gcontext
-		#:REGION->CLIPPING-VALUES
-		#:ROUND-COORDINATE
-		#:with-clx-graphics
-		#:clx-port-screen
+                 #:clx-port-screen
 		#:clx-graft
 		#:clx-port-window
 		#:sheet-xmirror

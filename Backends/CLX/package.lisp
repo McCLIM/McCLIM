@@ -71,5 +71,13 @@
                 #:%sheet-mirror-transformation
 		#:standard-port)
   (:export
+   #:clx-port-display
+   #:clx-medium
+   #:initialize-clx
+   #:clx-port-screen
+   #:clx-graft
+   #:clx-port-window
+   #:sheet-xmirror
+   #:sheet-direct-xmirror
    #:port-find-all-font-families
    #:find-replacement-fonts-from-renderer))
