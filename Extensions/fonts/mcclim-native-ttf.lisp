@@ -17,8 +17,6 @@
 ;;;  * Kerning (we didn't do this with Freetype, either. Oops.)
 ;;;  * Implement fixed-font-width-p for zpb-ttf.
 ;;;  * Boxes for missing glyphs.
-;;;  * Make certain left/right bearings and text-bounding-rectangle*
-;;;    are correct. (I doubt they are..)
 
 ;;; Wish-list:
 
@@ -57,11 +55,13 @@
     (pushnew face (all-faces family))))
 
 (defclass truetype-font ()
-  ((face          :initarg :face :reader truetype-font-face)
-   (size          :initarg :size :reader truetype-font-size)
-   (ascent                       :reader truetype-font-ascent)
-   (descent                      :reader truetype-font-descent)
-   (units->pixels                :reader zpb-ttf-font-units->pixels)))
+  ((face          :initarg :face    :reader truetype-font-face)
+   (size          :initarg :size    :reader truetype-font-size)
+   (kerning-p     :initarg :kerning :reader truetype-font-kerning-p)
+   (ascent                          :reader truetype-font-ascent)
+   (descent                         :reader truetype-font-descent)
+   (units->pixels                   :reader zpb-ttf-font-units->pixels))
+  (:default-initargs :kerning nil))
 
 (defmethod initialize-instance :after ((font truetype-font) &key &allow-other-keys)
   (with-slots (face size ascent descent font-loader units->pixels) font
@@ -145,22 +145,21 @@
                 (round advance-height))))))
 
 (defun font-text-width (font string)
-  ;; This last-* manging is meant for adjusting ZPB (and Freetype) behavior
-  ;; (which is probably correcty in light of TTF specification) to the one
-  ;; expected by McCLIM - namely even if last glyph has zero width we still want
-  ;; advance-width here. This is important for glueing strings with trailing
-  ;; spaces in FORMAT (like in "Text Underlining" example). -- jd 2018-09-28
+  ;; We add left-side and right-side bearings to the output-rectangle to avoid
+  ;; weird results when last glyph's width is 0 (i.e space). If we had failed to
+  ;; do that problem would exhibit itself in "Text Underlining" example which
+  ;; uses format with trailing space on the extended stream. -- jd 2018-09-29
   (flet ((bb-width (bb) (- (zpb-ttf:xmax bb) (zpb-ttf:xmin bb))))
-   (let* ((units->pixels (slot-value font 'units->pixels))
-          (last-glyph (zpb-ttf:find-glyph (alexandria:last-elt string)
-                                          (zpb-ttf-font-loader (truetype-font-face font))))
-          (last-advance-width (zpb-ttf:advance-width last-glyph))
-          (last-glyph-width (bb-width (zpb-ttf:bounding-box last-glyph)))
-          (total-width      (bb-width (zpb-ttf:string-bounding-box
-                                       string
-                                       (zpb-ttf-font-loader (truetype-font-face font))
-                                       :kerning nil))))
-     (* units->pixels (+ (- total-width last-glyph-width) last-advance-width )))))
+    (let* ((units->pixels (slot-value font 'units->pixels))
+           (font-loader (zpb-ttf-font-loader (truetype-font-face font)))
+           (first-glyph (zpb-ttf:find-glyph (alexandria:first-elt string) font-loader))
+           (last-glyph  (zpb-ttf:find-glyph (alexandria:last-elt string)  font-loader))
+           (total-width (+ (zpb-ttf:left-side-bearing first-glyph)
+                           (zpb-ttf:right-side-bearing last-glyph)
+                           (bb-width (zpb-ttf:string-bounding-box
+                                      string font-loader
+                                      :kerning (truetype-font-kerning-p font))))))
+      (* units->pixels total-width))))
 
 (defun font-fixed-width-p (truetype-font)
   (declare (ignore truetype-font))
