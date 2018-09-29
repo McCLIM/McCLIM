@@ -672,5 +672,7 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
              (write-char #\: stream)
              (princ slot-name stream)
              (write-char #\Space stream)
+             (unless (atom slot-value)
+               (princ "'" stream))
              (write slot-value :stream stream))))))
 
