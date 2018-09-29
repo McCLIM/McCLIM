@@ -551,12 +551,13 @@
    (tr          :initarg :tr)))         
 
 (defmethod print-object ((ell elliptical-thing) stream)
-  (with-slots (start-angle end-angle tr) ell
-    (format stream "#<~A [~A ~A] ~A>"
-            (type-of ell)
-            (and start-angle (* (/ 180 pi) start-angle))
-            (and end-angle (* (/ 180 pi) end-angle))
-            tr)))
+  (print-unreadable-object (ell stream :type t :identity t)
+    (with-slots (start-angle end-angle tr) ell
+      (format stream "~A [~A ~A] ~A"
+              (type-of ell)
+              (and start-angle (* (/ 180 pi) start-angle))
+              (and end-angle (* (/ 180 pi) end-angle))
+              tr))))
 
 (defclass standard-ellipse (elliptical-thing ellipse) ())
 (defclass standard-elliptical-arc (elliptical-thing elliptical-arc) ())
