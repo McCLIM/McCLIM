@@ -113,9 +113,18 @@
     :x (coerce x 'coordinate)
     :y (coerce y 'coordinate)))
 
+(defmethod slots-for-pprint-object append ((object standard-point))
+  '(x y))
+
 (defmethod print-object ((self standard-point) sink)
-  (with-slots (x y) self
-    (format sink "#<~S ~S ~S>" 'standard-point x y)))
+  (cond
+    ((and *print-readably* (not *read-eval*))
+     (error "cannot readably print standard-point when not *read-eval*."))
+    ((and *print-pretty* *print-readably*)
+     (simple-pprint-object sink self))
+    (t (print-unreadable-object (self sink :identity nil :type t)
+         (with-slots (x y) self
+           (format sink "~S ~S" x y))))))
 
 ;;; Point protocol: point-position
 
@@ -334,9 +343,18 @@
     (multiple-value-bind (x2 y2) (line-end-point* self)
       (line-contains-point-p* x1 y1 x2 y2 x y))))
 
+(defmethod slots-for-pprint-object append ((object standard-line))
+  '(x1 y1 x2 y2))
+
 (defmethod print-object ((self standard-line) sink)
-  (with-slots (x1 y1 x2 y2) self
-    (format sink "#<~S ~D ~D ~D ~D>" (type-of self) x1 y1 x2 y2)))
+  (cond
+    ((and *print-readably* (not *read-eval*))
+     (error "cannot readably print standard-line when not *read-eval*."))
+    ((and *print-pretty* *print-readably*)
+     (simple-pprint-object sink self))
+    (t (print-unreadable-object (self sink :identity nil :type t)
+         (with-slots (x1 y1 x2 y2) self
+           (format sink "~D ~D ~D ~D" x1 y1 x2 y2))))))
 
 ;;; -- 2.5.5 Rectangles in CLIM ----------------------------------------------
 
@@ -550,14 +568,23 @@
    ;; object.
    (tr          :initarg :tr)))         
 
+(defmethod slots-for-pprint-object append ((object elliptical-thing))
+  '(start-angle end-angle tr))
+
 (defmethod print-object ((ell elliptical-thing) stream)
-  (print-unreadable-object (ell stream :type t :identity t)
-    (with-slots (start-angle end-angle tr) ell
-      (format stream "~A [~A ~A] ~A"
-              (type-of ell)
-              (and start-angle (* (/ 180 pi) start-angle))
-              (and end-angle (* (/ 180 pi) end-angle))
-              tr))))
+  (cond
+    ((and *print-readably* (not *read-eval*))
+     (error "cannot readably print elliptical-thing when not *read-eval*."))
+    ((and *print-pretty* *print-readably*)
+     (simple-pprint-object stream ell))
+    (t
+     (print-unreadable-object (ell stream :type t :identity t)
+       (with-slots (start-angle end-angle tr) ell
+         (format stream "~A [~A ~A] ~A"
+                 (type-of ell)
+                 (and start-angle (* (/ 180 pi) start-angle))
+                 (and end-angle (* (/ 180 pi) end-angle))
+                 tr))))))
 
 (defclass standard-ellipse (elliptical-thing ellipse) ())
 (defclass standard-elliptical-arc (elliptical-thing elliptical-arc) ())
@@ -799,9 +826,18 @@
                   ((and sip eip)
                    ;; region difference may not work here due to float rounding
                    (let ((guess-line (make-line p1 si)))
-                     (if (not (region-intersects-region-p guess-line end-ray))
-                         (region-union guess-line (make-line p2 ei))
-                         (region-union (make-line p1 ei) (make-line p2 si)))))
+                     (let ((intersection-line
+                            (if (not (region-intersects-region-p guess-line end-ray))
+                                (region-union guess-line (make-line p2 ei))
+                                (region-union (make-line p1 ei) (make-line p2 si)))))
+                       (if (linep intersection-line)
+                           intersection-line
+                           (progn
+                             #+nil
+                             (error "Trying to intersect line ~S with
+                         ellipse ~S returned ~S which is not a line."
+                                    line ellipse intersection-line)
+                             intersection-line)))))
                   ;; line intersect only one angle ray
                   (t (make-line (if p1p p1 p2)
                                 (if sip si ei))))))))))))
