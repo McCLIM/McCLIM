@@ -729,8 +729,16 @@ translated, so they begin at different position than [0,0])."))
                  (draw-lines (scan-line)
                    (cond
                      ((region-equal scan-line +nowhere+))
-                     (filled (map-over-region-set-regions #'draw-line-1 scan-line))
-                     (t (map-over-region-set-regions #'maybe-draw-border-points scan-line)))))
+                     ((linep scan-line)
+                      (if filled
+                          (draw-line-1 scan-line)
+                          (maybe-draw-border-points scan-line)))
+                     ((polylinep scan-line)
+                      (map-over-polygon-segments #'(lambda (x1 y1 x2 y2)
+                                                     (draw-lines (make-line* x1 y1 x2 y2)))
+                                                 scan-line))
+                     (t
+                      (map-over-region-set-regions #'draw-lines scan-line)))))
           ;; O(n+m) because otherwise we may skip some points (better drawing quality)
           (progn ;if (<= width height)
             (loop for x from x1 to (+ x1 width) do
