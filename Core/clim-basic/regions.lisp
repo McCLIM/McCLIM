@@ -165,7 +165,8 @@
      (error "cannot readably print standard-polyline when not *read-eval*."))
     ((and *print-pretty* *print-readably*)
      (simple-pprint-object sink self))
-    (t (print-unreadable-object (self sink :identity nil :type t)))))
+    (t
+     (print-unreadable-object (self sink :identity t :type t)))))
 
 ;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
