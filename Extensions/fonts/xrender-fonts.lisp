@@ -155,6 +155,13 @@
                               :initial-element 0)))
       (xlib::render-add-glyph (display-the-glyph-set display) glyph-id
                               :data arr
+;;; We negate LEFT, because we want to start drawing array LEFT pixels after the
+;;; pen (pixarray contains only a glyph without its left-side bearing). TOP is
+;;; not negated because glyph coordinates are in the first quadrant (while
+;;; array's are in fourth).
+;;;
+;;; I'm leaving this comment because it wasn't obvious to me why we negate LEFT
+;;; and not TOP here. -- jd 2018-09-29
                               :x-origin (- left)
                               :y-origin top
                               :x-advance dx
@@ -195,11 +202,15 @@
 
 (declaim (inline gcache-get))
 
+(defmacro ensure-font-glyph-id (font cache code char)
+  `(or (gcache-get ,cache ,code)
+       (gcache-set ,cache ,code (font-glyph-id ,font ,char))))
+
 (defun gcache-get (cache key-number)  
   (declare (optimize (speed 3))
            (type (simple-array t (512))))
-  (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello.
-    (and (= key-number (the fixnum (svref cache hash)))
+  (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello there.
+    (and (= key-number (the fixnum (svref cache hash))) ; general kenobi.
          (svref cache (+ 256 hash)))))
 
 (defun gcache-set (cache key-number value)
@@ -305,8 +316,7 @@
              as code = (char-code char)
              do (setf (aref glyph-ids i*)
                       (the (unsigned-byte 16)
-                           (or (gcache-get cache code)
-                               (gcache-set cache code (font-glyph-id font char))))))
+                           (ensure-font-glyph-id font cache code char))))
 
           ;; Sync the picture-clip-mask with that of the gcontext.
           (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
