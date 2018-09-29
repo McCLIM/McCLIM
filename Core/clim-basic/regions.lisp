@@ -159,6 +159,17 @@
 (defclass standard-polygon (polygon)
   ((points :initarg :points)))
 
+(defmethod slots-for-pprint-object append ((object standard-polyline))
+  '(points closed))
+
+(defmethod print-object ((self standard-polyline) sink)
+  (cond
+    ((and *print-readably* (not *read-eval*))
+     (error "cannot readably print standard-polyline when not *read-eval*."))
+    ((and *print-pretty* *print-readably*)
+     (simple-pprint-object sink self))
+    (t (print-unreadable-object (self sink :identity nil :type t)))))
+
 ;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
 (defun coord-seq->point-seq (sequence)

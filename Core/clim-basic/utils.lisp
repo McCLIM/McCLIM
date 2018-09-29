@@ -594,5 +594,7 @@ STREAM in the direction DIRECTION."
              (write-char #\: stream)
              (princ slot-name stream)
              (write-char #\Space stream)
+             (unless (atom slot-value)
+               (princ "'" stream))
              (write slot-value :stream stream))))))
 
