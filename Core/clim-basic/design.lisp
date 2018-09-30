@@ -16,8 +16,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;;; Some Notes
@@ -36,7 +36,7 @@
 ;;; compose-in and compose-out is thought as to be drawn with
 ;;; +foreground-ink+ = +background-ink+ = +black+.
 ;;;
-;;; But Is (make-opacity 1) really the same as +foreground-ink+? 
+;;; But Is (make-opacity 1) really the same as +foreground-ink+?
 ;;;     Or: Is
 ;;;         (compose-in D +foreground-ink+) different from
 ;;;         (compose-in D (make-opacity 1))?
@@ -249,12 +249,30 @@
 (defun make-ihs-color (i h s)
   (multiple-value-call #'make-rgb-color (ihs-to-rgb i h s)))
 
+;;;
+;;; 13.3.2 Contrasting Colors
+;;;
+
+(defconstant +contrasting-colors+
+  (vector (make-named-color "Contrasting1" 0.0        0.44705883  0.7411765)
+          (make-named-color "Contrasting2" 0.8509804  0.3254902   0.09803922)
+          (make-named-color "Contrasting3" 0.92941177 0.69411767  0.1254902)
+          (make-named-color "Contrasting4" 0.49411765 0.18431373  0.5568628)
+          (make-named-color "Contrasting5" 0.46666667 0.6745098   0.1882353)
+          (make-named-color "Contrasting6" 0.3019608  0.74509805  0.93333334)
+          (make-named-color "Contrasting7" 0.63529414 0.078431375 0.18431373)
+          (make-named-color "Contrasting8" 0.53529414 0.378431375 0.38431373)))
+
+(defmethod contrasting-inks-limit (port)
+  (length +contrasting-colors+))
+
 (defun make-contrasting-inks (n &optional k)
-  ;; Look +contrasting-colors+ up at runtime, because it has not yet
-  ;; been declared when this is compiled.
-  (let ((contrasting-colors (symbol-value '+contrasting-colors+)))
-    (if (> n (length contrasting-colors))
-        (error "The argument N is out of range [1-~D]" (length contrasting-colors)))
+  (let ((contrasting-colors +contrasting-colors+))
+    (unless (<= 1 n (length contrasting-colors))
+      (error "The argument N = ~D is out of range [1, ~D]"
+             n (length contrasting-colors)))
+    (unless (or (null k) (<= 0 k (1- n)))
+      (error "The argument K = ~D is out of range [0, ~D]" k (1- n)))
     (if (null k)
         (subseq contrasting-colors 0 n)
         (aref contrasting-colors k))))
@@ -301,7 +319,7 @@
 ;;; foreground ink is interchangable with the everywhere region.
 ;;; By defining the following mixins and adding them to the
 ;;; appropriate ink/region class pairs, we can reduce the number
-;;; of methods necessary. 
+;;; of methods necessary.
 
 ;;;
 ;;; define these variables here so we can use them here in
@@ -411,7 +429,7 @@
   (declare (ignore x y))
   flipping-ink)
 
-(defvar +flipping-ink+ (make-instance 'standard-flipping-ink 
+(defvar +flipping-ink+ (make-instance 'standard-flipping-ink
                          :design1 +foreground-ink+
                          :design2 +background-ink+))
 
@@ -428,11 +446,11 @@
 (defmethod make-flipping-ink ((design1 design) (design2 design))
   (make-instance 'standard-flipping-ink :design1 design1 :design2 design2))
 
-(defmethod make-flipping-ink ((design1 (eql +foreground-ink+)) 
+(defmethod make-flipping-ink ((design1 (eql +foreground-ink+))
                               (design2 (eql +background-ink+)))
   +flipping-ink+)
 
-(defmethod make-flipping-ink ((design1 (eql +background-ink+)) 
+(defmethod make-flipping-ink ((design1 (eql +background-ink+))
                               (design2 (eql +foreground-ink+)))
   +flipping-ink+)
 
@@ -518,7 +536,7 @@ identity-transformation) then source design is returned."
    (mask :initarg :mask :reader compositum-mask)))
 
 (defmethod print-object ((object masked-compositum) stream)
-  (print-unreadable-object (object stream :identity nil :type t)    
+  (print-unreadable-object (object stream :identity nil :type t)
     (format stream "~S ~S ~S ~S"
             :ink  (compositum-ink object)
             :mask (compositum-mask object))))
