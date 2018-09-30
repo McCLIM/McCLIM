@@ -73,7 +73,13 @@
    (fixed-width       :initform nil)
    (glyph-id-cache    :initform (make-gcache))
    (glyph-width-cache :initform (make-gcache))
-   (char->glyph-info  :initform (make-hash-table :size 256))))
+   (char->glyph-info  :initform (make-hash-table :size 256))
+   (%buffer%          :initform (make-array 1024
+                                            :element-type '(unsigned-byte 32)
+                                            :adjustable nil
+                                            :fill-pointer nil)
+                      :accessor clx-truetype-font-%buffer%
+                      :type (simple-array (unsigned-byte 32)))))
 
 (defun register-all-ttf-fonts (port &optional (dir *truetype-font-path*))
   (when *truetype-font-path*
@@ -289,9 +295,7 @@
 ;;; kerning where the same glyph may have different advance-width values for
 ;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
 ;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
-(defvar %buffer%                        ; TODO: thread safety
-  (make-array 1024 :element-type '(unsigned-byte 32) :adjustable nil :fill-pointer nil))
-(defmethod clim-clx::font-draw-glyphs ((font truetype-font) mirror gc x y string
+(defmethod clim-clx::font-draw-glyphs ((font clx-truetype-font) mirror gc x y string
                                        &key start end translate size direction transformation)
   (declare (optimize (speed 3))
            (ignore size translate direction)
@@ -299,29 +303,35 @@
                  #+sbcl sb-int:index
                  start end)
            (type string string))
+  (when (< (length (the (simple-array (unsigned-byte 32)) (clx-truetype-font-%buffer% font)))
+           (- end start))
+    (setf (clx-truetype-font-%buffer% font)
+          (make-array (* 256 (ceiling (- end start) 256))
+                      :element-type '(unsigned-byte 32)
+                      :adjustable nil :fill-pointer nil)))
   (multiple-value-bind (x y)
       (transform-position transformation x y)
-    (when (< (length (the (simple-array (unsigned-byte 32)) %buffer%))
-             (- end start))
-      (setf %buffer% (make-array (* 256 (ceiling (- end start) 256))
-                                 :element-type '(unsigned-byte 32)
-                                 :adjustable nil :fill-pointer nil)))
     (let ((display (xlib:drawable-display mirror)))
       (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
         (declare (ignore source-pixmap))
         (let* ((cache (slot-value font 'glyph-id-cache))
-               (glyph-ids %buffer%)
+               (glyph-ids (clx-truetype-font-%buffer% font))
                (glyph-set (display-the-glyph-set display)))
           (loop
-             for i from start below end
-             for i* upfrom 0
-             as next-char = (if (>= (1+ i) end) #\nul (char string (1+ i)))
+             with char = (char string start)
+             with i* = 0
+             for i from (1+ start) below end
+             as next-char = (char string i)
              as next-char-code = (char-code next-char)
-             as char = (char string i)
              as code = (dpb next-char-code (byte 16 16) (char-code char))
-             do (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-                      (the (unsigned-byte 32)
-                           (ensure-font-glyph-id font cache code))))
+             do
+               (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+                     (the (unsigned-byte 32) (ensure-font-glyph-id font cache code)))
+               (setf char next-char)
+               (incf i*)
+             finally
+               (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+                     (the (unsigned-byte 32) (ensure-font-glyph-id font cache (char-code char)))))
 
           ;; Sync the picture-clip-mask with that of the gcontext.
           (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
