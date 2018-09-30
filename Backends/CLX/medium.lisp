@@ -792,7 +792,7 @@ translated, so they begin at different position than [0,0])."))
     (+ (font-ascent font) (font-descent font))))
 
 (defmethod text-style-character-width (text-style (medium clx-medium) char)
-  (font-glyph-width (text-style-to-X-font (port medium) text-style) char))
+  (font-glyph-width (text-style-to-X-font (port medium) text-style) (char-code char)))
 
 (defmethod text-style-width (text-style (medium clx-medium))
   (text-style-character-width text-style medium #\m))

@@ -137,9 +137,9 @@
   (:method (font)
     (xlib:font-descent font)))
 
-(defgeneric font-glyph-width (font char)
+(defgeneric font-glyph-width (font code)
   (:method (font char)
-    (xlib:char-width font (char-code char))))
+    (xlib:char-width font code)))
 
 ;;; This function should return nine values:
 ;;;

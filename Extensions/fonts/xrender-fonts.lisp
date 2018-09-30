@@ -191,14 +191,14 @@
 (defmethod clim-clx::font-descent ((font truetype-font))
   (truetype-font-descent font))
 
-(defmethod clim-clx::font-glyph-width ((font truetype-font) char)
-  (glyph-info-width (font-glyph-info font (char-code char))))
+(defmethod clim-clx::font-glyph-width ((font truetype-font) code)
+  (glyph-info-width (font-glyph-info font code)))
 
-(defmethod clim-clx::font-glyph-left ((font truetype-font) char)
-  (glyph-info-left (font-glyph-info font (char-code char))))
+(defun font-glyph-left (font code)
+  (glyph-info-left (font-glyph-info font code)))
 
-(defmethod clim-clx::font-glyph-right ((font truetype-font) char)
-  (glyph-info-right (font-glyph-info font (char-code char))))
+(defun font-glyph-right (font code)
+  (glyph-info-right (font-glyph-info font code)))
 
 ;;; Simple custom cache for glyph IDs and widths. Much faster than
 ;;; using the char->glyph-info hash table directly.
@@ -233,14 +233,15 @@
   ;; first-not-done)  
   (declare (optimize (speed 3))
            (ignore translate direction))
-  (let ((width (font-text-width font (subseq string start end))))
+  (let ((width (font-text-width font (subseq string start end)))
+        (last-char-code (char-code (char string (1- end)))))
     (values
      width
      (clim-clx::font-ascent font)
      (clim-clx::font-descent font)
-     (clim-clx::font-glyph-left font (char string start))
-     (- width (- (clim-clx::font-glyph-width font (char string (1- end)))
-                 (clim-clx::font-glyph-right font (char string (1- end)))))
+     (font-glyph-left font last-char-code)
+     (- width (- (clim-clx::font-glyph-width font last-char-code)
+                 (font-glyph-right font last-char-code)))
      (clim-clx::font-ascent font)
      (clim-clx::font-descent font)
      0 end)))
