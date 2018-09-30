@@ -531,28 +531,12 @@ or NIL if the current transformation is the identity transformation."
 ;;;  Character info
 ;;;
 
-(defmethod clim-clx::font-glyph-width ((font freetype-font) char)
+(defmethod clim-clx::font-glyph-width ((font freetype-font) code)
   (with-face-from-font (face font)
-    (freetype2:load-char face char)
+    (freetype2:load-char face (code-char char))
     (let* ((glyph (freetype2-types:ft-face-glyph face))
            (metrics (freetype2-types:ft-glyphslot-metrics glyph)))
       (/ (freetype2-types:ft-glyph-metrics-width metrics) *freetype-font-scale*))))
-
-(defmethod clim-clx::font-glyph-left ((font freetype-font) char)
-  (with-face-from-font (face font)
-    (freetype2:load-char face char)
-    (let* ((glyph (freetype2-types:ft-face-glyph face))
-           (metrics (freetype2-types:ft-glyphslot-metrics glyph)))
-      (/ (freetype2-types:ft-glyph-metrics-hori-bearing-x metrics) *freetype-font-scale*))))
-
-(defmethod clim-clx::font-glyph-right ((font freetype-font) char)
-  (with-face-from-font (face font)
-    (freetype2:load-char face char)
-    (let* ((glyph (freetype2-types:ft-face-glyph face))
-           (metrics (freetype2-types:ft-glyphslot-metrics glyph)))
-      (/ (- (freetype2-types:ft-glyph-metrics-width metrics)
-            (freetype2-types:ft-glyph-metrics-hori-advance metrics))
-         *freetype-font-scale*))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Font replacement code
