@@ -14,12 +14,10 @@
 (in-package :mcclim-truetype)
 
 ;;; TODO:
-;;;  * Kerning (we didn't do this with Freetype, either. Oops.)
 ;;;  * Implement fixed-font-width-p for zpb-ttf.
 ;;;  * Boxes for missing glyphs.
 
 ;;; Wish-list:
-
 ;;;  * Subpixel antialiasing. It would be straightforward to generate the
 ;;;    glyphs by tripling the width as passed to cl-vectors and compressing
 ;;;    triplets of pixels together ourselves. I'm not certain how to draw
@@ -55,13 +53,14 @@
     (pushnew face (all-faces family))))
 
 (defclass truetype-font ()
-  ((face          :initarg :face    :reader truetype-font-face)
-   (size          :initarg :size    :reader truetype-font-size)
-   (kerning-p     :initarg :kerning :reader truetype-font-kerning-p)
-   (ascent                          :reader truetype-font-ascent)
-   (descent                         :reader truetype-font-descent)
-   (units->pixels                   :reader zpb-ttf-font-units->pixels))
-  (:default-initargs :kerning nil))
+  ((face          :initarg :face     :reader truetype-font-face)
+   (size          :initarg :size     :reader truetype-font-size)
+   (kerning-p     :initarg :kerning  :reader truetype-font-kerning-p)
+   (tracking      :initarg :tracking :reader truetype-font-tracking)
+   (ascent                           :reader truetype-font-ascent)
+   (descent                          :reader truetype-font-descent)
+   (units->pixels                    :reader zpb-ttf-font-units->pixels))
+  (:default-initargs :kerning t :tracking 0))
 
 (defmethod initialize-instance :after ((font truetype-font) &key &allow-other-keys)
   (with-slots (face size ascent descent font-loader units->pixels) font
@@ -71,6 +70,11 @@
             ascent (* (zpb-ttf:ascender loader) units->pixels)
             descent (- (* (zpb-ttf:descender loader) units->pixels))))
     (pushnew font (all-fonts face))))
+
+(defmethod zpb-ttf:kerning-offset ((left character) (right character) (font truetype-font))
+  (if (null (truetype-font-kerning-p font))
+      0
+      (zpb-ttf:kerning-offset left right (zpb-ttf-font-loader (truetype-font-face font)))))
 
 (defmethod clim-extensions:font-face-all-sizes ((face truetype-face))
   (sort (mapcar #'truetype-font-size (all-fonts face)) #'<))
@@ -88,7 +92,7 @@
       (format stream " size=~A ascent=~A descent=~A units->pixels=~A"
               size ascent descent units->pixels))))
 
-(defun glyph-pixarray (font char)
+(defun glyph-pixarray (font char next)
   "Render a character of 'face', returning a 2D (unsigned-byte 8) array suitable
    as an alpha mask, and dimensions. This function returns seven values: alpha
    mask byte array, x-origin, y-origin (subtracted from position before
@@ -96,11 +100,13 @@
   (declare (optimize (debug 3)))
   (climi::with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
-      (let* ((glyph (zpb-ttf:find-glyph char (zpb-ttf-font-loader
-                                              (truetype-font-face font))))
-             (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
-             (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
-             (advance-width (* units->pixels (zpb-ttf:advance-width glyph)))
+      (let* ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))
+             (glyph (zpb-ttf:find-glyph char font-loader))
+             ;; (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
+             ;; (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
+             (advance-width (* units->pixels (+ (zpb-ttf:advance-width glyph)
+                                                (zpb-ttf:kerning-offset char next font)
+                                                (truetype-font-tracking font))))
              (advance-height 0)
              (bounding-box (map 'vector (lambda (x) (float (* x units->pixels)))
                                 (zpb-ttf:bounding-box glyph)))
@@ -158,7 +164,8 @@
                            (zpb-ttf:right-side-bearing last-glyph)
                            (bb-width (zpb-ttf:string-bounding-box
                                       string font-loader
-                                      :kerning (truetype-font-kerning-p font))))))
+                                      :kerning (truetype-font-kerning-p font)))
+                           (* (truetype-font-tracking font) (1- (length string))))))
       (* units->pixels total-width))))
 
 (defun font-fixed-width-p (truetype-font)

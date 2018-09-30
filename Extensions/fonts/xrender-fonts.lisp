@@ -135,9 +135,11 @@
 
 (defun font-generate-glyph (font glyph-index)
   (let* ((display (clx-truetype-font-display font))
-         (glyph-id (display-draw-glyph-id display)))
+         (glyph-id (display-draw-glyph-id display))
+         (character (code-char (ldb (byte 16 0) glyph-index)))
+         (next-character (code-char (ldb (byte 16 16) glyph-index))))
     (multiple-value-bind (arr left top width height dx dy)
-        (glyph-pixarray font (code-char glyph-index))
+        (glyph-pixarray font character next-character)
       (with-slots (fixed-width) font
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
@@ -169,13 +171,13 @@
       (let ((right (+ left (array-dimension arr 1))))
         (glyph-info glyph-id width height left right top dx dy)))))
 
-(defun font-glyph-info (font character)
+(defun font-glyph-info (font code)
   (with-slots (char->glyph-info) font
-    (ensure-gethash character char->glyph-info
-                    (font-generate-glyph font (char-code character)))))
+    (ensure-gethash code char->glyph-info
+                    (font-generate-glyph font code))))
 
-(defun font-glyph-id (font character)
-  (glyph-info-id (font-glyph-info font character)))
+(defun font-glyph-id (font code)
+  (glyph-info-id (font-glyph-info font code)))
 
 (defmethod clim-clx::font-ascent ((font truetype-font))
   (truetype-font-ascent font))
@@ -184,13 +186,13 @@
   (truetype-font-descent font))
 
 (defmethod clim-clx::font-glyph-width ((font truetype-font) char)
-  (glyph-info-width (font-glyph-info font char)))
+  (glyph-info-width (font-glyph-info font (char-code char))))
 
 (defmethod clim-clx::font-glyph-left ((font truetype-font) char)
-  (glyph-info-left (font-glyph-info font char)))
+  (glyph-info-left (font-glyph-info font (char-code char))))
 
 (defmethod clim-clx::font-glyph-right ((font truetype-font) char)
-  (glyph-info-right (font-glyph-info font char)))
+  (glyph-info-right (font-glyph-info font (char-code char))))
 
 ;;; Simple custom cache for glyph IDs and widths. Much faster than
 ;;; using the char->glyph-info hash table directly.
@@ -202,21 +204,21 @@
 
 (declaim (inline gcache-get))
 
-(defmacro ensure-font-glyph-id (font cache code char)
-  `(or (gcache-get ,cache ,code)
-       (gcache-set ,cache ,code (font-glyph-id ,font ,char))))
-
 (defun gcache-get (cache key-number)  
   (declare (optimize (speed 3))
            (type (simple-array t (512))))
-  (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello there.
-    (and (= key-number (the fixnum (svref cache hash))) ; general kenobi.
+  (let ((hash (logand (the (unsigned-byte 32) key-number) #xFF)))   ; hello there.
+    (and (= key-number (the (unsigned-byte 32) (svref cache hash))) ; general kenobi.
          (svref cache (+ 256 hash)))))
 
 (defun gcache-set (cache key-number value)
   (let ((hash (logand key-number #xFF)))
     (setf (svref cache hash) key-number
           (svref cache (+ 256 hash)) value)))
+
+(defmacro ensure-font-glyph-id (font cache code)
+  `(or (gcache-get ,cache ,code)
+       (gcache-set ,cache ,code (font-glyph-id ,font ,code))))
 
 (defmethod clim-clx::font-text-extents ((font truetype-font) string
                                         &key (start 0) (end (length string)) translate direction)
@@ -282,12 +284,13 @@
         (setf (first picture-info) fg))
       (cdr picture-info))))
 
-;;; Arbitrary restriction: No more than 65536 glyphs cached on a
-;;; single display. I don't think that's unreasonable. Extending 
-;;; this from 16 to 32 bits is straightforward, at a slight loss
-;;; in performance.
+;;; Restriction: no more than 65536 glyph pairs cached on a single display. I
+;;; don't think that's unreasonable. Having keys as glyph pairs is essential for
+;;; kerning where the same glyph may have different advance-width values for
+;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
+;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
 (defvar %buffer%                        ; TODO: thread safety
-  (make-array 1024 :element-type '(unsigned-byte 16) :adjustable nil :fill-pointer nil))
+  (make-array 1024 :element-type '(unsigned-byte 32) :adjustable nil :fill-pointer nil))
 (defmethod clim-clx::font-draw-glyphs ((font truetype-font) mirror gc x y string
                                        &key start end translate size direction transformation)
   (declare (optimize (speed 3))
@@ -298,25 +301,27 @@
            (type string string))
   (multiple-value-bind (x y)
       (transform-position transformation x y)
-    (when (< (length (the (simple-array (unsigned-byte 16)) %buffer%))
+    (when (< (length (the (simple-array (unsigned-byte 32)) %buffer%))
              (- end start))
       (setf %buffer% (make-array (* 256 (ceiling (- end start) 256))
-                                 :element-type '(unsigned-byte 16)
+                                 :element-type '(unsigned-byte 32)
                                  :adjustable nil :fill-pointer nil)))
     (let ((display (xlib:drawable-display mirror)))
       (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
         (declare (ignore source-pixmap))
         (let* ((cache (slot-value font 'glyph-id-cache))
-               (glyph-ids %buffer%))
-
+               (glyph-ids %buffer%)
+               (glyph-set (display-the-glyph-set display)))
           (loop
-             for i from start below end ; TODO: Read optimization notes. Fix. Repeat.
+             for i from start below end
              for i* upfrom 0
-             as char = (aref string i)
-             as code = (char-code char)
-             do (setf (aref glyph-ids i*)
-                      (the (unsigned-byte 16)
-                           (ensure-font-glyph-id font cache code char))))
+             as next-char = (if (>= (1+ i) end) #\nul (char string (1+ i)))
+             as next-char-code = (char-code next-char)
+             as char = (char string i)
+             as code = (dpb next-char-code (byte 16 16) (char-code char))
+             do (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+                      (the (unsigned-byte 32)
+                           (ensure-font-glyph-id font cache code))))
 
           ;; Sync the picture-clip-mask with that of the gcontext.
           (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
@@ -325,7 +330,7 @@
                   (xlib::gcontext-clip-mask gc)))
 
           (xlib::render-composite-glyphs (drawable-picture mirror)
-                                         (display-the-glyph-set display)
+                                         glyph-set
                                          source-picture
                                          (truncate (+ 0.5 x))
                                          (truncate (+ y 0.5))
