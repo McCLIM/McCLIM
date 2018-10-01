@@ -16,6 +16,8 @@
 
 (declaim (optimize (speed 1) (safety 3) (debug 1) (space 0)))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant +ccb+ #.(ceiling (log char-code-limit 2))))
 ;;;; Notes
 
 ;;; You might need to tweak mcclim-truetype::*families/faces* to point
@@ -232,16 +234,52 @@
   ;; font-ascent font-descent direction
   ;; first-not-done)  
   (declare (optimize (speed 3))
-           (ignore translate direction))
-  (let ((width (font-text-width font (subseq string start end)))
-        (last-char-code (char-code (char string (1- end)))))
+           (ignore translate direction)
+           (fixnum start end))
+  (let* ((last-char-code (char-code (char string (1- end))))
+         (left-offset (font-glyph-left font last-char-code))
+         (width-cache (slot-value font 'glyph-width-cache))
+         (width
+          ;; We could work a little harder and eliminate generic arithmetic
+          ;; here. It might shave a few percent off a draw-text benchmark.
+          ;; Rather silly to obsess over the array access considering that.
+           (macrolet ((compute ()
+                        `(loop
+                            with sum fixnum = (or (gcache-get width-cache last-char-code)
+                                                  (gcache-set width-cache last-char-code
+                                                              (glyph-info-advance-width
+                                                               (font-glyph-info font last-char-code))))
+                            with char = (char string start)
+                            for i from (1+ start) below end
+                            as next-char = (char string i)
+                            as next-char-code = (char-code next-char)
+                            as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
+
+                            ;; for i from start below end
+                            ;; as code = (char-code (char string i))
+
+                            do (incf sum (or (gcache-get width-cache code)
+                                             (gcache-set width-cache code
+                                                         (glyph-info-advance-width (font-glyph-info font code)))))
+                              (setf char next-char)
+                            finally (return sum))))
+             (if (numberp (slot-value font 'fixed-width))
+                 (* (slot-value font 'fixed-width) (- end start))
+                 (typecase string
+                   (simple-string
+                    (locally (declare (type simple-string string))
+                      (compute)))
+                   (string
+                    (locally (declare (type string string))
+                      (compute)))
+                   (t (compute)))))))
     (values
      width
      (clim-clx::font-ascent font)
      (clim-clx::font-descent font)
-     (font-glyph-left font last-char-code)
-     (- width (- (clim-clx::font-glyph-width font last-char-code)
-                 (font-glyph-right font last-char-code)))
+     (- left-offset)
+     ;; Cached WIDTH contains right-bearing already.
+     (+ left-offset width)
      (clim-clx::font-ascent font)
      (clim-clx::font-descent font)
      0 end)))
@@ -324,7 +362,7 @@
              for i from (1+ start) below end
              as next-char = (char string i)
              as next-char-code = (char-code next-char)
-             as code = (dpb next-char-code (byte 16 16) (char-code char))
+             as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
              do
                (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
                      (the (unsigned-byte 32) (ensure-font-glyph-id font cache code)))
