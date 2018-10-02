@@ -335,9 +335,9 @@
 ;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
 ;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
 (defmethod clim-clx::font-draw-glyphs ((font clx-truetype-font) mirror gc x y string
-                                       &key start end translate size direction transformation)
+                                       &key start end translate direction transformation)
   (declare (optimize (speed 3))
-           (ignore size translate direction)
+           (ignore translate direction)
            (type #-sbcl (integer 0 #.array-dimension-limit)
                  #+sbcl sb-int:index
                  start end)

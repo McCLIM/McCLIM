@@ -149,14 +149,14 @@
                        :translate translate)))
 
 (defgeneric font-draw-glyphs (font mirror gc x y string
-                              &key start end translate size direction transformation)
+                              &key start end translate direction transformation)
   (:method (font mirror gc x y string
-            &key (start 0) (end (length string)) (translate #'translate) (size 16) direction transformation)
+            &key (start 0) (end (length string)) (translate #'translate) direction transformation)
     (declare (ignore font direction))
     (multiple-value-bind (x y)
         (transform-position transformation x y)
       (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
-                        :start start :end end :translate translate :size size))))
+                        :start start :end end :translate translate :size 16))))
 
 
 ;;; Font listing implementation

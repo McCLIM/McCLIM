@@ -328,9 +328,8 @@ or NIL if the current transformation is the identity transformation."
 
 (defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string
                                        &key (start 0) (end (length string))
-                                         translate size (direction :ltr)
-                                         transformation)
-  (declare (ignore translate size))
+                                         translate (direction :ltr) transformation)
+  (declare (ignore translate))
   (with-face-from-font (face font)
     (multiple-value-bind (transform-matrix)
         (convert-transformation-to-matrix transformation)
@@ -533,7 +532,7 @@ or NIL if the current transformation is the identity transformation."
 
 (defmethod clim-clx::font-glyph-width ((font freetype-font) code)
   (with-face-from-font (face font)
-    (freetype2:load-char face (code-char char))
+    (freetype2:load-char face code)
     (let* ((glyph (freetype2-types:ft-face-glyph face))
            (metrics (freetype2-types:ft-glyphslot-metrics glyph)))
       (/ (freetype2-types:ft-glyph-metrics-width metrics) *freetype-font-scale*))))
