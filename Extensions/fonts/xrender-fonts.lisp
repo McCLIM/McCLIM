@@ -75,7 +75,7 @@
    (fixed-width       :initform nil)
    (glyph-id-cache    :initform (make-gcache))
    (glyph-width-cache :initform (make-gcache))
-   (char->glyph-info  :initform (make-hash-table :size 256))
+   (char->glyph-info  :initform (make-hash-table :size 512))
    (%buffer%          :initform (make-array 1024
                                             :element-type '(unsigned-byte 32)
                                             :adjustable nil
@@ -210,17 +210,19 @@
     (loop for i from 0 below 256 do (setf (aref array i) (1+ i)))
     array))
 
-(declaim (inline gcache-get))
+(declaim (inline gcache-get gcache-set))
 
 (defun gcache-get (cache key-number)  
   (declare (optimize (speed 3))
            (type (simple-array t (512))))
-  (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello there.
+  (let ((hash (logand (the fixnum key-number) 512)))    ; hello there.
     (and (= key-number (the fixnum (svref cache hash))) ; general kenobi.
          (svref cache (+ 256 hash)))))
 
 (defun gcache-set (cache key-number value)
-  (let ((hash (logand key-number #xFF)))
+  (declare (optimize (speed 3))
+           (type (simple-array t (512))))
+  (let ((hash (logand (the fixnum key-number) 512)))
     (setf (svref cache hash) key-number
           (svref cache (+ 256 hash)) value)))
 

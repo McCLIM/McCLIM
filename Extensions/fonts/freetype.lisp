@@ -329,14 +329,15 @@ or NIL if the current transformation is the identity transformation."
 
 (defun mcclim-font:draw-glyphs (medium mirror gc x y string
                                 &key (start 0) (end (length string))
-                                  translate (direction :ltr) transformation)
+                                  translate (direction :ltr) transformation
+                                &aux
+                                  (font (clim-clx::text-style-to-X-font (clim:port medium) (clim:medium-text-style medium))))
   (declare (ignore translate))
-  (let ((font (clim-clx::text-style-to-X-font (clim:port medium) (clim:medium-text-style medium))))
-    (when (null (freetype-font-replace font))
-      (return-from mcclim-font:draw-glyphs
-        (%freetype-draw-glyphs font mirror gc x y string
-                               :start start :end end :direction direction
-                               :transformation transformation))))
+  (when (null (freetype-font-replace font))
+    (return-from mcclim-font:draw-glyphs
+      (%freetype-draw-glyphs font mirror gc x y string
+                             :start start :end end :direction direction
+                             :transformation transformation)))
   ;; font replacement logic
   (let* ((text-style (clim:medium-text-style medium))
          (string (subseq string start end))
