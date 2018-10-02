@@ -1060,11 +1060,13 @@ Returns a SPACE-REQUIREMENT object."))
 
 (defgeneric (setf text-style-mapping)
     (mapping port text-style &optional character-set))
+
 (defgeneric medium-miter-limit (medium)
   (:documentation
    "If LINE-STYLE-JOINT-SHAPE is :MITER and the angle between two
    consequent lines is less than the values return by
    MEDIUM-MITER-LIMIT, :BEVEL is used instead."))
+
 (defgeneric line-style-effective-thickness (line-style medium)
   (:documentation
    "Returns the thickness in device units of a line,
