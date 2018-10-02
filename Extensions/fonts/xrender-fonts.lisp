@@ -215,8 +215,8 @@
 (defun gcache-get (cache key-number)  
   (declare (optimize (speed 3))
            (type (simple-array t (512))))
-  (let ((hash (logand (the (unsigned-byte 32) key-number) #xFF)))   ; hello there.
-    (and (= key-number (the (unsigned-byte 32) (svref cache hash))) ; general kenobi.
+  (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello there.
+    (and (= key-number (the fixnum (svref cache hash))) ; general kenobi.
          (svref cache (+ 256 hash)))))
 
 (defun gcache-set (cache key-number value)
@@ -258,9 +258,10 @@
                             ;; for i from start below end
                             ;; as code = (char-code (char string i))
 
-                            do (incf sum (or (gcache-get width-cache code)
-                                             (gcache-set width-cache code
-                                                         (glyph-info-advance-width (font-glyph-info font code)))))
+                            do
+                              (incf sum (or (gcache-get width-cache code)
+                                            (gcache-set width-cache code
+                                                        (glyph-info-advance-width (font-glyph-info font code)))))
                               (setf char next-char)
                             finally (return sum))))
              (if (numberp (slot-value font 'fixed-width))
@@ -334,8 +335,10 @@
 ;;; kerning where the same glyph may have different advance-width values for
 ;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
 ;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
-(defmethod clim-clx::font-draw-glyphs ((font clx-truetype-font) mirror gc x y string
-                                       &key start end translate direction transformation)
+(defun mcclim-font:draw-glyphs (medium mirror gc x y string
+                                &key start end translate direction transformation
+                                &aux (font (clim-clx::text-style-to-X-font
+                                            (port medium) (medium-text-style medium))))
   (declare (optimize (speed 3))
            (ignore translate direction)
            (type #-sbcl (integer 0 #.array-dimension-limit)

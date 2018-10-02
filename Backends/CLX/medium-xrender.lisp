@@ -195,13 +195,12 @@
                     (:last-line-baseline  y)                           ; change
                     (:bottom (+ y baseline (- text-height)))))))       ; change
       (let ((x (round-coordinate x))
-            (y (round-coordinate y))
-            (font (text-style-to-X-font (port medium) (medium-text-style medium))))
+            (y (round-coordinate y)))
         (bt:with-lock-held (*draw-font-lock*)
-          (font-draw-glyphs font mirror gc x y string
-                            :start start :end end
-                            :translate #'translate
-                            :transformation merged-transform))))))
+          (mcclim-font:draw-glyphs medium mirror gc x y string
+                                   :start start :end end
+                                   :translate #'translate
+                                   :transformation merged-transform))))))
 
 (defmethod clime:medium-draw-glyph ((medium clx-medium) element x y
                                     align-x align-y toward-x toward-y

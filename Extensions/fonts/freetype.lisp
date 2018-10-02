@@ -91,17 +91,18 @@ forms."
   ((face           :initarg :face
                    :reader freetype-font/face)
    (size           :initarg :size
-                   :initform 10
                    :reader freetype-font/size)
    (cached-glyphs  :initform (make-hash-table :test 'eql)
                    :reader freetype-font/cached-glyphs)
    (cached-picture :type cached-picture
                    :reader freetype-font/cached-picture)
    (hb-font        :initarg :hb-font
-                   :initform nil
                    :accessor freetype-font/hb-font)
    (port           :initarg :port
-                   :reader freetype-font/port)))
+                   :reader freetype-font/port)
+   (font-replace   :initarg :font-replace
+                   :reader freetype-font-replace))
+  (:default-initargs :size 10 :hb-font nil :font-replace nil))
 
 (defmethod initialize-instance :after ((obj freetype-font) &key)
   (let ((cached (make-instance 'cached-picture)))
@@ -326,10 +327,35 @@ or NIL if the current transformation is the identity transformation."
 ;;; applied. The assumption is that applying transformation on text is
 ;;; rare enough that the lower performance will be acceptable.
 
-(defmethod clim-clx::font-draw-glyphs ((font freetype-font) mirror gc x y string
-                                       &key (start 0) (end (length string))
-                                         translate (direction :ltr) transformation)
+(defun mcclim-font:draw-glyphs (medium mirror gc x y string
+                                &key (start 0) (end (length string))
+                                  translate (direction :ltr) transformation)
   (declare (ignore translate))
+  (let ((font (clim-clx::text-style-to-X-font (clim:port medium) (clim:medium-text-style medium))))
+    (when (null (freetype-font-replace font))
+      (return-from mcclim-font:draw-glyphs
+        (%freetype-draw-glyphs font mirror gc x y string
+                               :start start :end end :direction direction
+                               :transformation transformation))))
+  ;; font replacement logic
+  (let* ((text-style (clim:medium-text-style medium))
+         (string (subseq string start end))
+         (blocks (find-replacement-fonts (clim:port medium) text-style string))
+         (size (clim:text-style-size text-style)))
+    (loop
+       with curr-x = x
+       for (string family style) in blocks
+       for new-text-style = (if family (clim:make-text-style family style size) text-style)
+       do (let ((font (clim-clx::text-style-to-X-font (clim:port medium) new-text-style)))
+            (%freetype-draw-glyphs font mirror gc curr-x y string
+                                   :direction direction
+                                   :transformation transformation)
+            (incf curr-x (clim-clx::text-size medium string :text-style new-text-style)))
+       finally (return curr-x))))
+
+(defun %freetype-draw-glyphs (font mirror gc x y string
+                             &key (start 0) (end (length string))
+                               (direction :ltr) transformation)
   (with-face-from-font (face font)
     (multiple-value-bind (transform-matrix)
         (convert-transformation-to-matrix transformation)
@@ -376,37 +402,54 @@ or NIL if the current transformation is the identity transformation."
   ;;   width ascent descent left right font-ascent font-descent direction first-not-done
   (with-face-from-font (face font)
     (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
-    (if (= start end)
-        (values 0 0 0 0 0 (freetype2:face-ascender-pixels face) (freetype2:face-descender-pixels face) 0 end)
-        (let* ((index-list (make-glyph-list font (subseq string start end) direction)))
-          (load-cached-glyphset font (mapcar #'glyph-entry-codepoint index-list))
-          (let ((cached-glyphs (freetype-font/cached-glyphs font)))
-            (multiple-value-bind (width ascender descender)
-                (loop
-                  with rx = 0
-                  with ascender = 0
-                  with descender = 0
-                  for current-index on index-list
-                  for e = (car current-index)
-                  for attrs = (gethash (glyph-entry-codepoint e) cached-glyphs)
-                  do (progn
-                       (when (cdr current-index)
-                         (incf rx (/ (glyph-entry-x-advance e) 64)))
-                       (setf descender (max descender (- (glyph-attributes-height attrs)
-                                                         (glyph-attributes-y-origin attrs))))
-                       (setf ascender (max ascender (glyph-attributes-y-origin attrs))))
-                  finally (return (values rx ascender descender)))
-              (let* ((e (car (last index-list)))
-                     (glyph-attrs (gethash (glyph-entry-codepoint e) cached-glyphs)))
-                (values (+ width (/ (glyph-entry-x-advance e) 64))
-                        ascender
-                        descender
-                        (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
-                        (- (+ width (glyph-attributes-width glyph-attrs)) (glyph-attributes-x-origin glyph-attrs))
-                        (freetype2:face-ascender-pixels face)
-                        (freetype2:face-descender-pixels face)
-                        0
-                        end))))))))
+    (flet ((text-extents (font string start end)
+             (let* ((index-list (make-glyph-list font (subseq string start end) direction)))
+               (load-cached-glyphset font (mapcar #'glyph-entry-codepoint index-list))
+               (let ((cached-glyphs (freetype-font/cached-glyphs font)))
+                 (multiple-value-bind (width ascender descender)
+                     (loop
+                        with rx = 0
+                        with ascender = 0
+                        with descender = 0
+                        for current-index on index-list
+                        for e = (car current-index)
+                        for attrs = (gethash (glyph-entry-codepoint e) cached-glyphs)
+                        do (progn
+                             (when (cdr current-index)
+                               (incf rx (/ (glyph-entry-x-advance e) 64)))
+                             (setf descender (max descender (- (glyph-attributes-height attrs)
+                                                               (glyph-attributes-y-origin attrs))))
+                             (setf ascender (max ascender (glyph-attributes-y-origin attrs))))
+                        finally (return (values rx ascender descender)))
+                   (let* ((e (car (last index-list)))
+                          (glyph-attrs (gethash (glyph-entry-codepoint e) cached-glyphs)))
+                     (values (+ width (/ (glyph-entry-x-advance e) 64)) ascender descender
+                             (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
+                             (- (+ width (glyph-attributes-width glyph-attrs)) (glyph-attributes-x-origin glyph-attrs))
+                             (freetype2:face-ascender-pixels face)
+                             (freetype2:face-descender-pixels face)
+                             0 end)))))))
+      (cond ((= start end)
+             (values 0 0 0 0 0 (freetype2:face-ascender-pixels face) (freetype2:face-descender-pixels face) 0 end))
+            ((freetype-font-replace font)
+             (let* ((text-style (freetype-font-replace font))
+                    (port (freetype-font/port font))
+                    (string (subseq string start end))
+                    (blocks (find-replacement-fonts port text-style string))
+                    (size (clim:text-style-size text-style)))
+               (loop
+                  with curr-x = 0
+                  with sizes = nil
+                  for (string family style) in blocks
+                  for new-text-style = (if family (clim:make-text-style family style size) text-style)
+                  do (let ((font (clim-clx::text-style-to-X-font port new-text-style)))
+                       (setf sizes (multiple-value-list (text-extents font string 0 (length string))))
+                       (incf curr-x (car sizes)))
+                  finally
+                    (setf (car sizes) curr-x)
+                    (return (apply #'values sizes)))))
+            (t
+             (text-extents font string start end))))))
 
 (defmethod clim-clx::font-ascent ((font freetype-font))
   (with-face-from-font (face font)
@@ -467,7 +510,10 @@ or NIL if the current transformation is the identity transformation."
                        :size (etypecase size
                                (keyword (or (getf clim-clx::*clx-text-sizes* size) 12))
                                (number size)
-                               (null 12)))))))
+                               (null 12))
+                       :font-replace (typecase text-style
+                                       (font-replacement-text-style text-style)
+                                       (otherwise nil)))))))
 
 (defmethod clim-clx::lookup-text-style-to-x-font ((port clim-clx::clx-port)
                                                   (renderer freetype-font-renderer)
@@ -541,16 +587,16 @@ or NIL if the current transformation is the identity transformation."
 ;;; Font replacement code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defgeneric text-style-fallback-fonts (text-style)
-  (:method ((text-style clim:standard-text-style))
-    nil))
-
 (defclass font-replacement-text-style (clim:standard-text-style)
   ((fallback-fonts :initarg :replacement
+                   :initform :all
                    :reader font-replacement-text-style/replacement)))
 
-(defmethod text-style-fallback-fonts ((text-style font-replacement-text-style))
-  (font-replacement-text-style/replacement text-style))
+(defgeneric text-style-fallback-fonts (text-style)
+  (:method ((text-style clim:standard-text-style))
+    nil)
+  (:method ((text-style font-replacement-text-style))
+    (font-replacement-text-style/replacement text-style)))
 
 (defmethod clim:merge-text-styles ((style1 font-replacement-text-style) (style2 clim:standard-text-style))
   (let ((merged-standard (call-next-method)))
@@ -619,7 +665,7 @@ or NIL if the current transformation is the identity transformation."
                              *replacement-font-cache*
                              (find-best-font-for-fallback-internal port text-style ch)))
 
-(defmethod clim-clx:find-replacement-fonts-from-renderer (port (font-renderer freetype-font-renderer) text-style string)
+(defun find-replacement-fonts (port text-style string)
   (let* ((default-font (clim-clx::text-style-to-x-font port text-style))
          (default-charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face default-font)))
          (result nil)

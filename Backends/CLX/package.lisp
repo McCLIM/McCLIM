@@ -79,5 +79,4 @@
    #:clx-port-window
    #:sheet-xmirror
    #:sheet-direct-xmirror
-   #:port-find-all-font-families
-   #:find-replacement-fonts-from-renderer))
+   #:port-find-all-font-families))

@@ -376,12 +376,3 @@
 (clim-internals::define-protocol-class font-renderer ())
 (defclass clx-standard-font-renderer (font-renderer)
   ())
-
-(defgeneric find-replacement-fonts-from-renderer (port font-renderer font string)
-  (:method (port font-renderer font string)
-    (list (cons string '(nil nil)))))
-
-;;; This method can't be defined in fonts.lisp, since it relies on
-;;; CLX-PORT which is only defined when this file is loaded.
-(defmethod mcclim-font:find-replacement-fonts-from-port ((port clim-clx::clx-port) text-style string)
-  (find-replacement-fonts-from-renderer port (clim-clx::clx-port-font-renderer port) text-style string))
