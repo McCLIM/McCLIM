@@ -370,7 +370,13 @@
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))
 
-;;; Should this method be defined in fonts.lisp?
+;;; This protocol class should be eradicated with the whole mechanism. XRender
+;;; should dispatch on its own where feasible.
+
+(clim-internals::define-protocol-class font-renderer ())
+(defclass clx-standard-font-renderer (font-renderer)
+  ())
+
 (defgeneric find-replacement-fonts-from-renderer (port font-renderer font string)
   (:method (port font-renderer font string)
     (list (cons string '(nil nil)))))
