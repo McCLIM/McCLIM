@@ -55,7 +55,7 @@
 	 (itups internal-time-units-per-second)
 	 (n 0)
 	 (start (get-internal-real-time))
-	 (stop (+ start itups)))
+	 (stop (+ start (* 5 itups))))
     (do ()
 	((>= (get-internal-real-time) stop))
       (incf n)
@@ -85,6 +85,8 @@
     (window-clear stream)
     (setf (stream-recording-p stream) t)
     (format stream "Score: ~A operations/s~%"
+	    (float (/ n (/ (- stop start) itups))))
+    (format *debug-io* "Score: ~A operations/s~%"
 	    (float (/ n (/ (- stop start) itups))))))
 
 (define-drawing-benchmark-command (com-quit-drawing-benchmark :menu "Quit") ()

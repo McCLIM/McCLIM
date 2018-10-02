@@ -162,8 +162,6 @@
                                                  (min end (length string)))))
   ;; Possible optimalzaions:
   ;;
-  ;; * if align-x = left, then there is no need to compute text width (big win with kerning)
-  ;; * if align-y is not member (:center :last-line-baseline :bottom) then text-height is not needed
   ;; * with-clx-graphics already creates appropriate pixmap for us (correct one!) and we have
   ;; medium picture in place - there is no need for gcontext-picture (see xrender-fonts)
   ;; * don't use (PICTURE-DRAWABLE (CLX-RENDER-MEDIUM-PICTURE MEDIUM)) - it is slow due to possible
@@ -175,32 +173,31 @@
          (native-transform (sheet-native-transformation (medium-sheet medium)))
          (merged-transform (clim:compose-transformations native-transform medium-transform)))
     (with-clx-graphics () medium
-      (when (characterp string)
-        (setq string (make-string 1 :initial-element string)))
-      (if (null end)
-          (setq end (length string))
-          (setq end (min end (length string))))
-      (multiple-value-bind (text-width text-height x-cursor y-cursor baseline)
-          (text-size medium string :start start :end end)
-        (declare (ignore x-cursor y-cursor))
-        (unless (and (eq align-x :left) (eq align-y :baseline))
-          (setq x (- x (ecase align-x
-                         (:left 0)
-                         (:center (round text-width 2)) ; worst case
-                         (:right text-width))))         ; worst case
+      (unless (or (eq align-y :baseline)
+                  (eq align-y :first-line-baseline))
+        (let* ((font (clim-clx::text-style-to-X-font (port medium) (medium-text-style medium)))
+               (ascent (font-ascent font))
+               (descent (font-descent font))
+               (text-height (+ ascent descent)))
           (setq y (ecase align-y
-                    (:top (+ y baseline))                              ; OK
-                    (:first-line-baseline :baseline y)                 ; OK
-                    (:center (+ y baseline (- (floor text-height 2)))) ; change
-                    (:last-line-baseline  y)                           ; change
-                    (:bottom (+ y baseline (- text-height)))))))       ; change
-      (let ((x (round-coordinate x))
-            (y (round-coordinate y)))
-        (bt:with-lock-held (*draw-font-lock*)
-          (mcclim-font:draw-glyphs medium mirror gc x y string
-                                   :start start :end end
-                                   :translate #'translate
-                                   :transformation merged-transform))))))
+                    (:top (+ y ascent))                              ; OK
+                    ;;((:baseline :first-line-baseline) y)           ; OK
+                    (:center (+ y ascent (- (/ text-height 2.0s0)))) ; change
+                    (:last-line-baseline  y)                         ; change
+                    (:bottom (- y descent))))))                      ; change
+      (unless (eq align-x :left)
+        ;; This is the worst case - we need to compute whole text width what
+        ;; requires walking all lines char-by char.
+        (let ((text-width (text-size medium string)))
+          (setq x (- x (ecase align-x
+                         ;;(:left 0)
+                         (:center (/ text-width 2.0s0))
+                         (:right text-width))))))
+      (bt:with-lock-held (*draw-font-lock*)
+        (mcclim-font:draw-glyphs medium mirror gc x y string
+                                 :start start :end end
+                                 :translate #'translate
+                                 :transformation merged-transform)))))
 
 (defmethod clime:medium-draw-glyph ((medium clx-medium) element x y
                                     align-x align-y toward-x toward-y
