@@ -111,11 +111,98 @@
   (call-next-method))
 
 
+(defmethod climi::text-bounding-rectangle*
+    ((medium clx-render-medium) string &key text-style (start 0) end)
+  (when (characterp string)
+    (setf string (make-string 1 :initial-element string)))
+  (unless end (setf end (length string)))
+  (unless text-style (setf text-style (medium-text-style medium)))
+  (let ((xfont (text-style-to-X-font (port medium) text-style)))
+    (cond ((= start end)
+           (values 0 0 0 0))
+          (t
+           (let ((position-newline (position #\newline string :start start :end end)))
+             (cond ((not (null position-newline))
+                    (multiple-value-bind (width ascent descent left right
+                                                font-ascent font-descent direction
+                                                first-not-done)
+                        (font-text-extents xfont string
+                                           :start start :end position-newline
+                                           :translate #'translate)
+                      (declare (ignorable width left right
+                                          font-ascent font-descent
+                                          direction first-not-done))
+                      (multiple-value-bind (minx miny maxx maxy)
+                          (climi::text-bounding-rectangle*
+                           medium string :text-style text-style
+                           :start (1+ position-newline) :end end)
+                        (declare (ignore miny))
+                        (values (min minx left) (- ascent)
+                                (max maxx right) (+ descent maxy)))))
+                   (t
+                    (multiple-value-bind (width ascent descent left right
+                                                font-ascent font-descent direction
+                                                first-not-done)
+                        (font-text-extents
+                         xfont string :start start :end end :translate #'translate)
+                      (declare (ignore width ascent descent)
+                               (ignore direction first-not-done))
+                      ;; FIXME: Potential style points:
+                      ;; * (min 0 left), (max width right)
+                      ;; * font-ascent / ascent
+                      (values left (- font-ascent) right font-descent)))))))))
+
+(defvar *draw-font-lock* (climi::make-lock "draw-font"))
 (defmethod clim:medium-draw-text* ((medium clx-render-medium) string x y
                                    start end
                                    align-x align-y
-                                   toward-x toward-y transform-glyphs)
-  (call-next-method))
+                                   toward-x toward-y transform-glyphs
+                                   &aux (end (if (null end)
+                                                 (length string)
+                                                 (min end (length string)))))
+  ;; Possible optimalzaions:
+  ;;
+  ;; * if align-x = left, then there is no need to compute text width (big win with kerning)
+  ;; * if align-y is not member (:center :last-line-baseline :bottom) then text-height is not needed
+  ;; * with-clx-graphics already creates appropriate pixmap for us (correct one!) and we have
+  ;; medium picture in place - there is no need for gcontext-picture (see xrender-fonts)
+  ;; * don't use (PICTURE-DRAWABLE (CLX-RENDER-MEDIUM-PICTURE MEDIUM)) - it is slow due to possible
+  ;; mirror swaps, use (SHEET-XMIRROR (MEDIUM-SHEET MEDIUM)) instead. It might be a good idea to
+  ;; wrap our own (CLX-RENDER-MEDIUM-MIRROR MEDIUM) function.
+
+  (declare (ignore toward-x toward-y transform-glyphs))
+  (let* ((medium-transform (medium-transformation medium))
+         (native-transform (sheet-native-transformation (medium-sheet medium)))
+         (merged-transform (clim:compose-transformations native-transform medium-transform)))
+    (with-clx-graphics () medium
+      (when (characterp string)
+        (setq string (make-string 1 :initial-element string)))
+      (if (null end)
+          (setq end (length string))
+          (setq end (min end (length string))))
+      (multiple-value-bind (text-width text-height x-cursor y-cursor baseline)
+          (text-size medium string :start start :end end)
+        (declare (ignore x-cursor y-cursor))
+        (unless (and (eq align-x :left) (eq align-y :baseline))
+          (setq x (- x (ecase align-x
+                         (:left 0)
+                         (:center (round text-width 2)) ; worst case
+                         (:right text-width))))         ; worst case
+          (setq y (ecase align-y
+                    (:top (+ y baseline))                              ; OK
+                    (:first-line-baseline :baseline y)                 ; OK
+                    (:center (+ y baseline (- (floor text-height 2)))) ; change
+                    (:last-line-baseline  y)                           ; change
+                    (:bottom (+ y baseline (- text-height)))))))       ; change
+      (let ((x (round-coordinate x))
+            (y (round-coordinate y)))
+        (bt:with-lock-held (*draw-font-lock*)
+          (font-draw-glyphs
+           (text-style-to-X-font (port medium) (medium-text-style medium))
+           mirror gc x y string
+           #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
+           :start start :end end
+           :translate #'translate :size 16 :transformation merged-transform))))))
 
 (defmethod clime:medium-draw-glyph ((medium clx-medium) element x y
                                     align-x align-y toward-x toward-y

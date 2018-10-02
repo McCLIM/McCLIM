@@ -53,11 +53,6 @@
     ((:sans-serif (:bold :italic)) . "bold-o")
     ((:sans-serif (:italic :bold)) . "bold-o")))
 
-(clim-internals::define-protocol-class font-renderer ())
-
-(defclass clx-standard-font-renderer (font-renderer)
-  ())
-
 (defun open-font (display font-name)
   (let ((fonts (xlib:list-font-names display font-name :max-fonts 1)))
     (when fonts
@@ -138,7 +133,7 @@
     (xlib:font-descent font)))
 
 (defgeneric font-glyph-width (font code)
-  (:method (font char)
+  (:method (font code)
     (xlib:char-width font code)))
 
 ;;; This function should return nine values:

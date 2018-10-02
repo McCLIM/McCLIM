@@ -936,41 +936,39 @@ translated, so they begin at different position than [0,0])."))
   (unless end (setf end (length string)))
   (unless text-style (setf text-style (medium-text-style medium)))
   (let ((xfont (text-style-to-X-font (port medium) text-style)))
-    (cond ((= start end)
-           (values 0 0 0 0))
-          (t
-           (let ((position-newline (position #\newline string :start start :end end)))
-             (cond ((not (null position-newline))
-                    (multiple-value-bind (width ascent descent left right
-                                                font-ascent font-descent direction
-                                                first-not-done)
-                        (font-text-extents xfont string
-                                           :start start :end position-newline
-                                           :translate #'translate)
-                      (declare (ignorable width left right
-                                          font-ascent font-descent
-                                          direction first-not-done))
-                      (multiple-value-bind (minx miny maxx maxy)
-                          (climi::text-bounding-rectangle*
-                           medium string :text-style text-style
-                           :start (1+ position-newline) :end end)
-                        (declare (ignore miny))
-                        (values (min minx left) (- ascent)
-                                (max maxx right) (+ descent maxy)))))
-                   (t
-                    (multiple-value-bind (width ascent descent left right
-                                                font-ascent font-descent direction
-                                                first-not-done)
-                        (font-text-extents
-                         xfont string :start start :end end :translate #'translate)
-                      (declare (ignore width ascent descent)
-                               (ignore direction first-not-done))
-                      ;; FIXME: Potential style points:
-                      ;; * (min 0 left), (max width right)
-                      ;; * font-ascent / ascent
-                      (values left (- font-ascent) right font-descent)))))))))
+    (when (= start end)
+      (return-from climi::text-bounding-rectangle* (values 0 0 0 0)))
+    (let ((position-newline (position #\newline string :start start :end end)))
+      (if (null position-newline)
+          (multiple-value-bind (width ascent descent left right
+                                font-ascent font-descent direction
+                                first-not-done)
+              (xlib:text-extents xfont string
+                                 :start start :end end
+                                 :translate #'translate)
+            (declare (ignore width ascent descent)
+                     (ignore direction first-not-done))
+            ;; FIXME: Potential style points:
+            ;; * (min 0 left), (max width right)
+            ;; * font-ascent / ascent
+            (values left (- font-ascent) right font-descent))
+          (multiple-value-bind (width ascent descent left right
+                                font-ascent font-descent direction
+                                first-not-done)
+              (xlib:text-extents xfont string
+                                 :start start :end end
+                                 :translate #'translate)
+            (declare (ignorable width left right
+                                font-ascent font-descent
+                                direction first-not-done))
+            (multiple-value-bind (minx miny maxx maxy)
+                (climi::text-bounding-rectangle*
+                 medium string :text-style text-style
+                 :start (1+ position-newline) :end end)
+              (declare (ignore miny))
+              (values (min minx left) (- ascent)
+                      (max maxx right) (+ descent maxy))))))))
 
-(defvar *draw-font-lock* (climi::make-lock "draw-font"))
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
                               align-x align-y
@@ -991,22 +989,19 @@ translated, so they begin at different position than [0,0])."))
         (unless (and (eq align-x :left) (eq align-y :baseline))
           (setq x (- x (ecase align-x
                          (:left 0)
-                         (:center (round text-width 2))
-                         (:right text-width))))
+                         (:center (round text-width 2)) ; worst case
+                         (:right text-width))))         ; worst case
           (setq y (ecase align-y
-                    (:top (+ y baseline))
-                    (:center (+ y baseline (- (floor text-height 2))))
-                    (:baseline y)
-                    (:bottom (+ y baseline (- text-height)))))))
-      (let ((x (round-coordinate x))
-            (y (round-coordinate y)))
-        (bt:with-lock-held (*draw-font-lock*)
-          (font-draw-glyphs
-           (text-style-to-X-font (port medium) (medium-text-style medium))
-           mirror gc x y string
-           #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
-           :start start :end end
-           :translate #'translate :size 16 :transformation merged-transform))))))
+                    (:top (+ y baseline))                              ; OK
+                    (:first-line-baseline :baseline y)                 ; OK
+                    (:center (+ y baseline (- (floor text-height 2)))) ; change
+                    (:last-line-baseline  y)                           ; change
+                    (:bottom (+ y baseline (- text-height)))))))       ; change
+      (lookup-text-style-to-x-font (port medium) :xlib (medium-text-style medium))
+      (multiple-value-bind (x y)
+          (transform-position merged-transform x y)
+        (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
+                          :start start :end end :translate #'translate :size 16)))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
@@ -1018,13 +1013,13 @@ translated, so they begin at different position than [0,0])."))
                               align-x align-y toward-x toward-y
                               transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs align-x align-y))
-  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
+  (with-transformed-position ((clim:compose-transformations
+                               (sheet-native-transformation (medium-sheet medium))
+                               (medium-transformation medium))
                               x y)
     (with-clx-graphics () medium
       (xlib:draw-glyph mirror gc (round-coordinate x) (round-coordinate y)
-                       element
-                       :size 16
-                       :translate #'translate))))
+                       element :size 16 :translate #'translate))))
 
 
 ;;; Other Medium-specific Output Functions
