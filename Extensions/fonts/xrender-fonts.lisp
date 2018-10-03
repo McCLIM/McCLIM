@@ -338,7 +338,8 @@
 ;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
 ;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
 (defun mcclim-font:draw-glyphs (medium mirror gc x y string
-                                &key start end translate direction transformation
+                                &key start end translate direction
+                                  transformation transform-glyphs
                                 &aux (font (clim-clx::text-style-to-X-font
                                             (port medium) (medium-text-style medium))))
   (declare (optimize (speed 3))
