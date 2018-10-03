@@ -92,12 +92,13 @@
       (format stream " size=~A ascent=~A descent=~A units->pixels=~A"
               size ascent descent units->pixels))))
 
-(defun glyph-pixarray (font char next)
+(defun glyph-pixarray (font char next transformation)
   "Render a character of 'face', returning a 2D (unsigned-byte 8) array suitable
    as an alpha mask, and dimensions. This function returns seven values: alpha
    mask byte array, x-origin, y-origin (subtracted from position before
    rendering), glyph width and height, horizontal and vertical advances."
-  (declare (optimize (debug 3)))
+  (declare (optimize (debug 3))
+           (ignore transformation))
   (climi::with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
       (let* ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))
