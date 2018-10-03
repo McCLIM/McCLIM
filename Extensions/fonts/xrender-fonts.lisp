@@ -147,7 +147,7 @@
          (character (code-char (ldb (byte 16 0) glyph-index)))
          (next-character (code-char (ldb (byte 16 16) glyph-index))))
     (multiple-value-bind (arr left top width height dx dy)
-        (glyph-pixarray font character next-character)
+        (glyph-pixarray font character next-character +identity-transformation+)
       (with-slots (fixed-width) font
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
@@ -348,49 +348,56 @@
                  #+sbcl sb-int:index
                  start end)
            (type string string))
+
   (when (< (length (the (simple-array (unsigned-byte 32)) (clx-truetype-font-%buffer% font)))
            (- end start))
     (setf (clx-truetype-font-%buffer% font)
           (make-array (* 256 (ceiling (- end start) 256))
                       :element-type '(unsigned-byte 32)
                       :adjustable nil :fill-pointer nil)))
-  (multiple-value-bind (x y)
-      (transform-position transformation x y)
-    (let ((display (xlib:drawable-display mirror)))
-      (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
-        (declare (ignore source-pixmap))
-        (let* ((cache (slot-value font 'glyph-id-cache))
-               (glyph-ids (clx-truetype-font-%buffer% font))
-               (glyph-set (display-the-glyph-set display)))
-          (loop
-             with char = (char string start)
-             with i* = 0
-             for i from (1+ start) below end
-             as next-char = (char string i)
-             as next-char-code = (char-code next-char)
-             as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
-             do
-               (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-                     (the (unsigned-byte 32) (ensure-font-glyph-id font cache code)))
-               (setf char next-char)
-               (incf i*)
-             finally
-               (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-                     (the (unsigned-byte 32) (ensure-font-glyph-id font cache (char-code char)))))
 
-          ;; Sync the picture-clip-mask with that of the gcontext.
-          (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
-                       (xlib::gcontext-clip-mask gc))
-            (setf (xlib::picture-clip-mask (drawable-picture mirror))
-                  (xlib::gcontext-clip-mask gc)))
+  #+ (or)
+  (when (and transform-glyphs
+             (not (clim:translation-transformation-p transformation)))
+    (return-from mcclim-font:draw-glyphs
+      (%render-transformed-glyphs font string x y transformation mirror gc)))
 
-          (xlib::render-composite-glyphs (drawable-picture mirror)
-                                         glyph-set
-                                         source-picture
-                                         (truncate (+ 0.5 x))
-                                         (truncate (+ y 0.5))
-                                         glyph-ids
-                                         :end (- end start)))))))
+  (multiple-value-setq (x y) (clim:transform-position transformation x y))
+  (let ((cache (slot-value font 'glyph-id-cache))
+        (glyph-ids (clx-truetype-font-%buffer% font))
+        (glyph-set (display-the-glyph-set (xlib:drawable-display mirror))))
+    (loop
+       with char = (char string start)
+       with i* = 0
+       for i from (1+ start) below end
+       as next-char = (char string i)
+       as next-char-code = (char-code next-char)
+       as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
+       do
+         (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+               (the (unsigned-byte 32) (ensure-font-glyph-id font cache code)))
+         (setf char next-char)
+         (incf i*)
+       finally
+         (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+               (the (unsigned-byte 32) (ensure-font-glyph-id font cache (char-code char)))))
+
+    (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
+      (declare (ignore source-pixmap))
+      ;; Sync the picture-clip-mask with that of the gcontext.
+      (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
+                   (xlib::gcontext-clip-mask gc))
+        (setf (xlib::picture-clip-mask (drawable-picture mirror))
+              (xlib::gcontext-clip-mask gc)))
+
+      (xlib::render-composite-glyphs (drawable-picture mirror)
+                                     glyph-set
+                                     source-picture
+                                     (truncate (+ 0.5 x))
+                                     (truncate (+ y 0.5))
+                                     glyph-ids
+                                     :end (- end start)))))
+
 
 (defstruct truetype-device-font-name
   (font-file (error "missing argument"))
