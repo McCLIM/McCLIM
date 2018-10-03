@@ -329,10 +329,14 @@ or NIL if the current transformation is the identity transformation."
 
 (defun mcclim-font:draw-glyphs (medium mirror gc x y string
                                 &key (start 0) (end (length string))
-                                  translate (direction :ltr) transformation
+                                  translate (direction :ltr)
+                                  transformation transform-glyphs
                                 &aux
                                   (font (clim-clx::text-style-to-X-font (clim:port medium) (clim:medium-text-style medium))))
   (declare (ignore translate))
+  (unless (or transform-glyphs (clim:translation-transformation-p transformation))
+    (multiple-value-setq (x y) (clim:transform-position transformation x y))
+    (setq transformation clim:+identity-transformation+))
   (when (null (freetype-font-replace font))
     (return-from mcclim-font:draw-glyphs
       (%freetype-draw-glyphs font mirror gc x y string
@@ -358,8 +362,7 @@ or NIL if the current transformation is the identity transformation."
                              &key (start 0) (end (length string))
                                (direction :ltr) transformation)
   (with-face-from-font (face font)
-    (multiple-value-bind (transform-matrix)
-        (convert-transformation-to-matrix transformation)
+    (let ((transform-matrix (convert-transformation-to-matrix transformation)))
       (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
       (let* ((index-list (make-glyph-list font (subseq string start end) direction))
              (codepoints (mapcar #'glyph-entry-codepoint index-list))

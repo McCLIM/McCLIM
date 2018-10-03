@@ -168,7 +168,7 @@
   ;; mirror swaps, use (SHEET-XMIRROR (MEDIUM-SHEET MEDIUM)) instead. It might be a good idea to
   ;; wrap our own (CLX-RENDER-MEDIUM-MIRROR MEDIUM) function.
 
-  (declare (ignore toward-x toward-y transform-glyphs))
+  (declare (ignore toward-x toward-y))
   (let* ((medium-transform (medium-transformation medium))
          (native-transform (sheet-native-transformation (medium-sheet medium)))
          (merged-transform (clim:compose-transformations native-transform medium-transform)))
@@ -197,7 +197,8 @@
         (mcclim-font:draw-glyphs medium mirror gc x y string
                                  :start start :end end
                                  :translate #'translate
-                                 :transformation merged-transform)))))
+                                 :transformation merged-transform
+                                 :transform-glyphs transform-glyphs)))))
 
 (defmethod clime:medium-draw-glyph ((medium clx-medium) element x y
                                     align-x align-y toward-x toward-y
