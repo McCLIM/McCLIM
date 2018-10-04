@@ -135,19 +135,122 @@
                    (+ center-x radius-dx) (- center-y (* kappa radius-dy))
                    (+ center-x radius-dx) center-y)))
 
+(defun square (x)
+  (* x x))
+
+(defun vec-len (x1 y1)
+  (sqrt (+ (square x1)
+           (square y1))))
+
+(defun rad-to-deg (theta)
+  (* 180 (/ theta pi)))
+
+(defun find-angle (x1 y1)
+  (let ((angle (acos (/ x1 (vec-len x1 y1)))))
+    (if (minusp y1)
+        (- (* 2 pi) angle)
+        angle)))
+
+(defun reparameterize-ellipse (radius1-dx radius1-dy radius2-dx radius2-dy)
+  (let ((a (vec-len radius1-dx radius1-dy))
+        (b (vec-len radius2-dx radius2-dy)))
+    (let ((theta
+           (if (> b a)
+               (progn
+                 (rotatef a b)
+                 (find-angle radius2-dx radius2-dy))
+               (find-angle radius1-dx radius1-dy))))
+      (values a b theta))))
+
+(defun ell (lam center-x center-y a b theta)
+  (let ((eta (atan (/ (sin lam) b)
+                   (/ (cos lam) a))))
+    (values (+ center-x
+               (* a (cos theta) (cos eta))
+               (- (* b (sin theta) (sin eta))))
+            (+ center-y
+               (* a (sin theta) (cos eta))
+               (* b (cos theta) (sin eta))))))
+
+(defun ell* (lam
+             center-x center-y
+             radius1-dx radius1-dy radius2-dx radius2-dy)
+  (multiple-value-bind (a b theta)
+      (reparameterize-ellipse radius1-dx
+                              radius1-dy
+                              radius2-dx
+                              radius2-dy)
+    (ell lam center-x center-y a b theta)))
+
+(defun ell-prime (lam a b theta)
+  (let ((eta (atan (/ (sin lam) b)
+                   (/ (cos lam) a))))
+    (values (+ (- (* a (cos theta) (sin eta)))
+               (- (* b (sin theta) (cos eta))))
+            (+ (- (* a (sin theta) (sin eta)))
+               (* b (cos theta) (cos eta))))))
+
+(defun ell-prime* (lam
+                   center-x center-y
+                   radius1-dx radius1-dy radius2-dx radius2-dy)
+  (declare (ignore center-x center-y))
+  (multiple-value-bind (a b theta)
+      (reparameterize-ellipse radius1-dx radius1-dy radius2-dx radius2-dy)
+    (ell-prime lam a b theta)))
+
+(let ((center-x 200)
+      (center-y 200)
+      (radius1-dx 100)
+      (radius1-dy 200)
+      (radius2-dx 100)
+      (radius2-dy 100)
+      (lam 0))
+  (values
+   (ell* lam center-x center-y
+      radius1-dx radius1-dy radius2-dx radius2-dy)
+   (ell-prime* lam center-x center-y
+           radius1-dx radius1-dy radius2-dx radius2-dy)))
+
+
+(defun put-ellipse-2 (center-x center-y
+                      radius1-dx radius1-dy radius2-dx radius2-dy
+                      start-angle end-angle filled tr)
+  (declare (ignore start-angle end-angle filled))
+  (let* ((kappa (* 4 (/ (- (sqrt 2) 1) 3.0)))
+         (radius-dx (abs (+ radius1-dx radius2-dx)))
+         (radius-dy (abs (+ radius1-dy radius2-dy))))
+    (with-transformed-position (tr center-x center-y)
+      (pdf:move-to (+ center-x radius-dx) center-y))
+    (flet ((bez (q1x q1y q2x q2y p2x p2y)
+             (with-transformed-position (tr q1x q1y)
+               (with-transformed-position (tr q2x q2y)
+                 (with-transformed-position (tr p2x p2y)
+                   (pdf:bezier-to q1x q1y q2x q2y p2x p2y))))))
+      (bez (+ center-x radius-dx)
+           (+ center-y (* kappa radius-dy))
+           (+ center-x (* kappa radius-dx))
+           (+ center-y radius-dy)
+           center-x
+           (+ center-y radius-dy))
+      (bez (- center-x (* kappa radius-dx)) (+ center-y radius-dy)
+           (- center-x radius-dx) (+ center-y (* kappa radius-dy))
+           (- center-x radius-dx) center-y)
+      (bez (- center-x radius-dx) (- center-y (* kappa radius-dy))
+           (- center-x (* kappa radius-dx)) (- center-y radius-dy)
+           center-x (- center-y radius-dy))
+      (bez (+ center-x (* kappa radius-dx)) (- center-y radius-dy)
+           (+ center-x radius-dx) (- center-y (* kappa radius-dy))
+           (+ center-x radius-dx) center-y))))
+
 (defmethod medium-draw-ellipse* ((medium pdf-medium) center-x center-y
                                  radius1-dx radius1-dy radius2-dx radius2-dy
                                  start-angle end-angle filled)
-  (unless (or (= radius2-dx radius1-dy 0) (= radius1-dx radius2-dy 0))
-    (error "PDF Backend MEDIUM-DRAW-ELLIPSE* not yet implemented for
-    non axis-aligned ellipses."))
   (pdf:with-saved-state
     (let ((tr (sheet-native-transformation (medium-sheet medium))))
       (pdf-actualize-graphics-state medium :line-style :color)
-      (with-transformed-position (tr center-x center-y)
-        (put-ellipse center-x center-y
+      (put-ellipse-2 center-x center-y
                      radius1-dx radius1-dy radius2-dx radius2-dy
-                     start-angle end-angle filled))
+                     start-angle end-angle filled tr)
       (if filled
           (pdf:close-fill-and-stroke)
           (pdf:stroke)))))
