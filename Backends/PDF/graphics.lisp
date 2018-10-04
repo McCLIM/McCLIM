@@ -272,7 +272,7 @@
       (pdf-actualize-graphics-state medium :line-style :color)
       (put-ellipse center-x center-y
                    radius1-dx radius1-dy radius2-dx radius2-dy
-                   start-angle end-angle filled)
+                   start-angle end-angle tr)
       (if filled
           (pdf:close-fill-and-stroke)
           (pdf:stroke)))))
