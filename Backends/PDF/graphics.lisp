@@ -216,31 +216,39 @@
                       radius1-dx radius1-dy radius2-dx radius2-dy
                       start-angle end-angle filled tr)
   (declare (ignore start-angle end-angle filled))
-  (let* ((kappa (* 4 (/ (- (sqrt 2) 1) 3.0)))
-         (radius-dx (abs (+ radius1-dx radius2-dx)))
-         (radius-dy (abs (+ radius1-dy radius2-dy))))
-    (with-transformed-position (tr center-x center-y)
-      (pdf:move-to (+ center-x radius-dx) center-y))
-    (flet ((bez (q1x q1y q2x q2y p2x p2y)
+  (flet ((bez (p1x p1y q1x q1y q2x q2y p2x p2y)
+           (with-transformed-position (tr p1x p1y)
              (with-transformed-position (tr q1x q1y)
                (with-transformed-position (tr q2x q2y)
                  (with-transformed-position (tr p2x p2y)
-                   (pdf:bezier-to q1x q1y q2x q2y p2x p2y))))))
-      (bez (+ center-x radius-dx)
-           (+ center-y (* kappa radius-dy))
-           (+ center-x (* kappa radius-dx))
-           (+ center-y radius-dy)
-           center-x
-           (+ center-y radius-dy))
-      (bez (- center-x (* kappa radius-dx)) (+ center-y radius-dy)
-           (- center-x radius-dx) (+ center-y (* kappa radius-dy))
-           (- center-x radius-dx) center-y)
-      (bez (- center-x radius-dx) (- center-y (* kappa radius-dy))
-           (- center-x (* kappa radius-dx)) (- center-y radius-dy)
-           center-x (- center-y radius-dy))
-      (bez (+ center-x (* kappa radius-dx)) (- center-y radius-dy)
-           (+ center-x radius-dx) (- center-y (* kappa radius-dy))
-           (+ center-x radius-dx) center-y))))
+                   (pdf:move-to p1x p1y)
+                   (pdf:bezier-to q1x q1y q2x q2y p2x p2y)))))))
+    (flet ((draw-ellipse-segment (lam1 lam2)
+             (multiple-value-bind (p1x p1y)
+                 (ell* lam1
+                       center-x center-y
+                       radius1-dx radius1-dy radius2-dx radius2-dy)
+               (multiple-value-bind (p2x p2y)
+                   (ell* lam2 center-x center-y
+                         radius1-dx radius1-dy radius2-dx radius2-dy)
+                 (multiple-value-bind (e1x e1y)
+                     (ell-prime* lam1
+                                 center-x center-y
+                                 radius1-dx radius1-dy radius2-dx radius2-dy)
+                   (multiple-value-bind (e2x e2y)
+                       (ell-prime* lam2
+                                   center-x center-y
+                                   radius1-dx radius1-dy radius2-dx radius2-dy)
+                     (let ((alpha (* (sin (- lam2 lam1))
+                                     (/ (- (sqrt (+ 4 (* 3 (square (tan (/ (- lam2 lam1) 2)))))) 1)
+                                        3))))
+                       (bez p1x p1y
+                            (+ p1x (* alpha e1x)) (+ p1y (* alpha e1y))
+                            (- p2x (* alpha e2x)) (- p2y (* alpha e2y))
+                            p2x p2y))))))))
+      (loop for a from 0 to (* 2 pi) by (/ pi 2)
+         for b = (+ a (/ pi 2))
+         do (draw-ellipse-segment a b)))))
 
 (defmethod medium-draw-ellipse* ((medium pdf-medium) center-x center-y
                                  radius1-dx radius1-dy radius2-dx radius2-dy
