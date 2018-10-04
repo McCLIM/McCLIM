@@ -114,36 +114,12 @@
                                        (pdf:stroke)))))
                              position-seq))))
 
-(defun put-ellipse (center-x center-y
-                    radius1-dx radius1-dy radius2-dx radius2-dy
-                    start-angle end-angle filled)
-  (declare (ignore start-angle end-angle filled))
-  (let* ((kappa (* 4 (/ (- (sqrt 2) 1) 3.0)))
-         (radius-dx (abs (+ radius1-dx radius2-dx)))
-         (radius-dy (abs (+ radius1-dy radius2-dy))))
-    (pdf:move-to (+ center-x radius-dx) center-y)
-    (pdf:bezier-to (+ center-x radius-dx) (+ center-y (* kappa radius-dy))
-                   (+ center-x (* kappa radius-dx)) (+ center-y radius-dy)
-                   center-x (+ center-y radius-dy))
-    (pdf:bezier-to (- center-x (* kappa radius-dx)) (+ center-y radius-dy)
-                   (- center-x radius-dx) (+ center-y (* kappa radius-dy))
-                   (- center-x radius-dx) center-y)
-    (pdf:bezier-to (- center-x radius-dx) (- center-y (* kappa radius-dy))
-                   (- center-x (* kappa radius-dx)) (- center-y radius-dy)
-                   center-x (- center-y radius-dy))
-    (pdf:bezier-to (+ center-x (* kappa radius-dx)) (- center-y radius-dy)
-                   (+ center-x radius-dx) (- center-y (* kappa radius-dy))
-                   (+ center-x radius-dx) center-y)))
-
 (defun square (x)
   (* x x))
 
 (defun vec-len (x1 y1)
   (sqrt (+ (square x1)
            (square y1))))
-
-(defun rad-to-deg (theta)
-  (* 180 (/ theta pi)))
 
 (defun find-angle (x1 y1)
   (let ((angle (acos (/ x1 (vec-len x1 y1)))))
@@ -234,9 +210,9 @@
 (defun transform-angle (tr angle)
   (+ angle (transformation-angle tr)))
 
-(defun put-ellipse-2 (center-x center-y
-                      radius1-dx radius1-dy radius2-dx radius2-dy
-                      start-angle end-angle filled tr)
+(defun put-ellipse (center-x center-y
+                    radius1-dx radius1-dy radius2-dx radius2-dy
+                    start-angle end-angle tr)
   (let ((start-angle (transform-angle tr start-angle))
         (end-angle (transform-angle tr end-angle)))
     (let ((first-segment t))
@@ -294,9 +270,9 @@
   (pdf:with-saved-state
     (let ((tr (sheet-native-transformation (medium-sheet medium))))
       (pdf-actualize-graphics-state medium :line-style :color)
-      (put-ellipse-2 center-x center-y
-                     radius1-dx radius1-dy radius2-dx radius2-dy
-                     start-angle end-angle filled tr)
+      (put-ellipse center-x center-y
+                   radius1-dx radius1-dy radius2-dx radius2-dy
+                   start-angle end-angle filled)
       (if filled
           (pdf:close-fill-and-stroke)
           (pdf:stroke)))))
