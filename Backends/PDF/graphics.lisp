@@ -214,7 +214,7 @@
 
 (defun put-ellipse (center-x center-y
                     radius1-dx radius1-dy radius2-dx radius2-dy
-                    start-angle end-angle tr)
+                    start-angle end-angle tr filled)
   (let ((first-segment t))
     (flet ((bez (p1x p1y q1x q1y q2x q2y p2x p2y)
              (with-transformed-position (tr p1x p1y)
@@ -267,7 +267,10 @@
                        do (draw-ellipse-segment (- (transform-angle tr a))
                                                 (- (transform-angle tr b)))
                          (incf a step)
-                         (incf b step)))))))))))
+                         (incf b step)))))
+              (when filled
+                (with-transformed-position (tr center-x center-y)
+                  (pdf:line-to center-x center-y)))))))))
 
 (defmethod medium-draw-ellipse* ((medium pdf-medium) center-x center-y
                                  radius1-dx radius1-dy radius2-dx radius2-dy
@@ -277,7 +280,7 @@
       (pdf-actualize-graphics-state medium :line-style :color)
       (put-ellipse center-x center-y
                    radius1-dx radius1-dy radius2-dx radius2-dy
-                   start-angle end-angle tr)
+                   start-angle end-angle tr filled)
       (if filled
           (pdf:close-fill-and-stroke)
           (pdf:stroke)))))
