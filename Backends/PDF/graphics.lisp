@@ -329,7 +329,7 @@
     (+foreground-ink+ (medium-color-rgb (medium-foreground medium)))
     (+background-ink+ (medium-color-rgb (medium-background medium)))
     (otherwise (medium-color-rgb (clime:indirect-ink-ink ink))))
-  (medium-color-rgb (clime:indirect-ink-ink ink)))
+  (medium-color-rgb medium (clime:indirect-ink-ink ink)))
 
 (defmethod medium-color-rgb (medium (ink color))
   (declare (ignore medium))
