@@ -255,16 +255,17 @@
                      (incf b step))))
             (flet ((clamp-angle (angle)
                      (min (max 0 angle) (* pi 2))))
-              (let ((start-angle (clamp-angle (transform-angle tr start-angle)))
-                    (end-angle (clamp-angle (transform-angle tr end-angle))))
+              (let ((start-angle (clamp-angle start-angle))
+                    (end-angle (clamp-angle end-angle)))
                 (let* ((sweep (- end-angle start-angle))
-                       (step (/ sweep -4)))
+                       (step (/ sweep 4)))
                   ;; FIXME! We should probably vary the number of steps
                   ;; based on the sweep-angle!
                   (let ((a start-angle)
                         (b (+ start-angle step)))
                     (loop for i below 4
-                       do (draw-ellipse-segment a b)
+                       do (draw-ellipse-segment (- (transform-angle tr a))
+                                                (- (transform-angle tr b)))
                          (incf a step)
                          (incf b step)))))))))))
 
