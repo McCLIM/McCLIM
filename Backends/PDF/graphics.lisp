@@ -138,6 +138,7 @@
                (find-angle radius1-dx radius1-dy))))
       (values a b theta))))
 
+;; note that CLIM ellipses go counter-clockwise, not clockwise, so we'll reverse the sign of lam
 (defun ell (lam center-x center-y a b theta)
   (let ((eta (atan (/ (sin lam) b)
                    (/ (cos lam) a))))
@@ -156,36 +157,37 @@
                               radius1-dy
                               radius2-dx
                               radius2-dy)
-    (ell lam center-x center-y a b theta)))
+    (ell (- lam theta) center-x center-y a b theta)))
 
-(defun ell-prime (lam a b theta)
-  (let ((eta (atan (/ (sin lam) b)
-                   (/ (cos lam) a))))
-    (values (+ (- (* a (cos theta) (sin eta)))
-               (- (* b (sin theta) (cos eta))))
-            (+ (- (* a (sin theta) (sin eta)))
-               (* b (cos theta) (cos eta))))))
+(defun ell-prime (eta a b theta)
+  (values (+ (- (* a (cos theta) (sin eta)))
+             (- (* b (sin theta) (cos eta))))
+          (+ (- (* a (sin theta) (sin eta)))
+             (* b (cos theta) (cos eta)))))
 
-(defun ell-prime* (lam
+(defun ell-prime* (lam1 lam2
                    center-x center-y
                    radius1-dx radius1-dy radius2-dx radius2-dy)
   (declare (ignore center-x center-y))
   (multiple-value-bind (a b theta)
       (reparameterize-ellipse radius1-dx radius1-dy radius2-dx radius2-dy)
-    (ell-prime lam a b theta)))
-
-(let ((center-x 200)
-      (center-y 200)
-      (radius1-dx 100)
-      (radius1-dy 200)
-      (radius2-dx 100)
-      (radius2-dy 100)
-      (lam 0))
-  (values
-   (ell* lam center-x center-y
-      radius1-dx radius1-dy radius2-dx radius2-dy)
-   (ell-prime* lam center-x center-y
-           radius1-dx radius1-dy radius2-dx radius2-dy)))
+    (let ((lam1 (- lam1 theta))
+          (lam2 (- lam2 theta)))
+      (let ((eta1 (atan (/ (sin lam1) b)
+                        (/ (cos lam1) a)))
+            (eta2 (atan (/ (sin lam2) b)
+                        (/ (cos lam2) a))))
+        (let ((alpha (* (sin (- eta2 eta1))
+                        (/ (- (sqrt (+ 4 (* 3 (square (tan (/ (- eta2 eta1) 2)))))) 1)
+                           3))))
+          (multiple-value-bind (e1x e1y)
+              (ell-prime eta1 a b theta)
+            (multiple-value-bind (e2x e2y)
+                (ell-prime eta2 a b theta)
+              (values (* alpha e1x)
+                      (* alpha e1y)
+                      (* alpha e2x)
+                      (* alpha e2y)))))))))
 
 (defun normalize-angle (angle)
   (if (or (< angle 0)
@@ -205,64 +207,66 @@
         (transform-position tr x1 y1)
       (multiple-value-bind (tx2 ty2)
           (transform-position tr x2 y2)
-        (- (find-angle* tx1 ty1 tx2 ty2) (/ pi 2))))))
+        (+ (find-angle* tx1 ty1 tx2 ty2) )))))
 
 (defun transform-angle (tr angle)
-  (+ angle (transformation-angle tr)))
+  (+ angle (transformation-angle tr) ))
 
 (defun put-ellipse (center-x center-y
                     radius1-dx radius1-dy radius2-dx radius2-dy
                     start-angle end-angle tr)
-  (let ((start-angle (transform-angle tr start-angle))
-        (end-angle (transform-angle tr end-angle)))
-    (let ((first-segment t))
-      (flet ((bez (p1x p1y q1x q1y q2x q2y p2x p2y)
-               (with-transformed-position (tr p1x p1y)
-                 (with-transformed-position (tr q1x q1y)
-                   (with-transformed-position (tr q2x q2y)
-                     (with-transformed-position (tr p2x p2y)
-                       (when first-segment
-                         (pdf:move-to p1x p1y)
-                         (setf first-segment nil))
-                       (pdf:bezier-to q1x q1y q2x q2y p2x p2y)))))))
-        (flet ((draw-ellipse-segment (lam1 lam2)
-                 (multiple-value-bind (p1x p1y)
-                     (ell* lam1
-                           center-x center-y
+  (let ((first-segment t))
+    (flet ((bez (p1x p1y q1x q1y q2x q2y p2x p2y)
+             (with-transformed-position (tr p1x p1y)
+               (with-transformed-position (tr q1x q1y)
+                 (with-transformed-position (tr q2x q2y)
+                   (with-transformed-position (tr p2x p2y)
+                     (when first-segment
+                       (pdf:move-to p1x p1y)
+                       (setf first-segment nil))
+                     (pdf:bezier-to q1x q1y q2x q2y p2x p2y)))))))
+      (flet ((draw-ellipse-segment (lam1 lam2)
+               (multiple-value-bind (p1x p1y)
+                   (ell* lam1
+                         center-x center-y
+                         radius1-dx radius1-dy radius2-dx radius2-dy)
+                 (multiple-value-bind (p2x p2y)
+                     (ell* lam2 center-x center-y
                            radius1-dx radius1-dy radius2-dx radius2-dy)
-                   (multiple-value-bind (p2x p2y)
-                       (ell* lam2 center-x center-y
-                             radius1-dx radius1-dy radius2-dx radius2-dy)
-                     (multiple-value-bind (e1x e1y)
-                         (ell-prime* lam1
-                                     center-x center-y
-                                     radius1-dx radius1-dy radius2-dx radius2-dy)
-                       (multiple-value-bind (e2x e2y)
-                           (ell-prime* lam2
-                                       center-x center-y
-                                       radius1-dx radius1-dy radius2-dx radius2-dy)
-                         (let ((alpha (* (sin (- lam2 lam1))
-                                         (/ (- (sqrt (+ 4 (* 3 (square (tan (/ (- lam2 lam1) 2)))))) 1)
-                                            3))))
-                           (bez p1x p1y
-                                (+ p1x (* alpha e1x)) (+ p1y (* alpha e1y))
-                                (- p2x (* alpha e2x)) (- p2y (* alpha e2y))
-                                p2x p2y))))))))
-          (let ((start-angle (normalize-angle start-angle))
-                (end-angle (normalize-angle end-angle)))
-            (when (equal start-angle end-angle)
-              (setf start-angle 0
-                    end-angle (* pi 2)))
-            (let* ((sweep (- end-angle start-angle))
+                   (multiple-value-bind (e1x e1y e2x e2y)
+                       (ell-prime* lam1 lam2
+                                   center-x center-y
+                                   radius1-dx radius1-dy radius2-dx radius2-dy)
+                     (bez p1x p1y
+                          (+ p1x e1x) (+ p1y e1y)
+                          (- p2x e2x) (- p2y e2y)
+                          p2x p2y))))))
+        (if (or (and start-angle end-angle
+                     (zerop start-angle) (= (* pi 2) end-angle))
+                (and start-angle end-angle
+                     (zerop end-angle) (= (* pi 2) start-angle)))
+            (let* ((sweep (* pi 2))
                    (step (/ sweep 4)))
-              ;; FIXME! We should probably vary the number of steps
-              ;; based on the sweep-angle!
-              (let ((a start-angle)
+              (let ((a 0)
                     (b (+ start-angle step)))
                 (loop for i below 4
                    do (draw-ellipse-segment a b)
                      (incf a step)
-                     (incf b step))))))))))
+                     (incf b step))))
+            (flet ((clamp-angle (angle)
+                     (min (max 0 angle) (* pi 2))))
+              (let ((start-angle (clamp-angle (transform-angle tr start-angle)))
+                    (end-angle (clamp-angle (transform-angle tr end-angle))))
+                (let* ((sweep (- end-angle start-angle))
+                       (step (/ sweep -4)))
+                  ;; FIXME! We should probably vary the number of steps
+                  ;; based on the sweep-angle!
+                  (let ((a start-angle)
+                        (b (+ start-angle step)))
+                    (loop for i below 4
+                       do (draw-ellipse-segment a b)
+                         (incf a step)
+                         (incf b step)))))))))))
 
 (defmethod medium-draw-ellipse* ((medium pdf-medium) center-x center-y
                                  radius1-dx radius1-dy radius2-dx radius2-dy
