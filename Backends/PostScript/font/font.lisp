@@ -225,7 +225,7 @@
          (metrics-key (font-name-metrics-key font-name))
          (size (font-name-size font-name)))
     (let ((scale (/ size 1000)))
-      (cond ((= start end)
+      (cond ((>= start end)
              (values 0 0 0 0))
             (t
              (let ((position-newline (position #\newline string :start start)))
@@ -258,8 +258,6 @@
                                 (* scale descent)))))))))))
 
 (defun psfont-text-extents (metrics-key string &key (start 0) (end (length string)))
-  (unless (< start (length string))
-    (psfont-text-extents metrics-key ""))
   (let* ((font-info (or (gethash metrics-key *font-metrics*)
 			(error "Unknown font ~S." metrics-key)))
 	 (char-metrics (font-info-char-infos font-info))
