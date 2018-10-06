@@ -114,20 +114,80 @@
                                        (pdf:stroke)))))
                              position-seq))))
 
+;;; Ellipses
+
+;;;
+;;; PDF doesn't provide shape drawing functions per se, but rather
+;;; primitives for working with paths such as lines and bezier
+;;; curves. cl-pdf, which we use here in the PDF backend, defines some
+;;; geometric drawing functions such as arc, pie, circle, rectangle,
+;;; etc... and ellipse. Unfortunately the cl-pdf ellipse routine only
+;;; handles axis-aligned ellipses. The CLIM specification describes
+;;; arbitrary ellipses that have two (non-colinear) 2-d vectors as
+;;; radii. So we have to add support for these kind of ellipses. There
+;;; are multiple approaches to rendering ellipses but it turns out
+;;; that one can closely approximate arbitrary ellipse path with
+;;; appropriate bezier curves. A good primer on drawing ellipses with
+;;; lines, or quadratic or cubic bezier curves can be found here:
+;;; <https://www.spaceroots.org/documents/ellipse/index.html>.
+;;;
+;;; We use the algorithm described in the above reference to construct
+;;; cubic bezier curves, which are in turn handled by cl-pdf.
+
+;;;
+;;; this probably exists elsewhere in McCLIM and, either way, could be
+;;; replaced with in-line expansion, or a simple macro. But efficiency
+;;; isn't a key concern here so we'll leave this here for readability.
 (defun square (x)
+  "Returns the number X squared."
   (* x x))
 
-(defun vec-len (x1 y1)
-  (sqrt (+ (square x1)
-           (square y1))))
+(defun vec-len (x y)
+  "Returns the length of the vector described by x and y"
+  (sqrt (+ (square x)
+           (square y))))
 
-(defun find-angle (x1 y1)
-  (let ((angle (acos (/ x1 (vec-len x1 y1)))))
-    (if (minusp y1)
-        (- (* 2 pi) angle)
-        angle)))
+(defun find-angle (x y)
+  "Returns the angle (in radians) between the vector (x, y) and the
+postiive x-axis. The angle is measured as running counter-clockwise,
+in cartesian coordinates, in other words find-angle returns pi/4 for a
+the vector (1, 1)."
+  (acos (/ x (vec-len x y))))
 
+(defun normalize-angle (angle)
+  "Takes an angle ANGLE and returns the corresponding non-negative angle
+less than or equal to 2pi. Note that 4pi would be normalized to 0, not
+2pi, but 2pi is normalized to 2pi."
+  (if (or (< angle 0)
+          (> angle (* pi 2)))
+      (mod angle (* pi 2))
+      angle))
+
+(defun find-angle* (x1 y1 x2 y2)
+  "Returns the angle between two vectors described by x1, y1 and x2,
+y2."
+  (let ((theta (- (phase (complex y2 x2))
+                  (phase (complex y1 x1)))))
+    (normalize-angle theta)))
+
+
+;;
+;; CLIM describes general (not neccessarily axis-aligned) ellipses by
+;; their center and two vectors describing the radii. The formulation
+;; for general ellipses described by Luc Maisonobe, referenced above,
+;; computes the ellipse paths based on the center, the length of each
+;; radius vectors, and the angle between the two radii. Just as a
+;; circle could be (over-)described by its center and a specific 2-d
+;; radius, but only the length of the radius is needed to definitively
+;; describe the circle, any two (non-colinear) radius vectors could
+;; describe a general ellipse, but only the length of the vectors and
+;; the angle between them are needed. So, given two radii, we'll
+;; compute their lengths and the angle between them and use these for
+;; describing the cubiz bezier curves that will represent the ellipse.
 (defun reparameterize-ellipse (radius1-dx radius1-dy radius2-dx radius2-dy)
+  "Returns three values, the length of radius 1, the length of radius
+2, and the angle (CCW in cartesian coordinates) between the two
+vectors."
   (let ((a (vec-len radius1-dx radius1-dy))
         (b (vec-len radius2-dx radius2-dy)))
     (let ((theta
@@ -138,10 +198,14 @@
                (find-angle radius1-dx radius1-dy))))
       (values a b theta))))
 
-;; note that CLIM ellipses go counter-clockwise, not clockwise, so we'll reverse the sign of lam
-(defun ell (lam center-x center-y a b theta)
-  (let ((eta (atan (/ (sin lam) b)
-                   (/ (cos lam) a))))
+(defun ellipse-point (lambda0 center-x center-y a b theta)
+  "Given an ellipse having center CENTER-X, CENTER-Y, and two radii of
+length A and B, with angle THETA between the radii from the center of
+the ellipse, returns two values, the x and y coordinates of a point on
+the ellipse having angle LAMBDA0 (CCW) relative to the major axis of the
+ellipse."
+  (let ((eta (atan (/ (sin lambda0) b)
+                   (/ (cos lambda0) a))))
     (values (+ center-x
                (* a (cos theta) (cos eta))
                (- (* b (sin theta) (sin eta))))
@@ -149,58 +213,72 @@
                (* a (sin theta) (cos eta))
                (* b (cos theta) (sin eta))))))
 
-(defun ell* (lam
-             center-x center-y
-             radius1-dx radius1-dy radius2-dx radius2-dy)
+(defun ellipse-point* (lambda0
+                       center-x center-y
+                       radius1-dx radius1-dy radius2-dx radius2-dy)
+  "Given an ellipse having center CENTER-X, CENTER-Y, and two radii,
+one described by RADIUS1-DX and RADIUS1-DY, and the other described by
+RADIUS2-DX and RADIUS2-DY, returns two values, the x and y coordinates
+of a point on the ellipse having angle LAMBDA0 (CCW) relative to the
+positive direction of the line parallel to the x-axis that runs
+through the center of the ellipse. Note that this parameterization of
+LAMBDA0 is different from that used in ELLIPSE-POINT, which is relative
+to the major axis."
   (multiple-value-bind (a b theta)
       (reparameterize-ellipse radius1-dx
                               radius1-dy
                               radius2-dx
                               radius2-dy)
-    (ell (- lam theta) center-x center-y a b theta)))
+    (ellipse-point (- lambda0 theta) center-x center-y a b theta)))
 
-(defun ell-prime (eta a b theta)
+(defun ellipse-derivative (eta a b theta)
+  "Given an ellipse having two radii of length A and B, with angle
+THETA between the radii from the center of the ellipse, returns two
+values, the x and y coordinates of the derivative of the parametric
+curve of ellipse at the parametric angle eta. Note that this eta is
+not the angle ANGLE, as in ellipse-derivative*, but rather is computed
+parametricly from theta. See the paper from Luc Maisonobe for
+details."
   (values (+ (- (* a (cos theta) (sin eta)))
              (- (* b (sin theta) (cos eta))))
           (+ (- (* a (sin theta) (sin eta)))
              (* b (cos theta) (cos eta)))))
 
-(defun ell-prime* (lam1 lam2
-                   center-x center-y
-                   radius1-dx radius1-dy radius2-dx radius2-dy)
+(defun cubic-bezier-control-points (lambda1 lambda2
+                                    center-x center-y
+                                    radius1-dx radius1-dy radius2-dx radius2-dy)
+  "Given an ellipse having center CENTER-X, CENTER-Y, and two radii,
+one described by RADIUS1-DX and RADIUS1-DY, and the other described by
+RADIUS2-DX and RADIUS2-DY, returns four values corresponding to x1,
+y1, and x2, y2, of the two control points of a cubic bezier curve
+approximation of the elliptical arc from angle lambda1 to lambda2."
   (declare (ignore center-x center-y))
   (multiple-value-bind (a b theta)
       (reparameterize-ellipse radius1-dx radius1-dy radius2-dx radius2-dy)
-    (let ((lam1 (- lam1 theta))
-          (lam2 (- lam2 theta)))
-      (let ((eta1 (atan (/ (sin lam1) b)
-                        (/ (cos lam1) a)))
-            (eta2 (atan (/ (sin lam2) b)
-                        (/ (cos lam2) a))))
+    (let ((lambda1 (- lambda1 theta))
+          (lambda2 (- lambda2 theta)))
+      (let ((eta1 (atan (/ (sin lambda1) b)
+                        (/ (cos lambda1) a)))
+            (eta2 (atan (/ (sin lambda2) b)
+                        (/ (cos lambda2) a))))
         (let ((alpha (* (sin (- eta2 eta1))
                         (/ (- (sqrt (+ 4 (* 3 (square (tan (/ (- eta2 eta1) 2)))))) 1)
                            3))))
           (multiple-value-bind (e1x e1y)
-              (ell-prime eta1 a b theta)
+              (ellipse-derivative eta1 a b theta)
             (multiple-value-bind (e2x e2y)
-                (ell-prime eta2 a b theta)
+                (ellipse-derivative eta2 a b theta)
               (values (* alpha e1x)
                       (* alpha e1y)
                       (* alpha e2x)
                       (* alpha e2y)))))))))
 
-(defun normalize-angle (angle)
-  (if (or (< angle 0)
-          (> angle (* pi 2)))
-      (mod angle (* pi 2))
-      angle))
-
-(defun find-angle* (x1 y1 x2 y2)
-  (let ((theta (- (phase (complex y2 x2))
-                  (phase (complex y1 x1)))))
-    (normalize-angle theta)))
-
 (defun transformation-angle (tr)
+  "Returns the angle (in radians) described by the given
+transformation."
+  ;; We can't just use the parameters of the transformation for this,
+  ;; so we take two orthogonal vectors, transform them with tr and
+  ;; compute the angle between the two transformed vectors.
   (let ((x1 0) (y1 1)
         (x2 1) (y2 0))
     (multiple-value-bind (tx1 ty1)
@@ -210,11 +288,22 @@
         (+ (find-angle* tx1 ty1 tx2 ty2) )))))
 
 (defun transform-angle (tr angle)
+  "Returns the angle corresponding to the direction of a vector having
+angle ANGLE after transforming the vector with TR. Note that this is
+independent of the specific (non-zero) vector and only the
+transformation and angle are needed."
   (+ angle (transformation-angle tr) ))
 
 (defun put-ellipse (center-x center-y
                     radius1-dx radius1-dy radius2-dx radius2-dy
                     start-angle end-angle tr filled)
+  "Calls cl-pdf routines to draw a series of cubic bezier curves that
+approximate the ellipse having its center at CENTER-X, CENTER-Y, with
+two radii described by RADIUS1-DX, RADIUS1-DY and RADIUS2-DX,
+RADIUS2-DY. If start-angle and end-angle are NIL and filled is T, then
+a solid ellipse is drawn. If START-ANGLE and END-ANGLE are specified,
+draws an ellipse arc between the two angles, or a pie-wedge if filled
+is T."
   (let ((first-segment t))
     (flet ((bez (p1x p1y q1x q1y q2x q2y p2x p2y)
              (with-transformed-position (tr p1x p1y)
@@ -225,18 +314,18 @@
                        (pdf:move-to p1x p1y)
                        (setf first-segment nil))
                      (pdf:bezier-to q1x q1y q2x q2y p2x p2y)))))))
-      (flet ((draw-ellipse-segment (lam1 lam2)
+      (flet ((draw-ellipse-segment (lambda1 lambda2)
                (multiple-value-bind (p1x p1y)
-                   (ell* lam1
+                   (ellipse-point* lambda1
                          center-x center-y
                          radius1-dx radius1-dy radius2-dx radius2-dy)
                  (multiple-value-bind (p2x p2y)
-                     (ell* lam2 center-x center-y
+                     (ellipse-point* lambda2 center-x center-y
                            radius1-dx radius1-dy radius2-dx radius2-dy)
                    (multiple-value-bind (e1x e1y e2x e2y)
-                       (ell-prime* lam1 lam2
-                                   center-x center-y
-                                   radius1-dx radius1-dy radius2-dx radius2-dy)
+                       (cubic-bezier-control-points lambda1 lambda2
+                                                    center-x center-y
+                                                    radius1-dx radius1-dy radius2-dx radius2-dy)
                      (bez p1x p1y
                           (+ p1x e1x) (+ p1y e1y)
                           (- p2x e2x) (- p2y e2y)
