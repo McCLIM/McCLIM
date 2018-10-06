@@ -179,6 +179,30 @@
       (let ((right (+ left (array-dimension arr 1))))
         (glyph-info glyph-id width height left right top dx dy)))))
 
+(defun font-generate-glyph* (font glyph-index transformation)
+  (let* ((display (clx-truetype-font-display font))
+         (glyph-id (display-draw-glyph-id display))
+         (character (code-char (ldb (byte 16 0) glyph-index)))
+         (next-character (code-char (ldb (byte 16 16) glyph-index))))
+    (multiple-value-bind (arr left top width height dx dy udx udy)
+        (glyph-pixarray font character next-character; transformation
+                        (compose-transformations #1=(make-scaling-transformation 1.0 -1.0)
+                                                 (compose-transformations transformation #1#)))
+      (when (= (array-dimension arr 0) 0)
+        (setf arr (make-array (list 1 1)
+                              :element-type '(unsigned-byte 8)
+                              :initial-element 0)))
+      (xlib::render-add-glyph (display-the-glyph-set display) glyph-id
+                              :data arr
+                              :x-origin (- left)
+                              :y-origin top
+                              :x-advance dx
+                              :y-advance dy)
+      ;; INV advance-width and advance-height are hacked here for transformed
+      ;; glyph rendering. They are not transformed. See %RENDER-TRANSFORMED-GLYPHS.
+      (let ((right (+ left (array-dimension arr 1))))
+        (glyph-info glyph-id width height left right top udx udy)))))
+
 (defun font-glyph-info (font code)
   (with-slots (char->glyph-info) font
     (ensure-gethash code char->glyph-info
@@ -256,10 +280,8 @@
                             as next-char = (char string i)
                             as next-char-code = (char-code next-char)
                             as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
-
                             ;; for i from start below end
                             ;; as code = (char-code (char string i))
-
                             do
                               (incf sum (or (gcache-get width-cache code)
                                             (gcache-set width-cache code
@@ -356,7 +378,6 @@
                       :element-type '(unsigned-byte 32)
                       :adjustable nil :fill-pointer nil)))
 
-  #+ (or)
   (when (and transform-glyphs
              (not (clim:translation-transformation-p transformation)))
     (return-from mcclim-font:draw-glyphs
@@ -393,11 +414,84 @@
       (xlib::render-composite-glyphs (drawable-picture mirror)
                                      glyph-set
                                      source-picture
-                                     (truncate (+ 0.5 x))
+                                     (truncate (+ x 0.5))
                                      (truncate (+ y 0.5))
                                      glyph-ids
                                      :end (- end start)))))
 
+;;; Transforming glyphs is very inefficient because we don't cache them.
+(defun %render-transformed-glyphs (font string x y tr mirror gc
+                                   &aux (end (length string)))
+  ;; Sync the picture-clip-mask with that of the gcontext.
+  (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
+               (xlib::gcontext-clip-mask gc))
+    (setf (xlib::picture-clip-mask (drawable-picture mirror))
+          (xlib::gcontext-clip-mask gc)))
+
+  (loop
+     with glyph-transformation = (multiple-value-bind (x0 y0)
+                                     (transform-position tr 0 0)
+                                   (compose-translation-with-transformation tr (- x0) (- y0)))
+     ;; for rendering one glyph at a time
+     with current-x = x
+     with current-y = y
+     with picture = (drawable-picture mirror)
+     with source-picture = (car (gcontext-picture mirror gc))
+     ;; ~
+     with glyph-ids = (clx-truetype-font-%buffer% font)
+     with glyph-set = (display-the-glyph-set (xlib:drawable-display mirror))
+     with char = (char string 0)
+     with i* = 0
+     for i from 1 below end
+     as next-char = (char string i)
+     as next-char-code = (char-code next-char)
+     as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
+     as glyph-info = (font-generate-glyph* font code glyph-transformation)
+     do
+       (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+             (the (unsigned-byte 32) (glyph-info-id glyph-info)))
+     do ;; rendering one glyph at a time
+       (multiple-value-bind (current-x current-y)
+           (transform-position tr current-x current-y)
+         (xlib:render-composite-glyphs picture glyph-set source-picture
+                                       (truncate (+ current-x 0.5))
+                                       (truncate (+ current-y 0.5))
+                                       glyph-ids :start i* :end (1+ i*)))
+     ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH*.
+       (incf current-x (glyph-info-advance-width glyph-info))
+       (incf current-y (glyph-info-advance-height glyph-info))
+     do
+       (setf char next-char)
+       (incf i*)
+     finally
+       (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+             (the (unsigned-byte 32) (glyph-info-id (font-generate-glyph* font
+                                                                          (char-code char)
+                                                                          glyph-transformation))))
+     finally
+     ;; rendering one glyph at a time (last glyph)
+       (multiple-value-bind (current-x current-y)
+           (transform-position tr current-x current-y)
+         (xlib:render-composite-glyphs picture glyph-set source-picture
+                                       (truncate (+ current-x 0.5))
+                                       (truncate (+ current-y 0.5))
+                                       glyph-ids :start i* :end (1+ i*)))
+       (xlib:render-free-glyphs glyph-set (subseq glyph-ids 0 (1+ i*)))
+       #+ (or) ;; rendering all glyphs at once
+       (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
+         (declare (ignore source-pixmap))
+         ;; This solution is correct in principle, but advance-width and
+         ;; advance-height are victims of rounding errors and they don't
+         ;; hold the line for longer text in case of rotations and other
+         ;; hairy transformations. That's why we take our time and
+         ;; render one glyph at a time. -- jd 2018-10-04
+         (multiple-value-bind (x y) (clim:transform-position tr x y)
+           (xlib::render-composite-glyphs (drawable-picture mirror)
+                                          glyph-set
+                                          source-picture
+                                          (truncate (+ x 0.5))
+                                          (truncate (+ y 0.5))
+                                          glyph-ids :start 0 :end end)))))
 
 (defstruct truetype-device-font-name
   (font-file (error "missing argument"))
