@@ -92,13 +92,38 @@
       (format stream " size=~A ascent=~A descent=~A units->pixels=~A"
               size ascent descent units->pixels))))
 
+;;; This function is derived from cl-vectors library function
+;;; PATHS-TTF:PATHS-FROM-GLYPH.
+(defun paths-from-glyph* (glyph tr)
+  "Extract paths from a glyph."
+  (flet ((point (p) (multiple-value-call #'net.tuxee.paths:make-point
+                      (transform-position tr (zpb-ttf:x p) (zpb-ttf:y p)))))
+    (let (result)
+      (zpb-ttf:do-contours (contour glyph)
+        (let ((path (net.tuxee.paths:create-path :polygon))
+              (last-point nil))
+          (zpb-ttf:do-contour-segments (a b c) contour
+            (let ((pa (point a))
+                  (pb (when b (point b)))
+                  (pc (point c)))
+              (unless last-point
+                (net.tuxee.paths:path-reset path pa))
+              (net.tuxee.paths:path-extend path
+                                           (if b
+                                               (net.tuxee.paths:make-bezier-curve (list pb))
+                                               (net.tuxee.paths:make-straight-line))
+                                           pc)
+              (setq last-point pc)))
+          (push path result)))
+      (setq result (nreverse result))
+      result)))
+
 (defun glyph-pixarray (font char next transformation)
   "Render a character of 'face', returning a 2D (unsigned-byte 8) array suitable
    as an alpha mask, and dimensions. This function returns seven values: alpha
    mask byte array, x-origin, y-origin (subtracted from position before
    rendering), glyph width and height, horizontal and vertical advances."
-  (declare (optimize (debug 3))
-           (ignore transformation))
+  (declare (optimize (debug 3)))
   (climi::with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
       (let* ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))
@@ -115,41 +140,55 @@
              (min-y (elt bounding-box 1))
              (max-x (elt bounding-box 2))
              (max-y (elt bounding-box 3))
-             (width  (- (ceiling max-x) (floor min-x)))
-             (height (- (ceiling max-y) (floor min-y)))
-             (array (make-array (list height width)
-                                :initial-element 0
-                                :element-type '(unsigned-byte 8)))
-             (state (aa:make-state))
-             (paths (paths-ttf:paths-from-glyph  glyph                                                 
-                                                 :offset (paths:make-point (- (floor min-x))
-                                                                           (ceiling max-y))
-                                                 :scale-x units->pixels
-                                                 :scale-y (- units->pixels))))
-        (assert (<= (elt bounding-box 0) (elt bounding-box 2)))
-        (assert (<= (elt bounding-box 1) (elt bounding-box 3)))
-        (dolist (path paths)
-          (vectors:update-state state path))
-        (aa:cells-sweep state
-           (lambda (x y alpha)              
-             (when (and (<= 0 x (1- width))
-                        (<= 0 y (1- height)))
-               (setf alpha (min 255 (abs alpha))
-                     (aref array y x) (climi::clamp
-                                       (floor (+ (* (- 256 alpha) (aref array y x))
-                                                 (* alpha 255))
-                                              256)
-                                       0 255)))))
-        (values array
-                (floor min-x)             ; left
-                (ceiling max-y)           ; top
-                (ceiling (- max-y min-y)) ; glyph width
-                (ceiling (- max-y min-y)) ; glyph height
-                ;; X uses horizontal/vertical advance between letters. That way
-                ;; transformed glyph sequence may be rendered. This should not
-                ;; be confused with font width/height! -- jd 2018-09-28
-                (round advance-width)
-                (round advance-height))))))
+             width height left top array)
+
+        (with-bounding-rectangle* (x1 y1 x2 y2)
+            (transform-region transformation (make-rectangle* min-x min-y max-x max-y))
+          (setq width  (- (ceiling x2) (floor x1)))
+          (setq height (- (ceiling y2) (floor y1)))
+          (setq left (- (floor x1)))
+          (setq top (ceiling y2))
+          (setq array (make-array (list height width)
+                                  :initial-element 0
+                                  :element-type '(unsigned-byte 8))))
+        (let* ((glyph-tr (compose-transformations
+                          (compose-transformations
+                           (make-translation-transformation left top)
+                           (make-scaling-transformation units->pixels (- units->pixels)))
+                          transformation))
+               (paths (paths-from-glyph* glyph glyph-tr))
+               (state (aa:make-state)))
+          (dolist (path paths)
+            (vectors:update-state state path))
+          (aa:cells-sweep state
+                          (lambda (x y alpha)
+                            (when (array-in-bounds-p array y x)
+                              (setf alpha (min 255 (abs alpha))
+                                    (aref array y x) (climi::clamp
+                                                      (floor (+ (* (- 256 alpha) (aref array y x))
+                                                                (* alpha 255))
+                                                             256)
+                                                      0 255))))))
+
+        (multiple-value-bind (advance-width* advance-height*)
+            ;; Transformation is supplied in font coordinates for easy
+            ;; composition with offset and scaling. advance values should be
+            ;; returned in screen coordinates, so we transform it here.
+            (transform-distance (compose-transformations
+                                 #1=(make-scaling-transformation 1.0 -1.0)
+                                 (compose-transformations transformation #1#))
+                                advance-width advance-height)
+          (values array (- left) top width height
+                  ;; X uses horizontal/vertical advance between letters. That
+                  ;; way glyph sequence may be rendered. This should not be
+                  ;; confused with font width/height! -- jd 2018-09-28
+                  (round advance-width*)
+                  (round advance-height*)
+                  ;; Transformed text is rendered glyph by glyph to mitigate
+                  ;; accumulation of the rounding error. For that we need values
+                  ;; without rounding nor transformation. -- jd 2018-10-04
+                  advance-width
+                  advance-height))))))
 
 ;;; XXX: This method is left here as a reference of a clean implementation of
 ;;; font-text-width computed directly from the font loader information. In
