@@ -361,12 +361,11 @@ is T."
             (let ((start-angle (clamp-angle start-angle))
                   (end-angle (clamp-angle end-angle)))
               (let* ((sweep (- end-angle start-angle))
-                     (step (/ sweep 4)))
-                ;; FIXME! We should probably vary the number of steps
-                ;; based on the sweep-angle!
+                     (segment-count (ceiling (abs (/ sweep (/ pi 2)))))
+                     (step (/ sweep segment-count)))
                 (let ((a start-angle)
                       (b (+ start-angle step)))
-                  (loop for i below 4
+                  (loop for i below segment-count
                      do (draw-ellipse-segment (- (transform-angle tr a))
                                               (- (transform-angle tr b)))
                        (incf a step)
