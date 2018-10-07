@@ -6,7 +6,7 @@
 
 (defmethod display ((frame text-transformations-test) pane)
   (let* (;(string "ytmMΣ音")
-         (string "Tędy")
+         (string "TęΣ音")
          (y-offset 75)
          (x-offset 75)
          (text-style (make-text-style nil nil 22)))
