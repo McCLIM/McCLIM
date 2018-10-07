@@ -259,8 +259,18 @@
           (svref cache (+ 256 hash)) value)))
 
 (defmacro ensure-font-glyph-id (font cache code)
-  `(or (gcache-get ,cache ,code)
-       (gcache-set ,cache ,code (font-glyph-id ,font ,code))))
+  `(if (< ,code 512)
+       (or (gcache-get ,cache ,code)
+           (gcache-set ,cache ,code (font-glyph-id ,font ,code)))
+       (font-glyph-id ,font ,code)))
+
+(defmacro ensure-font-glyph-width (font cache code)
+  `(if (< ,code 512)
+       (or (gcache-get ,cache ,code)
+           (gcache-set ,cache ,code (glyph-info-advance-width
+                                     (font-glyph-info ,font ,code))))
+       (glyph-info-advance-width
+        (font-glyph-info ,font ,code))))
 
 (defmethod clim-clx::font-text-extents ((font truetype-font) string
                                         &key (start 0) (end (length string)) translate direction)
@@ -279,10 +289,7 @@
           ;; Rather silly to obsess over the array access considering that.
            (macrolet ((compute ()
                         `(loop
-                            with sum fixnum = (or (gcache-get width-cache last-char-code)
-                                                  (gcache-set width-cache last-char-code
-                                                              (glyph-info-advance-width
-                                                               (font-glyph-info font last-char-code))))
+                            with sum fixnum = (ensure-font-glyph-width font width-cache last-char-code)
                             with char = (char string start)
                             for i from (1+ start) below end
                             as next-char = (char string i)
@@ -291,9 +298,7 @@
                             ;; for i from start below end
                             ;; as code = (char-code (char string i))
                             do
-                              (incf sum (or (gcache-get width-cache code)
-                                            (gcache-set width-cache code
-                                                        (glyph-info-advance-width (font-glyph-info font code)))))
+                              (incf sum (ensure-font-glyph-width font width-cache code))
                               (setf char next-char)
                             finally (return sum))))
              (if (numberp (slot-value font 'fixed-width))
