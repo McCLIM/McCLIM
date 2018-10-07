@@ -225,10 +225,7 @@ through the center of the ellipse. Note that this parameterization of
 LAMBDA0 is different from that used in ELLIPSE-POINT, which is relative
 to the major axis."
   (multiple-value-bind (a b theta)
-      (reparameterize-ellipse radius1-dx
-                              radius1-dy
-                              radius2-dx
-                              radius2-dy)
+      (reparameterize-ellipse radius1-dx radius1-dy radius2-dx radius2-dy)
     (ellipse-point (- lambda0 theta) center-x center-y a b theta)))
 
 (defun ellipse-derivative (eta a b theta)
@@ -244,40 +241,66 @@ details."
           (+ (- (* a (sin theta) (sin eta)))
              (* b (cos theta) (cos eta)))))
 
-(defun ellipse-cubic-bezier-control-points (lambda1 lambda2
-                                            center-x center-y
-                                            radius1-dx radius1-dy
-                                            radius2-dx radius2-dy)
+(defun ellipse-cubic-bezier-control-points (lambda1 lambda2 a b theta)
+  "Given two angles, LAMBDA1 and LAMBDA2 of an ellipse having two
+radii of length A and B, with angle THETA between the radii from the
+center of the ellipse, returns 4 values, the relative x and y
+distances of two control points from each of two edge points of a
+quadratic bezier curve approximating the ellipse."
+  (let ((eta1 (atan (/ (sin lambda1) b)
+                    (/ (cos lambda1) a)))
+        (eta2 (atan (/ (sin lambda2) b)
+                    (/ (cos lambda2) a))))
+    (let ((alpha (* (sin (- eta2 eta1))
+                    (/ (- (sqrt (+ 4 (* 3 (square (tan (/ (- eta2 eta1) 2)))))) 1)
+                       3))))
+      (multiple-value-bind (e1x e1y)
+          (ellipse-derivative eta1 a b theta)
+        (multiple-value-bind (e2x e2y)
+            (ellipse-derivative eta2 a b theta)
+          (values (* alpha e1x)
+                  (* alpha e1y)
+                  (* alpha e2x)
+                  (* alpha e2y)))))))
+
+(defun ellipse-cubic-bezier-control-points* (lambda1 lambda2
+                                             radius1-dx radius1-dy
+                                             radius2-dx radius2-dy)
   "Given an ellipse having center CENTER-X, CENTER-Y, and two radii,
 one described by RADIUS1-DX and RADIUS1-DY, and the other described by
 RADIUS2-DX and RADIUS2-DY, returns four values corresponding to x1,
 y1, and x2, y2, of the two control points of a cubic bezier curve
 approximation of the elliptical arc from angle lambda1 to lambda2."
-  (declare (ignore center-x center-y))
   (multiple-value-bind (a b theta)
       (reparameterize-ellipse radius1-dx radius1-dy radius2-dx radius2-dy)
     (let ((lambda1 (- lambda1 theta))
           (lambda2 (- lambda2 theta)))
-      (let ((eta1 (atan (/ (sin lambda1) b)
-                        (/ (cos lambda1) a)))
-            (eta2 (atan (/ (sin lambda2) b)
-                        (/ (cos lambda2) a))))
-        (let ((alpha (* (sin (- eta2 eta1))
-                        (/ (- (sqrt (+ 4 (* 3 (square (tan (/ (- eta2 eta1) 2)))))) 1)
-                           3))))
-          (multiple-value-bind (e1x e1y)
-              (ellipse-derivative eta1 a b theta)
-            (multiple-value-bind (e2x e2y)
-                (ellipse-derivative eta2 a b theta)
-              (values (* alpha e1x)
-                      (* alpha e1y)
-                      (* alpha e2x)
-                      (* alpha e2y)))))))))
+      (ellipse-cubic-bezier-control-points lambda1 lambda2 a b theta))))
 
 (defun ellipse-cubic-bezier-points (lambda1 lambda2
                                     center-x center-y
-                                    radius1-dx radius1-dy
-                                    radius2-dx radius2-dy)
+                                    a b theta)
+  "Returns 8 values, the x and y points of ellipse point 1, control
+point 1, control point 2 and ellipse point 2 of a cubic bezier curve
+approximating the elliptical arc from angle lambda1 to lambda2 of the
+ellipse having center CENTER-X, CENTER-Y, and two radii of length A
+and B, with angle THETA between the radii from the center of the
+ellipse."
+  (multiple-value-bind (p1x p1y)
+      (ellipse-point lambda1 center-x center-y a b theta)
+    (multiple-value-bind (p2x p2y)
+        (ellipse-point lambda2 center-x center-y a b theta)
+      (multiple-value-bind (e1x e1y e2x e2y)
+          (ellipse-cubic-bezier-control-points lambda1 lambda2 a b theta)
+        (values p1x p1y
+                (+ p1x e1x) (+ p1y e1y)
+                (- p2x e2x) (- p2y e2y)
+                p2x p2y)))))
+
+(defun ellipse-cubic-bezier-points* (lambda1 lambda2
+                                     center-x center-y
+                                     radius1-dx radius1-dy
+                                     radius2-dx radius2-dy)
   "Returns 8 values, the x and y points of ellipse point 1, control
 point 1, control point 2 and ellipse point 2 of a cubic bezier curve
 approximating the elliptical arc from angle lambda1 to lambda2 of the
@@ -291,9 +314,8 @@ and RADIUS2-DY"
         (ellipse-point* lambda2 center-x center-y
                         radius1-dx radius1-dy radius2-dx radius2-dy)
       (multiple-value-bind (e1x e1y e2x e2y)
-          (ellipse-cubic-bezier-control-points lambda1 lambda2
-                                               center-x center-y
-                                               radius1-dx radius1-dy radius2-dx radius2-dy)
+          (ellipse-cubic-bezier-control-points* lambda1 lambda2
+                                                radius1-dx radius1-dy radius2-dx radius2-dy)
         (values p1x p1y
                 (+ p1x e1x) (+ p1y e1y)
                 (- p2x e2x) (- p2y e2y)
@@ -331,48 +353,50 @@ a solid ellipse is drawn. If START-ANGLE and END-ANGLE are specified,
 draws an ellipse arc between the two angles, or a pie-wedge if filled
 is T."
   (let ((first-segment t))
-    (flet ((draw-ellipse-segment (lambda1 lambda2)
-             (multiple-value-bind (p1x p1y q1x q1y q2x q2y p2x p2y)
-                 (ellipse-cubic-bezier-points lambda1 lambda2
-                                              center-x center-y
-                                              radius1-dx radius1-dy radius2-dx radius2-dy)
-               (with-transformed-position (tr p1x p1y)
-                 (with-transformed-position (tr q1x q1y)
-                   (with-transformed-position (tr q2x q2y)
-                     (with-transformed-position (tr p2x p2y)
-                       (when first-segment
-                         (pdf:move-to p1x p1y)
-                         (setf first-segment nil))
-                       (pdf:bezier-to q1x q1y q2x q2y p2x p2y))))))))
-      (if (or (and start-angle end-angle
-                   (zerop start-angle) (= (* pi 2) end-angle))
-              (and start-angle end-angle
-                   (zerop end-angle) (= (* pi 2) start-angle)))
-          (let* ((sweep (* pi 2))
-                 (step (/ sweep 4)))
-            (let ((a 0)
-                  (b (+ start-angle step)))
-              (loop for i below 4
-                 do (draw-ellipse-segment a b)
-                   (incf a step)
-                   (incf b step))))
-          (flet ((clamp-angle (angle)
-                   (min (max 0 angle) (* pi 2))))
-            (let ((start-angle (clamp-angle start-angle))
-                  (end-angle (clamp-angle end-angle)))
-              (let* ((sweep (- end-angle start-angle))
-                     (segment-count (ceiling (abs (/ sweep (/ pi 2)))))
-                     (step (/ sweep segment-count)))
-                (let ((a start-angle)
-                      (b (+ start-angle step)))
-                  (loop for i below segment-count
-                     do (draw-ellipse-segment (- (transform-angle tr a))
-                                              (- (transform-angle tr b)))
-                       (incf a step)
-                       (incf b step)))))
-            (when filled
-              (with-transformed-position (tr center-x center-y)
-                (pdf:line-to center-x center-y))))))))
+    (multiple-value-bind (a b theta)
+        (reparameterize-ellipse radius1-dx radius1-dy radius2-dx radius2-dy)
+      (flet ((draw-ellipse-segment (lambda1 lambda2)
+               (multiple-value-bind (p1x p1y q1x q1y q2x q2y p2x p2y)
+                   (ellipse-cubic-bezier-points (- lambda1 theta) (- lambda2 theta)
+                                                center-x center-y
+                                                a b theta)
+                 (with-transformed-position (tr p1x p1y)
+                   (with-transformed-position (tr q1x q1y)
+                     (with-transformed-position (tr q2x q2y)
+                       (with-transformed-position (tr p2x p2y)
+                         (when first-segment
+                           (pdf:move-to p1x p1y)
+                           (setf first-segment nil))
+                         (pdf:bezier-to q1x q1y q2x q2y p2x p2y))))))))
+        (if (or (and start-angle end-angle
+                     (zerop start-angle) (= (* pi 2) end-angle))
+                (and start-angle end-angle
+                     (zerop end-angle) (= (* pi 2) start-angle)))
+            (let* ((sweep (* pi 2))
+                   (step (/ sweep 4)))
+              (let ((a 0)
+                    (b (+ start-angle step)))
+                (loop for i below 4
+                   do (draw-ellipse-segment a b)
+                     (incf a step)
+                     (incf b step))))
+            (flet ((clamp-angle (angle)
+                     (min (max 0 angle) (* pi 2))))
+              (let ((start-angle (clamp-angle start-angle))
+                    (end-angle (clamp-angle end-angle)))
+                (let* ((sweep (- end-angle start-angle))
+                       (segment-count (ceiling (abs (/ sweep (/ pi 2)))))
+                       (step (/ sweep segment-count)))
+                  (let ((a start-angle)
+                        (b (+ start-angle step)))
+                    (loop for i below segment-count
+                       do (draw-ellipse-segment (- (transform-angle tr a))
+                                                (- (transform-angle tr b)))
+                         (incf a step)
+                         (incf b step)))))
+              (when filled
+                (with-transformed-position (tr center-x center-y)
+                  (pdf:line-to center-x center-y)))))))))
 
 (defmethod medium-draw-ellipse* ((medium pdf-medium) center-x center-y
                                  radius1-dx radius1-dy radius2-dx radius2-dy
