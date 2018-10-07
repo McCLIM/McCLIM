@@ -55,14 +55,14 @@
                 #:get-transformation
                 ;;
                 #:medium-miter-limit
-                ;; classes:
+                ;; classes
                 #:mirrored-pixmap
                 #:window-destroy-event
                 #:pointer-ungrab-event
 		#:pointer-motion-hint-event
                 #:device-font-text-style
-                ;;
-                )
+                ;; utils
+                #:dolines)
   (:import-from :clim-standard
 		#:standard-event-port-mixin
 		#:standard-graft

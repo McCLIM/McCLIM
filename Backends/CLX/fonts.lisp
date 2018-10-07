@@ -132,6 +132,14 @@
   (:method (font)
     (xlib:font-descent font)))
 
+(defgeneric font-leading (font)
+  (:method (font)
+    (* 1.2 (+ (font-ascent font) (font-descent font)))))
+
+(defgeneric font-tracking (font)
+  (:method (font)
+    0.0))
+
 (defgeneric font-glyph-width (font code)
   (:method (font code)
     (xlib:char-width font code)))
