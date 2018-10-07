@@ -202,7 +202,7 @@
 (defun render-image-test-16 (stream design cx cy cw ch w h)
   (let ((path (uiop/pathname:merge-pathnames* *testing-image-rgb-file* *testing-image-directory*)))
     (let ((image (make-pattern-from-bitmap-file path)))
-      (clim-render:fill-image image design nil :x cx :y cy :width cw :height ch)
+      (clim-render:fill-image image design :x cx :y cy :width cw :height ch)
       (clim-render:draw-image* stream image w h))))
 
 (define-render-image-test "2d - 01) simple rgb" (stream)
