@@ -54,6 +54,7 @@
               (toward-y (* -1 y-offset)))
          (clim:draw-point* pane 0 0 :ink +blue+ :line-thickness 10)
          (clim:draw-point* pane toward-x toward-y :ink +red+ :line-thickness 10)
+         (clim:draw-line* pane 0 0 toward-x toward-y :ink +magenta+)
          (let ((string "The quick brown fox jumps over the lazy dog"))
            (clim:draw-text* pane (format nil "~A~%~A~%~A" string string string)
                             0 0 :transform-glyphs t :ink +gray+))

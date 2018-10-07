@@ -57,18 +57,24 @@
    (size          :initarg :size     :reader truetype-font-size)
    (kerning-p     :initarg :kerning  :reader truetype-font-kerning-p)
    (tracking      :initarg :tracking :reader truetype-font-tracking)
+   (leading       :initarg :leading  :reader truetype-font-leading)
    (ascent                           :reader truetype-font-ascent)
    (descent                          :reader truetype-font-descent)
    (units->pixels                    :reader zpb-ttf-font-units->pixels))
-  (:default-initargs :kerning t :tracking 0))
+  ;; Parameters TRACKING and LEADING are specified in [em]. Internally we keep
+  ;; them in [units].
+  (:default-initargs :kerning t :tracking 0.0 :leading 1.2))
 
-(defmethod initialize-instance :after ((font truetype-font) &key &allow-other-keys)
-  (with-slots (face size ascent descent font-loader units->pixels) font
-    (let ((loader (zpb-ttf-font-loader face)))
-      (setf units->pixels (/ (* size (/ *dpi* 72))
-                             (zpb-ttf:units/em loader))
-            ascent (* (zpb-ttf:ascender loader) units->pixels)
-            descent (- (* (zpb-ttf:descender loader) units->pixels))))
+(defmethod initialize-instance :after ((font truetype-font) &key tracking leading &allow-other-keys)
+  (with-slots (face size ascent descent font-loader) font
+    (let* ((loader (zpb-ttf-font-loader face))
+           (em->units (zpb-ttf:units/em loader))
+           (units->pixels (/ (* size (/ *dpi* 72)) em->units)))
+      (setf ascent  (+ (* units->pixels (zpb-ttf:ascender loader)))
+            descent (- (* units->pixels (zpb-ttf:descender loader)))
+            (slot-value font 'tracking) (* em->units tracking)
+            (slot-value font 'leading)  (* em->units leading)
+            (slot-value font 'units->pixels) units->pixels))
     (pushnew font (all-fonts face))))
 
 (defmethod zpb-ttf:kerning-offset ((left character) (right character) (font truetype-font))

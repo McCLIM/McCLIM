@@ -217,6 +217,14 @@
 (defmethod clim-clx::font-descent ((font truetype-font))
   (truetype-font-descent font))
 
+(defmethod clim-clx::font-tracking ((font truetype-font))
+  (* (zpb-ttf-font-units->pixels font)
+     (truetype-font-tracking font)))
+
+(defmethod clim-clx::font-leading ((font truetype-font))
+  (* (zpb-ttf-font-units->pixels font)
+     (truetype-font-leading font)))
+
 (defmethod clim-clx::font-glyph-width ((font truetype-font) code)
   (glyph-info-width (font-glyph-info font code)))
 

@@ -560,3 +560,12 @@ STREAM in the direction DIRECTION."
               (slot-value original slot))))
     copy))
 
+(defmacro dolines ((line string &optional result) &body body)
+  "Iterates over lines in string separated by #\newline."
+  (alexandria:with-gensyms (substr end)
+    (alexandria:once-only (string)
+      `(do* ((,substr ,string (subseq ,substr (1+ ,end)))
+             (,end  #1=(position #\newline ,substr) #1#)
+             (,line #2=(subseq ,substr 0 ,end) #2#))
+            ((null ,end) ,@body ,result)
+         ,@body))))
