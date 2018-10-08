@@ -19,20 +19,18 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package #:clim-internals)
+(in-package :clim-demo)
 
 ;;; Example gadget definition.
-(defclass slider-test-pane (basic-gadget) ())
 
-(defmethod handle-repaint ((pane slider-test-pane) region)
+(defclass abstract-colored-gadget (basic-gadget) ())
+(defclass generic-colored-gadget (abstract-colored-gadget)
+  ((color :initform +black+ :accessor colored-gadget-color)))
+
+(defmethod handle-repaint ((gadget generic-colored-gadget) region)
   (declare (ignore region))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (display-gadget-background pane
-			       (gadget-current-color pane)
-			       0 0
-			       (- x2 x1) (- y2 y1))))
-
-(in-package :clim-demo)
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
+    (draw-rectangle* gadget x1 y1 x2 y2 :ink (colored-gadget-color gadget))))
 
 ;;; Slider callback and macro.
 
@@ -42,17 +40,17 @@
 
 (defmacro define-slider-callback (name position)
   `(defun ,(make-symbol name) (gadget value)
-     (let ((colored (find-if (lambda (x) (typep x 'climi::slider-test-pane))
-                             (sheet-siblings gadget))))
-       (setf ,(case position
-		(1 `(car *rgb*))
-		(2 `(cadr *rgb*))
-		(3 `(caddr *rgb*)))
-	     (/ value 10000)
-	     (clim-internals::gadget-current-color colored)
-	     (apply #'clim-internals::make-named-color "our-color"
-		    (mapcar #'(lambda (color) (coerce color 'single-float))
-			    *rgb*))))))
+     (declare (ignore gadget))
+     (setf ,(case position
+              (1 `(car *rgb*))
+              (2 `(cadr *rgb*))
+              (3 `(caddr *rgb*)))
+           (/ value 10000))
+     (execute-frame-command *application-frame*
+                            (list 'com-change-color
+                                  (apply #'clim:make-rgb-color
+                                         (mapcar #'(lambda (color) (coerce color 'single-float))
+                                                 *rgb*))))))
 
 (defvar callback-red (define-slider-callback "SLIDER-R" 1))
 (defvar callback-green (define-slider-callback "SLIDER-G" 2))
@@ -62,16 +60,6 @@
 
 (defun colorslider ()
   (run-frame-top-level (make-application-frame 'colorslider)))
-
-(defmethod slidertest-frame-top-level
-    ((frame application-frame)
-     &key (command-parser 'command-line-command-parser)
-     (command-unparser 'command-line-command-unparser)
-     (partial-command-parser
-      'command-line-read-remaining-arguments-for-partial-command)
-     (prompt "Command: "))
-  (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (clim-extensions:simple-event-loop))
 
 (define-application-frame colorslider
     () ()
@@ -102,14 +90,17 @@
 	       :orientation :horizontal
 	       :value 0
 	       :width 120)
-     (colored :slider-test
-              :normal +black+
-              :width 200 :height 90))
+     (colored (make-pane 'generic-colored-gadget
+                         :width 200 :height 90)))
     (:layouts
      (default (vertically ()
                 text
                 slider-r
                 slider-g
                 slider-b
-                colored)))
-    (:top-level (slidertest-frame-top-level . nil)))
+                colored))))
+
+(define-colorslider-command com-change-color ((color clim:color))
+  (let ((colored (find-pane-named *application-frame* 'colored)))
+    (setf (colored-gadget-color colored) color)
+    (repaint-sheet colored +everywhere+)))
