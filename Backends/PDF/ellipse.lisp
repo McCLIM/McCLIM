@@ -23,22 +23,17 @@
 ;;; Ellipses
 
 ;;;
-;;; PDF doesn't provide shape drawing functions per se, but rather
-;;; primitives for working with paths such as lines and bezier
-;;; curves. cl-pdf, which we use here in the PDF backend, defines some
-;;; geometric drawing functions such as arc, pie, circle, rectangle,
-;;; etc... and ellipse. Unfortunately the cl-pdf ellipse routine only
-;;; handles axis-aligned ellipses. The CLIM specification describes
-;;; arbitrary ellipses that have two (non-colinear) 2-d vectors as
-;;; radii. So we have to add support for these kind of ellipses. There
-;;; are multiple approaches to rendering ellipses but it turns out
-;;; that one can closely approximate arbitrary ellipse path with
-;;; appropriate bezier curves. A good primer on drawing ellipses with
-;;; lines, or quadratic or cubic bezier curves can be found here:
+;;; Many backends, such as PDF and PostScript don't provide shape
+;;; drawing functions per se, but rather primitives for working with
+;;; paths such as lines and bezier curves. One can closely approximate
+;;; arbitrary ellipse path with appropriate bezier curves. A good
+;;; primer on drawing ellipses with lines, or quadratic or cubic
+;;; bezier curves can be found here:
+;;;
 ;;; <https://www.spaceroots.org/documents/ellipse/index.html>.
 ;;;
 ;;; We use the algorithm described in the above reference to construct
-;;; cubic bezier curves, which are in turn handled by cl-pdf.
+;;; cubic bezier curves.
 
 ;;;
 ;;; this probably exists elsewhere in McCLIM and, either way, could be
