@@ -6,5 +6,6 @@
   ((:file "package")
    (:file "paper")
    (:file "class")
+   (:file "ellipse")
    (:file "graphics")
    (:file "sheet")))
