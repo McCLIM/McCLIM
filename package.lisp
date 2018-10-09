@@ -1992,6 +1992,7 @@
    #:destroy-mirror
    #:destroy-port
    #:graft
+   #:graftp
    #:graft-height
    #:graft-width
    #:handle-repaint
