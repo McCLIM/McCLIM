@@ -1054,13 +1054,6 @@ in an equalp hash table"))
    record
    t))
 
-(defun convert-from-relative-to-absolute-coordinates (stream record)
-  (declare (ignore stream record))
-  "This compatibility function returns offsets that are suitable for
-  drawing records that are the children of `record'. In McCLIM this is
-  a noop because output records are kept in stream coordinates."
-  (values 0 0))
-
 
 ;;; Support for explicitly changing output records
 
