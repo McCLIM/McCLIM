@@ -16,15 +16,12 @@
 
 (declaim (optimize (speed 1) (safety 3) (debug 1) (space 0)))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defconstant +ccb+ #.(ceiling (log char-code-limit 2))))
 ;;;; Notes
 
 ;;; You might need to tweak mcclim-truetype::*families/faces* to point
 ;;; to where ever there are suitable TTF fonts on your system.
 
-;;; FIXME: I don't think draw-text* works for strings spanning
-;;; multiple lines.  FIXME: Not particularly thread safe.
+;;; FIXME: Not particularly thread safe.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -211,27 +208,27 @@
 (defun font-glyph-id (font code)
   (glyph-info-id (font-glyph-info font code)))
 
-(defmethod clim-clx::font-ascent ((font truetype-font))
+(defmethod climb:font-ascent ((font truetype-font))
   (truetype-font-ascent font))
 
-(defmethod clim-clx::font-descent ((font truetype-font))
+(defmethod climb:font-descent ((font truetype-font))
   (truetype-font-descent font))
 
-(defmethod clim-clx::font-tracking ((font truetype-font))
+(defmethod climb:font-tracking ((font truetype-font))
   (* (zpb-ttf-font-units->pixels font)
      (truetype-font-tracking font)))
 
-(defmethod clim-clx::font-leading ((font truetype-font))
+(defmethod climb:font-leading ((font truetype-font))
   (* (zpb-ttf-font-units->pixels font)
      (truetype-font-leading font)))
 
-(defmethod clim-clx::font-glyph-width ((font truetype-font) code)
+(defmethod climb:font-glyph-width ((font truetype-font) code)
   (glyph-info-width (font-glyph-info font code)))
 
-(defun font-glyph-left (font code)
+(defmethod climb:font-glyph-left ((font truetype-font) code)
   (glyph-info-left (font-glyph-info font code)))
 
-(defun font-glyph-right (font code)
+(defmethod climb:font-glyph-right ((font truetype-font) code)
   (glyph-info-right (font-glyph-info font code)))
 
 ;;; Simple custom cache for glyph IDs and widths. Much faster than
@@ -272,8 +269,8 @@
        (glyph-info-advance-width
         (font-glyph-info ,font ,code))))
 
-(defmethod clim-clx::font-text-extents ((font truetype-font) string
-                                        &key (start 0) (end (length string)) translate direction)
+(defmethod climb:font-text-extents ((font truetype-font) string
+                                    &key (start 0) (end (length string)))
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
   ;; first-not-done)  
@@ -281,7 +278,7 @@
            (ignore translate direction)
            (fixnum start end))
   (let* ((last-char-code (char-code (char string (1- end))))
-         (left-offset (font-glyph-left font last-char-code))
+         (left-offset (climb:font-glyph-left font last-char-code))
          (width-cache (slot-value font 'glyph-width-cache))
          (width
           ;; We could work a little harder and eliminate generic arithmetic
@@ -294,7 +291,10 @@
                             for i from (1+ start) below end
                             as next-char = (char string i)
                             as next-char-code = (char-code next-char)
-                            as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
+                            as code = (dpb next-char-code (byte
+                                                           #.(ceiling (log char-code-limit 2))
+                                                           #.(ceiling (log char-code-limit 2)))
+                                           (char-code char))
                             ;; for i from start below end
                             ;; as code = (char-code (char string i))
                             do
@@ -313,13 +313,13 @@
                    (t (compute)))))))
     (values
      width
-     (clim-clx::font-ascent font)
-     (clim-clx::font-descent font)
+     (climb:font-ascent font)
+     (climb:font-descent font)
      (- left-offset)
      ;; Cached WIDTH contains right-bearing already.
      (+ left-offset width)
-     (clim-clx::font-ascent font)
-     (clim-clx::font-descent font)
+     (climb:font-ascent font)
+     (climb:font-descent font)
      0 end)))
 
 (defun drawable-picture (drawable)
@@ -406,7 +406,9 @@
        for i from (1+ start) below end
        as next-char = (char string i)
        as next-char-code = (char-code next-char)
-       as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
+       as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
+                                           #.(ceiling (log char-code-limit 2)))
+                      (char-code char))
        do
          (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
                (the (unsigned-byte 32) (ensure-font-glyph-id font cache code)))
@@ -467,7 +469,9 @@
      for i from 1 below end
      as next-char = (char string i)
      as next-char-code = (char-code next-char)
-     as code = (dpb next-char-code (byte #.+ccb+ #.+ccb+) (char-code char))
+     as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
+                                         #.(ceiling (log char-code-limit 2)))
+                    (char-code char))
      as glyph-info = (font-generate-glyph* font code glyph-transformation)
      do
        (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)

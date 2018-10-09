@@ -309,8 +309,7 @@
     graft))
 
 (defmethod make-medium ((port clx-port) sheet)
-  (make-instance #+clx-ext-render 'clx-render-medium
-                 #-clx-ext-render 'clx-medium
+  (make-instance 'clx-render-medium ;'clx-medium
 		 ;; :port port 
 		 ;; :graft (find-graft :port port) 
 		 :sheet sheet))

@@ -39,31 +39,25 @@
 (defun font-glyph-opacity-image (font character)
   (glyph-info-opacity-image (font-glyph-info font character)))
 
-(defmethod font-ascent ((font truetype-font))
-  (truetype-font-ascent font))
-
-(defmethod font-descent ((font truetype-font))
-  (truetype-font-descent font))
-
-(defmethod font-glyph-width ((font truetype-font) char)
+(defmethod climb:font-glyph-width ((font render-truetype-font) char)
   (glyph-info-width (font-glyph-info font char)))
 
-(defmethod font-glyph-height ((font truetype-font) char)
+(defmethod climb:font-glyph-height ((font render-truetype-font) char)
   (glyph-info-height (font-glyph-info font char)))
 
-(defmethod font-glyph-dx ((font truetype-font) char)
+(defmethod climb:font-glyph-dx ((font render-truetype-font) char)
   (glyph-info-dx (font-glyph-info font char)))
 
-(defmethod font-glyph-dy ((font truetype-font) char)
+(defmethod climb:font-glyph-dy ((font render-truetype-font) char)
   (glyph-info-dy (font-glyph-info font char)))
 
-(defmethod font-glyph-left ((font truetype-font) char)
+(defmethod climb:font-glyph-left ((font render-truetype-font) char)
   (glyph-info-left (font-glyph-info font char)))
 
-(defmethod font-glyph-right ((font truetype-font) char)
+(defmethod climb:font-glyph-right ((font render-truetype-font) char)
   (glyph-info-right (font-glyph-info font char)))
 
-(defmethod font-glyph-top ((font truetype-font) char)
+(defmethod climb:font-glyph-top ((font render-truetype-font) char)
   (glyph-info-top (font-glyph-info font char)))
 
 (defun make-gcache ()
@@ -104,15 +98,11 @@
 ;;; text geometry
 ;;;
 
-(defgeneric font-text-extents (font string &key start end translate))
-
-(defmethod font-text-extents ((font render-truetype-font) string
-                                        &key (start 0) (end (length string)) translate)
+(defmethod climb:font-text-extents ((font render-truetype-font) string
+                                    &key (start 0) (end (length string)))
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
   ;; first-not-done)
-  (declare ;;(optimize (speed 3))
-           (ignore translate))
   (let ((width
          ;; We could work a little harder and eliminate generic arithmetic
          ;; here. It might shave a few percent off a draw-text benchmark.
@@ -123,9 +113,9 @@
                           as char = (aref string i)
                           as code = (char-code char)
                           sum (or (gcache-get width-cache code)
-                                  (gcache-set width-cache code (max (font-glyph-right font char)
-                                                                    (font-glyph-width font char))))
-                            #+NIL (clim-clx::font-glyph-width font char))))
+                                  (gcache-set width-cache code (max (climb:font-glyph-right font char)
+                                                                    (climb:font-glyph-width font char))))
+                            #+NIL (climb:font-glyph-width font char))))
            (if (numberp (slot-value font 'fixed-width))
                (* (slot-value font 'fixed-width) (- end start))
                (typecase string
@@ -138,13 +128,13 @@
                  (t (compute)))))))
     (values
      width
-     (font-ascent font)
-     (font-descent font)
-     (font-glyph-left font (char string start))
-     (- width (- (font-glyph-width font (char string (1- end)))
-                 (font-glyph-right font (char string (1- end)))))
-     (font-ascent font)
-     (font-descent font)
+     (climb:font-ascent font)
+     (climb:font-descent font)
+     (climb:font-glyph-left font (char string start))
+     (- width (- (climb:font-glyph-width font (char string (1- end)))
+                 (climb:font-glyph-right font (char string (1- end)))))
+     (climb:font-ascent font)
+     (climb:font-descent font)
      0 end)))
 
 (defmethod text-size ((medium render-medium-mixin) string
@@ -178,9 +168,8 @@
              (multiple-value-bind (width ascent descent left right
                                          font-ascent font-descent direction
                                          first-not-done)
-                 (font-text-extents xfont string
-                                    :start start :end position-newline
-                                    )
+                 (climb:font-text-extents xfont string
+                                          :start start :end position-newline)
                (declare (ignorable left right
                                    font-ascent font-descent
                                    direction first-not-done))
@@ -193,9 +182,7 @@
              (multiple-value-bind (width ascent descent left right
                                          font-ascent font-descent direction
                                          first-not-done)
-                 (font-text-extents xfont string
-                                    :start start :end end
-                                    )
+                 (climb:font-text-extents xfont string :start start :end end)
                (declare (ignorable left right
                                    font-ascent font-descent
                                    direction first-not-done))
@@ -203,19 +190,19 @@
 
 (defmethod text-style-ascent (text-style (medium render-medium-mixin))
   (let ((xfont (text-style-to-font (port medium) text-style)))
-    (font-ascent xfont)))
+    (climb:font-ascent xfont)))
 
 (defmethod text-style-descent (text-style (medium render-medium-mixin))
   (let ((xfont (text-style-to-font (port medium) text-style)))
-    (font-descent xfont)))
+    (climb:font-descent xfont)))
 
 (defmethod text-style-height (text-style (medium render-medium-mixin))
-  (+ (text-style-ascent text-style medium)
-     (text-style-descent text-style medium)))
+  (+ (climb:text-style-ascent text-style medium)
+     (climb:text-style-descent text-style medium)))
 
 (defmethod text-style-width (text-style (medium render-medium-mixin))
   (let ((xfont (text-style-to-font (port medium) text-style)))
-    (font-glyph-width xfont #\m)))
+    (climb:font-glyph-width xfont #\m)))
 
 (defmethod climi::text-bounding-rectangle*
     ((medium render-medium-mixin) string &key text-style (start 0) end)
@@ -232,9 +219,7 @@
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
                                                 first-not-done)
-                        (font-text-extents xfont string
-                                           :start start :end position-newline
-                                           )
+                        (climb:font-text-extents xfont string :start start :end position-newline)
                       (declare (ignorable width left right
                                           font-ascent font-descent
                                           direction first-not-done))
@@ -249,8 +234,7 @@
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
                                                 first-not-done)
-                        (font-text-extents
-                         xfont string :start start :end end)
+                        (climb:font-text-extents xfont string :start start :end end)
                       (declare (ignore width ascent descent)
                                (ignore direction first-not-done))
                       ;; FIXME: Potential style points:

@@ -781,18 +781,18 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod text-style-ascent (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
-    (font-ascent font)))
+    (climb:font-ascent font)))
 
 (defmethod text-style-descent (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
-    (font-descent font)))
+    (climb:font-descent font)))
 
 (defmethod text-style-height (text-style (medium clx-medium))
   (let ((font (text-style-to-X-font (port medium) text-style)))
-    (+ (font-ascent font) (font-descent font))))
+    (+ (climb:font-ascent font) (climb:font-descent font))))
 
 (defmethod text-style-character-width (text-style (medium clx-medium) char)
-  (font-glyph-width (text-style-to-X-font (port medium) text-style) (char-code char)))
+  (climb:font-character-width (text-style-to-X-font (port medium) text-style) (char-code char)))
 
 (defmethod text-style-width (text-style (medium clx-medium))
   (text-style-character-width text-style medium #\m))
@@ -815,24 +815,6 @@ translated, so they begin at different position than [0,0])."))
                 implement a CLX translate function for this implementation."
                'code-char (code-char (+ i 32)))))))
 
-;;; The default CLX translation function is defined to work only for
-;;; ASCII characters; quoting from the documentation,
-;;;
-;;;   The default :translate function handles all characters that
-;;;   satisfy graphic-char-p by converting each character into its
-;;;   ASCII code.
-;;;
-;;; We provide our own translation function which is essentially the
-;;; same as that of CLX, but with the ASCII restriction relaxed.  This
-;;; is by no means a proper solution to the problem of
-;;; internationalization, because fonts tend not to have a complete
-;;; coverage of the entirety of the Unicode space, even assuming that
-;;; the underlying lisp supports it (this is the case at least for SBCL,
-;;; CLISP and CCL); instead, the translation function is meant to
-;;; handle font sets by requesting the X server change fonts in the
-;;; middle of rendering strings.  However, the below stands a chance
-;;; of working when using ISO-8859-1-encoded fonts, and will tend to
-;;; lose in other cases.
 (defun translate (src src-start src-end afont dst dst-start)
   (declare (type sequence src)
            (type xlib:array-index src-start src-end dst-start)
@@ -906,9 +888,7 @@ translated, so they begin at different position than [0,0])."))
            (multiple-value-bind (width ascent descent left right
                                        font-ascent font-descent direction
                                        first-not-done)
-               (font-text-extents xfont string
-                                  :start start :end position-newline
-                                  :translate #'translate)
+               (climb:font-text-extents xfont string :start start :end position-newline)
              (declare (ignorable left right
                                  font-ascent font-descent
                                  direction first-not-done))
@@ -921,9 +901,7 @@ translated, so they begin at different position than [0,0])."))
            (multiple-value-bind (width ascent descent left right
                                        font-ascent font-descent direction
                                        first-not-done)
-               (font-text-extents xfont string
-                                  :start start :end end
-                                  :translate #'translate)
+               (climb:font-text-extents xfont string :start start :end end)
              (declare (ignorable left right
                                  font-ascent font-descent
                                  direction first-not-done))
@@ -974,9 +952,8 @@ translated, so they begin at different position than [0,0])."))
                               align-x align-y
                               toward-x toward-y transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs))
-  (let* ((medium-transform (medium-transformation medium))
-         (native-transform (sheet-native-transformation (medium-sheet medium)))
-         (merged-transform (clim:compose-transformations native-transform medium-transform)))
+  (let ((merged-transform (sheet-device-transformation (medium-sheet medium)))
+        (xfont (lookup-text-style-to-x-font (port medium) :xlib (medium-text-style medium))))
     (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
@@ -997,11 +974,8 @@ translated, so they begin at different position than [0,0])."))
                     (:center (+ y baseline (- (floor text-height 2)))) ; change
                     (:last-line-baseline  y)                           ; change
                     (:bottom (+ y baseline (- text-height)))))))       ; change
-      (lookup-text-style-to-x-font (port medium) :xlib (medium-text-style medium))
-      (multiple-value-bind (x y)
-          (transform-position merged-transform x y)
-        (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
-                          :start start :end end :translate #'translate :size 16)))))
+      (font-draw-glyphs xfont mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
+                        :transformation merged-transform))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)

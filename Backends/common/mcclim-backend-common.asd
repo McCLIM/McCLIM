@@ -5,4 +5,5 @@
   ((:file "package")
    (:file "ports" :depends-on ("package"))
    (:file "grafts" :depends-on ("package"))
+   (:file "fonts" :depends-on ("package"))
    (:file "events" :depends-on ("ports" "package"))))
