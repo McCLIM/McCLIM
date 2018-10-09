@@ -85,6 +85,7 @@
                                           (max 0 (min #xFFFF (- x2 x1)))
                                           (max 0 (min #xFFFF (- y2 y1)))))))))))
 
+#+ (or) ;; this causes regressions (i.e in draggable graph)
 (defmethod clim:medium-draw-rectangle* ((medium clx-render-medium) left top right bottom filled)
   (unless filled
     (return-from clim:medium-draw-rectangle*
@@ -190,6 +191,8 @@
   ;; mirror swaps, use (SHEET-XMIRROR (MEDIUM-SHEET MEDIUM)) instead. It might be a good idea to
   ;; wrap our own (CLX-RENDER-MEDIUM-MIRROR MEDIUM) function.
   (declare (ignore toward-x toward-y))
+  (when (alexandria:emptyp string)
+    (return-from clim:medium-draw-text*))
   (with-clx-graphics () medium
     (unless (or (eq align-y :baseline)
                 (eq align-y :first-line-baseline))

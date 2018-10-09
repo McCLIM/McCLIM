@@ -103,25 +103,6 @@
             (setf (climi::text-style-mapping port text-style)
                   (find-font)))))))
 
-;;; the generic function port-character-width might be intended to be
-;;; common for all ports, but in fact, that symbol is in the clim-clx
-;;; package, so it is only defined here, and nowhere used.
-(defgeneric port-character-width (port text-style char))
-
-(defmethod port-character-width ((port clx-basic-port) text-style char)
-  (let* ((font (text-style-to-x-font port text-style))
-	 (width (xlib:char-width font (char-code char))))
-    width))
-
-;;; the generic function port-string-width might be intended to be
-;;; common for all ports, but in fact, that symbol is in the clim-clx
-;;; package, so it is only defined here, and nowhere used.
-(defgeneric port-string-width (port text-style string &key start end))
-
-(defmethod port-string-width ((port clx-basic-port) text-style string &key (start 0) end)
-  (xlib:text-width (text-style-to-x-font port text-style)
-		   string :start start :end end))
-
 
 
 (defgeneric font-ascent (font)
@@ -185,7 +166,7 @@
 
 (defgeneric port-find-all-font-families (port font-renderer &key invalidate-cache)
   (:method (port font-renderer &key invalidate-cache)
-    (when (or (null (font-families port)) invalidate-cache)
+    (when (or (null (clim-clx::font-families port)) invalidate-cache)
       (setf (font-families port) (reload-font-table port)))
     (font-families port)))
 

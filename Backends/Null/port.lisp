@@ -107,24 +107,6 @@
   (declare (ignore font-name text-style character-set))
   nil)
 
-;;; The generic function PORT-CHARACTER-WIDTH might be intended to be
-;;; common for all ports, but in fact, that symbol is in the CLIM-NULL
-;;; package, so it is only defined here, and nowhere used. 
-(defgeneric port-character-width (port text-style char))
-
-(defmethod port-character-width ((port null-port) text-style char)
-  (declare (ignore text-style char))
-  nil)
-
-;;; The generic function PORT-STRING-WIDTH might be intended to be
-;;; common for all ports, but in fact, that symbol is in the CLIM-NULL
-;;; package, so it is only defined here, and nowhere used. 
-(defgeneric port-string-width (port text-style string &key start end))
-
-(defmethod port-string-width ((port null-port) text-style string &key (start 0) end)
-  (declare (ignore text-style string start end))
-  nil)
-
 (defmethod graft ((port null-port))
   (first (climi::port-grafts port)))
 
