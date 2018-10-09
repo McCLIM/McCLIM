@@ -60,16 +60,9 @@ advised of the possiblity of such damages.
 
 (defun bounding-rectangle* (presentation)
   "Get the bounding edges of the presentation."
-  (let ((stream *standard-output*))
-    ;; Seem to need to know the stream under the presentation.
-    ;; Take a wild guess.
-    (multiple-value-bind (xoff yoff)
-        (climi::convert-from-relative-to-absolute-coordinates
-         stream
-         (clim::output-record-parent presentation))
-      (clim:with-bounding-rectangle*
-          (left top right bottom) presentation
-        (values (+ left xoff) (+ top yoff) (+ right xoff) (+ bottom yoff))))))
+  (clim:with-bounding-rectangle*
+      (left top right bottom) presentation
+    (values left top right bottom)))
 
 (defun redisplay (record stream)
   (clim:redisplay record stream :check-overlapping nil))
