@@ -1575,7 +1575,8 @@ were added."
         (:center (incf left (- point-x (round width 2)))
          (incf right (- point-x (round width 2)))))
       (ecase align-y
-        (:baseline (incf top point-y) (incf bottom point-y))
+        ((:first-line-baseline :baseline) (incf top point-y) (incf bottom point-y))
+        (:last-line-baseline (incf top point-y) (incf bottom point-y))
         (:top (incf top (+ point-y ascent))
          (incf bottom (+ point-y ascent)))
         (:bottom (incf top (- point-y descent))
