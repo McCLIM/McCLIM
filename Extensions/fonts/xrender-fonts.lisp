@@ -436,10 +436,19 @@
 (defun %render-transformed-glyphs (font string x y tr mirror gc
                                    &aux (end (length string)))
   ;; Sync the picture-clip-mask with that of the gcontext.
-  (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
-               (xlib::gcontext-clip-mask gc))
-    (setf (xlib::picture-clip-mask (drawable-picture mirror))
-          (xlib::gcontext-clip-mask gc)))
+
+  ;; XXX: TYPE-ERROR "The value 54530151 is not of type (INTEGER 0 0) when
+  ;; binding #:G2" in XLIB:GCONTEXT-CLIP-MASK null clip branch form:
+  ;;
+  ;;     (DECODE-TYPE (OR (MEMBER :NONE) PIXMAP) CLIP-MASK)
+  ;;
+  ;; is signalled if we change window size frequently and refresh the output
+  ;; recording. I'm not sure about source of this error – it may also be a case
+  ;; with untransformed rendering. I was unable to figure out what causes this
+  ;; error. That's why we wrap clip in IGNORE-ERRORS.
+  (when-let ((clip (ignore-errors (xlib::gcontext-clip-mask gc))))
+    (unless (eq (xlib::picture-clip-mask (drawable-picture mirror)) clip))
+    (setf (xlib::picture-clip-mask (drawable-picture mirror)) clip))
 
   (loop
      with glyph-transformation = (multiple-value-bind (x0 y0)

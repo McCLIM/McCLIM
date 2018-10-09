@@ -161,10 +161,17 @@
   (setq string (subseq string start end))
   (let* ((font (text-style-to-X-font (port medium) (medium-text-style medium)))
          (y-dx (font-leading font)))
+    ;; Single line centering is figured out in the primary method, we just fix
+    ;; the X/Y if it will be different for the supplied positioning and then
+    ;; increase it for each line. -- jd 2018-10-08
+    (case align-y
+      (:center (setq y (- y (/ (* y-dx (count #\newline string)) 2))))
+      ((:bottom :last-line-baseline) (setq y (- y (* y-dx (count #\newline string))))))
     (dolines (line string)
-      (call-next-method medium line x y 0 (length line)
-                        align-x align-y toward-x toward-y
-                        transform-glyphs)
+      (unless (alexandria:emptyp line)
+        (call-next-method medium line x y 0 (length line)
+                          align-x align-y toward-x toward-y
+                          transform-glyphs))
       (incf y y-dx))))
 
 (defvar *draw-font-lock* (climi::make-lock "draw-font"))
@@ -192,10 +199,10 @@
              (text-height (+ ascent descent)))
         (setq y (ecase align-y
                   (:top (+ y ascent))                              ; OK
-                  ;;((:baseline :first-line-baseline) y)           ; OK
-                  (:center (+ y ascent (- (/ text-height 2.0s0)))) ; change
-                  (:last-line-baseline  y)                         ; change
-                  (:bottom (- y descent))))))                      ; change
+                  #+ (or) ((:baseline :first-line-baseline) y)     ; OK
+                  (:center (+ y ascent (- (/ text-height 2.0s0)))) ; See :around for multiline
+                  (:last-line-baseline  y)                         ; See :around for multiline
+                  (:bottom (- y descent))))))                      ; See :around for multiline
     (unless (eq align-x :left)
       ;; This is the worst case - we need to compute whole text width what
       ;; requires walking all lines char-by char.
