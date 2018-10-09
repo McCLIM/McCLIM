@@ -127,9 +127,7 @@
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
                                                 first-not-done)
-                        (font-text-extents xfont string
-                                           :start start :end position-newline
-                                           :translate #'translate)
+                        (climb:font-text-extents xfont string :start start :end position-newline)
                       (declare (ignorable width left right
                                           font-ascent font-descent
                                           direction first-not-done))
@@ -144,8 +142,7 @@
                     (multiple-value-bind (width ascent descent left right
                                                 font-ascent font-descent direction
                                                 first-not-done)
-                        (font-text-extents
-                         xfont string :start start :end end :translate #'translate)
+                        (climb:font-text-extents xfont string :start start :end end)
                       (declare (ignore width ascent descent)
                                (ignore direction first-not-done))
                       ;; FIXME: Potential style points:
@@ -197,8 +194,8 @@
     (unless (or (eq align-y :baseline)
                 (eq align-y :first-line-baseline))
       (let* ((font (clim-clx::text-style-to-X-font (port medium) (medium-text-style medium)))
-             (ascent (font-ascent font))
-             (descent (font-descent font))
+             (ascent (climb:font-ascent font))
+             (descent (climb:font-descent font))
              (text-height (+ ascent descent)))
         (setq y (ecase align-y
                   (:top (+ y ascent))                              ; OK

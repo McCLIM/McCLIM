@@ -9,14 +9,6 @@
 ;;;;    see toplevel file 'copyright' for the copyright details.
 ;;;;
 
-;; (defpackage #:mcclim-clx/fonts
-;;   (:use :clim-clx :clim-lisp)
-;;   (:export #:font-ascent
-;;            #:font-descent
-;;            #:font-glyph-width))
-
-;; (in-package #:mcclim-clx/fonts)
-
 (in-package #:clim-clx)
 
 (defparameter *clx-text-sizes*
@@ -105,47 +97,30 @@
 
 
 
-(defgeneric font-ascent (font)
-  (:method (font)
-    (xlib:font-ascent font)))
+(defmethod climb:font-ascent ((font xlib:font))
+  (xlib:font-ascent font))
 
-(defgeneric font-descent (font)
-  (:method (font)
-    (xlib:font-descent font)))
+(defmethod climb:font-descent ((font xlib:font))
+  (xlib:font-descent font))
 
-(defgeneric font-leading (font)
-  (:method (font)
-    (* 1.2 (+ (font-ascent font) (font-descent font)))))
-
-(defgeneric font-tracking (font)
-  (:method (font)
-    0.0))
-
-(defgeneric font-glyph-width (font code)
-  (:method (font code)
-    (xlib:char-width font code)))
+(defmethod climb:font-character-width ((font xlib:font) code)
+  (xlib:char-width font code))
 
 ;;; This function should return nine values:
 ;;;
 ;;; (width ascent descent left right font-ascent font-descent
 ;;; direction first-not-done)
-(defgeneric font-text-extents (font string &key start end translate direction)
-  (:method (font string
-            &key (start 0) (end (length string)) (translate #'translate) direction)
-    (declare (ignore direction))
-    (xlib:text-extents font string
-                       :start start :end end
-                       :translate translate)))
+(defmethod climb:font-text-extents ((font xlib:font) string &key (start 0) (end (length string)))
+  (xlib:text-extents font string :start start :end end :translate #'translate))
 
 (defgeneric font-draw-glyphs (font mirror gc x y string
-                              &key start end translate direction transformation)
-  (:method (font mirror gc x y string
-            &key (start 0) (end (length string)) (translate #'translate) direction transformation)
-    (declare (ignore font direction))
+                              &key start end transformation)
+  (:method ((font xlib:font) mirror gc x y string
+            &key (start 0) (end (length string)) transformation)
     (multiple-value-bind (x y)
         (transform-position transformation x y)
       (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
-                        :start start :end end :translate translate :size 16))))
+                        :start start :end end :translate #'translate :size 16))))
 
 
 ;;; Font listing implementation

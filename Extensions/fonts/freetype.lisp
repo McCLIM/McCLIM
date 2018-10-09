@@ -355,7 +355,7 @@ or NIL if the current transformation is the identity transformation."
             (%freetype-draw-glyphs font mirror gc curr-x y string
                                    :direction direction
                                    :transformation transformation)
-            (incf curr-x (clim-clx::text-size medium string :text-style new-text-style)))
+            (incf curr-x (clim:text-size medium string :text-style new-text-style)))
        finally (return curr-x))))
 
 (defun %freetype-draw-glyphs (font mirror gc x y string
@@ -398,16 +398,15 @@ or NIL if the current transformation is the identity transformation."
           (when transform-matrix
             (free-glyphset glyphset)))))))
 
-(defmethod clim-clx::font-text-extents ((font freetype-font) string
-                                        &key (start 0) (end (length string))
-                                          translate (direction :ltr))
-  (declare (ignore translate))
+(defmethod climb:font-text-extents ((font freetype-font) string
+                                    &key (start 0) (end (length string)))
+
   ;; Values to return:
   ;;   width ascent descent left right font-ascent font-descent direction first-not-done
   (with-face-from-font (face font)
     (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
     (flet ((text-extents (font string start end)
-             (let* ((index-list (make-glyph-list font (subseq string start end) direction)))
+             (let* ((index-list (make-glyph-list font (subseq string start end) :ltr)))
                (load-cached-glyphset font (mapcar #'glyph-entry-codepoint index-list))
                (let ((cached-glyphs (freetype-font/cached-glyphs font)))
                  (multiple-value-bind (width ascender descender)
@@ -455,11 +454,11 @@ or NIL if the current transformation is the identity transformation."
             (t
              (text-extents font string start end))))))
 
-(defmethod clim-clx::font-ascent ((font freetype-font))
+(defmethod climb:font-ascent ((font freetype-font))
   (with-face-from-font (face font)
     (freetype2:face-ascender-pixels face)))
 
-(defmethod clim-clx::font-descent ((font freetype-font))
+(defmethod climb:font-descent ((font freetype-font))
   (with-face-from-font (face font)
     (freetype2:face-descender-pixels face)))
 
@@ -580,12 +579,16 @@ or NIL if the current transformation is the identity transformation."
 ;;;  Character info
 ;;;
 
-(defmethod clim-clx::font-glyph-width ((font freetype-font) code)
+(defmethod climb:font-glyph-width ((font freetype-font) code)
   (with-face-from-font (face font)
     (freetype2:load-char face code)
     (let* ((glyph (freetype2-types:ft-face-glyph face))
            (metrics (freetype2-types:ft-glyphslot-metrics glyph)))
       (/ (freetype2-types:ft-glyph-metrics-width metrics) *freetype-font-scale*))))
+
+;;; implement me
+(defmethod climb:font-glyph-left ((font freetype-font) code) 0)
+(defmethod climb:font-glyph-right ((font freetype-font) code) 0)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Font replacement code

@@ -1986,6 +1986,22 @@
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
    #:text-style-character-width
+   ;; Font abstraction
+   #:font-character-width
+   #:font-string-width
+   #:font-text-extents
+   #:font-ascent
+   #:font-descent
+   #:font-leading
+   #:font-tracking
+   #:font-glyph-width
+   #:font-glyph-height
+   #:font-glyph-top
+   #:font-glyph-left
+   #:font-glyph-bottom
+   #:font-glyph-right
+   #:font-glyph-dx
+   #:font-glyph-dy
    ;; From CLIM (mentioned in the spec)
    #:adopt-frame
    #:allocate-space

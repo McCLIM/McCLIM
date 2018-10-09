@@ -198,9 +198,9 @@
 
 ;;; XXX: This method is left here as a reference of a clean implementation of
 ;;; font-text-width computed directly from the font loader information. In
-;;; CLIM-CLX:FONT-TEXT-EXTENTS we use amortization (tracking and kerning are
-;;; stored with a glyph) and depend heavily on cache. Using FONT-TEXT-WIDTH
-;;; proves to slow down code by 60% compared to the faster method.
+;;; CLIMB:FONT-TEXT-EXTENTS we use amortization (tracking and kerning are stored
+;;; with a glyph) and depend heavily on cache. Using FONT-TEXT-WIDTH proves to
+;;; slow down code by 60% compared to the faster method.
 (defun font-text-width (font string)
   ;; We add left-side and right-side bearings to the output-rectangle to avoid
   ;; weird results when last glyph's width is 0 (i.e space). If we had failed to
