@@ -132,7 +132,7 @@ argument to avoid creating too many functions with similar name."))
     () ()
     (:layouts
      (default
-         (horizontally (:background climi::*3d-normal-color*)
+         (horizontally ()
            30
            (make-pane 'push-button :label "Okay"
                       :width '(50 :mm))
@@ -219,7 +219,7 @@ argument to avoid creating too many functions with similar name."))
                    5
                    (make-test-label2 :right :bottom))))))))))
 
-(defclass foo-pane (basic-pane climi::always-repaint-background-mixin)
+(defclass foo-pane (basic-pane clime:always-repaint-background-mixin)
   ())
 
 (defmethod compose-space ((pane foo-pane) &key width height)
