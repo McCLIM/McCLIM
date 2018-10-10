@@ -59,20 +59,10 @@
   (or (pop (display-free-glyph-ids display))
       (incf (display-free-glyph-id-counter display))))
 
-(defstruct (glyph-info (:constructor glyph-info (id width height left right top advance-width advance-height)))
-  id                                    ; FIXME: Types?
-  width height
-  left right top
-  advance-width advance-height)
-
 
 ;;;;;;; mcclim interface
-(defclass clx-truetype-font (truetype-font)
+(defclass clx-truetype-font (cached-truetype-font)
   ((display           :initarg :display :reader clx-truetype-font-display)
-   (fixed-width       :initform nil)
-   (glyph-id-cache    :initform (make-gcache))
-   (glyph-width-cache :initform (make-gcache))
-   (char->glyph-info  :initform (make-hash-table :size 512))
    (%buffer%          :initform (make-array 1024
                                             :element-type '(unsigned-byte 32)
                                             :adjustable nil
@@ -138,23 +128,20 @@
 
 
 
-(defun font-generate-glyph (font glyph-index)
+(defmethod font-generate-glyph ((font clx-truetype-font) code &optional (tr +identity-transformation+))
   (let* ((display (clx-truetype-font-display font))
          (glyph-id (display-draw-glyph-id display))
-         (character (code-char (ldb (byte 16 0) glyph-index)))
-         (next-character (code-char (ldb (byte 16 16) glyph-index))))
-    (multiple-value-bind (arr left top width height dx dy)
-        (glyph-pixarray font character next-character +identity-transformation+)
+         (character (code-char (ldb (byte 16 0) code)))
+         (next-character (code-char (ldb (byte 16 16) code))))
+    (multiple-value-bind (arr left top width height dx dy udx udy)
+        (glyph-pixarray font character next-character tr)
+
       (with-slots (fixed-width) font
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
           (setf fixed-width t)
           (warn "Font ~A is fixed width, but the glyph width appears to vary.
- Disabling fixed width optimization for this font. ~A vs ~A" 
-                font dx fixed-width))
-        (when (and (numberp fixed-width)
-                   (font-fixed-width-p font))
-          (setf fixed-width dx)))
+Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)))
 
       (when (= (array-dimension arr 0) 0)
         (setf arr (make-array (list 1 1)
@@ -200,82 +187,13 @@
       (let ((right (+ left (array-dimension arr 1))))
         (glyph-info glyph-id width height left right top udx udy)))))
 
-(defun font-glyph-info (font code)
-  (with-slots (char->glyph-info) font
-    (ensure-gethash code char->glyph-info
-                    (font-generate-glyph font code))))
-
-(defun font-glyph-id (font code)
-  (glyph-info-id (font-glyph-info font code)))
-
-(defmethod climb:font-ascent ((font truetype-font))
-  (truetype-font-ascent font))
-
-(defmethod climb:font-descent ((font truetype-font))
-  (truetype-font-descent font))
-
-(defmethod climb:font-tracking ((font truetype-font))
-  (* (zpb-ttf-font-units->pixels font)
-     (truetype-font-tracking font)))
-
-(defmethod climb:font-leading ((font truetype-font))
-  (* (zpb-ttf-font-units->pixels font)
-     (truetype-font-leading font)))
-
-(defmethod climb:font-glyph-width ((font truetype-font) code)
-  (glyph-info-width (font-glyph-info font code)))
-
-(defmethod climb:font-glyph-left ((font truetype-font) code)
-  (glyph-info-left (font-glyph-info font code)))
-
-(defmethod climb:font-glyph-right ((font truetype-font) code)
-  (glyph-info-right (font-glyph-info font code)))
-
-;;; Simple custom cache for glyph IDs and widths. Much faster than
-;;; using the char->glyph-info hash table directly.
-
-(defun make-gcache ()
-  (let ((array (make-array 512 :adjustable nil :fill-pointer nil)))
-    (loop for i from 0 below 256 do (setf (aref array i) (1+ i)))
-    array))
-
-(declaim (inline gcache-get gcache-set))
-
-(defun gcache-get (cache key-number)  
-  (declare (optimize (speed 3))
-           (type (simple-array t (512))))
-  (let ((hash (logand (the fixnum key-number) 512)))    ; hello there.
-    (and (= key-number (the fixnum (svref cache hash))) ; general kenobi.
-         (svref cache (+ 256 hash)))))
-
-(defun gcache-set (cache key-number value)
-  (declare (optimize (speed 3))
-           (type (simple-array t (512))))
-  (let ((hash (logand (the fixnum key-number) 512)))
-    (setf (svref cache hash) key-number
-          (svref cache (+ 256 hash)) value)))
-
-(defmacro ensure-font-glyph-id (font cache code)
-  `(if (< ,code 512)
-       (or (gcache-get ,cache ,code)
-           (gcache-set ,cache ,code (font-glyph-id ,font ,code)))
-       (font-glyph-id ,font ,code)))
-
-(defmacro ensure-font-glyph-width (font cache code)
-  `(if (< ,code 512)
-       (or (gcache-get ,cache ,code)
-           (gcache-set ,cache ,code (glyph-info-advance-width
-                                     (font-glyph-info ,font ,code))))
-       (glyph-info-advance-width
-        (font-glyph-info ,font ,code))))
-
 (defmethod climb:font-text-extents ((font truetype-font) string
-                                    &key (start 0) (end (length string)))
+                                    &key (start 0) (end (length string)) direction)
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
   ;; first-not-done)  
   (declare (optimize (speed 3))
-           (ignore translate direction)
+           (ignore direction)
            (fixnum start end))
   (let* ((last-char-code (char-code (char string (1- end))))
          (left-offset (climb:font-glyph-left font last-char-code))
@@ -301,8 +219,8 @@
                               (incf sum (ensure-font-glyph-width font width-cache code))
                               (setf char next-char)
                             finally (return sum))))
-             (if (numberp (slot-value font 'fixed-width))
-                 (* (slot-value font 'fixed-width) (- end start))
+             (if (climb:font-fixed-width font)
+                 (* (climb:font-fixed-width font) (- end start))
                  (typecase string
                    (simple-string
                     (locally (declare (type simple-string string))

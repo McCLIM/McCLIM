@@ -86,8 +86,8 @@
                 #:pixmap-mirror
                 #:pixmap-medium)
   (:import-from :mcclim-truetype
-                #:truetype-font-size
-                #:truetype-font-face
+                #:glyph-info
+                #:font-generate-glyph
                 #:glyph-pixarray
                 #:ensure-gethash
                 #:invoke-with-truetype-path-restart
@@ -101,12 +101,8 @@
                 #:fontconfig-font-name
                 #:make-truetype-device-font-name
                 #:make-fontconfig-font-name
-                #:truetype-font-family
                 #:truetype-font
                 #:truetype-face
-                #:truetype-font-size
-                #:truetype-font-ascent
-                #:truetype-font-descent
                 #:zpb-ttf-font-units->pixels)
   (:import-from :clim-backend
                 #:port-set-mirror-region

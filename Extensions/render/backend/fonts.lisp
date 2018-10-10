@@ -3,62 +3,33 @@
 ;;;
 ;;; Font utilities.
 ;;;
-
-(defstruct (glyph-info (:constructor glyph-info (id width height left right top dx dy paths opacity-image)))
-  id                                    ; FIXME: Types?
-  width height
-  left right top
-  dx
-  dy
+(defstruct (render-glyph-info
+             (:include glyph-info)
+             (:constructor render-glyph-info (id width height left right top advance-width advance-height paths opacity-image)))
   paths
   opacity-image)
 
-(defclass render-truetype-font (truetype-font)
-  ((fixed-width       :initform nil)
-   (glyph-id-cache    :initform (make-gcache))
-   (glyph-width-cache :initform (make-gcache))
-   (char->glyph-info  :initform (make-hash-table :size 256))))
+(defclass render-truetype-font (mcclim-truetype::cached-truetype-font)
+  ())
 
-(defun font-generate-glyph (font glyph-index)
-  (multiple-value-bind (paths left top width height dx dy) (glyph-paths font (code-char glyph-index))
+(defmethod font-generate-glyph ((font render-truetype-font) code &optional tr)
+  (declare (ignore tr))
+  (multiple-value-bind (paths left top width height dx dy)
+      (glyph-paths font (code-char code))
     (let ((right (+ left width))
           (opacity-image (font-generate-opacity-image paths width height left top)))
-      (glyph-info 0 dx dy left right top dx dy paths opacity-image))))
+      (render-glyph-info 0 dx dy left right top dx dy paths opacity-image))))
 
 (defun font-glyph-info (font character)
-  (with-slots (char->glyph-info) font
-    (ensure-gethash character char->glyph-info
+  (with-slots (mcclim-truetype::char->glyph-info) font
+    (ensure-gethash character mcclim-truetype::char->glyph-info
                     (font-generate-glyph font (char-code character)))))
 
-(defun font-glyph-id (font character)
-  (glyph-info-id (font-glyph-info font character)))
-
 (defun font-glyph-paths (font character)
-  (glyph-info-paths (font-glyph-info font character)))
+  (render-glyph-info-paths (font-glyph-info font character)))
 
 (defun font-glyph-opacity-image (font character)
-  (glyph-info-opacity-image (font-glyph-info font character)))
-
-(defmethod climb:font-glyph-width ((font render-truetype-font) char)
-  (glyph-info-width (font-glyph-info font char)))
-
-(defmethod climb:font-glyph-height ((font render-truetype-font) char)
-  (glyph-info-height (font-glyph-info font char)))
-
-(defmethod climb:font-glyph-dx ((font render-truetype-font) char)
-  (glyph-info-dx (font-glyph-info font char)))
-
-(defmethod climb:font-glyph-dy ((font render-truetype-font) char)
-  (glyph-info-dy (font-glyph-info font char)))
-
-(defmethod climb:font-glyph-left ((font render-truetype-font) char)
-  (glyph-info-left (font-glyph-info font char)))
-
-(defmethod climb:font-glyph-right ((font render-truetype-font) char)
-  (glyph-info-right (font-glyph-info font char)))
-
-(defmethod climb:font-glyph-top ((font render-truetype-font) char)
-  (glyph-info-top (font-glyph-info font char)))
+  (render-glyph-info-opacity-image (font-glyph-info font character)))
 
 (defun make-gcache ()
   (let ((array (make-array 512 :adjustable nil :fill-pointer nil)))
@@ -99,25 +70,26 @@
 ;;;
 
 (defmethod climb:font-text-extents ((font render-truetype-font) string
-                                    &key (start 0) (end (length string)))
+                                    &key (start 0) (end (length string)) direction)
   ;; -> (width ascent descent left right
   ;; font-ascent font-descent direction
   ;; first-not-done)
+  (declare (ignore direction))
   (let ((width
          ;; We could work a little harder and eliminate generic arithmetic
          ;; here. It might shave a few percent off a draw-text benchmark.
          ;; Rather silly to obsess over the array access considering that.
          (macrolet ((compute ()
-                      `(loop with width-cache = (slot-value font 'glyph-width-cache)
+                      `(loop with width-cache = (slot-value font 'mcclim-truetype::glyph-width-cache)
                           for i from start below end
                           as char = (aref string i)
                           as code = (char-code char)
                           sum (or (gcache-get width-cache code)
-                                  (gcache-set width-cache code (max (climb:font-glyph-right font char)
-                                                                    (climb:font-glyph-width font char))))
+                                  (gcache-set width-cache code (max (climb:font-glyph-right font code)
+                                                                    (climb:font-glyph-width font code))))
                             #+NIL (climb:font-glyph-width font char))))
-           (if (numberp (slot-value font 'fixed-width))
-               (* (slot-value font 'fixed-width) (- end start))
+           (if (climb:font-fixed-width font)
+               (* (climb:font-fixed-width font) (- end start))
                (typecase string
                  (simple-string
                   (locally (declare (type simple-string string))
@@ -130,9 +102,9 @@
      width
      (climb:font-ascent font)
      (climb:font-descent font)
-     (climb:font-glyph-left font (char string start))
-     (- width (- (climb:font-glyph-width font (char string (1- end)))
-                 (climb:font-glyph-right font (char string (1- end)))))
+     (climb:font-glyph-left font (char-code (char string start)))
+     (- width (- (climb:font-glyph-width font (char-code (char string (1- end))))
+                 (climb:font-glyph-right font (char-code (char string (1- end))))))
      (climb:font-ascent font)
      (climb:font-descent font)
      0 end)))
@@ -202,7 +174,7 @@
 
 (defmethod text-style-width (text-style (medium render-medium-mixin))
   (let ((xfont (text-style-to-font (port medium) text-style)))
-    (climb:font-glyph-width xfont #\m)))
+    (climb:font-character-width xfont #\m)))
 
 (defmethod climi::text-bounding-rectangle*
     ((medium render-medium-mixin) string &key text-style (start 0) end)

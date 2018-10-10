@@ -1987,13 +1987,18 @@
    #:synthesize-pointer-motion-event
    #:text-style-character-width
    ;; Font abstraction
+   #:font-face
+   #:font-size
    #:font-character-width
    #:font-string-width
+   #:font-string-glyph-codes
    #:font-text-extents
    #:font-ascent
    #:font-descent
    #:font-leading
    #:font-tracking
+   #:font-fixed-width
+   #:font-kerning-p
    #:font-glyph-width
    #:font-glyph-height
    #:font-glyph-top

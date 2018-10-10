@@ -27,19 +27,19 @@
                                          (kerning t) (auto-orient nil))
   "Extract paths from a string."
   (declare (ignore scale-x scale-y auto-orient))
-  (let ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))
+  (let ((font-loader (zpb-ttf-font-loader (climb:font-face font)))
         (scale (zpb-ttf-font-units->pixels font)))
     (loop
        for previous-char = nil then char
        for char across text
        for paths = (font-glyph-paths font char)
        for opacity-image = (font-glyph-opacity-image font char)
-       for dx = (font-glyph-left font char)
-       for dy = (font-glyph-top font char)
+       for dx = (climb:font-glyph-left font char)
+       for dy = (climb:font-glyph-top font char)
        for previous-width = nil then width
        for width = (max
-                    (font-glyph-right font char)
-                    (font-glyph-width font char))
+                    (climb:font-glyph-right font char)
+                    (climb:font-glyph-width font char))
        do (when previous-char
             (setf offset
                   (paths-ttf::p+ offset
@@ -63,11 +63,11 @@
   (climi::with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
       (let* ((units->pixels (zpb-ttf-font-units->pixels font))
-             (size  (truetype-font-size font))
-             (ascent (truetype-font-ascent font))
-             (descent (truetype-font-descent font))
+             (size  (climb:font-size font))
+             (ascent (climb:font-ascent font))
+             (descent (climb:font-descent font))
              (glyph (zpb-ttf:find-glyph char (zpb-ttf-font-loader
-                                              (truetype-font-face font))))
+                                              (climb:font-face font))))
              (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
              (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
              (advance-width (* units->pixels (zpb-ttf:advance-width glyph)))

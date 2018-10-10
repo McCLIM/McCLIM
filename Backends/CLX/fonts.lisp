@@ -103,14 +103,15 @@
 (defmethod climb:font-descent ((font xlib:font))
   (xlib:font-descent font))
 
-(defmethod climb:font-character-width ((font xlib:font) code)
-  (xlib:char-width font code))
+(defmethod climb:font-character-width ((font xlib:font) char)
+  (xlib:char-width font (char-code char)))
 
 ;;; This function should return nine values:
 ;;;
 ;;; (width ascent descent left right font-ascent font-descent
 ;;; direction first-not-done)
-(defmethod climb:font-text-extents ((font xlib:font) string &key (start 0) (end (length string)))
+(defmethod climb:font-text-extents ((font xlib:font) string &key (start 0) (end (length string)) direction)
+  (declare (ignore direction))
   (xlib:text-extents font string :start start :end end :translate #'translate))
 
 (defgeneric font-draw-glyphs (font mirror gc x y string
