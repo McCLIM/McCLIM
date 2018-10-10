@@ -85,6 +85,8 @@ R: restart demo
 Q: quit application frame
 Space: redisplay application")
 
+(defvar *draw* :pattern)
+
 (defclass my-basic-pane (clim:basic-pane clime:always-repaint-background-mixin) ())
 
 (define-application-frame pattern-design-test ()
@@ -319,7 +321,6 @@ right-trimmed for spaces."
   (with-translation (pane 5 5)
     (test-example pane)))
 
-(defvar *draw* :pattern)
 (defmethod display ((frame pattern-design-test) pane &aux (draw *draw*))
   (do ((i 5 (+ i 16))
        (j 5 (+ j 16))
