@@ -16,7 +16,7 @@
 
   (let* ((array (make-array '(50 50) :initial-element 1 :element-type 'bit))
          (array2 (make-array '(20 20) :initial-element 1 :element-type 'fixnum))
-         (array3 (make-array '(50 50) :initial-element 0.0 :element-type 'single-float))
+         (array3 (make-array '(50 50) :initial-element 0.0f0 :element-type 'single-float))
          (2-designs  (list +dark-blue+ +dark-red+))
          (2-designs* (list +dark-salmon+ +dark-slate-grey+))
          (4-designs  (list +orange+ +dark-green+ +red+ +blue+))
@@ -35,7 +35,7 @@
     ;; set array3 for gradient stencil
     (dotimes (i 50)
       (dotimes (j 50)
-        (setf (aref array3 i j) (/ (+ i j) 100.0))))
+        (setf (aref array3 i j) (/ (+ i j) 100.0f0))))
 
     (defparameter *patterns*
       (list
