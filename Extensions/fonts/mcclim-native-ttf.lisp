@@ -15,7 +15,7 @@
 
 ;;; TODO:
 ;;;  * Implement fixed-font-width-p for zpb-ttf.
-;;;  * Boxes for missing glyphs.
+;;;  * Implement text direction for font-text-extents
 
 ;;; Wish-list:
 ;;;  * Subpixel antialiasing. It would be straightforward to generate the
@@ -53,17 +53,18 @@
     (pushnew face (all-faces family))))
 
 (defclass truetype-font ()
-  ((face          :initarg :face     :reader truetype-font-face)
-   (size          :initarg :size     :reader truetype-font-size)
-   (kerning-p     :initarg :kerning  :reader truetype-font-kerning-p)
-   (tracking      :initarg :tracking :reader truetype-font-tracking)
-   (leading       :initarg :leading  :reader truetype-font-leading)
-   (ascent                           :reader truetype-font-ascent)
-   (descent                          :reader truetype-font-descent)
+  ((face          :initarg :face     :reader climb:font-face)
+   (size          :initarg :size     :reader climb:font-size)
+   (kerning-p     :initarg :kerning  :reader climb:font-kerning-p)
+   (tracking      :initarg :tracking :reader climb:font-tracking)
+   (leading       :initarg :leading  :reader climb:font-leading)
+   (fixed-width   :initarg :fixed    :reader climb:font-fixed-width)
+   (ascent                           :reader climb:font-ascent)
+   (descent                          :reader climb:font-descent)
    (units->pixels                    :reader zpb-ttf-font-units->pixels))
   ;; Parameters TRACKING and LEADING are specified in [em]. Internally we keep
   ;; them in [units].
-  (:default-initargs :kerning t :tracking 0.0 :leading 1.2))
+  (:default-initargs :fixed nil :kerning t :tracking 0.0 :leading 1.2))
 
 (defmethod initialize-instance :after ((font truetype-font) &key tracking leading &allow-other-keys)
   (with-slots (face size ascent descent font-loader) font
@@ -72,18 +73,18 @@
            (units->pixels (/ (* size (/ *dpi* 72)) em->units)))
       (setf ascent  (+ (* units->pixels (zpb-ttf:ascender loader)))
             descent (- (* units->pixels (zpb-ttf:descender loader)))
-            (slot-value font 'tracking) (* em->units tracking)
-            (slot-value font 'leading)  (* em->units leading)
+            (slot-value font 'tracking) (* units->pixels (* em->units tracking))
+            (slot-value font 'leading)  (* units->pixels (* em->units leading))
             (slot-value font 'units->pixels) units->pixels))
     (pushnew font (all-fonts face))))
 
 (defmethod zpb-ttf:kerning-offset ((left character) (right character) (font truetype-font))
-  (if (null (truetype-font-kerning-p font))
+  (if (null (climb:font-kerning-p font))
       0
-      (zpb-ttf:kerning-offset left right (zpb-ttf-font-loader (truetype-font-face font)))))
+      (zpb-ttf:kerning-offset left right (zpb-ttf-font-loader (climb:font-face font)))))
 
 (defmethod clim-extensions:font-face-all-sizes ((face truetype-face))
-  (sort (mapcar #'truetype-font-size (all-fonts face)) #'<))
+  (sort (mapcar #'climb:font-size (all-fonts face)) #'<))
 
 (defmethod clim-extensions:font-face-text-style
     ((face truetype-face) &optional size)
@@ -98,8 +99,7 @@
       (format stream " size=~A ascent=~A descent=~A units->pixels=~A"
               size ascent descent units->pixels))))
 
-;;; This function is derived from cl-vectors library function
-;;; PATHS-TTF:PATHS-FROM-GLYPH.
+;;; Derived from CL-VECTORS library function PATHS-TTF:PATHS-FROM-GLYPH.
 (defun paths-from-glyph* (glyph tr)
   "Extract paths from a glyph."
   (flet ((point (p) (multiple-value-call #'net.tuxee.paths:make-point
@@ -132,13 +132,13 @@
   (declare (optimize (debug 3)))
   (climi::with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
-      (let* ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))
+      (let* ((font-loader (zpb-ttf-font-loader (climb:font-face font)))
              (glyph (zpb-ttf:find-glyph char font-loader))
              ;; (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
              ;; (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
-             (advance-width (* units->pixels (+ (zpb-ttf:advance-width glyph)
-                                                (zpb-ttf:kerning-offset char next font)
-                                                (truetype-font-tracking font))))
+             (advance-width (+ (* units->pixels (zpb-ttf:advance-width glyph))
+                               (* units->pixels (zpb-ttf:kerning-offset char next font))
+                               (climb:font-tracking font)))
              (advance-height 0)
              (bounding-box (map 'vector (lambda (x) (float (* x units->pixels)))
                                 (zpb-ttf:bounding-box glyph)))
@@ -195,30 +195,88 @@
                   ;; without rounding nor transformation. -- jd 2018-10-04
                   advance-width
                   advance-height))))))
+
+(defstruct (glyph-info (:constructor glyph-info (id width height left right top advance-width advance-height)))
+  (id 0               :read-only t :type fixnum)
+  (width 0            :read-only t)
+  (height 0           :read-only t)
+  (left 0             :read-only t)
+  (right 0            :read-only t)
+  (top 0              :read-only t)
+  (advance-width 0s0  :read-only t)
+  (advance-height 0s0 :read-only t))
 
-;;; XXX: This method is left here as a reference of a clean implementation of
-;;; font-text-width computed directly from the font loader information. In
-;;; CLIMB:FONT-TEXT-EXTENTS we use amortization (tracking and kerning are stored
-;;; with a glyph) and depend heavily on cache. Using FONT-TEXT-WIDTH proves to
-;;; slow down code by 60% compared to the faster method.
-(defun font-text-width (font string)
-  ;; We add left-side and right-side bearings to the output-rectangle to avoid
-  ;; weird results when last glyph's width is 0 (i.e space). If we had failed to
-  ;; do that problem would exhibit itself in "Text Underlining" example which
-  ;; uses format with trailing space on the extended stream. -- jd 2018-09-29
-  (flet ((bb-width (bb) (- (zpb-ttf:xmax bb) (zpb-ttf:xmin bb))))
-    (let* ((units->pixels (slot-value font 'units->pixels))
-           (font-loader (zpb-ttf-font-loader (truetype-font-face font)))
-           (first-glyph (zpb-ttf:find-glyph (alexandria:first-elt string) font-loader))
-           (last-glyph  (zpb-ttf:find-glyph (alexandria:last-elt string)  font-loader))
-           (total-width (+ (zpb-ttf:left-side-bearing first-glyph)
-                           (zpb-ttf:right-side-bearing last-glyph)
-                           (bb-width (zpb-ttf:string-bounding-box
-                                      string font-loader
-                                      :kerning (truetype-font-kerning-p font)))
-                           (* (truetype-font-tracking font) (1- (length string))))))
-      (* units->pixels total-width))))
+;;; Simple custom cache for glyph IDs and widths. Much faster than
+;;; using the char->glyph-info hash table directly.
 
-(defun font-fixed-width-p (truetype-font)
-  (declare (ignore truetype-font))
-  nil)
+(defun make-gcache ()
+  (let ((array (make-array 512 :adjustable nil :fill-pointer nil)))
+    (loop for i from 0 below 256 do (setf (aref array i) (1+ i)))
+    array))
+
+(declaim (inline gcache-get gcache-set))
+
+(defun gcache-get (cache key-number)
+  (declare (optimize (speed 3))
+           (type (simple-array t (512))))
+  (let ((hash (logand (the fixnum key-number) 512)))    ; hello there.
+    (and (= key-number (the fixnum (svref cache hash))) ; general kenobi.
+         (svref cache (+ 256 hash)))))
+
+(defun gcache-set (cache key-number value)
+  (declare (optimize (speed 3))
+           (type (simple-array t (512))))
+  (let ((hash (logand (the fixnum key-number) 512)))
+    (setf (svref cache hash) key-number
+          (svref cache (+ 256 hash)) value)))
+
+(defmacro ensure-font-glyph-id (font cache code)
+  `(if (< ,code 512)
+       (or (gcache-get ,cache ,code)
+           (gcache-set ,cache ,code (font-glyph-id ,font ,code)))
+       (font-glyph-id ,font ,code)))
+
+(defmacro ensure-font-glyph-width (font cache code)
+  `(if (< ,code 512)
+       (or (gcache-get ,cache ,code)
+           (gcache-set ,cache ,code (glyph-info-advance-width
+                                     (font-glyph-info ,font ,code))))
+       (glyph-info-advance-width
+        (font-glyph-info ,font ,code))))
+
+(defclass cached-truetype-font (truetype-font)
+  ((glyph-id-cache :initform (make-gcache))
+   (glyph-width-cache :initform (make-gcache))
+   (char->glyph-info  :initform (make-hash-table :size 512))))
+
+(defun font-glyph-info (font code)
+  (with-slots (char->glyph-info) font
+    (ensure-gethash code char->glyph-info
+                    (font-generate-glyph font code))))
+
+(defgeneric font-generate-glyph (font code &optional tr)
+  (:documentation "Truetype TTF renderer internal interface. Backend-specific."))
+
+(defun font-glyph-id (font code)
+  (glyph-info-id (font-glyph-info font code)))
+
+(defmethod climb:font-glyph-width ((font cached-truetype-font) code)
+  (glyph-info-width (font-glyph-info font code)))
+
+(defmethod climb:font-glyph-height ((font cached-truetype-font) code)
+  (glyph-info-height (font-glyph-info font code)))
+
+(defmethod climb:font-glyph-dx ((font cached-truetype-font) code)
+  (glyph-info-advance-width (font-glyph-info font code)))
+
+(defmethod climb:font-glyph-dy ((font cached-truetype-font) code)
+  (glyph-info-advance-height (font-glyph-info font code)))
+
+(defmethod climb:font-glyph-left ((font cached-truetype-font) code)
+  (glyph-info-left (font-glyph-info font code)))
+
+(defmethod climb:font-glyph-right ((font cached-truetype-font) code)
+  (glyph-info-right (font-glyph-info font code)))
+
+(defmethod climb:font-glyph-top ((font cached-truetype-font) code)
+  (glyph-info-top (font-glyph-info font code)))

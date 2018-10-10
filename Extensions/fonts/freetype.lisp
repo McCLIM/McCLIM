@@ -399,14 +399,14 @@ or NIL if the current transformation is the identity transformation."
             (free-glyphset glyphset)))))))
 
 (defmethod climb:font-text-extents ((font freetype-font) string
-                                    &key (start 0) (end (length string)))
+                                    &key (start 0) (end (length string)) (direction :ltr))
 
   ;; Values to return:
   ;;   width ascent descent left right font-ascent font-descent direction first-not-done
   (with-face-from-font (face font)
     (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
     (flet ((text-extents (font string start end)
-             (let* ((index-list (make-glyph-list font (subseq string start end) :ltr)))
+             (let* ((index-list (make-glyph-list font (subseq string start end) direction)))
                (load-cached-glyphset font (mapcar #'glyph-entry-codepoint index-list))
                (let ((cached-glyphs (freetype-font/cached-glyphs font)))
                  (multiple-value-bind (width ascender descender)

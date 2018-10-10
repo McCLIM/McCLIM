@@ -6,6 +6,7 @@
 
 (defmethod display ((frame text-transformations-test) pane)
   (let* (;(string "ytmMΣ音")
+         ;;"◌᷉" - character made of two codepoints
          (string "TęΣ音")
          (y-offset 75)
          (x-offset 75)

@@ -85,7 +85,7 @@
                                      (zpb-ttf:open-font-loader filename)))
              (family-name (zpb-ttf:family-name loader))
              (family (ensure-gethash family-name font-families
-                                     (make-instance 'truetype-font-family
+                                     (make-instance 'mcclim-truetype::truetype-font-family
                                                     :port port
                                                     :name (zpb-ttf:family-name loader))))
              (face-name (zpb-ttf:subfamily-name loader))
