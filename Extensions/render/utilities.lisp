@@ -31,6 +31,8 @@ top-left. Useful when we iterate over the same array and mutate its state."
            (,a (ldb (byte 8 00) ,elt)))
        ,@body)))
 
+(declaim (inline %rgba->vals %vals->rgba))
+
 (defun %vals->rgba (r g b &optional (a #xff))
   (declare (type octet r g b a)
            (optimize (speed 3) (safety 0)))
@@ -44,7 +46,7 @@ top-left. Useful when we iterate over the same array and mutate its state."
           (ldb (byte 8 08) rgba)
           (ldb (byte 8 00) rgba)))
 
-(declaim (inline %rgba->vals %vals->rgba))
+(declaim (inline %check-coords %blend-octets %octet-mult))
 
 ;;; Returns T for valid arguments, NIL for malformed width/height and signals an
 ;;; error if coordinates go out of arrays bounds.
@@ -86,9 +88,7 @@ top-left. Useful when we iterate over the same array and mutate its state."
                       (byte 8 0)
                       0)))))
 
-(declaim (ftype (function (octet octet) octet) octet-mult))
+(declaim (ftype (function (octet octet) octet) %octet-mult))
 (defun %octet-mult (a b)
   (let ((temp (+ (* a b) #x80)))
     (logand #xFF (ash (+ (ash temp -8) temp) -8))))
-
-(declaim (inline %check-coords %blend-octets %octet-mult))

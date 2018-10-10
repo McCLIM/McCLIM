@@ -27,6 +27,8 @@
 
 ;;; Unsafe versions of COPY-IMAGE. Caller must ensure that all arguments are
 ;;; valid and arrays are of proper type.
+(declaim (inline %copy-image %copy-image*))
+
 (defun %copy-image (src-array dst-array x1s y1s x1d y1d x2 y2)
   (declare (type fixnum x1s y1s x1d y1d x2 y2)
            (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
@@ -44,8 +46,6 @@
                (src-i dest-i x1s x1d x2) :backward t)
     (setf (aref dst-array dest-j dest-i)
           (aref src-array src-j src-i))))
-
-(declaim (inline %copy-image %copy-image*))
 
 ;;; XXX: We should unify it with COPY-AREA and MEDIUM-COPY-AREA. That means that
 ;;; raster images should be mediums on their own rights (aren't they?).
@@ -74,6 +74,8 @@
         #1#))
   (make-rectangle* (1- dx) (1- dy) (+ dx width) (+ dy height)))
 
+(declaim (inline %blend-image %blend-image*))
+
 (defun %blend-image (src-array dst-array x1s y1s x1d y1d x2 y2)
   (declare (type fixnum x1s y1s x1d y1d x2 y2)
            (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
@@ -97,8 +99,6 @@
         (setf (aref dst-array dest-j dest-i)
               (octet-blend-function* r.fg g.fg b.fg a.fg
                                      r.bg g.bg b.bg a.bg))))))
-
-(declaim (inline %blend-image %blend-image*))
 
 (defun blend-image (src-image sx sy width height dst-image dx dy
                     &aux
