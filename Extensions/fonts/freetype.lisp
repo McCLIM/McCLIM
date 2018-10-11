@@ -402,7 +402,7 @@ or NIL if the current transformation is the identity transformation."
                                     &key (start 0) (end (length string)) (direction :ltr))
 
   ;; Values to return:
-  ;;   width ascent descent left right font-ascent font-descent direction first-not-done
+  ;;-> xmin ymin xmax ymax left top width height ascent descent linegap cursor-dx cursor-dy
   (with-face-from-font (face font)
     (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
     (flet ((text-extents (font string start end)
@@ -426,12 +426,27 @@ or NIL if the current transformation is the identity transformation."
                         finally (return (values rx ascender descender)))
                    (let* ((e (car (last index-list)))
                           (glyph-attrs (gethash (glyph-entry-codepoint e) cached-glyphs)))
-                     (values (+ width (/ (glyph-entry-x-advance e) 64)) ascender descender
-                             (- (glyph-attributes-x-origin (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
-                             (- (+ width (glyph-attributes-width glyph-attrs)) (glyph-attributes-x-origin glyph-attrs))
-                             (freetype2:face-ascender-pixels face)
-                             (freetype2:face-descender-pixels face)
-                             0 end)))))))
+                     (values
+                      ;; bounding box
+                      (- (glyph-attributes-x-origin
+                          (gethash (glyph-entry-codepoint (first index-list)) cached-glyphs)))
+                      (- ascender)
+                      (- (+ width (glyph-attributes-width glyph-attrs))
+                         (glyph-attributes-x-origin glyph-attrs))
+                      descender
+                      ;; text size
+                      0 0
+                      (+ width (/ (glyph-entry-x-advance e) 64))
+                      (+ (freetype2:face-ascender-pixels face)
+                         (freetype2:face-descender-pixels face))
+                      ;; line properties
+                      (freetype2:face-ascender-pixels face)
+                      (freetype2:face-descender-pixels face)
+                      (- (climb:font-leading font)
+                         (+ (freetype2:face-ascender-pixels face)
+                            (freetype2:face-descender-pixels face)))
+                      ;; cursor motion
+                      (+ width (/ (glyph-entry-x-advance e) 64)) 0)))))))
       (cond ((= start end)
              (values 0 0 0 0 0 (freetype2:face-ascender-pixels face) (freetype2:face-descender-pixels face) 0 end))
             ((freetype-font-replace font)

@@ -464,7 +464,7 @@ STREAM in the direction DIRECTION."
   (etypecase specification
     (integer specification)
     ((or string character) (multiple-value-bind (width height)
-                               (text-size stream specification)
+                               (text-size stream (string specification))
                              (ecase direction
                                (:horizontal width)
                                (:vertical height))))

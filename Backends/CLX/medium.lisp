@@ -858,94 +858,33 @@ translated, so they begin at different position than [0,0])."))
 (defmethod text-size ((medium clx-medium) string
                       &key text-style (start 0) end)
   (declare (optimize (speed 3)))
-  (when (characterp string)
-    (setf string (make-string 1 :initial-element string)))
-  (check-type string string)
-
   (unless end (setf end (length string)))
-  (check-type start (integer 0 #.array-dimension-limit))
-  (check-type end (integer 0 #.array-dimension-limit))
-
   (when (= start end)
     (return-from text-size (values 0 0 0 0 0)))
-
+  (check-type start (integer 0 #.array-dimension-limit))
+  (check-type end (integer 0 #.array-dimension-limit))
   (let* ((medium-text-style (medium-merged-text-style medium))
          (text-style (if text-style
                          (merge-text-styles text-style medium-text-style)
                          medium-text-style))
-         (xfont (text-style-to-X-font (port medium) text-style))
-         (position-newline
-          (macrolet ((p (type)
-                       `(locally (declare (type ,type string))
-                          (position #\newline string :start start :end end))))
-            (typecase string
-              (simple-base-string (p simple-base-string))
-              #+SBCL (sb-kernel::simple-character-string (p sb-kernel::simple-character-string))
-              #+SBCL (sb-kernel::character-string (p sb-kernel::character-string))
-              (simple-string (p simple-string))
-              (string (p string))))))
-    (cond ((not (null position-newline))
-           (multiple-value-bind (width ascent descent left right
-                                       font-ascent font-descent direction
-                                       first-not-done)
-               (climb:font-text-extents xfont string :start start :end position-newline)
-             (declare (ignorable left right
-                                 font-ascent font-descent
-                                 direction first-not-done))
-             (multiple-value-bind (w h x y baseline)
-                 (text-size medium string :text-style text-style
-                            :start (1+ position-newline) :end end)
-               (values (max w width) (+ ascent descent h)
-                       x (+ ascent descent y) (+ ascent descent baseline)))))
-          (t
-           (multiple-value-bind (width ascent descent left right
-                                       font-ascent font-descent direction
-                                       first-not-done)
-               (climb:font-text-extents xfont string :start start :end end)
-             (declare (ignorable left right
-                                 font-ascent font-descent
-                                 direction first-not-done))
-             (values width (+ ascent descent) width 0 ascent))))))
+         (xfont (text-style-to-X-font (port medium) text-style)))
+    (multiple-value-bind (xmin ymin xmax ymax left top width height ascent descent linegap cursor-dx cursor-dy)
+        (climb:font-text-extents xfont string :start start :end end)
+      (declare (ignore xmin ymin xmax ymax left top descent linegap))
+      (values width height cursor-dx cursor-dy ascent))))
 
 (defmethod climi::text-bounding-rectangle*
     ((medium clx-medium) string &key text-style (start 0) end)
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
   (unless end (setf end (length string)))
+  (when (= start end)
+    (return-from climi::text-bounding-rectangle* (values 0 0 0 0)))
   (unless text-style (setf text-style (medium-text-style medium)))
   (let ((xfont (text-style-to-X-font (port medium) text-style)))
-    (when (= start end)
-      (return-from climi::text-bounding-rectangle* (values 0 0 0 0)))
-    (let ((position-newline (position #\newline string :start start :end end)))
-      (if (null position-newline)
-          (multiple-value-bind (width ascent descent left right
-                                font-ascent font-descent direction
-                                first-not-done)
-              (xlib:text-extents xfont string
-                                 :start start :end end
-                                 :translate #'translate)
-            (declare (ignore width ascent descent)
-                     (ignore direction first-not-done))
-            ;; FIXME: Potential style points:
-            ;; * (min 0 left), (max width right)
-            ;; * font-ascent / ascent
-            (values left (- font-ascent) right font-descent))
-          (multiple-value-bind (width ascent descent left right
-                                font-ascent font-descent direction
-                                first-not-done)
-              (xlib:text-extents xfont string
-                                 :start start :end end
-                                 :translate #'translate)
-            (declare (ignorable width left right
-                                font-ascent font-descent
-                                direction first-not-done))
-            (multiple-value-bind (minx miny maxx maxy)
-                (climi::text-bounding-rectangle*
-                 medium string :text-style text-style
-                 :start (1+ position-newline) :end end)
-              (declare (ignore miny))
-              (values (min minx left) (- ascent)
-                      (max maxx right) (+ descent maxy))))))))
+    (multiple-value-bind (xmin ymin xmax ymax)
+        (climb:font-text-extents xfont string :start start :end end)
+      (values xmin ymin xmax ymax))))
 
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
