@@ -58,7 +58,7 @@
    (kerning-p     :initarg :kerning  :reader climb:font-kerning-p)
    (tracking      :initarg :tracking :reader climb:font-tracking)
    (leading       :initarg :leading  :reader climb:font-leading)
-   (fixed-width   :initarg :fixed    :reader climb:font-fixed-width)
+   (fixed-width   :initarg :fixed    :reader climb:font-fixed-width :type (or fixnum null))
    (ascent                           :reader climb:font-ascent)
    (descent                          :reader climb:font-descent)
    (units->pixels                    :reader zpb-ttf-font-units->pixels))
@@ -206,48 +206,9 @@
   (advance-width 0s0  :read-only t)
   (advance-height 0s0 :read-only t))
 
-;;; Simple custom cache for glyph IDs and widths. Much faster than
-;;; using the char->glyph-info hash table directly.
-
-(defun make-gcache ()
-  (let ((array (make-array 512 :adjustable nil :fill-pointer nil)))
-    (loop for i from 0 below 256 do (setf (aref array i) (1+ i)))
-    array))
-
-(declaim (inline gcache-get gcache-set))
-
-(defun gcache-get (cache key-number)
-  (declare (optimize (speed 3))
-           (type (simple-array t (512))))
-  (let ((hash (logand (the fixnum key-number) 512)))    ; hello there.
-    (and (= key-number (the fixnum (svref cache hash))) ; general kenobi.
-         (svref cache (+ 256 hash)))))
-
-(defun gcache-set (cache key-number value)
-  (declare (optimize (speed 3))
-           (type (simple-array t (512))))
-  (let ((hash (logand (the fixnum key-number) 512)))
-    (setf (svref cache hash) key-number
-          (svref cache (+ 256 hash)) value)))
-
-(defmacro ensure-font-glyph-id (font cache code)
-  `(if (< ,code 512)
-       (or (gcache-get ,cache ,code)
-           (gcache-set ,cache ,code (font-glyph-id ,font ,code)))
-       (font-glyph-id ,font ,code)))
-
-(defmacro ensure-font-glyph-width (font cache code)
-  `(if (< ,code 512)
-       (or (gcache-get ,cache ,code)
-           (gcache-set ,cache ,code (glyph-info-advance-width
-                                     (font-glyph-info ,font ,code))))
-       (glyph-info-advance-width
-        (font-glyph-info ,font ,code))))
 
 (defclass cached-truetype-font (truetype-font)
-  ((glyph-id-cache :initform (make-gcache))
-   (glyph-width-cache :initform (make-gcache))
-   (char->glyph-info  :initform (make-hash-table :size 512))))
+  ((char->glyph-info  :initform (make-hash-table :size 512))))
 
 (defun font-glyph-info (font code)
   (with-slots (char->glyph-info) font

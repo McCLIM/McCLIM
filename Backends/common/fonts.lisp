@@ -12,7 +12,7 @@
 (defgeneric climb:font-character-width (font character)
   (:method (font character)
     (let* ((codes (climb:font-string-glyph-codes font (string character)))
-           (code (alexandria:first-elt codes)))
+           (code (char-code character) (alexandria:first-elt codes)))
       (assert (alexandria:length= 1 codes))
       (+ (climb:font-glyph-left font code)
          (climb:font-glyph-width font code)
@@ -29,11 +29,23 @@ many codepoints, but argument must constitute exactly one character."))
   (:documentation "Returns a width of the string."))
 
 (defgeneric climb:font-string-glyph-codes (font string &key start end)
+  (:method (font string &key (start 0) (end (length string)))
+    (map 'list #'char-code (subseq string start end)))
   (:documentation "Converts string to a sequence of glyph codes. Some characters
 are composed of many codepoints – it is not guaranteed that length of the string
 and the resulting sequence are equal."))
 
 (defgeneric climb:font-text-extents (font string &key start end direction)
+  #+ (or) ;; bidi
+  (:method (font string &key start end direction)
+    (let ((glyph-codes (climb:font-string-glyph-codes font string :start start :end end)))
+      (loop
+         for code across glyph-codes
+         with top = (climb:font-glyph-top font code)
+         with left = (climb:font-glyph-left font code)
+         with right = (climb:font-glyph-right font code)
+         with bottom = (climb:font-glyph-bottom font code)
+         do (return (values top left right bottom)))))
   (:documentation "Function computes text extents as if it were drawn with a
 specified font. It returns two distinct extents: first is an exact pixel-wise
 bounding box. The second is a text bounding box with all its bearings. Text may
@@ -42,7 +54,8 @@ returned as the last two values.
 
 Width and height are relative to the position [-top, left]. For right-to-left
 direction left will be probably a negative number with the width being close to
-its absolute value. All other values are relative to the postion origin.
+its absolute value. All other values are relative to the postion
+origin. Coordinate system is in the fourth quadrant (same as sheet coordinates).
 
 Returned values:
 

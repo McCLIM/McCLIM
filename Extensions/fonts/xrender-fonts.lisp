@@ -197,14 +197,13 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
            (fixnum start end))
   (let* ((last-char-code (char-code (char string (1- end))))
          (left-offset (climb:font-glyph-left font last-char-code))
-         (width-cache (slot-value font 'glyph-width-cache))
          (width
           ;; We could work a little harder and eliminate generic arithmetic
           ;; here. It might shave a few percent off a draw-text benchmark.
           ;; Rather silly to obsess over the array access considering that.
            (macrolet ((compute ()
                         `(loop
-                            with sum fixnum = (ensure-font-glyph-width font width-cache last-char-code)
+                            with sum fixnum = (glyph-info-advance-width (font-glyph-info font last-char-code))
                             with char = (char string start)
                             for i from (1+ start) below end
                             as next-char = (char string i)
@@ -216,7 +215,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                             ;; for i from start below end
                             ;; as code = (char-code (char string i))
                             do
-                              (incf sum (ensure-font-glyph-width font width-cache code))
+                              (incf sum (glyph-info-advance-width (font-glyph-info font code)))
                               (setf char next-char)
                             finally (return sum))))
              (if (climb:font-fixed-width font)
@@ -228,17 +227,20 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                    (string
                     (locally (declare (type string string))
                       (compute)))
-                   (t (compute)))))))
+                   (t (compute))))))
+         (ascent (climb:font-ascent font))
+         (descent (climb:font-descent font))
+         (height (+ ascent descent))
+         (linegap (- (climb:font-leading font) height)))
     (values
-     width
-     (climb:font-ascent font)
-     (climb:font-descent font)
-     (- left-offset)
-     ;; Cached WIDTH contains right-bearing already.
-     (+ left-offset width)
-     (climb:font-ascent font)
-     (climb:font-descent font)
-     0 end)))
+       ;; bounding box: xmin ymin xmax ymax
+       0 (- ascent) width descent
+       ;; text properties: left top width height
+       0 (- ascent) width height
+       ;; line properties: ascent descent linegap
+       ascent descent linegap
+       ;; cursor motion: cursor-dx cursor-dy
+       width 0)))
 
 (defun drawable-picture (drawable)
   (or (getf (xlib:drawable-plist drawable) 'picture)
@@ -315,8 +317,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
       (%render-transformed-glyphs font string x y transformation mirror gc)))
 
   (multiple-value-setq (x y) (clim:transform-position transformation x y))
-  (let ((cache (slot-value font 'glyph-id-cache))
-        (glyph-ids (clx-truetype-font-%buffer% font))
+  (let ((glyph-ids (clx-truetype-font-%buffer% font))
         (glyph-set (display-the-glyph-set (xlib:drawable-display mirror))))
     (loop
        with char = (char string start)
@@ -329,12 +330,12 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                       (char-code char))
        do
          (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-               (the (unsigned-byte 32) (ensure-font-glyph-id font cache code)))
+               (the (unsigned-byte 32) (font-glyph-id font code)))
          (setf char next-char)
          (incf i*)
        finally
          (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-               (the (unsigned-byte 32) (ensure-font-glyph-id font cache (char-code char)))))
+               (the (unsigned-byte 32) (font-glyph-id font (char-code char)))))
 
     (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
       (declare (ignore source-pixmap))
