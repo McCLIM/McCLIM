@@ -131,8 +131,10 @@
 (defmethod font-generate-glyph ((font clx-truetype-font) code &optional (tr +identity-transformation+))
   (let* ((display (clx-truetype-font-display font))
          (glyph-id (display-draw-glyph-id display))
-         (character (code-char (ldb (byte 16 0) code)))
-         (next-character (code-char (ldb (byte 16 16) code))))
+         (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0) code)))
+         (next-character (code-char (ldb (byte #.(ceiling (log char-code-limit 2))
+                                               #.(ceiling (log char-code-limit 2)))
+                                         code))))
     (multiple-value-bind (arr left top width height dx dy udx udy)
         (glyph-pixarray font character next-character tr)
 
@@ -160,14 +162,17 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                               :y-origin top
                               :x-advance dx
                               :y-advance dy)
-      (let ((right (+ left (array-dimension arr 1))))
-        (glyph-info glyph-id width height left right top dx dy)))))
+      (let ((right (+ left (array-dimension arr 1)))
+            (bottom (- top (array-dimension arr 0))))
+        (glyph-info glyph-id width height left right top bottom dx dy)))))
 
 (defun font-generate-glyph* (font glyph-index transformation)
   (let* ((display (clx-truetype-font-display font))
          (glyph-id (display-draw-glyph-id display))
-         (character (code-char (ldb (byte 16 0) glyph-index)))
-         (next-character (code-char (ldb (byte 16 16) glyph-index))))
+         (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0) glyph-index)))
+         (next-character (code-char (ldb (byte #.(ceiling (log char-code-limit 2))
+                                               #.(ceiling (log char-code-limit 2)))
+                                         glyph-index))))
     (multiple-value-bind (arr left top width height dx dy udx udy)
         (glyph-pixarray font character next-character; transformation
                         (compose-transformations #1=(make-scaling-transformation 1.0 -1.0)
@@ -184,8 +189,9 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                               :y-advance dy)
       ;; INV advance-width and advance-height are hacked here for transformed
       ;; glyph rendering. They are not transformed. See %RENDER-TRANSFORMED-GLYPHS.
-      (let ((right (+ left (array-dimension arr 1))))
-        (glyph-info glyph-id width height left right top udx udy)))))
+      (let ((right (+ left (array-dimension arr 1)))
+            (bottom (- top (array-dimension arr 0))))
+        (glyph-info glyph-id width height left right top bottom udx udy)))))
 
 (defmethod climb:font-text-extents ((font truetype-font) string
                                     &key (start 0) (end (length string)) direction)

@@ -5,7 +5,7 @@
 ;;;
 (defstruct (render-glyph-info
              (:include glyph-info)
-             (:constructor render-glyph-info (id width height left right top advance-width advance-height paths opacity-image)))
+             (:constructor render-glyph-info (id width height left right top bottom advance-width advance-height paths opacity-image)))
   paths
   opacity-image)
 
@@ -17,8 +17,9 @@
   (multiple-value-bind (paths left top width height dx dy)
       (glyph-paths font code)
     (let ((right (+ left width))
+          (bottom (+ top height))
           (opacity-image (font-generate-opacity-image paths width height left top)))
-      (render-glyph-info 0 dx dy left right top dx dy paths opacity-image))))
+      (render-glyph-info 0 dx dy left right top bottom dx dy paths opacity-image))))
 
 (defun font-glyph-info (font character)
   (with-slots (mcclim-truetype::char->glyph-info) font
