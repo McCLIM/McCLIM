@@ -33,19 +33,47 @@ many codepoints, but argument must constitute exactly one character."))
     (map 'list #'char-code (subseq string start end)))
   (:documentation "Converts string to a sequence of glyph codes. Some characters
 are composed of many codepoints – it is not guaranteed that length of the string
-and the resulting sequence are equal."))
+and the length of resulting sequence are equal."))
 
 (defgeneric climb:font-text-extents (font string &key start end direction)
-  #+ (or) ;; bidi
   (:method (font string &key start end direction)
+    (declare (ignore direction))
     (let ((glyph-codes (climb:font-string-glyph-codes font string :start start :end end)))
       (loop
          for code across glyph-codes
-         with top = (climb:font-glyph-top font code)
-         with left = (climb:font-glyph-left font code)
-         with right = (climb:font-glyph-right font code)
-         with bottom = (climb:font-glyph-bottom font code)
-         do (return (values top left right bottom)))))
+         with origin-x fixnum = 0
+         with origin-y fixnum = 0
+         with xmin fixnum = most-positive-fixnum
+         with ymin fixnum = most-positive-fixnum
+         with xmax fixnum = most-negative-fixnum
+         with ymax fixnum = most-negative-fixnum
+         as glyph-left fixnum = (+ (climb:font-glyph-left font code) origin-x)
+         as glyph-top fixnum = (+ (climb:font-glyph-top font code) origin-y)
+         as glyph-right fixnum = (+ (climb:font-glyph-right font code) origin-x)
+         as glyph-bottom fixnum = (+ (climb:font-glyph-bottom font code) origin-y)
+         do
+           (alexandria:minf xmin glyph-left)
+           (alexandria:minf ymin glyph-bottom)
+           (alexandria:maxf xmax glyph-right)
+           (alexandria:maxf ymax glyph-top)
+           (incf origin-x (climb:font-glyph-dx font code))
+           (incf origin-y (climb:font-glyph-dy font code))
+         finally
+           (return (values xmin (- ymin) xmax (- ymax)
+
+                           (- (climb:font-glyph-left font (aref glyph-codes 0)) 50)
+                           (- (climb:font-ascent font))
+                           (+ xmax (- (climb:font-glyph-right font code)
+                                      (climb:font-glyph-width font code)))
+                           (+ (climb:font-ascent font)
+                              (climb:font-descent font))
+
+                           (climb:font-ascent font)
+                           (climb:font-descent font)
+                           (- (climb:font-leading font)
+                              (+ (climb:font-ascent font)
+                                 (climb:font-descent font)))
+                           xmax 0)))))
   (:documentation "Function computes text extents as if it were drawn with a
 specified font. It returns two distinct extents: first is an exact pixel-wise
 bounding box. The second is a text bounding box with all its bearings. Text may

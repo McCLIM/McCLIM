@@ -196,13 +196,14 @@
                   advance-width
                   advance-height))))))
 
-(defstruct (glyph-info (:constructor glyph-info (id width height left right top advance-width advance-height)))
+(defstruct (glyph-info (:constructor glyph-info (id width height left right top bottom advance-width advance-height)))
   (id 0               :read-only t :type fixnum)
   (width 0            :read-only t)
   (height 0           :read-only t)
   (left 0             :read-only t)
   (right 0            :read-only t)
   (top 0              :read-only t)
+  (bottom 0           :read-only t)
   (advance-width 0s0  :read-only t)
   (advance-height 0s0 :read-only t))
 
@@ -241,3 +242,24 @@
 
 (defmethod climb:font-glyph-top ((font cached-truetype-font) code)
   (glyph-info-top (font-glyph-info font code)))
+
+(defmethod climb:font-glyph-bottom ((font cached-truetype-font) code)
+  (glyph-info-bottom (font-glyph-info font code)))
+
+(defmethod climb:font-string-glyph-codes ((font truetype-font) string
+                                          &key (start 0) (end (length string)))
+  (loop
+     with array = (make-array (- end start) :fill-pointer 0)
+     with char = (char string start)
+     for i fixnum from (1+ start) below end
+     as next-char = (char string i)
+     as code = (dpb (char-code next-char)
+                    (byte #.(ceiling (log char-code-limit 2))
+                          #.(ceiling (log char-code-limit 2)))
+                    (char-code char))
+     do
+       (vector-push code array)
+       (setf char next-char)
+     finally
+       (vector-push (char-code char) array)
+       (return array)))
