@@ -1952,7 +1952,18 @@
    ;; images
    #:rgb-image
    #:xpm-parse-file
-   #:*xpm-x11-colors*))
+   #:*xpm-x11-colors*
+   ;; ellipses
+   #:reparameterize-ellipse
+   #:ellipse-point
+   #:ellipse-point*
+   #:ellipse-derivative
+   #:ellipse-cubic-bezier-control-points
+   #:ellipse-cubic-bezier-control-points*
+   #:ellipse-cubic-bezier-points
+   #:ellipse-cubic-bezier-points*
+   #:transformation-angle
+   #:transform-angle))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
