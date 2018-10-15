@@ -2040,18 +2040,7 @@
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-glyph
-   #:medium-draw-circle*
-   ;; ellipses
-   #:reparameterize-ellipse
-   #:ellipse-point
-   #:ellipse-point*
-   #:ellipse-derivative
-   #:ellipse-cubic-bezier-control-points
-   #:ellipse-cubic-bezier-control-points*
-   #:ellipse-cubic-bezier-points
-   #:ellipse-cubic-bezier-points*
-   #:transformation-angle
-   #:transform-angle))
+   #:medium-draw-circle*))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)
