@@ -812,6 +812,132 @@ min-y and max-y are (extremum points) are."
       (draw-el ellipse-1 100 500 nil :ink +red+ :filled nil :line-thickness 10)
       (draw-el ellipse-3 300 500 nil :ink +red+ :filled nil :line-thickness 10))))
 
+(defparameter *center-x* (/ *width* 2))
+(defparameter *center-y* (/ *height* 2))
+
+(defun test-draw-ellipse* (sheet
+		           center-x center-y
+		           radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+		           &rest args
+                           &key start-angle
+                                end-angle
+                                (draw-ellipse-parameters t)
+                                (ellipse-parameter-color-1 +red+)
+                                (ellipse-parameter-color-2 +black+)
+                                &allow-other-keys)
+  (declare (ignore start-angle end-angle))
+  (apply #'draw-ellipse* sheet center-x  center-y
+	 radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+         args)
+  (when draw-ellipse-parameters
+    (multiple-value-bind (a b theta)
+        (mcclim-ellipse::reparameterize-ellipse radius-1-dx radius-1-dy radius-2-dx radius-2-dy)
+      (draw-line* sheet center-x center-y
+                  (+ center-x (* a (cos theta)))
+                  (+ center-y (* a (sin theta)))
+                  :ink ellipse-parameter-color-2)
+      (draw-text* sheet "a"
+                  (+ center-x (* (+ a 15) (cos theta)))
+                  (+ center-y (* (+ a 15) (sin theta))))
+
+      (draw-line* sheet center-x center-y
+                  (+ center-x (* b (cos (+ theta (/ pi 2)))))
+                  (+ center-y (* b (sin (+ theta (/ pi 2)))))
+                  :ink ellipse-parameter-color-2)
+      (draw-text* sheet "b"
+                  (+ center-x (* (+ b 15) (cos (+ theta (/ pi 2)))))
+                  (+ center-y (* (+ b 15) (sin (+ theta (/ pi 2))))))
+      ;; radius 1
+      (draw-line* sheet center-x center-y
+                  (+ center-x radius-1-dx) (+ center-y radius-1-dy)
+                  :ink ellipse-parameter-color-1)
+      (draw-text* sheet "r1"
+                  (+ center-x (+ radius-1-dx 5)) (+ center-y (+ radius-1-dy 5)))
+
+      ;; radius 2
+      (draw-line* sheet center-x center-y
+                  (+ center-x radius-2-dx) (+ center-y radius-2-dy)
+                  :ink ellipse-parameter-color-1)
+      (draw-text* sheet "r2"
+                  (+ center-x radius-2-dx) (+ center-y radius-2-dy))
+
+      ;; draw parameters for reference
+      (draw-text* sheet
+                  (format nil "center-x: ~,3F, center-y: ~,3F"
+                          center-x center-y)
+                  10 30)
+      (draw-text* sheet
+                  (format nil "r1dx: ~,3F, r1dy: ~,3F, r2dx: ~,3F, r2dy: ~,3F"
+                          radius-1-dx radius-1-dy radius-2-dx radius-2-dy)
+                  10 50)
+      (draw-text* sheet
+                  (format nil "a: ~,3F,  b: ~,3F, theta: ~,3F (rad), ~,3F (deg)"
+                          a b theta (* 180 (/ theta pi)))
+                  10 70))))
+
+(define-drawing-test "05) Simple Ellipse Arc 1" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
+                 :line-thickness 6
+                 :start-angle 0 :end-angle pi))
+
+(define-drawing-test "05) Simple Ellipse Arc 2" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
+                 :line-thickness 6
+                 :start-angle 0 :end-angle (* 6 (/ pi 4))))
+
+(define-drawing-test "05) Simple Ellipse 1" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
+                 :line-thickness 6))
+
+(define-drawing-test "05) Simple Filled Ellipse 1" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled t
+                 :line-thickness 6))
+
+(define-drawing-test "05) Simple Ellipse 2" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+))
+
+(define-drawing-test "05) Simple Ellipse 4" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
+                 :start-angle 0 :end-angle (/ pi 2)))
+
+(define-drawing-test "05) Simple Ellipse 5" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
+                 :start-angle 0 :end-angle pi))
+
+(define-drawing-test "05) Simple Off-axis Ellipse 1" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 150 100 0 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Off-axis Ellipse 2" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -100 0 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Off-axis Ellipse 3" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 100 99 60 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Off-axis Ellipse 4" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 100 -99 60 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Off-axis Ellipse 5 (0-90 deg)" (stream)
+    ""
+  (test-draw-ellipse* stream *center-x* *center-y* 100 -99 60 60
+                      :ink +dark-green+ :filled nil :start-angle (/ pi 4) :end-angle (/ pi 2)))
+
+
+
 ;;;
 ;;; Circle
 ;;;
@@ -868,6 +994,30 @@ outside the clipping area should be grey.")
                                                    50
                                                    :line-thickness 4
                                                    :filled nil))))
+
+(define-drawing-test "06) Simple Circle" (stream)
+    ""
+  (draw-circle* stream *center-x* *center-y* 150 :ink +orange+))
+
+(define-drawing-test "06) Simple Circle Unfilled" (stream)
+    ""
+  (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil))
+
+(define-drawing-test "06) Simple Circle Unfilled Thick" (stream)
+    ""
+  (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil
+                :line-thickness 5))
+
+(define-drawing-test "06) Simple Circle Wedge" (stream)
+    ""
+  (draw-circle* stream *center-x* *center-y* 150 :ink +orange+
+                :start-angle 0 :end-angle (/ pi 4)))
+
+(define-drawing-test "06) Simple Arc" (stream)
+    ""
+  (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil
+                :start-angle 0 :end-angle (/ pi 4)))
+
 ;;;
 ;;; Text 
 ;;;

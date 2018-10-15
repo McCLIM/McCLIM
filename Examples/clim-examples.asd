@@ -45,9 +45,7 @@
      (:file "hierarchy-tool")
      (:file "patterns")
      (:file "flipping-ink")
-     (:file "patterns-overlap")
-     (:file "test-runner")
-     (:file "ellipse-tests")))
+     (:file "patterns-overlap")))
 
 (defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
