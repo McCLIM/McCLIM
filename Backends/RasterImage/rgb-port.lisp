@@ -21,7 +21,7 @@
 ;;;
 
 (defclass rgb-image-pixmap (image-pixmap-mixin basic-pane)
-  ((region :initform (make-bounding-rectangle 0 0 100 100))))
+  ((region :initform +nowhere+)))
 
 
 (defmethod port-allocate-pixmap ((port rgb-image-port) sheet width height)
