@@ -831,7 +831,7 @@ min-y and max-y are (extremum points) are."
          args)
   (when draw-ellipse-parameters
     (multiple-value-bind (a b theta)
-        (reparameterize-ellipse radius-1-dx radius-1-dy radius-2-dx radius-2-dy)
+        (climb:reparameterize-ellipse radius-1-dx radius-1-dy radius-2-dx radius-2-dy)
       (draw-line* sheet center-x center-y
                   (+ center-x (* a (cos theta)))
                   (+ center-y (* a (sin theta)))

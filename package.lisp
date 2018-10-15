@@ -1952,18 +1952,7 @@
    ;; images
    #:rgb-image
    #:xpm-parse-file
-   #:*xpm-x11-colors*
-   ;; ellipses
-   #:reparameterize-ellipse
-   #:ellipse-point
-   #:ellipse-point*
-   #:ellipse-derivative
-   #:ellipse-cubic-bezier-control-points
-   #:ellipse-cubic-bezier-control-points*
-   #:ellipse-cubic-bezier-points
-   #:ellipse-cubic-bezier-points*
-   #:transformation-angle
-   #:transform-angle))
+   #:*xpm-x11-colors*))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -2051,7 +2040,18 @@
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-glyph
-   #:medium-draw-circle*))
+   #:medium-draw-circle*
+   ;; ellipses
+   #:reparameterize-ellipse
+   #:ellipse-point
+   #:ellipse-point*
+   #:ellipse-derivative
+   #:ellipse-cubic-bezier-control-points
+   #:ellipse-cubic-bezier-control-points*
+   #:ellipse-cubic-bezier-points
+   #:ellipse-cubic-bezier-points*
+   #:transformation-angle
+   #:transform-angle))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)
