@@ -374,16 +374,23 @@
 ;;;     rectangle-edges*
 
 (defclass standard-rectangle (rectangle)
-  ((coordinates :initform (make-array 4 :element-type 'coordinate))))
+  ((coordinates :initform (make-array 4 :element-type 'coordinate :initial-element 0)
+                :initarg :coordinates)))
 
-(defmethod initialize-instance :after ((obj standard-rectangle)
-                                       &key (x1 0.0d0) (y1 0.0d0)
-                                       (x2 0.0d0) (y2 0.0d0))
-  (let ((coords (slot-value obj 'coordinates)))
-    (setf (aref coords 0) x1)
-    (setf (aref coords 1) y1)
-    (setf (aref coords 2) x2)
-    (setf (aref coords 3) y2)))
+(defmethod shared-initialize :after ((obj standard-rectangle)
+                                     slot-names
+                                     &rest initargs
+				     &key (x1 0.0d0) (y1 0.0d0)
+				          (x2 0.0d0) (y2 0.0d0)
+                                          coordinates
+                                          &allow-other-keys)
+  (declare (ignore initargs))
+  (unless coordinates
+    (let ((coords (slot-value obj 'coordinates)))
+      (setf (aref coords 0) x1)
+      (setf (aref coords 1) y1)
+      (setf (aref coords 2) x2)
+      (setf (aref coords 3) y2))))
 
 (defmacro with-standard-rectangle ((x1 y1 x2 y2) rectangle &body body)
   (with-gensyms (coords)
@@ -2894,11 +2901,19 @@ transformation and angle are needed."
 
 ;;;
 
+(defmethod slots-for-pprint-object append ((object standard-rectangle))
+  '(coordinates))
+
 (defmethod print-object ((self standard-rectangle) stream)
-  (print-unreadable-object (self stream :type t :identity nil)
-    (with-standard-rectangle (x1 y1 x2 y2)
-      self
-      (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))))
+  (cond
+    ((and *print-readably* (not *read-eval*))
+     (error "cannot readably print standard-point when not *read-eval*."))
+    ((and *print-pretty* *print-readably*)
+     (simple-pprint-object stream self))
+    (t (print-unreadable-object (self stream :identity nil :type t)
+         (with-standard-rectangle (x1 y1 x2 y2)
+             self
+           (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))))))
 
 ;;;;
 
