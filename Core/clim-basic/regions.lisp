@@ -195,11 +195,11 @@
     (do ((q points (cdr q)))
         ((null (cdr q))
          (funcall fun
-		  (point-x (car q)) (point-y (car q))
-		  (point-x (car points)) (point-y (car points))))
+                  (point-x (car q)) (point-y (car q))
+                  (point-x (car points)) (point-y (car points))))
       (funcall fun
-	       (point-x (car q)) (point-y (car q))
-	       (point-x (cadr q)) (point-y (cadr q))))))
+               (point-x (car q)) (point-y (car q))
+               (point-x (cadr q)) (point-y (cadr q))))))
 
 (defmethod polygon-points ((self standard-polyline))
   (with-slots (points) self
@@ -215,10 +215,10 @@
         ((null (cdr q))
          (when closed
            (funcall fun
-		    (point-x (car q)) (point-y (car q))
-		    (point-x (car points)) (point-y (car points)))))
+                    (point-x (car q)) (point-y (car q))
+                    (point-x (car points)) (point-y (car points)))))
       (funcall fun (point-x (car q)) (point-y (car q))
-	       (point-x (cadr q)) (point-y (cadr q))))))
+               (point-x (cadr q)) (point-y (cadr q))))))
 
 (defmethod polyline-closed ((self standard-polyline))
   (with-slots (closed) self
@@ -228,20 +228,20 @@
   (with-slots (points closed) self
     (make-polyline
      (mapcar (lambda (p)
-	       (multiple-value-bind (x* y*)
-		   (transform-position transformation (point-x p) (point-y p))
-		 (make-point x* y*)))
-	     points)
+               (multiple-value-bind (x* y*)
+                   (transform-position transformation (point-x p) (point-y p))
+                 (make-point x* y*)))
+             points)
      :closed closed)))
 
 (defmethod transform-region (transformation (self standard-polygon))
   (with-slots (points) self
     (make-polygon
      (mapcar (lambda (p)
-	       (multiple-value-bind (x* y*)
-		   (transform-position transformation (point-x p) (point-y p))
-		 (make-point x* y*)))
-	     points))))
+               (multiple-value-bind (x* y*)
+                   (transform-position transformation (point-x p) (point-y p))
+                 (make-point x* y*)))
+             points))))
 
 (defmethod region-contains-position-p ((self standard-polyline) x y)
   (setf x (coerce x 'coordinate)
@@ -250,7 +250,7 @@
     (map-over-polygon-segments
      (lambda (x1 y1 x2 y2)
        (when (line-contains-point-p* x1 y1 x2 y2 x y)
-	 (return t)))
+         (return t)))
      self)
     nil))
 
@@ -277,7 +277,7 @@
 
 (defun make-line (start-point end-point)
   (make-line* (point-x start-point) (point-y start-point)
-	      (point-x end-point) (point-y end-point)))
+              (point-x end-point) (point-y end-point)))
 
 (defun make-line* (start-x start-y end-x end-y)
   (setf start-x (coerce start-x 'coordinate)
@@ -347,8 +347,8 @@
   ((coordinates :initform (make-array 4 :element-type 'coordinate))))
 
 (defmethod initialize-instance :after ((obj standard-rectangle)
-				       &key (x1 0.0d0) (y1 0.0d0)
-				       (x2 0.0d0) (y2 0.0d0))
+                                       &key (x1 0.0d0) (y1 0.0d0)
+                                       (x2 0.0d0) (y2 0.0d0))
   (let ((coords (slot-value obj 'coordinates)))
     (setf (aref coords 0) x1)
     (setf (aref coords 1) y1)
@@ -360,36 +360,36 @@
     `(let ((,coords (slot-value ,rectangle 'coordinates)))
        (declare (type (simple-array coordinate (4)) ,coords))
        (let ((,x1 (aref ,coords 0))
-	     (,y1 (aref ,coords 1))
-	     (,x2 (aref ,coords 2))
-	     (,y2 (aref ,coords 3)))
-	 (declare (type coordinate ,x1 ,y1 ,x2 ,y2))
-	 ,@body))))
+             (,y1 (aref ,coords 1))
+             (,x2 (aref ,coords 2))
+             (,y2 (aref ,coords 3)))
+         (declare (type coordinate ,x1 ,y1 ,x2 ,y2))
+         ,@body))))
 
 (defmacro with-standard-rectangle* ((&key x1 y1 x2 y2) rectangle &body body)
   (with-gensyms (coords)
     `(let ((,coords (slot-value ,rectangle 'coordinates)))
        (declare (type (simple-array coordinate (4)) ,coords))
        (let (,@(and x1 `((,x1 (aref ,coords 0))))
-	     ,@(and y1 `((,y1 (aref ,coords 1))))
-	     ,@(and x2 `((,x2 (aref ,coords 2))))
-	     ,@(and y2 `((,y2 (aref ,coords 3)))))
-	 (declare (type coordinate
-			,@(and x1 `(,x1))
-			,@(and y1 `(,y1))
-			,@(and x2 `(,x2))
-			,@(and y2 `(,y2))))
-	 ,@body))))
+             ,@(and y1 `((,y1 (aref ,coords 1))))
+             ,@(and x2 `((,x2 (aref ,coords 2))))
+             ,@(and y2 `((,y2 (aref ,coords 3)))))
+         (declare (type coordinate
+                        ,@(and x1 `(,x1))
+                        ,@(and y1 `(,y1))
+                        ,@(and x2 `(,x2))
+                        ,@(and y2 `(,y2))))
+         ,@body))))
 
 (defun make-rectangle (point1 point2)
   (make-rectangle* (point-x point1) (point-y point1)
-		   (point-x point2) (point-y point2)))
+                   (point-x point2) (point-y point2)))
 
 (defun make-rectangle* (x1 y1 x2 y2)
   (psetq x1 (coerce (min x1 x2) 'coordinate)
          x2 (coerce (max x1 x2) 'coordinate)
          y1 (coerce (min y1 y2) 'coordinate)
-	 y2 (coerce (max y1 y2) 'coordinate))
+         y2 (coerce (max y1 y2) 'coordinate))
   (if (or (coordinate= x1 x2)
           (coordinate= y1 y2))
       +nowhere+
@@ -524,12 +524,12 @@
 
 (defmethod transform-region (transformation (rect standard-rectangle))
   (cond ((rectilinear-transformation-p transformation)
-	 (with-standard-rectangle (x1 y1 x2 y2)
-	       rect
+         (with-standard-rectangle (x1 y1 x2 y2)
+               rect
            (multiple-value-bind (x1* y1*)
-	       (transform-position transformation x1 y1)
+               (transform-position transformation x1 y1)
              (multiple-value-bind (x2* y2*)
-		 (transform-position transformation x2 y2)
+                 (transform-position transformation x2 y2)
                (make-rectangle* x1* y1* x2* y2*)))))
         (t
          (make-polygon (mapcar (lambda (p) (transform-region transformation p))
@@ -564,47 +564,47 @@
 ;;; -- 2.5.6.1 Constructor Functions for Ellipses and Elliptical Arcs in CLIM -
 
 (defun make-ellipse (center-point
-		     radius-1-dx radius-1-dy
-		     radius-2-dx radius-2-dy
-		     &key start-angle end-angle)
+                     radius-1-dx radius-1-dy
+                     radius-2-dx radius-2-dy
+                     &key start-angle end-angle)
   (make-ellipse* (point-x center-point) (point-y center-point)
                  radius-1-dx radius-1-dy radius-2-dx radius-2-dy 
                  :start-angle start-angle 
                  :end-angle end-angle))
 
 (defun make-ellipse* (center-x center-y
-		      radius-1-dx radius-1-dy
-		      radius-2-dx radius-2-dy 
+                      radius-1-dx radius-1-dy
+                      radius-2-dx radius-2-dy 
                       &key start-angle end-angle)
   (make-ellipical-thing 'standard-ellipse 
                         center-x center-y
-			radius-1-dx radius-1-dy
-			radius-2-dx radius-2-dy 
+                        radius-1-dx radius-1-dy
+                        radius-2-dx radius-2-dy 
                         start-angle end-angle))
 
 (defun make-elliptical-arc (center-point
-			    radius-1-dx radius-1-dy
-			    radius-2-dx radius-2-dy
-			    &key start-angle end-angle)
+                            radius-1-dx radius-1-dy
+                            radius-2-dx radius-2-dy
+                            &key start-angle end-angle)
   (make-elliptical-arc* (point-x center-point) (point-y center-point)
                         radius-1-dx radius-1-dy radius-2-dx radius-2-dy 
                         :start-angle start-angle 
                         :end-angle end-angle))
 
 (defun make-elliptical-arc* (center-x center-y
-			     radius-1-dx radius-1-dy
-			     radius-2-dx radius-2-dy 
+                             radius-1-dx radius-1-dy
+                             radius-2-dx radius-2-dy 
                              &key start-angle end-angle)
   (make-ellipical-thing 'standard-elliptical-arc 
                         center-x center-y
-			radius-1-dx radius-1-dy
-			radius-2-dx radius-2-dy 
+                        radius-1-dx radius-1-dy
+                        radius-2-dx radius-2-dy 
                         start-angle end-angle))
 
 (defun make-ellipical-thing (class 
                              center-x center-y
-			     radius-1-dx radius-1-dy
-			     radius-2-dx radius-2-dy
+                             radius-1-dx radius-1-dy
+                             radius-2-dx radius-2-dy
                              start-angle end-angle)
   (setf center-x (coerce center-x 'coordinate)
         center-y (coerce center-y 'coordinate)
@@ -616,10 +616,10 @@
         end-angle (and end-angle (coerce end-angle 'coordinate)))
 
   (let ((tr (make-3-point-transformation*
-	     0 0 1 0 0 1
-	     center-x center-y
-	     (+ center-x radius-1-dx) (+ center-y radius-1-dy)
-	     (+ center-x radius-2-dx) (+ center-y radius-2-dy))))
+             0 0 1 0 0 1
+             center-x center-y
+             (+ center-x radius-1-dx) (+ center-y radius-1-dy)
+             (+ center-x radius-2-dx) (+ center-y radius-2-dy))))
     (cond ((and (null start-angle) (null end-angle)))
           ((null start-angle) (setf start-angle 0))
           ((null end-angle) (setf end-angle (* 2 pi))))
@@ -631,9 +631,9 @@
     ;; go counter-clockwise in screen coordinates, whereas our transformations
     ;; rotate clockwise..  -Hefner
     (let ((start-angle* (and start-angle
-			     (untransform-angle transformation start-angle)))
+                             (untransform-angle transformation start-angle)))
           (end-angle*   (and end-angle
-			     (untransform-angle transformation end-angle))))      
+                             (untransform-angle transformation end-angle))))      
       (when (reflection-transformation-p transformation)
         (rotatef start-angle* end-angle*))
       (make-instance (type-of self)
@@ -892,7 +892,7 @@
   (with-slots (tr) ell
     ;; Why the inverse here?
     (multiple-value-bind (a b d e c f)
-	(get-transformation (invert-transformation tr))
+        (get-transformation (invert-transformation tr))
       (values
        (+ (* a a) (* d d))              ; x**2
        (+ (* b b) (* e e))              ; y**2
@@ -963,52 +963,52 @@
            (values  0 (sqrt (/ 1 b))
                     (sqrt (/ 1 a)) 0))
           (t
-	   (let* ((x1 (- (/ c
-			    (sqrt (+ (- (* (* c c)
-					   (sqrt (+ (* c c)
-						    (* b b)
-						    (- (* 2 a b)) (* a a)))))
-				     (- (* 2 (* b b)
-					   (sqrt (+ (* c c) (* b b)
-						    (- (* 2 a b)) (* a a)))))
-				     (* 2 a b (sqrt (+ (* c c) (* b b)
-						       (- (* 2 a b))
-						       (* a a))))
-				     (* 2 b (* c c))
-				     (* 2 (expt b 3))
-				     (- (* 4 a (* b b))) (* 2 (* a a) b))))))
-		  (y1 (- (/ (+ (* (sqrt (+ (* c c)
-					   (* b b)
-					   (- (* 2 a b))
-					   (* a a)))
-				  x1)
-			       (- (* b x1)) (* a x1)) 
-			    c)))
-		  (x2 (- (/ c
-			    (sqrt (+ (* (* c c)
-					(sqrt (+ (* c c)
-						 (* b b)
-						 (- (* 2 a b))
-						 (* a a))))
-				     (* 2 (* b b) (sqrt (+ (* c c)
-							   (* b b)
-							   (- (* 2 a b))
-							   (* a a))))
-				     (- (* 2 a b (sqrt (+ (* c c)
-							  (* b b)
-							  (- (* 2 a b))
-							  (* a a)))))
-				     (* 2 b (* c c))
-				     (* 2 (expt b 3))
-				     (- (* 4 a (* b b))) (* 2 (* a a) b))))))
-		  (y2 (- (/ (+ (- (* (sqrt (+ (* c c)
-					      (* b b)
-					      (- (* 2 a b))
-					      (* a a)))
-				     x2))
-			       (- (* b x2)) (* a x2))
-			    c))))
-	     (values x1 y1 x2 y2))))))
+           (let* ((x1 (- (/ c
+                            (sqrt (+ (- (* (* c c)
+                                           (sqrt (+ (* c c)
+                                                    (* b b)
+                                                    (- (* 2 a b)) (* a a)))))
+                                     (- (* 2 (* b b)
+                                           (sqrt (+ (* c c) (* b b)
+                                                    (- (* 2 a b)) (* a a)))))
+                                     (* 2 a b (sqrt (+ (* c c) (* b b)
+                                                       (- (* 2 a b))
+                                                       (* a a))))
+                                     (* 2 b (* c c))
+                                     (* 2 (expt b 3))
+                                     (- (* 4 a (* b b))) (* 2 (* a a) b))))))
+                  (y1 (- (/ (+ (* (sqrt (+ (* c c)
+                                           (* b b)
+                                           (- (* 2 a b))
+                                           (* a a)))
+                                  x1)
+                               (- (* b x1)) (* a x1)) 
+                            c)))
+                  (x2 (- (/ c
+                            (sqrt (+ (* (* c c)
+                                        (sqrt (+ (* c c)
+                                                 (* b b)
+                                                 (- (* 2 a b))
+                                                 (* a a))))
+                                     (* 2 (* b b) (sqrt (+ (* c c)
+                                                           (* b b)
+                                                           (- (* 2 a b))
+                                                           (* a a))))
+                                     (- (* 2 a b (sqrt (+ (* c c)
+                                                          (* b b)
+                                                          (- (* 2 a b))
+                                                          (* a a)))))
+                                     (* 2 b (* c c))
+                                     (* 2 (expt b 3))
+                                     (- (* 4 a (* b b))) (* 2 (* a a) b))))))
+                  (y2 (- (/ (+ (- (* (sqrt (+ (* c c)
+                                              (* b b)
+                                              (- (* 2 a b))
+                                              (* a a)))
+                                     x2))
+                               (- (* b x2)) (* a x2))
+                            c))))
+             (values x1 y1 x2 y2))))))
 
 ;;; this function is used in `ellipse-simplified-representation' to fixup
 ;;; normalized radius lengths. Can't be interchanged with
@@ -1085,7 +1085,7 @@
           r
         (mapcar (lambda (p)
                   (multiple-value-bind (x y)
-		      (transform-position (slot-value e1 'tr) (car p) (cdr p))
+                      (transform-position (slot-value e1 'tr) (car p) (cdr p))
                     (make-point x y)))
                 r)))))
 
@@ -1209,15 +1209,15 @@
                                    f
                                    (setq pn (canonize-polynom p2))
                                    (multiple-value-bind (sol done?)
-				       (maybe-solve-polynom-trivially pn)
+                                       (maybe-solve-polynom-trivially pn)
                                      (when done?
                                        ;; iterate more nonetheless here -- is
                                        ;; this a good idea?
                                        (setf sol
-					     (mapcar (lambda (x)
-						       (newton-ziel-gerade
-							polynom x))
-						     sol))
+                                             (mapcar (lambda (x)
+                                                       (newton-ziel-gerade
+                                                        polynom x))
+                                                     sol))
                                        (setf res (nconc sol res))
                                        (return))))
                                  (setf x1 x-start)
@@ -1506,14 +1506,14 @@ transformation and angle are needed."
   (with-slots (bands) self
     (cond ((or (null normalize) (eql normalize :x-banding))
            (map-over-bands-rectangles
-	    (lambda (x1 y1 x2 y2)
-	      (funcall fun (make-rectangle* x1 y1 x2 y2)))
-	    bands))
+            (lambda (x1 y1 x2 y2)
+              (funcall fun (make-rectangle* x1 y1 x2 y2)))
+            bands))
           ((eql normalize :y-banding)
            (map-over-bands-rectangles
-	    (lambda (y1 x1 y2 x2)
-	      (funcall fun (make-rectangle* x1 y1 x2 y2)))
-	    (xy-bands->yx-bands bands)))
+            (lambda (y1 x1 y2 x2)
+              (funcall fun (make-rectangle* x1 y1 x2 y2)))
+            (xy-bands->yx-bands bands)))
           (t
            (error "Bad ~S argument to ~S: ~S"
                   :normalize 'map-over-region-set-regions normalize)))))
@@ -1542,17 +1542,17 @@ transformation and angle are needed."
 (defmethod region-union ((xs standard-rectangle-set) (ys standard-rectangle-set))
   (make-standard-rectangle-set
    (bands-union (standard-rectangle-set-bands xs)
-		(standard-rectangle-set-bands ys))))
+                (standard-rectangle-set-bands ys))))
 
 (defmethod region-intersection ((xs standard-rectangle-set) (ys standard-rectangle-set))
   (make-standard-rectangle-set
    (bands-intersection (standard-rectangle-set-bands xs)
-		       (standard-rectangle-set-bands ys))))
+                       (standard-rectangle-set-bands ys))))
 
 (defmethod region-difference ((xs standard-rectangle-set) (ys standard-rectangle-set))
   (make-standard-rectangle-set
    (bands-difference (standard-rectangle-set-bands xs)
-		     (standard-rectangle-set-bands ys))))
+                     (standard-rectangle-set-bands ys))))
          
 ;;; rectangle-set vs. rectangle and vice versa
 
@@ -1578,19 +1578,19 @@ transformation and angle are needed."
 
 (defmethod region-union ((xs standard-rectangle) (ys standard-rectangle))
   (region-union (rectangle->standard-rectangle-set xs)
-		(rectangle->standard-rectangle-set ys)))
+                (rectangle->standard-rectangle-set ys)))
 
 (defmethod region-difference ((xs standard-rectangle) (ys standard-rectangle))
   (region-difference (rectangle->standard-rectangle-set xs)
-		     (rectangle->standard-rectangle-set ys)))
+                     (rectangle->standard-rectangle-set ys)))
 
 (defmethod region-intersection ((xs standard-rectangle) (ys standard-rectangle))
   (region-intersection (rectangle->standard-rectangle-set xs)
-		       (rectangle->standard-rectangle-set ys)))
+                       (rectangle->standard-rectangle-set ys)))
 
 (defmethod region-intersection ((xr rectangle) (yr rectangle))
   (region-intersection (rectangle->standard-rectangle-set xr)
-		       (rectangle->standard-rectangle-set yr)))
+                       (rectangle->standard-rectangle-set yr)))
 
 ;;;
 
@@ -1787,9 +1787,9 @@ transformation and angle are needed."
          ;; Maybe there is a faster way to do this.
          (let ((res +nowhere+))
            (map-over-region-set-regions
-	    (lambda (rect)
-	      (setf res (region-union res (transform-region tr rect))))
-	    self)
+            (lambda (rect)
+              (setf res (region-union res (transform-region tr rect))))
+            self)
            res))))
 
 ;;; ============================================================================
@@ -1974,11 +1974,11 @@ transformation and angle are needed."
                    nil)))
             (t
              (let ((x (/ (+ (* dx (- (* u1 dv) (* v1 du)))
-			    (* du (- (* y1 dx) (* x1 dy))))
-			 q))
+                            (* du (- (* y1 dx) (* x1 dy))))
+                         q))
                    (y (/ (+ (* dy (- (* u1 dv) (* v1 du)))
-			    (* dv (- (* y1 dx) (* x1 dy))))
-			 q)))
+                            (* dv (- (* y1 dx) (* x1 dy))))
+                         q)))
                (if (and (or (<= x1 x x2) (<= x2 x x1))
                         (or (<= u1 x u2) (<= u2 x u1)))
                    (values :hit x y)
@@ -1990,7 +1990,7 @@ transformation and angle are needed."
       (multiple-value-bind (u1 v1) (line-start-point* b)
         (multiple-value-bind (u2 v2) (line-end-point* b)
           (multiple-value-bind (r sx1 sy1 sx2 sy2)
-	      (line-intersection* x1 y1 x2 y2 u1 v1 u2 v2)
+              (line-intersection* x1 y1 x2 y2 u1 v1 u2 v2)
             (case r
               (:hit (make-point sx1 sy1))
               (:coincident (make-line* sx1 sy1 sx2 sy2))
@@ -2004,8 +2004,8 @@ transformation and angle are needed."
     (map-over-polygon-segments 
      (lambda (x1 y1 x2 y2)
        (setf res
-	     (region-union
-	      res (region-intersection (make-line* x1 y1 x2 y2) b))))
+             (region-union
+              res (region-intersection (make-line* x1 y1 x2 y2) b))))
      a)
     res))
 
@@ -2014,8 +2014,8 @@ transformation and angle are needed."
     (map-over-polygon-segments 
      (lambda (x1 y1 x2 y2)
        (setf res
-	     (region-union
-	      res (region-difference (make-line* x1 y1 x2 y2) b))))
+             (region-union
+              res (region-difference (make-line* x1 y1 x2 y2) b))))
      a)
     res))
 
@@ -2199,10 +2199,10 @@ transformation and angle are needed."
                           (dolist (k2 S)
                             (multiple-value-bind (px py)
                                 (line-intersection**
-				 (pg-edge-x1 k1) (pg-edge-y1 k1)
-				 (pg-edge-x2 k1) (pg-edge-y2 k1)
-				 (pg-edge-x1 k2) (pg-edge-y1 k2)
-				 (pg-edge-x2 k2) (pg-edge-y2 k2))
+                                 (pg-edge-x1 k1) (pg-edge-y1 k1)
+                                 (pg-edge-x2 k1) (pg-edge-y2 k1)
+                                 (pg-edge-x1 k2) (pg-edge-y1 k2)
+                                 (pg-edge-x2 k2) (pg-edge-y2 k2))
                               (when (and px (< sy0 py sy1))
                                 (pushnew py ys :test #'coordinate=)))))
                         (setq ys (sort ys #'<))
@@ -2214,25 +2214,25 @@ transformation and angle are needed."
                               (when (> (pg-edge-y2 k) (pg-edge-y1 k))
                                 (multiple-value-bind (x1 y1 x2 y2) 
                                     (restrict-line-on-y-interval*
-				     (pg-edge-x1 k) (pg-edge-y1 k)
-				     (pg-edge-x2 k) (pg-edge-y2 k)
-				     by0 by1)
+                                     (pg-edge-x1 k) (pg-edge-y1 k)
+                                     (pg-edge-x2 k) (pg-edge-y2 k)
+                                     by0 by1)
                                   (declare (ignore y1 y2))
                                   (push (list x1 x2 (pg-edge-extra k)) R))))
                             (setq R (sort R #'<
-					  :key (lambda (x) (+ (first x) (second x)))))
+                                          :key (lambda (x) (+ (first x) (second x)))))
                             (labels
                                 ((add (lo lu ro ru)
                                    (dolist (s sps
                                              ;; otherwise
                                              (push (make-pg-splitter
-						    :links  (list lu lo) 
-						    :rechts (list ru ro))
+                                                    :links  (list lu lo) 
+                                                    :rechts (list ru ro))
                                                    sps))
                                      (when (and (region-equal
-						 lo (car (pg-splitter-links s)))
+                                                 lo (car (pg-splitter-links s)))
                                                 (region-equal
-						 ro (car (pg-splitter-rechts s))))
+                                                 ro (car (pg-splitter-rechts s))))
                                        (push lu (pg-splitter-links s))
                                        (push ru (pg-splitter-rechts s))
                                        (return)))))
@@ -2342,11 +2342,11 @@ transformation and angle are needed."
              nil)
             (t
              (let ((x (/ (+ (* dx (- (* u1 dv) (* v1 du)))
-			    (* du (- (* y1 dx) (* x1 dy))))
-			 q))
+                            (* du (- (* y1 dx) (* x1 dy))))
+                         q))
                    (y (/ (+ (* dy (- (* u1 dv) (* v1 du)))
-			    (* dv (- (* y1 dx) (* x1 dy))))
-			 q)))
+                            (* dv (- (* y1 dx) (* x1 dy))))
+                         q)))
                (values x y)))))))
 
 ;;; ----------------------------------------------------------------------------
@@ -2372,7 +2372,7 @@ transformation and angle are needed."
   (assert (not (eq a +nowhere+)))
   (make-instance 'standard-region-union 
     :regions (append (standard-region-set-regions a)
-	      (standard-region-set-regions b))))
+                     (standard-region-set-regions b))))
 
 (defmethod region-union ((a region) (b region))
   (make-instance 'standard-region-union :regions (list a b)))
