@@ -21,7 +21,7 @@
    (signal-condition-p :initform nil)
    (current-selection :initform nil))
   (:panes
-   (backend-output :application-pane 
+   (backend-output :application-pane
                    :min-width *width*
                    :min-height *height*
                    :display-time nil
@@ -496,7 +496,7 @@ outside the clipping area should be grey.")
      for i from -10 to 10
      for a = (* i da)
      unless (= i 0)
-     do 
+     do
        (with-translation (stream 10 (+ 30 (* 32 (+ 10 i))))
          (draw a :miter)
          (with-translation (stream 170 0)
@@ -1019,7 +1019,7 @@ outside the clipping area should be grey.")
                 :start-angle 0 :end-angle (/ pi 4)))
 
 ;;;
-;;; Text 
+;;; Text
 ;;;
 
 (define-drawing-test "07) Text Align" (stream)
@@ -1143,130 +1143,14 @@ outside the clipping area should be grey.")
   (dotimes (i 10)
     (format stream "~&row ~A abcdefghilmnopqrstuvz ABCDEFGHILMNOPRSTUVZ 1234567890 <>.;-~%" i)))
 
-(defun draw-vstrecke2 (stream x y1 y2 &rest args &key ink &allow-other-keys)
-  (draw-line* stream (- x 10) y1 (+ x 10) y1 :ink ink)
-  (draw-line* stream (- x 10) y2 (+ x 10) y2 :ink ink)
-  (apply #'draw-arrow* stream x y1 x y2 args))
-
-(defun draw-hstrecke2 (stream y x1 x2 &rest args &key ink &allow-other-keys)
-  (draw-line* stream x1 (- y 10) x1 (+ y 10) :ink ink)
-  (draw-line* stream x2 (- y 10) x2 (+ y 10) :ink ink)
-  (apply #'draw-arrow* stream x1 y x2 y args))
-
-(defun legend-text-style2 ()
-  (make-text-style :sans-serif :roman :small))
-
-(defun draw-legend2 (stream &rest entries)
-  (let* ((style (legend-text-style))
-         (y 2)
-         (h (nth-value 1 (text-size stream "dummy" :text-style style))))
-    (dolist (entry entries)
-      (when entry
-        (incf y h)
-        (let ((y* (+ 0.5 (round (- y (/ h 2))))))
-          (apply #'draw-line* stream 2 y* 35 y* (cdr entry)))
-        (draw-text* stream (car entry) 40 y :text-style style)))))
-
-(defparameter *drawing-test-07-rectangle* :text-size)
-
 (define-drawing-test "07) Text Size" (stream)
     ""
-  (let* ((pane-width (rectangle-width (sheet-region stream)))
-         (pane-height (rectangle-height (sheet-region stream)))
-         (str "Ciao")
-         (rectangle *drawing-test-07-rectangle*)
-         (style (make-text-style :sans-serif :roman 100))
-         (medium (sheet-medium stream)))
-    (multiple-value-bind (width height final-x final-y baseline)
-        (text-size stream str :text-style style)
-      (let* ((x1 (/ (- pane-width width) 2))
-             (y1 (/ (- pane-height height) 2))
-             (ybase (+ y1 baseline)))
-        (draw-text* stream
-                    (format nil "fixed-width-p: ~(~A~)"
-                            (handler-case
-                                (text-style-fixed-width-p style medium)
-                              (error (c)
-                                c)))
-                    2
-                    pane-height
-                    :text-style (legend-text-style))
-        (draw-legend2 stream
-                      (list "Ascent"
-                            ;; :line-style (make-line-style :dashes '(1.5))
-                            :ink +black+)
-                      (list "Descent" :ink +black+)
-                      (list "Height"
-                            :line-style (make-line-style :thickness 2)
-                            :ink +black+)
-                      (list "Width (Avg.)" :ink +black+)
-                      (list "Baseline" :ink +green+)
-                      (when (eq rectangle :text-bounding-rectangle)
-                        (list "Bounding rectangle" :ink +purple+))
-                      (when (eq rectangle :text-size)
-                        (list "Text size (width/height)" :ink +red+))
-                      (when (eq rectangle :text-size)
-                        (list "Text size (final x/y)" :ink +blue+)))
-        (draw-vstrecke2 stream
-                        (- x1 20)
-                        ybase
-                        (- ybase (text-style-ascent style medium))
-                        ;; :line-style (make-line-style :dashes '(1.5))
-                        :ink +black+)
-        (draw-vstrecke stream
-                       (- x1 20)
-                       ybase
-                       (+ ybase (text-style-descent style medium))
-                       :ink +black+)
-        (draw-vstrecke2 stream
-                        (- x1 40)
-                        y1
-                        (+ y1 (text-style-height style medium))
-                        :line-style (make-line-style :thickness 2)
-                        :ink +black+)
-        (draw-hstrecke2 stream
-                        (- y1 20)
-                        x1
-                        (+ x1 (text-style-width style medium))
-                        :ink +black+)
-        (draw-line* stream
-                    0 ybase
-                    pane-width ybase
-                    :ink +green+)
-        (draw-text* stream str x1 ybase :text-style style)
-        ;; Gtkairo's DRAW-TEXT* understands multiple lines.
-        ;; (CLIM-CLX doesn't like multiple lines much.)
-        ;;
-        ;; If we use WRITE-STRING instead of DRAW-TEXT, the frontend will
-        ;; handle the line breaks, but lines 2..n will start at x = 0 rather
-        ;; than x = x1, confusing our diagram.
-;;;        (setf (stream-cursor-position stream) (values x1 y1))
-;;;        (with-text-style (stream style)
-;;;          (write-string str stream))
-        (ecase rectangle
-          ((:text-size)
-           (draw-rectangle* stream
-                            x1 y1
-                            (+ x1 width) (+ y1 height)
-                            :ink +red+
-                            :filled nil)
-           (draw-line* stream
-                       0 (+ y1 final-y)
-                       pane-width (+ y1 final-y)
-                       :ink +blue+)
-           (draw-line* stream
-                       (+ x1 final-x) 0
-                       (+ x1 final-x) pane-height
-                       :ink +blue+))
-          ((:text-bounding-rectangle)
-           (multiple-value-bind (left top right bottom)
-               (climi::text-bounding-rectangle* medium str :text-style style)
-             (draw-rectangle* stream 
-                              (+ x1 left) (+ y1 baseline top)
-                              (+ x1 right) (+ y1 baseline bottom)
-                              :ink +purple+
-                              :filled nil))))))))
-
+  (let ((state (make-instance 'state :text        "Ciao"
+                                     :text-family :sans-serif
+                                     :text-face   :roman
+                                     :text-size   100
+                                     :rectangle   :text-size)))
+    (draw-text-size-info stream state)))
 
 ;;;
 ;;; Arrow
@@ -1401,7 +1285,7 @@ clipping areas. No point should be drawn outside the blue rectangles."
   (surrounding-output-with-border (stream :shape :drop-shadow)
     (draw-circle* stream 100 500 40)
     (with-new-output-record (stream))))
-                                           
+
 (define-drawing-test "11) Bordered Empty Borders" (stream)
     ""
   (with-room-for-graphics (stream :first-quadrant nil)
@@ -1716,12 +1600,12 @@ clipping areas. No point should be drawn outside the blue rectangles."
   (clim:draw-rectangle* stream 40 40 230 180 :filled nil
                         :line-joint-shape :miter
                         :line-thickness 6)
-  
+
   (clim:draw-line* stream 200 10 10 150 :line-thickness 5 :line-cap-shape :round)
   (clim:draw-line* stream 220 10 30 150 :line-thickness 5 :line-cap-shape :butt)
   (clim:draw-line* stream 240 10 50 150 :line-thickness 5 :line-cap-shape :square)
   (clim:draw-line* stream 260 10 70 150 :line-thickness 5 :line-cap-shape :no-end-point)
-  
+
   (clim:draw-point* stream 180 25)
   (clim:draw-circle* stream 100 75 40 :filled nil :ink +green+)
   (clim:draw-ellipse* stream 160 110 30 0 0 10 :filled nil :ink +green+)
@@ -1766,7 +1650,7 @@ clipping areas. No point should be drawn outside the blue rectangles."
     (with-translation (stream 0 50)
       (copy-from-pixmap pixmap 50 50 100 100 stream 250 250))))
 
-    
+
 (define-drawing-test "15) Pixmap 2" (stream)
     ""
   (let ((pixmap (with-output-to-pixmap (m stream :width 200 :height 200)
@@ -1973,4 +1857,3 @@ bezier curve, and a convolution of a curve and an area."
               '(150 100 200 120 300 150 350 100 300 80 200 80 150 100)))
          (r3 (mcclim-bezier:region-difference r1 r2)))
     (mcclim-bezier:draw-bezier-design* stream r3)))
-

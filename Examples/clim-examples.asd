@@ -35,7 +35,7 @@
      (:file "font-selector")
      (:file "bordered-output-examples")
      (:file "misc-tests")
-     (:file "drawing-tests")
+     (:file "drawing-tests" :depends-on ("text-size-test"))
      (:file "render-image-tests")
      (:file "image-viewer")
      (:file "accepting-values")
