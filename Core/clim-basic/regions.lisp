@@ -148,7 +148,7 @@
    (closed :initarg :closed)))
 
 (defclass standard-polygon (polygon)
-  ((points :initarg :points)) )
+  ((points :initarg :points)))
 
 ;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
@@ -533,7 +533,7 @@
                (make-rectangle* x1* y1* x2* y2*)))))
         (t
          (make-polygon (mapcar (lambda (p) (transform-region transformation p))
-                               (polygon-points rect)))) ))
+                               (polygon-points rect))))))
 
 (defmethod region-contains-position-p ((self standard-rectangle) x y)
   (with-standard-rectangle (x1 y1 x2 y2)
@@ -613,7 +613,7 @@
         radius-2-dx (coerce radius-2-dx 'coordinate)
         radius-2-dy (coerce radius-2-dy 'coordinate)
         start-angle (and start-angle (coerce start-angle 'coordinate))
-        end-angle (and end-angle (coerce end-angle 'coordinate)) )
+        end-angle (and end-angle (coerce end-angle 'coordinate)))
 
   (let ((tr (make-3-point-transformation*
 	     0 0 1 0 0 1
@@ -623,7 +623,7 @@
     (cond ((and (null start-angle) (null end-angle)))
           ((null start-angle) (setf start-angle 0))
           ((null end-angle) (setf end-angle (* 2 pi))))
-    (make-instance class :tr tr :start-angle start-angle :end-angle end-angle) ))
+    (make-instance class :tr tr :start-angle start-angle :end-angle end-angle)))
 
 (defmethod transform-region (transformation (self elliptical-thing))
   (with-slots (start-angle end-angle tr) self
@@ -899,7 +899,7 @@
        (+ (* 2 a b) (* 2 d e))          ; xy
        (+ (* 2 a c) (* 2 d f))          ; x
        (+ (* 2 b c) (* 2 e f))          ; y
-       (+ (* c c) (* f f) -1)))) )
+       (+ (* c c) (* f f) -1)))))
 
 ;;; Straight from the horse's mouth -- moore
 ;;;
@@ -1103,8 +1103,8 @@
                      (when (coordinate= 0 (ellipse-equation a b c d e f x y))
                        (pushnew (cons x y) res :test #'equal))
                      (when (coordinate= 0 (ellipse-equation a b c d e f (- x) y))
-                       (pushnew (cons (- x) y) res :test #'equal)) )))
-               res)) ))))
+                       (pushnew (cons (- x) y) res :test #'equal)))))
+               res))))))
 
 (defun ellipse-equation (a b c d e f x y)
   (+ (* a x x) (* b y y) (* c x y) (* d x) (* e y) f))
@@ -1118,7 +1118,7 @@
              (+ (* 2 b e) (* -2 a e) (* 2 c d))
              (+ (* e e) (* 2 (- b a) (+ a f)) (* -1 c c) (* d d))
              (+ (* 2 e a) (* 2 e f) (* -2 c d))
-             (+ (* (+ a f) (+ a f)) (* -1 d d)) ))) )
+             (+ (* (+ a f) (+ a f)) (* -1 d d))))))
 
 ;;; We just build ourselves a simple newton iteration. Sometimes we fail
 ;;; desperately at local minima. But apart from that convergence behaviour for
@@ -1155,7 +1155,7 @@
                   (list (/ p 2)))
                  (t
                   (list (+ (/ p 2) (sqrt d))
-                        (- (/ p 2) (sqrt d))))))) ))
+                        (- (/ p 2) (sqrt d)))))))))
 
 (defun maybe-solve-polynom-trivially (pn)
   (case (length pn)
@@ -1186,7 +1186,7 @@
                  (eps-f* 0d-16)
                  (eps-x 1d-20)
                  (m 20)                 ;maximum number of steps
-                 (res nil) )
+                 (res nil))
              (loop
                (cond ((> n m)
                       (return)))
@@ -1221,10 +1221,10 @@
                                        (setf res (nconc sol res))
                                        (return))))
                                  (setf x1 x-start)
-                                 (setq n 0)) ))))
+                                 (setq n 0))))))
                  (setf x (min 1d0 (max -1d0 x1)))        ;Is this allowed?
                  (incf n)))
-             res)) )))
+             res)))))
 
 (defun horner-schema (polynom x)
   ;; Evaluates the polynomial `polynom' by means of horner's method at the
@@ -1242,7 +1242,7 @@
                   (values 
                    (+ (* (aref b (- i 1)) x) (aref polynom i))
                    b))
-               (setf (aref b i) (+ (* (aref b (- i 1)) x) (aref polynom i))))))) ))
+               (setf (aref b i) (+ (* (aref b (- i 1)) x) (aref polynom i)))))))))
 
 
 ;;; routines for approximating ellipses as bezier curves
@@ -1516,7 +1516,7 @@ transformation and angle are needed."
 	    (xy-bands->yx-bands bands)))
           (t
            (error "Bad ~S argument to ~S: ~S"
-                  :normalize 'map-over-region-set-regions normalize)) )))
+                  :normalize 'map-over-region-set-regions normalize)))))
 
 (defmethod region-set-regions ((self standard-rectangle-set) &key normalize)
   (let ((res nil))
@@ -1535,7 +1535,7 @@ transformation and angle are needed."
         ((= (length (first bands)) 1)
          (make-standard-rectangle-set (rest bands)))
         (t
-         (make-instance 'standard-rectangle-set :bands bands)) ))
+         (make-instance 'standard-rectangle-set :bands bands))))
     
 ;;; rectangle-set vs. rectangle-set
 
@@ -1703,7 +1703,7 @@ transformation and angle are needed."
                            (cdr rest))
                    (cons (cons z0 isum)
                          rest))
-               rest))) )))
+               rest))))))
 
 (defun canon-empty-bands (x)
   (cond ((null (cdr x)) nil)
@@ -1790,7 +1790,7 @@ transformation and angle are needed."
 	    (lambda (rect)
 	      (setf res (region-union res (transform-region tr rect))))
 	    self)
-           res)) ))
+           res))))
 
 ;;; ============================================================================
 
@@ -1982,7 +1982,7 @@ transformation and angle are needed."
                (if (and (or (<= x1 x x2) (<= x2 x x1))
                         (or (<= u1 x u2) (<= u2 x u1)))
                    (values :hit x y)
-                 nil)) ) )) ))
+                 nil)))))))
 
 (defmethod region-intersection ((a standard-line) (b standard-line))
   (multiple-value-bind (x1 y1) (line-start-point* a)
@@ -2228,14 +2228,14 @@ transformation and angle are needed."
                                              (push (make-pg-splitter
 						    :links  (list lu lo) 
 						    :rechts (list ru ro))
-                                                   sps) )
+                                                   sps))
                                      (when (and (region-equal
 						 lo (car (pg-splitter-links s)))
                                                 (region-equal
 						 ro (car (pg-splitter-rechts s))))
                                        (push lu (pg-splitter-links s))
                                        (push ru (pg-splitter-rechts s))
-                                       (return))) ))
+                                       (return)))))
                               (let ((eintritt nil)
                                     (ina 0)
                                     (inb 0))
@@ -2252,12 +2252,12 @@ transformation and angle are needed."
                                                 (make-point (second eintritt) by1)
                                                 (make-point (first k) by0)
                                                 (make-point (second k) by1))
-                                           (setq eintritt nil)) )))) ) )) ) )
+                                           (setq eintritt nil)))))))))))
     (setq sps (delete +nowhere+ (mapcar #'pg-splitter->polygon sps)))
     (cond ((null sps) +nowhere+)
           ((null (cdr sps))
            (car sps))
-          ((make-instance 'standard-region-union :regions sps))) ))
+          ((make-instance 'standard-region-union :regions sps)))))
 
 (defun over-sweep-bands (pg1 pg2 fun)
   (let ((es (nconc (polygon->pg-edges pg1 :a) (polygon->pg-edges pg2 :b))))
@@ -2277,7 +2277,7 @@ transformation and angle are needed."
                        (reduce #'max (mapcar #'pg-edge-y2 S)))))
           
           (funcall fun sy sy2 S)
-          (setq sy sy2)) ))))
+          (setq sy sy2))))))
 
 (defun polygon->pg-edges (pg extra)
   (let ((pts (polygon-points pg))
@@ -2305,7 +2305,7 @@ transformation and angle are needed."
                cur next
                next (or (cdr next) pts))
         (when (eq prev pts)
-          (return)) ))
+          (return))))
     res))
 
 (defun restrict-line-on-y-interval* (x1 y1 x2 y2 ry0 ry1)
@@ -2325,7 +2325,7 @@ transformation and angle are needed."
         ((colinear-p (car pts) (cadr pts) (caddr pts))
          (clean-up-point-sequence (list* (car pts) (caddr pts) (cdddr pts))))
         (t
-         (cons (car pts) (clean-up-point-sequence (cdr pts)))) ))
+         (cons (car pts) (clean-up-point-sequence (cdr pts))))))
 
 (defun colinear-p (p1 p2 p3)
   (multiple-value-bind (x1 y1) (point-position p1)
@@ -2396,7 +2396,7 @@ transformation and angle are needed."
           nil
         (values
          (- (/ (+ (* DX2 (- Y1 Y2)) (* DY2 X2) (- (* DY2 X1))) quot))
-         (- (/ (+ (* DX1 (- Y1 Y2)) (* DY1 X2) (- (* DY1 X1))) quot)))) )) )
+         (- (/ (+ (* DX1 (- Y1 Y2)) (* DY1 X2) (- (* DY1 X1))) quot)))))))
 
 (defun geraden-gleichung (x0 y0 x1 y1 px py)
   ;; ??? This somehow tries to calculate the distance between a point
@@ -2429,7 +2429,7 @@ transformation and angle are needed."
              (cond ((or (and (> sign-1 0) (< sign-2 0))
                         (and (< sign-1 0) (> sign-2 0)))
                     ;; clear cases: the line croses the polygon's border
-                    (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)) ))
+                    (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po))))
                    ((= sign-1 0)
                     ;; more difficult:
                     ;; The line is coincident with the edge po/pn
@@ -2437,16 +2437,16 @@ transformation and angle are needed."
                       (cond ((or (and (> sign-1 0) (< sign-2 0))
                                  (and (< sign-1 0) (> sign-2 0)))
                              ;; The line goes through the polygons border, by edge po/pn
-                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)) ))
+                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po))))
                             (t
                              ;; otherwise the line touches the polygon at the edge po/pn,
                              ;; return both points
-                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)) )
-                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x pn) (point-y pn)) ) ))))
+                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)))
+                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x pn) (point-y pn)))))))
                    (t
                     ;; all other cases: Line either touches polygon in
                     ;; a point or in an edge [handled above]. --GB
-                    nil) )))
+                    nil))))
          ((line-contains-point-p** x1 y1 x2 y2 (point-x pn) (point-y pn))
           nil)
          (t
@@ -2474,7 +2474,7 @@ transformation and angle are needed."
                   res))))
       (cond ((null res) +nowhere+)
             ((null (cdr res)) (car res))
-            (t (make-instance 'standard-region-union :regions res)) ))))
+            (t (make-instance 'standard-region-union :regions res))))))
 
 (defmethod region-contains-position-p ((pg polygon) x y)
   (setf x (coerce x 'coordinate))
@@ -2544,7 +2544,7 @@ transformation and angle are needed."
                   res2))))
       (cond ((null res2) +nowhere+)
             ((null (cdr res2)) (car res2))
-            (t (make-instance 'standard-region-union :regions res2)) ))))
+            (t (make-instance 'standard-region-union :regions res2))))))
 
 
 (defmethod region-difference ((a standard-line) (b standard-line))
@@ -2566,7 +2566,7 @@ transformation and angle are needed."
                                      nil))))
                      (cond ((null r) +nowhere+)
                            ((null (cdr r)) (car r))
-                           (t (make-instance 'standard-region-union :regions r)) ))))
+                           (t (make-instance 'standard-region-union :regions r))))))
                 (t
                  a)))))))
 
@@ -2597,7 +2597,7 @@ transformation and angle are needed."
                 ((and (coordinate= x2 u1) (coordinate= y2 v1))
                  (make-polyline* (list x1 y1 x2 y2 u2 v2)))
                 (t
-                 (make-instance 'standard-region-union :regions (list a b))) ))))))
+                 (make-instance 'standard-region-union :regions (list a b)))))))))
 
 (defmethod region-union ((a standard-polyline) (b standard-line))
   (with-slots (points) a
@@ -2781,7 +2781,7 @@ transformation and angle are needed."
            (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
              (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
                (values (min x1 u1) (min y1 v1)
-                       (max x2 u2) (min y2 v2))))) )))
+                       (max x2 u2) (min y2 v2))))))))
 
 (defmethod bounding-rectangle* ((self standard-region-intersection))
   ;; kill+yank alert
