@@ -115,39 +115,83 @@
                              position-seq))))
 
 (defun put-ellipse (center-x center-y
-                    radius1-dx radius1-dy radius2-dx radius2-dy
-                    start-angle end-angle filled)
-  (declare (ignore start-angle end-angle filled))
-  (let* ((kappa (* 4 (/ (- (sqrt 2) 1) 3.0)))
-         (radius-dx (abs (+ radius1-dx radius2-dx)))
-         (radius-dy (abs (+ radius1-dy radius2-dy))))
-    (pdf:move-to (+ center-x radius-dx) center-y)
-    (pdf:bezier-to (+ center-x radius-dx) (+ center-y (* kappa radius-dy))
-                   (+ center-x (* kappa radius-dx)) (+ center-y radius-dy)
-                   center-x (+ center-y radius-dy))
-    (pdf:bezier-to (- center-x (* kappa radius-dx)) (+ center-y radius-dy)
-                   (- center-x radius-dx) (+ center-y (* kappa radius-dy))
-                   (- center-x radius-dx) center-y)
-    (pdf:bezier-to (- center-x radius-dx) (- center-y (* kappa radius-dy))
-                   (- center-x (* kappa radius-dx)) (- center-y radius-dy)
-                   center-x (- center-y radius-dy))
-    (pdf:bezier-to (+ center-x (* kappa radius-dx)) (- center-y radius-dy)
-                   (+ center-x radius-dx) (- center-y (* kappa radius-dy))
-                   (+ center-x radius-dx) center-y)))
+                    a b theta
+                    start-angle end-angle tr filled)
+  "Calls cl-pdf routines to draw a series of cubic bezier curves that
+approximate the ellipse having its center at CENTER-X, CENTER-Y, radii
+A and B angle angle to the postiive x axis theta. If start-angle and
+end-angle are NIL and filled is T, then a solid ellipse is drawn. If
+START-ANGLE and END-ANGLE are specified, draws an ellipse arc between
+the two angles, or a pie-wedge if filled is T."
+  (let ((first-segment t))
+    (let ((theta (transform-angle tr theta)))
+      (flet ((draw-ellipse-segment (lambda1 lambda2)
+               (multiple-value-bind (p1x p1y q1x q1y q2x q2y p2x p2y)
+                   (ellipse-cubic-bezier-points (- lambda1 theta) (- lambda2 theta)
+                                                center-x center-y
+                                                a b theta)
+                 (with-transformed-position (tr p1x p1y)
+                   (with-transformed-position (tr q1x q1y)
+                     (with-transformed-position (tr q2x q2y)
+                       (with-transformed-position (tr p2x p2y)
+                         (when first-segment
+                           (pdf:move-to p1x p1y)
+                           (setf first-segment nil))
+                         (pdf:bezier-to q1x q1y q2x q2y p2x p2y))))))))
+        (if (or (and start-angle end-angle
+                     (zerop start-angle) (= (* pi 2) end-angle))
+                (and start-angle end-angle
+                     (zerop end-angle) (= (* pi 2) start-angle)))
+            (let* ((sweep (* pi 2))
+                   (steps 16)
+                   (step (/ sweep steps)))
+              (let ((seg-start-angle 0)
+                    (seg-end-angle (+ start-angle step)))
+                (loop for i below steps
+                   do (draw-ellipse-segment seg-start-angle seg-end-angle)
+                     (incf seg-start-angle step)
+                     (incf seg-end-angle step))))
+            (flet ((clamp-angle (angle)
+                     (min (max 0 angle) (* pi 2))))
+              (let ((start-angle (- (transform-angle tr (clamp-angle start-angle))))
+                    (end-angle (- (transform-angle tr (clamp-angle end-angle)))))
+                (let* ((sweep (- end-angle start-angle))
+                       (segment-count (ceiling (abs (/ sweep (/ pi 4)))))
+                       (step (/ sweep segment-count)))
+                  (let ((seg-start-angle start-angle)
+                        (seg-end-angle (+ start-angle step)))
+                    (loop for i below segment-count
+                       do (draw-ellipse-segment seg-start-angle
+                                                seg-end-angle)
+                         (incf seg-start-angle step)
+                         (incf seg-end-angle step)))))
+              (when filled
+                (with-transformed-position (tr center-x center-y)
+                  (pdf:line-to center-x center-y)))))))))
+
+(defun put-ellipse* (center-x center-y
+                     radius1-dx radius1-dy radius2-dx radius2-dy
+                     start-angle end-angle tr filled)
+  "Calls cl-pdf routines to draw a series of cubic bezier curves that
+approximate the ellipse having its center at CENTER-X, CENTER-Y, with
+two radii described by RADIUS1-DX, RADIUS1-DY and RADIUS2-DX,
+RADIUS2-DY. If start-angle and end-angle are NIL and filled is T, then
+a solid ellipse is drawn. If START-ANGLE and END-ANGLE are specified,
+draws an ellipse arc between the two angles, or a pie-wedge if filled
+is T."
+  (multiple-value-bind (a b theta)
+      (reparameterize-ellipse radius1-dx radius1-dy radius2-dx radius2-dy)
+    (put-ellipse center-x center-y a b theta start-angle end-angle tr filled)))
 
 (defmethod medium-draw-ellipse* ((medium pdf-medium) center-x center-y
                                  radius1-dx radius1-dy radius2-dx radius2-dy
                                  start-angle end-angle filled)
-  (unless (or (= radius2-dx radius1-dy 0) (= radius1-dx radius2-dy 0))
-    (error "PDF Backend MEDIUM-DRAW-ELLIPSE* not yet implemented for
-    non axis-aligned ellipses."))
   (pdf:with-saved-state
     (let ((tr (sheet-native-transformation (medium-sheet medium))))
       (pdf-actualize-graphics-state medium :line-style :color)
-      (with-transformed-position (tr center-x center-y)
-        (put-ellipse center-x center-y
-                     radius1-dx radius1-dy radius2-dx radius2-dy
-                     start-angle end-angle filled))
+      (put-ellipse* center-x center-y
+                    radius1-dx radius1-dy radius2-dx radius2-dy
+                    start-angle end-angle tr filled)
       (if filled
           (pdf:close-fill-and-stroke)
           (pdf:stroke)))))

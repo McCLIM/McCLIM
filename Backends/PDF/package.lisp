@@ -27,5 +27,9 @@
                 #:map-repeated-sequence
                 #:with-transformed-position
                 #:get-environment-variable
-                #:port-text-style-mappings))
+                #:port-text-style-mappings
+                ;; ellipses
+                #:reparameterize-ellipse
+                #:ellipse-cubic-bezier-points
+                #:transform-angle))
 
