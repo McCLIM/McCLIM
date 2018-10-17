@@ -47,35 +47,50 @@ and the length of resulting sequence are equal."))
          for code across glyph-codes
          with origin-x fixnum = 0
          with origin-y fixnum = 0
+         with line-height = (+ (climb:font-ascent font)
+                               (climb:font-descent font))
+         with width = 0
+         with height = (+ (climb:font-ascent font)
+                          (climb:font-descent font))
+         with line-gap fixnum = 0
          with xmin fixnum = most-positive-fixnum
          with ymin fixnum = most-positive-fixnum
          with xmax fixnum = most-negative-fixnum
          with ymax fixnum = most-negative-fixnum
          as glyph-left fixnum = (+ (climb:font-glyph-left font code) origin-x)
-         as glyph-top fixnum = (+ (climb:font-glyph-top font code) origin-y)
+         as glyph-top fixnum = (- (climb:font-glyph-top font code) origin-y)
          as glyph-right fixnum = (+ (climb:font-glyph-right font code) origin-x)
-         as glyph-bottom fixnum = (+ (climb:font-glyph-bottom font code) origin-y)
+         as glyph-bottom fixnum = (- (climb:font-glyph-bottom font code) origin-y)
          do
-           (alexandria:minf xmin glyph-left)
-           (alexandria:minf ymin glyph-bottom)
-           (alexandria:maxf xmax glyph-right)
-           (alexandria:maxf ymax glyph-top)
-           (incf origin-x (climb:font-glyph-dx font code))
-           (incf origin-y (climb:font-glyph-dy font code))
+         ;; Character may have more than one codepoint so in case of
+         ;; font-glyph-code-char returning string we use EQL not CHAR=.
+           (if (eql (climb:font-glyph-code-char font code) #\newline)
+               (progn
+                 (setf line-gap (ceiling (- (climb:font-leading font)
+                                            (+ (climb:font-ascent font)
+                                               (climb:font-descent font)))))
+                 ;(alexandria:minf height origin-y)
+                 (setf origin-x 0)
+                 (incf origin-y (ceiling (climb:font-leading font))))
+               (progn
+                 (alexandria:minf xmin glyph-left)
+                 (alexandria:minf ymin glyph-bottom)
+                 (alexandria:maxf xmax glyph-right)
+                 (alexandria:maxf ymax glyph-top)
+                 (incf origin-x (climb:font-glyph-dx font code))
+                 (incf origin-y (climb:font-glyph-dy font code))))
+           (alexandria:maxf height origin-y)
+           (alexandria:maxf width origin-x)
          finally
            (return (values xmin (- ymin) xmax (- ymax)
-
                            0
-                           (- (climb:font-ascent font))
-                           origin-x
-                           (+ (climb:font-ascent font)
-                              (climb:font-descent font))
+                           (climb:font-ascent font)
+                           width
+                           (+ origin-y line-height)
 
                            (climb:font-ascent font)
                            (climb:font-descent font)
-                           (- (climb:font-leading font)
-                              (+ (climb:font-ascent font)
-                                 (climb:font-descent font)))
+                           line-gap
                            origin-x origin-y)))))
   (:documentation "Function computes text extents as if it were drawn with a
 specified font. It returns two distinct extents: first is an exact pixel-wise
