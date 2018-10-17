@@ -61,10 +61,9 @@ and the length of resulting sequence are equal."))
          finally
            (return (values xmin (- ymin) xmax (- ymax)
 
-                           (- (climb:font-glyph-left font (aref glyph-codes 0)) 50)
+                           0
                            (- (climb:font-ascent font))
-                           (+ xmax (- (climb:font-glyph-right font code)
-                                      (climb:font-glyph-width font code)))
+                           origin-x
                            (+ (climb:font-ascent font)
                               (climb:font-descent font))
 
@@ -73,7 +72,7 @@ and the length of resulting sequence are equal."))
                            (- (climb:font-leading font)
                               (+ (climb:font-ascent font)
                                  (climb:font-descent font)))
-                           xmax 0)))))
+                           origin-x origin-y)))))
   (:documentation "Function computes text extents as if it were drawn with a
 specified font. It returns two distinct extents: first is an exact pixel-wise
 bounding box. The second is a text bounding box with all its bearings. Text may
