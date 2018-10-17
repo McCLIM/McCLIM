@@ -1652,13 +1652,13 @@ and must never be nil.")
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
-  (let ((minor (+ 50 (if (gadget-show-value-p pane) 30 0)))
+  (let ((minor (+ 8 (* 2 4) (if (gadget-show-value-p pane) 30 0)))
         (major 128))
-  (if (eq (gadget-orientation pane) :vertical)
-      (make-space-requirement :min-width  minor :width  minor
-                              :min-height major :height major)
-    (make-space-requirement :min-width  major :width  major
-                            :min-height minor :height minor))))
+    (if (eq (gadget-orientation pane) :vertical)
+        (make-space-requirement :min-width  minor :width  minor
+                                :min-height major :height major)
+        (make-space-requirement :min-width  major :width  major
+                                :min-height minor :height minor))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
   (with-slots (armed) pane
