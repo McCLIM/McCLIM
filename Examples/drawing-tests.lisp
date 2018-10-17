@@ -1025,6 +1025,20 @@ outside the clipping area should be grey.")
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil
                 :start-angle 0 :end-angle (/ pi 4)))
 
+(define-drawing-test "06) More Arcs" (stream)
+    ""
+  (loop for j from 1 to 4
+     for x from 75 by 100
+     for start-angle from 0 by (/ pi 2)
+     do
+       (loop for i from 1 to 8
+           for y from 50 by 75
+          do
+             (draw-circle* stream x y
+                           40 :ink +blue+ :filled nil
+                           :start-angle start-angle :end-angle (+ start-angle (* i (/ pi 4)))
+                           :line-thickness 2))))
+
 ;;;
 ;;; Text 
 ;;;
@@ -1327,6 +1341,43 @@ outside the clipping area should be grey.")
                                      :ink +blue+ :line-thickness 5)
                         (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
                         (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))))
+
+
+(define-drawing-test "09) Filled Ovals" (stream)
+    ""
+  (let ((scale 0.8))
+    (with-room-for-graphics (stream :first-quadrant nil)
+      (with-scaling (stream scale scale)
+        (with-translation (stream  0 100)
+          (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 11) do
+               (progn (let* ((x2 (* 250 (sin theta)))
+                             (y2 (* 250 (cos theta)))
+                             (x1 (* 0.2 x2))
+                             (y1 (* 0.2 y2)))
+                        (draw-oval* stream
+                                    (/ (+ x1 x2) 2)
+                                    (/ (+ y1 y2) 2)
+                                    (abs (/ (- x2 x1) 2))
+                                    (abs (/ (- y2 y1) 2))
+                                    :line-thickness 3
+                                    :filled t
+                                    :ink +pink+)
+                        (draw-point* stream (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
+                                     :ink +blue+ :line-thickness 5)
+                        (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
+                        (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))))
+
+(define-drawing-test "09) Simple Oval 1" (stream)
+    ""
+  (draw-oval* stream 200 200 25 25 :ink +blue+ :filled nil :line-thickness 4))
+
+(define-drawing-test "09) Simple Oval 2" (stream)
+    ""
+  (draw-oval* stream 200 200 50 25 :ink +blue+ :filled nil :line-thickness 4))
+
+(define-drawing-test "09) Simple Oval 3" (stream)
+    ""
+  (draw-oval* stream 200 200 25 50 :ink +blue+ :filled nil :line-thickness 4))
 
 ;;;
 ;;; Clipping
