@@ -35,6 +35,10 @@ many codepoints, but argument must constitute exactly one character."))
 are composed of many codepoints – it is not guaranteed that length of the string
 and the length of resulting sequence are equal."))
 
+(defgeneric climb:font-glyph-code-char (font code)
+  (:method (font code)
+    (code-char code)))
+
 (defgeneric climb:font-text-extents (font string &key start end direction)
   (:method (font string &key start end direction)
     (declare (ignore direction))

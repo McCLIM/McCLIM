@@ -278,3 +278,6 @@
      finally
        (vector-push (char-code char) array)
        (return array)))
+
+(defmethod climb:font-glyph-code-char ((font truetype-font) code)
+  (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0) code)))
