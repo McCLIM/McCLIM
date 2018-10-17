@@ -146,6 +146,21 @@
              (min-y (elt bounding-box 1))
              (max-x (elt bounding-box 2))
              (max-y (elt bounding-box 3))
+             ;; top-side-bearing is mostly useful for vertical
+             ;; metrics. left-side-bearing is the same as xmin,
+             ;; right-side-bearing may be inferred as well. bottom-side-bearing
+             ;; is usually not mentioned in the literature due to its limited
+             ;; purpose (I'm not aware of any vertical alphabet which direction
+             ;; is bottom-to-top), but we could imagine it has a similar
+             ;; relation as the right-side-bearing.
+             ;;
+             ;;   left-side-bearing = min-x
+             ;;   right-side-bearing = advance-width - left-side-bearing - width
+             ;;   top-side-bearing = baseline + max-y
+             ;;   bottom-side-bearing = advance-height - top-side-bearing - height
+             ;;
+             ;; all these values may be inferred from other glyph properties so
+             ;; we do not return them. -- jd 2018-10-14
              width height left top array)
 
         (with-bounding-rectangle* (x1 y1 x2 y2)
