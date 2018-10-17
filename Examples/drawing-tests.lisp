@@ -220,6 +220,13 @@
          (:skip ()
            :report (lambda (stream) (format stream "skip ~a" (drawing-test-name test)))))))
 
+(defun print-pdf-test (test-name)
+  (let ((test (gethash test-name *drawing-tests*)))
+    (when test
+      (restart-case (drawing-test-pdf test)
+        (:skip ()
+          :report (lambda (stream) (format stream "skip ~a" (drawing-test-name test))))))))
+
 (defun drawing-test-raster-image (test format &optional filename)
   (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
          (test-name (drawing-test-name test))
