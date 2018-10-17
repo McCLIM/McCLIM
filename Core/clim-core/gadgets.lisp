@@ -1642,7 +1642,6 @@ and must never be nil.")
 
 ;; This values should be changeable by user. That's
 ;; why they are parameters, and not constants.
-(defparameter slider-button-long-dim 30)
 (defparameter slider-button-short-dim 10)
 
 (defclass slider-pane (slider
@@ -1737,7 +1736,6 @@ and must never be nil.")
   (declare (ignore region))
   (let ((position (convert-value-to-position pane))
         (slider-button-half-short-dim (ash slider-button-short-dim -1))
-                                        ;(slider-button-half-long-dim  (ash slider-button-long-dim -1))
         (background-color (pane-background pane))
         (inner-color (gadget-current-color pane)))
     (flet ((draw-thingy (x y)
