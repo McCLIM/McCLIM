@@ -1430,28 +1430,6 @@ and RADIUS2-DY"
                 (- p2x e2x) (- p2y e2y)
                 p2x p2y)))))
 
-(defun transformation-angle (tr)
-  "Returns the angle (in radians) described by the given
-transformation."
-  ;; We can't just use the parameters of the transformation for this,
-  ;; so we take two orthogonal vectors, transform them with tr and
-  ;; compute the angle between the two transformed vectors.
-  (let ((x1 0) (y1 1)
-        (x2 1) (y2 0))
-    (multiple-value-bind (tx1 ty1)
-        (transform-position tr x1 y1)
-      (multiple-value-bind (tx2 ty2)
-          (transform-position tr x2 y2)
-        (+ (find-angle* tx1 ty1 tx2 ty2))))))
-
-(defun transform-angle (tr angle)
-  "Returns the angle corresponding to the direction of a vector having
-angle ANGLE after transforming the vector with TR. Note that this is
-independent of the specific (non-zero) vector and only the
-transformation and angle are needed."
-  (+ angle (transformation-angle tr)))
-
-
 ;;;; ===========================================================================
 
 (defmethod region-union ((a point) (b point))
