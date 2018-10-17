@@ -529,14 +529,14 @@ and must never be nil.")
 
 ;;; 30.4.6 The abstract radio-box and check-box Gadgets
 
-;; The only real different between a RADIO-BOX and a CHECK-BOX is the
+;; The only real difference between a RADIO-BOX and a CHECK-BOX is the
 ;; number of allowed selections.
 
 (defclass radio-box (value-gadget oriented-gadget-mixin)
   ()
   (:documentation "The value is a button")
   (:default-initargs
-    :value nil))
+   :value nil))
 
 ;; RADIO-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
 
@@ -784,9 +784,10 @@ and must never be nil.")
 
 (defmethod compose-label-space ((gadget labelled-gadget-mixin) &key (wider 0) (higher 0))
   (with-slots (label align-x align-y) gadget
-    (let* ((as (text-style-ascent (pane-text-style gadget) gadget))
-           (ds (text-style-descent (pane-text-style gadget) gadget))
-           (w  (+ (text-size gadget label :text-style (pane-text-style gadget)) wider))
+    (let* ((text-style (pane-text-style gadget))
+           (as (text-style-ascent text-style gadget))
+           (ds (text-style-descent text-style gadget))
+           (w  (+ (text-size gadget label :text-style text-style) wider))
            (h  (+ as ds higher)))
       (make-space-requirement :width w  :min-width w  :max-width  +fill+
                               :height h :min-height h :max-height +fill+))))
@@ -796,9 +797,10 @@ and must never be nil.")
 (defmethod draw-label* ((pane labelled-gadget-mixin) x1 y1 x2 y2
                         &key (ink +foreground-ink+))
   (with-slots (align-x align-y label) pane
-    (let ((as (text-style-ascent (pane-text-style pane) pane))
-          (ds (text-style-descent (pane-text-style pane) pane))
-          (w  (text-size pane label :text-style (pane-text-style pane))))
+    (let* ((text-style (pane-text-style pane))
+           (as (text-style-ascent text-style pane))
+           (ds (text-style-descent text-style pane))
+           (w  (text-size pane label :text-style text-style)))
       (draw-text* pane label
                   (case align-x
                     ((:left) x1)
@@ -811,7 +813,7 @@ and must never be nil.")
                     ((:bottom) (- y2 ds))
                     (otherwise (/ (+ y1 y2 (- as ds)) 2))) ;defensive programming
                   ;; Giving the text-style here shouldn't be neccessary --GB
-                  :text-style (pane-text-style pane)
+                  :text-style text-style
                   :ink ink))))
 
 ;;; 3D-ish Look
