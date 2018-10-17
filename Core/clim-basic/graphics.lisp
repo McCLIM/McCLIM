@@ -2,7 +2,7 @@
 
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;  (c) copyright 2014 by 
+;;;  (c) copyright 2014 by
 ;;;      Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -16,14 +16,14 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
 
 ;;; Work in progress that reduces consing of rest arguments and keyword
-;;; processing. 
+;;; processing.
 (defmacro with-medium-and-options ((sheet
 				    &key ink clipping-region transformation
 				    line-unit line-thickness
@@ -67,7 +67,7 @@
 ;;; CLIM-INTERNALS package.  It is used in the expansion of the macro
 ;;; WITH-MEDIUM-OPTIONS.
 (defgeneric do-graphics-with-options (medium function &rest options))
-	  
+
 (defmethod do-graphics-with-options ((sheet sheet) func &rest options)
   (with-sheet-medium (medium sheet)
     (let ((*foreground-ink* (medium-foreground medium))
@@ -111,7 +111,7 @@
     (unwind-protect
         (progn
           (when (eq ink old-ink) (setf ink nil))
-          
+
 	  (when ink
 	      (setf (medium-ink medium) ink))
 	  (when transformation
@@ -167,10 +167,10 @@
                                                 text-style)))
           (when changed-text-style
             (setf (medium-text-style medium) text-style))
-          
+
 	  (when orig-medium
 	    (funcall func orig-medium)))
-        
+
       (when ink
 	(setf (medium-ink medium) old-ink))
       ;; First set transformation, then clipping!
@@ -180,7 +180,7 @@
 	(setf (medium-clipping-region medium) old-clip))
       (when changed-line-style
         (setf (medium-line-style medium) old-line-style))
-      (when changed-text-style 
+      (when changed-text-style
         (setf (medium-text-style medium) old-text-style)))))
 
 (defmacro with-medium-options ((sheet args)
@@ -214,13 +214,15 @@
 					&rest drawing-options)
   (with-sheet-medium (medium sheet)
     (with-medium-options (medium drawing-options)
-      (funcall continuation medium))))
+      ;; We need to pass SHEET to CONTINUATION (not MEDIUM, like we
+      ;; used to) so that output recording works.
+      (funcall continuation sheet))))
 
 ;;; Compatibility with real CLIM
-(defmethod invoke-with-drawing-options ((sheet t) continuation
+(defmethod invoke-with-drawing-options ((medium t) continuation
 					&rest drawing-options)
   (declare (ignore drawing-options))
-  (funcall continuation sheet))
+  (funcall continuation medium))
 
 (defmethod invoke-with-identity-transformation
     ((sheet sheet) continuation)
@@ -654,7 +656,7 @@ position for the character."
 				       (- q head-length) width/2)
 				 :filled nil
 				 :closed nil))
-		
+
 		(unless (< q p)
 		  (draw-line* sheet q 0 p 0)))))))))
 
@@ -769,7 +771,7 @@ position for the character."
                 (,record (with-output-to-output-record (,medium-var)
                            ,@body)))
            (with-output-to-pixmap
-               (,medium-var 
+               (,medium-var
                 ,sheet
                 :width ,(or width `(bounding-rectangle-width ,record))
                 :height ,(or height `(bounding-rectangle-height ,record)))
@@ -802,7 +804,7 @@ position for the character."
 			       (- pixmap-y1)))
 	       (pixmap (allocate-pixmap msheet pixmap-width pixmap-height)))
 	  (unless pixmap
-	    (error "Couldn't allocate pixmap")) 
+	    (error "Couldn't allocate pixmap"))
 	  (multiple-value-bind (user-pixmap-x1 user-pixmap-y1)
 	      (untransform-position world-transform pixmap-x1 pixmap-y1)
 	    (multiple-value-bind (user-pixmap-x2 user-pixmap-y2)
@@ -1085,7 +1087,7 @@ position for the character."
       (let ((medium sheet))
         (if (not (and (>= (- x2 x1) (* 2 radius-x))
                       (>= (- y2 y1) (* 2 radius-y))))
-            (draw-rectangle* medium x1 y1 x2 y2)       
+            (draw-rectangle* medium x1 y1 x2 y2)
             (with-grown-rectangle* ((ix1 iy1 ix2 iy2) (x1 y1 x2 y2)
                                     :radius-left   (- radius-left)
                                     :radius-right  (- radius-right)
@@ -1159,4 +1161,3 @@ position for the character."
                                   :radius-left :radius-right
                                   :radius-top  :radius-bottom))
      args)))
-
