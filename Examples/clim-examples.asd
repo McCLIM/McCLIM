@@ -5,6 +5,8 @@
     :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image #:mcclim-bezier #:closer-mop)
     :components
     ((:file "package")
+     (:file "text-size-util")
+
      (:file "calculator")
      (:file "colorslider")
      (:file "menutest")                 ; extra
@@ -28,14 +30,14 @@
      (:file "stopwatch")
      (:file "dragndrop-translator")
      (:file "draggable-graph")
-     (:file "text-size-test")
+     (:file "text-size-test" :depends-on ("text-size-util"))
      (:file "drawing-benchmark")
      (:file "logic-cube")
      (:file "views")
      (:file "font-selector")
      (:file "bordered-output-examples")
      (:file "misc-tests")
-     (:file "drawing-tests" :depends-on ("text-size-test"))
+     (:file "drawing-tests" :depends-on ("text-size-util"))
      (:file "render-image-tests")
      (:file "image-viewer")
      (:file "accepting-values")
