@@ -501,8 +501,7 @@
 
 ;;; 30.4.5 The abstract slider Gadget
 
-(defclass slider (labelled-gadget-mixin
-		  value-gadget
+(defclass slider (value-gadget
 		  oriented-gadget-mixin
 		  range-gadget-mixin)
   ((drag-callback  :initform nil
@@ -529,14 +528,14 @@ and must never be nil.")
 
 ;;; 30.4.6 The abstract radio-box and check-box Gadgets
 
-;; The only real different between a RADIO-BOX and a CHECK-BOX is the
+;; The only real difference between a RADIO-BOX and a CHECK-BOX is the
 ;; number of allowed selections.
 
 (defclass radio-box (value-gadget oriented-gadget-mixin)
   ()
   (:documentation "The value is a button")
   (:default-initargs
-    :value nil))
+   :value nil))
 
 ;; RADIO-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
 
@@ -784,9 +783,10 @@ and must never be nil.")
 
 (defmethod compose-label-space ((gadget labelled-gadget-mixin) &key (wider 0) (higher 0))
   (with-slots (label align-x align-y) gadget
-    (let* ((as (text-style-ascent (pane-text-style gadget) gadget))
-           (ds (text-style-descent (pane-text-style gadget) gadget))
-           (w  (+ (text-size gadget label :text-style (pane-text-style gadget)) wider))
+    (let* ((text-style (pane-text-style gadget))
+           (as (text-style-ascent text-style gadget))
+           (ds (text-style-descent text-style gadget))
+           (w  (+ (text-size gadget label :text-style text-style) wider))
            (h  (+ as ds higher)))
       (make-space-requirement :width w  :min-width w  :max-width  +fill+
                               :height h :min-height h :max-height +fill+))))
@@ -796,9 +796,10 @@ and must never be nil.")
 (defmethod draw-label* ((pane labelled-gadget-mixin) x1 y1 x2 y2
                         &key (ink +foreground-ink+))
   (with-slots (align-x align-y label) pane
-    (let ((as (text-style-ascent (pane-text-style pane) pane))
-          (ds (text-style-descent (pane-text-style pane) pane))
-          (w  (text-size pane label :text-style (pane-text-style pane))))
+    (let* ((text-style (pane-text-style pane))
+           (as (text-style-ascent text-style pane))
+           (ds (text-style-descent text-style pane))
+           (w  (text-size pane label :text-style text-style)))
       (draw-text* pane label
                   (case align-x
                     ((:left) x1)
@@ -811,7 +812,7 @@ and must never be nil.")
                     ((:bottom) (- y2 ds))
                     (otherwise (/ (+ y1 y2 (- as ds)) 2))) ;defensive programming
                   ;; Giving the text-style here shouldn't be neccessary --GB
-                  :text-style (pane-text-style pane)
+                  :text-style text-style
                   :ink ink))))
 
 ;;; 3D-ish Look
@@ -1640,7 +1641,6 @@ and must never be nil.")
 
 ;; This values should be changeable by user. That's
 ;; why they are parameters, and not constants.
-(defparameter slider-button-long-dim 30)
 (defparameter slider-button-short-dim 10)
 
 (defclass slider-pane (slider
@@ -1652,13 +1652,13 @@ and must never be nil.")
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
-  (let ((minor (+ 50 (if (gadget-show-value-p pane) 30 0)))
+  (let ((minor (+ 8 (* 2 4) (if (gadget-show-value-p pane) 30 0)))
         (major 128))
-  (if (eq (gadget-orientation pane) :vertical)
-      (make-space-requirement :min-width  minor :width  minor
-                              :min-height major :height major)
-    (make-space-requirement :min-width  major :width  major
-                            :min-height minor :height minor))))
+    (if (eq (gadget-orientation pane) :vertical)
+        (make-space-requirement :min-width  minor :width  minor
+                                :min-height major :height major)
+        (make-space-requirement :min-width  major :width  major
+                                :min-height minor :height minor))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
   (with-slots (armed) pane
@@ -1735,7 +1735,6 @@ and must never be nil.")
   (declare (ignore region))
   (let ((position (convert-value-to-position pane))
         (slider-button-half-short-dim (ash slider-button-short-dim -1))
-                                        ;(slider-button-half-long-dim  (ash slider-button-long-dim -1))
         (background-color (pane-background pane))
         (inner-color (gadget-current-color pane)))
     (flet ((draw-thingy (x y)
