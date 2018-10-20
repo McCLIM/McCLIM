@@ -446,9 +446,9 @@ the associated sheet can be determined."
                :report "Delete from the old parent."
                (delete-output-record child parent))))
           ((eq record child)
-           (error "~S is being added to itself" record))
+           (error "~S is being added to itself." record))
           ((eq (output-record-parent record) child)
-           (error "child ~S is being added to its own child ~S"
+           (error "child ~S is being added to its own child ~S."
                   child record)))))
 
 (defmethod add-output-record :after (child (record compound-output-record))
