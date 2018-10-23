@@ -170,13 +170,9 @@ the two angles, or a pie-wedge if filled is T."
           ;; McCLIM wants 0 to be parallel to positive X axis, and the
           ;; angles to go CCW in a :first-quadrant nil sense so we
           ;; need to:
-          ;;
           ;; 1. swap end-angle and start-angle
-          ;;
           ;; 2. subtract minus theta from both start-angle and end-angle.
-          ;;
           ;; 3. reverse the signs
-          ;;
           ;; that reduces to:
           (let ((start-angle (- (+ end-angle theta)))
                 (end-angle (- (+ start-angle theta))))
