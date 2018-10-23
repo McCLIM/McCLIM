@@ -47,11 +47,9 @@ and the length of resulting sequence are equal."))
          for code across glyph-codes
          with origin-x fixnum = 0
          with origin-y fixnum = 0
-         with line-height = (+ (climb:font-ascent font)
-                               (climb:font-descent font))
+         with line-height = (+ (climb:font-ascent font) (climb:font-descent font))
          with width = 0
-         with height = (+ (climb:font-ascent font)
-                          (climb:font-descent font))
+         with height = line-height
          with line-gap fixnum = 0
          with xmin fixnum = most-positive-fixnum
          with ymin fixnum = most-positive-fixnum
@@ -79,19 +77,20 @@ and the length of resulting sequence are equal."))
                  (alexandria:maxf ymax glyph-top)
                  (incf origin-x (climb:font-glyph-dx font code))
                  (incf origin-y (climb:font-glyph-dy font code))))
-           (alexandria:maxf height origin-y)
+           (alexandria:maxf height (+ origin-y line-height))
            (alexandria:maxf width origin-x)
          finally
-           (return (values xmin (- ymin) xmax (- ymax)
-                           0
-                           (climb:font-ascent font)
-                           width
-                           (+ origin-y line-height)
-
-                           (climb:font-ascent font)
-                           (climb:font-descent font)
-                           line-gap
-                           origin-x origin-y)))))
+           (return (values
+                    ;; text bounding box (x1, y1, x2, y2)
+                    xmin (- ymin) xmax (- ymax)
+                    ;; text-bounding-rectangle
+                    0 #|x0|# (climb:font-ascent font) #|y0|# width height
+                    ;; line properties (ascent, descent, line gap)
+                    (climb:font-ascent font)
+                    (climb:font-descent font)
+                    line-gap
+                    ;; cursor-dx cursor-dy
+                    origin-x origin-y)))))
   (:documentation "Function computes text extents as if it were drawn with a
 specified font. It returns two distinct extents: first is an exact pixel-wise
 bounding box. The second is a text bounding box with all its bearings. Text may
