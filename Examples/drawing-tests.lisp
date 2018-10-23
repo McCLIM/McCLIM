@@ -830,7 +830,7 @@ min-y and max-y are (extremum points) are."
                                 end-angle
                                 (draw-ellipse-parameters t)
                                 (ellipse-parameter-color-1 +red+)
-                                (ellipse-parameter-color-2 +black+)
+                                (ellipse-parameter-color-2 +blue+)
                                 &allow-other-keys)
   (declare (ignore start-angle end-angle))
   (apply #'draw-ellipse* sheet center-x  center-y
@@ -882,67 +882,68 @@ min-y and max-y are (extremum points) are."
                           a b theta (* 180 (/ theta pi)))
                   10 70))))
 
+(define-drawing-test "05) Simple Ellipse 1" (stream)
+    "An off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
+                 :line-thickness 6))
+
+
+(define-drawing-test "05) Simple Ellipse 2" (stream)
+    "An black-filled off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled t
+                 :line-thickness 6))
+
+(define-drawing-test "05) Simple Ellipse 3" (stream)
+    "An orange-filled off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+))
+
+
+(define-drawing-test "05) Simple Ellipse 4" (stream)
+    "An off-axis ellipse pointing to the lower right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* 150 100 0 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Ellipse 5" (stream)
+    "An off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests radii with an angle between them of > 90 degrees."
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -100 0 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Ellipse 6" (stream)
+    "An off-axis ellipse pointing to the lower right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests drawing of long, very skinny ellipses."
+  (test-draw-ellipse* stream *center-x* *center-y* 100 99 60 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Ellipse 7" (stream)
+    "An off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests radii with an angle between them of 90 degrees."
+  (test-draw-ellipse* stream *center-x* *center-y* 100 -99 60 60
+                      :ink +dark-green+ :filled nil))
+
 (define-drawing-test "05) Simple Ellipse Arc 1" (stream)
-    ""
+    "An off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
   (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
                  :line-thickness 6
                  :start-angle 0 :end-angle pi))
 
 (define-drawing-test "05) Simple Ellipse Arc 2" (stream)
-    ""
+    "An off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests ellipse arcs of greater than 180 degrees. The gap in the arc should be in the lower right of the ellipse."
   (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
                  :line-thickness 6
                  :start-angle 0 :end-angle (* 6 (/ pi 4))))
 
-(define-drawing-test "05) Simple Ellipse 1" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
-                 :line-thickness 6))
-
-(define-drawing-test "05) Simple Filled Ellipse 1" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled t
-                 :line-thickness 6))
-
-(define-drawing-test "05) Simple Ellipse 2" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+))
-
-(define-drawing-test "05) Simple Ellipse 4" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
-                 :start-angle 0 :end-angle (/ pi 2)))
-
-(define-drawing-test "05) Simple Ellipse 5" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
-                 :start-angle 0 :end-angle pi))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 1" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 150 100 0 60
-                      :ink +dark-green+ :filled nil))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 2" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 150 -100 0 60
-                      :ink +dark-green+ :filled nil))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 3" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 100 99 60 60
-                      :ink +dark-green+ :filled nil))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 4" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 100 -99 60 60
-                      :ink +dark-green+ :filled nil))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 5 (0-90 deg)" (stream)
-    ""
+(define-drawing-test "05) Simple Ellipse Arc 3" (stream)
+    "An off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests ellipse arcs of greater than 180 degrees. The gap in the arc should be in the lower right of the ellipse. This tests drawing an arc angle from 90 degrees to 180 degrees. The green arc should extend from r1 to a point above the center."
   (test-draw-ellipse* stream *center-x* *center-y* 100 -99 60 60
                       :ink +dark-green+ :filled nil :start-angle (/ pi 4) :end-angle (/ pi 2)))
 
+(define-drawing-test "05) Simple Ellipse Arc 4" (stream)
+    "An orange-filled off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
+                 :start-angle 0 :end-angle (/ pi 2)))
+
+(define-drawing-test "05) Simple Ellipse Arc 5" (stream)
+    "An orange-filled off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests an arc angle from 0 to 180 degrees."
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
+                 :start-angle 0 :end-angle pi))
 
 
 ;;;
