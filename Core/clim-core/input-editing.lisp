@@ -514,7 +514,7 @@ for format."
   ((string :reader not-required-type-string :initarg :string)
    (type :reader not-required-type-type :initarg :type))
   (:report (lambda (condition stream)
-	     (format stream "Input ~S is not of required type ~S"
+	     (format stream "Input ~S is not of required type ~S."
 		     (not-required-type-string condition)
 		     (not-required-type-type condition))))
   (:documentation "The error that is signalled by

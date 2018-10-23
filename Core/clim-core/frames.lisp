@@ -411,14 +411,14 @@ documentation produced by presentations.")
             (unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
               (setf (pane-needs-redisplay pane-object) nil))))
       (clear-pane-try-again ()
-       :report "Clear the output history of the pane and reattempt forceful redisplay"
+       :report "Clear the output history of the pane and reattempt forceful redisplay."
        (window-clear pane)
        (redisplay-frame-pane frame pane :force-p t))
       (clear-pane ()
-       :report "Clear the output history of the pane, but don't redisplay"
+       :report "Clear the output history of the pane, but don't redisplay."
        (window-clear pane))
       (skip-redisplay ()
-       :report "Skip this redisplay"))))
+       :report "Skip this redisplay."))))
 
 (defmethod run-frame-top-level ((frame application-frame)
 				&key &allow-other-keys)
@@ -520,7 +520,7 @@ documentation produced by presentations.")
                    (let ((command (read-frame-command frame :stream nil)))
                      (when command (execute-frame-command frame command)))))
            (abort ()
-             :report "Return to application command loop"
+             :report "Return to application command loop."
              (if interactorp
                  (format *query-io* "~&Command aborted.~&")
                  (beep))))))))
@@ -560,13 +560,13 @@ documentation produced by presentations.")
   ;; *application-frame* to decide, which process processes which
   ;; frames command loop. Perhaps looking ath the process slot?
   ;; --GB 2005-11-28
+  (check-type command cons)
   (cond ((eq *application-frame* frame)
          (restart-case
              (apply (command-name command) (command-arguments command))
            (try-again ()
             :report (lambda (stream)
-                      (format stream "Try executing the command ~A again"
-                              (command-name command)))
+                      (format stream "Try executing the command ~S again." (command-name command)))
             (execute-frame-command frame command))))
         (t
          (let ((eq (sheet-event-queue (frame-top-level-sheet frame))))
