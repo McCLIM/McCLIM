@@ -124,8 +124,10 @@
     ;; the X/Y if it will be different for the supplied positioning and then
     ;; increase it for each line. -- jd 2018-10-08
     (case align-y
-      (:center (setq y (- y (/ (* y-dx (count #\newline string)) 2))))
-      ((:bottom :last-line-baseline) (setq y (- y (* y-dx (count #\newline string))))))
+      (:center
+       (setq y (- y (/ (* y-dx (count #\newline string)) 2))))
+      ((:bottom :baseline*)
+       (setq y (- y (* y-dx (count #\newline string))))))
     (dolines (line string)
       (unless (alexandria:emptyp line)
         (call-next-method medium line x y 0 (length line)
@@ -152,17 +154,16 @@
   (when (alexandria:emptyp string)
     (return-from clim:medium-draw-text*))
   (with-clx-graphics () medium
-    (unless (or (eq align-y :baseline)
-                (eq align-y :first-line-baseline))
+    (unless (eq align-y :baseline)
       (let* ((font (clim-clx::text-style-to-X-font (port medium) (medium-text-style medium)))
              (ascent (climb:font-ascent font))
              (descent (climb:font-descent font))
              (text-height (+ ascent descent)))
         (setq y (ecase align-y
                   (:top (+ y ascent))                              ; OK
-                  #+ (or) ((:baseline :first-line-baseline) y)     ; OK
+                  #+ (or) (:baseline y)                            ; OK
                   (:center (+ y ascent (- (/ text-height 2.0s0)))) ; See :around for multiline
-                  (:last-line-baseline  y)                         ; See :around for multiline
+                  (:baseline* y)                                   ; See :around for multiline
                   (:bottom (- y descent))))))                      ; See :around for multiline
     (unless (eq align-x :left)
       ;; This is the worst case - we need to compute whole text width what

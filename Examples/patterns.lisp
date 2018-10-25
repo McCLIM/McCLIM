@@ -209,10 +209,6 @@ right-trimmed for spaces."
     (multiple-value-setq (string remainder)
       (%split-line #\space text :count count :from-end t))))
 
-;;; XXX: add draw-in a box (so center/align-x/etc doesn't requier adjusting
-;;; align-x align-y), maybe draw-text**.
-;;;
-;;; XXX [done] add :first-line-baseline (same as :baseline) and :last-line-baseline.
 (defun draw-string (pane string x y &rest args
                     &key (align-x :left) (align-y :baseline) &allow-other-keys)
   "Like format but works on medium and takes draw-text* arguments. Wraps by word"
@@ -244,10 +240,10 @@ right-trimmed for spaces."
                     (push current final-lines)
                     (incf dy text-ascent))))
          (start-y (ecase align-y
-                    ((:top :baseline :first-line-baseline) y)
-                    ((:bottom :last-line-baseline) (- y (* (1- (length lines)) text-ascent)))
+                    ((:top :baseline) y)
+                    ((:bottom :baseline*) (- y (* (1- (length lines)) text-ascent)))
                     (:center (- y (* 0.5 (1- (length lines)) text-ascent))))))
-    (when (member align-y '(:first-line-baseline :last-line-baseline))
+    (when (member align-y '(:baseline :baseline*))
       (setf (getf args :align-y) :baseline))
     (dolist (line lines)
       (apply #'draw-text* pane line x start-y args)

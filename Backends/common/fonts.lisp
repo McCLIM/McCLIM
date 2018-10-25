@@ -47,6 +47,7 @@ and the length of resulting sequence are equal."))
          for code across glyph-codes
          with origin-x fixnum = 0
          with origin-y fixnum = 0
+         with newline-counter fixnum = 0
          with line-height = (+ (climb:font-ascent font) (climb:font-descent font))
          with width = 0
          with height = line-height
@@ -57,19 +58,19 @@ and the length of resulting sequence are equal."))
          with ymax fixnum = most-negative-fixnum
          as glyph-left fixnum = (+ (climb:font-glyph-left font code) origin-x)
          as glyph-top fixnum = (- (climb:font-glyph-top font code) origin-y)
-         as glyph-right fixnum = (+ (climb:font-glyph-right font code) origin-x)
-         as glyph-bottom fixnum = (- (climb:font-glyph-bottom font code) origin-y)
+         as glyph-right fixnum = (+ (climb:font-glyph-right font code) origin-x -1)
+         as glyph-bottom fixnum = (- (climb:font-glyph-bottom font code) origin-y -1)
          do
          ;; Character may have more than one codepoint so in case of
          ;; font-glyph-code-char returning string we use EQL not CHAR=.
            (if (eql (climb:font-glyph-code-char font code) #\newline)
                (progn
+                 (incf newline-counter)
                  (setf line-gap (ceiling (- (climb:font-leading font)
                                             (+ (climb:font-ascent font)
                                                (climb:font-descent font)))))
-                 ;(alexandria:minf height origin-y)
                  (setf origin-x 0)
-                 (incf origin-y (ceiling (climb:font-leading font))))
+                 (setf origin-y (ceiling (* newline-counter (climb:font-leading font)))))
                (progn
                  (alexandria:minf xmin glyph-left)
                  (alexandria:minf ymin glyph-bottom)
