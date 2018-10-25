@@ -1559,30 +1559,49 @@ were added."
   ;; FIXME: Multiple lines.
   (let* ((transformation (medium-transformation medium))
          (text-style (graphics-state-text-style graphic))
-         (width (if (characterp string)
-                    (stream-character-width stream string :text-style text-style)
-                    (stream-string-width stream string
-                                         :start start :end end
-                                         :text-style text-style)) )
          (ascent (text-style-ascent text-style (sheet-medium stream)))
          (descent (text-style-descent text-style (sheet-medium stream))))
     (setf (graphics-state-transformation graphic) transformation)
     (multiple-value-bind (left top right bottom)
-        (text-bounding-rectangle* medium string :start start :end end :text-style text-style)
-      (ecase align-x
-        (:left (incf left point-x) (incf right point-x))
-        (:right (incf left (- point-x width)) (incf right (- point-x width)))
-        (:center (incf left (- point-x (round width 2)))
-         (incf right (- point-x (round width 2)))))
-      (ecase align-y
-        ((:first-line-baseline :baseline) (incf top point-y) (incf bottom point-y))
-        (:last-line-baseline (incf top point-y) (incf bottom point-y))
-        (:top (incf top (+ point-y ascent))
-         (incf bottom (+ point-y ascent)))
-        (:bottom (incf top (- point-y descent))
-         (incf bottom (- point-y descent)))
-        (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
-         (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
+        (text-bounding-rectangle* medium string
+                                  :start start :end end
+                                  :text-style text-style)
+      ;; Note that this is slightly incorrect for multiline text which is not
+      ;; top/left aligned. For instance in right-aligned text shorter line's
+      ;; left-bearing is -1 and the longest line's is 0. In that case
+      ;; text-bounding-rectangle* will return xmin=-1 despite the shorter line
+      ;; not being on the boundary. -- jd 2018-10-25
+      (let ((width (- right left)))
+        (ecase align-x
+          (:left
+           (incf left point-x)
+           (incf right point-x))
+          (:right
+           (decf left (+ point-x width))
+           (decf right (+ point-x width)))
+          (:center
+           (incf left (- point-x (floor width 2)))
+           (incf right (- point-x (floor width 2))))))
+      (let ((height (- top bottom)))
+        (ecase align-y
+          (:baseline
+           (incf top point-y)
+           (incf bottom point-y))
+          (:baseline*
+           (setf top (- (+ point-y descent) height))
+           (setf bottom (+ point-y descent)))
+          (:top
+           (incf top (+ point-y ascent))
+           (incf bottom (+ point-y ascent)))
+          (:bottom
+           (incf top (+ point-y ascent (- height)))
+           (incf bottom (+ point-y ascent (- height))))
+          (:center
+           (incf top (+ point-y ascent (- (ceiling height 2))))
+           (incf bottom (+ point-y ascent (- (ceiling height 2)))))))
+      #+ (or)
+      (with-drawing-options (medium :line-dashes t :ink +red+)
+        (medium-draw-rectangle* medium left top right bottom nil))
       (enclosing-transform-polygon transformation (list left top
                                                         right top
                                                         left bottom

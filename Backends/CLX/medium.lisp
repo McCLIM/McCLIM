@@ -909,9 +909,9 @@ translated, so they begin at different position than [0,0])."))
                          (:right text-width))))         ; worst case
           (setq y (ecase align-y
                     (:top (+ y baseline))                              ; OK
-                    (:first-line-baseline :baseline y)                 ; OK
+                    (:baseline y)                                      ; OK
                     (:center (+ y baseline (- (floor text-height 2)))) ; change
-                    (:last-line-baseline  y)                           ; change
+                    (:baseline*  y)                                    ; change
                     (:bottom (+ y baseline (- text-height)))))))       ; change
       (font-draw-glyphs xfont mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
                         :transformation merged-transform))))
