@@ -1321,7 +1321,7 @@ outside the clipping area should be grey.")
 ;;;
 
 (define-drawing-test "09) Ovals" (stream)
-    ""
+    "Draws 12 unfilled ovals in various orientations, including one that reduces to a single line and another that yields a circle."
   (let ((scale 0.8))
     (with-room-for-graphics (stream :first-quadrant nil)
       (with-scaling (stream scale scale)
@@ -1345,7 +1345,7 @@ outside the clipping area should be grey.")
 
 
 (define-drawing-test "09) Filled Ovals" (stream)
-    ""
+    "Draws 12 filled ovals in various orientations, including one that reduces to a single line and another that yields a circle. The ovals overlap so it is not possible to make out all 12 ovals."
   (let ((scale 0.8))
     (with-room-for-graphics (stream :first-quadrant nil)
       (with-scaling (stream scale scale)
@@ -1369,15 +1369,11 @@ outside the clipping area should be grey.")
                         (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))))
 
 (define-drawing-test "09) Simple Oval 1" (stream)
-    ""
+    "Draws a single blue, unfilled oval, wider than it is tall."
   (draw-oval* stream 200 200 25 25 :ink +blue+ :filled nil :line-thickness 4))
 
 (define-drawing-test "09) Simple Oval 2" (stream)
-    ""
-  (draw-oval* stream 200 200 50 25 :ink +blue+ :filled nil :line-thickness 4))
-
-(define-drawing-test "09) Simple Oval 3" (stream)
-    ""
+    "Draws a single blue, unfilled oval, taller than it is wide."
   (draw-oval* stream 200 200 25 50 :ink +blue+ :filled nil :line-thickness 4))
 
 ;;;
