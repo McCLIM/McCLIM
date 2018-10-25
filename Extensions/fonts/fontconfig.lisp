@@ -24,7 +24,7 @@
   (find-if #'probe-file
            '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
              #p"/usr/share/fonts/truetype/dejavu/"
-	     #p"/usr/share/fonts/truetype/"
+             #p"/usr/share/fonts/truetype/"
              #p"/usr/share/fonts/TTF/"
              #p"/usr/share/fonts/"
              #p"/usr/local/share/fonts/dejavu/"
