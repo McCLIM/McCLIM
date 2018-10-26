@@ -1813,7 +1813,7 @@ were added."
                                            :adjustable t
                                            :fill-pointer t)))))
     (multiple-value-bind (minx miny maxx maxy)
-        (text-bounding-rectangle* medium character :text-style text-style)
+        (text-bounding-rectangle* medium (string character) :text-style text-style)
       (declare (ignore miny maxy))
       (setq baseline (max baseline new-baseline)
             ;; KLUDGE: note END-X here is really START-X of the new

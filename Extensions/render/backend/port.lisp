@@ -24,7 +24,7 @@
 ;;; Fonts
 ;;;
 
-(defmethod text-style-to-font ((port render-port-mixin)
+(defmethod climb:text-style-to-font ((port render-port-mixin)
                                (text-style standard-text-style))
   (labels
       ((find-and-make-truetype-font (family face size)
@@ -62,7 +62,7 @@
               (or (find-truetype-font port text-style)
                   (invoke-with-truetype-path-restart #'find-font))))))
 
-(defmethod text-style-to-font ((port render-port-mixin) (gs-text-style cons))
+(defmethod climb:text-style-to-font ((port render-port-mixin) (gs-text-style cons))
   (text-style-to-font port (apply #'make-text-style gs-text-style)))
 
 (defmethod clim-internals::text-style-size ((gs-text-style cons))

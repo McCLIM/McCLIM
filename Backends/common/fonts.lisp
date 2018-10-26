@@ -143,7 +143,26 @@ of letters specified in a separate kerning-table."))
 
 (defgeneric climb:text-style-to-font (port text-style))
 
-;(defgeneric climb:text-style-character-width)
+(defmethod text-style-ascent (text-style medium)
+  (let ((font (text-style-to-font (port medium) text-style)))
+    (climb:font-ascent font)))
+
+(defmethod text-style-descent (text-style medium)
+  (let ((font (text-style-to-font (port medium) text-style)))
+    (climb:font-descent font)))
+
+(defmethod text-style-height (text-style medium)
+  (let ((font (text-style-to-font (port medium) text-style)))
+    (+ (climb:font-ascent font) (climb:font-descent font))))
+
+(defmethod text-style-character-width (text-style medium char)
+  (climb:font-character-width (text-style-to-font (port medium) text-style) char))
+
+(defmethod text-style-width (text-style medium)
+  (text-style-character-width text-style medium #\m))
+
+(defmethod text-style-fixed-width-p (text-style medium)
+  (eql (text-style-family text-style) :fix))
 
 (defgeneric climb:text-bounding-rectangle*
     (medium string &key text-style start end &allow-other-keys)
@@ -179,15 +198,15 @@ xmin ymin xmax ymax."))
 (defmethod text-size (medium string &key text-style (start 0) end
                       &aux (end (or end (length string))))
   (when (= start end)
-    (return-from text-size (values 0 0 0 0)))
+    (return-from text-size (values 0 0 0 0 (text-style-ascent text-style medium))))
   (let ((text (string string))
         (font (text-style-to-font (port medium)
                                   (merge-text-styles text-style
                                                      (medium-merged-text-style medium)))))
     (multiple-value-bind (xmin ymin xmax ymax
-                               left top width height
-                               ascent descent linegap
-                               cursor-dx cursor-dy)
+                          left top width height
+                          ascent descent linegap
+                          cursor-dx cursor-dy)
         (climb:font-text-extents font text :start start :end end)
       (declare (ignore xmin ymin xmax ymax left top descent linegap))
       (values width height cursor-dx cursor-dy ascent))))

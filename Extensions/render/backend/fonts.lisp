@@ -50,12 +50,8 @@
 ;;;
 ;;; text geometry
 ;;;
-
 (defmethod climb:font-text-extents ((font render-truetype-font) string
                                     &key (start 0) (end (length string)) direction)
-  ;; -> (width ascent descent left right
-  ;; font-ascent font-descent direction
-  ;; first-not-done)
   (declare (ignore direction))
   (let ((width
          ;; We could work a little harder and eliminate generic arithmetic
@@ -91,50 +87,3 @@
        ascent descent linegap
        ;; cursor motion: cursor-dx cursor-dy
        width 0))))
-
-(defmethod text-size ((medium render-medium-mixin) string
-                      &key text-style (start 0) end)
-  (declare (optimize (speed 3)))
-  (unless end (setf end (length string)))
-  (when (= start end)
-    (return-from text-size (values 0 0 0 0 0)))
-  (check-type start (integer 0 #.array-dimension-limit))
-  (check-type end (integer 0 #.array-dimension-limit))
-  (let* ((medium-text-style (medium-merged-text-style medium))
-         (text-style (if text-style
-                         (merge-text-styles text-style medium-text-style)
-                         medium-text-style))
-         (xfont (text-style-to-font (port medium) text-style)))
-    (multiple-value-bind (xmin ymin xmax ymax left top width height ascent descent linegap cursor-dx cursor-dy)
-        (climb:font-text-extents xfont string :start start :end end)
-      (declare (ignore xmin ymin xmax ymax left top descent linegap))
-      (values width height cursor-dx cursor-dy ascent))))
-
-(defmethod text-style-ascent (text-style (medium render-medium-mixin))
-  (let ((xfont (text-style-to-font (port medium) text-style)))
-    (climb:font-ascent xfont)))
-
-(defmethod text-style-descent (text-style (medium render-medium-mixin))
-  (let ((xfont (text-style-to-font (port medium) text-style)))
-    (climb:font-descent xfont)))
-
-(defmethod text-style-height (text-style (medium render-medium-mixin))
-  (+ (climb:text-style-ascent text-style medium)
-     (climb:text-style-descent text-style medium)))
-
-(defmethod text-style-width (text-style (medium render-medium-mixin))
-  (let ((xfont (text-style-to-font (port medium) text-style)))
-    (climb:font-character-width xfont #\m)))
-
-(defmethod climi::text-bounding-rectangle*
-    ((medium render-medium-mixin) string &key text-style (start 0) end)
-  (when (characterp string)
-    (setf string (make-string 1 :initial-element string)))
-  (unless end (setf end (length string)))
-  (when (= start end)
-    (return-from climi::text-bounding-rectangle* (values 0 0 0 0)))
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (let ((xfont (text-style-to-font (port medium) text-style)))
-    (multiple-value-bind (xmin ymin xmax ymax)
-        (climb:font-text-extents xfont string :start start :end end)
-      (values xmin ymin xmax ymax))))
