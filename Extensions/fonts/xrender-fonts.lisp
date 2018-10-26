@@ -301,7 +301,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
 (defun mcclim-font:draw-glyphs (medium mirror gc x y string
                                 &key start end translate direction
                                   transformation transform-glyphs
-                                &aux (font (clim-clx::text-style-to-X-font
+                                &aux (font (climb:text-style-to-font
                                             (port medium) (medium-text-style medium))))
   (declare (optimize (speed 3))
            (ignore translate direction)
@@ -469,7 +469,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                            (namestring (truetype-device-font-name-font-file font-name))
                            (truetype-device-font-name-size font-name)))
       (fontconfig-font-name
-       (clim-clx::text-style-to-X-font
+       (climb:text-style-to-font
         port
         (or (fontconfig-font-name-device-name font-name)
             (setf (fontconfig-font-name-device-name font-name)

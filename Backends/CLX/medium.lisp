@@ -62,7 +62,7 @@
       (let ((old-text-style (medium-text-style medium)))
         (unless (eq text-style old-text-style)
           (setf (xlib:gcontext-font gc)
-                (text-style-to-X-font (port medium) (medium-text-style medium))))))))
+                (climb:text-style-to-font (port medium) (medium-text-style medium))))))))
 
 ;;; Translate from CLIM styles to CLX styles.
 (defconstant +cap-shape-map+ '((:butt . :butt)
@@ -234,7 +234,7 @@ translated, so they begin at different position than [0,0])."))
       (setf (xlib:gcontext-function gc) boole-1)
       (setf (xlib:gcontext-foreground gc) (X-pixel port ink)
             (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
-      (let ((fn (text-style-to-X-font port (medium-text-style medium))))
+      (let ((fn (climb:text-style-to-font port (medium-text-style medium))))
         (when (typep fn 'xlib:font)
           (setf (xlib:gcontext-font gc) fn)))
       (unless (eq last-medium-device-region (medium-device-region medium))
@@ -780,19 +780,19 @@ translated, so they begin at different position than [0,0])."))
 ;;; Methods for text styles
 
 (defmethod text-style-ascent (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
+  (let ((font (text-style-to-font (port medium) text-style)))
     (climb:font-ascent font)))
 
 (defmethod text-style-descent (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
+  (let ((font (text-style-to-font (port medium) text-style)))
     (climb:font-descent font)))
 
 (defmethod text-style-height (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
+  (let ((font (text-style-to-font (port medium) text-style)))
     (+ (climb:font-ascent font) (climb:font-descent font))))
 
 (defmethod text-style-character-width (text-style (medium clx-medium) char)
-  (climb:font-character-width (text-style-to-X-font (port medium) text-style) char))
+  (climb:font-character-width (text-style-to-font (port medium) text-style) char))
 
 (defmethod text-style-width (text-style (medium clx-medium))
   (text-style-character-width text-style medium #\m))
@@ -854,37 +854,6 @@ translated, so they begin at different position than [0,0])."))
                       (elt src i) afont)
                 (return i))
               (setf (aref dst j) elt))))))
-
-(defmethod text-size ((medium clx-medium) string
-                      &key text-style (start 0) end)
-  (declare (optimize (speed 3)))
-  (unless end (setf end (length string)))
-  (when (= start end)
-    (return-from text-size (values 0 0 0 0 0)))
-  (check-type start (integer 0 #.array-dimension-limit))
-  (check-type end (integer 0 #.array-dimension-limit))
-  (let* ((medium-text-style (medium-merged-text-style medium))
-         (text-style (if text-style
-                         (merge-text-styles text-style medium-text-style)
-                         medium-text-style))
-         (xfont (text-style-to-X-font (port medium) text-style)))
-    (multiple-value-bind (xmin ymin xmax ymax left top width height ascent descent linegap cursor-dx cursor-dy)
-        (climb:font-text-extents xfont string :start start :end end)
-      (declare (ignore xmin ymin xmax ymax left top descent linegap))
-      (values width height cursor-dx cursor-dy ascent))))
-
-(defmethod climi::text-bounding-rectangle*
-    ((medium clx-medium) string &key text-style (start 0) end)
-  (when (characterp string)
-    (setf string (make-string 1 :initial-element string)))
-  (unless end (setf end (length string)))
-  (when (= start end)
-    (return-from climi::text-bounding-rectangle* (values 0 0 0 0)))
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (let ((xfont (text-style-to-X-font (port medium) text-style)))
-    (multiple-value-bind (xmin ymin xmax ymax)
-        (climb:font-text-extents xfont string :start start :end end)
-      (values xmin ymin xmax ymax))))
 
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
@@ -978,7 +947,7 @@ translated, so they begin at different position than [0,0])."))
     (when gc
       (let ((old-text-style (medium-text-style medium)))
         (unless (eq text-style old-text-style)
-          (let ((fn (text-style-to-X-font (port medium) (medium-text-style medium))))
+          (let ((fn (text-style-to-font (port medium) (medium-text-style medium))))
             (when (typep fn 'xlib:font)
               (setf (xlib:gcontext-font gc)
                     fn))))))))

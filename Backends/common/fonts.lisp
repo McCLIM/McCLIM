@@ -1,8 +1,5 @@
 (in-package #:climi)
 
-;; (defgeneric clim:text-style-to-font (port text-style))
-;; (defgeneric clim:make-device-font-text-style (display-device device-font-name))
-
 (defgeneric open-font (port font-designator)
   (:documentation "Opens font for a port"))
 
@@ -140,3 +137,57 @@ of letters specified in a separate kerning-table."))
 (defgeneric climb:font-glyph-right (font code))
 (defgeneric climb:font-glyph-dx (font code))
 (defgeneric climb:font-glyph-dy (font code))
+
+
+;; clim:make-device-font-text-style
+
+(defgeneric climb:text-style-to-font (port text-style))
+
+;(defgeneric climb:text-style-character-width)
+
+(defgeneric climb:text-bounding-rectangle*
+    (medium string &key text-style start end &allow-other-keys)
+  (:documentation "Function returns a bounding box of the text for given
+text-style, alignment and direction. Direction is derived from the toward-point
+argument.
+
+Argument types:
+align-x   (member :left :center :right)
+align-y   (member :top :baseline :center :baseline* :bottom)
+direction (member :ltr :rtl)
+
+Returned values:
+xmin ymin xmax ymax."))
+
+(defmethod climb:text-bounding-rectangle* (medium string
+                                           &key
+                                             text-style
+                                             (start 0) end
+                                             (align-x :left) (align-y :baseline) (direction :ltr)
+                                           &aux (end (or end (length string))))
+  (declare (ignore align-x align-y))
+  (when (= start end)
+    (return-from text-bounding-rectangle* (values 0 0 0 0)))
+  (let ((text (string string))
+        (font (text-style-to-font (port medium)
+                                  (merge-text-styles text-style
+                                                     (medium-merged-text-style medium)))))
+    (multiple-value-bind (xmin ymin xmax ymax)
+        (climb:font-text-extents font text :start start :end end :direction direction)
+      (values xmin ymin xmax ymax))))
+
+(defmethod text-size (medium string &key text-style (start 0) end
+                      &aux (end (or end (length string))))
+  (when (= start end)
+    (return-from text-size (values 0 0 0 0)))
+  (let ((text (string string))
+        (font (text-style-to-font (port medium)
+                                  (merge-text-styles text-style
+                                                     (medium-merged-text-style medium)))))
+    (multiple-value-bind (xmin ymin xmax ymax
+                               left top width height
+                               ascent descent linegap
+                               cursor-dx cursor-dy)
+        (climb:font-text-extents font text :start start :end end)
+      (declare (ignore xmin ymin xmax ymax left top descent linegap))
+      (values width height cursor-dx cursor-dy ascent))))

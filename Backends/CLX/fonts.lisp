@@ -50,9 +50,11 @@
     (when fonts
       (xlib:open-font display (first fonts)))))
 
-(defun text-style-to-x-font (port text-style)
+(defmethod climb:text-style-to-font ((port clx-port) text-style)
   (lookup-text-style-to-x-font port (clx-port-font-renderer port) text-style))
 
+;;; XXX: this method should be annihilated in favor of port specialization in
+;;; text-style-to-font. -- jd 2018-10-26
 (defgeneric lookup-text-style-to-x-font (port font-renderer text-style)
   (:method ((port t) (font-renderer t) (text-style t))
     (let ((text-style (parse-text-style text-style)))
