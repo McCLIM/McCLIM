@@ -63,7 +63,7 @@
                 #:device-font-text-style
                 ;; utils
                 #:dolines)
-  (:import-from :clim-standard
+  (:import-from #:climi
 		#:standard-event-port-mixin
 		#:standard-graft
 		#:pointer-grab-sheet

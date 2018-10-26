@@ -1,4 +1,4 @@
-(in-package :clim-standard)
+(in-package :climi)
 
 (defclass standard-graft (graft)
   ())

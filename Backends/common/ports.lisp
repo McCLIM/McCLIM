@@ -1,4 +1,4 @@
-(in-package :clim-standard)
+(in-package #:climi)
 
 (defclass standard-port (clim:basic-port)
   ((mirrored-sheet->current-pointer-cursor :initform (make-hash-table :test #'eq))

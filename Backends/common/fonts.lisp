@@ -1,4 +1,4 @@
-(in-package #:clim-standard)
+(in-package #:climi)
 
 ;; (defgeneric clim:text-style-to-font (port text-style))
 ;; (defgeneric clim:make-device-font-text-style (display-device device-font-name))
