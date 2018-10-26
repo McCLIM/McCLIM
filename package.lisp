@@ -1985,7 +1985,10 @@
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
+   ;; Text-style
+   #:text-style-to-font
    #:text-style-character-width
+   #:text-bounding-rectangle*
    ;; Font abstraction
    #:font-face
    #:font-size

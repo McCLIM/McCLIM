@@ -118,7 +118,7 @@
   (unless (position #\newline string :start start :end end)
     (return-from clim:medium-draw-text* (call-next-method)))
   (setq string (subseq string start end))
-  (let* ((font (text-style-to-X-font (port medium) (medium-text-style medium)))
+  (let* ((font (text-style-to-font (port medium) (medium-text-style medium)))
          (y-dx (font-leading font)))
     ;; Single line centering is figured out in the primary method, we just fix
     ;; the X/Y if it will be different for the supplied positioning and then
@@ -155,7 +155,7 @@
     (return-from clim:medium-draw-text*))
   (with-clx-graphics () medium
     (unless (eq align-y :baseline)
-      (let* ((font (clim-clx::text-style-to-X-font (port medium) (medium-text-style medium)))
+      (let* ((font (climb:text-style-to-font (port medium) (medium-text-style medium)))
              (ascent (climb:font-ascent font))
              (descent (climb:font-descent font))
              (text-height (+ ascent descent)))

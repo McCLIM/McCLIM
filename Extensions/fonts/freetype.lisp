@@ -332,7 +332,7 @@ or NIL if the current transformation is the identity transformation."
                                   translate (direction :ltr)
                                   transformation transform-glyphs
                                 &aux
-                                  (font (clim-clx::text-style-to-X-font (clim:port medium) (clim:medium-text-style medium))))
+                                  (font (climb:text-style-to-font (clim:port medium) (clim:medium-text-style medium))))
   (declare (ignore translate))
   (unless (or transform-glyphs (clim:translation-transformation-p transformation))
     (multiple-value-setq (x y) (clim:transform-position transformation x y))
@@ -351,7 +351,7 @@ or NIL if the current transformation is the identity transformation."
        with curr-x = x
        for (string family style) in blocks
        for new-text-style = (if family (clim:make-text-style family style size) text-style)
-       do (let ((font (clim-clx::text-style-to-X-font (clim:port medium) new-text-style)))
+       do (let ((font (climb:text-style-to-font (clim:port medium) new-text-style)))
             (%freetype-draw-glyphs font mirror gc curr-x y string
                                    :direction direction
                                    :transformation transformation)
@@ -460,7 +460,7 @@ or NIL if the current transformation is the identity transformation."
                   with sizes = nil
                   for (string family style) in blocks
                   for new-text-style = (if family (clim:make-text-style family style size) text-style)
-                  do (let ((font (clim-clx::text-style-to-X-font port new-text-style)))
+                  do (let ((font (climb:text-style-to-font port new-text-style)))
                        (setf sizes (multiple-value-list (text-extents font string 0 (length string))))
                        (incf curr-x (car sizes)))
                   finally
@@ -665,7 +665,7 @@ or NIL if the current transformation is the identity transformation."
              '(nil nil))))))
 
 (defun text-style-contains-char-p (port text-style ch)
-  (let* ((font (clim-clx::text-style-to-x-font port text-style))
+  (let* ((font (climb:text-style-to-font port text-style))
          (charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face font))))
     (mcclim-fontconfig:charset-contains-char-p charset ch)))
 
@@ -688,7 +688,7 @@ or NIL if the current transformation is the identity transformation."
                              (find-best-font-for-fallback-internal port text-style ch)))
 
 (defun find-replacement-fonts (port text-style string)
-  (let* ((default-font (clim-clx::text-style-to-x-font port text-style))
+  (let* ((default-font (climb:text-style-to-font port text-style))
          (default-charset (clim-freetype::freetype-font-face/charset (clim-freetype::freetype-font/face default-font)))
          (result nil)
          (current-string (make-string-output-stream))

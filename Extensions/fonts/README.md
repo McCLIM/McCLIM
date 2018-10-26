@@ -80,11 +80,9 @@ XRender extension in our CLX backend. Moreover it provides port-wise
 part of the implementation for `Font listing extension`
 (`port-all-font-families` and `register-all-ttf-fonts`).
 
-We support both `standard-text-style` and
-`device-font-text-style`. The former verifies in
-`text-style-to-X-font` if the `text-style` is already registered in
+We support both `standard-text-style` and `device-font-text-style`. The former
+verifies in `text-style-to-font` if the `text-style` is already registered in
 the system or if we can load it from the provided
-mappings. `device-font-text-style` has a separate method
-specialization working with `make-truetype-font` or
-`fontconfig-font-name` which tries to find requested font
-`find-fontconfig-font`.
+mappings. `device-font-text-style` has a separate method specialization working
+with `make-truetype-font` or `fontconfig-font-name` which tries to find
+requested font `find-fontconfig-font`.

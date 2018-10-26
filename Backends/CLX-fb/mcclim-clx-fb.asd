@@ -1,8 +1,7 @@
 
 (defsystem #:mcclim-clx-fb
   :depends-on (#:mcclim-backend-common
-               #:mcclim-clx/basic
-               #:mcclim-clx/input
+               #:mcclim-clx
                #:mcclim-render)
   :components
   ((:file "package")
