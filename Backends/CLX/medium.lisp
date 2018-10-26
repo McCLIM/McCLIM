@@ -779,27 +779,6 @@ translated, so they begin at different position than [0,0])."))
 ;;;
 ;;; Methods for text styles
 
-(defmethod text-style-ascent (text-style (medium clx-medium))
-  (let ((font (text-style-to-font (port medium) text-style)))
-    (climb:font-ascent font)))
-
-(defmethod text-style-descent (text-style (medium clx-medium))
-  (let ((font (text-style-to-font (port medium) text-style)))
-    (climb:font-descent font)))
-
-(defmethod text-style-height (text-style (medium clx-medium))
-  (let ((font (text-style-to-font (port medium) text-style)))
-    (+ (climb:font-ascent font) (climb:font-descent font))))
-
-(defmethod text-style-character-width (text-style (medium clx-medium) char)
-  (climb:font-character-width (text-style-to-font (port medium) text-style) char))
-
-(defmethod text-style-width (text-style (medium clx-medium))
-  (text-style-character-width text-style medium #\m))
-
-(defmethod text-style-fixed-width-p (text-style (medium clx-medium))
-  (eql (text-style-family text-style) :fix))
-
 (eval-when (:compile-toplevel :execute)
   ;; ASCII / CHAR-CODE compatibility checking
   (unless (equal (mapcar #'char-code '(#\Backspace #\Tab #\Linefeed

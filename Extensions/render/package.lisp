@@ -106,5 +106,5 @@
                 #:zpb-ttf-font-units->pixels)
   (:import-from :clim-backend
                 #:port-set-mirror-region
-                #:port-set-mirror-transformation)
-  (:export))
+                #:port-set-mirror-transformation
+                #:text-style-to-font))
