@@ -72,7 +72,7 @@
 		#:sheet-xmirror
 		#:sheet-direct-xmirror
 		)
-  (:import-from :clim-standard
+  (:import-from :climi
 		#:standard-event-port-mixin
 		#:standard-port))
 

@@ -1,5 +1,4 @@
-(in-package :clim-standard)
-
+(in-package #:climi)
 
 (defclass standard-event-port-mixin ()
   ((pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)
