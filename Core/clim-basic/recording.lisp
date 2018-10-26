@@ -1577,8 +1577,8 @@ were added."
            (incf left point-x)
            (incf right point-x))
           (:right
-           (decf left (+ point-x width))
-           (decf right (+ point-x width)))
+           (incf left (- point-x width))
+           (incf right (- point-x width)))
           (:center
            (incf left (- point-x (floor width 2)))
            (incf right (- point-x (floor width 2))))))
@@ -1594,11 +1594,11 @@ were added."
            (incf top (+ point-y ascent))
            (incf bottom (+ point-y ascent)))
           (:bottom
-           (incf top (+ point-y ascent (- height)))
-           (incf bottom (+ point-y ascent (- height))))
+           (incf top (- point-y descent))
+           (incf bottom (- point-y descent)))
           (:center
-           (incf top (+ point-y ascent (- (ceiling height 2))))
-           (incf bottom (+ point-y ascent (- (ceiling height 2)))))))
+           (setf top (- point-y (ceiling height 2)))
+           (setf bottom (+ point-y (ceiling height 2))))))
       #+ (or)
       (with-drawing-options (medium :line-dashes t :ink +red+)
         (medium-draw-rectangle* medium left top right bottom nil))

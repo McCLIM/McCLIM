@@ -83,7 +83,7 @@ and the length of resulting sequence are equal."))
          finally
            (return (values
                     ;; text bounding box (x1, y1, x2, y2)
-                    xmin (- ymin) xmax (- ymax)
+                    xmin (- ymax) xmax (- ymin)
                     ;; text-bounding-rectangle
                     0 #|x0|# (climb:font-ascent font) #|y0|# width height
                     ;; line properties (ascent, descent, line gap)
