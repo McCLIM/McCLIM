@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-clx)
@@ -30,6 +30,12 @@
    (class-gensym :initarg :class-gensym
                  :initform (gensym "CLX-")
                  :reader class-gensym)))
+
+;;; We use &ALLOW-OTHER-KEYS since the INITIALIZE-INSTANCE for
+;;; CLX-PORT passes various initargs that CLX-FRAME-MANAGER doesn't
+;;; necessarily accept.
+(defmethod initialize-instance :after ((instance clx-frame-manager)
+                                       &key &allow-other-keys))
 
 ;;; Default mirroring predicates
 (defun mirror-factory (kind)
@@ -54,7 +60,7 @@
 
 (defun find-first-defined-class (types)
   (first
-   (remove-if #'null 
+   (remove-if #'null
               (mapcar (lambda (class-name)
                         (find-class class-name nil))
                       types))))
@@ -64,7 +70,7 @@
            (typecase name-elt
              (symbol (symbol-name name-elt))
              (sequence (coerce name-elt 'string))
-             (t (princ-to-string name-elt)))))    
+             (t (princ-to-string name-elt)))))
   (find-symbol
    (apply #'concatenate 'string (mapcar #'coerce-name-element name-components))
    package-spec)))
@@ -80,7 +86,7 @@
       (:climi ,type))))
 
 (defun generate-clx-pane-specs (type)
-  (append 
+  (append
    `((:clim-clx #:clx- ,type #:-pane)
      (:clim-clx #:clx- ,type)
      (:climi #:clx- ,type #:-pane)
