@@ -565,8 +565,9 @@ the associated sheet can be determined."
 ;;; not affect bounding rectangles.  -- Hefner
 (defun null-bounding-rectangle-p (bbox)
   (with-bounding-rectangle* (x1 y1 x2 y2) bbox
-     (and (= x1 x2)
-          (= y1 y2))))
+    (and (= x1 x2)
+         (= y1 y2)
+         t)))
 
 ;;; 16.2.3. Output Record Change Notification Protocol
 (defmethod recompute-extent-for-new-child
@@ -593,28 +594,28 @@ the associated sheet can be determined."
 
 (defmethod %tree-recompute-extent* ((record compound-output-record))
   ;; Internal helper function
-  (let ((new-x1 0)
-        (new-y1 0)
-        (new-x2 0)
-        (new-y2 0)
-        (first-time t))
-    (map-over-output-records
-     (lambda (child)
-       (unless (null-bounding-rectangle-p child)
-         (if first-time
-             (progn
-               (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
-                 (bounding-rectangle* child))
-               (setq first-time nil))
-             (with-bounding-rectangle* (cx1 cy1 cx2 cy2) child
-               (minf new-x1 cx1)
-               (minf new-y1 cy1)
-               (maxf new-x2 cx2)
-               (maxf new-y2 cy2)))))
-     record)
-    (if first-time
-        (with-slots (x y) record
-          (values x y x y))
+  (if (zerop (output-record-count record)) ; no children
+      (with-slots (x y) record
+        (values x y x y))
+      (let ((new-x1 0)
+            (new-y1 0)
+            (new-x2 0)
+            (new-y2 0)
+            (first-time t))
+        (flet ((do-child (child)
+                 (cond ((null-bounding-rectangle-p child))
+                       (first-time
+                        (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
+                          (bounding-rectangle* child))
+                        (setq first-time nil))
+                       (t
+                        (with-bounding-rectangle* (cx1 cy1 cx2 cy2) child
+                          (minf new-x1 cx1)
+                          (minf new-y1 cy1)
+                          (maxf new-x2 cx2)
+                          (maxf new-y2 cy2))))))
+          (declare (dynamic-extent #'do-child))
+          (map-over-output-records #'do-child record))
         (values new-x1 new-y1 new-x2 new-y2))))
 
 (defgeneric tree-recompute-extent-aux (record))
@@ -623,32 +624,31 @@ the associated sheet can be determined."
   (bounding-rectangle* record))
 
 (defmethod tree-recompute-extent-aux ((record compound-output-record))
-  (let ((new-x1 0)
-        (new-y1 0)
-        (new-x2 0)
-        (new-y2 0)
-        (first-time t))
-    (map-over-output-records
-     (lambda (child)
-       (if first-time
-           (progn
-             (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
-               (tree-recompute-extent-aux child))
-             (setq first-time nil))
-           (multiple-value-bind (cx1 cy1 cx2 cy2)
-               (tree-recompute-extent-aux child)
-             (minf new-x1 cx1)
-             (minf new-y1 cy1)
-             (maxf new-x2 cx2)
-             (maxf new-y2 cy2))))
-     record)
-    (with-slots (x y) record
-      (if first-time			;No children
-          (bounding-rectangle* record)
-          (progn
-            (setf  x new-x1 y new-y1)
-            (setf (rectangle-edges* record)
-                  (values new-x1 new-y1 new-x2 new-y2)))))))
+  (if (zerop (output-record-count record)) ; no children
+      (bounding-rectangle* record)
+      (let ((new-x1 0)
+            (new-y1 0)
+            (new-x2 0)
+            (new-y2 0)
+            (first-time t))
+        (flet ((do-child (child)
+                 (if first-time
+                     (progn
+                       (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
+                         (tree-recompute-extent-aux child))
+                       (setq first-time nil))
+                     (multiple-value-bind (cx1 cy1 cx2 cy2)
+                         (tree-recompute-extent-aux child)
+                       (minf new-x1 cx1)
+                       (minf new-y1 cy1)
+                       (maxf new-x2 cx2)
+                       (maxf new-y2 cy2)))))
+          (declare (dynamic-extent #'do-child))
+          (map-over-output-records #'do-child record))
+        (with-slots (x y) record
+          (setf x new-x1 y new-y1)
+          (setf (rectangle-edges* record)
+                (values new-x1 new-y1 new-x2 new-y2))))))
 
 (defmethod recompute-extent-for-changed-child
     ((record compound-output-record) changed-child
@@ -727,14 +727,12 @@ the associated sheet can be determined."
 (defmethod tree-recompute-extent :around ((record compound-output-record))
   (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) record
     (call-next-method)
-    (with-bounding-rectangle* (x1 y1 x2 y2)
-        record
-      (let ((parent (output-record-parent record)))
-        (when (and parent
-                   (not (and (= old-x1 x1)
-                             (= old-y1 y1)
-                             (= old-x2 x2)
-                             (= old-y2 y2))))
+    (with-bounding-rectangle* (x1 y1 x2 y2) record
+      (when-let ((parent (output-record-parent record)))
+        (when (not (and (= old-x1 x1)
+                        (= old-y1 y1)
+                        (= old-x2 x2)
+                        (= old-y2 y2)))
           (recompute-extent-for-changed-child parent record
                                               old-x1 old-y1
                                               old-x2 old-y2)))))
@@ -777,13 +775,12 @@ the associated sheet can be determined."
 (defmethod map-over-output-records-1
     (function (record standard-sequence-output-record) function-args)
   "Applies FUNCTION to all children in the order they were added."
-  (if function-args
-      (loop with children = (output-record-children record)
-            for child across children
-            do (apply function child function-args))
-      (loop with children = (output-record-children record)
-            for child across children
-            do (funcall function child))))
+  (let ((function (alexandria:ensure-function function)))
+    (if function-args
+        (loop for child across (output-record-children record)
+              do (apply function child function-args))
+        (loop for child across (output-record-children record)
+              do (funcall function child)))))
 
 (defmethod map-over-output-records-containing-position
     (function (record standard-sequence-output-record) x y
@@ -792,14 +789,15 @@ the associated sheet can be determined."
   "Applies FUNCTION to children, containing (X,Y), in the reversed
 order they were added."
   (declare (ignore x-offset y-offset))
-  (loop with children = (output-record-children record)
-        for i from (1- (length children)) downto 0
-        for child = (aref children i)
-        when (and (multiple-value-bind (min-x min-y max-x max-y)
-                      (output-record-hit-detection-rectangle* child)
-                    (and (<= min-x x max-x) (<= min-y y max-y)))
-                  (output-record-refined-position-test child x y))
-          do (apply function child function-args)))
+  (let ((function (alexandria:ensure-function function)))
+    (loop with children = (output-record-children record)
+          for i from (1- (length children)) downto 0
+          for child = (aref children i)
+          when (and (multiple-value-bind (min-x min-y max-x max-y)
+                        (output-record-hit-detection-rectangle* child)
+                      (and (<= min-x x max-x) (<= min-y y max-y)))
+                    (output-record-refined-position-test child x y))
+          do (apply function child function-args))))
 
 (defmethod map-over-output-records-overlapping-region
     (function (record standard-sequence-output-record) region
@@ -808,10 +806,11 @@ order they were added."
   "Applies FUNCTION to children, overlapping REGION, in the order they
 were added."
   (declare (ignore x-offset y-offset))
-  (loop with children = (output-record-children record)
-        for child across children
-        when (region-intersects-region-p region child)
-          do (apply function child function-args)))
+  (let ((function (alexandria:ensure-function function)))
+    (loop with children = (output-record-children record)
+          for child across children
+          when (region-intersects-region-p region child)
+          do (apply function child function-args))))
 
 ;;; tree output recording
 
