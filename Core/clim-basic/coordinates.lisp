@@ -19,8 +19,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
@@ -67,5 +67,8 @@
 (declaim (inline coordinate/=))
 (defun coordinate/= (x y)
   (/= x y))
+
+(deftype standard-rectangle-coordinate-vector ()
+  '(simple-array coordinate (4)))
 
 ;; $Log: $
