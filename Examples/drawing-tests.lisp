@@ -220,6 +220,13 @@
          (:skip ()
            :report (lambda (stream) (format stream "skip ~a" (drawing-test-name test)))))))
 
+(defun print-pdf-test (test-name)
+  (let ((test (gethash test-name *drawing-tests*)))
+    (when test
+      (restart-case (drawing-test-pdf test)
+        (:skip ()
+          :report (lambda (stream) (format stream "skip ~a" (drawing-test-name test))))))))
+
 (defun drawing-test-raster-image (test format &optional filename)
   (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
          (test-name (drawing-test-name test))
@@ -823,7 +830,7 @@ min-y and max-y are (extremum points) are."
                                 end-angle
                                 (draw-ellipse-parameters t)
                                 (ellipse-parameter-color-1 +red+)
-                                (ellipse-parameter-color-2 +black+)
+                                (ellipse-parameter-color-2 +blue+)
                                 &allow-other-keys)
   (declare (ignore start-angle end-angle))
   (apply #'draw-ellipse* sheet center-x  center-y
@@ -875,67 +882,68 @@ min-y and max-y are (extremum points) are."
                           a b theta (* 180 (/ theta pi)))
                   10 70))))
 
+(define-drawing-test "05) Simple Ellipse 1" (stream)
+    "An off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
+                 :line-thickness 6))
+
+
+(define-drawing-test "05) Simple Ellipse 2" (stream)
+    "An black-filled off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled t
+                 :line-thickness 6))
+
+(define-drawing-test "05) Simple Ellipse 3" (stream)
+    "An orange-filled off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+))
+
+
+(define-drawing-test "05) Simple Ellipse 4" (stream)
+    "An off-axis ellipse pointing to the lower right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* 150 100 0 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Ellipse 5" (stream)
+    "An off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests radii with an angle between them of > 90 degrees."
+  (test-draw-ellipse* stream *center-x* *center-y* 150 -100 0 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Ellipse 6" (stream)
+    "An off-axis ellipse pointing to the lower right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests drawing of long, very skinny ellipses."
+  (test-draw-ellipse* stream *center-x* *center-y* 100 99 60 60
+                      :ink +dark-green+ :filled nil))
+
+(define-drawing-test "05) Simple Ellipse 7" (stream)
+    "An off-axis ellipse pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests radii with an angle between them of 90 degrees."
+  (test-draw-ellipse* stream *center-x* *center-y* 100 -99 60 60
+                      :ink +dark-green+ :filled nil))
+
 (define-drawing-test "05) Simple Ellipse Arc 1" (stream)
-    ""
+    "An off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
   (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
                  :line-thickness 6
                  :start-angle 0 :end-angle pi))
 
 (define-drawing-test "05) Simple Ellipse Arc 2" (stream)
-    ""
+    "An off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests ellipse arcs of greater than 180 degrees. The gap in the arc should be in the lower right of the ellipse."
   (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
                  :line-thickness 6
                  :start-angle 0 :end-angle (* 6 (/ pi 4))))
 
-(define-drawing-test "05) Simple Ellipse 1" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled nil
-                 :line-thickness 6))
-
-(define-drawing-test "05) Simple Filled Ellipse 1" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 150 -90 60 25 :filled t
-                 :line-thickness 6))
-
-(define-drawing-test "05) Simple Ellipse 2" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+))
-
-(define-drawing-test "05) Simple Ellipse 4" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
-                 :start-angle 0 :end-angle (/ pi 2)))
-
-(define-drawing-test "05) Simple Ellipse 5" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
-                 :start-angle 0 :end-angle pi))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 1" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 150 100 0 60
-                      :ink +dark-green+ :filled nil))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 2" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 150 -100 0 60
-                      :ink +dark-green+ :filled nil))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 3" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 100 99 60 60
-                      :ink +dark-green+ :filled nil))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 4" (stream)
-    ""
-  (test-draw-ellipse* stream *center-x* *center-y* 100 -99 60 60
-                      :ink +dark-green+ :filled nil))
-
-(define-drawing-test "05) Simple Off-axis Ellipse 5 (0-90 deg)" (stream)
-    ""
+(define-drawing-test "05) Simple Ellipse Arc 3" (stream)
+    "An off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests ellipse arcs of greater than 180 degrees. The gap in the arc should be in the lower right of the ellipse. This tests drawing an arc angle from 90 degrees to 180 degrees. The green arc should extend from r1 to a point above the center."
   (test-draw-ellipse* stream *center-x* *center-y* 100 -99 60 60
                       :ink +dark-green+ :filled nil :start-angle (/ pi 4) :end-angle (/ pi 2)))
 
+(define-drawing-test "05) Simple Ellipse Arc 4" (stream)
+    "An orange-filled off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter."
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
+                 :start-angle 0 :end-angle (/ pi 2)))
+
+(define-drawing-test "05) Simple Ellipse Arc 5" (stream)
+    "An orange-filled off-axis ellipse arc pointing to the upper right. Specified radii are drawn in red from the ellipse center to the ellipse perimieter. Semi-major (a) and Semi-minor (b) axes are labeled and drawn in blue from the ellipse center to the ellipse perimeter. This tests an arc angle from 0 to 180 degrees."
+  (test-draw-ellipse* stream *center-x* *center-y* -150 150 0 30 :ink +orange+
+                 :start-angle 0 :end-angle pi))
 
 
 ;;;
@@ -995,28 +1003,42 @@ outside the clipping area should be grey.")
                                                    :line-thickness 4
                                                    :filled nil))))
 
-(define-drawing-test "06) Simple Circle" (stream)
-    ""
+(define-drawing-test "06) Simple Circle (Filled)" (stream)
+    "Draws a single filled circle."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+))
 
-(define-drawing-test "06) Simple Circle Unfilled" (stream)
-    ""
+(define-drawing-test "06) Simple Circle (Unfilled)" (stream)
+    "Draws a single unfilled circle."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil))
 
 (define-drawing-test "06) Simple Circle Unfilled Thick" (stream)
-    ""
+    "Draws a singlue unfiled circle with a line-thickness of 5."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil
                 :line-thickness 5))
 
 (define-drawing-test "06) Simple Circle Wedge" (stream)
-    ""
+    "Draws a filled arc wedge of a circle that extends from 0 to 45 degrees."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+
                 :start-angle 0 :end-angle (/ pi 4)))
 
 (define-drawing-test "06) Simple Arc" (stream)
-    ""
+    "Draws a single arc extending from 0 to 45 degrees."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil
                 :start-angle 0 :end-angle (/ pi 4)))
+
+(define-drawing-test "06) More Arcs" (stream)
+    "Draws four columns of arcs, beginning at 0, 90, 180, and 270 degrees, where the arc length in each row of arcs is 45 degrees longer than the previous row, until a full circle is drawn on the last row."
+  (loop for j from 1 to 4
+     for x from 75 by 100
+     for start-angle from 0 by (/ pi 2)
+     do
+       (loop for i from 1 to 8
+           for y from 50 by 75
+          do
+             (draw-circle* stream x y
+                           40 :ink +blue+ :filled nil
+                           :start-angle start-angle :end-angle (+ start-angle (* i (/ pi 4)))
+                           :line-thickness 2))))
 
 ;;;
 ;;; Text
@@ -1183,7 +1205,7 @@ outside the clipping area should be grey.")
 ;;;
 
 (define-drawing-test "09) Ovals" (stream)
-    ""
+    "Draws 12 unfilled ovals in various orientations, including one that reduces to a single line and another that yields a circle."
   (let ((scale 0.8))
     (with-room-for-graphics (stream :first-quadrant nil)
       (with-scaling (stream scale scale)
@@ -1204,6 +1226,39 @@ outside the clipping area should be grey.")
                                      :ink +blue+ :line-thickness 5)
                         (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
                         (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))))
+
+
+(define-drawing-test "09) Filled Ovals" (stream)
+    "Draws 12 filled ovals in various orientations, including one that reduces to a single line and another that yields a circle. The ovals overlap so it is not possible to make out all 12 ovals."
+  (let ((scale 0.8))
+    (with-room-for-graphics (stream :first-quadrant nil)
+      (with-scaling (stream scale scale)
+        (with-translation (stream  0 100)
+          (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 11) do
+               (progn (let* ((x2 (* 250 (sin theta)))
+                             (y2 (* 250 (cos theta)))
+                             (x1 (* 0.2 x2))
+                             (y1 (* 0.2 y2)))
+                        (draw-oval* stream
+                                    (/ (+ x1 x2) 2)
+                                    (/ (+ y1 y2) 2)
+                                    (abs (/ (- x2 x1) 2))
+                                    (abs (/ (- y2 y1) 2))
+                                    :line-thickness 3
+                                    :filled t
+                                    :ink +pink+)
+                        (draw-point* stream (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
+                                     :ink +blue+ :line-thickness 5)
+                        (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
+                        (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))))
+
+(define-drawing-test "09) Simple Oval 1" (stream)
+    "Draws a single blue, unfilled oval, wider than it is tall."
+  (draw-oval* stream 200 200 25 25 :ink +blue+ :filled nil :line-thickness 4))
+
+(define-drawing-test "09) Simple Oval 2" (stream)
+    "Draws a single blue, unfilled oval, taller than it is wide."
+  (draw-oval* stream 200 200 25 50 :ink +blue+ :filled nil :line-thickness 4))
 
 ;;;
 ;;; Clipping

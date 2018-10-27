@@ -114,6 +114,20 @@
                                        (pdf:stroke)))))
                              position-seq))))
 
+(defun clamp-minus2pi-to-2pi (theta)
+  (let ((sign (signum theta))
+        (new-angle (rem theta (* pi 2))))
+    (if (zerop new-angle)
+        (* sign (* pi 2))
+        new-angle)))
+
+(defun clamp-zero-to-2pi (theta)
+  (let ((sign (signum theta))
+        (new-angle (mod theta (* pi 2))))
+    (if (zerop new-angle)
+        (* (abs sign) (* pi 2))
+        new-angle)))
+
 (defun put-ellipse (center-x center-y
                     a b theta
                     start-angle end-angle tr filled)
@@ -124,39 +138,52 @@ end-angle are NIL and filled is T, then a solid ellipse is drawn. If
 START-ANGLE and END-ANGLE are specified, draws an ellipse arc between
 the two angles, or a pie-wedge if filled is T."
   (let ((first-segment t))
-    (let ((theta (transform-angle tr theta)))
-      (flet ((draw-ellipse-segment (lambda1 lambda2)
-               (multiple-value-bind (p1x p1y q1x q1y q2x q2y p2x p2y)
-                   (ellipse-cubic-bezier-points (- lambda1 theta) (- lambda2 theta)
-                                                center-x center-y
-                                                a b theta)
-                 (with-transformed-position (tr p1x p1y)
-                   (with-transformed-position (tr q1x q1y)
-                     (with-transformed-position (tr q2x q2y)
-                       (with-transformed-position (tr p2x p2y)
-                         (when first-segment
-                           (pdf:move-to p1x p1y)
-                           (setf first-segment nil))
-                         (pdf:bezier-to q1x q1y q2x q2y p2x p2y))))))))
-        (if (or (and start-angle end-angle
-                     (zerop start-angle) (= (* pi 2) end-angle))
-                (and start-angle end-angle
-                     (zerop end-angle) (= (* pi 2) start-angle)))
-            (let* ((sweep (* pi 2))
-                   (steps 16)
-                   (step (/ sweep steps)))
-              (let ((seg-start-angle 0)
-                    (seg-end-angle (+ start-angle step)))
-                (loop for i below steps
-                   do (draw-ellipse-segment seg-start-angle seg-end-angle)
-                     (incf seg-start-angle step)
-                     (incf seg-end-angle step))))
-            (flet ((clamp-angle (angle)
-                     (min (max 0 angle) (* pi 2))))
-              (let ((start-angle (- (transform-angle tr (clamp-angle start-angle))))
-                    (end-angle (- (transform-angle tr (clamp-angle end-angle)))))
-                (let* ((sweep (- end-angle start-angle))
-                       (segment-count (ceiling (abs (/ sweep (/ pi 4)))))
+    (flet ((draw-ellipse-segment (lambda1 lambda2)
+             (multiple-value-bind (p1x p1y q1x q1y q2x q2y p2x p2y)
+                 (ellipse-cubic-bezier-points lambda1 lambda2
+                                              center-x center-y
+                                              a b theta)
+               (with-transformed-position (tr p1x p1y)
+                 (with-transformed-position (tr q1x q1y)
+                   (with-transformed-position (tr q2x q2y)
+                     (with-transformed-position (tr p2x p2y)
+                       (when first-segment
+                         (pdf:move-to p1x p1y)
+                         (setf first-segment nil))
+                       (pdf:bezier-to q1x q1y q2x q2y p2x p2y))))))))
+      (if (or (and start-angle end-angle
+                   (zerop start-angle) (= (* pi 2) end-angle))
+              (and start-angle end-angle
+                   (zerop end-angle) (= (* pi 2) start-angle)))
+          (let* ((sweep (* pi 2))
+                 (steps 16)
+                 (step (/ sweep steps)))
+            (let ((seg-start-angle 0)
+                  (seg-end-angle (+ start-angle step)))
+              (loop for i below steps
+                 do (draw-ellipse-segment seg-start-angle seg-end-angle)
+                   (incf seg-start-angle step)
+                   (incf seg-end-angle step))))
+          ;; our bezier approximation of ellipse code treats the 0
+          ;; angle as being parallel to theta, and the angles go
+          ;; counter-clockwise in a :first-quadrant t sense, but
+          ;; McCLIM wants 0 to be parallel to positive X axis, and the
+          ;; angles to go CCW in a :first-quadrant nil sense so we
+          ;; need to:
+          ;; 1. swap end-angle and start-angle
+          ;; 2. subtract minus theta from both start-angle and end-angle.
+          ;; 3. reverse the signs
+          ;; that reduces to:
+          (let ((start-angle (- (+ end-angle theta)))
+                (end-angle (- (+ start-angle theta))))
+            ;; sweep can be positive or negative, but let's
+            ;; limit it to the range [-2pi 2pi] so we don't loop
+            ;; here.
+            (let* ((sweep (clamp-minus2pi-to-2pi (- end-angle start-angle)))
+                   ;; and let's limit start angle to be be [0 2pi]
+                   (start-angle (clamp-zero-to-2pi start-angle)))
+              (unless (zerop sweep)
+                (let* ((segment-count (ceiling (abs (/ sweep (/ pi 4)))))
                        (step (/ sweep segment-count)))
                   (let ((seg-start-angle start-angle)
                         (seg-end-angle (+ start-angle step)))
@@ -164,10 +191,10 @@ the two angles, or a pie-wedge if filled is T."
                        do (draw-ellipse-segment seg-start-angle
                                                 seg-end-angle)
                          (incf seg-start-angle step)
-                         (incf seg-end-angle step)))))
-              (when filled
-                (with-transformed-position (tr center-x center-y)
-                  (pdf:line-to center-x center-y)))))))))
+                         (incf seg-end-angle step))))))))
+      (when filled
+        (with-transformed-position (tr center-x center-y)
+          (pdf:line-to center-x center-y))))))
 
 (defun put-ellipse* (center-x center-y
                      radius1-dx radius1-dy radius2-dx radius2-dy
