@@ -1003,31 +1003,31 @@ outside the clipping area should be grey.")
                                                    :line-thickness 4
                                                    :filled nil))))
 
-(define-drawing-test "06) Simple Circle" (stream)
-    ""
+(define-drawing-test "06) Simple Circle (Filled)" (stream)
+    "Draws a single filled circle."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+))
 
-(define-drawing-test "06) Simple Circle Unfilled" (stream)
-    ""
+(define-drawing-test "06) Simple Circle (Unfilled)" (stream)
+    "Draws a single unfilled circle."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil))
 
 (define-drawing-test "06) Simple Circle Unfilled Thick" (stream)
-    ""
+    "Draws a singlue unfiled circle with a line-thickness of 5."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil
                 :line-thickness 5))
 
 (define-drawing-test "06) Simple Circle Wedge" (stream)
-    ""
+    "Draws a filled arc wedge of a circle that extends from 0 to 45 degrees."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+
                 :start-angle 0 :end-angle (/ pi 4)))
 
 (define-drawing-test "06) Simple Arc" (stream)
-    ""
+    "Draws a single arc extending from 0 to 45 degrees."
   (draw-circle* stream *center-x* *center-y* 150 :ink +orange+ :filled nil
                 :start-angle 0 :end-angle (/ pi 4)))
 
 (define-drawing-test "06) More Arcs" (stream)
-    ""
+    "Draws four columns of arcs, beginning at 0, 90, 180, and 270 degrees, where the arc length in each row of arcs is 45 degrees longer than the previous row, until a full circle is drawn on the last row."
   (loop for j from 1 to 4
      for x from 75 by 100
      for start-angle from 0 by (/ pi 2)
