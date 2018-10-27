@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
@@ -17,8 +17,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
@@ -30,7 +30,7 @@
 ;; The event objects are defined similar to the CLIM event hierarchy.
 ;;
 ;; Class hierarchy as in CLIM:
-;; 
+;;
 ;;   event
 ;;     device-event
 ;;       keyboard-event
@@ -143,7 +143,7 @@
 		(values ,x-var ,y-var))
 	  (declare (ignorable x y))
 	  ,@body))))
-  
+
 (defmethod pointer-event-x ((event pointer-event))
   (get-pointer-position ((event-sheet event) event) x))
 
@@ -177,13 +177,13 @@
 (define-event-class pointer-button-double-click-event   (pointer-button-event) ())
 (define-event-class pointer-button-click-and-hold-event (pointer-button-event) ())
 
-(define-event-class pointer-scroll-event (pointer-event)
+(define-event-class pointer-scroll-event (pointer-button-event)
   ((delta-x :initform 0 :initarg :delta-x
             :reader pointer-event-delta-x)
    (delta-y :initform 0 :initarg :delta-y
             :reader pointer-event-delta-y)))
 
-(define-event-class pointer-motion-event (pointer-event) ())
+(define-event-class pointer-motion-event (pointer-button-event) ())
 
 (defclass motion-hint-mixin ()
   ()
@@ -255,7 +255,7 @@
 (define-event-class window-manager-delete-event (window-manager-event)
   ;; sheet (inherited from standard-event) is not required by the spec but we
   ;; need to know which window to delete - mikemac
-  ())     
+  ())
 
 (define-event-class timer-event (standard-event)
   ((token
@@ -312,4 +312,3 @@
 ;; corresponding to the set of standard characters (such as the
 ;; alphanumerics) will be a symbol in the keyword package.
 ;; ???!
-
