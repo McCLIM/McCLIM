@@ -75,13 +75,10 @@
                                   :thickness 10
                                   :contents (list pane8)))
                 (pane3 (make-pane :vrack-pane   :name "pane3"
-                                  :mirrored t
                                   :contents (list pane5 pane6 pane7)))
                 (pane4 (make-pane :vrack-pane :name "pane4"
-                                  :mirrored t
                                   :contents (list pane9 pane0)))
                 (pane1 (make-pane :hrack-pane :name "pane1"
-                                  :mirrored nil
                                   :contents (list pane2 pane3 pane4))))
            (setf (gethash "pane6" *panes*) pane6)
            (setf (gethash "pane3" *panes*) pane3)
@@ -366,4 +363,3 @@ refresh-event to redisplay pane hierarchy when we start new application."
             (multiple-value-bind (x y) (stream-pointer-position pane)
               (draw-circle* pane x y 5 :filled t)))
         (com-dx-sheet original (- x init-x) (- y init-y))))))
-
