@@ -23,29 +23,43 @@
 
 (defmacro define-protocol-class (name super-classes &optional slots &rest options)
   (let* ((sym-name (symbol-name name))
-	 (protocol-predicate
-	  (intern (concatenate 'string
-			       sym-name
-			       (if (find #\- sym-name) "-" "")
-			       (symbol-name '#:p))))
-	 (predicate-docstring
-	  (concatenate 'string
-		       "Protocol predicate checking for class " sym-name)))
+         (protocol-predicate (alexandria:symbolicate
+                              sym-name
+                              (if (find #\- sym-name) "-" "")
+                              '#:p))
+         (predicate-docstring
+           (concatenate 'string
+                        "Protocol predicate checking for class " sym-name)))
     `(progn
        (defclass ,name ,super-classes ,slots ,@options)
 
+       ;; This adds a DUMMY slot to the protocol class that signals an
+       ;; error in its initfunction. Thus attempting to make an
+       ;; instance of the class signals an error.
+       ;;
+       ;; For subclasses, the slot is not added (as the method is
+       ;; EQL-specialized on the protocol class itself) so that no
+       ;; runtime time or space overhead is incurred.
+       (defmethod c2mop:compute-slots ((class (eql (find-class ',name))))
+         (list* (make-instance 'c2mop:standard-effective-slot-definition
+                               :name         'dummy
+                               :allocation   :instance
+                               :initform     '#1=(error "~S is a protocol class ~
+                                                         and thus cannot be ~
+                                                         instantiated"
+                                                        ',name)
+                               :initfunction (lambda () #1#))
+                (call-next-method)))
+
        (let ((the-class (find-class ',name)))
-         (setf (documentation the-class 'type) "CLIM protocol class")
-         (defmethod initialize-instance :after ((object ,name) &key &allow-other-keys)
-           (when (eq (class-of object) the-class)
-             (error "~S is a protocol class and thus can't be instantiated" ',name))))
+         (setf (documentation the-class 'type) "CLIM protocol class"))
 
        (defgeneric ,protocol-predicate (object)
-	 (:method ((object t))
-	   nil)
-	 (:method ((object ,name))
-	   t)
-	 (:documentation ,predicate-docstring))
+         (:method ((object t))
+           nil)
+         (:method ((object ,name))
+           t)
+         (:documentation ,predicate-docstring))
 
        ',name)))
 
@@ -179,7 +193,7 @@
 
 ;;; 22.2 Extended Input Streams
 
-(define-protocol-class extended-input-stream 
+(define-protocol-class extended-input-stream
     (fundamental-character-input-stream)
   ())
 
@@ -251,4 +265,3 @@
 ;;; C.1 Encapsulating Streams
 (define-protocol-class encapsulating-stream ()
   ())
-
