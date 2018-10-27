@@ -501,7 +501,8 @@
 
 ;;; 30.4.5 The abstract slider Gadget
 
-(defclass slider (value-gadget
+(defclass slider (labelled-gadget-mixin
+		  value-gadget
 		  oriented-gadget-mixin
 		  range-gadget-mixin)
   ((drag-callback  :initform nil
