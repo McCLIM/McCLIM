@@ -185,7 +185,7 @@
   "Maximum time in seconds between clicks in order to produce a double-click")
 
 (defparameter *double-click-max-travel* 7
-  "Maximum distance in device units that the cursor may move between clicks in 
+  "Maximum distance in device units that the cursor may move between clicks in
 order to produce a double-click")
 
 ;;;
@@ -339,7 +339,7 @@ order to produce a double-click")
                       :initform nil) ))
 
 ;;; XXX Move to protocol-classes.lisp. Should this really have all these
-;;; superclasses? 
+;;; superclasses?
 (define-protocol-class pane (clim-repainting-mixin
 			     clim-sheet-input-mixin
 			     sheet-transformation-mixin
@@ -406,7 +406,7 @@ order to produce a double-click")
 
 
 ;;;
-;;; Utilities 
+;;; Utilities
 ;;;
 
 ;; Since, I hate to duplicate code for HBOX and VBOX, I define this
@@ -446,7 +446,7 @@ order to produce a double-click")
 ;;;; Layout Utilities
 
 (defun layout-child (child align-x align-y x y width height)
-  "Allocates space to a child of a pane. 
+  "Allocates space to a child of a pane.
    x, y, width, height designate the area of available space.
    align-x, align-y name the desired child alignment.
    If the child does not have enough strechability to cover all of the
@@ -490,12 +490,12 @@ order to produce a double-click")
 ;;; User Space Requirements
 
 (defclass space-requirement-options-mixin ()
-  ((user-width       
+  ((user-width
     :initarg  :width
     :initform nil
     :reader   pane-user-width
     :type     (or null spacing-value))
-   (user-min-width 
+   (user-min-width
     :initarg :min-width
     :initform nil
     :reader   pane-user-min-width
@@ -533,6 +533,23 @@ order to produce a double-click")
   (:documentation
    "Mixin class for panes which offer the standard user space requirements options."))
 
+(defmethod shared-initialize :after ((instance space-requirement-options-mixin)
+                                     (slot-names t)
+                                     &key
+                                     (x-spacing nil x-spacing-p)
+                                     (y-spacing nil y-spacing-p)
+                                     (spacing nil spacing-p))
+  (declare (ignore x-spacing y-spacing))
+  (cond ((not spacing-p))
+        (x-spacing-p
+         (error #1="~@<The initargs ~S and ~S are mutually exclusive~@:>"
+                :spacing :x-spacing))
+        (y-spacing-p
+         (error #1# :spacing :y-spacing))
+        (t
+         (setf (slot-value instance 'x-spacing) spacing
+               (slot-value instance 'y-spacing) spacing))))
+
 (defclass standard-space-requirement-options-mixin (space-requirement-options-mixin)
   ())
 
@@ -540,7 +557,7 @@ order to produce a double-click")
 
 (defun merge-one-option
     (pane foo user-foo user-min-foo user-max-foo min-foo max-foo)
-  
+
 
   ;; NOTE: The defaulting for :min-foo and :max-foo is different from MAKE-SPACE-REQUIREMENT.
   ;;       MAKE-SPACE-REQUIREMENT has kind of &key foo (min-foo 0) (max-foo +fill+)
@@ -548,7 +565,7 @@ order to produce a double-click")
   ;;       I as a user would pretty much expect the same behavior, therefore I'll take the
   ;;       following route:
   ;;       When the :foo option is given, I'll let MAKE-SPACE-REQUIREMENT decide.
-  ;;   
+  ;;
   ;; old code:
   ;;
   ;; ;; Then we resolve defaulting. sec 29.3.1 says:
@@ -568,7 +585,7 @@ order to produce a double-click")
     (setf user-min-foo (space-requirement-min-width
 			(make-space-requirement
 			 :width (spacing-value-to-device-units pane foo)))))
-	    
+
   ;; when the user has no idea about the preferred size just take the
   ;; panes preferred size.
   (setf user-foo (or user-foo foo))
@@ -577,7 +594,7 @@ order to produce a double-click")
   ;; dito for min/max
   (setf user-min-foo (or user-min-foo min-foo)
 	user-max-foo (or user-max-foo max-foo))
-	    
+
   ;; | :max-width, :min-width, :max-height, and :min-height can
   ;; | also be specified as a relative size by supplying a list of
   ;; | the form (number :relative). In this case, the number
@@ -591,7 +608,7 @@ order to produce a double-click")
 			    (resolve-relative user-min-foo  -1 user-foo))
 	  user-max-foo (and user-max-foo
 			    (resolve-relative user-max-foo  +1 user-foo))))
-	    
+
   ;; Now we have two space requirements which need to be 'merged'.
   (setf min-foo (clamp user-min-foo min-foo max-foo)
 	max-foo (clamp user-max-foo min-foo max-foo)
@@ -602,7 +619,7 @@ order to produce a double-click")
 
 (defmethod merge-user-specified-options ((pane space-requirement-options-mixin)
 					 sr)
-  ;; ### I want proper error checking and in case there is an error we 
+  ;; ### I want proper error checking and in case there is an error we
   ;;     should just emit a warning and move on. CLIM should not die from
   ;;     garbage passed in here.
   (multiple-value-bind (width min-width max-width height min-height max-height)
@@ -961,7 +978,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
   (with-slots (native-transformation) sheet
-    	native-transformation))
+        native-transformation))
 
 (defmethod change-space-requirements ((pane unmanaged-top-level-sheet-pane)
                                       &rest space-req-keys
@@ -1246,7 +1263,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
  ;; box pane would just align the child according to the
  ;; alignment option. We do the same with the minor dimension.
  ;;
- 
+
  (defgeneric box-layout-mixin/xically-allocate-space (pane real-width real-height))
 
  (defmethod box-layout-mixin/xically-allocate-space ((pane box-layout-mixin) real-width real-height)
@@ -1531,9 +1548,9 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   (with-slots (array x-spacing y-spacing) pane
     ;; ---v our problem is here.
     ;; Which problem? --GB
-    (let ((rsrs (loop for i from 0 below (array-dimension array 0) 
+    (let ((rsrs (loop for i from 0 below (array-dimension array 0)
                     collect (table-pane-row-space-requirement pane i)))
-          (csrs (loop for j from 0 below (array-dimension array 1) 
+          (csrs (loop for j from 0 below (array-dimension array 1)
                     collect (table-pane-col-space-requirement pane j)))
           (xs (* x-spacing (1- (array-dimension array 1))))
           (ys (* y-spacing (1- (array-dimension array 0)))))
@@ -1634,7 +1651,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
           for y = 0 then (+ y new-height)
           do (loop
                 for col-index from 0 by 1
-                for l from nb-kids-p-l downto 1                  
+                for l from nb-kids-p-l downto 1
                 for child = (aref array row-index col-index)
                 for tmp-width = width then (decf tmp-width new-width)
                 for new-width = (/ tmp-width l)
@@ -1707,7 +1724,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 (defmacro bordering ((&rest options) &body contents)
   `(make-pane 'border-pane ,@options :contents (list ,@contents)))
 
-;;; This generic function appears to be nowhere used. 
+;;; This generic function appears to be nowhere used.
 (defgeneric pane-border (pane))
 
 (defmethod pane-border ((pane basic-pane))
@@ -1886,7 +1903,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defclass scroller-pane (composite-pane)
   ((scroll-bar :type scroll-bar-spec ; (member t :vertical :horizontal nil)
                ;; ### Note: I added NIL here, so that the application
-               ;; programmer can switch off scroll bars alltogether. 
+               ;; programmer can switch off scroll bars alltogether.
                ;; The spec though has it neither in the description of
                ;; SCROLLER-PANE, nor in the description of
                ;; MAKE-CLIM-STREAM-PANE, but in OPEN-WINDOW-STREAM.
@@ -1984,7 +2001,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                                         max-height)
                        :max-width max-width
                        :max-height max-height)))
-          
+
           req)
         (make-space-requirement))))
 
@@ -2108,7 +2125,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 		        (if vscrollbar
 			    (align-subpixel (- (gadget-value vscrollbar)) old-y)
 			    0))))))))
-    
+
 (defun scroller-pane/update-scroll-bars (pane)
   (check-type pane scroller-pane)
   (with-slots (viewport hscrollbar vscrollbar) pane
@@ -2387,7 +2404,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                                    (region-difference
                                     (sheet-region pane)
                                     (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d))))
-              (draw-bordered-rectangle* pane (+ x1 bleft) (+ y1 btop) (- x2 bright) (- y2 bbottom) 
+              (draw-bordered-rectangle* pane (+ x1 bleft) (+ y1 btop) (- x2 bright) (- y2 bbottom)
                                         :style :groove))))))))
 
 
@@ -2467,13 +2484,13 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                             ;; sheet-leaf-mixin
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane)
-  ((redisplay-needed :initarg :display-time) 
+  ((redisplay-needed :initarg :display-time)
    (scroll-bars :type scroll-bar-spec ; (member t :vertical :horizontal nil)
 		:initform nil
                 :initarg :scroll-bar
 		:initarg :scroll-bars
 		:accessor pane-scroll-bars)
-  
+
    ; Should inherit from label-pane for this one ??
    (label :type string
           :initform ""
@@ -2609,7 +2626,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (change-space-requirements pane))
 
 (defmethod window-refresh ((pane clim-stream-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
   (stream-replay pane))
 
@@ -2691,8 +2708,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 ;;; analogous to the mouse-wheel / select-and-paste handling in
 ;;; DISPATCH-EVENT, just in a slightly different place.
 (defmethod frame-input-context-button-press-handler :before
-    ((frame standard-application-frame) 
-     (stream interactor-pane) 
+    ((frame standard-application-frame)
+     (stream interactor-pane)
      button-press-event)
   (let ((previous (stream-set-input-focus stream)))
     (when (and previous (typep previous 'gadget))
@@ -2738,7 +2755,7 @@ be shown when there is no pointer documentation to show.")
                             :accessor background-message-time
                             :documentation "The universal time at which the
 current background message was set."))
-  (:default-initargs 
+  (:default-initargs
    :display-time nil
    :scroll-bars nil
    :default-view +pointer-documentation-view+
@@ -2925,7 +2942,7 @@ current background message was set."))
   "An simple event loop for applications that want all events to be handled by
  handle-event methods, which also handles FRAME-EXIT."
   (let ((frame *application-frame*))
-    (handler-case 
+    (handler-case
         (let ((queue (frame-event-queue frame)))
           (loop for event = (event-queue-read queue)
             ;; EVENT-QUEUE-READ in single-process mode calls PROCESS-NEXT-EVENT itself.
