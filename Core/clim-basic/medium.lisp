@@ -14,8 +14,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;;; TODO
@@ -44,7 +44,7 @@
 ;;
 ;;
 ;;; And when you start to think about it, text-styles are not fonts. So
-;;; we need two protocols: A text style protocol and a font protocol. 
+;;; we need two protocols: A text style protocol and a font protocol.
 ;;
 ;;; A text style is then something, which maps a sequence of characters
 ;;; into a couple of drawing commands, while probably using some font.
@@ -56,7 +56,7 @@
 ;;
 ;;; And [it can't be said too often] unicode is not a glyph encoding
 ;;; but more a kind of text formating.
-;;; 
+;;;
 ;;; [1] or even a code position
 ;;; --GB
 
@@ -202,7 +202,7 @@
 (defun device-font-text-style-p (s)
   (typep s 'device-font-text-style))
 
-(defmethod text-style-equalp ((style1 device-font-text-style) 
+(defmethod text-style-equalp ((style1 device-font-text-style)
                               (style2 device-font-text-style))
   (eq style1 style2))
 
@@ -241,17 +241,17 @@
 
 (defmethod merge-text-styles (s1 s2)
   (when (and (typep s1 'text-style)
-             (typep s2 'text-style)
              (eq s1 s2))
     (return-from merge-text-styles s1))
   (setq s1 (parse-text-style s1))
   (setq s2 (parse-text-style s2))
   (if (and (not (device-font-text-style-p s1))
-	   (not (device-font-text-style-p s2)))
+           (not (device-font-text-style-p s2)))
       (let* ((family (or (text-style-family s1) (text-style-family s2)))
              (face1 (text-style-face s1))
              (face2 (text-style-face s2))
-             (face (if (subsetp '(:bold :italic) (list face1 face2))
+             (face (if (or (and (eq face1 :bold)   (eq face2 :italic))
+                           (and (eq face1 :italic) (eq face2 :bold)))
                        '(:bold :italic)
                        (or face1 face2)))
              (size1 (text-style-size s1))
@@ -458,7 +458,7 @@
         :accessor medium-ink)
    (transformation :type transformation
                    :initarg :transformation
-                   :initform +identity-transformation+ 
+                   :initform +identity-transformation+
                    :accessor medium-transformation)
    (clipping-region :type region
                     :initarg :clipping-region
@@ -504,7 +504,7 @@
 
 (defmethod (setf medium-clipping-region) :after (region (medium medium))
   (declare (ignore region))
-  (let ((sheet (medium-sheet medium)))    
+  (let ((sheet (medium-sheet medium)))
     (when sheet
       (%invalidate-cached-device-regions sheet))))
 

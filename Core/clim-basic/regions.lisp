@@ -21,8 +21,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; ---- TODO ------------------------------------------------------------------
@@ -81,13 +81,13 @@
 
 ;;; 2.5.1.2 Composition of CLIM Regions
 
-(defclass standard-region-union (region-set) 
+(defclass standard-region-union (region-set)
   ((regions :initarg :regions :reader standard-region-set-regions)))
 
-(defclass standard-region-intersection (region-set) 
+(defclass standard-region-intersection (region-set)
   ((regions :initarg :regions :reader standard-region-set-regions)))
 
-(defclass standard-region-difference (region-set) 
+(defclass standard-region-difference (region-set)
   ((a :initarg :a :reader standard-region-difference-a)
    (b :initarg :b :reader standard-region-difference-b)))
 
@@ -142,7 +142,7 @@
 
 ;;; -- 2.5.3 Polygons and Polylines in CLIM ----------------------------------
 
-;; Protocol: 
+;; Protocol:
 (defclass standard-polyline (polyline)
   ((points :initarg :points)
    (closed :initarg :closed)))
@@ -267,7 +267,7 @@
 
 ;;; -- 2.5.4 Lines in CLIM ---------------------------------------------------
 
-;;; Line protocol: line-start-point* line-end-point* 
+;;; Line protocol: line-start-point* line-end-point*
 
 (defclass standard-line (line)
   ((x1 :type coordinate :initarg :x1)
@@ -350,6 +350,7 @@
                                        &key (x1 0.0d0) (y1 0.0d0)
                                        (x2 0.0d0) (y2 0.0d0))
   (let ((coords (slot-value obj 'coordinates)))
+    (declare (type standard-rectangle-coordinate-vector coords))
     (setf (aref coords 0) x1)
     (setf (aref coords 1) y1)
     (setf (aref coords 2) x2)
@@ -358,7 +359,7 @@
 (defmacro with-standard-rectangle ((x1 y1 x2 y2) rectangle &body body)
   (with-gensyms (coords)
     `(let ((,coords (slot-value ,rectangle 'coordinates)))
-       (declare (type (simple-array coordinate (4)) ,coords))
+       (declare (type standard-rectangle-coordinate-vector ,coords))
        (let ((,x1 (aref ,coords 0))
              (,y1 (aref ,coords 1))
              (,x2 (aref ,coords 2))
@@ -369,7 +370,7 @@
 (defmacro with-standard-rectangle* ((&key x1 y1 x2 y2) rectangle &body body)
   (with-gensyms (coords)
     `(let ((,coords (slot-value ,rectangle 'coordinates)))
-       (declare (type (simple-array coordinate (4)) ,coords))
+       (declare (type standard-rectangle-coordinate-vector ,coords))
        (let (,@(and x1 `((,x1 (aref ,coords 0))))
              ,@(and y1 `((,y1 (aref ,coords 1))))
              ,@(and x2 `((,x2 (aref ,coords 2))))
@@ -386,14 +387,19 @@
                    (point-x point2) (point-y point2)))
 
 (defun make-rectangle* (x1 y1 x2 y2)
-  (psetq x1 (coerce (min x1 x2) 'coordinate)
-         x2 (coerce (max x1 x2) 'coordinate)
-         y1 (coerce (min y1 y2) 'coordinate)
-         y2 (coerce (max y1 y2) 'coordinate))
-  (if (or (coordinate= x1 x2)
-          (coordinate= y1 y2))
-      +nowhere+
-    (make-instance 'standard-rectangle :x1 x1 :x2 x2 :y1 y1 :y2 y2)))
+  (let ((x1 (coordinate x1))
+        (y1 (coordinate y1))
+        (x2 (coordinate x2))
+        (y2 (coordinate y2)))
+    (multiple-value-bind (x1 x2)
+        (cond ((= x1 x2) (return-from make-rectangle* +nowhere+))
+              ((< x1 x2) (values x1 x2))
+              (t         (values x1 x2)))
+      (multiple-value-bind (y1 y2)
+          (cond ((= y1 y2) (return-from make-rectangle* +nowhere+))
+                ((< y1 y2) (values y1 y2 nil))
+                (t         (values y2 y1 nil)))
+        (make-instance 'standard-bounding-rectangle :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
 
 (defmethod rectangle-edges* ((rect standard-rectangle))
   (with-standard-rectangle (x1 y1 x2 y2)
@@ -407,7 +413,7 @@
 (defmethod* (setf rectangle-edges*)
   (x1 y1 x2 y2 (rectangle standard-rectangle))
   (let ((coords (slot-value rectangle 'coordinates)))
-    (declare (type (simple-array coordinate (4)) coords))
+    (declare (type standard-rectangle-coordinate-vector coords))
     (setf (aref coords 0) x1)
     (setf (aref coords 1) y1)
     (setf (aref coords 2) x2)
@@ -548,7 +554,7 @@
    (end-angle   :initarg :end-angle)
    ;; A transformation from the unit circle to get the elliptical
    ;; object.
-   (tr          :initarg :tr)))         
+   (tr          :initarg :tr)))
 
 (defmethod print-object ((ell elliptical-thing) stream)
   (with-slots (start-angle end-angle tr) ell
@@ -568,18 +574,18 @@
                      radius-2-dx radius-2-dy
                      &key start-angle end-angle)
   (make-ellipse* (point-x center-point) (point-y center-point)
-                 radius-1-dx radius-1-dy radius-2-dx radius-2-dy 
-                 :start-angle start-angle 
+                 radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                 :start-angle start-angle
                  :end-angle end-angle))
 
 (defun make-ellipse* (center-x center-y
                       radius-1-dx radius-1-dy
-                      radius-2-dx radius-2-dy 
+                      radius-2-dx radius-2-dy
                       &key start-angle end-angle)
-  (make-ellipical-thing 'standard-ellipse 
+  (make-ellipical-thing 'standard-ellipse
                         center-x center-y
                         radius-1-dx radius-1-dy
-                        radius-2-dx radius-2-dy 
+                        radius-2-dx radius-2-dy
                         start-angle end-angle))
 
 (defun make-elliptical-arc (center-point
@@ -587,21 +593,21 @@
                             radius-2-dx radius-2-dy
                             &key start-angle end-angle)
   (make-elliptical-arc* (point-x center-point) (point-y center-point)
-                        radius-1-dx radius-1-dy radius-2-dx radius-2-dy 
-                        :start-angle start-angle 
+                        radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                        :start-angle start-angle
                         :end-angle end-angle))
 
 (defun make-elliptical-arc* (center-x center-y
                              radius-1-dx radius-1-dy
-                             radius-2-dx radius-2-dy 
+                             radius-2-dx radius-2-dy
                              &key start-angle end-angle)
-  (make-ellipical-thing 'standard-elliptical-arc 
+  (make-ellipical-thing 'standard-elliptical-arc
                         center-x center-y
                         radius-1-dx radius-1-dy
-                        radius-2-dx radius-2-dy 
+                        radius-2-dx radius-2-dy
                         start-angle end-angle))
 
-(defun make-ellipical-thing (class 
+(defun make-ellipical-thing (class
                              center-x center-y
                              radius-1-dx radius-1-dy
                              radius-2-dx radius-2-dy
@@ -633,7 +639,7 @@
     (let ((start-angle* (and start-angle
                              (untransform-angle transformation start-angle)))
           (end-angle*   (and end-angle
-                             (untransform-angle transformation end-angle))))      
+                             (untransform-angle transformation end-angle))))
       (when (reflection-transformation-p transformation)
         (rotatef start-angle* end-angle*))
       (make-instance (type-of self)
@@ -867,11 +873,11 @@
         (values dx1 dy1 dx2 dy2)))))
 
 (defmethod ellipse-start-angle ((self elliptical-thing))
-  (with-slots (start-angle) self 
+  (with-slots (start-angle) self
     start-angle))
 
 (defmethod ellipse-end-angle ((self elliptical-thing))
-  (with-slots (end-angle) self 
+  (with-slots (end-angle) self
     end-angle))
 
 (defun ellipse-coefficients (ell)
@@ -923,7 +929,7 @@
 
 ;;; So the following set of equations remain to be solved
 
-;;;   (I)   dH/dx = 0 = 2x + 2kax + kcy 
+;;;   (I)   dH/dx = 0 = 2x + 2kax + kcy
 ;;;  (II)   dH/dy = 0 = 2y + 2kby + kcx
 ;;; (III)   dH/dk = 0 = ax^2 + by^2 + cxy - 1
 
@@ -982,7 +988,7 @@
                                            (- (* 2 a b))
                                            (* a a)))
                                   x1)
-                               (- (* b x1)) (* a x1)) 
+                               (- (* b x1)) (* a x1))
                             c)))
                   (x2 (- (/ c
                             (sqrt (+ (* (* c c)
@@ -1198,7 +1204,7 @@
                           (setf x1 (+ 1d0 (random 2d0))))
                          (t
                           (setf x1 (- x (/ f f*)))
-                          (cond ((or (<= (abs f) eps-f) 
+                          (cond ((or (<= (abs f) eps-f)
                                      (<= (abs (- x1 x)) eps-x))
                                  ;; a few more steps of newton, to improve
                                  ;; the result
@@ -1238,8 +1244,8 @@
            (let ((b (make-array (1- n))))
              (setf (aref b 0) (aref polynom 0))
              (do ((i 1 (+ i 1)))
-                 ((= i (- n 1)) 
-                  (values 
+                 ((= i (- n 1))
+                  (values
                    (+ (* (aref b (- i 1)) x) (aref polynom i))
                    b))
                (setf (aref b i) (+ (* (aref b (- i 1)) x) (aref polynom i)))))))))
@@ -1455,8 +1461,8 @@ and RADIUS2-DY"
   ((bands
     ;; Represents the set of rectangles. This is list like:
     ;;
-    ;;  ((<y_1> . <x_band_1>)        
-    ;;   (<y_2> . <x_band_2>) 
+    ;;  ((<y_1> . <x_band_1>)
+    ;;   (<y_2> . <x_band_2>)
     ;;   :
     ;;   (<y_n>))
     ;;
@@ -1474,7 +1480,7 @@ and RADIUS2-DY"
     :initarg :bands
     :reader  standard-rectangle-set-bands)
    ;;
-   (bounding-rectangle 
+   (bounding-rectangle
     ;; Caches the regions bounding-rectangle. Is either NIL or the
     ;; bounding-rectangle, represented by a list (x1 y1 x2 y2).
     :initform nil)))
@@ -1514,7 +1520,7 @@ and RADIUS2-DY"
          (make-standard-rectangle-set (rest bands)))
         (t
          (make-instance 'standard-rectangle-set :bands bands))))
-    
+
 ;;; rectangle-set vs. rectangle-set
 
 (defmethod region-union ((xs standard-rectangle-set) (ys standard-rectangle-set))
@@ -1531,7 +1537,7 @@ and RADIUS2-DY"
   (make-standard-rectangle-set
    (bands-difference (standard-rectangle-set-bands xs)
                      (standard-rectangle-set-bands ys))))
-         
+
 ;;; rectangle-set vs. rectangle and vice versa
 
 (defmethod region-union ((xs standard-rectangle-set) (ys standard-rectangle))
@@ -1618,7 +1624,7 @@ and RADIUS2-DY"
                  ((< (first as) (first bs))
                   (setq in-a (- 1 in-a))
                   (setq x (pop as)))
-                 
+
                  ((< (first bs) (first as))
                   (setq in-b (- 1 in-b))
                   (setq x (pop bs)))
@@ -1628,9 +1634,9 @@ and RADIUS2-DY"
                         in-b (- 1 in-b))
                   (setq x (pop as))
                   (pop bs)))
-           
+
            (cond ((zerop (boole boole-op in-a in-b))
-                  (if x0 
+                  (if x0
                       (list* x0 x (isum-op as bs boole-op in-a in-b nil))
                     (isum-op as bs boole-op in-a in-b x0)))
                  (t
@@ -1675,7 +1681,7 @@ and RADIUS2-DY"
                                  (if (and as (= z1 (caar as))) (cdar as) a)
                                  (if (and bs (= z1 (caar bs))) (cdar bs) b)))
                  (isum (funcall isum-op a b)))
-             (if z0  
+             (if z0
                  (if (and rest (equal isum (cdar rest)))
                      (cons (cons z0 isum)
                            (cdr rest))
@@ -1979,7 +1985,7 @@ and RADIUS2-DY"
 (defmethod region-intersection ((a standard-polyline) (b region))
   (let ((res +nowhere+))
     ;; hack alert
-    (map-over-polygon-segments 
+    (map-over-polygon-segments
      (lambda (x1 y1 x2 y2)
        (setf res
              (region-union
@@ -1989,7 +1995,7 @@ and RADIUS2-DY"
 
 (defmethod region-difference ((a standard-polyline) (b region))
   (let ((res +nowhere+))
-    (map-over-polygon-segments 
+    (map-over-polygon-segments
      (lambda (x1 y1 x2 y2)
        (setf res
              (region-union
@@ -1998,7 +2004,7 @@ and RADIUS2-DY"
     res))
 
 (defmethod region-difference ((a region) (b standard-polyline))
-  (map-over-polygon-segments 
+  (map-over-polygon-segments
      (lambda (x1 y1 x2 y2)
        (setf a (region-difference a (make-line* x1 y1 x2 y2))))
      b)
@@ -2190,7 +2196,7 @@ and RADIUS2-DY"
                                 (R nil))
                             (dolist (k S)
                               (when (> (pg-edge-y2 k) (pg-edge-y1 k))
-                                (multiple-value-bind (x1 y1 x2 y2) 
+                                (multiple-value-bind (x1 y1 x2 y2)
                                     (restrict-line-on-y-interval*
                                      (pg-edge-x1 k) (pg-edge-y1 k)
                                      (pg-edge-x2 k) (pg-edge-y2 k)
@@ -2204,7 +2210,7 @@ and RADIUS2-DY"
                                    (dolist (s sps
                                              ;; otherwise
                                              (push (make-pg-splitter
-                                                    :links  (list lu lo) 
+                                                    :links  (list lu lo)
                                                     :rechts (list ru ro))
                                                    sps))
                                      (when (and (region-equal
@@ -2247,13 +2253,13 @@ and RADIUS2-DY"
         (setq S (delete-if (lambda (e)
                              (<= (pg-edge-y2 e) sy))
                            S))
-      
+
         (do () ((or (null ep) (/= sy (pg-edge-y1 (car ep)))))
           (push (pop ep) S))
 
         (let ((sy2 (or (and ep (pg-edge-y1 (car ep)))
                        (reduce #'max (mapcar #'pg-edge-y2 S)))))
-          
+
           (funcall fun sy sy2 S)
           (setq sy sy2))))))
 
@@ -2348,7 +2354,7 @@ and RADIUS2-DY"
 (defmethod region-union ((a standard-region-union) (b standard-region-union))
   (assert (not (eq b +nowhere+)))
   (assert (not (eq a +nowhere+)))
-  (make-instance 'standard-region-union 
+  (make-instance 'standard-region-union
     :regions (append (standard-region-set-regions a)
                      (standard-region-set-regions b))))
 
@@ -2428,7 +2434,7 @@ and RADIUS2-DY"
          ((line-contains-point-p** x1 y1 x2 y2 (point-x pn) (point-y pn))
           nil)
          (t
-          (multiple-value-bind (k m) 
+          (multiple-value-bind (k m)
               (geraden-schnitt/prim x1 y1 x2 y2 (point-x po) (point-y po) (point-x pn) (point-y pn))
             (when (and k (<= 0 m 1))    ;Possible numerical instability
               (funcall fun k)))))))))
@@ -2458,7 +2464,7 @@ and RADIUS2-DY"
   (setf x (coerce x 'coordinate))
   (setf y (coerce y 'coordinate))
   (let ((n 0) (m 0))
-    (map-over-schnitt-gerade/polygon (lambda (k) 
+    (map-over-schnitt-gerade/polygon (lambda (k)
                                        (when (>= k 0) (incf n))
                                        (incf m))
                                      x y (+ x 1) y (polygon-points pg))
@@ -2651,7 +2657,7 @@ and RADIUS2-DY"
 
 (defmethod region-exclusive-or ((a region) (b region))
   (region-union (region-difference a b) (region-difference b a)))
-  
+
 
 (defmethod region-contains-region-p ((a region) (b point))
   (region-contains-position-p a (point-x b) (point-y b)))
@@ -2677,14 +2683,14 @@ and RADIUS2-DY"
 ;;   REGION-CONTAINS-REGION-P region1 region2
 ;;
 ;;        Returns t if all points in the region region2 are members of the
-;;        region region1; otherwise, it returns nil. 
-;;    
+;;        region region1; otherwise, it returns nil.
+;;
 ;;        aka region2 ist teilmenge von region1  aka B\A = 0
 ;;
 ;;   REGION-INTERSECTS-REGION-P region1 region2
 ;;
 ;;        Returns nil if region-intersection of the two regions region1 and
-;;        region2 would be +nowhere+; otherwise, it returns t. 
+;;        region2 would be +nowhere+; otherwise, it returns t.
 ;;
 ;;        aka region1 und region2 sind nicht disjunkt  aka AB /= 0
 ;;
@@ -2735,7 +2741,7 @@ and RADIUS2-DY"
           (reduce #'min (mapcar #'point-y (polygon-points self)))
           (reduce #'max (mapcar #'point-x (polygon-points self)))
           (reduce #'max (mapcar #'point-y (polygon-points self)))))
-          
+
 (defmethod bounding-rectangle* ((self standard-point))
   (with-slots (x y) self
     (values x y x y)))
@@ -2776,11 +2782,19 @@ and RADIUS2-DY"
 ;;;; ===========================================================================
 
 (defun make-bounding-rectangle (x1 y1 x2 y2)
-  (setf x1 (coerce x1 'coordinate)
-        y1 (coerce y1 'coordinate)
-        x2 (coerce x2 'coordinate)
-        y2 (coerce y2 'coordinate))
-  (make-instance 'standard-bounding-rectangle :x1 (min x1 x2) :y1 (min y1 y2) :x2 (max x1 x2) :y2 (max y1 y2)))
+  (let ((x1 (coordinate x1))
+        (y1 (coordinate y1))
+        (x2 (coordinate x2))
+        (y2 (coordinate y2)))
+    (multiple-value-bind (x1 x2)
+        (if (<= x1 x2)
+            (values x1 x2)
+            (values x2 x1))
+      (multiple-value-bind (y1 y2)
+          (if (<= y1 y2)
+              (values y1 y2)
+              (values y2 y1))
+        (make-instance 'standard-bounding-rectangle :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
 
 (defmethod bounding-rectangle ((region rectangle))
   region)
