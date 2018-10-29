@@ -190,7 +190,16 @@
                                                                 (* alpha 255))
                                                              256)
                                                       0 255))))))
-
+        #+ (or)
+        (progn ;; draw delicate border around each glyph for testing
+          (loop for j from 0 below height do (setf (aref array j 0)
+                                                   (logior #x40 (aref array j 0))
+                                                   (aref array j (1- width))
+                                                   (logior #x40 (aref array j (1- width)))))
+          (loop for i from 0 below width do (setf (aref array 0 i)
+                                                  (logior #x40 (aref array 0 i))
+                                                  (aref array (1- height) i)
+                                                  (logior #x40 (aref array (1- height) i)))))
         (multiple-value-bind (advance-width* advance-height*)
             ;; Transformation is supplied in font coordinates for easy
             ;; composition with offset and scaling. advance values should be

@@ -9,7 +9,7 @@
 (defgeneric climb:font-character-width (font character)
   (:method (font character)
     (let* ((codes (climb:font-string-glyph-codes font (string character)))
-           (code (char-code character) (alexandria:first-elt codes)))
+           (code (alexandria:first-elt codes)))
       (assert (alexandria:length= 1 codes))
       (+ (climb:font-glyph-left font code)
          (climb:font-glyph-width font code)
@@ -27,7 +27,7 @@ many codepoints, but argument must constitute exactly one character."))
 
 (defgeneric climb:font-string-glyph-codes (font string &key start end)
   (:method (font string &key (start 0) (end (length string)))
-    (map 'list #'char-code (subseq string start end)))
+    (map 'vector #'char-code (subseq string start end)))
   (:documentation "Converts string to a sequence of glyph codes. Some characters
 are composed of many codepoints – it is not guaranteed that length of the string
 and the length of resulting sequence are equal."))
@@ -196,13 +196,13 @@ xmin ymin xmax ymax."))
       (values xmin ymin xmax ymax))))
 
 (defmethod text-size (medium string &key text-style (start 0) end
-                      &aux (end (or end (length string))))
+                      &aux (end (or end (length string)))
+                        (text-style (merge-text-styles text-style
+                                                       (medium-merged-text-style medium))))
   (when (= start end)
     (return-from text-size (values 0 0 0 0 (text-style-ascent text-style medium))))
   (let ((text (string string))
-        (font (text-style-to-font (port medium)
-                                  (merge-text-styles text-style
-                                                     (medium-merged-text-style medium)))))
+        (font (text-style-to-font (port medium) text-style)))
     (multiple-value-bind (xmin ymin xmax ymax
                           left top width height
                           ascent descent linegap

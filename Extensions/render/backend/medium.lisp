@@ -150,22 +150,22 @@
                               align-x align-y
                               toward-x toward-y transform-glyphs)
   (with-transformed-position ((medium-transformation medium) x y)
-    (flet ((draw-font-glypse (paths opacity-image dx dy transformation)
-             (declare (ignore paths))
-             (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
+    (flet ((draw-font-glypse (array dx dy transformation)
+             (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
+                   (opacity-image (make-instance 'climi::%rgba-pattern :array array)))
                (when (and msheet (sheet-mirror msheet))
                  (multiple-value-bind (x1 y1)
                      (transform-position
                       (clim:compose-transformations transformation
                                                     (sheet-native-transformation
                                                      (medium-sheet medium)))
-                      (+ dx ) (-  dy))
+                      (+ dx ) (- dy))
                    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
                        (region-intersection
                         (climi::medium-device-region medium)
                         (make-rectangle* x1 y1
-                                         (+ -1 x1 (pattern-width opacity-image))
-                                         (+ -1 y1 (pattern-height opacity-image))))
+                                         (+ x1 (pattern-width opacity-image))
+                                         (+ y1 (pattern-height opacity-image))))
                      (%medium-fill-image-mask medium opacity-image
                                               min-x min-y
                                               (- max-x min-x) (- max-y min-y)

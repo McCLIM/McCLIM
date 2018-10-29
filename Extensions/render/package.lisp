@@ -87,6 +87,7 @@
                 #:pixmap-medium)
   (:import-from :mcclim-truetype
                 #:glyph-info
+                #:font-glyph-info
                 #:font-generate-glyph
                 #:glyph-pixarray
                 #:ensure-gethash
