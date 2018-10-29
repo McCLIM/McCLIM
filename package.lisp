@@ -2011,6 +2011,9 @@
    #:font-glyph-right
    #:font-glyph-dx
    #:font-glyph-dy
+   ;; Mixins available for backends
+   #:multiline-text-medium-mixin
+   #:transform-coordinates-mixin
    ;; From CLIM (mentioned in the spec)
    #:adopt-frame
    #:allocate-space

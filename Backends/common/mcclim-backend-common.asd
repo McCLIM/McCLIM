@@ -6,4 +6,5 @@
   ((:file "ports")
    (:file "grafts")
    (:file "fonts")
+   (:file "medium" :depends-on ("fonts"))
    (:file "events" :depends-on ("ports"))))
