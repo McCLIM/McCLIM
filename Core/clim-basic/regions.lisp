@@ -397,8 +397,8 @@
               (t         (values x2 x1)))
       (multiple-value-bind (y1 y2)
           (cond ((= y1 y2) (return-from make-rectangle* +nowhere+))
-                ((< y1 y2) (values y1 y2 nil))
-                (t         (values y2 y1 nil)))
+                ((< y1 y2) (values y1 y2))
+                (t         (values y2 y1)))
         (make-instance 'standard-bounding-rectangle :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
 
 (defmethod rectangle-edges* ((rect standard-rectangle))
