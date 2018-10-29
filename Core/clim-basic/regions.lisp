@@ -394,7 +394,7 @@
     (multiple-value-bind (x1 x2)
         (cond ((= x1 x2) (return-from make-rectangle* +nowhere+))
               ((< x1 x2) (values x1 x2))
-              (t         (values x1 x2)))
+              (t         (values x2 x1)))
       (multiple-value-bind (y1 y2)
           (cond ((= y1 y2) (return-from make-rectangle* +nowhere+))
                 ((< y1 y2) (values y1 y2 nil))
