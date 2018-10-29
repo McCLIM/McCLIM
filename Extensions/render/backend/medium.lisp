@@ -1,6 +1,6 @@
 (in-package :mcclim-render-internals)
 
-(defclass render-medium-mixin (basic-medium)
+(defclass render-medium-mixin (basic-medium climb:multiline-text-medium-mixin)
   ())
 
 (defun %medium-stroke-paths (medium paths)
@@ -191,6 +191,7 @@
                         (:center (+ y (- baseline text-height)
                                     (+ (floor text-height 2))))
                         (:baseline y)
+                        (:baseline* y)
                         (:bottom (+ y (- baseline text-height))))))
             (string-primitive-paths x y string xfont size #'draw-font-glypse)))))))
 
