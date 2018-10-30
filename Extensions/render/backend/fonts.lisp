@@ -19,9 +19,10 @@
                                         code))))
     (multiple-value-bind (arr left top width height dx dy udx udy)
         (glyph-pixarray font character next-character tr)
+      (declare (ignore udx udy))
       (let ((right (+ left (array-dimension arr 1)))
             (bottom (- top (array-dimension arr 0))))
-        (render-glyph-info 0 dx dy left right top bottom dx dy arr)))))
+        (render-glyph-info 0 width height left right top bottom dx dy arr)))))
 
 (defun font-glyph-opacity-image (font code)
   (render-glyph-info-opacity-image (font-glyph-info font code)))

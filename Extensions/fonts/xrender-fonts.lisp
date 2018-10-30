@@ -137,7 +137,7 @@
                                          code))))
     (multiple-value-bind (arr left top width height dx dy udx udy)
         (glyph-pixarray font character next-character tr)
-
+      (declare (ignore udx udy))
       (with-slots (fixed-width) font
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
@@ -461,7 +461,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
     (when (stringp font-name)
       (setf (climi::device-font-name text-style)
             (make-fontconfig-font-name :string font-name
-                                       :size (getf clim-clx::*clx-text-sizes* :normal))
+                                       :size (climb:normalize-font-size :normal))
             font-name (climi::device-font-name text-style)))
     (etypecase font-name
       (truetype-device-font-name
@@ -526,8 +526,7 @@ The following files should exist:~&~{  ~A~^~%~}"
 
            (setf face   (or face :roman)
                  family (or family :fix)
-                 size   (or size :normal)
-                 size   (getf clim-clx::*clx-text-sizes* size size))
+                 size   (climb:normalize-font-size size))
 
            (find-and-make-truetype-font family face size))))
 
