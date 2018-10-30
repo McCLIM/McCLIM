@@ -1,5 +1,7 @@
 ;;; Port of Kensanata's bidi code for Emacs:
 ;;; https://github.com/kensanata/emacs-bidi
+;;; The original author has given eprmission to re-license this code under LGPL2.1+
+;;; https://mailman.common-lisp.net/pipermail/mcclim-devel/2018-October/002102.html
 
 (defpackage :mcclim-bidi
   (:use :cl)
