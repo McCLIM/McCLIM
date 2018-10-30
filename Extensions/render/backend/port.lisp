@@ -53,8 +53,7 @@
 
            (setf face   (or face :roman)
                  family (or family :fix)
-                 size   (or size :normal)
-                 size (getf *text-sizes* size size))
+                 size   (climb:normalize-font-size size))
 
            (find-and-make-truetype-font family face size))))
     (or (text-style-mapping port text-style)

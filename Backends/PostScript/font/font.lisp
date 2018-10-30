@@ -131,15 +131,6 @@
                  (:italic . "Helvetica-Oblique")
                  ((:bold :italic) . "Helvetica-BoldOblique"))))
 
-(defconstant +postscript-font-sizes+
-  '(:normal 14
-    :tiny 8
-    :very-small 10
-    :small 12
-    :large 18
-    :very-large 20
-    :huge 24))
-
 (defmethod text-style-mapping ((port postscript-font-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
@@ -149,10 +140,7 @@
                                  (getf +postscript-fonts+ :fix)))
                (font-name (cdr (or (assoc face family-fonts :test #'equal)
                                    (assoc :roman family-fonts))))
-               (size-number (if (numberp size)
-                                (round size)
-                                (or (getf +postscript-font-sizes+ size)
-                                    (getf +postscript-font-sizes+ :normal)))))
+               (size-number (climb:normalize-font-size size)))
           (cons font-name size-number)))))
 
 (defmethod (setf text-style-mapping)

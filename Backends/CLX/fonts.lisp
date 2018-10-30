@@ -11,15 +11,6 @@
 
 (in-package #:clim-clx)
 
-(defparameter *clx-text-sizes*
-  '(:normal         12
-    :tiny            8
-    :very-small      8
-    :small          10
-    :large          14
-    :very-large     18
-    :huge           24))
-
 (defconstant *families/names*
   '(:fix         "adobe-courier"
     :serif       "adobe-times"
@@ -85,11 +76,9 @@
 
                (setf face   (or face :roman)
                      family (or family :fix)
-                     size   (or size :normal)
-                     size   (round (getf clim-clx::*clx-text-sizes* size size)))
+                     size   (climb:normalize-font-size size))
 
-               (when (zerop size)
-                 (setf size (getf clim-clx::*clx-text-sizes* :normal)))
+               (assert (plusp size))
 
                (let ((display (clim-clx::clx-port-display port)))
                  (find-and-make-xlib-face display family face size)))))

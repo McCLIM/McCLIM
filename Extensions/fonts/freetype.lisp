@@ -525,10 +525,7 @@ or NIL if the current transformation is the identity transformation."
         (make-instance 'freetype-font
                        :port port
                        :face face-obj
-                       :size (etypecase size
-                               (keyword (or (getf clim-clx::*clx-text-sizes* size) 12))
-                               (number size)
-                               (null 12))
+                       :size (climb:normalize-font-size size)
                        :font-replace (typecase text-style
                                        (font-replacement-text-style text-style)
                                        (otherwise nil)))))))
