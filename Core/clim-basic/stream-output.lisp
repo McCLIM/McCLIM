@@ -237,19 +237,6 @@
   `(letf (((cursor-visibility (stream-text-cursor ,stream)) nil))
      ,@body))
 
-(defgeneric stream-wrap-line (stream))
-
-(defmethod stream-wrap-line ((stream standard-extended-output-stream))
-  (let ((margin (stream-text-margin stream)))
-    (multiple-value-bind (cx cy) (stream-cursor-position stream)
-      (declare (ignore cx))
-      (when (stream-drawing-p stream)
-        (draw-rectangle* (sheet-medium stream) margin cy (+ margin 4)
-                         (+ cy (%stream-char-height stream))
-                         :ink +foreground-ink+
-                         :filled t))))
-  (stream-write-char stream #\newline))
-
 (defun seos-write-string (stream string &optional (start 0) end)
   (let* ((medium       (sheet-medium stream))
          (text-style   (medium-text-style medium))
@@ -293,8 +280,8 @@
               (setf (stream-cursor-position stream) (values cx cy)))
             (when (/= split end)
               (let ((current-baseline baseline))
-                (setf baseline current-baseline))               
-              (stream-wrap-line stream)
+                (setf baseline current-baseline))
+              (stream-write-char stream #\newline)
               (seos-write-string stream string split end))))))))
 
 (defgeneric %note-stream-end-of-page (stream action new-height)
