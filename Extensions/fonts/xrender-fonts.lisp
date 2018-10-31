@@ -128,7 +128,8 @@
 
 
 
-(defmethod font-generate-glyph ((font clx-truetype-font) code &optional (tr +identity-transformation+))
+(defmethod font-generate-glyph ((font clx-truetype-font) code
+                                &optional (transformation +identity-transformation+))
   (let* ((display (clx-truetype-font-display font))
          (glyph-id (display-draw-glyph-id display))
          (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0) code)))
@@ -136,8 +137,11 @@
                                                #.(ceiling (log char-code-limit 2)))
                                          code))))
     (multiple-value-bind (arr left top width height dx dy udx udy)
-        (glyph-pixarray font character next-character tr)
-      (declare (ignore udx udy))
+        (if (identity-transformation-p transformation)
+            (glyph-pixarray font character next-character transformation)
+            (glyph-pixarray font character next-character
+                            (compose-transformations #1=(make-scaling-transformation 1.0 -1.0)
+                                                     (compose-transformations transformation #1#))))
       (with-slots (fixed-width) font
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
@@ -164,34 +168,11 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                               :y-advance dy)
       (let ((right (+ left (array-dimension arr 1)))
             (bottom (- top (array-dimension arr 0))))
-        (glyph-info glyph-id width height left right top bottom dx dy)))))
-
-(defun font-generate-glyph* (font glyph-index transformation)
-  (let* ((display (clx-truetype-font-display font))
-         (glyph-id (display-draw-glyph-id display))
-         (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0) glyph-index)))
-         (next-character (code-char (ldb (byte #.(ceiling (log char-code-limit 2))
-                                               #.(ceiling (log char-code-limit 2)))
-                                         glyph-index))))
-    (multiple-value-bind (arr left top width height dx dy udx udy)
-        (glyph-pixarray font character next-character; transformation
-                        (compose-transformations #1=(make-scaling-transformation 1.0 -1.0)
-                                                 (compose-transformations transformation #1#)))
-      (when (= (array-dimension arr 0) 0)
-        (setf arr (make-array (list 1 1)
-                              :element-type '(unsigned-byte 8)
-                              :initial-element 0)))
-      (xlib::render-add-glyph (display-the-glyph-set display) glyph-id
-                              :data arr
-                              :x-origin (- left)
-                              :y-origin top
-                              :x-advance dx
-                              :y-advance dy)
-      ;; INV advance-width and advance-height are hacked here for transformed
-      ;; glyph rendering. They are not transformed. See %RENDER-TRANSFORMED-GLYPHS.
-      (let ((right (+ left (array-dimension arr 1)))
-            (bottom (- top (array-dimension arr 0))))
-        (glyph-info glyph-id width height left right top bottom udx udy)))))
+        (if (identity-transformation-p transformation)
+            (glyph-info glyph-id width height left right top bottom dx dy)
+            ;; INV advance-width and advance-height are hacked here for transformed
+            ;; glyph rendering. They are not transformed. See %RENDER-TRANSFORMED-GLYPHS.
+            (glyph-info glyph-id width height left right top bottom udx udy))))))
 
 (defun drawable-picture (drawable)
   (or (getf (xlib:drawable-plist drawable) 'picture)
@@ -342,7 +323,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
      as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
                                          #.(ceiling (log char-code-limit 2)))
                     (char-code char))
-     as glyph-info = (font-generate-glyph* font code glyph-transformation)
+     as glyph-info = (font-generate-glyph font code glyph-transformation)
      do
        (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
              (the (unsigned-byte 32) (glyph-info-id glyph-info)))
@@ -353,7 +334,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                        (truncate (+ current-x 0.5))
                                        (truncate (+ current-y 0.5))
                                        glyph-ids :start i* :end (1+ i*)))
-     ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH*.
+     ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH.
        (incf current-x (glyph-info-advance-width glyph-info))
        (incf current-y (glyph-info-advance-height glyph-info))
      do
@@ -361,9 +342,9 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
        (incf i*)
      finally
        (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-             (the (unsigned-byte 32) (glyph-info-id (font-generate-glyph* font
-                                                                          (char-code char)
-                                                                          glyph-transformation))))
+             (the (unsigned-byte 32) (glyph-info-id (font-generate-glyph font
+                                                                         (char-code char)
+                                                                         glyph-transformation))))
      finally
      ;; rendering one glyph at a time (last glyph)
        (multiple-value-bind (current-x current-y)
