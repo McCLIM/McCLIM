@@ -162,8 +162,8 @@
 (defclass standard-extended-output-stream (extended-output-stream
                                            standard-output-stream)
   ((cursor :accessor stream-text-cursor)
-   (foreground :initarg :foreground :reader stream-foreground)
-   (background :initarg :background :reader stream-background)
+   (foreground :initarg :foreground :reader foreground)
+   (background :initarg :background :reader background)
    (text-style :initarg :text-style :reader stream-text-style)
    (vspace :initarg :vertical-spacing :reader stream-vertical-spacing)
    (margin :initarg :text-margin :writer (setf stream-text-margin))

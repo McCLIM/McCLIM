@@ -1877,8 +1877,10 @@
    ;; sheets
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
-
-   #:line-style-effective-thickness
+   #:background
+   #:foreground
+   ;; #:line-style-effective-thickness
+   ;; #:line-style-effective-dashes
    ;; medium
    #:medium-miter-limit
    #:medium-draw-glyph

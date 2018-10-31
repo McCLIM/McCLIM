@@ -91,7 +91,7 @@
          (text      (text state))
          (style     (text-style state))
          (rectangle (rectangle state)))
-    (draw-design stream region :ink (pane-background stream))
+    (draw-design stream region :ink (clime:background stream))
     (multiple-value-bind (width height final-x final-y baseline)
         (text-size stream text :text-style style)
       (let* ((x1 (/ (- pane-width width) 2))
