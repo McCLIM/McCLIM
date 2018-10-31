@@ -418,14 +418,13 @@ or NIL if the current transformation is the identity transformation."
     (freetype2:face-descender-pixels face)))
 
 (defun make-family-pattern (family)
-  (list (cons :family
-              (cond
-                ((typep family 'freetype-font-family) (clim-extensions:font-family-name family))
-                ((stringp family) family)
-                ((eq family :fix) "Source Code Pro")
-                ((eq family :sans-serif) "DejaVu Sans")
-                ((eq family :serif) "DejaVu Serif")
-                (t "DejaVu Sans")))))
+  (list (cond
+          ((typep family 'freetype-font-family) `(:family . ,(clim-extensions:font-family-name family)))
+          ((stringp family) `(:family . ,family))
+          ((eq family :fix) '(:spacing . 100))
+          ((eq family :sans-serif) '(:family . "DejaVu Sans"))
+          ((eq family :serif) '(:family . "DejaVu Serif"))
+          (t '(:family . "DejaVu Sans")))))
 
 (defun make-face-pattern (face)
   (loop
