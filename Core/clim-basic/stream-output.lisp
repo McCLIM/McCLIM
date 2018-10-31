@@ -290,32 +290,27 @@
 
 (defun seos-write-newline (stream)
   (let ((medium       (sheet-medium stream))
-        (view-height  (bounding-rectangle-height stream)))
+        ;; Stream region may be +everywhere+.
+        (view-height  (if (region-equal (sheet-region stream) +everywhere+)
+                          nil
+                          (bounding-rectangle-height stream))))
     (with-slots (baseline vspace) stream
       (multiple-value-bind (cx cy) (stream-cursor-position stream)
         (setf (%stream-char-height stream) (max (%stream-char-height stream) (text-style-height (medium-text-style medium) medium)))
         (setf cx 0
               cy (+ cy (%stream-char-height stream) vspace))
-        (when (> cy view-height)
+        ;; VIEW-HEIGHT being NIL means that stream doesn't have a
+        ;; bounding-rectangle and we never do break a page.
+        (when (and view-height (> cy view-height))
           (%note-stream-end-of-page stream (stream-end-of-page-action stream) cy)
           (ecase (stream-end-of-page-action stream)
             ((:scroll :allow)
              nil)
             (:wrap
              (setq cy 0))))
-        ;; mikemac says that this "erase the new line" behavior is
-        ;; required by the stream text protocol, but I don't see
-        ;; it.  I'm happy to put this back in again, but in the
-        ;; meantime it makes debugging of updating-output a bit easier
-        ;; not to have "extra" records laying around.  If/When it goes
-        ;; back in... the draw-rectangle has to happen on the stream,
-        ;; not the medium. -- moore
-        #+nil(draw-rectangle* medium cx cy (+ margin 4) (+ cy height)
-                              :ink +background-ink+
-                              :filled t)
-        (setq baseline 0)
-        (setf (%stream-char-height stream) 0)
-        (setf (stream-cursor-position stream) (values cx cy))))))
+        (setf baseline 0
+              (%stream-char-height stream) 0
+              (stream-cursor-position stream) (values cx cy))))))
 
 
 
@@ -379,9 +374,11 @@ STREAM-STRING-WIDTH will be called."))
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
     (or margin
-        (- (bounding-rectangle-width (or (pane-viewport stream)
-                                         stream))
-           (text-size stream "O")))))
+        (let ((sheet (or (pane-viewport stream) stream)))
+          ;; PostScript backend for :eps may have region = +everywhere+.
+          (if (region-equal (sheet-region sheet) +everywhere+)
+              +fill+
+              (- (bounding-rectangle-width sheet) (text-size stream "O")))))))
 
 (defmethod stream-line-height ((stream standard-extended-output-stream)
                                &key (text-style nil))
