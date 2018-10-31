@@ -1032,6 +1032,15 @@ were added."
   (if-supplied (text-style)
     (text-style-equalp (slot-value record 'text-style) text-style)))
 
+(defmethod replay-output-record :around
+    ((record gs-transformation-mixin) stream &optional region x-offset y-offset)
+  (declare (ignore region x-offset y-offset))
+  (with-drawing-options (stream :transformation (graphics-state-transformation record))
+    (call-next-method)))
+
+(defrecord-predicate gs-transformation-mixin (transformation)
+  (transformation-equal (graphics-state-transformation record) transformation))
+
 (defclass standard-graphics-displayed-output-record
     (standard-displayed-output-record
      graphics-displayed-output-record)
@@ -1595,16 +1604,13 @@ were added."
                toward-y transform-glyphs transformation)
       record
     (let ((medium (sheet-medium stream)))
-      (with-drawing-options (medium :transformation transformation)
-        (medium-draw-text* medium string point-x point-y start end align-x
-                           align-y toward-x toward-y transform-glyphs)))))
+      (medium-draw-text* medium string point-x point-y start end align-x
+                         align-y toward-x toward-y transform-glyphs))))
 
 (defrecord-predicate draw-text-output-record
     (string start end point-x point-y align-x align-y toward-x toward-y transform-glyphs)
   (and (if-supplied (string)
          (string= (slot-value record 'string) string))
-       (transformation-equal (graphics-state-transformation record)
-                             (graphics-state-transformation record))
        (if-supplied (start)
          (eql (slot-value record 'start) start))
        (if-supplied (end)
