@@ -754,10 +754,12 @@ translated, so they begin at different position than [0,0])."))
                                          (round-coordinate lx2)
                                          (round-coordinate ly2)))))
                    (draw-lines (scan-line)
-                     (cond
-                       ((region-equal scan-line +nowhere+))
-                       (filled (map-over-region-set-regions #'draw-line-1 scan-line))
-                       (t (map-over-region-set-regions #'maybe-draw-border-points scan-line)))))
+                     ;; XXX: this linep masks a problem with region-intersection.
+                     (when (linep scan-line)
+                       (cond
+                         ((region-equal scan-line +nowhere+))
+                         (filled (map-over-region-set-regions #'draw-line-1 scan-line))
+                         (t (map-over-region-set-regions #'maybe-draw-border-points scan-line))))))
             ;; O(n+m) because otherwise we may skip some points (better drawing quality)
             (progn                      ;if (<= width height)
               (loop for x from x1 to (+ x1 width) do
