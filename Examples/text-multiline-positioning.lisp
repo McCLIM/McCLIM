@@ -17,7 +17,9 @@
     ;; XXX: surrounding-output-with-border makes transformed text drawing MANY
     ;; times slower. This may be indicator, that we redraw things too much when
     ;; we manipulate output records.
-    (progn;surrounding-output-with-border (pane :line-dashes t :line-thickness 3)
+    (progn ;; surrounding-output-with-border (pane :line-dashes t :line-thickness 1
+           ;;                                :padding-x 0
+           ;;                                :padding-y 0)
       (clim:draw-text* pane string*
                        0 0 :transform-glyphs t
                        :align-x align-x :align-y align-y))

@@ -193,61 +193,6 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
             (bottom (- top (array-dimension arr 0))))
         (glyph-info glyph-id width height left right top bottom udx udy)))))
 
-(defmethod climb:font-text-extents ((font truetype-font) string
-                                    &key (start 0) (end (length string)) direction)
-  ;; -> (width ascent descent left right
-  ;; font-ascent font-descent direction
-  ;; first-not-done)  
-  (declare (optimize (speed 3))
-           (ignore direction)
-           (fixnum start end))
-  (let* ((last-char-code (char-code (char string (1- end))))
-         (left-offset (climb:font-glyph-left font last-char-code))
-         (width
-          ;; We could work a little harder and eliminate generic arithmetic
-          ;; here. It might shave a few percent off a draw-text benchmark.
-          ;; Rather silly to obsess over the array access considering that.
-           (macrolet ((compute ()
-                        `(loop
-                            with sum fixnum = (glyph-info-advance-width (font-glyph-info font last-char-code))
-                            with char = (char string start)
-                            for i from (1+ start) below end
-                            as next-char = (char string i)
-                            as next-char-code = (char-code next-char)
-                            as code = (dpb next-char-code (byte
-                                                           #.(ceiling (log char-code-limit 2))
-                                                           #.(ceiling (log char-code-limit 2)))
-                                           (char-code char))
-                            ;; for i from start below end
-                            ;; as code = (char-code (char string i))
-                            do
-                              (incf sum (glyph-info-advance-width (font-glyph-info font code)))
-                              (setf char next-char)
-                            finally (return sum))))
-             (if (climb:font-fixed-width font)
-                 (* (climb:font-fixed-width font) (- end start))
-                 (typecase string
-                   (simple-string
-                    (locally (declare (type simple-string string))
-                      (compute)))
-                   (string
-                    (locally (declare (type string string))
-                      (compute)))
-                   (t (compute))))))
-         (ascent (climb:font-ascent font))
-         (descent (climb:font-descent font))
-         (height (+ ascent descent))
-         (linegap (- (climb:font-leading font) height)))
-    (values
-       ;; bounding box: xmin ymin xmax ymax
-       0 (- ascent) width descent
-       ;; text properties: left top width height
-       0 (- ascent) width height
-       ;; line properties: ascent descent linegap
-       ascent descent linegap
-       ;; cursor motion: cursor-dx cursor-dy
-       width 0)))
-
 (defun drawable-picture (drawable)
   (or (getf (xlib:drawable-plist drawable) 'picture)
       (setf (getf (xlib:drawable-plist drawable) 'picture)
