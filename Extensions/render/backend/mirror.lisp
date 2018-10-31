@@ -102,12 +102,12 @@
             (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
                                                            (ceiling max-x) (ceiling max-y)))))))))
 
-(defun %stroke-paths (mirror paths line-style transformation region ink)
+(defun %stroke-paths (medium mirror paths line-style transformation region ink)
   (check-type mirror image-mirror-mixin)
   (alexandria:when-let ((image (image-mirror-image mirror)))
     (with-slots (image-lock state) mirror
       (climi::with-lock-held (image-lock)
-        (let ((reg (aa-stroke-paths image ink paths line-style state transformation region)))
+        (let ((reg (aa-stroke-paths medium image ink paths line-style state transformation region)))
           (clim:with-bounding-rectangle* (min-x min-y max-x max-y) reg
             (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
                                                            (ceiling max-x) (ceiling max-y)))))))))

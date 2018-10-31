@@ -7,7 +7,7 @@
   (alexandria:when-let* ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
                          (mirror (sheet-mirror msheet))
                          (transformation (sheet-native-transformation (medium-sheet medium))))
-    (%stroke-paths mirror paths
+    (%stroke-paths medium mirror paths
                    (medium-line-style medium)
                    transformation
                    (climi::medium-device-region medium)
