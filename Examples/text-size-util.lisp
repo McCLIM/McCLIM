@@ -81,14 +81,17 @@
 
 (defun draw-text-size-info (stream state)
   (let* ((medium (sheet-medium stream))
-         (region (sheet-region stream))
+         (region (let ((region (sheet-region stream)))
+                   (if (not (region-equal region +everywhere+))
+                       region
+                       (make-rectangle* 0 0 800 600))))
          (pane-width (rectangle-width region))
          (pane-height (rectangle-height region))
 
          (text      (text state))
          (style     (text-style state))
          (rectangle (rectangle state)))
-    (draw-design stream +everywhere+ :ink (pane-background stream))
+    (draw-design stream region :ink (pane-background stream))
     (multiple-value-bind (width height final-x final-y baseline)
         (text-size stream text :text-style style)
       (let* ((x1 (/ (- pane-width width) 2))
