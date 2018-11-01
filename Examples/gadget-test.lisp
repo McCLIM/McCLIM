@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
 
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 
@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-demo)
@@ -25,7 +25,7 @@
 
 (defun gadget-test (&optional frame-manager-name)
   (run-frame-top-level
-   (if frame-manager-name 
+   (if frame-manager-name
        (make-application-frame
 	'gadget-test
 	:frame-manager (make-instance frame-manager-name :port (find-port)))
@@ -123,34 +123,29 @@
                  :max-value 100
                  :value 0
                  :show-value-p t
-                 :orientation :horizontal
-                 :current-color +black+)
+                 :orientation :horizontal)
      (slider-v   :slider
                  :min-value 0
 		 :show-value-p t
                  :max-value 100
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      #+(or)
      (slider-v1  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      (slider-v2  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      (slider-v3  :slider
                  :min-value 0
                  :max-value 100
 		 :show-value-p t
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      #+(or)
      (radar      (make-pane 'radar-pane :name 'radar))

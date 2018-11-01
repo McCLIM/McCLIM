@@ -7,8 +7,8 @@
 ;;;
 
 (defclass raster-image-graft (graft)
-  ((width  :initarg width :reader raster-image-graft-width)
-   (height :initarg height :reader raster-image-graft-height)))
+  ((width  :initarg :width :reader raster-image-graft-width)
+   (height :initarg :height :reader raster-image-graft-height)))
 
 (defmethod graft-orientation ((graft raster-image-graft))
   :graphics)
@@ -28,4 +28,3 @@
        (:inches         (/ 0.0393701 *dot-per-millimeter*))
        (:millimeters    (/ *dot-per-millimeter*))
        (:screen-sized   (/ (raster-image-graft-width graft))))))
-

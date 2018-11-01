@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
-;;;  (c) copyright 2000, 2014 by 
+;;;  (c) copyright 2000, 2014 by
 ;;;           Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -14,8 +14,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
@@ -262,7 +262,7 @@ account, and create a list of menu buttons."
 
 
 (defmethod handle-repaint ((pane menu-divider-leaf-pane) region)
-  (let ((label (slot-value pane 'label)))   
+  (let ((label (slot-value pane 'label)))
     (multiple-value-bind (x1 y1 x2 y2)
         (bounding-rectangle* (sheet-region pane))
       (declare (ignore y2))
@@ -304,7 +304,6 @@ account, and create a list of menu buttons."
                           :label name
                           :text-style *enabled-text-style*
                           :client client
-                          :vertical vertical
                           :value-changed-callback
                           #'(lambda (gadget val)
                               (declare (ignore gadget val))
@@ -313,7 +312,6 @@ account, and create a list of menu buttons."
                             :label name
                             :text-style *disabled-text-style*
                             :client client
-                            :vertical vertical
                             :value-changed-callback
                             #'(lambda (gadget val)
                                 (declare (ignore gadget val))
@@ -325,7 +323,6 @@ account, and create a list of menu buttons."
                      :label name
                      :text-style *enabled-text-style*
                      :client client
-                     :vertical vertical
                      :value-changed-callback
                      #'(lambda (gadget val)
                          (declare (ignore gadget val))
@@ -338,7 +335,6 @@ account, and create a list of menu buttons."
       (:divider
        (make-pane-1 manager frame 'menu-divider-leaf-pane
                     :label name
-                    :vertical vertical
                     :client client))
       (:menu
         (make-pane-1 manager frame (if vertical
@@ -346,7 +342,6 @@ account, and create a list of menu buttons."
                                        'menu-button-submenu-pane)
 		     :label name
 		     :client client
-                     :vertical vertical
 		     :frame-manager manager
 		     :command-table value
 		     :bottomp bottomp))
@@ -397,7 +392,7 @@ account, and create a list of menu buttons."
 	   :command-table command-table))
      (list +fill+))))
 
-(defun make-menu-bar (command-table 
+(defun make-menu-bar (command-table
 		      &key width height
 		           (max-width +fill+) max-height
 			   min-width min-height)

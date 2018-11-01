@@ -7,7 +7,7 @@
 (defclass raster-image-port (render-port-mixin basic-port)
   ((width :reader raster-image-port-width)
    (height :reader raster-image-port-height)))
-   
+
 ;;; Initialize and Destroy port
 
 (defmethod initialize-instance :after ((port raster-image-port)
@@ -31,7 +31,7 @@
 
 (defmethod destroy-port :before ((port raster-image-port))
  (%destroy-all-mirrors port))
-	    
+
 ;;; server path
 
 (defun parse-raster-image-server-path (path)
@@ -64,7 +64,7 @@
 ;;; medium
 
 (defmethod make-medium ((port raster-image-port) (sheet basic-sheet))
-  (make-instance 'raster-image-medium :sheet sheet :port port))
+  (make-instance 'raster-image-medium :sheet sheet))
 
 
 (defmethod port-set-mirror-region ((port raster-image-port) mirror region)

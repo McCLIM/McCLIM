@@ -120,8 +120,7 @@ will be active when the associated Drei view has focus.")
 (defclass point-cursor (drei-cursor)
   ()
   (:default-initargs
-   :mark nil
-   :active t)
+   :mark nil)
   (:documentation "A class that should be used for the visual
 representation of the point of a Drei instance."))
 
@@ -132,9 +131,8 @@ representation of the point of a Drei instance."))
   ()
   (:default-initargs
    :active-ink +dark-green+
-    :inactive-ink +dark-green+
-    :mark nil
-    :active t)
+   :inactive-ink +dark-green+
+   :mark nil)
   (:documentation "A class that should be used for the visual
 representation of the mark of a Drei instance."))
 

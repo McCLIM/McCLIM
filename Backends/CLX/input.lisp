@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-CLX; -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000,2001 by 
+;;;  (c) copyright 2000,2001 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000, 2001, 2014, 2016 by
@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-clx)
@@ -35,7 +35,7 @@
                (progn
                  ,@body)))))))
 
-(defun decode-x-button-code (code)  
+(defun decode-x-button-code (code)
   (let ((button-mapping #.(vector +pointer-left-button+
                                   +pointer-middle-button+
                                   +pointer-right-button+
@@ -50,7 +50,7 @@
 
 ;;; From "Inter-Client Communication Conventions Manual", Version
 ;;; 2.0.xf86.1, section 4.1.5:
-;;; 
+;;;
 ;;; |   Advice to Implementors
 ;;; |
 ;;; |   Clients cannot distinguish between the case where a top-level
@@ -96,7 +96,7 @@
 ;;; all events from there as usual.
 ;;;
 ;;;--GB
-  
+
 ;;; XXX :button code -> :button (decode-x-button-code code)
 ;;;
 ;;; Only button and keypress events get a :code keyword argument! For
@@ -128,7 +128,7 @@
       (case event-key
 	((:key-press :key-release)
          (multiple-value-bind (keyname modifier-state keysym-name)
-	     (x-event-to-key-name-and-modifiers *clx-port* 
+	     (x-event-to-key-name-and-modifiers *clx-port*
 						event-key code state)
            (make-instance (if (eq event-key :key-press)
 			      'key-press-event
@@ -241,23 +241,22 @@
 				  :sheet sheet
 				  :modifier-state modifier-state
 				  :timestamp time)))
-	       (progn
-		 (make-instance 'pointer-motion-event
-				:pointer 0 :button code
-				:x x :y y
-				:graft-x root-x
-				:graft-y root-y
-				:sheet sheet
-				:modifier-state modifier-state
-				:timestamp time)))))
+	       (make-instance 'pointer-motion-event
+			      :pointer 0 :button code
+			      :x x :y y
+			      :graft-x root-x
+			      :graft-y root-y
+			      :sheet sheet
+			      :modifier-state modifier-state
+			      :timestamp time))))
         ;;
 	((:exposure :display :graphics-exposure)
          ;; Notes:
          ;; . Do not compare count with 0 here, last rectangle in an
-         ;;   :exposure event sequence does not cover the whole region. 
+         ;;   :exposure event sequence does not cover the whole region.
          ;;
          ;; . Do not transform the event region here, since
-         ;;   WINDOW-EVENT-REGION does it already. And rightfully so. 
+         ;;   WINDOW-EVENT-REGION does it already. And rightfully so.
          ;;   (think about changing a sheet's native transformation).
          ;;--GB
          ;;
@@ -291,7 +290,7 @@
                         :timestamp time))
 	(:client-message
          (port-client-message sheet time type data))
-	(t         
+	(t
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
 	   (xlib:display-force-output (clx-port-display *clx-port*)))
 	 nil)))))
@@ -344,7 +343,7 @@
     ; temporary solution
     (or (xlib:process-event (clx-port-display port) :timeout timeout :handler #'event-handler :discard-p t)
 	:timeout)))
-;; [Mike] Timeout and wait-functions are both implementation 
+;; [Mike] Timeout and wait-functions are both implementation
 ;;        specific and hence best done in the backends.
 
 
@@ -410,7 +409,7 @@
 	       ;; The event initialization code will give us a
 	       ;; reasonable timestamp.
 	       :timestamp 0))))))))
-  
+
 (defmethod port-frame-keyboard-input-focus ((port clx-basic-port) frame)
   (frame-properties frame 'focus))
 (defmethod (setf port-frame-keyboard-input-focus) (focus (port clx-basic-port) frame)
