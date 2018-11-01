@@ -66,10 +66,9 @@
   ())
 
 (defmethod initialize-instance :after
-    ((sheet permanent-medium-sheet-output-mixin) &rest args)
-  (declare (ignore args))
+    ((sheet permanent-medium-sheet-output-mixin) &key port)
   ;; hmm, 
-  (setf (%sheet-medium sheet) (make-medium (port sheet) sheet))
+  (setf (%sheet-medium sheet) (make-medium port sheet))
   ;; hmm...
   (engraft-medium (sheet-medium sheet) (port sheet) sheet))
 

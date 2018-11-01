@@ -453,6 +453,28 @@ outside the clipping area should be grey.")
                                                         (+ (random 100)  x) (+ (random 100) y)
                                                         :ink (make-random-col)
                                                         :line-thickness (random 10))))))
+
+(define-drawing-test "02) Line Unit" (stream)
+    "Lines drawn with different line-unit values without (left column) and with (right column) the scaling transformation applied (1/2 1/2).
+
+line-thickness and line-dashes with line-unit :COORDINATE should depend on a transformation, otherwise they should be independent. Line coordinates are always subject of the transformation. line-thickness is 8, line-dashes are T and (8 12 8 4) for first and third line accordingly."
+  (loop
+     with dashes = '(8 12 8 4)
+     for lu in '(:normal :point :coordinate)
+     for dy in '(20 170 320)
+     do
+       (draw-text* stream (format nil "~s" lu) 20 dy)
+       (with-translation (stream 150 dy)
+         (with-drawing-options (stream :line-thickness 8 :line-unit lu)
+           (draw-line* stream 0 0 100 0 :line-dashes t)
+           (draw-line* stream 0 30 100 30)
+           (draw-line* stream 0 60 100 120 :line-dashes dashes)))
+       (with-translation (stream 300 dy)
+         (with-drawing-options (stream :line-thickness 8 :line-unit lu
+                                       :transformation (make-scaling-transformation 1/2 1/2))
+           (draw-line* stream 0 0 100 0 :line-dashes t)
+           (draw-line* stream 0 30 100 30)
+           (draw-line* stream 0 60 100 100 :line-dashes dashes)))))
 ;;;
 ;;; Polygon
 ;;;

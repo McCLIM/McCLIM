@@ -15,15 +15,36 @@
 (defun close-path (path )
   (setf (paths::path-type path) :closed-polyline))
 
-(defun stroke-path (path line-style)
-  (alexandria:when-let ((dashes (climi::line-style-dashes line-style)))
+;;; XXX: this should be refactored into a reusable protocol in clim-backend with
+;;; specialization on medium. -- jd 2018-10-31
+(defun line-style-scale (line-style medium)
+  (let ((unit (line-style-unit line-style)))
+    (ecase unit
+      (:normal 1)
+      (:point (/ (graft-width (graft medium))
+                 (graft-width (graft medium) :units :inches)
+                 72))
+      (:coordinate (multiple-value-bind (x y)
+                       (transform-distance (medium-transformation medium) 0.71 0.71)
+                     (sqrt (+ (expt x 2) (expt y 2))))))))
+
+(defun line-style-effective-thickness (line-style medium)
+  (* (line-style-thickness line-style)
+     (line-style-scale line-style medium)))
+
+(defun line-style-effective-dashes (line-style medium)
+  (let ((scale (line-style-scale line-style medium)))
+    (map 'vector #'(lambda (dash) (* dash scale))
+         (line-style-dashes line-style))))
+
+(defun stroke-path (path line-style medium)
+  (alexandria:when-let ((dashes (clim:line-style-dashes line-style)))
     (setf path (paths:dash-path path
-                                (ctypecase dashes
-                                  (simple-array dashes)
-                                  (list (coerce dashes 'simple-vector))
-                                  (t #(2 1))))))
+                                (case dashes
+                                  ((t) (vector (* (line-style-scale line-style medium) 3)))
+                                  (otherwise (line-style-effective-dashes line-style medium))))))
   (paths:stroke-path path
-                     (max 1 (line-style-thickness line-style))
+                     (max 1 (line-style-effective-thickness line-style medium))
                      :joint (funcall #'(lambda (c)
                                          (if (eq c :bevel)
                                              :none
@@ -67,10 +88,10 @@
                                 (ceiling max-y)
                                 draw-function))))
 
-(defun aa-stroke-paths (image design paths line-style state transformation clip-region)
+(defun aa-stroke-paths (medium image design paths line-style state transformation clip-region)
   (vectors::state-reset state)
   (let ((paths (car (mapcar (lambda (path)
-                              (stroke-path path line-style))
+                              (stroke-path path line-style medium))
                             paths))))
     (aa-update-state state paths transformation)
     (aa-cells-sweep/rectangle image design state clip-region)))

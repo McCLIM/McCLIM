@@ -98,6 +98,7 @@
                           :writer %%set-sheet-native-transformation
                           :reader %%sheet-native-transformation)
    (native-region :type (or null region)
+                  :initarg :native-region
 		  :initform nil)
    (device-transformation :type (or null transformation)
                           :initform nil)

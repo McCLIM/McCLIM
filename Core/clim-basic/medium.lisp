@@ -449,10 +449,12 @@
 (defclass basic-medium (transform-coordinates-mixin complete-medium-state medium)
   ((foreground :initarg :foreground
                :initform +black+
-               :accessor medium-foreground)
+               :accessor medium-foreground
+               :reader foreground)
    (background :initarg :background
                :initform +white+
-               :accessor medium-background)
+               :accessor medium-background
+               :reader background)
    (ink :initarg :ink
         :initform +foreground-ink+
         :accessor medium-ink)
