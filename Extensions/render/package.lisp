@@ -89,6 +89,10 @@
                 #:glyph-info
                 #:font-glyph-info
                 #:font-generate-glyph
+                #:glyph-info-left
+                #:glyph-info-top
+                #:glyph-info-advance-width
+                #:glyph-info-advance-height
                 #:glyph-pixarray
                 #:ensure-gethash
                 #:invoke-with-truetype-path-restart

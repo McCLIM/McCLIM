@@ -18,19 +18,10 @@
                                               #.(ceiling (log char-code-limit 2)))
                                         code))))
     (multiple-value-bind (arr left top width height dx dy udx udy)
-        (glyph-pixarray font character next-character tr)
+        (glyph-pixarray font character next-character
+                        (compose-transformations #1=(make-scaling-transformation 1.0 -1.0)
+                                                 (compose-transformations tr #1#)))
       (declare (ignore udx udy))
       (let ((right (+ left (array-dimension arr 1)))
             (bottom (- top (array-dimension arr 0))))
         (render-glyph-info 0 width height left right top bottom dx dy arr)))))
-
-(defun font-glyph-opacity-image (font code)
-  (render-glyph-info-opacity-image (font-glyph-info font code)))
-
-;;;
-;;; text geometry
-;;;
-#+ (or)
-(defmethod climb:font-string-glyph-codes ((font render-truetype-font) string
-                                          &key (start 0) (end (length string)))
-  (map 'vector #'char-code (subseq string start end)))

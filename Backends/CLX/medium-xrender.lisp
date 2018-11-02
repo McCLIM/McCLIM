@@ -144,7 +144,7 @@
     (unless (eq align-x :left)
       ;; This is the worst case - we need to compute whole text width what
       ;; requires walking all lines char-by char.
-      (let ((text-width (text-size medium string)))
+      (let ((text-width (text-size medium string :start start :end end)))
         (setq x (- x (ecase align-x
                        ;;(:left 0)
                        (:center (/ text-width 2.0s0))
