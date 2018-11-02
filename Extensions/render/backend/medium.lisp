@@ -150,48 +150,27 @@
                               align-x align-y
                               toward-x toward-y transform-glyphs)
   (with-transformed-position ((medium-transformation medium) x y)
-    (flet ((draw-font-glypse (array dx dy transformation)
-             (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
-                   (opacity-image (make-instance 'climi::%rgba-pattern :array array)))
-               (when (and msheet (sheet-mirror msheet))
-                 (multiple-value-bind (x1 y1)
-                     (transform-position
-                      (clim:compose-transformations transformation
-                                                    (sheet-native-transformation
-                                                     (medium-sheet medium)))
-                      (+ dx ) (- dy))
-                   (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-                       (region-intersection
-                        (climi::medium-device-region medium)
-                        (make-rectangle* x1 y1
-                                         (+ x1 (pattern-width opacity-image))
-                                         (+ y1 (pattern-height opacity-image))))
-                     (%medium-fill-image-mask medium opacity-image
-                                              min-x min-y
-                                              (- max-x min-x) (- max-y min-y)
-                                              (- (round x1)) (- (round y1)))))))))
-      (let ((xfont (text-style-to-font (port medium) (medium-text-style medium))))
-        (let ((size (climb:normalize-font-size (text-style-size (medium-text-style medium)))))
-          (when (characterp string)
-            (setq string (make-string 1 :initial-element string)))
-          (when (null end) (setq end (length string)))
-          (multiple-value-bind (text-width text-height x-cursor y-cursor baseline)
-              (text-size medium string :start start :end end)
-            (declare (ignore x-cursor y-cursor))
-            (unless (and (eq align-x :left) (eq align-y :baseline))
-              (setq x (- x (ecase align-x
-                             (:left 0)
-                             (:center (round text-width 2))
-                             (:right text-width))))
-              (setq y (ecase align-y
-                        (:top (+ y (- baseline text-height)
-                                 (+ text-height)))
-                        (:center (+ y (- baseline text-height)
-                                    (+ (floor text-height 2))))
-                        (:baseline y)
-                        (:baseline* y)
-                        (:bottom (+ y (- baseline text-height))))))
-            (string-primitive-paths x y string xfont size #'draw-font-glypse)))))))
+    (when (characterp string)
+      (setq string (make-string 1 :initial-element string)))
+    (when (null end) (setq end (length string)))
+    (multiple-value-bind (text-width text-height x-cursor y-cursor baseline)
+        (text-size medium string :start start :end end)
+      (declare (ignore x-cursor y-cursor))
+      (unless (and (eq align-x :left) (eq align-y :baseline))
+        (setq x (- x (ecase align-x
+                       (:left 0)
+                       (:center (round text-width 2))
+                       (:right text-width))))
+        (setq y (ecase align-y
+                  (:top (+ y (- baseline text-height)
+                           (+ text-height)))
+                  (:center (+ y (- baseline text-height)
+                              (+ (floor text-height 2))))
+                  (:baseline y)
+                  (:baseline* y)
+                  (:bottom (+ y (- baseline text-height))))))
+      (string-primitive-paths medium x y string
+                              (text-style-to-font (port medium) (medium-text-style medium))))))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
