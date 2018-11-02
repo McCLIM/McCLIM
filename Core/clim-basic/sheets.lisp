@@ -84,6 +84,16 @@
 (defgeneric %invalidate-cached-device-regions (sheet))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; constants
+
+;; this should really be in clim-core/Pane.lisp but we use it in
+;; clim-basic/stream-output.lisp. This seems more like a sheet/pane
+;; concept than a stream concept, os define it here.
+(defconstant +fill+ (expt 10 (floor (log most-positive-fixnum 10))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;
 ;;;; sheet protocol class
 

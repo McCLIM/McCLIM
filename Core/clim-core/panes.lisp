@@ -207,7 +207,7 @@ order to produce a double-click")
 
 ;;; Space Requirements
 
-(defconstant +fill+ (expt 10 (floor (log most-positive-fixnum 10))))
+;; we used to define +fill+ here, but it is now in clim-basic/sheets.lisp
 
 (defclass space-requirement () ())
 
