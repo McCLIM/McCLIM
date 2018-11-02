@@ -374,11 +374,12 @@ STREAM-STRING-WIDTH will be called."))
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (with-slots (margin) stream
     (or margin
-        (let ((sheet (or (pane-viewport stream) stream)))
+        (let ((sheet (or (pane-viewport stream) stream))
+              (chsize (text-size stream "O")))
           ;; PostScript backend for :eps may have region = +everywhere+.
           (if (region-equal (sheet-region sheet) +everywhere+)
-              +fill+
-              (- (bounding-rectangle-width sheet) (text-size stream "O")))))))
+              (* 60 chsize)             ; 2.5 alphabets
+              (- (bounding-rectangle-width sheet) chsize))))))
 
 (defmethod stream-line-height ((stream standard-extended-output-stream)
                                &key (text-style nil))
