@@ -167,12 +167,16 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                               :x-advance dx
                               :y-advance dy)
       (let ((right (+ left (array-dimension arr 1)))
-            (bottom (- top (array-dimension arr 0))))
-        (if (identity-transformation-p transformation)
-            (glyph-info glyph-id width height left right top bottom dx dy)
-            ;; INV advance-width and advance-height are hacked here for transformed
-            ;; glyph rendering. They are not transformed. See %RENDER-TRANSFORMED-GLYPHS.
-            (glyph-info glyph-id width height left right top bottom udx udy))))))
+            (bottom (- top (array-dimension arr 0)))
+            (array #|arr|# nil))
+        ;; INV udx and udy are not transformed here for the transformed glyph
+        ;; rendering (to avoid accumulation of a roundnig error). See
+        ;; %RENDER-TRANSFORMED-GLYPHS. ARR is set to NIL because we are not
+        ;; interested in keeping opacity array (it is already kept on the X11
+        ;; side and we have no need for it on the Lisp side).
+        (glyph-info glyph-id array width height
+                    left right top bottom
+                    dx dy udx udy)))))
 
 (defun drawable-picture (drawable)
   (or (getf (xlib:drawable-plist drawable) 'picture)
@@ -335,8 +339,8 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                        (truncate (+ current-y 0.5))
                                        glyph-ids :start i* :end (1+ i*)))
      ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH.
-       (incf current-x (glyph-info-advance-width glyph-info))
-       (incf current-y (glyph-info-advance-height glyph-info))
+       (incf current-x (glyph-info-advance-width* glyph-info))
+       (incf current-y (glyph-info-advance-height* glyph-info))
      do
        (setf char next-char)
        (incf i*)

@@ -136,10 +136,10 @@
              (glyph (zpb-ttf:find-glyph char font-loader))
              ;; (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
              ;; (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
-             (advance-width (+ (* units->pixels (zpb-ttf:advance-width glyph))
-                               (* units->pixels (zpb-ttf:kerning-offset char next font))
-                               (climb:font-tracking font)))
-             (advance-height 0)
+             (udx (+ (* units->pixels (zpb-ttf:advance-width glyph))
+                     (* units->pixels (zpb-ttf:kerning-offset char next font))
+                     (climb:font-tracking font)))
+             (udy 0)
              (bounding-box (map 'vector (lambda (x) (float (* x units->pixels)))
                                 (zpb-ttf:bounding-box glyph)))
              (min-x (elt bounding-box 0))
@@ -200,36 +200,43 @@
                                                   (logior #x40 (aref array 0 i))
                                                   (aref array (1- height) i)
                                                   (logior #x40 (aref array (1- height) i)))))
-        (multiple-value-bind (advance-width* advance-height*)
+        (multiple-value-bind (dx dy)
             ;; Transformation is supplied in font coordinates for easy
             ;; composition with offset and scaling. advance values should be
             ;; returned in screen coordinates, so we transform it here.
             (transform-distance (compose-transformations
                                  #1=(make-scaling-transformation 1.0 -1.0)
                                  (compose-transformations transformation #1#))
-                                advance-width advance-height)
+                                udx udy)
           (values array (- left) top width height
                   ;; X uses horizontal/vertical advance between letters. That
                   ;; way glyph sequence may be rendered. This should not be
                   ;; confused with font width/height! -- jd 2018-09-28
-                  (round advance-width*)
-                  (round advance-height*)
+                  (round dx)
+                  (round dy)
                   ;; Transformed text is rendered glyph by glyph to mitigate
                   ;; accumulation of the rounding error. For that we need values
                   ;; without rounding nor transformation. -- jd 2018-10-04
-                  advance-width
-                  advance-height))))))
+                  udx
+                  udy))))))
 
-(defstruct (glyph-info (:constructor glyph-info (id width height left right top bottom advance-width advance-height)))
-  (id 0               :read-only t :type fixnum)
-  (width 0            :read-only t)
-  (height 0           :read-only t)
-  (left 0             :read-only t)
-  (right 0            :read-only t)
-  (top 0              :read-only t)
-  (bottom 0           :read-only t)
-  (advance-width 0s0  :read-only t)
-  (advance-height 0s0 :read-only t))
+(defstruct (glyph-info (:constructor glyph-info (id pixarray width height
+                                                 left right top bottom
+                                                 advance-width advance-height
+                                                 advance-width* advance-height*)))
+  (id 0                :read-only t :type fixnum)
+  (pixarray nil        :read-only t :type (or null (simple-array (unsigned-byte 8))))
+  (width 0             :read-only t)
+  (height 0            :read-only t)
+  (left 0              :read-only t)
+  (right 0             :read-only t)
+  (top 0               :read-only t)
+  (bottom 0            :read-only t)
+  (advance-width 0     :read-only t)
+  (advance-height 0    :read-only t)
+  ;; untransformed values
+  (advance-width* 0s0  :read-only t)
+  (advance-height* 0s0 :read-only t))
 
 
 (defclass cached-truetype-font (truetype-font)
