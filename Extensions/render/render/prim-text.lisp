@@ -22,7 +22,7 @@
                     (font-generate-glyph font code glyph-transformation))
      for dx fixnum = (glyph-info-left info)
      for dy fixnum = (glyph-info-top info)
-     for opacity-image = (render-glyph-info-opacity-image info)
+     for opacity-image = (glyph-info-pixarray info)
      do
        (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
              (opacity-image (make-instance 'climi::%rgba-pattern :array opacity-image))

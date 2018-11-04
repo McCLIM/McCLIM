@@ -93,6 +93,9 @@
                 #:glyph-info-top
                 #:glyph-info-advance-width
                 #:glyph-info-advance-height
+                #:glyph-info-advance-width*
+                #:glyph-info-advance-height*
+                #:glyph-info-pixarray
                 #:glyph-pixarray
                 #:ensure-gethash
                 #:invoke-with-truetype-path-restart
