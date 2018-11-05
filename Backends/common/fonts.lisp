@@ -147,7 +147,7 @@ of letters specified in a separate kerning-table."))
 (declaim (inline climb:normalize-font-size))
 (defun climb:normalize-font-size (size)
   (if (numberp size)
-      (round size)
+      (round (max size 2))
       (or (getf +font-sizes+ size size)
           (getf +font-sizes+ :normal))))
 

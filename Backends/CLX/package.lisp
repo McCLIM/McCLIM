@@ -71,8 +71,11 @@
                 #:%sheet-mirror-transformation
 		#:standard-port)
   (:export
+   #:clx-port
+   #:clx-render-port
    #:clx-port-display
    #:clx-medium
+   #:clx-render-medium
    #:initialize-clx
    #:clx-port-screen
    #:clx-graft

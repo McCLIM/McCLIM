@@ -37,6 +37,8 @@
 
    (design-cache :initform (make-hash-table :test #'eq))))
 
+(defclass clx-render-port (clx-port) ())
+
 
 (defun automagic-clx-server-path (port-type)
   (let ((name (get-environment-variable "DISPLAY")))
@@ -80,22 +82,18 @@
 
 (defun parse-clx-server-path (path)
   (let* ((port-type (pop path))
-         (mirroring (mirror-factory (getf path :mirroring)))
-         (font-renderer (getf path :font-renderer 'clx-standard-font-renderer)))
+         (mirroring (mirror-factory (getf path :mirroring))))
     (remf path :mirroring)
-    (remf path :font-renderer)
     (if path
         `(,port-type
           :host ,(getf path :host "localhost")
           :display-id ,(getf path :display-id 0)
           :screen-id ,(getf path :screen-id 0)
           :protocol ,(getf path :protocol :internet)
-          :font-renderer ,font-renderer
           ,@(when mirroring (list :mirroring mirroring)))
         (append (helpfully-automagic-clx-server-path port-type)
                 (when mirroring
-                  (list :mirroring mirroring))
-                (list :font-renderer font-renderer)))))
+                  (list :mirroring mirroring))))))
 
 (setf (get :x11 :port-type) 'clx-port)
 (setf (get :x11 :server-path-parser) 'parse-clx-server-path)
@@ -309,12 +307,16 @@
     graft))
 
 (defmethod make-medium ((port clx-port) sheet)
-  (make-instance 'clx-render-medium ;'clx-medium
-		 ;; :port port 
-		 ;; :graft (find-graft :port port) 
+  (make-instance 'clx-medium
+		 ;; :port port
+		 ;; :graft (find-graft :port port)
 		 :sheet sheet))
 
-
+(defmethod make-medium ((port clx-render-port) sheet)
+  (make-instance 'clx-render-medium
+		 ;; :port port
+		 ;; :graft (find-graft :port port)
+		 :sheet sheet))
 
 (defmethod graft ((port clx-port))
   (first (port-grafts port)))
@@ -368,10 +370,3 @@
 
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))
-
-;;; This protocol class should be eradicated with the whole mechanism. XRender
-;;; should dispatch on its own where feasible.
-
-(clim-internals::define-protocol-class font-renderer ())
-(defclass clx-standard-font-renderer (font-renderer)
-  ())

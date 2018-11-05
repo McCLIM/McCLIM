@@ -839,8 +839,7 @@ translated, so they begin at different position than [0,0])."))
                               align-x align-y
                               toward-x toward-y transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs))
-  (let ((merged-transform (sheet-device-transformation (medium-sheet medium)))
-        (xfont (lookup-text-style-to-x-font (port medium) :xlib (medium-text-style medium))))
+  (let ((merged-transform (sheet-device-transformation (medium-sheet medium))))
     (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
@@ -861,8 +860,10 @@ translated, so they begin at different position than [0,0])."))
                     (:center (+ y baseline (- (floor text-height 2)))) ; change
                     (:baseline*  y)                                    ; change
                     (:bottom (+ y baseline (- text-height)))))))       ; change
-      (font-draw-glyphs xfont mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
-                        :transformation merged-transform))))
+      (multiple-value-bind (x y)
+          (transform-position merged-transform x y)
+        (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
+                          :start start :end end :translate #'translate :size 16)))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)

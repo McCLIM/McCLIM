@@ -25,11 +25,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defclass truetype-font-renderer (clim-clx::font-renderer)
-  ())
-
-(setq clim:*default-server-path* '(:clx :font-renderer mcclim-truetype:truetype-font-renderer))
-
 (defun display-the-glyph-set (display)
   (let ((glyph-set (or (getf (xlib:display-plist display) 'the-glyph-set)
                        (setf (getf (xlib:display-plist display) 'the-glyph-set)
@@ -60,7 +55,11 @@
       (incf (display-free-glyph-id-counter display))))
 
 
-;;;;;;; mcclim interface
+(defclass clx-ttf-port (clim-clx:clx-render-port) ())
+
+(setf (get :clx-ttf :port-type) 'clx-ttf-port)
+(setf (get :clx-ttf :server-path-parser) 'clim-clx::parse-clx-server-path)
+
 (defclass clx-truetype-font (cached-truetype-font)
   ((display           :initarg :display :reader clx-truetype-font-display)
    (%buffer%          :initform (make-array 1024
@@ -81,13 +80,11 @@
                     (make-truetype-font port path size))
              '(8 10 12 14 18 24 48 72))))))
 
-(defmethod clim-clx:port-find-all-font-families ((port clim-clx::clx-port) (font-renderer truetype-font-renderer)
-                                                 &key invalidate-cache)
+(defmethod clime:port-all-font-families ((port clx-ttf-port) &key invalidate-cache)
   (when (or (null (clim-clx::font-families port)) invalidate-cache)
-    (setf (clim-clx::font-families port) (clim-clx::reload-font-table port)))
+    (setf (clim-clx::font-families port) nil))
   (register-all-ttf-fonts port)
-  (append (call-next-method)
-          (clim-clx::font-families port)))
+  (clim-clx::font-families port))
 
 (let ((font-loader-cache (make-hash-table :test #'equal))
       (font-families     (make-hash-table :test #'equal))
@@ -384,9 +381,19 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
   (options nil)
   (device-name nil))
 
-(defmethod clim-clx::lookup-text-style-to-X-font ((port clim-clx::clx-port)
-                                           (font-renderer truetype-font-renderer)
-                                           (text-style climi::device-font-text-style))
+(define-condition missing-font (simple-error)
+  ((filename :reader missing-font-filename :initarg :filename)
+   (text-style :reader missing-font-text-style :initarg :text-style))
+  (:report (lambda (condition stream)
+             (format stream  "Cannot access ~W (~a)
+Your *truetype-font-path* is currently ~W
+The following files should exist:~&~{  ~A~^~%~}"
+                     (missing-font-filename condition)
+                     (missing-font-text-style condition)
+                     *truetype-font-path*
+                     (mapcar #'cdr *families/faces*)))))
+
+(defmethod climb:text-style-to-font ((port clx-ttf-port) (text-style climi::device-font-text-style))
   (let ((font-name (climi::device-font-name text-style)))
     (when (stringp font-name)
       (setf (climi::device-font-name text-style)
@@ -413,21 +420,8 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                         (fontconfig-font-name-options font-name)))
                     :size (fontconfig-font-name-size font-name))))))))))
 
-(define-condition missing-font (simple-error)
-  ((filename :reader missing-font-filename :initarg :filename)
-   (text-style :reader missing-font-text-style :initarg :text-style))
-  (:report (lambda (condition stream)
-             (format stream  "Cannot access ~W (~a)
-Your *truetype-font-path* is currently ~W
-The following files should exist:~&~{  ~A~^~%~}"
-                     (missing-font-filename condition)
-                     (missing-font-text-style condition)
-                     *truetype-font-path*
-                     (mapcar #'cdr *families/faces*)))))
-
-(defmethod clim-clx::lookup-text-style-to-X-font ((port clim-clx::clx-port)
-                                                  (font-renderer truetype-font-renderer)
-                                                  (text-style standard-text-style))
+(defmethod climb:text-style-to-font ((port clx-ttf-port)
+                                     (text-style standard-text-style))
   (labels
       ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative

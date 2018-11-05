@@ -1,12 +1,14 @@
 (defpackage :clim-freetype
   (:use :cl)
-  (:export #:freetype-font-renderer
-           #:*enable-autohint*
+  (:export #:*enable-autohint*
            #:make-font-replacement-text-style))
 
 (in-package :clim-freetype)
 
-(setq clim:*default-server-path* '(:clx :font-renderer clim-freetype:freetype-font-renderer))
+(defclass freetype-font-port (clim-clx:clx-render-port) ())
+
+(setf (get :clx-ff :port-type) 'freetype-font-port)
+(setf (get :clx-ff :server-path-parser) 'clim-clx::parse-clx-server-path)
 
 (defparameter *freetype-font-scale* 26.6)
 
@@ -44,9 +46,7 @@ forms."
     (setf (freetype2-types:ft-vector-y vector) y)
     vector))
 
-(defclass freetype-font-renderer (clim-clx::font-renderer)
-  ())
-
+#+ (or) ;; there is no such class hierarchy anymore
 (defmethod initialize-instance :after ((obj freetype-font-renderer) &key)
   #+autofitter-warp-available
   (when *enable-autofitter-warp*
@@ -530,25 +530,21 @@ or NIL if the current transformation is the identity transformation."
                                        (font-replacement-text-style text-style)
                                        (otherwise nil)))))))
 
-(defmethod clim-clx::lookup-text-style-to-x-font ((port clim-clx::clx-port)
-                                                  (renderer freetype-font-renderer)
-                                                  (text-style clim:standard-text-style))
-  (let ((x (or (clim:text-style-mapping port text-style)
-               (setf (clim:text-style-mapping port text-style)
-                     (find-freetype-font port text-style)))))
-    x))
-
-(defmethod clim-clx::lookup-text-style-to-x-font ((port clim-clx::clx-port)
-                                                  (renderer freetype-font-renderer)
-                                                  (text-style climi::device-font-text-style))
-  nil)
+(defmethod climb:text-style-to-font ((port freetype-font-port) text-style)
+  (etypecase text-style
+    (clim:standard-text-style
+     (let ((x (or (clim:text-style-mapping port text-style)
+                  (setf (clim:text-style-mapping port text-style)
+                        (find-freetype-font port text-style)))))
+       x))
+    (climi::device-font-text-style
+     nil)))
 
 ;;;
 ;;;  List fonts
 ;;;
 
-(defmethod clim-clx:port-find-all-font-families ((port clim-clx::clx-port) (font-renderer freetype-font-renderer)
-                                                 &key invalidate-cache)
+(defmethod clime:port-all-font-families ((port freetype-font-port) &key invalidate-cache)
   (let* ((h (make-hash-table :test 'equal))
          (existing-families (make-hash-table :test 'equal))
          (prev-families nil))

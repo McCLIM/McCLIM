@@ -67,10 +67,9 @@ interface management system."
 ;;; platform.
 (defsystem #:mcclim/looks
   :depends-on (#:clim
-               #-(or mcclim-ugly mcclim-ffi-freetype)
+               #:mcclim-clx                                 #| raw clim-clx backend |#
                #:mcclim-clx/truetype                        #| adds truetype        |#
                #+mcclim-ffi-freetype #:mcclim-clx/freetype  #| adds freetype        |#
-               #+mcclim-ugly #:mcclim-clx                   #| raw clim-clx backend |#
                #:mcclim-clx-fb                              #| experimental backend |#
 
                ;; null backend
