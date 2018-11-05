@@ -271,9 +271,6 @@
      (font-info-ascent font-info)
      (font-info-descent font-info)
      0 end)))
-     
-
-
 
 (defmethod text-size ((medium postscript-font-medium) string
                       &key text-style (start 0) end)

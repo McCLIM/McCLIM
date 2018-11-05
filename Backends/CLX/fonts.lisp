@@ -24,11 +24,11 @@
     ((:fix (:bold :italic))        . "bold-o")
     ((:fix (:italic :bold))        . "bold-o")
     ;; "adome-times"
-    ((:sans :roman)                . "medium-r")
-    ((:sans :bold)                 . "bold-r")
-    ((:sans :italic)               . "medium-i")
-    ((:sans (:bold :italic))       . "bold-i")
-    ((:sans (:italic :bold))       . "boid-i")
+    ((:serif :roman)               . "medium-r")
+    ((:serif :bold)                . "bold-r")
+    ((:serif :italic)              . "medium-i")
+    ((:serif (:bold :italic))      . "bold-i")
+    ((:serif (:italic :bold))      . "boid-i")
     ;; "adobe-helvetica"
     ((:sans-serif :roman)          . "medium-r")
     ((:sans-serif :bold)           . "bold-r")
@@ -42,49 +42,48 @@
       (xlib:open-font display (first fonts)))))
 
 (defmethod climb:text-style-to-font ((port clx-port) text-style)
-  (lookup-text-style-to-x-font port (clx-port-font-renderer port) text-style))
-
-;;; XXX: this method should be annihilated in favor of port specialization in
-;;; text-style-to-font. -- jd 2018-10-26
-(defgeneric lookup-text-style-to-x-font (port font-renderer text-style)
-  (:method ((port t) (font-renderer t) (text-style t))
-    (let ((text-style (parse-text-style text-style)))
-      (labels
-          ((find-and-make-xlib-face (display family face size)
-             (let* ((family-name (if (stringp family)
-                                     family
-                                     (getf *families/names* family)))
-                    (face-name (if (stringp face)
-                                   face
-                                   (assoc (list family face) *families/faces*
-                                          :test #'equal))))
-               (flet ((try (encoding)
-                        (open-font display
-                                   (format nil "-~a-~a-*-*-~d-*-*-*-*-*-~a"
-                                           family-name face-name size encoding))))
+  (let ((text-style (parse-text-style text-style)))
+    (labels
+        ((find-and-make-xlib-face (display family face size)
+           (log:error "family: ~s, face: ~s" family face)
+           (let* ((family-name (if (stringp family)
+                                   family
+                                   (getf *families/names* family)))
+                  (face-name (if (stringp face)
+                                 face
+                                 (alexandria:assoc-value *families/faces* (list family face)
+                                                         :test #'equal))))
+             (log:error "face-name is ~s" face-name)
+             (flet ((try (encoding)
+                      (open-font display
+                                 (format nil "-~a-~a-*-*-~d-*-*-*-*-*-~a"
+                                         family-name face-name size encoding))))
 ;;; xxx: this part is a bit problematic - we either list all fonts
 ;;; with any possible encoding (what leads to the situation, when our
 ;;; font can't render a simple string "abcd") or we end with only a
 ;;; partial list of fonts. since we have mcclim-ttf extension which
 ;;; handles unicode characters well, this mechanism of getting fonts
 ;;; is deprecated and there is no big harm.
-                 (or (try "iso8859-1")
-                     (xlib:open-font display "fixed")))))
-           (find-font ()
-             (multiple-value-bind (family face size)
-                 (text-style-components text-style)
+               (or (try "iso8859-1")
+                   (progn
+                     (setf family :sans-serif)
+                     (try "iso8859-1"))
+                   (progn
+                     (setf family :fix)
+                     (xlib:open-font display "fixed"))))))
+         (find-font ()
+           (multiple-value-bind (family face size)
+               (text-style-components text-style)
 
-               (setf face   (or face :roman)
-                     family (or family :fix)
-                     size   (climb:normalize-font-size size))
+             (setf face   (or face :roman)
+                   family (or family :fix)
+                   size   (max 2 (climb:normalize-font-size size)))
 
-               (assert (plusp size))
-
-               (let ((display (clim-clx::clx-port-display port)))
-                 (find-and-make-xlib-face display family face size)))))
-        (or (text-style-mapping port text-style)
-            (setf (climi::text-style-mapping port text-style)
-                  (find-font)))))))
+             (let ((display (clim-clx::clx-port-display port)))
+               (find-and-make-xlib-face display family face size)))))
+      (or (text-style-mapping port text-style)
+          (setf (climi::text-style-mapping port text-style)
+                (find-font))))))
 
 
 
@@ -97,22 +96,17 @@
 (defmethod climb:font-character-width ((font xlib:font) char)
   (xlib:char-width font (char-code char)))
 
-;;; This function should return nine values:
-;;;
-;;; (width ascent descent left right font-ascent font-descent
-;;; direction first-not-done)
-(defmethod climb:font-text-extents ((font xlib:font) string &key (start 0) (end (length string)) direction)
+(defmethod climb:font-text-extents ((font xlib:font) string &key start end direction)
   (declare (ignore direction))
-  (xlib:text-extents font string :start start :end end :translate #'translate))
-
-(defgeneric font-draw-glyphs (font mirror gc x y string
-                              &key start end transformation)
-  (:method ((font xlib:font) mirror gc x y string
-            &key (start 0) (end (length string)) transformation)
-    (multiple-value-bind (x y)
-        (transform-position transformation x y)
-      (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
-                        :start start :end end :translate #'translate :size 16))))
+  (multiple-value-bind (width ascent descent
+                        left-bearing right-bearing overall-ascent overall-descent
+                        overall-direction next-start)
+      (xlib:text-extents font string :start start :end end :translate #'translate)
+    (declare (ignore next-start overall-direction))
+    (let ((height (+ overall-ascent overall-descent)))
+     (values left-bearing (- ascent) right-bearing descent
+             left-bearing overall-ascent width height overall-ascent overall-descent 0
+             width 0))))
 
 
 ;;; Font listing implementation
@@ -131,15 +125,10 @@
    (raw-name :initarg :raw-name
              :reader clx-font-face-raw-name)))
 
-(defgeneric port-find-all-font-families (port font-renderer &key invalidate-cache)
-  (:method (port font-renderer &key invalidate-cache)
-    (when (or (null (clim-clx::font-families port)) invalidate-cache)
-      (setf (font-families port) (reload-font-table port)))
-    (font-families port)))
-
 (defmethod clim-extensions:port-all-font-families ((port clx-basic-port) &key invalidate-cache)
-  (append (call-next-method)
-          (port-find-all-font-families port (clx-port-font-renderer port) :invalidate-cache invalidate-cache)))
+  (when (or (null (clim-clx::font-families port)) invalidate-cache)
+    (setf (font-families port) (reload-font-table port)))
+  (font-families port))
 
 (defun split-font-name (name)
   (loop
