@@ -1,10 +1,10 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2014 by 
+;;;  (c) copyright 2000, 2014 by
 ;;;           Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2004 by
 ;;;           Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
@@ -20,8 +20,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
@@ -70,7 +70,7 @@
 (defgeneric note-input-focus-changed (pane state)
   (:documentation "Called when a pane receives or loses the keyboard
 input focus. This is a McCLIM extension."))
-    
+
 (defclass standard-application-frame (application-frame
 				      presentation-history-mixin)
   ((port :initform nil
@@ -130,7 +130,7 @@ input focus. This is a McCLIM extension."))
 		     :reader frame-top-level-lambda)
    (hilited-presentation :initform nil
 			 :initarg :hilited-presentation
-			 :accessor frame-hilited-presentation)   
+			 :accessor frame-hilited-presentation)
    (process :accessor frame-process :initform nil)
    (client-settings :accessor client-settings :initform nil)
    (event-queue :initarg :frame-event-queue
@@ -195,7 +195,7 @@ documentation produced by presentations.")
 			(space-requirement-width (compose-space pane))))
 	     (height (or geometry-height
 			 (and geometry-top geometry-bottom (- geometry-bottom geometry-top))
-			 (space-requirement-height (compose-space pane))))	   
+			 (space-requirement-height (compose-space pane))))
 	     ;; See if a position is wanted and return left, top.
 	     (left (or geometry-left
 		       (and geometry-right (- geometry-right geometry-width))))
@@ -711,7 +711,7 @@ documentation produced by presentations.")
   (setf (slot-value pane 'name) name)
   pane)
 
-(defun do-pane-creation-form (name form)  
+(defun do-pane-creation-form (name form)
   (cond
     ;; Single form which is a function call
     ((and (= (length form) 1)
@@ -828,7 +828,7 @@ documentation produced by presentations.")
 	(disabled-commands nil)
 	(command-definer t)
 	(top-level '(default-frame-top-level))
-	(others nil)	
+	(others nil)
 	(pointer-documentation nil)
 	(geometry nil)
 	(user-default-initargs nil)
@@ -848,7 +848,7 @@ documentation produced by presentations.")
 	     (:pointer-documentation (setq pointer-documentation (car values)))
 	     (:geometry (setq geometry values))
 	     (:default-initargs (setq user-default-initargs values))
-	     (t (push (cons prop values) others))))    
+	     (t (push (cons prop values) others))))
     (when (eq command-definer t)
       (setf command-definer
             (intern (concatenate 'string
@@ -1148,7 +1148,7 @@ frames and will not have focus.
 ;;; presentations -- menu choices, for example -- could influence pointer
 ;;; documentation window.
 
-(defgeneric frame-compute-pointer-documentation-state 
+(defgeneric frame-compute-pointer-documentation-state
     (frame input-context stream event)
   (:documentation
    "Compute a state object that will be used to generate pointer documentation."))
@@ -1641,16 +1641,18 @@ have a `pointer-documentation-pane' as pointer documentation,
 		   do (return-from find-dest-translator translator))
 	     nil)
 	   (do-feedback (window x y state)
-	     (funcall feedback-fn frame from-presentation window
-			initial-x initial-y x y state))
+             (when (and feedback-activated window)
+               (funcall feedback-fn frame from-presentation window
+		        initial-x initial-y x y state)))
 	   (do-hilite (presentation window state)
-	     (funcall hilite-fn frame presentation window state))
-	   (last-window ()
-	     (event-sheet last-event))
-	   (last-x ()
-	     (pointer-event-x last-event))
-	   (last-y ()
-	     (pointer-event-y last-event)))
+             (when (and presentation hilite-fn)
+               (funcall hilite-fn frame presentation window state)))
+	   (last-point ()
+	     (if last-event
+                 (values (event-sheet last-event)
+                         (pointer-event-x last-event)
+                         (pointer-event-y last-event))
+                 (values nil nil nil))))
       ;; :highlight nil will cause the presentation that is the source of the
       ;; dragged object to be unhighlighted initially.
       (block do-tracking
@@ -1661,27 +1663,30 @@ have a `pointer-documentation-pane' as pointer documentation,
 	  (:presentation (&key presentation window event x y)
 	    (let ((dest-translator (find-dest-translator presentation window
 							 x y)))
-	      (when feedback-activated
-		(do-feedback (last-window) (last-x) (last-y) :unhighlight))
+	      (multiple-value-call #'do-feedback (last-point) :unhighlight)
 	      (setq feedback-activated t
 		    last-event event)
-	      (when last-presentation
-		(do-hilite last-presentation (last-window) :unhighlight))
-	      (setq last-presentation presentation
-		    feedback-fn (feedback dest-translator)
-		    hilite-fn (highlighting dest-translator))
+	      (do-hilite last-presentation (last-point) :unhighlight)
+	      (setf last-presentation presentation
+                    (values feedback-fn hilite-fn)
+                    (if dest-translator
+                        (values (feedback dest-translator)
+                                (highlighting dest-translator))
+                        (values #'frame-drag-and-drop-feedback
+                                nil)))
 	      (do-hilite presentation window :highlight)
 	      (do-feedback window x y :highlight)
-	      (document-drag-n-drop dest-translator presentation
-				    context-type frame event window
-				    x y)))
+	      (multiple-value-call #'document-drag-n-drop
+                (if dest-translator
+                    (values dest-translator presentation)
+                    (values translator      nil))
+	        context-type frame event window
+	        x y)))
 	  (:pointer-motion (&key event window x y)
-	    (when feedback-activated
-	      (do-feedback (last-window) (last-x) (last-y) :unhighlight))
+	    (multiple-value-call #'do-feedback (last-point) :unhighlight)
 	    (setq feedback-activated t
 		  last-event event)
-	    (when last-presentation
-	      (do-hilite last-presentation (last-window) :unhighlight))
+	    (do-hilite last-presentation (last-point) :unhighlight)
 	    (setq last-presentation nil)
 	    (do-feedback window x y :highlight)
 	    (document-drag-n-drop translator nil
@@ -1700,15 +1705,12 @@ have a `pointer-documentation-pane' as pointer documentation,
       ;;
       ;; XXX Assumes x y from :button-release are the same as for the preceding
       ;; button-motion; is that correct?
-      (when feedback-activated
-	(do-feedback (last-window) (last-x) (last-y) :unhighlight))
-      (when last-presentation
-	(do-hilite last-presentation (last-window) :unhighlight))
+      (multiple-value-call #'do-feedback (last-point) :unhighlight)
+      (do-hilite last-presentation (last-point) :unhighlight)
+
       (if destination-presentation
-	  (let ((final-translator (find-dest-translator destination-presentation
-							(last-window)
-							(last-x)
-							(last-y))))
+	  (let ((final-translator (multiple-value-call #'find-dest-translator
+                                    destination-presentation (last-point))))
 	    (if final-translator
 		(funcall (destination-translator final-translator)
 			 *dragged-object*
@@ -1727,24 +1729,21 @@ have a `pointer-documentation-pane' as pointer documentation,
 
 (defun document-drag-n-drop
     (translator presentation context-type frame event window x y)
-  (when *pointer-documentation-output*
-    (let ((s *pointer-documentation-output*))
-      (window-clear s)
-      (with-end-of-page-action (s :allow)
-	(with-end-of-line-action (s :allow)
-	  (funcall (pointer-documentation translator)
-	   *dragged-object*
-	   :presentation *dragged-presentation*
-	   :destination-object (and presentation
-				    (presentation-object presentation))
-	   :destination-presentation presentation
-	   :context-type context-type
-	   :frame frame
-	   :event event
-	   :window window
-	   :x x
-	   :y y
-	   :stream s))))))
-
-
-
+  (when-let ((stream *pointer-documentation-output*))
+    (let ((function (pointer-documentation translator)))
+      (window-clear stream)
+      (with-end-of-page-action (stream :allow)
+        (with-end-of-line-action (stream :allow)
+          (funcall function
+                   *dragged-object*
+                   :presentation *dragged-presentation*
+                   :destination-object (and presentation
+                                            (presentation-object presentation))
+                   :destination-presentation presentation
+                   :context-type context-type
+                   :frame frame
+                   :event event
+                   :window window
+                   :x x
+                   :y y
+                   :stream stream))))))
