@@ -111,8 +111,8 @@ region and its clipping pixmap. This is looked up for optimization with region-e
 
 (defun line-style-effective-dashes (line-style medium)
   (let ((scale (line-style-scale line-style medium)))
-    (mapcar #'(lambda (dash) (round (* dash scale)))
-            (line-style-dashes line-style))))
+    (map 'list #'(lambda (dash) (round (* dash scale)))
+         (line-style-dashes line-style))))
 
 (defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
   (with-slots (gc) medium
