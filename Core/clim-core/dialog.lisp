@@ -580,6 +580,7 @@ is called. Used to determine if any editing has been done by user")))
                              (make-instance 'standard-input-editing-stream
                                             :stream stream
                                             :cursor-visibility nil
+                                            :single-line t
                                             :min-width (- (bounding-rectangle-max-x stream)
                                                           (stream-cursor-position stream)
                                                           100)))))
