@@ -222,7 +222,7 @@ characters."))
            #:drei-view #:modified-p #:no-cursors
            
            #:drei-buffer-view #:buffer #:top #:bot #:buffer-view-p
-           #:lines
+           #:lines #:single-line-mixin
            #:buffer-line #:start-mark #:end-mark #:line-length #:chunks
            #:line-containing-offset #:offset-in-line-p
            #:buffer-view-pump-state-for-offset
