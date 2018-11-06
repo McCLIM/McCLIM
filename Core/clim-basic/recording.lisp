@@ -1603,8 +1603,6 @@ were added."
     (string start end point-x point-y align-x align-y toward-x toward-y transform-glyphs)
   (and (if-supplied (string)
          (string= (slot-value record 'string) string))
-       (transformation-equal (graphics-state-transformation record)
-                             (graphics-state-transformation record))
        (if-supplied (start)
          (eql (slot-value record 'start) start))
        (if-supplied (end)
