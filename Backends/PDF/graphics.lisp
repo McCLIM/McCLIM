@@ -438,7 +438,8 @@ is T."
        (unless font-info
          (error "Unknown font: ~S" font-info))
        (clim-postscript-font:font-info-name font-info)))
-    (cons (coerce (car font-name) 'string))))
+    (clim-postscript-font:postscript-font-name
+     (clim-postscript-font:font-name-name font-name))))
 
 (defmethod pdf-set-graphics-state (medium (kind (eql :text-style)))
   (let* ((font-name (medium-font medium))
