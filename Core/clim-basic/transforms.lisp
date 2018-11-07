@@ -734,11 +734,11 @@ real numbers, and default to 0."
       (make-translation-transformation (+ dx1 dx2) (+ dy1 dy2)))))
 
 (defmethod compose-transformations
-    (transformation2 (transformation1 standard-identity-transformation))
+    ((transformation2 transformation) (transformation1 standard-identity-transformation))
   transformation2)
 
 (defmethod compose-transformations
-    ((transformation2 standard-identity-transformation) transformation1)
+    ((transformation2 standard-identity-transformation) (transformation1 transformation))
   transformation1)
 
 (defmethod invert-transformation
@@ -781,10 +781,10 @@ real numbers, and default to 0."
   t)
 
 (defmethod transformation-equal ((t1 standard-identity-transformation)
-                                 (t2 t))
+                                 (t2 transformation))
   nil)
 
-(defmethod transformation-equal ((t2 t)
+(defmethod transformation-equal ((t2 transformation)
                                  (t1 standard-identity-transformation))
   nil)
 
@@ -796,9 +796,9 @@ real numbers, and default to 0."
            (coordinate= dy1 dy2)))))
 
 (defmethod transformation-equal ((t1 standard-translation)
-                                 (t2 t))
+                                 (t2 transformation))
   nil)
 
-(defmethod transformation-equal ((t2 t)
+(defmethod transformation-equal ((t2 transformation)
                                  (t1 standard-translation))
   nil)

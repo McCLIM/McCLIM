@@ -1039,7 +1039,8 @@ were added."
     (call-next-method)))
 
 (defrecord-predicate gs-transformation-mixin (transformation)
-  (transformation-equal (graphics-state-transformation record) transformation))
+  (if-supplied (transformation)
+    (transformation-equal (graphics-state-transformation record) transformation)))
 
 (defclass standard-graphics-displayed-output-record
     (standard-displayed-output-record
