@@ -50,23 +50,23 @@
 
 (defvar *font-metrics* (make-hash-table :test 'equal))
 
-(defstruct postscript-device-font-name
-  (font-file (error "missing argument"))
-  (metrics-file (error "missing argument"))
-  (size (error "missing argument")))
+(defclass postscript-font-name ()
+  ((name :initarg :name :reader font-name-name)
+   (size :initarg :size :reader font-name-size)))
+
+;;; FIXME postscript-device-font-name is not tested anywhere! Add regression
+;;; tests in Examples module. -- jd 2018-11-07
+(defclass postscript-device-font-name (postscript-font-name)
+  ((font-file :initarg :font-file :reader postscript-device-font-name-font-file)
+   (metrics-file :initarg :metrics-file :reader postscript-device-font-name-metrics-file)))
 
 (defun get-font-info (font-name)
   (gethash font-name *font-metrics*))
 
-(defun font-name-size (font-name)
-  (etypecase font-name
-    (postscript-device-font-name (postscript-device-font-name-size font-name))
-    (cons (cdr font-name))))
-
 (defun font-name-metrics-key (font-name)
   (etypecase font-name
     (postscript-device-font-name font-name)
-    (cons (car font-name))))
+    (postscript-font-name (font-name-name font-name))))
 
 (defun define-font-metrics (name ascent descent angle char-infos &optional (font-name nil))
   (let ((font-info (make-instance 'font-info
@@ -141,27 +141,16 @@
                (font-name (cdr (or (assoc face family-fonts :test #'equal)
                                    (assoc :roman family-fonts))))
                (size-number (climb:normalize-font-size size)))
-          (cons font-name size-number)))))
+          (make-instance 'postscript-font-name :name font-name :size size-number)))))
 
 (defmethod (setf text-style-mapping)
     (mapping (port postscript-font-port) (text-style text-style)
      &optional character-set)
   (declare (ignore character-set))
-  (cond 
-    ((and (consp mapping)
-	  (stringp (car mapping))
-	  (numberp (cdr mapping)))
-     (when (not (gethash (car mapping) *font-metrics*))
-       (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
-	       text-style (car mapping)))
-     (setf (gethash text-style (port-text-style-mappings port))
-	   mapping))
-    (t
-     (when (not (gethash mapping *font-metrics*))
+  (when (not (gethash mapping *font-metrics*))
        (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
 	       text-style mapping))
-     (setf (gethash text-style (port-text-style-mappings port))
-	   mapping))))
+     (setf (gethash text-style (port-text-style-mappings port)) mapping))
 
 ;; The following four functions should be rewritten: AFM contains all
 ;; needed information
@@ -250,24 +239,29 @@
 			(error "Unknown font ~S." metrics-key)))
 	 (char-metrics (font-info-char-infos font-info))
 	 (width (loop for i from start below end
-		   sum (char-width (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
+		   sum (char-width (gethash (aref *iso-latin-1-symbolic-names*
+                                                  (char-code (char string i)))
 					    char-metrics))))
-         (ascent (loop for i from start below end
-                       maximize (char-ascent (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
-                                                      char-metrics))))
-         (descent (loop for i from start below end
-                       maximize (char-descent (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
-                                                       char-metrics)))))
+         (ymin (loop for i from start below end
+                  minimize (- (char-ascent (gethash (aref *iso-latin-1-symbolic-names*
+                                                          (char-code (char string i)))
+                                                    char-metrics)))))
+         (ymax (loop for i from start below end
+                  maximize (char-descent (gethash (aref *iso-latin-1-symbolic-names*
+                                                        (char-code (char string i)))
+                                                  char-metrics))))
+         (xmin (char-xmin (gethash (aref *iso-latin-1-symbolic-names*
+                                         (char-code (char string start)))
+                                   char-metrics)))
+         (xmax (- width (- (char-width (gethash (aref *iso-latin-1-symbolic-names*
+                                                      (char-code (char string (1- end))))
+                                                char-metrics))
+                           (char-xmax (gethash (aref *iso-latin-1-symbolic-names*
+                                                     (char-code (char string (1- end))))
+                                               char-metrics))))))
     (values
      width
-     ascent
-     descent
-     (char-xmin (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string start)))
-			 char-metrics))
-     (- width (- (char-width (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string (1- end))))
-				      char-metrics))
-		 (char-xmax (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string (1- end))))
-				     char-metrics))))
+     ymin ymax xmin xmax
      (font-info-ascent font-info)
      (font-info-descent font-info)
      0 end)))
