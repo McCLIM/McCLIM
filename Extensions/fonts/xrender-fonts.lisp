@@ -163,8 +163,8 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                               :y-origin top
                               :x-advance dx
                               :y-advance dy)
-      (let ((right (+ left (array-dimension arr 1)))
-            (bottom (- top (array-dimension arr 0)))
+      (let ((right (+ left (1- (array-dimension arr 1))))
+            (bottom (- top (1- (array-dimension arr 0))))
             (array #|arr|# nil))
         ;; INV udx and udy are not transformed here for the transformed glyph
         ;; rendering (to avoid accumulation of a roundnig error). See
