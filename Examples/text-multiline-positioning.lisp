@@ -23,9 +23,9 @@
       (clim:draw-text* pane string*
                        0 0 :transform-glyphs t
                        :align-x align-x :align-y align-y))
-    (clim:draw-line* pane -25 0 25 0 :ink +blue+ :line-thickness 1)
-    (clim:draw-line* pane 0 -25 0 25 :ink +blue+ :line-thickness 1)
-    (clim:draw-point* pane 0 0 :ink +red+ :line-thickness 10)))
+    (clim:draw-line* pane -5 0 5 0 :ink +blue+ :line-thickness 1)
+    (clim:draw-line* pane 0 -5 0 5 :ink +blue+ :line-thickness 1)
+    (clim:draw-rectangle* pane -1 -1 2 2 :ink +dark-red+)))
 
 (defmethod display ((frame text-multiline-positioning) pane)
 
