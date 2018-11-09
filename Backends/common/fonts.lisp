@@ -36,59 +36,96 @@ and the length of resulting sequence are equal."))
   (:method (font code)
     (code-char code)))
 
+(defun line-bbox (font glyph-codes align-x)
+  (loop
+     for code across glyph-codes
+     with origin-x fixnum = 0
+     with origin-y fixnum = 0
+     with xmin = most-positive-fixnum
+     with ymin = most-positive-fixnum
+     with xmax = most-negative-fixnum
+     with ymax = most-negative-fixnum
+     as glyph-left fixnum =   (+ origin-x (climb:font-glyph-left font code))
+     as glyph-top fixnum =    (+ origin-y (- (climb:font-glyph-top font code)))
+     as glyph-right fixnum =  (+ origin-x (climb:font-glyph-right font code))
+     as glyph-bottom fixnum = (+ origin-y (- (climb:font-glyph-bottom font code)))
+     do
+       (alexandria:minf xmin glyph-left)
+       (alexandria:minf ymin glyph-top)
+       (alexandria:maxf xmax glyph-right)
+       (alexandria:maxf ymax glyph-bottom)
+       (incf origin-x (climb:font-glyph-dx font code))
+       (incf origin-y (climb:font-glyph-dy font code))
+     finally
+       (case align-x
+         (:center
+          (let ((width/2 (/ (- xmax xmin) 2)))
+            (setf xmin (- width/2))
+            (setf xmax (+ width/2))))
+         (:right
+          (let ((width (- xmax xmin)))
+            (setf xmin (- width))
+            (setf xmax 0))))
+       (return (values xmin ymin xmax ymax origin-x origin-y))))
+
 (defgeneric climb:font-text-extents (font string &key start end align-x align-y direction)
   (:method (font string &key start end align-x align-y direction)
-    (declare (ignore align-x align-y direction))
-    (let ((glyph-codes (climb:font-string-glyph-codes font string :start start :end end)))
-      (loop
-         for code across glyph-codes
-         with origin-x fixnum = 0
-         with origin-y fixnum = 0
-         with newline-counter fixnum = 0
-         with line-height = (+ (climb:font-ascent font) (climb:font-descent font))
-         with width = 0
-         with height = line-height
-         with line-gap fixnum = 0
-         with xmin fixnum = most-positive-fixnum
-         with ymin fixnum = most-positive-fixnum
-         with xmax fixnum = most-negative-fixnum
-         with ymax fixnum = most-negative-fixnum
-         as glyph-left fixnum = (+ (climb:font-glyph-left font code) origin-x)
-         as glyph-top fixnum = (- (climb:font-glyph-top font code) origin-y)
-         as glyph-right fixnum = (+ (climb:font-glyph-right font code) origin-x -1)
-         as glyph-bottom fixnum = (- (climb:font-glyph-bottom font code) origin-y -1)
-         do
-         ;; Character may have more than one codepoint so in case of
-         ;; font-glyph-code-char returning string we use EQL not CHAR=.
-           (if (eql (climb:font-glyph-code-char font code) #\newline)
-               (progn
-                 (incf newline-counter)
-                 (setf line-gap (ceiling (- (climb:font-leading font)
-                                            (+ (climb:font-ascent font)
-                                               (climb:font-descent font)))))
-                 (setf origin-x 0)
-                 (setf origin-y (ceiling (* newline-counter (climb:font-leading font)))))
-               (progn
-                 (alexandria:minf xmin glyph-left)
-                 (alexandria:minf ymin glyph-bottom)
-                 (alexandria:maxf xmax glyph-right)
-                 (alexandria:maxf ymax glyph-top)
-                 (incf origin-x (climb:font-glyph-dx font code))
-                 (incf origin-y (climb:font-glyph-dy font code))))
-           (alexandria:maxf height (+ origin-y line-height))
-           (alexandria:maxf width origin-x)
-         finally
-           (return (values
-                    ;; text bounding box (x1, y1, x2, y2)
-                    xmin (- ymax) xmax (- ymin)
-                    ;; text-bounding-rectangle
-                    0 #|x0|# (climb:font-ascent font) #|y0|# width height
-                    ;; line properties (ascent, descent, line gap)
-                    (climb:font-ascent font)
-                    (climb:font-descent font)
-                    line-gap
-                    ;; cursor-dx cursor-dy
-                    origin-x origin-y)))))
+    (declare (ignore direction))
+    (let* ((ascent (climb:font-ascent font))
+           (descent (climb:font-descent font))
+           (line-height (+ ascent descent))
+           (xmin most-positive-fixnum)
+           (ymin most-positive-fixnum)
+           (xmax most-negative-fixnum)
+           (ymax most-negative-fixnum)
+           (dx 0)
+           (dy 0)
+           (current-y 0))
+      (dolines (line (subseq string start end))
+        (multiple-value-bind (xmin* ymin* xmax* ymax* dx* dy*)
+            (if (alexandria:emptyp line)
+                (values 0 0 0 0 0 0)
+                (line-bbox font (climb:font-string-glyph-codes font line) align-x))
+          (case align-y
+            (:top
+             (let ((height (- ymax* ymin*))
+                   (ymin* (- ascent (abs ymin*))))
+               (minf ymin (+ current-y ymin*))
+               (maxf ymax (+ current-y (+ ymin* height)))))
+            (:center
+             (let ((height/2 (/ (+ current-y (- ymax* ymin*)) 2)))
+               (minf ymin (- height/2))
+               (maxf ymax (+ height/2))))
+            (:bottom
+             (let ((height (- ymax* ymin*))
+                   (ymax* (- ymax* descent)))
+               (minf ymin (- (- ymax* height) current-y))
+               (maxf ymax ymax*)))
+            (:baseline*
+             (minf ymin (- ymin* current-y))
+             (maxf ymax ymax*))
+            (otherwise
+             (minf ymin (+ current-y ymin*))
+             (maxf ymax (+ current-y ymax*))))
+          (minf xmin xmin*)
+          (maxf xmax xmax*)
+          (maxf dx dx*)
+          (maxf dy (+ current-y dy*))
+          (incf current-y (climb:font-leading font))))
+      (return-from climb:font-text-extents
+        (values
+         ;; text bounding box
+         xmin ymin xmax ymax
+         ;; text-bounding-rectangle
+         0 #|x0|# (climb:font-ascent font) #|y0|# xmax line-height
+         ;; line properties (ascent, descent, line gap)
+         (climb:font-ascent font)
+         (climb:font-descent font)
+         (- (climb:font-leading font)
+            (+ (climb:font-ascent font)
+               (climb:font-descent font)))
+         ;; cursor-dx cursor-dy
+         dx dy))))
   (:documentation "Function computes text extents as if it were drawn with a
 specified font. It returns two distinct extents: first is an exact pixel-wise
 bounding box. The second is a text bounding box with all its bearings. Text may
