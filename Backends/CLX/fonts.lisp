@@ -96,8 +96,8 @@
 (defmethod climb:font-character-width ((font xlib:font) char)
   (xlib:char-width font (char-code char)))
 
-(defmethod climb:font-text-extents ((font xlib:font) string &key start end direction)
-  (declare (ignore direction))
+(defmethod climb:font-text-extents ((font xlib:font) string &key start end align-x align-y direction)
+  (declare (ignore align-x align-y direction))
   (multiple-value-bind (width ascent descent
                         left-bearing right-bearing overall-ascent overall-descent
                         overall-direction next-start)
