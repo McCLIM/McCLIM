@@ -25,7 +25,7 @@
 
 (in-package :clim-postscript-font)
 
-(defclass postscript-font-medium (basic-medium)
+(defclass postscript-font-medium (basic-medium climb:approx-bbox-medium-mixin)
   ((device-fonts :initform nil
 		 :accessor device-fonts)))
 
@@ -187,9 +187,10 @@
     (declare (ignore height final-x final-y baseline))
     width))
 
-(defmethod climi::text-bounding-rectangle*
+(defmethod climb:text-bounding-rectangle*
     ((medium postscript-font-medium) string
-     &key text-style (start 0) end)
+     &key text-style (start 0) end align-x align-y direction)
+  (declare (ignore align-x align-y direction))
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
   (unless end (setf end (length string)))
@@ -214,7 +215,7 @@
                                                :start start :end position-newline)
 			(declare (ignore width font-ascent font-descent direction first-not-done))
                         (multiple-value-bind (minx miny maxx maxy)
-                            (climi::text-bounding-rectangle*
+                            (climb:text-bounding-rectangle*
                              medium string :text-style text-style
                              :start (1+ position-newline) :end end)
 			  (declare (ignore miny))

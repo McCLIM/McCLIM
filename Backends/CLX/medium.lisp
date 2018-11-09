@@ -45,7 +45,9 @@
 
 ;;; CLX-MEDIUM class
 
-(defclass clx-medium (basic-medium)
+(defclass clx-medium (basic-medium
+                      climb:multiline-text-medium-mixin
+                      climb:approx-bbox-medium-mixin)
   ((gc :initform nil)
    (last-medium-device-region :initform nil
                               :accessor last-medium-device-region)

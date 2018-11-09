@@ -36,9 +36,9 @@ and the length of resulting sequence are equal."))
   (:method (font code)
     (code-char code)))
 
-(defgeneric climb:font-text-extents (font string &key start end direction)
-  (:method (font string &key start end direction)
-    (declare (ignore direction))
+(defgeneric climb:font-text-extents (font string &key start end align-x align-y direction)
+  (:method (font string &key start end align-x align-y direction)
+    (declare (ignore align-x align-y direction))
     (let ((glyph-codes (climb:font-string-glyph-codes font string :start start :end end)))
       (loop
          for code across glyph-codes
@@ -175,7 +175,7 @@ of letters specified in a separate kerning-table."))
   (eql (text-style-family text-style) :fix))
 
 (defgeneric climb:text-bounding-rectangle*
-    (medium string &key text-style start end &allow-other-keys)
+    (medium string &key text-style start end align-x align-y direction)
   (:documentation "Function returns a bounding box of the text for given
 text-style, alignment and direction. Direction is derived from the toward-point
 argument.
@@ -194,7 +194,6 @@ xmin ymin xmax ymax."))
                                              (start 0) end
                                              (align-x :left) (align-y :baseline) (direction :ltr)
                                            &aux (end (or end (length string))))
-  (declare (ignore align-x align-y))
   (when (= start end)
     (return-from text-bounding-rectangle* (values 0 0 0 0)))
   (let ((text (string string))
@@ -202,7 +201,8 @@ xmin ymin xmax ymax."))
                                   (merge-text-styles text-style
                                                      (medium-merged-text-style medium)))))
     (multiple-value-bind (xmin ymin xmax ymax)
-        (climb:font-text-extents font text :start start :end end :direction direction)
+        (climb:font-text-extents font text :start start :end end
+                                 :align-x align-x :align-y align-y :direction direction)
       (values xmin ymin xmax ymax))))
 
 (defmethod text-size (medium string &key text-style (start 0) end

@@ -154,8 +154,9 @@
 	(setf height (+ height (text-style-height text-style medium)))
 	(setf baseline (+ baseline (text-style-height text-style medium)))))))
 
-(defmethod climi::text-bounding-rectangle*
-    ((medium null-medium) string &key text-style (start 0) end)
+(defmethod climb:text-bounding-rectangle*
+    ((medium null-medium) string &key text-style (start 0) end align-x align-y direction)
+  (declare (ignore align-x align-y direction)) ; implement me!
   (text-size medium string :text-style text-style :start start :end end))
 
 (defmethod medium-draw-text* ((medium null-medium) string x y
