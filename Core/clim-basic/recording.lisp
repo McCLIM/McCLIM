@@ -1568,7 +1568,7 @@ were added."
       (incf top point-y)
       (incf left point-x)
       (incf bottom point-y)
-      #+ (or)
+      #+ (or) ;; draw rectangle around text bbox (for testing)
       (with-drawing-options (medium :line-dashes t :ink +red+)
         (medium-draw-rectangle* medium left top right bottom nil))
       (enclosing-transform-polygon transformation (list left top

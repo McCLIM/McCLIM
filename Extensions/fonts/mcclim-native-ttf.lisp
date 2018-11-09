@@ -190,8 +190,8 @@
                                                                 (* alpha 255))
                                                              256)
                                                       0 255))))))
-        #+ (or)
-        (progn ;; draw delicate border around each glyph for testing
+        #+ (or) ;; draw delicate border around each glyph (for testing)
+        (progn
           (loop for j from 0 below height do (setf (aref array j 0)
                                                    (logior #x40 (aref array j 0))
                                                    (aref array j (1- width))
