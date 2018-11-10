@@ -146,10 +146,10 @@
       ;; This is the worst case - we need to compute whole text width what
       ;; requires walking all lines char-by char.
       (let ((text-width (text-size medium string :start start :end end)))
-        (setq x (- x (ecase align-x
-                       ;;(:left 0)
-                       (:center (/ text-width 2.0s0))
-                       (:right text-width))))))
+        (setq x (- (- x 0.5) (ecase align-x
+                               ;;(:left 0)
+                               (:center (/ text-width 2.0s0))
+                               (:right text-width))))))
     (bt:with-lock-held (*draw-font-lock*)
       (mcclim-font:draw-glyphs medium mirror gc x y string
                                :start start :end end
