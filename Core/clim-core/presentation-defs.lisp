@@ -1293,7 +1293,7 @@ protocol retrieving gestures from a provided string."))
                                                   &key (default-type type)
                                                   default)
   (let ((read-result (accept-using-read stream type)))
-    (if (and (null read-result) default) 
+    (if (and (null read-result) default)
         (values default default-type)
         (values read-result type))))
 
@@ -1390,12 +1390,12 @@ protocol retrieving gestures from a provided string."))
         (*print-radix* radix))
     (princ object stream)))
 
-(define-presentation-method accept ((type real) stream (view textual-view) &key 
+(define-presentation-method accept ((type real) stream (view textual-view) &key
                                                 (default-type type)
                                                 default)
   (let ((*read-base* base)
          (read-result (accept-using-read stream type)))
-    (if (and (null read-result) default) 
+    (if (and (null read-result) default)
         (values default default-type)
         (values read-result type))))
 
@@ -2189,7 +2189,7 @@ protocol retrieving gestures from a provided string."))
       (object type-var)
       (let ((str (read-token stream)))
 	(loop for or-type in types
-	   do 
+	   do
 	     (handler-case
 		 (progn
 		   (return (accept-from-string or-type
@@ -2284,7 +2284,6 @@ protocol retrieving gestures from a provided string."))
 (defvar *dragged-object* nil
   "Bound to the object dragged in a drag-and-drop context")
 
-()
 ;;; According to the Franz User's guide, the destination object is
 ;;; available in the tester, documentation, and translator function
 ;;; as destination-object. Therefore OBJECT is the dragged object. In
@@ -2302,21 +2301,9 @@ protocol retrieving gestures from a provided string."))
                                        pointer-documentation
                                        destination-translator)
   (declare (ignore destination-translator))
-  ;; This is starting to smell...
-  (flet ((make-adapter (func)
-           (lambda (object &rest args &key presentation &allow-other-keys)
-             (if *dragged-presentation*
-                 (apply func
-                        *dragged-object*
-                        :presentation *dragged-presentation*
-                        :destination-object object
-                        :destination-presentation presentation
-                        args)
-                 (apply func object args)))))
-    (setf (slot-value obj 'documentation) (make-adapter documentation))
-    (when pointer-documentation
-      (setf (slot-value obj 'pointer-documentation)
-            (make-adapter pointer-documentation)))))
+  (setf (slot-value obj 'documentation) documentation)
+  (when pointer-documentation
+    (setf (slot-value obj 'pointer-documentation) pointer-documentation)))
 
 (defmacro define-drag-and-drop-translator
     (name (from-type to-type destination-type command-table
