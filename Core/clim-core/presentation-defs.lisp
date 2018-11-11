@@ -1518,6 +1518,7 @@ protocol retrieving gestures from a provided string."))
   (frob real)
   (frob rational)
   (frob ratio)
+  (frob integer)
   (frob float))
 
 (define-presentation-type character ()
