@@ -1716,6 +1716,18 @@ and must never be nil.")
             (convert-position-to-value pane event))
       (dispatch-repaint pane (sheet-region pane)))))
 
+(defmethod handle-event ((pane slider-pane) (event pointer-scroll-event))
+  (with-slots (armed) pane
+    (when (eq armed t) ; when armed and not currently dragging
+      (let* ((old-value (gadget-value pane))
+             (new-value (+ old-value (- (pointer-event-delta-y event))))
+             (effective-new-value (alexandria:clamp new-value
+                                                    (gadget-min-value pane)
+                                                    (gadget-max-value pane))))
+        (unless (eql effective-new-value old-value)
+          (setf (gadget-value pane :invoke-callback t) effective-new-value)
+          (dispatch-repaint pane (sheet-region pane)))))))
+
 (defun format-value (value decimal-places)
   (if (<= decimal-places 0)
       (format nil "~D" (round value))
