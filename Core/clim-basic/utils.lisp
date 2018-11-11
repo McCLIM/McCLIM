@@ -49,7 +49,7 @@
 (eval-when (:compile-toplevel :execute)
   (when (find-symbol "PACKAGE-LOCK" :ext)
     (pushnew 'clim-internals::package-locks *features*)))
- 
+
 #+(and cmu clim-internals::package-locks)
 (eval-when (:load-toplevel)
   (unless (find-symbol "PACKAGE-LOCK" :ext)
@@ -76,7 +76,7 @@
 (defmacro with-system-redefinition-allowed (&body body)
   #+clim-internals::package-locks
   `(progn
-    (eval-when (:compile-toplevel :load-toplevel :execute)      
+    (eval-when (:compile-toplevel :load-toplevel :execute)
       (sb-ext:unlock-package :common-lisp))
     ,@body
     (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -104,6 +104,19 @@
 
 (defun 2- (x)
   (- x 2))
+
+(defun unlerp (v a b)
+  "Inverse linear interpolate (lerp).
+
+Given an interpolated value V and two extreme values A and B, return
+the blending factor. More precisely, return c such that
+
+  V = (1 - c) A + c B.
+
+When A = B, return 0.5."
+  (if (= a b)
+      0.5
+      (/ (- v a) (- b a))))
 
 
 (defun check-letf-form (form)
@@ -443,7 +456,7 @@ in KEYWORDS removed."
 
 (defun declare-ignorable-form* (&rest variables)
   (declare-ignorable-form variables))
-  
+
 (defun gen-invoke-trampoline (fun to-bind to-pass body)
   "Macro helper function, generates the LABELS / INVOKE-WITH-... ideom."
   (let ((cont (gensym ".CONT.")))
@@ -459,7 +472,7 @@ in KEYWORDS removed."
   "Returns the amount of space given by SPECIFICATION relating to the
 STREAM in the direction DIRECTION."
   ;; This implementation lives unter the assumption that an
-  ;; extended-output stream is also a sheet and has a graft. 
+  ;; extended-output stream is also a sheet and has a graft.
   ;; --GB 2002-08-14
   (etypecase specification
     (real specification)
@@ -490,7 +503,7 @@ STREAM in the direction DIRECTION."
               ((:point)  (setf value (/ value 72) unit :inches))
               ((:pixel)  (setf unit :device))
               ((:mm)     (setf unit :millimeters)))
-            ;; 
+            ;;
             (multiple-value-bind (dx dy)
                 (multiple-value-call
                     #'transform-distance

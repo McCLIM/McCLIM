@@ -1646,15 +1646,30 @@ and must never be nil.")
 ;; slider's sheet, probably his child).
 ;; ----------------------------------------------------------
 
+(defgeneric convert-position-to-value (slider-pane position)
+  (:documentation
+   "Return gadget value for SLIDER-PANE corresponding to POSITION.
+
+    POSITION can be a real number or a pointer event. Both designate a
+    horizontal or vertical position in the gadget's coordinate
+    system."))
+
+(defgeneric convert-value-to-position (slider-pane)
+  (:documentation
+   "Return a position for SLIDER-PANE's gadget value.
+
+    The returned position measures a distance along the horizontal or
+    vertical axis of the gadget's coordinate system."))
+
 ;; This values should be changeable by user. That's
 ;; why they are parameters, and not constants.
 (defparameter slider-button-short-dim 10)
 
 (defclass slider-pane (slider
-		       gadget-color-mixin
-		       value-changed-repaint-mixin
-		       activate/deactivate-repaint-mixin
-		       basic-pane)
+                       gadget-color-mixin
+                       value-changed-repaint-mixin
+                       activate/deactivate-repaint-mixin
+                       basic-pane)
   ())
 
 (defmethod compose-space ((pane slider-pane) &key width height)
@@ -1685,15 +1700,10 @@ and must never be nil.")
      (when armed
        (setf armed ':button-press))))
 
-(defgeneric convert-position-to-value (slider-pane dim))
-
 (defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
   (with-slots (armed) pane
     (when (eq armed ':button-press)
-      (let ((value (convert-position-to-value pane
-                                              (if (eq (gadget-orientation pane) :vertical)
-                                                  (pointer-event-y event)
-                                                  (pointer-event-x event)))))
+      (let ((value (convert-position-to-value pane event)))
         (setf (gadget-value pane :invoke-callback nil) value)
         (drag-callback pane (gadget-client pane) (gadget-id pane) value)
         (dispatch-repaint pane (sheet-region pane))))))
@@ -1703,32 +1713,8 @@ and must never be nil.")
     (when armed
       (setf armed t
             (gadget-value pane :invoke-callback t)
-            (convert-position-to-value pane
-                                       (if (eq (gadget-orientation pane) :vertical)
-                                           (pointer-event-y event)
-                                           (pointer-event-x event))))
+            (convert-position-to-value pane event))
       (dispatch-repaint pane (sheet-region pane)))))
-
-
-(defmethod convert-position-to-value ((pane slider-pane) dim)
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (multiple-value-bind (good-dim1 good-dim2)
-        (if (eq (gadget-orientation pane) :vertical)
-            ;; vertical orientation
-            (values (+ y1 (ash slider-button-short-dim -1))
-                    (- y2 (ash slider-button-short-dim -1)))
-            ;; horizontal orientation
-            (values (+ x1 (ash slider-button-short-dim -1))
-                    (- x2 (ash slider-button-short-dim -1))))
-      (let ((displacement
-             (/ (- (max good-dim1 (min dim good-dim2)) good-dim1)
-                (- good-dim2 good-dim1)))
-            (quanta (slider-number-of-quanta pane)))
-        (+ (gadget-min-value pane)
-           (* (gadget-range pane)
-              (if quanta
-                  (/ (round (* displacement quanta)) quanta)
-                  displacement)))))))
 
 (defun format-value (value decimal-places)
   (if (<= decimal-places 0)
@@ -1736,15 +1722,13 @@ and must never be nil.")
       (let ((control-string (format nil "~~,~DF" decimal-places)))
         (format nil control-string value))))
 
-(defgeneric convert-value-to-position (slider-pane))
-
 (defmethod handle-repaint ((pane slider-pane) region)
   (declare (ignore region))
   (let ((position (convert-value-to-position pane))
-        (slider-button-half-short-dim (ash slider-button-short-dim -1))
+        (slider-button-half-short-dim (floor slider-button-short-dim 2))
         (background-color (pane-background pane))
         (inner-color (gadget-current-color pane)))
-    (flet ((draw-thingy (x y)
+    (flet ((draw-knob (x y)
              (if (gadget-active-p pane)
                  (progn
                    (draw-circle* pane x y 8.0 :filled t :ink inner-color)
@@ -1772,7 +1756,7 @@ and must never be nil.")
                                  :ink *3d-dark-color*))))))
       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
         (display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
-        (case (gadget-orientation pane)
+        (ecase (gadget-orientation pane)
           ((:vertical)
            (let ((middle (round (- x2 x1) 2)))
              (draw-bordered-polygon pane
@@ -1782,11 +1766,10 @@ and must never be nil.")
                                       (+ middle 2) (- y2 slider-button-half-short-dim)))
                                     :style :inset
                                     :border-width 2)
-             (draw-thingy middle (- position slider-button-half-short-dim))
+             (draw-knob middle position)
              (when (gadget-show-value-p pane)
-               (draw-value
-                (+ middle 10.0)
-                (- y2 (* 2 slider-button-half-short-dim))))))
+               (draw-value (+ middle 10.0)
+                           (- y2 slider-button-short-dim)))))
           ((:horizontal)
            (let ((middle (round (- y2 y1) 2)))
              (draw-bordered-polygon pane
@@ -1796,9 +1779,9 @@ and must never be nil.")
                                       (- x2 slider-button-half-short-dim) (+ middle 2)))
                                     :style :inset
                                     :border-width 2)
-             (draw-thingy (- position slider-button-half-short-dim) middle)
+             (draw-knob position middle)
              (when (gadget-show-value-p pane)
-               (draw-value (+ x1 (* 2 slider-button-half-short-dim))
+               (draw-value (+ x1 slider-button-short-dim)
                            (- middle 10.0))))))))))
 
 
@@ -1853,24 +1836,35 @@ and must never be nil.")
                             (- middle slider-button-half-long-dim)))))))))
 |#
 
+(flet ((compute-dims (slider)
+         (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region slider))
+           ;; Offset is the distance from the bounding region to the
+           ;; slider's "rail" and then some, so the knob doesn't go
+           ;; beyond the rail too much.
+           (let ((offset (+ (floor slider-button-short-dim 2) 4)))
+             (if (eq (gadget-orientation slider) :vertical)
+                 (values (+ y1 offset) (- y2 offset))
+                 (values (+ x1 offset) (- x2 offset)))))))
 
-(defmethod convert-value-to-position ((pane slider-pane))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (let ((x1 (+ x1 8.0)) ; replace this with some rectangle-inset transform or something
-          (y1 (+ y1 8.0)))
-      (multiple-value-bind (good-dim1 good-dim2)
-          (if (eq (gadget-orientation pane) :vertical)
-              ; vertical orientation
-              (values (+ y1 (ash slider-button-short-dim -1))
-                      (- y2 (ash slider-button-short-dim -1)))
-              ; horizontal orientation
-              (values (+ x1 (ash slider-button-short-dim -1))
-                      (- x2 (ash slider-button-short-dim -1))))
-        (+ good-dim1 (* (- good-dim2 good-dim1)
-                        (if (zerop (gadget-range pane))
-                            0.5
-                          (/ (- (gadget-value pane) (gadget-min-value pane))
-                             (gadget-range pane)))))))))
+  (defmethod convert-value-to-position ((pane slider-pane))
+    (multiple-value-bind (good-dim1 good-dim2) (compute-dims pane)
+      (alexandria:lerp (unlerp (gadget-value pane)
+                               (gadget-min-value pane) (gadget-max-value pane))
+                       good-dim1 good-dim2)))
+
+  (defmethod convert-position-to-value ((pane slider-pane) (position real))
+    (multiple-value-bind (good-dim1 good-dim2) (compute-dims pane)
+      (let* ((clamped (alexandria:clamp position good-dim1 good-dim2))
+             (displacement (unlerp clamped good-dim1 good-dim2))
+             (quantized (if-let ((quanta (slider-number-of-quanta pane)))
+                          (/ (round (* displacement quanta)) quanta)
+                          displacement)))
+        (alexandria:lerp quantized (gadget-min-value pane) (gadget-max-value pane))))))
+
+(defmethod convert-position-to-value ((pane slider-pane) (position pointer-event))
+  (convert-position-to-value pane (if (eq (gadget-orientation pane) :vertical)
+                                      (pointer-event-y position)
+                                      (pointer-event-x position))))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.6 The concrete radio-box and check-box Gadgets
