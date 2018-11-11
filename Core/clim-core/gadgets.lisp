@@ -1626,8 +1626,16 @@ and must never be nil.")
                              (scroll-bar/map-coordinate-to-value sb y-new-thumb-top)))) )
              (setf (gadget-value sb :invoke-callback t) new-value)))))
       (otherwise
-       (setf event-state nil) )))
+       (setf event-state nil))))
   (scroll-bar/update-display sb))
+
+(defmethod handle-event ((pane scroll-bar-pane) (event pointer-scroll-event))
+  (with-slots (event-state) pane
+    (when (eq event-state nil) ; when not currently processing a button press
+      (let ((function (if (minusp (pointer-event-delta-y event))
+                          'scroll-up-page-callback
+                          'scroll-down-page-callback)))
+        (funcall function pane (gadget-client pane) (gadget-id pane))))))
 
 (defmethod handle-repaint ((pane scroll-bar-pane) region)
   (with-slots (all-new-p) pane
