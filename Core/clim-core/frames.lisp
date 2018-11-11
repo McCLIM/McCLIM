@@ -1707,6 +1707,8 @@ have a `pointer-documentation-pane' as pointer documentation,
       ;; button-motion; is that correct?
       (multiple-value-call #'do-feedback (last-point) :unhighlight)
       (do-hilite last-presentation (last-point) :unhighlight)
+      (when-let ((stream *pointer-documentation-output*))
+        (window-clear stream))
 
       (if destination-presentation
 	  (let ((final-translator (multiple-value-call #'find-dest-translator
