@@ -71,6 +71,8 @@ and the length of resulting sequence are equal."))
 (defgeneric climb:font-text-extents (font string &key start end align-x align-y direction)
   (:method (font string &key start end align-x align-y direction)
     (declare (ignore direction))
+    (when (alexandria:emptyp string)
+      (values 0 0 0 0 0 0))
     (let* ((ascent (climb:font-ascent font))
            (descent (climb:font-descent font))
            (line-height (+ ascent descent))
@@ -117,7 +119,7 @@ and the length of resulting sequence are equal."))
          ;; text bounding box
          xmin ymin xmax ymax
          ;; text-bounding-rectangle
-         0 #|x0|# (climb:font-ascent font) #|y0|# xmax line-height
+         0 #|x0|# (climb:font-ascent font) #|y0|# dx (+ dy line-height)
          ;; line properties (ascent, descent, line gap)
          (climb:font-ascent font)
          (climb:font-descent font)
