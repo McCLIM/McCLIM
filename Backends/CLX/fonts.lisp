@@ -45,7 +45,6 @@
   (let ((text-style (parse-text-style text-style)))
     (labels
         ((find-and-make-xlib-face (display family face size)
-           (log:error "family: ~s, face: ~s" family face)
            (let* ((family-name (if (stringp family)
                                    family
                                    (getf *families/names* family)))
@@ -53,7 +52,6 @@
                                  face
                                  (alexandria:assoc-value *families/faces* (list family face)
                                                          :test #'equal))))
-             (log:error "face-name is ~s" face-name)
              (flet ((try (encoding)
                       (open-font display
                                  (format nil "-~a-~a-*-*-~d-*-*-*-*-*-~a"
