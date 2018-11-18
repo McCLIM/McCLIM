@@ -174,7 +174,8 @@
                              (setf (values cx cy) (stream-cursor-position stream)))
                            drawing-options)))
 
-        (stream-add-output-record stream border)
+        (when (stream-recording-p stream)
+          (stream-add-output-record stream border))
 
         (when (stream-drawing-p stream)
           (with-output-recording-options (stream :record nil)

@@ -21,10 +21,10 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
- 
+
 (in-package :clim-internals)
 
 ;;;; Notes
@@ -133,53 +133,47 @@
   (declare (ignore generation-separation within-generation-separation center-nodes
                    maximize-generations))
   ;; don't destructively modify the &rest arg
-  (let ((graph-options (copy-list rest-args)))
+  (let ((graph-options (alexandria:remove-from-plist
+                        rest-args :stream :duplicate-key :duplicate-test
+                        :arc-drawer :arc-drawing-options
+                        :graph-type :move-cursor)))
 
     ;; munge some of the arguments
     (check-type cutoff-depth (or null integer))
     (check-type root-objects sequence)
     (check-type orientation (member :horizontal :vertical))
     (setf stream (or stream *standard-output*)
-	  graph-type (or graph-type (if merge-duplicates :digraph :tree))
-	  duplicate-key (or duplicate-key #'identity)
-	  duplicate-test (or duplicate-test #'eql) )
-  
-    ;; clean the options
-    (remf graph-options :stream)
-    (remf graph-options :duplicate-key)
-    (remf graph-options :duplicate-test)
-    (remf graph-options :arc-drawer)
-    (remf graph-options :arc-drawing-options)
-    (remf graph-options :graph-type)
-    (remf graph-options :move-cursor)
-  
+          graph-type (or graph-type (if merge-duplicates :digraph :tree))
+          duplicate-key (or duplicate-key #'identity)
+          duplicate-test (or duplicate-test #'eql) )
+
     (multiple-value-bind (cursor-old-x cursor-old-y)
-	(stream-cursor-position stream)
+        (stream-cursor-position stream)
       (let ((graph-output-record
-	     (labels ((cont (stream graph-output-record)
-			(with-output-recording-options (stream :draw nil :record t)
-			  (generate-graph-nodes graph-output-record stream root-objects
-						object-printer inferior-producer
-						:duplicate-key duplicate-key
-						:duplicate-test duplicate-test)
-			  (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
-			  (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options)) ))
-	       (apply #'invoke-with-new-output-record stream
-		      #'cont
-		      (find-graph-type graph-type)
-		      graph-options))))
-	(setf (output-record-position graph-output-record)
-	  (values cursor-old-x cursor-old-y))
-	(when (and (stream-drawing-p stream)
-		   (output-record-ancestor-p (stream-output-history stream)
-					     graph-output-record))
-	  (with-output-recording-options (stream :draw t :record nil)
-	    (replay graph-output-record stream)))
-	(when move-cursor
-	  (setf (stream-cursor-position stream)
-	    (values (bounding-rectangle-max-x graph-output-record)
-		    (bounding-rectangle-max-y graph-output-record))))
-	graph-output-record))))
+             (labels ((cont (stream graph-output-record)
+                        (with-output-recording-options (stream :draw nil :record t)
+                          (generate-graph-nodes graph-output-record stream root-objects
+                                                object-printer inferior-producer
+                                                :duplicate-key duplicate-key
+                                                :duplicate-test duplicate-test)
+                          (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
+                          (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options))))
+               (apply #'invoke-with-new-output-record stream
+                      #'cont
+                      (find-graph-type graph-type)
+                      graph-options))))
+        (setf (output-record-position graph-output-record)
+          (values cursor-old-x cursor-old-y))
+        (when (and (stream-drawing-p stream)
+                   (output-record-ancestor-p (stream-output-history stream)
+                                             graph-output-record))
+          (with-output-recording-options (stream :draw t :record nil)
+            (replay graph-output-record stream)))
+        (when move-cursor
+          (setf (stream-cursor-position stream)
+            (values (bounding-rectangle-max-x graph-output-record)
+                    (bounding-rectangle-max-y graph-output-record))))
+        graph-output-record))))
 
 ;;;; Graph Output Records
 
@@ -254,7 +248,7 @@
   (with-slots (cutoff-depth merge-duplicates) graph-output-record
     (let* ((hash-table (when (and merge-duplicates (member duplicate-test (list #'eq #'eql #'equal #'equalp)))
 			 (make-hash-table :test duplicate-test)))
-	   node-list 
+	   node-list
 	   (hashed hash-table))
       (labels
 	  ((previous-node (obj)
@@ -420,7 +414,7 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
 		         (setf (gethash node parent-hash) parent))
 		       (when (>= depth (length generation-sizes))
 			 (setf generation-sizes (adjust-array generation-sizes (ceiling (* depth 1.2))
-			  				      :initial-element 0)))
+			                                      :initial-element 0)))
 		       (setf (aref generation-sizes depth)
 			     (max (aref generation-sizes depth) (node-major-dimension node)))
 		       (setf (graph-node-minor-size node) 0)
@@ -518,7 +512,7 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
 	  record))))
 
 (defun layout-edge-1 (graph major-node minor-node)
-  (let ((edge-record (ensure-edge-record graph major-node minor-node)))    
+  (let ((edge-record (ensure-edge-record graph major-node minor-node)))
     (with-slots (stream arc-drawer arc-drawing-options) edge-record
       (with-bounding-rectangle* (x1 y1 x2 y2) major-node
         (with-bounding-rectangle* (u1 v1 u2 v2) minor-node
@@ -536,7 +530,7 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
 	      ((:vertical)
 	       (multiple-value-bind (from to) (if (< y1 v1)
 						  (values y2 v1)
-				     	          (values y1 v2))
+				                  (values y1 v2))
 		 (apply arc-drawer stream major-node minor-node
 			(/ (+ x1 x2) 2) from
 			(/ (+ u1 u2) 2) to
@@ -699,7 +693,7 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
        (list (find-class 'standard-graph-output-record)
              ;;(find-class 'climi::basic-output-record)
              ;;(find-class 'climi::graph-output-record)
-             
+
              )
        #'(lambda (x s)
            (with-text-style (s (make-text-style nil
