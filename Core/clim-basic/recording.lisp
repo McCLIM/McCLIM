@@ -1566,7 +1566,7 @@ were added."
                                   :text-style text-style)
       (incf left point-x)
       (incf top point-y)
-      (incf left point-x)
+      (incf right point-x)
       (incf bottom point-y)
       #+ (or) ;; draw rectangle around text bbox (for testing)
       (with-drawing-options (medium :line-dashes t :ink +red+)
