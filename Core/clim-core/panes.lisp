@@ -830,9 +830,11 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
                       ;; protocol class with million mixins goes last
                       pane)
   ((foreground       :initarg :foreground
-                     :reader pane-foreground)
+                     :reader pane-foreground
+                     :reader foreground)
    (background       :initarg :background
-                     :accessor pane-background)
+                     :accessor pane-background
+                     :reader background)
    (text-style       :initarg :text-style
                      :reader pane-text-style)
    (align-x          :initarg :align-x

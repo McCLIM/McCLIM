@@ -322,18 +322,19 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame option-test
     () ()
-    (:panes (option-pane-1 :option-pane
-                           :value 1
-                           :items '(1 2 3 4 6 7)
-                           :value-changed-callback (constantly nil))
-            (option-pane-2 :option-pane
-                           :value "Option 1"
-                           :items '("Option 1" "Option 2" "Option 3" "Option 4" "Option 6" "Option 7")
-                           :value-changed-callback (constantly nil)))
-    (:layouts
-     (:default
-         (vertically (:label "Option panes example")
-           (1/2 option-pane-1)
-           (1/2 option-pane-2)))))
+  (:panes (option-pane-1 :option-pane
+                         :value 1
+                         :items '(1 2 3 4 6 7)
+                         :value-changed-callback (constantly nil))
+          (option-pane-2 :option-pane
+                         :value "Option 1"
+                         :items '("Option 1" "Option 2" "Option 3" "Option 4" "Option 6" "Option 7")
+                         :value-changed-callback (constantly nil)))
+  (:layouts
+   (:default
+    (labelling (:label "Option panes example")
+      (vertically ()
+        (1/2 option-pane-1)
+        (1/2 option-pane-2))))))
 
 (format t "~&;; try (CLIM-DEMO:DEMODEMO)~%")

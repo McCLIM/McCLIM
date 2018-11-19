@@ -32,8 +32,8 @@
 
 ;; Pane definition and puzzle generator
 
-(defclass logic-cube-pane (climi::never-repaint-background-mixin basic-gadget)
-  ((background :initform (make-rgb-color 0.35 0.35 0.46) :reader background-color)
+(defclass logic-cube-pane (clime:never-repaint-background-mixin basic-gadget)
+  ((%background :initform (make-rgb-color 0.35 0.35 0.46) :reader background-color)
    (pitch :initform 0.0 :accessor pitch)
    (yaw   :initform 0.0 :accessor yaw)   
    (density :initform 5 :accessor density)

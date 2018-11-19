@@ -323,17 +323,19 @@ setmatrix")
 
 (defconstant +normal-line-width+ (/ 2.0 3.0))
 
-(defun line-style-scale (line-style)
+(defun line-style-scale (line-style medium)
   (let ((unit (line-style-unit line-style)))
     (ecase unit
       (:normal +normal-line-width+)
       (:point 1)
-      (:coordinate (error ":COORDINATE line unit is not implemented.")))))
+      (:coordinate (multiple-value-bind (x y)
+                       (transform-distance (medium-transformation medium) 0.71 0.71)
+                     (sqrt (+ (expt x 2) (expt y 2))))))))
 
 (defmethod line-style-effective-thickness
     (line-style (medium postscript-medium))
   (* (line-style-thickness line-style)
-     (line-style-scale line-style)))
+     (line-style-scale line-style medium)))
 
 (defun medium-line-thickness (medium)
   (line-style-effective-thickness (medium-line-style medium) medium))
@@ -341,7 +343,7 @@ setmatrix")
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :line-style)))
   (let* ((line-style (medium-line-style medium))
-         (scale (line-style-scale line-style)))
+         (scale (line-style-scale line-style medium)))
     (write-number stream (* scale (line-style-thickness line-style)))
     (format stream "setlinewidth ~A setlinejoin ~A setlinecap~%"
             (getf +postscript-line-joints+

@@ -1032,6 +1032,16 @@ were added."
   (if-supplied (text-style)
     (text-style-equalp (slot-value record 'text-style) text-style)))
 
+(defmethod replay-output-record :around
+    ((record gs-transformation-mixin) stream &optional region x-offset y-offset)
+  (declare (ignore region x-offset y-offset))
+  (with-drawing-options (stream :transformation (graphics-state-transformation record))
+    (call-next-method)))
+
+(defrecord-predicate gs-transformation-mixin (transformation)
+  (if-supplied (transformation)
+    (transformation-equal (graphics-state-transformation record) transformation)))
+
 (defclass standard-graphics-displayed-output-record
     (standard-displayed-output-record
      graphics-displayed-output-record)
@@ -1595,16 +1605,13 @@ were added."
                toward-y transform-glyphs transformation)
       record
     (let ((medium (sheet-medium stream)))
-      (with-drawing-options (medium :transformation transformation)
-        (medium-draw-text* medium string point-x point-y start end align-x
-                           align-y toward-x toward-y transform-glyphs)))))
+      (medium-draw-text* medium string point-x point-y start end align-x
+                         align-y toward-x toward-y transform-glyphs))))
 
 (defrecord-predicate draw-text-output-record
     (string start end point-x point-y align-x align-y toward-x toward-y transform-glyphs)
   (and (if-supplied (string)
          (string= (slot-value record 'string) string))
-       (transformation-equal (graphics-state-transformation record)
-                             (graphics-state-transformation record))
        (if-supplied (start)
          (eql (slot-value record 'start) start))
        (if-supplied (end)
@@ -1645,21 +1652,18 @@ were added."
    (baseline :initform 0)
    (width :initform 0)
    (max-height :initform 0)
-   ;; FIXME (or rework this comment): CLIM does not separate the
-   ;; notions of the text width and the bounding box; however, we need
-   ;; to, because some fonts will render outside the logical
-   ;; coordinates defined by the start position and the width.  LEFT
-   ;; and RIGHT here (and below) deal with this in a manner completely
-   ;; hidden from the user.  (should we export
-   ;; TEXT-BOUNDING-RECTANGLE*?)
+   ;; FIXME (or rework this comment):
+   ;; CLIM does not separate the notions of the text width and the bounding box;
+   ;; however, we need to, because some fonts will render outside the logical
+   ;; coordinates defined by the start position and the width. LEFT and RIGHT
+   ;; here (and below) deal with this in a manner completely hidden from the
+   ;; user. Should we export TEXT-BOUNDING-RECTANGLE*?
    (left :initarg :start-x)
    (right :initarg :start-x)
    (start-x :initarg :start-x)
    (start-y :initarg :start-y)
    (end-x :initarg :start-x)
    (end-y :initarg :start-y)
-   (wrapped :initform nil
-            :accessor text-record-wrapped)
    (medium :initarg :medium :initform nil)))
 
 (defmethod initialize-instance :after
@@ -1675,7 +1679,7 @@ were added."
     ((record standard-text-displayed-output-record)
      (record2 standard-text-displayed-output-record))
   (with-slots
-        (initial-x1 initial-y1 start-x start-y left right end-x end-y wrapped strings)
+        (initial-x1 initial-y1 start-x start-y left right end-x end-y strings)
       record2
     (and (coordinate= (slot-value record 'initial-x1) initial-x1)
          (coordinate= (slot-value record 'initial-y1) initial-y1)
@@ -1685,7 +1689,6 @@ were added."
          (coordinate= (slot-value record 'right) right)
          (coordinate= (slot-value record 'end-x) end-x)
          (coordinate= (slot-value record 'end-y) end-y)
-         (eq (slot-value record 'wrapped) wrapped)
          (coordinate= (slot-value record 'baseline)
                       (slot-value record2 'baseline))
          (eql (length (slot-value record 'strings)) (length strings));XXX
@@ -1719,7 +1722,7 @@ were added."
                                  stream
                                  &optional region (x-offset 0) (y-offset 0))
   (declare (ignore region x-offset y-offset))
-  (with-slots (strings baseline max-height start-y wrapped) record
+  (with-slots (strings baseline max-height start-y) record
     (with-sheet-medium (medium stream) ;is sheet a sheet-with-medium-mixin? --GB
       ;; FIXME:
       ;; 1. SLOT-VALUE...
@@ -1742,13 +1745,7 @@ were added."
                   (stream :ink (graphics-state-ink substring)
                           :clipping-region (graphics-state-clip substring)
                           :text-style (graphics-state-text-style substring))
-                (stream-write-output stream string nil))))
-      (when wrapped ; FIXME
-        (draw-rectangle* medium
-                         (+ wrapped 0) start-y
-                         (+ wrapped 4) (+ start-y max-height)
-                         :ink +foreground-ink+
-                         :filled t)))))
+                (stream-write-output stream string nil)))))))
 
 (defmethod output-record-start-cursor-position
     ((record standard-text-displayed-output-record))
@@ -2026,11 +2023,6 @@ add output recording facilities. It is not instantiable."))
 (defmethod* (setf stream-cursor-position) :after (x y (stream standard-output-recording-stream))
   (declare (ignore x y))
   (stream-close-text-output-record stream))
-
-(defmethod stream-wrap-line :before ((stream standard-output-recording-stream))
-  (when (stream-recording-p stream)
-    (setf (text-record-wrapped (stream-text-output-record stream nil)) ; FIXME!
-          (stream-text-margin stream))))
 
 ;;; 16.4.4. Output Recording Utilities
 

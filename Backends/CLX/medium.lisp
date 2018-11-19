@@ -92,16 +92,38 @@ region and its clipping pixmap. This is looked up for optimization with region-e
           (warn "Unknown cap style ~S, using :round" clim-shape)
           :round))))
 
+;;; XXX: this should be refactored into a reusable protocol in clim-backend
+;;; with specialization on medium. -- jd 2018-10-31
+(defun line-style-scale (line-style medium)
+  (let ((unit (line-style-unit line-style)))
+    (ecase unit
+      (:normal 1)
+      (:point (/ (graft-width (graft medium))
+                 (graft-width (graft medium) :units :inches)
+                 72))
+      (:coordinate (multiple-value-bind (x y)
+                       (transform-distance (medium-transformation medium) 0.71 0.71)
+                     (sqrt (+ (expt x 2) (expt y 2))))))))
+
+(defun line-style-effective-thickness (line-style medium)
+  (round (* (line-style-thickness line-style)
+            (line-style-scale line-style medium))))
+
+(defun line-style-effective-dashes (line-style medium)
+  (let ((scale (line-style-scale line-style medium)))
+    (map 'list #'(lambda (dash) (round (* dash scale)))
+         (line-style-dashes line-style))))
+
 (defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
   (with-slots (gc) medium
     (when gc
       (let ((old-line-style (medium-line-style medium)))
-        (unless (eql (line-style-thickness line-style)
-                     (line-style-thickness old-line-style))
-          ;; this is kind of false, since the :unit should be taken
-          ;; into account -RS 2001-08-24
+        (unless (and (eql (line-style-thickness line-style)
+                          (line-style-thickness old-line-style))
+                     (eq (line-style-unit line-style)
+                         (line-style-unit old-line-style)))
           (setf (xlib:gcontext-line-width gc)
-                (round (line-style-thickness line-style))))
+                (line-style-effective-thickness line-style medium)))
         (unless (eq (line-style-cap-shape line-style)
                     (line-style-cap-shape old-line-style))
           (setf (xlib:gcontext-cap-style gc)
@@ -112,14 +134,16 @@ region and its clipping pixmap. This is looked up for optimization with region-e
                 (line-style-joint-shape line-style)))
         ;; we could do better here by comparing elements of the vector
         ;; -RS 2001-08-24
-        (unless (eq (line-style-dashes line-style)
-                    (line-style-dashes old-line-style))
+        (unless (and (eq (line-style-dashes line-style)
+                         (line-style-dashes old-line-style))
+                     (eq (line-style-unit line-style)
+                         (line-style-unit old-line-style)))
           (setf (xlib:gcontext-line-style gc)
                 (if (line-style-dashes line-style) :dash :solid)
                 (xlib:gcontext-dashes gc)
                 (case (line-style-dashes line-style)
-                  ((t nil) 3)
-                  (otherwise (line-style-dashes line-style)))))))))
+                  ((t nil) (round (* (line-style-scale line-style medium) 3)))
+                  (otherwise (line-style-effective-dashes line-style medium)))))))))
 
 (defun %set-gc-clipping-region (medium gc)
   (declare (type clx-medium medium))
@@ -730,10 +754,12 @@ translated, so they begin at different position than [0,0])."))
                                          (round-coordinate lx2)
                                          (round-coordinate ly2)))))
                    (draw-lines (scan-line)
-                     (cond
-                       ((region-equal scan-line +nowhere+))
-                       (filled (map-over-region-set-regions #'draw-line-1 scan-line))
-                       (t (map-over-region-set-regions #'maybe-draw-border-points scan-line)))))
+                     ;; XXX: this linep masks a problem with region-intersection.
+                     (when (linep scan-line)
+                       (cond
+                         ((region-equal scan-line +nowhere+))
+                         (filled (map-over-region-set-regions #'draw-line-1 scan-line))
+                         (t (map-over-region-set-regions #'maybe-draw-border-points scan-line))))))
             ;; O(n+m) because otherwise we may skip some points (better drawing quality)
             (progn                      ;if (<= width height)
               (loop for x from x1 to (+ x1 width) do

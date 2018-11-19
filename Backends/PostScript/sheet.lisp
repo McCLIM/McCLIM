@@ -158,7 +158,7 @@
   (postscript-medium-file-stream medium))
 
 (defmethod make-medium ((port postscript-port) (sheet postscript-stream))
-  (make-instance 'postscript-medium :sheet sheet :port port))
+  (make-instance 'postscript-medium :sheet sheet))
 
 (defmethod medium-miter-limit ((medium postscript-medium))
   #.(* pi (/ 11 180))) ; ?

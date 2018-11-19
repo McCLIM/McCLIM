@@ -104,7 +104,7 @@
   (pdf-medium-file-stream medium))
 
 (defmethod make-medium ((port pdf-port) (sheet clim-pdf-stream))
-  (make-instance 'pdf-medium :sheet sheet :port port))
+  (make-instance 'pdf-medium :sheet sheet))
 
 (defmethod medium-miter-limit ((medium pdf-medium))
   #.(* pi (/ 11 180))) ; ?

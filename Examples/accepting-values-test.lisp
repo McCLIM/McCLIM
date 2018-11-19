@@ -23,7 +23,7 @@
       (clim:radio-box-current-selection "no")
       "yes"))
    (interactor :interactor)
-   (doc ::pointer-documentation))
+   (doc :pointer-documentation))
   (:layouts
    (defaults
        (horizontally ()
@@ -138,4 +138,3 @@
   (format *standard-output* "Popup Test. ")
   (format t "Result: ~S~%" (multiple-value-list (accept-popup '(1 2 3 4 5 6 7 8))))
   (finish-output *standard-output*))
-
