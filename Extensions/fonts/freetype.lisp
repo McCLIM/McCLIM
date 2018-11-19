@@ -5,10 +5,14 @@
 
 (in-package :clim-freetype)
 
-(defclass freetype-font-port (clim-clx:clx-render-port) ())
+(defclass clx-freetype-port (clim-clx:clx-render-port) ())
+(defclass clx-freetype-medium (clim-clx:clx-render-medium) ())
 
-(setf (get :clx-ff :port-type) 'freetype-font-port)
+(setf (get :clx-ff :port-type) 'clx-freetype-port)
 (setf (get :clx-ff :server-path-parser) 'clim-clx::parse-clx-server-path)
+
+(defmethod clim:make-medium ((port clx-freetype-port) sheet)
+  (make-instance 'clx-freetype-medium :sheet sheet))
 
 (defparameter *freetype-font-scale* 26.6)
 
@@ -323,22 +327,66 @@ or NIL if the current transformation is the identity transformation."
             nil
             (make-array '(2 2) :initial-contents (list (list rxx (- rxy)) (list (- ryx) ryy)))))))
 
+(defvar *draw-font-lock* (climi::make-lock "draw-font"))
+(defmethod clim:medium-draw-text* ((medium clx-freetype-medium) string x y
+                                   start end
+                                   align-x align-y
+                                   toward-x toward-y transform-glyphs
+                                   &aux (end (if (null end)
+                                                 (length string)
+                                                 (min end (length string)))))
+  ;; Possible optimalzaions:
+  ;;
+  ;; * with-clx-graphics already creates appropriate pixmap for us (correct one!) and we have
+  ;; medium picture in place - there is no need for gcontext-picture (see xrender-fonts)
+  ;; * don't use (PICTURE-DRAWABLE (CLX-RENDER-MEDIUM-PICTURE MEDIUM)) - it is slow due to possible
+  ;; mirror swaps, use (SHEET-XMIRROR (MEDIUM-SHEET MEDIUM)) instead. It might be a good idea to
+  ;; wrap our own (CLX-RENDER-MEDIUM-MIRROR MEDIUM) function.
+  (declare (ignore toward-x toward-y))
+  (when (alexandria:emptyp string)
+    (return-from clim:medium-draw-text*))
+  (clim-clx::with-clx-graphics () medium
+    (unless (eq align-y :baseline)
+      (let* ((font (climb:text-style-to-font (clim:port medium) (clim:medium-text-style medium)))
+             (ascent (climb:font-ascent font))
+             (descent (climb:font-descent font))
+             (text-height (+ ascent descent)))
+        (setq y (ecase align-y
+                  (:top (+ y ascent))                              ; OK
+                  #+ (or) (:baseline y)                            ; OK
+                  (:center (+ y ascent (- (/ text-height 2.0s0)))) ; See :around for multiline
+                  (:baseline* y)                                   ; See :around for multiline
+                  (:bottom (- y descent))))))                      ; See :around for multiline
+    (unless (eq align-x :left)
+      ;; This is the worst case - we need to compute whole text width what
+      ;; requires walking all lines char-by char.
+      (let ((text-width (clim:text-size medium string :start start :end end)))
+        (setq x (- (- x 0.5) (ecase align-x
+                               ;;(:left 0)
+                               (:center (/ text-width 2.0s0))
+                               (:right text-width))))))
+    (bt:with-lock-held (*draw-font-lock*)
+      (freetype-draw-glyphs medium clim-clx::mirror clim-clx::gc x y string
+                            :start start :end end
+                            :transformation (clim:sheet-device-transformation
+                                             (clim:medium-sheet medium))
+                            :transform-glyphs transform-glyphs))))
+
 ;;; We only cache glyphsets that does not have a transformation
 ;;; applied. The assumption is that applying transformation on text is
 ;;; rare enough that the lower performance will be acceptable.
 
-(defun mcclim-font:draw-glyphs (medium mirror gc x y string
-                                &key (start 0) (end (length string))
-                                  translate (direction :ltr)
-                                  transformation transform-glyphs
-                                &aux
-                                  (font (climb:text-style-to-font (clim:port medium) (clim:medium-text-style medium))))
-  (declare (ignore translate))
+(defun freetype-draw-glyphs (medium mirror gc x y string
+                    &key (start 0) (end (length string))
+                      (direction :ltr)
+                      transformation transform-glyphs
+                    &aux
+                      (font (climb:text-style-to-font (clim:port medium) (clim:medium-text-style medium))))
   (unless (or transform-glyphs (clim:translation-transformation-p transformation))
     (multiple-value-setq (x y) (clim:transform-position transformation x y))
     (setq transformation clim:+identity-transformation+))
   (when (null (freetype-font-replace font))
-    (return-from mcclim-font:draw-glyphs
+    (return-from freetype-draw-glyphs
       (%freetype-draw-glyphs font mirror gc x y string
                              :start start :end end :direction direction
                              :transformation transformation)))
@@ -399,8 +447,8 @@ or NIL if the current transformation is the identity transformation."
             (free-glyphset glyphset)))))))
 
 (defmethod climb:font-text-extents ((font freetype-font) string
-                                    &key (start 0) (end (length string)) (direction :ltr))
-
+                                    &key align-x align-y (start 0) (end (length string)) (direction :ltr))
+  (declare (ignore align-x align-y))
   ;; Values to return:
   ;;-> xmin ymin xmax ymax left top width height ascent descent linegap cursor-dx cursor-dy
   (with-face-from-font (face font)
@@ -530,7 +578,7 @@ or NIL if the current transformation is the identity transformation."
                                        (font-replacement-text-style text-style)
                                        (otherwise nil)))))))
 
-(defmethod climb:text-style-to-font ((port freetype-font-port) text-style)
+(defmethod climb:text-style-to-font ((port clx-freetype-port) text-style)
   (etypecase text-style
     (clim:standard-text-style
      (let ((x (or (clim:text-style-mapping port text-style)
@@ -544,7 +592,7 @@ or NIL if the current transformation is the identity transformation."
 ;;;  List fonts
 ;;;
 
-(defmethod clime:port-all-font-families ((port freetype-font-port) &key invalidate-cache)
+(defmethod clime:port-all-font-families ((port clx-freetype-port) &key invalidate-cache)
   (let* ((h (make-hash-table :test 'equal))
          (existing-families (make-hash-table :test 'equal))
          (prev-families nil))
