@@ -4,6 +4,8 @@
   (:darwin "libharfbuzz.dylib")                             
   (:unix "libharfbuzz.so"))
 
+(cffi:use-foreign-library libharfbuzz)
+
 (cffi:defcfun ("hb_buffer_create" hb-buffer-create) :pointer)
 (cffi:defcfun ("hb_buffer_destroy" hb-buffer-destroy) :void
   (buffer :pointer))
