@@ -282,9 +282,11 @@
 
 (defmethod climb:font-string-glyph-codes ((font truetype-font) string
                                           &key (start 0) (end (length string)))
+  (when (= start end)
+    (return-from climb:font-string-glyph-codes #()))
   (loop
      with array = (make-array (- end start) :fill-pointer 0)
-     with char = (char string start)
+     as char = (char string start) then next-char
      for i fixnum from (1+ start) below end
      as next-char = (char string i)
      as code = (dpb (char-code next-char)
@@ -293,7 +295,6 @@
                     (char-code char))
      do
        (vector-push code array)
-       (setf char next-char)
      finally
        (vector-push (char-code char) array)
        (return array)))

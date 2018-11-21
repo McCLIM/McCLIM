@@ -82,7 +82,8 @@ and the length of resulting sequence are equal."))
            (ymax most-negative-fixnum)
            (dx 0)
            (dy 0)
-           (current-y 0))
+           (current-y 0)
+           (current-dx 0))
       (dolines (line (subseq string start end))
         (multiple-value-bind (xmin* ymin* xmax* ymax* dx* dy*)
             (if (alexandria:emptyp line)
@@ -113,7 +114,8 @@ and the length of resulting sequence are equal."))
           (maxf xmax xmax*)
           (maxf dx dx*)
           (maxf dy (+ current-y dy*))
-          (incf current-y (climb:font-leading font))))
+          (incf current-y (climb:font-leading font))
+          (setf current-dx dx*)))
       (return-from climb:font-text-extents
         (values
          ;; text bounding box
@@ -127,7 +129,7 @@ and the length of resulting sequence are equal."))
             (+ (climb:font-ascent font)
                (climb:font-descent font)))
          ;; cursor-dx cursor-dy
-         dx dy))))
+         current-dx dy))))
   (:documentation "Function computes text extents as if it were drawn with a
 specified font. It returns two distinct extents: first is an exact pixel-wise
 bounding box. The second is a text bounding box with all its bearings. Text may
@@ -245,17 +247,28 @@ xmin ymin xmax ymax."))
       (values xmin ymin xmax ymax))))
 
 (defmethod text-size (medium string &key text-style (start 0) end
-                      &aux (end (or end (length string)))
-                        (text-style (merge-text-styles text-style
-                                                       (medium-merged-text-style medium))))
+                      &aux (end (or end (length string))))
   (when (= start end)
     (return-from text-size (values 0 0 0 0 (text-style-ascent text-style medium))))
-  (let ((text (string string))
-        (font (text-style-to-font (port medium) text-style)))
-    (multiple-value-bind (xmin ymin xmax ymax
-                          left top width height
-                          ascent descent linegap
-                          cursor-dx cursor-dy)
-        (climb:font-text-extents font text :start start :end end)
-      (declare (ignore xmin ymin xmax ymax left top descent linegap))
-      (values width height cursor-dx cursor-dy ascent))))
+  (let* ((text-style (merge-text-styles text-style
+                                        (medium-merged-text-style medium)))
+         (font (text-style-to-font (port medium) text-style))
+         (text (string string))
+         (ascent (climb:font-ascent font))
+         (line-height (+ ascent (climb:font-descent font)))
+         (leading (climb:font-leading font))
+         (current-dx 0)
+         (maximum-dx 0)
+         (current-y 0))
+    (dolines (text text)
+      (loop
+         with origin-x fixnum = 0
+         for code across (climb:font-string-glyph-codes font text :start start :end end)
+         do (incf origin-x (climb:font-glyph-dx font code))
+         finally
+           (maxf maximum-dx origin-x)
+           (setf current-dx origin-x)
+           (incf current-y leading)))
+    (values maximum-dx (+ current-y line-height (- leading))
+            current-dx (- current-y leading)
+            ascent)))
