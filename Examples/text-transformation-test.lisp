@@ -5,12 +5,10 @@
   (:pane :application :display-function #'display :scroll-bars nil))
 
 (defmethod display ((frame text-transformations-test) pane)
-  (let* (;(string "ytmMΣ音")
-         ;;"◌᷉" - character made of two codepoints
-         (string "TęΣ音")
+  (let* ((string "aTΣ音◌᷉")
          (y-offset 75)
          (x-offset 75)
-         (text-style (make-text-style nil nil 22)))
+         (text-style (make-text-style nil nil 18)))
     #+ (or)
     (surrounding-output-with-border (pane)
       ;; XXX: text-editor nor text-field call value-changed-callback. Probably
