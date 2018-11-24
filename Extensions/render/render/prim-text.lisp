@@ -25,7 +25,7 @@
      for opacity-image = (glyph-info-pixarray info)
      do
        (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
-             (opacity-image (make-instance 'climi::%rgba-pattern :array opacity-image))
+             (opacity-image (make-instance 'climi::%ub8-stencil :array opacity-image))
              (transformation (make-translation-transformation origin-x origin-y)))
          (when (and msheet (sheet-mirror msheet))
            (multiple-value-bind (x1 y1)

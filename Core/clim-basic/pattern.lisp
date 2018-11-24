@@ -219,6 +219,12 @@ pattern, stencil, image etc)."))
         (setf (aref designs i) (make-opacity (row-major-aref array i))))
       array)))
 
+(defclass %ub8-stencil (%array-pattern)
+  ((array :type (simple-array (unsigned-byte 8) 2)))
+  (:documentation "Internal class analogous to a stencil, but whose
+array is of type (unsigned-byte 8), rather than a float from 0 to
+1."))
+
 (defclass rectangular-tile (pattern)
   ((width  :initarg :width   :reader pattern-width)
    (height :initarg :height  :reader pattern-height)
