@@ -220,12 +220,15 @@
                   udx
                   udy))))))
 
+
+(deftype glyph-pixarray () '(simple-array (unsigned-byte 8) (* *)))
+
 (defstruct (glyph-info (:constructor glyph-info (id pixarray width height
                                                  left right top bottom
                                                  advance-width advance-height
                                                  advance-width* advance-height*)))
   (id 0                :read-only t :type fixnum)
-  (pixarray nil        :read-only t :type (or null (simple-array (unsigned-byte 8))))
+  (pixarray nil        :read-only t :type (or null glyph-pixarray))
   (width 0             :read-only t)
   (height 0            :read-only t)
   (left 0              :read-only t)
