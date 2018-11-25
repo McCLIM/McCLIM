@@ -843,7 +843,7 @@ second curve point, yielding (200 50)."
   (render-through-pixmap design medium))
 
 (defmethod medium-draw-bezier-design* ((sheet basic-sheet) design)
-  (render-through-pixmap design (sheet-medium sheet)))
+  (medium-draw-bezier-design* (sheet-medium sheet) design))
 
 ;;; NULL backend support
 
