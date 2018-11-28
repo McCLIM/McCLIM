@@ -385,6 +385,11 @@
 (defgeneric invoke-with-first-quadrant-coordinates (medium continuation x y))
 
 
+;;;; 10.3.2 Contrasting Dash Patterns
+
+(defgeneric contrasting-dash-pattern-limit (port))
+
+
 ;;; 11.1.1 Text Style Protocol and Text Style Suboptions
 
 (defgeneric text-style-components (text-style))
@@ -412,7 +417,7 @@
 (defgeneric medium-beep (medium))
 
 
-;;; 13.3.2
+;;; 13.3.2 Contrasting Colors
 
 (defgeneric contrasting-inks-limit (port))
 
