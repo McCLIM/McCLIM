@@ -875,14 +875,14 @@ second curve point, yielding (200 50)."
                                        &key (bezier-draw-control-lines *bezier-draw-control-lines*)
                                             (bezier-draw-location-labels *bezier-draw-location-labels*))
   (let ((segments (mcclim-bezier:segments design)))
-    (let ((p0 (slot-value (elt segments 0) 'mcclim-bezier:p0)))
+    (let ((p0 (slot-value (elt segments 0) 'p0)))
       (let ((path (make-path (point-x p0) (point-y p0))))
         (map nil (lambda (segment)
-                   (with-slots (mcclim-bezier:p1 mcclim-bezier:p2 mcclim-bezier:p3) segment
+                   (with-slots (p1 p2 p3) segment
                      (curve-to path
-                               (point-x mcclim-bezier:p1) (point-y mcclim-bezier:p1)
-                               (point-x mcclim-bezier:p2) (point-y mcclim-bezier:p2)
-                               (point-x mcclim-bezier:p3) (point-y mcclim-bezier:p3))))
+                               (point-x p1) (point-y p1)
+                               (point-x p2) (point-y p2)
+                               (point-x p3) (point-y p3))))
              segments)
         (if filled
             (%medium-fill-paths medium (list path))
@@ -892,10 +892,10 @@ second curve point, yielding (200 50)."
           (let ((i 0))
             (map nil (lambda (segment)
                        (incf i)
-                       (with-slots ((p0 mcclim-bezier:p0)
-                                    (p1 mcclim-bezier:p1)
-                                    (p2 mcclim-bezier:p2)
-                                    (p3 mcclim-bezier:p3))
+                       (with-slots ((p0 p0)
+                                    (p1 p1)
+                                    (p2 p2)
+                                    (p3 p3))
                            segment
                          (when bezier-draw-control-lines
                            (draw-point medium p0 :ink +blue+ :line-thickness 6)
