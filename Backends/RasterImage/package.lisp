@@ -37,12 +37,12 @@
 		  #:*truetype-font-path*
 		  #:*family-names*
 		  #:zpb-ttf-font-loader
-		  #:*zpb-font-lock* 
+		  #:*zpb-font-lock*
 		  #:*fontconfig-faces*
 		  #:*families/faces*
-		  #:truetype-device-font-name 
+		  #:truetype-device-font-name
 		  #:fontconfig-font-name
-		  #:make-truetype-device-font-name 
+		  #:make-truetype-device-font-name
 		  #:make-fontconfig-font-name
 		  #:truetype-font-family
 		  #:truetype-font
@@ -53,7 +53,6 @@
 		  )
     (:export
      #:with-output-to-raster-image-stream
+     #:with-output-to-raster-image-file
      #:with-output-to-rgba-pattern
      #:with-output-to-image-stream))
-
-
