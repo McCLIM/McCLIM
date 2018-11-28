@@ -66,11 +66,10 @@ appropriate times without explicitly recording it.
 \Defmacro {define-border-type} {shape arglist \body body}
 
 Defines a new kind of border named \arg{shape}.  \arg{arglist} must be a subset
-of the ``canonical'' arglist below (using \cl{string-equal} to do the
-comparison):
-\\
+of the ``canonical'' arglist, using \cl{string-equal} to do the
+comparison:
 \arg{(\key stream record left top right bottom)}
-\\
+
 
 \arg{arglist} may include other keyword arguments that serve as the drawing options.
 
