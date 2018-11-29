@@ -74,7 +74,7 @@ class.  So you should do the following (in the ws package, 'natch):
 	    :display-time t
 	    :text-style 
 	    (parse-text-style '(:fix :roman :normal))
-	    :initial-cursor-visibility nil
+	    ;; :initial-cursor-visibility nil
 	    :scroll-bars t))
   (:pointer-documentation t)
   (:layouts
