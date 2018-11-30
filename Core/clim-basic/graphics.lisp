@@ -292,6 +292,29 @@
                                    x y))
         (funcall cont medium)))))
 
+;;;; 10.3 Line Styles
+
+;;;; 10.3.2 Contrasting Dash Patterns
+
+(defconstant +contrasting-dash-patterns+
+  #(#(2 2) #(4 4) #(8 8) #(8 2) #(2 2 8 2)))
+
+(defmethod contrasting-dash-pattern-limit (port)
+  (length +contrasting-dash-patterns+))
+
+(defun make-contrasting-dash-patterns (n &optional k)
+  (let ((contrasting-dash-patterns +contrasting-dash-patterns+))
+    (unless (<= 1 n (length contrasting-dash-patterns))
+      (error "The argument N = ~D is out of range [1, ~D]"
+             n (length contrasting-dash-patterns)))
+    (unless (or (null k) (<= 0 k (1- n)))
+      (error "The argument K = ~D is out of range [0, ~D]" k (1- n)))
+    (if (null k)
+        (subseq contrasting-dash-patterns 0 n)
+        (aref contrasting-dash-patterns k))))
+
+;;;; 12 Graphics
+
 (defun draw-point (sheet point
 		   &rest args
 		   &key ink clipping-region transformation

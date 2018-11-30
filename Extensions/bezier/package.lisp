@@ -42,7 +42,6 @@
 
            #:relative-to-absolute-coord-seq
            #:segments
-           #:p0 #:p1 #:p2 #:p3
            #:region-difference
            #:convolve-regions
 
