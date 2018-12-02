@@ -72,9 +72,7 @@ class.  So you should do the following (in the ws package, 'natch):
    (display :application
 	    :display-function 'redisplay-graphs
 	    :display-time t
-	    :text-style 
-	    (parse-text-style '(:fix :roman :normal))
-	    ;; :initial-cursor-visibility nil
+	    :text-style (parse-text-style '(:fix :roman :normal))
 	    :scroll-bars t))
   (:pointer-documentation t)
   (:layouts
