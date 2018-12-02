@@ -264,7 +264,7 @@ by the number of variables in VARS."
 		      do (,body-fun ,@vector-args))))))
 	 ,@(when result-form
 	     `((let ,vars		;Bind variables to nil
-		 (declare (ignorable ,vars))
+		 (declare (ignorable ,@vars))
 		 ,result-form)))))))
 
 ;;;;
@@ -569,3 +569,68 @@ STREAM in the direction DIRECTION."
              (,line #2=(subseq ,substr 0 ,end) #2#))
             ((null ,end) ,@body ,result)
          ,@body))))
+
+;;;; The Collect macro:
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun collect-normal-expander (n-value fun forms)
+    `(progn
+       ,@(mapcar #'(lambda (form) `(setq ,n-value (,fun ,form ,n-value))) forms)
+       ,n-value))
+
+  (defun collect-list-expander (n-value n-tail forms)
+    (let ((n-res (gensym)))
+      `(progn
+         ,@(mapcar #'(lambda (form)
+                       `(let ((,n-res (cons ,form nil)))
+                          (cond (,n-tail
+                                 (setf (cdr ,n-tail) ,n-res)
+                                 (setq ,n-tail ,n-res))
+                                (t
+                                 (setq ,n-tail ,n-res  ,n-value ,n-res)))))
+                   forms)
+         ,n-value))))
+
+(defmacro collect (collections &body body)
+  (let (macros binds)
+    (dolist (spec collections)
+      (cond ((atom spec)
+             (setf spec (list spec)))
+            ((not (<= 1 (length spec) 3))
+             (error "Malformed collection specifier: ~S." spec)))
+      (let ((n-value (gensym))
+            (name (first spec))
+            (default (second spec))
+            (kind (or (third spec) 'collect)))
+        (push `(,n-value ,default) binds)
+        (if (eq kind 'collect)
+            (let ((n-tail (gensym)))
+              (if default
+                  (push `(,n-tail (last ,n-value)) binds)
+                  (push n-tail binds))
+              (push `(,name (&rest args)
+                            (collect-list-expander ',n-value ',n-tail args))
+                    macros))
+            (push `(,name (&rest args)
+                          (collect-normal-expander ',n-value ',kind args))
+                  macros))))
+    `(macrolet ,macros (let* ,(nreverse binds) ,@body))))
+
+(defun coord-seq->point-seq (sequence)
+  (collect (collect-point)
+    (do-sequence ((x y) sequence (collect-point))
+      (collect-point (make-point x y)))))
+
+(defun remove-duplicated-points (point-sequence &optional closed)
+  "Given points A B C ... Z removes consecutive points which are duplicated. If
+a flag CLOSED is T then beginning and end of the list are consecutive too."
+  (collect (collect-point)
+    (let ((last-point +nowhere+))
+      (do-sequence ((a) point-sequence
+                    (if (and closed
+                             (region-equal last-point (first (collect-point))))
+                        (butlast (collect-point))
+                        (collect-point)))
+        (unless (region-equal a last-point)
+          (setf last-point a)
+          (collect-point a))))))

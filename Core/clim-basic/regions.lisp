@@ -152,12 +152,6 @@
 
 ;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
-(defun coord-seq->point-seq (sequence)
-  (let ((res nil))
-    (do-sequence ((x y) sequence)
-      (push (make-point x y) res))
-    (nreverse res)))
-
 (defun make-polyline (point-seq &key closed)
   (assert (every #'pointp point-seq))
   (setq point-seq (coerce point-seq 'list))
