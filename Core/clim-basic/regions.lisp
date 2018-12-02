@@ -48,12 +48,6 @@
 ;;; - while you are are at it; provide a reasonable fast vertical scan
 ;;;   routine.  polygons should make use of the sweep line algorithm.
 
-;;; - implement bounding rectangle cache for polygons and polylines
-
-;;; - make REGION-CONTAINS-POSITION-P for polygons faster by handling
-;;;   the special case of the intersection of a horizontal line and
-;;;   the polygons
-
 ;;; - MAKE-POLY{LINE,GON} should canonise its arguments; no edges of
 ;;;   length 0 and no co-linear vertexes. Maybe: canonise rectangles?
 ;;;   Also a polygon of less than three vertexes is to be considered
@@ -142,43 +136,38 @@
 
 ;;; -- 2.5.3 Polygons and Polylines in CLIM ----------------------------------
 
+(defclass cached-bbox-mixin ()
+  ((bbox :reader bounding-rectangle)))
+
 ;; Protocol:
-(defclass standard-polyline (polyline)
-  ((points :initarg :points)
+(defclass standard-polyline (cached-bbox-mixin polyline)
+  ((points :initarg :points :reader polygon-points)
    (closed :initarg :closed)))
 
-(defclass standard-polygon (polygon)
-  ((points :initarg :points)))
+(defclass standard-polygon (cached-bbox-mixin polygon)
+  ((points :initarg :points :reader polygon-points)))
 
 ;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
 (defun make-polyline (point-seq &key closed)
   (assert (every #'pointp point-seq))
-  (setq point-seq (coerce point-seq 'list))
-  (cond ((every (lambda (x) (region-equal x (car point-seq)))
-                (cdr point-seq))
-         +nowhere+)
-        (t
-         (make-instance 'standard-polyline :points point-seq :closed closed))))
+  (setq point-seq (remove-duplicated-points point-seq closed))
+  (if (< (length point-seq) 2)
+      +nowhere+
+      (make-instance 'standard-polyline :points point-seq :closed closed)))
 
 (defun make-polyline* (coord-seq &key closed)
   (make-polyline (coord-seq->point-seq coord-seq) :closed closed))
 
 (defun make-polygon (point-seq)
   (assert (every #'pointp point-seq))
-  (setq point-seq (coerce point-seq 'list))
-  (cond ((every (lambda (x) (region-equal x (car point-seq)))
-                (cdr point-seq))
-         +nowhere+)
-        (t
-         (make-instance 'standard-polygon :points point-seq))))
+  (setq point-seq (remove-duplicated-points point-seq t))
+  (if (< (length point-seq) 3)
+      +nowhere+
+      (make-instance 'standard-polygon :points point-seq)))
 
 (defun make-polygon* (coord-seq)
   (make-polygon (coord-seq->point-seq coord-seq)))
-
-(defmethod polygon-points ((self standard-polygon))
-  (with-slots (points) self
-    points))
 
 (defmethod map-over-polygon-coordinates (fun (self standard-polygon))
   (with-slots (points) self
@@ -194,10 +183,6 @@
       (funcall fun
                (point-x (car q)) (point-y (car q))
                (point-x (cadr q)) (point-y (cadr q))))))
-
-(defmethod polygon-points ((self standard-polyline))
-  (with-slots (points) self
-    points))
 
 (defmethod map-over-polygon-coordinates (fun (self standard-polyline))
   (with-slots (points) self
@@ -2168,6 +2153,43 @@ and RADIUS2-DY"
 (defmethod region-difference ((a standard-rectangle) (b standard-polygon))
   (polygon-op a b #'logandc2))
 
+;;; Lazy evaluation of a bounding rectangle.
+(defmethod slot-unbound (class (self cached-bbox-mixin) (slot-name (eql 'bbox)))
+  (setf (slot-value self 'bbox)
+        (make-instance 'standard-bounding-rectangle
+                       :x1 (reduce #'min (mapcar #'point-x (polygon-points self)))
+                       :y1 (reduce #'min (mapcar #'point-y (polygon-points self)))
+                       :x2 (reduce #'max (mapcar #'point-x (polygon-points self)))
+                       :y2 (reduce #'max (mapcar #'point-y (polygon-points self))))))
+
+(defmethod bounding-rectangle* ((self cached-bbox-mixin))
+  (with-standard-rectangle (x1 y1 x2 y2)
+      (bounding-rectangle self)
+    (values x1 y1 x2 y2)))
+
+(defmethod region-contains-position-p ((self standard-polygon) x y)
+  (and (region-contains-position-p (bounding-rectangle self) x y)
+       ;; The following algorithm is a Winding Number (wn) method implementation
+       ;; based on a description by Dan Sunday "Inclusion of a Point in a
+       ;; Polygon" (http://geomalgorithms.com/a03-_inclusion.html).
+       (flet ((is-left (x0 y0 x1 y1 x2 y2)
+                (- (* (- x1 x0) (- y2 y0))
+                   (* (- x2 x0) (- y1 y0)))))
+         (let ((x (coerce x 'coordinate))
+               (y (coerce y 'coordinate))
+               (wn 0))
+           (map-over-polygon-segments
+            (lambda (x1 y1 x2 y2)
+              (if (<= y1 y)
+                  (when (and (> y2 y)
+                             (> (is-left x1 y1 x2 y2 x y) 0))
+                    (incf wn))
+                  (when (and (<= y2 y)
+                             (< (is-left x1 y1 x2 y2 x y) 0))
+                    (decf wn))))
+            self)
+           (not (zerop wn))))))
+
 (defun polygon-op (pg1 pg2 &optional logop)
   (let ((sps nil))
     (over-sweep-bands pg1 pg2
@@ -2454,17 +2476,6 @@ and RADIUS2-DY"
             ((null (cdr res)) (car res))
             (t (make-instance 'standard-region-union :regions res))))))
 
-(defmethod region-contains-position-p ((pg polygon) x y)
-  (setf x (coerce x 'coordinate))
-  (setf y (coerce y 'coordinate))
-  (let ((n 0) (m 0))
-    (map-over-schnitt-gerade/polygon (lambda (k)
-                                       (when (>= k 0) (incf n))
-                                       (incf m))
-                                     x y (+ x 1) y (polygon-points pg))
-    (assert (evenp m))
-    (oddp n)))
-
 (defmethod region-intersection ((a standard-line) (b standard-polygon))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
@@ -2723,18 +2734,6 @@ and RADIUS2-DY"
                                                             by2 (max (or by2 y2) y2)))
                                                     bands)
                          (list bx1 by1 bx2 by2)))))))
-
-(defmethod bounding-rectangle* ((self standard-polygon))
-  (values (reduce #'min (mapcar #'point-x (polygon-points self)))
-          (reduce #'min (mapcar #'point-y (polygon-points self)))
-          (reduce #'max (mapcar #'point-x (polygon-points self)))
-          (reduce #'max (mapcar #'point-y (polygon-points self)))))
-
-(defmethod bounding-rectangle* ((self standard-polyline))
-  (values (reduce #'min (mapcar #'point-x (polygon-points self)))
-          (reduce #'min (mapcar #'point-y (polygon-points self)))
-          (reduce #'max (mapcar #'point-x (polygon-points self)))
-          (reduce #'max (mapcar #'point-y (polygon-points self)))))
 
 (defmethod bounding-rectangle* ((self standard-point))
   (with-slots (x y) self
