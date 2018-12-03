@@ -82,8 +82,7 @@ will probably have the same value as `*application-frame*'.")
   ((master-pane :initarg :master-pane :reader master-pane))
   (:default-initargs
       :background +gray85+
-      :scroll-bars nil
-      :borders nil))
+      :scroll-bars nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
