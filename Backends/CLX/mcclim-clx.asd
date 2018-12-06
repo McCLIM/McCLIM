@@ -5,10 +5,12 @@
                #:mcclim-clx/basic
 	       #:mcclim-clx/input
 	       #:mcclim-clx/output
-	       #:mcclim-clx/text-selection)
+	       #:mcclim-clx/text-selection
+               #:xkeyboard)
   :components
   ((:file "port")
-   (:file "frame-manager" :depends-on ("port"))))
+   (:file "frame-manager" :depends-on ("port"))
+   (:file "xkb")))
 
 (defsystem #:mcclim-clx/basic
   :depends-on (#:clx
