@@ -282,7 +282,8 @@
 
 (defmethod climb:font-string-glyph-codes ((font truetype-font) string
                                           &key (start 0) (end (length string)))
-  (when (= start end)
+  (alexandria:minf end (length string))
+  (when (>= start end)
     (return-from climb:font-string-glyph-codes #()))
   (loop
      with array = (make-array (- end start) :fill-pointer 0)

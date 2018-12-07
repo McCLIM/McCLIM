@@ -263,7 +263,7 @@ xmin ymin xmax ymax."))
     (dolines (text text)
       (loop
          with origin-x fixnum = 0
-         for code across (climb:font-string-glyph-codes font text :start start :end end)
+         for code across (climb:font-string-glyph-codes font text)
          do (incf origin-x (climb:font-glyph-dx font code))
          finally
            (maxf maximum-dx origin-x)
