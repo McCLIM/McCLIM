@@ -253,7 +253,7 @@ xmin ymin xmax ymax."))
   (let* ((text-style (merge-text-styles text-style
                                         (medium-merged-text-style medium)))
          (font (text-style-to-font (port medium) text-style))
-         (text (string string))
+         (text (subseq (string string) start end))
          (ascent (climb:font-ascent font))
          (line-height (+ ascent (climb:font-descent font)))
          (leading (climb:font-leading font))
