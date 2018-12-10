@@ -96,7 +96,7 @@ input focus. This is a McCLIM extension."))
 		   :initarg :current-layout
 		   :accessor frame-current-layout)
    (panes-for-layout :initform nil :accessor frame-panes-for-layout
-		     :documentation "alist of names and panes ~
+		     :documentation "alist of names and panes
                                      (as returned by make-pane)")
 
    (output-pane :initform nil
