@@ -81,9 +81,7 @@ will probably have the same value as `*application-frame*'.")
 (defclass info-pane (application-pane)
   ((master-pane :initarg :master-pane :reader master-pane))
   (:default-initargs
-      :background +gray85+
-      :scroll-bars nil
-      :borders nil))
+   :background +gray85+))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
@@ -109,7 +107,6 @@ message is supposed to be displayed in the minibuffer.")
                  :documentation "The universal time at which the
 current message was set."))
   (:default-initargs
-   :scroll-bars nil
    :display-function 'display-minibuffer
    :display-time :command-loop
    :incremental-redisplay t))
