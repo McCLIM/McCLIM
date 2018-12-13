@@ -107,9 +107,10 @@
     :x (coerce x 'coordinate)
     :y (coerce y 'coordinate)))
 
-(defmethod print-object ((self standard-point) sink)
-  (with-slots (x y) self
-    (format sink "#<~S ~S ~S>" 'standard-point x y)))
+(defmethod print-object ((self standard-point) stream)
+  (print-unreadable-object (self stream :type t :identity nil)
+    (with-slots (x y) self
+      (format stream "~s ~s" x y))))
 
 ;;; Point protocol: point-position
 
