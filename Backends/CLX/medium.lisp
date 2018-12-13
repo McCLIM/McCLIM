@@ -50,8 +50,11 @@
    (last-medium-device-region :initform nil
                               :accessor last-medium-device-region)
    ;; CLIPPING-REGION-TMP is reused to avoid consing in the most common case
-   ;; when configuring the clipping region.n
+   ;; when configuring the clipping region.
    (clipping-region-tmp :initform (vector 0 0 0 0))))
+
+;; Variable is used to deallocate lingering resources after the operation.
+(defvar ^cleanup)
 
 
 ;;; secondary methods for changing text styles and line styles
@@ -131,14 +134,81 @@
                   ((t nil) (round (* (line-style-scale line-style medium) 3)))
                   (otherwise (line-style-effective-dashes line-style medium)))))))))
 
+(defun %clip-region-pixmap (medium mask mask-gc clipping-region x1 y1 width height)
+  (typecase clipping-region
+    (climi::nowhere-mixin)              ; do nothing
+    (clim:standard-rectangle
+     (multiple-value-bind (x1 y1 width height)
+         (region->clipping-values clipping-region)
+       (xlib:draw-rectangle mask mask-gc x1 y1 width height t)))
+    (clim:standard-polygon
+     (let ((coord-seq (climi::expand-point-seq (polygon-points clipping-region))))
+       (with-transformed-positions((sheet-native-transformation (medium-sheet medium))
+                                   coord-seq)
+         (setq coord-seq (map 'vector #'round-coordinate coord-seq))
+         (xlib:draw-lines mask mask-gc
+                          (concatenate 'vector
+                                       coord-seq
+                                       (vector (elt coord-seq 0)
+                                               (elt coord-seq 1)))
+                          :fill-p t))))
+    (clim:standard-ellipse
+     (flet ((%draw-lines (scan-line)
+              (map-over-region-set-regions
+               (lambda (reg)
+                 (when (linep reg)
+                   (multiple-value-bind (lx1 ly1) (line-start-point* reg)
+                     (multiple-value-bind (lx2 ly2) (line-end-point* reg)
+                       (xlib:draw-line mask mask-gc
+                                       (round-coordinate lx1)
+                                       (round-coordinate ly1)
+                                       (round-coordinate lx2)
+                                       (round-coordinate ly2))))))
+               scan-line)))
+       (if (<= width height)
+           (loop for x from x1 to (+ x1 width) do
+                (%draw-lines (region-intersection
+                              clipping-region
+                              (make-line* x y1 x (+ y1 height)))))
+           (loop for y from y1 to (+ y1 height) do
+                (%draw-lines (region-intersection
+                              clipping-region
+                              (make-line* x1 y (+ x1 width) y)))))))
+    (clim:standard-region-difference
+     (let ((region-a (climi::standard-region-difference-a clipping-region))
+           (region-b (climi::standard-region-difference-b clipping-region)))
+       (multiple-value-bind (x1* y1* width* height*)
+           (region->clipping-values region-a)
+         (%clip-region-pixmap medium mask mask-gc region-a x1* y1* width* height*))
+       (rotatef (xlib:gcontext-foreground mask-gc)
+                (xlib:gcontext-background mask-gc))
+       (multiple-value-bind (x1* y1* width* height*)
+           (region->clipping-values region-b)
+         (%clip-region-pixmap medium mask mask-gc region-b x1* y1* width* height*))
+       (rotatef (xlib:gcontext-foreground mask-gc)
+                (xlib:gcontext-background mask-gc))))
+    (clim:standard-region-union
+     (map-over-region-set-regions
+      (lambda (region)
+        (multiple-value-bind (x1* y1* width* height*)
+            (region->clipping-values region)
+          (%clip-region-pixmap medium mask mask-gc region x1* y1* width* height*)))
+      clipping-region))
+    (otherwise
+     (warn "clx backend: set clipping region: unoptimized path for ~s." (type-of clipping-region))
+     (loop for x from x1 to (+ x1 width) do
+          (loop for y from y1 to (+ y1 height) do
+               (when (region-contains-position-p clipping-region x y)
+                 (xlib:draw-point mask mask-gc x y)))))))
+
 (defun %set-gc-clipping-region (medium gc)
   (declare (type clx-medium medium))
   (let ((clipping-region (medium-device-region medium))
         (tmp (slot-value medium 'clipping-region-tmp)))
-    (cond
-      ((region-equal clipping-region +nowhere+)
+    (typecase clipping-region
+      (climi::nowhere-mixin
        (setf (xlib:gcontext-clip-mask gc) #()))
-      ((typep clipping-region 'standard-rectangle)
+      (clim:standard-rectangle
        (multiple-value-bind (x1 y1 width height)
            (region->clipping-values clipping-region)
          (setf (aref tmp 0) x1
@@ -146,15 +216,15 @@
                (aref tmp 2) width
                (aref tmp 3) height
                (xlib:gcontext-clip-mask gc :yx-banded) tmp)))
-      ((typep clipping-region 'climi::standard-rectangle-set)
+      (climi::standard-rectangle-set
        (alexandria:when-let ((rect-seq (clipping-region->rect-seq clipping-region)))
          ;; What McCLIM is generating is not :yx-banded in the same
          ;; sense as CLX requires it. Use :unsorted until we fix it.
          #+ (or) (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
          #- (or) (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))
-      ((typep clipping-region 'standard-ellipse)
+      (otherwise
        (multiple-value-bind (x1 y1 width height)
-           (region->clipping-values (bounding-rectangle clipping-region))
+           (region->clipping-values clipping-region)
          (let* ((drawable (sheet-xmirror (medium-sheet medium)))
                 (mask (xlib:create-pixmap :drawable drawable
                                           :depth 1
@@ -164,44 +234,9 @@
            (setf (xlib:gcontext-foreground mask-gc) 0)
            (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
            (setf (xlib:gcontext-foreground mask-gc) 1)
-           (flet ((%draw-lines (scan-line)
-                    (map-over-region-set-regions
-                     (lambda (reg)
-                       (when (linep reg)
-                         (multiple-value-bind (lx1 ly1) (line-start-point* reg)
-                           (multiple-value-bind (lx2 ly2) (line-end-point* reg)
-                             (xlib:draw-line mask mask-gc
-                                             (round-coordinate lx1)
-                                             (round-coordinate ly1)
-                                             (round-coordinate lx2)
-                                             (round-coordinate ly2))))))
-                     scan-line)))
-             (if (<= width height)
-                 (loop for x from x1 to (+ x1 width) do
-                      (%draw-lines (region-intersection
-                                    clipping-region
-                                    (make-line* x y1 x (+ y1 height)))))
-                 (loop for y from y1 to (+ y1 height) do
-                      (%draw-lines (region-intersection
-                                    clipping-region
-                                    (make-line* x1 y (+ x1 width) y))))))
-           (setf (xlib:gcontext-clip-mask gc :yx-banded) mask))))
-      (t
-       (multiple-value-bind (x1 y1 width height)
-           (region->clipping-values (bounding-rectangle clipping-region))
-         (let* ((drawable (sheet-xmirror (medium-sheet medium)))
-                (mask (xlib:create-pixmap :drawable drawable
-                                          :depth 1
-                                          :width (+ x1 width)
-                                          :height (+ y1 height)))
-                (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
-           (setf (xlib:gcontext-foreground mask-gc) 0)
-           (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
-           (setf (xlib:gcontext-foreground mask-gc) 1)
-           (loop for x from x1 to (+ x1 width) do
-                (loop for y from y1 to (+ y1 height) do
-                     (when (region-contains-position-p clipping-region x y)
-                       (xlib:draw-point mask mask-gc x y))))
+           (%clip-region-pixmap medium mask mask-gc clipping-region x1 y1 width height)
+           (xlib:free-gcontext mask-gc)
+           (push #'(lambda () (xlib:free-pixmap mask)) ^cleanup)
            (setf (xlib:gcontext-clip-mask gc :yx-banded) mask)))))))
 
 
@@ -323,8 +358,6 @@ translated, so they begin at different position than [0,0])."))
         gc))))
 
 
-;; Variable is used to deallocate lingering resources after the operation.
-(defvar ^cleanup)
 
 ;;; XXX: both PM and MM pixmaps should be freed with (xlib:free-pixmap pixmap)
 ;;; when not used. We do not do that right now.
@@ -380,7 +413,7 @@ translated, so they begin at different position than [0,0])."))
                 (let ((elt (aref idata y x)))
                   (setf (aref pdata y x) (ash elt -8)))))
       (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
-	(xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
+        (xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
                         :width width :height height))
       (xlib:free-gcontext pm-gc)
       (push #'(lambda () (xlib:free-pixmap pm)) ^cleanup)
