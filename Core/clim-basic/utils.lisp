@@ -625,12 +625,17 @@ STREAM in the direction DIRECTION."
   "Given points A B C ... Z removes consecutive points which are duplicated. If
 a flag CLOSED is T then beginning and end of the list are consecutive too."
   (collect (collect-point)
-    (let ((last-point +nowhere+))
-      (do-sequence ((a) point-sequence
-                    (if (and closed
-                             (region-equal last-point (first (collect-point))))
-                        (butlast (collect-point))
-                        (collect-point)))
-        (unless (region-equal a last-point)
-          (setf last-point a)
-          (collect-point a))))))
+    (let* ((first-point (elt point-sequence 0))
+           (last-point first-point))
+      (collect-point first-point)
+      (mapc (lambda (current-point)
+              (unless (region-equal current-point last-point)
+                (setf last-point current-point)
+                (collect-point last-point)))
+            point-sequence)
+      (if (and closed
+               (region-equal first-point last-point)
+               (null (alexandria:length= 1 (collect-point))))
+          (butlast (collect-point))
+          (collect-point)))))
+

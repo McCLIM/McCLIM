@@ -136,7 +136,7 @@
 
 (defun %clip-region-pixmap (medium mask mask-gc clipping-region x1 y1 width height)
   (typecase clipping-region
-    (climi::nowhere-mixin)              ; do nothing
+    (climi::nowhere-region)             ; do nothing
     (clim:standard-rectangle
      (multiple-value-bind (x1 y1 width height)
          (region->clipping-values clipping-region)
@@ -206,7 +206,7 @@
   (let ((clipping-region (medium-device-region medium))
         (tmp (slot-value medium 'clipping-region-tmp)))
     (typecase clipping-region
-      (climi::nowhere-mixin
+      (climi::nowhere-region
        (setf (xlib:gcontext-clip-mask gc) #()))
       (clim:standard-rectangle
        (multiple-value-bind (x1 y1 width height)
