@@ -2866,14 +2866,23 @@ if INVOKE-CALLBACK is given."))
     ((or hbox-pane hrack-pane) :vertical)
     ((or vbox-pane vrack-pane) :horizontal)))
 
+(cl:defconstant +box-adjuster-gadget-major-size+ 6)
+(cl:defconstant +box-adjuster-gadget-minor-size+ 1)
+
+(defclass box-adjuster-gadget-dragging-state ()
+  ((%left         :initarg :left
+                  :reader  dragging-state-left)
+   (%right        :initarg :right
+                  :reader  dragging-state-right)
+   (%clients-size :initarg :clients-size
+                  :reader  dragging-state-clients-size)
+   (%total-size   :initarg :total-size
+                  :reader  dragging-state-total-size)))
 
 (defclass clim-extensions::box-adjuster-gadget
-               (basic-gadget 3d-border-mixin orientation-from-parent-mixin)
-  ((drag-from :initform nil)
-   (left-sr)
-   (left-peer)
-   (right-sr)
-   (right-peer))
+    (basic-gadget 3d-border-mixin orientation-from-parent-mixin)
+  ((dragging-state :initform nil
+                   :accessor dragging-state))
   (:default-initargs :background *3d-inner-color*)
   (:documentation "The box-adjuster-gadget allows users to resize the panes
 in a layout by dragging the boundary between the panes.  To use it, insert
@@ -2886,62 +2895,96 @@ it in a layout between two panes that are to be resizeable.  E.g.:
 (defmethod compose-space ((gadget clim-extensions:box-adjuster-gadget)
                           &key width height)
   (declare (ignore width height))
-  (if (eq (orientation gadget) :vertical)
-      (make-space-requirement :min-width 6 :width 6 :max-width 6
-                              :min-height 1 :height 1)
-      (make-space-requirement :min-height 6 :height 6 :max-height 6
-                              :min-width 1 :width 1)))
+  (let ((major-size +box-adjuster-gadget-major-size+)
+        (minor-size +box-adjuster-gadget-minor-size+))
+    (ecase (orientation gadget)
+      (:vertical
+       (make-space-requirement :min-width major-size :width major-size :max-width major-size
+                               :min-height minor-size :height minor-size))
+      (:horizontal
+       (make-space-requirement :min-height major-size :height major-size :max-height major-size
+                               :min-width minor-size :width minor-size)))))
+
+(defmethod note-sheet-grafted ((sheet clim-extensions:box-adjuster-gadget))
+  (setf (sheet-pointer-cursor sheet) :move))
 
 (defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
                          (event pointer-button-press-event))
-  (with-slots (drag-from left-peer right-peer left-sr right-sr) gadget
-    (setf drag-from (if (eq (orientation gadget) :vertical)
-                        (pointer-event-native-graft-x event)
-                        (pointer-event-native-graft-y event))
-          (values left-peer right-peer)
-          (do ((current (box-layout-mixin-clients (sheet-parent gadget)) (rest current)))
-              ((or (null (third current))
-                   (eq gadget (box-client-pane (second current))))
-               (values (box-client-pane (first current))
-                       (box-client-pane (third current)))))
-          left-sr  (compose-space left-peer)
-          right-sr (compose-space right-peer))))
+  (let ((orientation (orientation gadget))
+        (parent (sheet-parent gadget)))
+    (multiple-value-bind (left right)
+        (loop for (first second third) on (box-layout-mixin-clients parent)
+              when (eq gadget (box-client-pane second))
+              do (return (values first third)))
+      (labels ((sheet-size (sheet)
+                 (ecase orientation
+                   (:vertical (bounding-rectangle-width sheet))
+                   (:horizontal (bounding-rectangle-height sheet)))))
+        (let ((clients-size (+ (sheet-size (box-client-pane left))
+                               (sheet-size (box-client-pane right))))
+              (total-size (sheet-size parent)))
+          (setf (dragging-state gadget)
+                (make-instance 'box-adjuster-gadget-dragging-state
+                               :left         left
+                               :right        right
+                               :clients-size clients-size
+                               :total-size   total-size)))))))
 
 (defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
                          (event pointer-button-release-event))
-  (setf (slot-value gadget 'drag-from) nil))
-
-(defun adjust-space-requirement (pane sr orientation delta)
-  (multiple-value-bind (major major-max major-min)
-      (if (eq orientation :vertical)
-          (values (space-requirement-width sr)
-                  (space-requirement-max-width sr)
-                  (space-requirement-min-width sr))
-          (values (space-requirement-height sr)
-                  (space-requirement-max-height sr)
-                  (space-requirement-min-height sr)))
-    (let ((new-major (max major-min (min major-max (+ major delta)))))
-      (if (eq orientation :vertical)
-          (change-space-requirements pane :width new-major)
-          (change-space-requirements pane :height new-major))
-      (- new-major major))))
+  (setf (dragging-state gadget) nil))
 
 (defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
-                         (event pointer-motion-event)
-                         &aux (orientation (orientation gadget)))
-  (with-slots (drag-from left-peer left-sr right-peer right-sr) gadget
-    (when (and drag-from
-               (typep (sheet-parent gadget) 'box-layout-mixin))
-      (let* ((major-pos (if (eq orientation :vertical)
-                            (pointer-event-native-graft-x event)
-                            (pointer-event-native-graft-y event)))
-             (delta (- major-pos drag-from)))
-        (changing-space-requirements (:resize-frame nil)
-          (adjust-space-requirement left-peer  left-sr  orientation delta)
-          (adjust-space-requirement right-peer right-sr orientation (- delta)))))))
+                         (event pointer-motion-event))
+  (when-let ((state (dragging-state gadget)))
+    (let ((orientation (orientation gadget))
+          (parent (sheet-parent gadget))
+          (left (dragging-state-left state))
+          (right (dragging-state-right state))
+          (clients-size (dragging-state-clients-size state))
+          (total-size (dragging-state-total-size state)))
+      ;; Compute cursor position in coordinate system of left
+      ;; child. Dividing by the combined size of left and right gives
+      ;; the ratio the user is going for.
+      (flet ((left-pointer-position ()
+               (untransform-position
+                (sheet-delta-transformation
+                 (sheet-mirrored-ancestor (box-client-pane left)) nil)
+                (climi::pointer-event-native-graft-x event)
+                (climi::pointer-event-native-graft-y event))))
+        (let ((position (- (ecase orientation
+                             (:vertical (left-pointer-position))
+                             (:horizontal (nth-value 1 (left-pointer-position))))
+                           ;; Make GADGET's center track the cursor,
+                           ;; not its edge.
+                           (/ +box-adjuster-gadget-major-size+ 2))))
+          (update-box-clients
+           left right position clients-size total-size)
+          (changing-space-requirements (:resize-frame nil)
+            (change-space-requirements parent)))))))
 
-(defmethod note-sheet-grafted ((sheet clim-extensions:box-adjuster-gadget))
-  (setf (sheet-pointer-cursor sheet) :rotate))
+(defun update-box-clients (left right position clients-size total-size)
+  (let* ((as-fixed (clamp position 0 clients-size))
+         (as-proportion (/ as-fixed clients-size))
+         (non-fill-p nil))
+    (flet ((update-client (client as-fixed as-proportion
+                           &optional (can-fill-p t))
+             (cond ((and (box-client-fillp client) can-fill-p))
+                   ((box-client-fixed-size client)
+                    (setf (box-client-fixed-size client) as-fixed
+                          non-fill-p                     t))
+                   (t ; proportional, fill with CAN-FILL-P false or none
+                    ;; Translate proportion from size of left and
+                    ;; right to parent's size (needed when the parent
+                    ;; has more than two children).
+                    (let ((proportion (* as-proportion
+                                         (/ clients-size total-size))))
+                      (setf (box-client-fillp client)      nil
+                            (box-client-proportion client) proportion
+                            non-fill-p                     t))))))
+      ;; Adjust both clients, making sure at least one does not use fill.
+      (update-client left  as-fixed                as-proportion       t)
+      (update-client right (- total-size as-fixed) (- 1 as-proportion) non-fill-p))))
 
 ;;; Support for definition of callbacks and associated callback events. A
 ;;; callback event is used by a backend when a high-level notification of a
