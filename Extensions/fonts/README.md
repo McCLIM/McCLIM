@@ -8,20 +8,29 @@ using the `XRender` extension and the libraries `zpb-ttf` and
 ## mcclim-native-ttf
 
 This component contains native implementation of ttf fonts access and
-drawning. It is decoupled from `xrender-fonts` component and may be
-eventually reused in the future.
+drawing. It is decoupled from `xrender-fonts` component and may be eventually
+reused in the future.
 
 Also implementation of `Font listing extension` (see
 `Core/clim-basic/ports.lisp`) is provided (except port part, because
 it is dependent on the backend which uses `mcclim-native-ttf`).
 
+### Features
+
+* Kerning
+* Tracking (letter-spacing)
+* Leading (line-spacing)
+* Boxes for missing glyphs
+* Transformations
+
 ### TODO
 
-* Kerning (we didn't do this with Freetype, either. Oops.)
 * Implement fixed-font-width-p for zpb-ttf.
-* Boxes for missing glyphs.
 * Make certain left/right bearings and text-bounding-rectangle are
-  correct. (I doubt they are..)
+  correct. text-bounding-rectangle and text-size are quite incorrect especially
+  when we take multiline into account and align-x/align-y to center/bottom (not
+  to mention toward-x/toward-y which are not implemented at all).
+* Rethink interface and make it play well with text-style protocol.
 
 ### Wish-list
 
@@ -71,11 +80,9 @@ XRender extension in our CLX backend. Moreover it provides port-wise
 part of the implementation for `Font listing extension`
 (`port-all-font-families` and `register-all-ttf-fonts`).
 
-We support both `standard-text-style` and
-`device-font-text-style`. The former verifies in
-`text-style-to-X-font` if the `text-style` is already registered in
+We support both `standard-text-style` and `device-font-text-style`. The former
+verifies in `text-style-to-font` if the `text-style` is already registered in
 the system or if we can load it from the provided
-mappings. `device-font-text-style` has a separate method
-specialization working with `make-truetype-font` or
-`fontconfig-font-name` which tries to find requested font
-`find-fontconfig-font`.
+mappings. `device-font-text-style` has a separate method specialization working
+with `make-truetype-font` or `fontconfig-font-name` which tries to find
+requested font `find-fontconfig-font`.

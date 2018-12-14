@@ -96,7 +96,7 @@ synthesize-pointer-motion-event
 @verbatim
 GRAFT (in grafts.lisp)
 -----------------------------------
-;;; Use clim-standard:standard-graft as superclass
+;;; Use climb:standard-graft as superclass
 
 ;;; Originally in CLIM
 graft        ; root window/screen

@@ -4,90 +4,39 @@
 ;;; Converting string into paths
 ;;;
 
-;;; Font's utilities
-(defparameter *text-sizes* '(:normal         12
-                             :tiny            8
-                             :very-small      8
-                             :small          10
-                             :large          14
-                             :very-large     18
-                             :huge           24))
 
-
-(defun string-primitive-paths (x y string font size fn)
-  (declare (ignore size))
-  (let ((scale (zpb-ttf-font-units->pixels font)))
-    (declare (ignore scale))
-    (paths-from-string font string fn
-                       :offset (paths:make-point x y))))
-
-
-(defun paths-from-string (font text fn &key (offset (make-point 0 0))
-                                         (scale-x 1.0) (scale-y 1.0)
-                                         (kerning t) (auto-orient nil))
-  "Extract paths from a string."
-  (declare (ignore scale-x scale-y auto-orient))
-  (let ((font-loader (zpb-ttf-font-loader (truetype-font-face font)))
-        (scale (zpb-ttf-font-units->pixels font)))
-    (loop
-       for previous-char = nil then char
-       for char across text
-       for paths = (font-glyph-paths font char)
-       for opacity-image = (font-glyph-opacity-image font char)
-       for dx = (font-glyph-left font char)
-       for dy = (font-glyph-top font char)
-       for previous-width = nil then width
-       for width = (max
-                    (font-glyph-right font char)
-                    (font-glyph-width font char))
-       do (when previous-char
-            (setf offset
-                  (paths-ttf::p+ offset
-                                 (paths:make-point (* 1
-                                                      (+ previous-width
-                                                         (* scale (if kerning
-                                                                      (paths-ttf::kerning-offset previous-char
-                                                                                                 char
-                                                                                                 font-loader)
-                                                                      0))))
-                                                   0))))
-         (funcall fn paths opacity-image dx dy
-                  (make-translation-transformation (paths:point-x offset)
-                                                   (paths:point-y offset))))))
-
-(defun glyph-paths (font char)
-  "Render a character of 'face', returning a 2D (unsigned-byte 8) array
-   suitable as an alpha mask, and dimensions. This function returns five
-   values: alpha mask byte array, x-origin, y-origin (subtracted from
-   position before rendering), horizontal and vertical advances."
-  (climi::with-lock-held (*zpb-font-lock*)
-    (with-slots (units->pixels size ascent descent) font
-      (let* ((units->pixels (zpb-ttf-font-units->pixels font))
-             (size  (truetype-font-size font))
-             (ascent (truetype-font-ascent font))
-             (descent (truetype-font-descent font))
-             (glyph (zpb-ttf:find-glyph char (zpb-ttf-font-loader
-                                              (truetype-font-face font))))
-             (left-side-bearing  (* units->pixels (zpb-ttf:left-side-bearing  glyph)))
-             (right-side-bearing (* units->pixels (zpb-ttf:right-side-bearing glyph)))
-             (advance-width (* units->pixels (zpb-ttf:advance-width glyph)))
-             (bounding-box (map 'vector (lambda (x) (float (* x units->pixels)))
-                                (zpb-ttf:bounding-box glyph)))
-             (min-x (elt bounding-box 0))
-             (min-y (elt bounding-box 1))
-             (max-x (elt bounding-box 2))
-             (max-y (elt bounding-box 3))
-             (width  (- (ceiling max-x) (floor min-x)))
-             (height (- (ceiling max-y) (floor min-y)))
-             (paths (paths-ttf:paths-from-glyph glyph
-                                                :offset (paths:make-point 0 0)
-                                                :scale-x units->pixels
-                                                :scale-y (- units->pixels))))
-        (declare (ignore SIZE ASCENT DESCENT LEFT-SIDE-BEARING RIGHT-SIDE-BEARING))
-        (values paths
-                (floor min-x)
-                (ceiling max-y)
-                width
-                height
-                (round advance-width)
-                0)))))
+(defun string-primitive-paths (medium x y string transform-glyphs
+                               &aux (transformation (sheet-device-transformation (medium-sheet medium))))
+  (multiple-value-setq (x y)
+    (clim:transform-position transformation x y))
+  (loop
+     with font = (text-style-to-font (port medium) (medium-text-style medium))
+     with glyph-transformation = (multiple-value-bind (x0 y0)
+                                     (transform-position transformation 0 0)
+                                   (compose-translation-with-transformation transformation (- x0) (- y0)))
+     for code across (climb:font-string-glyph-codes font string)
+     for origin-x fixnum = (round x) then (+ origin-x (glyph-info-advance-width info))
+     for origin-y fixnum = (round y) then (+ origin-y (glyph-info-advance-height info))
+     for info = (if (null transform-glyphs)
+                    (font-glyph-info font code)
+                    (font-generate-glyph font code glyph-transformation))
+     for dx fixnum = (glyph-info-left info)
+     for dy fixnum = (glyph-info-top info)
+     for opacity-image = (glyph-info-pixarray info)
+     do
+       (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
+             (opacity-image (make-instance 'climi::%ub8-stencil :array opacity-image))
+             (transformation (make-translation-transformation origin-x origin-y)))
+         (when (and msheet (sheet-mirror msheet))
+           (multiple-value-bind (x1 y1)
+               (transform-position transformation dx (- dy))
+             (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+                 (region-intersection
+                  (climi::medium-device-region medium)
+                  (make-rectangle* x1 y1
+                                   (+ x1 (pattern-width opacity-image))
+                                   (+ y1 (pattern-height opacity-image))))
+               (%medium-fill-image-mask medium opacity-image
+                                        min-x min-y
+                                        (- max-x min-x) (- max-y min-y)
+                                        (- (round x1)) (- (round y1)))))))))

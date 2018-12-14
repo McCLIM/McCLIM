@@ -25,7 +25,7 @@
 
 (in-package :clim-postscript-font)
 
-(defclass postscript-font-medium (basic-medium)
+(defclass postscript-font-medium (basic-medium climb:approx-bbox-medium-mixin)
   ((device-fonts :initform nil
 		 :accessor device-fonts)))
 
@@ -50,23 +50,23 @@
 
 (defvar *font-metrics* (make-hash-table :test 'equal))
 
-(defstruct postscript-device-font-name
-  (font-file (error "missing argument"))
-  (metrics-file (error "missing argument"))
-  (size (error "missing argument")))
+(defclass postscript-font-name ()
+  ((name :initarg :name :reader font-name-name)
+   (size :initarg :size :reader font-name-size)))
+
+;;; FIXME postscript-device-font-name is not tested anywhere! Add regression
+;;; tests in Examples module. -- jd 2018-11-07
+(defclass postscript-device-font-name (postscript-font-name)
+  ((font-file :initarg :font-file :reader postscript-device-font-name-font-file)
+   (metrics-file :initarg :metrics-file :reader postscript-device-font-name-metrics-file)))
 
 (defun get-font-info (font-name)
   (gethash font-name *font-metrics*))
 
-(defun font-name-size (font-name)
-  (etypecase font-name
-    (postscript-device-font-name (postscript-device-font-name-size font-name))
-    (cons (cdr font-name))))
-
 (defun font-name-metrics-key (font-name)
   (etypecase font-name
     (postscript-device-font-name font-name)
-    (cons (car font-name))))
+    (postscript-font-name (font-name-name font-name))))
 
 (defun define-font-metrics (name ascent descent angle char-infos &optional (font-name nil))
   (let ((font-info (make-instance 'font-info
@@ -131,15 +131,6 @@
                  (:italic . "Helvetica-Oblique")
                  ((:bold :italic) . "Helvetica-BoldOblique"))))
 
-(defconstant +postscript-font-sizes+
-  '(:normal 14
-    :tiny 8
-    :very-small 10
-    :small 12
-    :large 18
-    :very-large 20
-    :huge 24))
-
 (defmethod text-style-mapping ((port postscript-font-port) text-style
                                &optional character-set)
   (declare (ignore character-set))
@@ -149,31 +140,17 @@
                                  (getf +postscript-fonts+ :fix)))
                (font-name (cdr (or (assoc face family-fonts :test #'equal)
                                    (assoc :roman family-fonts))))
-               (size-number (if (numberp size)
-                                (round size)
-                                (or (getf +postscript-font-sizes+ size)
-                                    (getf +postscript-font-sizes+ :normal)))))
-          (cons font-name size-number)))))
+               (size-number (climb:normalize-font-size size)))
+          (make-instance 'postscript-font-name :name font-name :size size-number)))))
 
 (defmethod (setf text-style-mapping)
     (mapping (port postscript-font-port) (text-style text-style)
      &optional character-set)
   (declare (ignore character-set))
-  (cond 
-    ((and (consp mapping)
-	  (stringp (car mapping))
-	  (numberp (cdr mapping)))
-     (when (not (gethash (car mapping) *font-metrics*))
-       (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
-	       text-style (car mapping)))
-     (setf (gethash text-style (port-text-style-mappings port))
-	   mapping))
-    (t
-     (when (not (gethash mapping *font-metrics*))
+  (when (not (gethash mapping *font-metrics*))
        (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
 	       text-style mapping))
-     (setf (gethash text-style (port-text-style-mappings port))
-	   mapping))))
+     (setf (gethash text-style (port-text-style-mappings port)) mapping))
 
 ;; The following four functions should be rewritten: AFM contains all
 ;; needed information
@@ -210,9 +187,10 @@
     (declare (ignore height final-x final-y baseline))
     width))
 
-(defmethod climi::text-bounding-rectangle*
+(defmethod climb:text-bounding-rectangle*
     ((medium postscript-font-medium) string
-     &key text-style (start 0) end)
+     &key text-style (start 0) end align-x align-y direction)
+  (declare (ignore align-x align-y direction))
   (when (characterp string)
     (setf string (make-string 1 :initial-element string)))
   (unless end (setf end (length string)))
@@ -237,7 +215,7 @@
                                                :start start :end position-newline)
 			(declare (ignore width font-ascent font-descent direction first-not-done))
                         (multiple-value-bind (minx miny maxx maxy)
-                            (climi::text-bounding-rectangle*
+                            (climb:text-bounding-rectangle*
                              medium string :text-style text-style
                              :start (1+ position-newline) :end end)
 			  (declare (ignore miny))
@@ -262,30 +240,32 @@
 			(error "Unknown font ~S." metrics-key)))
 	 (char-metrics (font-info-char-infos font-info))
 	 (width (loop for i from start below end
-		   sum (char-width (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
+		   sum (char-width (gethash (aref *iso-latin-1-symbolic-names*
+                                                  (char-code (char string i)))
 					    char-metrics))))
-         (ascent (loop for i from start below end
-                       maximize (char-ascent (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
-                                                      char-metrics))))
-         (descent (loop for i from start below end
-                       maximize (char-descent (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string i)))
-                                                       char-metrics)))))
+         (ymin (loop for i from start below end
+                  minimize (- (char-ascent (gethash (aref *iso-latin-1-symbolic-names*
+                                                          (char-code (char string i)))
+                                                    char-metrics)))))
+         (ymax (loop for i from start below end
+                  maximize (char-descent (gethash (aref *iso-latin-1-symbolic-names*
+                                                        (char-code (char string i)))
+                                                  char-metrics))))
+         (xmin (char-xmin (gethash (aref *iso-latin-1-symbolic-names*
+                                         (char-code (char string start)))
+                                   char-metrics)))
+         (xmax (- width (- (char-width (gethash (aref *iso-latin-1-symbolic-names*
+                                                      (char-code (char string (1- end))))
+                                                char-metrics))
+                           (char-xmax (gethash (aref *iso-latin-1-symbolic-names*
+                                                     (char-code (char string (1- end))))
+                                               char-metrics))))))
     (values
      width
-     ascent
-     descent
-     (char-xmin (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string start)))
-			 char-metrics))
-     (- width (- (char-width (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string (1- end))))
-				      char-metrics))
-		 (char-xmax (gethash (aref *iso-latin-1-symbolic-names* (char-code (char string (1- end))))
-				     char-metrics))))
+     ymin ymax xmin xmax
      (font-info-ascent font-info)
      (font-info-descent font-info)
      0 end)))
-     
-
-
 
 (defmethod text-size ((medium postscript-font-medium) string
                       &key text-style (start 0) end)

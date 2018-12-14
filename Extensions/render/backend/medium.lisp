@@ -1,6 +1,6 @@
 (in-package :mcclim-render-internals)
 
-(defclass render-medium-mixin (basic-medium)
+(defclass render-medium-mixin (basic-medium climb:multiline-text-medium-mixin)
   ())
 
 (defun %medium-stroke-paths (medium paths)
@@ -148,51 +148,31 @@
 (defmethod medium-draw-text* ((medium render-medium-mixin) string x y
                               start end
                               align-x align-y
-                              toward-x toward-y transform-glyphs)
-  (with-transformed-position ((medium-transformation medium) x y)
-    (flet ((draw-font-glypse (paths opacity-image dx dy transformation)
-             (declare (ignore paths))
-             (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium))))
-               (when (and msheet (sheet-mirror msheet))
-                 (multiple-value-bind (x1 y1)
-                     (transform-position
-                      (clim:compose-transformations transformation
-                                                    (sheet-native-transformation
-                                                     (medium-sheet medium)))
-                      (+ dx ) (-  dy))
-                   (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-                       (region-intersection
-                        (climi::medium-device-region medium)
-                        (make-rectangle* x1 y1
-                                         (+ -1 x1 (pattern-width opacity-image))
-                                         (+ -1 y1 (pattern-height opacity-image))))
-                     (%medium-fill-image-mask medium opacity-image
-                                              min-x min-y
-                                              (- max-x min-x) (- max-y min-y)
-                                              (- (round x1)) (- (round y1)))))))))
-      (let ((xfont (text-style-to-font (port medium) (medium-text-style medium))))
-        (let ((size (text-style-size (medium-text-style medium))))
-          (setf size   (or size :normal)
-                size (getf *text-sizes* size size))
-          (when (characterp string)
-            (setq string (make-string 1 :initial-element string)))
-          (when (null end) (setq end (length string)))
-          (multiple-value-bind (text-width text-height x-cursor y-cursor baseline)
-              (text-size medium string :start start :end end)
-            (declare (ignore x-cursor y-cursor))
-            (unless (and (eq align-x :left) (eq align-y :baseline))
-              (setq x (- x (ecase align-x
-                             (:left 0)
-                             (:center (round text-width 2))
-                             (:right text-width))))
-              (setq y (ecase align-y
-                        (:top (+ y (- baseline text-height)
-                                 (+ text-height)))
-                        (:center (+ y (- baseline text-height)
-                                    (+ (floor text-height 2))))
-                        (:baseline y)
-                        (:bottom (+ y (- baseline text-height))))))
-            (string-primitive-paths x y string xfont size #'draw-font-glypse)))))))
+                              toward-x toward-y transform-glyphs
+                              &aux (end (if (null end)
+                                            (length string)
+                                            (min end (length string)))))
+  (declare (ignore toward-x toward-y))
+  (unless (eq align-y :baseline)
+    (let* ((font (climb:text-style-to-font (port medium) (medium-text-style medium)))
+           (ascent (climb:font-ascent font))
+           (descent (climb:font-descent font))
+           (text-height (+ ascent descent)))
+      (setq y (ecase align-y
+                (:top (+ y ascent))                              ; OK
+                #+ (or) (:baseline y)                            ; OK
+                (:center (+ y ascent (- (/ text-height 2.0s0)))) ; See :around for multiline
+                (:baseline* y)                                   ; See :around for multiline
+                (:bottom (- y descent))))))                      ; See :around for multiline
+  (unless (eq align-x :left)
+    ;; This is the worst case - we need to compute whole text width what
+    ;; requires walking all lines char-by char.
+    (let ((text-width (text-size medium string :start start :end end)))
+      (setq x (- x (ecase align-x
+                     ;;(:left 0)
+                     (:center (/ text-width 2.0s0))
+                     (:right text-width))))))
+  (string-primitive-paths medium x y string transform-glyphs))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)

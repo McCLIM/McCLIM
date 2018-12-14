@@ -1,3 +1,5 @@
+(cl:in-package #:asdf-user)
+
 #| dummy system to make Quicklisp happy |#
 (defsystem #:mcclim-fonts
   :depends-on (#:clim-basic)

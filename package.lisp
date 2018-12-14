@@ -1985,13 +1985,44 @@
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
+   ;; Text-style
+   #:text-style-to-font
    #:text-style-character-width
+   #:text-bounding-rectangle*
+   #:normalize-font-size
+   ;; Font abstraction
+   #:font-face
+   #:font-size
+   #:font-character-width
+   #:font-string-width
+   #:font-string-glyph-codes
+   #:font-glyph-code-char
+   #:font-text-extents
+   #:font-ascent
+   #:font-descent
+   #:font-leading
+   #:font-tracking
+   #:font-fixed-width
+   #:font-kerning-p
+   #:font-glyph-width
+   #:font-glyph-height
+   #:font-glyph-top
+   #:font-glyph-left
+   #:font-glyph-bottom
+   #:font-glyph-right
+   #:font-glyph-dx
+   #:font-glyph-dy
+   ;; Mixins available for backends
+   #:multiline-text-medium-mixin
+   #:approx-bbox-medium-mixin
+   #:transform-coordinates-mixin
    ;; From CLIM (mentioned in the spec)
    #:adopt-frame
    #:allocate-space
    #:destroy-mirror
    #:destroy-port
    #:graft
+   #:graftp
    #:graft-height
    #:graft-width
    #:handle-repaint
