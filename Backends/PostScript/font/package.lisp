@@ -24,11 +24,13 @@
   (:export #:postscript-font-medium
            #:postscript-font-port
            #:device-fonts
+           #:postscript-font-name
            #:postscript-device-font-name
            #:postscript-device-font-name-font-file
            #:text-size-in-font
            #:get-font-info
            #:font-info-name
+           #:font-name-name
            #:font-name-size
            #:font-name-metrics-key
            #:*iso-latin-1-symbolic-names*)

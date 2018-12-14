@@ -24,7 +24,7 @@
 ;;; Fonts
 ;;;
 
-(defmethod text-style-to-font ((port render-port-mixin)
+(defmethod climb:text-style-to-font ((port render-port-mixin)
                                (text-style standard-text-style))
   (labels
       ((find-and-make-truetype-font (family face size)
@@ -53,8 +53,7 @@
 
            (setf face   (or face :roman)
                  family (or family :fix)
-                 size   (or size :normal)
-                 size (getf *text-sizes* size size))
+                 size   (climb:normalize-font-size size))
 
            (find-and-make-truetype-font family face size))))
     (or (text-style-mapping port text-style)
@@ -62,7 +61,7 @@
               (or (find-truetype-font port text-style)
                   (invoke-with-truetype-path-restart #'find-font))))))
 
-(defmethod text-style-to-font ((port render-port-mixin) (gs-text-style cons))
+(defmethod climb:text-style-to-font ((port render-port-mixin) (gs-text-style cons))
   (text-style-to-font port (apply #'make-text-style gs-text-style)))
 
 (defmethod clim-internals::text-style-size ((gs-text-style cons))
@@ -85,7 +84,7 @@
                                      (zpb-ttf:open-font-loader filename)))
              (family-name (zpb-ttf:family-name loader))
              (family (ensure-gethash family-name font-families
-                                     (make-instance 'truetype-font-family
+                                     (make-instance 'mcclim-truetype::truetype-font-family
                                                     :port port
                                                     :name (zpb-ttf:family-name loader))))
              (face-name (zpb-ttf:subfamily-name loader))

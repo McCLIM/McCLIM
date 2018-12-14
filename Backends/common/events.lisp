@@ -1,5 +1,4 @@
-(in-package :clim-standard)
-
+(in-package #:climi)
 
 (defclass standard-event-port-mixin ()
   ((pointer-grab-sheet :accessor pointer-grab-sheet :initform nil)
@@ -105,7 +104,7 @@
         ;; need to make an event copy for single-mirrored sheets - event-sheet
         ;; is not the same as sheet we want to distribute event to.
         (let ((new-event (climi::shallow-copy-object event)))
-          (setf (slot-value new-event 'climi::sheet) sheet)
+          (setf (slot-value new-event 'clim:sheet) sheet)
           (unless (eq (sheet-mirrored-ancestor sheet)
                       (sheet-mirrored-ancestor (event-sheet event)))
             (multiple-value-bind (cx cy)
@@ -122,25 +121,24 @@
 
 
 (defmethod distribute-event ((port standard-event-port-mixin)
-				    (event selection-event))
+                             (event climb:selection-event))
   (let ((owner (port-selection-owner port)))
     (if owner
 	(progn
-	  (setf (slot-value event 'clim::sheet) owner)
+	  (setf (slot-value event 'clim:sheet) owner)
 	  (dispatch-event owner event))
 	(dispatch-event (event-sheet event)
 			event))))
 
 
 (defmethod distribute-event ((port standard-event-port-mixin)
-				    (event selection-notify-event))
+                             (event climb:selection-notify-event))
   (let ((owner (port-selection-requester port)))
     (if owner
 	(progn
-	  (setf (slot-value event 'clim::sheet) owner)
+	  (setf (slot-value event 'clim:sheet) owner)
 	  (dispatch-event owner event))
-	(dispatch-event (event-sheet event)
-			event))))
+	(dispatch-event (event-sheet event) event))))
 
 
 ;;;
@@ -151,21 +149,21 @@
   (dolist (s
             (do ((s sheet-b (sheet-parent s))
                  (lis nil))
-                ((or (null s) (climi::graftp s) (eq s sheet-t)) lis)
+                ((or (null s) (climb:graftp s) (eq s sheet-t)) lis)
               (push s lis)))
     (let ((new-event (climi::shallow-copy-object event)))
       ;; should we change also `climi::x' and `climi::y'?
-      (setf (slot-value new-event 'climi::sheet) s)
+      (setf (slot-value new-event 'clim:sheet) s)
       (change-class new-event 'pointer-enter-event)
       (dispatch-event s new-event))))
 
 (defun distribute-exit-events (sheet-b sheet-t event)
   (when (and sheet-t sheet-b)
     (do ((s sheet-b (sheet-parent s)))
-        ((or (null s) (climi::graftp s) (eq s sheet-t)))
+        ((or (null s) (climb:graftp s) (eq s sheet-t)))
       (let ((new-event (climi::shallow-copy-object event)))
         ;; should we change also `climi::x' and `climi::y'?
-        (setf (slot-value new-event 'climi::sheet) s)
+        (setf (slot-value new-event 'clim:sheet) s)
         (change-class new-event 'pointer-exit-event)
         (dispatch-event s new-event)))))
 
@@ -174,7 +172,7 @@
   (cond
     ((or (null sheet-a) (null sheet-b))
      nil)
-    ((climi::graftp sheet-a)
+    ((climb:graftp sheet-a)
      sheet-a)
     ((sheet-ancestor-p sheet-b sheet-a)
      sheet-a)

@@ -37,7 +37,7 @@
            :initform (make-instance 'state
                                     :text-family :serif
                                     :text-face   nil
-                                    :text-size   120
+                                    :text-size   60
                                     :rectangle   :text-size)))
   (:panes
    (canvas (make-pane 'canvas :state      (state *application-frame*)

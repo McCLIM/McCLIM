@@ -543,7 +543,8 @@ setmatrix")
        (unless font-info
          (error "Unknown font: ~S" font-info))
        (clim-postscript-font:font-info-name font-info)))
-    (cons (concatenate 'string (car font-name) "-iso"))))
+    (clim-postscript-font:postscript-font-name
+     (concatenate 'string (clim-postscript-font:font-name-name font-name) "-iso"))))
 
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :text-style)))

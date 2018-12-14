@@ -21,27 +21,22 @@
 ;;; You might need to tweak mcclim-truetype::*families/faces* to point
 ;;; to where ever there are suitable TTF fonts on your system.
 
-;;; FIXME: I don't think draw-text* works for strings spanning
-;;; multiple lines.  FIXME: Not particularly thread safe.
+;;; FIXME: Not particularly thread safe.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defclass truetype-font-renderer (clim-clx::font-renderer)
-  ())
+(defun display-the-glyph-set (display)
+  (let ((glyph-set (or (getf (xlib:display-plist display) 'the-glyph-set)
+                       (setf (getf (xlib:display-plist display) 'the-glyph-set)
+                             (xlib::render-create-glyph-set
+                              (first (xlib::find-matching-picture-formats display
+                                                                          :alpha 8 :red 0 :green 0 :blue 0)))))))
+    glyph-set))
 
-(setq clim:*default-server-path* '(:clx :font-renderer mcclim-truetype:truetype-font-renderer))
-
-(let ((lookaside nil))
-  (defun display-the-glyph-set (display)
-    (if (eq (car lookaside) display)
-        (cdr lookaside)
-        (let ((glyph-set (or (getf (xlib:display-plist display) 'the-glyph-set)
-                             (setf (getf (xlib:display-plist display) 'the-glyph-set)
-                                   (xlib::render-create-glyph-set
-                                    (first (xlib::find-matching-picture-formats display
-                                            :alpha 8 :red 0 :green 0 :blue 0)))))))
-          (setf lookaside (cons display glyph-set))
-          glyph-set))))
+(defun display-free-the-glyph-set (display)
+  (alexandria:when-let ((glyph-set (getf (xlib:display-plist display) 'the-glyph-set)))
+    (xlib:render-free-glyph-set glyph-set)
+    (remf (xlib:display-plist display) 'the-glyph-set)))
 
 (defun display-free-glyph-ids (display)
   (getf (xlib:display-plist display) 'free-glyph-ids))
@@ -59,19 +54,20 @@
   (or (pop (display-free-glyph-ids display))
       (incf (display-free-glyph-id-counter display))))
 
-(defstruct (glyph-info (:constructor glyph-info (id width height left right top)))
-  id                                    ; FIXME: Types?
-  width height
-  left right top)
-
 
-;;;;;;; mcclim interface
-(defclass clx-truetype-font (truetype-font)
+(defclass clx-ttf-port (clim-clx:clx-render-port) ())
+
+(setf (get :clx-ttf :port-type) 'clx-ttf-port)
+(setf (get :clx-ttf :server-path-parser) 'clim-clx::parse-clx-server-path)
+
+(defclass clx-truetype-font (cached-truetype-font)
   ((display           :initarg :display :reader clx-truetype-font-display)
-   (fixed-width       :initform nil)
-   (glyph-id-cache    :initform (make-gcache))
-   (glyph-width-cache :initform (make-gcache))
-   (char->glyph-info  :initform (make-hash-table :size 256))))
+   (%buffer%          :initform (make-array 1024
+                                            :element-type '(unsigned-byte 32)
+                                            :adjustable nil
+                                            :fill-pointer nil)
+                      :accessor clx-truetype-font-%buffer%
+                      :type (simple-array (unsigned-byte 32)))))
 
 (defun register-all-ttf-fonts (port &optional (dir *truetype-font-path*))
   (when *truetype-font-path*
@@ -84,13 +80,11 @@
                     (make-truetype-font port path size))
              '(8 10 12 14 18 24 48 72))))))
 
-(defmethod clim-clx:port-find-all-font-families ((port clim-clx::clx-port) (font-renderer truetype-font-renderer)
-                                                 &key invalidate-cache)
+(defmethod clime:port-all-font-families ((port clx-ttf-port) &key invalidate-cache)
   (when (or (null (clim-clx::font-families port)) invalidate-cache)
-    (setf (clim-clx::font-families port) (clim-clx::reload-font-table port)))
+    (setf (clim-clx::font-families port) nil))
   (register-all-ttf-fonts port)
-  (append (call-next-method)
-          (clim-clx::font-families port)))
+  (clim-clx::font-families port))
 
 (let ((font-loader-cache (make-hash-table :test #'equal))
       (font-families     (make-hash-table :test #'equal))
@@ -131,20 +125,26 @@
 
 
 
-(defun font-generate-glyph (font glyph-index)
+(defmethod font-generate-glyph ((font clx-truetype-font) code
+                                &optional (transformation +identity-transformation+))
   (let* ((display (clx-truetype-font-display font))
-         (glyph-id (display-draw-glyph-id display)))
-    (multiple-value-bind (arr left top dx dy) (glyph-pixarray font (code-char glyph-index))
+         (glyph-id (display-draw-glyph-id display))
+         (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0) code)))
+         (next-character (code-char (ldb (byte #.(ceiling (log char-code-limit 2))
+                                               #.(ceiling (log char-code-limit 2)))
+                                         code))))
+    (multiple-value-bind (arr left top width height dx dy udx udy)
+        (if (identity-transformation-p transformation)
+            (glyph-pixarray font character next-character transformation)
+            (glyph-pixarray font character next-character
+                            (compose-transformations #1=(make-scaling-transformation 1.0 -1.0)
+                                                     (compose-transformations transformation #1#))))
       (with-slots (fixed-width) font
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
           (setf fixed-width t)
           (warn "Font ~A is fixed width, but the glyph width appears to vary.
- Disabling fixed width optimization for this font. ~A vs ~A" 
-                font dx fixed-width))
-        (when (and (numberp fixed-width)
-                   (font-fixed-width-p font))
-          (setf fixed-width dx)))
+Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)))
 
       (when (= (array-dimension arr 0) 0)
         (setf arr (make-array (list 1 1)
@@ -152,98 +152,28 @@
                               :initial-element 0)))
       (xlib::render-add-glyph (display-the-glyph-set display) glyph-id
                               :data arr
+;;; We negate LEFT, because we want to start drawing array LEFT pixels after the
+;;; pen (pixarray contains only a glyph without its left-side bearing). TOP is
+;;; not negated because glyph coordinates are in the first quadrant (while
+;;; array's are in fourth).
+;;;
+;;; I'm leaving this comment because it wasn't obvious to me why we negate LEFT
+;;; and not TOP here. -- jd 2018-09-29
                               :x-origin (- left)
                               :y-origin top
                               :x-advance dx
                               :y-advance dy)
-      (let ((right (+ left (array-dimension arr 1))))
-        (glyph-info glyph-id dx dy left right top)))))
-
-(defun font-glyph-info (font character)
-  (with-slots (char->glyph-info) font
-    (ensure-gethash character char->glyph-info
-                    (font-generate-glyph font (char-code character)))))
-
-(defun font-glyph-id (font character)
-  (glyph-info-id (font-glyph-info font character)))
-
-(defmethod clim-clx::font-ascent ((font truetype-font))
-  (truetype-font-ascent font))
-
-(defmethod clim-clx::font-descent ((font truetype-font))
-  (truetype-font-descent font))
-
-(defmethod clim-clx::font-glyph-width ((font truetype-font) char)
-  (glyph-info-width (font-glyph-info font char)))
-
-(defmethod clim-clx::font-glyph-left ((font truetype-font) char)
-  (glyph-info-left (font-glyph-info font char)))
-
-(defmethod clim-clx::font-glyph-right ((font truetype-font) char)
-  (glyph-info-right (font-glyph-info font char)))
-
-;;; Simple custom cache for glyph IDs and widths. Much faster than
-;;; using the char->glyph-info hash table directly.
-
-(defun make-gcache ()
-  (let ((array (make-array 512 :adjustable nil :fill-pointer nil)))
-    (loop for i from 0 below 256 do (setf (aref array i) (1+ i)))
-    array))
-
-(declaim (inline gcache-get))
-
-(defun gcache-get (cache key-number)  
-  (declare (optimize (speed 3))
-           (type (simple-array t (512))))
-  (let ((hash (logand (the fixnum key-number) #xFF)))   ; hello.
-    (and (= key-number (the fixnum (svref cache hash)))
-         (svref cache (+ 256 hash)))))
-
-(defun gcache-set (cache key-number value)
-  (let ((hash (logand key-number #xFF)))
-    (setf (svref cache hash) key-number
-          (svref cache (+ 256 hash)) value)))
-
-(defmethod clim-clx::font-text-extents ((font truetype-font) string
-                                        &key (start 0) (end (length string)) translate direction)
-  ;; -> (width ascent descent left right
-  ;; font-ascent font-descent direction
-  ;; first-not-done)  
-  (declare (optimize (speed 3))
-           (ignore translate direction))
-
-  (let ((width
-         ;; We could work a little harder and eliminate generic arithmetic
-         ;; here. It might shave a few percent off a draw-text benchmark.
-         ;; Rather silly to obsess over the array access considering that.
-         (macrolet ((compute ()
-                      `(loop with width-cache = (slot-value font 'glyph-width-cache)
-                          for i from start below end
-                          as char = (aref string i)
-                          as code = (char-code char)
-                          sum (or (gcache-get width-cache code)
-                                  (gcache-set width-cache code (clim-clx::font-glyph-width font char)))
-                            #+NIL (clim-clx::font-glyph-width font char))))
-           (if (numberp (slot-value font 'fixed-width))
-               (* (slot-value font 'fixed-width) (- end start))
-               (typecase string 
-                 (simple-string 
-                  (locally (declare (type simple-string string))
-                    (compute)))
-                 (string 
-                  (locally (declare (type string string))
-                    (compute)))
-                 (t (compute)))))))
-    (values
-     width
-     (clim-clx::font-ascent font)
-     (clim-clx::font-descent font)
-     (clim-clx::font-glyph-left font (char string start))
-     (- width (- (clim-clx::font-glyph-width font (char string (1- end)))
-                 (clim-clx::font-glyph-right font (char string (1- end)))))
-     (clim-clx::font-ascent font)
-     (clim-clx::font-descent font)
-     0 end)))
+      (let ((right (+ left (1- (array-dimension arr 1))))
+            (bottom (- top (1- (array-dimension arr 0))))
+            (array #|arr|# nil))
+        ;; INV udx and udy are not transformed here for the transformed glyph
+        ;; rendering (to avoid accumulation of a roundnig error). See
+        ;; %RENDER-TRANSFORMED-GLYPHS. ARR is set to NIL because we are not
+        ;; interested in keeping opacity array (it is already kept on the X11
+        ;; side and we have no need for it on the Lisp side).
+        (glyph-info glyph-id array width height
+                    left right top bottom
+                    dx dy udx udy)))))
 
 (defun drawable-picture (drawable)
   (or (getf (xlib:drawable-plist drawable) 'picture)
@@ -290,60 +220,146 @@
         (setf (first picture-info) fg))
       (cdr picture-info))))
 
-;;; Arbitrary restriction: No more than 65536 glyphs cached on a
-;;; single display. I don't think that's unreasonable. Extending 
-;;; this from 16 to 32 bits is straightforward, at a slight loss
-;;; in performance.
+;;; Restriction: no more than 65536 glyph pairs cached on a single display. I
+;;; don't think that's unreasonable. Having keys as glyph pairs is essential for
+;;; kerning where the same glyph may have different advance-width values for
+;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
+;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
+(defun mcclim-font:draw-glyphs (medium mirror gc x y string
+                                &key start end translate direction
+                                  transformation transform-glyphs
+                                &aux (font (climb:text-style-to-font
+                                            (port medium) (medium-text-style medium))))
+  (declare (optimize (speed 3))
+           (ignore translate direction)
+           (type #-sbcl (integer 0 #.array-dimension-limit)
+                 #+sbcl sb-int:index
+                 start end)
+           (type string string))
 
-(let ((buffer (make-array 1024 :element-type '(unsigned-byte 16) ; TODO: thread safety
-                               :adjustable nil :fill-pointer nil)))
-  (defmethod clim-clx::font-draw-glyphs ((font truetype-font) mirror gc x y string
-                                         &key start end translate size direction transformation)
-    (declare (optimize (speed 3))
-             (ignore size translate direction)
-             (type #-sbcl (integer 0 #.array-dimension-limit)
-                   #+sbcl sb-int:index
-                   start end)
-             (type string string))
-    (multiple-value-bind (x y)
-        (transform-position transformation x y)
-      (when (< (length buffer) (- end start))
-        (setf buffer (make-array (* 256 (ceiling (- end start) 256))
-                                 :element-type '(unsigned-byte 16)
-                                 :adjustable nil :fill-pointer nil)))
-      (let ((display (xlib:drawable-display mirror)))
-        (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
-          (declare (ignore source-pixmap))
-          (let* ((cache (slot-value font 'glyph-id-cache))
-                 (glyph-ids buffer))
+  (when (< (length (the (simple-array (unsigned-byte 32)) (clx-truetype-font-%buffer% font)))
+           (- end start))
+    (setf (clx-truetype-font-%buffer% font)
+          (make-array (* 256 (ceiling (- end start) 256))
+                      :element-type '(unsigned-byte 32)
+                      :adjustable nil :fill-pointer nil)))
 
-            (loop
-              for i from start below end ; TODO: Read optimization notes. Fix. Repeat.
-              for i* upfrom 0
-              as char = (aref string i)
-              as code = (char-code char)
-              do (setf (aref buffer i*)
-                       (the (unsigned-byte 16)
-                            (or (gcache-get cache code)
-                                (gcache-set cache code (font-glyph-id font char))))))
+  (when (and transform-glyphs
+             (not (clim:translation-transformation-p transformation)))
+    (return-from mcclim-font:draw-glyphs
+      (%render-transformed-glyphs font string x y transformation mirror gc)))
 
-            ;; Debugging - show the text rectangle
-                                        ;(setf (xlib:gcontext-foreground gc) #xFF0000)
-                                        ;(xlib:draw-rectangle mirror gc x0 y0 (- x1 x0) (- y1 y0))
+  (multiple-value-setq (x y) (clim:transform-position transformation x y))
+  (let ((glyph-ids (clx-truetype-font-%buffer% font))
+        (glyph-set (display-the-glyph-set (xlib:drawable-display mirror))))
+    (loop
+       with char = (char string start)
+       with i* = 0
+       for i from (1+ start) below end
+       as next-char = (char string i)
+       as next-char-code = (char-code next-char)
+       as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
+                                           #.(ceiling (log char-code-limit 2)))
+                      (char-code char))
+       do
+         (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+               (the (unsigned-byte 32) (font-glyph-id font code)))
+         (setf char next-char)
+         (incf i*)
+       finally
+         (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+               (the (unsigned-byte 32) (font-glyph-id font (char-code char)))))
 
-            ;; Sync the picture-clip-mask with that of the gcontext.
-            (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
-                         (xlib::gcontext-clip-mask gc))
-              (setf (xlib::picture-clip-mask (drawable-picture mirror))
-                    (xlib::gcontext-clip-mask gc)))
+    (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
+      (declare (ignore source-pixmap))
+      ;; Sync the picture-clip-mask with that of the gcontext.
+      (unless  (eq (xlib::picture-clip-mask (drawable-picture mirror))
+                   (xlib::gcontext-clip-mask gc))
+        (setf (xlib::picture-clip-mask (drawable-picture mirror))
+              (xlib::gcontext-clip-mask gc)))
 
-            (xlib::render-composite-glyphs
-             (drawable-picture mirror)
-             (display-the-glyph-set display)
-             source-picture
-             (truncate (+ 0.5 x)) (truncate (+ y 0.5))
-             glyph-ids
-             :end (- end start))))))))
+      (xlib::render-composite-glyphs (drawable-picture mirror)
+                                     glyph-set
+                                     source-picture
+                                     (truncate (+ x 0.5))
+                                     (truncate (+ y 0.5))
+                                     glyph-ids
+                                     :end (- end start)))))
+
+;;; Transforming glyphs is very inefficient because we don't cache them.
+(defun %render-transformed-glyphs (font string x y tr mirror gc
+                                   &aux (end (length string)))
+  ;; Sync the picture-clip-mask with that of the gcontext.
+  (when-let ((clip (xlib::gcontext-clip-mask gc)))
+    (unless (eq (xlib::picture-clip-mask (drawable-picture mirror)) clip))
+    (setf (xlib::picture-clip-mask (drawable-picture mirror)) clip))
+
+  (loop
+     with glyph-transformation = (multiple-value-bind (x0 y0)
+                                     (transform-position tr 0 0)
+                                   (compose-translation-with-transformation tr (- x0) (- y0)))
+     ;; for rendering one glyph at a time
+     with current-x = x
+     with current-y = y
+     with picture = (drawable-picture mirror)
+     with source-picture = (car (gcontext-picture mirror gc))
+     ;; ~
+     with glyph-ids = (clx-truetype-font-%buffer% font)
+     with glyph-set = (display-the-glyph-set (xlib:drawable-display mirror))
+     with char = (char string 0)
+     with i* = 0
+     for i from 1 below end
+     as next-char = (char string i)
+     as next-char-code = (char-code next-char)
+     as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
+                                         #.(ceiling (log char-code-limit 2)))
+                    (char-code char))
+     as glyph-info = (font-generate-glyph font code glyph-transformation)
+     do
+       (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+             (the (unsigned-byte 32) (glyph-info-id glyph-info)))
+     do ;; rendering one glyph at a time
+       (multiple-value-bind (current-x current-y)
+           (transform-position tr current-x current-y)
+         (xlib:render-composite-glyphs picture glyph-set source-picture
+                                       (truncate (+ current-x 0.5))
+                                       (truncate (+ current-y 0.5))
+                                       glyph-ids :start i* :end (1+ i*)))
+     ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH.
+       (incf current-x (glyph-info-advance-width* glyph-info))
+       (incf current-y (glyph-info-advance-height* glyph-info))
+     do
+       (setf char next-char)
+       (incf i*)
+     finally
+       (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+             (the (unsigned-byte 32) (glyph-info-id (font-generate-glyph font
+                                                                         (char-code char)
+                                                                         glyph-transformation))))
+     finally
+     ;; rendering one glyph at a time (last glyph)
+       (multiple-value-bind (current-x current-y)
+           (transform-position tr current-x current-y)
+         (xlib:render-composite-glyphs picture glyph-set source-picture
+                                       (truncate (+ current-x 0.5))
+                                       (truncate (+ current-y 0.5))
+                                       glyph-ids :start i* :end (1+ i*)))
+       (xlib:render-free-glyphs glyph-set (subseq glyph-ids 0 (1+ i*)))
+       #+ (or) ;; rendering all glyphs at once
+       (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
+         (declare (ignore source-pixmap))
+         ;; This solution is correct in principle, but advance-width and
+         ;; advance-height are victims of rounding errors and they don't
+         ;; hold the line for longer text in case of rotations and other
+         ;; hairy transformations. That's why we take our time and
+         ;; render one glyph at a time. -- jd 2018-10-04
+         (multiple-value-bind (x y) (clim:transform-position tr x y)
+           (xlib::render-composite-glyphs (drawable-picture mirror)
+                                          glyph-set
+                                          source-picture
+                                          (truncate (+ x 0.5))
+                                          (truncate (+ y 0.5))
+                                          glyph-ids :start 0 :end end)))))
 
 (defstruct truetype-device-font-name
   (font-file (error "missing argument"))
@@ -354,35 +370,6 @@
   (size   (error "missing argument"))
   (options nil)
   (device-name nil))
-
-(defmethod clim-clx::lookup-text-style-to-X-font ((port clim-clx::clx-port)
-                                           (font-renderer truetype-font-renderer)
-                                           (text-style climi::device-font-text-style))
-  (let ((font-name (climi::device-font-name text-style)))
-    (when (stringp font-name)
-      (setf (climi::device-font-name text-style)
-            (make-fontconfig-font-name :string font-name
-                                       :size (getf clim-clx::*clx-text-sizes* :normal))
-            font-name (climi::device-font-name text-style)))
-    (etypecase font-name
-      (truetype-device-font-name
-       (make-truetype-font port
-                           (namestring (truetype-device-font-name-font-file font-name))
-                           (truetype-device-font-name-size font-name)))
-      (fontconfig-font-name
-       (clim-clx::text-style-to-X-font
-        port
-        (or (fontconfig-font-name-device-name font-name)
-            (setf (fontconfig-font-name-device-name font-name)
-                  (make-device-font-text-style
-                   port
-                   (make-truetype-device-font-name 
-                    :font-file (find-fontconfig-font
-                                (format nil "~A-~A~{:~A~}"
-                                        (namestring (fontconfig-font-name-string font-name))
-                                        (fontconfig-font-name-size font-name)
-                                        (fontconfig-font-name-options font-name)))
-                    :size (fontconfig-font-name-size font-name))))))))))
 
 (define-condition missing-font (simple-error)
   ((filename :reader missing-font-filename :initarg :filename)
@@ -396,9 +383,35 @@ The following files should exist:~&~{  ~A~^~%~}"
                      *truetype-font-path*
                      (mapcar #'cdr *families/faces*)))))
 
-(defmethod clim-clx::lookup-text-style-to-X-font ((port clim-clx::clx-port)
-                                                  (font-renderer truetype-font-renderer)
-                                                  (text-style standard-text-style))
+(defmethod climb:text-style-to-font ((port clx-ttf-port) (text-style climi::device-font-text-style))
+  (let ((font-name (climi::device-font-name text-style)))
+    (when (stringp font-name)
+      (setf (climi::device-font-name text-style)
+            (make-fontconfig-font-name :string font-name
+                                       :size (climb:normalize-font-size :normal))
+            font-name (climi::device-font-name text-style)))
+    (etypecase font-name
+      (truetype-device-font-name
+       (make-truetype-font port
+                           (namestring (truetype-device-font-name-font-file font-name))
+                           (truetype-device-font-name-size font-name)))
+      (fontconfig-font-name
+       (climb:text-style-to-font
+        port
+        (or (fontconfig-font-name-device-name font-name)
+            (setf (fontconfig-font-name-device-name font-name)
+                  (make-device-font-text-style
+                   port
+                   (make-truetype-device-font-name 
+                    :font-file (find-fontconfig-font
+                                (format nil "~A-~A~{:~A~}"
+                                        (namestring (fontconfig-font-name-string font-name))
+                                        (fontconfig-font-name-size font-name)
+                                        (fontconfig-font-name-options font-name)))
+                    :size (fontconfig-font-name-size font-name))))))))))
+
+(defmethod climb:text-style-to-font ((port clx-ttf-port)
+                                     (text-style standard-text-style))
   (labels
       ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative
@@ -427,8 +440,7 @@ The following files should exist:~&~{  ~A~^~%~}"
 
            (setf face   (or face :roman)
                  family (or family :fix)
-                 size   (or size :normal)
-                 size   (getf clim-clx::*clx-text-sizes* size size))
+                 size   (climb:normalize-font-size size))
 
            (find-and-make-truetype-font family face size))))
 
@@ -436,41 +448,3 @@ The following files should exist:~&~{  ~A~^~%~}"
         (setf (climi::text-style-mapping port text-style)
               (or (find-truetype-font port text-style)
                   (invoke-with-truetype-path-restart #'find-font))))))
-
-;;;;;;
-
-(in-package :clim-clx)
-
-(defmethod make-medium-gcontext* (medium foreground background line-style text-style (ink color) clipping-region)
-  (let* ((drawable (sheet-mirror (medium-sheet medium)))
-         (port (port medium)))
-    (let ((gc (xlib:create-gcontext :drawable drawable)))
-      (let ((fn (text-style-to-X-font port text-style)))
-        (if (typep fn 'xlib:font)
-            (setf (xlib:gcontext-font gc) fn)))
-      (setf 
-            (xlib:gcontext-foreground gc) (X-pixel port ink)
-            )
-      gc)))
-
-;;; This fixes the worst offenders making the assumption that drawing
-;;; would be idempotent.
-;; moved on basic repaint protocol
-
-#|
-(defmethod clim:handle-repaint :around ((s clim:sheet-with-medium-mixin) r)
-  (let ((m (clim:sheet-medium s))
-        (r (clim:bounding-rectangle
-            (clim:region-intersection r (clim:sheet-region s)))))
-    (unless (eql r clim:+nowhere+)
-      (clim:with-drawing-options (m :clipping-region r)
-        ;; This causes applications which want to do a double-buffered repaint,
-        ;; such as the logic cube, to flicker. On the other hand, it also
-        ;; stops things such as the listener wholine from overexposing their
-        ;; text. Who is responsible for clearing to the background color before
-        ;; repainting?
-        ;(clim:draw-design m r :ink clim:+background-ink+)
-        (call-next-method s r)
-        ;; FIXME: Shouldn't McCLIM always do this?
-        (medium-force-output (sheet-medium s))))))
-|#

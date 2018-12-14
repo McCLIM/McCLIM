@@ -45,27 +45,16 @@
 
 ;;; CLX-MEDIUM class
 
-(defclass clx-medium (basic-medium)
+(defclass clx-medium (basic-medium climb:multiline-text-medium-mixin)
   ((gc :initform nil)
-   (picture :initform nil)
    (last-medium-device-region :initform nil
                               :accessor last-medium-device-region)
-   (clipping-region-tmp :initform (vector 0 0 0 0)
-     :documentation "This object is reused to avoid consing in the
- most common case when configuring the clipping region.")
-   (clipping-pixmap-cache
-    :initform (cons +everywhere+ nil)
-    :documentation "This object stores cons of the last non-rectangular clipping
-region and its clipping pixmap. This is looked up for optimization with region-equal."
-    :accessor %clipping-pixmap-cache)
-   (buffer :initform nil :accessor medium-buffer)))
+   ;; CLIPPING-REGION-TMP is reused to avoid consing in the most common case
+   ;; when configuring the clipping region.
+   (clipping-region-tmp :initform (vector 0 0 0 0))))
 
-#+CLX-EXT-RENDER
-(defun clx-medium-picture (clx-medium)
-  (with-slots (picture) clx-medium
-    (or picture
-        (let ((mirror (port-lookup-mirror (port clx-medium) (medium-sheet clx-medium))))
-          (setf picture (xlib:render-create-picture mirror))))))
+;; Variable is used to deallocate lingering resources after the operation.
+(defvar ^cleanup)
 
 
 ;;; secondary methods for changing text styles and line styles
@@ -76,7 +65,7 @@ region and its clipping pixmap. This is looked up for optimization with region-e
       (let ((old-text-style (medium-text-style medium)))
         (unless (eq text-style old-text-style)
           (setf (xlib:gcontext-font gc)
-                (text-style-to-X-font (port medium) (medium-text-style medium))))))))
+                (climb:text-style-to-font (port medium) (medium-text-style medium))))))))
 
 ;;; Translate from CLIM styles to CLX styles.
 (defconstant +cap-shape-map+ '((:butt . :butt)
@@ -145,14 +134,81 @@ region and its clipping pixmap. This is looked up for optimization with region-e
                   ((t nil) (round (* (line-style-scale line-style medium) 3)))
                   (otherwise (line-style-effective-dashes line-style medium)))))))))
 
+(defun %clip-region-pixmap (medium mask mask-gc clipping-region x1 y1 width height)
+  (typecase clipping-region
+    (climi::nowhere-region)             ; do nothing
+    (clim:standard-rectangle
+     (multiple-value-bind (x1 y1 width height)
+         (region->clipping-values clipping-region)
+       (xlib:draw-rectangle mask mask-gc x1 y1 width height t)))
+    (clim:standard-polygon
+     (let ((coord-seq (climi::expand-point-seq (polygon-points clipping-region))))
+       (with-transformed-positions((sheet-native-transformation (medium-sheet medium))
+                                   coord-seq)
+         (setq coord-seq (map 'vector #'round-coordinate coord-seq))
+         (xlib:draw-lines mask mask-gc
+                          (concatenate 'vector
+                                       coord-seq
+                                       (vector (elt coord-seq 0)
+                                               (elt coord-seq 1)))
+                          :fill-p t))))
+    (clim:standard-ellipse
+     (flet ((%draw-lines (scan-line)
+              (map-over-region-set-regions
+               (lambda (reg)
+                 (when (linep reg)
+                   (multiple-value-bind (lx1 ly1) (line-start-point* reg)
+                     (multiple-value-bind (lx2 ly2) (line-end-point* reg)
+                       (xlib:draw-line mask mask-gc
+                                       (round-coordinate lx1)
+                                       (round-coordinate ly1)
+                                       (round-coordinate lx2)
+                                       (round-coordinate ly2))))))
+               scan-line)))
+       (if (<= width height)
+           (loop for x from x1 to (+ x1 width) do
+                (%draw-lines (region-intersection
+                              clipping-region
+                              (make-line* x y1 x (+ y1 height)))))
+           (loop for y from y1 to (+ y1 height) do
+                (%draw-lines (region-intersection
+                              clipping-region
+                              (make-line* x1 y (+ x1 width) y)))))))
+    (clim:standard-region-difference
+     (let ((region-a (climi::standard-region-difference-a clipping-region))
+           (region-b (climi::standard-region-difference-b clipping-region)))
+       (multiple-value-bind (x1* y1* width* height*)
+           (region->clipping-values region-a)
+         (%clip-region-pixmap medium mask mask-gc region-a x1* y1* width* height*))
+       (rotatef (xlib:gcontext-foreground mask-gc)
+                (xlib:gcontext-background mask-gc))
+       (multiple-value-bind (x1* y1* width* height*)
+           (region->clipping-values region-b)
+         (%clip-region-pixmap medium mask mask-gc region-b x1* y1* width* height*))
+       (rotatef (xlib:gcontext-foreground mask-gc)
+                (xlib:gcontext-background mask-gc))))
+    (clim:standard-region-union
+     (map-over-region-set-regions
+      (lambda (region)
+        (multiple-value-bind (x1* y1* width* height*)
+            (region->clipping-values region)
+          (%clip-region-pixmap medium mask mask-gc region x1* y1* width* height*)))
+      clipping-region))
+    (otherwise
+     (warn "clx backend: set clipping region: unoptimized path for ~s." (type-of clipping-region))
+     (loop for x from x1 to (+ x1 width) do
+          (loop for y from y1 to (+ y1 height) do
+               (when (region-contains-position-p clipping-region x y)
+                 (xlib:draw-point mask mask-gc x y)))))))
+
 (defun %set-gc-clipping-region (medium gc)
   (declare (type clx-medium medium))
   (let ((clipping-region (medium-device-region medium))
         (tmp (slot-value medium 'clipping-region-tmp)))
-    (cond
-      ((region-equal clipping-region +nowhere+)
+    (typecase clipping-region
+      (climi::nowhere-region
        (setf (xlib:gcontext-clip-mask gc) #()))
-      ((typep clipping-region 'standard-rectangle)
+      (clim:standard-rectangle
        (multiple-value-bind (x1 y1 width height)
            (region->clipping-values clipping-region)
          (setf (aref tmp 0) x1
@@ -160,69 +216,28 @@ region and its clipping pixmap. This is looked up for optimization with region-e
                (aref tmp 2) width
                (aref tmp 3) height
                (xlib:gcontext-clip-mask gc :yx-banded) tmp)))
-      ((typep clipping-region 'climi::standard-rectangle-set)
+      (climi::standard-rectangle-set
        (alexandria:when-let ((rect-seq (clipping-region->rect-seq clipping-region)))
          ;; What McCLIM is generating is not :yx-banded in the same
          ;; sense as CLX requires it. Use :unsorted until we fix it.
          #+ (or) (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)
          #- (or) (setf (xlib:gcontext-clip-mask gc :unsorted) rect-seq)))
-      ((typep clipping-region 'standard-ellipse)
-       (let ((last-clip (%clipping-pixmap-cache medium)))
-         (if (region-equal clipping-region (car last-clip))
-             (setf (xlib:gcontext-clip-mask gc :yx-banded) (cdr last-clip))
-             (multiple-value-bind (x1 y1 width height)
-                 (region->clipping-values (bounding-rectangle clipping-region))
-               (let* ((drawable (sheet-xmirror (medium-sheet medium)))
-                      (mask (xlib:create-pixmap :drawable drawable
-                                                :depth 1
-                                                :width (+ x1 width)
-                                                :height (+ y1 height)))
-                      (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
-                 (setf (xlib:gcontext-foreground mask-gc) 0)
-                 (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
-                 (setf (xlib:gcontext-foreground mask-gc) 1)
-                 (flet ((%draw-lines (scan-line)
-                          (map-over-region-set-regions
-                           (lambda (reg)
-                             (when (linep reg)
-                               (multiple-value-bind (lx1 ly1) (line-start-point* reg)
-                                 (multiple-value-bind (lx2 ly2) (line-end-point* reg)
-                                   (xlib:draw-line mask mask-gc
-                                                   (round-coordinate lx1)
-                                                   (round-coordinate ly1)
-                                                   (round-coordinate lx2)
-                                                   (round-coordinate ly2))))))
-                           scan-line)))
-                   (if (<= width height)
-                       (loop for x from x1 to (+ x1 width) do
-                            (%draw-lines (region-intersection
-                                          clipping-region
-                                          (make-line* x y1 x (+ y1 height)))))
-                       (loop for y from y1 to (+ y1 height) do
-                            (%draw-lines (region-intersection
-                                          clipping-region
-                                          (make-line* x1 y (+ x1 width) y))))))
-                 (setf (xlib:gcontext-clip-mask gc :yx-banded) mask))))))
-      (t
-       (let ((last-clip (%clipping-pixmap-cache medium)))
-         (if (region-equal clipping-region (car last-clip))
-             (setf (xlib:gcontext-clip-mask gc :yx-banded) (cdr last-clip))
-             (multiple-value-bind (x1 y1 width height)
-                 (region->clipping-values (bounding-rectangle clipping-region))
-               (let* ((drawable (sheet-xmirror (medium-sheet medium)))
-                      (mask (xlib:create-pixmap :drawable drawable
-                                                :depth 1
-                                                :width (+ x1 width)
-                                                :height (+ y1 height)))
-                      (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
-                 (setf (xlib:gcontext-foreground mask-gc) 0)
-                 (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
-                 (setf (xlib:gcontext-foreground mask-gc) 1)
-                 (loop for x from x1 to (+ x1 width) do
-                      (loop for y from y1 to (+ y1 height) do
-                           (when (region-contains-position-p clipping-region x y)
-                             (xlib:draw-point mask mask-gc x y))))
-                 (setf (xlib:gcontext-clip-mask gc :yx-banded) mask)))))))))
+      (otherwise
+       (multiple-value-bind (x1 y1 width height)
+           (region->clipping-values clipping-region)
+         (let* ((drawable (sheet-xmirror (medium-sheet medium)))
+                (mask (xlib:create-pixmap :drawable drawable
+                                          :depth 1
+                                          :width (+ x1 width)
+                                          :height (+ y1 height)))
+                (mask-gc (xlib:create-gcontext :drawable mask :foreground 1)))
+           (setf (xlib:gcontext-foreground mask-gc) 0)
+           (xlib:draw-rectangle mask mask-gc 0 0 (+ x1 width) (+ y1 height) t)
+           (setf (xlib:gcontext-foreground mask-gc) 1)
+           (%clip-region-pixmap medium mask mask-gc clipping-region x1 y1 width height)
+           (xlib:free-gcontext mask-gc)
+           (push #'(lambda () (xlib:free-pixmap mask)) ^cleanup)
+           (setf (xlib:gcontext-clip-mask gc :yx-banded) mask)))))))
 
 
 (defgeneric medium-gcontext (medium ink)
@@ -254,7 +269,7 @@ translated, so they begin at different position than [0,0])."))
       (setf (xlib:gcontext-function gc) boole-1)
       (setf (xlib:gcontext-foreground gc) (X-pixel port ink)
             (xlib:gcontext-background gc) (X-pixel port (medium-background medium)))
-      (let ((fn (text-style-to-X-font port (medium-text-style medium))))
+      (let ((fn (climb:text-style-to-font port (medium-text-style medium))))
         (when (typep fn 'xlib:font)
           (setf (xlib:gcontext-font gc) fn)))
       (unless (eq last-medium-device-region (medium-device-region medium))
@@ -343,8 +358,6 @@ translated, so they begin at different position than [0,0])."))
         gc))))
 
 
-;; Variable is used to deallocate lingering resources after the operation.
-(defvar ^cleanup)
 
 ;;; XXX: both PM and MM pixmaps should be freed with (xlib:free-pixmap pixmap)
 ;;; when not used. We do not do that right now.
@@ -400,7 +413,7 @@ translated, so they begin at different position than [0,0])."))
                 (let ((elt (aref idata y x)))
                   (setf (aref pdata y x) (ash elt -8)))))
       (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
-	(xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
+        (xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
                         :width width :height height))
       (xlib:free-gcontext pm-gc)
       (push #'(lambda () (xlib:free-pixmap pm)) ^cleanup)
@@ -490,8 +503,7 @@ translated, so they begin at different position than [0,0])."))
                           (medium-gcontext from-drawable +background-ink+)
                           (round-coordinate from-x) (round-coordinate from-y)
                           (round width) (round height)
-                          (or (medium-buffer to-drawable)
-                              (sheet-xmirror (medium-sheet to-drawable)))
+                          (sheet-xmirror (medium-sheet to-drawable))
                           (round-coordinate to-x) (round-coordinate to-y)))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
@@ -516,7 +528,7 @@ translated, so they begin at different position than [0,0])."))
                     (medium-gcontext to-drawable +background-ink+)
                     (round-coordinate from-x) (round-coordinate from-y)
                     (round width) (round height)
-                    (or (medium-buffer to-drawable) (sheet-xmirror (medium-sheet to-drawable)))
+                    (sheet-xmirror (medium-sheet to-drawable))
                     (round-coordinate to-x) (round-coordinate to-y))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
@@ -634,14 +646,15 @@ translated, so they begin at different position than [0,0])."))
                            coord-seq)
                        :fill-p filled))))
 
-(defgeneric medium-draw-rectangle-using-ink*
-    (medium ink left top right bottom filled))
+(defmethod medium-draw-rectangle* :around ((medium clx-medium) left top right bottom filled
+                                           &aux (ink (medium-ink medium)))
+  (if (clime:indirect-ink-p ink)
+      (with-drawing-options (medium :ink (clime:indirect-ink-ink ink))
+        (call-next-method))
+      (call-next-method)))
 
-(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
-  (medium-draw-rectangle-using-ink* medium (medium-ink medium)
-                                    left top right bottom filled))
-
-(defmethod medium-draw-rectangle-using-ink* ((medium clx-medium) (ink t) left top right bottom filled)
+(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled
+                                   &aux (ink (medium-ink medium)))
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
@@ -659,34 +672,6 @@ translated, so they begin at different position than [0,0])."))
                                  (max 0 (min #xFFFF (- right left)))
                                  (max 0 (min #xFFFF (- bottom top)))
                                  filled)))))))
-
-#+CLX-EXT-RENDER
-(defmethod medium-draw-rectangle-using-ink* ((medium clx-medium) (ink climi::uniform-compositum)
-                                             x1 y1 x2 y2 filled)
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (with-transformed-position (tr x1 y1)
-      (with-transformed-position (tr x2 y2)
-        (let ((x1 (round-coordinate x1))
-              (y1 (round-coordinate y1))
-              (x2 (round-coordinate x2))
-              (y2 (round-coordinate y2)))
-          (multiple-value-bind (r g b) (color-rgb (slot-value ink 'climi::ink))
-            (let ((a (opacity-value (slot-value ink 'climi::mask))))
-              ;; Hmm, XRender uses pre-multiplied alpha, how useful!
-              (setf r (min #xffff (max 0 (round (* #xffff a r))))
-                    g (min #xffff (max 0 (round (* #xffff a g))))
-                    b (min #xffff (max 0 (round (* #xffff a b))))
-                    a (min #xffff (max 0 (round (* #xffff a)))))
-              (let ((picture (clx-medium-picture medium)))
-                (xlib::%render-change-picture-clip-rectangles picture
-                                                              (clipping-region->rect-seq
-                                                               (last-medium-device-region medium)))
-                (xlib:render-fill-rectangle picture :over (list r g b a)
-                                            (max #x-8000 (min #x7FFF x1))
-                                            (max #x-8000 (min #x7FFF y1))
-                                            (max 0 (min #xFFFF (- x2 x1)))
-                                            (max 0 (min #xFFFF (- y2 y1))))))))))))
-
 
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (assert (evenp (length position-seq)))
@@ -827,27 +812,6 @@ translated, so they begin at different position than [0,0])."))
 ;;;
 ;;; Methods for text styles
 
-(defmethod text-style-ascent (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
-    (font-ascent font)))
-
-(defmethod text-style-descent (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
-    (font-descent font)))
-
-(defmethod text-style-height (text-style (medium clx-medium))
-  (let ((font (text-style-to-X-font (port medium) text-style)))
-    (+ (font-ascent font) (font-descent font))))
-
-(defmethod text-style-character-width (text-style (medium clx-medium) char)
-  (font-glyph-width (text-style-to-X-font (port medium) text-style) char))
-
-(defmethod text-style-width (text-style (medium clx-medium))
-  (text-style-character-width text-style medium #\m))
-
-(defmethod text-style-fixed-width-p (text-style (medium clx-medium))
-  (eql (text-style-family text-style) :fix))
-
 (eval-when (:compile-toplevel :execute)
   ;; ASCII / CHAR-CODE compatibility checking
   (unless (equal (mapcar #'char-code '(#\Backspace #\Tab #\Linefeed
@@ -863,24 +827,6 @@ translated, so they begin at different position than [0,0])."))
                 implement a CLX translate function for this implementation."
                'code-char (code-char (+ i 32)))))))
 
-;;; The default CLX translation function is defined to work only for
-;;; ASCII characters; quoting from the documentation,
-;;;
-;;;   The default :translate function handles all characters that
-;;;   satisfy graphic-char-p by converting each character into its
-;;;   ASCII code.
-;;;
-;;; We provide our own translation function which is essentially the
-;;; same as that of CLX, but with the ASCII restriction relaxed.  This
-;;; is by no means a proper solution to the problem of
-;;; internationalization, because fonts tend not to have a complete
-;;; coverage of the entirety of the Unicode space, even assuming that
-;;; the underlying lisp supports it (this is the case at least for SBCL,
-;;; CLISP and CCL); instead, the translation function is meant to
-;;; handle font sets by requesting the X server change fonts in the
-;;; middle of rendering strings.  However, the below stands a chance
-;;; of working when using ISO-8859-1-encoded fonts, and will tend to
-;;; lose in other cases.
 (defun translate (src src-start src-end afont dst dst-start)
   (declare (type sequence src)
            (type xlib:array-index src-start src-end dst-start)
@@ -921,112 +867,12 @@ translated, so they begin at different position than [0,0])."))
                 (return i))
               (setf (aref dst j) elt))))))
 
-(defmethod text-size ((medium clx-medium) string
-                      &key text-style (start 0) end)
-  (declare (optimize (speed 3)))
-  (when (characterp string)
-    (setf string (make-string 1 :initial-element string)))
-  (check-type string string)
-
-  (unless end (setf end (length string)))
-  (check-type start (integer 0 #.array-dimension-limit))
-  (check-type end (integer 0 #.array-dimension-limit))
-
-  (when (= start end)
-    (return-from text-size (values 0 0 0 0 0)))
-
-  (let* ((medium-text-style (medium-merged-text-style medium))
-         (text-style (if text-style
-                         (merge-text-styles text-style medium-text-style)
-                         medium-text-style))
-         (xfont (text-style-to-X-font (port medium) text-style))
-         (position-newline
-          (macrolet ((p (type)
-                       `(locally (declare (type ,type string))
-                          (position #\newline string :start start :end end))))
-            (typecase string
-              (simple-base-string (p simple-base-string))
-              #+SBCL (sb-kernel::simple-character-string (p sb-kernel::simple-character-string))
-              #+SBCL (sb-kernel::character-string (p sb-kernel::character-string))
-              (simple-string (p simple-string))
-              (string (p string))))))
-    (cond ((not (null position-newline))
-           (multiple-value-bind (width ascent descent left right
-                                       font-ascent font-descent direction
-                                       first-not-done)
-               (font-text-extents xfont string
-                                  :start start :end position-newline
-                                  :translate #'translate)
-             (declare (ignorable left right
-                                 font-ascent font-descent
-                                 direction first-not-done))
-             (multiple-value-bind (w h x y baseline)
-                 (text-size medium string :text-style text-style
-                            :start (1+ position-newline) :end end)
-               (values (max w width) (+ ascent descent h)
-                       x (+ ascent descent y) (+ ascent descent baseline)))))
-          (t
-           (multiple-value-bind (width ascent descent left right
-                                       font-ascent font-descent direction
-                                       first-not-done)
-               (font-text-extents xfont string
-                                  :start start :end end
-                                  :translate #'translate)
-             (declare (ignorable left right
-                                 font-ascent font-descent
-                                 direction first-not-done))
-             (values width (+ ascent descent) width 0 ascent))))))
-
-(defmethod climi::text-bounding-rectangle*
-    ((medium clx-medium) string &key text-style (start 0) end)
-  (when (characterp string)
-    (setf string (make-string 1 :initial-element string)))
-  (unless end (setf end (length string)))
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (let ((xfont (text-style-to-X-font (port medium) text-style)))
-    (cond ((= start end)
-           (values 0 0 0 0))
-          (t
-           (let ((position-newline (position #\newline string :start start :end end)))
-             (cond ((not (null position-newline))
-                    (multiple-value-bind (width ascent descent left right
-                                                font-ascent font-descent direction
-                                                first-not-done)
-                        (font-text-extents xfont string
-                                           :start start :end position-newline
-                                           :translate #'translate)
-                      (declare (ignorable width left right
-                                          font-ascent font-descent
-                                          direction first-not-done))
-                      (multiple-value-bind (minx miny maxx maxy)
-                          (climi::text-bounding-rectangle*
-                           medium string :text-style text-style
-                           :start (1+ position-newline) :end end)
-                        (declare (ignore miny))
-                        (values (min minx left) (- ascent)
-                                (max maxx right) (+ descent maxy)))))
-                   (t
-                    (multiple-value-bind (width ascent descent left right
-                                                font-ascent font-descent direction
-                                                first-not-done)
-                        (font-text-extents
-                         xfont string :start start :end end :translate #'translate)
-                      (declare (ignore width ascent descent)
-                               (ignore direction first-not-done))
-                      ;; FIXME: Potential style points:
-                      ;; * (min 0 left), (max width right)
-                      ;; * font-ascent / ascent
-                      (values left (- font-ascent) right font-descent)))))))))
-
-(defvar *draw-font-lock* (climi::make-lock "draw-font"))
 (defmethod medium-draw-text* ((medium clx-medium) string x y
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs))
-  (let* ((medium-transform (medium-transformation medium))
-         (native-transform (sheet-native-transformation (medium-sheet medium)))
-         (merged-transform (clim:compose-transformations native-transform medium-transform)))
+  (let ((merged-transform (sheet-device-transformation (medium-sheet medium))))
     (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
@@ -1039,22 +885,18 @@ translated, so they begin at different position than [0,0])."))
         (unless (and (eq align-x :left) (eq align-y :baseline))
           (setq x (- x (ecase align-x
                          (:left 0)
-                         (:center (round text-width 2))
-                         (:right text-width))))
+                         (:center (round text-width 2)) ; worst case
+                         (:right text-width))))         ; worst case
           (setq y (ecase align-y
-                    (:top (+ y baseline))
-                    (:center (+ y baseline (- (floor text-height 2))))
-                    (:baseline y)
-                    (:bottom (+ y baseline (- text-height)))))))
-      (let ((x (round-coordinate x))
-            (y (round-coordinate y)))
-        (bt:with-lock-held (*draw-font-lock*)
-          (font-draw-glyphs
-           (text-style-to-X-font (port medium) (medium-text-style medium))
-           mirror gc x y string
-           #| x (- y baseline) (+ x text-width) (+ y (- text-height baseline )) |#
-           :start start :end end
-           :translate #'translate :size 16 :transformation merged-transform))))))
+                    (:top (+ y baseline))                              ; OK
+                    (:baseline y)                                      ; OK
+                    (:center (+ y baseline (- (floor text-height 2)))) ; change
+                    (:baseline*  y)                                    ; change
+                    (:bottom (+ y baseline (- text-height)))))))       ; change
+      (multiple-value-bind (x y)
+          (transform-position merged-transform x y)
+        (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
+                          :start start :end end :translate #'translate :size 16)))))
 
 (defmethod medium-buffering-output-p ((medium clx-medium))
   t)
@@ -1066,13 +908,13 @@ translated, so they begin at different position than [0,0])."))
                               align-x align-y toward-x toward-y
                               transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs align-x align-y))
-  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
+  (with-transformed-position ((clim:compose-transformations
+                               (sheet-native-transformation (medium-sheet medium))
+                               (medium-transformation medium))
                               x y)
     (with-clx-graphics () medium
       (xlib:draw-glyph mirror gc (round-coordinate x) (round-coordinate y)
-                       element
-                       :size 16
-                       :translate #'translate))))
+                       element :size 16 :translate #'translate))))
 
 
 ;;; Other Medium-specific Output Functions
@@ -1091,9 +933,8 @@ translated, so they begin at different position than [0,0])."))
               (min-y (round-coordinate (min top bottom)))
               (max-x (round-coordinate (max left right)))
               (max-y (round-coordinate (max top bottom))))
-          (xlib:draw-rectangle (or (medium-buffer medium)
-                                   (port-lookup-mirror (port medium)
-                                                       (medium-sheet medium)))
+          (xlib:draw-rectangle (port-lookup-mirror (port medium)
+                                                   (medium-sheet medium))
                                (medium-gcontext medium (medium-background medium))
                                (max #x-8000 (min #x7fff min-x))
                                (max #x-8000 (min #x7fff min-y))
@@ -1119,7 +960,7 @@ translated, so they begin at different position than [0,0])."))
     (when gc
       (let ((old-text-style (medium-text-style medium)))
         (unless (eq text-style old-text-style)
-          (let ((fn (text-style-to-X-font (port medium) (medium-text-style medium))))
+          (let ((fn (text-style-to-font (port medium) (medium-text-style medium))))
             (when (typep fn 'xlib:font)
               (setf (xlib:gcontext-font gc)
                     fn))))))))

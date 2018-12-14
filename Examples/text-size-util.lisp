@@ -135,7 +135,7 @@
                        (let ((height (text-style-height style medium)))
                          (draw-vdist stream (- x1 40) y1 (+ y1 height))))
                      :line-style (make-line-style :thickness 2))
-          (component "Width (Avg."
+          (component "Average character width"
                      (lambda (stream)
                        (let ((width (text-style-width style medium)))
                          (draw-hdist stream (- y1 20) x1 (+ x1 width)))))

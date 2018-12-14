@@ -1556,32 +1556,21 @@ were added."
                            toward-x toward-y transform-glyphs)
     (:replay-fn nil)
   ;; FIXME!!! Text direction.
-  ;; FIXME: Multiple lines.
   (let* ((transformation (medium-transformation medium))
-         (text-style (graphics-state-text-style graphic))
-         (width (if (characterp string)
-                    (stream-character-width stream string :text-style text-style)
-                    (stream-string-width stream string
-                                         :start start :end end
-                                         :text-style text-style)) )
-         (ascent (text-style-ascent text-style (sheet-medium stream)))
-         (descent (text-style-descent text-style (sheet-medium stream))))
+         (text-style (graphics-state-text-style graphic)))
     (setf (graphics-state-transformation graphic) transformation)
     (multiple-value-bind (left top right bottom)
-        (text-bounding-rectangle* medium string :start start :end end :text-style text-style)
-      (ecase align-x
-        (:left (incf left point-x) (incf right point-x))
-        (:right (incf left (- point-x width)) (incf right (- point-x width)))
-        (:center (incf left (- point-x (round width 2)))
-         (incf right (- point-x (round width 2)))))
-      (ecase align-y
-        (:baseline (incf top point-y) (incf bottom point-y))
-        (:top (incf top (+ point-y ascent))
-         (incf bottom (+ point-y ascent)))
-        (:bottom (incf top (- point-y descent))
-         (incf bottom (- point-y descent)))
-        (:center (incf top (+ point-y (ceiling (- ascent descent) 2)))
-         (incf bottom (+ point-y (ceiling (- ascent descent) 2)))))
+        (text-bounding-rectangle* medium string
+                                  :align-x align-x :align-y align-y
+                                  :start start :end end
+                                  :text-style text-style)
+      (incf left point-x)
+      (incf top point-y)
+      (incf right point-x)
+      (incf bottom point-y)
+      #+ (or) ;; draw rectangle around text bbox (for testing)
+      (with-drawing-options (medium :line-dashes t :ink +red+)
+        (medium-draw-rectangle* medium left top right bottom nil))
       (enclosing-transform-polygon transformation (list left top
                                                         right top
                                                         left bottom
@@ -1793,7 +1782,7 @@ were added."
                                            :adjustable t
                                            :fill-pointer t)))))
     (multiple-value-bind (minx miny maxx maxy)
-        (text-bounding-rectangle* medium character :text-style text-style)
+        (text-bounding-rectangle* medium (string character) :text-style text-style)
       (declare (ignore miny maxy))
       (setq baseline (max baseline new-baseline)
             ;; KLUDGE: note END-X here is really START-X of the new
