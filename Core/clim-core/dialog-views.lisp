@@ -75,8 +75,6 @@ highlighting, etc." ))
   (declare (ignore stream query record))
   nil)
 
-
-
 (defmethod select-query (stream query (record av-pop-up-menu-record))
   (declare (ignore stream))
   (let* ((value-key (pop-up-value-key record))
