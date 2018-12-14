@@ -1014,17 +1014,17 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   ((fillp
     :initarg       :fillp
     :initform      nil
-    :reader        box-client-fillp
+    :accessor      box-client-fillp
     :documentation "Whether this child can stretch infinitely.")
    (fixed-size
     :initarg       :fixed-size
     :initform      nil
-    :reader        box-client-fixed-size
+    :accessor      box-client-fixed-size
     :documentation "Possible fixed size of a child.")
    (proportion
     :initarg       :proportion
     :initform      nil
-    :reader        box-client-proportion
+    :accessor      box-client-proportion
     :documentation "Proportion child should get of excess space.")
    (pane
     :initarg       :pane
