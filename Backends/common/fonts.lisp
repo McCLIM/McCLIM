@@ -236,39 +236,28 @@ xmin ymin xmax ymax."))
                                              (align-x :left) (align-y :baseline) (direction :ltr)
                                            &aux (end (or end (length string))))
   (when (= start end)
-    (return-from text-bounding-rectangle* (values 0 0 0 0)))
+    (return-from climb:text-bounding-rectangle* (values 0 0 0 0)))
   (let ((text (string string))
-        (font (text-style-to-font (port medium)
-                                  (merge-text-styles text-style
-                                                     (medium-merged-text-style medium)))))
+        (font (climb:text-style-to-font (clim:port medium)
+                                        (clim:merge-text-styles text-style
+                                                                (clim:medium-merged-text-style medium)))))
     (multiple-value-bind (xmin ymin xmax ymax)
         (climb:font-text-extents font text :start start :end end
                                  :align-x align-x :align-y align-y :direction direction)
       (values xmin ymin xmax ymax))))
 
-(defmethod text-size (medium string &key text-style (start 0) end
-                      &aux (end (or end (length string))))
+(defmethod climb:text-size (medium string &key text-style (start 0) end
+                            &aux (end (or end (length string)))
+                              (text-style (clim:merge-text-styles text-style
+                                                                  (clim:medium-merged-text-style medium))))
   (when (= start end)
-    (return-from text-size (values 0 0 0 0 (text-style-ascent text-style medium))))
-  (let* ((text-style (merge-text-styles text-style
-                                        (medium-merged-text-style medium)))
-         (font (text-style-to-font (port medium) text-style))
-         (text (subseq (string string) start end))
-         (ascent (climb:font-ascent font))
-         (line-height (+ ascent (climb:font-descent font)))
-         (leading (climb:font-leading font))
-         (current-dx 0)
-         (maximum-dx 0)
-         (current-y 0))
-    (dolines (text text)
-      (loop
-         with origin-x fixnum = 0
-         for code across (climb:font-string-glyph-codes font text)
-         do (incf origin-x (climb:font-glyph-dx font code))
-         finally
-           (maxf maximum-dx origin-x)
-           (setf current-dx origin-x)
-           (incf current-y leading)))
-    (values maximum-dx (+ current-y line-height (- leading))
-            current-dx (- current-y leading)
-            ascent)))
+    (return-from climb:text-size (values 0 0 0 0 (clim:text-style-ascent text-style medium))))
+  (let ((text (string string))
+        (font (climb:text-style-to-font (clim:port medium) text-style)))
+    (multiple-value-bind (xmin ymin xmax ymax
+                               left top width height
+                               ascent descent linegap
+                               cursor-dx cursor-dy)
+        (climb:font-text-extents font text :start start :end end)
+      (declare (ignore xmin ymin xmax ymax left top descent linegap))
+      (values width height cursor-dx cursor-dy ascent))))

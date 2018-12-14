@@ -517,6 +517,39 @@ or NIL if the current transformation is the identity transformation."
             (t
              (text-extents font string start end))))))
 
+(defmethod climb:text-bounding-rectangle* ((medium clx-freetype-medium) string
+                                           &key
+                                             text-style
+                                             (start 0) end
+                                             (align-x :left) (align-y :baseline) (direction :ltr)
+                                           &aux (end (or end (length string))))
+  (when (= start end)
+    (return-from climb:text-bounding-rectangle* (values 0 0 0 0)))
+  (let ((text (string string))
+        (font (climb:text-style-to-font (clim:port medium)
+                                        (clim:merge-text-styles text-style
+                                                                (clim:medium-merged-text-style medium)))))
+    (multiple-value-bind (xmin ymin xmax ymax)
+        (climb:font-text-extents font text :start start :end end
+                                 :align-x align-x :align-y align-y :direction direction)
+      (values xmin ymin xmax ymax))))
+
+(defmethod climb:text-size ((medium clx-freetype-medium) string &key text-style (start 0) end
+                            &aux (end (or end (length string)))
+                              (text-style (clim:merge-text-styles text-style
+                                                                  (clim:medium-merged-text-style medium))))
+  (when (= start end)
+    (return-from climb:text-size (values 0 0 0 0 (clim:text-style-ascent text-style medium))))
+  (let ((text (string string))
+        (font (climb:text-style-to-font (clim:port medium) text-style)))
+    (multiple-value-bind (xmin ymin xmax ymax
+                               left top width height
+                               ascent descent linegap
+                               cursor-dx cursor-dy)
+        (climb:font-text-extents font text :start start :end end)
+      (declare (ignore xmin ymin xmax ymax left top descent linegap))
+      (values width height cursor-dx cursor-dy ascent))))
+
 (defmethod climb:font-ascent ((font freetype-font))
   (with-face-from-font (face font)
     (freetype2:face-ascender-pixels face)))
