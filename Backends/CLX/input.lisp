@@ -142,10 +142,7 @@
       ((:button-press :button-release)
        (let* ((modifier-state (clim-xcommon:x-event-state-modifiers port state))
               (button (decode-x-button-code code))
-              (scrollp (member button '(#.+pointer-wheel-up+
-                                        #.+pointer-wheel-down+
-                                        #.+pointer-wheel-left+
-                                        #.+pointer-wheel-right+))))
+              (scrollp (climi::pointer-button-wheel-p button)))
          (if (and scrollp (eq event-key :button-press))
              (make-instance 'climi::pointer-scroll-event
                             :pointer 0

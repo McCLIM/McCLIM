@@ -264,20 +264,26 @@
 
 ;;; Constants dealing with events
 
-(defconstant +pointer-left-button+   #x01)
-(defconstant +pointer-middle-button+ #x02)
-(defconstant +pointer-right-button+  #x04)
-(defconstant +pointer-wheel-up+      #x08)
-(defconstant +pointer-wheel-down+    #x10)
-(defconstant +pointer-wheel-left+    #x20)
-(defconstant +pointer-wheel-right+   #x40)
+(cl:defconstant +pointer-left-button+   #b00000000000001)
+(cl:defconstant +pointer-middle-button+ #b00000000000010)
+(cl:defconstant +pointer-right-button+  #b00000000000100)
 
-(defconstant +shift-key+             #x0100)
-(defconstant +control-key+           #x0200)
-(defconstant +meta-key+              #x0400)
-(defconstant +super-key+             #x0800)
-(defconstant +hyper-key+             #x1000)
-(defconstant +alt-key+               #x2000)
+(cl:defconstant +pointer-wheel-up+      #b00000000001000)
+(cl:defconstant +pointer-wheel-down+    #b00000000010000)
+(cl:defconstant +pointer-wheel-left+    #b00000000100000)
+(cl:defconstant +pointer-wheel-right+   #b00000001000000)
+(cl:defconstant +pointer-wheel-mask+    #b00000001111000)
+
+(cl:defconstant +shift-key+             #b00000100000000)
+(cl:defconstant +control-key+           #b00001000000000)
+(cl:defconstant +meta-key+              #b00010000000000)
+(cl:defconstant +super-key+             #b00100000000000)
+(cl:defconstant +hyper-key+             #b01000000000000)
+(cl:defconstant +alt-key+               #b10000000000000)
+
+(declaim (inline pointer-button-wheel-p))
+(defun pointer-button-wheel-p (button)
+  (plusp (logand button +pointer-wheel-mask+)))
 
 (defmacro key-modifier-state-match-p (button modifier-state &body clauses)
   (let ((button-names '((:left        . +pointer-left-button+)
