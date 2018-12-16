@@ -668,6 +668,7 @@ or NIL if the current transformation is the identity transformation."
 ;;;  Character info
 ;;;
 
+#+nil
 (defmethod climb:font-glyph-width ((font freetype-font) code)
   (with-face-from-font (face font)
     (freetype2:load-char face code)
@@ -675,9 +676,27 @@ or NIL if the current transformation is the identity transformation."
            (metrics (freetype2-types:ft-glyphslot-metrics glyph)))
       (/ (freetype2-types:ft-glyph-metrics-width metrics) *freetype-font-scale*))))
 
-;;; implement me
-(defmethod climb:font-glyph-left ((font freetype-font) code) 0)
-(defmethod climb:font-glyph-right ((font freetype-font) code) 0)
+(macrolet ((define-glyph-info-method (name reader-function)
+             `(defmethod ,name ((font freetype-font) code)
+                (with-face-from-font (face font)
+                  (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
+                  ;; This ensures that the glyph in question has been cached
+                  (load-cached-glyphset font (list code))
+                  (let ((info (gethash code (freetype-font/cached-glyphs font))))
+                    (unless info
+                      (error "Character with code ~s was not found in font ~s after loading cached glyphs" code font))
+                    ,reader-function)))))
+  (define-glyph-info-method climb:font-glyph-top 0) ;; FIXME
+  (define-glyph-info-method climb:font-glyph-left (- (glyph-attributes-x-origin info)))
+  (define-glyph-info-method climb:font-glyph-bottom (glyph-attributes-height info)) ;; FIXME
+  (define-glyph-info-method climb:font-glyph-right (- (glyph-attributes-width info)
+                                                      (glyph-attributes-x-origin info)))
+  (define-glyph-info-method climb:font-glyph-width (glyph-attributes-width info))
+  (define-glyph-info-method climb:font-glyph-height (glyph-attributes-height info)))
+
+(defmethod climb:font-string-glyph-codes ((font freetype-font) string &key (start 0) (end (length string)))
+  (let ((index-list (make-glyph-list font (subseq string start end) :ltr)))
+    (map 'vector #'glyph-entry-codepoint index-list)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Font replacement code
@@ -783,3 +802,4 @@ or NIL if the current transformation is the identity transformation."
                                   (find-best-font-for-fallback port text-style ch))))
       (push-string)
       (reverse result))))
+
