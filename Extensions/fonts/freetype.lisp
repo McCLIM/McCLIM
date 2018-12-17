@@ -686,9 +686,10 @@ or NIL if the current transformation is the identity transformation."
                     (unless info
                       (error "Character with code ~s was not found in font ~s after loading cached glyphs" code font))
                     ,reader-function)))))
-  (define-glyph-info-method climb:font-glyph-top 0) ;; FIXME
+  (define-glyph-info-method climb:font-glyph-top (glyph-attributes-y-origin info))
   (define-glyph-info-method climb:font-glyph-left (- (glyph-attributes-x-origin info)))
-  (define-glyph-info-method climb:font-glyph-bottom (glyph-attributes-height info)) ;; FIXME
+  (define-glyph-info-method climb:font-glyph-bottom (- (glyph-attributes-height info)
+                                                       (glyph-attributes-y-origin info)))
   (define-glyph-info-method climb:font-glyph-right (- (glyph-attributes-width info)
                                                       (glyph-attributes-x-origin info)))
   (define-glyph-info-method climb:font-glyph-width (glyph-attributes-width info))
