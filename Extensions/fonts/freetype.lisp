@@ -668,14 +668,6 @@ or NIL if the current transformation is the identity transformation."
 ;;;  Character info
 ;;;
 
-#+nil
-(defmethod climb:font-glyph-width ((font freetype-font) code)
-  (with-face-from-font (face font)
-    (freetype2:load-char face code)
-    (let* ((glyph (freetype2-types:ft-face-glyph face))
-           (metrics (freetype2-types:ft-glyphslot-metrics glyph)))
-      (/ (freetype2-types:ft-glyph-metrics-width metrics) *freetype-font-scale*))))
-
 (macrolet ((define-glyph-info-method (name reader-function)
              `(defmethod ,name ((font freetype-font) code)
                 (with-face-from-font (face font)
@@ -803,4 +795,3 @@ or NIL if the current transformation is the identity transformation."
                                   (find-best-font-for-fallback port text-style ch))))
       (push-string)
       (reverse result))))
-
