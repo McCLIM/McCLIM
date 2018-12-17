@@ -1015,7 +1015,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
     :initarg       :fillp
     :initform      nil
     :reader        box-client-fillp
-    :documentation "Whether this child can stretch infinitly.")
+    :documentation "Whether this child can stretch infinitely.")
    (fixed-size
     :initarg       :fixed-size
     :initform      nil
