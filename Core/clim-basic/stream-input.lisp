@@ -241,34 +241,19 @@ keys read."))
       (event-queue-peek buffer)
       (event-queue-read-no-hang buffer)))
 
-
 (defun repush-gesture (gesture buffer)
   (event-queue-prepend buffer gesture))
 
-(defgeneric convert-to-gesture (event))
-
-(defmethod convert-to-gesture ((ev event))
-  nil)
-
-(defmethod convert-to-gesture ((ev character))
-  ev)
-
-(defmethod convert-to-gesture ((ev symbol))
-  ev)
-
-(defmethod convert-to-gesture ((ev key-press-event))
-  (let ((modifiers (event-modifier-state ev))
-	(event ev)
-	(char nil))
-    (when (or (zerop modifiers)
-	      (eql modifiers +shift-key+))
-      (setq char (keyboard-event-character ev)))
-    (if char
-	(char-for-read char)
-	event)))
-
-(defmethod convert-to-gesture ((ev pointer-button-press-event))
-  ev)
+(defun convert-to-gesture (event)
+  (typecase event
+    ((or character symbol pointer-button-event)
+     event)
+    (key-press-event
+     (if-let ((character (keyboard-event-character event))
+              (char-p (member (event-modifier-state event) '(0 +shift-key+))))
+       (char-for-read character)
+       event))
+    (otherwise nil)))
 
 (defmethod stream-read-gesture ((stream standard-extended-input-stream)
 				&key timeout peek-p
