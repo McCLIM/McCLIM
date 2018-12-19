@@ -848,7 +848,9 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
    :background *3d-normal-color*
    :text-style *default-text-style*
    :align-x :left
-   :align-y :top))
+   :align-y :top
+   :width 100
+   :height 100))
 
 (defmethod initialize-instance :after ((obj basic-pane) &key text-style)
   (when (consp text-style)
@@ -980,7 +982,9 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
   (with-slots (native-transformation) sheet
-        native-transformation))
+    (unless native-transformation
+      (setf native-transformation +identity-transformation+))
+    native-transformation))
 
 (defmethod change-space-requirements ((pane unmanaged-top-level-sheet-pane)
                                       &rest space-req-keys
