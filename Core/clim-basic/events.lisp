@@ -41,7 +41,7 @@
 ;;           pointer-button-press-event
 ;;           pointer-button-release-event
 ;;           pointer-button-hold-event
-;;         pointer-scroll-event
+;;           pointer-scroll-event
 ;;         pointer-motion-event
 ;;           pointer-boundary-event
 ;;             pointer-enter-event
