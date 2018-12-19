@@ -1110,11 +1110,11 @@ and must never be nil.")
                                             :max-width +fill+
                                             :min-height (* 2 (pane-y-spacing gadget))
                                             :height (* 2 (pane-y-spacing gadget))
-                                            :max-height +fill+
+                                            :max-height +fill+)
                        :min-width (* 2 *3d-border-thickness*)
                        :width (* 2 *3d-border-thickness*)
                        :min-height (* 2 *3d-border-thickness*)
-                       :height (* 2 *3d-border-thickness*))))
+                       :height (* 2 *3d-border-thickness*)))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
   (with-slots (pressedp) pane
