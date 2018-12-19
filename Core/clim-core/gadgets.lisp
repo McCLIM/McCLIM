@@ -1104,17 +1104,20 @@ and must never be nil.")
     :y-spacing 4))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
-  (space-requirement+* (space-requirement+* (compose-label-space gadget)
-                                            :min-width (* 2 (pane-x-spacing gadget))
-                                            :width (* 2 (pane-x-spacing gadget))
-                                            :max-width +fill+
-                                            :min-height (* 2 (pane-y-spacing gadget))
-                                            :height (* 2 (pane-y-spacing gadget))
-                                            :max-height +fill+)
-                       :min-width (* 2 *3d-border-thickness*)
-                       :width (* 2 *3d-border-thickness*)
-                       :min-height (* 2 *3d-border-thickness*)
-                       :height (* 2 *3d-border-thickness*)))
+  (let ((2*x-spacing (* 2 (pane-x-spacing gadget)))
+        (2*y-spacing (* 2 (pane-y-spacing gadget)))
+        (2*border-thickness (* 2 *3d-border-thickness*)))
+    (space-requirement+* (space-requirement+* (compose-label-space gadget)
+                                              :min-width 2*x-spacing
+                                              :width 2*x-spacing
+                                              :max-width +fill+
+                                              :min-height 2*y-spacing
+                                              :height 2*y-spacing
+                                              :max-height +fill+)
+                         :min-width 2*border-thickness
+                         :width 2*border-thickness
+                         :min-height 2*border-thickness
+                         :height 2*border-thickness)))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
   (with-slots (pressedp) pane
@@ -1132,15 +1135,18 @@ and must never be nil.")
 (defmethod handle-repaint ((pane push-button-pane) region)
   (declare (ignore region))
   (with-slots (armed pressedp) pane
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
       (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
       (draw-bordered-rectangle* pane x1 y1 x2 y2
                                 :border-width 1
                                 :style (if (and pressedp armed) :inset :outset))
-      (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 *3d-border-thickness* (pane-x-spacing pane))
-                                                 (+ y1 *3d-border-thickness* (pane-y-spacing pane))
-                                                 (- x2 *3d-border-thickness* (pane-x-spacing pane))
-                                                 (- y2 *3d-border-thickness* (pane-y-spacing pane)))
+      (let* ((x-spacing (pane-x-spacing pane))
+             (y-spacing (pane-y-spacing pane))
+             (border-thickness *3d-border-thickness*)
+             (x1 (+ x1 border-thickness x-spacing))
+             (y1 (+ y1 border-thickness y-spacing))
+             (x2 (- x2 border-thickness x-spacing))
+             (y2 (- y2 border-thickness y-spacing)))
         (if (gadget-active-p pane)
             (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
             (draw-engraved-label* pane x1 y1 x2 y2))))))
