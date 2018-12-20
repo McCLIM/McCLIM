@@ -508,8 +508,7 @@ documentation produced by presentations.")
                              (write-string prompt *query-io*)
                              (funcall prompt *query-io* frame))
                          (force-output *query-io*)))
-                     (let ((command (read-frame-command frame
-                                                        :stream *query-io*)))
+                     (let ((command (read-frame-command frame :stream *query-io*)))
                        (when interactorp
                          (fresh-line *query-io*))
                        (when command

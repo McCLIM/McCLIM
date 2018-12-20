@@ -244,16 +244,18 @@ keys read."))
 (defun repush-gesture (gesture buffer)
   (event-queue-prepend buffer gesture))
 
-(defun convert-to-gesture (event)
-  (typecase event
+(defmethod stream-process-gesture ((stream standard-extended-input-stream) gesture type)
+  (declare (ignore type))
+  (typecase gesture
     ((or character symbol pointer-button-event)
-     event)
+     (values gesture (type-of gesture)))
     (key-press-event
-     (if-let ((character (keyboard-event-character event))
-              (char-p (member (event-modifier-state event) '(0 +shift-key+))))
-       (char-for-read character)
-       event))
-    (otherwise nil)))
+     (if-let ((character (keyboard-event-character gesture))
+              (char-p (member (event-modifier-state gesture) '(0 +shift-key+))))
+       (values (char-for-read character) 'standard-char)
+       (values gesture (type-of gesture))))
+    (otherwise
+     nil)))
 
 (defmethod stream-read-gesture ((stream standard-extended-input-stream)
                                 &key timeout peek-p
@@ -299,25 +301,23 @@ keys read."))
          (when (handle-non-stream-event buffer)
            (go wait-for-char))
          (let* ((raw-gesture (pop-gesture buffer peek-p))
-                (gesture (convert-to-gesture raw-gesture)))
-           ;; Sometimes key press events get generated with a key code
-           ;; for which there is no keysym.  This seems to happen on
-           ;; my machine when keys are hit rapidly in succession.  I'm
-           ;; not sure if this is a hardware problem with my keyboard,
-           ;; and this case is probably better handled in the backend,
-           ;; but for now the case below handles the problem. -- moore
+                (gesture (stream-process-gesture stream raw-gesture nil)))
+           ;; Sometimes key press events get generated with a key code for which
+           ;; there is no keysym.  This seems to happen on my machine when keys
+           ;; are hit rapidly in succession.  I'm not sure if this is a hardware
+           ;; problem with my keyboard, and this case is probably better handled
+           ;; in the backend, but for now the case below handles the problem. --
+           ;; moore
            (cond ((null gesture)
                   (go wait-for-char))
                  ((and pointer-button-press-handler
                        (typep gesture 'pointer-button-press-event))
                   (funcall pointer-button-press-handler stream gesture))
                  ((loop for gesture-name in *abort-gestures*
-                        thereis (event-matches-gesture-name-p gesture
-                                                              gesture-name))
+                        thereis (event-matches-gesture-name-p gesture gesture-name))
                   (signal 'abort-gesture :event gesture))
                  ((loop for gesture-name in *accelerator-gestures*
-                        thereis (event-matches-gesture-name-p gesture
-                                                              gesture-name))
+                        thereis (event-matches-gesture-name-p gesture gesture-name))
                   (signal 'accelerator-gesture :event gesture))
                  (t (setf (last-gesture stream) raw-gesture)
                     (return-from stream-read-gesture gesture))))
