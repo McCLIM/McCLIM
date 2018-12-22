@@ -67,6 +67,14 @@ a query is selected for input. It is responsible for updating the
   (:documentation "Deselect a query field: turn the cursor off, turn off
 highlighting, etc." ))
 
+(defmethod select-query (stream query record)
+  (declare (ignore stream query record))
+  nil)
+
+(defmethod deselect-query (stream query record)
+  (declare (ignore stream query record))
+  nil)
+
 (defmethod select-query (stream query (record av-pop-up-menu-record))
   (declare (ignore stream))
   (let* ((value-key (pop-up-value-key record))
