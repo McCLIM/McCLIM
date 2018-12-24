@@ -140,7 +140,7 @@
             current-dx (- current-y leading)
             ascent)))
 
-(defvar *draw-font-lock* (climi::make-lock "draw-font"))
+(defvar *draw-font-lock* (clim-sys:make-lock "draw-font"))
 (defmethod clim:medium-draw-text* ((medium clx-render-medium) string x y
                                    start end
                                    align-x align-y
@@ -178,7 +178,7 @@
                                ;;(:left 0)
                                (:center (/ text-width 2.0s0))
                                (:right text-width))))))
-    (bt:with-lock-held (*draw-font-lock*)
+    (clim-sys:with-lock-held (*draw-font-lock*)
       (mcclim-font:draw-glyphs medium mirror gc x y string
                                :start start :end end
                                :translate #'translate

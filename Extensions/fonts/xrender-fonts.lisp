@@ -92,7 +92,7 @@
       (font-cache        (make-hash-table :test #'equal))
       (text-style-cache  (make-hash-table :test #'equal)))
   (defun make-truetype-font (port filename size)
-    (climi::with-lock-held (*zpb-font-lock*)
+    (clim-sys:with-lock-held (*zpb-font-lock*)
       (let* ((display (clim-clx::clx-port-display port))
              (loader (ensure-gethash filename font-loader-cache
                                      (zpb-ttf:open-font-loader filename)))

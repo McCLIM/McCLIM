@@ -2,7 +2,7 @@
 
 (defclass image-mirror-mixin ()
   ((image :initform nil :reader image-mirror-image)
-   (image-lock :initform (climi::make-lock "image"))
+   (image-lock :initform (clim-sys:make-lock "image"))
    (resize-image-p :initform t :reader image-mirror-resize-image-p)
    (dirty-region :initform nil)
    (state :initform (aa:make-state))))
@@ -70,7 +70,7 @@
                                                             (+ to-y height))))
       (warn "copy image not correct"))
     (with-slots (image-lock) mirror
-      (climi::with-lock-held (image-lock)
+      (clim-sys:with-lock-held (image-lock)
         (let* ((image (image-mirror-image mirror))
                (region  (copy-image src-image x y width height image to-x to-y)))
           (%notify-image-updated mirror region))))))
@@ -84,7 +84,7 @@
               (not (region-contains-region-p clip-region (make-rectangle* x y (+ x width) (+ y height)))))
       (warn "fill image mask not correct [~A -> ~A]" clip-region (make-rectangle* x y (+ x width) (+ y height))))
     (with-slots (image-lock) mirror
-      (climi::with-lock-held (image-lock)
+      (clim-sys:with-lock-held (image-lock)
         (let ((region (fill-image image ink
                                   :x x :y y :width width :height height
                                   :stencil stencil
@@ -96,7 +96,7 @@
   (check-type mirror image-mirror-mixin)
   (alexandria:when-let ((image (image-mirror-image mirror)))
     (with-slots (image-lock state) mirror
-      (climi::with-lock-held (image-lock)
+      (clim-sys:with-lock-held (image-lock)
         (let ((reg (aa-fill-paths image ink paths state transformation region)))
           (clim:with-bounding-rectangle* (min-x min-y max-x max-y) reg
             (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
@@ -106,7 +106,7 @@
   (check-type mirror image-mirror-mixin)
   (alexandria:when-let ((image (image-mirror-image mirror)))
     (with-slots (image-lock state) mirror
-      (climi::with-lock-held (image-lock)
+      (clim-sys:with-lock-held (image-lock)
         (let ((reg (aa-stroke-paths medium image ink paths line-style state transformation region)))
           (clim:with-bounding-rectangle* (min-x min-y max-x max-y) reg
             (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
