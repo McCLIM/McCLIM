@@ -89,14 +89,10 @@ transformation protocol."))
   '(mxx mxy myx myy tx ty))
 
 (defmethod print-object ((self standard-hairy-transformation) sink)
-  (cond
-    ((and *print-readably* (not *read-eval*))
-     (error "cannot readably print standard-hairy-transformation when not *read-eval*."))
-    ((and *print-pretty* *print-readably*)
-     (simple-pprint-object sink self))
-    (t (print-unreadable-object (self sink :identity nil :type t)
-         (apply #'format sink "~S ~S ~S ~S ~S ~S"
-                (multiple-value-list (get-transformation self)))))))
+  (maybe-print-readably (self sink)
+    (print-unreadable-object (self sink :identity nil :type t)
+      (apply #'format sink "~S ~S ~S ~S ~S ~S"
+             (multiple-value-list (get-transformation self))))))
 
 (defmethod print-object ((self standard-transformation) sink)
   (print-unreadable-object (self sink :identity nil :type t)

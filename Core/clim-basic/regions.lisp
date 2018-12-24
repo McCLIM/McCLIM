@@ -111,14 +111,10 @@
   '(x y))
 
 (defmethod print-object ((self standard-point) sink)
-  (cond
-    ((and *print-readably* (not *read-eval*))
-     (error "cannot readably print standard-point when not *read-eval*."))
-    ((and *print-pretty* *print-readably*)
-     (simple-pprint-object sink self))
-    (t (print-unreadable-object (self sink :identity nil :type t)
-         (with-slots (x y) self
-           (format sink "~S ~S" x y))))))
+  (maybe-print-readably (self sink)
+    (print-unreadable-object (self sink :identity nil :type t)
+      (with-slots (x y) self
+        (format sink "~S ~S" x y)))))
 
 ;;; Point protocol: point-position
 
@@ -160,13 +156,8 @@
   '(points closed))
 
 (defmethod print-object ((self standard-polyline) sink)
-  (cond
-    ((and *print-readably* (not *read-eval*))
-     (error "cannot readably print standard-polyline when not *read-eval*."))
-    ((and *print-pretty* *print-readably*)
-     (simple-pprint-object sink self))
-    (t
-     (print-unreadable-object (self sink :identity t :type t)))))
+  (maybe-print-readably (self sink)
+    (print-unreadable-object (self sink :identity t :type t))))
 
 ;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
@@ -338,14 +329,10 @@
   '(x1 y1 x2 y2))
 
 (defmethod print-object ((self standard-line) sink)
-  (cond
-    ((and *print-readably* (not *read-eval*))
-     (error "cannot readably print standard-line when not *read-eval*."))
-    ((and *print-pretty* *print-readably*)
-     (simple-pprint-object sink self))
-    (t (print-unreadable-object (self sink :identity nil :type t)
+  (maybe-print-readably (self sink)
+    (print-unreadable-object (self sink :identity nil :type t)
          (with-slots (x1 y1 x2 y2) self
-           (format sink "~D ~D ~D ~D" x1 y1 x2 y2))))))
+           (format sink "~D ~D ~D ~D" x1 y1 x2 y2)))))
 
 ;;; -- 2.5.5 Rectangles in CLIM ----------------------------------------------
 
@@ -569,18 +556,13 @@
   '(start-angle end-angle tr))
 
 (defmethod print-object ((ell elliptical-thing) stream)
-  (cond
-    ((and *print-readably* (not *read-eval*))
-     (error "cannot readably print elliptical-thing when not *read-eval*."))
-    ((and *print-pretty* *print-readably*)
-     (simple-pprint-object stream ell))
-    (t
-     (print-unreadable-object (ell stream :type t :identity t)
+  (maybe-print-readably (ell stream)
+    (print-unreadable-object (ell stream :type t :identity t)
        (with-slots (start-angle end-angle tr) ell
          (format stream "[~A ~A] ~A"
                  (and start-angle (* (/ 180 pi) start-angle))
                  (and end-angle (* (/ 180 pi) end-angle))
-                 tr))))))
+                 tr)))))
 
 (defclass standard-ellipse (elliptical-thing ellipse) ())
 (defclass standard-elliptical-arc (elliptical-thing elliptical-arc) ())
@@ -2871,11 +2853,28 @@ and RADIUS2-DY"
 
 ;;;
 
+(defmethod simple-pprint-object-args (stream (object standard-rectangle))
+  (with-standard-rectangle (x1 y1 x2 y2) object
+    (loop for (slot-name slot-value) in `((x1 ,x1)
+                                          (y1 ,y1)
+                                          (x2 ,x2)
+                                          (y2 ,y2))
+       do
+         (write-char #\Space stream)
+         (pprint-newline :fill stream)
+         (write-char #\: stream)
+         (princ slot-name stream)
+         (write-char #\Space stream)
+         (unless (atom slot-value)
+           (princ "'" stream))
+         (write slot-value :stream stream))))
+
 (defmethod print-object ((self standard-rectangle) stream)
-  (print-unreadable-object (self stream :type t :identity nil)
-    (with-standard-rectangle (x1 y1 x2 y2)
-      self
-      (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))))
+  (maybe-print-readably (self stream)
+    (print-unreadable-object (self stream :type t :identity nil)
+      (with-standard-rectangle (x1 y1 x2 y2)
+          self
+        (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2)))))
 
 ;;;;
 
