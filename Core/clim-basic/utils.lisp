@@ -654,9 +654,9 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
 
 (defun simple-pprint-object (stream object)
   (let ((slots (mapcan (lambda (slot)
-			 (let ((value (slot-value object slot)))
-			   (list (list slot value))))
-		       (slots-for-pprint-object object))))
+                         (let ((value (slot-value object slot)))
+                           (list (list slot value))))
+                       (slots-for-pprint-object object))))
     (with-slots (start-angle end-angle tr)
         object
       (pprint-logical-block (stream (list object) :prefix "#.(" :suffix ")")
