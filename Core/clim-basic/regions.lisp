@@ -577,8 +577,7 @@
     (t
      (print-unreadable-object (ell stream :type t :identity t)
        (with-slots (start-angle end-angle tr) ell
-         (format stream "~A [~A ~A] ~A"
-                 (type-of ell)
+         (format stream "[~A ~A] ~A"
                  (and start-angle (* (/ 180 pi) start-angle))
                  (and end-angle (* (/ 180 pi) end-angle))
                  tr))))))
