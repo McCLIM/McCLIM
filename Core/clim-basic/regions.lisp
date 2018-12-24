@@ -827,14 +827,7 @@
                             (if (not (region-intersects-region-p guess-line end-ray))
                                 (region-union guess-line (make-line p2 ei))
                                 (region-union (make-line p1 ei) (make-line p2 si)))))
-                       (if (linep intersection-line)
-                           intersection-line
-                           (progn
-                             #+nil
-                             (error "Trying to intersect line ~S with
-                         ellipse ~S returned ~S which is not a line."
-                                    line ellipse intersection-line)
-                             intersection-line)))))
+                       intersection-line)))
                   ;; line intersect only one angle ray
                   (t (make-line (if p1p p1 p2)
                                 (if sip si ei))))))))))))
