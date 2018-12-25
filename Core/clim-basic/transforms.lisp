@@ -85,6 +85,15 @@ transformation protocol."))
   (:documentation
    "A transformation class which is neither the identity nor a translation."))
 
+(defmethod slots-for-pprint-object append ((object standard-hairy-transformation))
+  '(mxx mxy myx myy tx ty))
+
+(defmethod print-object ((self standard-hairy-transformation) sink)
+  (maybe-print-readably (self sink)
+    (print-unreadable-object (self sink :identity nil :type t)
+      (apply #'format sink "~S ~S ~S ~S ~S ~S"
+             (multiple-value-list (get-transformation self))))))
+
 (defmethod print-object ((self standard-transformation) sink)
   (print-unreadable-object (self sink :identity nil :type t)
     (apply #'format sink "~S ~S ~S ~S ~S ~S"

@@ -107,10 +107,14 @@
     :x (coerce x 'coordinate)
     :y (coerce y 'coordinate)))
 
-(defmethod print-object ((self standard-point) stream)
-  (print-unreadable-object (self stream :type t :identity nil)
-    (with-slots (x y) self
-      (format stream "~s ~s" x y))))
+(defmethod slots-for-pprint-object append ((object standard-point))
+  '(x y))
+
+(defmethod print-object ((self standard-point) sink)
+  (maybe-print-readably (self sink)
+    (print-unreadable-object (self sink :identity nil :type t)
+      (with-slots (x y) self
+        (format sink "~S ~S" x y)))))
 
 ;;; Point protocol: point-position
 
@@ -147,6 +151,13 @@
 
 (defclass standard-polygon (cached-bbox-mixin polygon)
   ((points :initarg :points :reader polygon-points)))
+
+(defmethod slots-for-pprint-object append ((object standard-polyline))
+  '(points closed))
+
+(defmethod print-object ((self standard-polyline) sink)
+  (maybe-print-readably (self sink)
+    (print-unreadable-object (self sink :identity t :type t))))
 
 ;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
@@ -314,9 +325,14 @@
     (multiple-value-bind (x2 y2) (line-end-point* self)
       (line-contains-point-p* x1 y1 x2 y2 x y))))
 
+(defmethod slots-for-pprint-object append ((object standard-line))
+  '(x1 y1 x2 y2))
+
 (defmethod print-object ((self standard-line) sink)
-  (with-slots (x1 y1 x2 y2) self
-    (format sink "#<~S ~D ~D ~D ~D>" (type-of self) x1 y1 x2 y2)))
+  (maybe-print-readably (self sink)
+    (print-unreadable-object (self sink :identity nil :type t)
+         (with-slots (x1 y1 x2 y2) self
+           (format sink "~D ~D ~D ~D" x1 y1 x2 y2)))))
 
 ;;; -- 2.5.5 Rectangles in CLIM ----------------------------------------------
 
@@ -536,13 +552,17 @@
    ;; object.
    (tr          :initarg :tr)))
 
+(defmethod slots-for-pprint-object append ((object elliptical-thing))
+  '(start-angle end-angle tr))
+
 (defmethod print-object ((ell elliptical-thing) stream)
-  (with-slots (start-angle end-angle tr) ell
-    (format stream "#<~A [~A ~A] ~A>"
-            (type-of ell)
-            (and start-angle (* (/ 180 pi) start-angle))
-            (and end-angle (* (/ 180 pi) end-angle))
-            tr)))
+  (maybe-print-readably (ell stream)
+    (print-unreadable-object (ell stream :type t :identity t)
+       (with-slots (start-angle end-angle tr) ell
+         (format stream "[~A ~A] ~A"
+                 (and start-angle (* (/ 180 pi) start-angle))
+                 (and end-angle (* (/ 180 pi) end-angle))
+                 tr)))))
 
 (defclass standard-ellipse (elliptical-thing ellipse) ())
 (defclass standard-elliptical-arc (elliptical-thing elliptical-arc) ())
@@ -784,9 +804,11 @@
                   ((and sip eip)
                    ;; region difference may not work here due to float rounding
                    (let ((guess-line (make-line p1 si)))
-                     (if (not (region-intersects-region-p guess-line end-ray))
-                         (region-union guess-line (make-line p2 ei))
-                         (region-union (make-line p1 ei) (make-line p2 si)))))
+                     (let ((intersection-line
+                            (if (not (region-intersects-region-p guess-line end-ray))
+                                (region-union guess-line (make-line p2 ei))
+                                (region-union (make-line p1 ei) (make-line p2 si)))))
+                       intersection-line)))
                   ;; line intersect only one angle ray
                   (t (make-line (if p1p p1 p2)
                                 (if sip si ei))))))))))))
@@ -2831,11 +2853,28 @@ and RADIUS2-DY"
 
 ;;;
 
+(defmethod simple-pprint-object-args (stream (object standard-rectangle))
+  (with-standard-rectangle (x1 y1 x2 y2) object
+    (loop for (slot-name slot-value) in `((x1 ,x1)
+                                          (y1 ,y1)
+                                          (x2 ,x2)
+                                          (y2 ,y2))
+       do
+         (write-char #\Space stream)
+         (pprint-newline :fill stream)
+         (write-char #\: stream)
+         (princ slot-name stream)
+         (write-char #\Space stream)
+         (unless (atom slot-value)
+           (princ "'" stream))
+         (write slot-value :stream stream))))
+
 (defmethod print-object ((self standard-rectangle) stream)
-  (print-unreadable-object (self stream :type t :identity t)
-    (with-standard-rectangle (x1 y1 x2 y2)
-      self
-      (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))))
+  (maybe-print-readably (self stream)
+    (print-unreadable-object (self stream :type t :identity nil)
+      (with-standard-rectangle (x1 y1 x2 y2)
+          self
+        (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2)))))
 
 ;;;;
 

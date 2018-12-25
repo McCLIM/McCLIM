@@ -639,3 +639,50 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
           (butlast (collect-point))
           (collect-point)))))
 
+;;
+;; pretty printing
+;;
+;; This is a simplified version of the approach used by David
+;; Lichteblau for pretty-printing objects in cxml-stp/node.lip
+(defgeneric slots-for-pprint-object (node)
+  (:documentation "A generic function that returns the slot names of
+  objects to be pretty-printed by simple-pprint-object. Providers of
+  print-object methods that intend to use simple-pprint-object should
+  provide their own methods that return the appropriate slot-names.")
+  (:method-combination append)
+  (:method append ((object t)) nil))
+
+;; print :slot-name slot-value for each slot
+(defgeneric simple-pprint-object-args (stream object)
+  (:method (stream object)
+    (let ((slots (mapcan (lambda (slot)
+                           (let ((value (slot-value object slot)))
+                             (list (list slot value))))
+                         (slots-for-pprint-object object))))
+      (loop for (slot-name slot-value) in slots
+         do
+           (write-char #\Space stream)
+           (pprint-newline :fill stream)
+           (write-char #\: stream)
+           (princ slot-name stream)
+           (write-char #\Space stream)
+           (unless (atom slot-value)
+             (princ "'" stream))
+           (write slot-value :stream stream)))))
+
+(defgeneric simple-pprint-object (stream object)
+  (:method (stream object)
+    (pprint-logical-block (stream (list object) :prefix "#.(" :suffix ")")
+      (write (intern "MAKE-INSTANCE" *package*) :stream stream)
+      (write-char #\Space stream)
+      (write-char #\' stream)
+      (write (class-name (class-of object)) :stream stream)
+      (simple-pprint-object-args stream object))))
+
+(defmacro maybe-print-readably ((self sink) &body body)
+  `(cond
+     ((and *print-readably* (not *read-eval*))
+      (error "cannot readably print object of type ~A when not *read-eval*." (type-of ,self)))
+     ((and *print-pretty* *print-readably*)
+      (simple-pprint-object ,sink ,self))
+     (t ,@body)))
