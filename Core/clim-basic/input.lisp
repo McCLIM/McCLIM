@@ -89,7 +89,7 @@
 (defgeneric event-queue-listen-or-wait (event-queue &key timeout))
 
 (defclass standard-event-queue (event-queue schedule-mixin)
-  ((lock :initform (make-lock "event queue")
+  ((lock :initform (make-recursive-lock "event queue")
          :reader event-queue-lock)
    (head :initform nil
          :accessor event-queue-head
@@ -120,14 +120,14 @@
 (defmethod event-queue-read-no-hang ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event just return NIL."
   (do-port-force-output eq)
-  (with-lock-held ((event-queue-lock eq))
+  (with-recursive-lock-held ((event-queue-lock eq))
     (%event-queue-read eq)))
 
 (defmethod event-queue-read ((eq standard-event-queue))
   "Reads one event from the queue, if there is no event, hang until here is one."
   (do-port-force-output eq)
   (let ((lock (event-queue-lock eq)))
-    (with-lock-held (lock)
+    (with-recursive-lock-held (lock)
       (loop
          (when-let ((res (%event-queue-read eq)))
            (return res))
@@ -143,7 +143,7 @@
                                           timeout wait-function)
   (do-port-force-output eq)
   (let ((lock (event-queue-lock eq)))
-    (with-lock-held (lock)
+    (with-recursive-lock-held (lock)
       (loop
          (let ((res (%event-queue-read eq)))
            (when res
@@ -155,7 +155,7 @@
 
 (defmethod event-queue-append ((eq standard-event-queue) item)
   "Append the item at the end of the queue. Does event compression."
-  (with-lock-held ((event-queue-lock eq))
+  (with-recursive-lock-held ((event-queue-lock eq))
     (labels ((append-event ()
                (cond ((null (event-queue-tail eq))
                       (setf (event-queue-head eq) (cons item nil)
@@ -254,7 +254,7 @@
 
 (defmethod event-queue-prepend ((eq standard-event-queue) item)
   "Prepend the item to the beginning of the queue."
-  (with-lock-held ((event-queue-lock eq))
+  (with-recursive-lock-held ((event-queue-lock eq))
     (cond ((null (event-queue-tail eq))
            (setf (event-queue-head eq) (cons item nil)
                  (event-queue-tail eq) (event-queue-head eq)))
@@ -264,7 +264,7 @@
 
 (defmethod event-queue-peek ((eq standard-event-queue))
   (do-port-force-output eq)
-  (with-lock-held ((event-queue-lock eq))
+  (with-recursive-lock-held ((event-queue-lock eq))
     (check-schedule eq)
     (first (event-queue-head eq))))
 
@@ -273,7 +273,7 @@
    satisfies 'predicate' and leaves the event in the queue.
    Returns NIL, if there is no such event."
   (do-port-force-output eq)
-  (with-lock-held ((event-queue-lock eq))
+  (with-recursive-lock-held ((event-queue-lock eq))
     (find-if predicate (event-queue-head eq))))
 
 (defmethod event-queue-listen ((eq standard-event-queue))
@@ -285,7 +285,7 @@
   (do-port-force-output eq)
   (check-schedule eq)
   (let ((lock (event-queue-lock eq)))
-    (with-lock-held (lock)
+    (with-recursive-lock-held (lock)
       (with-slots (schedule-time) eq
         (flet ((pred ()
                  (not (null (event-queue-head eq)))))
