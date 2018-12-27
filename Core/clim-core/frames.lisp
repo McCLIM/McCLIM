@@ -203,15 +203,17 @@ documentation produced by presentations.")
 		      (and geometry-bottom (- geometry-bottom geometry-height)))))
       (values width height left top)))))
 
-;;; Support the :input-buffer initarg for compatibility with "real CLIM"
-
+;;; This method causes related frames share the same queue by default (on both
+;;; SMP and non-SMP systems). Thanks to that we have a single loop processing
+;;; events. Alternative approach is executed with window-stream frames which
+;;; have a standalone-event-loop (see panes.lisp). -- jd 2018-12-27
 (defmethod initialize-instance :after ((obj standard-application-frame)
                                        &key &allow-other-keys)
-  (when (and (frame-calling-frame obj)
-	   (null (frame-event-queue obj)))
-    (setf (frame-event-queue obj)
-	  (frame-event-queue (frame-calling-frame obj))))
   (unless (frame-event-queue obj)
+    (alexandria:when-let* ((calling-frame (frame-calling-frame obj))
+                           (calling-queue (frame-event-queue calling-frame)))
+      (setf (frame-event-queue obj) calling-queue)
+      (return-from initialize-instance))
     (setf (frame-event-queue obj)
           (if *multiprocessing-p*
               (make-instance 'concurrent-event-queue)
@@ -623,13 +625,13 @@ documentation produced by presentations.")
   (setf (frame-manager frame) fm)
   (setf (port frame) (port fm))
   (setf (graft frame) (find-graft :port (port frame)))
-  (let* ((*application-frame* frame)
-	 (t-l-s (make-pane-1 fm frame 'top-level-sheet-pane
-			     :name 'top-level-sheet
-			     ;; enabling should be left to enable-frame
-			     :enabled-p nil))
-         (event-queue (sheet-event-queue t-l-s)))
-    (setf (slot-value frame 'top-level-sheet) t-l-s)
+  (let ((*application-frame* frame)
+        (event-queue (frame-event-queue frame)))
+    (setf (slot-value frame 'top-level-sheet)
+          (make-pane-1 fm frame 'top-level-sheet-pane
+                       :name 'top-level-sheet
+                       ;; sheet is enabled from enable-frame
+                       :enabled-p nil))
     (generate-panes fm frame)
     (setf (slot-value frame 'state) :disabled)
     (when (typep event-queue 'event-queue)
@@ -637,10 +639,12 @@ documentation produced by presentations.")
     frame))
 
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
-  (let* ((t-l-s (frame-top-level-sheet frame))
-         (queue (sheet-event-queue t-l-s)))
-    (when (typep queue 'event-queue)
-      (setf (event-queue-port queue) nil)))
+                                        ;#+clim-mp
+  (alexandria:when-let* ((event-queue (frame-event-queue frame))
+                         (calling-frame (frame-calling-frame frame))
+                         (calling-queue (frame-event-queue calling-frame))
+                         (another-queue-p (not (eql calling-queue event-queue))))
+    (setf (event-queue-port event-queue) nil))
   (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
   (setf (%frame-manager frame) nil)

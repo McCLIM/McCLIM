@@ -351,7 +351,6 @@ order to produce a double-click")
    (manager :initarg :manager)
    (port :initarg :port)
    (frame :initarg :frame :initform *application-frame* :reader pane-frame)
-   (enabledp :initform nil :initarg :enabledp :accessor pane-enabledp)
    (space-requirement :initform nil :accessor pane-space-requirement)
    ;; New sizes, for allocating protocol
    (new-width :initform nil)
