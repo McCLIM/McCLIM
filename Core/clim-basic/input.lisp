@@ -26,15 +26,18 @@
 
 ;; Event queues
 
+(defstruct schedule-entry
+  time event)
+
 (defclass schedule-mixin ()
   ((schedule-time
-         :initform nil
-         :accessor event-schedule-time
-         :documentation "The next time an event should be scheduled.")
+    :initform nil
+    :accessor event-schedule-time
+    :documentation "The next time an event should be scheduled.")
    (schedule
-         :initform nil
-         :accessor event-queue-schedule
-         :documentation "Time ordered queue of events to schedule."))
+    :initform nil
+    :accessor event-queue-schedule
+    :documentation "Time ordered queue of events to schedule."))
   (:documentation "Experimental timer event extension."))
 
 (defun now ()
@@ -44,37 +47,34 @@
 ;; See if it's time to inject a scheduled event into the queue.
 (defun check-schedule (event-queue)
   (check-type event-queue schedule-mixin)
-  (with-slots (schedule-time schedule) event-queue
-    (when (and schedule-time (> (now) schedule-time))
-      (let* ((event (pop schedule))
-             (sheet (pop schedule)))
-        (declare (ignore sheet))
-        (setf schedule-time (pop schedule))
-        (event-queue-prepend event-queue event)))))
+  (alexandria:when-let* ((schedule-time (event-schedule-time event-queue))
+                         (execute-p (>= (now) schedule-time))
+                         (entry (pop (event-queue-schedule event-queue))))
+    (event-queue-append event-queue (schedule-entry-event entry))
+    (if-let ((next-entry (first (event-queue-schedule event-queue))))
+      (setf schedule-time (schedule-entry-time next-entry))
+      (setf schedule-time nil))))
 
-;;; ugh. FIXME when I work - build a priority queue or something
 (defun schedule-event-queue (event-queue sheet event delay)
+  (declare (ignore sheet))
   (check-type event-queue schedule-mixin)
   (with-slots (schedule-time schedule) event-queue
     (let ((alarm (+ (now) delay)))
       (cond
         ((null schedule)
-         (setf schedule-time alarm)
-         (push sheet schedule)
-         (push event schedule))
+         (push (make-schedule-entry :time alarm :event event) schedule)
+         (setf schedule-time alarm))
         ((< alarm schedule-time)
-         (push schedule-time schedule)
-         (push sheet schedule)
-         (push event schedule)
+         (push (make-schedule-entry :time alarm :event event) schedule)
          (setf schedule-time alarm))
         (t
-         (do* ((prev  (cdr schedule)  (cdddr prev))
-               (point (cddr schedule) (cdddr point))
-               (time  (car point)))
-              ((or (null point)
-                   (< alarm time))
-               (setf (cdr prev)
-                     (cons alarm (cons event (cons sheet (cdr prev))))))))))))
+         (do* ((previous schedule (rest previous))
+               (current  (rest schedule) (rest current))
+               (entry #1=(first current) #1#))
+              ((or (null current)
+                   (< alarm (schedule-entry-time entry)))
+               (setf (cdr previous)
+                     (list* (make-schedule-entry :time alarm :event event) (cdr previous))))))))))
 
 ;;; EVENT-QUEUE protocol (not exported)
 
@@ -169,6 +169,7 @@ use condition-variables nor locks."))
                             ((null timeout) (- schedule-time (now)))
                             (T (min timeout (- schedule-time (now))))))
              (port (event-queue-port queue)))
+        (when timeout (maxf timeout 0))
         (process-next-event port :wait-function wait-function :timeout timeout)
         (%event-queue-read queue))))
 
@@ -285,7 +286,7 @@ use condition-variables nor locks."))
   (do-port-force-output queue)
   ;; Slurp as many elements as available.
   (loop until (null (process-next-event (event-queue-port queue) :timeout 0)))
-  ;; Check-schedule may prepend scheduled event in a queue.
+  ;; Check-schedule may append scheduled event in a queue.
   (check-schedule queue)
   (find-if predicate (event-queue-head queue)))
 
@@ -298,6 +299,7 @@ use condition-variables nor locks."))
                             ((null timeout) (- schedule-time (now)))
                             (T (min timeout (- schedule-time (now))))))
              (port (event-queue-port queue)))
+        (when timeout (maxf timeout 0))
         (process-next-event port :timeout timeout)
         (check-schedule queue)
         (not (null (event-queue-head queue))))))
@@ -347,6 +349,7 @@ use condition-variables nor locks."))
                  (timeout (if (null schedule-time)
                               timeout
                               (min timeout (- schedule-time (now))))))
+            (when timeout (maxf timeout 0))
             (condition-wait cv lock timeout)
             (%event-queue-read queue))))))
 
@@ -387,6 +390,7 @@ use condition-variables nor locks."))
                  (timeout (cond ((null schedule-time) timeout)
                                 ((null timeout) (- schedule-time (now)))
                                 (T (min timeout (- schedule-time (now)))))))
+            (when timeout (maxf timeout 0))
             (condition-wait cv lock timeout)
             (check-schedule queue)
             (not (null (event-queue-head queue))))))))
