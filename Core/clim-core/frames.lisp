@@ -213,7 +213,9 @@ documentation produced by presentations.")
 	  (frame-event-queue (frame-calling-frame obj))))
   (unless (frame-event-queue obj)
     (setf (frame-event-queue obj)
-          (make-instance 'standard-event-queue))))
+          (if *multiprocessing-p*
+              (make-instance 'concurrent-event-queue)
+              (make-instance 'simple-event-queue)))))
 
 (defmethod (setf frame-manager) (fm (frame application-frame))
   (let ((old-manager (frame-manager frame)))
@@ -626,20 +628,18 @@ documentation produced by presentations.")
 			     :name 'top-level-sheet
 			     ;; enabling should be left to enable-frame
 			     :enabled-p nil))
-         #+clim-mp (event-queue (sheet-event-queue t-l-s)))
+         (event-queue (sheet-event-queue t-l-s)))
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (generate-panes fm frame)
     (setf (slot-value frame 'state) :disabled)
-    #+clim-mp
-    (when (typep event-queue 'standard-event-queue)
+    (when (typep event-queue 'event-queue)
       (setf (event-queue-port event-queue) (port fm)))
     frame))
 
 (defmethod disown-frame ((fm frame-manager) (frame application-frame))
-  #+CLIM-MP
   (let* ((t-l-s (frame-top-level-sheet frame))
          (queue (sheet-event-queue t-l-s)))
-    (when (typep queue 'standard-event-queue)
+    (when (typep queue 'event-queue)
       (setf (event-queue-port queue) nil)))
   (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))

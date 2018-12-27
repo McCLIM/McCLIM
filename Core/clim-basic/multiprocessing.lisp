@@ -20,11 +20,11 @@
 ;;; multi-processing. CLIM provides a pset of functions that implement
 ;;; a uniform interface to the multi-processing functionality.
 
-(eval-when (:load-toplevel :compile-toplevel :execute)
-  (defconstant *multiprocessing-p* bt:*supports-threads-p*
-    "The value of *multiprocessing-p* is t if the current Lisp environment
+(defconstant *multiprocessing-p* bt:*supports-threads-p*
+  "The value of *multiprocessing-p* is t if the current Lisp environment
 supports multi-processing, otherwise it is nil.")
 
+(eval-when (:load-toplevel :compile-toplevel :execute)
   (when bt:*supports-threads-p*
     (pushnew :clim-mp *features*)))
 
@@ -193,33 +193,15 @@ equivalent to progn."
 ;;; These functions aren't in the CLIM specification but event queue uses them.
 
 (defun make-condition-variable ()
-  #+clim-mp (bt:make-condition-variable)
-  #-clim-mp (list nil))
+  (bt:make-condition-variable))
 
 (defun condition-wait (cv lock &optional timeout)
   ;; Some implementations have interface for condition wait with timeout, but
   ;; raise an error when this function is called. When not necessary, we provide
   ;; working variant.
-  #+clim-mp
   (if timeout
       (bt:condition-wait cv lock :timeout timeout)
-      (bt:condition-wait cv lock))
-  ;; This is a bit dodgy; it depends on the condition notifier to be called from
-  ;; process-next-event. However, I don't feel obligated to put too much work
-  ;; into CLIM-SYS on non-multiprocessing platforms.
-  #-clim-mp
-  (flet ((wait-func ()
-           (loop for port in climi::*all-ports* ;; this is dubious
-              do (loop as this-event = (process-next-event port :timeout 0)
-                    for got-events = this-event then (or got-events this-event)
-                    while this-event
-                    finally (unless got-events (process-next-event port))))
-           (car cv)))
-    (setf (car cv) nil)
-    (if timeout
-        (process-wait-with-timeout "Waiting for event" timeout #'wait-func)
-        (process-wait "Waiting for event" #'wait-func))))
+      (bt:condition-wait cv lock)))
 
 (defun condition-notify (cv)
-  #+clim-mp (bt:condition-notify cv)
-  #-clim-mp (setf (car cv) t))
+  (bt:condition-notify cv))

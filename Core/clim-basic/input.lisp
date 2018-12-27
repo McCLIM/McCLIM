@@ -78,34 +78,61 @@
 ;;; EVENT-QUEUE protocol (not exported)
 
 (define-protocol-class event-queue () ())
-(defgeneric event-queue-read (event-queue))
-(defgeneric event-queue-read-no-hang (event-queue))
-(defgeneric event-queue-read-with-timeout (event-queue timeout wait-function))
-(defgeneric event-queue-append (event-queue item))
-(defgeneric event-queue-prepend (event-queue item))
-(defgeneric event-queue-peek (event-queue))
-(defgeneric event-queue-peek-if (predicate event-queue))
-(defgeneric event-queue-listen (event-queue))
-(defgeneric event-queue-listen-or-wait (event-queue &key timeout))
 
-(defclass standard-event-queue (event-queue schedule-mixin)
-  ((lock :initform (make-recursive-lock "event queue")
-         :reader event-queue-lock)
-   (head :initform nil
+(defgeneric event-queue-read (event-queue)
+  (:documentation "Reads one event from the queue, if there is no event, hang
+until here is one."))
+
+(defgeneric event-queue-read-no-hang (event-queue)
+  (:documentation "Reads one event from the queue, if there is no event just
+return NIL."))
+
+(defgeneric event-queue-read-with-timeout (event-queue timeout wait-function)
+  (:documentation "Reads one event from the queue, if there is no event before
+timeout returns NIL."))
+
+(defgeneric event-queue-append (event-queue item)
+  (:documentation "Append the item at the end of the queue. Does event compression."))
+
+(defgeneric event-queue-prepend (event-queue item)
+  (:documentation "Prepend the item to the beginning of the queue."))
+
+(defgeneric event-queue-peek (event-queue)
+  (:documentation "Peeks the first event in a queue. Queue is left unchanged.
+If queue is empty returns NIL."))
+
+(defgeneric event-queue-peek-if (predicate event-queue)
+  (:documentation "Goes through the whole event queue and returns the first
+event, which satisfies PREDICATE. Queue is left unchanged. Returns NIL if there
+is no such event."))
+
+(defgeneric event-queue-listen (event-queue)
+  (:documentation "Returns true if there are any events in the queue. Otherwise
+returns NIL."))
+
+(defgeneric event-queue-listen-or-wait (event-queue &key timeout)
+  (:documentation "Returns true if there are any events in the queue. Otherwise
+blocks until event arives or timeout is reached. If there is no event before
+timeout returns NIL."))
+
+
+(defclass simple-event-queue (event-queue schedule-mixin)
+  ((head :initform nil
          :accessor event-queue-head
          :documentation "Head pointer of event queue.")
    (tail :initform nil
          :accessor event-queue-tail
          :documentation "Tail pointer of event queue.")
-   (processes
-         :initform (make-condition-variable)
-         :accessor event-queue-processes
-         :documentation "Condition variable for waiting processes")
    (port :initform nil
          :initarg  :port
          :accessor event-queue-port
-         :documentation "The port which will be generating events for the queue.")))
+         :documentation "The port which will be generating events for the queue."))
+  (:documentation "Event queue which works under assumption that there are no
+concurrent threads. Most notably it calls process-next-event by itself. Doesn't
+use condition-variables nor locks."))
 
+;;; We want to force port output just in case we wait for an event yet to be
+;;; performed by a user (which may be prompted on a screen). -- jd 2018-12-26
 (defun do-port-force-output (port-event-queue)
   (when-let ((port (event-queue-port port-event-queue)))
     (port-force-output port)))
@@ -117,209 +144,254 @@
       (setf (event-queue-tail queue) nil))
     res))
 
-(defmethod event-queue-read-no-hang ((eq standard-event-queue))
-  "Reads one event from the queue, if there is no event just return NIL."
-  (do-port-force-output eq)
-  (with-recursive-lock-held ((event-queue-lock eq))
-    (%event-queue-read eq)))
+(defmethod event-queue-read ((queue simple-event-queue))
+  (do-port-force-output queue)
+  (let* ((schedule-time (event-schedule-time queue))
+         (timeout (when schedule-time (- schedule-time (now))))
+         (port (event-queue-port queue)))
+    (loop
+       as result = (%event-queue-read queue)
+       if result do (return result)
+       else do (process-next-event port :timeout timeout))))
 
-(defmethod event-queue-read ((eq standard-event-queue))
-  "Reads one event from the queue, if there is no event, hang until here is one."
-  (do-port-force-output eq)
-  (let ((lock (event-queue-lock eq)))
-    (with-recursive-lock-held (lock)
+(defmethod event-queue-read-no-hang ((queue simple-event-queue))
+  (do-port-force-output queue)
+  (%event-queue-read queue))
+
+(defmethod event-queue-read-with-timeout ((queue simple-event-queue) timeout wait-function)
+  (do-port-force-output queue)
+  (when wait-function
+    (warn "EVENT-QUEUE-READ-WITH-TIMEOUT: ignoring WAIT-FUNCTION."))
+  (or (%event-queue-read queue)
+      (let* ((schedule-time (event-schedule-time queue))
+             (timeout (cond ((null schedule-time) timeout)
+                            ((null timeout) (- schedule-time (now)))
+                            (T (min timeout (- schedule-time (now))))))
+             (port (event-queue-port queue)))
+        (process-next-event port :wait-function wait-function :timeout timeout)
+        (%event-queue-read queue))))
+
+(defmethod event-queue-append ((queue simple-event-queue) item)
+  (labels ((append-event ()
+             (cond ((null (event-queue-tail queue))
+                    (setf (event-queue-head queue) (cons item nil)
+                          (event-queue-tail queue) (event-queue-head queue)))
+                   (t
+                    (setf (event-queue-tail queue)
+                          (setf (cdr (event-queue-tail queue)) (cons item nil))))))
+           (event-delete-if (predicate)
+             (when (not (null (event-queue-head queue)))
+               (setf (event-queue-head queue)
+                     (delete-if predicate (event-queue-head queue))
+                     (event-queue-tail queue)
+                     (last (event-queue-head queue))))))
+    (typecase item
+      ;;
+      ;; Motion Event Compression
+      ;;
+      ;; . find the (at most one) motion event
+      ;; . delete it
+      ;; . append item to queue
+      ;;
+      ;; But leave enter/exit events.
+      ;;
+      ((and pointer-motion-event (not pointer-boundary-event))
+       (let ((sheet (event-sheet item)))
+         (event-delete-if
+          #'(lambda (x)
+              (and (typep x 'pointer-motion-event)
+                   (not (typep x 'pointer-boundary-event))
+                   (eq (event-sheet x) sheet))))
+         (append-event)))
+      ;;
+      ;; Resize event compression
+      ;;
+      (window-configuration-event
+       (when (typep (event-sheet item) 'top-level-sheet-pane)
+         (let ((sheet (event-sheet item)))
+           (event-delete-if
+            #'(lambda (ev)
+                (and (typep ev 'window-configuration-event)
+                     (eq (event-sheet ev) sheet)))))
+         (append-event)))
+      ;;
+      ;; Repaint event compression
+      ;;
+      (window-repaint-event
+       (let ((region (window-event-native-region item))
+             (sheet  (event-sheet item))
+             (did-something-p nil))
+         (labels ((fun (xs)
+                    (cond ((null xs)
+                           ;; We reached the queue's tail: Append the
+                           ;; new event, construct a new one if
+                           ;; necessary.
+                           (when did-something-p
+                             (setf item
+                                   (make-instance 'window-repaint-event
+                                                  :timestamp (event-timestamp item)
+                                                  :sheet     (event-sheet item)
+                                                  :region    region)))
+                           (setf (event-queue-tail queue) (cons item nil)) )
+                          ((and (typep (car xs) 'window-repaint-event)
+                                (eq (event-sheet (car xs)) sheet))
+                           ;; This is a repaint event for the same
+                           ;; sheet, delete it and combine its region
+                           ;; into the new event.
+                           (setf region
+                                 (region-union region
+                                               (window-event-native-region (car xs))))
+                           ;; Here is an alternative, which just takes
+                           ;; the bounding rectangle.
+                           ;; NOTE: When doing this also take care that
+                           ;; the new region really is cleared.
+                           ;; (setf region
+                           ;;   (let ((old-region (window-event-native-region (car xs))))
+                           ;;     (make-rectangle*
+                           ;;      (min (bounding-rectangle-min-x region)
+                           ;;           (bounding-rectangle-min-x old-region))
+                           ;;      (min (bounding-rectangle-min-y region)
+                           ;;           (bounding-rectangle-min-y old-region))
+                           ;;      (max (bounding-rectangle-max-x region)
+                           ;;           (bounding-rectangle-max-x old-region))
+                           ;;      (max (bounding-rectangle-max-y region)
+                           ;;           (bounding-rectangle-max-y old-region)))))
+                           (setf did-something-p t)
+                           (fun (cdr xs)))
+                          ;;
+                          (t
+                           (setf (cdr xs) (fun (cdr xs)))
+                           xs))))
+           (setf (event-queue-head queue) (fun (event-queue-head queue))))))
+      ;; Regular events are just appended:
+      (otherwise
+       (append-event)))))
+
+(defmethod event-queue-prepend ((queue simple-event-queue) item)
+  (if (null (event-queue-tail queue))
+      (setf (event-queue-head queue) (cons item nil)
+            (event-queue-tail queue) (event-queue-head queue))
+      (push item (event-queue-head queue))))
+
+(defmethod event-queue-peek ((queue simple-event-queue))
+  (do-port-force-output queue)
+  (check-schedule queue)
+  (or (first (event-queue-head queue))
+      (when (process-next-event (event-queue-port queue) :timeout 0)
+        (first (event-queue-head queue)))))
+
+(defmethod event-queue-peek-if (predicate (queue simple-event-queue))
+  (do-port-force-output queue)
+  ;; Slurp as many elements as available.
+  (loop until (null (process-next-event (event-queue-port queue) :timeout 0)))
+  ;; Check-schedule may prepend scheduled event in a queue.
+  (check-schedule queue)
+  (find-if predicate (event-queue-head queue)))
+
+(defmethod event-queue-listen-or-wait ((queue simple-event-queue) &key timeout)
+  (do-port-force-output queue)
+  (check-schedule queue)
+  (or (not (null (event-queue-head queue)))
+      (when (process-next-event (event-queue-port queue) :timeout timeout)
+        (check-schedule queue)
+        (not (null (event-queue-head queue))))))
+
+(defmethod event-queue-listen ((queue simple-event-queue))
+  (event-queue-listen-or-wait queue :timeout 0))
+
+
+(defclass concurrent-event-queue (simple-event-queue)
+  ((lock :initform (make-lock "event queue")
+         :reader event-queue-lock)
+   (processes
+         :initform (make-condition-variable)
+         :accessor event-queue-processes
+         :documentation "Condition variable for waiting processes")))
+
+(defmethod event-queue-read ((queue concurrent-event-queue))
+  (do-port-force-output queue)
+  (let ((lock (event-queue-lock queue))
+        (cv (event-queue-processes queue)))
+    (with-lock-held (lock)
       (loop
-         (when-let ((res (%event-queue-read eq)))
-           (return res))
-         ;; is there an event waiting to be scheduled?
-         (with-slots (schedule-time) eq
-           (let ((timeout (when schedule-time (- schedule-time (now)))))
-             (condition-wait (event-queue-processes eq) lock timeout)))))))
+         with schedule-time = (event-schedule-time queue)
+         as timeout = (when schedule-time (- schedule-time (now)))
+         as result = (%event-queue-read queue)
+         if result do (return result)
+         else do (condition-wait cv lock timeout)))))
+
+(defmethod event-queue-read-no-hang ((queue concurrent-event-queue))
+  (do-port-force-output queue)
+  (with-lock-held ((event-queue-lock queue))
+    (%event-queue-read queue)))
 
 ;;; XXX Should we do something with the wait function? I suspect that
 ;;; it's not compatible with the brave new world of native threads.
 
-(defmethod event-queue-read-with-timeout ((eq standard-event-queue)
+(defmethod event-queue-read-with-timeout ((queue concurrent-event-queue)
                                           timeout wait-function)
-  (do-port-force-output eq)
-  (let ((lock (event-queue-lock eq)))
-    (with-recursive-lock-held (lock)
-      (loop
-         (let ((res (%event-queue-read eq)))
-           (when res
-             (return res))
-           (when wait-function
-             (warn "event-queue-read-with-timeout ignoring predicate"))
-           (unless (condition-wait (event-queue-processes eq) lock timeout)
-             (return)))))))
+  (do-port-force-output queue)
+  (when wait-function
+    (warn "EVENT-QUEUE-READ-WITH-TIMEOUT: ignoring WAIT-FUNCTION."))
+  (let ((lock (event-queue-lock queue))
+        (cv (event-queue-processes queue)))
+    (with-lock-held (lock)
+      (or (%event-queue-read queue)
+          (let* ((schedule-time (event-schedule-time queue))
+                 (timeout (if (null schedule-time)
+                              timeout
+                              (min timeout (- schedule-time (now))))))
+            (condition-wait cv lock timeout)
+            (%event-queue-read queue))))))
 
-(defmethod event-queue-append ((eq standard-event-queue) item)
-  "Append the item at the end of the queue. Does event compression."
-  (with-recursive-lock-held ((event-queue-lock eq))
-    (labels ((append-event ()
-               (cond ((null (event-queue-tail eq))
-                      (setf (event-queue-head eq) (cons item nil)
-                            (event-queue-tail eq) (event-queue-head eq)))
-                     (t
-                      (setf (event-queue-tail eq)
-                            (setf (cdr (event-queue-tail eq)) (cons item nil))))))
-             (event-delete-if (predicate)
-               (when (not (null (event-queue-head eq)))
-                 (setf (event-queue-head eq)
-                       (delete-if predicate (event-queue-head eq))
-                       (event-queue-tail eq)
-                       (last (event-queue-head eq))))))
-      (typecase item
-        ;;
-        ;; Motion Event Compression
-        ;;
-        ;; . find the (at most one) motion event
-        ;; . delete it
-        ;; . append item to queue
-        ;;
-        ;; But leave enter/exit events.
-        ;;
-        ((and pointer-motion-event (not pointer-boundary-event))
-         (let ((sheet (event-sheet item)))
-           (event-delete-if
-            #'(lambda (x)
-                (and (typep x 'pointer-motion-event)
-                     (not (typep x 'pointer-boundary-event))
-                     (eq (event-sheet x) sheet))))
-           (append-event)))
-        ;;
-        ;; Resize event compression
-        ;;
-        (window-configuration-event
-         (when (typep (event-sheet item) 'top-level-sheet-pane)
-           (let ((sheet (event-sheet item)))
-             (event-delete-if
-              #'(lambda (ev)
-                  (and (typep ev 'window-configuration-event)
-                       (eq (event-sheet ev) sheet)))))
-           (append-event)))
-        ;;
-        ;; Repaint event compression
-        ;;
-        (window-repaint-event
-         (let ((region (window-event-native-region item))
-               (sheet  (event-sheet item))
-               (did-something-p nil))
-           (labels ((fun (xs)
-                      (cond ((null xs)
-                             ;; We reached the queue's tail: Append the
-                             ;; new event, construct a new one if
-                             ;; necessary.
-                             (when did-something-p
-                               (setf item
-                                     (make-instance 'window-repaint-event
-                                                    :timestamp (event-timestamp item)
-                                                    :sheet     (event-sheet item)
-                                                    :region    region)))
-                             (setf (event-queue-tail eq) (cons item nil)) )
-                            ((and (typep (car xs) 'window-repaint-event)
-                                  (eq (event-sheet (car xs)) sheet))
-                             ;; This is a repaint event for the same
-                             ;; sheet, delete it and combine its region
-                             ;; into the new event.
-                             (setf region
-                                   (region-union region
-                                                 (window-event-native-region (car xs))))
-                             ;; Here is an alternative, which just takes
-                             ;; the bounding rectangle.
-                             ;; NOTE: When doing this also take care that
-                             ;; the new region really is cleared.
-                             ;; (setf region
-                             ;;   (let ((old-region (window-event-native-region (car xs))))
-                             ;;     (make-rectangle*
-                             ;;      (min (bounding-rectangle-min-x region)
-                             ;;           (bounding-rectangle-min-x old-region))
-                             ;;      (min (bounding-rectangle-min-y region)
-                             ;;           (bounding-rectangle-min-y old-region))
-                             ;;      (max (bounding-rectangle-max-x region)
-                             ;;           (bounding-rectangle-max-x old-region))
-                             ;;      (max (bounding-rectangle-max-y region)
-                             ;;           (bounding-rectangle-max-y old-region)))))
-                             (setf did-something-p t)
-                             (fun (cdr xs)))
-                            ;;
-                            (t
-                             (setf (cdr xs) (fun (cdr xs)))
-                             xs))))
-             (setf (event-queue-head eq) (fun (event-queue-head eq))))))
-        ;; Regular events are just appended:
-        (otherwise
-         (append-event))))
-    (condition-notify (event-queue-processes eq))))
+(defmethod event-queue-append ((queue concurrent-event-queue) item)
+  (with-lock-held ((event-queue-lock queue))
+    (call-next-method)
+    (condition-notify (event-queue-processes queue))))
 
-(defmethod event-queue-prepend ((eq standard-event-queue) item)
-  "Prepend the item to the beginning of the queue."
-  (with-recursive-lock-held ((event-queue-lock eq))
-    (cond ((null (event-queue-tail eq))
-           (setf (event-queue-head eq) (cons item nil)
-                 (event-queue-tail eq) (event-queue-head eq)))
-          (t
-           (push item (event-queue-head eq))))
-    (condition-notify (event-queue-processes eq))))
+(defmethod event-queue-prepend ((queue concurrent-event-queue) item)
+  (with-lock-held ((event-queue-lock queue))
+    (call-next-method)
+    (condition-notify (event-queue-processes queue))))
 
-(defmethod event-queue-peek ((eq standard-event-queue))
-  (do-port-force-output eq)
-  (with-recursive-lock-held ((event-queue-lock eq))
-    (check-schedule eq)
-    (first (event-queue-head eq))))
+(defmethod event-queue-peek ((queue concurrent-event-queue))
+  (do-port-force-output queue)
+  (with-lock-held ((event-queue-lock queue))
+    (check-schedule queue)
+    (first (event-queue-head queue))))
 
-(defmethod event-queue-peek-if (predicate (eq standard-event-queue))
-  "Goes thru the whole event queue and returns the first event, which
-   satisfies 'predicate' and leaves the event in the queue.
-   Returns NIL, if there is no such event."
-  (do-port-force-output eq)
-  (with-recursive-lock-held ((event-queue-lock eq))
-    (find-if predicate (event-queue-head eq))))
+(defmethod event-queue-peek-if (predicate (queue concurrent-event-queue))
+  (do-port-force-output queue)
+  (with-lock-held ((event-queue-lock queue))
+    (find-if predicate (event-queue-head queue))))
 
-(defmethod event-queue-listen ((eq standard-event-queue))
-  (do-port-force-output eq)
-  (check-schedule eq)
-  (not (null (event-queue-head eq))))
+(defmethod event-queue-listen ((queue concurrent-event-queue))
+  (do-port-force-output queue)
+  (check-schedule queue)
+  (not (null (event-queue-head queue))))
 
-(defmethod event-queue-listen-or-wait ((eq standard-event-queue) &key timeout)
-  (do-port-force-output eq)
-  (check-schedule eq)
-  (let ((lock (event-queue-lock eq)))
-    (with-recursive-lock-held (lock)
-      (with-slots (schedule-time) eq
-        (flet ((pred ()
-                 (not (null (event-queue-head eq)))))
-          (cond
-            (timeout
-             (loop as timeout-time = (+ now timeout)
-                   with now = (now)
-                   do (when (pred)
-                        (return t))
-                   do (when (>= now timeout-time)
-                        (return nil))
-                   do (let ((timeout (if schedule-time
-                                         (min (- schedule-time now)
-                                              (- timeout-time now))
-                                         (- timeout-time now))))
-                        (condition-wait (event-queue-processes eq)
-                                        lock timeout))
-                   do (check-schedule eq)))
-            (schedule-time
-             (loop do (when (pred)
-                        (return t))
-                   do (condition-wait
-                       (event-queue-processes eq) lock (- schedule-time (now)))
-                   do (check-schedule eq)))
-            (t
-             (or (pred)
-                 (progn
-                   (condition-wait (event-queue-processes eq) lock)
-                   t)))))))))
+(defmethod event-queue-listen-or-wait ((queue concurrent-event-queue) &key timeout)
+  (do-port-force-output queue)
+  (check-schedule queue)
+  (let ((lock (event-queue-lock queue))
+        (cv (event-queue-processes queue)))
+    (with-lock-held (lock)
+      (or (not (null (event-queue-head queue)))
+          (let* ((schedule-time (event-schedule-time queue))
+                 (timeout (cond ((null schedule-time) timeout)
+                                ((null timeout) (- schedule-time (now)))
+                                (T (min timeout (- schedule-time (now)))))))
+            (condition-wait cv lock timeout)
+            (check-schedule queue)
+            (not (null (event-queue-head queue))))))))
 
+
 ;;; STANDARD-SHEET-INPUT-MIXIN
 
 (defclass standard-sheet-input-mixin ()
-  ((queue :initform (make-instance 'standard-event-queue)
+  ((queue :initform (if *multiprocessing-p*
+                        (make-instance 'concurrent-event-queue)
+                        (make-instance 'simple-event-queue))
           :reader sheet-event-queue
           :initarg :input-buffer)
    (port :initform nil
