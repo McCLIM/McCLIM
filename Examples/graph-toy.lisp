@@ -28,6 +28,7 @@
         (make-array length :displaced-to arr :displaced-index-offset (- orig-len length)))))
 
 (defun display-main (frame stream)
+  (declare (ignore frame))
   (when (= 0 (length (val-array *application-frame*)))
     (return-from display-main nil))
   (let* ((left-x-padding 30)
@@ -109,34 +110,29 @@
          for j from (- val-array-len xval-count)
          do (setf (elt (val-array frame) i) (elt (val-array frame) j)))
       (setf (fill-pointer (val-array frame)) xval-count))
-    (redisplay-frame-pane frame 'main-display)))
+    (redisplay-frame-pane frame 'main-display)
+    (example-data frame)))
 
 (defmethod handle-event ((frame graph-toy) (event refresh-event))
-  (with-application-frame (frame)
-    (redisplay-frame-pane frame 'main-display)))
+  (redisplay-frame-pane frame 'main-display))
 
 (defun add-value (graph val)
-  (queue-event (frame-top-level-sheet graph)
-               (make-instance 'new-value-event
-                              :sheet graph
-                              :val val)))
+  (schedule-event (frame-top-level-sheet graph)
+                  (make-instance 'new-value-event
+                                 :sheet graph
+                                 :val val)
+                  0.5))
 
 (defun refresh-graph (graph)
   (queue-event (frame-top-level-sheet graph)
                (make-instance 'refresh-event
                               :sheet graph)))
 
-(defun example-data (graph)
-  (loop
-     with current = 20
-     do (progn
-          (add-value graph current)
-          (setf current (+ current (- (random 9) 4)))
-          (sleep 0.5))))
+(let ((current 20))
+  (defun example-data (graph)
+    (add-value graph current)
+    (setf current (+ current (- (random 9) 4)))))
 
 (defmethod run-frame-top-level ((graph graph-toy) &key)
-  (let ((example-data-proc (clim-sys:make-process #'(lambda () (example-data graph))
-                                                  :name "Graph Updater")))
-    (unwind-protect
-         (call-next-method)
-      (clim-sys:destroy-process example-data-proc))))
+  (example-data graph)
+  (call-next-method))
