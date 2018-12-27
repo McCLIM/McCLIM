@@ -68,12 +68,11 @@
   (let ((new-char (car (rassoc char +read-char-map+))))
     (or new-char char)))
 
-;;; Streams are subclasses of standard-sheet-input-mixin regardless of
-;;; whether or not we are multiprocessing.  In single-process mode the
-;;; blocking calls to stream-read-char, stream-read-gesture are what
-;;; cause process-next-event to be called.  It's most convenient to
-;;; let process-next-event queue up events for the stream and then see
-;;; what we've got after it returns.
+;;; Streams are subclasses of standard-sheet-input-mixin regardless of whether
+;;; or not we are multiprocessing.  In single-process mode the blocking calls to
+;;; stream-read-char, stream-read-gesture are what cause process-next-event to
+;;; be called.  It's most convenient to let process-next-event queue up events
+;;; for the stream and then see what we've got after it returns.
 
 (defclass standard-input-stream (fundamental-character-input-stream
                                  standard-sheet-input-mixin
@@ -81,28 +80,22 @@
   ((unread-chars :initform nil
                  :accessor stream-unread-chars)))
 
+;;; XXX: fixing stream shisophrenia is a subject of the next input-refactor pass.
+;;; 1. What about EOF?
+;;; 2. GESTURE-OBJECT should be already coerced to a character!
+;;;   2a. We don't handle modifiers here, so it is double wrong, see stream-process-gesture.
+;;; 3. HANDLE-EVENT should have been invoked on a completely different level. -- jd 2018-12-20
 (defmethod stream-read-char ((pane standard-input-stream))
   (if (stream-unread-chars pane)
       (pop (stream-unread-chars pane))
-      ;XXX
-      (flet ((do-one-event (event)
-               (if (and (typep event 'key-press-event)
-                        (keyboard-event-character event))
-                   (let ((char (char-for-read (keyboard-event-character
-                                               event))))
-                     (stream-write-char pane char)
-                     (return-from stream-read-char char))
-                   (handle-event (event-sheet event) event))))
-        (let* ((port (port pane))
-               (queue (stream-input-buffer pane)))
-          (declare (ignorable port))
-          (loop
-           (let ((event (event-queue-read-no-hang queue)))
-             (cond (event
-                    (do-one-event event))
-                   (*multiprocessing-p*
-                    (event-queue-listen-or-wait queue))
-                   (t (process-next-event port)))))))))
+      (let ((event (event-read pane)))  ; (1)
+        (if (and (typep event 'key-press-event)  ; (2)
+                 (keyboard-event-character event)) ; (2a)
+            (let ((char (char-for-read (keyboard-event-character event))))
+              (stream-write-char pane char)
+              (return-from stream-read-char char))
+            ;; (3)
+            (handle-event (event-sheet event) event)))))
 
 (defmethod stream-unread-char ((pane standard-input-stream) char)
   (push char (stream-unread-chars pane)))
@@ -327,11 +320,7 @@ keys read."))
 (defmethod stream-input-wait ((stream standard-extended-input-stream)
                               &key timeout input-wait-test)
   (block exit
-    (let* ((buffer (stream-input-buffer stream))
-           (port (port stream)))
-      (declare (ignorable port))
-      ;; Loop if not multiprocessing or if input-wait-test returns nil
-      ;; XXX need to decay timeout on multiple trips through the loop
+    (let ((buffer (stream-input-buffer stream)))
       (tagbody
        check-buffer
          (let ((event (event-queue-peek buffer)))
@@ -341,17 +330,10 @@ keys read."))
              (if (handle-non-stream-event buffer)
                  (go check-buffer)
                  (return-from exit t))))
-         ;; Event queue has been drained, time to block waiting for
-         ;; new events.
-         (if *multiprocessing-p*
-             (unless (event-queue-listen-or-wait buffer :timeout timeout)
-               (return-from exit (values nil :timeout)))
-             (multiple-value-bind (result reason)
-                 (process-next-event port :timeout timeout)
-               (unless result
-                 (return-from exit (values nil reason)))))
+         ;; Event queue has been drained, time to block waiting for new events.
+         (unless (event-queue-listen-or-wait buffer :timeout timeout)
+           (return-from exit (values nil :timeout)))
          (go check-buffer)))))
-
 
 (defun unread-gesture (gesture &key (stream *standard-input*))
   (stream-unread-gesture stream gesture))
@@ -444,8 +426,7 @@ keys read."))
             finally (return (values (subseq result 0)
                                     (not (characterp char))))))))
 
-;;; stream-read-gesture on string strings.  Needed so
-;;; accept-from-string "just works"
+;;; stream-read-gesture on string strings. Needed for accept-from-string.
 
 ;;; XXX Evil hack because "string-stream" isn't the superclass of
 ;;; string streams in CMUCL/SBCL...
@@ -713,8 +694,7 @@ known gestures."
 (defgeneric* (setf pointer-position) (x y pointer))
 
 (defgeneric synthesize-pointer-motion-event (pointer)
-  (:documentation "Create a CLIM pointer motion event based on the
-  current pointer state."))
+  (:documentation "Create a CLIM pointer motion event based on the current pointer state."))
 
 (defgeneric pointer-cursor (pointer))
 
