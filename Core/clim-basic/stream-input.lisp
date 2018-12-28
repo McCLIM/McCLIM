@@ -272,6 +272,7 @@ keys read."))
          (unless available
            (case reason
              (:timeout
+              (assert timeout () "Reason is timeout but timeout is null!.")
               (return-from stream-read-gesture
                 (values nil :timeout)))
              (:input-wait-test
@@ -323,13 +324,12 @@ keys read."))
     (let ((buffer (stream-input-buffer stream)))
       (tagbody
        check-buffer
-         (let ((event (event-queue-peek buffer)))
-           (when event
-             (when (and input-wait-test (funcall input-wait-test stream))
-               (return-from exit (values nil :input-wait-test)))
-             (if (handle-non-stream-event buffer)
-                 (go check-buffer)
-                 (return-from exit t))))
+         (when-let ((event (event-queue-peek buffer)))
+           (when (and input-wait-test (funcall input-wait-test stream))
+             (return-from exit (values nil :input-wait-test)))
+           (if (handle-non-stream-event buffer)
+               (go check-buffer)
+               (return-from exit t)))
          ;; Event queue has been drained, time to block waiting for new events.
          (unless (event-queue-listen-or-wait buffer :timeout timeout)
            (return-from exit (values nil :timeout)))
