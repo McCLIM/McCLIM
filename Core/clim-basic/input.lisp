@@ -42,7 +42,18 @@
 
 (defun now ()
   (/ (get-internal-real-time)
+     1.0
      internal-time-units-per-second))
+
+;; Given two alarm times compute remaining time (in seconds). If both times are
+;; NIL returns NIL.
+(defun compute-decay (time-1 time-2)
+  (cond ((and time-1 time-2) (- (min time-1 time-2) (now)))
+        (time-1 (- time-1 (now)))
+        (time-2 (- time-2 (now)))
+        (T NIL)))
+
+(declaim (inline now compute-decay))
 
 ;; See if it's time to inject a scheduled event into the queue.
 (defun check-schedule (event-queue)
@@ -147,13 +158,13 @@ use condition-variables nor locks."))
 
 (defmethod event-queue-read ((queue simple-event-queue))
   (do-port-force-output queue)
-  (let* ((schedule-time (event-schedule-time queue))
-         (timeout (when schedule-time (- schedule-time (now))))
-         (port (event-queue-port queue)))
+  (let ((decay (compute-decay nil (event-schedule-time queue)))
+        (port (event-queue-port queue)))
+    (when decay (maxf decay 0))
     (loop
        as result = (%event-queue-read queue)
        if result do (return result)
-       else do (process-next-event port :timeout timeout))))
+       else do (process-next-event port :timeout decay))))
 
 (defmethod event-queue-read-no-hang ((queue simple-event-queue))
   (do-port-force-output queue)
@@ -163,15 +174,17 @@ use condition-variables nor locks."))
   (do-port-force-output queue)
   (when wait-function
     (warn "EVENT-QUEUE-READ-WITH-TIMEOUT: ignoring WAIT-FUNCTION."))
-  (or (%event-queue-read queue)
-      (let* ((schedule-time (event-schedule-time queue))
-             (timeout (cond ((null schedule-time) timeout)
-                            ((null timeout) (- schedule-time (now)))
-                            (T (min timeout (- schedule-time (now))))))
-             (port (event-queue-port queue)))
-        (when timeout (maxf timeout 0))
-        (process-next-event port :wait-function wait-function :timeout timeout)
-        (%event-queue-read queue))))
+  (loop
+     with timeout-time = (and timeout (+ timeout (now)))
+     with port = (event-queue-port queue)
+     as decay = (compute-decay timeout-time (event-schedule-time queue))
+     do
+       (when decay (maxf decay 0))
+       (if-let ((event (%event-queue-read queue)))
+         (return event)
+         (if (and timeout-time (> (now) timeout-time))
+             (return nil)
+             (process-next-event port :wait-function wait-function :timeout decay)))))
 
 (defmethod event-queue-append ((queue simple-event-queue) item)
   (labels ((append-event ()
@@ -292,17 +305,19 @@ use condition-variables nor locks."))
 
 (defmethod event-queue-listen-or-wait ((queue simple-event-queue) &key timeout)
   (do-port-force-output queue)
-  (check-schedule queue)
-  (or (not (null (event-queue-head queue)))
-      (let* ((schedule-time (event-schedule-time queue))
-             (timeout (cond ((null schedule-time) timeout)
-                            ((null timeout) (- schedule-time (now)))
-                            (T (min timeout (- schedule-time (now))))))
-             (port (event-queue-port queue)))
-        (when timeout (maxf timeout 0))
-        (process-next-event port :timeout timeout)
-        (check-schedule queue)
-        (not (null (event-queue-head queue))))))
+  (loop
+     with timeout-time = (and timeout (+ timeout (now)))
+     with port = (event-queue-port queue)
+     as decay = (compute-decay timeout-time (event-schedule-time queue))
+     do
+       (when decay (maxf decay 0))
+       (check-schedule queue)
+       (cond ((event-queue-head queue)
+              (return t))
+             ((and timeout-time (> (now) timeout-time))
+              (return nil))
+             (T
+              (process-next-event port :timeout decay)))))
 
 (defmethod event-queue-listen ((queue simple-event-queue))
   (event-queue-listen-or-wait queue :timeout 0))
@@ -321,12 +336,11 @@ use condition-variables nor locks."))
   (let ((lock (event-queue-lock queue))
         (cv (event-queue-processes queue)))
     (loop
-       with schedule-time = (event-schedule-time queue)
-       as timeout = (when schedule-time (- schedule-time (now)))
+       as decay = (compute-decay nil (event-schedule-time queue))
        do (with-recursive-lock-held (lock)
             (if-let ((result (%event-queue-read queue)))
               (return result)
-              (condition-wait cv lock timeout))))))
+              (condition-wait cv lock decay))))))
 
 (defmethod event-queue-read-no-hang ((queue concurrent-event-queue))
   (do-port-force-output queue)
@@ -341,17 +355,20 @@ use condition-variables nor locks."))
   (do-port-force-output queue)
   (when wait-function
     (warn "EVENT-QUEUE-READ-WITH-TIMEOUT: ignoring WAIT-FUNCTION."))
-  (let ((lock (event-queue-lock queue))
-        (cv (event-queue-processes queue)))
-    (with-recursive-lock-held (lock)
-      (or (%event-queue-read queue)
-          (let* ((schedule-time (event-schedule-time queue))
-                 (timeout (if (null schedule-time)
-                              timeout
-                              (min timeout (- schedule-time (now))))))
-            (when timeout (maxf timeout 0))
-            (condition-wait cv lock timeout)
-            (%event-queue-read queue))))))
+  ;; We need to LOOP because of possible spurious wakeup (sbcl/bt quirk).
+  (loop
+     with lock = (event-queue-lock queue)
+     with cv = (event-queue-processes queue)
+     with timeout-time = (and timeout (+ timeout (now)))
+     as decay = (compute-decay timeout-time (event-schedule-time queue))
+     do
+       (when decay (maxf decay 0))
+       (with-recursive-lock-held (lock)
+         (if-let ((event (%event-queue-read queue)))
+           (return event)
+           (if (and timeout-time (> (now) timeout-time))
+               (return nil)
+               (condition-wait cv lock decay))))))
 
 (defmethod event-queue-append ((queue concurrent-event-queue) item)
   (with-recursive-lock-held ((event-queue-lock queue))
@@ -381,19 +398,22 @@ use condition-variables nor locks."))
 
 (defmethod event-queue-listen-or-wait ((queue concurrent-event-queue) &key timeout)
   (do-port-force-output queue)
-  (check-schedule queue)
-  (let ((lock (event-queue-lock queue))
-        (cv (event-queue-processes queue)))
-    (with-recursive-lock-held (lock)
-      (or (not (null (event-queue-head queue)))
-          (let* ((schedule-time (event-schedule-time queue))
-                 (timeout (cond ((null schedule-time) timeout)
-                                ((null timeout) (- schedule-time (now)))
-                                (T (min timeout (- schedule-time (now)))))))
-            (when timeout (maxf timeout 0))
-            (condition-wait cv lock timeout)
-            (check-schedule queue)
-            (not (null (event-queue-head queue))))))))
+  ;; We need to LOOP because of possible spurious wakeup (sbcl/bt quirk).
+  (loop
+     with lock = (event-queue-lock queue)
+     with cv = (event-queue-processes queue)
+     with timeout-time = (and timeout (+ timeout (now)))
+     as decay = (compute-decay timeout-time (event-schedule-time queue))
+     do
+       (when decay (maxf decay 0))
+       (with-recursive-lock-held (lock)
+         (check-schedule queue)
+         (cond ((event-queue-head queue)
+                (return t))
+               ((and timeout-time (> (now) timeout-time))
+                (return nil))
+               (T
+                (condition-wait cv lock decay))))))
 
 
 ;;; STANDARD-SHEET-INPUT-MIXIN
