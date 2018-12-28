@@ -28,12 +28,12 @@
         (make-array length :displaced-to arr :displaced-index-offset (- orig-len length)))))
 
 (defun display-main (frame stream)
-  (declare (ignore frame))
-  (when (= 0 (length (val-array *application-frame*)))
+  (when (= 0 (length (val-array frame)))
     (return-from display-main nil))
   (let* ((left-x-padding 30)
-         (pane (find-pane-named *application-frame* 'main-display))
-         (values (sub-array-for (val-array *application-frame*) (max-xvals *application-frame*)))
+         (pane (find-pane-named frame 'main-display))
+         (values (sub-array-for (val-array frame)
+                                (max-xvals frame)))
          (maximum (if (> (length values) 0) (reduce #'max values) 0))
          (minimum (if (> (length values) 0) (reduce #'min values) 0))
          (variance (- maximum minimum))
@@ -50,7 +50,7 @@
                       (+ (- height (truncate (* h-step (+ y (- minimum))))) 50))))
 
     ;; Draw the title
-    (draw-text* pane (format nil "~a" (title *application-frame*))
+    (draw-text* pane (format nil "~a" (title frame))
                 (/ width 2) 10)
     
     ;; Draw the Y labels
@@ -68,13 +68,13 @@
     (reduce (lambda (acc yval)
               (let ((xpos (funcall step-fn-x))
                     (ypos (funcall fn-y yval)))
-                (when (draw-values *application-frame*)
+                (when (draw-values frame)
                   (clim:draw-text* pane (format nil "~a" yval) (- xpos 20) ypos))
                 (when (not (eq acc nil))
                   (draw-line* pane (car acc) (cdr acc) xpos ypos))
                 (cons xpos ypos)))
             values :initial-value nil)
-    (format stream "Length: ~a~%" (length (val-array *application-frame*)))))
+    (format stream "Length: ~a~%" (length (val-array frame)))))
 
 (define-application-frame graph-toy ()
   ((val-array :initform (make-array 8 :adjustable t :fill-pointer 0) :accessor val-array)
@@ -114,7 +114,8 @@
     (example-data frame)))
 
 (defmethod handle-event ((frame graph-toy) (event refresh-event))
-  (redisplay-frame-pane frame 'main-display))
+  (with-application-frame (frame)
+   (redisplay-frame-pane frame 'main-display)))
 
 (defun add-value (graph val)
   (schedule-event (frame-top-level-sheet graph)
