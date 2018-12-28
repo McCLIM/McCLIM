@@ -177,6 +177,10 @@ documentation produced by presentations.")
 		  :initarg :height
 		  :initform nil)))
 
+(defmethod frame-parent ((frame standard-application-frame))
+  (or (frame-calling-frame frame)
+      (frame-manager frame)))
+
 (defgeneric frame-geometry* (frame))
 
 (defmethod frame-geometry* ((frame standard-application-frame))
@@ -427,11 +431,7 @@ documentation produced by presentations.")
 (defmethod run-frame-top-level ((frame application-frame)
 				&key &allow-other-keys)
   (letf (((frame-process frame) (current-process)))
-    (handler-case
-	(funcall (frame-top-level-lambda frame) frame)
-      (frame-exit ()
-	nil))))
-
+    (funcall (frame-top-level-lambda frame) frame)))
 
 (defmethod run-frame-top-level :around ((frame application-frame) &key)
   (let ((*application-frame* frame)
@@ -457,12 +457,13 @@ documentation produced by presentations.")
 			       (with-input-focus (query-io)
 				 (call-next-method))
 			       (call-next-method)))
-		 (frame-layout-changed () nil)))
-      (let ((fm (frame-manager frame)))
-        (case original-state
-          (:disabled
-           (disable-frame frame))
-          (:disowned
+		 (frame-layout-changed () nil)
+                 (frame-exit ()	(return))))
+      (case original-state
+        (:disabled
+         (disable-frame frame))
+        (:disowned
+         (when-let ((fm (frame-manager frame)))
            (disown-frame fm frame)))))))
 
 (defparameter +default-prompt-style+ (make-text-style :sans-serif :bold :normal))
