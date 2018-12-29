@@ -56,36 +56,35 @@
 (declaim (inline now compute-decay))
 
 ;; See if it's time to inject a scheduled event into the queue.
-(defun check-schedule (event-queue)
-  (check-type event-queue schedule-mixin)
-  (alexandria:when-let* ((schedule-time (event-schedule-time event-queue))
-                         (execute-p (>= (now) schedule-time))
-                         (entry (pop (event-queue-schedule event-queue))))
-    (if-let ((next-entry (first (event-queue-schedule event-queue))))
-      (setf schedule-time (schedule-entry-time next-entry))
-      (setf schedule-time nil))
-    (event-queue-append event-queue (schedule-entry-event entry))))
+(defgeneric check-schedule (queue)
+  (:method ((queue schedule-mixin))
+    (alexandria:when-let* ((schedule-time (event-schedule-time queue))
+                           (execute-p (>= (now) schedule-time))
+                           (entry (pop (event-queue-schedule queue))))
+      (if-let ((next-entry (first (event-queue-schedule queue))))
+        (setf (event-schedule-time queue) (schedule-entry-time next-entry))
+        (setf (event-schedule-time queue) nil))
+      (event-queue-append queue (schedule-entry-event entry)))))
 
-(defun schedule-event-queue (event-queue sheet event delay)
-  (declare (ignore sheet))
-  (check-type event-queue schedule-mixin)
-  (with-slots (schedule-time schedule) event-queue
-    (let ((alarm (+ (now) delay)))
-      (cond
-        ((null schedule)
-         (push (make-schedule-entry :time alarm :event event) schedule)
-         (setf schedule-time alarm))
-        ((< alarm schedule-time)
-         (push (make-schedule-entry :time alarm :event event) schedule)
-         (setf schedule-time alarm))
-        (t
-         (do* ((previous schedule (rest previous))
-               (current  (rest schedule) (rest current))
-               (entry #1=(first current) #1#))
-              ((or (null current)
-                   (< alarm (schedule-entry-time entry)))
-               (setf (cdr previous)
-                     (list* (make-schedule-entry :time alarm :event event) (cdr previous))))))))))
+(defgeneric schedule-event-queue (queue event delay)
+  (:method ((queue schedule-mixin) event delay)
+    (with-slots (schedule) queue
+      (let ((alarm (+ (now) delay)))
+        (cond
+          ((null schedule)
+           (push (make-schedule-entry :time alarm :event event) schedule)
+           (setf (event-schedule-time queue) alarm))
+          ((< alarm (event-schedule-time queue))
+           (push (make-schedule-entry :time alarm :event event) schedule)
+           (setf (event-schedule-time queue) alarm))
+          (t
+           (do* ((previous schedule (rest previous))
+                 (current  (rest schedule) (rest current))
+                 (entry #1=(first current) #1#))
+                ((or (null current)
+                     (< alarm (schedule-entry-time entry)))
+                 (setf (cdr previous)
+                       (list* (make-schedule-entry :time alarm :event event) (cdr previous)))))))))))
 
 ;;; EVENT-QUEUE protocol (not exported)
 
@@ -331,6 +330,14 @@ use condition-variables nor locks."))
          :accessor event-queue-processes
          :documentation "Condition variable for waiting processes")))
 
+(defmethod check-schedule :around ((queue concurrent-event-queue))
+  (with-recursive-lock-held ((event-queue-lock queue))
+    (call-next-method)))
+
+(defmethod schedule-event-queue :around ((queue concurrent-event-queue) event delay)
+  (with-recursive-lock-held ((event-queue-lock queue))
+    (call-next-method)))
+
 (defmethod event-queue-read ((queue concurrent-event-queue))
   (do-port-force-output queue)
   (let ((lock (event-queue-lock queue))
@@ -444,7 +451,7 @@ use condition-variables nor locks."))
 
 (defmethod schedule-event ((sheet standard-sheet-input-mixin) event delay)
   (with-slots (queue) sheet
-    (schedule-event-queue queue sheet event delay)))
+    (schedule-event-queue queue event delay)))
 
 (defmethod handle-event ((sheet standard-sheet-input-mixin) event)
   ;; Standard practice is to ignore events
