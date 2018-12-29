@@ -1874,6 +1874,8 @@
   (:use)
   (:nicknames :clime)
   (:export
+   ;; events
+   #:event-read-with-timeout #:schedule-event
    ;; sheets
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin

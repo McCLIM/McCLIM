@@ -92,7 +92,7 @@
       sheet
     (when (not (region-equal dirty-xr +nowhere+))
       (let ((reg))
-        (climi::with-lock-held (mcclim-render-internals::image-lock)
+        (clim-sys:with-lock-held (mcclim-render-internals::image-lock)
           (setf reg dirty-xr)
           (setf dirty-xr +nowhere+))
         (image-mirror-put width height xmirror gcontext clx-image reg)))))
@@ -109,7 +109,7 @@
                           xlib-image xmirror)
       mirror
     (when mcclim-render-internals::dirty-region
-      (climi::with-lock-held (mcclim-render-internals::image-lock)
+      (clim-sys:with-lock-held (mcclim-render-internals::image-lock)
         (when mcclim-render-internals::dirty-region
           (setf dirty-xr (region-union dirty-xr mcclim-render-internals::dirty-region))
           (image-mirror-pre-put width height xmirror mirror clx-image xlib-image dirty-xr)

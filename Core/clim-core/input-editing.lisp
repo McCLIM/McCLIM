@@ -692,8 +692,7 @@ stream. Output will be done to its typeout."
 		       partial-completers allow-any-input
                        (possibility-printer #'possibility-printer)
 		       (help-displays-possibilities t))
-  (let ((so-far (make-array 1 :element-type 'character :adjustable t
-			    :fill-pointer 0))
+  (let ((so-far (make-array 1 :element-type 'character :adjustable t :fill-pointer 0))
 	(*accelerator-gestures* (append *help-gestures*
 					*possibilities-gestures*
 					*accelerator-gestures*)))

@@ -28,11 +28,12 @@
         (make-array length :displaced-to arr :displaced-index-offset (- orig-len length)))))
 
 (defun display-main (frame stream)
-  (when (= 0 (length (val-array *application-frame*)))
+  (when (= 0 (length (val-array frame)))
     (return-from display-main nil))
   (let* ((left-x-padding 30)
-         (pane (find-pane-named *application-frame* 'main-display))
-         (values (sub-array-for (val-array *application-frame*) (max-xvals *application-frame*)))
+         (pane (find-pane-named frame 'main-display))
+         (values (sub-array-for (val-array frame)
+                                (max-xvals frame)))
          (maximum (if (> (length values) 0) (reduce #'max values) 0))
          (minimum (if (> (length values) 0) (reduce #'min values) 0))
          (variance (- maximum minimum))
@@ -49,7 +50,7 @@
                       (+ (- height (truncate (* h-step (+ y (- minimum))))) 50))))
 
     ;; Draw the title
-    (draw-text* pane (format nil "~a" (title *application-frame*))
+    (draw-text* pane (format nil "~a" (title frame))
                 (/ width 2) 10)
     
     ;; Draw the Y labels
@@ -67,18 +68,19 @@
     (reduce (lambda (acc yval)
               (let ((xpos (funcall step-fn-x))
                     (ypos (funcall fn-y yval)))
-                (when (draw-values *application-frame*)
+                (when (draw-values frame)
                   (clim:draw-text* pane (format nil "~a" yval) (- xpos 20) ypos))
                 (when (not (eq acc nil))
                   (draw-line* pane (car acc) (cdr acc) xpos ypos))
                 (cons xpos ypos)))
             values :initial-value nil)
-    (format stream "Length: ~a~%" (length (val-array *application-frame*)))))
+    (format stream "Length: ~a~%" (length (val-array frame)))))
 
 (define-application-frame graph-toy ()
   ((val-array :initform (make-array 8 :adjustable t :fill-pointer 0) :accessor val-array)
    (title :initform "Clim Example Graph" :initarg :title :accessor title)
    (max-xvals :initform 50 :initarg :max-xvals :accessor max-xvals)
+   (last-yval :initform 20 :accessor last-yval)
    (draw-values :initform t :initarg :draw-values :accessor draw-values))
   (:default-initargs
     :width 800
@@ -89,15 +91,10 @@
     :scroll-bars nil
     :display-function 'display-main
     :display-time :command-loop))
-  (:layouts
-   (default
-       (horizontally ()
-         main-display))))
+  (:layouts (default main-display)))
 
 (defclass new-value-event (window-manager-event)
   ((val :initarg :val :accessor val)))
-
-(defclass refresh-event (window-manager-event) ())
 
 (defmethod handle-event ((frame graph-toy) (event new-value-event))
   (vector-push-extend (val event) (val-array frame))
@@ -109,34 +106,16 @@
          for j from (- val-array-len xval-count)
          do (setf (elt (val-array frame) i) (elt (val-array frame) j)))
       (setf (fill-pointer (val-array frame)) xval-count))
-    (redisplay-frame-pane frame 'main-display)))
+    (redisplay-frame-pane frame 'main-display)
+    (incf (last-yval frame) (- (random 9) 4))
+    (when (member (frame-state frame) '(:enabled :shrunk))
+      (schedule-event (frame-top-level-sheet frame)
+                      (make-instance 'new-value-event
+                                     :sheet frame
+                                     :val (last-yval frame))
+                      0.5))))
 
-(defmethod handle-event ((frame graph-toy) (event refresh-event))
-  (with-application-frame (frame)
-    (redisplay-frame-pane frame 'main-display)))
-
-(defun add-value (graph val)
-  (queue-event (frame-top-level-sheet graph)
-               (make-instance 'new-value-event
-                              :sheet graph
-                              :val val)))
-
-(defun refresh-graph (graph)
-  (queue-event (frame-top-level-sheet graph)
-               (make-instance 'refresh-event
-                              :sheet graph)))
-
-(defun example-data (graph)
-  (loop
-     with current = 20
-     do (progn
-          (add-value graph current)
-          (setf current (+ current (- (random 9) 4)))
-          (sleep 0.5))))
-
-(defmethod run-frame-top-level ((graph graph-toy) &key)
-  (let ((example-data-proc (clim-sys:make-process #'(lambda () (example-data graph))
-                                                  :name "Graph Updater")))
-    (unwind-protect
-         (call-next-method)
-      (clim-sys:destroy-process example-data-proc))))
+(defmethod run-frame-top-level :before ((graph graph-toy) &key)
+  (let* ((sheet (frame-top-level-sheet graph))
+         (event (make-instance 'new-value-event :sheet graph :val (last-yval graph))))
+    (queue-event sheet event)))

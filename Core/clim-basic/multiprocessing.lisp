@@ -21,11 +21,12 @@
 ;;; a uniform interface to the multi-processing functionality.
 
 (defconstant *multiprocessing-p* bt:*supports-threads-p*
-  "The value of *multiprocessing-p* is t if the current Lisp
-environment supports multi-processing, otherwise it is nil.")
+  "The value of *multiprocessing-p* is t if the current Lisp environment
+supports multi-processing, otherwise it is nil.")
 
 (eval-when (:load-toplevel :compile-toplevel :execute)
-  (pushnew :clim-mp *features*))
+  (when bt:*supports-threads-p*
+    (pushnew :clim-mp *features*)))
 
 (defun make-process (function &key name)
     "Creates a process named name. The new process will evaluate the
@@ -88,7 +89,6 @@ the timeout has elapsed."
     (loop (when (or (funcall predicate)
                     (> (get-universal-time) end-time))
             (return))
-       ;; (sleep 0.1)
        (process-yield))))
 
 (defun process-yield ()
@@ -132,20 +132,23 @@ state, and reinvoking its top-level function."
   "Evaluates body in a context that is guaranteed to be free from
 interruption by other processes. On systems that do not support
 multi-processing, without-scheduling is equivalent to progn."
-  (declare (ignore body))
-  (error "WITHOUT-SCHEDULING not supported."))
+  (declare (ignorable body))
+  #+clim-mp (error "WITHOUT-SCHEDULING not supported.")
+  #-clim-mp `(progn ,@body))
 
 (defun atomic-incf (reference)
   "Increments the fixnum value referred to by reference as a single,
 atomic operation."
-  (declare (ignore reference))
-  (error "Atomic operations aren't supported."))
+  (declare (ignorable reference))
+  #+clim-mp (error "Atomic operations aren't supported.")
+  #-clim-mp (incf reference))
 
 (defun atomic-decf (reference)
   "Decrements the fixnum value referred to by reference as a single,
 atomic operation."
-  (declare (ignore reference))
-  (error "Atomic operations aren't supported."))
+  (declare (ignorable reference))
+  #+clim-mp (error "Atomic operations aren't supported.")
+  #-clim-mp (decf reference))
 
 
 ;;; B.3 Locks
@@ -187,16 +190,15 @@ equivalent to progn."
 
 ;;; O.0 Conditionals
 ;;; 
-;;; These functions aren't in the CLIM specification, but *things*
-;;; depend on them (apparenly they are useful)
+;;; These functions aren't in the CLIM specification but event queue uses them.
 
 (defun make-condition-variable ()
   (bt:make-condition-variable))
 
 (defun condition-wait (cv lock &optional timeout)
-  ;; Some implementations have interface for condition wait with
-  ;; timeout, but raise an error when this function is called. When
-  ;; not necessary, we provide working variant.
+  ;; Some implementations have interface for condition wait with timeout, but
+  ;; raise an error when this function is called. When not necessary, we provide
+  ;; working variant.
   (if timeout
       (bt:condition-wait cv lock :timeout timeout)
       (bt:condition-wait cv lock)))

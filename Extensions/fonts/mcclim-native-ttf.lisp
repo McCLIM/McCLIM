@@ -35,7 +35,7 @@
 ;;;    for perfect text spacing in small fonts, we don't really need this.
 
 
-(defvar *zpb-font-lock* (climi::make-lock "zpb-font"))
+(defvar *zpb-font-lock* (clim-sys:make-lock "zpb-font"))
 (defparameter *dpi* 72)
 
 (defclass truetype-font-family (clim-extensions:font-family)
@@ -130,7 +130,7 @@
    mask byte array, x-origin, y-origin (subtracted from position before
    rendering), glyph width and height, horizontal and vertical advances."
   (declare (optimize (debug 3)))
-  (climi::with-lock-held (*zpb-font-lock*)
+  (clim-sys:with-lock-held (*zpb-font-lock*)
     (with-slots (units->pixels size ascent descent) font
       (let* ((font-loader (zpb-ttf-font-loader (climb:font-face font)))
              (glyph (zpb-ttf:find-glyph char font-loader))

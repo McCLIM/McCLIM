@@ -20,6 +20,6 @@
 (defun app-main ()
   (let ((frame (make-application-frame 'superapp)))
     (values frame
-            (bt:make-thread
+            (clim-sys:make-process
              (lambda ()
                (run-frame-top-level frame))))))

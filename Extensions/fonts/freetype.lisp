@@ -327,7 +327,7 @@ or NIL if the current transformation is the identity transformation."
             nil
             (make-array '(2 2) :initial-contents (list (list rxx (- rxy)) (list (- ryx) ryy)))))))
 
-(defvar *draw-font-lock* (climi::make-lock "draw-font"))
+(defvar *draw-font-lock* (clim-sys:make-lock "draw-font"))
 (defmethod clim:medium-draw-text* ((medium clx-freetype-medium) string x y
                                    start end
                                    align-x align-y
@@ -365,7 +365,7 @@ or NIL if the current transformation is the identity transformation."
                                ;;(:left 0)
                                (:center (/ text-width 2.0s0))
                                (:right text-width))))))
-    (bt:with-lock-held (*draw-font-lock*)
+    (clim-sys:with-lock-held (*draw-font-lock*)
       (freetype-draw-glyphs medium clim-clx::mirror clim-clx::gc x y string
                             :start start :end end
                             :transformation (clim:sheet-device-transformation
