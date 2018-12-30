@@ -462,7 +462,7 @@ STREAM in the direction DIRECTION."
   ;; extended-output stream is also a sheet and has a graft. 
   ;; --GB 2002-08-14
   (etypecase specification
-    (integer specification)
+    (real specification)
     ((or string character) (multiple-value-bind (width height)
                                (text-size stream (string specification))
                              (ecase direction
