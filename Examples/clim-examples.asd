@@ -2,7 +2,7 @@
 
 ;;; CLIM-Examples depends on having at least one backend loaded.
 (defsystem #:clim-examples
-    :depends-on (#:mcclim #:mcclim-layouts/tab :mcclim-raster-image #:mcclim-bezier #:closer-mop)
+    :depends-on (#:alexandria #:mcclim #:mcclim-layouts/tab :mcclim-raster-image #:mcclim-bezier #:closer-mop)
     :components
     ((:file "package")
      (:file "text-size-util")

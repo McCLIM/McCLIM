@@ -109,13 +109,7 @@
 (define-tabdemo-command (com-randomize-tabdemo :name t)
     ()
   (setf (tab-layout-pages (tabdemo-layout))
-	(let ((old (tab-layout-pages (tabdemo-layout)))
-	      (new '()))
-	  (loop while old
-		for i = (random (length old))
-		do (push (elt old i) new)
-		   (setf old (remove-if (constantly t) old :start i :count 1)))
-	  new)))
+	(alexandria:shuffle (tab-layout-pages (tabdemo-layout)))))
 
 (defmacro with-enabled-tab-layout-page (var &body body)
   `(let ((,var (tab-layout-enabled-page (tabdemo-layout))))
