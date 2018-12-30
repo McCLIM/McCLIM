@@ -167,23 +167,27 @@ use condition-variables nor locks."))
 
 (defmethod event-queue-read-no-hang ((queue simple-event-queue))
   (do-port-force-output queue)
+  (process-next-event (event-queue-port queue) :timeout 0)
   (%event-queue-read queue))
 
 (defmethod event-queue-read-with-timeout ((queue simple-event-queue) timeout wait-function)
   (do-port-force-output queue)
   (when wait-function
     (warn "EVENT-QUEUE-READ-WITH-TIMEOUT: ignoring WAIT-FUNCTION."))
-  (loop
-     with timeout-time = (and timeout (+ timeout (now)))
-     with port = (event-queue-port queue)
-     as decay = (compute-decay timeout-time (event-schedule-time queue))
-     do
-       (when decay (maxf decay 0))
-       (if-let ((event (%event-queue-read queue)))
-         (return event)
-         (if (and timeout-time (> (now) timeout-time))
-             (return nil)
-             (process-next-event port :wait-function wait-function :timeout decay)))))
+  (let ((port (event-queue-port queue))
+        (timeout-time (and timeout (+ timeout (now)))))
+    ;; timeout-time may be past-due already but we may have an event waiting to be
+    ;; processed for some time. Do preemptive check. -- jd 2018-12-30
+    (process-next-event port :timeout 0)
+    (loop
+       as decay = (compute-decay timeout-time (event-schedule-time queue))
+       do
+         (when decay (maxf decay 0))
+         (if-let ((event (%event-queue-read queue)))
+           (return event)
+           (if (and timeout-time (> (now) timeout-time))
+               (return nil)
+               (process-next-event port :wait-function wait-function :timeout decay))))))
 
 (defmethod event-queue-append ((queue simple-event-queue) item)
   (labels ((append-event ()
@@ -304,19 +308,22 @@ use condition-variables nor locks."))
 
 (defmethod event-queue-listen-or-wait ((queue simple-event-queue) &key timeout)
   (do-port-force-output queue)
-  (loop
-     with timeout-time = (and timeout (+ timeout (now)))
-     with port = (event-queue-port queue)
-     as decay = (compute-decay timeout-time (event-schedule-time queue))
-     do
-       (when decay (maxf decay 0))
-       (check-schedule queue)
-       (cond ((event-queue-head queue)
-              (return t))
-             ((and timeout-time (> (now) timeout-time))
-              (return nil))
-             (T
-              (process-next-event port :timeout decay)))))
+  (let ((port (event-queue-port queue))
+        (timeout-time (and timeout (+ timeout (now)))))
+    ;; timeout-time may be past-due already but we may have an event waiting to be
+    ;; processed for some time. Do preemptive check. -- jd 2018-12-30
+    (process-next-event port :timeout 0)
+    (loop
+       as decay = (compute-decay timeout-time (event-schedule-time queue))
+       do
+         (when decay (maxf decay 0))
+         (check-schedule queue)
+         (cond ((event-queue-head queue)
+                (return t))
+               ((and timeout-time (> (now) timeout-time))
+                (return nil))
+               (T
+                (process-next-event port :timeout decay))))))
 
 (defmethod event-queue-listen ((queue simple-event-queue))
   (event-queue-listen-or-wait queue :timeout 0))
