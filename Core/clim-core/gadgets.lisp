@@ -520,7 +520,9 @@
                      :reader slider-number-of-quanta))
   (:documentation "The value is a real number, and default value for orientation is :vertical,
 and must never be nil.")
-  (:default-initargs :orientation :vertical))
+  (:default-initargs
+    :text-style (merge-text-styles (make-text-style :sans-serif nil nil) *default-text-style*)
+    :orientation :vertical))
 
 (defmethod drag-callback ((pane slider) client gadget-id value)
   (declare (ignore client gadget-id))
@@ -1096,7 +1098,7 @@ and must never be nil.")
                       :initarg :show-as-default-p
                       :accessor push-button-show-as-default-p))
   (:default-initargs
-    :text-style (make-text-style :sans-serif nil nil)
+    :text-style (merge-text-styles (make-text-style :sans-serif nil nil) *default-text-style*)
     :background *3d-normal-color*
     :align-x :center
     :align-y :center
@@ -1173,7 +1175,7 @@ and must never be nil.")
                    :initform :some-of) )
   (:default-initargs
     :value nil
-    :text-style (make-text-style :sans-serif nil nil)
+    :text-style (merge-text-styles (make-text-style :sans-serif nil nil) *default-text-style*)
     :align-x :left
     :align-y :center
     :x-spacing 2
@@ -1259,7 +1261,7 @@ and must never be nil.")
                             sheet-leaf-mixin)
   ()
   (:default-initargs
-    :text-style (make-text-style :sans-serif nil nil)
+    :text-style (merge-text-styles (make-text-style :sans-serif nil nil) *default-text-style*)
     :background *3d-normal-color*
     :x-spacing 3
     :y-spacing 2
@@ -1659,13 +1661,22 @@ and must never be nil.")
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
-  (let ((minor (+ 8 (* 2 4) (if (gadget-show-value-p pane) 30 0)))
-        (major 128))
-    (if (eq (gadget-orientation pane) :vertical)
-        (make-space-requirement :min-width  minor :width  minor
-                                :min-height major :height major)
-        (make-space-requirement :min-width  major :width  major
-                                :min-height minor :height minor))))
+  (multiple-value-bind (vw vh)
+      (text-size pane (format-value (gadget-min-value pane) (slider-decimal-places pane)))
+    (setq vw
+      (max vw
+           (text-size pane
+                      (format-value (gadget-max-value pane) (slider-decimal-places pane)))))
+    (let ((minor
+            (if (gadget-show-value-p pane)
+                (* 2 (+ 10.0 (if (eq (gadget-orientation pane) :vertical) vw vh))) ; the value
+                (* 2 (1+ 8.0)))) ; the thingy
+          (major 128))
+      (if (eq (gadget-orientation pane) :vertical)
+          (make-space-requirement :min-width  minor :width  minor
+                                  :min-height major :height major)
+          (make-space-requirement :min-width  major :width  major
+                                  :min-height minor :height minor)))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
   (with-slots (armed) pane
@@ -1929,8 +1940,8 @@ and must never be nil.")
                           basic-pane)
   ()
   (:default-initargs
-   :text-style (make-text-style :sans-serif nil nil)
-   :background *3d-normal-color*))
+    :text-style (merge-text-styles (make-text-style :sans-serif nil nil) *default-text-style*)
+    :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane check-box-pane)
                                        &key choices current-selection orientation (active t) &allow-other-keys)
@@ -2054,8 +2065,10 @@ response to scroll wheel events.")
    (visible-items :initarg :visible-items ; Clim 2.0 compatibility
                   :initform nil
                   :documentation "Maximum number of visible items in list"))
-  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
-                     :background +white+ :foreground +black+))
+  (:default-initargs
+    :text-style (merge-text-styles (make-text-style :sans-serif nil nil) *default-text-style*)
+    :background +white+
+    :foreground +black+))
 
 (defmethod initialize-instance :after ((gadget meta-list-pane) &rest rest)
   (declare (ignorable rest))
@@ -2437,7 +2450,8 @@ if INVOKE-CALLBACK is given."))
                                arm/disarm-repaint-mixin
                                enter/exit-arms/disarms-mixin)
   ((current-label :initform "" :accessor generic-option-pane-label))
-  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)))
+  (:default-initargs
+    :text-style (merge-text-styles (make-text-style :sans-serif nil nil) *default-text-style*)))
 
 (defun option-pane-evil-backward-map (pane value)
   (let ((key-fn (list-pane-value-key pane)))
@@ -2611,6 +2625,7 @@ if INVOKE-CALLBACK is given."))
                                 :name-key (list-pane-name-key parent)
                                 :value-key (list-pane-value-key parent)
                                 :test (list-pane-test parent)
+                                :text-style (pane-text-style parent)
                                 (and (slot-boundp parent 'value)
                                      (list :value (gadget-value parent))))))
     (multiple-value-bind (scroll-p position height)
@@ -2624,10 +2639,9 @@ if INVOKE-CALLBACK is given."))
           ;;       which I could have easily worked around without adding kludges
           ;;       to the scroller-pane..
           (let* ((topmost-pane (if scroll-p
-                                  ;list-pane
                                   (scrolling (:scroll-bar :vertical
-                                              :suggest-height height   ;; Doesn't appear to be working..
-                                              :suggest-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
+                                              :suggested-height height
+                                              :suggested-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
                                      list-pane)
                                   list-pane))
                  (topmost-pane    (outlining (:thickness 1) topmost-pane))

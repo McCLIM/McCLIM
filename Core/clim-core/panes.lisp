@@ -2297,7 +2297,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    (background :initform *3d-normal-color*))
   (:default-initargs
    :align-y    :center
-   :text-style (make-text-style :sans-serif nil nil))
+   :text-style (merge-text-styles (make-text-style :sans-serif nil nil) *default-text-style*))
   (:documentation ""))
 
 (defmacro labelling ((&rest options) &body contents)
