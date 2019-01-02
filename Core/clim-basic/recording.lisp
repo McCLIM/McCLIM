@@ -590,9 +590,8 @@ the associated sheet can be determined."
            parent record old-x1 old-y1 old-x2 old-y2)))))
   record)
 
-(defgeneric %tree-recompute-extent* (record))
-
-(defmethod %tree-recompute-extent* ((record compound-output-record))
+(defun %tree-recompute-extent* (record)
+  (check-type record compound-output-record)
   ;; Internal helper function
   (if (zerop (output-record-count record)) ; no children
       (with-slots (x y) record
@@ -617,38 +616,6 @@ the associated sheet can be determined."
           (declare (dynamic-extent #'do-child))
           (map-over-output-records #'do-child record))
         (values new-x1 new-y1 new-x2 new-y2))))
-
-(defgeneric tree-recompute-extent-aux (record))
-
-(defmethod tree-recompute-extent-aux (record)
-  (bounding-rectangle* record))
-
-(defmethod tree-recompute-extent-aux ((record compound-output-record))
-  (if (zerop (output-record-count record)) ; no children
-      (bounding-rectangle* record)
-      (let ((new-x1 0)
-            (new-y1 0)
-            (new-x2 0)
-            (new-y2 0)
-            (first-time t))
-        (flet ((do-child (child)
-                 (if first-time
-                     (progn
-                       (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
-                         (tree-recompute-extent-aux child))
-                       (setq first-time nil))
-                     (multiple-value-bind (cx1 cy1 cx2 cy2)
-                         (tree-recompute-extent-aux child)
-                       (minf new-x1 cx1)
-                       (minf new-y1 cy1)
-                       (maxf new-x2 cx2)
-                       (maxf new-y2 cy2)))))
-          (declare (dynamic-extent #'do-child))
-          (map-over-output-records #'do-child record))
-        (with-slots (x y) record
-          (setf x new-x1 y new-y1)
-          (setf (rectangle-edges* record)
-                (values new-x1 new-y1 new-x2 new-y2))))))
 
 (defmethod recompute-extent-for-changed-child
     ((record compound-output-record) changed-child
@@ -719,6 +686,28 @@ the associated sheet can be determined."
               (recompute-extent-for-changed-child parent record
                                                   ox1 oy1 ox2 oy2)))))))
   record)
+
+(defun tree-recompute-extent-aux (record &aux new-x1 new-y1 new-x2 new-y2 changedp)
+  (when (or (null (typep record 'compound-output-record))
+            (zerop (output-record-count record)))
+    (return-from tree-recompute-extent-aux
+      (bounding-rectangle* record)))
+  (flet ((do-child (child)
+           (if (null changedp)
+               (progn
+                 (multiple-value-setq (new-x1 new-y1 new-x2 new-y2)
+                   (tree-recompute-extent-aux child))
+                 (setq changedp t))
+               (multiple-value-bind (cx1 cy1 cx2 cy2)
+                   (tree-recompute-extent-aux child)
+                 (minf new-x1 cx1) (minf new-y1 cy1)
+                 (maxf new-x2 cx2) (maxf new-y2 cy2)))))
+    (declare (dynamic-extent #'do-child))
+    (map-over-output-records #'do-child record))
+  (with-slots (x y) record
+    (setf x new-x1 y new-y1)
+    (setf (rectangle-edges* record)
+          (values new-x1 new-y1 new-x2 new-y2))))
 
 (defmethod tree-recompute-extent ((record compound-output-record))
   (tree-recompute-extent-aux record)

@@ -116,14 +116,10 @@
                            drawing-options
                            body)))
 
-(defmethod replay-output-record :before ((border bordered-output-record) stream
-                                         &optional region (x-offset 0) (y-offset 0))
-  (clear-output-record border)
-  (%prepare-bordered-output-record border))
-
-(defmethod tree-recompute-extent-aux :before ((border bordered-output-record))
-  (clear-output-record border)
-  (%prepare-bordered-output-record border))
+(defmethod recompute-extent-for-changed-child
+    ((record bordered-output-record) child x1 y1 x2 y2)
+  (clear-output-record record)
+  (%prepare-bordered-output-record record))
 
 (defun %prepare-bordered-output-record (border)
   (with-slots (under record over stream shape drawing-options) border
