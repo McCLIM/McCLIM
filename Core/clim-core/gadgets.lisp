@@ -1104,6 +1104,7 @@ and must never be nil.")
     :y-spacing 4))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
+  (declare (ignore width height))
   (let ((2*x-spacing (* 2 (pane-x-spacing gadget)))
         (2*y-spacing (* 2 (pane-y-spacing gadget)))
         (2*border-thickness (* 2 *3d-border-thickness*)))
@@ -1680,8 +1681,17 @@ and must never be nil.")
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
-  (let ((minor (+ 8 (* 2 4) (if (gadget-show-value-p pane) 30 0)))
-        (major 128))
+  (let* ((value-size (ecase (gadget-orientation pane)
+                       (:horizontal (text-style-ascent (pane-text-style pane) pane))
+                       (:vertical (let* ((dp (slider-decimal-places pane))
+                                         (s1 (format-value (gadget-min-value pane) dp))
+                                         (s2 (format-value (gadget-max-value pane) dp)))
+                                    (* (max (length s1) (length s2))
+                                       (text-size pane #\0))))))
+         (minor (if (gadget-show-value-p pane)
+                    (* 2 (+ 10.0 value-size)) ; the value
+                    (* 2 (1+ 8.0)))) ; the knob
+         (major 128))
     (if (eq (gadget-orientation pane) :vertical)
         (make-space-requirement :min-width  minor :width  minor
                                 :min-height major :height major)
