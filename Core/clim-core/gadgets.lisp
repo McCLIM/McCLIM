@@ -1106,6 +1106,7 @@ and must never be nil.")
     :y-spacing 4))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
+  (declare (ignore width height))
   (let ((2*x-spacing (* 2 (pane-x-spacing gadget)))
         (2*y-spacing (* 2 (pane-y-spacing gadget)))
         (2*border-thickness (* 2 *3d-border-thickness*)))
@@ -1661,22 +1662,24 @@ and must never be nil.")
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
-  (multiple-value-bind (vw vh)
-      (text-size pane (format-value (gadget-min-value pane) (slider-decimal-places pane)))
-    (setq vw
-      (max vw
-           (text-size pane
-                      (format-value (gadget-max-value pane) (slider-decimal-places pane)))))
-    (let ((minor
-            (if (gadget-show-value-p pane)
-                (* 2 (+ 10.0 (if (eq (gadget-orientation pane) :vertical) vw vh))) ; the value
-                (* 2 (1+ 8.0)))) ; the thingy
-          (major 128))
-      (if (eq (gadget-orientation pane) :vertical)
-          (make-space-requirement :min-width  minor :width  minor
-                                  :min-height major :height major)
-          (make-space-requirement :min-width  major :width  major
-                                  :min-height minor :height minor)))))
+  (let* ((vw
+           (max ; no slider value can be wider than widest of min-value or max-value
+             (text-size pane
+                        (format-value (gadget-min-value pane) (slider-decimal-places pane)))
+             (text-size pane
+                        (format-value (gadget-max-value pane) (slider-decimal-places pane)))))
+         (vh
+           (text-style-ascent (pane-text-style pane) pane))
+         (minor
+           (if (gadget-show-value-p pane)
+               (* 2 (+ 10.0 (if (eq (gadget-orientation pane) :vertical) vw vh))) ; the value
+               (* 2 (1+ 8.0)))) ; the knob
+         (major 128))
+    (if (eq (gadget-orientation pane) :vertical)
+        (make-space-requirement :min-width  minor :width  minor
+                                :min-height major :height major)
+        (make-space-requirement :min-width  major :width  major
+                                :min-height minor :height minor))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
   (with-slots (armed) pane
