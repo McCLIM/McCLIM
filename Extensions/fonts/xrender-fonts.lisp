@@ -438,8 +438,8 @@ The following files should exist:~&~{  ~A~^~%~}"
          (multiple-value-bind (family face size)
              (clim:text-style-components text-style)
 
-           (setf face   (or face :roman)
-                 family (or family :fix)
+           (setf face   (or face (text-style-face *default-text-style*))
+                 family (or family (text-style-family *default-text-style*))
                  size   (climb:normalize-font-size size))
 
            (find-and-make-truetype-font family face size))))
