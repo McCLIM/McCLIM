@@ -198,7 +198,8 @@
                         ;; immediate-repainting-mixin
                         basic-pane
                         gadget)
-  ())
+  ()
+  (:default-initargs :text-style (make-text-style :sans-serif nil nil)))
 
 (defgeneric armed-callback (gadget client gadget-id)
   (:argument-precedence-order client gadget-id gadget))
@@ -1096,7 +1097,6 @@ and must never be nil.")
                       :initarg :show-as-default-p
                       :accessor push-button-show-as-default-p))
   (:default-initargs
-    :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :align-x :center
     :align-y :center
@@ -1173,7 +1173,6 @@ and must never be nil.")
                    :initform :some-of) )
   (:default-initargs
     :value nil
-    :text-style (make-text-style :sans-serif nil nil)
     :align-x :left
     :align-y :center
     :x-spacing 2
@@ -1259,7 +1258,6 @@ and must never be nil.")
                             sheet-leaf-mixin)
   ()
   (:default-initargs
-    :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :x-spacing 3
     :y-spacing 2
@@ -1943,7 +1941,6 @@ and must never be nil.")
                           basic-pane)
   ()
   (:default-initargs
-   :text-style (make-text-style :sans-serif nil nil)
    :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane check-box-pane)
@@ -2068,8 +2065,7 @@ response to scroll wheel events.")
    (visible-items :initarg :visible-items ; Clim 2.0 compatibility
                   :initform nil
                   :documentation "Maximum number of visible items in list"))
-  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
-                     :background +white+ :foreground +black+))
+  (:default-initargs :background +white+ :foreground +black+))
 
 (defmethod initialize-instance :after ((gadget meta-list-pane) &rest rest)
   (declare (ignorable rest))
@@ -2450,8 +2446,7 @@ if INVOKE-CALLBACK is given."))
                                activate/deactivate-repaint-mixin
                                arm/disarm-repaint-mixin
                                enter/exit-arms/disarms-mixin)
-  ((current-label :initform "" :accessor generic-option-pane-label))
-  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)))
+  ((current-label :initform "" :accessor generic-option-pane-label)))
 
 (defun option-pane-evil-backward-map (pane value)
   (let ((key-fn (list-pane-value-key pane)))

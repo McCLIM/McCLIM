@@ -282,9 +282,6 @@ account, and create a list of menu buttons."
 
 ;;; Menu creation from command tables
 
-(defparameter *enabled-text-style*  (make-text-style :sans-serif :roman :normal))
-(defparameter *disabled-text-style* (make-text-style :sans-serif :roman :normal))
-
 (defun make-menu-button-from-menu-item (item client
 					&key (bottomp nil)
                                         (vertical nil)
@@ -302,7 +299,6 @@ account, and create a list of menu buttons."
          (if (command-enabled command-name frame)
              (make-pane-1 manager frame 'menu-button-leaf-pane
                           :label name
-                          :text-style *enabled-text-style*
                           :client client
                           :value-changed-callback
                           #'(lambda (gadget val)
@@ -310,7 +306,6 @@ account, and create a list of menu buttons."
                               (throw-object-ptype item presentation-type)))
              (let ((pane (make-pane-1 manager frame 'menu-button-leaf-pane
                             :label name
-                            :text-style *disabled-text-style*
                             :client client
                             :value-changed-callback
                             #'(lambda (gadget val)
@@ -321,7 +316,6 @@ account, and create a list of menu buttons."
       (:function
         (make-pane-1 manager frame 'menu-button-leaf-pane
                      :label name
-                     :text-style *enabled-text-style*
                      :client client
                      :value-changed-callback
                      #'(lambda (gadget val)
