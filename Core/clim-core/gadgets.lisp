@@ -1662,19 +1662,20 @@ and must never be nil.")
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
-  (let* ((vw
-           (max ; no slider value can be wider than widest of min-value or max-value
-             (text-size pane
-                        (format-value (gadget-min-value pane) (slider-decimal-places pane)))
-             (text-size pane
-                        (format-value (gadget-max-value pane) (slider-decimal-places pane)))))
-         (vh
-           (text-style-ascent (pane-text-style pane) pane))
-         (minor
-           (if (gadget-show-value-p pane)
-               (* 2 (+ 10.0 (if (eq (gadget-orientation pane) :vertical) vw vh))) ; the value
-               (* 2 (1+ 8.0)))) ; the knob
-         (major 128))
+  (let* ((value-size (ecase (gadget-orientation pane)
+                       (:horizontal (text-style-ascent (pane-text-style pane) pane))
+                       (:vertical (let* ((dp (slider-decimal-places pane))
+                                         (s1 (format-value (gadget-min-value pane) dp))
+                                         (s2 (format-value (gadget-max-value pane) dp)))
+                                     ;; (over-)estimate, otherwise would have to check all
+                                     ;; possible strings in order to allow for kerning etc
+                                     (* (max (length s1) (length s2))
+                                        (text-size pane #\0))))))
+          (minor (if (gadget-show-value-p pane)
+                     ;; values reflect sizes of controls and spacing in handle-repaint
+                     (* 2 (+ 10.0 value-size)) ; the numeric value
+                     (* 2 (1+ 8.0)))) ; the knob
+          (major 128))
     (if (eq (gadget-orientation pane) :vertical)
         (make-space-requirement :min-width  minor :width  minor
                                 :min-height major :height major)
