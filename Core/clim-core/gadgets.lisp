@@ -2638,10 +2638,10 @@ if INVOKE-CALLBACK is given."))
           ;;       which I could have easily worked around without adding kludges
           ;;       to the scroller-pane..
           (let* ((topmost-pane (if scroll-p
-                                  ;list-pane
-                                  (scrolling (:scroll-bar :vertical
-                                              :suggest-height height   ;; Doesn't appear to be working..
-                                              :suggest-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
+                                   ;; TODO investigate whether suggested-* arguments actually have an effect
+                                   (scrolling (:scroll-bar :vertical
+                                               :suggested-height height
+                                               :suggested-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
                                      list-pane)
                                   list-pane))
                  (topmost-pane    (outlining (:thickness 1) topmost-pane))
