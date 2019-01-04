@@ -187,10 +187,13 @@ of letters specified in a separate kerning-table."))
 
 (declaim (inline climb:normalize-font-size))
 (defun climb:normalize-font-size (size)
-  (if (numberp size)
-      (round (max size 2))
-      (or (getf +font-sizes+ size size)
-          (getf +font-sizes+ :normal))))
+  (cond ((numberp size)
+         (round (max size 2)))
+        ((null size)
+         (getf +font-sizes+ (text-style-size *default-text-style*)))
+        (T
+         (or (getf +font-sizes+ size nil)
+             (error "~s is not a valid text style size!" size)))))
 
 (defgeneric climb:text-style-to-font (port text-style))
 

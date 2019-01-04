@@ -198,7 +198,8 @@
                         ;; immediate-repainting-mixin
                         basic-pane
                         gadget)
-  ())
+  ()
+  (:default-initargs :text-style (make-text-style :sans-serif nil nil)))
 
 (defgeneric armed-callback (gadget client gadget-id)
   (:argument-precedence-order client gadget-id gadget))
@@ -1096,7 +1097,6 @@ and must never be nil.")
                       :initarg :show-as-default-p
                       :accessor push-button-show-as-default-p))
   (:default-initargs
-    :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :align-x :center
     :align-y :center
@@ -1104,6 +1104,7 @@ and must never be nil.")
     :y-spacing 4))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
+  (declare (ignore width height))
   (let ((2*x-spacing (* 2 (pane-x-spacing gadget)))
         (2*y-spacing (* 2 (pane-y-spacing gadget)))
         (2*border-thickness (* 2 *3d-border-thickness*)))
@@ -1173,7 +1174,6 @@ and must never be nil.")
                    :initform :some-of) )
   (:default-initargs
     :value nil
-    :text-style (make-text-style :sans-serif nil nil)
     :align-x :left
     :align-y :center
     :x-spacing 2
@@ -1259,7 +1259,6 @@ and must never be nil.")
                             sheet-leaf-mixin)
   ()
   (:default-initargs
-    :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :x-spacing 3
     :y-spacing 2
@@ -1682,8 +1681,17 @@ and must never be nil.")
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
-  (let ((minor (+ 8 (* 2 4) (if (gadget-show-value-p pane) 30 0)))
-        (major 128))
+  (let* ((value-size (ecase (gadget-orientation pane)
+                       (:horizontal (text-style-ascent (pane-text-style pane) pane))
+                       (:vertical (let* ((dp (slider-decimal-places pane))
+                                         (s1 (format-value (gadget-min-value pane) dp))
+                                         (s2 (format-value (gadget-max-value pane) dp)))
+                                    (* (max (length s1) (length s2))
+                                       (text-size pane #\0))))))
+         (minor (if (gadget-show-value-p pane)
+                    (* 2 (+ 10.0 value-size)) ; the value
+                    (* 2 (1+ 8.0)))) ; the knob
+         (major 128))
     (if (eq (gadget-orientation pane) :vertical)
         (make-space-requirement :min-width  minor :width  minor
                                 :min-height major :height major)
@@ -1943,7 +1951,6 @@ and must never be nil.")
                           basic-pane)
   ()
   (:default-initargs
-   :text-style (make-text-style :sans-serif nil nil)
    :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane check-box-pane)
@@ -2068,8 +2075,7 @@ response to scroll wheel events.")
    (visible-items :initarg :visible-items ; Clim 2.0 compatibility
                   :initform nil
                   :documentation "Maximum number of visible items in list"))
-  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
-                     :background +white+ :foreground +black+))
+  (:default-initargs :background +white+ :foreground +black+))
 
 (defmethod initialize-instance :after ((gadget meta-list-pane) &rest rest)
   (declare (ignorable rest))
@@ -2450,8 +2456,7 @@ if INVOKE-CALLBACK is given."))
                                activate/deactivate-repaint-mixin
                                arm/disarm-repaint-mixin
                                enter/exit-arms/disarms-mixin)
-  ((current-label :initform "" :accessor generic-option-pane-label))
-  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)))
+  ((current-label :initform "" :accessor generic-option-pane-label)))
 
 (defun option-pane-evil-backward-map (pane value)
   (let ((key-fn (list-pane-value-key pane)))
@@ -2638,10 +2643,10 @@ if INVOKE-CALLBACK is given."))
           ;;       which I could have easily worked around without adding kludges
           ;;       to the scroller-pane..
           (let* ((topmost-pane (if scroll-p
-                                  ;list-pane
-                                  (scrolling (:scroll-bar :vertical
-                                              :suggest-height height   ;; Doesn't appear to be working..
-                                              :suggest-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
+                                   ;; TODO investigate whether suggested-* arguments actually have an effect
+                                   (scrolling (:scroll-bar :vertical
+                                               :suggested-height height
+                                               :suggested-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
                                      list-pane)
                                   list-pane))
                  (topmost-pane    (outlining (:thickness 1) topmost-pane))
