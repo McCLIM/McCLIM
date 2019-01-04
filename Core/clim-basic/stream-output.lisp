@@ -312,9 +312,6 @@
               (%stream-char-height stream) 0
               (stream-cursor-position stream) (values cx cy))))))
 
-
-
-
 (defgeneric stream-write-output (stream line string-width &optional start end)
   (:documentation
    "Writes the character or string LINE to STREAM. This function produces no
@@ -327,11 +324,11 @@ STREAM-STRING-WIDTH will be called."))
                                 line string-width
                                 &optional (start 0) end)
   (declare (ignore string-width))
-  (with-slots (baseline vspace) stream
+  ;; Do not capture medium transformation - this is a stream operation and we
+  ;; draw at the current cursor position. -- jd 2019-01-04
+  (with-identity-transformation (stream)
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
-      (draw-text* (sheet-medium stream) line
-                  cx (+ cy baseline)
-                  :transformation +identity-transformation+
+      (draw-text* stream line cx (+ cy (stream-baseline stream))
                   :start start :end end))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
