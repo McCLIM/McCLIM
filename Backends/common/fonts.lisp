@@ -250,7 +250,9 @@ xmin ymin xmax ymax."))
       (values xmin ymin xmax ymax))))
 
 (defmethod climb:text-size (medium string &key text-style (start 0) end
-                            &aux (end (or end (length string)))
+                            &aux
+                              (string (string string))
+                              (end (or end (length string)))
                               (text-style (clim:merge-text-styles text-style
                                                                   (clim:medium-merged-text-style medium))))
   (when (= start end)
