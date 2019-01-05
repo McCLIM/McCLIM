@@ -41,47 +41,43 @@
     (when fonts
       (xlib:open-font display (first fonts)))))
 
-(defmethod climb:text-style-to-font ((port clx-port) text-style)
-  (let ((text-style (parse-text-style text-style)))
-    (labels
-        ((find-and-make-xlib-face (display family face size)
-           (let* ((family-name (if (stringp family)
-                                   family
-                                   (getf *families/names* family)))
-                  (face-name (if (stringp face)
-                                 face
-                                 (alexandria:assoc-value *families/faces* (list family face)
-                                                         :test #'equal))))
-             (flet ((try (encoding)
-                      (open-font display
-                                 (format nil "-~a-~a-*-*-~d-*-*-*-*-*-~a"
-                                         family-name face-name size encoding))))
+(defmethod climb:text-style-to-font ((port clx-port) text-style
+                                     &aux (text-style (climb:parse-text-style* text-style)))
+  (labels
+      ((find-and-make-xlib-face (display family face size)
+         (let* ((family-name (if (stringp family)
+                                 family
+                                 (getf *families/names* family)))
+                (face-name (if (stringp face)
+                               face
+                               (alexandria:assoc-value *families/faces* (list family face)
+                                                       :test #'equal))))
+           (flet ((try (encoding)
+                    (open-font display
+                               (format nil "-~a-~a-*-*-~d-*-*-*-*-*-~a"
+                                       family-name face-name size encoding))))
 ;;; xxx: this part is a bit problematic - we either list all fonts
 ;;; with any possible encoding (what leads to the situation, when our
 ;;; font can't render a simple string "abcd") or we end with only a
 ;;; partial list of fonts. since we have mcclim-ttf extension which
 ;;; handles unicode characters well, this mechanism of getting fonts
 ;;; is deprecated and there is no big harm.
-               (or (try "iso8859-1")
-                   (progn
-                     (setf family :sans-serif)
-                     (try "iso8859-1"))
-                   (progn
-                     (setf family :fix)
-                     (xlib:open-font display "fixed"))))))
-         (find-font ()
-           (multiple-value-bind (family face size)
-               (text-style-components text-style)
-
-             (setf face   (or face :roman)
-                   family (or family :fix)
-                   size   (max 2 (climb:normalize-font-size size)))
-
-             (let ((display (clim-clx::clx-port-display port)))
-               (find-and-make-xlib-face display family face size)))))
-      (or (text-style-mapping port text-style)
-          (setf (climi::text-style-mapping port text-style)
-                (find-font))))))
+             (or (try "iso8859-1")
+                 (progn
+                   (setf family :sans-serif)
+                   (try "iso8859-1"))
+                 (progn
+                   (setf family :fix)
+                   (xlib:open-font display "fixed"))))))
+       (find-font ()
+         (multiple-value-bind (family face size)
+             (text-style-components text-style)
+           (setf size (max 2 size))
+           (let ((display (clim-clx::clx-port-display port)))
+             (find-and-make-xlib-face display family face size)))))
+    (or (text-style-mapping port text-style)
+        (setf (climi::text-style-mapping port text-style)
+              (find-font)))))
 
 
 
