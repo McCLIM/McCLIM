@@ -198,6 +198,21 @@ of letters specified in a separate kerning-table."))
          (or (getf +font-sizes+ size nil)
              (error "~s is not a valid text style size!" size)))))
 
+(defun parse-text-style* (style)
+  "Returns complete text-style without NIL components and with numeric size."
+  (cond ((text-style-p style)
+         (multiple-value-bind (family face size)
+             (clim:text-style-components style)
+           (if (and family face size (numberp size))
+               style
+               (make-text-style (or family (text-style-family *default-text-style*))
+                                (or face (text-style-face *default-text-style*))
+                                (climb:normalize-font-size size)))))
+        ((null style) *default-text-style*)
+        ((and (listp style) (<= 3 (length style) 4))
+         (parse-text-style* (apply #'make-text-style style)))
+        (t (error "Invalid text style specification ~S." style))))
+
 (defgeneric climb:text-style-to-font (port text-style))
 
 (defmethod text-style-ascent (text-style medium)
