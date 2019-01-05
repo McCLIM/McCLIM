@@ -491,8 +491,8 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
   ((stream)
    (arc-drawer)
    (arc-drawing-options)
-   (from-node :initarg :from-node)
-   (to-node :initarg :to-node)))
+   (from-node :initarg :from-node :reader from-node)
+   (to-node :initarg :to-node :reader to-node)))
 
 (defun layout-edges (graph node stream arc-drawer arc-drawing-options)
   (dolist (k (graph-node-children node))

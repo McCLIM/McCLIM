@@ -24,49 +24,37 @@
 
 (define-application-frame draggable-graph-demo () ()
   (:pane (make-pane 'application-pane
-		    :width :compute
-		    :height :compute
-		    :display-function 'generate-graph
-		    :display-time t)))
+                    :width :compute
+                    :height :compute
+                    :display-function 'generate-graph
+                    :display-time t)))
 
 (defun generate-graph (frame pane)
   (declare (ignore frame))
   (format-graph-from-roots
    (list (find-class 'number))
    (lambda (object stream)
-     (present (class-name object)
-	      (presentation-type-of object)
-	      :stream stream))
+     (present (class-name object) (presentation-type-of object) :stream stream))
    #'c2mop:class-direct-subclasses
    :stream pane))
 
-(defun record-parent-chain (record)
-  (and record
-       (cons record
-	     (record-parent-chain (output-record-parent record)))))
-
 (defun find-graph-node (record)
   "Searches upward until a graph node parent of the supplied output record is found."
-  (find-if #'graph-node-output-record-p (record-parent-chain record)))
+  (loop for current = record then (output-record-parent current)
+        while current
+        when (graph-node-output-record-p current)
+          do (return current)))
 
 (defun node-edges (node)
-  (let (edges)
-    (maphash
-     (lambda (child edge)
-       (declare (ignore child))
-       (push edge edges))
-     (slot-value node 'climi::edges-from))
-    (maphash
-     (lambda (parent edge)
-       (declare (ignore parent))       
-       (push edge edges))
-     (slot-value node 'climi::edges-to))
-    edges))
+  (append (alexandria:hash-table-values (slot-value node 'climi::edges-from))
+          (alexandria:hash-table-values (slot-value node 'climi::edges-to))))
+
+(defun node-and-edges-region (node edges)
+  (stupid-copy-rectangle (reduce #'region-union edges :initial-value node)))
 
 (defun redisplay-edges (graph edges)
   (dolist (edge edges)
-    (with-slots (climi::from-node climi::to-node) edge
-      (climi::layout-edge-1 graph climi::from-node climi::to-node))))
+    (climi::layout-edge-1 graph (climi::from-node edge) (climi::to-node edge))))
 
 ;;; (AH) McCLIM bug of the day:
 ;;;
@@ -85,42 +73,37 @@
     (make-rectangle* x0 y0 x1 y1)))
 
 (define-draggable-graph-demo-command (com-drag-node)
-    ((record t) (x real) (y real))
-  (let* ((graph-node (find-graph-node record))
-	 (edges (node-edges graph-node))
-	 (erase-region (stupid-copy-rectangle
-                        (reduce (lambda (x &optional y)
-                                  (if y (region-union x y) x))
-                                edges))))
-    (multiple-value-bind (px py) (output-record-position graph-node)
-      (let ((graph (output-record-parent graph-node))
-	    (x-offset (- x px))
-	    (y-offset (- y py)))
-	(assert (typep graph 'graph-output-record))
-	(erase-output-record graph-node *standard-output*)
-	(dolist (edge edges)
-	  (clear-output-record edge))
-	(when edges (repaint-sheet *standard-output* erase-region))
-	(multiple-value-bind (final-x final-y)
-	    (drag-output-record *standard-output* graph-node
-				:erase-final t
-				:finish-on-release t)
-	  (setf (output-record-position graph-node)
-		(values (- final-x x-offset) (- final-y y-offset)))
-          
-	  (add-output-record graph-node graph)
-	  (redisplay-edges graph edges)
-	  (repaint-sheet *standard-output* graph-node))))))
-         
+    ((record t) (offset-x real :default 0) (offset-y real :default 0))
+  (let* ((stream *standard-output*)
+         (node-record (find-graph-node record))
+         (edge-records (node-edges node-record))
+         (graph-record (output-record-parent node-record))
+         (erase-region))
+    (assert (typep graph-record 'graph-output-record))
+    (erase-output-record node-record stream)
+    (drag-output-record stream node-record
+                        :feedback (lambda (record stream old-x old-y x y mode)
+                                    (declare (ignore old-x old-y))
+                                    (ecase mode
+                                      (:erase
+                                       (erase-output-record record stream)
+                                       (map nil #'clear-output-record edge-records)
+                                       (setf erase-region
+                                             (node-and-edges-region record edge-records)))
+                                      (:draw
+                                       (setf (output-record-position record)
+                                             (values (- x offset-x) (- y offset-y)))
+                                       (add-output-record record graph-record)
+                                       (redisplay-edges graph-record edge-records)
+                                       (repaint-sheet
+                                        stream (region-union (or erase-region +nowhere+)
+                                                             (node-and-edges-region record edge-records))))))
+                        :finish-on-release t :multiple-window t)))
+
 (define-presentation-to-command-translator record-dragging-translator
     (t com-drag-node draggable-graph-demo
-       :tester ((object presentation)
-                (find-graph-node presentation)))
+     :tester ((object presentation)
+              (find-graph-node presentation)))
     (object presentation x y)
-  (list presentation x y))
-
-;;; (CSR) This demo code is quite cool; visually, it's a little
-;;; disconcerting to have the edges disappear when dragging, but
-;;; that's acceptable, though I think it might be possible to preserve
-;;; them by having a feedback function for the call to
-;;; DRAG-OUTPUT-RECORD.
+  (multiple-value-bind (old-x old-y) (output-record-position presentation)
+    (list presentation (- x old-x) (- y old-y))))
