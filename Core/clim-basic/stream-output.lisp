@@ -255,9 +255,8 @@
         (return-from seos-write-string))
       (with-slots (baseline vspace) stream
         (multiple-value-bind (cx cy) (stream-cursor-position stream)
-          (when (> new-baseline baseline)
-            (setq baseline new-baseline))
-          (setf (%stream-char-height stream) (max (%stream-char-height stream) new-height))
+          (maxf baseline new-baseline)
+          (maxf (%stream-char-height stream) new-height)
           (let ((width (stream-string-width stream string
                                             :start start :end end
                                             :text-style text-style))
@@ -314,10 +313,9 @@
 
 (defgeneric stream-write-output (stream line string-width &optional start end)
   (:documentation
-   "Writes the character or string LINE to STREAM. This function produces no
-more than one line of output i.e., doesn't wrap. If STRING-WIDTH is
-non-nil, that is used as the width where needed; otherwise
-STREAM-STRING-WIDTH will be called."))
+   "Writes the character or string LINE to STREAM. This function produces no more
+than one line of output i.e., doesn't wrap. If STRING-WIDTH is non-nil, that is
+used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 
 ;;; The cursor is in stream coordinates.
 (defmethod stream-write-output ((stream standard-extended-output-stream)

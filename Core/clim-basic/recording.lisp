@@ -1747,9 +1747,8 @@ were added."
                     (coordinate (+ y1 max-height))))))
   text-record)
 
-(defmethod add-character-output-to-text-record ; XXX OAOO with ADD-STRING-...
-    ((text-record standard-text-displayed-output-record)
-     character text-style char-width height new-baseline)
+(defmethod add-character-output-to-text-record ((text-record standard-text-displayed-output-record)
+                                                character text-style char-width height new-baseline)
   (with-slots (strings baseline width max-height left right start-y end-x end-y medium)
       text-record
     (if (and strings
@@ -1784,9 +1783,8 @@ were added."
             width (+ width char-width))))
   (tree-recompute-extent text-record))
 
-(defmethod add-string-output-to-text-record
-    ((text-record standard-text-displayed-output-record)
-     string start end text-style string-width height new-baseline)
+(defmethod add-string-output-to-text-record ((text-record standard-text-displayed-output-record)
+                                             string start end text-style string-width height new-baseline)
   (setf end (or end (length string)))
   (let ((length (max 0 (- end start))))
     (cond
@@ -1937,26 +1935,21 @@ add output recording facilities. It is not instantiable."))
               (stream-current-text-output-record stream) record)))
     record))
 
-(defmethod stream-close-text-output-record
-    ((stream standard-output-recording-stream))
-  (let ((record (stream-current-text-output-record stream)))
-    (when record
-      (setf (stream-current-text-output-record stream) nil)
-      #|record stream-current-cursor-position to (end-x record) - already done|#
-      (stream-add-output-record stream record))))
+(defmethod stream-close-text-output-record ((stream standard-output-recording-stream))
+  (when-let ((record (stream-current-text-output-record stream)))
+    (setf (stream-current-text-output-record stream) nil)
+    #|record stream-current-cursor-position to (end-x record) - already done|#
+    (stream-add-output-record stream record)))
 
-(defmethod stream-add-character-output
-    ((stream standard-output-recording-stream)
-     character text-style width height baseline)
-  (add-character-output-to-text-record
-   (stream-text-output-record stream text-style)
-   character text-style width height baseline))
+(defmethod stream-add-character-output ((stream standard-output-recording-stream)
+                                        character text-style width height baseline)
+  (add-character-output-to-text-record (stream-text-output-record stream text-style)
+                                       character text-style width height baseline))
 
 (defmethod stream-add-string-output ((stream standard-output-recording-stream)
                                      string start end text-style
                                      width height baseline)
-  (add-string-output-to-text-record (stream-text-output-record stream
-                                                               text-style)
+  (add-string-output-to-text-record (stream-text-output-record stream text-style)
                                     string start end text-style
                                     width height baseline))
 
