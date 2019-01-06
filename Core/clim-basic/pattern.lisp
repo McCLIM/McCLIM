@@ -388,7 +388,9 @@ Returns a pattern representing this file."
          (transformation (transformed-design-transformation effective-pattern))
          (inv-tr (invert-transformation transformation)))
     (multiple-value-bind (x y) (transform-position inv-tr x y)
-      (design-ink source-pattern (round x) (round y)))))
+      ;; It is important to not use ROUND here, since when the
+      ;; fractional part is exactly 0.5, we get wrong dimensions -- loke 2019-01-06
+      (design-ink source-pattern (floor (+ x 0.5)) (floor (+ y 0.5))))))
 
 (defmethod %collapse-pattern ((pattern transformed-pattern))
   (with-bounding-rectangle* (x1 y1 x2 y2) pattern
