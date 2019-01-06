@@ -394,22 +394,20 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
     (declare (ignore y))
     (zerop x)))
 
-(locally
-    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
-  (defmacro with-room-for-graphics ((&optional (stream t)
-                                               &rest arguments
-                                               &key (first-quadrant t)
-                                               height
-                                               (move-cursor t)
-                                               (record-type ''standard-sequence-output-record))
-                                     &body body)
-    (declare (ignore first-quadrant height move-cursor record-type))
-    (let ((cont (gensym "CONT."))
-          (stream (stream-designator-symbol stream '*standard-output*)))
-      `(labels ((,cont (,stream)
-                  ,@body))
-         (declare (dynamic-extent #',cont))
-         (invoke-with-room-for-graphics #',cont ,stream ,@arguments)))))
+(defmacro with-room-for-graphics ((&optional (stream t)
+                                             &rest arguments
+                                             &key (first-quadrant t)
+                                             height
+                                             (move-cursor t)
+                                             (record-type ''standard-sequence-output-record))
+                                  &body body)
+  (declare (ignore first-quadrant height move-cursor record-type))
+  (let ((cont (gensym "CONT."))
+        (stream (stream-designator-symbol stream '*standard-output*)))
+    `(labels ((,cont (,stream)
+                ,@body))
+       (declare (dynamic-extent #',cont))
+       (invoke-with-room-for-graphics #',cont ,stream ,@arguments))))
 
 (defmacro with-end-of-line-action ((stream action) &body body)
   (when (eq stream t)

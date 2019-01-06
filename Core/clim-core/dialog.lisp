@@ -148,75 +148,71 @@ accept of this query")))
 
 (defvar *accepting-values-stream* nil)
 
-(locally
-    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
-  (defmacro with-stream-in-own-window ((&optional (stream '*query-io*)
-					&rest window-args
-					&key
-					  label foreground background
-					  height width)
-				       (&rest further-streams)
-				       &rest body)
-    (declare (ignorable label foreground background height width))
-    `(let* ((,stream (open-window-stream :input-buffer
-                                         (climi::frame-event-queue
-                                          *application-frame*)
-                                         ,@window-args))
-            ,@(mapcar (lambda (a-stream)
-                        (list a-stream stream))
-                      further-streams))
-       (unwind-protect
-            (progn
-              ,@body)
-         (close ,stream)))))
+(defmacro with-stream-in-own-window ((&optional (stream '*query-io*)
+                                                &rest window-args
+                                                &key
+                                                label foreground background
+                                                height width)
+                                                  (&rest further-streams)
+                                     &rest body)
+  (declare (ignorable label foreground background height width))
+  `(let* ((,stream (open-window-stream :input-buffer
+                                       (climi::frame-event-queue
+                                        *application-frame*)
+                                       ,@window-args))
+          ,@(mapcar (lambda (a-stream)
+                      (list a-stream stream))
+                    further-streams))
+     (unwind-protect
+          (progn
+            ,@body)
+       (close ,stream))))
 
-(locally
-    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
-  (defmacro accepting-values
-      ((&optional (stream t)
-                  &rest args
-                  &key own-window exit-boxes initially-select-query-identifier
-                  modify-initial-query resynchronize-every-pass resize-frame
-                  align-prompts label scroll-bars select-first-query
-                  x-position y-position width height command-table frame-class
-                  (foreground nil foregroundp) (background nil backgroundp)
-                  (text-style nil text-style-p))
-        &body body)
-    (declare (ignorable exit-boxes initially-select-query-identifier
-                        modify-initial-query resynchronize-every-pass resize-frame
-                        align-prompts scroll-bars select-first-query
-                        x-position y-position width height command-table frame-class
-                        text-style))
-    (setq stream (stream-designator-symbol stream '*standard-input*))
-    (with-gensyms (accepting-values-continuation)
-      (with-keywords-removed (args (:foreground :background :text-style))
-        (let* ((with-text-style-body
-                   (if text-style-p
-                       `((with-drawing-options (,stream :text-style ,text-style)
-                           ,@body))
-                       body))
-               (return-form
-                `(flet ((,accepting-values-continuation (,stream)
-                          ,@with-text-style-body))
-                   (invoke-accepting-values ,stream
-                                            #',accepting-values-continuation
-                                            ,@args)))
-               (true-form `(with-stream-in-own-window
-                               (,stream
-                                :label ,label
-				:height ,height
-				:width ,width
-                                ,@(and foregroundp `(:foreground ,foreground))
-                                ,@(and backgroundp `(:background ,background)))
-                             (*standard-input* *standard-output*)
-                             ,return-form)))
-          ;; To avoid unreachable-code warnings, if `own-window' is a
-          ;; boolean constant, don't generate the `if' form.
-          (cond ((eq own-window t) true-form)
-                ((eq own-window nil) return-form)
-                (t `(if ,own-window
-                        ,true-form
-                        ,return-form))))))))
+(defmacro accepting-values
+    ((&optional (stream t)
+                &rest args
+                &key own-window exit-boxes initially-select-query-identifier
+                modify-initial-query resynchronize-every-pass resize-frame
+                align-prompts label scroll-bars select-first-query
+                x-position y-position width height command-table frame-class
+                (foreground nil foregroundp) (background nil backgroundp)
+                (text-style nil text-style-p))
+     &body body)
+  (declare (ignorable exit-boxes initially-select-query-identifier
+                      modify-initial-query resynchronize-every-pass resize-frame
+                      align-prompts scroll-bars select-first-query
+                      x-position y-position width height command-table frame-class
+                      text-style))
+  (setq stream (stream-designator-symbol stream '*standard-input*))
+  (with-gensyms (accepting-values-continuation)
+    (with-keywords-removed (args (:foreground :background :text-style))
+      (let* ((with-text-style-body
+                 (if text-style-p
+                     `((with-drawing-options (,stream :text-style ,text-style)
+                         ,@body))
+                     body))
+             (return-form
+              `(flet ((,accepting-values-continuation (,stream)
+                        ,@with-text-style-body))
+                 (invoke-accepting-values ,stream
+                                          #',accepting-values-continuation
+                                          ,@args)))
+             (true-form `(with-stream-in-own-window
+                             (,stream
+                              :label ,label
+                              :height ,height
+                              :width ,width
+                              ,@(and foregroundp `(:foreground ,foreground))
+                              ,@(and backgroundp `(:background ,background)))
+                           (*standard-input* *standard-output*)
+                           ,return-form)))
+        ;; To avoid unreachable-code warnings, if `own-window' is a
+        ;; boolean constant, don't generate the `if' form.
+        (cond ((eq own-window t) true-form)
+              ((eq own-window nil) return-form)
+              (t `(if ,own-window
+                      ,true-form
+                      ,return-form)))))))
 
 (defun invoke-accepting-values
     (stream body
@@ -875,35 +871,33 @@ is run for the last time"))
 
 ;;; An accept-values button sort of behaves like an accepting-values query with
 ;;; no value.
-(locally
-    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
-  (defmacro accept-values-command-button
-      ((&optional (stream t) &rest key-args
-                  &key documentation query-identifier cache-value cache-test
-                  (view '+push-button-view+) resynchronize &allow-other-keys)
-                       prompt
-        &body body)
-    (declare (ignorable documentation query-identifier cache-value cache-test
-                        resynchronize))
-    (setq stream (stream-designator-symbol stream '*standard-input*))
-    (with-gensyms (command-button-continuation prompt-function)
-      (with-keywords-removed (key-args (:view))
-        (let* ((prompt-arg (if (stringp prompt)
-                               prompt
-                               `#',prompt-function))
-               (button-body
-                `(flet ((,command-button-continuation ()
-                          ,@body))
-                   (invoke-accept-values-command-button
-                    ,stream
-                    #',command-button-continuation
-                    ,view
-                    ,prompt-arg
-                    ,@key-args))))
-          (if (stringp prompt)
-              button-body
-              `(flet ((,prompt-function (,stream) ,prompt))
-                 ,button-body)))))))
+(defmacro accept-values-command-button
+    ((&optional (stream t) &rest key-args
+                &key documentation query-identifier cache-value cache-test
+                (view '+push-button-view+) resynchronize &allow-other-keys)
+                  prompt
+     &body body)
+  (declare (ignorable documentation query-identifier cache-value cache-test
+                      resynchronize))
+  (setq stream (stream-designator-symbol stream '*standard-input*))
+  (with-gensyms (command-button-continuation prompt-function)
+    (with-keywords-removed (key-args (:view))
+      (let* ((prompt-arg (if (stringp prompt)
+                             prompt
+                             `#',prompt-function))
+             (button-body
+              `(flet ((,command-button-continuation ()
+                        ,@body))
+                 (invoke-accept-values-command-button
+                  ,stream
+                  #',command-button-continuation
+                  ,view
+                  ,prompt-arg
+                  ,@key-args))))
+        (if (stringp prompt)
+            button-body
+            `(flet ((,prompt-function (,stream) ,prompt))
+               ,button-body))))))
 
 (defclass command-button-state ()
   ((continuation :reader continuation :initarg :continuation)

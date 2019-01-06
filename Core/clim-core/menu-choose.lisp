@@ -172,21 +172,19 @@
 
 ;; Spec macro.
 ;; The menu is not visible.
-(locally
-    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
-  (defmacro with-menu ((menu &optional associated-window
-                             &key (deexpose t) label scroll-bars)
-                             &body body)
-    (check-type menu symbol)
-    (with-gensyms (with-menu-cont)
-      `(flet ((,with-menu-cont (,menu)
-                ,@body))
-         (declare (dynamic-extent #',with-menu-cont))
-         (invoke-with-menu #',with-menu-cont
-                           ,associated-window ; XXX
-                           ',deexpose         ; XXX!!!
-                           ,label
-                           ,scroll-bars)))))
+(defmacro with-menu ((menu &optional associated-window
+                           &key (deexpose t) label scroll-bars)
+                     &body body)
+  (check-type menu symbol)
+  (with-gensyms (with-menu-cont)
+    `(flet ((,with-menu-cont (,menu)
+              ,@body))
+       (declare (dynamic-extent #',with-menu-cont))
+       (invoke-with-menu #',with-menu-cont
+                         ,associated-window ; XXX
+                         ',deexpose         ; XXX!!!
+                         ,label
+                         ,scroll-bars))))
 
 (defun invoke-with-menu (continuation associated-window deexpose
 			 label scroll-bars)

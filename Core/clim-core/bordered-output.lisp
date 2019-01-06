@@ -102,19 +102,17 @@
     (with-bounding-rectangle* (left top right bottom) ,record
       ,@body)))
 
-(locally
-    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
-  (defmacro surrounding-output-with-border
-      ((&optional stream &rest drawing-options &key (shape :rectangle)
-                  (move-cursor t)
-                  &allow-other-keys)
-        &body body)
-    (declare (ignore shape move-cursor))
-    (setf stream (stream-designator-symbol stream '*standard-output*))
-    (gen-invoke-trampoline 'invoke-surrounding-output-with-border
-                           (list stream)
-                           drawing-options
-                           body)))
+(defmacro surrounding-output-with-border
+    ((&optional stream &rest drawing-options &key (shape :rectangle)
+                (move-cursor t)
+                &allow-other-keys)
+     &body body)
+  (declare (ignore shape move-cursor))
+  (setf stream (stream-designator-symbol stream '*standard-output*))
+  (gen-invoke-trampoline 'invoke-surrounding-output-with-border
+                         (list stream)
+                         drawing-options
+                         body))
 
 (defmethod recompute-extent-for-changed-child
     ((record bordered-output-record) child x1 y1 x2 y2)
