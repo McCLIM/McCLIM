@@ -1992,6 +1992,7 @@
    #:text-style-character-width
    #:text-bounding-rectangle*
    #:normalize-font-size
+   #:parse-text-style*
    ;; Font abstraction
    #:font-face
    #:font-size

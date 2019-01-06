@@ -114,7 +114,9 @@
 
 
 (defmethod climb:text-size ((medium clx-render-medium) string &key text-style (start 0) end
-                            &aux (end (or end (length string))))
+                            &aux
+                              (string (string string))
+                              (end (or end (length string))))
   (when (= start end)
     (return-from text-size (values 0 0 0 0 (text-style-ascent text-style medium))))
   (let* ((text-style (merge-text-styles text-style

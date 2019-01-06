@@ -24,8 +24,8 @@
 ;;; Fonts
 ;;;
 
-(defmethod climb:text-style-to-font ((port render-port-mixin)
-                               (text-style standard-text-style))
+(defmethod climb:text-style-to-font ((port render-port-mixin) (text-style standard-text-style)
+                                     &aux (text-style (climb:parse-text-style* text-style)))
   (labels
       ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative
@@ -48,14 +48,8 @@
                       :filename font-path
                       :text-style text-style))))
        (find-font ()
-         (multiple-value-bind (family face size)
-             (clim:text-style-components text-style)
-
-           (setf face   (or face :roman)
-                 family (or family :fix)
-                 size   (climb:normalize-font-size size))
-
-           (find-and-make-truetype-font family face size))))
+         (multiple-value-call #'find-and-make-truetype-font
+           (clim:text-style-components text-style))))
     (or (text-style-mapping port text-style)
         (setf (climi::text-style-mapping port text-style)
               (or (find-truetype-font port text-style)
