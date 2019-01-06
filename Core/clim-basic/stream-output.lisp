@@ -276,7 +276,9 @@
             (unless (= start split)
               (stream-write-output stream string nil start split)
               (setq cx (+ cx width))
-              (setf (stream-cursor-position stream) (values cx cy)))
+              ;; We can't call (setf stream-cursor-position) here because that would
+              ;; close the text-output-record when it is recorded. -- jd 2019-01-07
+              (setf (cursor-position (stream-text-cursor stream)) (values cx cy)))
             (when (/= split end)
               (let ((current-baseline baseline))
                 (setf baseline current-baseline))
