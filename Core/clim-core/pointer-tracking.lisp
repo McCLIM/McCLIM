@@ -294,17 +294,15 @@
 	     (funcall feedback-event-fn record stream x0 y0 x y event)
 	     (return-from drag-output-record (values x y)))))))))
   
-(locally
-    (declare #+sbcl (sb-ext:muffle-conditions style-warning))
-  (defmacro dragging-output ((&optional (stream '*standard-output*) &rest args
-                                        &key (repaint t) finish-on-release multiple-window)
-                              &body body)
-    (declare (ignore repaint finish-on-release multiple-window))
-    (setq stream (stream-designator-symbol stream '*standard-output*))
-    (with-gensyms (record)
-      `(let ((,record (with-output-to-output-record (,stream)
-                        ,@body)))
-         (drag-output-record ,stream ,record :erase-final t ,@args)))))
+(defmacro dragging-output ((&optional (stream '*standard-output*) &rest args
+                                      &key (repaint t) finish-on-release multiple-window)
+                           &body body)
+  (declare (ignore repaint finish-on-release multiple-window))
+  (setq stream (stream-designator-symbol stream '*standard-output*))
+  (with-gensyms (record)
+    `(let ((,record (with-output-to-output-record (,stream)
+                      ,@body)))
+       (drag-output-record ,stream ,record :erase-final t ,@args))))
 
 (defun dragging-drawing (stream drawer &key (finish-on-release t)
                          (pointer (port-pointer (port stream)))
