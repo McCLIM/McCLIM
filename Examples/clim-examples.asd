@@ -6,7 +6,7 @@
     :components
     ((:file "package")
      (:file "text-size-util")
-
+     (:file "seos-baseline")
      (:file "calculator")
      (:file "colorslider")
      (:file "menutest")                 ; extra
