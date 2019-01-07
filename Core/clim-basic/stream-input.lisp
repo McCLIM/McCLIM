@@ -243,10 +243,13 @@ keys read."))
     ((or character symbol pointer-button-event)
      (values gesture (type-of gesture)))
     (key-press-event
-     (if-let ((character (keyboard-event-character gesture))
-              (char-p (member (event-modifier-state gesture) '(0 +shift-key+))))
-       (values (char-for-read character) 'standard-char)
-       (values gesture (type-of gesture))))
+     (let ((modifiers (event-modifier-state gesture))
+           (character (keyboard-event-character gesture)))
+       (if (and (or (zerop modifiers)
+                    (eql modifiers +shift-key+))
+                character)
+           (values (char-for-read character) 'standard-character)
+           (values gesture (type-of gesture)))))
     (otherwise
      nil)))
 
