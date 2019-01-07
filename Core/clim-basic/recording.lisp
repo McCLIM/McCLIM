@@ -1708,22 +1708,21 @@ were added."
       (setf (slot-value stream 'baseline) baseline)
       (loop for substring in strings
          do (with-slots (start-x string) substring
-              (setf (stream-cursor-position stream)
-                    (values start-x start-y))
-              ;; FIXME: a bit of an abstraction inversion.  Should
-              ;; the styled strings here not simply be output
-              ;; records?  Then we could just replay them and all
-              ;; would be well.  -- CSR, 20060528.
+              ;; FIXME: a bit of an abstraction inversion.  Should the styled
+              ;; strings here not simply be output records?  Then we could just
+              ;; replay them and all would be well.  -- CSR, 20060528.
+              ;;
               ;; But then we'd have to implement the output record
               ;; protocols for them. Are we allowed no internal
               ;; structure of our own? -- Hefner, 20080118
 
               ;; Some optimization might be possible here.
-              (with-drawing-options
-                  (stream :ink (graphics-state-ink substring)
-                          :clipping-region (graphics-state-clip substring)
-                          :text-style (graphics-state-text-style substring))
-                (stream-write-output stream string nil)))))))
+              (with-drawing-options (stream :ink (graphics-state-ink substring)
+                                            :clipping-region (graphics-state-clip substring)
+                                            :text-style (graphics-state-text-style substring))
+                (with-identity-transformation (stream)
+                  (draw-text* (sheet-medium stream)
+                              string start-x (+ start-y (stream-baseline stream))))))))))
 
 (defmethod output-record-start-cursor-position
     ((record standard-text-displayed-output-record))
@@ -1939,7 +1938,12 @@ add output recording facilities. It is not instantiable."))
   (when-let ((record (stream-current-text-output-record stream)))
     (setf (stream-current-text-output-record stream) nil)
     #|record stream-current-cursor-position to (end-x record) - already done|#
-    (stream-add-output-record stream record)))
+    (stream-add-output-record stream record)
+    ;; STREAM-WRITE-OUTPUT on recorded stream inhibits eager drawing to collect
+    ;; whole output record in order to align line's baseline between strings of
+    ;; different height. See \"15.3 The Text Cursor\". -- jd 2019-01-07
+    (when (stream-drawing-p stream)
+      (replay record stream))))
 
 (defmethod stream-add-character-output ((stream standard-output-recording-stream)
                                         character text-style width height baseline)
@@ -1954,33 +1958,33 @@ add output recording facilities. It is not instantiable."))
                                     width height baseline))
 
 ;;; Text output catching methods
-(defmethod stream-write-output :around
-    ((stream standard-output-recording-stream)
-     line
-     string-width
-     &optional (start 0) end)
-
-  (when (stream-recording-p stream)
-    (let* ((medium (sheet-medium stream))
-           (text-style (medium-text-style medium))
-           (height (text-style-height text-style medium))
-           (ascent (text-style-ascent text-style medium)))
-      (if (characterp line)
-          (stream-add-character-output stream line text-style
-                                       (stream-character-width
-                                        stream line :text-style text-style)
-                                       height
-                                       ascent)
-          (stream-add-string-output stream line start end text-style
-                                    (or string-width
-                                        (stream-string-width stream line
-                                                             :start start :end end
-                                                             :text-style text-style))
-                                    height
-                                    ascent))))
-
-  (when (stream-drawing-p stream)
-    (call-next-method)))
+(defmethod stream-write-output ((stream standard-output-recording-stream)
+                                line string-width
+                                &optional (start 0) end)
+  (unless (stream-recording-p stream)
+    (return-from stream-write-output
+      ;; Stream will replay output when the output record is closed to maintain
+      ;; the baseline. If we are not recording and this method is invoked we
+      ;; draw string eagerly (if it is set for drawing). -- jd 2019-01-07
+      (when (stream-drawing-p stream)
+        (call-next-method))))
+  (let* ((medium (sheet-medium stream))
+         (text-style (medium-text-style medium))
+         (height (text-style-height text-style medium))
+         (ascent (text-style-ascent text-style medium)))
+    (if (characterp line)
+        (stream-add-character-output stream line text-style
+                                     (stream-character-width
+                                      stream line :text-style text-style)
+                                     height
+                                     ascent)
+        (stream-add-string-output stream line start end text-style
+                                  (or string-width
+                                      (stream-string-width stream line
+                                                           :start start :end end
+                                                           :text-style text-style))
+                                  height
+                                  ascent))))
 
 (defmethod stream-finish-output :after ((stream standard-output-recording-stream))
   (stream-close-text-output-record stream))

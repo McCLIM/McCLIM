@@ -2481,9 +2481,9 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defclass clim-stream-pane (updating-output-stream-mixin
 			    pane-display-mixin
                             #-clim-mp standard-repainting-mixin
+                            standard-output-recording-stream
                             standard-extended-input-stream
                             standard-extended-output-stream
-                            standard-output-recording-stream
                             ;; sheet-leaf-mixin
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane)
