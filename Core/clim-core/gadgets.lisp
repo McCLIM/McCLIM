@@ -653,15 +653,44 @@ and must never be nil.")
 
 ;;; 30.4.7 The abstract list-pane and option-pane Gadgets
 
-(defclass list-pane (value-gadget)
-  ()
+(defclass meta-list-pane ()
+  ((mode        :initarg :mode
+                :initform :exclusive
+                :reader list-pane-mode
+                :type (member :one-of :some-of :exclusive :nonexclusive))
+   (items       :initarg :items
+                :initform nil
+                :reader list-pane-items
+                :type sequence)
+   (name-key    :initarg :name-key
+                :initform #'princ-to-string
+                :reader list-pane-name-key
+                :documentation "A function to be applied to items to gain a printable representation")
+   (value-key   :initarg :value-key
+                :initform #'identity
+                :reader list-pane-value-key
+                :documentation "A function to be applied to items to gain its value
+                                for the purpose of GADGET-VALUE.")
+   (presentation-type-key :initarg :presentation-type-key
+                          :initform (constantly nil)
+                          :reader list-pane-presentation-type-key
+                          :documentation "A function to be applied to items to find the presentation types for their values, or NIL.")
+   (test        :initarg :test
+                :initform #'eql
+                :reader list-pane-test
+                :documentation "A function to compare two items for equality.")))
+
+(defclass list-pane (meta-list-pane value-gadget)
+  ((visible-items :initarg :visible-items ; Clim 2.2 compatibility
+                  :initform nil
+                  :documentation "Maximum number of visible items in list"))
   (:documentation
    "The instantiable class that implements an abstract list pane, that is, a gadget
     whose semantics are similar to a radio box or check box, but whose visual
     appearance is a list of buttons.")
   (:default-initargs :value nil))
 
-(defclass option-pane (value-gadget)
+(defclass option-pane (meta-list-pane value-gadget)
   ()
   (:documentation
    "The instantiable class that implements an abstract option pane, that is, a
@@ -2018,37 +2047,12 @@ and must never be nil.")
 
 (define-abstract-pane-mapping 'list-pane 'generic-list-pane)
 
-(defclass meta-list-pane ()
-  ((mode        :initarg :mode
-                :initform :exclusive
-                :reader list-pane-mode
-                :type (member :one-of :some-of :exclusive :nonexclusive))
-   (items       :initarg :items
-                :initform nil
-                :reader list-pane-items
-                :type sequence)
-   (name-key    :initarg :name-key
-                :initform #'princ-to-string
-                :reader list-pane-name-key
-                :documentation "A function to be applied to items to gain a printable representation")
-   (value-key   :initarg :value-key
-                :initform #'identity
-                :reader list-pane-value-key
-                :documentation "A function to be applied to items to gain its value
-                                for the purpose of GADGET-VALUE.")
-   (presentation-type-key :initarg :presentation-type-key
-                          :initform (constantly nil)
-                          :reader list-pane-presentation-type-key
-                          :documentation "A function to be applied to items to find the presentation types for their values, or NIL.")
-   (test        :initarg :test
-                :initform #'eql
-                :reader list-pane-test
-                :documentation "A function to compare two items for equality.")))
 
-(defclass generic-list-pane (list-pane meta-list-pane
-                                       standard-sheet-input-mixin ;; Hmm..
-                                       activate/deactivate-repaint-mixin
-                                       value-changed-repaint-mixin)
+
+(defclass generic-list-pane (list-pane 
+                             standard-sheet-input-mixin ;; Hmm..
+                             activate/deactivate-repaint-mixin
+                             value-changed-repaint-mixin)
   ((highlight-ink :initform +royalblue4+
                   :initarg :highlight-ink
                   :reader list-pane-highlight-ink)
@@ -2071,10 +2075,7 @@ selection via the control modifier.")
                  :documentation "Number of items")
    (items-origin :initform 0 :accessor items-origin
      :documentation "Index of the first item to be rendered. This changes in
-response to scroll wheel events.")
-   (visible-items :initarg :visible-items ; Clim 2.0 compatibility
-                  :initform nil
-                  :documentation "Maximum number of visible items in list"))
+response to scroll wheel events."))
   (:default-initargs :background +white+ :foreground +black+))
 
 (defmethod initialize-instance :after ((gadget meta-list-pane) &rest rest)
@@ -2450,7 +2451,6 @@ if INVOKE-CALLBACK is given."))
 (define-abstract-pane-mapping 'option-pane 'generic-option-pane)
 
 (defclass generic-option-pane (option-pane
-                               meta-list-pane
                                value-changed-repaint-mixin
                                3d-border-mixin
                                activate/deactivate-repaint-mixin
