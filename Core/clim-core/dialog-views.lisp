@@ -20,6 +20,67 @@
 
 ;;; Classes for the gadget dialog views. Eventually.
 
+;;; Views described in the Franz User manual (CLIM 2.2). Sec. 8.6.13
+
+(macrolet
+    ((define-gadget-view (name &optional new-slots)
+       (let* ((class-name (alexandria:symbolicate name '-view))
+              (variable-name (alexandria:symbolicate '+ name '-view+))
+              (slots (c2mop:class-slots (c2mop:ensure-finalized (find-class name))))
+              (slots-with-initargs (remove-if-not #'c2mop:slot-definition-initargs slots)))
+         `(progn
+            (defclass ,class-name (gadget-view)
+              ((gadget-name :allocation :class :reader view-gadget-name
+                            :initform ',name)
+               (gadget-slots :allocation :class :reader view-gadget-slots
+                             :initform
+                             ',(loop for slot in slots-with-initargs
+                                     for name = (c2mop:slot-definition-name slot)
+                                     for initargs = (c2mop:slot-definition-initargs slot)
+                                     collect (list name (first initargs))))
+               ,@new-slots
+               ,@(loop for slot in slots-with-initargs
+                       for name = (c2mop:slot-definition-name slot)
+                       for type = (c2mop:slot-definition-type slot)
+                       for initargs = (c2mop:slot-definition-initargs slot)
+                       collect (list name :initarg (first initargs) :type type))))
+            (defvar ,variable-name (make-instance ',class-name))
+            ',name))))
+
+  (define-gadget-view toggle-button)
+  (define-gadget-view push-button)
+  (define-gadget-view radio-box)
+  (define-gadget-view check-box)
+  (define-gadget-view slider)
+  (define-gadget-view text-field
+      ((width :accessor width :initarg :width :initform nil)))
+  (define-gadget-view text-editor)
+  (define-gadget-view list-pane)
+  (define-gadget-view option-pane))
+
+;;; Use textual-dialog-view as default for Views not implemented
+
+(define-default-presentation-method accept-present-default
+    (type stream (view gadget-view) default default-supplied-p
+          present-p query-identifier)
+  (funcall-presentation-generic-function accept-present-default
+                                         type
+                                         stream
+                                         +textual-dialog-view+
+                                         default default-supplied-p
+                                         present-p
+                                         query-identifier))
+
+(define-default-presentation-method accept
+    (type stream (view gadget-view) &key default default-type)
+  (funcall-presentation-generic-function accept
+                                         type
+                                         stream
+                                         +textual-dialog-view+
+                                         :default default
+                                         :default-type default-type))
+
+
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)
   ()

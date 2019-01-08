@@ -13,7 +13,7 @@
    (:file "frames" :depends-on ("commands" "presentations" "presentation-defs"
                                 "pointer-tracking" "incremental-redisplay"))
    (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay"
-                                      "bordered-output" "presentation-defs"))
+                                      "bordered-output" "presentation-defs" "gadgets"))
    (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
    (:file "gadgets" :depends-on ("commands" "pointer-tracking" "input-editing" 
                                  "frames" "incremental-redisplay" "panes"))
