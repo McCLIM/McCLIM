@@ -164,8 +164,7 @@
 
 (defun print-listener-prompt (stream frame)
   (declare (ignore frame))
-  (with-output-as-presentation 
-   (stream *package* 'package :single-box t)
+  (with-output-as-presentation (stream *package* 'package :single-box t)
    (with-drawing-options (stream :text-face :roman text-size :normal)
 			 (print-package-name stream))
    (princ "> " stream)
