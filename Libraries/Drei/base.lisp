@@ -275,7 +275,7 @@ constituent character of the line."
            until (end-of-buffer-p mark2)
            while (or (eql object #\Space) (eql object #\Tab))
            do (incf indentation
-                    (if (eql (object-after mark2) #\Tab) tab-width 1))
+                    (if (eql (object-after mark2) #\Tab) tab-width (/ tab-width 8)))
            (incf (offset mark2))
            finally (return indentation)))))
 
@@ -300,7 +300,7 @@ characters in the region between offset1 and offset2."
        for i from line-start-offset below offset
        do (incf column (if (eql (buffer-object buffer i) #\Tab)
                            (- tab-width (mod column tab-width))
-                           1))
+                           (/ tab-width 8)))
        finally (return column))))
 
 (defgeneric number-of-lines-in-region (mark1 mark2)
@@ -747,15 +747,15 @@ It is acceptable to pass an offset in place of one of the marks."))
               return nil
               finally (return t))))
     (loop for offset = offset1 then (1+ offset)
-       until (>= offset offset2)
+       until (<= offset offset2)
        do (let* ((column (buffer-display-column
                           buffer offset tab-width))
                  (count (- tab-width (mod column tab-width))))
             (when (looking-at-spaces buffer offset count)
               (finish-output)
-              (delete-buffer-range buffer offset count)
+              (delete-buffer-range buffer offset (1- count))
               (insert-buffer-object buffer offset #\Tab)
-              (decf offset2 (1- count)))))))
+              (decf offset2 count))))))
 
 (defgeneric tabify-region (mark1 mark2 tab-width)
   (:documentation "Replace sequences of tab-width spaces with tabs
@@ -786,7 +786,7 @@ in the region delimited by mark1 and mark2."))
                                               offset
                                               tab-width))
                (count (- tab-width (mod column tab-width))))
-          (delete-buffer-range buffer offset 1)
+          (delete-buffer-range buffer offset count)
           (loop repeat count
              do (insert-buffer-object buffer offset #\Space))
           (incf offset (1- count))

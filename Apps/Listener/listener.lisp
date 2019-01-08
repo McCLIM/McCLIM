@@ -164,12 +164,14 @@
 
 (defun print-listener-prompt (stream frame)
   (declare (ignore frame))
-  (with-output-as-presentation (stream *package* 'package :single-box t)
-    (print-package-name stream))
-  (princ "> " stream)
-  (let ((h (- (bounding-rectangle-height (stream-output-history stream))
-              (bounding-rectangle-height (or (pane-viewport stream) stream)))))
-    (scroll-extent stream 0 (max 0 h))))
+  (with-output-as-presentation 
+   (stream *package* 'package :single-box t)
+   (with-drawing-options (stream :text-face :roman text-size :normal)
+			 (print-package-name stream))
+   (princ "> " stream)
+   (let ((h (- (bounding-rectangle-height (stream-output-history stream))
+	       (bounding-rectangle-height (or (pane-viewport stream) stream)))))
+     (scroll-extent stream 0 (max 0 h)))))
 
 (defmethod frame-standard-output ((frame listener))
   (get-frame-pane frame 'interactor))

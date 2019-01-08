@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: DREI -*-
+;; -*- Mode: Lisp; Package: DREI -*-
 
 ;;;  (c) copyright 2007 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
@@ -81,37 +81,46 @@ If empty, tabs every TAB-WIDTH are assumed.")))
   (:documentation "Return the width of a space character on
 `stream' in device units (most likely pixels).")
   (:method ((stream extended-output-stream) (tabify tabify-mixin))
-    (maybe-update-recordings stream tabify)
-    (recorded-space-width tabify)))
+	   (maybe-update-recordings stream tabify)
+	   (with-accessors ((recorded-space-width recorded-space-width)) tabify
+			   recorded-space-width)))
 
 (defgeneric tab-width (stream tabify)
   (:documentation "Return the width of a tab character on
 `stream' in device units (most likely pixels).")
   (:method ((stream extended-output-stream) (tabify tabify-mixin))
-    (if (tab-space-count tabify)
-        (* (tab-space-count tabify) (space-width stream tabify))
-        (recorded-tab-width tabify))))
+	   (with-accessors ((tab-space-count tab-space-count) (recorded-tab-width recorded-tab-width) (use-tabs use-tabs)) tabify
+			   (if use-tabs
+			       recorded-tab-width
+				 (* (if tab-space-count tab-space-count 8) (space-width stream tabify))))))
 
 (defgeneric next-tab-stop (stream tabify x)
   (:documentation "Return the distance to the next tab-stop after `x'
 on `stream' in device units (most likely pixels).")
   (:method ((stream extended-output-stream) (tabify tabify-mixin) x)
-    (flet ((round-up (x width)
-	     (- width (mod x width))))
-      (if (tab-stops tabify)
-	(let ((next (find-if (lambda (pos) (> pos x)) (tab-stops tabify))))
-	  (or (and next (- next x)) (round-up x (space-width stream tabify))))
-	(round-up x (tab-width stream tabify))))))
+	   (with-accessors ((tab-space-count tab-space-count) (tab-stops tab-stops) (use-tabs use-tabs)) tabify
+			   (flet ((round-up (x width)
+					    (if (= 0 width)
+						(* tab-space-count (space-width stream tabify))
+					      (- width (mod x width)))))
+				 
+				 (if use-tabs
+				     (when tab-stops
+				       (let ((next (find-if (lambda (pos) (> pos x)) tab-stops)))
+					 (or (and next (- next x)) (round-up x (tab-width stream tabify)))))
+				   (round-up x
+					     (* (if tab-space-count tab-space-count 8) (space-width stream tabify))))))))
 
 (defgeneric (setf tab-stop-columns) (column-list tabify)
   (:documentation "Set the TAB-STOPS of view at the character column offsets
 in `column-list'.")
   (:method (column-list (tabify tabify-mixin))
-    (setf (tab-stops tabify) 
+	   (with-accessors ((tab-stops tab-stops) (recorded-stream recorded-stream)) tabify
+    (setf tab-stops
 	  (and column-list
-	       (sort (mapcar (lambda (col) (* col (space-width (recorded-stream tabify) tabify)))
-			     column-list) 
-		     #'<)))))
+	       (sort (mapcar (lambda (col) (* col (space-width recorded-stream tabify)))
+			     column-list)
+		     #'<))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
