@@ -244,30 +244,48 @@
          (new-height   (text-style-height text-style medium))
          (margin       (stream-text-margin stream))
          (end          (or end (length string))))
-    (flet ((find-split (delta)
-             ;; To prevent infinite recursion if there isn't room for even a
-             ;; single character we return at least (1+ start). -- jd 2019-01-08
-             (if (text-style-fixed-width-p text-style medium)
-                 (let ((char-size (text-style-width text-style medium)))
-                   (if (> char-size delta)
-                       (1+ start)
-                       (min end (+ start (floor delta char-size)))))
-                 ;; This loop performs string width bisection taking into
-                 ;; account its boundaries.
-                 (loop
-                    with last-found = (1+ start)
-                    with middle = (floor (+ start end) 2)
-                    until (or (<= middle last-found)
-                              (>= last-found end))
-                    do (if (<= (stream-string-width stream string
-                                                    :start start :end middle
-                                                    :text-style text-style)
-                               delta)
-                           (setf last-found middle
-                                 middle (ceiling (+ middle end) 2))
-                           (setf middle (floor (+ last-found middle) 2)))
-                    finally (return last-found)))))
-      (when (eql end 0)
+    ;; Implementing line breaking as defined in Unicode[1] is left as an
+    ;; excercise for the reader. -- jd 2019-01-08
+    ;;
+    ;; [1] https://unicode.org/reports/tr14/
+    (labels ((string-fits-p (delta string-index)
+               (<= (stream-string-width stream string
+                                        :start start :end string-index
+                                        :text-style text-style)
+                   delta))
+             (break-opportunity-indexes ()
+               (loop
+                  with space-indexes = (make-array 0 :fill-pointer 0 :adjustable t :element-type 'fixnum)
+                  for i from start below end
+                  do (when (char= #\space (aref string i))
+                       (vector-push-extend i space-indexes))
+                  finally (return space-indexes)))
+             (find-split (delta &aux (char-size (text-style-width text-style medium)))
+               "Split by character."
+               ;; To prevent infinite recursion if there isn't room for even a
+               ;; single character we start from (1+ start). -- jd 2019-01-08
+               (if (= delta margin)
+                   (when (> char-size delta)
+                     (return-from find-split (1+ start)))
+                   (return-from find-split start))
+               (if (text-style-fixed-width-p text-style medium)
+                   (min end (+ start (floor delta char-size)))
+                   (bisect (1+ start) end (curry #'string-fits-p delta))))
+             (find-split-by-word (delta)
+               "Split by word with a greedy approach."
+               (let* ((space-indexes (break-opportunity-indexes))
+                      (space-count (length space-indexes)))
+                (when (or (zerop space-count)
+                          (not (string-fits-p delta (elt space-indexes 0))))
+                  (if (= delta margin)
+                      (return-from find-split-by-word (find-split delta))
+                      (return-from find-split-by-word start)))
+                ;; 1+ to avoid putting a single space as a first character.
+                (1+ (elt space-indexes
+                         (bisect 0 (1- space-count)
+                                 (lambda (guess)
+                                   (string-fits-p delta (elt space-indexes guess)))))))))
+      (when (eql start end)
         (return-from seos-write-string))
       (with-slots (baseline vspace) stream
         (multiple-value-bind (cx cy) (stream-cursor-position stream)
@@ -281,6 +299,8 @@
               (ecase (stream-end-of-line-action stream)
                 (:wrap
                  (setq split (find-split (- margin cx))))
+                (:wrap*
+                 (setq split (find-split-by-word (- margin cx))))
                 (:scroll
                  (multiple-value-bind (tx ty)
                      (bounding-rectangle-position (sheet-region stream))
@@ -320,7 +340,7 @@
           (ecase (stream-end-of-page-action stream)
             ((:scroll :allow)
              nil)
-            (:wrap
+            ((:wrap :wrap*)
              (setq cy 0))))
         (setf baseline 0
               (%stream-char-height stream) 0
@@ -389,7 +409,7 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
           ;; PostScript backend for :eps may have region = +everywhere+.
           (if (region-equal (sheet-region sheet) +everywhere+)
               (* 60 chsize)             ; 2.5 alphabets
-              (- (bounding-rectangle-width sheet) chsize))))))
+              (bounding-rectangle-width sheet))))))
 
 (defmethod stream-line-height ((stream standard-extended-output-stream)
                                &key (text-style nil))

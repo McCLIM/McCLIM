@@ -548,6 +548,25 @@ STREAM in the direction DIRECTION."
      end
      finally (return (values bindings new-arg-list))))
 
+(defun bisect (start end predicate &optional (predicament :half))
+  (when (funcall predicate end)
+    (return-from bisect end))
+  (when (eql predicament :half)
+    (setf predicament (lambda (last-good last-bad)
+                        (let ((predicament (floor (+ last-good last-bad) 2)))
+                          (and (/= predicament last-good)
+                               (/= predicament last-bad)
+                               predicament)))))
+  (loop
+     with last-good = start
+     with last-bad = end
+     as current-guess = (funcall predicament last-good last-bad)
+     until (null current-guess)
+     do (if (funcall predicate current-guess)
+            (setf last-good current-guess)
+            (setf last-bad current-guess))
+     finally (return last-good)))
+
 ;;; Command name utilities that are useful elsewhere.
 
 (defun command-name-from-symbol (symbol)
