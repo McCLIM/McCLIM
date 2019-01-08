@@ -244,13 +244,29 @@
          (new-height   (text-style-height text-style medium))
          (margin       (stream-text-margin stream))
          (end          (or end (length string))))
-    (flet ((find-split (delta)  ;; FIXME: This can be done smarter.
-             (loop for i from (1+ start) upto end
-                   as sub-width = (stream-string-width stream string
-                                                       :start start :end i
-                                                       :text-style text-style)
-                   while (<= sub-width delta)
-                   finally (return (1- i)))))
+    (flet ((find-split (delta)
+             ;; To prevent infinite recursion if there isn't room for even a
+             ;; single character we return at least (1+ start). -- jd 2019-01-08
+             (if (text-style-fixed-width-p text-style medium)
+                 (let ((char-size (text-style-width text-style medium)))
+                   (if (> char-size delta)
+                       (1+ start)
+                       (min end (+ start (floor delta char-size)))))
+                 ;; This loop performs string width bisection taking into
+                 ;; account its boundaries.
+                 (loop
+                    with last-found = (1+ start)
+                    with middle = (floor (+ start end) 2)
+                    until (or (<= middle last-found)
+                              (>= last-found end))
+                    do (if (<= (stream-string-width stream string
+                                                    :start start :end middle
+                                                    :text-style text-style)
+                               delta)
+                           (setf last-found middle
+                                 middle (ceiling (+ middle end) 2))
+                           (setf middle (floor (+ last-found middle) 2)))
+                    finally (return last-found)))))
       (when (eql end 0)
         (return-from seos-write-string))
       (with-slots (baseline vspace) stream
@@ -264,10 +280,7 @@
             (when (>= (+ cx width) margin)
               (ecase (stream-end-of-line-action stream)
                 (:wrap
-                 ;; Let's prevent infinite recursion if there isn't
-                 ;; room for even a single character.
-                 (setq split (max (find-split (- margin cx))
-                                  (1+ start))))
+                 (setq split (find-split (- margin cx))))
                 (:scroll
                  (multiple-value-bind (tx ty)
                      (bounding-rectangle-position (sheet-region stream))
@@ -297,9 +310,9 @@
                           (bounding-rectangle-height stream))))
     (with-slots (baseline vspace) stream
       (multiple-value-bind (cx cy) (stream-cursor-position stream)
-        (setf (%stream-char-height stream) (max (%stream-char-height stream) (text-style-height (medium-text-style medium) medium)))
-        (setf cx 0
-              cy (+ cy (%stream-char-height stream) vspace))
+        (maxf (%stream-char-height stream) (text-style-height (medium-text-style medium) medium))
+        (setf cx 0)
+        (incf cy (+ (%stream-char-height stream) vspace))
         ;; VIEW-HEIGHT being NIL means that stream doesn't have a
         ;; bounding-rectangle and we never do break a page.
         (when (and view-height (> cy view-height))
