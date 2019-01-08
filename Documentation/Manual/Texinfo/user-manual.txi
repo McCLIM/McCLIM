@@ -347,7 +347,7 @@ which is the name of our only pane.
 In order to run a CLIM application, you must have a Lisp system that
 contains McCLIM.  If you use CMUCL or SBCL, you either need a @t{core}
 file that already has McCLIM in it, or else, you have to load the McCLIM
-compiled files that make up the McCLIM distribution.  The fist solution
+compiled files that make up the McCLIM distribution.  The first solution
 is recommended so as to avoid having to load the McCLIM files each time
 you start your CLIM application.
 
