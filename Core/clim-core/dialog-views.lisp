@@ -238,6 +238,22 @@
                                   (declare (ignore pane))
                                   (%standard-value-changed-callback (round item)))))
 
+;;; text-field
+
+(define-default-presentation-method accept-present-default
+    (type stream (view text-field-view) default default-supplied-p
+     present-p query-identifier)
+  (when-let ((width (width view)))
+    (let ((cx (stream-cursor-position stream)))
+      (letf (((stream-text-margin stream) (+ cx width)))
+        (funcall-presentation-generic-function accept-present-default
+                                               type
+                                               stream
+                                               +textual-dialog-view+
+                                               default default-supplied-p
+                                               present-p
+                                               query-identifier)))))
+
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)
   ()
