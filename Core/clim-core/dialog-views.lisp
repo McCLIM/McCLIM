@@ -233,6 +233,24 @@
                                     (throw-object-ptype `(com-change-query ,query-identifier ,value)
                                                         '(command :command-table accept-values))))))
 
+;;;; text-field
+
+(define-default-presentation-method accept-present-default
+    (type stream (view text-field-view) default default-supplied-p
+     present-p query-identifier)
+  (if (width view)
+      (multiple-value-bind (cx cy)
+	  (stream-cursor-position stream)
+	(declare (ignore cy))
+	(letf (((stream-text-margin stream) (+ cx (width view))))
+	  (funcall-presentation-generic-function accept-present-default
+						 type
+						 stream
+						 +textual-dialog-view+
+						 default default-supplied-p
+						 present-p
+						 query-identifier)))))
+
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)
   ()

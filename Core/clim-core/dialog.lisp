@@ -535,24 +535,6 @@ is called. Used to determine if any editing has been done by user")))
 
 (defparameter *no-default-cache-value* (cons nil nil))
 
-;;; Hack until more views / dialog gadgets are defined.
-
-(define-default-presentation-method accept-present-default
-    (type stream (view text-field-view) default default-supplied-p
-     present-p query-identifier)
-  (if (width view)
-      (multiple-value-bind (cx cy)
-	  (stream-cursor-position stream)
-	(declare (ignore cy))
-	(letf (((stream-text-margin stream) (+ cx (width view))))
-	  (funcall-presentation-generic-function accept-present-default
-						 type
-						 stream
-						 +textual-dialog-view+
-						 default default-supplied-p
-						 present-p
-						 query-identifier)))))
-
 (define-default-presentation-method accept-present-default
     (type stream (view textual-dialog-view) default default-supplied-p
      present-p query-identifier)
