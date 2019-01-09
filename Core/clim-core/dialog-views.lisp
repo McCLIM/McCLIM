@@ -115,6 +115,68 @@
                                 :value-changed-callback
                                 (%standard-value-changed-callback query-identifier)))
 
+;;; radio-box-view
+
+(define-presentation-method accept-present-default
+    ((type completion) stream (view radio-box-view) default default-supplied-p
+     present-p query-identifier)
+  (let ((buttons (loop for choice in sequence collect
+                      (make-pane 'toggle-button
+                                 :indicator-type :one-of
+                                 :id (funcall value-key choice)
+                                 :label (funcall name-key choice)))))
+    (make-output-record-from-view view stream query-identifier
+                                  :choices buttons
+                                  :current-selection (find default buttons :test test :key #'gadget-id)
+                                  :value-changed-callback
+                                  (lambda (pane item)
+                                    (let ((value (gadget-id item)))
+                                      (throw-object-ptype `(com-change-query ,query-identifier ,value)
+                                                          '(command :command-table accept-values)))))))
+
+;;; check-box-view
+
+(define-presentation-method accept-present-default
+    ((type subset-completion) stream (view check-box-view) default default-supplied-p
+     present-p query-identifier)
+  (let ((buttons (loop for choice in sequence collect
+                      (make-pane 'toggle-button
+                                 :indicator-type :some-of
+                                 :id (funcall value-key choice)
+                                 :label (funcall name-key choice)))))
+    (make-output-record-from-view view stream query-identifier
+                                  :choices buttons
+                                  :current-selection
+                                  (remove-if-not (lambda (x) (find (gadget-id x) default :test test)) buttons)
+                                  :value-changed-callback
+                                  (lambda (pane item)
+                                    (let ((value (map 'list #'gadget-id item)))
+                                      (throw-object-ptype `(com-change-query ,query-identifier ,value)
+                                                          '(command :command-table accept-values)))))))
+
+;;; option-pane-view
+
+(define-presentation-method accept-present-default
+    ((type completion) stream (view option-pane-view) default default-supplied-p
+     present-p query-identifier)
+  (flet ((generate-callback (query-identifier)
+           (lambda (pane item)
+             (declare (ignore pane))
+             (when *accepting-values-stream*
+               (when-let ((query (find query-identifier
+                                       (queries *accepting-values-stream*)
+                                       :key #'query-identifier :test #'equal)))
+                 (setf (value query) item)
+                 (setf (changedp query) t))))))
+    (make-output-record-from-view view stream query-identifier
+                                  :mode :exclusive
+                                  :test test
+                                  :value default
+                                  :name-key name-key
+                                  :value-key value-key
+                                  :items sequence
+                                  :value-changed-callback (generate-callback query-identifier))))
+
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)
   ()
