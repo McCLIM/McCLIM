@@ -56,6 +56,31 @@
   (define-gadget-view list-pane)
   (define-gadget-view option-pane))
 
+(defmethod make-gadget-pane-from-view ((view gadget-view) stream &rest initargs)
+  (let ((initargs (append initargs
+                          (loop for slot in (view-gadget-slots view)
+                             when (slot-boundp view (first slot))
+                             append (list (second slot) (slot-value view (first slot)))))))
+    (let ((gadget (with-look-and-feel-realization
+                      ((frame-manager *application-frame*) *application-frame*)
+                    (apply #'make-pane (view-gadget-name view) initargs))))
+      gadget)))
+
+(defmethod make-output-record-from-view ((view gadget-view) stream query-identifier &rest initargs)
+  (updating-output (stream
+                    :cache-value t      ; don't redisplay
+                    :unique-id query-identifier
+                    :record-type 'accepting-values-record)
+                   (let ((gadget (apply #'make-gadget-pane-from-view view stream initargs)))
+                     (with-output-as-gadget (stream)
+                       gadget))))
+
+(defun %standard-value-changed-callback (query-identifier)
+  (lambda (pane item)
+    (declare (ignore pane))
+    (throw-object-ptype `(com-change-query ,query-identifier ,item)
+                        '(command :command-table accept-values))))
+
 ;;; Use textual-dialog-view as default for Views not implemented
 
 (define-default-presentation-method accept-present-default
@@ -78,6 +103,17 @@
                                          :default default
                                          :default-type default-type))
 
+;;; toggle-button-view
+
+(define-presentation-method accept-present-default
+    ((type boolean) stream (view toggle-button-view) default default-supplied-p
+     present-p query-identifier)
+  (unless default-supplied-p
+    (setq default nil))
+  (make-output-record-from-view view stream query-identifier
+                                :value default
+                                :value-changed-callback
+                                (%standard-value-changed-callback query-identifier)))
 
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)
