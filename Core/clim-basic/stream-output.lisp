@@ -387,10 +387,14 @@
     (setf (cursor-position (stream-text-cursor stream))
           (values (stream-effective-left-margin stream)
                   updated-cy))
-    (maybe-end-of-page-action stream (+ updated-cy vertical-spacing))
-    (finish-output stream)       ; this will close the output record if recorded
-    (setf (slot-value stream 'baseline) 0
-          (%stream-char-height stream) 0)))
+    (finish-output stream)       ; this will close the output record if recorded)
+    (let* ((medium       (sheet-medium stream))
+           (text-style   (medium-text-style medium))
+           (new-baseline (text-style-ascent text-style medium))
+           (new-height   (text-style-height text-style medium)))
+      (maybe-end-of-page-action stream (+ updated-cy new-height))
+      (setf (slot-value stream 'baseline) new-baseline
+            (%stream-char-height stream)  new-height))))
 
 (defgeneric stream-write-output (stream line string-width &optional start end)
   (:documentation
