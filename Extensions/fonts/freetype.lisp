@@ -611,15 +611,10 @@ or NIL if the current transformation is the identity transformation."
                                        (font-replacement-text-style text-style)
                                        (otherwise nil)))))))
 
-(defmethod climb:text-style-to-font ((port clx-freetype-port) text-style)
-  (etypecase text-style
-    (clim:standard-text-style
-     (let ((x (or (clim:text-style-mapping port text-style)
-                  (setf (clim:text-style-mapping port text-style)
-                        (find-freetype-font port text-style)))))
-       x))
-    (climi::device-font-text-style
-     nil)))
+(defmethod climb:text-style-to-font ((port clx-freetype-port) (text-style clim:standard-text-style))
+  (or (clim:text-style-mapping port text-style)
+      (setf (clim:text-style-mapping port text-style)
+            (find-freetype-font port text-style))))
 
 ;;;
 ;;;  List fonts
