@@ -126,7 +126,7 @@ argument to avoid creating too many functions with similar name."))
                    (make-demo-button "Overlapping patterns" 'patterns-overlap)
                    (make-demo-button "Text transformations" 'text-transformations-test)
                    (make-demo-button "Text multiline positioning" 'text-multiline-positioning)
-                   (make-demo-button "SEOS baseline" 'seos-baseline)))))))))
+                   (make-demo-button "SEOS baseline and wrapping" 'seos-baseline)))))))))
 
 (defun demodemo ()
   (run-frame-top-level (make-application-frame 'demodemo)))
