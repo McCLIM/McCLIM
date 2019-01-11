@@ -2621,9 +2621,10 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 	(medium-clear-area (sheet-medium pane) left top right bottom)))
     (clear-output-record output-history))
   (window-erase-viewport pane)
-  (let ((cursor (stream-text-cursor pane)))
-    (when cursor
-      (setf (cursor-position cursor) (values 0 0))))
+  (when-let ((cursor (stream-text-cursor pane)))
+    (setf (cursor-position cursor)
+          (values (stream-effective-left-margin pane)
+                  (stream-effective-top-margin pane))))
   (setf (stream-width pane) 0)
   (setf (stream-height pane) 0)
   (scroll-extent pane 0 0)

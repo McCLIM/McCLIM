@@ -188,11 +188,48 @@
   (with-sheet-medium (medium stream)
     (medium-finish-output medium)))
 
+;;; STREAM-EFFECTIVE-*-MARGIN methods may return NIL if there is no margin
+;;; specified. If corresponding text wrap margin is NIL then text never wraps,
+;;; because end of line is never reached. Similar thing applies to lines, pages
+;;; and top/bottom margins.
+;;;
+;;; For left-to-right text starting cursor position is
+;;;   [(or effective-left-margin 0) (or effective-top-margin 0)]
+;;;
+;;; For right-to-left text starting cursor position is
+;;;   [(or effective-right-margin 0) (or effective-top-margin 0)]
+;;;
+;;; -- jd 2019-01-09
+
+(defgeneric stream-effective-left-margin (stream)
+  (:method ((stream standard-extended-output-stream))
+    0))
+
+(defgeneric stream-effective-top-margin (stream)
+  (:method ((stream standard-extended-output-stream))
+    0))
+
+(defgeneric stream-effective-right-margin (stream)
+  (:method ((stream standard-extended-output-stream))
+    (or (slot-value stream 'margin)
+        (let ((sheet (or (pane-viewport stream) stream)))
+          ;; Sheet region may not be bound (ie in PostScript backend).
+          (if (region-equal (sheet-region sheet) +everywhere+)
+              nil
+              (bounding-rectangle-width sheet))))))
+
+(defgeneric stream-effective-bottom-margin (stream)
+  (:method ((stream standard-extended-output-stream))
+    (bounding-rectangle-height stream)))
+
 (defmethod initialize-instance :after
     ((stream standard-extended-output-stream) &rest args)
   (declare (ignore args))
   (setf (stream-text-cursor stream)
-        (make-instance 'standard-text-cursor :sheet stream))
+        (make-instance 'standard-text-cursor
+                       :sheet stream
+                       :x-position (stream-effective-left-margin stream)
+                       :y-position (stream-effective-top-margin stream)))
   (setf (cursor-active (stream-text-cursor stream)) t))
 
 
@@ -233,16 +270,40 @@
           (call-next-method))
         (call-next-method))))
 
+;; In a next few functions we can't call (setf stream-cursor-position) because
+;; that would close the text-output-record unnecessarily. Using underlying
+;; text-cursor with (setf cursor-position) is fine as long as the cursor is
+;; off. If it were on that would close the output record too. -- jd 2019-01-07
+
 (defmacro with-cursor-off (stream &body body)
   `(letf (((cursor-visibility (stream-text-cursor ,stream)) nil))
      ,@body))
+
+(defgeneric maybe-end-of-page-action (stream y)
+  (:method ((stream standard-extended-output-stream) y)
+    (let ((bottom-margin (stream-effective-bottom-margin stream))
+          (end-of-page-action (stream-end-of-page-action stream)))
+      (when (and bottom-margin (> y bottom-margin))
+        (%note-stream-end-of-page stream end-of-page-action y)
+        (ecase end-of-page-action
+          ((:scroll :allow)  nil)
+          ((:wrap :wrap*)
+           (setf (cursor-position (stream-text-cursor stream))
+                 (values (nth-value 0 (stream-cursor-position stream))
+                         (stream-effective-top-margin stream)))))))))
+
+(defgeneric %note-stream-end-of-page (stream action new-height)
+  (:method (stream action new-height)
+    nil))
 
 (defun seos-write-string (stream string &optional (start 0) end)
   (let* ((medium       (sheet-medium stream))
          (text-style   (medium-text-style medium))
          (new-baseline (text-style-ascent text-style medium))
          (new-height   (text-style-height text-style medium))
-         (margin       (stream-text-margin stream))
+         ;; fixme: remove assumption about the text direction (LTR).
+         (left-margin  (stream-effective-left-margin stream))
+         (right-margin (stream-effective-right-margin stream))
          (end          (or end (length string))))
     ;; Implementing line breaking as defined in Unicode[1] is left as an
     ;; excercise for the reader. -- jd 2019-01-08
@@ -253,6 +314,8 @@
                                         :start start :end string-index
                                         :text-style text-style)
                    delta))
+             (empty-line-p (delta)
+               (= right-margin (+ (or left-margin 0) delta)))
              (break-opportunity-indexes ()
                (loop
                   with space-indexes = (make-array 0 :fill-pointer 0 :adjustable t :element-type 'fixnum)
@@ -264,7 +327,7 @@
                "Split by character."
                ;; To prevent infinite recursion if there isn't room for even a
                ;; single character we start from (1+ start). -- jd 2019-01-08
-               (if (= delta margin)
+               (if (empty-line-p delta)
                    (when (> char-size delta)
                      (return-from find-split (1+ start)))
                    (return-from find-split start))
@@ -277,7 +340,7 @@
                       (space-count (length space-indexes)))
                 (when (or (zerop space-count)
                           (not (string-fits-p delta (elt space-indexes 0))))
-                  (if (= delta margin)
+                  (if (empty-line-p delta)
                       (return-from find-split-by-word (find-split delta))
                       (return-from find-split-by-word start)))
                 ;; 1+ to avoid putting a single space as a first character.
@@ -291,16 +354,17 @@
         (multiple-value-bind (cx cy) (stream-cursor-position stream)
           (maxf baseline new-baseline)
           (maxf (%stream-char-height stream) new-height)
+          (maybe-end-of-page-action stream (+ cy (%stream-char-height stream)))
           (let ((width (stream-string-width stream string
                                             :start start :end end
                                             :text-style text-style))
                 (split end))
-            (when (>= (+ cx width) margin)
+            (when (and right-margin (> (+ cx width) right-margin))
               (ecase (stream-end-of-line-action stream)
                 (:wrap
-                 (setq split (find-split (- margin cx))))
+                 (setq split (find-split (- right-margin cx))))
                 (:wrap*
-                 (setq split (find-split-by-word (- margin cx))))
+                 (setq split (find-split-by-word (- right-margin cx))))
                 (:scroll
                  (multiple-value-bind (tx ty)
                      (bounding-rectangle-position (sheet-region stream))
@@ -308,43 +372,25 @@
                 (:allow)))
             (unless (= start split)
               (stream-write-output stream string nil start split)
-              (setq cx (+ cx width))
-              ;; We can't call (setf stream-cursor-position) here because that would
-              ;; close the text-output-record when it is recorded. -- jd 2019-01-07
+              (incf cx width)
               (setf (cursor-position (stream-text-cursor stream)) (values cx cy)))
             (when (/= split end)
-              (let ((current-baseline baseline))
-                (setf baseline current-baseline))
               (stream-write-char stream #\newline)
               (seos-write-string stream string split end))))))))
 
-(defgeneric %note-stream-end-of-page (stream action new-height)
-  (:method (stream action new-height)
-    nil))
-
 (defun seos-write-newline (stream)
-  (let ((medium       (sheet-medium stream))
-        ;; Stream region may be +everywhere+.
-        (view-height  (if (region-equal (sheet-region stream) +everywhere+)
-                          nil
-                          (bounding-rectangle-height stream))))
-    (with-slots (baseline vspace) stream
-      (multiple-value-bind (cx cy) (stream-cursor-position stream)
-        (maxf (%stream-char-height stream) (text-style-height (medium-text-style medium) medium))
-        (setf cx 0)
-        (incf cy (+ (%stream-char-height stream) vspace))
-        ;; VIEW-HEIGHT being NIL means that stream doesn't have a
-        ;; bounding-rectangle and we never do break a page.
-        (when (and view-height (> cy view-height))
-          (%note-stream-end-of-page stream (stream-end-of-page-action stream) cy)
-          (ecase (stream-end-of-page-action stream)
-            ((:scroll :allow)
-             nil)
-            ((:wrap :wrap*)
-             (setq cy 0))))
-        (setf baseline 0
-              (%stream-char-height stream) 0
-              (stream-cursor-position stream) (values cx cy))))))
+  (let* ((current-cy       (nth-value 1 (stream-cursor-position stream)))
+         (vertical-spacing (stream-vertical-spacing stream))
+         (updated-cy       (+ current-cy
+                              (%stream-char-height stream)
+                              vertical-spacing)))
+    (setf (cursor-position (stream-text-cursor stream))
+          (values (stream-effective-left-margin stream)
+                  updated-cy))
+    (maybe-end-of-page-action stream (+ updated-cy vertical-spacing))
+    (finish-output stream)       ; this will close the output record if recorded
+    (setf (slot-value stream 'baseline) 0
+          (%stream-char-height stream) 0)))
 
 (defgeneric stream-write-output (stream line string-width &optional start end)
   (:documentation
@@ -402,14 +448,8 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
       (values final-x total-width))))
 
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
-  (with-slots (margin) stream
-    (or margin
-        (let ((sheet (or (pane-viewport stream) stream))
-              (chsize (text-size stream "O")))
-          ;; PostScript backend for :eps may have region = +everywhere+.
-          (if (region-equal (sheet-region sheet) +everywhere+)
-              (* 60 chsize)             ; 2.5 alphabets
-              (bounding-rectangle-width sheet))))))
+  (stream-effective-right-margin stream))
+
 
 (defmethod stream-line-height ((stream standard-extended-output-stream)
                                &key (text-style nil))
