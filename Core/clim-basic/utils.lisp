@@ -567,6 +567,19 @@ STREAM in the direction DIRECTION."
             (setf last-bad current-guess))
      finally (return last-good)))
 
+;; Implementing line breaking as defined in Unicode[1] is left as an excercise
+;; for the reader. [1] https://unicode.org/reports/tr14/ -- jd 2019-01-08
+(defun line-break-opportunities (string start end &optional (break-characters '(#\space)))
+  "Returns a sequence of string indexes where line may be braken."
+  (loop
+     with space-indexes = (make-array 1 :fill-pointer 0 :adjustable t :element-type 'fixnum)
+     for i from start below (1- end)
+     do (when (member (aref string i) break-characters :test #'char=)
+          (vector-push-extend i space-indexes))
+     finally
+       (vector-push-extend (1- end) space-indexes)
+       (return space-indexes)))
+
 ;;; Command name utilities that are useful elsewhere.
 
 (defun command-name-from-symbol (symbol)
