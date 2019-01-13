@@ -289,22 +289,23 @@ right-trimmed for spaces."
                   (if y-p y oy)))))
 
 (defmacro layout-examples ((pane) &body examples)
-  `(let ((eosp (extended-output-stream-p ,pane)))
-     ,@(mapcar (let ((y 0))
-                 #'(lambda (ex)
-                     (prog1 `(progn
-                               (if eosp
-                                   (progn (ssop ,pane :x 0 :y ,y) ,ex)
-                                   (with-translation (,pane 0 ,y) ,ex))
-                               (draw-line* pane
-                                           0
-                                           ,(+ y *block-height* -10)
-                                           *text-right-margin*
-                                           ,(+ y *block-height* -10)
-                                           :ink +blue+
-                                           :line-dashes t))
-                       (incf y *block-height*))))
-               examples)))
+  (let ((eosp (gensym)))
+    `(let ((,eosp (extended-output-stream-p ,pane)))
+       ,@(mapcar (let ((y 0))
+                   #'(lambda (ex)
+                       (prog1 `(progn
+                                 (if ,eosp
+                                     (progn (ssop ,pane :x 0 :y ,y) ,ex)
+                                     (with-translation (,pane 0 ,y) ,ex))
+                                 (draw-line* pane
+                                             0
+                                             ,(+ y *block-height* -10)
+                                             *text-right-margin*
+                                             ,(+ y *block-height* -10)
+                                             :ink +blue+
+                                             :line-dashes t))
+                         (incf y *block-height*))))
+                 examples))))
 
 (defmethod handle-repaint ((pane my-basic-pane) region)
   (declare (ignore region))
