@@ -40,6 +40,7 @@
     :documentation "Time ordered queue of events to schedule."))
   (:documentation "Experimental timer event extension."))
 
+(declaim (inline now compute-decay))
 (defun now ()
   (/ (get-internal-real-time)
      1.0
@@ -52,8 +53,6 @@
         (time-1 (- time-1 (now)))
         (time-2 (- time-2 (now)))
         (T NIL)))
-
-(declaim (inline now compute-decay))
 
 ;; See if it's time to inject a scheduled event into the queue.
 (defgeneric check-schedule (queue)
