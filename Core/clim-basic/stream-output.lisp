@@ -255,9 +255,8 @@
         (return-from seos-write-string))
       (with-slots (baseline vspace) stream
         (multiple-value-bind (cx cy) (stream-cursor-position stream)
-          (when (> new-baseline baseline)
-            (setq baseline new-baseline))
-          (setf (%stream-char-height stream) (max (%stream-char-height stream) new-height))
+          (maxf baseline new-baseline)
+          (maxf (%stream-char-height stream) new-height)
           (let ((width (stream-string-width stream string
                                             :start start :end end
                                             :text-style text-style))
@@ -277,7 +276,9 @@
             (unless (= start split)
               (stream-write-output stream string nil start split)
               (setq cx (+ cx width))
-              (setf (stream-cursor-position stream) (values cx cy)))
+              ;; We can't call (setf stream-cursor-position) here because that would
+              ;; close the text-output-record when it is recorded. -- jd 2019-01-07
+              (setf (cursor-position (stream-text-cursor stream)) (values cx cy)))
             (when (/= split end)
               (let ((current-baseline baseline))
                 (setf baseline current-baseline))
@@ -312,26 +313,22 @@
               (%stream-char-height stream) 0
               (stream-cursor-position stream) (values cx cy))))))
 
-
-
-
 (defgeneric stream-write-output (stream line string-width &optional start end)
   (:documentation
-   "Writes the character or string LINE to STREAM. This function produces no
-more than one line of output i.e., doesn't wrap. If STRING-WIDTH is
-non-nil, that is used as the width where needed; otherwise
-STREAM-STRING-WIDTH will be called."))
+   "Writes the character or string LINE to STREAM. This function produces no more
+than one line of output i.e., doesn't wrap. If STRING-WIDTH is non-nil, that is
+used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 
 ;;; The cursor is in stream coordinates.
 (defmethod stream-write-output ((stream standard-extended-output-stream)
                                 line string-width
                                 &optional (start 0) end)
   (declare (ignore string-width))
-  (with-slots (baseline vspace) stream
+  ;; Do not capture medium transformation - this is a stream operation and we
+  ;; draw at the current cursor position. -- jd 2019-01-04
+  (with-identity-transformation (stream)
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
-      (draw-text* (sheet-medium stream) line
-                  cx (+ cy baseline)
-                  :transformation +identity-transformation+
+      (draw-text* stream line cx (+ cy (stream-baseline stream))
                   :start start :end end))))
 
 (defmethod stream-write-char ((stream standard-extended-output-stream) char)
