@@ -157,7 +157,7 @@ A CLIM application is made up of a hierarchy of an @gloss{application
 @node How CLIM applications produce output
 @subsection How CLIM applications produce output
 
-Although it is easy to imagine panes in term of their appearance on
+Although it is easy to imagine panes in terms of their appearance on
 screen, they are much richer: they are actually the series of
 operations that produces that appearance. They are not only the end
 product visible on a screen, but they contain all the step-by-step
