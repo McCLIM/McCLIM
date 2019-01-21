@@ -202,14 +202,17 @@
 ;;; -- jd 2019-01-09
 
 (defgeneric stream-effective-left-margin (stream)
+  (:documentation "Absolute position of the left margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
     0))
 
 (defgeneric stream-effective-top-margin (stream)
+  (:documentation "Absolute position of the top margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
     0))
 
 (defgeneric stream-effective-right-margin (stream)
+  (:documentation "Absolute position of the right margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
     (or (slot-value stream 'margin)
         (let ((sheet (or (pane-viewport stream) stream)))
@@ -219,6 +222,7 @@
               (bounding-rectangle-width sheet))))))
 
 (defgeneric stream-effective-bottom-margin (stream)
+  (:documentation "Absolute position of the bottom margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
     (bounding-rectangle-height stream)))
 

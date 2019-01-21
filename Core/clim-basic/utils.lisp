@@ -548,21 +548,33 @@ STREAM in the direction DIRECTION."
      end
      finally (return (values bindings new-arg-list))))
 
-(defun bisect (start end predicate &optional (predicament :half))
-  (when (funcall predicate end)
+(defun bisect (start end predicate-fn &optional predicament-fn)
+  "Finds the rightmost index meeting the PREDICATE-FN between START and END. It
+is assumed that START always meets the predicate while END may but doesn't have
+to meet it. That means that function always return some index.
+
+PREDICATE-FN INDEX
+Should return NIL if index does not meet the predicate and something else
+otherwise.
+
+PREDICAMENT-FN INDEX-1 INDEX-2
+Returns next index between its arguments for test.  If there is nothing more to
+test must return NIL. When not supplied default function looks always for an
+index being halfway between INDEX-1 and INDEX-2."
+  (when (funcall predicate-fn end)
     (return-from bisect end))
-  (when (eql predicament :half)
-    (setf predicament (lambda (last-good last-bad)
-                        (let ((predicament (floor (+ last-good last-bad) 2)))
-                          (and (/= predicament last-good)
-                               (/= predicament last-bad)
-                               predicament)))))
+  (unless predicament-fn
+    (setf predicament-fn (lambda (last-good last-bad)
+                           (let ((predicament (floor (+ last-good last-bad) 2)))
+                             (and (/= predicament last-good)
+                                  (/= predicament last-bad)
+                                  predicament)))))
   (loop
      with last-good = start
      with last-bad = end
-     as current-guess = (funcall predicament last-good last-bad)
+     as current-guess = (funcall predicament-fn last-good last-bad)
      until (null current-guess)
-     do (if (funcall predicate current-guess)
+     do (if (funcall predicate-fn current-guess)
             (setf last-good current-guess)
             (setf last-bad current-guess))
      finally (return last-good)))
@@ -570,7 +582,7 @@ STREAM in the direction DIRECTION."
 ;; Implementing line breaking as defined in Unicode[1] is left as an excercise
 ;; for the reader. [1] https://unicode.org/reports/tr14/ -- jd 2019-01-08
 (defun line-break-opportunities (string start end &optional (break-characters '(#\space)))
-  "Returns a sequence of string indexes where line may be braken."
+  "Returns a sequence of string indexes where line can break."
   (loop
      with space-indexes = (make-array 1 :fill-pointer 0 :adjustable t :element-type 'fixnum)
      for i from start below (1- end)
