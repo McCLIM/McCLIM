@@ -163,8 +163,8 @@ supposed to be called whenever one of the following happens:
   - the parent's transformation changed
   - the parent's mirror region changed
 
-Also if the sheet's native transformation changes the mirror's contents need
-to be redrawn, which is achieved by calling PORT-DIRTY-MIRROR-REGION.
+Also if the sheet's native transformation changes, the mirror's contents need
+to be redrawn, which is achieved by calling PORT-DIRTY-MIRROR-REGION. TODO is this true?
 
 Since changing the sheet's native transformation might thus be expensive,
 this function tries to minimize changes to it. (although it does not try
@@ -175,21 +175,21 @@ very hard)."
   ;; The native transformation has to changed or needs to be computed initially.
   (let* ((parent (sheet-parent sheet))
          (sheet-region-in-native-parent
-          ;; this now is the wanted sheet mirror region
-          (transform-region (sheet-native-transformation parent)
-                            (region-intersection (sheet-region parent)
-                                                 (transform-region (sheet-transformation sheet)
-                                                                   (sheet-region sheet))))))
+           ;; this now is the wanted sheet mirror region
+           (transform-region (sheet-native-transformation parent)
+                             (region-intersection (sheet-region parent)
+                                                  (transform-region (sheet-transformation sheet)
+                                                                    (sheet-region sheet))))))
     (when (region-equal sheet-region-in-native-parent +nowhere+)
       (%set-mirror-geometry sheet :invalidate-transformations t)
       (return-from update-mirror-geometry))
     ;; mx1 .. my2 are is now the wanted mirror region in the
     ;; parent coordinate system.
-    (with-bounding-rectangle* (mx1 my1 mx2 my2)
-        sheet-region-in-native-parent
-      (let (;; pw, ph is the width/height of the mirror containing our sheet
-            (pw (bounding-rectangle-width (%sheet-mirror-region* (sheet-mirrored-ancestor parent))))
-            (ph (bounding-rectangle-height (%sheet-mirror-region* (sheet-mirrored-ancestor parent)))))
+    (with-bounding-rectangle* (mx1 my1 mx2 my2) sheet-region-in-native-parent
+      (let* ((parent-mirror-region (%sheet-mirror-region* (sheet-mirrored-ancestor parent)))
+             ;; pw, ph is the width/height of the mirror containing our sheet
+             (pw (bounding-rectangle-width parent-mirror-region))
+             (ph (bounding-rectangle-height parent-mirror-region)))
         (labels ((choose (MT)
                    ;; -> fits-p mirror-region
                    (multiple-value-bind (x1 y1) (transform-position MT 0 0)
@@ -215,32 +215,31 @@ very hard)."
               (multiple-value-bind (fits-p MR) (choose MT)
                 (when fits-p
                   (%set-mirror-geometry sheet :MT MT :MR MR)
-                  (return-from update-mirror-geometry) ))))
+                  (return-from update-mirror-geometry)))))
           ;; Try reusing the mirror transformation:
-          (let ((MT (%sheet-mirror-transformation sheet)))
-            (when MT
-              (multiple-value-bind (fits-p MR) (choose MT)
-                (when fits-p
-                  (let ((native-transformation
-                         ;; NT = T o PNT o -MT
-                         (compose-transformations
-                          (invert-transformation MT)
-                          (compose-transformations (sheet-native-transformation parent)
-                                                   (sheet-transformation sheet)))))
-                    ;; finally reflect the change to the host window system
-                    (%set-mirror-geometry sheet :MT MT :MR MR)
-                    ;; update the native transformation if neccessary.
-                    (unless (and old-native-transformation
-                                 (transformation-equal native-transformation
-                                                       old-native-transformation))
-                      (invalidate-cached-transformations sheet)
-                      (%%set-sheet-native-transformation native-transformation sheet)
-                      (when old-native-transformation
-                        ;; Full sheet contents are redrawn.
-                        (dispatch-repaint sheet
-                                          (untransform-region native-transformation
-                                                              (%effective-mirror-region sheet))))))
-                  (return-from update-mirror-geometry))))))
+          (when-let ((MT (%sheet-mirror-transformation sheet)))
+            (multiple-value-bind (fits-p MR) (choose MT)
+              (when fits-p
+                (let ((native-transformation
+                        ;; NT = T o PNT o MT⁻¹
+                        (compose-transformations
+                         (invert-transformation MT)
+                         (compose-transformations (sheet-native-transformation parent)
+                                                  (sheet-transformation sheet)))))
+                  ;; finally reflect the change to the host window system
+                  (%set-mirror-geometry sheet :MT MT :MR MR)
+                  ;; update the native transformation if neccessary.
+                  (unless (and old-native-transformation
+                               (transformation-equal native-transformation
+                                                     old-native-transformation))
+                    (invalidate-cached-transformations sheet)
+                    (%%set-sheet-native-transformation native-transformation sheet)
+                    (when old-native-transformation
+                      ;; Full sheet contents are redrawn.
+                      (dispatch-repaint sheet
+                                        (untransform-region native-transformation
+                                                            (%effective-mirror-region sheet))))))
+                (return-from update-mirror-geometry)))))
         ;; Otherwise just choose the geometry
         ;; Conditions to be met:
         ;;  x2 < #x8000 + x1
@@ -257,13 +256,13 @@ very hard)."
                (MT (make-translation-transformation x1 y1))
                (MR (make-rectangle* 0 0 (round (- x2 x1)) (round (- y2 y1))))
                (native-transformation
-                ;; NT = T o PNT o -MT
-                (compose-transformations
-                 (invert-transformation MT)
-                 (compose-transformations (sheet-native-transformation (sheet-parent sheet))
-                                          (sheet-transformation sheet))))
+                 ;; NT = T o PNT o MT⁻¹
+                 (compose-transformations
+                  (invert-transformation MT)
+                  (compose-transformations (sheet-native-transformation (sheet-parent sheet))
+                                           (sheet-transformation sheet))))
                (old-native-transformation
-                (%%sheet-native-transformation sheet)))
+                 (%%sheet-native-transformation sheet)))
 
           (cond ((and (> (round (- x2 x1)) 0)
                       (> (round (- y2 y1)) 0))
@@ -276,7 +275,7 @@ very hard)."
                          (mirror (sheet-direct-mirror sheet)))
                      (port-set-mirror-region port mirror MR)
                      (port-set-mirror-transformation port mirror MT)))
-                 ;; update the native transformation if neccessary.
+                 ;; update the native transformation if necessary.
                  (unless (and old-native-transformation
                               (transformation-equal native-transformation
                                                     old-native-transformation))
