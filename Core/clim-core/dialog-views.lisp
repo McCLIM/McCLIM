@@ -184,6 +184,34 @@
                                   :items sequence
                                   :value-changed-callback (generate-callback query-identifier))))
 
+;;; list-pane-view
+
+(define-presentation-method accept-present-default
+    ((type completion) stream (view list-pane-view) default default-supplied-p
+     present-p query-identifier)
+  (make-output-record-from-view view stream query-identifier
+                                :mode :exclusive
+                                :test test
+                                :value default
+                                :name-key name-key
+                                :value-key value-key
+                                :items sequence
+                                :value-changed-callback
+                                (%standard-value-changed-callback query-identifier)))
+
+(define-presentation-method accept-present-default
+    ((type subset-completion) stream (view list-pane-view) default default-supplied-p
+     present-p query-identifier)
+  (make-output-record-from-view view stream query-identifier
+                                :mode :nonexclusive
+                                :test test
+                                :value default
+                                :name-key name-key
+                                :value-key value-key
+                                :items sequence
+                                :value-changed-callback
+                                (%standard-value-changed-callback query-identifier)))
+
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)
   ()
