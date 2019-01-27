@@ -1626,6 +1626,8 @@
    #:+push-button-view+                 ;constant
    #:radio-box-view                     ;class
    #:+radio-box-view+                   ;class
+   #:check-box-view                     ;class
+   #:+check-box-view+                   ;class
    #:read-bitmap-file                   ;function
    #:slider-view                        ;slider-view
    #:+slider-view+                      ;constant
