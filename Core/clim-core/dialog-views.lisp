@@ -205,6 +205,34 @@
                                 :value-changed-callback
                                 (%standard-value-changed-callback query-identifier)))
 
+;;;; slider-view
+
+(define-presentation-method accept-present-default
+    ((type real) stream (view slider-view) default default-supplied-p
+     present-p query-identifier)
+  (make-output-record-from-view view stream query-identifier
+                                :value default
+                                :max-value high ; high: presentation parameter
+                                :min-value low ; low: presentation parameter
+                                :show-value-p t
+                                :value-changed-callback (%standard-value-changed-callback query-identifier)))
+
+(define-presentation-method accept-present-default
+    ((type integer) stream (view slider-view) default default-supplied-p
+     present-p query-identifier)
+  (make-output-record-from-view view stream query-identifier
+                                :value default
+                                :max-value high ; presentation parameter
+                                :min-value low ; presentation parameter
+                                :show-value-p t
+                                :number-of-quanta (- high low)
+                                :value-changed-callback
+                                (lambda (pane item)
+                                  (declare (ignore pane))
+                                  (let ((value (round item)))
+                                    (throw-object-ptype `(com-change-query ,query-identifier ,value)
+                                                        '(command :command-table accept-values))))))
+
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)
   ()
