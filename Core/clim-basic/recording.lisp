@@ -366,30 +366,41 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     ((record gs-clip-mixin) x y)
   (region-contains-position-p (graphics-state-clip record) x y))
 
+(defun highlight-colour (colour)
+  "Given the specified background colour, return the appropriate
+colour to use for presentation highlights.
+
+The default implementation returns a slightly lighter colour, unless
+the colour is already white, in which case it returns a slightly
+darker version."
+  (let ((delta 0.1))
+    (multiple-value-bind (i h s)
+        (clim:color-ihs colour)
+      (clim:make-ihs-color (if (> (+ i delta) 1)
+                               (- i delta)
+                               (+ i delta))
+                           h
+                           s))))
+
+(defvar +highlight-border-colour+ (make-rgb-color 0.7 0.7 0.7))
+
 (defun highlight-output-record-rectangle (record stream state)
-  (with-identity-transformation (stream)
-    (multiple-value-bind (x1 y1 x2 y2)
-        (bounding-rectangle* record)
-      (ecase state
-        (:highlight
-         (draw-rectangle* (sheet-medium stream) (1+ x1) (1+ y1) (1- x2) (1- y2)
-                          :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+?
-        (:unhighlight
-         (repaint-sheet stream (bounding-rectangle record))
-         ;; Using queue-repaint should be faster in apps (such as
-         ;; clouseau) that highlight/unhighlight many bounding
-         ;; rectangles at once. The event code should merge these into
-         ;; a single larger repaint. Unfortunately, since an enqueued
-         ;; repaint does not occur immediately, and highlight
-         ;; rectangles are not recorded, newer highlighting gets wiped
-         ;; out shortly after being drawn. So, we aren't ready for
-         ;; this yet.  ..Actually, it isn't necessarily
-         ;; faster. Depends on the app.
-         #+ (or)
-	       (queue-repaint stream
-			      (make-instance 'window-repaint-event
-                           :sheet stream
-                           :region (bounding-rectangle record))))))))
+  (clim:with-identity-transformation (stream)
+    (multiple-value-bind (px1 py1 px2 py2)
+        (clim:bounding-rectangle* record)
+      (let ((x1 (truncate (+ px1 0.5)))
+            (y1 (truncate (+ py1 0.5)))
+            (x2 (truncate px2))
+            (y2 (truncate py2)))
+        (let ((medium (clim:sheet-medium stream)))
+          (ecase state
+            (:highlight
+             (let ((bg-colour (highlight-colour (medium-background medium))))
+               (clim:draw-rectangle* medium x1 y1 x2 y2 :filled t :ink bg-colour)
+               (clim:draw-rectangle* medium x1 y1 x2 y2 :filled nil :ink +highlight-border-colour+)
+               (clim:replay-output-record (stream-output-history stream) stream (make-rectangle* x1 y1 x2 y2))))
+            (:unhighlight
+             (clim:repaint-sheet stream (make-rectangle* x1 y1 (1+ x2) (1+ y2))))))))))
 
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record output-record) stream state)
