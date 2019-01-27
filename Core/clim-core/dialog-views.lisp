@@ -251,6 +251,31 @@
 						 present-p
 						 query-identifier)))))
 
+;;;; text-editor-view
+
+(define-presentation-method accept-present-default
+    ((type string) stream (view text-editor-view) default default-supplied-p
+     present-p query-identifier)
+  (unless default-supplied-p
+    (setf default ""))
+  (let ((gadget (make-gadget-pane-from-view view stream
+                                            :value default
+                                            :value-changed-callback
+                                            (%standard-value-changed-callback query-identifier))))
+    (updating-output (stream
+                      :cache-value t    ; don't redisplay
+                      :unique-id query-identifier
+                      :record-type 'accepting-values-record)
+
+                     (with-output-as-presentation (stream query-identifier 'selectable-query
+                                                          :single-box t)
+                       (surrounding-output-with-border (stream :shape :rounded
+                                                               :radius 3 :background clim:+background-ink+
+                                                               :foreground clim:+foreground-ink+
+                                                               :move-cursor t)
+                                                       (with-output-as-gadget (stream)
+                                                         gadget))))))
+
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)
   ()
