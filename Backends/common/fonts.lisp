@@ -12,8 +12,7 @@
            (code (alexandria:first-elt codes)))
       (assert (alexandria:length= 1 codes))
       (+ (climb:font-glyph-left font code)
-         (climb:font-glyph-width font code)
-         (climb:font-glyph-right font code))))
+         (climb:font-glyph-width font code))))
   (:documentation "Returns width of the character. Character may be composed of
 many codepoints, but argument must constitute exactly one character."))
 
@@ -232,7 +231,7 @@ of letters specified in a separate kerning-table."))
   (climb:font-character-width (text-style-to-font (port medium) text-style) char))
 
 (defmethod text-style-width (text-style medium)
-  (text-style-character-width text-style medium #\m))
+  (text-style-character-width text-style medium #\M))
 
 (defmethod text-style-fixed-width-p (text-style medium)
   (eql (text-style-family text-style) :fix))
