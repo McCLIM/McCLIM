@@ -157,16 +157,112 @@
 
 (defgeneric* (setf stream-cursor-position) (x y stream))
 
+;;; STANDARD-MARGINS
+;;;
+;;; I don't think we support model where stream (hence sheet) starts at a
+;;; different coordinate than (0,0) but we might want to that in the
+;;; future. This code is resilent to such change by specifying separately
+;;; top/left margin and absolute coordinates of said margins. -- jd 2019-01-09
+
+(defclass standard-margins ()
+  (;; relative margin positions
+   (left-margin   :initarg :left-margin   :accessor left-margin   :writer set-left-margin)
+   (top-margin    :initarg :top-margin    :accessor top-margin    :writer set-top-margin)
+   (right-margin  :initarg :right-margin  :accessor right-margin  :writer set-right-margin)
+   (bottom-margin :initarg :bottom-margin :accessor bottom-margin :writer set-bottom-margin)
+   ;; absolute margin positions
+   (margin-x1 :initarg :margin-x1 :initform nil :accessor margin-x1 :writer set-margin-x1)
+   (margin-y1 :initarg :margin-y1 :initform nil :accessor margin-y1 :writer set-margin-y1)
+   (margin-x2 :initarg :margin-x2 :initform nil :accessor margin-x2 :writer set-margin-x2)
+   (margin-y2 :initarg :margin-y2 :initform nil :accessor margin-y2 :writer set-margin-y2))
+  (:default-initargs))
+
+;;; SETF :before method sets the counterpart margin to NIL.
+(macrolet ((thunk (margin-accessor corresponding-margin-writer)
+             `(defmethod (setf ,margin-accessor) :before (value (margin standard-margins))
+                (if (null value)
+                    (error "Margin can't be set to NIL.")
+                    (,corresponding-margin-writer nil margin)))))
+  (thunk left-margin   set-margin-x1)
+  (thunk right-margin  set-margin-x2)
+  (thunk top-margin    set-margin-y1)
+  (thunk bottom-margin set-margin-y2)
+  (thunk margin-x1     set-left-margin)
+  (thunk margin-x2     set-right-margin)
+  (thunk margin-y1     set-top-margin)
+  (thunk margin-y2     set-bottom-margin))
+
+(defmethod initialize-instance :after ((margin standard-margins)
+                                       &key text-margin ;kludge
+                                         margin-x1 margin-y1 margin-x2 margin-y2
+                                         (left-margin 0 left-margin-p)
+                                         (top-margin 0 top-margin-p)
+                                         (right-margin 0 right-margin-p)
+                                         (bottom-margin 0 bottom-margin-p)
+                                       &allow-other-keys)
+  ;; Kludge: text-margin is part of the seos protocol and it means margin-x2.
+  (when text-margin
+    (assert (null margin-x2) () "TEXT-MARGIN and MARGIN-X2 initargs are mutually exclusive.")
+    (set-margin-x2 text-margin margin))
+  ;; Check that each margin has either relative or absolute position (or none).
+  (assert (null (or (and margin-x1 left-margin-p)
+                    (and margin-y1 top-margin-p)
+                    (and margin-x2 right-margin-p)
+                    (and margin-y2 bottom-margin-p)))
+          ()
+          "Margin can't be specified to have both relative and absolute position.")
+  ;; Captain? You seem a little defensive.
+  (if (null margin-x1)
+      (set-left-margin left-margin margin)
+      (set-margin-x1 margin-x1 margin))
+  (if (null margin-y1)
+      (set-top-margin top-margin margin)
+      (set-margin-y1 margin-y1 margin))
+  (if (null margin-x2)
+      (set-right-margin right-margin margin)
+      (set-margin-x2 margin-x2 margin))
+  (if (null margin-y2)
+      (set-bottom-margin bottom-margin margin)
+      (set-margin-y2 margin-y2 margin)))
+
+(defun make-margins (margin &key text-margin ;kludge
+                              margin-x1 margin-y1 margin-x2 margin-y2
+                              (left-margin 0 left-margin-p)
+                              (top-margin 0 top-margin-p)
+                              (right-margin 0 right-margin-p)
+                              (bottom-margin 0 bottom-margin-p))
+  ;; Kludge: text-margin is part of the seos protocol and it means margin-x2.
+  (when text-margin
+    (assert (null margin-x2) () "TEXT-MARGIN and MARGIN-X2 initargs are mutually exclusive.")
+    (set-margin-x2 text-margin margin))
+  ;; Check that each margin has either relative or absolute position (or none).
+  (assert (null (or (and margin-x1 left-margin-p)
+                    (and margin-y1 top-margin-p)
+                    (and margin-x2 right-margin-p)
+                    (and margin-y2 bottom-margin-p)))
+          ()
+          "Margin can't be specified to have both relative and absolute position.")
+  ;; Captain? You seem a little defensive.
+  (cond (margin-x1   (set-margin-x1 margin-x1 margin))
+        (left-margin (set-left-margin left-margin margin)))
+  (cond (margin-y1  (set-margin-y1 margin-y1 margin))
+        (top-margin (set-top-margin top-margin margin)))
+  (cond (margin-x2    (set-margin-x2 margin-x2 margin))
+        (right-margin (set-right-margin right-margin margin)))
+  (cond (margin-y2     (set-margin-y2 margin-y2 margin))
+        (bottom-margin (set-bottom-margin bottom-margin margin))))
+
+
 ;;; Standard-Extended-Output-Stream class
 
 (defclass standard-extended-output-stream (extended-output-stream
                                            standard-output-stream)
   ((cursor :accessor stream-text-cursor)
+   (margin :accessor stream-text-margins)
    (foreground :initarg :foreground :reader foreground)
    (background :initarg :background :reader background)
    (text-style :initarg :text-style :reader stream-text-style)
    (vspace :initarg :vertical-spacing :reader stream-vertical-spacing)
-   (margin :initarg :text-margin :writer (setf stream-text-margin))
    (eol :initarg :end-of-line-action :accessor stream-end-of-line-action)
    (eop :initarg :end-of-page-action :accessor stream-end-of-page-action)
    (view :initarg :default-view :accessor stream-default-view)
@@ -175,8 +271,8 @@
    (char-height :initform 0 :accessor %stream-char-height))
   (:default-initargs
    :foreground +black+ :background +white+ :text-style *default-text-style*
-   :vertical-spacing 2 :text-margin nil :end-of-line-action :wrap
-   :end-of-page-action :scroll :default-view +textual-view+))
+   :vertical-spacing 2 :end-of-page-action :scroll :end-of-line-action :wrap
+   :default-view +textual-view+))
 
 (defmethod stream-force-output :after
     ((stream standard-extended-output-stream))
@@ -188,52 +284,113 @@
   (with-sheet-medium (medium stream)
     (medium-finish-output medium)))
 
-;;; STREAM-EFFECTIVE-*-MARGIN methods may return NIL if there is no margin
-;;; specified. If corresponding text wrap margin is NIL then text never wraps,
-;;; because end of line is never reached. Similar thing applies to lines, pages
-;;; and top/bottom margins.
+
+;;; STREAM-EFFECTIVE-*-MARGIN methods always return a number. If there is no
+;;; margin specified [0,0] x [80,43] size is assumed (default text style
+;;; character size unit).
 ;;;
 ;;; For left-to-right text starting cursor position is
-;;;   [(or effective-left-margin 0) (or effective-top-margin 0)]
+;;;   [effective-left-margin effective-top-margin]
 ;;;
 ;;; For right-to-left text starting cursor position is
-;;;   [(or effective-right-margin 0) (or effective-top-margin 0)]
+;;;   [effective-right-margin effective-top-margin]
 ;;;
-;;; -- jd 2019-01-09
+;;; To abstract this away functions PAGE-INITIAL-CURSOR-POSITION and
+;;; PAGE-FINAL-CURSOR-POSITION are defined. RTL is not supported yet.
+;;;
+;;; -- jd 2019-01-27
 
 (defgeneric stream-effective-left-margin (stream)
   (:documentation "Absolute position of the left margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
-    0))
+    (let ((margins (stream-text-margins stream)))
+      (or (margin-x1 margins)
+          (let ((sheet (or (pane-viewport stream) stream)))
+            ;; Sheet region may be +everywhere+ (i.e. in PostScript's paper :eps).
+            (if (region-equal (sheet-region sheet) +everywhere+)
+                0
+                (+ (bounding-rectangle-min-x sheet) (left-margin margins))))))))
 
 (defgeneric stream-effective-top-margin (stream)
   (:documentation "Absolute position of the top margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
-    0))
+    (let ((margins (stream-text-margins stream)))
+      (or (margin-y1 margins)
+          (let ((sheet (or (pane-viewport stream) stream)))
+            ;; Sheet region may be +everywhere+ (i.e. in PostScript's paper :eps).
+            (if (region-equal (sheet-region sheet) +everywhere+)
+                0
+                (+ (bounding-rectangle-min-y sheet) (top-margin margins))))))))
 
 (defgeneric stream-effective-right-margin (stream)
   (:documentation "Absolute position of the right margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
-    (or (slot-value stream 'margin)
-        (let ((sheet (or (pane-viewport stream) stream)))
-          ;; Sheet region may not be bound (ie in PostScript backend).
-          (if (region-equal (sheet-region sheet) +everywhere+)
-              nil
-              (bounding-rectangle-width sheet))))))
+    (let ((margins (stream-text-margins stream)))
+      (or (margin-x2 margins)
+          (let ((sheet (or (pane-viewport stream) stream)))
+            ;; Sheet region may be +everywhere+ (i.e. in PostScript's paper :eps).
+            (- (if (region-equal (sheet-region sheet) +everywhere+)
+                   (* 80 (text-style-width *default-text-style* stream))
+                   (bounding-rectangle-max-x sheet))
+               (right-margin margins)))))))
 
 (defgeneric stream-effective-bottom-margin (stream)
   (:documentation "Absolute position of the bottom margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
-    (bounding-rectangle-height stream)))
+    (let ((margins (stream-text-margins stream)))
+      (or (margin-y2 margins)
+          (let ((sheet (or (pane-viewport stream) stream)))
+            ;; Sheet region may be +everywhere+ (i.e. in PostScript's paper :eps).
+            (- (if (region-equal (sheet-region sheet) +everywhere+)
+                   (* 43 (text-style-height *default-text-style* stream))
+                   (bounding-rectangle-max-y sheet))
+               (bottom-margin margins)))))))
 
+(defgeneric page-cursor-initial-position (stream)
+  (:documentation "Returns two values: x and y initial position for a cursor on page.")
+  (:method ((stream standard-extended-output-stream))
+    (values (stream-effective-left-margin stream)
+            (stream-effective-top-margin stream))))
+
+(defgeneric page-cursor-final-position (stream)
+  (:documentation "Returns two values: x and y final position for a cursor on page.")
+  (:method ((stream standard-extended-output-stream))
+    (values (stream-effective-right-margin stream)
+            (stream-effective-bottom-margin stream))))
+
+(defgeneric invoke-with-temporary-page (stream continuation margins &key move-cursor)
+  (:method ((stream standard-extended-output-stream) continuation margins &key (move-cursor t))
+    (letf (((stream-text-margins stream) margins))
+      (multiple-value-bind (cx cy) (stream-cursor-position stream)
+        (setf (stream-cursor-position stream) (page-cursor-initial-position stream))
+        (funcall continuation stream)
+        (unless move-cursor
+          (setf (stream-cursor-position stream) (values cx cy)))))))
+
+(defmacro with-temporary-page ((stream margin-spec
+                               &rest args &key (move-cursor t))
+                               &body body)
+  (declare (ignore move-cursor))
+  (setq stream (stream-designator-symbol stream '*standard-output*))
+  (with-gensyms (continuation margins)
+    `(flet ((,continuation (,stream) ,@body))
+       (let ((,margins (shallow-copy-object (stream-text-margins ,stream))))
+         (make-margins ,margins ,@margin-spec)
+         (invoke-with-temporary-page ,stream #',continuation ,margins ,@args)))))
+
+
+
 (defmethod initialize-instance :after
-    ((stream standard-extended-output-stream) &rest args)
-  (declare (ignore args))
-  (setf (stream-text-cursor stream)
-        (make-instance 'standard-text-cursor
-                       :sheet stream
-                       :x-position (stream-effective-left-margin stream)
-                       :y-position (stream-effective-top-margin stream)))
+    ((stream standard-extended-output-stream) &rest args &key &allow-other-keys)
+  (setf (stream-text-margins stream)
+        (apply #'make-instance 'standard-margins args))
+  (multiple-value-bind (x-start y-start)
+      (page-cursor-initial-position stream)
+    (setf (stream-text-cursor stream)
+          (make-instance 'standard-text-cursor
+                         :sheet stream
+                         :x-position x-start
+                         :y-position y-start)))
   (setf (cursor-active (stream-text-cursor stream)) t))
 
 
@@ -285,16 +442,16 @@
 
 (defgeneric maybe-end-of-page-action (stream y)
   (:method ((stream standard-extended-output-stream) y)
-    (let ((bottom-margin (stream-effective-bottom-margin stream))
+    (let ((bottom-margin (nth-value 1 (page-cursor-final-position stream)))
           (end-of-page-action (stream-end-of-page-action stream)))
-      (when (and bottom-margin (> y bottom-margin))
+      (when (> y bottom-margin)
         (%note-stream-end-of-page stream end-of-page-action y)
         (ecase end-of-page-action
           ((:scroll :allow)  nil)
           ((:wrap :wrap*)
            (setf (cursor-position (stream-text-cursor stream))
                  (values (nth-value 0 (stream-cursor-position stream))
-                         (stream-effective-top-margin stream)))))))))
+                         (nth-value 1 (page-cursor-initial-position stream))))))))))
 
 (defgeneric %note-stream-end-of-page (stream action new-height)
   (:method (stream action new-height)
@@ -307,8 +464,8 @@
   (let* ((medium (sheet-medium stream))
          (text-style (medium-text-style medium))
          ;; fixme: remove assumption about the text direction (LTR).
-         (left-margin  (stream-effective-left-margin stream))
-         (right-margin (stream-effective-right-margin stream)))
+         (left-margin  (page-cursor-initial-position stream))
+         (right-margin (page-cursor-final-position stream)))
     (maxf (slot-value stream 'baseline) (text-style-ascent text-style medium))
     (maxf (%stream-char-height stream)  (text-style-height text-style medium))
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
@@ -317,13 +474,12 @@
                                          :start start :end end
                                          :text-style text-style))
              (eol-action (stream-end-of-line-action stream))
-             (eol-p (and right-margin (> (+ cx width) right-margin))))
+             (eol-p (> (+ cx width) right-margin)))
         (when (or (null eol-p) (member eol-action '(:allow :scroll)))
           (stream-write-output stream string nil start end)
           (incf cx width)
           (setf (cursor-position (stream-text-cursor stream)) (values cx cy))
-          (when (and right-margin
-                     (> (+ cx width) right-margin)
+          (when (and (> (+ cx width) right-margin)
                      (eql eol-action :scroll))
             (multiple-value-bind (tx ty)
                 (bounding-rectangle-position (sheet-region stream))
@@ -340,8 +496,8 @@
                                        :text-style text-style
                                        :start start :end end))))
                (splits (line-breaks string width
-                                    :initial-offset (- cx (or left-margin 0))
-                                    :margin (- right-margin (or left-margin 0))
+                                    :initial-offset (- cx left-margin)
+                                    :margin (- right-margin left-margin)
                                     :break-strategy (ecase eol-action
                                                       (:wrap NIL)
                                                       (:wrap* T))
@@ -351,7 +507,7 @@
               ((null split)
                (stream-write-output stream string nil start end)
                (setf (cursor-position (stream-text-cursor stream))
-                     (values (+ (stream-effective-left-margin stream)
+                     (values (+ left-margin
                                 (stream-string-width stream string
                                                      :start start :end split
                                                      :text-style text-style))
@@ -373,7 +529,7 @@
                               (%stream-char-height stream)
                               vertical-spacing)))
     (setf (cursor-position (stream-text-cursor stream))
-          (values (stream-effective-left-margin stream)
+          (values (page-cursor-initial-position stream)
                   updated-cy))
     (finish-output stream)       ; this will close the output record if recorded)
     (let* ((medium       (sheet-medium stream))
@@ -442,6 +598,8 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 (defmethod stream-text-margin ((stream standard-extended-output-stream))
   (stream-effective-right-margin stream))
 
+(defmethod* (setf stream-text-margin) (margin (stream standard-extended-output-stream))
+  (setf (margin-x2 stream) margin))
 
 (defmethod stream-line-height ((stream standard-extended-output-stream)
                                &key (text-style nil))
@@ -457,8 +615,7 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (declare (ignore y))
-    (when-let ((left-margin (stream-effective-left-margin stream)))
-      (= x left-margin))))
+    (= x (page-cursor-initial-position stream))))
 
 (defmacro with-room-for-graphics ((&optional (stream t)
                                              &rest arguments

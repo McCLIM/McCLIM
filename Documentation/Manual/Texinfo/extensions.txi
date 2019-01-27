@@ -7,6 +7,7 @@
 * Fonts and Extended Text Styles::
 * Tab Layout::
 * Raster Images::
+* Text Formatting::
 @end menu
 
 @node Text editor substrate
@@ -222,3 +223,171 @@ image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
 An image describing the output to the @code{stream-var} stream will be
 returned as an rgba pattern (of class @code{clime:image-pattern}).
 @end defmac
+
+@node Text Formatting
+@section Text Formatting
+
+@subsection Margins
+
+Extended output streams in CLIM 2.0 specification allow only
+specifying text right margin. Left margin may be simulated with an
+@code{indenting-output} macro and top margin with setting cursor
+position before doing the output. Bottom margin is always assumed to
+be the viewport bottom.
+
+Each margin may have either an absolute or a relative
+position. Absolute position is specified in sheet native coordinates
+and relative one is specified as a distance from the corresponding
+edge towards the sheet center (i.e bottom margin relative position 30
+means 30 units above bottom edge of the viewport while bottom marigin
+absolute position 330 means margin positioned at y = 330 units).
+
+Initargs and accessors for the margin configuration follow the
+convention: @emph{side}@code{-margin} specifies the relative position
+and @code{margin-}@emph{edge} specifies the absolute position. For
+instance for the left margin @code{left-margin} is relative and
+@code{margin-x1} is its absolute counterpart. For CLIM compatibility
+@code{text-margin} if specified is the same thing as @code{margin-x2}.
+
+When margin is set then its counterpart is nullfied (i.e if we set
+@code{top-margin} then @code{margin-y2} is set to NIL. By default all
+margins are set to a relative position 0 (on the viewport edges). To
+see if the margin is relative or absolute it is enough to see if it is
+not NIL. Initiargs for relative and absolute position are mutually
+exclusive. Initargs should be supplied to either the stream initargs
+or to @code{with-temporary-page} macro @code{margin-spec}.
+
+@itemize
+@item  @code{:left-margin}, @code{:margin-x1} --- left margin initargs.
+@item  @code{:top-margin}, @code{:margin-y1} --- top margin initargs.
+@item  @code{:right-margin}, @code{:margin-x2} (@code{:text-margin}) --- right margin initargs.
+@item  @code{:bottom-margin}, @code{:margin-y2} --- bottom margin initargs.
+@end itemize
+
+@deffn {Reader} {clime:stream-text-margins} stream
+Returns an object which implements the margin protocol described
+below. Reader is defined for @code{standard-extended-output-stream}.
+@end deffn
+
+@deffn {Accessor} {clime:margin-x1} stream
+@deffnx {Accessor} {clime:margin-y1} stream
+@deffnx {Accessor} {clime:margin-x2} stream
+@deffnx {Accessor} {clime:margin-y2} stream
+Absolute margin position specification.
+@end deffn
+
+@deffn {Accessor} {clime:left-margin} stream
+@deffnx {Accessor} {clime:top-margin} stream
+@deffnx {Accessor} {clime:right-margin} stream
+@deffnx {Accessor} {clime:bottom-margin} stream
+Relative margin position specification. If the number is a ratio in
+range (0;1), then it means that percentage of the viewport size is
+used. For instance for left margin of size 1/3 and viewport of size
+200 units left margin will be located at 67th unit.
+
+Sometimes stream is associated with a sheet which doesn't have a
+bounding rectangle (for instance @code{:eps} stream on PostScript
+backend has sheet's region @code{+everywhere}). In such case margins
+are relative to these arbitrary positions:
+
+@itemize
+@item left margin --- x = 0
+@item top margin --- y = 0
+@item right margin --- x = 80 * default-text-style-width
+@item bottom margin --- y = 43 * default-text-style-height
+@end itemize
+@end deffn
+
+@deffn {Function} {clime:stream-effective-left-margin} stream
+@deffnx {Function} {clime:stream-effective-top-margin} stream
+@deffnx {Function} {clime:stream-effective-right-margin} stream
+@deffnx {Function} {clime:stream-effective-bottom-margin} stream
+To probe the stream margin position in its native coordinates we call
+a function @code{stream-effective-*-margin}. These functions always
+return a number.
+@end deffn
+
+@deffn {Macro} {clime:with-temporary-page} (stream margin-spec &key move-cursor) &body body
+Function temporarily auguments stream margins according to
+@code{margin-spec} (margins which are not specified are inherited from
+the current stream configuration). Macro changes cursor position to
+the @code{page-cursor-initial-position}. If @code{move-cursor} is
+@code{T} (default) cursor is left where it was at the end of the macro
+scope. Otherwise old stream-cursor-position is reinstationed.
+@end deffn
+
+@subsection Line and page wrapping
+
+Word wrapping in CLIM 2.0 can be achieved with @code{filling-output}
+macro. McCLIM in addition to that supports @code{:end-of-line-action}
+called @code{:wrap*}. It breaks lines by a word when the string width
+exceeds line length between left and right margins.
+
+Both @code{indenting-output} and @code{filling-output} are implemented
+in terms of the @code{with-temporary-page} macro. Former temporarily
+auguments the left margin while the latter does the same for the right
+one. @code{filling-output} has a behavior extending what is defined in
+CLIM 2.0.
+
+@deffn {Macro} {clim:filling-output} stream &key fill-width breah-characters after-line-break after-line-break-initially after-line-break-subsequent
+
+Macro behaves as specified in CLIM 2.0 specification. Additionally
+@code{after-line-break} may be a function accepting two arguments:
+stream and a boolean indicating whenever line was broken by a hard
+break or a soft newline due to word wrap. String is printed (or
+function is executed) with the same ink and text-style as was set on
+the stream when @code{filling-output} scope has started.
+
+If @code{after-line-break-initially} is @code{T}
+@code{after-line-break} is triggered on each ``hard''
+newline. Otherwise it is not.
+
+If @code{after-line-break-subsequent} is @code{T} (default)
+@code{after-line-break} is triggered on each ``soft''
+newline. Otherwise it is not.
+@end deffn
+
+In the following example we print all lines in @code{*lorem-ipsum*}
+with line numbers before each line. If it is a genuine new line in the
+string line number is printed in italic red, otherwise it is printed
+in italic blue. Lines are printed using @code{*default-text-style*}
+and a black ink. Line is wrapped by word between x=20 (left margin)
+and x=400 (right margin).
+
+@lisp
+(with-drawing-options
+  (stream :text-style (make-text-style :fix :italic :normal)
+          :ink +dark-blue+)
+  (indenting-output (stream 20)
+    (fresh-line stream)
+    (filling-output
+      (stream :fill-width 400
+              :break-characters '(#\space)
+              :after-line-break
+              (let ((counter 0))
+                (lambda (stream soft-newline-p)
+                  (if soft-newline-p
+                      (with-drawing-options (stream :ink +dark-red+)
+                        (format stream "~4,'0d: " counter))
+                      (format stream "~4,'0d: " counter))
+                  (incf counter)))
+              :after-line-break-initially t)
+      (with-drawing-options (stream :text-style *default-text-style*
+                                    :ink +black+)
+        (format stream *lorem-ipsum*)))))
+@end lisp
+
+Page wrapping doesn't have yet any useful interpretation. To avoid any
+confusion where page starts two functions are provided which return
+page cursor initial position and its final position.
+
+@deffn {Function} {ext:page-cursor-initial-position} stream
+@deffnx {Function} {ext:page-cursor-final-position} stream
+Each function returns two values: x and y coordinate of the initial /
+final cursor position. This is useful for line and page wrapping where
+these values are reset.
+
+For left-to-right top-to-bottom text the initial position is at the
+effective left top margin and the final position is at the effective
+right bottom margin.
+@end deffn

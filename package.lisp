@@ -1878,6 +1878,17 @@
   (:export
    ;; events
    #:event-read-with-timeout #:schedule-event
+   ;; seos margins
+   #:stream-text-margins
+   #:margin-x1 #:margin-y1 #:margin-x2 #:margin-y2
+   #:left-margin #:top-margin #:right-margin #:bottom-margin
+   #:stream-effective-left-margin
+   #:stream-effective-top-margin
+   #:stream-effective-right-margin
+   #:stream-effective-bottom-margin
+   #:with-temporary-page
+   #:page-cursor-initial-position
+   #:page-cursor-final-position
    ;; sheets
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
