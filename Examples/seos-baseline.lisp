@@ -5,12 +5,15 @@
   ()
   (:menu-bar seos-command-table)
   (:pane :application
-         :width 350
+         :width 400
          :height 400
          :display-function #'display
          :end-of-line-action :allow
          :end-of-page-action :allow
-         :text-margin 300))
+         :margin-x1 50
+         :margin-x2 325 ;same thing as :text-margin 325
+         :margin-y1 50
+         :margin-y2 325))
 
 (defun show-line (stream &rest args)
   (loop for (size text) on args by #'cddr do
