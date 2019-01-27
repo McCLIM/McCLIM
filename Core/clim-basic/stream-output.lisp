@@ -340,7 +340,7 @@
                                        :text-style text-style
                                        :start start :end end))))
                (splits (line-breaks string width
-                                    :initial-offset cx
+                                    :initial-offset (- cx (or left-margin 0))
                                     :margin (- right-margin (or left-margin 0))
                                     :break-strategy (ecase eol-action
                                                       (:wrap NIL)
@@ -452,12 +452,13 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 (defmethod stream-line-column ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (declare (ignore y))
-    (floor x (stream-string-width stream " "))))
+    (floor x (stream-string-width stream "m"))))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (declare (ignore y))
-    (zerop x)))
+    (when-let ((left-margin (stream-effective-left-margin stream)))
+      (= x left-margin))))
 
 (defmacro with-room-for-graphics ((&optional (stream t)
                                              &rest arguments
