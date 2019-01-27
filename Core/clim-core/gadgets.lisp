@@ -714,7 +714,14 @@ and must never be nil.")
 ;;; 30.4.9 The abstract text-editor Gadget
 
 (defclass text-editor (text-field)
-  ()
+  ((ncolumns :reader text-editor-ncolumns
+             :initarg :ncolumns
+             :initform nil
+             :type (or null integer))
+   (nlines :reader text-editor-nlines
+           :initarg :nlines
+           :initform nil
+           :type (or null integer)))
   (:documentation "The value is a string"))
 
 ;;;; ------------------------------------------------------------------------------------------
