@@ -252,11 +252,30 @@
   (cond (margin-y2     (set-margin-y2 margin-y2 margin))
         (bottom-margin (set-bottom-margin bottom-margin margin))))
 
+;;; Mixin is used to store text-style and ink when filling-output it is invoked.
+(defclass %filling-output-graphics-state (gs-ink-mixin gs-text-style-mixin)
+  ()
+  (:default-initargs :ink +foreground-ink+ :text-style *default-text-style*))
+
+(defclass filling-output-mixin (gs-ink-mixin gs-text-style-mixin)
+  ((lbs :accessor line-break-strategy :initarg :line-break-strategy
+        :documentation "T for a default word wrap or a list of break characters.")
+   (alb :accessor after-line-break :initarg :after-line-break
+        :documentation "Function accepting stream to call after the line break.")
+   (ilb :accessor after-line-break-initially :initarg :after-line-break-initially
+        :documentation "Flag whenever we execture alb on fresh newlines.")
+   (slb :accessor after-line-break-subsequent :initarg :after-line-break-subsequent
+        :documentation "Flag whenever we execture alb on soft newlines.")
+   (gfs :reader graphics-state :initarg :gfs))
+  (:default-initargs :line-break-strategy t
+    :gfs (make-instance '%filling-output-graphics-state)
+    :after-line-break nil :after-line-break-initially nil :after-line-break-subsequent t))
 
 ;;; Standard-Extended-Output-Stream class
 
 (defclass standard-extended-output-stream (extended-output-stream
-                                           standard-output-stream)
+                                           standard-output-stream
+                                           filling-output-mixin)
   ((cursor :accessor stream-text-cursor)
    (margin :accessor stream-text-margins)
    (foreground :initarg :foreground :reader foreground)
@@ -378,6 +397,50 @@
          (make-margins ,margins ,@margin-spec)
          (invoke-with-temporary-page ,stream #',continuation ,margins ,@args)))))
 
+(defmacro with-end-of-line-action ((stream action) &body body)
+  (when (eq stream t)
+    (setq stream '*standard-output*))
+  (check-type stream symbol)
+  `(letf (((stream-end-of-line-action ,stream) ,action))
+     ,@body))
+
+(defmacro with-end-of-page-action ((stream action) &body body)
+  (when (eq stream t)
+    (setq stream '*standard-output*))
+  (check-type stream symbol)
+  `(letf (((stream-end-of-page-action ,stream) ,action))
+     ,@body))
+
+(defmacro filling-output ((stream &key
+                                  (fill-width ''(80 :character))
+                                  break-characters
+				  after-line-break
+                                  after-line-break-initially
+                                  (after-line-break-subsequent t))
+			  &body body)
+  (setq stream (stream-designator-symbol stream '*standard-output*))
+  `(with-temporary-page (,stream (:margin-y1 (nth-value 1 (stream-cursor-position ,stream))
+                                  :margin-x2 (parse-space ,stream ,fill-width :horizontal)))
+     (letf (((stream-end-of-line-action ,stream) :wrap*)
+            ((line-break-strategy ,stream) ,break-characters)
+            ,@(when after-line-break
+                `(((after-line-break ,stream) ,after-line-break)
+                  ((after-line-break-initially ,stream) ,after-line-break-initially)
+                  ((after-line-break-subsequent ,stream) ,after-line-break-subsequent)
+                  ((graphics-state-ink (graphics-state ,stream)) (medium-ink ,stream))
+                  ((graphics-state-text-style (graphics-state ,stream)) (medium-text-style ,stream)))))
+       ,(when (and after-line-break after-line-break-initially)
+          `(etypecase (after-line-break ,stream)
+             (string   (write-string (after-line-break ,stream) ,stream))
+             (function (funcall (after-line-break ,stream) ,stream nil))))
+       ,@body)))
+
+(defmacro indenting-output ((stream indent &key (move-cursor t)) &body body)
+  (setq stream (stream-designator-symbol stream '*standard-output*))
+  `(with-temporary-page (,stream (:margin-x1 (parse-space ,stream ,indent :horizontal)
+                                             :margin-y1 (nth-value 1 (stream-cursor-position ,stream)))
+                                 :move-cursor ,move-cursor)
+     ,@body))
 
 
 (defmethod initialize-instance :after
@@ -457,6 +520,39 @@
   (:method (stream action new-height)
     nil))
 
+(defgeneric seos-write-newline (stream &optional soft-newline-p)
+  (:method :after ((stream filling-output-mixin) &optional soft-newline-p)
+    (when (or (and soft-newline-p (after-line-break-subsequent stream))
+              (and (not soft-newline-p) (after-line-break-initially stream)))
+      (when-let ((after-line-break (after-line-break stream))
+                 (gs (graphics-state stream)))
+        (with-end-of-line-action (stream :allow) ; prevent infinite recursion
+          (with-drawing-options (stream :text-style (graphics-state-text-style gs)
+                                        :ink (graphics-state-ink gs))
+            (etypecase after-line-break
+              (string (write-string after-line-break stream))
+              (function (funcall after-line-break stream soft-newline-p))))))))
+  (:method ((stream standard-extended-output-stream) &optional soft-newline-p)
+    (declare (ignorable soft-newline-p))
+    (let* ((current-cy       (nth-value 1 (stream-cursor-position stream)))
+           (vertical-spacing (stream-vertical-spacing stream))
+           (updated-cy       (+ current-cy
+                                (%stream-char-height stream)
+                                vertical-spacing)))
+      (setf (cursor-position (stream-text-cursor stream))
+            (values (page-cursor-initial-position stream)
+                    updated-cy))
+      (progn;unless soft-newline-p
+        ;; this will close the output record if recorded
+        (finish-output stream))
+      (let* ((medium       (sheet-medium stream))
+             (text-style   (medium-text-style medium))
+             (new-baseline (text-style-ascent text-style medium))
+             (new-height   (text-style-height text-style medium)))
+        (maybe-end-of-page-action stream (+ updated-cy new-height))
+        (setf (slot-value stream 'baseline) new-baseline
+              (%stream-char-height stream)  new-height)))))
+
 (defun seos-write-string (stream string &optional (start 0) end)
   (setq end (or end (length string)))
   (when (= start end)
@@ -500,7 +596,7 @@
                                     :margin (- right-margin left-margin)
                                     :break-strategy (ecase eol-action
                                                       (:wrap NIL)
-                                                      (:wrap* T))
+                                                      (:wrap* (line-break-strategy stream)))
                                     :start start :end end)))
           (do ((start start (car split))
                (split splits (rest split)))
@@ -520,25 +616,7 @@
                         (when pos (incf pos))
                         (stream-write-output stream string nil start (or pos (car split))))))
             ;; print a soft newline
-            (stream-write-char stream #\newline)))))))
-
-(defun seos-write-newline (stream)
-  (let* ((current-cy       (nth-value 1 (stream-cursor-position stream)))
-         (vertical-spacing (stream-vertical-spacing stream))
-         (updated-cy       (+ current-cy
-                              (%stream-char-height stream)
-                              vertical-spacing)))
-    (setf (cursor-position (stream-text-cursor stream))
-          (values (page-cursor-initial-position stream)
-                  updated-cy))
-    (finish-output stream)       ; this will close the output record if recorded)
-    (let* ((medium       (sheet-medium stream))
-           (text-style   (medium-text-style medium))
-           (new-baseline (text-style-ascent text-style medium))
-           (new-height   (text-style-height text-style medium)))
-      (maybe-end-of-page-action stream (+ updated-cy new-height))
-      (setf (slot-value stream 'baseline) new-baseline
-            (%stream-char-height stream)  new-height))))
+            (seos-write-newline stream t)))))))
 
 (defgeneric stream-write-output (stream line string-width &optional start end)
   (:documentation
@@ -631,20 +709,6 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
                 ,@body))
        (declare (dynamic-extent #',cont))
        (invoke-with-room-for-graphics #',cont ,stream ,@arguments))))
-
-(defmacro with-end-of-line-action ((stream action) &body body)
-  (when (eq stream t)
-    (setq stream '*standard-output*))
-  (check-type stream symbol)
-  `(letf (((stream-end-of-line-action ,stream) ,action))
-     ,@body))
-
-(defmacro with-end-of-page-action ((stream action) &body body)
-  (when (eq stream t)
-    (setq stream '*standard-output*))
-  (check-type stream symbol)
-  `(letf (((stream-end-of-page-action ,stream) ,action))
-     ,@body))
 
 (defmethod beep (&optional medium)
   (if medium
