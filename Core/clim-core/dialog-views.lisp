@@ -24,26 +24,32 @@
 
 (macrolet
     ((define-gadget-view (name &optional new-slots)
+       ;; The gadget class stores the information required to make an
+       ;; instances of its corresponding gadget class: the name of the
+       ;; gadget class and a list of initargs. The INITIALIZE-INSTANCE
+       ;; method ensures that the view only accepts initargs also
+       ;; accepted by the gadget class.
        (let* ((class-name (alexandria:symbolicate name '-view))
               (variable-name (alexandria:symbolicate '+ name '-view+))
-              (slots (c2mop:class-slots (c2mop:ensure-finalized (find-class name))))
-              (slots-with-initargs (remove-if-not #'c2mop:slot-definition-initargs slots)))
+              (class (c2mop:ensure-finalized (find-class name)))
+              (slots (c2mop:class-slots class))
+              (slot-initargs (alexandria:mappend #'c2mop:slot-definition-initargs slots))
+              (default-initargs (map 'list #'first (c2mop:class-default-initargs class)))
+              ;; REMOVE-DUPLICATES is a workaround for an SBCL bug
+              (allowed-initargs (union (remove-duplicates slot-initargs) default-initargs))
+              (parameters (map 'list (alexandria:compose #'intern #'string)
+                               allowed-initargs)))
          `(progn
             (defclass ,class-name (gadget-view)
               ((gadget-name :allocation :class :reader view-gadget-name
                             :initform ',name)
-               (gadget-slots :allocation :class :reader view-gadget-slots
-                             :initform
-                             ',(loop for slot in slots-with-initargs
-                                     for name = (c2mop:slot-definition-name slot)
-                                     for initargs = (c2mop:slot-definition-initargs slot)
-                                     collect (list name (first initargs))))
-               ,@new-slots
-               ,@(loop for slot in slots-with-initargs
-                       for name = (c2mop:slot-definition-name slot)
-                       for type = (c2mop:slot-definition-type slot)
-                       for initargs = (c2mop:slot-definition-initargs slot)
-                       collect (list name :initarg (first initargs) :type type))))
+               (gadget-initargs :accessor view-gadget-initargs)
+               ,@new-slots))
+            (defmethod initialize-instance :after
+                ((instance ,class-name)
+                 &rest initargs &key ,@parameters)
+              (declare (ignore ,@parameters))
+              (setf (view-gadget-initargs instance) initargs))
             (defvar ,variable-name (make-instance ',class-name))
             ',name))))
 
@@ -60,10 +66,7 @@
 
 (defmethod make-gadget-pane-from-view ((view gadget-view) stream &rest initargs)
   (let ((frame *application-frame*)
-        (initargs (append initargs
-                          (loop for (name initarg) in (view-gadget-slots view)
-                                when (slot-boundp view name)
-                                append (list initarg (slot-value view name))))))
+        (initargs (append initargs (view-gadget-initargs view))))
     (with-look-and-feel-realization ((frame-manager frame) frame)
       (apply #'make-pane (view-gadget-name view) initargs))))
 
