@@ -332,7 +332,8 @@
 (defclass oriented-gadget ()
   ((orientation :type    (member :vertical :horizontal)
                 :initarg :orientation
-                :reader  gadget-orientation)))
+                :reader  gadget-orientation))
+  (:default-initargs :orientation :horizontal))
 
 (defclass oriented-gadget-mixin (oriented-gadget)
   ;; Try to be compatible with Lispworks' CLIM.
