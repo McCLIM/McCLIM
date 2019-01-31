@@ -315,6 +315,50 @@
                     #+NIL
                     (draw-rectangle* stream 0 (- width/2) width width/2 :filled nil :ink +white+))))))))
 
+(define-misc-test "Line centering" (stream)
+    "Test focuses on a fact that line should be centered around its underlying coordinate (so if it has big thickness it extends in both directions) for regions composed of lines."
+  (let ((array (make-array '(10 10) :initial-element 0)))
+    (dotimes (i 10) (setf (aref array 0 i) 1
+                          (aref array i 0) 1))
+    (setf (pane-background stream) (make-rectangular-tile
+                                      (make-pattern array (list +white+ +gray+)) 10 10))
+    (repaint-sheet stream +everywhere+))
+  (flet ((single-lines ()
+           (draw-line* stream 20 0 100 0)
+           (draw-line* stream 0 20 0 100)
+           (draw-line* stream 20 20 80 80))
+         (arrow-lines ()
+           (draw-arrow* stream 20 0 100 0)
+           (draw-arrow* stream 0 20 0 100)
+           (draw-arrow* stream 20 20 80 80))
+         (joint-lines ()
+           (draw-lines* stream '(20 0 100 0 20 20 80 80 0 20 0 100)))
+         (polyline ()
+           (draw-polygon* stream '(20 0 100 0 20 20 80 80 0 20 0 100) :closed t :filled nil))
+         (rectangle (background)
+           (when background
+             (draw-rectangle* stream 20 20 80 80 :filled t :ink +cyan+))
+           (draw-rectangle* stream 20 20 80 80 :filled nil))
+         (circle (background)
+           (when background
+             (draw-circle* stream 50 50 30 :filled t :ink +cyan+))
+           (draw-circle* stream 50 50 30 :filled nil))
+         (polygon (background)
+           (when background
+             (draw-polygon* stream '(20 0 100 0 20 20 80 80 0 20 100 20) :filled t :ink +cyan+))
+           (draw-polygon* stream '(20 0 100 0 20 20 80 80 0 20 100 20) :filled nil)))
+    (flet ((draw-things (bg)
+             (with-translation (stream 30 30)   (single-lines))
+             (with-translation (stream 230 30)  (arrow-lines))
+             (with-translation (stream 30 230)  (joint-lines))
+             (with-translation (stream 230 230) (polyline))
+             (with-drawing-options (stream :line-dashes (if bg '(4) '(1)))
+               (with-translation (stream 30 430)  (rectangle bg))
+               (with-translation (stream 230 430) (circle bg))
+               (with-translation (stream 430 430) (polygon bg)))))
+      (with-drawing-options (stream :line-thickness 3) (draw-things t))
+      (with-drawing-options (stream :ink +red+)        (draw-things nil)))))
+
 (defun misc-tests ()
   (let ((frame (make-application-frame 'misc-tests)))
     (run-frame-top-level frame)))
