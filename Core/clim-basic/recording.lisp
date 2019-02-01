@@ -368,28 +368,31 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
 (defun highlight-output-record-rectangle (record stream state)
   (with-identity-transformation (stream)
-    (multiple-value-bind (x1 y1 x2 y2)
-        (bounding-rectangle* record)
-      (ecase state
-        (:highlight
-         (draw-rectangle* (sheet-medium stream) (1+ x1) (1+ y1) (1- x2) (1- y2)
-                          :filled nil :ink +foreground-ink+)) ; XXX +FLIPPING-INK+?
-        (:unhighlight
-         (repaint-sheet stream (bounding-rectangle record))
-         ;; Using queue-repaint should be faster in apps (such as
-         ;; clouseau) that highlight/unhighlight many bounding
-         ;; rectangles at once. The event code should merge these into
-         ;; a single larger repaint. Unfortunately, since an enqueued
-         ;; repaint does not occur immediately, and highlight
-         ;; rectangles are not recorded, newer highlighting gets wiped
-         ;; out shortly after being drawn. So, we aren't ready for
-         ;; this yet.  ..Actually, it isn't necessarily
-         ;; faster. Depends on the app.
-         #+ (or)
-	       (queue-repaint stream
-			      (make-instance 'window-repaint-event
-                           :sheet stream
-                           :region (bounding-rectangle record))))))))
+    (ecase state
+      (:highlight
+       ;; We can't "just" draw-rectangle :filled nil because the path lines
+       ;; rounding may get outside the bounding rectangle. -- jd 2019-02-01
+       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* record)
+         (draw-design (sheet-medium stream)
+                      (if (or (> (1+ x1) (1- x2))
+                              (> (1+ y1) (1- y2)))
+                          (bounding-rectangle record)
+                          (region-difference (bounding-rectangle record)
+                                             (make-rectangle* (1+ x1) (1+ y1) (1- x2) (1- y2))))
+                      :ink +foreground-ink+)))
+      (:unhighlight
+       (repaint-sheet stream (bounding-rectangle record))
+       ;; Using queue-repaint should be faster in apps (such as clouseau) that
+       ;; highlight/unhighlight many bounding rectangles at once. The event code
+       ;; should merge these into a single larger repaint. Unfortunately, since
+       ;; an enqueued repaint does not occur immediately, and highlight
+       ;; rectangles are not recorded, newer highlighting gets wiped out shortly
+       ;; after being drawn. So, we aren't ready for this yet.  ..Actually, it
+       ;; isn't necessarily faster. Depends on the app.
+       #+ (or)
+       (queue-repaint stream (make-instance 'window-repaint-event
+                                            :sheet stream
+                                            :region (bounding-rectangle record)))))))
 
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record output-record) stream state)
