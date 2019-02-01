@@ -44,34 +44,6 @@
 (defclass pointer-documentation-view (textual-view)
   ())
 
-;;; Views described in the Franz User manual (CLIM 2.2)...
-
-(defclass toggle-button-view (gadget-view)
-  ())
-
-(defclass push-button-view (gadget-view)
-  ())
-
-(defclass radio-box-view (gadget-view)
-  ())
-
-(defclass check-box-view (gadget-view)
-  ())
-
-(defclass slider-view (gadget-view)
-  ())
-
-(defclass text-field-view (gadget-dialog-view)
-  ((width :accessor width :initarg :width :initform nil)))
-
-(defclass text-editor-view (gadget-view)
-  ())
-
-(defclass list-pane-view (gadget-view)
-  ((visible-items :accessor visible-items :initarg :visible-items)))
-
-(defclass option-pane-view (gadget-view)
-  ())
 
 (defparameter +textual-view+ (make-instance 'textual-view))
 
@@ -87,21 +59,6 @@
 
 (defparameter +pointer-documentation-view+ (make-instance 'pointer-documentation-view))
 
-(defparameter +toggle-button-view+ (make-instance 'toggle-button-view))
-
-(defparameter +push-button-view+ (make-instance 'push-button-view))
-
-(defparameter +radio-box-view+ (make-instance 'radio-box-view))
-
-(defparameter +slider-view+ (make-instance 'slider-view))
-
-(defparameter +text-field-view+ (make-instance 'text-field-view))
-
-(defparameter +text-editor-view+ (make-instance 'text-editor-view))
-
-(defparameter +list-pane-view+ (make-instance 'list-pane-view))
-
-(defparameter +option-pane-view+ (make-instance 'option-pane-view))
 
 (defmethod stream-default-view (stream)
   (declare (ignore stream))

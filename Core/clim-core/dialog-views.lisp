@@ -12,13 +12,280 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
 
 ;;; Classes for the gadget dialog views. Eventually.
+
+;;; Views described in the Franz User manual (CLIM 2.2). Sec. 8.6.13
+
+(macrolet
+    ((define-gadget-view (name)
+       ;; The gadget class stores the information required to make an
+       ;; instances of its corresponding gadget class: the name of the
+       ;; gadget class and a list of initargs. The INITIALIZE-INSTANCE
+       ;; method ensures that the view only accepts initargs also
+       ;; accepted by the gadget class.
+       (let* ((class-name (alexandria:symbolicate name '-view))
+              (variable-name (alexandria:symbolicate '+ name '-view+))
+              (class (c2mop:ensure-finalized (find-class name)))
+              (slots (c2mop:class-slots class))
+              (slot-initargs (alexandria:mappend #'c2mop:slot-definition-initargs slots))
+              (default-initargs (map 'list #'first (c2mop:class-default-initargs class)))
+              ;; REMOVE-DUPLICATES is a workaround for an SBCL bug
+              (allowed-initargs (union (remove-duplicates slot-initargs) default-initargs))
+              (parameters (map 'list (alexandria:compose #'intern #'string)
+                               allowed-initargs)))
+         `(progn
+            (defclass ,class-name (gadget-view)
+              ((gadget-name :allocation :class :reader view-gadget-name
+                            :initform ',name)
+               (gadget-initargs :accessor view-gadget-initargs)))
+            (defmethod initialize-instance :after
+                ((instance ,class-name)
+                 &rest initargs &key ,@parameters)
+              (declare (ignore ,@parameters))
+              (setf (view-gadget-initargs instance) initargs))
+            (defvar ,variable-name (make-instance ',class-name))
+            ',name))))
+
+  (define-gadget-view toggle-button)
+  (define-gadget-view push-button)
+  (define-gadget-view radio-box)
+  (define-gadget-view check-box)
+  (define-gadget-view slider)
+  (define-gadget-view text-field)
+  (define-gadget-view text-editor)
+  (define-gadget-view list-pane)
+  (define-gadget-view option-pane))
+
+(defmethod make-gadget-pane-from-view ((view gadget-view) stream &rest initargs)
+  (let ((frame *application-frame*)
+        (initargs (append initargs (view-gadget-initargs view))))
+    (with-look-and-feel-realization ((frame-manager frame) frame)
+      (apply #'make-pane (view-gadget-name view) initargs))))
+
+(defmethod make-output-record-from-view ((view gadget-view) stream query-identifier &rest initargs)
+  (updating-output (stream
+                    :cache-value t      ; don't redisplay
+                    :unique-id query-identifier
+                    :record-type 'accepting-values-record)
+    (let ((gadget (apply #'make-gadget-pane-from-view view stream initargs)))
+      (with-output-as-gadget (stream)
+        gadget))))
+
+(defun %standard-value-changed-callback (query-identifier)
+  (lambda (pane item)
+    (declare (ignore pane))
+    (throw-object-ptype `(com-change-query ,query-identifier ,item)
+                        '(command :command-table accept-values))))
+
+;;; Use textual-dialog-view as default for Views not implemented
+
+(define-default-presentation-method accept-present-default
+    (type stream (view gadget-view) default default-supplied-p
+          present-p query-identifier)
+  (funcall-presentation-generic-function accept-present-default
+                                         type
+                                         stream
+                                         +textual-dialog-view+
+                                         default default-supplied-p
+                                         present-p
+                                         query-identifier))
+
+(define-default-presentation-method accept
+    (type stream (view gadget-view) &key default default-type)
+  (funcall-presentation-generic-function accept
+                                         type
+                                         stream
+                                         +textual-dialog-view+
+                                         :default default
+                                         :default-type default-type))
+
+;;; toggle-button-view
+
+(define-presentation-method accept-present-default
+    ((type boolean) stream (view toggle-button-view) default default-supplied-p
+     present-p query-identifier)
+  (unless default-supplied-p
+    (setq default nil))
+  (make-output-record-from-view view stream query-identifier
+                                :value default
+                                :value-changed-callback
+                                (%standard-value-changed-callback query-identifier)))
+
+;;; radio-box-view
+
+(define-presentation-method accept-present-default
+    ((type completion) stream (view radio-box-view) default default-supplied-p
+     present-p query-identifier)
+  (let* ((buttons (loop for choice in sequence
+                        collect (make-pane 'toggle-button
+                                           :indicator-type :one-of
+                                           :id (funcall value-key choice)
+                                           :label (funcall name-key choice))))
+         (selection (find default buttons :test test :key #'gadget-id)))
+    (make-output-record-from-view view stream query-identifier
+                                  :choices buttons
+                                  :current-selection selection
+                                  :value-changed-callback
+                                  (lambda (pane item)
+                                    (declare (ignore pane))
+                                    (%standard-value-changed-callback
+                                     (gadget-id item))))))
+
+;;; check-box-view
+
+(define-presentation-method accept-present-default
+    ((type subset-completion) stream (view check-box-view) default default-supplied-p
+     present-p query-identifier)
+  (let* ((buttons (loop for choice in sequence collect
+                      (make-pane 'toggle-button
+                                 :indicator-type :some-of
+                                 :id (funcall value-key choice)
+                                 :label (funcall name-key choice))))
+         (selection (remove-if-not (lambda (x)
+                                     (find (gadget-id x) default :test test))
+                                   buttons)))
+    (make-output-record-from-view view stream query-identifier
+                                  :choices buttons
+                                  :current-selection selection
+                                  :value-changed-callback
+                                  (lambda (pane item)
+                                    (declare (ignore pane))
+                                    (%standard-value-changed-callback
+                                     (map 'list #'gadget-id item))))))
+
+;;; option-pane-view
+
+(define-presentation-method accept-present-default
+    ((type completion) stream (view option-pane-view) default default-supplied-p
+     present-p query-identifier)
+  (flet ((generate-callback (query-identifier)
+           (lambda (pane item)
+             (declare (ignore pane))
+             (when *accepting-values-stream*
+               (when-let ((query (find query-identifier
+                                       (queries *accepting-values-stream*)
+                                       :key #'query-identifier :test #'equal)))
+                 (setf (value query) item)
+                 (setf (changedp query) t))))))
+    (make-output-record-from-view view stream query-identifier
+                                  :mode :exclusive
+                                  :test test
+                                  :value default
+                                  :name-key name-key
+                                  :value-key value-key
+                                  :items sequence
+                                  :value-changed-callback (generate-callback query-identifier))))
+
+;;; list-pane-view
+
+(define-presentation-method accept-present-default
+    ((type completion) stream (view list-pane-view) default default-supplied-p
+     present-p query-identifier)
+  (make-output-record-from-view view stream query-identifier
+                                :mode :exclusive
+                                :test test
+                                :value default
+                                :name-key name-key
+                                :value-key value-key
+                                :items sequence
+                                :value-changed-callback
+                                (%standard-value-changed-callback query-identifier)))
+
+(define-presentation-method accept-present-default
+    ((type subset-completion) stream (view list-pane-view) default default-supplied-p
+     present-p query-identifier)
+  (make-output-record-from-view view stream query-identifier
+                                :mode :nonexclusive
+                                :test test
+                                :value default
+                                :name-key name-key
+                                :value-key value-key
+                                :items sequence
+                                :value-changed-callback
+                                (%standard-value-changed-callback query-identifier)))
+
+;;; slider-view
+
+(define-presentation-method accept-present-default
+    ((type real) stream (view slider-view) default default-supplied-p
+     present-p query-identifier)
+  (make-output-record-from-view view stream query-identifier
+                                :value default
+                                :max-value high ; presentation parameter
+                                :min-value low ; presentation parameter
+                                :show-value-p t
+                                :value-changed-callback (%standard-value-changed-callback query-identifier)))
+
+(define-presentation-method accept-present-default
+    ((type integer) stream (view slider-view) default default-supplied-p
+     present-p query-identifier)
+  (make-output-record-from-view view stream query-identifier
+                                :value default
+                                :max-value high ; presentation parameter
+                                :min-value low ; presentation parameter
+                                :show-value-p t
+                                :number-of-quanta (- high low)
+                                :value-changed-callback
+                                (lambda (pane item)
+                                  (declare (ignore pane))
+                                  (%standard-value-changed-callback (round item)))))
+
+;;; text-field
+
+(define-presentation-method accept-present-default
+    ((type string) stream (view text-field-view) default default-supplied-p
+                   present-p query-identifier)
+  (unless default-supplied-p
+    (setf default ""))
+  (let* ((width (or (getf (view-gadget-initargs view) :width)
+                    (stream-effective-right-margin stream)))
+         (gadget (make-gadget-pane-from-view view stream
+                                             :width width
+                                             :value default
+                                             :value-changed-callback
+                                             (%standard-value-changed-callback query-identifier))))
+    (updating-output (stream
+                      :cache-value t    ; don't redisplay
+                      :unique-id query-identifier
+                      :record-type 'accepting-values-record)
+      (with-output-as-presentation (stream query-identifier 'selectable-query
+                                           :single-box t)
+        (surrounding-output-with-border (stream :shape :rounded
+                                                :radius 3 :background clim:+background-ink+
+                                                :foreground clim:+foreground-ink+
+                                                :move-cursor t)
+          (with-output-as-gadget (stream)
+            gadget))))))
+
+;;; text-editor-view
+
+(define-presentation-method accept-present-default
+    ((type string) stream (view text-editor-view) default default-supplied-p
+     present-p query-identifier)
+  (unless default-supplied-p
+    (setf default ""))
+  (let ((gadget (make-gadget-pane-from-view view stream
+                                            :value default
+                                            :value-changed-callback
+                                            (%standard-value-changed-callback query-identifier))))
+    (updating-output (stream
+                      :cache-value t    ; don't redisplay
+                      :unique-id query-identifier
+                      :record-type 'accepting-values-record)
+      (with-output-as-presentation (stream query-identifier 'selectable-query
+                                           :single-box t)
+        (surrounding-output-with-border (stream :shape :rounded
+                                                :radius 3 :background clim:+background-ink+
+                                                :foreground clim:+foreground-ink+
+                                                :move-cursor t)
+          (with-output-as-gadget (stream)
+            gadget))))))
 
 ;;; A gadget that's not in the spec but which would  be useful.
 (defclass pop-up-menu-view (gadget-dialog-view)

@@ -531,24 +531,6 @@ is called. Used to determine if any editing has been done by user")))
 
 (defparameter *no-default-cache-value* (cons nil nil))
 
-;;; Hack until more views / dialog gadgets are defined.
-
-(define-default-presentation-method accept-present-default
-    (type stream (view text-field-view) default default-supplied-p
-     present-p query-identifier)
-  (if (width view)
-      (multiple-value-bind (cx cy)
-	  (stream-cursor-position stream)
-	(declare (ignore cy))
-	(letf (((stream-text-margin stream) (+ cx (width view))))
-	  (funcall-presentation-generic-function accept-present-default
-						 type
-						 stream
-						 +textual-dialog-view+
-						 default default-supplied-p
-						 present-p
-						 query-identifier)))))
-
 (define-default-presentation-method accept-present-default
     (type stream (view textual-dialog-view) default default-supplied-p
      present-p query-identifier)
@@ -834,40 +816,6 @@ is run for the last time"))
     (run-frame-top-level frame)
     (slot-value frame 'return-value)))
 
-;;; The list pane in an accepting-values dialog
-
-(define-presentation-method accept-present-default
-    ((type completion) stream (view list-pane-view)
-     default default-supplied-p present-p query-identifier)
-  (declare (ignore present-p))
-  (unless default-supplied-p
-    (setq default (funcall value-key (elt sequence 0))))
-  (let ((gadget-options
-         (loop
-            for slot in '(foreground background text-style visible-items)
-            for initarg in '(:foreground :background :text-style :visible-items)
-            when (slot-boundp view slot)
-            append (list initarg (slot-value view slot))))
-        (fm (frame-manager *application-frame*))
-        (command-ptype '(command :command-table accept-values)))
-    (flet ((value-changed-callback (pane item)
-	     (declare (ignore pane))
-             (throw-object-ptype `(com-change-query ,query-identifier ,item)
-                                 command-ptype))
-           (dont-redisplay (a b)
-             (declare (ignore a b))
-             t))
-      (updating-output (stream
-                        :cache-value t
-                        :cache-test #'dont-redisplay
-                        :unique-id query-identifier
-                        :record-type 'accepting-values-record)
-        (with-look-and-feel-realization (fm *application-frame*)
-          (with-output-as-gadget (stream)
-            (apply #'make-pane 'list-pane
-                   :items sequence :name-key name-key :value-key value-key
-                   :value-changed-callback #'value-changed-callback
-                   gadget-options)))))))
 
 ;;; An accept-values button sort of behaves like an accepting-values query with
 ;;; no value.

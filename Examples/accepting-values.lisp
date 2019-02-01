@@ -274,3 +274,24 @@
     (notify-user *application-frame*
                  (format nil "~a, ~a, and ~a were selected." abbrev prez vp))
     (values abbrev prez vp)))
+
+(defun accepting-with-gadgets (&key (stream *query-io*) (ow t))
+  (clim:accepting-values (stream :resynchronize-every-pass t :own-window ow)
+                         (fresh-line stream)
+
+                         (let (results)
+                           (macrolet ((generate-accept (type prompt view &rest keys)
+                                        `(progn
+                                           (push (accept ,type :prompt ,prompt :view ,view :stream stream ,@keys) results)
+                                           (fresh-line stream))))
+                             (generate-accept 'boolean "Toggle button [boolean]" +toggle-button-view+)
+                             (generate-accept '(member 1 2 3 4) "Radio Box [completion] " +radio-box-view+ :default 3)
+                             (generate-accept '(member "first" "second" "third") "Radio Box vertical [completion] " '(radio-box-view :orientation :vertical))
+                             (generate-accept '(member "Red" "Green" "Blue") "List pane [completion] " +list-pane-view+)
+                             (generate-accept '(member-sequence ("Male" "Female") :test string=) "Option pane [completion] " +option-pane-view+ :default "Male")
+                             (generate-accept '(subset 1 10 100 1000) "Check list [subset]" +check-box-view+ :default '(1 1000))
+                             (generate-accept '(subset :a :b :c :d) "List pane [subset]" +list-pane-view+ :default '(:a))
+                             (generate-accept '(float -1 1) "slider [float]" '(slider-view :orientation :horizontal :decimal-places 2) :default 0)
+                             (generate-accept '(integer 0 10) "slider [integer]" +slider-view+ :default 0)
+                             (generate-accept 'string "text editor [string]" '(text-editor-view :ncolumns 10 :nlines 10)))
+                           (nreverse results))))
