@@ -23,7 +23,7 @@
 ;;; Views described in the Franz User manual (CLIM 2.2). Sec. 8.6.13
 
 (macrolet
-    ((define-gadget-view (name &optional new-slots)
+    ((define-gadget-view (name)
        ;; The gadget class stores the information required to make an
        ;; instances of its corresponding gadget class: the name of the
        ;; gadget class and a list of initargs. The INITIALIZE-INSTANCE
@@ -43,8 +43,7 @@
             (defclass ,class-name (gadget-view)
               ((gadget-name :allocation :class :reader view-gadget-name
                             :initform ',name)
-               (gadget-initargs :accessor view-gadget-initargs)
-               ,@new-slots))
+               (gadget-initargs :accessor view-gadget-initargs)))
             (defmethod initialize-instance :after
                 ((instance ,class-name)
                  &rest initargs &key ,@parameters)
@@ -58,8 +57,7 @@
   (define-gadget-view radio-box)
   (define-gadget-view check-box)
   (define-gadget-view slider)
-  (define-gadget-view text-field
-      ((width :accessor width :initarg :width :initform nil)))
+  (define-gadget-view text-field)
   (define-gadget-view text-editor)
   (define-gadget-view list-pane)
   (define-gadget-view option-pane))
@@ -240,19 +238,30 @@
 
 ;;; text-field
 
-(define-default-presentation-method accept-present-default
-    (type stream (view text-field-view) default default-supplied-p
-     present-p query-identifier)
-  (when-let ((width (width view)))
-    (let ((cx (stream-cursor-position stream)))
-      (letf (((stream-text-margin stream) (+ cx width)))
-        (funcall-presentation-generic-function accept-present-default
-                                               type
-                                               stream
-                                               +textual-dialog-view+
-                                               default default-supplied-p
-                                               present-p
-                                               query-identifier)))))
+(define-presentation-method accept-present-default
+    ((type string) stream (view text-field-view) default default-supplied-p
+                   present-p query-identifier)
+  (unless default-supplied-p
+    (setf default ""))
+  (let* ((width (or (getf (view-gadget-initargs view) :width)
+                    (stream-effective-right-margin stream)))
+         (gadget (make-gadget-pane-from-view view stream
+                                             :width width
+                                             :value default
+                                             :value-changed-callback
+                                             (%standard-value-changed-callback query-identifier))))
+    (updating-output (stream
+                      :cache-value t    ; don't redisplay
+                      :unique-id query-identifier
+                      :record-type 'accepting-values-record)
+      (with-output-as-presentation (stream query-identifier 'selectable-query
+                                           :single-box t)
+        (surrounding-output-with-border (stream :shape :rounded
+                                                :radius 3 :background clim:+background-ink+
+                                                :foreground clim:+foreground-ink+
+                                                :move-cursor t)
+          (with-output-as-gadget (stream)
+            gadget))))))
 
 ;;; text-editor-view
 
