@@ -2519,8 +2519,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    (user-min-height :accessor %pane-user-min-height)
    (user-max-height :accessor %pane-user-max-height)
    ;; size required by the stream
-   (stream-width :initform 0 :accessor stream-width)
-   (stream-height :initform 0 :accessor stream-height))
+   (stream-width :initform 100 :accessor stream-width)
+   (stream-height :initform 100 :accessor stream-height))
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
