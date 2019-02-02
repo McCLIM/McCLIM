@@ -39,8 +39,8 @@
    (frames :initform (make-hash-table))
    (application-frame-recording-p :initform nil))
   (:panes
-   (options-pane
-    (vertically ()
+   (category-test-pane
+    (horizontally (:equalize-height t)
       (1/8 (labelling (:label "Category")
              (clim-extensions:lowering ()
                (scrolling (:scroll-bar :vertical)
@@ -58,7 +58,9 @@
                             :mode :exclusive
                             :name-key #'drawing-test-name
                             :items nil
-                            :value-changed-callback #'%update-selection)))))
+                            :value-changed-callback #'%update-selection)))))))
+   (options-pane
+    (vertically ()
       (horizontally ()
         (labelling (:label "Recording")
           (clim:with-radio-box (:orientation :vertical
@@ -152,24 +154,26 @@
           "side-by-side view with the renderer output"))))
    (backend-pane
     (labelling (:label "Backend")
-      (make-pane 'application-pane
-                 :name 'backend-output
-                 :min-width *width*
-                 :min-height *height*
-                 :display-time nil
-                 :display-function #'display-backend-output
-                 :end-of-line-action :wrap
-                 :end-of-page-action :wrap)))
+      (scrolling ()
+        (make-pane 'application-pane
+                   :name 'backend-output
+                   :min-width *width*
+                   :min-height *height*
+                   :display-time nil
+                   :display-function #'display-backend-output
+                   :end-of-line-action :wrap
+                   :end-of-page-action :wrap))))
    (render-pane
     (labelling (:label "Render")
-      (make-pane 'application-pane
-                 :name 'render-output
-                 :min-width *width*
-                 :min-height *height*
-                 :display-time nil
-                 :display-function #'display-render-output
-                 :end-of-line-action :wrap
-                 :end-of-page-action :wrap)))
+      (scrolling ()
+        (make-pane 'application-pane
+                   :name 'render-output
+                   :min-width *width*
+                   :min-height *height*
+                   :display-time nil
+                   :display-function #'display-render-output
+                   :end-of-line-action :wrap
+                   :end-of-page-action :wrap))))
    (description-pane
     (spacing (:thickness 3)
       (clim-extensions:lowering ()
@@ -179,26 +183,28 @@
   (:layouts
    (default
     (spacing (:thickness 3)
-      (vertically (:equalize-width t)
-        (horizontally (:max-width (* 4/3 *width*)
-                       :max-height (* 3/2 *height*))
-          options-pane
-          (vertically ()
-            (spacing (:thickness 3)
-              (clim-extensions:lowering ()
-                backend-pane))
-            description-pane)))))
+      (vertically ()
+        (1/6 category-test-pane)
+        (:fill (horizontally (:min-width (* 15/8 *width*))
+                 (1/3 options-pane)
+                 (:fill (vertically ()
+                          (:fill (spacing (:thickness 3)
+                                   (clim-extensions:lowering ()
+                                     backend-pane)))
+                          (1/5 description-pane))))))))
    (side-by-side
     (spacing (:thickness 3)
-      (horizontally (:max-width (* 8/3 *width*)
-                     :max-height (* 3/2 *height*))
-        options-pane
-        (vertically (:equalize-width t)
-          (spacing (:thickness 3)
-            (clim-extensions:lowering ()
-              (horizontally ()
-                backend-pane render-pane)))
-          description-pane))))))
+      (vertically ()
+        (1/6 category-test-pane)
+        (:fill (horizontally (:min-width (* 3 *width*))
+                 (1/6 options-pane)
+                 (:fill (vertically ()
+                          (:fill (spacing (:thickness 3)
+                                   (clim-extensions:lowering ()
+                                     (horizontally ()
+                                       (1/2 backend-pane)
+                                       (1/2 render-pane)))))
+                          (1/5 description-pane))))))))))
 
 (defclass drawing-app-pane (application-pane)
   ())
@@ -232,21 +238,21 @@
 
 (defun list-pane-up (pane-name)
   (let* ((pane (find-pane-named *application-frame* pane-name))
-         (categories (clime:list-pane-items pane))
+         (items (clime:list-pane-items pane))
          (current (gadget-value pane))
-         (pos (when current (position current categories))))
+         (pos (when current (position current items))))
     (when (and pos (not (zerop pos)))
       (setf (gadget-value pane :invoke-callback t)
-            (elt categories (1- pos))))))
+            (elt items (1- pos))))))
 
 (defun list-pane-down (pane-name)
   (let* ((pane (find-pane-named *application-frame* pane-name))
-         (categories (clime:list-pane-items pane))
+         (items (clime:list-pane-items pane))
          (current (gadget-value pane))
-         (pos (when current (position current categories))))
-    (when (and pos (< pos (1- (length categories))))
+         (pos (when current (position current items))))
+    (when (and pos (< pos (1- (length items))))
       (setf (gadget-value pane :invoke-callback t)
-            (elt categories (1+ pos))))))
+            (elt items (1+ pos))))))
 
 (define-drawing-tests-command (com-drawing-tests-change-category-up :keystroke (:left :meta)) ()
   (list-pane-up 'category-selector))
@@ -255,10 +261,12 @@
   (list-pane-down 'category-selector))
 
 (define-drawing-tests-command (com-drawing-tests-change-test-up :keystroke :up) ()
-  (list-pane-up 'test-selector))
+  (unless (list-pane-up 'test-selector)
+    (list-pane-up 'category-selector)))
 
 (define-drawing-tests-command (com-drawing-tests-change-test-down :keystroke :down) ()
-  (list-pane-down 'test-selector))
+  (unless (list-pane-down 'test-selector)
+    (list-pane-down 'category-selector)))
 
 (defmethod handle-event ((pane drawing-app-pane) (event keyboard-event))
   (case (keyboard-event-key-name event)
