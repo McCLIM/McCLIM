@@ -521,7 +521,7 @@
 
 (defun drawing-test-raster-image (test format &optional filename)
   (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
-         (filename (or filename (format nil "/tmp/~a-~a.~a"
+         (filename (or filename (format nil "/tmp/~a-~a.~(~a~)"
                                         (drawing-test-category test)
                                         (drawing-test-name test) format)))
          (height (+ 72 *height*)))
