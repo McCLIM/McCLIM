@@ -58,6 +58,11 @@ forms."
       (setf (cffi:mem-ref v :int) 1)
       (ft-property-set freetype2:*library* "autofitter" "warping" v))))
 
+(defun ensure-string-value (v)
+  (etypecase v
+    (string v)
+    (character (string v))))
+
 (defclass freetype-font-family (clim-extensions:font-family)
   ((faces :initform (make-hash-table :test 'equal)
           :reader freetype-font-family/faces)))
@@ -343,34 +348,35 @@ or NIL if the current transformation is the identity transformation."
   ;; mirror swaps, use (SHEET-XMIRROR (MEDIUM-SHEET MEDIUM)) instead. It might be a good idea to
   ;; wrap our own (CLX-RENDER-MEDIUM-MIRROR MEDIUM) function.
   (declare (ignore toward-x toward-y))
-  (when (alexandria:emptyp string)
-    (return-from clim:medium-draw-text*))
-  (clim-clx::with-clx-graphics () medium
-    (unless (eq align-y :baseline)
-      (let* ((font (climb:text-style-to-font (clim:port medium) (clim:medium-text-style medium)))
-             (ascent (climb:font-ascent font))
-             (descent (climb:font-descent font))
-             (text-height (+ ascent descent)))
-        (setq y (ecase align-y
-                  (:top (+ y ascent))                              ; OK
-                  #+ (or) (:baseline y)                            ; OK
-                  (:center (+ y ascent (- (/ text-height 2.0s0)))) ; See :around for multiline
-                  (:baseline* y)                                   ; See :around for multiline
-                  (:bottom (- y descent))))))                      ; See :around for multiline
-    (unless (eq align-x :left)
-      ;; This is the worst case - we need to compute whole text width what
-      ;; requires walking all lines char-by char.
-      (let ((text-width (clim:text-size medium string :start start :end end)))
-        (setq x (- (- x 0.5) (ecase align-x
-                               ;;(:left 0)
-                               (:center (/ text-width 2.0s0))
-                               (:right text-width))))))
-    (clim-sys:with-lock-held (*draw-font-lock*)
-      (freetype-draw-glyphs medium clim-clx::mirror clim-clx::gc x y string
-                            :start start :end end
-                            :transformation (clim:sheet-device-transformation
-                                             (clim:medium-sheet medium))
-                            :transform-glyphs transform-glyphs))))
+  (let ((string (ensure-string-value string)))
+    (when (alexandria:emptyp string)
+      (return-from clim:medium-draw-text*))
+    (clim-clx::with-clx-graphics () medium
+      (unless (eq align-y :baseline)
+        (let* ((font (climb:text-style-to-font (clim:port medium) (clim:medium-text-style medium)))
+               (ascent (climb:font-ascent font))
+               (descent (climb:font-descent font))
+               (text-height (+ ascent descent)))
+          (setq y (ecase align-y
+                    (:top (+ y ascent))                              ; OK
+                    #+ (or) (:baseline y)                            ; OK
+                    (:center (+ y ascent (- (/ text-height 2.0s0)))) ; See :around for multiline
+                    (:baseline* y)                                   ; See :around for multiline
+                    (:bottom (- y descent))))))                      ; See :around for multiline
+      (unless (eq align-x :left)
+        ;; This is the worst case - we need to compute whole text width what
+        ;; requires walking all lines char-by char.
+        (let ((text-width (clim:text-size medium string :start start :end end)))
+          (setq x (- (- x 0.5) (ecase align-x
+                                 ;;(:left 0)
+                                 (:center (/ text-width 2.0s0))
+                                 (:right text-width))))))
+      (clim-sys:with-lock-held (*draw-font-lock*)
+        (freetype-draw-glyphs medium clim-clx::mirror clim-clx::gc x y string
+                              :start start :end end
+                              :transformation (clim:sheet-device-transformation
+                                               (clim:medium-sheet medium))
+                              :transform-glyphs transform-glyphs)))))
 
 ;;; We only cache glyphsets that does not have a transformation
 ;;; applied. The assumption is that applying transformation on text is
@@ -534,21 +540,22 @@ or NIL if the current transformation is the identity transformation."
                                  :align-x align-x :align-y align-y :direction direction)
       (values xmin ymin xmax ymax))))
 
-(defmethod climb:text-size ((medium clx-freetype-medium) string &key text-style (start 0) end
-                            &aux (end (or end (length string)))
-                              (text-style (clim:merge-text-styles text-style
-                                                                  (clim:medium-merged-text-style medium))))
-  (when (= start end)
-    (return-from climb:text-size (values 0 0 0 0 (clim:text-style-ascent text-style medium))))
-  (let ((text (string string))
-        (font (climb:text-style-to-font (clim:port medium) text-style)))
-    (multiple-value-bind (xmin ymin xmax ymax
-                               left top width height
-                               ascent descent linegap
-                               cursor-dx cursor-dy)
-        (climb:font-text-extents font text :start start :end end)
-      (declare (ignore xmin ymin xmax ymax left top descent linegap))
-      (values width height cursor-dx cursor-dy ascent))))
+(defmethod climb:text-size ((medium clx-freetype-medium) string &key text-style (start 0) end)
+  (let* ((string (ensure-string-value string))
+         (end (or end (length string)))
+         (text-style (clim:merge-text-styles text-style
+                                             (clim:medium-merged-text-style medium))))
+    (when (= start end)
+      (return-from climb:text-size (values 0 0 0 0 (clim:text-style-ascent text-style medium))))
+    (let ((text (string string))
+          (font (climb:text-style-to-font (clim:port medium) text-style)))
+      (multiple-value-bind (xmin ymin xmax ymax
+                            left top width height
+                            ascent descent linegap
+                            cursor-dx cursor-dy)
+          (climb:font-text-extents font text :start start :end end)
+        (declare (ignore xmin ymin xmax ymax left top descent linegap))
+        (values width height cursor-dx cursor-dy ascent)))))
 
 (defmethod climb:font-ascent ((font freetype-font))
   (with-face-from-font (face font)
