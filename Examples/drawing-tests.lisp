@@ -1,7 +1,7 @@
 (in-package :clim-demo)
 
 (defparameter *drawing-tests-categories* nil)
-(defparameter *drawing-tests* (make-hash-table :test 'equal))
+(defparameter *drawing-tests* (make-hash-table))
 
 (defparameter *width* 500)
 (defparameter *height* 700)
@@ -10,7 +10,7 @@
 (defstruct drawing-test category name description display-function)
 
 (defun drawing-test-keyname (category name)
-  (concatenate 'string category "-" name))
+  (alexandria:symbolicate category "-" name))
 
 (defmacro define-drawing-test (category name (frame stream &rest arglist) description &body body)
   (check-type category string)
@@ -18,13 +18,13 @@
   (check-type description string)
   (alexandria:with-gensyms (g-category g-name)
     `(let ((,g-name ,name)
-           (,g-category ,category))
+           (,g-category ',(alexandria:symbolicate category)))
        (setf (gethash (drawing-test-keyname ,g-category ,g-name) *drawing-tests*)
              (make-drawing-test :category ,g-category
                                 :name ,g-name
                                 :description ,description
                                 :display-function (lambda (,frame ,stream ,@arglist) ,@body)))
-       (pushnew ,g-category *drawing-tests-categories* :test #'string-equal))))
+       (pushnew ,g-category *drawing-tests-categories*))))
 
 (defun get-display (category name)
   (let ((drawing-test (gethash (drawing-test-keyname category name) *drawing-tests*)))
@@ -473,7 +473,7 @@
     (drawing-test-print-log "~&Writing ~A~%" filename)))
 
 (defun drawing-test-postscript (test &optional filename)
-  (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
+  (let* ((test (if (symbolp test) (gethash test *drawing-tests*) test))
          (filename (or filename (format nil "/tmp/~a-~a.eps"
                                         (drawing-test-category test)
                                         (drawing-test-name test)))))
@@ -491,7 +491,7 @@
                             (drawing-test-name test)))))))
 
 (defun drawing-test-pdf (test &optional filename)
-  (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
+  (let* ((test (if (symbolp test) (gethash test *drawing-tests*) test))
          (filename (or filename (format nil "/tmp/~a-~a.pdf"
                                         (drawing-test-category test)
                                         (drawing-test-name test)))))
@@ -520,7 +520,7 @@
                            (drawing-test-name test))))))))
 
 (defun drawing-test-raster-image (test format &optional filename)
-  (let* ((test (if (stringp test) (gethash test *drawing-tests*) test))
+  (let* ((test (if (symbolp test) (gethash test *drawing-tests*) test))
          (filename (or filename (format nil "/tmp/~a-~a.~(~a~)"
                                         (drawing-test-category test)
                                         (drawing-test-name test) format)))
@@ -1647,7 +1647,7 @@ outside the clipping area should be grey.")
 ;;; Clipping
 ;;;
 
-(define-drawing-test "Clipping region" "ellipse" (frame stream)
+(define-drawing-test "Clipping Region" "ellipse" (frame stream)
     "Non-rectangular clipping region. We should see grey rotated ellipse with
 limited angle drawn inside green border. This ellipse is a clipping region. Then
 we randomly drawn points on the screen which should be clipped to the grey area."
