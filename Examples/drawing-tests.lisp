@@ -283,17 +283,20 @@
       (loop with stream = (find-pane-named clim:*application-frame* 'description)
             and itups = internal-time-units-per-second
             and start = (get-internal-real-time)
+            and backend-pane = (find-pane-named clim:*application-frame* 'backend-output)
             repeat times do
-              (display-backend-output clim:*application-frame*
-                                      (find-pane-named clim:*application-frame* 'backend)
-                                      t)
-            finally (let* ((score (float (/ times (/ (- (get-internal-real-time) start) itups)))))
-                      (with-slots (recording-p) clim:*application-frame*
-                        (with-slots (category name) test
-                          (format stream "~&~a-~a score: ~a operations/s; recording: ~:[no~;yes~]~%"
-                                  category name score recording-p)
-                          (format *debug-io* "~&~a~a score: ~a operations/s; recording: ~:[no~;yes~]~%"
-                                  category name score recording-p))))))))
+              (display-backend-output clim:*application-frame* backend-pane t)
+            finally
+               (let* ((score (float (/ times (/ (- (get-internal-real-time) start) itups)))))
+                 (with-slots (recording-p) clim:*application-frame*
+                   (when recording-p
+                     (clear-output-record (stream-output-history backend-pane))
+                     (display-backend-output clim:*application-frame* backend-pane t))
+                   (with-slots (category name) test
+                     (format stream "~&~a-~a score: ~a operations/s; recording: ~:[no~;yes~]~%"
+                             category name score recording-p)
+                     (format *debug-io* "~&~a~a score: ~a operations/s; recording: ~:[no~;yes~]~%"
+                             category name score recording-p))))))))
 
 (defun %run-in-backend (this-gadget)
   (declare (ignore this-gadget))
