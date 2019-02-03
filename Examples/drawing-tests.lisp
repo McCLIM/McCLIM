@@ -27,9 +27,9 @@
        (pushnew ,g-category *drawing-tests-categories*))))
 
 (defun get-display (category name)
-  (let ((drawing-test (gethash (drawing-test-keyname category name) *drawing-tests*)))
-    (when drawing-test
-      (drawing-test-display-function drawing-test))))
+  (alexandria:when-let ((drawing-test (gethash (drawing-test-keyname category name)
+                                               *drawing-tests*)))
+    (drawing-test-display-function drawing-test)))
 
 (define-application-frame drawing-tests ()
   ((recording-p :initform t)
