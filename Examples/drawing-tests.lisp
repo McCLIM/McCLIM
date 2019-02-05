@@ -36,8 +36,7 @@
    (signal-condition-p :initform nil)
    (current-selection :initform nil)
    (application-frame-backend :initform :clx-ttf)
-   (frames :initform (make-hash-table))
-   (application-frame-recording-p :initform nil))
+   (frames :initform (make-hash-table)))
   (:panes
    (category-test-pane
     (horizontally (:equalize-height t)
@@ -125,12 +124,7 @@
                   (2/3 (clim-extensions:lowering ()
                          (make-pane 'text-field-pane
                                     :name 'server-path
-                                    :value ":custom")))))))
-          (labelling (:label "Recording")
-            (clim:with-radio-box (:orientation :vertical
-                                  :value-changed-callback #'%update-application-frame-recording-option)
-              "yes"
-              (clim:radio-box-current-selection "no")))))
+                                    :value ":custom")))))))))
       (spacing (:thickness 6)
         (vertically ()
           (make-pane 'push-button
@@ -177,25 +171,27 @@
    (description-pane
     (spacing (:thickness 3)
       (clim-extensions:lowering ()
-        (scrolling (:scroll-bar :vertical :height 200)
+        (scrolling (:scroll-bar :vertical)
           (make-pane 'application-pane
-                     :name 'description))))))
+                     :name 'description
+                     :end-of-line-action :wrap*
+                     :end-of-page-action :scroll))))))
   (:layouts
    (default
     (spacing (:thickness 3)
-      (vertically ()
-        (1/6 category-test-pane)
+      (vertically (:height (* 3/2 *height*))
+        (1/7 category-test-pane)
         (:fill (horizontally (:min-width (* 15/8 *width*))
                  (1/3 options-pane)
                  (:fill (vertically ()
                           (:fill (spacing (:thickness 3)
                                    (clim-extensions:lowering ()
-                                     backend-pane)))
-                          (1/5 description-pane))))))))
+                                     backend-pane)))))))
+        (1/7 description-pane))))
    (side-by-side
     (spacing (:thickness 3)
-      (vertically ()
-        (1/6 category-test-pane)
+      (vertically (:height (* 3/2 *height*))
+        (1/7 category-test-pane)
         (:fill (horizontally (:min-width (* 3 *width*))
                  (1/6 options-pane)
                  (:fill (vertically ()
@@ -203,38 +199,40 @@
                                    (clim-extensions:lowering ()
                                      (horizontally ()
                                        (1/2 backend-pane)
-                                       (1/2 render-pane)))))
-                          (1/5 description-pane))))))))))
+                                       (1/2 render-pane)))))))))
+        (1/7 description-pane))))))
 
 (defclass drawing-app-pane (application-pane)
   ())
 
 (define-application-frame drawing-app-frame ()
-  ((recording-p :initform nil :initarg :recording-p)
-   (signal-condition-p :initform nil)
+  ((drawing-tests-frame :initform nil :initarg :drawing-tests-frame)
    (backend :initform :clx-ttf :initarg :backend)
    (current-selection :initform nil :initarg :current-selection))
   (:panes
    (backend-pane
     (labelling (:label "Backend")
-      (make-pane 'drawing-app-pane
-                 :name 'backend-output
-                 :min-width *width*
-                 :min-height *height*
-                 :display-time nil
-                 :display-function #'display-backend-output
-                 :end-of-line-action :wrap
-                 :end-of-page-action :wrap)))
+      (scrolling (:min-width *width*)
+        (make-pane 'drawing-app-pane
+                   :name 'backend-output
+                   :min-width *width*
+                   :min-height *height*
+                   :display-time nil
+                   :display-function #'display-backend-output
+                   :end-of-line-action :wrap
+                   :end-of-page-action :wrap))))
    (description-pane
     (spacing (:thickness 3)
       (clim-extensions:lowering ()
-        (scrolling (:scroll-bar :vertical :height 200)
+        (scrolling (:scroll-bar :vertical)
           (make-pane 'application-pane
-                     :name 'description))))))
+                     :name 'description
+                     :end-of-line-action :wrap*
+                     :end-of-page-action :scroll))))))
   (:layouts
-   (default (vertically ()
-              backend-pane
-              description-pane))))
+   (default (vertically (:min-height (* 4/3 *height*))
+              (:fill backend-pane)
+              (1/6 description-pane)))))
 
 (defun list-pane-up (pane-name)
   (let* ((pane (find-pane-named *application-frame* pane-name))
@@ -331,8 +329,7 @@
              (when (and string (> (length string) 0))
                (let ((server-path (read-from-string (concatenate 'string "(" string ")"))))
                  (when (and server-path (listp server-path)) server-path)))))
-    (with-slots (current-selection application-frame-recording-p
-                 application-frame-backend frames)
+    (with-slots (current-selection application-frame-backend frames)
         *application-frame*
       (when current-selection
         (unless (gethash current-selection frames)
@@ -344,10 +341,11 @@
                                              (list application-frame-backend))))
                  (app-frame (make-application-frame 'drawing-app-frame
                                                     :calling-frame *application-frame*
-                                                    :frame-manager (when server-path (find-frame-manager :port server-path))
+                                                    :frame-manager (when server-path
+                                                                     (find-frame-manager :port server-path))
                                                     :current-selection current-selection
                                                     :backend application-frame-backend
-                                                    :recording-p application-frame-recording-p)))
+                                                    :drawing-tests-frame *application-frame*)))
             (setf (gethash current-selection frames) app-frame)
             (run-frame-top-level app-frame)
             (remhash current-selection frames)))))))
@@ -356,12 +354,6 @@
   (declare (ignore pane))
   (with-slots (application-frame-backend) *application-frame*
     (setf application-frame-backend item)))
-
-(defun %update-application-frame-recording-option (this-gadget selected-gadget)
-  (declare (ignore this-gadget))
-  (with-slots (application-frame-recording-p) clim:*application-frame*
-    (setf application-frame-recording-p
-          (string= (clim:gadget-label selected-gadget) "yes"))))
 
 (defun %update-recording-option (this-gadget selected-gadget)
   (declare (ignore this-gadget))
@@ -398,28 +390,29 @@
 
 (defun display-backend-output (frame pane &optional benchmark)
   (declare (ignore pane))
-  (let ((output (get-frame-pane frame 'backend-output))
-        (item (slot-value frame 'current-selection)))
-    (let ((description (get-frame-pane frame 'description)))
-      (when item
-        (unless benchmark
-          (window-clear description)
-          (with-text-style (description (make-text-style :sans-serif :roman :normal))
-            (write-string (drawing-test-description item) description)))
-        (labels ((draw ()
-                   (with-slots (recording-p) frame
-                     (with-output-recording-options (output :record recording-p)
-                       (clim:with-drawing-options (output :clipping-region
-                                                          (clim:make-rectangle* 0 0 *width* *height*))
-                         (clim:draw-rectangle* output 0 0 *width* *height*
-                                               :filled t :ink clim:+grey90+)
-                         (funcall (drawing-test-display-function item) frame output))))))
-          (if (slot-value frame 'signal-condition-p)
-              (draw)
-              (handler-case (draw)
-                (simple-error (condition)
-                  (clim:with-drawing-options (description :ink +red+)
-                    (format description "Backend:~a~%" condition))))))))))
+  (alexandria:when-let ((item (slot-value frame 'current-selection)))
+    (let ((description (get-frame-pane frame 'description))
+          (output (get-frame-pane frame 'backend-output))
+          (drawing-tests-frame (when (eq (type-of frame) 'drawing-app-frame)
+                                 (slot-value frame 'drawing-tests-frame))))
+      (unless benchmark
+        (window-clear description)
+        (with-text-style (description (make-text-style :sans-serif :roman :normal))
+          (format description "~A~%" (drawing-test-description item))))
+      (labels ((draw ()
+                 (with-slots (recording-p) (or drawing-tests-frame frame)
+                   (with-output-recording-options (output :record recording-p)
+                     (clim:with-drawing-options (output :clipping-region
+                                                        (clim:make-rectangle* 0 0 *width* *height*))
+                       (clim:draw-rectangle* output 0 0 *width* *height*
+                                             :filled t :ink clim:+grey90+)
+                       (funcall (drawing-test-display-function item) frame output))))))
+        (if (slot-value (or drawing-tests-frame frame) 'signal-condition-p)
+            (draw)
+            (handler-case (draw)
+              (simple-error (condition)
+                (clim:with-drawing-options (description :ink +red+)
+                  (format description "Backend:~a~%" condition)))))))))
 
 (defun display-render-output (frame pane)
   (declare (ignore pane))
@@ -1048,9 +1041,7 @@ outside the clipping area should be grey.")
                                                        :filled nil))))
 
 (define-drawing-test "Ellipse" "Slope line intersection" (frame stream)
-    "Ellipse with rotation and limited angle is surrounded by its bounding
-rectangle. Slope lines go through the sheet and the intersections of lines with
-the ellipse are drawn in different color and thickness."
+    "Ellipse with rotation and limited angle is surrounded by its bounding rectangle. Slope lines go through the sheet and the intersections of lines with the ellipse are drawn in different color and thickness."
   (declare (ignore frame))
   (let* ((cx (/ *width* 2))
          (cy (/ *height* 2))
@@ -1087,10 +1078,7 @@ the ellipse are drawn in different color and thickness."
                        :ink +dark-green+ :line-thickness 5))))))
 
 (define-drawing-test "Ellipse" "xy-line intersection" (frame stream)
-    "Ellipse with rotation and limited angle is surrounded by its bounding
-rectangle. Horizontal and vertical lines go through the sheet and the
-intersections of lines with the ellipse are d1rawn in different color and
-thickness."
+    "Ellipse with rotation and limited angle is surrounded by its bounding rectangle. Horizontal and vertical lines go through the sheet and the intersections of lines with the ellipse are d1rawn in different color and thickness."
   (declare (ignore frame))
   (let* ((cx (/ *width* 2))
          (cy (/ *height* 2))
@@ -1125,11 +1113,7 @@ thickness."
                        :ink +dark-green+ :line-thickness 5))))))
 
 (define-drawing-test "Ellipse" "Angle transformations" (frame stream)
-    "Uses internal interfaces. We should see 6 ellipses with limited
-angle. First four should be filled and should have angle radius drawn. Last two
-should not be filled (and no angle radius is drawn). Each ellipse is bound by
-its bounding rectangle and surrounded by four points marking where min-x, max-x,
-min-y and max-y are (extremum points) are."
+    "Uses internal interfaces. We should see 6 ellipses with limited angle. First four should be filled and should have angle radius drawn. Last two should not be filled (and no angle radius is drawn). Each ellipse is bound by its bounding rectangle and surrounded by four points marking where min-x, max-x, min-y and max-y are (extremum points) are."
   (declare (ignore frame))
   (let* ((sa (/ pi 2))
          (ea (+ pi (* 3 (/ pi 4))))
@@ -1651,9 +1635,7 @@ outside the clipping area should be grey.")
 ;;;
 
 (define-drawing-test "Clipping Region" "ellipse" (frame stream)
-    "Non-rectangular clipping region. We should see grey rotated ellipse with
-limited angle drawn inside green border. This ellipse is a clipping region. Then
-we randomly drawn points on the screen which should be clipped to the grey area."
+    "Non-rectangular clipping region. We should see grey rotated ellipse with limited angle drawn inside green border. This ellipse is a clipping region. Then we randomly drawn points on the screen which should be clipped to the grey area."
   (declare (ignore frame))
   (let ((cr (clim:make-ellipse* (/ *width* 2) (/ *height* 2)
                                 (- (/ *width* 2) 50) 100
@@ -1673,11 +1655,7 @@ we randomly drawn points on the screen which should be clipped to the grey area.
                                 :line-thickness (random 100)))))))
 
 (define-drawing-test "Clipping Region" "Clipping Region" (frame stream)
-    "Various clipping regions. We should see seven blue bounding
-rectangles. Each of them host a clipping area: square, rotated rectangle,
-circle, polygon, region intersection, region union and region difference (last
-three are based on rectangles). Randomly drawn points should be clipped to these
-clipping areas. No point should be drawn outside the blue rectangles."
+    "Various clipping regions. We should see seven blue bounding rectangles. Each of them host a clipping area: square, rotated rectangle, circle, polygon, region intersection, region union and region difference (last three are based on rectangles). Randomly drawn points should be clipped to these clipping areas. No point should be drawn outside the blue rectangles."
   (declare (ignore frame))
   (dolist (cr (list
                (make-rectangle* 20 20 120 120)
@@ -2161,18 +2139,14 @@ clipping areas. No point should be drawn outside the blue rectangles."
 ;;;
 
 (define-drawing-test "Bezier" "Area" (frame stream)
-    "Draws a single bezier-area. Currently this is quite slow and
-needs to be optimized. Also, the shape of the drawn bezier area is not
-particularly attractive."
+    "Draws a single bezier-area. Currently this is quite slow and needs to be optimized. Also, the shape of the drawn bezier area is not particularly attractive."
   (declare (ignore frame))
   (let* ((r1 (mcclim-bezier:make-bezier-area*
               '(120 160 35 200 220 280 220 40 180 160 160 180 120 160))))
     (mcclim-bezier:draw-bezier-design* stream r1 :ink +cyan2+)))
 
 (define-drawing-test "Bezier" "Curve" (frame stream)
-    "Draws a single bezier curve. This is currently broken as it
-should just draw the stroke of the bezier and instead renders the
-design as a bezier area."
+    "Draws a single bezier curve. This is currently broken as it should just draw the stroke of the bezier and instead renders the design as a bezier area."
   (declare (ignore frame))
   (let* ((r4 (mcclim-bezier:make-bezier-curve*
               (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
@@ -2181,9 +2155,7 @@ design as a bezier area."
                                        :ink +orange+)))
 
 (define-drawing-test "Bezier" "Test 3" (frame stream)
-    "Some more complicated bezier design drawings. We draw two
-overlapping bezier areas, the difference between these two areas, a
-bezier curve, and a convolution of a curve and an area."
+    "Some more complicated bezier design drawings. We draw two overlapping bezier areas, the difference between these two areas, a bezier curve, and a convolution of a curve and an area."
   (declare (ignore frame))
   (let* ((r1 (mcclim-bezier:make-bezier-area*
               '(100 100 200 200 300 200 400 100 300 50 200 50 100 100)))
