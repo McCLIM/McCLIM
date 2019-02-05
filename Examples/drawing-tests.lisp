@@ -252,10 +252,10 @@
       (setf (gadget-value pane :invoke-callback t)
             (elt items (1+ pos))))))
 
-(define-drawing-tests-command (com-drawing-tests-change-category-up :keystroke (:left :meta)) ()
+(define-drawing-tests-command (com-drawing-tests-change-category-up :keystroke (:up :meta)) ()
   (list-pane-up 'category-selector))
 
-(define-drawing-tests-command (com-drawing-tests-change-category-down :keystroke (:right :meta)) ()
+(define-drawing-tests-command (com-drawing-tests-change-category-down :keystroke (:down :meta)) ()
   (list-pane-down 'category-selector))
 
 (define-drawing-tests-command (com-drawing-tests-change-test-up :keystroke :up) ()
