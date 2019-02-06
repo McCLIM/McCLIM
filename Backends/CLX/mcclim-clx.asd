@@ -24,7 +24,8 @@
              (:file "medium" :depends-on ("fonts"))
              (:file "medium-xrender" :depends-on ("medium"))))
    (:file "input")
-   (:file "text-selection")))
+   (:file "text-selection")
+   (:file "clipboard")))
 
 (defsystem #:mcclim-clx/truetype
   :depends-on (#:mcclim-clx

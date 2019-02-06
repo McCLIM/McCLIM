@@ -32,6 +32,7 @@
 
 (defclass clx-port (clim-xcommon:keysym-port-mixin
 		    clx-text-selection-port-mixin
+                    clx-clipboard-port-mixin
 		    clx-basic-port)
   ((color-table :initform (make-hash-table :test #'eq))
 
