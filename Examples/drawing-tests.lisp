@@ -268,7 +268,9 @@
 
 (defmethod handle-event ((pane drawing-app-pane) (event keyboard-event))
   (case (keyboard-event-key-name event)
-    ((:|r| :r) (redisplay-frame-pane (pane-frame pane) pane :force-p t))
+    ((:|r| :r) (let ((frame (pane-frame pane)))
+                 (window-clear (find-pane-named frame 'description))
+                 (redisplay-frame-pane (pane-frame pane) pane :force-p t)))
     (:| | (repaint-sheet pane clim:+everywhere+))))
 
 (defun %start-benchmark (this-gadget)
@@ -371,7 +373,6 @@
   (declare (ignore pane))
   (with-slots (current-selection) clim:*application-frame*
     (setf current-selection item))
-  (window-clear (get-frame-pane *application-frame* 'description))
   (redisplay-frame-pane *application-frame*
                         (get-frame-pane *application-frame* 'backend-output) :force-p t)
   (let ((render-pane (get-frame-pane *application-frame* 'render-output)))
@@ -396,9 +397,12 @@
           (drawing-tests-frame (when (eq (type-of frame) 'drawing-app-frame)
                                  (slot-value frame 'drawing-tests-frame))))
       (unless benchmark
-        (window-clear description)
+        (with-text-style (description (make-text-style :sans-serif :bold :normal))
+          (format description "~&~A / ~A:" (drawing-test-category item) (drawing-test-name item)))
         (with-text-style (description (make-text-style :sans-serif :roman :normal))
-          (format description "~A~%" (drawing-test-description item))))
+          (let ((test-description (drawing-test-description item)))
+            (format description "~:[~; ~A~]~%" (and test-description (> (length test-description) 0))
+                    test-description))))
       (labels ((draw ()
                  (with-slots (recording-p) (or drawing-tests-frame frame)
                    (with-output-recording-options (output :record recording-p)
@@ -416,39 +420,28 @@
 
 (defun display-render-output (frame pane)
   (declare (ignore pane))
-  (let ((output (get-frame-pane frame 'render-output))
-        (item (slot-value frame 'current-selection)))
-    (let ((description (get-frame-pane *application-frame* 'description)))
-      (when item
+  (alexandria:when-let ((item (slot-value frame 'current-selection)))
+    (let ((output (get-frame-pane frame 'render-output)))
+      (labels ((draw ()
+                 (with-slots (recording-p) clim:*application-frame*
+                   (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
+                                      (stream :width *width*
+                                              :height *height*
+                                              :border-width *border-width*
+                                              :recording-p recording-p)
+                                    (clim:draw-rectangle* stream 0 0 *width* *height*
+                                                          :filled t
+                                                          :ink clim:+grey90+)
+                                    (funcall (drawing-test-display-function item) frame stream))))
+                     (draw-pattern* output pattern 0 0)
+                     (medium-finish-output (sheet-medium output))))))
         (if (slot-value *application-frame* 'signal-condition-p)
-            (with-slots (recording-p) clim:*application-frame*
-              (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
-                                 (stream :width *width*
-                                         :height *height*
-                                         :border-width *border-width*
-                                         :recording-p recording-p)
-                               (clim:draw-rectangle* stream 0 0 *width* *height*
-                                                     :filled t
-                                                     :ink clim:+grey90+)
-                               (funcall (drawing-test-display-function item) frame stream))))
-                (draw-pattern* output pattern 0 0)
-                (medium-finish-output (sheet-medium output))))
-            (handler-case
-                (with-slots (recording-p) clim:*application-frame*
-                  (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
-                                     (stream :width *width*
-                                             :height *height*
-                                             :border-width *border-width*
-                                             :recording-p recording-p)
-                                   (clim:draw-rectangle* stream 0 0 *width* *height*
-                                                         :filled t
-                                                         :ink clim:+grey90+)
-                                   (funcall (drawing-test-display-function item) frame stream))))
-                    (draw-pattern* output pattern 0 0)
-                    (medium-finish-output (sheet-medium output))))
+            (draw)
+            (handler-case (draw)
               (simple-error (condition)
-                (clim:with-drawing-options (description :ink +red+)
-                  (format description "Render:~a~%" condition)))))))))
+                (let ((description (get-frame-pane *application-frame* 'description)))
+                  (clim:with-drawing-options (description :ink +red+)
+                    (format description "Render:~a~%" condition))))))))))
 
 (defun run-drawing-tests ()
   (run-frame-top-level (make-application-frame
