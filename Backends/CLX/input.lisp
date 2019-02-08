@@ -115,7 +115,7 @@
 (defgeneric port-client-message (sheet time type data))
 
 (defun process-non-sheet-event (window event-key target property requestor selection time)
-  (when (member event-key '(:selection-notify :selection-request))
+  (when (member event-key '(:selection-notify :selection-request :selection-clear))
     (process-clipboard-event *clx-port* window event-key target property requestor selection time)))
 
 (defun event-handler (&key display window event-key code state mode time
