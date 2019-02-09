@@ -38,7 +38,7 @@
 (defmethod climi::copy-to-clipboard ((port clx-clipboard-port-mixin) obj)
   (let ((window (clipboard-window port)))
     ;; We're not actually supposed to call set-selection-owner without
-    ;; a timestamp due to the follow statemnt in ICCCM:
+    ;; a timestamp due to the following statemnt in ICCCM:
     ;;
     ;;     Clients attempting to acquire a selection must set the time
     ;;     value of the SetSelectionOwner request to the timestamp of
@@ -104,7 +104,7 @@
            (log:info "Sending targets reply: ~s" (mapcar (lambda (v) (xlib:atom-name display v)) targets))
            (send-reply-event)))
         ((:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|)
-         (let ((content-as-string (convert-clipboard-object content :string)))
+         (let ((content-as-string (climi::convert-clipboard-object content :string)))
            (xlib:change-property requestor property (babel:string-to-octets content-as-string :encoding :utf-8) target 8)
            (log:info "Sending string reply")
            (send-reply-event)))
@@ -113,7 +113,7 @@
                                (babel:string-to-octets (format nil "~a~a~a"
                                                                "<meta http-equiv=\"content-type\" "
                                                                "content=\"text/html; charset=utf-8\">"
-                                                               (convert-clipboard-object content :html))
+                                                               (climi::convert-clipboard-object content :html))
                                                        :encoding :utf-8)
                                target 8)
          (log:info "Sending html reply")
