@@ -545,6 +545,10 @@ if there is one, or STREAM"
 (defmethod do-graphics-with-options ((sheet encapsulating-stream) func &rest options)
   (apply #'do-graphics-with-options (encapsulating-stream-stream sheet) func options))
 
+(defmethod invoke-with-room-for-graphics (cont (stream encapsulating-stream)
+                                          &rest options)
+  (apply #'invoke-with-room-for-graphics cont (encapsulating-stream-stream stream) options))
+
 ;;; Extended Input Streams
 
 (def-stream-method extended-input-stream-p
