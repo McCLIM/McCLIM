@@ -542,6 +542,9 @@ if there is one, or STREAM"
 (defmethod invoke-with-sheet-medium-bound (continuation (medium null) (stream standard-encapsulating-stream))
   (invoke-with-sheet-medium-bound continuation medium  (encapsulating-stream-stream stream)))
 
+(defmethod do-graphics-with-options ((sheet encapsulating-stream) func &rest options)
+  (apply #'do-graphics-with-options (encapsulating-stream-stream sheet) func options))
+
 ;;; Extended Input Streams
 
 (def-stream-method extended-input-stream-p
