@@ -440,10 +440,19 @@
      (type    :initarg :type
               :reader clipboard-object/type))))
 
+(clim:define-presentation-translator presentation-clipboard-object
+    (t clipboard-object clim:global-command-table :tester ((obj presentation)
+                                                           (supported-clipboard-types obj (presentation-type presentation))))
+    (obj presentation)
+  (log:info "Creating clipboard object = ~s / ~s" obj (presentation-type presentation))
+  (make-instance 'clipboard-object :content obj :type (presentation-type presentation)))
+
 (clim:define-command (com-copy-to-clipboard :command-table clim:global-command-table :name "Copy to clipboard")
-    ((obj 'clipboard-object :prompt "Object"))
-  (copy-to-clipboard (clim:frame-top-level-sheet clim:*application-frame*) (clipboard-object/content obj)))
+    ((obj clipboard-object :prompt "Object"))
+  (copy-to-clipboard (clim:frame-top-level-sheet clim:*application-frame*)
+                     (clipboard-object/content obj)
+                     :presentation-type (clipboard-object/type obj)))
 
 (clim:define-presentation-translator string-to-clipboard (string clipboard-object clim:global-command-table)
     (object)
-  (make-instance 'clipboard-object :content object))
+  (make-instance 'clipboard-object :content object :type 'string))

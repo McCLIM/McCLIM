@@ -4,7 +4,6 @@
   (type-key parameters options object type output-type check-only))
 
 (define-presentation-method convert-clipboard-content (obj (type t) output-type check-only)
-  (log:info "Default conversion for ~s (type: ~s)" obj type)
   nil)
 
 (define-presentation-method convert-clipboard-content (obj (type string) (output-type (eql :string)) check-only)
@@ -18,3 +17,9 @@
                                          (or type (presentation-type-of obj))
                                          output-type
                                          check-only))
+
+(defun supported-clipboard-types (obj type)
+  (loop
+    for output-type in '(:string :html)
+    when (convert-clipboard-content obj output-type :type type :check-only t)
+      collect type))

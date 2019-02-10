@@ -25,24 +25,69 @@
 ;;; CLX implementation of clipboard management
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defgeneric process-clipboard-event (port window event-key target property requestor selection time)
-  (:method (port window event-key target property requestor selection time)
-    ;; Default implementation doesn't support clipboard
-    nil))
+;;; Port mixin
+
+(defclass clx-clipboard-stored-object ()
+  ((content :initarg :content
+            :reader clipboard-stored-object-content)
+   (type    :initarg :type
+            :reader clipboard-stored-object-type)
+   (owner   :initarg :owner
+            :reader clipboard-stored-object-owner)))
 
 (defclass clx-clipboard-port-mixin ()
-  ((clipboard-timestamp       :initform nil
-                              :accessor clipboard-timestamp)
-   (clipboard-content         :initform nil
-                              :accessor clipboard-content)
-   (clipboard-owner           :initform nil
-                              :accessor clipboard-owner)
+  ((selection-content :initform nil
+                      :accessor selection-content)
+   (clipboard-content :initform nil
+                      :accessor clipboard-content)
    (outstanding-request-pane :initform nil
-                              :accessor clipboard-outstanding-request-pane)
+                             :accessor clipboard-outstanding-request-pane)
    (outstanding-request-type  :initform nil
                               :accessor clipboard-outstanding-request-type)))
 
-(defmethod climi::copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet obj)
+(defun find-stored-object (port selection)
+  (case selection
+    (:selection (selection-content port))
+    (:clipboard (clipboard-content port))))
+
+(defun set-stored-object (port selection value)
+  (case selection
+    (:selection (setf (selection-content port) value))
+    (:clipboard (setf (clipboard-content port) value))))
+
+;;; Event classes
+
+#+nil
+(defclass clx-selection-event (window-event)
+  ())
+
+#+nil
+(defclass clx-selection-notify-event (clx-selection-event)
+  ((selection :initarg :selection
+              :reader selection-event-selection)
+   (target   :initarg :target
+             :reader selection-event-target)
+   (property :initarg :property
+             :reader selection-event-property)))
+
+#+nil
+(defclass clx-selection-request-event (window-event)
+  ((selection :initarg :selection
+              :reader selection-event-selection)
+   (target    :initarg :target
+              :reader selection-event-target)
+   (property  :initarg :property
+              :reader selection-event-property)
+   (requestor :initarg :requestor
+              :reader selection-event-requestor)))
+
+(defclass clx-selection-clear-event (window-event)
+  ((selection :initarg :selection
+              :reader selection-event-selection)))
+
+;;; Main entry point
+
+(defmethod climi::copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet obj presentation-type)
   (let ((window (sheet-direct-xmirror sheet)))
     ;; We're not actually supposed to call set-selection-owner without
     ;; a timestamp due to the following statemnt in ICCCM:
@@ -60,8 +105,14 @@
     ;; implementation.
     (xlib:set-selection-owner (xlib:window-display window) :clipboard window nil)
     (let ((success-p (eq (xlib:selection-owner (xlib:window-display window) :clipboard) window)))
-      (setf (clipboard-owner port) (if success-p sheet nil))
-      (setf (clipboard-content port) (if success-p obj nil))
+      (set-stored-object port
+                         :clipboard
+                         (if success-p
+                             (make-instance 'clx-clipboard-stored-object
+                                            :content obj
+                                            :type presentation-type
+                                            :owner sheet)
+                             nil))
       success-p)))
 
 (defun representation-type-to-native (type)
@@ -69,52 +120,56 @@
     (:string '(:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|))
     (:html '(:|text/html|))))
 
-(defun make-targets-response (port)
+(defun make-targets-response (port content presentation-type)
   (let ((display (clx-port-display port))
         (types (loop
-                 for type in '(:string :html)
-                 when (climi::convert-clipboard-content (clipboard-content port) type :check-only t)
-                   append (representation-type-to-native type))))
+                 for output-type in '(:string :html)
+                 when (climi::convert-clipboard-content content output-type :type presentation-type :check-only t)
+                   append (representation-type-to-native output-type))))
     (mapcar (lambda (v)
               (xlib:intern-atom display v))
             (remove-duplicates (cons :targets types)))))
 
 (defun process-selection-request (port window target property requestor selection time)
   (let ((display (xlib:window-display window))
-        (content (clipboard-content port)))
-    (flet ((send-reply-event (&optional omit-prop)
-             (xlib:send-event requestor :selection-notify nil
-                                        :window requestor
-                                        :event-window requestor
-                                        :selection selection
-                                        :target target
-                                        :property (if omit-prop nil property)
-                                        :time time)))
-      (case target
-        ((:targets)
-         (let ((targets (make-targets-response port)))
-           (xlib:change-property requestor property targets target 32)
-           (log:info "Sending targets reply: ~s" (mapcar (lambda (v) (xlib:atom-name display v)) targets))
-           (send-reply-event)))
-        ((:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|)
-         (let ((content-as-string (climi::convert-clipboard-content content :string)))
-           (xlib:change-property requestor property (babel:string-to-octets content-as-string :encoding :utf-8) target 8)
-           (log:info "Sending string reply")
-           (send-reply-event)))
-        ((:|text/html|)
-         (xlib:change-property requestor property
-                               (babel:string-to-octets (format nil "~a~a~a"
-                                                               "<meta http-equiv=\"content-type\" "
-                                                               "content=\"text/html; charset=utf-8\">"
-                                                               (climi::convert-clipboard-content content :html))
-                                                       :encoding :utf-8)
-                               target 8)
-         (log:info "Sending html reply")
-         (send-reply-event))
-        (t
-         (log:info "Sending negative reply")
-         (send-reply-event t)))
-      nil)))
+        (stored-object (find-stored-object port selection)))
+    (when stored-object
+      (let ((content (clipboard-stored-object-content stored-object))
+            (presentation-type (clipboard-stored-object-type stored-object)))
+        (flet ((send-reply-event (&optional omit-prop)
+                 (xlib:send-event requestor :selection-notify nil
+                                            :window requestor
+                                            :event-window requestor
+                                            :selection selection
+                                            :target target
+                                            :property (if omit-prop nil property)
+                                            :time time)))
+          (case target
+            ((:targets)
+             (let ((targets (make-targets-response port content presentation-type)))
+               (xlib:change-property requestor property targets target 32)
+               (log:info "Sending targets reply: ~s" (mapcar (lambda (v) (xlib:atom-name display v)) targets))
+               (send-reply-event)))
+            ((:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|)
+             (let ((content-as-string (climi::convert-clipboard-content content :string :type presentation-type)))
+               (xlib:change-property requestor property (babel:string-to-octets content-as-string :encoding :utf-8) target 8)
+               (log:info "Sending string reply")
+               (send-reply-event)))
+            ((:|text/html|)
+             (xlib:change-property requestor property
+                                   (babel:string-to-octets (format nil "~a~a~a"
+                                                                   "<meta http-equiv=\"content-type\" "
+                                                                   "content=\"text/html; charset=utf-8\">"
+                                                                   (climi::convert-clipboard-content content :html
+                                                                                                     :type presentation-type))
+                                                           :encoding :utf-8)
+                                   target 8)
+             (log:info "Sending html reply")
+             (send-reply-event))
+            (t
+             (log:info "Sending negative reply")
+             (send-reply-event t)))
+          nil)))))
 
 (defun process-selection-notify (port window target property time)
   (case target
@@ -131,24 +186,9 @@
     (t
      nil)))
 
-(defun process-selection-clear (port)
-  (setf (clipboard-content port) nil)
+(defun process-selection-clear (port selection)
+  (set-stored-object port selection nil)
   nil)
-
-#+nil
-(defmethod process-clipboard-event ((port clx-clipboard-port-mixin) window event-key target property requestor selection time)
-  (when (eq window (clipboard-window port))
-    (log:info "Clipboard event: key=~s target=~s prop=~s req=~s sel=~s time=~s" event-key target property requestor selection time)
-    (ecase event-key
-      (:selection-request (process-selection-request port window target property requestor selection time))
-      (:selection-notify (process-selection-notify port window target property requestor selection time))
-      (:selection-clear (process-selection-clear port)))))
-
-(defmethod handle-event :around (pane (event clx-selection-request-event))
-  (log:info "BEFORE: event=~s" event)
-  (let ((result (call-next-method)))
-    (log:info "AFTER: result=~s" result)
-    result))
 
 (defmethod distribute-event ((port clx-clipboard-port-mixin) (event clx-selection-event))
   (log:info "Redistributing clipboard event")
@@ -158,13 +198,15 @@
   ;;
   ;; This method checks who actually performed the original request
   ;; and adjusts the event to specify the correct receiver.
-  (alexandria:when-let ((pane (clipboard-owner port)))
-    (setf (slot-value event 'clim:sheet) pane)
-    (dispatch-event pane event)))
+  (alexandria:when-let ((stored-object (find-stored-object port (selection-event-selection event))))
+    (let ((pane (clipboard-stored-object-owner stored-object)))
+      (setf (slot-value event 'clim:sheet) pane)
+      (dispatch-event pane event))))
 
-;;; The following methods all use HANDLE-EVENT. This is because we
-;;; want to discriminate on the event type only, which means the event
-;;; will never be delivered otherwise.
+;;; The following methods all use an :AROND method for their
+;;; HANDLE-EVENT implementations. This is because we want to
+;;; discriminate on the event type only, which means the event will
+;;; never be delivered otherwise.
 (defmethod handle-event :around (pane (event clx-selection-request-event))
   (log:info "Selection request: ~s" event)
   (process-selection-request (port pane)
@@ -185,7 +227,7 @@
 
 (defmethod handle-event :around (pane (event clx-selection-clear-event))
   (log:info "Selection clear: ~s" event)
-  (process-selection-clear (port pane)))
+  (process-selection-clear (port pane) (selection-event-selection event)))
 
 ;;;
 ;;;  Paste support

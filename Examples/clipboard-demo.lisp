@@ -4,6 +4,14 @@
 
 (in-package :clipboard-demo)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(clim:define-presentation-type foo ())
+
+(clim:define-presentation-method clim:present (obj (type foo) stream view &key)
+  (clim:with-drawing-options (stream :ink clim:+red+)
+    (format stream "Foo object")))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defclass markup-text ()
   ((text :initarg :text
          :reader markup-text/text)))
@@ -32,15 +40,13 @@
                        content
                        interaction-pane))))
 
-(clim:define-presentation-translator html-to-clipboard (markup-text climi::clipboard-object clipboard-demo)
-    (object)
-  (make-instance 'climi::clipboard-object :content object))
-
 (defun display-clipboard-demo (frame stream)
   (format stream "Select text using shift and the left mouse button~%")
   (format stream "You can also use the command \"Copy to clipboard\" to select a presentation.~%")
   (let ((obj (make-instance 'markup-text :text "This text can be copied in HTML form")))
     (clim:stream-present stream obj (clim:presentation-type-of obj)))
+  (format stream "~%")
+  (clim:stream-present stream 1234 'foo)
   (format stream "~%")
   (when (clipboard-demo/string-list frame)
     (format stream "~%~%Pasted content:~%"))
