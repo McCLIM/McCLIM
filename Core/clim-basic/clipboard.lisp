@@ -6,11 +6,11 @@
 
 (deftype representation-type-name () '(member :string :html))
 
-(defgeneric copy-to-clipboard-with-port (port sheet object presentation-type)
+(defgeneric copy-to-clipboard-with-port (port sheet clipboard-p object presentation-type)
   (:documentation "Method to be implemented by backends."))
 
-(defmethod copy-to-clipboard-with-port ((port clim:port) (sheet clim:sheet) object presentation-type)
-  "Fallback implementation if the implementation does not support a clipboard.."
+(defmethod copy-to-clipboard-with-port ((port clim:port) (sheet clim:sheet) clipboard-p object presentation-type)
+  "Fallback implementation if the implementation does not support a clipboard."
   nil)
 
 (defun copy-to-clipboard (sheet object &key presentation-type)
@@ -18,29 +18,26 @@
 SHEET is the owner of the clipboard, and it is not guaranteed that the
 content of the clipboard will be available after the sheet has been
 removed."
-  (copy-to-clipboard-with-port (port sheet) sheet object presentation-type))
+  (copy-to-clipboard-with-port (port sheet) sheet t object presentation-type))
 
-#+nil
-(progn
-  (defgeneric representation-type-supported-p (object type)
-    (:documentation "Returns true if OBJECT can be converted TYPE."))
+(defun copy-to-selection (sheet object &key presentation-type)
+  "Copy OBJECT to the selection.
+SHEET is the owner of the selection, and it is not guaranteed that the
+content of the selection will be available after the sheet has been
+removed."
+  (copy-to-clipboard-with-port (port sheet) sheet nil object presentation-type))
 
-  (defmethod representation-type-supported-p (object type)
-    "Default implementation that simply calls CONVERT-CLIPBOARD-OBJECT."
-    (climi::convert-clipboard-object object type))
+(defgeneric clear-clipboard-with-port (port sheet clipboard-p))
 
-  (defgeneric convert-clipboard-object (object type)
-    (:documentation "Convert OBJECT to representation type TYPE.
+(defmethod clear-clipboard-with-port (port sheet clipboard-p)
+  "Fallback implementation if the implementation does not support a clipboard.."
+  nil)
 
-If the conversion is expensive, the method
-REPRESENTATION-TYPE-SUPPORTED-P can be implemented in addition to this
-method."))
+(defun clear-clipboard (sheet)
+  (clear-clipboard-with-port (port sheet) port t))
 
-  (defmethod convert-clipboard-object (object type)
-    nil)
-
-  (defmethod convert-clipboard-object ((object string) (type (eql :string)))
-    object))
+(defun clear-selection (sheet)
+  (clear-clipboard-with-port (port sheet) port nil))
 
 ;;;
 ;;;  The following functions implement the standard API to request

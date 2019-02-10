@@ -57,11 +57,9 @@
 
 ;;; Event classes
 
-#+nil
 (defclass clx-selection-event (window-event)
   ())
 
-#+nil
 (defclass clx-selection-notify-event (clx-selection-event)
   ((selection :initarg :selection
               :reader selection-event-selection)
@@ -70,7 +68,6 @@
    (property :initarg :property
              :reader selection-event-property)))
 
-#+nil
 (defclass clx-selection-request-event (window-event)
   ((selection :initarg :selection
               :reader selection-event-selection)
@@ -87,7 +84,7 @@
 
 ;;; Main entry point
 
-(defmethod climi::copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet obj presentation-type)
+(defmethod climi::copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet clipboard-p obj presentation-type)
   (let ((window (sheet-direct-xmirror sheet)))
     ;; We're not actually supposed to call set-selection-owner without
     ;; a timestamp due to the following statemnt in ICCCM:
@@ -103,17 +100,25 @@
     ;; actually transferred correctly. This shouldn't be a major issue
     ;; in practice, and it significantly simplifies the
     ;; implementation.
-    (xlib:set-selection-owner (xlib:window-display window) :clipboard window nil)
-    (let ((success-p (eq (xlib:selection-owner (xlib:window-display window) :clipboard) window)))
-      (set-stored-object port
-                         :clipboard
-                         (if success-p
-                             (make-instance 'clx-clipboard-stored-object
-                                            :content obj
-                                            :type presentation-type
-                                            :owner sheet)
-                             nil))
-      success-p)))
+    (let ((selection (if clipboard-p :clipboard :selection)))
+      (xlib:set-selection-owner (xlib:window-display window) selection window nil)
+      (let ((success-p (eq (xlib:selection-owner (xlib:window-display window) :clipboard) window)))
+        (set-stored-object port selection
+                           (if success-p
+                               (make-instance 'clx-clipboard-stored-object
+                                              :content obj
+                                              :type presentation-type
+                                              :owner sheet)
+                               nil))
+        success-p))))
+
+(defmethod climi::clear-clipboard-with-port ((port clx-clipboard-port-mixin) sheet clipboard-p)
+  (let ((window (sheet-direct-xmirror sheet))
+        (selection (if clipboard-p :clipboard :selection)))
+    (alexandria:when-let ((stored-object (find-stored-object port selection)))
+      (when (eq (clipboard-stored-object-owner stored-object) sheet)
+        (xlib:set-selection-owner (xlib:window-display window) selection nil nil)
+        (set-stored-object port selection nil)))))
 
 (defun representation-type-to-native (type)
   (case type

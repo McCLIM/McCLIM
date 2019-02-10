@@ -31,7 +31,6 @@
   ())
 
 (defclass clx-port (clim-xcommon:keysym-port-mixin
-		    clx-text-selection-port-mixin
                     clx-clipboard-port-mixin
 		    clx-basic-port)
   ((color-table :initform (make-hash-table :test #'eq))
@@ -214,6 +213,19 @@
 				    :structure-notify)
                       :map (sheet-enabled-p sheet)))
 
+;; The following function used to live in CLX/text-selection.lisp
+;; before it was replaced by the new clipboard system. The below
+;; comment was already there.
+;;
+;; Incredibly crappy broken unportable Latin 1 encoder which should be
+;; replaced by various implementation-specific versions.
+(flet ((latin1-code-p (x)
+	 (not (or (< x 9) (< 10 x 32) (< #x7f x #xa0) (> x 255)))))
+  (defun string-encode (string)
+    (delete-if-not #'latin1-code-p (map 'vector #'char-code string)))
+  (defun exactly-encodable-as-string-p (string)
+    (every #'latin1-code-p (map 'vector #'char-code string))))
+
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
   (let ((q (compose-space sheet))
         (frame (pane-frame sheet)))
@@ -228,13 +240,13 @@
       (unless (exactly-encodable-as-string-p name)
         (xlib:change-property window
                               :_NET_WM_NAME
-                              (utf8-string-encode (map 'vector #'char-code name))
+                              (babel:string-to-octets (map 'vector #'char-code name) :encoding :utf-8)
                               :UTF8_STRING 8))
       (setf (xlib:wm-icon-name window) name)
       (unless (exactly-encodable-as-string-p name)
         (xlib:change-property window
                               :_NET_WM_ICON_NAME
-                              (utf8-string-encode (map 'vector #'char-code name))
+                              (babel:string-to-octets (map 'vector #'char-code name) :encoding :utf-8)
                               :UTF8_STRING 8))
       (xlib:set-wm-class
        window
