@@ -8,17 +8,27 @@
 
 ;;; Event classes
 
-(defclass clx-selection-notify-event (selection-notify-event)
-  ((target   :initarg :target
+(defclass clx-selection-notify-event (window-event)
+  ((selection :initarg :selection
+              :reader selection-event-selection)
+   (target   :initarg :target
              :reader selection-event-target)
    (property :initarg :property
              :reader selection-event-property)))
 
-(defclass clx-selection-request-event (selection-request-event)
-  ((target    :initarg :target
+(defclass clx-selection-request-event (window-event)
+  ((selection :initarg :selection
+              :reader selection-event-selection)
+   (target    :initarg :target
               :reader selection-event-target)
    (property  :initarg :property
-              :reader selection-event-property)))
+              :reader selection-event-property)
+   (requestor :initarg :requestor
+              :reader selection-event-requestor)))
+
+(defclass clx-selection-clear-event (window-event)
+  ((selection :initarg :selection
+              :reader selection-event-selection)))
 
 ;;; Conversions
 

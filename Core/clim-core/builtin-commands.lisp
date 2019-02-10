@@ -442,7 +442,7 @@
 
 (clim:define-command (com-copy-to-clipboard :command-table clim:global-command-table :name "Copy to clipboard")
     ((obj 'clipboard-object :prompt "Object"))
-  (copy-to-clipboard (clim:port clim:*application-frame*) (clipboard-object/content obj)))
+  (copy-to-clipboard (clim:frame-top-level-sheet clim:*application-frame*) (clipboard-object/content obj)))
 
 (clim:define-presentation-translator string-to-clipboard (string clipboard-object clim:global-command-table)
     (object)

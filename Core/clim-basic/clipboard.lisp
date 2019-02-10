@@ -6,12 +6,16 @@
 
 (deftype representation-type-name () '(member :string :html))
 
-(defgeneric copy-to-clipboard (port object)
-  (:documentation "Copy OBJECT to the clipboard."))
+(defgeneric copy-to-clipboard-with-port (port sheet object)
+  (:documentation "Method to be implemented by backends."))
 
-(defmethod copy-to-clipboard ((port clim:port) object)
-  "Fallback implementation if the port does not support copying to the clipboard."
+(defmethod copy-to-clipboard-with-port ((port clim:port) (sheet clim:sheet) object)
+  "Fallback implementation if the implementation does not support a clipboard.."
   nil)
+
+(defun copy-to-clipboard (sheet object)
+  "Copy OBJECT to the clipboard."
+  (copy-to-clipboard-with-port (port sheet) sheet object))
 
 (defgeneric representation-type-supported-p (object type)
   (:documentation "Returns true if OBJECT can be converted TYPE."))
@@ -40,7 +44,9 @@ method."))
 
 (defclass clipboard-send-event (climi::window-event)
   ((content :initarg :content
-            :reader clipboard-event-content)))
+            :reader clipboard-event-content)
+   (type    :initarg :type
+            :reader clipboard-event-type)))
 
 (defgeneric request-clipboard-content-from-port (port pane type)
   (:documentation "Backend implementation of REQUEST-CLIPBOARD-CONTENT.")

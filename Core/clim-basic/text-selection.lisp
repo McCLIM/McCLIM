@@ -77,6 +77,11 @@ the incoming selection."))
 
 ;;; Backends will likely produce subclasses of selection-notify-event
 ;;; and selection-request-event.
+;;;
+;;;   loke 2019-02-09.
+;;;   Yes, they definitely are. The new system uses
+;;;   the term "clipboard", and should be able to completely replace
+;;;   the selections.
 
 (defclass selection-event (window-event)
   ((selection :initarg :selection
@@ -86,7 +91,6 @@ the incoming selection."))
 (defclass selection-notify-event (selection-event) ())
 (defclass selection-request-event (selection-event)
   ((requestor :initarg :requestor :reader selection-event-requestor)))
-
 
 ;;;; Random Notes
 
