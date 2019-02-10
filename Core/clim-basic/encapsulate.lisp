@@ -464,6 +464,9 @@ if there is one, or STREAM"
 
 ;;; Extended Output Streams
 
+(def-stream-method extended-output-stream-p
+    ((stream standard-encapsulating-stream)))
+
 (def-stream-method stream-text-cursor ((stream standard-encapsulating-stream)))
 
 (def-stream-method (setf stream-text-cursor)
