@@ -535,7 +535,10 @@ if there is one, or STREAM"
              (declare (ignore old-medium))
              (funcall continuation medium))
          drawing-options))
-                               
+
+(defmethod invoke-with-sheet-medium-bound (continuation (medium null) (stream standard-encapsulating-stream))
+  (invoke-with-sheet-medium-bound continuation medium  (slot-value stream 'stream)))
+
 ;;; Extended Input Streams
 
 (def-stream-method extended-input-stream-p
