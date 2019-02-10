@@ -81,26 +81,6 @@ advised of the possiblity of such damages.
 	  (apply #'format stream string a)))
       (apply #'format stream string args)))
 
-(defun accept (presentation-type &key
-				 (view nil view-p)
-				 (stream *standard-output*)
-				 (prompt t)
-				 default query-identifier)
-  (if view-p
-      (clim:accept presentation-type
-                   :view view
-                   :stream stream
-                   :prompt prompt
-                   :default default
-                   :display-default nil
-                   :query-identifier query-identifier)
-      (clim:accept presentation-type
-                   :stream stream
-                   :prompt prompt
-                   :default default
-                   :display-default nil
-                   :query-identifier query-identifier)))
-
 (defun accept-values (descriptions &key (prompt nil)
 					(stream *query-io*)
 					(own-window nil))
