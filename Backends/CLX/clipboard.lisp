@@ -73,7 +73,7 @@
   (let ((display (clx-port-display port))
         (types (loop
                  for type in '(:string :html)
-                 when (climi::representation-type-supported-p (clipboard-content port) type)
+                 when (climi::convert-clipboard-content (clipboard-content port) type :check-only t)
                    append (representation-type-to-native type))))
     (mapcar (lambda (v)
               (xlib:intern-atom display v))
@@ -97,7 +97,7 @@
            (log:info "Sending targets reply: ~s" (mapcar (lambda (v) (xlib:atom-name display v)) targets))
            (send-reply-event)))
         ((:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|)
-         (let ((content-as-string (climi::convert-clipboard-object content :string)))
+         (let ((content-as-string (climi::convert-clipboard-content content :string)))
            (xlib:change-property requestor property (babel:string-to-octets content-as-string :encoding :utf-8) target 8)
            (log:info "Sending string reply")
            (send-reply-event)))
@@ -106,7 +106,7 @@
                                (babel:string-to-octets (format nil "~a~a~a"
                                                                "<meta http-equiv=\"content-type\" "
                                                                "content=\"text/html; charset=utf-8\">"
-                                                               (climi::convert-clipboard-object content :html))
+                                                               (climi::convert-clipboard-content content :html))
                                                        :encoding :utf-8)
                                target 8)
          (log:info "Sending html reply")
@@ -150,7 +150,7 @@
     (log:info "AFTER: result=~s" result)
     result))
 
-(defmethod distribute-event ((port clx-clipboard-port-mixin) (event clx-selection-request-event))
+(defmethod distribute-event ((port clx-clipboard-port-mixin) (event clx-selection-event))
   (log:info "Redistributing clipboard event")
   ;; When the event is generated from EVENT-HANDLER, the pane is
   ;; wrong. This is becasue there isn't enough information in the

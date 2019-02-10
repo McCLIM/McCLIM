@@ -1,0 +1,136 @@
+Notes on the new clipboard implementation
+
+* Definitions
+
+The clipboard API defines two types of copyable content, *selection*
+and *clipboard*:
+
+** Selection
+
+The selection is the content that has been selected in some way. For
+example, it may be the text that is highlighted when shift-dragging on
+text in a stream pane, or it may be a portion of an image that has
+been highlighted in a drawing program.
+
+** Clipboard
+
+The clipboard is what is used in most applications when choosing the
+“copy” and “paste” operations. In a CUA-based application, “copy”
+transfers the content of the selection to the clipboard, and “paste”
+inserts the content of the clipboard into the document.
+
+Traditional X-based applications allows you to paste the content of
+the selection directly into other programs by middle-clicking the
+mouse button. This functionality is not available on OSX or Windows.
+
+* Default end-user functionality
+
+** Selecting text in stream panes
+
+Shift-dragging on text in a stream pane will highlight text and
+immediately making that text available in the *selection*. This
+functionality was available with the old implementation, and has not
+changed with the new implementation.
+
+** Copying text in Drei
+
+The new implementation updates the kill command in Drei so that in
+addition to putting the killed text in the internal kill-ring, it also
+copies it to the clipboard.
+
+The effect of this is that the user now can kill text in any editable
+text field, and use the regular paste functionality in any other
+application to paste this text.
+
+** Pasting text in Drei
+
+Pressing *Shift-Insert* in Drei pastes the content of the clipboard
+into the edited buffer.
+
+The chosen key combination matches the typical keys used for pasting
+in most CUA-based applications.
+
+It is also theoretically possible to merge the Drei kill-ring with the
+clipboard support in a way similar to how Emacs does it. However, even
+in Emacs this functionality sometimes results in surprising behaviour,
+so it's probably better to keep them separate.
+
+** New interactor commands
+
+*** Copy to Clipboard
+
+The interactor now has a default command: “Copy to Clipboard”. This
+command accepts a single argument: The presentation to place on the
+clipboard.
+
+If the application has implemented support for converting its
+presentations to a transferable form, this command provides a single
+entry point to copy these presentations to the clipboard.
+
+If an application adds a presentation-to-command-translator for their
+presentations, then the user will automatically be given the ability
+to right-click on a presentation and choose “Copy to Clipboard”.
+
+* End-user API
+
+** Copying content to the clipboard
+
+*** Copying plain text
+
+Copying plain text to the clipboard is achieved using a single call to
+=COPY-TO-CLIPBOARD=:
+
+#+BEGIN_SRC lisp
+(copy-to-clipboard pane "this is the text to be copied")
+#+END_SRC
+
+After this, the given text should be available on the clipboard for
+any other application to use. The content will remain on the clipboard
+until the pane is removed (for some backends, it may remain even after
+the pane is no longer available).
+
+*** Copying other object types
+
+TODO
+
+** Pasting from the clipboard
+
+Pasting is a two-step process:
+
+  1. Call the function =REQUEST-CLIPBOARD-CONTENT= with a pane and the
+     requested type.
+  2. After some time (usually within a few milliseconds) an event of
+     type =CLIPBOARD-SEND-EVENT= will be delivered to the pane. This
+     event contains the requested clipboard data.
+
+TODO: Add example code
+
+* Implementing backend support
+
+** Implement port mixin
+
+The platform-specific support is encapsulated in the port, and the
+easiest way to keep this functionality separate is to implement a
+mixin that is inherited into the port. The CLX implementation adds the
+following mixin:
+
+#+BEGIN_SRC lisp
+(defclass clx-clipboard-port-mixin ()
+  ...)
+#+END_SRC
+
+Then, the copy functionality needs to be implemented by creating a
+method on =COPY-TO-CLIPBOARD-WITH-PORT=. Here is the CLX
+implementation for reference purposes:
+
+#+BEGIN_SRC lisp
+(defmethod climi::copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet object)
+  (let ((window (sheet-direct-xmirror sheet)))
+    (xlib:set-selection-owner (xlib:window-display window) :clipboard window nil)
+    (let ((success-p (eq (xlib:selection-owner (xlib:window-display window) :clipboard) window)))
+      (setf (clipboard-owner port) (if success-p sheet nil))
+      (setf (clipboard-content port) (if success-p obj nil))
+      success-p))
+#+END_SRC
+
+TODO: More explanation here

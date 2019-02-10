@@ -8,7 +8,10 @@
 
 ;;; Event classes
 
-(defclass clx-selection-notify-event (window-event)
+(defclass clx-selection-event (window-event)
+  ())
+
+(defclass clx-selection-notify-event (clx-selection-event)
   ((selection :initarg :selection
               :reader selection-event-selection)
    (target   :initarg :target

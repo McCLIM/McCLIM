@@ -14,28 +14,33 @@
   nil)
 
 (defun copy-to-clipboard (sheet object)
-  "Copy OBJECT to the clipboard."
+  "Copy OBJECT to the clipboard.
+SHEET is the owner of the clipboard, and it is not guaranteed that the
+content of the clipboard will be available after the sheet has been
+removed."
   (copy-to-clipboard-with-port (port sheet) sheet object))
 
-(defgeneric representation-type-supported-p (object type)
-  (:documentation "Returns true if OBJECT can be converted TYPE."))
+#+nil
+(progn
+  (defgeneric representation-type-supported-p (object type)
+    (:documentation "Returns true if OBJECT can be converted TYPE."))
 
-(defmethod representation-type-supported-p (object type)
-  "Default implementation that simply calls CONVERT-CLIPBOARD-OBJECT."
-  (climi::convert-clipboard-object object type))
+  (defmethod representation-type-supported-p (object type)
+    "Default implementation that simply calls CONVERT-CLIPBOARD-OBJECT."
+    (climi::convert-clipboard-object object type))
 
-(defgeneric convert-clipboard-object (object type)
-  (:documentation "Convert OBJECT to representation type TYPE.
+  (defgeneric convert-clipboard-object (object type)
+    (:documentation "Convert OBJECT to representation type TYPE.
 
 If the conversion is expensive, the method
 REPRESENTATION-TYPE-SUPPORTED-P can be implemented in addition to this
 method."))
 
-(defmethod convert-clipboard-object (object type)
-  nil)
+  (defmethod convert-clipboard-object (object type)
+    nil)
 
-(defmethod convert-clipboard-object ((object string) (type (eql :string)))
-  object)
+  (defmethod convert-clipboard-object ((object string) (type (eql :string)))
+    object))
 
 ;;;
 ;;;  The following functions implement the standard API to request
