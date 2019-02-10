@@ -548,6 +548,10 @@ if there is one, or STREAM"
           (*background-ink* (medium-background medium)))
       (apply #'do-graphics-with-options-internal medium sheet func options))))
 
+(defmethod invoke-with-room-for-graphics (cont (stream encapsulating-stream) 
+                                          &rest options)
+  (apply #'invoke-with-room-for-graphics cont (encapsulating-stream-stream stream) options))
+
 ;;; Extended Input Streams
 
 (def-stream-method extended-input-stream-p
