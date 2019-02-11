@@ -31,6 +31,9 @@
                                                *drawing-tests*)))
     (drawing-test-display-function drawing-test)))
 
+(defclass drawing-app-pane (application-pane clime:never-repaint-background-mixin)
+  ())
+
 (define-application-frame drawing-tests ()
   ((recording-p :initform t)
    (signal-condition-p :initform nil)
@@ -149,7 +152,7 @@
    (backend-pane
     (labelling (:label "Backend")
       (scrolling ()
-        (make-pane 'application-pane
+        (make-pane 'drawing-app-pane
                    :name 'backend-output
                    :min-width *width*
                    :min-height *height*
@@ -201,9 +204,6 @@
                                        (1/2 backend-pane)
                                        (1/2 render-pane)))))))))
         (1/7 description-pane))))))
-
-(defclass drawing-app-pane (application-pane)
-  ())
 
 (define-application-frame drawing-app-frame ()
   ((drawing-tests-frame :initform nil :initarg :drawing-tests-frame)
