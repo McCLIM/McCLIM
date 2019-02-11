@@ -11,6 +11,7 @@
 
 (clim:define-command (com-yank-from-clipboard :name t :command-table drei:editing-table) ()
   "Insert the contents of the clipboard at point."
+  (log:info "inst = ~s. pane = ~s" (drei:drei-instance) (drei:editor-pane (drei:drei-instance)))
   (climi::request-clipboard-content (drei:editor-pane (drei:drei-instance)) :string)
   #+nil
   (handler-case (insert-sequence (point) (kill-ring-yank *kill-ring*))
@@ -20,6 +21,11 @@
 (esa:set-key 'com-yank-from-clipboard
              'drei:editing-table
              '((:insert :shift)))
+
+(defmethod handle-event :around ((pane drei:drei) (event climi::clipboard-send-event))
+  (log:info "Got data, should be a string: ~s (type=~s)"
+            (climi::clipboard-event-content event) (climi::clipboard-event-type event))
+  (call-next-method))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; CLX implementation of clipboard management
@@ -43,16 +49,18 @@
    (outstanding-request-pane :initform nil
                              :accessor clipboard-outstanding-request-pane)
    (outstanding-request-type  :initform nil
-                              :accessor clipboard-outstanding-request-type)))
+                              :accessor clipboard-outstanding-request-type)
+   (outstanding-request-selection :initform nil
+                                  :accessor clipboard-outstanding-request-selection)))
 
 (defun find-stored-object (port selection)
   (case selection
-    (:selection (selection-content port))
+    (:primary (selection-content port))
     (:clipboard (clipboard-content port))))
 
 (defun set-stored-object (port selection value)
   (case selection
-    (:selection (setf (selection-content port) value))
+    (:primary (setf (selection-content port) value))
     (:clipboard (setf (clipboard-content port) value))))
 
 ;;; Event classes
@@ -100,9 +108,10 @@
     ;; actually transferred correctly. This shouldn't be a major issue
     ;; in practice, and it significantly simplifies the
     ;; implementation.
-    (let ((selection (if clipboard-p :clipboard :selection)))
+    (let ((selection (if clipboard-p :clipboard :primary)))
       (xlib:set-selection-owner (xlib:window-display window) selection window nil)
-      (let ((success-p (eq (xlib:selection-owner (xlib:window-display window) :clipboard) window)))
+      (let ((success-p (eq (xlib:selection-owner (xlib:window-display window) selection) window)))
+        (log:info "setting selection ~s to: ~s → ~s" selection obj success-p)
         (set-stored-object port selection
                            (if success-p
                                (make-instance 'clx-clipboard-stored-object
@@ -114,7 +123,7 @@
 
 (defmethod climi::clear-clipboard-with-port ((port clx-clipboard-port-mixin) sheet clipboard-p)
   (let ((window (sheet-direct-xmirror sheet))
-        (selection (if clipboard-p :clipboard :selection)))
+        (selection (if clipboard-p :clipboard :primary)))
     (alexandria:when-let ((stored-object (find-stored-object port selection)))
       (when (eq (clipboard-stored-object-owner stored-object) sheet)
         (xlib:set-selection-owner (xlib:window-display window) selection nil nil)
@@ -176,18 +185,18 @@
              (send-reply-event t)))
           nil)))))
 
-(defun process-selection-notify (port window target property time)
+(defun process-selection-notify (port window target property selection time)
   (case target
     ((:targets)
-     (process-targets-reply port window time))
+     (process-targets-reply port window selection time))
     ((:utf8_string :text :string  :|text/plain;charset=utf-8| :|text/plain|)
      (let ((content (babel:octets-to-string (coerce (xlib:get-property window property) '(vector (unsigned-byte 8)))
                                             :encoding :utf-8)))
-       (process-string-reply port content :string)))
+       (process-string-reply port selection content :string)))
     ((:|text/html|)
      (let ((content (babel:octets-to-string (coerce (xlib:get-property window property) '(vector (unsigned-byte 8)))
                                             :encoding :utf-8)))
-       (process-string-reply port content :html)))
+       (process-string-reply port selection content :html)))
     (t
      nil)))
 
@@ -195,8 +204,8 @@
   (set-stored-object port selection nil)
   nil)
 
-(defmethod distribute-event ((port clx-clipboard-port-mixin) (event clx-selection-event))
-  (log:info "Redistributing clipboard event")
+(defmethod distribute-event ((port clx-clipboard-port-mixin) (event clx-selection-request-event))
+  (log:info "Redistributing selection event, event=~s, sel=~s" event (selection-event-selection event))
   ;; When the event is generated from EVENT-HANDLER, the pane is
   ;; wrong. This is becasue there isn't enough information in the
   ;; event itself to determine to which pane it should be sent.
@@ -207,6 +216,14 @@
     (let ((pane (clipboard-stored-object-owner stored-object)))
       (setf (slot-value event 'clim:sheet) pane)
       (dispatch-event pane event))))
+
+(defmethod distribute-event ((port clx-clipboard-port-mixin) (event clx-selection-notify-event))
+  (log:info "Redistributing notify event, event=~s, sel=~s" event (selection-event-selection event))
+  (alexandria:when-let ((outstanding-request-pane (clipboard-outstanding-request-pane port)))
+    (when (eq (clipboard-outstanding-request-selection port)
+              (selection-event-selection event))
+      (setf (slot-value event 'clim:sheet) outstanding-request-pane)
+      (dispatch-event outstanding-request-pane event))))
 
 ;;; The following methods all use an :AROND method for their
 ;;; HANDLE-EVENT implementations. This is because we want to
@@ -228,6 +245,7 @@
                             (sheet-direct-xmirror pane)
                             (selection-event-target event)
                             (selection-event-property event)
+                            (selection-event-selection event)
                             (event-timestamp event)))
 
 (defmethod handle-event :around (pane (event clx-selection-clear-event))
@@ -238,14 +256,18 @@
 ;;;  Paste support
 ;;;
 
-(defmethod climi::request-clipboard-content-from-port ((port clx-clipboard-port-mixin) pane type)
+(defmethod climi::request-clipboard-content-from-port ((port clx-clipboard-port-mixin) pane clipboard-p type)
   (check-type type climi::representation-type-name)
-  (setf (clipboard-outstanding-request-pane port) pane)
-  (setf (clipboard-outstanding-request-type port) type)
-  (xlib:convert-selection :clipboard :targets (sheet-direct-xmirror pane) :mcclim nil))
+  (let ((selection (if clipboard-p :clipboard :primary)))
+    (setf (clipboard-outstanding-request-pane port) pane)
+    (setf (clipboard-outstanding-request-type port) type)
+    (setf (clipboard-outstanding-request-selection port) selection)
+    (log:info "Getting TARGETS from: selection=~s, pane=~s" selection pane)
+    (xlib:convert-selection selection :targets (sheet-direct-xmirror pane) :mcclim nil)))
 
-(defun process-targets-reply (port window time)
-  (when (clipboard-outstanding-request-pane port)
+(defun process-targets-reply (port window selection time)
+  (when (and (clipboard-outstanding-request-pane port)
+             (eq (clipboard-outstanding-request-selection port) selection))
     (let* ((display (xlib:window-display window))
            (targets (mapcar (lambda (v)
                               (xlib:atom-name display v))
@@ -257,16 +279,18 @@
                               return type)))
       (log:info "Available tagets: ~s, selected: ~s" targets selected-type)
       (if selected-type
-          (xlib:convert-selection :clipboard selected-type window :mcclim time)
+          (xlib:convert-selection selection selected-type window :mcclim time)
           ;; ELSE: The clipboard doesn't support content of this type, send a negative response here
           nil))))
 
-(defun process-string-reply (port content type)
-  (log:info "Got string reply: type=~s content=~s" type content)
+(defun process-string-reply (port selection content type)
+  (log:info "Got string reply: type=~s content=~s selection=~s" type content selection)
   (when (clipboard-outstanding-request-pane port)
     (let ((event (make-instance 'climi::clipboard-send-event
                                 :sheet (clipboard-outstanding-request-pane port)
                                 :type (clipboard-outstanding-request-type port))))
       (setf (clipboard-outstanding-request-pane port) nil)
       (setf (clipboard-outstanding-request-type port) nil)
-      event)))
+      (setf (clipboard-outstanding-request-selection port) nil)
+      (log:info "Distributing to: ~s" (slot-value event 'clim:sheet))
+      (distribute-event port event))))

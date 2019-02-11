@@ -199,7 +199,7 @@ the incoming selection."))
 (defun pane-clear-markings (pane &optional time)
   (repaint-markings pane (slot-value pane 'markings)
                     (setf (slot-value pane 'markings) nil))
-  (release-selection (port pane) time))
+  (clear-selection pane))
  
 
 (defmethod eos/shift-click ((pane extended-output-stream) event)
@@ -233,15 +233,19 @@ the incoming selection."))
             point-2-y (pointer-event-y event)
             dragging-p nil)
       ;;
+      #+nil
       (let ((owner (selection-owner (port pane))))
         (when (and owner (not (eq owner pane)))
           (distribute-event (port pane)
                             (make-instance 'selection-clear-event
                                            :sheet owner
                                            :selection :primary))))
+      #+nil
       (when (bind-selection (port pane) pane (event-timestamp event))
 	(setf (selection-owner (port pane)) pane)
-	(setf (selection-timestamp (port pane)) (event-timestamp event))))))
+	(setf (selection-timestamp (port pane)) (event-timestamp event)))
+      (log:info "Button released, will copy")
+      (copy-to-selection pane (fetch-selection pane)))))
 
 (defun repaint-markings (pane old-markings new-markings)
   (let ((old-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) old-markings)

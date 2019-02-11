@@ -34,10 +34,10 @@ removed."
   nil)
 
 (defun clear-clipboard (sheet)
-  (clear-clipboard-with-port (port sheet) port t))
+  (clear-clipboard-with-port (port sheet) sheet t))
 
 (defun clear-selection (sheet)
-  (clear-clipboard-with-port (port sheet) port nil))
+  (clear-clipboard-with-port (port sheet) sheet nil))
 
 ;;;
 ;;;  The following functions implement the standard API to request
@@ -50,10 +50,23 @@ removed."
    (type    :initarg :type
             :reader clipboard-event-type)))
 
-(defgeneric request-clipboard-content-from-port (port pane type)
+(defgeneric request-clipboard-content-from-port (port pane clipboard-p type)
   (:documentation "Backend implementation of REQUEST-CLIPBOARD-CONTENT.")
-  (:method ((port clim:port) pane type)
+  (:method ((port clim:port) pane clipboard-p type)
     (error "Clipboard not implemented for port: ~s" port)))
 
+(defun request-selection-content (pane type)
+  (request-clipboard-content-from-port (port pane) pane nil type))
+
 (defun request-clipboard-content (pane type)
-  (request-clipboard-content-from-port (port pane) pane type))
+  (request-clipboard-content-from-port (port pane) pane t type))
+
+(define-condition clipboard-send ()
+  ((event :initarg :event
+          :reader event-of)))
+
+(defmethod clim:dispatch-event :around (pane (event clipboard-send-event))
+  (log:info "Signalling clipboard send event: ~s" event)
+  (break)
+  (signal 'clipboard-send :event event)
+  (call-next-method))
