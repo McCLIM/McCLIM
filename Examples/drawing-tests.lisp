@@ -114,20 +114,12 @@
                      :label "Use separate application frame"
                      :activate-callback #'%run-in-separate-application-frame)
           (labelling (:label "Backend")
-            (vertically ()
+            (vertically (:name 'server-port-vbox)
               (make-pane 'option-pane
                          :value :clx-ttf
                          :name-key (lambda (name) (string-capitalize (symbol-name name)))
                          :items '(:clx-ttf :clx-fb :custom)
-                         :value-changed-callback #'%update-application-frame-backend)
-              (spacing (:thickness 6)
-                (horizontally ()
-                  (1/3 (make-pane 'label-pane
-                                  :label "Server port"))
-                  (2/3 (clim-extensions:lowering ()
-                         (make-pane 'text-field-pane
-                                    :name 'server-path
-                                    :value ":custom")))))))))
+                         :value-changed-callback #'%update-application-frame-backend)))))
       (spacing (:thickness 6)
         (vertically ()
           (make-pane 'push-button
@@ -330,32 +322,48 @@
   (labels ((string-to-server-path (string)
              (when (and string (> (length string) 0))
                (let ((server-path (read-from-string (concatenate 'string "(" string ")"))))
-                 (when (and server-path (listp server-path)) server-path)))))
+                 (when (and server-path (listp server-path) (keywordp (car server-path)))
+                   server-path)))))
     (with-slots (current-selection application-frame-backend frames)
         *application-frame*
-      (when current-selection
-        (unless (gethash current-selection frames)
-          (let* ((server-path (find-port :server-path
-                                         (if (eq :custom application-frame-backend)
-                                             (string-to-server-path (gadget-value
-                                                                     (find-pane-named *application-frame*
-                                                                                      'server-path)))
-                                             (list application-frame-backend))))
-                 (app-frame (make-application-frame 'drawing-app-frame
-                                                    :calling-frame *application-frame*
-                                                    :frame-manager (when server-path
-                                                                     (find-frame-manager :port server-path))
-                                                    :current-selection current-selection
-                                                    :backend application-frame-backend
-                                                    :drawing-tests-frame *application-frame*)))
-            (setf (gethash current-selection frames) app-frame)
-            (run-frame-top-level app-frame)
-            (remhash current-selection frames)))))))
+      (when (and current-selection (null (gethash current-selection frames)))
+        (alexandria:when-let* ((server-path (if (eq :custom application-frame-backend)
+                                                (string-to-server-path (gadget-value
+                                                                        (find-pane-named *application-frame*
+                                                                                         'server-path)))
+                                                (list application-frame-backend)))
+                               (port (handler-case (find-port :server-path server-path)
+                                       (error () nil)))
+                               (frame-manager (find-frame-manager :port port))
+                               (app-frame (make-application-frame 'drawing-app-frame
+                                                                  :calling-frame *application-frame*
+                                                                  :frame-manager frame-manager
+                                                                  :current-selection current-selection
+                                                                  :backend application-frame-backend
+                                                                  :drawing-tests-frame *application-frame*)))
+          (setf (gethash current-selection frames) app-frame)
+          (run-frame-top-level app-frame)
+          (remhash current-selection frames))))))
 
 (defun %update-application-frame-backend (pane item)
   (declare (ignore pane))
   (with-slots (application-frame-backend) *application-frame*
-    (setf application-frame-backend item)))
+    (setf application-frame-backend item)
+    (let ((vbox (find-pane-named *application-frame* 'server-port-vbox)))
+      (if (eq item :custom)
+          (sheet-adopt-child vbox
+                             (spacing (:name 'server-port-pane
+                                       :thickness 6)
+                               (horizontally ()
+                                 (1/3 (make-pane 'label-pane
+                                                 :label "Server port"))
+                                 (2/3 (clime:lowering ()
+                                        (make-pane 'text-field-pane
+                                                   :name 'server-path
+                                                   :value ""
+                                                   :activate-callback #'%run-in-separate-application-frame))))))
+          (alexandria:when-let ((pane (find-pane-named *application-frame* 'server-port-pane)))
+            (sheet-disown-child vbox pane))))))
 
 (defun %update-recording-option (this-gadget selected-gadget)
   (declare (ignore this-gadget))
