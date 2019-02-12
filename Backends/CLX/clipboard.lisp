@@ -12,7 +12,8 @@
 (clim:define-command (com-yank-from-clipboard :name t :command-table drei:editing-table) ()
   "Insert the contents of the clipboard at point."
   (log:info "inst = ~s. pane = ~s" (drei:drei-instance) (drei:editor-pane (drei:drei-instance)))
-  (climi::request-clipboard-content (drei:editor-pane (drei:drei-instance)) :string)
+  (let ((drei (drei:drei-instance)))
+    (climi::request-clipboard-content (drei:editor-pane drei) :string drei))
   #+nil
   (handler-case (insert-sequence (point) (kill-ring-yank *kill-ring*))
     (empty-kill-ring ()
@@ -22,10 +23,32 @@
              'drei:editing-table
              '((:insert :shift)))
 
+#+nil
 (defmethod handle-event :around ((pane drei:drei) (event climi::clipboard-send-event))
   (log:info "Got data, should be a string: ~s (type=~s)"
             (climi::clipboard-event-content event) (climi::clipboard-event-type event))
   (call-next-method))
+
+(defmethod climi::deliver-clipboard-message ((drei drei:drei) event)
+  (if (eq (climi::clipboard-event-type event) :string)
+      (let ((content (climi::clipboard-event-content event)))
+        (drei-buffer:insert-sequence (drei:point (drei-core::view drei)) content)
+        (drei:display-drei drei :redisplay-minibuffer t)
+        #+nil
+        (drei::propagate-changed-value drei))
+      ;; ELSE: The content is not a string. For now, raise an error.
+      (error "Only string pasting is supported")))
+
+#+nil
+(defmethod handle-event :around ((drei drei:drei) event)
+  (if (eq (climi::clipboard-event-type event) :string)
+      (let ((content (climi::clipboard-event-content event)))
+        (drei-buffer:insert-sequence (drei:point (drei-core::view drei)) content)
+        (drei:display-drei drei :redisplay-minibuffer t)
+        #+nil
+        (drei::propagate-changed-value drei))
+      ;; ELSE: The content is not a string. For now, raise an error.
+      (error "Only string pasting is supported")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; CLX implementation of clipboard management
@@ -51,7 +74,9 @@
    (outstanding-request-type  :initform nil
                               :accessor clipboard-outstanding-request-type)
    (outstanding-request-selection :initform nil
-                                  :accessor clipboard-outstanding-request-selection)))
+                                  :accessor clipboard-outstanding-request-selection)
+   (outstanding-request-handler :initform nil
+                                :accessor clipboard-outstanding-request-handler)))
 
 (defun find-stored-object (port selection)
   (case selection
@@ -256,12 +281,13 @@
 ;;;  Paste support
 ;;;
 
-(defmethod climi::request-clipboard-content-from-port ((port clx-clipboard-port-mixin) pane clipboard-p type)
+(defmethod climi::request-clipboard-content-from-port ((port clx-clipboard-port-mixin) pane clipboard-p type handler)
   (check-type type climi::representation-type-name)
   (let ((selection (if clipboard-p :clipboard :primary)))
     (setf (clipboard-outstanding-request-pane port) pane)
     (setf (clipboard-outstanding-request-type port) type)
     (setf (clipboard-outstanding-request-selection port) selection)
+    (setf (clipboard-outstanding-request-handler port) handler)
     (log:info "Getting TARGETS from: selection=~s, pane=~s" selection pane)
     (xlib:convert-selection selection :targets (sheet-direct-xmirror pane) :mcclim nil)))
 
@@ -287,10 +313,13 @@
   (log:info "Got string reply: type=~s content=~s selection=~s" type content selection)
   (when (clipboard-outstanding-request-pane port)
     (let ((event (make-instance 'climi::clipboard-send-event
+                                :content content
                                 :sheet (clipboard-outstanding-request-pane port)
-                                :type (clipboard-outstanding-request-type port))))
+                                :type (clipboard-outstanding-request-type port)
+                                :handler (clipboard-outstanding-request-handler port))))
       (setf (clipboard-outstanding-request-pane port) nil)
       (setf (clipboard-outstanding-request-type port) nil)
       (setf (clipboard-outstanding-request-selection port) nil)
+      (setf (clipboard-outstanding-request-handler port) nil)
       (log:info "Distributing to: ~s" (slot-value event 'clim:sheet))
       (distribute-event port event))))
