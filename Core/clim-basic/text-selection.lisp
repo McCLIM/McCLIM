@@ -212,6 +212,8 @@ the incoming selection."))
            (setf dragging-p t))
           ((eql +pointer-middle-button+ (pointer-event-button event))
            ;; paste           
+           (request-selection-content pane :string)
+           #+nil
            (request-selection (port pane) #|:UTF8_STRING|# pane (event-timestamp event)))
           ((eql +pointer-right-button+ (pointer-event-button event))
            (when (and point-1-x point-1-y point-2-x point-2-y)

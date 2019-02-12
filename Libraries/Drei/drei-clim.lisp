@@ -322,6 +322,7 @@ modifier key."))
           (with-bound-drei-special-variables (gadget :prompt (format nil "~A " (gesture-name gesture)))
             (handle-gesture gadget gesture)))))))
 
+#+nil
 (defmethod handle-event ((gadget drei-gadget-pane)
                          (event clim-backend:selection-notify-event))
   ;; Cargo-culted from above:

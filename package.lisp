@@ -1958,7 +1958,16 @@
    ;; images
    #:rgb-image
    #:xpm-parse-file
-   #:*xpm-x11-colors*))
+   #:*xpm-x11-colors*
+   ;; Clipboard
+   #:copy-to-clipboard
+   #:copy-to-selection
+   #:clear-clipboard
+   #:clear-selection
+   #:request-selection-content
+   #:request-clipboard-content
+   ;; Clipboard presentations integration
+   #:convert-clipboard-content))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -2063,18 +2072,23 @@
    #:text-style-mapping
    #:text-style-width
    ;; Text selection protocol
-   #:selection-owner
-   #:selection-timestamp
-   #:selection-event
-   #:selection-clear-event
-   #:selection-notify-event
-   #:selection-request-event
-   #:selection-event-requestor
-   #:request-selection
-   #:release-selection
-   #:bind-selection
-   #:send-selection
-   #:get-selection-from-event
+   #+nil
+   (#:selection-owner
+    #:selection-timestamp
+    #:selection-event
+    #:selection-clear-event
+    #:selection-notify-event
+    #:selection-request-event
+    #:selection-event-requestor
+    #:request-selection
+    #:release-selection
+    #:bind-selection
+    #:send-selection
+    #:get-selection-from-event)
+   #:clear-clipboard-with-port
+   #:clipboard-send-event
+   #:copy-to-clipboard-with-port
+   #:request-clipboard-content-with-port
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-glyph

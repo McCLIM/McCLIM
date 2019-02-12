@@ -14,11 +14,7 @@
   (log:info "inst = ~s. pane = ~s" (drei:drei-instance) (drei:editor-pane (drei:drei-instance)))
   (let ((drei (drei:drei-instance)))
     (log:info "out=~s, in=~s" *standard-output* *standard-input*)
-    (climi::request-clipboard-content (drei:editor-pane drei) :string))
-  #+nil
-  (handler-case (insert-sequence (point) (kill-ring-yank *kill-ring*))
-    (empty-kill-ring ()
-      (display-message "Kill ring is empty"))))
+    (climi::request-clipboard-content (drei:editor-pane drei) :string)))
 
 (esa:set-key 'com-yank-from-clipboard
              'drei:editing-table
@@ -281,7 +277,7 @@
 ;;;  Paste support
 ;;;
 
-(defmethod climi::request-clipboard-content-from-port ((port clx-clipboard-port-mixin) pane clipboard-p type)
+(defmethod climi::request-clipboard-content-with-port ((port clx-clipboard-port-mixin) pane clipboard-p type)
   (check-type type climi::representation-type-name)
   (let ((selection (if clipboard-p :clipboard :primary)))
     (setf (clipboard-outstanding-request-pane port) pane)
@@ -311,7 +307,7 @@
 (defun process-string-reply (port selection content type)
   (log:info "Got string reply: type=~s content=~s selection=~s" type content selection)
   (when (clipboard-outstanding-request-pane port)
-    (let ((event (make-instance 'climi::clipboard-send-event
+    (let ((event (make-instance 'climb:clipboard-send-event
                                 :content content
                                 :sheet (clipboard-outstanding-request-pane port)
                                 :type (clipboard-outstanding-request-type port))))

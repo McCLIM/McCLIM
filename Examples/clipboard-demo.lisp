@@ -4,14 +4,6 @@
 
 (in-package :clipboard-demo)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(clim:define-presentation-type foo ())
-
-(clim:define-presentation-method clim:present (obj (type foo) stream view &key)
-  (clim:with-drawing-options (stream :ink clim:+red+)
-    (format stream "Foo object")))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defclass markup-text ()
   ((text :initarg :text
          :reader markup-text/text)))
@@ -42,14 +34,13 @@
 
 (defun display-clipboard-demo (frame stream)
   (format stream "Select text using shift and the left mouse button~%")
-  (format stream "You can also use the command \"Copy to clipboard\" to select a presentation.~%")
+  (format stream "You can also use the command \"Copy to clipboard\" to select a presentation.~%~%")
   (let ((obj (make-instance 'markup-text :text "This text can be copied in HTML form")))
     (clim:stream-present stream obj (clim:presentation-type-of obj)))
-  (format stream "~%")
-  (clim:stream-present stream 1234 'foo)
-  (format stream "~%")
+  (format stream "~%~%You can paste the clipboard into editor fields using Shift-Insert,~%")
+  (format stream "or you can Shift-click the middle mouse button the paste from the selection.~%~%")
   (when (clipboard-demo/string-list frame)
-    (format stream "~%~%Pasted content:~%"))
+    (format stream "Pasted content:~%"))
   (loop
     for string in (clipboard-demo/string-list frame)
     do (format stream "~a~%" string)))
@@ -60,8 +51,8 @@
 
 (define-clipboard-demo-command (cmd-copy-text :name "Paste Text")
     ()
-  (climi::request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :string))
+  (clim-extensions:request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :string))
 
 (define-clipboard-demo-command (cmd-copy-html :name "Paste HTML")
     ()
-  (climi::request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :html))
+  (clim-extensions:request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :html))
