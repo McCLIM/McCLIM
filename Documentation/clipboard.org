@@ -1,3 +1,5 @@
+* Introduction
+
 Notes on the new clipboard implementation
 
 * Definitions
@@ -23,6 +25,16 @@ Traditional X-based applications allows you to paste the content of
 the selection directly into other programs by middle-clicking the
 mouse button. This functionality is not available on OSX or Windows.
 
+** Object types
+
+This implementation supports multiple types of clipboard data. As of
+this writing, support for plain text and HTML content has been
+implemented. The next step is to implement support for at least the
+following types:
+
+- Images
+- Lisp lists
+
 * Default end-user functionality
 
 ** Selecting text in stream panes
@@ -32,7 +44,15 @@ immediately making that text available in the *selection*. This
 functionality was available with the old implementation, and has not
 changed with the new implementation.
 
-** Copying text in Drei
+*** TODO Pasting sometimes pastes into the wrong field
+
+The new implementation tries to implement pasting on the input editing
+stream level instead of in the Drei code. This had the effect that
+only the outer input loop is sensitive to the paste event.
+
+** TODO Copying text in Drei
+
+(currently not implemented)
 
 The new implementation updates the kill command in Drei so that in
 addition to putting the killed text in the internal kill-ring, it also
@@ -91,7 +111,30 @@ the pane is no longer available).
 
 *** Copying other object types
 
-TODO
+Objects that are copied to the clipboard are CLIM presentations.
+=COPY-TO-CLIPBOARD= accepts a keyword argument =:TYPE= that indicates
+the presentation type of the object.
+
+To support conversion from an arbitrary presentation type, implement
+=CONVERT-CLIPBOARD-CONTENT=. Below is an example of what such
+conversion method can look like. Assume that the custom presentation
+type is called =MARKUP-TEXT=.
+
+#+BEGIN_SRC lisp
+(define-presentation-method convert-clipboard-content
+    (obj (type markup-text) (output-type (eql :string)) check-only)
+  (markup-text/text obj))
+#+END_SRC
+
+When this presentation method has been defined, presentations of this
+type will be selectable as an argument to the built-in command “Copy
+to Clipboard”.
+
+The argument =CHECK-ONLY= is true if the caller is only interested in
+knowing whether the object can be converted to the requested type or
+not, and its return value will only be checked for a nil or non-nil
+value. It should be used if the conversion function is expensive in
+terms if CPU or memory.
 
 ** Pasting from the clipboard
 

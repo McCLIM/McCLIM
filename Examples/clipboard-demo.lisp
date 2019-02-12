@@ -12,11 +12,11 @@
   (clim:with-drawing-options (stream :ink clim:+blue+)
     (format stream "~a" (markup-text/text obj))))
 
-(clim:define-presentation-method clim-internals::convert-clipboard-content
+(clim:define-presentation-method clim-extensions:convert-clipboard-content
     (obj (type markup-text) (output-type (eql :string)) check-only)
   (markup-text/text obj))
 
-(clim:define-presentation-method clim-internals::convert-clipboard-content
+(clim:define-presentation-method clim-extensions:convert-clipboard-content
     (obj (type markup-text) (output-type (eql :html)) check-only)
   (format nil "Highlighted content: <b>~a</b>" (markup-text/text obj)))
 
