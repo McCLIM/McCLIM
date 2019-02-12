@@ -2072,20 +2072,9 @@
    #:text-style-mapping
    #:text-style-width
    ;; Text selection protocol
-   #+nil
-   (#:selection-owner
-    #:selection-timestamp
-    #:selection-event
-    #:selection-clear-event
-    #:selection-notify-event
-    #:selection-request-event
-    #:selection-event-requestor
-    #:request-selection
-    #:release-selection
-    #:bind-selection
-    #:send-selection
-    #:get-selection-from-event)
    #:clear-clipboard-with-port
+   #:clipboard-event-content
+   #:clipboard-event-type
    #:clipboard-send-event
    #:copy-to-clipboard-with-port
    #:request-clipboard-content-with-port
