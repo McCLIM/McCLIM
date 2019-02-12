@@ -246,7 +246,6 @@ the incoming selection."))
       (when (bind-selection (port pane) pane (event-timestamp event))
 	(setf (selection-owner (port pane)) pane)
 	(setf (selection-timestamp (port pane)) (event-timestamp event)))
-      (log:info "Button released, will copy")
       (copy-to-selection pane (fetch-selection pane)))))
 
 (defun repaint-markings (pane old-markings new-markings)

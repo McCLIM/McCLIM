@@ -11,42 +11,12 @@
 
 (clim:define-command (com-yank-from-clipboard :name t :command-table drei:editing-table) ()
   "Insert the contents of the clipboard at point."
-  (log:info "inst = ~s. pane = ~s" (drei:drei-instance) (drei:editor-pane (drei:drei-instance)))
   (let ((drei (drei:drei-instance)))
-    (log:info "out=~s, in=~s" *standard-output* *standard-input*)
     (climi::request-clipboard-content (drei:editor-pane drei) :string)))
 
 (esa:set-key 'com-yank-from-clipboard
              'drei:editing-table
              '((:insert :shift)))
-
-#+nil
-(defmethod handle-event :around ((pane drei:drei) (event climi::clipboard-send-event))
-  (log:info "Got data, should be a string: ~s (type=~s)"
-            (climi::clipboard-event-content event) (climi::clipboard-event-type event))
-  (call-next-method))
-
-#+nil
-(defmethod climi::deliver-clipboard-message ((drei drei:drei) event)
-  (if (eq (climi::clipboard-event-type event) :string)
-      (let ((content (climi::clipboard-event-content event)))
-        (drei-buffer:insert-sequence (drei:point (drei-core::view drei)) content)
-        (drei:display-drei drei :redisplay-minibuffer t)
-        #+nil
-        (drei::propagate-changed-value drei))
-      ;; ELSE: The content is not a string. For now, raise an error.
-      (error "Only string pasting is supported")))
-
-#+nil
-(defmethod handle-event :around ((drei drei:drei) event)
-  (if (eq (climi::clipboard-event-type event) :string)
-      (let ((content (climi::clipboard-event-content event)))
-        (drei-buffer:insert-sequence (drei:point (drei-core::view drei)) content)
-        (drei:display-drei drei :redisplay-minibuffer t)
-        #+nil
-        (drei::propagate-changed-value drei))
-      ;; ELSE: The content is not a string. For now, raise an error.
-      (error "Only string pasting is supported")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; CLX implementation of clipboard management
@@ -132,7 +102,6 @@
     (let ((selection (if clipboard-p :clipboard :primary)))
       (xlib:set-selection-owner (xlib:window-display window) selection window nil)
       (let ((success-p (eq (xlib:selection-owner (xlib:window-display window) selection) window)))
-        (log:info "setting selection ~s to: ~s → ~s" selection obj success-p)
         (set-stored-object port selection
                            (if success-p
                                (make-instance 'clx-clipboard-stored-object
@@ -183,12 +152,10 @@
             ((:targets)
              (let ((targets (make-targets-response port content presentation-type)))
                (xlib:change-property requestor property targets target 32)
-               (log:info "Sending targets reply: ~s" (mapcar (lambda (v) (xlib:atom-name display v)) targets))
                (send-reply-event)))
             ((:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|)
              (let ((content-as-string (climi::convert-clipboard-content content :string :type presentation-type)))
                (xlib:change-property requestor property (babel:string-to-octets content-as-string :encoding :utf-8) target 8)
-               (log:info "Sending string reply")
                (send-reply-event)))
             ((:|text/html|)
              (xlib:change-property requestor property
@@ -199,10 +166,8 @@
                                                                                                      :type presentation-type))
                                                            :encoding :utf-8)
                                    target 8)
-             (log:info "Sending html reply")
              (send-reply-event))
             (t
-             (log:info "Sending negative reply")
              (send-reply-event t)))
           nil)))))
 
@@ -226,7 +191,6 @@
   nil)
 
 (defmethod distribute-event ((port clx-clipboard-port-mixin) (event clx-selection-request-event))
-  (log:info "Redistributing selection event, event=~s, sel=~s" event (selection-event-selection event))
   ;; When the event is generated from EVENT-HANDLER, the pane is
   ;; wrong. This is becasue there isn't enough information in the
   ;; event itself to determine to which pane it should be sent.
@@ -239,7 +203,6 @@
       (dispatch-event pane event))))
 
 (defmethod distribute-event ((port clx-clipboard-port-mixin) (event clx-selection-notify-event))
-  (log:info "Redistributing notify event, event=~s, sel=~s" event (selection-event-selection event))
   (alexandria:when-let ((outstanding-request-pane (clipboard-outstanding-request-pane port)))
     (when (eq (clipboard-outstanding-request-selection port)
               (selection-event-selection event))
@@ -251,7 +214,6 @@
 ;;; discriminate on the event type only, which means the event will
 ;;; never be delivered otherwise.
 (defmethod handle-event :around (pane (event clx-selection-request-event))
-  (log:info "Selection request: ~s" event)
   (process-selection-request (port pane)
                              (sheet-direct-xmirror pane)
                              (selection-event-target event)
@@ -261,7 +223,6 @@
                              (event-timestamp event)))
 
 (defmethod handle-event :around (pane (event clx-selection-notify-event))
-  (log:info "Selection notify: ~s" event)
   (process-selection-notify (port pane)
                             (sheet-direct-xmirror pane)
                             (selection-event-target event)
@@ -270,7 +231,6 @@
                             (event-timestamp event)))
 
 (defmethod handle-event :around (pane (event clx-selection-clear-event))
-  (log:info "Selection clear: ~s" event)
   (process-selection-clear (port pane) (selection-event-selection event)))
 
 ;;;
@@ -283,7 +243,6 @@
     (setf (clipboard-outstanding-request-pane port) pane)
     (setf (clipboard-outstanding-request-type port) type)
     (setf (clipboard-outstanding-request-selection port) selection)
-    (log:info "Getting TARGETS from: selection=~s, pane=~s" selection pane)
     (xlib:convert-selection selection :targets (sheet-direct-xmirror pane) :mcclim nil)))
 
 (defun process-targets-reply (port window selection time)
@@ -298,14 +257,12 @@
                             for type in native-representation
                             when (member type targets)
                               return type)))
-      (log:info "Available tagets: ~s, selected: ~s" targets selected-type)
       (if selected-type
           (xlib:convert-selection selection selected-type window :mcclim time)
           ;; ELSE: The clipboard doesn't support content of this type, send a negative response here
           nil))))
 
 (defun process-string-reply (port selection content type)
-  (log:info "Got string reply: type=~s content=~s selection=~s" type content selection)
   (when (clipboard-outstanding-request-pane port)
     (let ((event (make-instance 'climb:clipboard-send-event
                                 :content content
@@ -314,5 +271,4 @@
       (setf (clipboard-outstanding-request-pane port) nil)
       (setf (clipboard-outstanding-request-type port) nil)
       (setf (clipboard-outstanding-request-selection port) nil)
-      (log:info "Distributing to: ~s" (slot-value event 'clim:sheet))
       (distribute-event port event))))

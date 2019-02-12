@@ -7,7 +7,6 @@
   nil)
 
 (define-presentation-method convert-clipboard-content (obj (type string) (output-type (eql :string)) check-only)
-  (log:info "Converting string to string: ~s" obj)
   (check-type obj string)
   obj)
 

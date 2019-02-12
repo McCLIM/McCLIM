@@ -357,7 +357,6 @@ buffer using `presentation-replace-input'."
                                                              (subseq content 0 insertion-pointer)
                                                              s
                                                              (subseq content insertion-pointer))))
-                                   (log:info "Updated content: ~s" new-content)
                                    (replace-input editing-stream new-content :rescan nil :buffer-start 0)
                                    (setf (stream-insertion-pointer editing-stream) (+ insertion-pointer (length s)))
                                    (redraw-input-buffer editing-stream))))))

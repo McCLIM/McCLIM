@@ -444,7 +444,6 @@
     (t clipboard-object clim:global-command-table :tester ((obj presentation)
                                                            (supported-clipboard-types obj (presentation-type presentation))))
     (obj presentation)
-  (log:info "Creating clipboard object = ~s / ~s" obj (presentation-type presentation))
   (make-instance 'clipboard-object :content obj :type (presentation-type presentation)))
 
 (clim:define-command (com-copy-to-clipboard :command-table clim:global-command-table :name "Copy to clipboard")

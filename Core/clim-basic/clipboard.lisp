@@ -66,5 +66,4 @@ removed."
           :reader event-of)))
 
 (defmethod clim:dispatch-event :around (pane (event clipboard-send-event))
-  (log:info "Sending clipboard send signal: ~s" event)
   (signal 'clipboard-send :event event))
