@@ -48,29 +48,31 @@ removed."
   ((content :initarg :content
             :reader clipboard-event-content)
    (type    :initarg :type
-            :reader clipboard-event-type)
-   (handler :initarg :handler
-            :initform nil
-            :reader clipboard-event-handler)))
+            :reader clipboard-event-type)))
 
-(defgeneric request-clipboard-content-from-port (port pane clipboard-p type handler)
+(defgeneric request-clipboard-content-from-port (port pane clipboard-p type)
   (:documentation "Backend implementation of REQUEST-CLIPBOARD-CONTENT.")
-  (:method ((port clim:port) pane clipboard-p type handler)
+  (:method ((port clim:port) pane clipboard-p type)
     (error "Clipboard not implemented for port: ~s" port)))
 
-(defun request-selection-content (pane type handler)
-  (request-clipboard-content-from-port (port pane) pane nil type handler))
+(defun request-selection-content (pane type)
+  (request-clipboard-content-from-port (port pane) pane nil type))
 
-(defun request-clipboard-content (pane type handler)
-  (request-clipboard-content-from-port (port pane) pane t type handler))
+(defun request-clipboard-content (pane type)
+  (request-clipboard-content-from-port (port pane) pane t type))
 
-#+(or)
 (define-condition clipboard-send ()
   ((event :initarg :event
           :reader event-of)))
 
+(defmethod clim:dispatch-event :around (pane (event clipboard-send-event))
+  (log:info "Sending clipboard send signal: ~s" event)
+  (signal 'clipboard-send :event event))
+
+#+nil
 (defgeneric deliver-clipboard-message (handler event))
 
+#+il
 (defmethod clim:dispatch-event :around (pane (event clipboard-send-event))
   (alexandria:if-let ((handler (clipboard-event-handler event)))
     (deliver-clipboard-message handler event)
@@ -78,5 +80,5 @@ removed."
 
 #+(or)
 (defmethod clim:dispatch-event :around (pane (event clipboard-send-event))
-  (log:info "Signalling clipboard send event: ~s" event)
+  (log:info "Signalling clipboard send event to: ~s, event=~s" pane event)
   (call-next-method))

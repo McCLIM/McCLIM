@@ -330,11 +330,37 @@ buffer using `presentation-replace-input'."
   (let ((start-scan-pointer (stream-scan-pointer editing-stream)))
     (loop (block rescan
             (handler-bind ((rescan-condition
-                            #'(lambda (c)
-                                (declare (ignore c))
-                                (reset-scan-pointer editing-stream start-scan-pointer)
-                                ;; Input-editing contexts above may be interested...
-                                (return-from rescan nil))))
+                             (lambda (c)
+                               (declare (ignore c))
+                               (reset-scan-pointer editing-stream start-scan-pointer)
+                               ;; Input-editing contexts above may be interested...
+                               (return-from rescan nil)))
+                           (clipboard-send
+                             (lambda (c)
+                               ;; For now, we only support string insertions
+                               (when (eq (clipboard-event-type (event-of c)) :string)
+                                 ;; We read the old content, create a
+                                 ;; new string with the pasted text
+                                 ;; and completely replace the input
+                                 ;; buffer with the new string.
+                                 ;; Finally, we move the cursor to the
+                                 ;; proper location.
+                                 ;;
+                                 ;; This is done because the current
+                                 ;; implementation of replace-input is
+                                 ;; a bit broken and doesn't behave
+                                 ;; according to spec.
+                                 (let* ((s (clipboard-event-content (event-of c)))
+                                        (content (coerce (stream-input-buffer editing-stream) 'string))
+                                        (insertion-pointer (stream-insertion-pointer editing-stream))
+                                        (new-content (format nil "~a~a~a"
+                                                             (subseq content 0 insertion-pointer)
+                                                             s
+                                                             (subseq content insertion-pointer))))
+                                   (log:info "Updated content: ~s" new-content)
+                                   (replace-input editing-stream new-content :rescan nil :buffer-start 0)
+                                   (setf (stream-insertion-pointer editing-stream) (+ insertion-pointer (length s)))
+                                   (redraw-input-buffer editing-stream))))))
               (return-from input-editing-rescan-loop
                 (funcall continuation editing-stream)))))))
 
