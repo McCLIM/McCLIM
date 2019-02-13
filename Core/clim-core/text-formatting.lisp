@@ -147,18 +147,19 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 	    (foo seg-start (1+ i))
 	    (setq seg-start (1+ i))))
 	(foo seg-start end)))))
-		     
+
+(defun invoke-with-indenting-output (cont stream indent move-cursor)
+  (multiple-value-bind (old-x old-y) (stream-cursor-position stream)
+    (let ((new-stream (make-instance
+                       'indenting-output-stream
+                       :stream stream
+                       :indent-spec indent)))
+      (funcall cont new-stream))
+    (unless move-cursor
+      (setf (stream-cursor-position stream) (values old-x old-y)))))
+
 (defmacro indenting-output ((stream indent &key (move-cursor t)) &body body)
   (when (eq stream t)
     (setq stream '*standard-output*))
-  (with-gensyms (old-x old-y)
-     `(multiple-value-bind (,old-x ,old-y)
-	  (stream-cursor-position ,stream)	
-	(let ((,stream (make-instance
-		       'indenting-output-stream
-		       :stream ,stream
-		       :indent-spec ,indent)))
-	  ,@body)
-	(unless ,move-cursor
-	  (setf (stream-cursor-position ,stream)
-		(values ,old-x ,old-y))))))
+  `(invoke-with-indenting-output
+    (lambda (,stream) ,@body) ,stream ,indent ,move-cursor))
