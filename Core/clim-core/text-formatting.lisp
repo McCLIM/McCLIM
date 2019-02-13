@@ -121,40 +121,49 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
   ((indentation :accessor indentation)))
 
 (defmethod initialize-instance :after ((obj indenting-output-stream)
-				       &key (indent-spec 0) &allow-other-keys)
+                                       &key (indent-spec 0) &allow-other-keys)
   (setf (indentation obj) (parse-space (encapsulating-stream-stream obj)
-				       indent-spec
-				       :horizontal)))
+                                       indent-spec
+                                       :horizontal)))
 
-(defmethod stream-write-char :around ((stream indenting-output-stream) char)
-  (let ((under-stream (encapsulating-stream-stream stream)))
-    (when (stream-start-line-p under-stream)
-      (stream-increment-cursor-position under-stream (indentation stream) nil))
-    (call-next-method)))
+(defmethod stream-start-line-p ((stream indenting-output-stream))
+  (let ((x (stream-cursor-position (encapsulating-stream-stream stream))))
+    (= x (indentation stream))))
 
-(defmethod stream-write-string :around ((stream indenting-output-stream)
-				string &optional (start 0) end)
-  (let ((under-stream (encapsulating-stream-stream stream))
-	(end (or end (length string))))
-    (flet ((foo (start end)
-	     (when (stream-start-line-p under-stream)
-	       (stream-increment-cursor-position under-stream (indentation stream) nil))
-	     (stream-write-string under-stream string start end)))
-      (let ((seg-start start))
-	(loop for i from start below end do
-	  (when (char= #\Newline
-		       (char string i))
-	    (foo seg-start (1+ i))
-	    (setq seg-start (1+ i))))
-	(foo seg-start end)))))
+(flet ((maybe-indent (stream)
+         (let ((under-stream (encapsulating-stream-stream stream)))
+           (when (stream-start-line-p under-stream)
+             (stream-increment-cursor-position under-stream (indentation stream) 0)))))
+
+  (defmethod stream-write-char :after ((stream indenting-output-stream)
+                                       (char (eql #\Newline)))
+    (maybe-indent stream))
+
+  (defmethod stream-write-string ((stream indenting-output-stream)
+                                  string &optional (start 0) end)
+    (let ((under-stream (encapsulating-stream-stream stream))
+          (end (or end (length string))))
+      (flet ((write-segment (start end)
+               (stream-write-string under-stream string start end)))
+        (loop with seg-start = start
+              for i from start below end
+              when (char= #\Newline (char string i))
+              do (write-segment seg-start (1+ i))
+                 (maybe-indent stream)
+                 (setf seg-start (1+ i))
+              finally (write-segment seg-start end)
+                      (maybe-indent stream))))))
 
 (defun invoke-with-indenting-output (cont stream indent move-cursor)
   (multiple-value-bind (old-x old-y) (stream-cursor-position stream)
-    (let ((new-stream (make-instance
-                       'indenting-output-stream
-                       :stream stream
-                       :indent-spec indent)))
-      (funcall cont new-stream))
+    (let* ((new-stream (make-instance 'indenting-output-stream
+                                      :stream stream
+                                      :indent-spec indent))
+           (indentation (indentation new-stream)))
+      (stream-increment-cursor-position stream indentation nil)
+      (unwind-protect
+           (funcall cont new-stream)
+        (stream-increment-cursor-position stream (- indentation) nil)))
     (unless move-cursor
       (setf (stream-cursor-position stream) (values old-x old-y)))))
 
