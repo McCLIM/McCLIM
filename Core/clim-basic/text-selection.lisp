@@ -170,7 +170,7 @@
            (setf point-1-y (pointer-event-y event))
            (setf dragging-p t))
           ((eql +pointer-middle-button+ (pointer-event-button event))
-           ;; paste           
+           ;; paste
            (request-selection-content pane :string)
            #+nil
            (request-selection (port pane) #|:UTF8_STRING|# pane (event-timestamp event)))
