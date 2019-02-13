@@ -464,6 +464,9 @@ if there is one, or STREAM"
 
 ;;; Extended Output Streams
 
+(def-stream-method extended-output-stream-p
+    ((stream standard-encapsulating-stream)))
+
 (def-stream-method stream-text-cursor ((stream standard-encapsulating-stream)))
 
 (def-stream-method (setf stream-text-cursor)
@@ -535,7 +538,17 @@ if there is one, or STREAM"
              (declare (ignore old-medium))
              (funcall continuation medium))
          drawing-options))
-                               
+
+(defmethod invoke-with-sheet-medium-bound (continuation (medium null) (stream standard-encapsulating-stream))
+  (invoke-with-sheet-medium-bound continuation medium  (encapsulating-stream-stream stream)))
+
+(defmethod do-graphics-with-options ((sheet encapsulating-stream) func &rest options)
+  (apply #'do-graphics-with-options (encapsulating-stream-stream sheet) func options))
+
+(defmethod invoke-with-room-for-graphics (cont (stream encapsulating-stream)
+                                          &rest options)
+  (apply #'invoke-with-room-for-graphics cont (encapsulating-stream-stream stream) options))
+
 ;;; Extended Input Streams
 
 (def-stream-method extended-input-stream-p
