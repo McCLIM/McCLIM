@@ -52,50 +52,6 @@
 
 (defparameter *marking-border* 1)
 
-;;;; Text Selection Protocol
-
-(defgeneric release-selection (port &optional time)
-  (:documentation "Relinquish ownership of the selection."))
-
-(defgeneric request-selection (port requestor time)
-  (:documentation
-   #.(format nil "Request that the window system retrieve the selection ~
-                  from its current owner. This should cause a ~
-                  selection-notify-event to be delivered.")))
-
-(defgeneric bind-selection (port window &optional time)
-  (:documentation "Take ownership of the selection."))
-
-(defgeneric send-selection (port request-event string)
-  (:documentation "Send 'string' to a client in response to a selection-request-event."))
-
-(defgeneric get-selection-from-event (port event)
-  (:documentation "Given a selection-notify event, return a string containing
-the incoming selection."))
-
-;;; These events are probably very X11 specific.
-
-;;; Backends will likely produce subclasses of selection-notify-event
-;;; and selection-request-event.
-;;;
-;;;   loke 2019-02-09.
-;;;   Yes, they definitely are. The new system uses
-;;;   the term "clipboard", and should be able to completely replace
-;;;   the selections.
-
-(defclass selection-event (window-event)
-  ((selection :initarg :selection
-              :reader selection-event-selection)))
-
-(defclass selection-clear-event (selection-event)  ())
-(defclass selection-notify-event (selection-event) ())
-(defclass selection-request-event (selection-event)
-  ((requestor :initarg :requestor :reader selection-event-requestor)))
-
-;;;; Random Notes
-
-;;; - McCLIM still has absolutely no idea of lines.
-
 (defclass marking ()
   ()
   (:documentation "A common super class for markings (= stuff marked)."))
@@ -181,6 +137,9 @@ the incoming selection."))
   (if (eql (event-modifier-state event) +shift-key+)
       (eos/shift-click pane event)
       (call-next-method)))
+
+(defmethod dispatch-event :before (pane (event pointer-button-press-event))
+  (log:info "Pointer press on: ~s" pane))
 
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                            (event pointer-button-release-event))
@@ -374,23 +333,6 @@ the incoming selection."))
               (visit chunk)) )
           (setf (slot-value stream 'markings) (reverse marks)))))))
 
-
-;;;; Selections Events
-
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                                   (event selection-clear-event))  
-  (pane-clear-markings pane (event-timestamp event)))
-
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                                   (event selection-request-event))  
-  (send-selection (port pane) event (fetch-selection pane)))
-
-(define-condition selection-notify ()
-  ((event :reader event-of :initarg :event)))
-
-(defmethod handle-event ((pane cut-and-paste-mixin)
-                         (event selection-notify-event))
-  (signal 'selection-notify :event event))
 
 ;; FIXME: Non-text target conversions.. (?)
 (defun fetch-selection (pane)

@@ -32,7 +32,8 @@
                                    :incremental-redisplay nil))
           (interaction-pane :interactor))
   (:layouts (default (clim:vertically ()
-                       content
+                       (clim:scrolling ()
+                         content)
                        interaction-pane))))
 
 (defmethod clim:dispatch-event :around ((pane paste-demo-stream-pane) (event climb:clipboard-send-event))
@@ -47,8 +48,12 @@
     (clim:stream-present stream obj (clim:presentation-type-of obj)))
   (format stream "~%~%You can paste the clipboard into editor fields using Shift-Insert,~%")
   (format stream "or you can Shift-click the middle mouse button to paste from the selection.~%~%")
+  (format stream "      ")
+  (clim:surrounding-output-with-border (stream)
+    (clim:with-output-as-gadget (stream)
+      (clim:make-pane 'clim:text-field-pane :width 400)))
+  (format stream "~%~%")
   (alexandria:when-let ((string-list (paste-demo-stream-pane/string-list (clim:find-pane-named frame 'content))))
-    (format stream "Pasted content:~%")
     (loop
       for string in string-list
       do (format stream "~a~%" string))))

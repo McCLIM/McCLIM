@@ -335,9 +335,12 @@ buffer using `presentation-replace-input'."
                                (reset-scan-pointer editing-stream start-scan-pointer)
                                ;; Input-editing contexts above may be interested...
                                (return-from rescan nil)))
+                           #+nil
                            (clipboard-send
                              (lambda (c)
+                               (log:info "Got clipboard send to: ~s" editing-stream)
                                ;; For now, we only support string insertions
+                               #+nil
                                (when (eq (clipboard-event-type (event-of c)) :string)
                                  ;; We read the old content, create a
                                  ;; new string with the pasted text

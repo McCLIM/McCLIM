@@ -593,6 +593,8 @@ if stuff is inserted after the insertion pointer."
                        (when (eq *standard-input* sheet)
                          (insert-sequence (point (view drei))
                                           (clim-backend:get-selection-from-event port event)))))
+                   (climi::clipboard-send (c)
+                     (log:info "Got clipboard send: ~s" c))
                    (unbound-gesture-sequence (c)
                      (display-message "~A is unbound" (gesture-name (gestures c))))
                    (abort-gesture (c)
