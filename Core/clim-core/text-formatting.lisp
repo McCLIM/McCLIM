@@ -116,8 +116,8 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
 ;;; indenting-output
 
 (defclass indenting-output-stream (standard-encapsulating-stream
-				   extended-output-stream
-				   output-recording-stream)
+                                   output-recording-stream
+                                   updating-output-stream-mixin)
   ((indentation :accessor indentation)))
 
 (defmethod initialize-instance :after ((obj indenting-output-stream)
