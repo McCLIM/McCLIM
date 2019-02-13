@@ -135,6 +135,9 @@ SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
            (when (stream-start-line-p under-stream)
              (stream-increment-cursor-position under-stream (indentation stream) 0)))))
 
+  (defmethod stream-terpri :after ((stream indenting-output-stream))
+    (maybe-indent stream))
+
   (defmethod stream-write-char :after ((stream indenting-output-stream)
                                        (char (eql #\Newline)))
     (maybe-indent stream))
