@@ -132,30 +132,35 @@
 
 (defgeneric eos/shift-drag (pane event))
 
+(defun shift-rl-click-event-p (event)
+  (let ((b (pointer-event-button event)))
+    (and (eql (event-modifier-state event) +shift-key+)
+         (or (eql b +pointer-left-button+)
+             (eql b +pointer-right-button+)))))
+
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                           (event pointer-button-press-event))  
-  (if (eql (event-modifier-state event) +shift-key+)
+                                   (event pointer-button-press-event))
+  (if (shift-rl-click-event-p event)
       (eos/shift-click pane event)
       (call-next-method)))
 
-(defmethod dispatch-event :before (pane (event pointer-button-press-event))
-  (log:info "Pointer press on: ~s" pane))
-
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                           (event pointer-button-release-event))
-  (if (eql (event-modifier-state event) +shift-key+)
+                                   (event pointer-button-release-event))
+  (if (shift-rl-click-event-p event)
       (eos/shift-release pane event)
       (call-next-method)))
 
 (defmethod dispatch-event :around ((pane cut-and-paste-mixin)
                            (event pointer-motion-event))
   (with-slots (point-1-x dragging-p) pane
-    (if (and (eql (event-modifier-state event) +shift-key+))
-        (when dragging-p (eos/shift-drag pane event))
+    (if (eql (event-modifier-state event) +shift-key+)
+        (when dragging-p
+          (eos/shift-drag pane event))
         (call-next-method))))
 
 
 (defun pane-clear-markings (pane &optional time)
+  (declare (ignore time))
   (repaint-markings pane (slot-value pane 'markings)
                     (setf (slot-value pane 'markings) nil))
   (clear-selection pane))
@@ -169,11 +174,6 @@
            (setf point-1-x (pointer-event-x event))
            (setf point-1-y (pointer-event-y event))
            (setf dragging-p t))
-          ((eql +pointer-middle-button+ (pointer-event-button event))
-           ;; paste
-           (request-selection-content pane :string)
-           #+nil
-           (request-selection (port pane) #|:UTF8_STRING|# pane (event-timestamp event)))
           ((eql +pointer-right-button+ (pointer-event-button event))
            (when (and point-1-x point-1-y point-2-x point-2-y)
              ;; If point-1 and point-2 are set up pick the nearest (what metric?) and drag it around.

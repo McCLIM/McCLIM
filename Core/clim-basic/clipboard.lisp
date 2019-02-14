@@ -61,6 +61,7 @@ removed."
 (defun request-clipboard-content (pane type)
   (request-clipboard-content-with-port (port pane) pane t type))
 
+#+nil
 (define-condition clipboard-send ()
   ((event :initarg :event
           :reader event-of)))

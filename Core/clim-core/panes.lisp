@@ -2709,6 +2709,11 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmethod initialize-instance :after ((pane interactor-pane) &rest args)
   (declare (ignore args)))
 
+(defmethod handle-event ((pane interactor-pane) (event clipboard-send-event))
+  (log:info "Handle clipboard event: ~s" event)
+  (break)
+  (call-next-method))
+
 ;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
 ;;; roughly working for interactor panes.  It's a hack somewhat
 ;;; analogous to the mouse-wheel / select-and-paste handling in
