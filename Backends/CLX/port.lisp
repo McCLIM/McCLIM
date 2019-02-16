@@ -240,13 +240,13 @@
       (unless (exactly-encodable-as-string-p name)
         (xlib:change-property window
                               :_NET_WM_NAME
-                              (babel:string-to-octets (map 'vector #'char-code name) :encoding :utf-8)
+                              (babel:string-to-octets name :encoding :utf-8)
                               :UTF8_STRING 8))
       (setf (xlib:wm-icon-name window) name)
       (unless (exactly-encodable-as-string-p name)
         (xlib:change-property window
                               :_NET_WM_ICON_NAME
-                              (babel:string-to-octets (map 'vector #'char-code name) :encoding :utf-8)
+                              (babel:string-to-octets name :encoding :utf-8)
                               :UTF8_STRING 8))
       (xlib:set-wm-class
        window
