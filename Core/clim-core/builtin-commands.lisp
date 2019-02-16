@@ -433,12 +433,11 @@
 ;;;  Copy to clipboard is a global command that should be available
 ;;;  everywhere, just like the Describe command above.
 ;;;
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defclass clipboard-object ()
-    ((content :initarg :content
-              :reader clipboard-object/content)
-     (type    :initarg :type
-              :reader clipboard-object/type))))
+(defclass clipboard-object ()
+  ((content :initarg :content
+            :reader clipboard-object/content)
+   (type    :initarg :type
+            :reader clipboard-object/type)))
 
 (clim:define-presentation-translator presentation-clipboard-object
     (t clipboard-object clim:global-command-table :tester ((obj presentation)

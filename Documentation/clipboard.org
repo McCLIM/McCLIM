@@ -50,9 +50,7 @@ The new implementation tries to implement pasting on the input editing
 stream level instead of in the Drei code. This had the effect that
 only the outer input loop is sensitive to the paste event.
 
-** TODO Copying text in Drei
-
-(currently not implemented)
+** Copying text in Drei
 
 The new implementation updates the kill command in Drei so that in
 addition to putting the killed text in the internal kill-ring, it also
