@@ -544,6 +544,9 @@ input-editing-stream. Bound when executing a command.")
           (setf activation-gesture gesture)
           (decf scan-pointer)))))
 
+(defmethod gesture-name ((gesture climb:clipboard-send-event))
+  "Insert from clipboard")
+
 (defun read-gestures-and-act (stream first-gesture type)
   "Read gestures from `stream' and act upon them as per the
 semantics of `process-gesture'. This basically means that we read
@@ -620,13 +623,6 @@ if stuff is inserted after the insertion pointer."
   ;; to assume that an activation gesture really is an activation
   ;; gesture. For example, #\Newline should not cause input activation
   ;; if isearch is being performed.
-  (when (typep gesture 'climb:clipboard-send-event)
-    (let ((drei (drei-instance stream)))
-      (insert-sequence (point (view drei))
-                       (climb:clipboard-event-content gesture))
-      (display-drei drei)
-      (rescan-if-necessary stream)
-      (return-from stream-process-gesture gesture)))
   (when (and (or (activation-gesture-p gesture)
                  (climi::gesture-match gesture *completion-gestures*)
                  (climi::gesture-match gesture *help-gestures*)

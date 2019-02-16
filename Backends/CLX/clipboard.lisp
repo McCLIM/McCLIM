@@ -252,8 +252,6 @@
       (setf (clipboard-outstanding-request-pane port) nil)
       (setf (clipboard-outstanding-request-type port) nil)
       (setf (clipboard-outstanding-request-selection port) nil)
-      #+nil
-      (distribute-event port event)
       (queue-event (event-sheet event) event))))
 
 ;;;
