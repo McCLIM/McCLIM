@@ -1,24 +1,6 @@
 (in-package :clim-clx)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; The following declarations belongs in core, not in the CLX
-;;; backend.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;
-;;;  Drei integration
-;;;
-
-(clim:define-command (com-yank-from-clipboard :name t :command-table drei:editing-table) ()
-  "Insert the contents of the clipboard at point."
-  (let ((drei (drei:drei-instance)))
-    (climi::request-clipboard-content (drei:editor-pane drei) :string)))
-
-(esa:set-key 'com-yank-from-clipboard
-             'drei:editing-table
-             '((:insert :shift)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; CLX implementation of clipboard management
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
