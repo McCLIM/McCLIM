@@ -39,6 +39,12 @@ removed."
 (defun clear-selection (sheet)
   (clear-clipboard-with-port (port sheet) sheet nil))
 
+(defgeneric local-selection-content (port)
+  (:documentation "Returns the content of the selection in this Lisp image.
+If the global selection is currently held, the value returned is the
+same as what would be sent in response to a REQUEST-CLIPBOARD-CONTENT
+call."))
+
 ;;;
 ;;;  The following functions implement the standard API to request
 ;;;  content from the clipboard.
@@ -48,7 +54,8 @@ removed."
   ((content :initarg :content
             :reader clipboard-event-content)
    (type    :initarg :type
-            :reader clipboard-event-type)))
+            :reader clipboard-event-type))
+  (:documentation "Event containing the result of a clipboard or selection request"))
 
 (defgeneric request-clipboard-content-with-port (port pane clipboard-p type)
   (:documentation "Backend implementation of REQUEST-CLIPBOARD-CONTENT.")

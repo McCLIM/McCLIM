@@ -1966,6 +1966,7 @@
    #:clear-selection
    #:request-selection-content
    #:request-clipboard-content
+   #:local-selection-content
    ;; Clipboard presentations integration
    #:convert-clipboard-content))
 

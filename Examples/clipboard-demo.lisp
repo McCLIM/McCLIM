@@ -31,6 +31,7 @@
                                    :scroll-bars :both
                                    :incremental-redisplay nil))
           (interaction-pane :interactor))
+  (:menu-bar clipboard-demo-menubar-table)
   (:layouts (default (clim:vertically ()
                        (clim:scrolling ()
                          content)
@@ -62,10 +63,18 @@
   (let ((frame (clim:make-application-frame 'clipboard-demo :width 600 :height 800)))
     (clim:run-frame-top-level frame)))
 
-(define-clipboard-demo-command (cmd-copy-text :name "Paste Text")
+(define-clipboard-demo-command (cmd-paste-text :name "Paste Text")
     ()
   (clim-extensions:request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :string))
 
-(define-clipboard-demo-command (cmd-copy-html :name "Paste HTML")
+(define-clipboard-demo-command (cmd-paste-html :name "Paste HTML")
     ()
   (clim-extensions:request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :html))
+
+(clim:make-command-table 'clipboard-demo-menubar-table
+                         :errorp nil
+                         :menu '(("Edit" :menu clipboard-demo-edit-table)))
+
+(clim:make-command-table 'clipboard-demo-edit-table
+                         :errorp nil
+                         :menu '(("Copy Selection to Clipboard" :command climi::com-copy-text-to-clipboard)))

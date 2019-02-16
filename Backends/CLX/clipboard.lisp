@@ -117,8 +117,7 @@
             (remove-duplicates (cons :targets types)))))
 
 (defun process-selection-request (port window target property requestor selection time)
-  (let ((display (xlib:window-display window))
-        (stored-object (find-stored-object port selection)))
+  (let ((stored-object (find-stored-object port selection)))
     (when stored-object
       (let ((content (clipboard-stored-object-content stored-object))
             (presentation-type (clipboard-stored-object-type stored-object)))
@@ -191,7 +190,7 @@
       (setf (slot-value event 'clim:sheet) outstanding-request-pane)
       (dispatch-event outstanding-request-pane event))))
 
-;;; The following methods all use an :AROND method for their
+;;; The following methods all use an :AROUND method for their
 ;;; HANDLE-EVENT implementations. This is because we want to
 ;;; discriminate on the event type only, which means the event will
 ;;; never be delivered otherwise.
@@ -249,10 +248,20 @@
     (let ((event (make-instance 'climb:clipboard-send-event
                                 :content content
                                 :sheet (clipboard-outstanding-request-pane port)
-                                :type (clipboard-outstanding-request-type port))))
+                                :type type)))
       (setf (clipboard-outstanding-request-pane port) nil)
       (setf (clipboard-outstanding-request-type port) nil)
       (setf (clipboard-outstanding-request-selection port) nil)
       #+nil
       (distribute-event port event)
       (queue-event (event-sheet event) event))))
+
+;;;
+;;;  Access to the local content
+;;;
+
+(defmethod clim-extensions:local-selection-content ((port clx-clipboard-port-mixin))
+  (alexandria:if-let ((stored-object (find-stored-object port :primary)))
+    (values (clipboard-stored-object-content stored-object)
+            (clipboard-stored-object-type stored-object))
+    nil))
