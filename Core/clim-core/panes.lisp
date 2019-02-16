@@ -2709,6 +2709,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmethod initialize-instance :after ((pane interactor-pane) &rest args)
   (declare (ignore args)))
 
+#+nil
 (defmethod handle-event ((pane interactor-pane) (event clipboard-send-event))
   (log:info "Handle clipboard event: ~s" event)
   (break)
@@ -2730,7 +2731,11 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 ;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
 ;;; roughly working for interactor panes.  It's a hack somewhat
 ;;; analogous to the mouse-wheel / select-and-paste handling in
-;;; DISPATCH-EVENT, just in a slightly different place.
+;;; DISPATCH-EVENT, just in a slightly different place. -- unknown
+;;;
+;;; The paste handling is gone from text-selection.lisp now, but the
+;;; hack is still needed. We'll just put it right here so it's all in
+;;; one place. -- lokedhs 2019-02-16
 (defmethod frame-input-context-button-press-handler :before
     ((frame standard-application-frame)
      (stream interactor-pane)
@@ -2739,7 +2744,15 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
     (when (and previous (typep previous 'gadget))
       (let ((client (gadget-client previous))
             (id (gadget-id previous)))
-      (disarmed-callback previous client id)))))
+      (disarmed-callback previous client id))))
+  ;; Deal with shift-middle-click. Why are we checking for shift
+  ;; anyway? We could just use middle-click. The plain-middle click
+  ;; event gets eaten here anyway. -- lokedgs 2019-02-16
+  (log:info "checking for middle click")
+  (when (and (eql (event-modifier-state button-press-event) +shift-key+)
+             (eql (pointer-event-button button-press-event) +pointer-middle-button+))
+    (log:info "requesting selection to: ~s" stream)
+    (clim-extensions:request-selection-content stream :string)))
 
 ;;; APPLICATION PANES
 

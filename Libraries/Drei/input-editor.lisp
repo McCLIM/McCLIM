@@ -636,6 +636,14 @@ if stuff is inserted after the insertion pointer."
   ;; to assume that an activation gesture really is an activation
   ;; gesture. For example, #\Newline should not cause input activation
   ;; if isearch is being performed.
+  (when (typep gesture 'climb:clipboard-send-event)
+    (log:info "Got the paste in process-gesture!")
+    (let ((drei (drei-instance stream)))
+      (insert-sequence (point (view drei))
+                       (climb:clipboard-event-content gesture))
+      (display-drei drei)
+      (rescan-if-necessary stream)
+      (return-from stream-process-gesture gesture)))
   (when (and (or (activation-gesture-p gesture)
                  (climi::gesture-match gesture *completion-gestures*)
                  (climi::gesture-match gesture *help-gestures*)
