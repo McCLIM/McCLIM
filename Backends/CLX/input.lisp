@@ -180,12 +180,12 @@
                               :timestamp time))))
 	(:enter-notify
 	 (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
-                                             :graft-x root-x
-                                             :graft-y root-y
-			                     :sheet sheet
-			                     :modifier-state (clim-xcommon:x-event-state-modifiers
-					                      *clx-port* state)
-			                     :timestamp time))
+                        :graft-x root-x
+                        :graft-y root-y
+			:sheet sheet
+			:modifier-state (clim-xcommon:x-event-state-modifiers
+					 *clx-port* state)
+			:timestamp time))
 	(:leave-notify
 	 (make-instance (if (eq mode :ungrab)
 			    'pointer-ungrab-event

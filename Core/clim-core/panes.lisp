@@ -2709,25 +2709,6 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmethod initialize-instance :after ((pane interactor-pane) &rest args)
   (declare (ignore args)))
 
-#+nil
-(defmethod handle-event ((pane interactor-pane) (event clipboard-send-event))
-  (log:info "Handle clipboard event: ~s" event)
-  (break)
-  (signal 'clipboard-send :event event)
-  #+nil
-  (call-next-method))
-
-#+nil
-(defmethod stream-read-gesture :around ((stream standard-extended-input-stream)
-                                        &key timeout peek-p input-wait-test
-                                          input-wait-handler pointer-button-press-handler)
-  (handler-case
-      (call-next-method)
-    (foo (condition)
-      (log:info "pasted!?")
-      (break)
-      (values "foo" :timeout))))
-
 ;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
 ;;; roughly working for interactor panes.  It's a hack somewhat
 ;;; analogous to the mouse-wheel / select-and-paste handling in
@@ -2748,10 +2729,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   ;; Deal with shift-middle-click. Why are we checking for shift
   ;; anyway? We could just use middle-click. The plain-middle click
   ;; event gets eaten here anyway. -- lokedgs 2019-02-16
-  (log:info "checking for middle click")
   (when (and (eql (event-modifier-state button-press-event) +shift-key+)
              (eql (pointer-event-button button-press-event) +pointer-middle-button+))
-    (log:info "requesting selection to: ~s" stream)
     (clim-extensions:request-selection-content stream :string)))
 
 ;;; APPLICATION PANES

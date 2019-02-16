@@ -193,18 +193,6 @@
       (setf point-2-x (pointer-event-x event)
             point-2-y (pointer-event-y event)
             dragging-p nil)
-      ;;
-      #+nil
-      (let ((owner (selection-owner (port pane))))
-        (when (and owner (not (eq owner pane)))
-          (distribute-event (port pane)
-                            (make-instance 'selection-clear-event
-                                           :sheet owner
-                                           :selection :primary))))
-      #+nil
-      (when (bind-selection (port pane) pane (event-timestamp event))
-	(setf (selection-owner (port pane)) pane)
-	(setf (selection-timestamp (port pane)) (event-timestamp event)))
       (copy-to-selection pane (fetch-selection pane)))))
 
 (defun repaint-markings (pane old-markings new-markings)

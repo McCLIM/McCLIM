@@ -215,7 +215,7 @@
 
 ;; The following function used to live in CLX/text-selection.lisp
 ;; before it was replaced by the new clipboard system. The below
-;; comment was already there.
+;; comment was already there. -- lokedhs 2019-02-16
 ;;
 ;; Incredibly crappy broken unportable Latin 1 encoder which should be
 ;; replaced by various implementation-specific versions.

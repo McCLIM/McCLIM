@@ -60,11 +60,3 @@ removed."
 
 (defun request-clipboard-content (pane type)
   (request-clipboard-content-with-port (port pane) pane t type))
-
-(define-condition clipboard-send ()
-  ((event :initarg :event
-          :reader event-of)))
-
-#+nil
-(defmethod clim:dispatch-event :around (pane (event clipboard-send-event))
-  (signal 'clipboard-send :event event))

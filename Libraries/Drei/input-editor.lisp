@@ -529,7 +529,6 @@ input-editing-stream. Bound when executing a command.")
                do (setf (values gesture type)
                         (apply #'stream-read-gesture
                                (encapsulating-stream-stream stream) rest-args))
-               do (log:info "gesture=~s, type=~s" gesture type)
                when (null gesture)
                do (return-from stream-read-gesture (values gesture type))
                when (stream-process-gesture stream gesture type)
@@ -637,7 +636,6 @@ if stuff is inserted after the insertion pointer."
   ;; gesture. For example, #\Newline should not cause input activation
   ;; if isearch is being performed.
   (when (typep gesture 'climb:clipboard-send-event)
-    (log:info "Got the paste in process-gesture!")
     (let ((drei (drei-instance stream)))
       (insert-sequence (point (view drei))
                        (climb:clipboard-event-content gesture))

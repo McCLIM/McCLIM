@@ -240,7 +240,6 @@ keys read."))
 
 (defmethod stream-process-gesture ((stream standard-extended-input-stream) gesture type)
   (declare (ignore type))
-  (log:info "Processing gesture: ~s" gesture)
   (typecase gesture
     ((or character symbol pointer-button-event clipboard-send-event)
      (values gesture (type-of gesture)))
@@ -301,7 +300,6 @@ keys read."))
            (go wait-for-char))
          (let* ((raw-gesture (pop-gesture buffer peek-p))
                 (gesture (stream-process-gesture stream raw-gesture nil)))
-           (log:info "Popped raw gesture=~s, cooked=~s" raw-gesture gesture)
            ;; Sometimes key press events get generated with a key code for which
            ;; there is no keysym.  This seems to happen on my machine when keys
            ;; are hit rapidly in succession.  I'm not sure if this is a hardware
