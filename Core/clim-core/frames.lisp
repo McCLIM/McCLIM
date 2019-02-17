@@ -496,9 +496,13 @@ documentation produced by presentations.")
               (*partial-command-parser* partial-command-parser)
               (interactorp (typep *query-io* 'interactor-pane)))
          (restart-case
-             (progn
-               (redisplay-frame-panes frame :force-p first-time)
-               (setq first-time nil)
+             (labels ((exec-cmd (frame command)
+                        (when command
+                          (execute-frame-command frame command)
+                          (redisplay-frame-panes frame))))
+               (when first-time
+                 (redisplay-frame-panes frame)
+                 (setq first-time nil))
                (if query-io
                    ;; For frames with an interactor:
                    (progn
@@ -515,13 +519,11 @@ documentation produced by presentations.")
                      (let ((command (read-frame-command frame :stream *query-io*)))
                        (when interactorp
                          (fresh-line *query-io*))
-                       (when command
-                         (execute-frame-command frame command))
+                       (exec-cmd frame command)
                        (when interactorp
                          (fresh-line *query-io*))))
                    ;; Frames without an interactor:
-                   (let ((command (read-frame-command frame :stream nil)))
-                     (when command (execute-frame-command frame command)))))
+                   (exec-cmd frame (read-frame-command frame :stream nil))))
            (abort ()
              :report "Return to application command loop."
              (if interactorp
