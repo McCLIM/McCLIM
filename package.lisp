@@ -1916,7 +1916,7 @@
    #:draw-rounded-rectangle*
 
    #:highlight-output-record-tree
-   #:cut-and-paste-mixin
+   #:selection-mixin
    #:mouse-wheel-scroll-mixin
    ;; designs and patterns
    #:pattern

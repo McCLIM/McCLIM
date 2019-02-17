@@ -94,7 +94,7 @@
 
 ;;;;
 
-(defclass cut-and-paste-mixin ()
+(defclass selection-mixin ()
   ((markings   :initform nil)
    (point-1-x  :initform nil)
    (point-1-y  :initform nil)
@@ -102,7 +102,7 @@
    (point-2-y  :initform nil)
    (dragging-p :initform nil)))
 
-(defmethod handle-repaint :around ((pane cut-and-paste-mixin) region)
+(defmethod handle-repaint :around ((pane selection-mixin) region)
   (with-slots (markings) pane
     (when (null markings)
       (return-from handle-repaint (call-next-method)))
@@ -138,19 +138,19 @@
          (or (eql b +pointer-left-button+)
              (eql b +pointer-right-button+)))))
 
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
+(defmethod dispatch-event :around ((pane selection-mixin)
                                    (event pointer-button-press-event))
   (if (shift-rl-click-event-p event)
       (eos/shift-click pane event)
       (call-next-method)))
 
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
+(defmethod dispatch-event :around ((pane selection-mixin)
                                    (event pointer-button-release-event))
   (if (shift-rl-click-event-p event)
       (eos/shift-release pane event)
       (call-next-method)))
 
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
+(defmethod dispatch-event :around ((pane selection-mixin)
                            (event pointer-motion-event))
   (with-slots (point-1-x dragging-p) pane
     (if (eql (event-modifier-state event) +shift-key+)
