@@ -50,7 +50,8 @@
      (:file "flipping-ink")
      (:file "patterns-overlap")
      (:file "text-transformation-test")
-     (:file "text-multiline-positioning")))
+     (:file "text-multiline-positioning")
+     (:file "indentation")))
 
 (defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
