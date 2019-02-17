@@ -114,11 +114,6 @@
 
 (defgeneric port-client-message (sheet time type data))
 
-#+nil
-(defun process-non-sheet-event (window event-key target property requestor selection time)
-  (when (member event-key '(:selection-notify :selection-request :selection-clear))
-    (process-clipboard-event *clx-port* window event-key target property requestor selection time)))
-
 (defun event-handler (&key display window event-key code state mode time
                         type width height x y root-x root-y
                         data override-redirect-p send-event-p hint-p
@@ -232,7 +227,7 @@
 								     state)))
 	   (if hint-p
 	       (multiple-value-bind (x y same-screen-p child mask
-                                     root-x root-y)
+                                       root-x root-y)
 		   (xlib:query-pointer window)
 		 (declare (ignore mask))
 		 ;; If not same-screen-p or the child is different
