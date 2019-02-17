@@ -333,11 +333,11 @@ modifier key."))
       (display-drei gadget :redisplay-minibuffer t)
       (propagate-changed-value gadget))))
 
-(defmethod handle-event ((gadget drei-gadget-pane) (event clim-backend:clipboard-send-event))
+(defmethod handle-event ((gadget drei-gadget-pane) (event clim-extensions:clipboard-send-event))
   ;; Cargo-culted from above:
   (unless (and (currently-processing-p gadget) (directly-processing-p gadget))
     (letf (((currently-processing-p gadget) t))
-      (insert-sequence (point (view gadget)) (climb:clipboard-event-content event))
+      (insert-sequence (point (view gadget)) (clim-extensions:clipboard-event-content event))
       (display-drei gadget :redisplay-minibuffer t)
       (propagate-changed-value gadget))))
 

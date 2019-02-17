@@ -544,7 +544,7 @@ input-editing-stream. Bound when executing a command.")
           (setf activation-gesture gesture)
           (decf scan-pointer)))))
 
-(defmethod gesture-name ((gesture climb:clipboard-send-event))
+(defmethod gesture-name ((gesture clim-extensions:clipboard-send-event))
   "Insert from clipboard")
 
 (defun read-gestures-and-act (stream first-gesture type)

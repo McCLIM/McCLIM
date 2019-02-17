@@ -37,9 +37,9 @@
                          content)
                        interaction-pane))))
 
-(defmethod clim:dispatch-event :around ((pane paste-demo-stream-pane) (event climb:clipboard-send-event))
+(defmethod clim:handle-event :around ((pane paste-demo-stream-pane) (event clim-extensions:clipboard-send-event))
   (setf (paste-demo-stream-pane/string-list pane)
-        (append (paste-demo-stream-pane/string-list pane) (list (climb:clipboard-event-content event))))
+        (append (paste-demo-stream-pane/string-list pane) (list (clim-extensions:clipboard-event-content event))))
   (clim:redisplay-frame-pane (clim:pane-frame pane) pane))
 
 (defun display-clipboard-demo (frame stream)
@@ -63,11 +63,11 @@
   (let ((frame (clim:make-application-frame 'clipboard-demo :width 600 :height 800)))
     (clim:run-frame-top-level frame)))
 
-(define-clipboard-demo-command (cmd-paste-text :name "Paste Text")
+(define-clipboard-demo-command (com-paste-text :name "Paste Text")
     ()
   (clim-extensions:request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :string))
 
-(define-clipboard-demo-command (cmd-paste-html :name "Paste HTML")
+(define-clipboard-demo-command (com-paste-html :name "Paste HTML")
     ()
   (clim-extensions:request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :html))
 
@@ -77,4 +77,6 @@
 
 (clim:make-command-table 'clipboard-demo-edit-table
                          :errorp nil
-                         :menu '(("Copy Selection to Clipboard" :command climi::com-copy-text-to-clipboard)))
+                         :menu '(("Copy Selection to Clipboard" :command climi::com-copy-text-to-clipboard)
+                                 ("Paste Text" :command com-paste-text)
+                                 ("Paste HTML" :command com-paste-html)))

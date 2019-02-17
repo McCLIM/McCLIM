@@ -1960,15 +1960,17 @@
    #:xpm-parse-file
    #:*xpm-x11-colors*
    ;; Clipboard
-   #:copy-to-clipboard
-   #:copy-to-selection
    #:clear-clipboard
    #:clear-selection
-   #:request-selection-content
-   #:request-clipboard-content
+   #:clipboard-event-content
+   #:clipboard-event-type
+   #:clipboard-send-event
+   #:convert-clipboard-content
+   #:copy-to-clipboard
+   #:copy-to-selection
    #:local-selection-content
-   ;; Clipboard presentations integration
-   #:convert-clipboard-content))
+   #:request-selection-content
+   #:request-clipboard-content))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -2074,9 +2076,6 @@
    #:text-style-width
    ;; Text selection protocol
    #:clear-clipboard-with-port
-   #:clipboard-event-content
-   #:clipboard-event-type
-   #:clipboard-send-event
    #:copy-to-clipboard-with-port
    #:request-clipboard-content-with-port
    ;; CLIM-EXTENSIONS

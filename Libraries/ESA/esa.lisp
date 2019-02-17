@@ -421,7 +421,7 @@ that is not just the sole pressing of a modifier key."
                               :hyper-left :hyper-right
                               :shift-lock :caps-lock
                               :alt-left :alt-right)))))
-      (typep gesture 'climb:clipboard-send-event)))
+      (typep gesture 'clipboard-send-event)))
 
 (define-condition unbound-gesture-sequence (simple-condition)
   ((%gestures :initarg :gestures

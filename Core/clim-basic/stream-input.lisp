@@ -220,10 +220,14 @@ keys read."))
     (if (and event
              (or (and (gadgetp sheet)
                       (gadget-active-p sheet))
-                 (not (and (typep sheet 'clim-stream-pane)
-                           (or (typep event 'key-press-event)
-                               (typep event 'pointer-button-press-event)
-                               (typep event 'clipboard-send-event))))))
+                 (not (or (and (typep sheet 'clim-stream-pane)
+                               (not (typep sheet 'interactor-pane))
+                               (or (typep event 'key-press-event)
+                                   (typep event 'pointer-button-press-event)))
+                          (and (typep sheet 'interactor-pane)
+                               (or (typep event 'key-press-event)
+                                   (typep event 'pointer-button-press-event)
+                                   (typep event 'clipboard-send-event)))))))
         (progn
           (event-queue-read buffer)	;eat it
           (handle-event (event-sheet event) event)

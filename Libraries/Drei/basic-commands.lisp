@@ -521,8 +521,8 @@ the numeric arguments."
 
 (define-command com-insert-clipboard
     ()
-  (when (typep *current-gesture* 'climb:clipboard-send-event)
-    (let ((content (climb:clipboard-event-content *current-gesture*)))
+  (when (typep *current-gesture* 'clim-extensions:clipboard-send-event)
+    (let ((content (clim-extensions:clipboard-event-content *current-gesture*)))
       (insert-sequence (point) content))))
 
 (defmethod command-for-unbound-gestures ((view textual-drei-syntax-view) gestures)
@@ -530,7 +530,7 @@ the numeric arguments."
               (characterp (first gestures))
               (graphic-char-p (first gestures)))
          `(com-self-insert ,*numeric-argument-marker*))
-        ((typep (first gestures) 'climb:clipboard-send-event)
+        ((typep (first gestures) 'clim-extensions:clipboard-send-event)
          `(com-insert-clipboard))))
 
 (set-key `(com-self-insert ,*numeric-argument-marker*)

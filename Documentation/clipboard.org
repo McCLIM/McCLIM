@@ -144,7 +144,13 @@ Pasting is a two-step process:
      type =CLIPBOARD-SEND-EVENT= will be delivered to the pane. This
      event contains the requested clipboard data.
 
-TODO: Add example code
+#+BEGIN_SRC lisp
+(defmethod clim:handle-event :around ((pane paste-demo-stream-pane) (event climb:clipboard-send-event))
+  (log:info "stream pane got clipboard content: ~s" event)
+  (setf (paste-demo-stream-pane/string-list pane)
+        (append (paste-demo-stream-pane/string-list pane) (list (climb:clipboard-event-content event))))
+  (clim:redisplay-frame-pane (clim:pane-frame pane) pane))
+#+END_SRC
 
 * Implementing backend support
 

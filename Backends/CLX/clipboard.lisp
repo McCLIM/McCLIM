@@ -245,7 +245,7 @@
 
 (defun process-string-reply (port selection content type)
   (when (clipboard-outstanding-request-pane port)
-    (let ((event (make-instance 'climb:clipboard-send-event
+    (let ((event (make-instance 'clim-extensions:clipboard-send-event
                                 :content content
                                 :sheet (clipboard-outstanding-request-pane port)
                                 :type type)))
