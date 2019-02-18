@@ -103,8 +103,7 @@ input focus. This is a McCLIM extension."))
                 :accessor frame-standard-output
                 :accessor frame-error-output)
    (input-pane :initform nil
-               :accessor frame-standard-input
-               :accessor frame-query-io)
+               :accessor frame-standard-input)
    (documentation-pane :initform nil
                        :accessor frame-pointer-documentation-output)
 
@@ -180,6 +179,10 @@ documentation produced by presentations.")
 (defmethod frame-parent ((frame standard-application-frame))
   (or (frame-calling-frame frame)
       (frame-manager frame)))
+
+(defmethod frame-query-io ((frame standard-application-frame))
+  (or (frame-standard-input frame)
+      (frame-standard-output frame)))
 
 (defgeneric frame-geometry* (frame))
 
@@ -477,55 +480,50 @@ documentation produced by presentations.")
            'command-line-read-remaining-arguments-for-partial-command)
           (prompt "Command: "))
   ;; Give each pane a fresh start first time through.
-  (let ((first-time t))
+  (let ((needs-redisplay t)
+        (first-time t))
     (loop
        ;; The variables are rebound each time through the loop because the
        ;; values of frame-standard-input et al. might be changed by a command.
-       (let* ((*standard-input*  (or (frame-standard-input frame)
-                                     *standard-input*))
-              (*standard-output* (or (frame-standard-output frame)
-                                     *standard-output*))
-              (query-io  (frame-query-io frame))
-              (*query-io* (or query-io *query-io*))
-              (*pointer-documentation-output*
-               (frame-pointer-documentation-output frame))
+       ;;
+       ;; We rebind *QUERY-IO* ensuring variable is always a stream,
+       ;; but we use FRAME-QUERY-IO for our own actions and to decide
+       ;; whenever frame has the query IO stream associated with it..
+       (let* ((frame-query-io (frame-query-io frame))
+              (interactorp (typep frame-query-io 'interactor-pane))
+              (*standard-input*  (or (frame-standard-input frame)  *standard-input*))
+              (*standard-output* (or (frame-standard-output frame) *standard-output*))
+              (*query-io* (or frame-query-io *query-io*))
               ;; during development, don't alter *error-output*
               ;; (*error-output* (frame-error-output frame))
+              (*pointer-documentation-output* (frame-pointer-documentation-output frame))
               (*command-parser* command-parser)
               (*command-unparser* command-unparser)
-              (*partial-command-parser* partial-command-parser)
-              (interactorp (typep *query-io* 'interactor-pane)))
+              (*partial-command-parser* partial-command-parser))
          (restart-case
-             (progn
-               (redisplay-frame-panes frame :force-p first-time)
-               (setq first-time nil)
-               (if query-io
-                   ;; For frames with an interactor:
-                   (progn
-                     ;; Hide cursor, so we don't need to toggle it during
-                     ;; command output.
-                     (setf (cursor-visibility (stream-text-cursor *query-io*))
-                           nil)
-                     (when (and prompt interactorp)
-                       (with-text-style (*query-io* +default-prompt-style+)
-                         (if (stringp prompt)
-                             (write-string prompt *query-io*)
-                             (funcall prompt *query-io* frame))
-                         (force-output *query-io*)))
-                     (let ((command (read-frame-command frame :stream *query-io*)))
-                       (when interactorp
-                         (fresh-line *query-io*))
-                       (when command
-                         (execute-frame-command frame command))
-                       (when interactorp
-                         (fresh-line *query-io*))))
-                   ;; Frames without an interactor:
-                   (let ((command (read-frame-command frame :stream nil)))
-                     (when command (execute-frame-command frame command)))))
+             (flet ((execute-command ()
+                      (when-let ((command (read-frame-command frame :stream frame-query-io)))
+                        (setq needs-redisplay t)
+                        (execute-frame-command frame command))))
+               (when needs-redisplay
+                 (redisplay-frame-panes frame :force-p first-time)
+                 (setq first-time nil
+                       needs-redisplay nil))
+               (when interactorp
+                 (setf (cursor-visibility (stream-text-cursor frame-query-io)) nil)
+                 (when prompt
+                   (with-text-style (frame-query-io +default-prompt-style+)
+                     (if (stringp prompt)
+                         (write-string prompt frame-query-io)
+                         (funcall prompt frame-query-io frame))
+                     (force-output frame-query-io))))
+               (execute-command)
+               (when interactorp
+                 (fresh-line frame-query-io)))
            (abort ()
              :report "Return to application command loop."
              (if interactorp
-                 (format *query-io* "~&Command aborted.~&")
+                 (format frame-query-io "~&Command aborted.~&")
                  (beep))))))))
 
 (defmethod read-frame-command :around ((frame application-frame)
