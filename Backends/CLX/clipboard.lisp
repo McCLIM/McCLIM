@@ -65,7 +65,7 @@
 
 ;;; Main entry point
 
-(defmethod climi::copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet clipboard-p obj presentation-type)
+(defmethod clim-backend:copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet clipboard-p obj presentation-type)
   (let ((window (sheet-direct-xmirror sheet)))
     ;; We're not actually supposed to call set-selection-owner without
     ;; a timestamp due to the following statemnt in ICCCM:
@@ -93,7 +93,7 @@
                                nil))
         success-p))))
 
-(defmethod climi::clear-clipboard-with-port ((port clx-clipboard-port-mixin) sheet clipboard-p)
+(defmethod clim-backend:clear-clipboard-with-port ((port clx-clipboard-port-mixin) sheet clipboard-p)
   (let ((window (sheet-direct-xmirror sheet))
         (selection (if clipboard-p :clipboard :primary)))
     (alexandria:when-let ((stored-object (find-stored-object port selection)))
@@ -110,13 +110,14 @@
   (let ((display (clx-port-display port))
         (types (loop
                  for output-type in '(:string :html)
-                 when (climi::convert-clipboard-content content output-type :type presentation-type :check-only t)
+                 when (clim-extensions:convert-clipboard-content content output-type :type presentation-type :check-only t)
                    append (representation-type-to-native output-type))))
     (mapcar (lambda (v)
               (xlib:intern-atom display v))
             (remove-duplicates (cons :targets types)))))
 
 (defun process-selection-request (port window target property requestor selection time)
+  (declare (ignore window))
   (let ((stored-object (find-stored-object port selection)))
     (when stored-object
       (let ((content (clipboard-stored-object-content stored-object))
@@ -135,18 +136,15 @@
                (xlib:change-property requestor property targets target 32)
                (send-reply-event)))
             ((:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|)
-             (let ((content-as-string (climi::convert-clipboard-content content :string :type presentation-type)))
+             (let ((content-as-string (clim-extensions:convert-clipboard-content content :string :type presentation-type)))
                (xlib:change-property requestor property (babel:string-to-octets content-as-string :encoding :utf-8) target 8)
                (send-reply-event)))
             ((:|text/html|)
-             (xlib:change-property requestor property
-                                   (babel:string-to-octets (format nil "~a~a~a"
-                                                                   "<meta http-equiv=\"content-type\" "
-                                                                   "content=\"text/html; charset=utf-8\">"
-                                                                   (climi::convert-clipboard-content content :html
-                                                                                                     :type presentation-type))
-                                                           :encoding :utf-8)
-                                   target 8)
+             (let ((s (format nil "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">~a"
+                              (clim-extensions:convert-clipboard-content content :html :type presentation-type))))
+               (xlib:change-property requestor property
+                                     (babel:string-to-octets s :encoding :utf-8)
+                                     target 8))
              (send-reply-event))
             (t
              (send-reply-event t)))
@@ -218,7 +216,7 @@
 ;;;  Paste support
 ;;;
 
-(defmethod climi::request-clipboard-content-with-port ((port clx-clipboard-port-mixin) pane clipboard-p type)
+(defmethod clim-backend:request-clipboard-content-with-port ((port clx-clipboard-port-mixin) pane clipboard-p type)
   (check-type type climi::representation-type-name)
   (let ((selection (if clipboard-p :clipboard :primary)))
     (setf (clipboard-outstanding-request-pane port) pane)
@@ -244,6 +242,7 @@
           nil))))
 
 (defun process-string-reply (port selection content type)
+  (declare (ignore selection))
   (when (clipboard-outstanding-request-pane port)
     (let ((event (make-instance 'clim-extensions:clipboard-send-event
                                 :content content

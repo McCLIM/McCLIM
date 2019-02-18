@@ -50,7 +50,7 @@ call."))
 ;;;  content from the clipboard.
 ;;;
 
-(defclass clipboard-send-event (climi::window-event)
+(defclass clipboard-send-event (window-event)
   ((content :initarg :content
             :reader clipboard-event-content)
    (type    :initarg :type

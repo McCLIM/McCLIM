@@ -171,7 +171,7 @@ method on =COPY-TO-CLIPBOARD-WITH-PORT=. Here is the CLX
 implementation for reference purposes:
 
 #+BEGIN_SRC lisp
-(defmethod climi::copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet object)
+(defmethod clim-extensions:copy-to-clipboard-with-port ((port clx-clipboard-port-mixin) sheet object)
   (let ((window (sheet-direct-xmirror sheet)))
     (xlib:set-selection-owner (xlib:window-display window) :clipboard window nil)
     (let ((success-p (eq (xlib:selection-owner (xlib:window-display window) :clipboard) window)))
