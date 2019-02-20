@@ -220,7 +220,7 @@
   (check-type type climi::representation-type-name)
   (let ((selection (if clipboard-p :clipboard :primary)))
     (setf (clipboard-outstanding-request-pane port) pane)
-    (setf (clipboard-outstanding-request-type port) type)
+    (setf (clipboard-outstanding-request-type port) (if (listp type) type (list type)))
     (setf (clipboard-outstanding-request-selection port) selection)
     (xlib:convert-selection selection :targets (sheet-direct-xmirror pane) :mcclim nil)))
 
@@ -231,11 +231,15 @@
            (targets (mapcar (lambda (v)
                               (xlib:atom-name display v))
                             (xlib:get-property window :mcclim)))
-           (native-representation (representation-type-to-native (clipboard-outstanding-request-type port)))
            (selected-type (loop
-                            for type in native-representation
-                            when (member type targets)
-                              return type)))
+                            named outer
+                            for request-type in (clipboard-outstanding-request-type port)
+                            for v = (loop
+                                      for type in (representation-type-to-native request-type)
+                                      when (member type targets)
+                                        return type)
+                            when v
+                              return v)))
       (if selected-type
           (xlib:convert-selection selection selected-type window :mcclim time)
           ;; ELSE: The clipboard doesn't support content of this type, send a negative response here
