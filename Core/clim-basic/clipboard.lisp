@@ -4,7 +4,7 @@
 ;;;  Functions dealing with copying to the clipboard.
 ;;;
 
-(deftype representation-type-name () '(member :string :html))
+(deftype representation-type-name () '(member :string :html :image))
 
 (defgeneric copy-to-clipboard-with-port (port sheet clipboard-p object presentation-type)
   (:documentation "Method to be implemented by backends."))
@@ -61,6 +61,13 @@ call."))
   (:documentation "Backend implementation of REQUEST-CLIPBOARD-CONTENT.")
   (:method ((port clim:port) pane clipboard-p type)
     (error "Clipboard not implemented for port: ~s" port)))
+
+(defmethod request-clipboard-content-with-port :around (port name clipboard-p type)
+  (unless (or (typep type 'climi::representation-type-name)
+              (and (listp type)
+                   (every (lambda (v) (typep v 'climi::representation-type-name)) type)))
+    (error "Invalid type: ~s" type))
+  (call-next-method))
 
 (defun request-selection-content (pane type)
   (request-clipboard-content-with-port (port pane) pane nil type))

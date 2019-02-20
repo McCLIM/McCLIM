@@ -21,8 +21,8 @@
   (format nil "Highlighted content: <b>~a</b>" (markup-text/text obj)))
 
 (defclass paste-demo-stream-pane (clim:application-pane)
-  ((string-list :initform nil
-                :accessor paste-demo-stream-pane/string-list)))
+  ((pasted-list :initform nil
+                :accessor paste-demo-stream-pane/pasted-list)))
 
 (clim:define-application-frame clipboard-demo ()
   ()
@@ -37,9 +37,16 @@
                          content)
                        interaction-pane))))
 
+(clim:define-presentation-to-command-translator copy-markup-text
+    (markup-text climi::com-copy-to-clipboard clipboard-demo :menu t)
+    (obj)
+  (list (make-instance 'climi::clipboard-object :content obj :type 'markup-text)))
+
 (defmethod clim:handle-event :around ((pane paste-demo-stream-pane) (event clim-extensions:clipboard-send-event))
-  (setf (paste-demo-stream-pane/string-list pane)
-        (append (paste-demo-stream-pane/string-list pane) (list (clim-extensions:clipboard-event-content event))))
+  (setf (paste-demo-stream-pane/pasted-list pane)
+        (append (paste-demo-stream-pane/pasted-list pane)
+                (list (list (clim-extensions:clipboard-event-content event)
+                            (clim-extensions:clipboard-event-type event)))))
   (clim:redisplay-frame-pane (clim:pane-frame pane) pane))
 
 (defun display-clipboard-demo (frame stream)
@@ -54,10 +61,14 @@
     (clim:with-output-as-gadget (stream)
       (clim:make-pane 'clim:text-field-pane :width 400)))
   (format stream "~%~%")
-  (alexandria:when-let ((string-list (paste-demo-stream-pane/string-list (clim:find-pane-named frame 'content))))
+  (alexandria:when-let ((pasted-list (paste-demo-stream-pane/pasted-list (clim:find-pane-named frame 'content))))
     (loop
-      for string in string-list
-      do (format stream "~a~%" string))))
+      for (content type) in pasted-list
+      do (case type
+           (:string (format stream "~a~%" content))
+           (:html (format stream "~a~%" content))
+           (:image (clim:with-room-for-graphics (stream)
+                     (clim:draw-pattern* stream content 0 0)))))))
 
 (defun clipboard-demo ()
   (let ((frame (clim:make-application-frame 'clipboard-demo :width 600 :height 800)))
@@ -71,6 +82,10 @@
     ()
   (clim-extensions:request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :html))
 
+(define-clipboard-demo-command (com-paste-image :name "Paste Image")
+    ()
+  (clim-extensions:request-clipboard-content (clim:find-pane-named clim:*application-frame* 'content) :image))
+
 (clim:make-command-table 'clipboard-demo-menubar-table
                          :errorp nil
                          :menu '(("Edit" :menu clipboard-demo-edit-table)))
@@ -79,4 +94,5 @@
                          :errorp nil
                          :menu '(("Copy Selection to Clipboard" :command climi::com-copy-text-to-clipboard)
                                  ("Paste Text" :command com-paste-text)
-                                 ("Paste HTML" :command com-paste-html)))
+                                 ("Paste HTML" :command com-paste-html)
+                                 ("Paste Image" :command com-paste-image)))

@@ -104,7 +104,8 @@
 (defun representation-type-to-native (type)
   (case type
     (:string '(:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|))
-    (:html '(:|text/html|))))
+    (:html '(:|text/html|))
+    (:image '(:|image/png| :|image/jpeg|))))
 
 (defun make-targets-response (port content presentation-type)
   (let ((display (clx-port-display port))
@@ -150,6 +151,13 @@
              (send-reply-event t)))
           nil)))))
 
+(defun convert-image-array (array type)
+  (flexi-streams:with-input-from-sequence (s array)
+    (let ((image-content (ecase type
+                           (:png (opticl:read-png-stream s))
+                           (:jpeg (opticl:read-jpeg-stream s)))))
+      (make-instance 'clim-extensions:image-pattern :array (climi::convert-opticl-img image-content)))))
+
 (defun process-selection-notify (port window target property selection time)
   (case target
     ((:targets)
@@ -162,6 +170,12 @@
      (let ((content (babel:octets-to-string (coerce (xlib:get-property window property) '(vector (unsigned-byte 8)))
                                             :encoding :utf-8)))
        (process-string-reply port selection content :html)))
+    ((:|image/png|)
+     (let ((image (convert-image-array (coerce (xlib:get-property window property) '(vector (unsigned-byte 8))) :png)))
+       (process-string-reply port selection image :image)))
+    ((:|image/jpeg|)
+     (let ((image (convert-image-array (coerce (xlib:get-property window property) '(vector (unsigned-byte 8))) :jpeg)))
+       (process-string-reply port selection image :image)))
     (t
      nil)))
 
@@ -217,7 +231,6 @@
 ;;;
 
 (defmethod clim-backend:request-clipboard-content-with-port ((port clx-clipboard-port-mixin) pane clipboard-p type)
-  (check-type type climi::representation-type-name)
   (let ((selection (if clipboard-p :clipboard :primary)))
     (setf (clipboard-outstanding-request-pane port) pane)
     (setf (clipboard-outstanding-request-type port) (if (listp type) type (list type)))
