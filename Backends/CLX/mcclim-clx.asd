@@ -3,6 +3,8 @@
 (defsystem #:mcclim-clx
   :depends-on (#:clx
                #:cl-unicode
+               #:opticl
+               #:flexi-streams
                #:mcclim-backend-common
                #:mcclim-fonts)
   :serial t

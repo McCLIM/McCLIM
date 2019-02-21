@@ -134,18 +134,18 @@
           (case target
             ((:targets)
              (let ((targets (make-targets-response port content presentation-type)))
-               (xlib:change-property requestor property targets target 32)
+               (xlib:change-property requestor property targets :atom 32)
                (send-reply-event)))
             ((:utf8_string :text :string :|text/plain;charset=utf-8| :|text/plain|)
              (let ((content-as-string (clim-extensions:convert-clipboard-content content :string :type presentation-type)))
-               (xlib:change-property requestor property (babel:string-to-octets content-as-string :encoding :utf-8) target 8)
+               (xlib:change-property requestor property (babel:string-to-octets content-as-string :encoding :utf-8) :string 8)
                (send-reply-event)))
             ((:|text/html|)
              (let ((s (format nil "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">~a"
                               (clim-extensions:convert-clipboard-content content :html :type presentation-type))))
                (xlib:change-property requestor property
                                      (babel:string-to-octets s :encoding :utf-8)
-                                     target 8))
+                                     :string 8))
              (send-reply-event))
             (t
              (send-reply-event t)))
@@ -253,6 +253,7 @@
                                         return type)
                             when v
                               return v)))
+      (log:info "Got targets reply: ~s. selected-type: ~s" targets selected-type)
       (if selected-type
           (xlib:convert-selection selection selected-type window :mcclim time)
           ;; ELSE: The clipboard doesn't support content of this type, send a negative response here
