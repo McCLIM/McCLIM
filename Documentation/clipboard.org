@@ -28,11 +28,11 @@ mouse button. This functionality is not available on OSX or Windows.
 ** Object types
 
 This implementation supports multiple types of clipboard data. As of
-this writing, support for plain text and HTML content has been
-implemented. The next step is to implement support for at least the
-following types:
+this writing, support for copying and pasting plain text and HTML
+content has been implemented, as well as support for pasting images.
+The next step is to implement support for at least the following:
 
-- Images
+- Copying images
 - Lisp lists
 
 * Default end-user functionality
@@ -43,12 +43,6 @@ Shift-dragging on text in a stream pane will highlight text and
 immediately making that text available in the *selection*. This
 functionality was available with the old implementation, and has not
 changed with the new implementation.
-
-*** TODO Pasting sometimes pastes into the wrong field
-
-The new implementation tries to implement pasting on the input editing
-stream level instead of in the Drei code. This had the effect that
-only the outer input loop is sensitive to the paste event.
 
 ** Copying text in Drei
 
@@ -75,11 +69,11 @@ so it's probably better to keep them separate.
 
 ** New interactor commands
 
-*** Copy to Clipboard
+*** Copy Presentation to Clipboard
 
-The interactor now has a default command: “Copy to Clipboard”. This
-command accepts a single argument: The presentation to place on the
-clipboard.
+The interactor now has a default command: “Copy Presentation to
+Clipboard”. This command accepts a single argument: The presentation
+to place on the clipboard.
 
 If the application has implemented support for converting its
 presentations to a transferable form, this command provides a single
@@ -88,6 +82,12 @@ entry point to copy these presentations to the clipboard.
 If an application adds a presentation-to-command-translator for their
 presentations, then the user will automatically be given the ability
 to right-click on a presentation and choose “Copy to Clipboard”.
+
+*** Copy to Clipboard
+
+This command copies the selected text and places it on the clipboard.
+This mirrors the behaviour of the “Copy” operation in most
+applications.
 
 * End-user API
 
