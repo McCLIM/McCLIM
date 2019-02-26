@@ -253,7 +253,6 @@
                                         return type)
                             when v
                               return v)))
-      (log:info "Got targets reply: ~s. selected-type: ~s" targets selected-type)
       (if selected-type
           (xlib:convert-selection selection selected-type window :mcclim time)
           ;; ELSE: The clipboard doesn't support content of this type, send a negative response here
