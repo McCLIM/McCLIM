@@ -420,7 +420,7 @@ by the number of variables in VARS."
 
 (defmacro with-keywords-removed ((var keywords &optional (new-var var))
 				 &body body)
-  "binds NEW-VAR (defaults to VAR) to VAR with the keyword arguments specified
+  "Binds NEW-VAR (defaults to VAR) to VAR with the keyword arguments specified
 in KEYWORDS removed."
   `(let ((,new-var (remove-keywords ,var ',keywords)))
      ,@body))
@@ -452,7 +452,7 @@ in KEYWORDS removed."
   #-CMU
   `(declare (ignorable ,@variables)))
 
-;; spread version:
+;;; spread version:
 
 (defun declare-ignorable-form* (&rest variables)
   (declare-ignorable-form variables))
@@ -550,8 +550,8 @@ STREAM in the direction DIRECTION."
 
 (defun bisect (start end predicate-fn &optional predicament-fn)
   "Finds the rightmost index meeting the PREDICATE-FN between START and END. It
-is assumed that START always meets the predicate while END may but doesn't have
-to meet it. That means that function always return some index.
+is assumed that START meets the predicate while END doesn't. These indexes are
+*not* tested.
 
 PREDICATE-FN INDEX
 Should return NIL if index does not meet the predicate and something else
@@ -561,8 +561,6 @@ PREDICAMENT-FN INDEX-1 INDEX-2
 Returns next index between its arguments for test.  If there is nothing more to
 test must return NIL. When not supplied default function looks always for an
 index being halfway between INDEX-1 and INDEX-2."
-  (when (funcall predicate-fn end)
-    (return-from bisect end))
   (unless predicament-fn
     (setf predicament-fn (lambda (last-good last-bad)
                            (let ((predicament (floor (+ last-good last-bad) 2)))
@@ -578,19 +576,6 @@ index being halfway between INDEX-1 and INDEX-2."
             (setf last-good current-guess)
             (setf last-bad current-guess))
      finally (return last-good)))
-
-;; Implementing line breaking as defined in Unicode[1] is left as an excercise
-;; for the reader. [1] https://unicode.org/reports/tr14/ -- jd 2019-01-08
-(defun line-break-opportunities (string start end &optional (break-characters '(#\space)))
-  "Returns a sequence of string indexes where line can break."
-  (loop
-     with space-indexes = (make-array 1 :fill-pointer 0 :adjustable t :element-type 'fixnum)
-     for i from start below (1- end)
-     do (when (member (aref string i) break-characters :test #'char=)
-          (vector-push-extend i space-indexes))
-     finally
-       (vector-push-extend (1- end) space-indexes)
-       (return space-indexes)))
 
 ;;; Command name utilities that are useful elsewhere.
 
@@ -696,11 +681,11 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
           (butlast (collect-point))
           (collect-point)))))
 
-;;
-;; pretty printing
-;;
-;; This is a simplified version of the approach used by David
-;; Lichteblau for pretty-printing objects in cxml-stp/node.lip
+;;;
+;;; pretty printing
+;;;
+;;; This is a simplified version of the approach used by David
+;;; Lichteblau for pretty-printing objects in cxml-stp/node.lip
 (defgeneric slots-for-pprint-object (node)
   (:documentation "A generic function that returns the slot names of
   objects to be pretty-printed by simple-pprint-object. Providers of
@@ -709,7 +694,7 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
   (:method-combination append)
   (:method append ((object t)) nil))
 
-;; print :slot-name slot-value for each slot
+;;; print :slot-name slot-value for each slot
 (defgeneric simple-pprint-object-args (stream object)
   (:method (stream object)
     (let ((slots (mapcan (lambda (slot)
@@ -743,3 +728,207 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
      ((and *print-pretty* *print-readably*)
       (simple-pprint-object ,sink ,self))
      (t ,@body)))
+
+
+
+;;; Function returns a sequence with indexes where the string should be
+;;; broken. Line breaks are computed disregarding the newlines (we
+;;; assume that line may be broken at any place). If a single character
+;;; doesn't fit in an empty line we assume the break *after* this
+;;; character to avoid infinite recursion.
+(defun %line-breaks-1 (string width initial-offset margin start end)
+  (collect (break-line)
+    (macrolet ((split (step-form)
+                 `(let* ((current-margin (- margin initial-offset))
+                         (split start)
+                         (initial-break ,step-form))
+                    (maxf initial-break split)
+                    (when (and (= initial-break split)
+                               (<= initial-offset 0))
+                      (setf initial-break (1+ split)))
+                    (setf current-margin margin)
+                    (do ((split initial-break
+                                (max ,step-form (1+ split))))
+                        ((>= split end))
+                      (if-let ((pos (position #\space string
+                                              :start (min split end)
+                                              :end end
+                                              :test-not #'char=)))
+                        (break-line (setf split pos))
+                        (return-from %line-breaks-1 (break-line)))))))
+      (etypecase width
+        (number   (split (+ split (floor current-margin width))))
+        (function (split (bisect split (1+ end) ; we split *after* the string
+                                 (lambda (index)
+                                   (<= (funcall width string split index)
+                                       current-margin)))))))
+    (break-line)))
+
+;;; Break greedily on the break opportunity. If a single word doesn't fit in the
+;;; line and that line is shorter than an empty line then we break it right
+;;; away. If the line is longer or equal to an empty one then we break this word
+;;; by a character. If there are multiple #\space characters at the line
+;;; beginning they are kept in the previous line.
+(defun %line-breaks-2 (string width initial-offset margin start end opportunities
+                       &aux (width-fn (etypecase width
+                                        (function width)
+                                        (number (lambda (string start end)
+                                                  (declare (ignore string))
+                                                  (* width (- end start)))))))
+  (labels ((skip-whitespace (string index)
+             (and index (position #\space string :start index :test-not #'char=)))
+           (breaks-rec (offset start end next-opportunity-index
+                        &aux (current-margin (max (- margin offset) 1)))
+             (cond ((<= (funcall width-fn string start end) current-margin)
+                    (return-from breaks-rec
+                      nil))
+                   ((= next-opportunity-index (length opportunities))
+                    (return-from breaks-rec
+                      (%line-breaks-1 string width offset margin start end)))
+                   ((>= start (aref opportunities next-opportunity-index))
+                    (return-from breaks-rec
+                      (breaks-rec offset start end (1+ next-opportunity-index)))))
+             (loop
+                with best-break = nil
+                for i from next-opportunity-index below (length opportunities)
+                for opportunity = (aref opportunities i)
+                for current-width = (funcall width-fn string start opportunity)
+                do
+                  (cond ((<= current-width current-margin)
+                         (if-let ((pos (skip-whitespace string opportunity)))
+                           (setf best-break pos)
+                           (return-from breaks-rec nil)))
+                        ((null best-break)
+                         (return-from breaks-rec
+                           (if (> offset 0)
+                               (list* start (breaks-rec 0 start end i))
+                               (let* ((char-breaks (%line-breaks-1 string width
+                                                                   offset margin
+                                                                   start opportunity))
+                                      (new-start (alexandria:last-elt char-breaks)))
+                                 (append char-breaks (breaks-rec 0 new-start end i))))))
+                        (t #1=(return-from breaks-rec
+                                (list* best-break (breaks-rec 0 best-break end i)))))
+                finally #1#)))
+    (breaks-rec initial-offset start end 0)))
+
+;;; This is super-slow and barely tested. Function implements word wrap with a
+;;; minimum raggedness. I'm leaving the code for someone eager to optimize and
+;;; test it. -- jd 2018-12-26
+#+ (or)
+(defun %line-breaks-3 (string width initial-offset margin start end opportunities
+                       &aux (width-fn (etypecase width
+                                        (function width)
+                                        (number (lambda (string start end)
+                                                  (declare (ignore string))
+                                                  (* width (- end start)))))))
+  (labels ((skip-whitespace (string index)
+             (and index (position #\space string :start index :test-not #'char=)))
+           (breaks-rec (offset start end next-opportunity-index
+                               &aux (current-margin (max (- margin offset) 1)))
+             (cond ((<= (funcall width-fn string start end) current-margin)
+                    (return-from breaks-rec
+                      (values nil 0)))
+                   ((= next-opportunity-index (length opportunities))
+                    (return-from breaks-rec
+                      (values (%line-breaks-1 string width offset margin start end) 0)))
+                   ((>= start (aref opportunities next-opportunity-index))
+                    (return-from breaks-rec
+                      (breaks-rec offset start end (1+ next-opportunity-index)))))
+             (loop
+                with best-breaks = nil
+                with best-cost = nil
+                for i from next-opportunity-index below (length opportunities)
+                for opportunity = (aref opportunities i)
+                for current-width = (funcall width-fn string start opportunity)
+                do
+                  (cond ((<= current-width current-margin)
+                         (let ((current-cost (expt (- current-margin current-width) 2))
+                               (current-break (if-let ((pos (skip-whitespace string opportunity)))
+                                                pos
+                                                (return-from breaks-rec nil))))
+                           (multiple-value-bind (breaks remaining-cost)
+                               (breaks-rec 0 current-break end (1+ i))
+                             (when (or (null best-cost)
+                                       (< (+ current-cost remaining-cost) best-cost))
+                               (setf best-breaks (list* current-break breaks)
+                                     best-cost (+ current-cost remaining-cost))))))
+                        ((null best-cost)
+                         (return-from breaks-rec
+                           (if (> offset 0)
+                               (multiple-value-bind (breaks remaining-cost)
+                                   (breaks-rec 0 start end i)
+                                 (return-from breaks-rec
+                                   (values (list* start breaks)
+                                           (+ remaining-cost current-margin))))
+                               (let* ((char-breaks (%line-breaks-1 string width
+                                                                   offset margin
+                                                                   start opportunity))
+                                      (new-start (alexandria:last-elt char-breaks)))
+                                 (multiple-value-bind (breaks remaining-cost)
+                                     (breaks-rec 0 new-start end i)
+                                   (values (append char-breaks breaks) remaining-cost))))))
+                        (t #1=(return-from breaks-rec
+                                (values best-breaks best-cost))))
+                finally #1#)))
+    (breaks-rec initial-offset start end 0)))
+
+;;; Implementing line breaking as defined in Unicode[1] is left as an
+;;; excercise for the reader. When implemented it should be wired to
+;;; the strategy designated by T. Current approach break on space, but
+;;; in "real" languages lines may /need to/ or /must to/ be split under
+;;; various conditions - hyphen, hard space, infix numeric separators
+;;; etc. Optimally this should be implemented in cl-unicode and used
+;;; from there.  [1] https://unicode.org/reports/tr14/ -- jd 2019-01-08
+(defun line-breaks (string width &key (break-strategy t) initial-offset margin (start 0) end)
+  "Function takes a string and returns a list of indexes where it should be split.
+
+WIDTH is a function accepting STRING, START and END arguments which should
+return string width for these boundaries. Alternatively for fixed font width it
+is a number.
+
+INITIAL-OFFSET is an initial position for the first line (may be negative). All
+remaining lines will start from the line beginning. Default is line beginning.
+
+MARGIN is a maximum width at which line should break. Defaults to 80
+characters (width of a character m is taken as a reference value).
+
+BREAK-STRATEGY may be:
+- symbol T implementing a default line breaking by word strategy,
+- symbol NIL implementing a line breaking by character strategy,
+- function accepting index which should return T for break opportunity,
+- list of characters which are break opportunities (i.e space),
+- vector of string indexes which are break opportunities.
+
+START/END designate the sub-sequence of STRING beginning and ending
+offset. The sub-sequence may contain newline characters and it is up
+to the BREAK-STRATEGY whenever it assigns any meaning to to them."
+  (unless start (setq start 0))
+  (unless end (setq end (length string)))
+  (unless margin (setq margin (* 80 (etypecase width
+                                      (function (funcall width "m" 0 1))
+                                      (number width)))))
+  (unless initial-offset (setq initial-offset 0))
+  (assert (< start end))
+  (when (null break-strategy)
+    (return-from line-breaks
+      (%line-breaks-1 string width initial-offset margin start end)))
+  (let ((opportunities (etypecase break-strategy
+                         (function
+                          (coerce (loop for i from start below end
+                                     when (funcall break-strategy i)
+                                     collect i)
+                                  'vector))
+                         ((eql t)
+                          (coerce (loop for i from start below end
+                                     when (char= (char string i) #\space)
+                                     collect i)
+                                  'vector))
+                         (list
+                          (coerce (loop for i from start below end
+                                     when (member (char string i) break-strategy)
+                                     collect i)
+                                  'vector))
+                         (vector
+                          break-strategy))))
+    (%line-breaks-2 string width initial-offset margin start end opportunities)))

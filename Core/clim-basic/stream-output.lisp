@@ -333,82 +333,38 @@
         ;; closing the text-output-record and have multiline records to
         ;; allow gimmics like a dynamic reflow). Also text-style doesn't
         ;; change until the end of this function. -- jd 2019-01-10
-        (labels ((string-fits-p (delta string-index)
-                   (<= (stream-string-width stream string
-                                            :start start :end string-index
-                                            :text-style text-style)
-                       delta))
-                 (find-split (delta)
-                   ;; To prevent infinite recursion if there isn't room for even a
-                   ;; single character we start from (1+ start). -- jd 2019-01-08
-                   (when (not (string-fits-p delta start))
-                     (if (= right-margin (+ (or left-margin 0) delta))
-                         (return-from find-split (1+ start))
-                         (return-from find-split start)))
-                   (if (text-style-fixed-width-p text-style medium)
-                       (min end (+ start (floor delta (text-style-width text-style medium))))
-                       (bisect (1+ start) end (curry #'string-fits-p delta))))
-                 (find-split-by-word (delta)
-                   (let ((space-indexes (line-break-opportunities string start end)))
-                     (when (not (string-fits-p delta (elt space-indexes 0)))
-                       (if (or (= right-margin (+ (or left-margin 0) delta))
-                               (= (length space-indexes) 1))
-                           ;; word exceeds whole line length
-                           (return-from find-split-by-word (find-split delta))
-                           ;; word exceeds part of the line length
-                           (return-from find-split-by-word start)))
-                     (let ((split (elt space-indexes
-                                       (bisect 0 (1- (length space-indexes))
-                                               (lambda (guess)
-                                                 (string-fits-p delta (elt space-indexes guess)))))))
-                       (if (= (1+ split) end)
-                           end
-                           ;; trim leading spaces
-                           (position #\space string
-                                     :start split
-                                     :end end
-                                     :test-not #'char=))))))
-          (ecase eol-action
-            (:wrap
-             (do ((split (find-split (- right-margin cx))
-                         (find-split (- right-margin (or left-margin 0)))))
-                 ((= start end)
-                  (return-from seos-write-string))
-               (unless (= start split)
-                 (stream-write-output stream string nil start split))
-               (if (/= split end)
-                   ;; print a soft newline
-                   (stream-write-char stream #\newline)
-                   ;; adjust the cursor
-                   (progn
-                     (setf (cursor-position (stream-text-cursor stream))
-                           (values (+ (stream-effective-left-margin stream)
-                                      (stream-string-width stream string
-                                                           :start start :end split
-                                                           :text-style text-style))
-                                   (nth-value 1 (stream-cursor-position stream))))
-                     (return-from seos-write-string)))
-               (setf start split)))
-            (:wrap*
-             (do ((split (find-split-by-word (- right-margin cx))
-                         (find-split-by-word (- right-margin (or left-margin 0)))))
-                 ((= start end)
-                  (return-from seos-write-string))
-               (unless (= start split)
-                 (stream-write-output stream string nil start split))
-               (if (/= split end)
-                   ;; print a soft newline
-                   (stream-write-char stream #\newline)
-                   ;; adjust the cursor
-                   (progn
-                     (setf (cursor-position (stream-text-cursor stream))
-                           (values (+ (stream-effective-left-margin stream)
-                                      (stream-string-width stream string
-                                                           :start start :end split
-                                                           :text-style text-style))
-                                   (nth-value 1 (stream-cursor-position stream))))
-                     (return-from seos-write-string)))
-               (setf start split)))))))))
+        (let* ((width (if (text-style-fixed-width-p text-style medium)
+                          (text-style-width text-style medium)
+                          (lambda (string start end)
+                            (text-size medium string
+                                       :text-style text-style
+                                       :start start :end end))))
+               (splits (line-breaks string width
+                                    :initial-offset (- cx (or left-margin 0))
+                                    :margin (- right-margin (or left-margin 0))
+                                    :break-strategy (ecase eol-action
+                                                      (:wrap NIL)
+                                                      (:wrap* T))
+                                    :start start :end end)))
+          (do ((start start (car split))
+               (split splits (rest split)))
+              ((null split)
+               (stream-write-output stream string nil start end)
+               (setf (cursor-position (stream-text-cursor stream))
+                     (values (+ (stream-effective-left-margin stream)
+                                (stream-string-width stream string
+                                                     :start start :end split
+                                                     :text-style text-style))
+                             (nth-value 1 (stream-cursor-position stream)))))
+            (ecase eol-action
+              (:wrap  (stream-write-output stream string nil start (car split)))
+              (:wrap* (let ((pos (position #\space string
+                                           :from-end t :start start :end (car split)
+                                           :test-not #'char=)))
+                        (when pos (incf pos))
+                        (stream-write-output stream string nil start (or pos (car split))))))
+            ;; print a soft newline
+            (stream-write-char stream #\newline)))))))
 
 (defun seos-write-newline (stream)
   (let* ((current-cy       (nth-value 1 (stream-cursor-position stream)))
@@ -496,12 +452,13 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 (defmethod stream-line-column ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (declare (ignore y))
-    (floor x (stream-string-width stream " "))))
+    (floor x (stream-string-width stream "m"))))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (declare (ignore y))
-    (zerop x)))
+    (when-let ((left-margin (stream-effective-left-margin stream)))
+      (= x left-margin))))
 
 (defmacro with-room-for-graphics ((&optional (stream t)
                                              &rest arguments
