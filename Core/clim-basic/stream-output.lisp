@@ -218,13 +218,17 @@
         (let ((sheet (or (pane-viewport stream) stream)))
           ;; Sheet region may not be bound (ie in PostScript backend).
           (if (region-equal (sheet-region sheet) +everywhere+)
-              nil
+              (* 80 (text-style-width *default-text-style* stream))
               (bounding-rectangle-width sheet))))))
 
 (defgeneric stream-effective-bottom-margin (stream)
   (:documentation "Absolute position of the bottom margin in stream coordinates.")
   (:method ((stream standard-extended-output-stream))
-    (bounding-rectangle-height stream)))
+    (let ((sheet (or (pane-viewport stream) stream)))
+      ;; Sheet region may not be bound (ie in PostScript backend).
+      (if (region-equal (sheet-region sheet) +everywhere+)
+          (* 43 (text-style-height *default-text-style* stream))
+          (bounding-rectangle-height stream)))))
 
 (defmethod initialize-instance :after
     ((stream standard-extended-output-stream) &rest args)
@@ -283,11 +287,25 @@
   `(letf (((cursor-visibility (stream-text-cursor ,stream)) nil))
      ,@body))
 
+(defmacro with-end-of-line-action ((stream action) &body body)
+  (when (eq stream t)
+    (setq stream '*standard-output*))
+  (check-type stream symbol)
+  `(letf (((stream-end-of-line-action ,stream) ,action))
+     ,@body))
+
+(defmacro with-end-of-page-action ((stream action) &body body)
+  (when (eq stream t)
+    (setq stream '*standard-output*))
+  (check-type stream symbol)
+  `(letf (((stream-end-of-page-action ,stream) ,action))
+     ,@body))
+
 (defgeneric maybe-end-of-page-action (stream y)
   (:method ((stream standard-extended-output-stream) y)
     (let ((bottom-margin (stream-effective-bottom-margin stream))
           (end-of-page-action (stream-end-of-page-action stream)))
-      (when (and bottom-margin (> y bottom-margin))
+      (when (> y bottom-margin)
         (%note-stream-end-of-page stream end-of-page-action y)
         (ecase end-of-page-action
           ((:scroll :allow)  nil)
@@ -317,13 +335,12 @@
                                          :start start :end end
                                          :text-style text-style))
              (eol-action (stream-end-of-line-action stream))
-             (eol-p (and right-margin (> (+ cx width) right-margin))))
+             (eol-p (> (+ cx width) right-margin)))
         (when (or (null eol-p) (member eol-action '(:allow :scroll)))
           (stream-write-output stream string nil start end)
           (incf cx width)
           (setf (cursor-position (stream-text-cursor stream)) (values cx cy))
-          (when (and right-margin
-                     (> (+ cx width) right-margin)
+          (when (and (> (+ cx width) right-margin)
                      (eql eol-action :scroll))
             (multiple-value-bind (tx ty)
                 (bounding-rectangle-position (sheet-region stream))
@@ -474,20 +491,6 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
                 ,@body))
        (declare (dynamic-extent #',cont))
        (invoke-with-room-for-graphics #',cont ,stream ,@arguments))))
-
-(defmacro with-end-of-line-action ((stream action) &body body)
-  (when (eq stream t)
-    (setq stream '*standard-output*))
-  (check-type stream symbol)
-  `(letf (((stream-end-of-line-action ,stream) ,action))
-     ,@body))
-
-(defmacro with-end-of-page-action ((stream action) &body body)
-  (when (eq stream t)
-    (setq stream '*standard-output*))
-  (check-type stream symbol)
-  `(letf (((stream-end-of-page-action ,stream) ,action))
-     ,@body))
 
 (defmethod beep (&optional medium)
   (if medium
