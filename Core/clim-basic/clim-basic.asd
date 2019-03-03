@@ -31,6 +31,7 @@
    (:file "repaint" :depends-on ("decls" "protocol-classes" "multiprocessing" "sheets" "events" "graphics"))
    (:file "graphics" :depends-on ("decls" "protocol-classes" "multiprocessing" "output" "utils" "medium" "sheets" "pixmap" "regions" "design" "transforms"))
    (:file "views" :depends-on ("utils" "protocol-classes"))
+   (:file "text-formatting" :depends-on ("utils" "protocol-classes"))
    (:file "stream-output" :depends-on ("decls" "protocol-classes" "multiprocessing" "design" "utils" "X11-colors" "views" "output" "sheets" "regions" "graphics" "medium" "setf-star"))
    (:file "recording" :depends-on ("decls" "protocol-classes" "multiprocessing" "output" "coordinates" "graphics" "design" "medium" "transforms" "regions" "sheets" "utils" "stream-output"))
    (:file "encapsulate" :depends-on ("decls" "protocol-classes" "multiprocessing" "sheets" "graphics" "utils" "medium" "input" "stream-output" "recording"))

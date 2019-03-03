@@ -1918,6 +1918,13 @@
    #:highlight-output-record-tree
    #:cut-and-paste-mixin
    #:mouse-wheel-scroll-mixin
+   ;; page abstraction (seos mixin)
+   #:page-initial-position
+   #:page-final-position
+   #:stream-page-region
+   #:stream-text-margins
+   #:with-temporary-margins
+   #:invoke-with-temporary-page
    ;; designs and patterns
    #:pattern
    #:image-pattern
