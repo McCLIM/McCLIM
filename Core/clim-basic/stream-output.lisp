@@ -161,7 +161,8 @@
 
 (defclass standard-extended-output-stream (extended-output-stream
                                            standard-output-stream
-                                           standard-page-layout)
+                                           standard-page-layout
+                                           filling-output-mixin)
   ((cursor :accessor stream-text-cursor)
    (foreground :initarg :foreground :reader foreground)
    (background :initarg :background :reader background)
@@ -278,6 +279,17 @@
     nil))
 
 (defgeneric seos-write-newline (stream &optional soft-newline-p)
+  (:method :after ((stream filling-output-mixin) &optional soft-newline-p)
+    (when (or (and soft-newline-p (after-line-break-subsequent stream))
+              (and (not soft-newline-p) (after-line-break-initially stream)))
+      (when-let ((after-line-break (after-line-break stream))
+                 (gs (graphics-state stream)))
+        (with-end-of-line-action (stream :allow) ; prevent infinite recursion
+          (with-drawing-options (stream :text-style (graphics-state-text-style gs)
+                                        :ink (graphics-state-ink gs))
+            (etypecase after-line-break
+              (string (write-string after-line-break stream))
+              (function (funcall after-line-break stream soft-newline-p))))))))
   (:method ((stream standard-extended-output-stream) &optional soft-newline-p)
     (declare (ignorable soft-newline-p))
     (let* ((current-cy       (nth-value 1 (stream-cursor-position stream)))

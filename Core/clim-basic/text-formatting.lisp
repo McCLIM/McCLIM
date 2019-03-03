@@ -128,3 +128,88 @@
                (margin))
            (invoke-with-temporary-page ,stream #',continuation :margins ,margins ,@args))))))
 
+
+;;; Mixin is used to store text-style and ink when filling-output it is invoked.
+
+(defclass %filling-output-graphics-state (gs-ink-mixin gs-text-style-mixin)
+  ()
+  (:default-initargs :ink +foreground-ink+ :text-style *default-text-style*))
+
+(defclass filling-output-mixin (gs-ink-mixin gs-text-style-mixin)
+  ((lbs :accessor line-break-strategy :initarg :line-break-strategy
+        :documentation "T for a default word wrap or a list of break characters.")
+   (alb :accessor after-line-break :initarg :after-line-break
+        :documentation "Function accepting stream to call after the line break.")
+   (ilb :accessor after-line-break-initially :initarg :after-line-break-initially
+        :documentation "Flag whenever we execture alb on fresh newlines.")
+   (slb :accessor after-line-break-subsequent :initarg :after-line-break-subsequent
+        :documentation "Flag whenever we execture alb on soft newlines.")
+   (gfs :reader graphics-state :initarg :gfs))
+  (:default-initargs :line-break-strategy t
+                     :gfs (make-instance '%filling-output-graphics-state)
+                     :after-line-break nil
+                     :after-line-break-initially nil
+                     :after-line-break-subsequent t))
+
+(defmacro filling-output ((stream &key
+                                  (fill-width ''(80 :character))
+                                  break-characters
+				  after-line-break
+                                  after-line-break-initially
+                                  (after-line-break-subsequent t))
+			  &body body)
+  (setq stream (stream-designator-symbol stream '*standard-output*))
+  `(with-temporary-margins (,stream :right (list :absolute ,fill-width))
+     (letf (((stream-end-of-line-action ,stream) :wrap*)
+            ((line-break-strategy ,stream) ,break-characters)
+            ,@(when after-line-break
+                `(((after-line-break ,stream) ,after-line-break)
+                  ((after-line-break-initially ,stream) ,after-line-break-initially)
+                  ((after-line-break-subsequent ,stream) ,after-line-break-subsequent)
+                  ((graphics-state-ink (graphics-state ,stream)) (medium-ink ,stream))
+                  ((graphics-state-text-style (graphics-state ,stream)) (medium-text-style ,stream)))))
+       ,(when (and after-line-break after-line-break-initially)
+          `(etypecase (after-line-break ,stream)
+             (string   (write-string (after-line-break ,stream) ,stream))
+             (function (funcall (after-line-break ,stream) ,stream nil))))
+       ,@body)))
+
+(defmacro indenting-output ((stream indent &key (move-cursor t)) &body body)
+  (setq stream (stream-designator-symbol stream '*standard-output*))
+  `(with-temporary-margins (,stream :left (list :absolute ,indent)
+                                    :move-cursor ,move-cursor)
+     ,@body))
+
+
+;;; formatting functions
+(defun format-textual-list (sequence printer
+                            &key stream separator conjunction
+                              suppress-separator-before-conjunction
+                              suppress-space-after-conjunction)
+  "Outputs the SEQUENCE of items as a \"textual list\" into
+STREAM. PRINTER is a function of an item and a stream. Between each
+two items the string SEPARATOR is placed. If the string CONJUCTION is
+supplied, it is placed before the last item.
+
+SUPPRESS-SEPARATOR-BEFORE-CONJUNCTION and
+SUPPRESS-SPACE-AFTER-CONJUNCTION are non-standard."
+  (orf stream *standard-output*)
+  (orf separator ", ")
+  (let* ((length (length sequence))
+         (n-rest length))
+    (map-repeated-sequence nil 1
+                           (lambda (item)
+                             (funcall printer item stream)
+                             (decf n-rest)
+                             (cond ((> n-rest 1)
+                                    (princ separator stream))
+                                   ((= n-rest 1)
+                                    (if conjunction
+                                        (progn
+                                          (unless suppress-separator-before-conjunction
+                                            (princ separator stream))
+                                          (princ conjunction stream)
+                                          (unless suppress-space-after-conjunction
+                                            (princ #\space stream)))
+                                        (princ separator stream)))))
+                           sequence)))
