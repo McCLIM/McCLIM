@@ -359,6 +359,56 @@
       (with-drawing-options (stream :line-thickness 3) (draw-things t))
       (with-drawing-options (stream :ink +red+)        (draw-things nil)))))
 
+(defparameter *lorem-ipsum*
+  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed venenatis volutpat lorem. Etiam molestie ac mi vel imperdiet. Aenean vehicula purus quis purus ultricies blandit. Proin eu molestie elit. Fusce interdum ac lectus id iaculis. Pellentesque porttitor eu mauris eu tempor. In nisl nunc, fringilla vitae fermentum et, pharetra et nibh. Vivamus nisi libero, mattis at enim semper, tristique dapibus ante. Pellentesque semper mi vel risus accumsan condimentum. Donec tellus nibh, egestas ut dignissim in, mollis non ligula. Sed condimentum commodo felis, ac iaculis tellus rutrum nec. Donec cursus viverra sodales. Donec at mauris et justo dapibus iaculis. Donec nec lectus leo. Sed ante enim, ultricies vel convallis sed, hendrerit vitae nisl. Interdum et malesuada fames ac ante ipsum primis in faucibus.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed venenatis volutpat lorem. Etiam molestie ac mi vel imperdiet. Aenean vehicula purus quis purus ultricies blandit. Proin eu molestie elit. Fusce interdum ac lectus id iaculis. Pellentesque porttitor eu mauris eu tempor. In nisl nunc, fringilla vitae fermentum et, pharetra et nibh. Vivamus nisi libero, mattis at enim semper, tristique dapibus ante. Pellentesque semper mi vel risus accumsan condimentum. Donec tellus nibh, egestas ut dignissim in, mollis non ligula. Sed condimentum commodo felis, ac iaculis tellus rutrum nec. Donec cursus viverra sodales. Donec at mauris et justo dapibus iaculis. Donec nec lectus leo. Sed ante enim, ultricies vel convallis sed, hendrerit vitae nisl. Interdum et malesuada fames ac ante ipsum primis in faucibus.")
+
+(defun print-line-number ()
+  (let ((counter 0))
+    (lambda (stream soft-newline-p)
+      (if soft-newline-p
+          (with-drawing-options (stream :ink +dark-red+)
+            (format stream "~4,'0d: " counter))
+          (format stream "~4,'0d: " counter))
+      (incf counter))))
+
+(define-misc-test "Text Formatting" (stream)
+    "First paragraph uses INDENTING-OUTPUT, the second FILLING-OUTPUT and remaining use both."
+  (indenting-output (stream 20)
+    (fresh-line stream)
+    (format stream *lorem-ipsum*))
+  (terpri stream)
+  (terpri stream)
+  (filling-output (stream  :fill-width '(40 :character)
+                           :break-characters '(#\space)
+                           :after-line-break "Line: "
+                           :after-line-break-initially t)
+    (format stream *lorem-ipsum*))
+  (terpri stream)
+  (terpri stream)
+  (with-drawing-options (stream :text-style (make-text-style :fix :italic :normal)
+                                :ink +dark-blue+)
+    (indenting-output (stream 20)
+      (fresh-line stream)
+      (filling-output (stream  :fill-width '(40 :character)
+                               :break-characters '(#\space)
+                               :after-line-break (print-line-number)
+                               :after-line-break-initially t)
+        (with-drawing-options (stream :text-style *default-text-style* :ink +black+)
+          (format stream *lorem-ipsum*)))))
+  (terpri stream)
+  (terpri stream)
+  (with-drawing-options (stream :text-style (make-text-style :fix :italic :normal)
+                                :ink +dark-blue+)
+    (indenting-output (stream 20)
+      (fresh-line stream)
+      (filling-output (stream :break-characters '(#\space)
+                              :after-line-break (print-line-number)
+                              :after-line-break-initially t
+                              :after-line-break-subsequent nil)
+        (with-drawing-options (stream :text-style *default-text-style* :ink +black+)
+          (format stream *lorem-ipsum*))))))
+
 (defun misc-tests ()
   (let ((frame (make-application-frame 'misc-tests)))
     (run-frame-top-level frame)))
