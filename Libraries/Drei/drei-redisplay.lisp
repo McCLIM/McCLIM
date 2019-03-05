@@ -1178,8 +1178,8 @@ half a pane-size up."
     (with-accessors ((top top) (point point)) view
       (setf (offset top) (offset point))
       (beginning-of-line top)
-      (loop do (beginning-of-line top)
-         repeat (floor nb-lines-in-pane 2)
+      (loop repeat (floor nb-lines-in-pane 2)
+         do (beginning-of-line top)
          until (beginning-of-buffer-p top)
          do (decf (offset top))
          (beginning-of-line top))
