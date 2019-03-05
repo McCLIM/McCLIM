@@ -41,7 +41,7 @@
   ()
   (:panes
    (output :application-pane)
-   (description :application-pane)
+   (description :application-pane :end-of-line-action :wrap*)
    (selector :list-pane
              :mode :exclusive
              :name-key #'misc-test-name
@@ -55,7 +55,8 @@
                  (window-clear output)
                  (window-clear description)
                  (with-text-style (description (make-text-style :sans-serif :roman :normal))
-                   (write-string (misc-test-description item) description))
+                   (write-string (misc-test-description item) description)
+                   (finish-output description))
                  (funcall (misc-test-drawer item) output)))))
   (:layouts
    (default
