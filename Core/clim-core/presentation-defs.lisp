@@ -1752,7 +1752,14 @@ protocol retrieving gestures from a provided string."))
   (defconstant +completion-options+
     '((name-key 'default-completion-name-key)
       documentation-key
-      (partial-completers '(#\Space)))))
+      (partial-completers '(#\Space))
+      (printer #'write-token)
+      (highlighter #'highlight-completion-choice))))
+
+;;;; This function is copied from CLIM Franz code
+(defun highlight-completion-choice (continuation object stream)
+  (with-text-face (stream :bold)
+    (funcall continuation object stream)))
 
 (define-presentation-type completion (sequence
                                       &key (test 'eql) (value-key 'identity))
@@ -1826,7 +1833,9 @@ protocol retrieving gestures from a provided string."))
   (make-presentation-type-specifier `(completion ,elements)
                                     :name-key name-key
                                     :documentation-key documentation-key
-                                    :partial-completers partial-completers)
+                                    :partial-completers partial-completers
+                                    :printer printer
+                                    :highlighter highlighter)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation member-sequence (sequence
@@ -1835,7 +1844,9 @@ protocol retrieving gestures from a provided string."))
    `(completion ,sequence ,@(and testp `(:test ,test)))
    :name-key name-key
    :documentation-key documentation-key
-   :partial-completers partial-completers)
+   :partial-completers partial-completers
+   :printer printer
+   :highlighter highlighter)
   :options #.+completion-options+)
 
 (defun member-alist-value-key (element)
@@ -1858,10 +1869,14 @@ protocol retrieving gestures from a provided string."))
                 :value-key member-alist-value-key)
    :name-key name-key
    :documentation-key documentation-key
-   :partial-completers partial-completers)
+   :partial-completers partial-completers
+   :printer printer
+   :highlighter highlighter)
   :options ((name-key 'default-completion-name-key)
             (documentation-key 'member-alist-doc-key)
-            (partial-completers '(#\Space))))
+            (partial-completers '(#\Space))
+            (printer #'write-token)
+            (highlighter #'highlight-completion-choice)))
 
 (define-presentation-type subset-completion (sequence
                                              &key (test 'eql)
@@ -1870,7 +1885,9 @@ protocol retrieving gestures from a provided string."))
             documentation-key
             (partial-completers '(#\Space))
             (separator #\,)
-            (echo-space t))
+            (echo-space t)
+            (printer #'write-token)
+            (highlighter #'highlight-completion-choice))
   :inherit-from t)
 
 (define-presentation-method presentation-typep (object
@@ -1933,7 +1950,9 @@ protocol retrieving gestures from a provided string."))
   (make-presentation-type-specifier `(subset-completion ,elements)
                                     :name-key name-key
                                     :documentation-key documentation-key
-                                    :partial-completers partial-completers)
+                                    :partial-completers partial-completers
+                                    :printer printer
+                                    :highlighter highlighter)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation subset-sequence (sequence
@@ -1942,7 +1961,9 @@ protocol retrieving gestures from a provided string."))
    `(subset-completion ,sequence ,@(and testp `(:test ,test)))
    :name-key name-key
    :documentation-key documentation-key
-   :partial-completers partial-completers)
+   :partial-completers partial-completers
+   :printer printer
+   :highlighter highlighter)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation subset-alist (alist
@@ -1952,10 +1973,14 @@ protocol retrieving gestures from a provided string."))
                        :value-key member-alist-value-key)
    :name-key name-key
    :documentation-key documentation-key
-   :partial-completers partial-completers)
+   :partial-completers partial-completers
+   :printer printer
+   :highlighter highlighter)
   :options ((name-key 'default-completion-name-key)
             (documentation-key 'member-alist-doc-key)
-            (partial-completers '(#\Space))))
+            (partial-completers '(#\Space))
+            (printer #'write-token)
+            (highlighter #'highlight-completion-choice)))
 
 (define-presentation-type sequence (type)
   :options ((separator #\,) (echo-space t))
