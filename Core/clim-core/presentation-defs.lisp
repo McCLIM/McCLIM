@@ -1749,17 +1749,16 @@ protocol retrieving gestures from a provided string."))
   (princ-to-string item))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defconstant +completion-options+
-    '((name-key 'default-completion-name-key)
-      documentation-key
-      (partial-completers '(#\Space))
-      (printer #'write-token)
-      (highlighter #'highlight-completion-choice))))
-
-;;;; This function is copied from CLIM Franz code
-(defun highlight-completion-choice (continuation object stream)
-  (with-text-face (stream :bold)
-    (funcall continuation object stream)))
+    ;; This function is copied from CLIM Franz code
+    (defun highlight-completion-choice (continuation object stream)
+        (with-text-face (stream :bold)
+            (funcall continuation object stream)))
+    (defconstant +completion-options+
+        '((name-key 'default-completion-name-key)
+             documentation-key
+             (partial-completers '(#\Space))
+             (printer #'write-token)
+             (highlighter #'highlight-completion-choice))))
 
 (define-presentation-type completion (sequence
                                       &key (test 'eql) (value-key 'identity))
