@@ -1749,82 +1749,71 @@ were added."
                     (coordinate (+ y1 max-height))))))
   text-record)
 
-(defmethod add-character-output-to-text-record ((text-record standard-text-displayed-output-record)
-                                                character text-style char-width height new-baseline)
-  (with-slots (strings baseline width max-height left right start-y end-x end-y medium)
-      text-record
-    (if (and strings
-             (let ((string (last-elt strings)))
-               (match-output-records string
-                                     :text-style text-style
-                                     :ink (medium-ink medium)
-                                     :clipping-region (medium-clipping-region
-                                                       medium))))
-        (vector-push-extend character (slot-value (last-elt strings) 'string))
-        (nconcf strings
-                (list (make-instance
-                       'styled-string
-                       :start-x end-x
-                       :text-style text-style
-                       :medium medium	; pick up ink and clipping region
-                       :string (make-array 1 :initial-element character
-                                           :element-type 'character
-                                           :adjustable t
-                                           :fill-pointer t)))))
-    (multiple-value-bind (minx miny maxx maxy)
-        (text-bounding-rectangle* medium (string character) :text-style text-style)
-      (declare (ignore miny maxy))
-      (setq baseline (max baseline new-baseline)
-            ;; KLUDGE: note END-X here is really START-X of the new
-            ;; string
-            left (min left (+ end-x minx))
-            end-x (+ end-x char-width)
-            right (+ end-x (max 0 (- maxx char-width)))
-            max-height (max max-height height)
-            end-y (max end-y (+ start-y max-height))
-            width (+ width char-width))))
-  (tree-recompute-extent text-record))
+(defmethod add-character-output-to-text-record
+    ((text-record standard-text-displayed-output-record)
+     character text-style char-width height new-baseline
+     &aux (start 0) (end 1))
+  (add-string-output-to-text-record text-record character
+                                    start end text-style
+                                    char-width height new-baseline))
 
 (defmethod add-string-output-to-text-record ((text-record standard-text-displayed-output-record)
                                              string start end text-style string-width height new-baseline)
-  (setf end (or end (length string)))
+  (setf end (or end (etypecase string
+                      (character 1)
+                      (string (length string)))))
   (let ((length (max 0 (- end start))))
-    (cond
-      ((eql length 1)
-       (add-character-output-to-text-record text-record
-                                            (aref string start)
-                                            text-style
-                                            string-width height new-baseline))
-      (t (with-slots (strings baseline width max-height left right start-y end-x end-y
-                      medium)
-             text-record
-           (let ((styled-string (make-instance
-                                 'styled-string
-                                 :start-x end-x
-                                 :text-style text-style
-                                 :medium medium
-                                 :string (make-array length
-                                                     :element-type 'character
-                                                     :adjustable t
-                                                     :fill-pointer t))))
-             (nconcf strings (list styled-string))
-             (replace (styled-string-string styled-string) string
-                      :start2 start :end2 end))
-           (multiple-value-bind (minx miny maxx maxy)
-               (text-bounding-rectangle* medium string
-                                         :text-style text-style
-                                         :start start :end end)
-             (declare (ignore miny maxy))
-             (setq baseline (max baseline new-baseline)
-                   ;; KLUDGE: note that END-X here really means
-                   ;; START-X of the new string.
-                   left (min left (+ end-x minx))
-                   end-x (+ end-x string-width)
-                   right (+ end-x (max 0 (- maxx string-width)))
-                   max-height (max max-height height)
-                   end-y (max end-y (+ start-y max-height))
-                   width (+ width string-width))))
-         (tree-recompute-extent text-record)))))
+    (with-slots (strings baseline width max-height left right start-y end-x end-y medium)
+        text-record
+      (let* ((strings-last-cons (last strings))
+             (last-string (first strings-last-cons)))
+        (if (and last-string
+                 (match-output-records last-string
+                                       :text-style text-style
+                                       :ink (medium-ink medium)
+                                       :clipping-region (medium-clipping-region medium)))
+            ;; Simply append the string to the last one.
+            (let* ((last-string (styled-string-string last-string))
+                   (last-string-length (length last-string))
+                   (start1 (length last-string))
+                   (end1 (+ start1 length)))
+              (when (< (array-dimension last-string 0) end1)
+                (adjust-array last-string (max end1 (* 2 last-string-length))))
+              (setf (fill-pointer last-string) end1)
+              (etypecase string
+                (character (setf (char last-string (1- end1)) string))
+                (string (replace last-string string
+                                 :start1 start1 :end1 end1
+                                 :start2 start :end2 end))))
+            (let ((styled-string (make-instance
+                                  'styled-string
+                                  :start-x end-x
+                                  :text-style text-style
+                                  :medium medium
+                                  :string (make-array length
+                                                      :element-type 'character
+                                                      :adjustable t
+                                                      :fill-pointer t))))
+              (nconcf strings (list styled-string))
+              (etypecase string
+                (character (setf (char last-string 0) string))
+                (string (replace (styled-string-string styled-string) string
+                                 :start2 start :end2 end))))))
+      (multiple-value-bind (minx miny maxx maxy)
+          (text-bounding-rectangle* medium string
+                                    :text-style text-style
+                                    :start start :end end)
+        (declare (ignore miny maxy))
+        (setq baseline (max baseline new-baseline)
+              ;; KLUDGE: note that END-X here really means
+              ;; START-X of the new string.
+              left (min left (+ end-x minx))
+              end-x (+ end-x string-width)
+              right (+ end-x (max 0 (- maxx string-width)))
+              max-height (max max-height height)
+              end-y (max end-y (+ start-y max-height))
+              width (+ width string-width))))
+    (tree-recompute-extent text-record)))
 
 (defmethod text-displayed-output-record-string
     ((record standard-text-displayed-output-record))
