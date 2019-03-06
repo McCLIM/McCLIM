@@ -153,34 +153,67 @@
                      :after-line-break-initially nil
                      :after-line-break-subsequent t))
 
-(defmacro filling-output ((stream &key
-                                  (fill-width ''(80 :character))
-                                  break-characters
-				  after-line-break
-                                  after-line-break-initially
-                                  (after-line-break-subsequent t))
-			  &body body)
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  `(with-temporary-margins (,stream :right (list :absolute ,fill-width))
-     (letf (((stream-end-of-line-action ,stream) :wrap*)
-            ((line-break-strategy ,stream) ,break-characters)
-            ,@(when after-line-break
-                `(((after-line-break ,stream) ,after-line-break)
-                  ((after-line-break-initially ,stream) ,after-line-break-initially)
-                  ((after-line-break-subsequent ,stream) ,after-line-break-subsequent)
-                  ((graphics-state-ink (graphics-state ,stream)) (medium-ink ,stream))
-                  ((graphics-state-text-style (graphics-state ,stream)) (medium-text-style ,stream)))))
-       ,(when (and after-line-break after-line-break-initially)
-          `(etypecase (after-line-break ,stream)
-             (string   (write-string (after-line-break ,stream) ,stream))
-             (function (funcall (after-line-break ,stream) ,stream nil))))
-       ,@body)))
+(defgeneric invoke-with-filling-output
+    (stream continuation
+     &key fill-width break-characters
+       after-line-break after-line-break-initially after-line-break-subsequent)
+  (:method ((stream filling-output-mixin) continuation
+            &key (fill-width '(80 :character))
+              break-characters
+              (after-line-break nil)
+              (after-line-break-initially nil)
+              (after-line-break-subsequent t))
+    (with-temporary-margins (stream :right `(:absolute ,fill-width))
+      (letf (((stream-end-of-line-action stream) :wrap*)
+             ((line-break-strategy stream) break-characters))
+        (if (not after-line-break)
+            (funcall continuation stream)
+            (letf (((after-line-break stream) after-line-break)
+                   ((after-line-break-initially stream) after-line-break-initially)
+                   ((after-line-break-subsequent stream) after-line-break-subsequent)
+                   ((graphics-state-ink (graphics-state stream)) (medium-ink stream))
+                   ((graphics-state-text-style (graphics-state stream)) (medium-text-style stream)))
+              (funcall continuation stream)))))))
 
-(defmacro indenting-output ((stream indent &key (move-cursor t)) &body body)
+(defmacro filling-output ((stream &rest args
+                                  &key
+                                  fill-width
+                                  break-characters
+                                  after-line-break
+                                  after-line-break-initially
+                                  after-line-break-subsequent)
+                          &body body)
+  (declare (ignore fill-width break-characters after-line-break
+                   after-line-break-initially after-line-break-subsequent))
   (setq stream (stream-designator-symbol stream '*standard-output*))
-  `(with-temporary-margins (,stream :left (list :absolute ,indent)
-                                    :move-cursor ,move-cursor)
-     ,@body))
+  (with-gensyms (continuation)
+    `(flet ((,continuation (,stream)
+              (when (after-line-break-initially ,stream)
+                (etypecase (after-line-break ,stream)
+                  (string   (write-string (after-line-break ,stream) ,stream))
+                  (function (funcall (after-line-break ,stream) ,stream nil))
+                  (null nil)))
+              ,@body))
+       (declare (dynamic-extent #',continuation))
+       (invoke-with-filling-output ,stream #',continuation ,@args))))
+
+(defgeneric invoke-with-indenting-output
+    (stream continuation &key indent move-cursor)
+  (:method (stream continuation &key indent (move-cursor t))
+    (let ((left-margin (copy-list (getf (stream-text-margins stream) :left))))
+      (setf (second left-margin)
+            (+ (parse-space stream (second left-margin) :horizontal)
+               (parse-space stream indent :horizontal)))
+      (with-temporary-margins (stream :left left-margin :move-cursor move-cursor)
+        (funcall continuation stream)))))
+
+(defmacro indenting-output ((stream indentation &rest args &key move-cursor) &body body)
+  (declare (ignore move-cursor))
+  (setq stream (stream-designator-symbol stream '*standard-output*))
+  (with-gensyms (continuation)
+    `(flet ((,continuation (,stream) ,@body))
+       (declare (dynamic-extent #',continuation))
+       (invoke-with-indenting-output ,stream #',continuation :indent ,indentation ,@args))))
 
 
 ;;; formatting functions
