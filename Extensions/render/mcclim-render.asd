@@ -6,7 +6,6 @@
   :serial t
   :components ((:file "package")
                (:file "utilities")
-               (:file "color")
                (:file "image")
                (:module "render"
                         :serial t
