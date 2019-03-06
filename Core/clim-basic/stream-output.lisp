@@ -441,9 +441,9 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
      (stream-vertical-spacing stream)))
 
 (defmethod stream-line-column ((stream standard-extended-output-stream))
-  (multiple-value-bind (x y) (stream-cursor-position stream)
-    (declare (ignore y))
-    (floor x (stream-string-width stream "m"))))
+  (let ((line-width (- (stream-cursor-position stream)
+                       (page-cursor-initial-position stream))))
+    (floor line-width (stream-string-width stream "m"))))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
