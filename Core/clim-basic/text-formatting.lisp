@@ -18,9 +18,20 @@
 ;;;
 (in-package :clim-internals)
 
+(defun valid-margin-spec-p (margins)
+  (ignore-errors ; destructuring-bind may error; that yields invalid spec
+    (destructuring-bind (&key left top right bottom) margins
+      (flet ((margin-spec-p (m)
+               (and (member (first m) '(:absolute :relative))
+                    (not (null (second m))))))
+        (every #'margin-spec-p (list left top right bottom))))))
+
+(deftype margin-spec ()
+  `(satisfies valid-margin-spec-p))
+
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))
-   (margins :initarg :text-margins :accessor stream-text-margins))
+   (margins :initarg :text-margins :accessor stream-text-margins :type margin-spec))
   (:default-initargs :text-margins '(:left   (:absolute 0)
                                      :top    (:absolute 0)
                                      :right  (:relative 0)
@@ -34,7 +45,8 @@
     (thunk :left   '(:absolute 0))
     (thunk :top    '(:absolute 0))
     (thunk :right  (or text-margin '(:relative 0)))
-    (thunk :bottom '(:relative 0))))
+    (thunk :bottom '(:relative 0))
+    (setf (stream-text-margins instance) text-margins)))
 
 (defgeneric page-cursor-initial-position (stream)
   (:documentation "Returns two values: x and y initial position for a cursor on page.")
@@ -75,18 +87,7 @@
   (unless (region-equal sheet-region (sheet-region stream))
     (slot-makunbound stream '%page-region)))
 
-(defun valid-margin-spec-p (margins)
-  (ignore-errors ; destructuring-bind may error; that yields invalid spec
-    (destructuring-bind (&key left top right bottom) margins
-      (flet ((margin-spec-p (m)
-               (and (member (first m) '(:absolute :relative))
-                    (not (null (second m))))))
-        (every #'margin-spec-p (list left top right bottom))))))
-
-(deftype margin-spec ()
-  `(satisfies valid-margin-spec-p))
-
-(defmethod (setf stream-text-margins) :before
+(defmethod (setf stream-text-margins) :around
     (new-margins (stream standard-page-layout)
      &aux (old-margins (stream-text-margins stream)))
   (macrolet ((thunk (edge)
@@ -99,7 +100,8 @@
     (thunk :bottom))
   (check-type new-margins margin-spec)
   (unless (equal new-margins old-margins)
-    (slot-makunbound stream '%page-region)))
+    (slot-makunbound stream '%page-region)
+    (call-next-method new-margins stream)))
 
 (defgeneric invoke-with-temporary-page (stream continuation &key margins move-cursor)
   (:method ((stream standard-page-layout) continuation &key margins (move-cursor t))
