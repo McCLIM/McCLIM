@@ -5,12 +5,15 @@
   ()
   (:menu-bar seos-command-table)
   (:pane :application
-         :width 350
+         :width 400
          :height 400
          :display-function #'display
          :end-of-line-action :allow
          :end-of-page-action :allow
-         :text-margin 300))
+         :text-margins '(:left (:absolute 30)
+                         :right (:relative 30)
+                         :top (:relative 30)
+                         :bottom (:absolute 370))))
 
 (defun show-line (stream &rest args)
   (loop for (size text) on args by #'cddr do
@@ -31,12 +34,10 @@
   (show-line pane :normal "Last " :huge "line " :normal "bam bam")
 
   (terpri pane)
-  (let ((y (nth-value 1 (stream-cursor-position pane))))
-   (draw-line* pane (climi::stream-effective-left-margin pane)
-               y
-               (climi::stream-effective-right-margin pane)
-               y
-               :ink +blue+ :line-dashes t))
+  (with-bounding-rectangle* (x1 y1 x2 y2) (clime:stream-page-region pane)
+    (declare (ignore y1 y2))
+    (let ((y (nth-value 1 (stream-cursor-position pane))))
+      (draw-line* pane x1 y x2 y :ink +blue+ :line-dashes t)))
   (terpri pane)
   (format pane "All lines should have text aligned on the same baseline. Likely failures:
 
@@ -50,12 +51,8 @@
 
 See the introduction in \"15.3 The Text Cursor\"."
           (stream-end-of-line-action pane))
-  (draw-rectangle* pane
-                   (climi::stream-effective-left-margin pane)
-                   (climi::stream-effective-top-margin pane)
-                   (climi::stream-effective-right-margin pane)  ; may be nil!
-                   (climi::stream-effective-bottom-margin pane) ; may be nil!
-                   :ink +red+ :line-dashes t :filled nil))
+  (draw-design pane (clime:stream-page-region pane)
+               :ink +red+ :line-dashes t :filled nil))
 
 (define-seos-baseline-command (com-redisplay :keystroke #\space) ()
   (schedule-event *standard-output*
@@ -102,4 +99,3 @@ See the introduction in \"15.3 The Text Cursor\"."
   (setf (stream-end-of-page-action *standard-output*) :wrap))
 
 ;(run-frame-top-level (make-application-frame 'seos-baseline))
-

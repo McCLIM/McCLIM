@@ -2,8 +2,7 @@
 (defsystem #:clim-core
   :depends-on (#:clim-basic #:clim-postscript #+sbcl (:require #:sb-introspect))
   :components
-  ((:file "text-formatting")
-   (:file "defresource")
+  ((:file "defresource")
    (:file "presentations")
    (:file "bordered-output" :depends-on ("presentations"))
    (:file "table-formatting" :depends-on ("presentations"))

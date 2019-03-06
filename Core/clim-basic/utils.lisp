@@ -749,7 +749,9 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
                     (setf current-margin margin)
                     (do ((split initial-break
                                 (max ,step-form (1+ split))))
-                        ((>= split end))
+                        ((>= split end)
+                         (when (null (break-line))
+                           (break-line initial-break)))
                       (if-let ((pos (position #\space string
                                               :start (min split end)
                                               :end end

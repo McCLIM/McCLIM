@@ -4,8 +4,9 @@
 
 @menu
 * Text editor substrate::
-* Fonts and Extended Text Styles::
+* Extended text formatting::
 * Tab Layout::
+* Fonts and Extended Text Styles::
 * Raster Images::
 @end menu
 
@@ -26,6 +27,75 @@ the manual. Drei documentation is provided as a separate document.
 
 @node Text field gadget
 @node Text editor pane
+
+@node Extended text formatting
+@section Extended text formatting
+
+@code{standard-extended-output-stream} has been extended by protocols
+complementary to already defined ones. Some were clearly missing given
+how it is specified - like margins and word wrap. Some are useful in
+contemporary text displaying applications like text direction and
+alignment.
+
+@subsection Page abstraction
+
+@anchor{Function clime:page-initial-position}
+@anchor{Function clime:page-final-position}
+@deffn {Function} {clime:page-initial-position} stream
+@deffnx {Function} {clime:page-initial-position} stream
+@findex clime:page-initial-position
+@findex clime:page-final-position
+Both functions return two values, x and y coordinates of the
+corresponding position. Initial position is where the cursor is placed
+on a fresh page, and the final position is where the cursor is placed
+right before the page ends. Coordinates depend on current margins and
+text alignment.
+@end deffn
+
+@anchor{Function clime:stream-page-region}
+@deffn {Function} {clime:stream-page-region} stream
+@findex clime:stream-page-region
+Functions returns a region which corresponds to the stream page
+format. This region implies the stream margins.
+@end deffn
+
+@anchor{Macro clime:with-temporary-margins}
+@deffn {Macro} {clime:with-temporary-margins} (stream &key (move-cursor t) left right top bottom) &body body
+@findex clime:with-temporary-margins
+Executes a body in a dynamic environment where stream's margins are
+augumented with provided one. Not all margins have to be specified. If
+they are not current margin values are taken as defaults.
+
+Each margin must be in one of following formats: @code{(:relative
+space)} or @code{(:absolute space)}. Space may be specified as for
+@code{:x-spacing} and @code{:y-spacing} for horizontal and vertical
+margins accordingly. If margin is ``absolute'' then it corresponds to
+its exact placement in stream coordinates. ``relative'' margins are
+relative to the stream viewport region.
+
+If the boolean @code{move-cursor} is T then the cursor is left where
+it was placed after the last operation. Otherwise upon body completion
+cursor-position is restored to its previous value.
+
+Programmers using clime:with-temporary-margins should begin the body
+with a call to a function @code{clim:stream-set-cursor-position} which
+will set the cursor at the @code{clime:page-initial-position}.
+@end deffn
+
+@subsection FILLING-OUTPUT extension
+
+Macro @code{filling-output} behaves the same as before with a few
+additions:
+
+@code{:after-line-break-subsequent} is complementary to
+@code{:after-line-break-initially}, it decides whenever
+@code{:after-line-break} is printed for lines after the first break.
+
+@code{:after-line-break} may be a string or a function accepting two
+arguments: a stream and a flag indicating whenever it is a soft
+newline or not. The function will be executed conditionally depending
+on values of @code{:after-line-break-initially} and
+@code{:after-line-break-subsequent} flags.
 
 @node Tab Layout
 @section Tab Layout

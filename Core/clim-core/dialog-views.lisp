@@ -244,7 +244,8 @@
   (unless default-supplied-p
     (setf default ""))
   (let* ((width (or (getf (view-gadget-initargs view) :width)
-                    (stream-effective-right-margin stream)))
+                    (- (page-cursor-final-position stream)
+                       (page-cursor-initial-position stream))))
          (gadget (make-gadget-pane-from-view view stream
                                              :width width
                                              :value default
