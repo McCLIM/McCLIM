@@ -455,7 +455,7 @@
 ;; standard-text-cursor [class]
 (defgeneric cursor-sheet (cursor))
 (defgeneric cursor-position (cursor))
-;;(defgeneric (setf* cursor-position) (x y cursor))
+(defgeneric* (setf cursor-position) (x y cursor))
 (defgeneric cursor-active (cursor))
 (defgeneric (setf cursor-active) (value cursor))
 (defgeneric cursor-state (cursor))
@@ -469,7 +469,7 @@
 (defgeneric stream-text-cursor (stream))
 (defgeneric (setf stream-text-cursor) (cursor stream))
 (defgeneric stream-cursor-position (stream))
-;; (defgeneric (setf* stream-cursor-position) (x y stream)) unsure how to declare this, can somebody help? --GB
+(defgeneric* (setf stream-cursor-position) (x y stream))
 (defgeneric stream-set-cursor-position (stream x y)) ; This is actually in 19.3.1 in CLIM 2.2
 (defgeneric stream-increment-cursor-position (stream dx dy))
 

@@ -32,8 +32,6 @@
 (defmethod stream-recording-p ((stream output-stream)) nil)
 (defmethod stream-drawing-p ((stream output-stream)) t)
 
-(defgeneric* (setf cursor-position) (x y cursor))
-
 ;;; Cursor-Mixin class
 (defclass cursor-mixin ()
   ((sheet :initarg :sheet
@@ -153,10 +151,6 @@
   (%stream-char-height (cursor-sheet cursor)))
 
 
-;;; Extended-Output-Stream class
-
-(defgeneric* (setf stream-cursor-position) (x y stream))
-
 ;;; Standard-Extended-Output-Stream class
 
 (defclass standard-extended-output-stream (extended-output-stream
