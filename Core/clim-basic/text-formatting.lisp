@@ -200,12 +200,18 @@
 (defgeneric invoke-with-indenting-output
     (stream continuation &key indent move-cursor)
   (:method (stream continuation &key indent (move-cursor t))
-    (let ((left-margin (copy-list (getf (stream-text-margins stream) :left))))
+    (let ((left-margin (copy-list (getf (stream-text-margins stream) :left)))
+          (line-beginning (page-cursor-initial-position stream)))
       (setf (second left-margin)
             (+ (parse-space stream (second left-margin) :horizontal)
                (parse-space stream indent :horizontal)))
       (with-temporary-margins (stream :left left-margin :move-cursor move-cursor)
-        (funcall continuation stream)))))
+        (unwind-protect (funcall continuation stream)
+          (when (stream-start-line-p stream)
+            ;; We purposefully bypass the protocol to adjust
+            ;; cursor-position. Roundabout way with accessors is
+            ;; possible but obfuscates the intent. -- jd 2019-03-07
+            (setf (slot-value (stream-text-cursor stream) 'x) line-beginning)))))))
 
 (defmacro indenting-output ((stream indentation &rest args &key move-cursor) &body body)
   (declare (ignore move-cursor))
