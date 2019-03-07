@@ -420,7 +420,8 @@ that is not just the sole pressing of a modifier key."
                               :super-left :super-right
                               :hyper-left :hyper-right
                               :shift-lock :caps-lock
-                              :alt-left :alt-right)))))))
+                              :alt-left :alt-right)))))
+      (typep gesture 'clipboard-send-event)))
 
 (define-condition unbound-gesture-sequence (simple-condition)
   ((%gestures :initarg :gestures

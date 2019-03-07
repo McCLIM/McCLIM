@@ -500,6 +500,16 @@ The default is 5. A number less than 5 will be replaced by 5."
 	 'editing-table
 	 '((#\w :control :meta)))
 
+(clim:define-command (com-yank-from-clipboard :name t :command-table drei:editing-table) ()
+  "Insert the contents of the clipboard at point."
+  (let* ((drei (drei:drei-instance))
+         (pane (drei:editor-pane drei)))
+    (clim-extensions:request-clipboard-content (clim:port pane) pane :string)))
+
+(esa:set-key 'com-yank-from-clipboard
+             'drei:editing-table
+             '((:insert :shift)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Undo/redo

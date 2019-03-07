@@ -322,12 +322,25 @@ modifier key."))
           (with-bound-drei-special-variables (gadget :prompt (format nil "~A " (gesture-name gesture)))
             (handle-gesture gadget gesture)))))))
 
-(defmethod handle-event :before
-    ((gadget drei-gadget-pane) (event pointer-button-press-event))
+(defmethod handle-event ((gadget drei-gadget-pane) (event clim-extensions:clipboard-send-event))
+  ;; Cargo-culted from above:
+  (unless (and (currently-processing-p gadget) (directly-processing-p gadget))
+    (letf (((currently-processing-p gadget) t))
+      (insert-sequence (point (view gadget)) (clim-extensions:clipboard-event-content event))
+      (display-drei gadget :redisplay-minibuffer t)
+      (propagate-changed-value gadget))))
+
+(defmethod handle-event :before ((gadget drei-gadget-pane) (event pointer-button-press-event))
   (let ((previous (stream-set-input-focus gadget)))
     (when (and previous (typep previous 'gadget))
       (disarmed-callback previous (gadget-client previous) (gadget-id previous)))
     (armed-callback gadget (gadget-client gadget) (gadget-id gadget))))
+
+(defmethod handle-event ((gadget drei-gadget-pane) (event pointer-button-press-event))
+  (if (and (eql (event-modifier-state event) +shift-key+)
+           (eql (pointer-event-button event) +pointer-middle-button+))
+      (clim-extensions:request-selection-content (clim:port gadget) gadget :string)
+      (call-next-method)))
 
 (defmethod invoke-accepting-from-user ((drei drei-gadget-pane) (continuation function))
   ;; When an `accept' is called during the execution of a command for

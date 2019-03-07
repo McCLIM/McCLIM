@@ -144,40 +144,46 @@ of type `empty-kill-ring' is signalled."))
 			 (kill-ring-length kr))))
 	  (setf (cursor-pos curs) pos))))
 
+(defun push-start-and-copy (chain vector)
+  (push-start chain vector)
+  (when (every #'characterp vector)
+    (let ((pane (drei:editor-pane (drei:drei-instance))))
+      (clim-extensions:copy-to-clipboard (clim:port pane) pane (coerce vector 'string)))))
+
 (defmethod kill-ring-standard-push ((kr kill-ring) vector)
   (check-type vector vector)
   (cond ((append-next-p kr)
 	 (kill-ring-concatenating-push kr vector)
 	 (setf (append-next-p kr) nil))
 	(t (let ((chain (kill-ring-chain kr)))
-	   (if (>= (kill-ring-length kr)
-		   (kill-ring-max-size kr))
-	       (progn
-		 (pop-end chain)
-		 (push-start chain vector))
-	       (push-start chain vector)))
-	 (reset-yank-position kr))))
+	     (if (>= (kill-ring-length kr)
+		     (kill-ring-max-size kr))
+	         (progn
+		   (pop-end chain)
+		   (push-start-and-copy chain vector))
+	         (push-start-and-copy chain vector)))
+	   (reset-yank-position kr))))
 
 (defmethod kill-ring-concatenating-push ((kr kill-ring) vector)
   (check-type vector vector)
   (let ((chain (kill-ring-chain kr)))
     (if (zerop (kill-ring-length kr))
-	(push-start chain vector)
-        (push-start chain 
-		    (concatenate 'vector 
-				 (pop-start chain) 
-				 vector)))
+	(push-start-and-copy chain vector)
+        (push-start-and-copy chain
+		             (concatenate 'vector
+				          (pop-start chain)
+				          vector)))
     (reset-yank-position kr)))
 
 (defmethod kill-ring-reverse-concatenating-push ((kr kill-ring) vector)
   (check-type vector vector)
   (let ((chain (kill-ring-chain kr)))
     (if (zerop (kill-ring-length kr))
-	(push-start chain vector)
-	(push-start chain
-		    (concatenate 'vector
-				 vector
-				 (pop-start chain))))
+	(push-start-and-copy chain vector)
+	(push-start-and-copy chain
+		             (concatenate 'vector
+				          vector
+				          (pop-start chain))))
     (reset-yank-position kr)))
 
 (defmethod kill-ring-yank ((kr kill-ring) &optional (reset nil))
