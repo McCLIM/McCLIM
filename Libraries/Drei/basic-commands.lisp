@@ -519,11 +519,19 @@ the numeric arguments."
   (loop repeat count
         do (insert-character *current-gesture*)))
 
+(define-command com-insert-clipboard
+    ()
+  (when (typep *current-gesture* 'clim-extensions:clipboard-send-event)
+    (let ((content (clim-extensions:clipboard-event-content *current-gesture*)))
+      (insert-sequence (point) content))))
+
 (defmethod command-for-unbound-gestures ((view textual-drei-syntax-view) gestures)
-  (when (and (= (length gestures) 1)
-             (characterp (first gestures))
-             (graphic-char-p (first gestures)))
-    `(com-self-insert ,*numeric-argument-marker*)))
+  (cond ((and (= (length gestures) 1)
+              (characterp (first gestures))
+              (graphic-char-p (first gestures)))
+         `(com-self-insert ,*numeric-argument-marker*))
+        ((typep (first gestures) 'clim-extensions:clipboard-send-event)
+         `(com-insert-clipboard))))
 
 (set-key `(com-self-insert ,*numeric-argument-marker*)
          'self-insert-table
