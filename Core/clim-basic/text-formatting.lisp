@@ -142,45 +142,81 @@
         :documentation "T for a default word wrap or a list of break characters.")
    (alb :accessor after-line-break :initarg :after-line-break
         :documentation "Function accepting stream to call after the line break.")
-   (ilb :accessor after-line-break-initially :initarg :after-line-break-initially
-        :documentation "Flag whenever we execture alb on fresh newlines.")
-   (slb :accessor after-line-break-subsequent :initarg :after-line-break-subsequent
-        :documentation "Flag whenever we execture alb on soft newlines.")
-   (gfs :reader graphics-state :initarg :gfs))
+   (gfs :reader graphics-state :initarg :gfs
+        :documentation "Preserves the state for after-line-break execution."))
   (:default-initargs :line-break-strategy t
                      :gfs (make-instance '%filling-output-graphics-state)
-                     :after-line-break nil
-                     :after-line-break-initially nil
-                     :after-line-break-subsequent t))
+                     :after-line-break nil))
 
-(defmacro filling-output ((stream &key
-                                  (fill-width ''(80 :character))
+(defgeneric invoke-with-filling-output (stream continuation fresh-line-fn
+                                        &key fill-width break-characters)
+  (:method ((stream filling-output-mixin) continuation fresh-line-fn
+            &key (fill-width '(80 :character)) break-characters)
+    (with-temporary-margins (stream :right `(:absolute ,fill-width))
+      (letf (((stream-end-of-line-action stream) :wrap*)
+             ((line-break-strategy stream) break-characters)
+             ((after-line-break stream) fresh-line-fn)
+             ((graphics-state-ink (graphics-state stream)) (medium-ink stream))
+             ((graphics-state-text-style (graphics-state stream)) (medium-text-style stream)))
+        (when (stream-start-line-p stream)
+          (funcall fresh-line-fn stream nil))
+        (funcall continuation stream)))))
+
+(defmacro filling-output ((stream &rest args
+                                  &key
+                                  fill-width
                                   break-characters
-				  after-line-break
-                                  after-line-break-initially
+                                  after-line-break
+                                  (after-line-break-initially nil)
                                   (after-line-break-subsequent t))
-			  &body body)
+                          &body body)
+  (declare (ignore fill-width break-characters))
   (setq stream (stream-designator-symbol stream '*standard-output*))
-  `(with-temporary-margins (,stream :right (list :absolute ,fill-width))
-     (letf (((stream-end-of-line-action ,stream) :wrap*)
-            ((line-break-strategy ,stream) ,break-characters)
-            ,@(when after-line-break
-                `(((after-line-break ,stream) ,after-line-break)
-                  ((after-line-break-initially ,stream) ,after-line-break-initially)
-                  ((after-line-break-subsequent ,stream) ,after-line-break-subsequent)
-                  ((graphics-state-ink (graphics-state ,stream)) (medium-ink ,stream))
-                  ((graphics-state-text-style (graphics-state ,stream)) (medium-text-style ,stream)))))
-       ,(when (and after-line-break after-line-break-initially)
-          `(etypecase (after-line-break ,stream)
-             (string   (write-string (after-line-break ,stream) ,stream))
-             (function (funcall (after-line-break ,stream) ,stream nil))))
-       ,@body)))
+  (with-keywords-removed (args (:after-line-break
+                                :after-line-break-initially
+                                :after-line-break-subsequent))
+   (with-gensyms (continuation fresh-line-fn)
+     (alexandria:once-only (after-line-break
+                            after-line-break-initially
+                            after-line-break-subsequent)
+       `(flet ((,continuation (,stream)
+                 ,@body)
+               (,fresh-line-fn (,stream soft-newline-p &aux (gs (graphics-state stream)))
+                 (when (or (and ,after-line-break-initially (null soft-newline-p))
+                           (and ,after-line-break-subsequent soft-newline-p))
+                   (with-end-of-line-action (stream :allow) ; prevent infinite recursion
+                     (with-drawing-options (stream :text-style (graphics-state-text-style gs)
+                                                   :ink (graphics-state-ink gs))
+                       (etypecase ,after-line-break
+                         (string   (write-string ,after-line-break ,stream))
+                         (function (funcall ,after-line-break ,stream soft-newline-p))
+                         (null nil)))))))
+          (declare (dynamic-extent #',continuation #',fresh-line-fn))
+          (invoke-with-filling-output ,stream #',continuation #',fresh-line-fn ,@args))))))
 
-(defmacro indenting-output ((stream indent &key (move-cursor t)) &body body)
+(defgeneric invoke-with-indenting-output
+    (stream continuation &key indent move-cursor)
+  (:method (stream continuation &key indent (move-cursor t))
+    (let ((left-margin (copy-list (getf (stream-text-margins stream) :left)))
+          (line-beginning (page-cursor-initial-position stream)))
+      (setf (second left-margin)
+            (+ (parse-space stream (second left-margin) :horizontal)
+               (parse-space stream indent :horizontal)))
+      (with-temporary-margins (stream :left left-margin :move-cursor move-cursor)
+        (unwind-protect (funcall continuation stream)
+          (when (stream-start-line-p stream)
+            ;; We purposefully bypass the protocol to adjust
+            ;; cursor-position. Roundabout way with accessors is
+            ;; possible but obfuscates the intent. -- jd 2019-03-07
+            (setf (slot-value (stream-text-cursor stream) 'x) line-beginning)))))))
+
+(defmacro indenting-output ((stream indentation &rest args &key move-cursor) &body body)
+  (declare (ignore move-cursor))
   (setq stream (stream-designator-symbol stream '*standard-output*))
-  `(with-temporary-margins (,stream :left (list :absolute ,indent)
-                                    :move-cursor ,move-cursor)
-     ,@body))
+  (with-gensyms (continuation)
+    `(flet ((,continuation (,stream) ,@body))
+       (declare (dynamic-extent #',continuation))
+       (invoke-with-indenting-output ,stream #',continuation :indent ,indentation ,@args))))
 
 
 ;;; formatting functions

@@ -274,16 +274,8 @@
 
 (defgeneric seos-write-newline (stream &optional soft-newline-p)
   (:method :after ((stream filling-output-mixin) &optional soft-newline-p)
-    (when (or (and soft-newline-p (after-line-break-subsequent stream))
-              (and (not soft-newline-p) (after-line-break-initially stream)))
-      (when-let ((after-line-break (after-line-break stream))
-                 (gs (graphics-state stream)))
-        (with-end-of-line-action (stream :allow) ; prevent infinite recursion
-          (with-drawing-options (stream :text-style (graphics-state-text-style gs)
-                                        :ink (graphics-state-ink gs))
-            (etypecase after-line-break
-              (string (write-string after-line-break stream))
-              (function (funcall after-line-break stream soft-newline-p))))))))
+    (when-let ((after-line-break-fn (after-line-break stream)))
+      (funcall after-line-break-fn stream soft-newline-p)))
   (:method ((stream standard-extended-output-stream) &optional soft-newline-p)
     (declare (ignorable soft-newline-p))
     (let* ((current-cy       (nth-value 1 (stream-cursor-position stream)))
@@ -441,9 +433,9 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
      (stream-vertical-spacing stream)))
 
 (defmethod stream-line-column ((stream standard-extended-output-stream))
-  (multiple-value-bind (x y) (stream-cursor-position stream)
-    (declare (ignore y))
-    (floor x (stream-string-width stream "m"))))
+  (let ((line-width (- (stream-cursor-position stream)
+                       (page-cursor-initial-position stream))))
+    (floor line-width (stream-string-width stream "m"))))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)

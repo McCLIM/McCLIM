@@ -2532,7 +2532,6 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 				 (pane clim-stream-pane)
 				 &key force-p)
   (declare (ignore frame force-p))
-  (finish-output pane)
   (unless (or (eql :compute (pane-user-width pane))
               (eql :compute (pane-user-min-width pane))
               (eql :compute (pane-user-max-width pane))
@@ -2548,7 +2547,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 		  frame pane (cdr display-function)))
 	  (display-function
 	   (funcall display-function frame pane))
-	  (t nil))))
+	  (t nil))
+    (finish-output pane)))
 
 (defun change-stream-space-requirements (pane &key width height)
   (check-type pane clim-stream-pane)
