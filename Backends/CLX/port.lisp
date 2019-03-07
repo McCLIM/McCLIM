@@ -31,7 +31,6 @@
   ())
 
 (defclass clx-port (clim-xcommon:keysym-port-mixin
-		    clx-text-selection-port-mixin
 		    clx-basic-port)
   ((color-table :initform (make-hash-table :test #'eq))
 
@@ -224,17 +223,15 @@
 	  (name (frame-pretty-name frame)))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) name)
-      (unless (exactly-encodable-as-string-p name)
-        (xlib:change-property window
-                              :_NET_WM_NAME
-                              (utf8-string-encode (map 'vector #'char-code name))
-                              :UTF8_STRING 8))
+      (xlib:change-property window
+                            :_NET_WM_NAME
+                            (babel:string-to-octets name :encoding :utf-8)
+                            :UTF8_STRING 8)
       (setf (xlib:wm-icon-name window) name)
-      (unless (exactly-encodable-as-string-p name)
-        (xlib:change-property window
-                              :_NET_WM_ICON_NAME
-                              (utf8-string-encode (map 'vector #'char-code name))
-                              :UTF8_STRING 8))
+      (xlib:change-property window
+                            :_NET_WM_ICON_NAME
+                            (babel:string-to-octets name :encoding :utf-8)
+                            :UTF8_STRING 8)
       (xlib:set-wm-class
        window
        (string-downcase (frame-name frame))
