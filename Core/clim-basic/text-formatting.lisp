@@ -142,60 +142,57 @@
         :documentation "T for a default word wrap or a list of break characters.")
    (alb :accessor after-line-break :initarg :after-line-break
         :documentation "Function accepting stream to call after the line break.")
-   (ilb :accessor after-line-break-initially :initarg :after-line-break-initially
-        :documentation "Flag whenever we execture alb on fresh newlines.")
-   (slb :accessor after-line-break-subsequent :initarg :after-line-break-subsequent
-        :documentation "Flag whenever we execture alb on soft newlines.")
-   (gfs :reader graphics-state :initarg :gfs))
+   (gfs :reader graphics-state :initarg :gfs
+        :documentation "Preserves the state for after-line-break execution."))
   (:default-initargs :line-break-strategy t
                      :gfs (make-instance '%filling-output-graphics-state)
-                     :after-line-break nil
-                     :after-line-break-initially nil
-                     :after-line-break-subsequent t))
+                     :after-line-break nil))
 
-(defgeneric invoke-with-filling-output
-    (stream continuation
-     &key fill-width break-characters
-       after-line-break after-line-break-initially after-line-break-subsequent)
-  (:method ((stream filling-output-mixin) continuation
-            &key (fill-width '(80 :character))
-              break-characters
-              (after-line-break nil)
-              (after-line-break-initially nil)
-              (after-line-break-subsequent t))
+(defgeneric invoke-with-filling-output (stream continuation fresh-line-fn
+                                        &key fill-width break-characters)
+  (:method ((stream filling-output-mixin) continuation fresh-line-fn
+            &key (fill-width '(80 :character)) break-characters)
     (with-temporary-margins (stream :right `(:absolute ,fill-width))
       (letf (((stream-end-of-line-action stream) :wrap*)
-             ((line-break-strategy stream) break-characters))
-        (if (not after-line-break)
-            (funcall continuation stream)
-            (letf (((after-line-break stream) after-line-break)
-                   ((after-line-break-initially stream) after-line-break-initially)
-                   ((after-line-break-subsequent stream) after-line-break-subsequent)
-                   ((graphics-state-ink (graphics-state stream)) (medium-ink stream))
-                   ((graphics-state-text-style (graphics-state stream)) (medium-text-style stream)))
-              (funcall continuation stream)))))))
+             ((line-break-strategy stream) break-characters)
+             ((after-line-break stream) fresh-line-fn)
+             ((graphics-state-ink (graphics-state stream)) (medium-ink stream))
+             ((graphics-state-text-style (graphics-state stream)) (medium-text-style stream)))
+        (when (stream-start-line-p stream)
+          (funcall fresh-line-fn stream nil))
+        (funcall continuation stream)))))
 
 (defmacro filling-output ((stream &rest args
                                   &key
                                   fill-width
                                   break-characters
                                   after-line-break
-                                  after-line-break-initially
-                                  after-line-break-subsequent)
+                                  (after-line-break-initially nil)
+                                  (after-line-break-subsequent t))
                           &body body)
-  (declare (ignore fill-width break-characters after-line-break
-                   after-line-break-initially after-line-break-subsequent))
+  (declare (ignore fill-width break-characters))
   (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (continuation)
-    `(flet ((,continuation (,stream)
-              (when (after-line-break-initially ,stream)
-                (etypecase (after-line-break ,stream)
-                  (string   (write-string (after-line-break ,stream) ,stream))
-                  (function (funcall (after-line-break ,stream) ,stream nil))
-                  (null nil)))
-              ,@body))
-       (declare (dynamic-extent #',continuation))
-       (invoke-with-filling-output ,stream #',continuation ,@args))))
+  (with-keywords-removed (args (:after-line-break
+                                :after-line-break-initially
+                                :after-line-break-subsequent))
+   (with-gensyms (continuation fresh-line-fn)
+     (alexandria:once-only (after-line-break
+                            after-line-break-initially
+                            after-line-break-subsequent)
+       `(flet ((,continuation (,stream)
+                 ,@body)
+               (,fresh-line-fn (,stream soft-newline-p &aux (gs (graphics-state stream)))
+                 (when (or (and ,after-line-break-initially (null soft-newline-p))
+                           (and ,after-line-break-subsequent soft-newline-p))
+                   (with-end-of-line-action (stream :allow) ; prevent infinite recursion
+                     (with-drawing-options (stream :text-style (graphics-state-text-style gs)
+                                                   :ink (graphics-state-ink gs))
+                       (etypecase ,after-line-break
+                         (string   (write-string ,after-line-break ,stream))
+                         (function (funcall ,after-line-break ,stream soft-newline-p))
+                         (null nil)))))))
+          (declare (dynamic-extent #',continuation #',fresh-line-fn))
+          (invoke-with-filling-output ,stream #',continuation #',fresh-line-fn ,@args))))))
 
 (defgeneric invoke-with-indenting-output
     (stream continuation &key indent move-cursor)
