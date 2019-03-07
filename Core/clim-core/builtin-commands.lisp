@@ -428,3 +428,36 @@
         (funcall *sys-read-preserving-whitespace*
                  stream eof-error-p eof-value recursivep)))
 ) ; with-system-redefinition-allowed
+
+;;;
+;;;  Copy to clipboard is a global command that should be available
+;;;  everywhere, just like the Describe command above.
+;;;
+(defclass clipboard-object ()
+  ((content :initarg :content
+            :reader clipboard-object/content)
+   (type    :initarg :type
+            :reader clipboard-object/type)))
+
+(clim:define-presentation-translator presentation-clipboard-object
+    (t clipboard-object clim:global-command-table :tester ((obj presentation)
+                                                           (supported-clipboard-types obj (presentation-type presentation))))
+    (obj presentation)
+  (make-instance 'clipboard-object :content obj :type (presentation-type presentation)))
+
+(clim:define-command (com-copy-to-clipboard :command-table clim:global-command-table :name "Copy Presentation to Clipboard")
+    ((obj clipboard-object :prompt "Object"))
+  (copy-to-clipboard (clim:frame-top-level-sheet clim:*application-frame*)
+                     (clipboard-object/content obj)
+                     :presentation-type (clipboard-object/type obj)))
+
+(clim:define-presentation-translator string-to-clipboard (string clipboard-object clim:global-command-table)
+    (object)
+  (make-instance 'clipboard-object :content object :type 'string))
+
+(clim:define-command (com-copy-text-to-clipboard :command-table clim:global-command-table :name "Copy Text to Clipboard")
+    ()
+  (multiple-value-bind (object type)
+      (clim-extensions:local-selection-content (port *standard-output*))
+    (when object
+      (clim-extensions:copy-to-clipboard *standard-output* object :presentation-type type))))
