@@ -1965,7 +1965,19 @@
    ;; images
    #:rgb-image
    #:xpm-parse-file
-   #:*xpm-x11-colors*))
+   #:*xpm-x11-colors*
+   ;; Clipboard
+   #:clear-clipboard
+   #:clear-selection
+   #:clipboard-event-content
+   #:clipboard-event-type
+   #:clipboard-send-event
+   #:convert-clipboard-content
+   #:copy-to-clipboard
+   #:copy-to-selection
+   #:local-selection-content
+   #:request-selection-content
+   #:request-clipboard-content))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -2072,7 +2084,14 @@
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-glyph
-   #:medium-draw-circle*))
+   #:medium-draw-circle*
+   #:clear-clipboard
+   #:clear-selection
+   #:copy-to-clipboard
+   #:copy-to-selection
+   #:local-selection-content
+   #:request-selection-content
+   #:request-clipboard-content))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)
