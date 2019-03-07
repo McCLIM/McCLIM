@@ -76,7 +76,7 @@
 
 (defclass standard-input-stream (fundamental-character-input-stream
                                  standard-sheet-input-mixin
-                                 cut-and-paste-mixin)
+                                 selection-mixin)
   ((unread-chars :initform nil
                  :accessor stream-unread-chars)))
 

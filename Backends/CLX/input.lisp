@@ -270,24 +270,6 @@
                         :sheet sheet
                         :region (make-rectangle* x y (+ x width) (+ y height))))
         ;;
-        (:selection-notify
-         (make-instance 'clx-selection-notify-event
-                        :sheet sheet
-                        :selection selection
-                        :target target
-                        :property property))
-        (:selection-clear
-         (make-instance 'selection-clear-event
-                        :sheet sheet
-                        :selection selection))
-        (:selection-request
-         (make-instance 'clx-selection-request-event
-                        :sheet sheet
-                        :selection selection
-                        :requestor requestor
-                        :target target
-                        :property property
-                        :timestamp time))
 	(:client-message
          (port-client-message sheet time type data))
 	(t

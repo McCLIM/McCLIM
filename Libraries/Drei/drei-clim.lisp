@@ -322,16 +322,6 @@ modifier key."))
           (with-bound-drei-special-variables (gadget :prompt (format nil "~A " (gesture-name gesture)))
             (handle-gesture gadget gesture)))))))
 
-(defmethod handle-event ((gadget drei-gadget-pane)
-                         (event clim-backend:selection-notify-event))
-  ;; Cargo-culted from above:
-  (unless (and (currently-processing-p gadget) (directly-processing-p gadget))
-    (letf (((currently-processing-p gadget) t))
-      (insert-sequence (point (view gadget))
-                       (clim-backend:get-selection-from-event (port gadget) event))
-      (display-drei gadget :redisplay-minibuffer t)
-      (propagate-changed-value gadget))))
-
 (defmethod handle-event :before
     ((gadget drei-gadget-pane) (event pointer-button-press-event))
   (let ((previous (stream-set-input-focus gadget)))

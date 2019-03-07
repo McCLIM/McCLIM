@@ -115,31 +115,6 @@
                     (slot-value new-event 'climi::y) cy)))
           (dispatch-event destination new-event)))))
 
-;;;
-;;; selection
-;;;
-
-
-(defmethod distribute-event ((port standard-event-port-mixin)
-                             (event climb:selection-event))
-  (let ((owner (port-selection-owner port)))
-    (if owner
-	(progn
-	  (setf (slot-value event 'clim:sheet) owner)
-	  (dispatch-event owner event))
-	(dispatch-event (event-sheet event)
-			event))))
-
-
-(defmethod distribute-event ((port standard-event-port-mixin)
-                             (event climb:selection-notify-event))
-  (let ((owner (port-selection-requester port)))
-    (if owner
-	(progn
-	  (setf (slot-value event 'clim:sheet) owner)
-	  (dispatch-event owner event))
-	(dispatch-event (event-sheet event) event))))
-
 
 ;;;
 ;;; all events

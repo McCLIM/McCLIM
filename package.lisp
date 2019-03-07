@@ -1916,7 +1916,7 @@
    #:draw-rounded-rectangle*
 
    #:highlight-output-record-tree
-   #:cut-and-paste-mixin
+   #:selection-mixin
    #:mouse-wheel-scroll-mixin
    ;; page abstraction (seos mixin)
    #:stream-cursor-initial-position
@@ -2069,19 +2069,6 @@
    #:text-style-height
    #:text-style-mapping
    #:text-style-width
-   ;; Text selection protocol
-   #:selection-owner
-   #:selection-timestamp
-   #:selection-event
-   #:selection-clear-event
-   #:selection-notify-event
-   #:selection-request-event
-   #:selection-event-requestor
-   #:request-selection
-   #:release-selection
-   #:bind-selection
-   #:send-selection
-   #:get-selection-from-event
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-glyph
