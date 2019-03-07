@@ -1965,7 +1965,19 @@
    ;; images
    #:rgb-image
    #:xpm-parse-file
-   #:*xpm-x11-colors*))
+   #:*xpm-x11-colors*
+   ;; Clipboard
+   #:clear-clipboard
+   #:clear-selection
+   #:clipboard-event-content
+   #:clipboard-event-type
+   #:clipboard-send-event
+   #:convert-clipboard-content
+   #:copy-to-clipboard
+   #:copy-to-selection
+   #:local-selection-content
+   #:request-selection-content
+   #:request-clipboard-content))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -2069,6 +2081,10 @@
    #:text-style-height
    #:text-style-mapping
    #:text-style-width
+   ;; Text selection protocol
+   #:clear-clipboard-with-port
+   #:copy-to-clipboard-with-port
+   #:request-clipboard-content-with-port
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-glyph

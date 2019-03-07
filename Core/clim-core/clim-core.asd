@@ -31,4 +31,5 @@
                                 "dialog-views" "input-editing"
                                 "commands" "gadgets"))
    (:file "builtin-commands" :depends-on ("table-formatting" "commands" "presentations"
-                                          "dialog" "presentation-defs" "input-editing"))))
+                                          "dialog" "presentation-defs" "input-editing"))
+   (:file "presentations-clipboard" :depends-on ("presentations"))))

@@ -162,7 +162,8 @@
 (defun pane-clear-markings (pane &optional time)
   (declare (ignore time))
   (repaint-markings pane (slot-value pane 'markings)
-                    (setf (slot-value pane 'markings) nil)))
+                    (setf (slot-value pane 'markings) nil))
+  (clear-selection pane))
  
 
 (defmethod eos/shift-click ((pane extended-output-stream) event)
@@ -191,7 +192,8 @@
     (when dragging-p
       (setf point-2-x (pointer-event-x event)
             point-2-y (pointer-event-y event)
-            dragging-p nil))))
+            dragging-p nil)
+      (copy-to-selection pane (fetch-selection pane)))))
 
 (defun repaint-markings (pane old-markings new-markings)
   (let ((old-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) old-markings)

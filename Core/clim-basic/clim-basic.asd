@@ -36,4 +36,5 @@
    (:file "recording" :depends-on ("decls" "protocol-classes" "multiprocessing" "output" "coordinates" "graphics" "design" "medium" "transforms" "regions" "sheets" "utils" "stream-output"))
    (:file "encapsulate" :depends-on ("decls" "protocol-classes" "multiprocessing" "sheets" "graphics" "utils" "medium" "input" "stream-output" "recording"))
    (:file "stream-input" :depends-on ("decls" "protocol-classes" "multiprocessing" "input" "ports" "sheets" "events" "encapsulate" "transforms" "utils" "dead-keys"))
-   (:file "text-selection" :depends-on ("decls" "protocol-classes" "multiprocessing" "X11-colors" "medium" "output" "transforms" "sheets" "stream-output" "ports" "recording" "regions" "events"))))
+   (:file "text-selection" :depends-on ("decls" "protocol-classes" "multiprocessing" "X11-colors" "medium" "output" "transforms" "sheets" "stream-output" "ports" "recording" "regions" "events"))
+   (:file "clipboard" :depends-on ("decls" "protocol-classes" "multiprocessing" "X11-colors" "medium" "output" "transforms" "sheets" "stream-output" "ports" "recording" "regions" "events"))))

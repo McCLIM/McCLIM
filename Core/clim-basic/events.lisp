@@ -257,6 +257,13 @@
   ;; need to know which window to delete - mikemac
   ())
 
+(define-event-class clipboard-send-event (window-event)
+  ((content :initarg :content
+            :reader clipboard-event-content)
+   (type    :initarg :type
+            :reader clipboard-event-type))
+  (:documentation "Event containing the result of a clipboard or selection request"))
+
 (define-event-class timer-event (standard-event)
   ((token
      :initarg :token
