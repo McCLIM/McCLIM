@@ -270,6 +270,15 @@
                         :sheet sheet
                         :region (make-rectangle* x y (+ x width) (+ y height))))
         ;;
+        (:selection-notify
+         (process-selection-notify *clx-port* selection target property time)
+         nil)
+        (:selection-clear
+         (process-selection-clear *clx-port* selection)
+         nil)
+        (:selection-request
+         (process-selection-request *clx-port* window target property requestor selection time)
+         nil)
 	(:client-message
          (port-client-message sheet time type data))
 	(t
