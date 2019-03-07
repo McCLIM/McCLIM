@@ -21,6 +21,7 @@
      (:file "sliderdemo")
      (:file "tabledemo")
      (:file "image-transform-demo")
+     (:file "clipboard-demo")
      (:file "demodemo")
      (:file "stream-test")
      (:file "presentation-test")
