@@ -3,6 +3,8 @@
 (defsystem #:mcclim-clx
   :depends-on (#:clx
                #:cl-unicode
+               #:opticl
+               #:flexi-streams
                #:mcclim-backend-common
                #:mcclim-fonts)
   :serial t
@@ -23,7 +25,8 @@
              (:file "fonts" :depends-on ("bidi"))
              (:file "medium" :depends-on ("fonts"))
              (:file "medium-xrender" :depends-on ("medium"))))
-   (:file "input")))
+   (:file "input")
+   (:file "clipboard")))
 
 (defsystem #:mcclim-clx/truetype
   :depends-on (#:mcclim-clx
