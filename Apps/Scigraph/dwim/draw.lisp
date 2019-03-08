@@ -105,15 +105,17 @@ advised of the possiblity of such damages.
 			  :line-dashes line-dashes))
 
 (defun draw-string (string u v &key
-		    (stream *standard-output*)
-		    (alu %alu)
-		    (attachment-x :left)
-		    (attachment-y :baseline)
-		    character-style
-		    &allow-other-keys)
+		                         (stream *standard-output*)
+		                         (alu %alu)
+		                         (attachment-x :left)
+		                         (attachment-y :baseline)
+		                         character-style
+                                 transform-glyphs
+		                         &allow-other-keys)
   (clim:draw-text* stream string u v :ink alu
                    :align-x attachment-x :align-y attachment-y
-                   :text-style character-style))
+                   :text-style character-style
+                   :transform-glyphs transform-glyphs))
 
 (defun draw-vertical-text (text stream u v &key (rotation (/ pi 2))
 			   style (alu %draw))
@@ -152,8 +154,9 @@ advised of the possiblity of such damages.
 	 ;; an extremely expensive operation.  So forget it.
          (climi::with-rotation (stream rotation (clim:make-point u v))
            (draw-string string u v :alu alu :stream stream
-		        :attachment-y attachment-y
-		        :character-style character-style)))))
+		                :attachment-y attachment-y
+		                :character-style character-style
+                        :transform-glyphs t)))))
 
 (defun draw-polygon (points &key (stream *standard-output*) (alu %alu) (filled nil)
 		     &allow-other-keys)
