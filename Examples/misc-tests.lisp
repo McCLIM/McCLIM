@@ -374,7 +374,11 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed venenatis volutpat 
       (incf counter))))
 
 (define-misc-test "Text Formatting" (stream)
-    "First paragraph uses INDENTING-OUTPUT, the second FILLING-OUTPUT and remaining use both."
+    "First case uses INDENTING-OUTPUT
+Second case uses FILLING-OUTPUT,
+Third case uses INDENTING-OUTPUT over FILLING-OUTPUT,
+Fourth case FILLING-OUTPUT over INDENTING-OUTPUT,
+Fifth case is a nested mix of two above."
   (indenting-output (stream 20)
     (fresh-line stream)
     (format stream *lorem-ipsum*))
@@ -401,12 +405,50 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed venenatis volutpat 
   (terpri stream)
   (with-drawing-options (stream :text-style (make-text-style :fix :italic :normal)
                                 :ink +dark-blue+)
+    (filling-output (stream :break-characters '(#\space)
+                            :after-line-break (print-line-number)
+                            :after-line-break-initially t
+                            :after-line-break-subsequent nil)
+      (indenting-output (stream 20)
+        (with-drawing-options (stream :text-style *default-text-style* :ink +black+)
+          (format stream *lorem-ipsum*)))))
+  (terpri stream)
+  (terpri stream)
+  (with-drawing-options (stream :text-style (make-text-style :fix :italic :normal)
+                                :ink +dark-blue+)
     (indenting-output (stream 20)
       (fresh-line stream)
-      (filling-output (stream :break-characters '(#\space)
-                              :after-line-break (print-line-number)
-                              :after-line-break-initially t
-                              :after-line-break-subsequent nil)
+      (filling-output (stream  :fill-width '(60 :character)
+                               :break-characters '(#\space)
+                               :after-line-break (print-line-number)
+                               :after-line-break-initially t)
+        (with-drawing-options (stream :text-style *default-text-style* :ink +black+)
+          (format stream *lorem-ipsum*))
+        (indenting-output (stream 20)
+          (with-drawing-options (stream :ink +dark-red+)
+           (filling-output (stream :fill-width '(80 :character)
+                                   :break-characters '(#\space)
+                                   :after-line-break "| "
+                                   :after-line-break-composed nil
+                                   :after-line-break-initially t
+                                   :after-line-break-subsequent t)
+             (fresh-line stream)
+             (with-drawing-options (stream :text-style *default-text-style* :ink +dark-blue+)
+               (format stream *lorem-ipsum*)))))
+        (fresh-line stream)
+        (with-drawing-options (stream :text-style *default-text-style* :ink +black+)
+          (format stream *lorem-ipsum*))
+        (indenting-output (stream '(10 :character))
+          (with-drawing-options (stream :ink +dark-green+)
+            (filling-output (stream :fill-width '(80 :character)
+                                    :break-characters '(#\space)
+                                    :after-line-break "| "
+                                    :after-line-break-composed t
+                                    :after-line-break-initially t
+                                    :after-line-break-subsequent t)
+              (fresh-line stream)
+              (with-drawing-options (stream :text-style *default-text-style* :ink +dark-blue+)
+                (format stream *lorem-ipsum*)))))
         (with-drawing-options (stream :text-style *default-text-style* :ink +black+)
           (format stream *lorem-ipsum*))))))
 
