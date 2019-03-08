@@ -203,12 +203,15 @@
             (+ (parse-space stream (second left-margin) :horizontal)
                (parse-space stream indent :horizontal)))
       (with-temporary-margins (stream :left left-margin :move-cursor move-cursor)
-        (unwind-protect (funcall continuation stream)
-          (when (stream-start-line-p stream)
-            ;; We purposefully bypass the protocol to adjust
-            ;; cursor-position. Roundabout way with accessors is
-            ;; possible but obfuscates the intent. -- jd 2019-03-07
-            (setf (slot-value (stream-text-cursor stream) 'x) line-beginning)))))))
+        (flet ((fix-cursor-position (from-value to-value)
+                 ;; We purposefully bypass the protocol to adjust
+                 ;; cursor-position. Roundabout way with accessors is
+                 ;; possible but obfuscates the intent. -- jd 2019-03-07
+                 (when (= (stream-cursor-position stream) from-value)
+                   (setf (slot-value (stream-text-cursor stream) 'x) to-value))))
+          (fix-cursor-position line-beginning (second left-margin))
+          (unwind-protect (funcall continuation stream)
+            (fix-cursor-position (second left-margin) line-beginning)))))))
 
 (defmacro indenting-output ((stream indentation &rest args &key move-cursor) &body body)
   (declare (ignore move-cursor))
