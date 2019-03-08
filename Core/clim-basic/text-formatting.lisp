@@ -100,16 +100,19 @@
     (thunk :bottom))
   (check-type new-margins margin-spec)
   (unless (equal new-margins old-margins)
-    (slot-makunbound stream '%page-region)
-    (call-next-method new-margins stream)))
+    (call-next-method new-margins stream)
+    (slot-unbound (class-of stream) stream '%page-region)))
 
 (defgeneric invoke-with-temporary-page (stream continuation &key margins move-cursor)
   (:method ((stream standard-page-layout) continuation &key margins (move-cursor t))
-    (letf (((stream-text-margins stream) margins))
-      (multiple-value-bind (cx cy) (stream-cursor-position stream)
-        (funcall continuation stream)
-        (unless move-cursor
-          (setf (stream-cursor-position stream) (values cx cy)))))))
+    (flet ((do-it ()
+             (letf (((stream-text-margins stream) margins))
+               (funcall continuation stream))))
+      (if move-cursor
+          (do-it)
+          (multiple-value-bind (cx cy) (stream-cursor-position stream)
+            (unwind-protect (do-it)
+              (setf (stream-cursor-position stream) (values cx cy))))))))
 
 (defmacro with-temporary-margins
     ((stream &rest args
