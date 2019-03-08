@@ -435,7 +435,9 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 (defmethod stream-line-column ((stream standard-extended-output-stream))
   (let ((line-width (- (stream-cursor-position stream)
                        (stream-cursor-initial-position stream))))
-    (floor line-width (stream-string-width stream "m"))))
+    (if (minusp line-width)
+        nil
+        (floor line-width (stream-string-width stream "m")))))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
