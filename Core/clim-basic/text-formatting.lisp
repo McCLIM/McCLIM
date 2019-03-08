@@ -48,7 +48,7 @@
     (thunk :bottom '(:relative 0))
     (setf (stream-text-margins instance) text-margins)))
 
-(defgeneric page-cursor-initial-position (stream)
+(defgeneric stream-cursor-initial-position (stream)
   (:documentation "Returns two values: x and y initial position for a cursor on page.")
   (:method ((stream standard-page-layout))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
@@ -56,7 +56,7 @@
       (declare (ignore max-x max-y))
       (values min-x min-y))))
 
-(defgeneric page-cursor-final-position (stream)
+(defgeneric stream-cursor-final-position (stream)
   (:documentation "Returns two values: x and y final position for a cursor on page.")
   (:method ((stream standard-page-layout))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
@@ -198,7 +198,7 @@
     (stream continuation &key indent move-cursor)
   (:method (stream continuation &key indent (move-cursor t))
     (let ((left-margin (copy-list (getf (stream-text-margins stream) :left)))
-          (line-beginning (page-cursor-initial-position stream)))
+          (line-beginning (stream-cursor-initial-position stream)))
       (setf (second left-margin)
             (+ (parse-space stream (second left-margin) :horizontal)
                (parse-space stream indent :horizontal)))

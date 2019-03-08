@@ -1919,8 +1919,8 @@
    #:cut-and-paste-mixin
    #:mouse-wheel-scroll-mixin
    ;; page abstraction (seos mixin)
-   #:page-initial-position
-   #:page-final-position
+   #:stream-cursor-initial-position
+   #:stream-cursor-final-position
    #:stream-page-region
    #:stream-text-margins
    #:with-temporary-margins
