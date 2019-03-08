@@ -84,18 +84,28 @@ will set the cursor at the @code{clime:page-initial-position}.
 
 @subsection FILLING-OUTPUT extension
 
-Macro @code{filling-output} behaves the same as before with a few
+The macro @code{filling-output} behaves the same as before with a few
 additions:
 
 @code{:after-line-break-subsequent} is complementary to
-@code{:after-line-break-initially}, it decides whenever
-@code{:after-line-break} is printed for lines after the first break.
+@code{:after-line-break-initially}, it decides whether
+@code{:after-line-break} is printed for lines after the first
+break. It defaults to @code{T}.
+
+@code{:after-line-break-composed} decides whether
+@code{after-line-break} from the external @code{filling-output} should
+be called as well (defaults to @code{T}).
 
 @code{:after-line-break} may be a string or a function accepting two
-arguments: a stream and a flag indicating whenever it is a soft
-newline or not. The function will be executed conditionally depending
-on values of @code{:after-line-break-initially} and
+arguments: a stream and a flag indicating whether it is a soft newline
+or not. The function will be executed conditionally depending on
+values of @code{:after-line-break-initially} and
 @code{:after-line-break-subsequent} flags.
+
+The macro preserves a @code{text-style}, @code{ink} and indentation
+from state in which it was invoked. That means in particular that
+@code{indenting-output} may be called from insde @code{filling-output}
+and @code{after-line-break} will be printed without this indent.
 
 @node Tab Layout
 @section Tab Layout
