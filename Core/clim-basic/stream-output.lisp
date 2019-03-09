@@ -187,7 +187,7 @@
     ((stream standard-extended-output-stream) &rest initargs)
   (declare (ignore initargs))
   (multiple-value-bind (x-start y-start)
-      (page-cursor-initial-position stream)
+      (stream-cursor-initial-position stream)
     (setf (stream-text-cursor stream)
           (make-instance 'standard-text-cursor
                          :sheet stream
@@ -257,7 +257,7 @@
 (defgeneric maybe-end-of-page-action (stream y)
   (:method ((stream standard-extended-output-stream) y)
     ;; fixme: remove assumption about page vertical direction -- jd 2019-03-02
-    (let ((bottom-margin (nth-value 1 (page-cursor-final-position stream)))
+    (let ((bottom-margin (nth-value 1 (stream-cursor-final-position stream)))
           (end-of-page-action (stream-end-of-page-action stream)))
       (when (> y bottom-margin)
         (%note-stream-end-of-page stream end-of-page-action y)
@@ -266,7 +266,7 @@
           ((:wrap :wrap*)
            (setf (cursor-position (stream-text-cursor stream))
                  (values (nth-value 0 (stream-cursor-position stream))
-                         (nth-value 1 (page-cursor-initial-position stream))))))))))
+                         (nth-value 1 (stream-cursor-initial-position stream))))))))))
 
 (defgeneric %note-stream-end-of-page (stream action new-height)
   (:method (stream action new-height)
@@ -284,7 +284,7 @@
                                 (%stream-char-height stream)
                                 vertical-spacing)))
       (setf (cursor-position (stream-text-cursor stream))
-            (values (page-cursor-initial-position stream)
+            (values (stream-cursor-initial-position stream)
                     updated-cy))
       ;; this will close the output record if recorded
       (unless nil ;soft-newline-p
@@ -304,8 +304,8 @@
   (let* ((medium (sheet-medium stream))
          (text-style (medium-text-style medium))
          ;; fixme: remove assumption about the text direction (LTR).
-         (left-margin  (page-cursor-initial-position stream))
-         (right-margin (page-cursor-final-position stream)))
+         (left-margin  (stream-cursor-initial-position stream))
+         (right-margin (stream-cursor-final-position stream)))
     (maxf (slot-value stream 'baseline) (text-style-ascent text-style medium))
     (maxf (%stream-char-height stream)  (text-style-height text-style medium))
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
@@ -434,13 +434,15 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 
 (defmethod stream-line-column ((stream standard-extended-output-stream))
   (let ((line-width (- (stream-cursor-position stream)
-                       (page-cursor-initial-position stream))))
-    (floor line-width (stream-string-width stream "m"))))
+                       (stream-cursor-initial-position stream))))
+    (if (minusp line-width)
+        nil
+        (floor line-width (stream-string-width stream "m")))))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
     (declare (ignore y))
-    (= x (page-cursor-initial-position stream))))
+    (= x (stream-cursor-initial-position stream))))
 
 (defmacro with-room-for-graphics ((&optional (stream t)
                                              &rest arguments

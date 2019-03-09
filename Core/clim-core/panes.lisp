@@ -2624,7 +2624,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (window-erase-viewport pane)
   (when-let ((cursor (stream-text-cursor pane)))
     (setf (cursor-position cursor)
-          (page-cursor-initial-position pane)))
+          (stream-cursor-initial-position pane)))
   (setf (stream-width pane) 0)
   (setf (stream-height pane) 0)
   (scroll-extent pane 0 0)

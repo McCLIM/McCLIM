@@ -66,46 +66,38 @@
   (:default-initargs
    :align-x :left :align-y :baseline :min-width 0 :min-height 0))
 
-(defgeneric invoke-formatting-cell (stream cont
-                                    &key align-x align-y min-width min-height record-type
-                                      &allow-other-keys))
-
-(defmethod invoke-formatting-cell (stream cont
-                                   &key (align-x :left)
-                                     (align-y :baseline)
-                                     (min-width 0)
-                                     (min-height 0)
-                                     (record-type 'standard-cell-output-record)
-                                     &allow-other-keys)
-  (invoke-with-new-output-record
-   stream
-   (lambda (stream record)
-     (declare (ignore record))
-     (letf (((stream-cursor-position stream) (values 0 0)))
-       (funcall cont stream)))
-   record-type
-   :align-x align-x
-   :align-y align-y
-   :min-width (parse-space stream min-width :horizontal)
-   :min-height (parse-space stream min-height :vertical)))
+(defgeneric invoke-formatting-cell
+    (stream cont &key align-x align-y min-width min-height record-type &allow-other-keys)
+  (:method (stream continuation &key
+                                  (align-x :left)
+                                  (align-y :baseline)
+                                  (min-width 0)
+                                  (min-height 0)
+                                  (record-type 'standard-cell-output-record)
+                                  &allow-other-keys)
+    (invoke-with-new-output-record
+     stream
+     (lambda (stream record)
+       (declare (ignore record))
+       (with-temporary-margins (stream :left '(:absolute 0))
+         (letf (((stream-cursor-position stream) (values 0 0)))
+           (funcall continuation stream))))
+     record-type
+     :align-x align-x
+     :align-y align-y
+     :min-width (parse-space stream min-width :horizontal)
+     :min-height (parse-space stream min-height :vertical))))
 
 (defmacro formatting-cell ((&optional (stream t)
-                                      &rest more
-                                      &key align-x align-y
-                                      (min-width 0) (min-height 0)
-                                      (record-type ''standard-cell-output-record))
+                            &rest args
+                            &key align-x align-y min-width min-height record-type)
                            &body body)
-  (declare (ignorable align-x align-y))
+  (declare (ignore align-x align-y min-width min-height record-type))
   (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-keywords-removed (more (:record-type :min-width :min-height))
-    (with-gensyms (record)
-      ;; Blow off order-of-evaluation issues for the moment...
-      `(with-new-output-record
-           (,stream ,record-type ,record ,@more
-                    :min-width (parse-space ,stream ,min-width :horizontal)
-                    :min-height (parse-space ,stream ,min-height :vertical))
-         (letf (((stream-cursor-position ,stream) (values 0 0)))
-               ,@body)))))
+  (with-gensyms (continuation)
+    `(flet ((,continuation (,stream) ,@body))
+       (declare (dynamic-extent #',continuation))
+       (invoke-formatting-cell ,stream #',continuation ,@args))))
 
 
 ;;; Generic block formatting
