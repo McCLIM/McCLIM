@@ -22,3 +22,11 @@
     for output-type in '(:string :html)
     when (convert-clipboard-content obj output-type :type type :check-only t)
       collect type))
+
+(clim:define-presentation-method convert-clipboard-content
+    (obj (type selection-content) (output-type (eql :string)) check-only)
+  (selection-content/text obj))
+
+(clim:define-presentation-method convert-clipboard-content
+    (obj (type selection-content) (output-type (eql :html)) check-only)
+  (selection-content/html obj))

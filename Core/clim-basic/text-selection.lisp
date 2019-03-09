@@ -321,29 +321,81 @@
               (visit chunk)) )
           (setf (slot-value stream 'markings) (reverse marks)))))))
 
+(defun make-style-tags (style ink)
+  (log:info "style=~s ink=~s" style ink)
+  (multiple-value-bind (bold-p italic-p)
+      (if (typep style 'standard-text-style)
+          (let ((face-list (alexandria:ensure-list (text-style-face style))))
+            (values (not (null (member :bold face-list)))
+                    (not (null (member :italic face-list)))))
+          (values nil nil))
+    (list bold-p italic-p)))
+
+(defun escape-html (string)
+  (with-output-to-string (out)
+    (loop
+      for ch across string
+      do (princ (case ch
+                  (#\& "&amp;")
+                  (#\< "&lt;")
+                  (#\> "&gt;")
+                  (t ch))
+                out))))
+
+(defclass selection-content ()
+  ((text :initarg :text
+         :reader selection-content/text)
+   (html :initarg :html
+         :reader selection-content/html)))
 
 (defun fetch-selection (pane)
-  (let (old-y2 old-x2)
-    (with-output-to-string (bag)
-      (map nil
-           (lambda (m)
-             (with-slots (record styled-string start end) m
-               (with-standard-rectangle*
-                   (:x1 x1 :x2 x2 :y1 y1 :y2 y2) record
-                   (cond ((and old-y2 (>= y1 old-y2))
-                          (setf old-y2 nil
-                                old-x2 0 ;<-- ### we should use the minimum of all x1 coordinates.
-                                )
-                          (terpri bag))
-                         (t
-                          (setf old-y2 (max y2 (or old-y2 y2)))))
-                   (when old-x2
-                     (loop repeat (round
-                                   (- x1 old-x2)
-                                   (text-style-width (slot-value styled-string 'text-style)
-                                                     pane))
-                       do
-                       (princ " " bag)))
-                   (setf old-x2 x2)
-                   (princ (subseq (styled-string-string styled-string) start end) bag))))
-           (slot-value pane 'markings)))))
+  (let ((old-y2 nil)
+        (old-x2 nil)
+        (plain-content nil)
+        (html-content nil))
+    (setq plain-content
+          (with-output-to-string (bag)
+            (setq html-content
+                  (with-output-to-string (html)
+                    (macrolet ((maybe-wrap-in-tag (tag wrap-p &body body)
+                                 (alexandria:with-gensyms (fn)
+                                   (alexandria:once-only (tag wrap-p)
+                                     `(labels ((,fn () ,@body))
+                                        (if ,wrap-p
+                                            (progn
+                                              (format html "<~a>" ,tag)
+                                              (,fn)
+                                              (format html "</~a>" ,tag))
+                                            (,fn)))))))
+                      (map nil
+                           (lambda (m)
+                             (with-slots (record styled-string start end) m
+                               (with-standard-rectangle*
+                                   (:x1 x1 :x2 x2 :y1 y1 :y2 y2) record
+                                 (cond ((and old-y2 (>= y1 old-y2))
+                                        (setf old-y2 nil
+                                              old-x2 0 ;<-- ### we should use the minimum of all x1 coordinates.
+                                              )
+                                        (terpri bag))
+                                       (t
+                                        (setf old-y2 (max y2 (or old-y2 y2)))))
+                                 (when old-x2
+                                   (loop repeat (round
+                                                 (- x1 old-x2)
+                                                 (text-style-width (slot-value styled-string 'text-style)
+                                                                   pane))
+                                         do
+                                            (princ " " bag)))
+                                 (setf old-x2 x2)
+                                 (let ((string (subseq (styled-string-string styled-string) start end)))
+                                   (let ((style (make-style-tags (graphics-state-text-style styled-string)
+                                                                 (graphics-state-ink styled-string))))
+                                     (destructuring-bind (bold-p italic-p)
+                                         style
+                                       (log:info "string = ~s" string)
+                                       (maybe-wrap-in-tag "b" bold-p
+                                                          (maybe-wrap-in-tag "i" italic-p
+                                                                             (format html "~a" (escape-html string))))))
+                                   (princ string bag)))))
+                           (slot-value pane 'markings)))))))
+    (make-instance 'selection-content :text plain-content :html html-content)))
