@@ -31,11 +31,11 @@
 
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))
-   (margins :initarg :text-margins :accessor stream-text-margins :type margin-spec))
-  (:default-initargs :text-margins '(:left   (:absolute 0)
-                                     :top    (:absolute 0)
-                                     :right  (:relative 0)
-                                     :bottom (:relative 0))))
+   (margins :initform '(:left   (:absolute 0)
+                        :top    (:absolute 0)
+                        :right  (:relative 0)
+                        :bottom (:relative 0))
+            :accessor stream-text-margins :type margin-spec)))
 
 (defmethod initialize-instance :after ((instance standard-page-layout)
                                        &key text-margins text-margin)
