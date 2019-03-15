@@ -1856,16 +1856,6 @@ add output recording facilities. It is not instantiable."))
           (slot-value stream 'output-history) history
           (stream-current-output-record stream) history)))
 
-;;; Used in initializing clim-stream-pane
-
-(defgeneric reset-output-history (stream))
-
-(defmethod reset-output-history ((stream
-                                  standard-output-recording-stream))
-  (setf (slot-value stream 'output-history)
-        (make-instance 'standard-tree-output-history :stream stream))
-  (setf (stream-current-output-record stream) (stream-output-history stream)))
-
 ;;; 16.4.1 The Output Recording Stream Protocol
 (defmethod (setf stream-recording-p)
     (recording-p (stream standard-output-recording-stream))
