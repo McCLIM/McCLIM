@@ -527,6 +527,9 @@ if there is one, or STREAM"
 (def-stream-method (setf stream-end-of-page-action)
     (action (stream standard-encapsulating-stream)))
 
+(def-stream-method invoke-with-temporary-page
+    ((stream standard-encapsulating-stream) continuation &key margins (move-cursor t)))
+
 (def-stream-method medium-buffering-output-p
     ((stream standard-encapsulating-stream)))
 
