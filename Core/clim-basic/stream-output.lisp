@@ -319,7 +319,7 @@
           (stream-write-output stream string nil start end)
           (incf cx width)
           (setf (cursor-position (stream-text-cursor stream)) (values cx cy))
-          (when (and (> (+ cx width) right-margin)
+          (when (and (> cx right-margin)
                      (eql eol-action :scroll))
             (multiple-value-bind (tx ty)
                 (bounding-rectangle-position (sheet-region stream))
