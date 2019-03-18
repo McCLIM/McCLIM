@@ -142,7 +142,8 @@
   (let ((history (make-instance 'standard-tree-output-history :stream stream)))
     (setf (slot-value stream 'climi::output-history) history
 	  (stream-current-output-record stream) history))    
-  (setf (stream-cursor-position stream) (values 0 0)))
+  (setf (stream-cursor-position stream)
+        (stream-cursor-initial-position stream)))
 
 (defun emit-new-page (stream)
   ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11

@@ -123,7 +123,8 @@ activated with GESTURE"))
           ((stream-drawing-p real-stream)
            (replay record real-stream) ))
     (setf (stream-cursor-position real-stream)
-          (values 0 (bounding-rectangle-max-y (input-editing-stream-output-record stream))))))
+          (values (stream-cursor-initial-position real-stream)
+                  (bounding-rectangle-max-y (input-editing-stream-output-record stream))))))
 
 ;; XXX: We are supposed to implement input editing for all
 ;; "interactive streams", but that's not really reasonable. We only
