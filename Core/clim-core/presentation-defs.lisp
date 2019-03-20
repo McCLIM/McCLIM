@@ -665,13 +665,14 @@ history will be unchanged."
          (when ,added
            (decf (fill-pointer (presentation-history-array ,history))))))))
 
-(defun presentation-history-add (history object ptype)
-  "Add OBJECT and PTYPE to the HISTORY unless they are already at the head of
- HISTORY"
-  (multiple-value-bind (top-object top-ptype)
-      (presentation-history-top history ptype)
-    (unless (and top-ptype (eql object top-object) (equal ptype top-ptype))
-      (presentation-history-insert history object ptype))))
+(defgeneric presentation-history-add (history object ptype)
+  (:documentation "Add OBJECT and PTYPE to the HISTORY unless they are already at the head of
+ HISTORY")
+  (:method (history object ptype)
+    (multiple-value-bind (top-object top-ptype)
+        (presentation-history-top history ptype)
+      (unless (and top-ptype (eql object top-object) (equal ptype top-ptype))
+        (presentation-history-insert history object ptype)))))
 
 (define-presentation-generic-function %accept accept
     (type-key parameters options type stream view &key))
