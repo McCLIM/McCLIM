@@ -19,7 +19,7 @@
 * Frame manager::
 * Pointer protocol (events?)::
 * Text size::
-* Text selection::
+* Selections and Clipboard::
 * Miscellaneous::
 * Obsolete::
 @end menu
@@ -209,26 +209,83 @@ text-style-mapping
 text-style-width
 @end verbatim
 
-@node Text selection
-@subheading Text selection
+@node Selections and Clipboard
+@subheading Selection Definitions
+
+The clipboard API defines two types of copyable content, *selection*
+and *clipboard*:
+
+@subsubheading Selection
+
+The selection is the content that has been selected in some way. For
+example, it may be the text that is highlighted when shift-dragging on
+text in a stream pane, or it may be a portion of an image that has
+been highlighted in a drawing program.
+
+@subsubheading Clipboard
+
+The clipboard is what is used in most applications when choosing the
+@emph{copy} and @emph{paste} operations. In a CUA-based application,
+@emph{copy} transfers the content of the selection to the clipboard, and
+@emph{paste} inserts the content of the clipboard into the document.
+
+Traditional X-based applications allows you to paste the content of
+the selection directly into other programs by middle-clicking the
+mouse button. This functionality is not available on OSX or Windows.
+
+@subsubheading Object types
+
+This implementation supports multiple types of clipboard data. As of
+this writing, support for copying and pasting plain text and HTML
+content has been implemented, as well as support for pasting images.
+
+@subheading Selection End User API
+
+@subsubheading Copying content to the clipboard
+
+The @code{COPY-TO-SELECTION} function is used to copy an object to the
+selection, while @code{COPY-TO-CLIPBOARD} is used to copy to the
+clipboard.
+
+Objects that are copied to the clipboard are CLIM presentations.
+@code{COPY-TO-CLIPBOARD} accepts a keyword argument @code{:TYPE} that
+indicates the presentation type of the object.
+
+To support conversion from an arbitrary presentation type, implement
+@code{CONVERT-CLIPBOARD-CONTENT}. Below is an example of what such
+conversion method can look like. Assume that the custom presentation
+type is called @code{MARKUP-TEXT}.
 
 @verbatim
-TEXT SELECTION (port.lisp)
---------------------------
-;;; Originally in CLIM
-selection-owner
-selection-timestamp
-selection-event
-selection-clear-event
-selection-notify-event
-selection-request-event
-selection-event-requestor
-request-selection
-release-selection
-bind-selection
-send-selection
-get-selection-from-event
+(define-presentation-method convert-clipboard-content
+    (obj (type markup-text) (output-type (eql :string)) check-only)
+  (markup-text/text obj))
 @end verbatim
+
+When this presentation method has been defined, presentations of this
+type will be selectable as an argument to the built-in command
+@emph{Copy to Clipboard}.
+
+The argument @code{CHECK-ONLY} is true if the caller is only interested
+in knowing whether the object can be converted to the requested type or
+not, and its return value will only be checked for a nil or non-nil
+value. It should be used if the conversion function is expensive in
+terms if CPU or memory.
+
+@subsubheading Pasting from the Clipboard
+
+Pasting is a two-step process:
+
+@enumerate
+@item
+Call the function =REQUEST-CLIPBOARD-CONTENT= with a pane and the
+requested type.
+
+@item
+After some time (usually within a few milliseconds) an event of type
+@code{CLIPBOARD-SEND-EVENT} will be delivered to the pane. This event
+contains the requested clipboard data.
+@end enumerate
 
 @node Miscellaneous
 @subheading Miscellaneous
