@@ -183,49 +183,49 @@ activated with GESTURE"))
 		 (push item result)))
     (reverse result)))
 
-(defun history-yank-next (stream input-buffer gesture numeric-argument)
-  (declare (ignore input-buffer gesture numeric-argument))
-  (let* ((accepting-type *active-history-type*)
-	 (quoted-sublists nil)
-         (history (and accepting-type
-                       (presentation-type-history accepting-type))))
-    (when history
-      (multiple-value-bind (object type)
-          (presentation-history-next history accepting-type)
-        (when type
-	  (when (and (equal type 'command-or-form)
-		     (listp object)
-		     (alexandria:starts-with-subseq "COM-" (symbol-name `,(car object))))
-	    (setf quoted-sublists (%quote-sublists object)))
-	  (when (null quoted-sublists)
-	    (setf quoted-sublists object))
-	  (let ((*print-case* :downcase))
-	    (presentation-replace-input stream quoted-sublists type
-					(stream-default-view stream)
-					:allow-other-keys t
-					:accept-result nil)))))))
-
-(defun history-yank-previous (stream input-buffer gesture numeric-argument)
-  (declare (ignore input-buffer gesture numeric-argument))
-  (let* ((accepting-type *active-history-type*)
-	 (quoted-sublists nil)
-         (history (and accepting-type
-                       (presentation-type-history accepting-type))))
-    (when history
-      (multiple-value-bind (object type)
-          (presentation-history-previous history accepting-type)
-        (when type
-	  (when (and (equal type 'command-or-form)
-		     (listp object)
-		     (alexandria:starts-with-subseq "COM-" (symbol-name `,(car object))))
+(defgeneric history-yank-next (stream input-buffer gesture numeric-argument)
+  (:method (stream input-buffer gesture numeric-argument)
+    (let* ((accepting-type *active-history-type*)
+	   (quoted-sublists nil)
+           (history (and accepting-type
+                         (presentation-type-history accepting-type))))
+      (when history
+        (multiple-value-bind (object type)
+            (presentation-history-next history accepting-type)
+          (when type
+	    (when (and (equal type 'command-or-form)
+		       (listp object)
+		       (alexandria:starts-with-subseq "COM-" (symbol-name `,(car object))))
 	      (setf quoted-sublists (%quote-sublists object)))
-	  (when (null quoted-sublists)
-	    (setf quoted-sublists object))
-	  (let ((*print-case* :downcase))
-	    (presentation-replace-input stream quoted-sublists type
-					(stream-default-view stream)
-					:allow-other-keys t
-					:accept-result nil)))))))
+	    (when (null quoted-sublists)
+	      (setf quoted-sublists object))
+	    (let ((*print-case* :downcase))
+	      (presentation-replace-input stream quoted-sublists type
+					  (stream-default-view stream)
+					  :allow-other-keys t
+					  :accept-result nil))))))))
+
+(defgeneric history-yank-previous (stream input-buffer gesture numeric-argument)
+  (:method (stream input-buffer gesture numeric-argument)
+    (let* ((accepting-type *active-history-type*)
+	   (quoted-sublists nil)
+           (history (and accepting-type
+                         (presentation-type-history accepting-type))))
+      (when history
+        (multiple-value-bind (object type)
+            (presentation-history-previous history accepting-type)
+          (when type
+	    (when (and (equal type 'command-or-form)
+		       (listp object)
+		       (alexandria:starts-with-subseq "COM-" (symbol-name `,(car object))))
+	      (setf quoted-sublists (%quote-sublists object)))
+	    (when (null quoted-sublists)
+	      (setf quoted-sublists object))
+	    (let ((*print-case* :downcase))
+	      (presentation-replace-input stream quoted-sublists type
+					  (stream-default-view stream)
+					  :allow-other-keys t
+					  :accept-result nil))))))))
 
 (add-input-editor-command '((#\n :meta)) 'history-yank-next)
 
