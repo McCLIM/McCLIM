@@ -1969,7 +1969,10 @@
    #:xpm-parse-file
    #:*xpm-x11-colors*
    ;; selection
-   #:define-selection-translator))
+   #:define-selection-translator
+   #:release-selection
+   #:publish-selection
+   #:request-selection))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -2075,7 +2078,15 @@
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-glyph
-   #:medium-draw-circle*))
+   #:medium-draw-circle*
+   ;; selection
+   #:release-selection
+   #:publish-selection
+   #:request-selection
+   #:selection-object
+   #:selection-object-content
+   #:selection-object-type
+   #:selection-object-owner))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)

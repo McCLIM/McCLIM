@@ -437,9 +437,12 @@ will ask whether to sort in ascending or descending order."
 ;; Copies an element from a kill-ring to a buffer at the given offset
 (define-command (com-yank :name t :command-table editing-table) ()
   "Insert the objects most recently added to the kill ring at point."
-  (handler-case (insert-sequence (point) (kill-ring-yank *kill-ring*))
-    (empty-kill-ring ()
-      (display-message "Kill ring is empty"))))
+  (alexandria:if-let
+      ((string (clime:request-selection *standard-input* :clipboard 'string)))
+    (insert-sequence (point) string)
+    (handler-case (insert-sequence (point) (kill-ring-yank *kill-ring*))
+      (empty-kill-ring ()
+        (display-message "Kill ring is empty")))))
 
 (set-key 'com-yank
 	 'editing-table

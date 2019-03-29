@@ -150,7 +150,11 @@
     (when dragging-p
       (setf point-2-x (pointer-event-x event)
             point-2-y (pointer-event-y event)
-            dragging-p nil))))
+            dragging-p nil)
+      (let ((content (fetch-selection pane)))
+        (when (plusp (length content))
+          (publish-selection pane :primary content 'string)
+          (publish-selection pane :local-selection content 'string))))))
 
 (defun eos/shift-drag (pane event)
   (with-slots (point-1-x point-1-y) pane
@@ -180,7 +184,7 @@
       (call-next-method)))
 
 (defmethod dispatch-event :around ((pane text-selection-mixin)
-                           (event pointer-motion-event))
+                                   (event pointer-motion-event))
   (with-slots (point-1-x dragging-p) pane
     (if (eql (event-modifier-state event) +shift-key+)
         (when dragging-p
@@ -191,7 +195,9 @@
 (defun pane-clear-markings (pane &optional time)
   (declare (ignore time))
   (repaint-markings pane (slot-value pane 'markings)
-                    (setf (slot-value pane 'markings) nil)))
+                    (setf (slot-value pane 'markings) nil))
+  (release-selection pane :primary t)
+  (release-selection pane :local-selection t))
  
 (defun repaint-markings (pane old-markings new-markings)
   (let ((old-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) old-markings)
