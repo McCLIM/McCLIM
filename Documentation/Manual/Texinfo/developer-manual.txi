@@ -19,7 +19,6 @@
 * Frame manager::
 * Pointer protocol (events?)::
 * Text size::
-* Text selection::
 * Miscellaneous::
 * Obsolete::
 @end menu
@@ -83,7 +82,6 @@ foo-pointer
 EVENT HANDLING (in port.lisp)
 -----------------------------
 ;;; Originally in CLIM-INTERNALS
-get-next-event
 port-frame-keyboard-input-focus
 port-grab-pointer
 port-ungrab-pointer
@@ -207,27 +205,6 @@ text-style-descent
 text-style-height
 text-style-mapping
 text-style-width
-@end verbatim
-
-@node Text selection
-@subheading Text selection
-
-@verbatim
-TEXT SELECTION (port.lisp)
---------------------------
-;;; Originally in CLIM
-selection-owner
-selection-timestamp
-selection-event
-selection-clear-event
-selection-notify-event
-selection-request-event
-selection-event-requestor
-request-selection
-release-selection
-bind-selection
-send-selection
-get-selection-from-event
 @end verbatim
 
 @node Miscellaneous

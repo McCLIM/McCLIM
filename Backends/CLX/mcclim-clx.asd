@@ -23,8 +23,7 @@
              (:file "fonts" :depends-on ("bidi"))
              (:file "medium" :depends-on ("fonts"))
              (:file "medium-xrender" :depends-on ("medium"))))
-   (:file "input")
-   (:file "text-selection")))
+   (:file "input")))
 
 (defsystem #:mcclim-clx/truetype
   :depends-on (#:mcclim-clx
