@@ -71,7 +71,6 @@
    (lock
     :initform (make-recursive-lock "port lock")
     :accessor port-lock)
-   (event-count :initform 0)
    (text-style-mappings :initform (make-hash-table :test #'eq)
                         :reader port-text-style-mappings)
    (pointer-sheet :initform nil :accessor port-pointer-sheet
@@ -168,30 +167,6 @@
 (defmethod (setf port-properties) (value (port basic-port) indicator)
   (with-slots (properties) port
     (setf (getf properties indicator) value)))
-
-(defgeneric get-next-event (port &key wait-function timeout))
-
-(defmethod get-next-event ((port basic-port) &key wait-function timeout)
-  (declare (ignore wait-function timeout))
-  (error "Calling GET-NEXT-EVENT on a PORT protocol class"))
-
-(defmethod get-next-event :after ((port basic-port) &key wait-function timeout)
-  (declare (ignore wait-function timeout))
-  (with-slots (event-count) port
-    (incf event-count)))
-
-(defmethod process-next-event ((port basic-port) &key wait-function timeout)
-  (let ((event (get-next-event port
-			       :wait-function wait-function
-			       :timeout timeout)))
-    (cond
-     ((null event) nil)
-     ((eq event :timeout) (values nil :timeout))
-     (t
-      (distribute-event port event)
-      t))))
-
-(defgeneric distribute-event (port event))
 
 (defmacro with-port-locked ((port) &body body)
   (let ((fn (gensym "CONT.")))

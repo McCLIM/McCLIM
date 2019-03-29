@@ -112,18 +112,6 @@
            (slot-value port 'climi::sheet->mirror))
   (xlib:display-force-output (clx-port-display port)))
 
-(defmethod get-next-event ((port clx-fb-port) &key wait-function (timeout nil))
-  (declare (ignore wait-function))
-  (let* ((clim-clx::*clx-port* port)
-         (display (clx-port-display port)))
-    (unless (xlib:event-listen display)
-      (xlib:display-force-output (clx-port-display port)))
-    (let ((event (xlib:process-event (clx-port-display port)
-				     :handler #'clim-clx::event-handler :discard-p t)))
-      (if event
-	  event
-	  :timeout))))
-
 ;;; Pixmap
 
 (defmethod destroy-mirror ((port clx-fb-port) (pixmap image-pixmap-mixin))

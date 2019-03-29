@@ -82,10 +82,9 @@
     (value (port null-port) (sheet mirrored-sheet-mixin))
   value)
 
-(defmethod get-next-event
-    ((port null-port) &key wait-function (timeout nil))
+(defmethod process-next-event ((port null-port) &key wait-function (timeout nil))
   (declare (ignore wait-function timeout))
-  nil)
+  (values nil :null-backend))
 
 (defmethod make-graft
     ((port null-port) &key (orientation :default) (units :device))

@@ -24,7 +24,6 @@
 
 (in-package :clim-clx)
 
-
 ;;; Think about rewriting this macro to be nicer.
 (defmacro peek-event ((display &rest keys) &body body)
   (let ((escape (gensym)))
@@ -111,8 +110,7 @@
 ;;; adding a pointer-event-buttons slot to pointer events. -- moore
 
 (defvar *clx-port*)
-
-(defgeneric port-client-message (sheet time type data))
+(defvar *wait-function*)
 
 (defun event-handler (&key display window event-key code state mode time
                         type width height x y root-x root-y
@@ -122,7 +120,8 @@
                         &allow-other-keys)
   (declare (ignore first-keycode count))
   (when (eql event-key :mapping-notify)
-    (return-from event-handler (xlib:mapping-notify display request 0 0)))
+    (xlib:mapping-notify display request 0 0)
+    (return-from event-handler (maybe-funcall *wait-function*)))
   (let ((sheet (and window (port-lookup-sheet *clx-port* window))))
     (when sheet
       (case event-key
@@ -249,7 +248,6 @@
 			      :sheet sheet
 			      :modifier-state modifier-state
 			      :timestamp time))))
-        ;;
 	((:exposure :display :graphics-exposure)
          ;; Notes:
          ;; . Do not compare count with 0 here, last rectangle in an
@@ -269,7 +267,6 @@
                         :timestamp time
                         :sheet sheet
                         :region (make-rectangle* x y (+ x width) (+ y height))))
-        ;;
         (:selection-notify
          (make-instance 'clx-selection-notify-event
                         :sheet sheet
@@ -289,25 +286,15 @@
                         :property property
                         :timestamp time))
 	(:client-message
-         (port-client-message sheet time type data))
+         (or (port-client-message sheet time type data)
+             (maybe-funcall *wait-function*)))
 	(t
 	 (unless (xlib:event-listen (clx-port-display *clx-port*))
 	   (xlib:display-force-output (clx-port-display *clx-port*)))
-	 nil)))))
+	 (maybe-funcall *wait-function*))))))
 
 
 ;; Handling of X client messages
-
-(defgeneric port-wm-protocols-message (sheet time message data))
-
-(defmethod port-client-message (sheet time (type (eql :wm_protocols)) data)
-  (port-wm-protocols-message sheet time
-                             (xlib:atom-name (slot-value *clx-port* 'display) (aref data 0))
-                             data))
-
-(defmethod port-client-message (sheet time (type t) data)
-  (warn "Unprocessed client message: ~:_type = ~S;~:_ data = ~S;~_ sheet = ~S."
-        type data sheet))
 
 ;;; this client message is only necessary if we advertise that we
 ;;; participate in the :WM_TAKE_FOCUS protocol; otherwise, the window
@@ -316,36 +303,39 @@
 ;;; then this method should be adjusted appropriately and the
 ;;; top-level-sheet REALIZE-MIRROR method should be adjusted to add
 ;;; :WM_TAKE_FOCUS to XLIB:WM-PROTOCOLS.  CSR, 2009-02-18
-(defmethod port-wm-protocols-message (sheet time (message (eql :wm_take_focus)) data)
-  (let ((timestamp (elt data 1))
-        (mirror (sheet-xmirror sheet)))
-    (when mirror
-      (xlib:set-input-focus (clx-port-display *clx-port*)
-                            mirror :parent timestamp))
-    nil))
 
-(defmethod port-wm-protocols-message (sheet time (message (eql :wm_delete_window)) data)
-  (declare (ignore data))
-  (make-instance 'window-manager-delete-event :sheet sheet :timestamp time))
+(defun port-client-message (sheet time type data)
+  (case type
+    (:wm_protocols
+     (let ((message (xlib:atom-name (slot-value *clx-port* 'display) (aref data 0))))
+       (case message
+         (:wm_take_focus
+          (when-let ((mirror (sheet-xmirror sheet)))
+            (xlib:set-input-focus (clx-port-display *clx-port*)
+                                  mirror :parent (elt data 1)))
+          nil)
+         (:wm_delete_window
+          (make-instance 'window-manager-delete-event :sheet sheet :timestamp time))
+         (otherwise
+          (warn "Unprocessed WM Protocols message: ~:_message = ~S;~:_ data = ~S;~_ sheet = ~S."
+                message data sheet)))))
+    (otherwise
+     (warn "Unprocessed client message: ~:_type = ~S;~:_ data = ~S;~_ sheet = ~S."
+           type data sheet))))
 
-(defmethod port-wm-protocols-message (sheet time (message t) data)
-  (warn "Unprocessed WM Protocols message: ~:_message = ~S;~:_ data = ~S;~_ sheet = ~S."
-        message data sheet))
-
-
-
-(defmethod get-next-event ((port clx-basic-port) &key wait-function (timeout nil))
-  (declare (ignore wait-function))
-  (let* ((*clx-port* port)
-         (display    (clx-port-display port)))
-    (unless (xlib:event-listen display)
-      (xlib:display-force-output (clx-port-display port)))
-    ; temporary solution
-    (or (xlib:process-event (clx-port-display port) :timeout timeout :handler #'event-handler :discard-p t)
-	:timeout)))
-;; [Mike] Timeout and wait-functions are both implementation
-;;        specific and hence best done in the backends.
-
+(defmethod process-next-event ((port clx-basic-port) &key wait-function (timeout nil))
+  (let ((*clx-port* port)
+        (*wait-function* wait-function))
+    (let ((event (xlib:process-event (clx-port-display port)
+                                     :timeout timeout
+				     :handler #'event-handler
+                                     :discard-p t
+                                     :force-output-p t)))
+      (case event
+        ((nil) (values nil :timeout))
+        ((t)   (values nil :wait-function))
+        (otherwise
+         (prog1 t (distribute-event port event)))))))
 
 ;;; pointer button bits in the state mask
 

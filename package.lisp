@@ -1877,7 +1877,9 @@
   (:nicknames :clime)
   (:export
    ;; events
-   #:event-read-with-timeout #:schedule-event
+   #:event-read-with-timeout
+   #:event-listen-or-wait
+   #:schedule-event
    ;; sheets
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
@@ -1979,7 +1981,6 @@
   (:use :clim :clim-extensions)
   (:export
    ;; Originally in CLIM-INTERNALS
-   #:get-next-event
    #:make-graft
    #:medium-draw-circle*
    #:medium-draw-glyph
