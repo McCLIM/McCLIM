@@ -255,21 +255,23 @@ then repaint `sheet'."
                                    (stream-increment-cursor-position
                                     encapsulated-stream 0 old-height))
                                  (funcall continuation encapsulated-stream))))
-      (with-sheet-medium (medium encapsulated-stream)
-        (setf (output-record-position new-typeout-record) (values 0 old-min-y))
-        ;; Calculate the height difference between the old typeout and the new.
-        (let ((delta-y (- (bounding-rectangle-height new-typeout-record) old-height)))
-          (multiple-value-bind (typeout-x typeout-y)
-              (output-record-position new-typeout-record)
-            (declare (ignore typeout-x))
-            ;; Clear the old typeout...
-            (clear-output-record stream-typeout-record)
-            ;; Move stuff for the new typeout record...
-            (sheet-move-output-vertically encapsulated-stream typeout-y delta-y)
-            ;; Reuse the old stream-typeout-record...
-            (add-output-record new-typeout-record stream-typeout-record)
-            ;; Now, let there be light!
-            (repaint-sheet encapsulated-stream stream-typeout-record)))))))
+      (when (alexandria:emptyp (output-record-children new-typeout-record))
+        (clear-output-record stream-typeout-record)
+        (return-from invoke-with-input-editor-typeout))
+      (setf (output-record-position new-typeout-record) (values 0 old-min-y))
+      ;; Calculate the height difference between the old typeout and the new.
+      (let ((delta-y (- (bounding-rectangle-height new-typeout-record) old-height)))
+        (multiple-value-bind (typeout-x typeout-y)
+            (output-record-position new-typeout-record)
+          (declare (ignore typeout-x))
+          ;; Clear the old typeout...
+          (clear-output-record stream-typeout-record)
+          ;; Move stuff for the new typeout record...
+          (sheet-move-output-vertically encapsulated-stream typeout-y delta-y)
+          ;; Reuse the old stream-typeout-record...
+          (add-output-record new-typeout-record stream-typeout-record)
+          ;; Now, let there be light!
+          (repaint-sheet encapsulated-stream stream-typeout-record))))))
 
 (defun clear-typeout (&optional (stream t))
   "Blank out the input-editor typeout displayed on `stream',
