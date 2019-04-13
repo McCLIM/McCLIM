@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com), 
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com),
+;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000, 20014 by
@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;;; The Repaint Protocol.
@@ -47,45 +47,46 @@ want to do the same.")
 (defmethod queue-repaint ((sheet basic-sheet) (event window-repaint-event))
   (queue-event sheet event))
 
-(defmethod handle-repaint ((sheet basic-sheet) region)    
+(defmethod handle-repaint ((sheet basic-sheet) region)
   (declare (ignore region))
   nil)
 
 (defmethod repaint-sheet :around ((sheet basic-sheet) region)
   (declare (ignore region))
   (when (and (sheet-mirror sheet)
-	     (sheet-viewable-p sheet))
+             (sheet-viewable-p sheet))
     (call-next-method)))
 
 (defmethod handle-repaint :around ((sheet sheet-with-medium-mixin) region)
-  (let ((medium (sheet-medium sheet)))
-    (unless (eql region +nowhere+)
-      (with-drawing-options (medium :clipping-region region)
-	(call-next-method)))))
+  (typecase region
+    (nowhere-region)
+    (everywhere-region
+     (call-next-method))
+    (otherwise
+     (let ((medium (sheet-medium sheet)))
+       (with-drawing-options (medium :clipping-region region)
+         (call-next-method))))))
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
-  (labels ((effective-native-region (mirrored-sheet child region)
-	     (if (eq mirrored-sheet child)
-                 (transform-region
-                    (%%sheet-native-transformation mirrored-sheet)
-                    (region-intersection
-                     (sheet-region mirrored-sheet)
-                     region))
-		 (effective-native-region mirrored-sheet
-					  (sheet-parent child)
-					  (transform-region
-					   (sheet-transformation child)
-					   (region-intersection
-					    region
-					    (sheet-region child)))))))
-    (let ((r (bounding-rectangle
-	      (untransform-region
-	       (sheet-native-transformation sheet)
-	       (effective-native-region (sheet-mirrored-ancestor sheet) sheet region)))))
-      ;; This causes applications which want to do a double-buffered repaint,
-      ;; such as the logic cube, to flicker. On the other hand, it also stops
-      ;; things such as the listener wholine from overexposing their text.
-      (handle-repaint sheet r))))
+  (labels ((effective-native-region (msheet child region)
+             (let ((intersection (region-intersection (sheet-region child) region)))
+               (if (eq msheet child)
+                   (transform-region (%%sheet-native-transformation msheet) intersection)
+                   (effective-native-region msheet
+                                            (sheet-parent child)
+                                            (transform-region (sheet-transformation child)
+                                                              intersection))))))
+    ;; This causes applications which want to do a double-buffered repaint,
+    ;; such as the logic cube, to flicker. On the other hand, it also stops
+    ;; things such as the listener wholine from overexposing their text.
+    (let ((msheet (sheet-mirrored-ancestor sheet)))
+      ;; Do not call bounding-rectangle on region here. For +nowhere+ it gives
+      ;; 0:0 0:0 (disregarding the nativer region). -- jd 2019-03-23
+      (if (eql msheet sheet)
+          (handle-repaint sheet (region-intersection (sheet-region sheet) region))
+          (handle-repaint sheet (untransform-region
+                                 (sheet-native-transformation sheet)
+                                 (effective-native-region msheet sheet region)))))))
 
 (defmethod repaint-sheet :after ((sheet sheet-parent-mixin) region)
   ;; propagate repaint to unmirrored sheets
@@ -102,10 +103,10 @@ want to do the same.")
                      (handle-repaint child child-region)
                      (propagate-repaint-1 child child-region)))))))
     (propagate-repaint-1 sheet region)))
-	       
+
 (defmethod repaint-sheet :after ((sheet sheet-with-medium-mixin) region)
   ;; FIXME: Shouldn't McCLIM always do this?
-  (medium-force-output (sheet-medium sheet)))
+  (medium-finish-output (sheet-medium sheet)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -118,7 +119,7 @@ want to do the same.")
 (defclass standard-repainting-mixin () ())
 
 (defmethod dispatch-event
-    ((sheet standard-repainting-mixin) (event window-repaint-event)) 
+    ((sheet standard-repainting-mixin) (event window-repaint-event))
   (queue-repaint sheet event))
 
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
@@ -126,11 +127,11 @@ want to do the same.")
     (queue-repaint sheet (make-instance 'window-repaint-event
                                         :sheet sheet
                                         :region (transform-region
-						 (sheet-native-transformation sheet)
-						 region)))))
+                                                 (sheet-native-transformation sheet)
+                                                 region)))))
 
 (defmethod handle-event ((sheet standard-repainting-mixin)
-			 (event window-repaint-event))
+                         (event window-repaint-event))
   (repaint-sheet sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -147,7 +148,7 @@ want to do the same.")
   (repaint-sheet sheet region))
 
 (defmethod handle-event ((sheet immediate-repainting-mixin)
-			 (event window-repaint-event))
+                         (event window-repaint-event))
   (repaint-sheet sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -160,10 +161,10 @@ want to do the same.")
   (when (sheet-mirror sheet)
     ;; Only dispatch repaints, when the sheet has a mirror.
     (queue-repaint sheet (make-instance 'window-repaint-event
-			   :sheet sheet
-			   :region (transform-region
-				    (sheet-native-transformation sheet)
-				    region)))))
+                           :sheet sheet
+                           :region (transform-region
+                                    (sheet-native-transformation sheet)
+                                    region)))))
 
 (defmethod handle-repaint ((sheet sheet-mute-repainting-mixin) region)
   (declare (ignore region))
@@ -192,19 +193,19 @@ want to do the same.")
   (when (typep sheet 'never-repaint-background-mixin)
     (return-from handle-repaint))
   (labels ((effective-repaint-region (mirrored-sheet sheet region)
-	     (if (eq mirrored-sheet sheet)
-		 (region-intersection (sheet-region mirrored-sheet) region)
-		 (effective-repaint-region mirrored-sheet
-					   (sheet-parent sheet)
-					   (transform-region (sheet-transformation sheet)
+             (if (eq mirrored-sheet sheet)
+                 (region-intersection (sheet-region mirrored-sheet) region)
+                 (effective-repaint-region mirrored-sheet
+                                           (sheet-parent sheet)
+                                           (transform-region (sheet-transformation sheet)
                                                              (region-intersection region
                                                                                   (sheet-region sheet)))))))
     (let* ((parent (sheet-mirrored-ancestor sheet))
            (native-sheet-region (effective-repaint-region parent sheet region)))
-	  (with-sheet-medium (medium parent)
-	    (with-drawing-options (medium :clipping-region native-sheet-region
-					  :ink (pane-background sheet)
-					  :transformation +identity-transformation+)
-	      (with-bounding-rectangle* (left top right bottom)
-		  native-sheet-region
-		(medium-draw-rectangle* medium left top right bottom t)))))))
+          (with-sheet-medium (medium parent)
+            (with-drawing-options (medium :clipping-region native-sheet-region
+                                          :ink (pane-background sheet)
+                                          :transformation +identity-transformation+)
+              (with-bounding-rectangle* (left top right bottom)
+                  native-sheet-region
+                (medium-draw-rectangle* medium left top right bottom t)))))))
