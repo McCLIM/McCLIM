@@ -226,7 +226,9 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
 ;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
 ;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
 (defun mcclim-font:draw-glyphs (medium mirror gc x y string
-                                &key start end translate direction
+                                &key start end
+                                  align-x align-y
+                                  translate direction
                                   transformation transform-glyphs
                                 &aux (font (climb:text-style-to-font
                                             (port medium) (medium-text-style medium))))
@@ -246,12 +248,29 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
 
   (when (and transform-glyphs
              (not (clim:translation-transformation-p transformation)))
+    (setq string (subseq string start end))
+    (ecase align-x
+      (:left)
+      (:center (let ((origin-x (climb:text-size medium string :text-style (medium-text-style medium))))
+                 (decf x (/ origin-x 2.0))))
+      (:right  (let ((origin-x (climb:text-size medium string :text-style (medium-text-style medium))))
+                 (decf x origin-x))))
+    (ecase align-y
+      (:top (incf y (climb:font-ascent font)))
+      (:baseline)
+      (:center (let* ((ascent (climb:font-ascent font))
+                      (descent (climb:font-descent font))
+                      (height (+ ascent descent))
+                      (middle (- ascent (/ height 2.0s0))))
+                 (incf y middle)))
+      (:baseline*)
+      (:bottom (decf y (climb:font-descent font))))
     (return-from mcclim-font:draw-glyphs
-      (%render-transformed-glyphs font string x y transformation mirror gc)))
+      (%render-transformed-glyphs font string x y align-x align-y transformation mirror gc)))
 
-  (multiple-value-setq (x y) (clim:transform-position transformation x y))
   (let ((glyph-ids (clx-truetype-font-%buffer% font))
-        (glyph-set (display-the-glyph-set (xlib:drawable-display mirror))))
+        (glyph-set (display-the-glyph-set (xlib:drawable-display mirror)))
+        (origin-x 0))
     (loop
        with char = (char string start)
        with i* = 0
@@ -266,9 +285,32 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                (the (unsigned-byte 32) (font-glyph-id font code)))
          (setf char next-char)
          (incf i*)
+         (incf origin-x (climb:font-glyph-dx font code))
        finally
          (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-               (the (unsigned-byte 32) (font-glyph-id font (char-code char)))))
+               (the (unsigned-byte 32) (font-glyph-id font (char-code char))))
+         (incf origin-x (climb:font-glyph-dx font (char-code char))))
+
+
+    (multiple-value-bind (new-x new-y) (clim:transform-position transformation x y)
+      (setq x (ecase align-x
+                (:left (truncate (+ new-x 0.5)))
+                (:center (truncate (+ (- new-x (/ origin-x 2.0)) 0.5)))
+                (:right  (truncate (+ (- new-x origin-x)         0.5)))))
+      (setq y (ecase align-y
+                (:top       (truncate (+ new-y (climb:font-ascent font) 0.5)))
+                (:baseline  (truncate (+ new-y 0.5)))
+                (:center    (let* ((ascent (climb:font-ascent font))
+                                   (descent (climb:font-descent font))
+                                   (height (+ ascent descent))
+                                   (middle (- ascent (/ height 2.0s0))))
+                              (truncate (+ new-y middle 0.5))))
+                (:baseline* (truncate (+ new-y 0.5)))
+                (:bottom    (truncate (+ new-y (- (climb:font-descent font)) 0.5)))))
+      (unless (and (typep x '(signed-byte 16))
+                   (typep y '(signed-byte 16)))
+        (warn "Trying to render string outside the mirror.")
+        (return-from mcclim-font:draw-glyphs)))
 
     (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
       (declare (ignore source-pixmap))
@@ -281,13 +323,12 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
       (xlib::render-composite-glyphs (drawable-picture mirror)
                                      glyph-set
                                      source-picture
-                                     (truncate (+ x 0.5))
-                                     (truncate (+ y 0.5))
+                                     x y
                                      glyph-ids
                                      :end (- end start)))))
 
 ;;; Transforming glyphs is very inefficient because we don't cache them.
-(defun %render-transformed-glyphs (font string x y tr mirror gc
+(defun %render-transformed-glyphs (font string x y align-x align-y tr mirror gc
                                    &aux (end (length string)))
   ;; Sync the picture-clip-mask with that of the gcontext.
   (when-let ((clip (xlib::gcontext-clip-mask gc)))

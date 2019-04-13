@@ -5,12 +5,35 @@
 ;;;
 
 
-(defun string-primitive-paths (medium x y string transform-glyphs
-                               &aux (transformation (sheet-device-transformation (medium-sheet medium))))
-  (multiple-value-setq (x y)
-    (clim:transform-position transformation x y))
+(defun string-primitive-paths (medium x y string align-x align-y transform-glyphs
+                               &aux
+                                 (transformation (sheet-device-transformation (medium-sheet medium)))
+                                 (font (text-style-to-font (port medium) (medium-text-style medium))))
+  (flet ((adjust-positions ()
+           (ecase align-x
+             (:left)
+             (:center (let ((origin-x (climb:text-size medium string :text-style (medium-text-style medium))))
+                        (decf x (/ origin-x 2.0))))
+             (:right  (let ((origin-x (climb:text-size medium string :text-style (medium-text-style medium))))
+                        (decf x origin-x))))
+           (ecase align-y
+             (:top (incf y (climb:font-ascent font)))
+             (:baseline)
+             (:center (let* ((ascent (climb:font-ascent font))
+                             (descent (climb:font-descent font))
+                             (height (+ ascent descent))
+                             (middle (- ascent (/ height 2.0s0))))
+                        (incf y middle)))
+             (:baseline*)
+             (:bottom (decf y (climb:font-descent font))))))
+    (if transform-glyphs
+        (progn (adjust-positions)
+               (multiple-value-setq (x y)
+                 (clim:transform-position transformation x y)))
+        (progn (multiple-value-setq (x y)
+                 (clim:transform-position transformation x y))
+               (adjust-positions))))
   (loop
-     with font = (text-style-to-font (port medium) (medium-text-style medium))
      with glyph-transformation = (multiple-value-bind (x0 y0)
                                      (transform-position transformation 0 0)
                                    (compose-translation-with-transformation transformation (- x0) (- y0)))

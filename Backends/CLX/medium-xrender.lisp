@@ -171,28 +171,10 @@
   (when (alexandria:emptyp string)
     (return-from clim:medium-draw-text*))
   (with-clx-graphics () medium
-    (unless (eq align-y :baseline)
-      (let* ((font (climb:text-style-to-font (port medium) (medium-text-style medium)))
-             (ascent (climb:font-ascent font))
-             (descent (climb:font-descent font))
-             (text-height (+ ascent descent)))
-        (setq y (ecase align-y
-                  (:top (+ y ascent))                              ; OK
-                  #+ (or) (:baseline y)                            ; OK
-                  (:center (+ y ascent (- (/ text-height 2.0s0)))) ; See :around for multiline
-                  (:baseline* y)                                   ; See :around for multiline
-                  (:bottom (- y descent))))))                      ; See :around for multiline
-    (unless (eq align-x :left)
-      ;; This is the worst case - we need to compute whole text width what
-      ;; requires walking all lines char-by char.
-      (let ((text-width (text-size medium string :start start :end end)))
-        (setq x (- (- x 0.5) (ecase align-x
-                               ;;(:left 0)
-                               (:center (/ text-width 2.0s0))
-                               (:right text-width))))))
     (clim-sys:with-lock-held (*draw-font-lock*)
       (mcclim-font:draw-glyphs medium mirror gc x y string
                                :start start :end end
+                               :align-x align-x :align-y align-y
                                :translate #'translate
                                :transformation (sheet-device-transformation (medium-sheet medium))
                                :transform-glyphs transform-glyphs))))

@@ -153,26 +153,8 @@
                                             (length string)
                                             (min end (length string)))))
   (declare (ignore toward-x toward-y))
-  (unless (eq align-y :baseline)
-    (let* ((font (climb:text-style-to-font (port medium) (medium-text-style medium)))
-           (ascent (climb:font-ascent font))
-           (descent (climb:font-descent font))
-           (text-height (+ ascent descent)))
-      (setq y (ecase align-y
-                (:top (+ y ascent))                              ; OK
-                #+ (or) (:baseline y)                            ; OK
-                (:center (+ y ascent (- (/ text-height 2.0s0)))) ; See :around for multiline
-                (:baseline* y)                                   ; See :around for multiline
-                (:bottom (- y descent))))))                      ; See :around for multiline
-  (unless (eq align-x :left)
-    ;; This is the worst case - we need to compute whole text width what
-    ;; requires walking all lines char-by char.
-    (let ((text-width (text-size medium string :start start :end end)))
-      (setq x (- x (ecase align-x
-                     ;;(:left 0)
-                     (:center (/ text-width 2.0s0))
-                     (:right text-width))))))
-  (string-primitive-paths medium x y string transform-glyphs))
+  (setq string (subseq string start end))
+  (string-primitive-paths medium x y string align-x align-y transform-glyphs))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y width height
                              (to-drawable render-medium-mixin) to-x to-y)
