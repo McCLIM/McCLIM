@@ -786,7 +786,9 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
                       nil))
                    ((= next-opportunity-index (length opportunities))
                     (return-from breaks-rec
-                      (%line-breaks-1 string width offset margin start end)))
+                      (if (<= offset 0)
+                          (%line-breaks-1 string width offset margin start end)
+                          '(0))))
                    ((>= start (aref opportunities next-opportunity-index))
                     (return-from breaks-rec
                       (breaks-rec offset start end (1+ next-opportunity-index)))))
