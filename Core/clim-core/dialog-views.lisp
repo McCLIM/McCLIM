@@ -77,11 +77,22 @@
       (with-output-as-gadget (stream)
         gadget))))
 
-(defun %standard-value-changed-callback (query-identifier)
-  (lambda (pane item)
+(defun %standard-value-changed-callback (query-identifier &optional value-transform)
+  ;; Return a function to be used as value-changed-callback of a
+  ;; gadget.  The returned function changes the value of the query
+  ;; associated with the gadget inside a dialog. The query is
+  ;; identified by QUERY-IDENTIFIER.  If VALUE-TRANSFORM is NIL the
+  ;; new value of the query will be the value of the gadget, otherwise
+  ;; the VALUE-TRANSFORM function will be called with the value of the
+  ;; gadget as argument and the returned value will be the new value
+  ;; of the query.
+  (lambda (pane value)
     (declare (ignore pane))
-    (throw-object-ptype `(com-change-query ,query-identifier ,item)
-                        '(command :command-table accept-values))))
+    (let ((new-value (if value-transform
+                         (funcall value-transform value)
+                         value)))
+      (throw-object-ptype `(com-change-query ,query-identifier ,new-value)
+                          '(command :command-table accept-values)))))
 
 ;;; Use textual-dialog-view as default for Views not implemented
 
@@ -132,10 +143,8 @@
                                   :choices buttons
                                   :current-selection selection
                                   :value-changed-callback
-                                  (lambda (pane item)
-                                    (declare (ignore pane))
-                                    (%standard-value-changed-callback
-                                     (gadget-id item))))))
+                                  (%standard-value-changed-callback
+                                   query-identifier #'gadget-id))))
 
 ;;; check-box-view
 
@@ -154,10 +163,9 @@
                                   :choices buttons
                                   :current-selection selection
                                   :value-changed-callback
-                                  (lambda (pane item)
-                                    (declare (ignore pane))
-                                    (%standard-value-changed-callback
-                                     (map 'list #'gadget-id item))))))
+                                  (%standard-value-changed-callback
+                                   query-identifier (lambda (item)
+                                                      (map 'list #'gadget-id item))))))
 
 ;;; option-pane-view
 
@@ -232,9 +240,7 @@
                                 :show-value-p t
                                 :number-of-quanta (- high low)
                                 :value-changed-callback
-                                (lambda (pane item)
-                                  (declare (ignore pane))
-                                  (%standard-value-changed-callback (round item)))))
+                                (%standard-value-changed-callback query-identifier #'round)))
 
 ;;; text-field
 
