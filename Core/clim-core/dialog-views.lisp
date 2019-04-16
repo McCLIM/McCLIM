@@ -77,11 +77,23 @@
       (with-output-as-gadget (stream)
         gadget))))
 
-(defun %standard-value-changed-callback (query-identifier)
-  (lambda (pane item)
-    (declare (ignore pane))
-    (throw-object-ptype `(com-change-query ,query-identifier ,item)
-                        '(command :command-table accept-values))))
+(defun %standard-value-changed-callback (query-identifier &optional value-fn)
+  "Return a function to be used as value-changed-callback of a gadget.
+The returned function change the value of the query associated with
+the gadget inside a dialog. The query is identified by
+QUERY-IDENTIFIER.  If VALUE-FN is NIL the new value of the query will
+be the value of the gadget, otherwise the VALUE-FN function will be
+called with the value of the gadget as argument and the returned value
+will be the new value of the query."
+  (if value-fn
+      (lambda (pane value)
+        (declare (ignore pane))
+        (throw-object-ptype `(com-change-query ,query-identifier ,(funcall value-fn value))
+                            '(command :command-table accept-values)))
+      (lambda (pane value)
+        (declare (ignore pane))
+        (throw-object-ptype `(com-change-query ,query-identifier ,value)
+                            '(command :command-table accept-values)))))
 
 ;;; Use textual-dialog-view as default for Views not implemented
 
@@ -132,10 +144,7 @@
                                   :choices buttons
                                   :current-selection selection
                                   :value-changed-callback
-                                  (lambda (pane item)
-                                    (declare (ignore pane))
-                                    (%standard-value-changed-callback
-                                     (gadget-id item))))))
+                                  (%standard-value-changed-callback query-identifier #'gadget-id))))
 
 ;;; check-box-view
 
@@ -154,10 +163,7 @@
                                   :choices buttons
                                   :current-selection selection
                                   :value-changed-callback
-                                  (lambda (pane item)
-                                    (declare (ignore pane))
-                                    (%standard-value-changed-callback
-                                     (map 'list #'gadget-id item))))))
+                                  (%standard-value-changed-callback query-identifier (lambda (item) (map 'list #'gadget-id item))))))
 
 ;;; option-pane-view
 
@@ -232,9 +238,7 @@
                                 :show-value-p t
                                 :number-of-quanta (- high low)
                                 :value-changed-callback
-                                (lambda (pane item)
-                                  (declare (ignore pane))
-                                  (%standard-value-changed-callback (round item)))))
+                                (%standard-value-changed-callback query-identifier #'round)))
 
 ;;; text-field
 
