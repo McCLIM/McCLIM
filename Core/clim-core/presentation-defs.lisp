@@ -1607,77 +1607,110 @@ protocol retrieving gestures from a provided string."))
 (defmethod presentation-type-of ((object pathname))
   'pathname)
 
-(defun filename-completer (so-far mode)
-  (let* ((directory-prefix
-          (if (and (plusp (length so-far)) (eql (aref so-far 0) #\/))
-              ""
-              (namestring #+sbcl *default-pathname-defaults*
-                          #+cmu (ext:default-directory)
-                          #-(or sbcl cmu) *default-pathname-defaults*)))
-         (full-so-far (concatenate 'string directory-prefix so-far))
-         (pathnames
-          (loop with length = (length full-so-far)
-                and wildcard = (format nil "~A*.*"
-                                       (loop for start = 0 ; Replace * -> \*
-                                             for occurence = (position #\* so-far :start start)
-                                             until (= start (length so-far))
-                                             until (null occurence)
-                                             do (replace so-far "\\*" :start1 occurence)
-                                                (setf start (+ occurence 2))
-                                             finally (return so-far)))
-                for path in
-                #+(or sbcl cmu lispworks) (directory wildcard)
-                #+openmcl (directory wildcard :directories t)
-                #+allegro (directory wildcard :directories-are-files nil)
-                #+cormanlisp (nconc (directory wildcard)
-                                    (cl::directory-subdirs dirname))
-                #-(or sbcl cmu lispworks openmcl allegro cormanlisp)
-                (directory wildcard)
-                when (let ((mismatch (mismatch (namestring path) full-so-far)))
-                       (or (null mismatch) (= mismatch length)))
-                  collect path))
-         (strings (mapcar #'namestring pathnames))
-         (first-string (car strings))
-         (length-common-prefix nil)
-         (completed-string nil)
-         (full-completed-string nil)
-         (input-is-directory-p (when (plusp (length so-far))
-                                 (char= (aref so-far (1- (length so-far))) #\/))))
-    (unless (null pathnames)
-      (setf length-common-prefix
-            (loop with length = (length first-string)
-                  for string in (cdr strings)
-                  do (setf length (min length (or (mismatch string first-string) length)))
-                  finally (return length))))
-    (unless (null pathnames)
-      (setf completed-string
-            (subseq first-string (length directory-prefix)
-                    (if (null (cdr pathnames)) nil length-common-prefix)))
-      (setf full-completed-string
-            (concatenate 'string directory-prefix completed-string)))
-    (case mode
-      ((:complete-limited :complete-maximal)
-       (cond ((null pathnames)
-              (values so-far nil nil 0 nil))
-             ((null (cdr pathnames))
-              (values completed-string (plusp (length so-far)) (car pathnames) 1 nil))
-             (input-is-directory-p
-              (values completed-string t (parse-namestring so-far) (length pathnames) nil))
-             (t
-              (values completed-string nil nil (length pathnames) nil))))
-      (:complete
-       ;; This is reached when input is activated, if we did
-       ;; completion, that would mean that an input of "foo" would
-       ;; be expanded to "foobar" if "foobar" exists, even if the
-       ;; user actually *wants* the "foo" pathname (to create the
-       ;; file, for example).
-       (values so-far t so-far 1 nil))
-      (:possibilities
-       (values nil nil nil (length pathnames)
-               (loop with length = (length directory-prefix)
-                     for name in pathnames
-                     collect (list (subseq (namestring name) length nil)
-                                   name)))))))
+(defun filename-completer (string action &optional (default *default-pathname-defaults*))
+  (flet
+      ((deal-with-home (pathname his-directory)
+	 ;; SBCL (and maybe others) treat "~/xxx" specially, returning a pathname
+	 ;; whose directory is (:ABSOLUTE :HOME xxx)
+	 ;; But if you call Directory on that pathname the returned list
+	 ;; are all complete pathnames without the :Home part!.
+	 ;; So this replaces the :HOME with what it actually means
+	 (let* ((home-env-variable (clim-internals::get-environment-variable "HOME"))
+		(home (loop for pos = 1 then (1+ next-pos)
+			 for next-pos = (position #\/ home-env-variable :start pos)
+			 collect (subseq home-env-variable pos next-pos)
+			 until (null next-pos)))
+		(new-directory (cons
+				(first his-directory)
+				(append home (rest (rest his-directory))))))
+	     (make-pathname :host (pathname-host pathname)
+			    :device (pathname-device pathname)
+			    :name (pathname-name pathname)
+			    :version (pathname-version pathname)
+			    :type (pathname-type pathname)
+			    :directory new-directory)
+	     )))
+    ;; Slow but accurate
+    (let* ((raw-pathname (pathname string))
+	   (raw-directory (pathname-directory raw-pathname))
+	   (original-pathname (if (and (listp raw-directory)
+				       (eql (first raw-directory) :absolute)
+				       (eql (second raw-directory) :Home))
+				  (deal-with-home raw-pathname raw-directory)
+				  raw-pathname))
+	   (original-string (namestring original-pathname))
+	   ;; Complete logical pathnames as well as regular pathnames
+	   ;; strategy is to keep track of both original string provided and translated string
+	   ;; but to return pathname built from original components except for the name.
+	   (logical-pathname-p (typep original-pathname 'logical-pathname))
+	   (actual-pathname (if logical-pathname-p
+				(translate-logical-pathname original-pathname)
+				original-pathname))
+	   (merged-pathname (merge-pathnames actual-pathname default))
+	   ;; (version (pathname-version actual-pathname))
+	   completions)
+      (let ((search-pathname (make-pathname :host (pathname-host merged-pathname)
+					    :device (pathname-device merged-pathname)
+					    :directory (pathname-directory merged-pathname)
+					    :version :unspecific
+					    :type :wild
+					    :name :wild)))
+	(setq completions (directory search-pathname)))
+      ;; Now prune out all completions that don't start with the string
+      ;; why is this necessary would complete-from-suggestions do this also?
+      (let (;; (name (pathname-name actual-pathname))
+       	    (type (pathname-type actual-pathname)))
+	;; (loop for pn in completions
+	;;    for pn-name = (pathname-name pn)
+	;;    for pn-type = (pathname-type pn)
+	;;    when (cond
+	;; 	    ;; if the query has a type, then the name must be
+	;; 	    ;; complete and match
+	;; 	    (type
+	;; 	     (and
+	;; 	      (string-equal pn-name name)
+	;; 	      (let ((s (search type pn-type :test #'char-equal)))
+	;; 		(and s (zerop s)))))
+	;; 	    ;; But if not, then if the query has a name
+	;; 	    (name
+	;; 	     ;; but at least in SBCL a candidate with neither name nor
+	;; 	     ;; type is a directory
+	;; 	     (when (and (null pn-name) (null pn-type))
+	;; 	       (setq pn-name (first (last (pathname-directory pn)))))
+	;; 	     (let ((s (search name pn-name
+	;; 			      :test #'char-equal)))
+	;; 	       (if (eq action :apropos-possibilities)
+	;; 		   (not (null s))
+	;; 		   (and s (zerop s))))))
+	;;    collect pn into answer
+	;;    finally (setq completions answer))
+	(when (null type)
+	  ;; If the user didn't supply a file type, don't burden him with all
+	  ;; sorts of version numbers right now.
+	  (let ((new-completions nil))
+	    (dolist (pathname completions)
+	      (cond
+		;; meaning this is actually a directory
+		((and (null (pathname-name pathname))
+		      (null (pathname-type pathname)))
+		 (pushnew (make-pathname :host (pathname-host original-pathname)
+					 :device (pathname-device original-pathname)
+					 :directory (butlast (pathname-directory pathname))
+					 :name (first (last (pathname-directory pathname)))
+					 :type nil)
+			  new-completions))
+		(t
+		 (pushnew (make-pathname :host (pathname-host original-pathname)
+					 :device (pathname-device original-pathname)
+					 :directory (pathname-directory original-pathname)
+					 :name (pathname-name pathname)
+					 :type (pathname-type original-pathname))
+			  new-completions))))
+	    (setq completions (nreverse new-completions))))
+	(complete-from-possibilities original-string completions '(#\space)
+						    :action action
+						    :name-key #'namestring
+						    :value-key #'identity)))))
 
 (define-presentation-method accept ((type pathname) stream (view textual-view)
                                     &key (default *default-pathname-defaults* defaultp)
