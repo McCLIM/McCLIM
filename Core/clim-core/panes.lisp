@@ -2847,6 +2847,9 @@ current background message was set."))
 (defun make-clim-pointer-documentation-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'pointer-documentation-pane options))
 
+(defun make-clim-command-menu-pane (&rest options)
+  (apply #'make-clim-stream-pane :type 'command-menu-pane options))
+
 
 ;;;
 ;;; 29.4.5 Creating a Standalone CLIM Window
