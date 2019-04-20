@@ -876,11 +876,28 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
            (:pixels (car x))
            (:point  (* (car x) (graft-pixels-per-inch (graft pane)) 1/72))
            (:mm     (* (car x) (graft-pixels-per-millimeter (graft pane))))
-           (:character (* (car x) (text-style-character-width (pane-text-style pane)
-                                                               (sheet-medium pane)
-                                                               #\m)))
-           (:line  (* (car x)
-                      (stream-line-height pane)))))))
+           (:character (device-units-in-character-expression pane x))
+           (:line (device-units-in-line-expression pane x))))))
+
+(defgeneric device-units-in-character-expression (pane character-expression))
+(defmethod device-units-in-character-expression (pane character-expression) 0)
+(defmethod device-units-in-character-expression ((pane single-child-composite-pane) character-expression)
+  (device-units-in-character-expression (sheet-child pane) character-expression))
+(defmethod device-units-in-character-expression ((pane composite-pane) character-expression)
+  (loop for child in (sheet-children pane) maximize (device-units-in-character-expression child character-expression)))
+(defmethod device-units-in-character-expression ((pane clim-stream-pane) character-expression)
+  (* (first character-expression) (text-style-character-width (pane-text-style pane)
+						      (sheet-medium pane)
+						      #\m)))
+
+(defgeneric device-units-in-line-expression (pane line-expression))
+(defmethod device-units-in-line-expression (pane line-expression) 0)
+(defmethod device-units-in-line-expression ((pane single-child-composite-pane) line-expression)
+  (device-units-in-line-expression (sheet-child pane) line-expression))
+(defmethod device-units-in-line-expression ((pane composite-pane) line-expression)
+  (loop for child in (sheet-children pane) maximize (device-units-in-line-expression child line-expression)))
+(defmethod device-units-in-line-expression ((pane clim-stream-pane) line-expression)
+  (* (first line-expression) (stream-line-height pane)))
 
 ;;; SINGLE-CHILD-COMPOSITE PANE
 
