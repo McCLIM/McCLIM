@@ -864,10 +864,10 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 ;;;; Composite Panes
 ;;;;
 
-(defclass composite-pane (sheet-multiple-child-mixin
-			  basic-pane)
-  ()
-  (:documentation "protocol class"))
+(defgeneric device-units-in-character-expression (pane character-expression))
+(defgeneric device-units-in-line-expression (pane line-expression))
+(defmethod device-units-in-character-expression (pane character-expression) 0)
+(defmethod device-units-in-line-expression (pane line-expression) 0)
 
 (defmethod spacing-value-to-device-units (pane x)
   (cond ((realp x) x)
@@ -879,30 +879,20 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
            (:character (device-units-in-character-expression pane x))
            (:line (device-units-in-line-expression pane x))))))
 
-(defgeneric device-units-in-character-expression (pane character-expression))
-(defmethod device-units-in-character-expression (pane character-expression) 0)
-(defmethod device-units-in-character-expression ((pane single-child-composite-pane) character-expression)
-  (device-units-in-character-expression (sheet-child pane) character-expression))
+(defclass composite-pane (sheet-multiple-child-mixin
+			  basic-pane)
+  ()
+  (:documentation "protocol class"))
+
 (defmethod device-units-in-character-expression ((pane composite-pane) character-expression)
   (loop for child in (sheet-children pane) maximize (device-units-in-character-expression child character-expression)))
-(defmethod device-units-in-character-expression ((pane clim-stream-pane) character-expression)
-  (* (first character-expression) (text-style-character-width (pane-text-style pane)
-						      (sheet-medium pane)
-						      #\m)))
 
-(defgeneric device-units-in-line-expression (pane line-expression))
-(defmethod device-units-in-line-expression (pane line-expression) 0)
-(defmethod device-units-in-line-expression ((pane single-child-composite-pane) line-expression)
-  (device-units-in-line-expression (sheet-child pane) line-expression))
 (defmethod device-units-in-line-expression ((pane composite-pane) line-expression)
   (loop for child in (sheet-children pane) maximize (device-units-in-line-expression child line-expression)))
-(defmethod device-units-in-line-expression ((pane clim-stream-pane) line-expression)
-  (* (first line-expression) (stream-line-height pane)))
 
 ;;; SINGLE-CHILD-COMPOSITE PANE
 
 (defclass single-child-composite-pane (sheet-single-child-mixin basic-pane) ())
-
 
 (defmethod initialize-instance :after ((pane single-child-composite-pane)
 				       &rest args
@@ -923,6 +913,13 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
   (when (sheet-child pane)
     (allocate-space (sheet-child pane) width height)))
+
+(defmethod device-units-in-character-expression ((pane single-child-composite-pane) character-expression)
+  (device-units-in-character-expression (sheet-child pane) character-expression))
+
+
+(defmethod device-units-in-line-expression ((pane single-child-composite-pane) line-expression)
+  (device-units-in-line-expression (sheet-child pane) line-expression))
 
 ;;; TOP-LEVEL-SHEET
 
@@ -2630,6 +2627,13 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
      :min-height (clamp h 0 height)
      :height height
      :max-height +fill+)))
+
+(defmethod device-units-in-line-expression ((pane clim-stream-pane) line-expression)
+  (* (first line-expression) (stream-line-height pane)))
+(defmethod device-units-in-character-expression ((pane clim-stream-pane) character-expression)
+  (* (first character-expression) (text-style-character-width (pane-text-style pane)
+						      (sheet-medium pane)
+						      #\m)))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
