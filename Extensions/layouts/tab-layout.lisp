@@ -66,7 +66,7 @@
 
 (climi::define-abstract-pane-mapping 'tab-layout 'tab-layout-pane)
 
-(defclass tab-layout (climi::composite-pane)
+(defclass tab-layout (climi::multiple-child-composite-pane)
     ((pages :initform nil :reader tab-layout-pages :initarg :pages)
      (enabled-page :initform nil :accessor tab-layout-enabled-page))
   (:documentation "The abstract tab layout pane is a composite pane arranging
