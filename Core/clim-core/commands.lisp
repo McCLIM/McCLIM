@@ -223,19 +223,20 @@ designator) inherits menu items."
 
 (make-command-table 'user-command-table)
 
-(defmacro define-command-table (name &key inherit-from menu inherit-menu)
-  `(let ((old-table (gethash ',name *command-tables* nil))
-	 (inherit-from-arg (or ',inherit-from '(global-command-table))))
-     (if old-table
-	 (with-slots (inherit-from menu) old-table
-	   (setq inherit-from inherit-from-arg
-		 menu (menu-items-from-list ',menu))
-	   old-table)
-	 (make-command-table ',name
-			     :inherit-from inherit-from-arg
-                             :inherit-menu ,inherit-menu
-			     :menu ',menu
-			     :errorp nil))))
+(defmacro define-command-table (name &key (inherit-from '(global-command-table))
+                                          (menu nil menu-supplied-p)
+                                          inherit-menu)
+  `(if-let ((old-table (gethash ',name *command-tables* nil)))
+     (with-slots (inherit-from menu) old-table
+       (setq inherit-from ',inherit-from)
+       ,(when menu-supplied-p
+          `(setq menu (menu-items-from-list ',menu)))
+       old-table)
+     (make-command-table ',name
+			 :inherit-from ',inherit-from
+                         :inherit-menu ,inherit-menu
+			 :menu ',menu
+			 :errorp nil)))
 
 (defun remove-command-from-command-table (command-name
 					  command-table
