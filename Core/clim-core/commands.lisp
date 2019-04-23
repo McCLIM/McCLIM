@@ -223,6 +223,7 @@ designator) inherits menu items."
 
 (make-command-table 'user-command-table)
 
+<<<<<<< HEAD
 (defmacro define-command-table (name &key (inherit-from nil inherit-supplied-p)
 				       (menu nil menu-supplied-p)
 				       inherit-menu)
@@ -244,6 +245,22 @@ designator) inherits menu items."
 			       :inherit-menu ,inherit-menu
 			       :menu ',menu
 			       :errorp nil)))))
+=======
+(defmacro define-command-table (name &key (inherit-from '(global-command-table))
+                                          (menu nil menu-supplied-p)
+                                          inherit-menu)
+  `(if-let ((old-table (gethash ',name *command-tables* nil)))
+     (with-slots (inherit-from menu) old-table
+       (setq inherit-from ',inherit-from)
+       ,(when menu-supplied-p
+          `(setq menu (menu-items-from-list ',menu)))
+       old-table)
+     (make-command-table ',name
+			 :inherit-from ',inherit-from
+                         :inherit-menu ,inherit-menu
+			 :menu ',menu
+			 :errorp nil)))
+>>>>>>> 06b469aac20fbc8793d142094a38e66b1ed17bb5
 
 (defun remove-command-from-command-table (command-name
 					  command-table

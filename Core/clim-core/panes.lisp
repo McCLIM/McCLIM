@@ -864,35 +864,45 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 ;;;; Composite Panes
 ;;;;
 
-(defgeneric device-units-in-character-expression (pane character-expression))
-(defgeneric device-units-in-line-expression (pane line-expression))
-(defmethod device-units-in-character-expression (pane character-expression) 0)
-(defmethod device-units-in-line-expression (pane line-expression) 0)
-
-(defmethod spacing-value-to-device-units (pane x)
-  (cond ((realp x) x)
-        ((consp x)
-         (ecase (cadr x)
-           (:pixels (car x))
-           (:point  (* (car x) (graft-pixels-per-inch (graft pane)) 1/72))
-           (:mm     (* (car x) (graft-pixels-per-millimeter (graft pane))))
-           (:character (device-units-in-character-expression pane x))
-           (:line (device-units-in-line-expression pane x))))))
-
-(defclass composite-pane (sheet-multiple-child-mixin
-			  basic-pane)
+(defclass composite-pane (basic-pane)
   ()
   (:documentation "protocol class"))
 
-(defmethod device-units-in-character-expression ((pane composite-pane) character-expression)
-  (loop for child in (sheet-children pane) maximize (device-units-in-character-expression child character-expression)))
+(defmethod spacing-value-to-device-units ((pane extended-output-stream) x)
+  (etypecase x
+    (real x)
+    (cons (destructuring-bind (value type) x
+            (ecase type
+              (:pixels    value)
+              (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
+              (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
+              (:character (* value (stream-character-width pane #\m)))
+              (:line      (* value (stream-line-height pane))))))))
 
-(defmethod device-units-in-line-expression ((pane composite-pane) line-expression)
-  (loop for child in (sheet-children pane) maximize (device-units-in-line-expression child line-expression)))
+(defmethod spacing-value-to-device-units ((pane composite-pane) x)
+  (if (and (consp x) (member (second x) '(:character :line)))
+      (loop for sheet in (sheet-children pane)
+         maximize (spacing-value-to-device-units sheet x))
+      (call-next-method)))
+
+(defmethod spacing-value-to-device-units ((pane basic-pane) x)
+  (etypecase x
+    (real x)
+    (cons (destructuring-bind (value type) x
+            (ecase type
+              (:pixels    value)
+              (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
+              (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
+              (:character 0)
+              (:line      0))))))
+
+;;; MULTIPLE-CHILD-COMPOSITE PANE
+
+(defclass multiple-child-composite-pane (sheet-multiple-child-mixin composite-pane) ())
 
 ;;; SINGLE-CHILD-COMPOSITE PANE
 
-(defclass single-child-composite-pane (sheet-single-child-mixin basic-pane) ())
+(defclass single-child-composite-pane (sheet-single-child-mixin composite-pane) ())
 
 (defmethod initialize-instance :after ((pane single-child-composite-pane)
 				       &rest args
@@ -1368,7 +1378,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   (frob horizontally hbox-pane hrack-pane equalize-height)
   (frob vertically vbox-pane vrack-pane equalize-width))
 
-(defclass box-pane (box-layout-mixin composite-pane)
+(defclass box-pane (box-layout-mixin multiple-child-composite-pane)
   ()
   (:documentation "Superclass for hbox-pane and vbox-pane that provides the
 		    initialization common to both."))
@@ -1459,7 +1469,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 ;;; TODO: The table and grid panes should respect the :x-spacing,
 ;;; :y-spacing, and :spacing initargs.
 
-(defclass table-pane (composite-pane)
+(defclass table-pane (multiple-child-composite-pane)
   ((array
     :documentation "Two-dimensional array holding the child panes as they are to be arranged."))
   ;;
@@ -1799,7 +1809,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 ;;; BBOARD PANE
 
-(defclass bboard-pane (composite-pane) ())
+(defclass bboard-pane (multiple-child-composite-pane) ())
 
 (defmethod initialize-instance :after ((sheet bboard-pane) &key contents)
   (dolist (child (alexandria:ensure-list contents))
@@ -1918,7 +1928,7 @@ SCROLLER-PANE. Set it to :LEFT to have the vertical scroll bar of a
 SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 :RIGHT to have it on the distant right hand side of the scroller.")
 
-(defclass scroller-pane (composite-pane)
+(defclass scroller-pane (multiple-child-composite-pane)
   ((scroll-bar :type scroll-bar-spec ; (member t :vertical :horizontal nil)
                ;; ### Note: I added NIL here, so that the application
                ;; programmer can switch off scroll bars alltogether.
@@ -2300,7 +2310,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 ;;; LABEL PANE
 
-(defclass label-pane (composite-pane)
+(defclass label-pane (multiple-child-composite-pane)
   ((label :type string
           :initarg :label
           :accessor label-pane-label
