@@ -128,7 +128,8 @@ activated with GESTURE"))
 
 ;; XXX: We are supposed to implement input editing for all
 ;; "interactive streams", but that's not really reasonable. We only
-;; care about `clim-stream-pane's, at least for Drei, currently.
+;; care about `clim-stream-pane's, at least for Drei, currently. --
+;; internally screams (jd)
 (defmethod invoke-with-input-editing ((stream clim-stream-pane)
 				      continuation
 				      input-sensitizer

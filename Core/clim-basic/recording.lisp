@@ -333,7 +333,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
                                                    (sheet-region stream))))
   (when (typep stream 'encapsulating-stream)
     (return-from replay (replay record (encapsulating-stream-stream stream) region)))
-  (stream-close-text-output-record stream)
+  (with-output-recording-options (stream :draw nil)
+    (stream-close-text-output-record stream))
   (when (stream-drawing-p stream)
     (with-output-recording-options (stream :record nil)
       (with-sheet-medium (medium stream)
@@ -1556,17 +1557,14 @@ were added."
                                   :align-x align-x :align-y align-y
                                   :start start :end end
                                   :text-style text-style)
-      (incf left point-x)
-      (incf top point-y)
-      (incf right point-x)
-      (incf bottom point-y)
-      #+ (or) ;; draw rectangle around text bbox (for testing)
-      (with-drawing-options (medium :line-dashes t :ink +red+)
-        (medium-draw-rectangle* medium left top right bottom nil))
-      (enclosing-transform-polygon transformation (list left top
-                                                        right top
-                                                        left bottom
-                                                        right bottom)))))
+      (if transform-glyphs
+          (enclosing-transform-polygon transformation (list (+ point-x left)  (+ point-y top)
+                                                            (+ point-x right) (+ point-y top)
+                                                            (+ point-x left)  (+ point-y bottom)
+                                                            (+ point-x right) (+ point-y bottom)))
+          (with-transformed-position (transformation point-x point-y)
+            (values (+ point-x left) (+ point-y top)
+                    (+ point-x right) (+ point-y bottom)))))))
 
 (defmethod* (setf output-record-position) :around
   (nx ny (record draw-text-output-record))
