@@ -1607,7 +1607,7 @@ protocol retrieving gestures from a provided string."))
 (defmethod presentation-type-of ((object pathname))
   'pathname)
 
-(defun filename-completer (string action &optional (default *default-pathname-defaults*))
+(defun filename-completer (string action)
   (flet
       ((deal-with-home (pathname his-directory)
 	 ;; SBCL (and maybe others) treat "~/xxx" specially, returning a pathname
@@ -1615,7 +1615,7 @@ protocol retrieving gestures from a provided string."))
 	 ;; But if you call Directory on that pathname the returned list
 	 ;; are all complete pathnames without the :Home part!.
 	 ;; So this replaces the :HOME with what it actually means
-	 (let* ((home-env-variable (clim-internals::get-environment-variable "HOME"))
+	 (let* ((home-env-variable (get-environment-variable "HOME"))
 		(home (loop for pos = 1 then (1+ next-pos)
 			 for next-pos = (position #\/ home-env-variable :start pos)
 			 collect (subseq home-env-variable pos next-pos)
@@ -1628,8 +1628,7 @@ protocol retrieving gestures from a provided string."))
 			    :name (pathname-name pathname)
 			    :version (pathname-version pathname)
 			    :type (pathname-type pathname)
-			    :directory new-directory)
-	     )))
+			    :directory new-directory))))
     ;; Slow but accurate
     (let* ((raw-pathname (pathname string))
 	   (raw-directory (pathname-directory raw-pathname))
@@ -1646,7 +1645,7 @@ protocol retrieving gestures from a provided string."))
 	   (actual-pathname (if logical-pathname-p
 				(translate-logical-pathname original-pathname)
 				original-pathname))
-	   (merged-pathname (merge-pathnames actual-pathname default))
+	   (merged-pathname (merge-pathnames actual-pathname))
 	   completions)
       (let ((search-pathname (make-pathname :host (pathname-host merged-pathname)
 					    :device (pathname-device merged-pathname)
