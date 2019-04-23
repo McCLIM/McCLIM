@@ -1647,7 +1647,6 @@ protocol retrieving gestures from a provided string."))
 				(translate-logical-pathname original-pathname)
 				original-pathname))
 	   (merged-pathname (merge-pathnames actual-pathname default))
-	   ;; (version (pathname-version actual-pathname))
 	   completions)
       (let ((search-pathname (make-pathname :host (pathname-host merged-pathname)
 					    :device (pathname-device merged-pathname)
@@ -1657,33 +1656,7 @@ protocol retrieving gestures from a provided string."))
 					    :name :wild)))
 	(setq completions (directory search-pathname)))
       ;; Now prune out all completions that don't start with the string
-      ;; why is this necessary would complete-from-suggestions do this also?
-      (let (;; (name (pathname-name actual-pathname))
-       	    (type (pathname-type actual-pathname)))
-	;; (loop for pn in completions
-	;;    for pn-name = (pathname-name pn)
-	;;    for pn-type = (pathname-type pn)
-	;;    when (cond
-	;; 	    ;; if the query has a type, then the name must be
-	;; 	    ;; complete and match
-	;; 	    (type
-	;; 	     (and
-	;; 	      (string-equal pn-name name)
-	;; 	      (let ((s (search type pn-type :test #'char-equal)))
-	;; 		(and s (zerop s)))))
-	;; 	    ;; But if not, then if the query has a name
-	;; 	    (name
-	;; 	     ;; but at least in SBCL a candidate with neither name nor
-	;; 	     ;; type is a directory
-	;; 	     (when (and (null pn-name) (null pn-type))
-	;; 	       (setq pn-name (first (last (pathname-directory pn)))))
-	;; 	     (let ((s (search name pn-name
-	;; 			      :test #'char-equal)))
-	;; 	       (if (eq action :apropos-possibilities)
-	;; 		   (not (null s))
-	;; 		   (and s (zerop s))))))
-	;;    collect pn into answer
-	;;    finally (setq completions answer))
+      (let ((type (pathname-type actual-pathname)))
 	(when (null type)
 	  ;; If the user didn't supply a file type, don't burden him with all
 	  ;; sorts of version numbers right now.
