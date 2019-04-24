@@ -1653,7 +1653,7 @@ protocol retrieving gestures from a provided string."))
 					    :version :unspecific
 					    :type :wild
 					    :name :wild)))
-	(setq completions (directory search-pathname)))
+	(setq completions (directory search-pathname #+sbcl :resolve-symlinks #+sbcl nil)))
       ;; Now prune out all completions that don't start with the string
       (let ((type (pathname-type actual-pathname)))
 	(when (null type)
