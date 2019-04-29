@@ -67,6 +67,9 @@ advised of the possiblity of such damages.
   #+lucid
   (lucid::environment-variable string)
 
+  #+lispworks
+  (lispworks:environment-variable name)
+
   #+allegro
   (system:getenv string)
 
