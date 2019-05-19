@@ -113,6 +113,7 @@ input focus. This is a McCLIM extension."))
 	     :initform nil)
    (menu-bar-pane :initform nil
                   :accessor frame-menu-bar-pane)
+   (active-menu :initform nil)
    (state :initarg :state
 	  :initform :disowned
 	  :reader frame-state)

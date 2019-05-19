@@ -50,6 +50,16 @@
       (dispatch-repaint button (sheet-region button))
       (stream-force-output button))))
 
+(defgeneric toggle-arm-branch (button))
+
+(defmethod toggle-arm-branch ((button menu-button-pane))
+  (arm-menu button))
+
+(defmethod toggle-arm-branch ((button menu-button-submenu-pane))
+  (if (slot-value button 'armed)
+      (destroy-substructure button)
+      (arm-branch button)))
+
 (defun menu-draw-highlighted (gadget)
   (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
     (with-slots (label) gadget
@@ -82,7 +92,7 @@
     (arm-branch pane)))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
-  (arm-branch pane))
+  (toggle-arm-branch pane))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-ungrab-event))
   (destroy-substructure (menu-root pane)))
@@ -170,7 +180,11 @@ account, and create a list of menu buttons."
 	    (adopt-frame manager submenu-frame)
 	    (enable-frame submenu-frame)
 	    (with-sheet-medium (medium raised)
-	      (medium-force-output medium))))))))
+	      (medium-force-output medium))))))
+    (when frame
+      (with-slots (active-menu) frame
+	(assert (not active-menu))
+	(setf active-menu sub-menu)))))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
   (with-slots (frame-manager submenu-frame) sub-menu
@@ -179,7 +193,10 @@ account, and create a list of menu buttons."
       (disown-frame frame-manager submenu-frame)
       (disarm-gadget sub-menu)
       (dispatch-repaint sub-menu +everywhere+)
-      (setf submenu-frame nil) )))
+      (setf submenu-frame nil)))
+  (with-application-frame (frame)
+    (when frame
+      (setf (slot-value frame 'active-menu) nil))))
 
 (defmethod arm-branch ((sub-menu menu-button-submenu-pane))
   (with-slots (client frame-manager submenu-frame) sub-menu
@@ -192,8 +209,14 @@ account, and create a list of menu buttons."
 	  (create-substructure sub-menu sub-menu)))
     (arm-menu sub-menu)))
 
-(defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
-  (destroy-substructure (menu-root pane)))
+(defmethod handle-event :before (pane (event pointer-button-release-event))
+  (when (not (or (typep event 'window-repaint-event)
+		  (typep event 'pointer-motion-event)))
+    (with-application-frame (frame)
+      (when (and (not (typep pane 'menu-button)) frame)
+	(with-slots (active-menu) frame
+	  (when active-menu
+	    (destroy-substructure (menu-root active-menu))))))))
 
 ;;; menu-button-vertical-submenu-pane
 (defclass menu-button-vertical-submenu-pane (menu-button-submenu-pane) ())
