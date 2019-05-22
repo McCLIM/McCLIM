@@ -1969,7 +1969,7 @@ protocol retrieving gestures from a provided string."))
 (define-presentation-type-abbreviation subset-alist (alist
                                                      &key (test 'eql testp))
   (make-presentation-type-specifier
-   `(subset-completion ,@(and testp `(:test ,test))
+   `(subset-completion ,alist ,@(and testp `(:test ,test))
                        :value-key member-alist-value-key)
    :name-key name-key
    :documentation-key documentation-key
