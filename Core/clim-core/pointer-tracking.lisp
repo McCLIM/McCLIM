@@ -335,10 +335,6 @@ symbol)."
                    (when ox (draw ox oy))
                    (return-from dragging-drawing
                      (values x y)))))
-        ;; Make an initial draw. We need to convert the screen
-        ;; coordinates from the pointer into sheet-local coordinates.
-        (multiple-value-call #'transform-position
-          (sheet-native-transformation stream) (pointer-position pointer))
         (tracking-pointer (stream :pointer pointer
                                   :multiple-window multiple-window)
           (:pointer-motion (window x y)
