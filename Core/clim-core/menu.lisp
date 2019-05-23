@@ -55,11 +55,6 @@
 (defmethod toggle-arm-branch ((button menu-button-pane))
   (arm-menu button))
 
-(defmethod toggle-arm-branch ((button menu-button-submenu-pane))
-  (if (slot-value button 'armed)
-      (destroy-substructure button)
-      (arm-branch button)))
-
 (defun menu-draw-highlighted (gadget)
   (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
     (with-slots (label) gadget
@@ -183,7 +178,6 @@ account, and create a list of menu buttons."
 	      (medium-force-output medium))))))
     (when frame
       (with-slots (active-menu) frame
-	(assert (not active-menu))
 	(setf active-menu sub-menu)))))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
@@ -208,6 +202,11 @@ account, and create a list of menu buttons."
 	  (mapc #'destroy-substructure (menu-children client))
 	  (create-substructure sub-menu sub-menu)))
     (arm-menu sub-menu)))
+
+(defmethod toggle-arm-branch ((button menu-button-submenu-pane))
+  (if (slot-value button 'armed)
+      (destroy-substructure button)
+      (arm-branch button)))
 
 (defmethod handle-event :before (pane (event pointer-button-release-event))
   (when (not (or (typep event 'window-repaint-event)
