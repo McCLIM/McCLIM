@@ -4,6 +4,7 @@
   :components
   ((:file "defresource")
    (:file "presentations")
+   (:file "presentation-translators" :depends-on ("presentations"))
    (:file "bordered-output" :depends-on ("presentations"))
    (:file "table-formatting" :depends-on ("presentations"))
    (:file "input-editing" :depends-on ("presentations" "bordered-output" "table-formatting"))
@@ -16,7 +17,7 @@
    (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
    (:file "gadgets" :depends-on ("commands" "pointer-tracking" "input-editing" 
                                  "frames" "incremental-redisplay" "panes"))
-   (:file "describe" :depends-on ("presentations" "presentation-defs" "table-formatting"))
+   (:file "describe" :depends-on ("presentations" "presentation-translators" "presentation-defs" "table-formatting"))
    (:file "commands" :depends-on ("input-editing" "presentations"
                                   "presentation-defs"))
    (:file "incremental-redisplay" :depends-on ("presentation-defs"))

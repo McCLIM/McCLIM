@@ -1372,49 +1372,6 @@ examine the type of the command menu item to see if it is
 
 (defparameter +null-command+ '(com-null-command))
 
-(defclass presentation-command-translator (presentation-translator)
-  ()
-  (:documentation "Wraps the tester function with a test that
-  determines if the command is enabled."))
-
-(defmethod initialize-instance :after ((obj presentation-command-translator)
-				       &key tester command-name)
-  (setf (slot-value obj 'tester)
-	#'(lambda (&rest args)
-	    (if (command-enabled command-name *application-frame*)
-		(when tester
-		  (apply tester args))
-		nil))))
-
-(defmacro define-presentation-to-command-translator 
-    (name (from-type command-name command-table &key
-	   (gesture :select)
-	   (tester 'default-translator-tester)
-	   (documentation nil documentationp)
-	   (pointer-documentation (command-name-from-symbol command-name))
-	   (menu t)
-	   (priority 0)
-	   (echo t))
-     arglist
-     &body body)
-  (let ((command-args (gensym "COMMAND-ARGS")))
-    `(define-presentation-translator ,name
-	 (,from-type (command :command-table ,command-table) ,command-table
-		     :gesture ,gesture
-		     :tester ,tester
-		     :tester-definitive t
-		     ,@(and documentationp `(:documentation ,documentation))
-		     :pointer-documentation ,pointer-documentation
-		     :menu ,menu
-		     :priority ,priority
-		     :translator-class presentation-command-translator
-		     :command-name ',command-name)
-       ,arglist
-       (let ((,command-args (let () ,@body)))
-	 (values (cons ',command-name ,command-args)
-		 '(command :command-table ,command-table)
-		 '(:echo ,echo))))))
-
 (defun command-name (command)
   (first command))
 
