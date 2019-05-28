@@ -1,0 +1,840 @@
+;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+
+;;;  (c) copyright 1998-2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2001-2002 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2019 by Daniel Kochmański (daniel@turtleware.eu)
+
+;;; Implementation of presentation translators as defined in 23.7.
+
+(in-package #:climi)
+
+
+;;; 23.7.1 Defining Presentation Translators
+(defclass presentation-translator ()
+  ((name :reader name :initarg :name)
+   (from-type :reader from-type :initarg :from-type)
+   (to-type :reader to-type :initarg :to-type)
+   (gesture :reader gesture :initarg :gesture)
+   (tester :reader tester :initarg :tester)
+   (tester-definitive :reader tester-definitive :initarg :tester-definitive)
+   (documentation :reader translator-documentation :initarg :documentation)
+   (pointer-documentation :reader pointer-documentation
+                          :initarg :pointer-documentation)
+   (menu :reader menu :initarg :menu)
+   (priority :reader priority :initarg :priority :initform 0)
+   (translator-function :reader translator-function
+                        :initarg :translator-function)))
+
+(defmethod initialize-instance :after ((obj presentation-translator)
+                                       &key &allow-other-keys)
+  (unless (slot-boundp obj 'pointer-documentation)
+    (setf (slot-value obj 'pointer-documentation)
+          (translator-documentation obj))))
+
+(defmethod print-object ((obj presentation-translator) stream)
+  (print-unreadable-object (obj stream :identity t)
+    (format stream "Translator ~S from ~S to ~S"
+            (name obj) (from-type obj) (to-type obj))))
+
+(defclass presentation-action (presentation-translator)
+  ())
+
+(defmethod initialize-instance :after ((obj presentation-action)
+                                       &key &allow-other-keys)
+  (setf (slot-value obj 'tester-definitive) t))
+
+(defmethod print-object ((obj presentation-action) stream)
+  (print-unreadable-object (obj stream :identity t)
+    (format stream "Action from ~S to ~S" (from-type obj) (to-type obj))))
+
+;; Wraps the tester function with a test that determines if the
+;; command is enabled.
+(defclass presentation-command-translator (presentation-translator)
+  ())
+
+(defmethod initialize-instance :after ((obj presentation-command-translator)
+				       &key tester command-name)
+  (setf (slot-value obj 'tester)
+	#'(lambda (&rest args)
+	    (if (command-enabled command-name *application-frame*)
+                (maybe-apply tester args)
+		nil))))
+
+(defclass drag-n-drop-translator (presentation-translator)
+  ((destination-ptype :reader destination-ptype :initarg :destination-ptype)
+   (feedback :reader feedback :initarg :feedback)
+   (highlighting :reader highlighting :initarg :highlighting)
+   (destination-translator :reader destination-translator
+                           :initarg :destination-translator)))
+
+;;; According to the Franz User's guide, the destination object is
+;;; available in the tester, documentation, and translator function
+;;; as destination-object. Therefore OBJECT is the dragged object. In
+;;; our scheme the tester function, translator function etc. is
+;;; really called on the destination object. So, we do a little
+;;; shuffling of arguments here. We don't do that for the destination
+;;; translator because we can call that ourselves in frame-drag-and-drop.
+;;;
+;;; Also, in Classic CLIM the destination presentation is passed as a
+;;; destination-presentation keyword argument; hence the presentation argument
+;;; is the dragged presentation.
+
+(defmethod initialize-instance :after ((obj drag-n-drop-translator)
+                                       &key documentation
+                                       pointer-documentation
+                                       destination-translator)
+  (declare (ignore destination-translator))
+  (setf (slot-value obj 'documentation) documentation)
+  (when pointer-documentation
+    (setf (slot-value obj 'pointer-documentation) pointer-documentation)))
+
+;;; This lives in a command table
+
+(defvar *current-translator-cache-generation* 0
+  "This is incremented whenever presentation translators are defined,
+and used to ensure that presentation-translators-caches are up to date.")
+
+(defclass translator-table ()
+  ((translators :accessor translators :initarg :translators
+                :initform (make-hash-table :test #'eq)
+                :documentation "Translators keyed by name.")
+   (simple-type-translators :accessor simple-type-translators
+                            :initarg :simple-type-translators
+                            :initform (make-hash-table :test #'eq)
+                            :documentation "Holds transators with a simple
+  from-type (i.e. doesn't contain \"or\" or \"and\").")
+   (translator-cache-generation :accessor translator-cache-generation
+                                :initform 0)
+   (presentation-translators-cache
+    :writer (setf presentation-translators-cache)
+    :initform (make-hash-table :test #'equal))))
+
+(defun invalidate-translator-caches ()
+  (incf *current-translator-cache-generation*))
+
+(defgeneric presentation-translators-cache (table))
+
+(defmethod presentation-translators-cache ((table translator-table))
+  (with-slots ((cache presentation-translators-cache)
+               (generation translator-cache-generation))
+      table
+    (unless (or (= generation *current-translator-cache-generation*)
+                (zerop (hash-table-size cache)))
+      (clrhash cache))
+    (setf generation *current-translator-cache-generation*)
+    cache))
+
+(defun default-translator-tester (object-arg &key &allow-other-keys)
+  (declare (ignore object-arg))
+  t)
+
+(defun add-translator (table translator)
+  ;; Remove old one.
+  (with-accessors ((translators translators)
+                   (simple-type-translators simple-type-translators))
+      table
+    (let ((old (gethash (name translator) translators)))
+      (when old
+        (setf (gethash (presentation-type-name (from-type old))
+                       simple-type-translators)
+              (remove old
+                      (gethash (presentation-type-name (from-type old))
+                               simple-type-translators))))
+      (invalidate-translator-caches)
+      (setf (gethash (name translator) translators) translator)
+      (push translator
+            (gethash (from-type translator) simple-type-translators))
+      translator)))
+
+(defun make-translator-fun (args body)
+  (cond ((null args)
+         (warn "OBJECT parameter is obligatory (adding ignored parameter)")
+         (let ((object-arg (gensym "OBJECT-ARG")))
+           `(lambda (,object-arg &key &allow-other-keys)
+              (declare (ignore ,object-arg))
+              ,@body)))
+        (t
+         `(lambda (,(car args) &key ,@(cdr args) &allow-other-keys)
+            (declare (ignorable ,(car args)))
+            ,@body))))
+
+(defun make-documentation-fun (doc-arg)
+  (cond ((and doc-arg (symbolp doc-arg))
+         doc-arg)
+        ((consp doc-arg)
+         (make-translator-fun (car doc-arg) (cdr doc-arg)))
+        ((stringp doc-arg)
+         `(lambda (object &key stream &allow-other-keys)
+            (declare (ignore object))
+            (write-string ,doc-arg stream)))
+        ((null doc-arg)
+         `(lambda (object &key presentation stream &allow-other-keys)
+            (present object (presentation-type presentation)
+                     :stream stream :sensitive nil)))
+        (t (error "Can't handle doc-arg ~S" doc-arg))))
+
+(defmacro define-presentation-translator
+    (name (from-type to-type command-table &rest translator-options &key
+           (gesture :select)
+           (tester 'default-translator-tester testerp)
+           (tester-definitive (if testerp nil t))
+           (documentation nil documentationp)
+           (pointer-documentation nil pointer-documentation-p)
+           (menu t)
+           (priority 0)
+           (translator-class 'presentation-translator)
+           &allow-other-keys)
+     arglist
+     &body body)
+  ;; null tester should be the same as no tester
+  (unless tester
+    (setq tester 'default-translator-tester)
+    (setq tester-definitive t))
+  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
+         (real-to-type (expand-presentation-type-abbreviation to-type)))
+    (with-keywords-removed (translator-options
+                            (:gesture :tester :tester-definitive :documentation
+                             :pointer-documentation :menu :priority
+                             :translator-class))
+      `(add-translator (presentation-translators (find-command-table ',command-table))
+                       (make-instance
+                        ',translator-class
+                        :name ',name
+                        :from-type ',real-from-type
+                        :to-type ',real-to-type
+                        :gesture ,(if (eq gesture t)
+                                      t
+                                      `(gethash ',gesture *gesture-names*))
+                        :tester ,(if (symbolp tester)
+                                     `',tester
+                                     `#',(make-translator-fun (car tester)
+                                                              (cdr tester)))
+                        :tester-definitive ',tester-definitive
+                        :documentation #',(make-documentation-fun
+                                           (if documentationp
+                                               documentation
+                                               (command-name-from-symbol
+                                                name)))
+                        ,@(when pointer-documentation-p
+                                `(:pointer-documentation
+                                  #',(make-documentation-fun
+                                      pointer-documentation)))
+                        :menu ',menu
+                        :priority ,priority
+                        :translator-function #',(make-translator-fun arglist body)
+                        ,@translator-options)))))
+
+(defmacro define-presentation-action
+    (name (from-type to-type command-table &key
+           (gesture :select)
+           (tester 'default-translator-tester)
+           (documentation nil documentationp)
+           (pointer-documentation nil pointer-documentation-p)
+           (menu t)
+           (priority 0))
+     arglist
+     &body body)
+  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
+         (real-to-type (expand-presentation-type-abbreviation to-type)))
+    `(add-translator (presentation-translators (find-command-table ',command-table))
+      (make-instance
+       'presentation-action
+       :name ',name
+       :from-type ',real-from-type
+       :to-type ',real-to-type
+       :gesture ,(if (eq gesture t)
+                     t
+                     `(gethash ',gesture *gesture-names*))
+       :tester ,(if (symbolp tester)
+                    `',tester
+                    `#',(make-translator-fun (car tester)
+                                             (cdr tester)))
+       :tester-definitive t
+       :documentation #',(make-documentation-fun (if documentationp
+                                                     documentation
+                                                     (command-name-from-symbol
+                                                      name)))
+       ,@(when pointer-documentation-p
+               `(:pointer-documentation
+                 #',(make-documentation-fun pointer-documentation)))
+       :menu ',menu
+       :priority ,priority
+       :translator-function #',(make-translator-fun arglist body)))))
+
+(defmacro define-presentation-to-command-translator 
+    (name (from-type command-name command-table &key
+	   (gesture :select)
+	   (tester 'default-translator-tester)
+	   (documentation nil documentationp)
+	   (pointer-documentation (command-name-from-symbol command-name))
+	   (menu t)
+	   (priority 0)
+	   (echo t))
+     arglist
+     &body body)
+  (let ((command-args (gensym "COMMAND-ARGS")))
+    `(define-presentation-translator ,name
+	 (,from-type (command :command-table ,command-table) ,command-table
+		     :gesture ,gesture
+		     :tester ,tester
+		     :tester-definitive t
+		     ,@(and documentationp `(:documentation ,documentation))
+		     :pointer-documentation ,pointer-documentation
+		     :menu ,menu
+		     :priority ,priority
+		     :translator-class presentation-command-translator
+		     :command-name ',command-name)
+       ,arglist
+       (let ((,command-args (let () ,@body)))
+	 (values (cons ',command-name ,command-args)
+		 '(command :command-table ,command-table)
+		 '(:echo ,echo))))))
+
+(defmacro define-drag-and-drop-translator
+    (name (from-type to-type destination-type command-table
+                     &rest args &key
+                     (gesture :select)
+                     (tester 'default-translator-tester)
+                     documentation
+                     (pointer-documentation nil pointer-doc-p)
+                     (menu t)
+                     (priority 0)
+                     (feedback 'frame-drag-and-drop-feedback)
+                     (highlighting 'frame-drag-and-drop-highlighting))
+                                  arglist
+     &body body)
+  (declare (ignore tester gesture documentation pointer-documentation
+                   menu priority))
+  (let* ((real-dest-type (expand-presentation-type-abbreviation
+                          destination-type))
+         (name-string (command-name-from-symbol name))
+         (drag-string (format nil "Drag to ~A" name-string))
+         (pointer-doc (if pointer-doc-p
+                          nil
+                          `(:pointer-documentation
+                            ((object destination-object stream)
+                             (declare (ignore object))
+                             (write-string (if destination-object
+                                               ,name-string
+                                               ,drag-string)
+                                           stream))))))
+    (with-keywords-removed (args (:feedback :highlighting))
+      (with-gensyms (object)
+        `(progn
+           (define-presentation-translator ,name
+               (,from-type ,to-type ,command-table
+                           :tester-definitive t
+                           ,@args
+                           ,@pointer-doc
+                           :feedback #',feedback
+                           :highlighting #',highlighting
+                           :destination-ptype ',real-dest-type
+                           :destination-translator #',(make-translator-fun arglist body)
+                           :translator-class drag-n-drop-translator)
+               (,object presentation context-type frame event window x y)
+             (declare (ignore ,object))
+             (frame-drag-and-drop ',name ',command-table
+                                  presentation context-type
+                                  frame event window x y)))))))
+
+
+;;; 23.7.2 Presentation Translator Functions
+
+;;; This is to implement the requirement on presentation translators
+;;; for doing subtype calculations without reference to type
+;;; parameters.  We are generous in that we return T when we are
+;;; unsure, to give translator testers a chance to accept or reject
+;;; the translator.  This is essentially
+;;;   (multiple-value-bind (yesp surep)
+;;;       (presentation-subtypep maybe-subtype type)
+;;;     (or yesp (not surep)))
+;;; except faster.
+(defun stupid-subtypep (maybe-subtype type)
+  "Return t if maybe-subtype is a presentation subtype of type, regardless of
+  parameters."
+  (when (or (eq maybe-subtype nil) (eq type t))
+    (return-from stupid-subtypep t))
+  (when (eql maybe-subtype type)
+    (return-from stupid-subtypep t))
+  (let ((maybe-subtype-name (presentation-type-name maybe-subtype))
+        (type-name (presentation-type-name type)))
+    (cond
+      ;; see DEFUN PRESENTATION-SUBTYPEP for some caveats
+      ((eq maybe-subtype-name 'or)
+       (let ((or-types (decode-parameters maybe-subtype)))
+         (every (lambda (x) (stupid-subtypep x type)) or-types)))
+      ((eq type-name 'and)
+       (stupid-subtypep maybe-subtype (car (decode-parameters type))))
+      ((eq type-name 'or)
+       (let ((or-types (decode-parameters type)))
+         (some (lambda (x) (stupid-subtypep maybe-subtype x)) or-types)))
+      ((eq maybe-subtype-name 'and)
+       ;; this clause is actually not conservative, but probably in a
+       ;; way that no-one will complain about too much.  Basically, we
+       ;; will only return T if the first type in the AND (which is
+       ;; treated specially by CLIM) is subtypep the maybe-supertype
+       (stupid-subtypep (car (decode-parameters maybe-subtype)) type))
+      (t
+       (let ((subtype-meta (get-ptype-metaclass maybe-subtype-name))
+             (type-meta (get-ptype-metaclass type-name)))
+         (unless (and subtype-meta type-meta)
+           (return-from stupid-subtypep nil))
+         (map-over-ptype-superclasses #'(lambda (super)
+                                          (when (eq type-meta super)
+                                            (return-from stupid-subtypep t)))
+                                      maybe-subtype-name)
+         nil)))))
+
+(defun find-presentation-translators (from-type to-type command-table)
+  (let* ((command-table (find-command-table command-table))
+         (from-name (presentation-type-name from-type))
+         (to-name (presentation-type-name to-type))
+         (cached-translators (gethash (cons from-name to-name)
+                                      (presentation-translators-cache
+                                       (presentation-translators
+                                        command-table)))))
+    (when cached-translators
+      (return-from find-presentation-translators cached-translators))
+    (let ((translator-vector (make-array 8 :adjustable t :fill-pointer 0))
+          (table-counter 0))
+      (do-command-table-inheritance (table command-table)
+        (let ((translator-map (simple-type-translators
+                               (presentation-translators table))))
+          (flet ((get-translators (type)
+                   (let ((translators (gethash type translator-map)))
+                     (loop for translator in translators
+                           if (stupid-subtypep (to-type translator)
+                                               to-type)
+                           do (vector-push-extend (cons translator
+                                                        table-counter)
+                                                  translator-vector)))))
+            (map-over-ptype-superclasses #'(lambda (super)
+                                             (get-translators (type-name
+                                                               super)))
+                                         from-name)))
+        (incf table-counter))
+      (let ((from-super-names nil))
+        (map-over-ptype-superclasses #'(lambda (super)
+                                         (push (type-name super)
+                                               from-super-names))
+                                     from-name)
+        (setq from-super-names (nreverse from-super-names))
+        ;; The Spec mentions "high order priority" and "low order priority"
+        ;; without saying what that is!  Fortunately, the Franz CLIM user guide
+        ;; says that high order priority is (floor priority 10), low order
+        ;; priority is (mod priority 10.) That's pretty wacked...
+        (flet ((translator-lessp (a b)
+                 (destructuring-bind (translator-a . table-num-a)
+                     a
+                   (destructuring-bind (translator-b . table-num-b)
+                       b
+                     (multiple-value-bind (hi-a low-a)
+                         (floor (priority translator-a))
+                       (multiple-value-bind (hi-b low-b)
+                           (floor (priority translator-b))
+                         ;; High order priority
+                         (cond ((> hi-a hi-b)
+                                (return-from translator-lessp t))
+                               ((< hi-a hi-b)
+                                (return-from translator-lessp nil)))
+                         ;; more specific
+                         (let ((a-precedence (position
+                                              (presentation-type-name
+                                               (from-type translator-a))
+                                              from-super-names))
+                               (b-precedence (position
+                                              (presentation-type-name
+                                               (from-type translator-b))
+                                              from-super-names)))
+                           (cond ((< a-precedence b-precedence)
+                                  (return-from translator-lessp t))
+                                 ((> a-precedence b-precedence)
+                                  (return-from translator-lessp nil))))
+                         ;; Low order priority
+                         (cond ((> low-a low-b)
+                                (return-from translator-lessp t))
+                               ((< low-a low-b)
+                                (return-from translator-lessp nil)))))
+                     ;; Command table inheritance
+                     (< table-num-a table-num-b)))))
+          ;; Add translators to their caches.
+          (setf (gethash (cons from-name to-name)
+                         (presentation-translators-cache
+                          (presentation-translators command-table)))
+                (remove-duplicates
+                 (map 'list
+                      #'car
+                      (sort translator-vector #'translator-lessp)))))))))
+
+;;; :button is a pointer button state, for performing matches where we want to
+;;; restrict the match to certain gestures but don't have a real event.
+
+(defun test-presentation-translator
+    (translator presentation context-type frame window x y
+     &key event (modifier-state 0) for-menu button)
+  (flet ((match-gesture (gesture event modifier-state)
+           (let ((modifiers (if event
+                                (event-modifier-state event)
+                                modifier-state)))
+             (or (eq gesture t)
+                 for-menu
+                 (loop for g in gesture
+                       thereis (and (eql modifiers (caddr g))
+                                    (or (and button (eql button (cadr g)))
+                                        (and (null button)
+                                             (or (null event)
+                                                 (eql (pointer-event-button
+                                                       event)
+                                                      (cadr g)))))))))))
+    (let* ((from-type (from-type translator)))
+      (unless (match-gesture (gesture translator) event modifier-state)
+        (return-from test-presentation-translator nil))
+      (unless (or (null (decode-parameters from-type))
+                  (presentation-typep (presentation-object presentation)
+                                      from-type))
+        (return-from test-presentation-translator nil))
+      (unless (or (null (tester translator))
+                  (funcall (tester translator) (presentation-object presentation)
+                           :presentation presentation :context-type context-type
+                           :frame frame :window window :x x :y y :event event))
+        (return-from test-presentation-translator nil))
+      (unless (or (tester-definitive translator)
+                  (null (decode-parameters context-type))
+                  (presentation-typep (call-presentation-translator
+                                       translator
+                                       presentation
+                                       context-type
+                                       frame
+                                       event
+                                       window
+                                       x y)
+                                      context-type))
+        (return-from test-presentation-translator nil))))
+  t)
+
+;;; presentation-contains-position moved to presentation-defs.lisp
+
+(defun map-over-presentations-containing-position (func record x y)
+  "maps recursively over all presentations in record, including record."
+  (map-over-output-records-containing-position
+   #'(lambda (child)
+       (check-type child output-record)
+       (map-over-presentations-containing-position func child x y)
+       #+nil
+       (when (presentationp child)
+         (funcall func child)))
+   record
+   x y)
+  (when (and (presentationp record)
+             (presentation-contains-position record x y))
+    (funcall func record)))
+
+(defun map-applicable-translators (func
+                                   presentation input-context frame window x y
+                                   &key event (modifier-state 0)
+                                     for-menu
+                                     button)
+  (flet ((process-presentation (context context-ptype presentation)
+           (let ((maybe-translators
+                  (find-presentation-translators (presentation-type presentation)
+                                                 context-ptype
+                                                 (frame-command-table frame))))
+             (loop for translator in maybe-translators
+                when (and (or (not for-menu) (eql for-menu (menu translator)))
+                          (test-presentation-translator
+                           translator presentation context-ptype
+                           frame window x y
+                           :event event :modifier-state modifier-state
+                           :for-menu for-menu :button button))
+                do (funcall func translator presentation context)))))
+    (if (and (presentationp presentation)
+             (presentation-subtypep (presentation-type presentation) 'blank-area))
+        (loop for context in input-context
+           for (context-ptype) = context
+           do (process-presentation context context-ptype presentation))
+        (loop for context in input-context
+           for (context-ptype) = context
+           do (map-over-presentations-containing-position
+               #'(lambda (p)
+                   (process-presentation context context-ptype p))
+               presentation
+               x y)))))
+
+(defun window-modifier-state (window)
+  "Provides default modifier state for presentation translator functions."
+  (let ((pointer (port-pointer (port window))))
+    (pointer-modifier-state pointer)))
+
+(defun find-applicable-translators
+    (presentation input-context frame window x y
+     &key event (modifier-state (window-modifier-state window)) for-menu fastp)
+  (let ((results nil))
+    (flet ((fast-func (translator presentation context)
+             (declare (ignore translator presentation context))
+             (return-from find-applicable-translators t))
+           (slow-func (translator presentation context)
+             (push (list translator presentation (input-context-type context))
+                   results)))
+      (map-applicable-translators (if fastp #'fast-func #'slow-func)
+                                  presentation input-context frame window x y
+                                  :event event
+                                  :modifier-state modifier-state
+                                  :for-menu for-menu)
+      (nreverse results))))
+
+(defun presentation-matches-context-type
+    (presentation context-type frame window x y &key event (modifier-state 0))
+  (let* ((ptype (expand-presentation-type-abbreviation (presentation-type presentation)))
+         (ctype (expand-presentation-type-abbreviation context-type))
+         (table (frame-command-table frame)))
+    (and (some (lambda (translator)
+                 (test-presentation-translator translator presentation ctype
+                                               frame window x y
+                                               :event event
+                                               :modifier-state modifier-state))
+               (find-presentation-translators ptype ctype table))
+         t)))
+
+(defgeneric call-presentation-translator
+    (translator presentation context-type frame event window x y)
+  (:method ((translator presentation-translator) presentation context-type
+            frame event window x y)
+    ;; Let the translator return an explict ptype of nil to, in effect, abort the
+    ;; presentation throw.
+    (multiple-value-call
+        #'(lambda (object &optional (ptype context-type) options)
+            (values object ptype options))
+      (funcall (translator-function translator) (presentation-object presentation)
+               :presentation presentation :context-type context-type
+               :frame frame :event event :window window :x x :y y)))
+  (:method ((translator presentation-action) presentation context-type
+            frame event window x y)
+    (funcall (translator-function translator) (presentation-object presentation)
+             :presentation presentation :context-type context-type
+             :frame frame :event event :window window :x x :y y)
+    (values nil nil nil)))
+
+(defun document-presentation-translator (translator
+                                         presentation
+                                         context-type
+                                         frame
+                                         event
+                                         window
+                                         x y
+                                         &key (stream *standard-output*)
+                                         (documentation-type :normal))
+  (funcall (if (eq documentation-type :normal)
+               (translator-documentation translator)
+               (pointer-documentation translator))
+           (presentation-object presentation)
+           :presentation presentation
+           :context-type context-type
+           :frame frame
+           :event event
+           :window window
+           :x x
+           :y y
+           :stream stream))
+
+(defstruct presentation-translator-menu-item
+  translator
+  presentation
+  context)
+
+(defun call-presentation-menu
+    (presentation input-context frame window x y
+     &key (for-menu t) label)
+  (let (items)
+    (map-applicable-translators
+     #'(lambda (translator presentation context)
+         (push
+          `(,(make-presentation-translator-menu-item :translator translator
+                                                     :presentation presentation
+                                                     :context context)
+             :documentation ,(with-output-to-string (stream)
+                               (document-presentation-translator
+                                translator
+                                presentation
+                                input-context
+                                frame nil window x y
+                                :stream stream)))
+          items))
+     presentation input-context frame window x y :for-menu for-menu)
+    (when items
+      (setq items (nreverse items))
+      (multiple-value-bind (item object event)
+          (menu-choose
+           items
+           :label label
+           :associated-window window
+           :printer #'(lambda (item stream)
+                        (let ((object (first item)))
+                          (document-presentation-translator
+                           (presentation-translator-menu-item-translator object)
+                           (presentation-translator-menu-item-presentation object)
+                           (presentation-translator-menu-item-context object)
+                           frame nil window x y
+                           :stream stream)))
+           :label label
+           :pointer-documentation *pointer-documentation-output*)
+        (declare (ignore object))
+        (when item
+          (multiple-value-bind (object ptype options)
+              (call-presentation-translator
+               (presentation-translator-menu-item-translator item)
+               (presentation-translator-menu-item-presentation item)
+               (presentation-translator-menu-item-context item)
+               frame
+               event
+               window
+               x y)
+            (when ptype
+              (funcall (cdr (presentation-translator-menu-item-context item))
+                       object ptype event options))))))))
+
+
+
+;;; 23.7.3 Finding Applicable Presentations
+
+(defun find-innermost-presentation-match
+    (input-context top-record frame window x y event modifier-state button)
+  "Helper function that implements the \"innermost-smallest\" input-context
+  presentation matching algorithm.  Returns presentation, translator, and
+  matching input context."
+  (let ((result nil)
+        (result-translator nil)
+        (result-context nil)
+        (result-size nil))
+    (map-applicable-translators
+     #'(lambda (translator presentation context)
+         (if (and result-context (not (eq result-context context)))
+             ;; Return inner presentation
+             (return-from find-innermost-presentation-match
+               (values result result-translator result-context))
+             (multiple-value-bind (min-x min-y max-x max-y)
+                 (output-record-hit-detection-rectangle* presentation)
+               (let ((size (* (- max-x min-x) (- max-y min-y))))
+                 (when (or (not result) (< size result-size))
+                   (setq result presentation)
+                   (setq result-translator translator)
+                   (setq result-context context)
+                   (setq result-size size))))))
+     top-record
+     input-context
+     frame
+     window
+     x y
+     :event event
+     :modifier-state modifier-state
+     :button button)
+    (when result
+      (return-from find-innermost-presentation-match
+        (values result result-translator result-context)))
+    (map-applicable-translators
+     #'(lambda (translator presentation context)
+         (return-from find-innermost-presentation-match
+           (values presentation translator context)))
+     *null-presentation*
+     input-context
+     frame
+     window
+     x y
+     :event event
+     :modifier-state modifier-state
+     :button button))
+  nil)
+
+(defun find-innermost-applicable-presentation
+    (input-context window x y
+     &key (frame *application-frame*)
+     (modifier-state (window-modifier-state window))
+     event)
+  (values (find-innermost-presentation-match input-context
+                                             (stream-output-history window)
+                                             frame
+                                             window
+                                             x y
+                                             event
+                                             modifier-state
+                                             nil)))
+
+(defun find-innermost-presentation-context
+    (input-context window x y
+     &key (top-record (stream-output-history window))
+     (frame *application-frame*)
+     event
+     (modifier-state (window-modifier-state window))
+     button)
+  (find-innermost-presentation-match input-context
+                                     top-record
+                                     frame
+                                     window
+                                     x y
+                                     event
+                                     modifier-state
+                                     button))
+
+(defun throw-highlighted-presentation (presentation input-context event)
+  (let ((x (pointer-event-x event))
+        (y (pointer-event-y event))
+        (window (event-sheet event)))
+    (multiple-value-bind (p translator context)
+        (find-innermost-presentation-match input-context
+                                           presentation
+                                           *application-frame*
+                                           (event-sheet event)
+                                           x y
+                                           event
+                                           0
+                                           nil)
+      (when p
+        (multiple-value-bind (object ptype options)
+            (call-presentation-translator translator
+                                          p
+                                          (input-context-type context)
+                                          *application-frame*
+                                          event
+                                          window
+                                          x y)
+          (when ptype
+            (funcall (cdr context) object ptype event options)))))))
+
+(defun throw-object-ptype (object type &key (input-context *input-context*) sheet)
+  "Throw an object and presentation type within input-context without
+a presentation"
+  (throw-highlighted-presentation
+                          (make-instance 'standard-presentation
+                                         :object object :type type
+                                         :single-box t)
+                          input-context
+                          (make-instance 'pointer-button-press-event
+                                         :sheet sheet
+                                         :x 0 :y 0
+                                         :modifier-state 0
+                                         :button +pointer-left-button+)))
+
+(defun highlight-applicable-presentation (frame stream input-context
+                                          &optional (prefer-pointer-window t))
+  (let* ((queue (stream-input-buffer stream))
+         (event (event-queue-peek queue))
+         (sheet (and event (event-sheet event))))
+    (when (and event
+               (or (and (typep event 'pointer-event)
+                        (or prefer-pointer-window
+                            (eq stream sheet)))
+                   (typep event 'keyboard-event)))
+      (frame-input-context-track-pointer frame input-context sheet event)
+      ;; Stream only needs to see button press events.
+      ;; XXX Need to think about this more.  Should any pointer events be
+      ;; passed through?  If there's no presentation, maybe?
+      ;;
+      ;; If we don't pass through other pointer events we let stream eat
+      ;; scrolling events and similar - nacceptable. -- jd, 2017-11-26
+      (when (typep event 'pointer-button-press-event)
+        (event-queue-read queue)
+        (funcall *pointer-button-press-handler* stream event)))))
+
+;;; FIXME missing functions
+;;;
+;;; set-highlighted-presentation
+;;; unhighlight-highlighted-presentation
