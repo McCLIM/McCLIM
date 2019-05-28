@@ -81,7 +81,8 @@
                    #+cmu (kernel:%function-arglist (symbol-function object))
                    #+sbcl (sb-introspect:function-lambda-list (symbol-function object))
                    #+clisp (ext:arglist (symbol-function object))
-                   #-(or excl cmu sbcl clisp) "( ??? )"))
+                   #+lispworks (lw:function-lambda-list (symbol-function object))
+                   #-(or excl cmu sbcl clisp lispworks) "( ??? )"))
       (when arglist
         (present-simply arglist stream)))
     (terpri))

@@ -1607,7 +1607,7 @@ protocol retrieving gestures from a provided string."))
 (defmethod presentation-type-of ((object pathname))
   'pathname)
 
-(defun filename-completer (string action &optional (default *default-pathname-defaults*))
+(defun filename-completer (string action)
   (flet
       ((deal-with-home (pathname his-directory)
 	 ;; SBCL (and maybe others) treat "~/xxx" specially, returning a pathname
@@ -1615,7 +1615,7 @@ protocol retrieving gestures from a provided string."))
 	 ;; But if you call Directory on that pathname the returned list
 	 ;; are all complete pathnames without the :Home part!.
 	 ;; So this replaces the :HOME with what it actually means
-	 (let* ((home-env-variable (clim-internals::get-environment-variable "HOME"))
+	 (let* ((home-env-variable (get-environment-variable "HOME"))
 		(home (loop for pos = 1 then (1+ next-pos)
 			 for next-pos = (position #\/ home-env-variable :start pos)
 			 collect (subseq home-env-variable pos next-pos)
@@ -1628,8 +1628,7 @@ protocol retrieving gestures from a provided string."))
 			    :name (pathname-name pathname)
 			    :version (pathname-version pathname)
 			    :type (pathname-type pathname)
-			    :directory new-directory)
-	     )))
+			    :directory new-directory))))
     ;; Slow but accurate
     (let* ((raw-pathname (pathname string))
 	   (raw-directory (pathname-directory raw-pathname))
@@ -1646,8 +1645,7 @@ protocol retrieving gestures from a provided string."))
 	   (actual-pathname (if logical-pathname-p
 				(translate-logical-pathname original-pathname)
 				original-pathname))
-	   (merged-pathname (merge-pathnames actual-pathname default))
-	   ;; (version (pathname-version actual-pathname))
+	   (merged-pathname (merge-pathnames actual-pathname))
 	   completions)
       (let ((search-pathname (make-pathname :host (pathname-host merged-pathname)
 					    :device (pathname-device merged-pathname)
@@ -1655,35 +1653,9 @@ protocol retrieving gestures from a provided string."))
 					    :version :unspecific
 					    :type :wild
 					    :name :wild)))
-	(setq completions (directory search-pathname)))
+	(setq completions (directory search-pathname #+sbcl :resolve-symlinks #+sbcl nil)))
       ;; Now prune out all completions that don't start with the string
-      ;; why is this necessary would complete-from-suggestions do this also?
-      (let (;; (name (pathname-name actual-pathname))
-       	    (type (pathname-type actual-pathname)))
-	;; (loop for pn in completions
-	;;    for pn-name = (pathname-name pn)
-	;;    for pn-type = (pathname-type pn)
-	;;    when (cond
-	;; 	    ;; if the query has a type, then the name must be
-	;; 	    ;; complete and match
-	;; 	    (type
-	;; 	     (and
-	;; 	      (string-equal pn-name name)
-	;; 	      (let ((s (search type pn-type :test #'char-equal)))
-	;; 		(and s (zerop s)))))
-	;; 	    ;; But if not, then if the query has a name
-	;; 	    (name
-	;; 	     ;; but at least in SBCL a candidate with neither name nor
-	;; 	     ;; type is a directory
-	;; 	     (when (and (null pn-name) (null pn-type))
-	;; 	       (setq pn-name (first (last (pathname-directory pn)))))
-	;; 	     (let ((s (search name pn-name
-	;; 			      :test #'char-equal)))
-	;; 	       (if (eq action :apropos-possibilities)
-	;; 		   (not (null s))
-	;; 		   (and s (zerop s))))))
-	;;    collect pn into answer
-	;;    finally (setq completions answer))
+      (let ((type (pathname-type actual-pathname)))
 	(when (null type)
 	  ;; If the user didn't supply a file type, don't burden him with all
 	  ;; sorts of version numbers right now.
@@ -2002,7 +1974,7 @@ protocol retrieving gestures from a provided string."))
 (define-presentation-type-abbreviation subset-alist (alist
                                                      &key (test 'eql testp))
   (make-presentation-type-specifier
-   `(subset-completion ,@(and testp `(:test ,test))
+   `(subset-completion ,alist ,@(and testp `(:test ,test))
                        :value-key member-alist-value-key)
    :name-key name-key
    :documentation-key documentation-key
