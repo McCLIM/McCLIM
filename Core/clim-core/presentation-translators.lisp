@@ -389,10 +389,10 @@ and used to ensure that presentation-translators-caches are up to date.")
   (let* ((command-table (find-command-table command-table))
          (from-name (presentation-type-name from-type))
          (to-name (presentation-type-name to-type))
-         (cached-translators (gethash (cons from-name to-name)
-                                      (presentation-translators-cache
-                                       (presentation-translators
-                                        command-table)))))
+         (cache-key (cons from-name to-name))
+         (cache-table (presentation-translators-cache
+                       (presentation-translators command-table)))
+         (cached-translators (gethash cache-key cache-table)))
     (when cached-translators
       (return-from find-presentation-translators cached-translators))
     (let ((translator-vector (make-array 8 :adjustable t :fill-pointer 0))
@@ -400,18 +400,13 @@ and used to ensure that presentation-translators-caches are up to date.")
       (do-command-table-inheritance (table command-table)
         (let ((translator-map (simple-type-translators
                                (presentation-translators table))))
-          (flet ((get-translators (type)
-                   (let ((translators (gethash type translator-map)))
-                     (loop for translator in translators
-                           if (stupid-subtypep (to-type translator)
-                                               to-type)
-                           do (vector-push-extend (cons translator
-                                                        table-counter)
-                                                  translator-vector)))))
-            (map-over-ptype-superclasses #'(lambda (super)
-                                             (get-translators (type-name
-                                                               super)))
-                                         from-name)))
+          (flet ((get-translators (super)
+                   (loop
+                      for translator in (gethash (type-name super) translator-map)
+                      if (stupid-subtypep (to-type translator) to-type)
+                      do (vector-push-extend (cons translator table-counter)
+                                             translator-vector))))
+            (map-over-ptype-superclasses #'get-translators from-name)))
         (incf table-counter))
       (let ((from-super-names nil))
         (map-over-ptype-superclasses #'(lambda (super)
@@ -422,49 +417,33 @@ and used to ensure that presentation-translators-caches are up to date.")
         ;; The Spec mentions "high order priority" and "low order priority"
         ;; without saying what that is!  Fortunately, the Franz CLIM user guide
         ;; says that high order priority is (floor priority 10), low order
-        ;; priority is (mod priority 10.) That's pretty wacked...
+        ;; priority is (mod priority 10) That's pretty wacked...
         (flet ((translator-lessp (a b)
-                 (destructuring-bind (translator-a . table-num-a)
-                     a
-                   (destructuring-bind (translator-b . table-num-b)
-                       b
-                     (multiple-value-bind (hi-a low-a)
-                         (floor (priority translator-a))
-                       (multiple-value-bind (hi-b low-b)
-                           (floor (priority translator-b))
-                         ;; High order priority
-                         (cond ((> hi-a hi-b)
-                                (return-from translator-lessp t))
-                               ((< hi-a hi-b)
-                                (return-from translator-lessp nil)))
-                         ;; more specific
-                         (let ((a-precedence (position
-                                              (presentation-type-name
-                                               (from-type translator-a))
-                                              from-super-names))
-                               (b-precedence (position
-                                              (presentation-type-name
-                                               (from-type translator-b))
-                                              from-super-names)))
-                           (cond ((< a-precedence b-precedence)
-                                  (return-from translator-lessp t))
-                                 ((> a-precedence b-precedence)
-                                  (return-from translator-lessp nil))))
-                         ;; Low order priority
-                         (cond ((> low-a low-b)
-                                (return-from translator-lessp t))
-                               ((< low-a low-b)
-                                (return-from translator-lessp nil)))))
-                     ;; Command table inheritance
-                     (< table-num-a table-num-b)))))
+                 (nest
+                  (destructuring-bind (translator-a . table-num-a) a)
+                  (destructuring-bind (translator-b . table-num-b) b)
+                  (multiple-value-bind (hi-a low-a) (floor (priority translator-a) 10))
+                  (multiple-value-bind (hi-b low-b) (floor (priority translator-b) 10))
+                  (let* ((a-name (presentation-type-name (from-type translator-a)))
+                         (b-name (presentation-type-name (from-type translator-b)))
+                         (a-precedence (position a-name from-super-names))
+                         (b-precedence (position b-name from-super-names)))
+                    (cond
+                      ;; 1. High order priority
+                      ((> hi-a hi-b) (return-from translator-lessp t))
+                      ((< hi-a hi-b) (return-from translator-lessp nil))
+                      ;; 2. More specific "from type"
+                      ((< a-precedence b-precedence) (return-from translator-lessp t))
+                      ((> a-precedence b-precedence) (return-from translator-lessp nil))
+                      ;; 3. Low order priority
+                      ((> low-a low-b) (return-from translator-lessp t))
+                      ((< low-a low-b) (return-from translator-lessp nil))
+                      ;; 4. Command table inheritance
+                      (t (< table-num-a table-num-b)))))))
           ;; Add translators to their caches.
-          (setf (gethash (cons from-name to-name)
-                         (presentation-translators-cache
-                          (presentation-translators command-table)))
-                (remove-duplicates
-                 (map 'list
-                      #'car
-                      (sort translator-vector #'translator-lessp)))))))))
+          (let ((translators (map 'list #'car (sort translator-vector #'translator-lessp))))
+            (setf (gethash cache-key cache-table)
+                  (remove-duplicates translators))))))))
 
 ;;; :button is a pointer button state, for performing matches where we want to
 ;;; restrict the match to certain gestures but don't have a real event.
