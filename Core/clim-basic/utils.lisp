@@ -936,3 +936,8 @@ to the BREAK-STRATEGY whenever it assigns any meaning to to them."
                          (vector
                           break-strategy))))
     (%line-breaks-2 string width initial-offset margin start end opportunities)))
+
+;;; curbed from uiop
+(defmacro nest (&rest things)
+  (reduce #'(lambda (outer inner) `(,@outer ,inner))
+          things :from-end t))
