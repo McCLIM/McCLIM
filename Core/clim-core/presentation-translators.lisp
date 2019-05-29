@@ -562,8 +562,9 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun window-modifier-state (window)
   "Provides default modifier state for presentation translator functions."
-  (let ((pointer (port-pointer (port window))))
-    (pointer-modifier-state pointer)))
+  ;; There are many things which may go wrong (NULL window, sheet
+  ;; without a port etc). We clamp errors to 0 meaning "no modifiers".
+  (or (ignore-errors (pointer-modifier-state (port-pointer (port window)))) 0))
 
 (defun find-applicable-translators
     (presentation input-context frame window x y
