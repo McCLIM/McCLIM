@@ -600,12 +600,14 @@ and used to ensure that presentation-translators-caches are up to date.")
   presentation
   context)
 
-(defun call-presentation-menu
-    (presentation input-context frame window x y
-     &key (for-menu t) label)
-  (let (items)
-    (map-applicable-translators
-     #'(lambda (translator presentation context)
+(defun call-presentation-menu (presentation input-context frame window x y
+                               &key (for-menu t) label
+                               &aux (items nil) (processed nil))
+  (map-applicable-translators
+   #'(lambda (translator presentation context
+              &aux (key (cons translator presentation)))
+       (unless (member key processed :test #'equal)
+         (push key processed)
          (push
           `(,(make-presentation-translator-menu-item :translator translator
                                                      :presentation presentation
@@ -617,39 +619,40 @@ and used to ensure that presentation-translators-caches are up to date.")
                                 input-context
                                 frame nil window x y
                                 :stream stream)))
-          items))
-     presentation input-context frame window x y :for-menu for-menu)
-    (when items
-      (setq items (nreverse items))
-      (multiple-value-bind (item object event)
-          (menu-choose
-           items
-           :label label
-           :associated-window window
-           :printer #'(lambda (item stream)
-                        (let ((object (first item)))
-                          (document-presentation-translator
-                           (presentation-translator-menu-item-translator object)
-                           (presentation-translator-menu-item-presentation object)
-                           (presentation-translator-menu-item-context object)
-                           frame nil window x y
-                           :stream stream)))
-           :label label
-           :pointer-documentation *pointer-documentation-output*)
-        (declare (ignore object))
-        (when item
-          (multiple-value-bind (object ptype options)
-              (call-presentation-translator
-               (presentation-translator-menu-item-translator item)
-               (presentation-translator-menu-item-presentation item)
-               (presentation-translator-menu-item-context item)
-               frame
-               event
-               window
-               x y)
-            (when ptype
-              (funcall (cdr (presentation-translator-menu-item-context item))
-                       object ptype event options))))))))
+          items)))
+   presentation input-context frame window x y :for-menu for-menu)
+  (unless items
+    (return-from call-presentation-menu))
+  (setq items (nreverse items))
+  (multiple-value-bind (item object event)
+      (menu-choose
+       items
+       :label label
+       :associated-window window
+       :printer #'(lambda (item stream)
+                    (let ((object (first item)))
+                      (document-presentation-translator
+                       (presentation-translator-menu-item-translator object)
+                       (presentation-translator-menu-item-presentation object)
+                       (presentation-translator-menu-item-context object)
+                       frame nil window x y
+                       :stream stream)))
+       :label label
+       :pointer-documentation *pointer-documentation-output*)
+    (declare (ignore object))
+    (when item
+      (multiple-value-bind (object ptype options)
+          (call-presentation-translator
+           (presentation-translator-menu-item-translator item)
+           (presentation-translator-menu-item-presentation item)
+           (presentation-translator-menu-item-context item)
+           frame
+           event
+           window
+           x y)
+        (when ptype
+          (funcall (cdr (presentation-translator-menu-item-context item))
+                   object ptype event options))))))
 
 
 
