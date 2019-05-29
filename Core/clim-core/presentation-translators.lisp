@@ -482,53 +482,41 @@ and used to ensure that presentation-translators-caches are up to date.")
               context-type))
          t)))
 
-;;; presentation-contains-position moved to presentation-defs.lisp
-
-(defun map-over-presentations-containing-position (func record x y)
-  "maps recursively over all presentations in record, including record."
-  (map-over-output-records-containing-position
-   #'(lambda (child)
-       (check-type child output-record)
-       (map-over-presentations-containing-position func child x y)
-       #+nil
-       (when (presentationp child)
-         (funcall func child)))
-   record
-   x y)
-  (when (and (presentationp record)
-             (presentation-contains-position record x y))
-    (funcall func record)))
-
-(defun map-applicable-translators (func
-                                   presentation input-context frame window x y
-                                   &key event (modifier-state 0)
-                                     for-menu
-                                     button)
-  (flet ((process-presentation (context context-ptype presentation)
-           (let ((maybe-translators
-                  (find-presentation-translators (presentation-type presentation)
-                                                 context-ptype
-                                                 (frame-command-table frame))))
-             (loop for translator in maybe-translators
-                when (and (or (not for-menu) (eql for-menu (menu translator)))
-                          (test-presentation-translator
-                           translator presentation context-ptype
-                           frame window x y
-                           :event event :modifier-state modifier-state
-                           :for-menu for-menu :button button))
-                do (funcall func translator presentation context)))))
+(defun map-applicable-translators (func presentation input-context frame window x y
+                                   &key event (modifier-state 0) for-menu button)
+  (labels ((process-presentation (context presentation)
+             (let* ((context-ptype (first context))
+                    (maybe-translators
+                     (find-presentation-translators (presentation-type presentation)
+                                                    context-ptype
+                                                    (frame-command-table frame))))
+               (loop for translator in maybe-translators
+                  when (and (or (not for-menu) (eql for-menu (menu translator)))
+                            (test-presentation-translator
+                             translator presentation context-ptype
+                             frame window x y
+                             :event event :modifier-state modifier-state
+                             :for-menu for-menu :button button))
+                  do (funcall func translator presentation context))))
+           (mopscp (context record)
+             "maps recursively over all presentations in record, including record."
+             (if (and x y)
+                 (map-over-output-records-containing-position
+                  (curry #'mopscp context) record x y)
+                 (map-over-output-records (curry #'mopscp context) record))
+             ;; presentation-contains-position is in presentation-defs.lisp
+             (when (and (presentationp record)
+                        (or (and (null x) (null y)) ; allow wildcards
+                            (presentation-contains-position record x y)))
+               (process-presentation context record))))
     (if (and (presentationp presentation)
              (presentation-subtypep (presentation-type presentation) 'blank-area))
-        (loop for context in input-context
-           for (context-ptype) = context
-           do (process-presentation context context-ptype presentation))
-        (loop for context in input-context
-           for (context-ptype) = context
-           do (map-over-presentations-containing-position
-               #'(lambda (p)
-                   (process-presentation context context-ptype p))
-               presentation
-               x y)))))
+        (loop
+           for context in input-context
+           do (process-presentation context presentation))
+        (loop
+           for context in input-context
+           do (mopscp context presentation)))))
 
 (defun window-modifier-state (window)
   "Provides default modifier state for presentation translator functions."
