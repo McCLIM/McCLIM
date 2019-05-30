@@ -50,11 +50,6 @@
       (dispatch-repaint button (sheet-region button))
       (stream-force-output button))))
 
-(defgeneric toggle-arm-branch (button))
-
-(defmethod toggle-arm-branch ((button menu-button-pane))
-  (arm-menu button))
-
 (defun menu-draw-highlighted (gadget)
   (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
     (with-slots (label) gadget
@@ -87,7 +82,7 @@
     (arm-branch pane)))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
-  (toggle-arm-branch pane))
+  (arm-menu pane))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-ungrab-event))
   (destroy-substructure (menu-root pane)))
@@ -176,9 +171,7 @@ account, and create a list of menu buttons."
 	    (enable-frame submenu-frame)
 	    (with-sheet-medium (medium raised)
 	      (medium-force-output medium))))))
-    (when frame
-      (with-slots (active-menu) frame
-	(setf active-menu sub-menu)))))
+    (setf (%frame-active-menu frame) sub-menu)))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
   (with-slots (frame-manager submenu-frame) sub-menu
@@ -190,7 +183,7 @@ account, and create a list of menu buttons."
       (setf submenu-frame nil)))
   (with-application-frame (frame)
     (when frame
-      (setf (slot-value frame 'active-menu) nil))))
+      (setf (%frame-active-menu frame) nil))))
 
 (defmethod arm-branch ((sub-menu menu-button-submenu-pane))
   (with-slots (client frame-manager submenu-frame) sub-menu
@@ -203,19 +196,17 @@ account, and create a list of menu buttons."
 	  (create-substructure sub-menu sub-menu)))
     (arm-menu sub-menu)))
 
-(defmethod toggle-arm-branch ((button menu-button-submenu-pane))
-  (if (slot-value button 'armed)
-      (destroy-substructure button)
-      (arm-branch button)))
+(defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-press-event))
+  (if (slot-value pane 'armed)
+      (destroy-substructure pane)
+      (arm-branch pane)))
 
 (defmethod handle-event :before (pane (event pointer-button-release-event))
-  (when (not (or (typep event 'window-repaint-event)
-		  (typep event 'pointer-motion-event)))
+  (unless (typep pane 'menu-button)
     (with-application-frame (frame)
-      (when (and (not (typep pane 'menu-button)) frame)
-	(with-slots (active-menu) frame
-	  (when active-menu
-	    (destroy-substructure (menu-root active-menu))))))))
+      (with-accessors ((active-menu %frame-active-menu)) frame
+	(when (and frame active-menu)
+	  (destroy-substructure (menu-root active-menu)))))))
 
 ;;; menu-button-vertical-submenu-pane
 (defclass menu-button-vertical-submenu-pane (menu-button-submenu-pane) ())
