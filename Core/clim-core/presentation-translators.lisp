@@ -67,6 +67,11 @@
    (destination-translator :reader destination-translator
                            :initarg :destination-translator)))
 
+(defvar *dragged-presentation* nil
+  "Bound to the presentation dragged in a drag-and-drop context")
+(defvar *dragged-object* nil
+  "Bound to the object dragged in a drag-and-drop context")
+
 ;;; According to the Franz User's guide, the destination object is
 ;;; available in the tester, documentation, and translator function
 ;;; as destination-object. Therefore OBJECT is the dragged object. In
