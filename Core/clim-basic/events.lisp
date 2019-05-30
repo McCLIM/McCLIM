@@ -220,12 +220,12 @@
 (define-event-class window-configuration-event (window-event)
   ((x :initarg :x :reader window-configuration-event-native-x)
    (y :initarg :y :reader window-configuration-event-native-y)
-   (width :initarg :width :reader window-configuration-event-width)
-   (height :initarg :height :reader window-configuration-event-height)))
+   (width :initarg :width :reader window-configuration-event-native-width)
+   (height :initarg :height :reader window-configuration-event-native-height)))
 
 (defmacro get-window-position ((sheet event) &body body)
   `(multiple-value-bind (x y)
-       (transform-position (sheet-native-transformation ,sheet)
+       (untransform-position (sheet-native-transformation (sheet-parent ,sheet))
 			   (window-configuration-event-native-x ,event)
 			   (window-configuration-event-native-y ,event))
      (declare (ignorable x y))
@@ -240,6 +240,24 @@
 
 (defmethod window-configuration-event-y ((event window-configuration-event))
   (get-window-position ((event-sheet event) event) y))
+
+(defgeneric window-configuration-event-width (window-configuration-event)
+  (:method ((event window-configuration-event))
+    (multiple-value-bind (width height)
+        (untransform-distance  (sheet-native-transformation
+                                (sheet-parent (event-sheet event)))
+                               (window-configuration-event-native-width event)
+                               (window-configuration-event-native-height event))
+      width)))
+
+(defgeneric window-configuration-event-height (window-configuration-event)
+  (:method ((event window-configuration-event))
+    (multiple-value-bind (width height)
+        (untransform-distance  (sheet-native-transformation
+                                (sheet-parent (event-sheet event)))
+                               (window-configuration-event-native-width event)
+                               (window-configuration-event-native-height event))
+      height)))
 
 (define-event-class window-unmap-event (window-event)
   ())
