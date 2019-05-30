@@ -975,8 +975,8 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod handle-event ((sheet top-level-sheet-pane)
                          (event window-configuration-event))
-  (let ((x (window-configuration-event-native-x event))
-        (y (window-configuration-event-native-y event))
+  (let ((x (window-configuration-event-x event))
+        (y (window-configuration-event-y event))
         (width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
     (let ((*configuration-event-p* sheet))
@@ -984,7 +984,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
        sheet
        (make-bounding-rectangle 0 0 width height)
        ;; negative offsets are handled by the native transformation?
-       (make-translation-transformation (max 0 x) (max 0 y))))))
+       (make-translation-transformation x y)))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-manager-delete-event))

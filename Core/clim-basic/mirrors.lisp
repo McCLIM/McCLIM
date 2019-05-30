@@ -176,10 +176,16 @@ very hard)."
   (let* ((parent (sheet-parent sheet))
          (sheet-region-in-native-parent
            ;; this now is the wanted sheet mirror region
-           (transform-region (sheet-native-transformation parent)
+          (if (graftp parent)
+              ;; For the TOP-LEVEL-SHEET-PANE (when the parent is a GRAFT) we don't
+              ;; clip the sheet-region with the parent-region. -- admich 2019-05-30
+              (transform-region (sheet-native-transformation parent)
+                                (transform-region (sheet-transformation sheet)
+                                                  (sheet-region sheet)))
+              (transform-region (sheet-native-transformation parent)
                              (region-intersection (sheet-region parent)
                                                   (transform-region (sheet-transformation sheet)
-                                                                    (sheet-region sheet))))))
+                                                                    (sheet-region sheet)))))))
     (when (region-equal sheet-region-in-native-parent +nowhere+)
       (%set-mirror-geometry sheet :invalidate-transformations t)
       (return-from update-mirror-geometry))
