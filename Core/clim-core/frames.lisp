@@ -71,6 +71,15 @@
   (:documentation "Called when a pane receives or loses the keyboard
 input focus. This is a McCLIM extension."))
 
+(defmethod (setf port-keyboard-input-focus) :around (focus port)
+  (let ((old-focus (port-keyboard-input-focus port))
+        (result (call-next-method))     ; clim-null cheats
+        (new-focus (port-keyboard-input-focus port)))
+    (prog1 result
+      (unless (eq old-focus new-focus)
+        (note-input-focus-changed old-focus nil)
+        (note-input-focus-changed new-focus t)))))
+
 (defclass standard-application-frame (application-frame
 				      presentation-history-mixin)
   ((port :initform nil
