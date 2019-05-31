@@ -650,11 +650,8 @@ and used to ensure that presentation-translators-caches are up to date.")
           (call-presentation-translator
            (presentation-translator-menu-item-translator item)
            (presentation-translator-menu-item-presentation item)
-           (presentation-translator-menu-item-context item)
-           frame
-           event
-           window
-           x y)
+           (input-context-type (presentation-translator-menu-item-context item))
+           frame event window x y)
         (when ptype
           (funcall (cdr (presentation-translator-menu-item-context item))
                    object ptype event options))))))
