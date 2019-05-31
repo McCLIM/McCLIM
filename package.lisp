@@ -1965,7 +1965,9 @@
    ;; images
    #:rgb-image
    #:xpm-parse-file
-   #:*xpm-x11-colors*))
+   #:*xpm-x11-colors*
+   ;; selection
+   #:define-selection-translator))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
