@@ -749,3 +749,10 @@ known gestures."
       (pointer-position pointer)
     (let ((graft (graft (port pointer))))
       (untransform-position (sheet-delta-transformation stream graft) x y))))
+
+(defmethod* (setf stream-pointer-position) (x y (stream standard-extended-input-stream))
+  (let ((graft (graft stream))
+        (pointer (port-pointer (port stream))))
+    (multiple-value-bind (x y)
+        (transform-position (sheet-delta-transformation stream graft) x y)
+      (setf (pointer-position pointer) (values x y)))))
