@@ -675,7 +675,7 @@ unspecified. "))
 (defgeneric stream-input-buffer (stream))
 (defgeneric (setf stream-input-buffer) (buffer stream))
 (defgeneric stream-pointer-position (stream &key pointer))
-;; (defgeneric (setf* stream-pointer-position))
+(defgeneric* (setf stream-pointer-position) (x y stream))
 (defgeneric stream-set-input-focus (stream))
 (defgeneric stream-read-gesture
     (stream &key timeout peek-p input-wait-test

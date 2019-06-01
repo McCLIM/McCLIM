@@ -117,6 +117,14 @@
       (when same-screen-p
         (untransform-position (sheet-native-transformation graft) x y)))))
 
+(clim-sys:defmethod* (setf pointer-position) (x y (pointer clx-basic-pointer))
+  (let* ((port (port pointer))
+         (graft (graft port))
+         (xmirror (sheet-xmirror graft)))
+    (multiple-value-bind (x y)
+        (transform-position (sheet-native-transformation graft) x y)
+      (xlib:warp-pointer xmirror (round x) (round y)))))
+
 (defmethod set-sheet-pointer-cursor ((port clx-basic-port) (sheet mirrored-sheet-mixin) cursor)
   (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port)))
 	(mirror (sheet-direct-xmirror sheet)))
