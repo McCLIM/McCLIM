@@ -122,158 +122,168 @@
   (when (eql event-key :mapping-notify)
     (xlib:mapping-notify display request 0 0)
     (return-from event-handler (maybe-funcall *wait-function*)))
-  (let ((sheet (and window (port-lookup-sheet *clx-port* window))))
-    (when sheet
-      (case event-key
-	((:key-press :key-release)
-         (multiple-value-bind (keyname modifier-state keysym-name)
-	     (x-event-to-key-name-and-modifiers *clx-port*
-						event-key code state)
-           (make-instance (if (eq event-key :key-press)
-			      'key-press-event
-			      'key-release-event)
-                          :key-name keysym-name
-                          :key-character (and (characterp keyname) keyname)
-                          :x x :y y
-                          :graft-x root-x
-                          :graft-y root-y
-                          :sheet (or (frame-properties (pane-frame sheet) 'focus) sheet)
-                          :modifier-state modifier-state :timestamp time)))
-	((:button-press :button-release)
-	 (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port* state))
-               (button (decode-x-button-code code)))
-           (if (and (eq event-key :button-press)
-                    (member button '(#.+pointer-wheel-up+
-                                     #.+pointer-wheel-down+
-                                     #.+pointer-wheel-left+
-                                     #.+pointer-wheel-right+)))
-               (make-instance 'climi::pointer-scroll-event
-                              :pointer 0
-                              :button button :x x :y y
-                              :graft-x root-x
-                              :graft-y root-y
-                              :sheet sheet
-                              :modifier-state modifier-state
-                              :delta-x (case button
-                                         (#.+pointer-wheel-left+ -1)
-                                         (#.+pointer-wheel-right+ 1)
-                                         (otherwise 0))
-                              :delta-y (case button
-                                         (#.+pointer-wheel-up+ -1)
-                                         (#.+pointer-wheel-down+ 1)
-                                         (otherwise 0))
-                              :timestamp time)
-               (make-instance (if (eq event-key :button-press)
-                                  'pointer-button-press-event
-                                  'pointer-button-release-event)
-                              :pointer 0
-                              :button button :x x :y y
-                              :graft-x root-x
-                              :graft-y root-y
-                              :sheet sheet :modifier-state modifier-state
-                              :timestamp time))))
-	(:enter-notify
-	 (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
+  (when-let ((sheet (and window (port-lookup-sheet *clx-port* window))))
+    (case event-key
+      ((:key-press :key-release)
+       (multiple-value-bind (keyname modifier-state keysym-name)
+           (x-event-to-key-name-and-modifiers *clx-port*
+                                              event-key code state)
+         (make-instance (if (eq event-key :key-press)
+                            'key-press-event
+                            'key-release-event)
+                        :key-name keysym-name
+                        :key-character (and (characterp keyname) keyname)
+                        :x x :y y
                         :graft-x root-x
                         :graft-y root-y
-			:sheet sheet
-			:modifier-state (clim-xcommon:x-event-state-modifiers
-					 *clx-port* state)
-			:timestamp time))
-	(:leave-notify
-	 (make-instance (if (eq mode :ungrab)
-			    'pointer-ungrab-event
-			    'pointer-exit-event)
-			:pointer 0 :button code
-			:x x :y y
-			:graft-x root-x
-			:graft-y root-y
-			:sheet sheet
-			:modifier-state (clim-xcommon:x-event-state-modifiers
-					 *clx-port* state)
-			:timestamp time))
-	(:configure-notify
-         (cond ((and (eq (sheet-parent sheet) (graft sheet))
-                     (graft sheet)
-                     (not override-redirect-p)
-                     (not send-event-p))
-                ;; Genuine top-level-sheet event (with override-redirect off).
-                ;;
-                ;; Since the root window is not our real parent, but there the
-                ;; window managers decoration in between, only the size is
-                ;; correct, so we need to query coordinates from the X
-                ;; server. Note that sheet relative coodinates may be something
-                ;; different than [0,0].
-                (multiple-value-bind (x y)
-                    (xlib:translate-coordinates window
-                                                0
-                                                0
-                                                (clx-port-window *clx-port*))
-                  (make-instance 'window-configuration-event
-                                 :sheet sheet
-                                 :x x
-                                 :y y
-                                 :width width :height height)))
-               (t
-                ;; nothing special here
+                        :sheet (or (frame-properties (pane-frame sheet) 'focus) sheet)
+                        :modifier-state modifier-state :timestamp time)))
+      ((:button-press :button-release)
+       (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port* state))
+             (button (decode-x-button-code code)))
+         (if (and (eq event-key :button-press)
+                  (member button '(#.+pointer-wheel-up+
+                                   #.+pointer-wheel-down+
+                                   #.+pointer-wheel-left+
+                                   #.+pointer-wheel-right+)))
+             (make-instance 'climi::pointer-scroll-event
+                            :pointer 0
+                            :button button :x x :y y
+                            :graft-x root-x
+                            :graft-y root-y
+                            :sheet sheet
+                            :modifier-state modifier-state
+                            :delta-x (case button
+                                       (#.+pointer-wheel-left+ -1)
+                                       (#.+pointer-wheel-right+ 1)
+                                       (otherwise 0))
+                            :delta-y (case button
+                                       (#.+pointer-wheel-up+ -1)
+                                       (#.+pointer-wheel-down+ 1)
+                                       (otherwise 0))
+                            :timestamp time)
+             (make-instance (if (eq event-key :button-press)
+                                'pointer-button-press-event
+                                'pointer-button-release-event)
+                            :pointer 0
+                            :button button :x x :y y
+                            :graft-x root-x
+                            :graft-y root-y
+                            :sheet sheet :modifier-state modifier-state
+                            :timestamp time))))
+      (:enter-notify
+       (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
+                      :graft-x root-x
+                      :graft-y root-y
+                      :sheet sheet
+                      :modifier-state (clim-xcommon:x-event-state-modifiers
+                                       *clx-port* state)
+                      :timestamp time))
+      (:leave-notify
+       (make-instance (if (eq mode :ungrab)
+                          'pointer-ungrab-event
+                          'pointer-exit-event)
+                      :pointer 0 :button code
+                      :x x :y y
+                      :graft-x root-x
+                      :graft-y root-y
+                      :sheet sheet
+                      :modifier-state (clim-xcommon:x-event-state-modifiers
+                                       *clx-port* state)
+                      :timestamp time))
+      (:configure-notify
+       (cond ((and (eq (sheet-parent sheet) (graft sheet))
+                   (graft sheet)
+                   (not override-redirect-p)
+                   (not send-event-p))
+              ;; Genuine top-level-sheet event (with override-redirect off).
+              ;;
+              ;; Since the root window is not our real parent, but there the
+              ;; window managers decoration in between, only the size is
+              ;; correct, so we need to query coordinates from the X
+              ;; server. Note that sheet relative coodinates may be something
+              ;; different than [0,0].
+              (multiple-value-bind (x y)
+                  (xlib:translate-coordinates window
+                                              0
+                                              0
+                                              (clx-port-window *clx-port*))
                 (make-instance 'window-configuration-event
                                :sheet sheet
-                               :x x :y y :width width :height height))))
-	(:destroy-notify
-	 (make-instance 'window-destroy-event :sheet sheet))
-	(:motion-notify
-	 (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
-								     state)))
-	   (if hint-p
-	       (multiple-value-bind (x y same-screen-p child mask
-                                       root-x root-y)
-		   (xlib:query-pointer window)
-		 (declare (ignore mask))
-		 ;; If not same-screen-p or the child is different
-		 ;; from the original event, assume we're way out of date
-		 ;; and don't return an event.
-		 (when (and same-screen-p (not child))
-		   (make-instance 'pointer-motion-hint-event
-				  :pointer 0 :button code
-				  :x x :y y
-				  :graft-x root-x :graft-y root-y
-				  :sheet sheet
-				  :modifier-state modifier-state
-				  :timestamp time)))
-	       (make-instance 'pointer-motion-event
-			      :pointer 0 :button code
-			      :x x :y y
-			      :graft-x root-x
-			      :graft-y root-y
-			      :sheet sheet
-			      :modifier-state modifier-state
-			      :timestamp time))))
-	((:exposure :display :graphics-exposure)
-         ;; Notes:
-         ;; . Do not compare count with 0 here, last rectangle in an
-         ;;   :exposure event sequence does not cover the whole region.
-         ;;
-         ;; . Do not transform the event region here, since
-         ;;   WINDOW-EVENT-REGION does it already. And rightfully so.
-         ;;   (think about changing a sheet's native transformation).
-         ;;--GB
-         ;;
-         ;; Mike says:
-         ;;   One of the lisps is bogusly sending a :display event instead of an
-         ;; :exposure event. I don't remember if it's CMUCL or SBCL. So the
-         ;; :display event should be left in.
-         ;;
-         (make-instance 'window-repaint-event
-                        :timestamp time
-                        :sheet sheet
-                        :region (make-rectangle* x y (+ x width) (+ y height))))
-	(:client-message
-         (or (port-client-message sheet time type data)
-             (maybe-funcall *wait-function*)))
-	(t
-	 (unless (xlib:event-listen (clx-port-display *clx-port*))
-	   (xlib:display-force-output (clx-port-display *clx-port*)))
-	 (maybe-funcall *wait-function*))))))
+                               :x x
+                               :y y
+                               :width width :height height)))
+             (t
+              ;; nothing special here
+              (make-instance 'window-configuration-event
+                             :sheet sheet
+                             :x x :y y :width width :height height))))
+      (:destroy-notify
+       (make-instance 'window-destroy-event :sheet sheet))
+      (:motion-notify
+       (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
+                                                                   state)))
+         (if hint-p
+             (multiple-value-bind (x y same-screen-p child mask
+                                     root-x root-y)
+                 (xlib:query-pointer window)
+               (declare (ignore mask))
+               ;; If not same-screen-p or the child is different
+               ;; from the original event, assume we're way out of date
+               ;; and don't return an event.
+               (when (and same-screen-p (not child))
+                 (make-instance 'pointer-motion-hint-event
+                                :pointer 0 :button code
+                                :x x :y y
+                                :graft-x root-x :graft-y root-y
+                                :sheet sheet
+                                :modifier-state modifier-state
+                                :timestamp time)))
+             (make-instance 'pointer-motion-event
+                            :pointer 0 :button code
+                            :x x :y y
+                            :graft-x root-x
+                            :graft-y root-y
+                            :sheet sheet
+                            :modifier-state modifier-state
+                            :timestamp time))))
+      ((:exposure :display :graphics-exposure)
+       ;; Notes:
+       ;; . Do not compare count with 0 here, last rectangle in an
+       ;;   :exposure event sequence does not cover the whole region.
+       ;;
+       ;; . Do not transform the event region here, since
+       ;;   WINDOW-EVENT-REGION does it already. And rightfully so.
+       ;;   (think about changing a sheet's native transformation).
+       ;;--GB
+       ;;
+       ;; Mike says:
+       ;;   One of the lisps is bogusly sending a :display event instead of an
+       ;; :exposure event. I don't remember if it's CMUCL or SBCL. So the
+       ;; :display event should be left in.
+       ;;
+       (make-instance 'window-repaint-event
+                      :timestamp time
+                      :sheet sheet
+                      :region (make-rectangle* x y (+ x width) (+ y height))))
+      ;; port processes selection events synchronously and there is
+      ;; no event passed to the rest of the system.
+      (:selection-notify
+       (process-selection-notify *clx-port* window target property selection time)
+       (maybe-funcall *wait-function*))
+      (:selection-clear
+       (process-selection-clear *clx-port* selection)
+       (maybe-funcall *wait-function*))
+      (:selection-request
+       (process-selection-request *clx-port* window sheet target property requestor selection time)
+       (maybe-funcall *wait-function*))
+      (:client-message
+       (or (port-client-message sheet time type data)
+           (maybe-funcall *wait-function*)))
+      (t
+       (unless (xlib:event-listen (clx-port-display *clx-port*))
+         (xlib:display-force-output (clx-port-display *clx-port*)))
+       (maybe-funcall *wait-function*)))))
 
 
 ;; Handling of X client messages

@@ -9,6 +9,7 @@
   :components
   ((:module "basic" :pathname "" :components
             ((:file "package")
+             (:file "clipboard")
              (:file "port" :depends-on ("package" "graft"))
              (:file "frame-manager" :depends-on ("port"))
              (:file "basic" :depends-on ("package"))
