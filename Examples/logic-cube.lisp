@@ -466,7 +466,10 @@
   (generate-better-cube-puzzle (find-cube))
   (cleanup-cube (find-cube)))
 
-(add-menu-item-to-command-table (find-command-table 'logic-cube-game-commands) nil :divider nil)
+(add-menu-item-to-command-table
+ (find-command-table 'logic-cube-game-commands)  nil
+ :divider nil
+ :errorp nil)
 
 (define-command (com-lc-quit :menu "Quit" :command-table logic-cube-game-commands) ()
   (frame-exit *application-frame*))

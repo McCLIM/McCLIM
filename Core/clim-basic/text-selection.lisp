@@ -34,8 +34,6 @@
 ;;; Shift-Mouse-R drag: drag said point
 ;;; Shift-Mouse-R up:   leave said point where it was dragged to.
 
-;;; Shift-Mouse-M:      paste
-
 ;;;; Interaction to implement:
 
 ;;; Shift-Mouse-L single click: (maybe) select current presentation, if any.
@@ -51,46 +49,6 @@
 ;;;; Preferences
 
 (defparameter *marking-border* 1)
-
-;;;; Text Selection Protocol
-
-(defgeneric release-selection (port &optional time)
-  (:documentation "Relinquish ownership of the selection."))
-
-(defgeneric request-selection (port requestor time)
-  (:documentation
-   #.(format nil "Request that the window system retrieve the selection ~
-                  from its current owner. This should cause a ~
-                  selection-notify-event to be delivered.")))
-
-(defgeneric bind-selection (port window &optional time)
-  (:documentation "Take ownership of the selection."))
-
-(defgeneric send-selection (port request-event string)
-  (:documentation "Send 'string' to a client in response to a selection-request-event."))
-
-(defgeneric get-selection-from-event (port event)
-  (:documentation "Given a selection-notify event, return a string containing
-the incoming selection."))
-
-;;; These events are probably very X11 specific.
-
-;;; Backends will likely produce subclasses of selection-notify-event
-;;; and selection-request-event.
-
-(defclass selection-event (window-event)
-  ((selection :initarg :selection
-              :reader selection-event-selection)))
-
-(defclass selection-clear-event (selection-event)  ())
-(defclass selection-notify-event (selection-event) ())
-(defclass selection-request-event (selection-event)
-  ((requestor :initarg :requestor :reader selection-event-requestor)))
-
-
-;;;; Random Notes
-
-;;; - McCLIM still has absolutely no idea of lines.
 
 (defclass marking ()
   ()
@@ -134,7 +92,7 @@ the incoming selection."))
 
 ;;;;
 
-(defclass cut-and-paste-mixin ()
+(defclass text-selection-mixin ()
   ((markings   :initform nil)
    (point-1-x  :initform nil)
    (point-1-y  :initform nil)
@@ -142,7 +100,7 @@ the incoming selection."))
    (point-2-y  :initform nil)
    (dragging-p :initform nil)))
 
-(defmethod handle-repaint :around ((pane cut-and-paste-mixin) region)
+(defmethod handle-repaint :around ((pane text-selection-mixin) region)
   (with-slots (markings) pane
     (when (null markings)
       (return-from handle-repaint (call-next-method)))
@@ -166,39 +124,7 @@ the incoming selection."))
                      ((pane-background pane) new-bg))
                 (call-next-method pane R)))))))))
 
-(defgeneric eos/shift-click (pane event))
-
-(defgeneric eos/shift-release (pane event))
-
-(defgeneric eos/shift-drag (pane event))
-
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                           (event pointer-button-press-event))  
-  (if (eql (event-modifier-state event) +shift-key+)
-      (eos/shift-click pane event)
-      (call-next-method)))
-
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                           (event pointer-button-release-event))
-  (if (eql (event-modifier-state event) +shift-key+)
-      (eos/shift-release pane event)
-      (call-next-method)))
-
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                           (event pointer-motion-event))
-  (with-slots (point-1-x dragging-p) pane
-    (if (and (eql (event-modifier-state event) +shift-key+))
-        (when dragging-p (eos/shift-drag pane event))
-        (call-next-method))))
-
-
-(defun pane-clear-markings (pane &optional time)
-  (repaint-markings pane (slot-value pane 'markings)
-                    (setf (slot-value pane 'markings) nil))
-  (release-selection (port pane) time))
- 
-
-(defmethod eos/shift-click ((pane extended-output-stream) event)
+(defun eos/shift-click (pane event)
   (with-slots (point-1-x point-1-y point-2-x point-2-y dragging-p) pane
     (cond ((eql +pointer-left-button+ (pointer-event-button event))
            (pane-clear-markings pane (event-timestamp event))
@@ -206,9 +132,6 @@ the incoming selection."))
            (setf point-1-x (pointer-event-x event))
            (setf point-1-y (pointer-event-y event))
            (setf dragging-p t))
-          ((eql +pointer-middle-button+ (pointer-event-button event))
-           ;; paste           
-           (request-selection (port pane) #|:UTF8_STRING|# pane (event-timestamp event)))
           ((eql +pointer-right-button+ (pointer-event-button event))
            (when (and point-1-x point-1-y point-2-x point-2-y)
              ;; If point-1 and point-2 are set up pick the nearest (what metric?) and drag it around.
@@ -222,31 +145,18 @@ the incoming selection."))
              (setf dragging-p t)))
           (t (describe event)))))
 
-(defmethod eos/shift-release ((pane extended-output-stream) event)  
+(defun eos/shift-release (pane event)
   (with-slots (point-1-x point-1-y point-2-x point-2-y dragging-p) pane
     (when dragging-p
       (setf point-2-x (pointer-event-x event)
             point-2-y (pointer-event-y event)
             dragging-p nil)
-      ;;
-      (let ((owner (selection-owner (port pane))))
-        (when (and owner (not (eq owner pane)))
-          (distribute-event (port pane)
-                            (make-instance 'selection-clear-event
-                                           :sheet owner
-                                           :selection :primary))))
-      (when (bind-selection (port pane) pane (event-timestamp event))
-	(setf (selection-owner (port pane)) pane)
-	(setf (selection-timestamp (port pane)) (event-timestamp event))))))
+      (let ((content (fetch-selection pane)))
+        (when (plusp (length content))
+          (publish-selection pane :primary content 'string)
+          (publish-selection pane :local-selection content 'string))))))
 
-(defun repaint-markings (pane old-markings new-markings)
-  (let ((old-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) old-markings)
-                            :initial-value +nowhere+))
-        (new-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) new-markings)
-                            :initial-value +nowhere+)))
-    (handle-repaint pane (region-exclusive-or old-region new-region))))
-
-(defmethod eos/shift-drag ((pane extended-output-stream) event)
+(defun eos/shift-drag (pane event)
   (with-slots (point-1-x point-1-y) pane
     (let ((old-markings (slot-value pane 'markings)))
       (setup-marked-extents pane (stream-output-history pane) +everywhere+
@@ -254,6 +164,47 @@ the incoming selection."))
                             (pointer-event-x event)
                             (pointer-event-y event))
       (repaint-markings pane old-markings (slot-value pane 'markings)))))
+
+(defun shift-rl-click-event-p (event)
+  (let ((b (pointer-event-button event)))
+    (and (eql (event-modifier-state event) +shift-key+)
+         (or (eql b +pointer-left-button+)
+             (eql b +pointer-right-button+)))))
+
+(defmethod dispatch-event :around ((pane text-selection-mixin)
+                                   (event pointer-button-press-event))
+  (if (shift-rl-click-event-p event)
+      (eos/shift-click pane event)
+      (call-next-method)))
+
+(defmethod dispatch-event :around ((pane text-selection-mixin)
+                                   (event pointer-button-release-event))
+  (if (shift-rl-click-event-p event)
+      (eos/shift-release pane event)
+      (call-next-method)))
+
+(defmethod dispatch-event :around ((pane text-selection-mixin)
+                                   (event pointer-motion-event))
+  (with-slots (point-1-x dragging-p) pane
+    (if (eql (event-modifier-state event) +shift-key+)
+        (when dragging-p
+          (eos/shift-drag pane event))
+        (call-next-method))))
+
+
+(defun pane-clear-markings (pane &optional time)
+  (declare (ignore time))
+  (repaint-markings pane (slot-value pane 'markings)
+                    (setf (slot-value pane 'markings) nil))
+  (release-selection pane :primary t)
+  (release-selection pane :local-selection t))
+ 
+(defun repaint-markings (pane old-markings new-markings)
+  (let ((old-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) old-markings)
+                            :initial-value +nowhere+))
+        (new-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) new-markings)
+                            :initial-value +nowhere+)))
+    (handle-repaint pane (region-exclusive-or old-region new-region))))
 
 (defun map-over-text (record function)  
   (cond ((typep record 'standard-text-displayed-output-record)
@@ -365,25 +316,6 @@ the incoming selection."))
               (visit chunk)) )
           (setf (slot-value stream 'markings) (reverse marks)))))))
 
-
-;;;; Selections Events
-
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                                   (event selection-clear-event))  
-  (pane-clear-markings pane (event-timestamp event)))
-
-(defmethod dispatch-event :around ((pane cut-and-paste-mixin)
-                                   (event selection-request-event))  
-  (send-selection (port pane) event (fetch-selection pane)))
-
-(define-condition selection-notify ()
-  ((event :reader event-of :initarg :event)))
-
-(defmethod handle-event ((pane cut-and-paste-mixin)
-                         (event selection-notify-event))
-  (signal 'selection-notify :event event))
-
-;; FIXME: Non-text target conversions.. (?)
 (defun fetch-selection (pane)
   (let (old-y2 old-x2)
     (with-output-to-string (bag)

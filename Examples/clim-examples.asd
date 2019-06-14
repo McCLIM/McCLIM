@@ -50,7 +50,8 @@
      (:file "patterns-overlap")
      (:file "text-transformation-test")
      (:file "text-multiline-positioning")
-     (:file "indentation")))
+     (:file "indentation")
+     (:file "selection")))
 
 (defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)

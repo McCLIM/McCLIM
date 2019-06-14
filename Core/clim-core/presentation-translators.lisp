@@ -53,12 +53,12 @@
   ())
 
 (defmethod initialize-instance :after ((obj presentation-command-translator)
-				       &key tester command-name)
+                                       &key tester command-name)
   (setf (slot-value obj 'tester)
-	#'(lambda (&rest args)
-	    (if (command-enabled command-name *application-frame*)
+        #'(lambda (&rest args)
+            (if (command-enabled command-name *application-frame*)
                 (maybe-apply tester args)
-		nil))))
+                nil))))
 
 (defclass drag-n-drop-translator (presentation-translator)
   ((destination-ptype :reader destination-ptype :initarg :destination-ptype)
@@ -92,6 +92,9 @@
   (setf (slot-value obj 'documentation) documentation)
   (when pointer-documentation
     (setf (slot-value obj 'pointer-documentation) pointer-documentation)))
+
+(defclass selection-translator (presentation-translator)
+  ())
 
 ;;; This lives in a command table
 
@@ -135,21 +138,15 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun add-translator (table translator)
   ;; Remove old one.
-  (with-accessors ((translators translators)
-                   (simple-type-translators simple-type-translators))
-      table
-    (let ((old (gethash (name translator) translators)))
-      (when old
-        (setf (gethash (presentation-type-name (from-type old))
-                       simple-type-translators)
-              (remove old
-                      (gethash (presentation-type-name (from-type old))
-                               simple-type-translators))))
-      (invalidate-translator-caches)
-      (setf (gethash (name translator) translators) translator)
-      (push translator
-            (gethash (from-type translator) simple-type-translators))
-      translator)))
+  (when-let ((old (gethash (name translator) (translators table))))
+    (alexandria:removef (gethash (presentation-type-name (from-type old))
+                                 (simple-type-translators table))
+                        old))
+  (invalidate-translator-caches)
+  (setf (gethash (name translator) (translators table)) translator)
+  (push translator (gethash (from-type translator)
+                            (simple-type-translators table)))
+  translator)
 
 (defun make-translator-fun (args body)
   (cond ((null args)
@@ -197,6 +194,12 @@ and used to ensure that presentation-translators-caches are up to date.")
     (setq tester-definitive t))
   (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
          (real-to-type (expand-presentation-type-abbreviation to-type)))
+    ;; I did not investigate yet to decide what is the right thing. Let's issue
+    ;; a warning for a time being. See #778. -- jd 2019-06-11
+    (cond ((not (ignore-errors (get-ptype-metaclass real-from-type)))
+           (alexandria:simple-style-warning "~s does not have a presentation metaclass. Translator may not work." real-from-type))
+          ((not (ignore-errors (get-ptype-metaclass real-to-type)))
+           (alexandria:simple-style-warning "~s does not have a presentation metaclass. Translator may not work." real-to-type)))
     (with-keywords-removed (translator-options
                             (:gesture :tester :tester-definitive :documentation
                              :pointer-documentation :menu :priority
@@ -221,9 +224,9 @@ and used to ensure that presentation-translators-caches are up to date.")
                                                (command-name-from-symbol
                                                 name)))
                         ,@(when pointer-documentation-p
-                                `(:pointer-documentation
-                                  #',(make-documentation-fun
-                                      pointer-documentation)))
+                            `(:pointer-documentation
+                              #',(make-documentation-fun
+                                  pointer-documentation)))
                         :menu ',menu
                         :priority ,priority
                         :translator-function #',(make-translator-fun arglist body)
@@ -266,34 +269,34 @@ and used to ensure that presentation-translators-caches are up to date.")
        :priority ,priority
        :translator-function #',(make-translator-fun arglist body)))))
 
-(defmacro define-presentation-to-command-translator 
+(defmacro define-presentation-to-command-translator
     (name (from-type command-name command-table &key
-	   (gesture :select)
-	   (tester 'default-translator-tester)
-	   (documentation nil documentationp)
-	   (pointer-documentation (command-name-from-symbol command-name))
-	   (menu t)
-	   (priority 0)
-	   (echo t))
+           (gesture :select)
+           (tester 'default-translator-tester)
+           (documentation nil documentationp)
+           (pointer-documentation (command-name-from-symbol command-name))
+           (menu t)
+           (priority 0)
+           (echo t))
      arglist
      &body body)
   (let ((command-args (gensym "COMMAND-ARGS")))
     `(define-presentation-translator ,name
-	 (,from-type (command :command-table ,command-table) ,command-table
-		     :gesture ,gesture
-		     :tester ,tester
-		     :tester-definitive t
-		     ,@(and documentationp `(:documentation ,documentation))
-		     :pointer-documentation ,pointer-documentation
-		     :menu ,menu
-		     :priority ,priority
-		     :translator-class presentation-command-translator
-		     :command-name ',command-name)
+         (,from-type (command :command-table ,command-table) ,command-table
+                     :gesture ,gesture
+                     :tester ,tester
+                     :tester-definitive t
+                     ,@(and documentationp `(:documentation ,documentation))
+                     :pointer-documentation ,pointer-documentation
+                     :menu ,menu
+                     :priority ,priority
+                     :translator-class presentation-command-translator
+                     :command-name ',command-name)
        ,arglist
        (let ((,command-args (let () ,@body)))
-	 (values (cons ',command-name ,command-args)
-		 '(command :command-table ,command-table)
-		 '(:echo ,echo))))))
+         (values (cons ',command-name ,command-args)
+                 '(command :command-table ,command-table)
+                 '(:echo ,echo))))))
 
 (defmacro define-drag-and-drop-translator
     (name (from-type to-type destination-type command-table
@@ -341,6 +344,24 @@ and used to ensure that presentation-translators-caches are up to date.")
              (frame-drag-and-drop ',name ',command-table
                                   presentation context-type
                                   frame event window x y)))))))
+
+(defmacro define-selection-translator
+    (name (from-type to-type command-table &rest args &key &allow-other-keys)
+     arglist &body body)
+  (let* ((forbidden-args '(context-type frame event window x y))
+         (intersection (intersection arglist forbidden-args :test #'string=)))
+    (unless (null intersection)
+      (error "Selection translator ~s arglist can't have args ~a but has ~a."
+             name forbidden-args intersection)))
+  (with-keywords-removed (args (:translator-class :tester-definitive :gesture))
+    `(define-presentation-translator ,name
+         (,from-type ,to-type ,command-table
+                     :gesture :select
+                     :tester-definitive t
+                     :translator-class selection-translator
+                     ,@args)
+         ,arglist
+       ,@body)))
 
 
 ;;; 23.7.2 Presentation Translator Functions

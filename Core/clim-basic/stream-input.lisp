@@ -75,10 +75,8 @@
 ;;; for the stream and then see what we've got after it returns.
 
 (defclass standard-input-stream (fundamental-character-input-stream
-                                 standard-sheet-input-mixin
-                                 cut-and-paste-mixin)
-  ((unread-chars :initform nil
-                 :accessor stream-unread-chars)))
+                                 standard-sheet-input-mixin)
+  ((unread-chars :initform nil :accessor stream-unread-chars)))
 
 ;;; XXX: fixing stream shisophrenia is a subject of the next input-refactor pass.
 ;;; 1. What about EOF?

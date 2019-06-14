@@ -62,9 +62,13 @@
 		#:pointer-motion-hint-event
                 #:device-font-text-style
                 ;; utils
-                #:dolines)
+                #:dolines
+                #:maybe-funcall
+                #:when-let
+                #:if-let)
   (:import-from #:climi
 		#:standard-event-port-mixin
+                #:event-listen-or-wait
 		#:standard-graft
 		#:pointer-grab-sheet
 		#:%sheet-mirror-region

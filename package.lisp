@@ -1877,7 +1877,9 @@
   (:nicknames :clime)
   (:export
    ;; events
-   #:event-read-with-timeout #:schedule-event
+   #:event-read-with-timeout
+   #:event-listen-or-wait
+   #:schedule-event
    ;; sheets
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
@@ -1916,7 +1918,7 @@
    #:draw-rounded-rectangle*
 
    #:highlight-output-record-tree
-   #:cut-and-paste-mixin
+   #:text-selection-mixin
    #:mouse-wheel-scroll-mixin
    ;; page abstraction (seos mixin)
    #:stream-cursor-initial-position
@@ -1965,7 +1967,12 @@
    ;; images
    #:rgb-image
    #:xpm-parse-file
-   #:*xpm-x11-colors*))
+   #:*xpm-x11-colors*
+   ;; selection
+   #:define-selection-translator
+   #:release-selection
+   #:publish-selection
+   #:request-selection))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -1977,7 +1984,6 @@
   (:use :clim :clim-extensions)
   (:export
    ;; Originally in CLIM-INTERNALS
-   #:get-next-event
    #:make-graft
    #:medium-draw-circle*
    #:medium-draw-glyph
@@ -2069,23 +2075,18 @@
    #:text-style-height
    #:text-style-mapping
    #:text-style-width
-   ;; Text selection protocol
-   #:selection-owner
-   #:selection-timestamp
-   #:selection-event
-   #:selection-clear-event
-   #:selection-notify-event
-   #:selection-request-event
-   #:selection-event-requestor
-   #:request-selection
-   #:release-selection
-   #:bind-selection
-   #:send-selection
-   #:get-selection-from-event
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-glyph
-   #:medium-draw-circle*))
+   #:medium-draw-circle*
+   ;; selection
+   #:release-selection
+   #:publish-selection
+   #:request-selection
+   #:selection-object
+   #:selection-object-content
+   #:selection-object-type
+   #:selection-object-owner))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)

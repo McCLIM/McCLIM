@@ -9,6 +9,7 @@
   :components
   ((:module "basic" :pathname "" :components
             ((:file "package")
+             (:file "clipboard")
              (:file "port" :depends-on ("package" "graft"))
              (:file "frame-manager" :depends-on ("port"))
              (:file "basic" :depends-on ("package"))
@@ -23,8 +24,7 @@
              (:file "fonts" :depends-on ("bidi"))
              (:file "medium" :depends-on ("fonts"))
              (:file "medium-xrender" :depends-on ("medium"))))
-   (:file "input")
-   (:file "text-selection")))
+   (:file "input")))
 
 (defsystem #:mcclim-clx/truetype
   :depends-on (#:mcclim-clx

@@ -227,9 +227,9 @@
 
 ;;;; 8.1
 (defgeneric process-next-event (port &key wait-function timeout))
-
 (defgeneric port-keyboard-input-focus (port))
 (defgeneric (setf port-keyboard-input-focus) (focus port))
+(defgeneric distribute-event (port event))
 
 ;;; 8.2 Standard Device Events
 
