@@ -444,12 +444,16 @@ translated, so they begin at different position than [0,0])."))
 
 (defun region->clipping-values (region)
   (with-bounding-rectangle* (min-x min-y max-x max-y) region
-    (let ((clip-x (round-coordinate min-x))
-          (clip-y (round-coordinate min-y)))
+    ;; We don't use here round-coordinate because clipping rectangle
+    ;; must cover the whole region. It is especially important when we
+    ;; draw arcs (ellipses without filling) which are not drawn if any
+    ;; part is outside the clipped area. -- jd 2019-06-17
+    (let ((clip-x (floor min-x))
+          (clip-y (floor min-y)))
       (values clip-x
               clip-y
-              (- (round-coordinate max-x) clip-x)
-              (- (round-coordinate max-y) clip-y)))))
+              (- (ceiling max-x) clip-x)
+              (- (ceiling max-y) clip-y)))))
 
 ;;; This seems to work, but find out why all of these +nowhere+s are
 ;;; coming from and kill them at the source...
