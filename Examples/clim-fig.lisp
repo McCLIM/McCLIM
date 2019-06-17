@@ -1,5 +1,4 @@
 ;;; -*- Mode: Lisp; Package: CLIM-DEMO -*-
-
 ;;;  (c) copyright 2001 by
 ;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
 ;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
@@ -157,11 +156,13 @@
       (set-status-line " ")
       (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
       (deallocate-pixmap canvas-pixmap)
-      (with-output-as-presentation (pane nil 'figure
-                                         :single-box t)
-        (draw-figure pane x1 y1 x y
-		     :cp-x1 cp-x1 :cp-y1 cp-y1
-		     :cp-x2 cp-x2 :cp-y2 cp-y2))
+      (let ((new-record (with-output-to-output-record (*standard-output*)
+                          (draw-figure pane x1 y1 x y
+		                       :cp-x1 cp-x1 :cp-y1 cp-y1
+		                       :cp-x2 cp-x2 :cp-y2 cp-y2))))
+        (push new-record (clim-fig-undo-list *application-frame*))
+        (stream-add-output-record *standard-output* new-record)
+        (replay new-record *standard-output*))
       (setf (clim-fig-redo-list *application-frame*) nil))))
 
 (defun handle-move-object (pane figure first-point-x first-point-y)
@@ -217,6 +218,7 @@
 (define-application-frame clim-fig ()
   ((drawing-mode :initform :line :accessor clim-fig-drawing-mode)
    (output-record :accessor clim-fig-output-record)
+   (undo-list :initform nil :accessor clim-fig-undo-list)
    (redo-list :initform nil :accessor clim-fig-redo-list)
    (current-color :initform +black+ :accessor clim-fig-current-color)
    (line-style :initform (make-line-style) :accessor clim-fig-line-style)
@@ -372,31 +374,34 @@
   (frame-exit *application-frame*))
 
 (define-clim-fig-command com-undo ()
-  (let* ((output-history (clim-fig-output-record *application-frame*))
-	 (record-count (output-record-count output-history))
-         (record (and (not (zerop record-count))
-		      (elt (output-record-children output-history)
-			   (1- record-count)))))
-    (if record
-        (progn
-          (erase-output-record record *standard-output*)
-          (push record (clim-fig-redo-list *application-frame*)))
-        (beep))))
+  "Undo the previous command, which might have been either 'draw a new object',
+   or the CLEAR command. In the former case, remove the record and add it to the
+   redo list; in the latter case, replay the output-history."
+  (let ((latest-undo-entry (pop (clim-fig-undo-list *application-frame*))))
+    (cond
+      ((not latest-undo-entry) (beep))
+      ((listp latest-undo-entry)
+       (loop for record in latest-undo-entry do
+            (stream-add-output-record *standard-output* record)
+            (replay record *standard-output* (bounding-rectangle record))))
+      (T
+       (erase-output-record latest-undo-entry *standard-output*)
+       (push latest-undo-entry (clim-fig-redo-list *application-frame*))))))
 
 (define-clim-fig-command com-redo ()
-  (let* ((record (pop (clim-fig-redo-list *application-frame*))))
-    (if record
-        (progn
-          (stream-add-output-record *standard-output* record)
-          (replay record *standard-output* (bounding-rectangle record)))
-        (beep))))
+  (alexandria:if-let ((record (pop (clim-fig-redo-list *application-frame*))))
+    (progn
+      (push record (clim-fig-undo-list *application-frame*))
+      (stream-add-output-record *standard-output* record)
+      (replay record *standard-output* (bounding-rectangle record)))
+    (beep)))
 
 (define-clim-fig-command com-clear ()
-  (setf (clim-fig-redo-list *application-frame*)
-        (append (coerce (output-record-children (clim-fig-output-record
-						 *application-frame*))
-			'list)
-                (clim-fig-redo-list *application-frame*)))
+  (push (coerce (output-record-children (clim-fig-output-record
+					 *application-frame*))
+		'list)
+        (clim-fig-undo-list *application-frame*))
+  (setf (clim-fig-redo-list *application-frame*) (list))
   (window-clear *standard-output*))
 
 (define-clim-fig-command (com-add-figure :name nil) ((x real) (y real))
