@@ -161,8 +161,9 @@
 		                       :cp-x1 cp-x1 :cp-y1 cp-y1
 		                       :cp-x2 cp-x2 :cp-y2 cp-y2))))
         (push new-record (clim-fig-undo-list *application-frame*))
-        (stream-add-output-record *standard-output* new-record)
-        (replay new-record *standard-output*))
+        (with-output-as-presentation (pane nil 'figure)
+            (stream-add-output-record *standard-output* new-record))
+        (replay new-record *standard-output* (bounding-rectangle new-record)))
       (setf (clim-fig-redo-list *application-frame*) nil))))
 
 (defun handle-move-object (pane figure first-point-x first-point-y)
@@ -382,7 +383,8 @@
       ((not latest-undo-entry) (beep))
       ((listp latest-undo-entry)
        (loop for record in latest-undo-entry do
-            (stream-add-output-record *standard-output* record)
+            (with-output-as-presentation (*standard-output* nil 'figure)
+              (stream-add-output-record *standard-output* record))
             (replay record *standard-output* (bounding-rectangle record))))
       (T
        (erase-output-record latest-undo-entry *standard-output*)
@@ -392,7 +394,8 @@
   (alexandria:if-let ((record (pop (clim-fig-redo-list *application-frame*))))
     (progn
       (push record (clim-fig-undo-list *application-frame*))
-      (stream-add-output-record *standard-output* record)
+      (with-output-as-presentation (*standard-output* nil 'figure)
+        (stream-add-output-record *standard-output* record))
       (replay record *standard-output* (bounding-rectangle record)))
     (beep)))
 
