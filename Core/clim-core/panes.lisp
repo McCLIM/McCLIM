@@ -364,13 +364,13 @@ order to produce a double-click")
     (prin1 (pane-name pane) sink)))
 
 (defun make-pane (type &rest args)
-  (when (eql (symbol-package type)
-             (symbol-package :foo))
-    (setf type (or (find-symbol (symbol-name type) (find-package :clim))
-                   type)))
-  (apply #'make-pane-1 (or *pane-realizer*
-			   (frame-manager *application-frame*))
-	 *application-frame* type args))
+  (when-let ((clim-type (and (keywordp type)
+                             (find-symbol (symbol-name type) :clim))))
+    (setq type clim-type))
+  (let* ((frame *application-frame*)
+         (fm (frame-manager frame))
+         (realizer (or *pane-realizer* fm)))
+    (apply #'make-pane-1 realizer frame type args)))
 
 (defmethod medium-foreground ((pane pane))
   (medium-foreground (sheet-medium pane)))
@@ -2935,33 +2935,43 @@ current background message was set."))
                       borders
                       label))
   (setf port (or port (find-port)))
-  (let* ((fm (find-frame-manager :port port))
-         (frame (make-application-frame 'a-window-stream
-                                        :frame-event-queue input-buffer
-                                        :frame-manager fm
-                                        :pretty-name (or label "")
-					:left left
-					:top top
-					:right right
-					:bottom bottom
-					:width width
-					:height height
-                                        :scroll-bars scroll-bars)))
-    ;; Adopt and enable the pane
-    (when (eq (frame-state frame) :disowned)
-      (adopt-frame fm frame))
-    (unless (or (eq (frame-state frame) :enabled)
-		(eq (frame-state frame) :shrunk))
-      (enable-frame frame))
-    ;; Start a new thread to run the event loop, if necessary.
-    (let ((*application-frame* frame))
-      (stream-set-input-focus (encapsulating-stream-stream frame)))
-    #+clim-mp
-    (unless input-buffer
-      (redisplay-frame-panes frame :force-p t)
-      (clim-sys:make-process (lambda () (let ((*application-frame* frame))
-                                          (standalone-event-loop)))))
-    (encapsulating-stream-stream frame)))
+  ;; Input buffers in the spec are not well defined for panes but at least we
+  ;; know that they are vectors while event queues are deliberely
+  ;; unspecified. OPEN-WINDOW-STREAM description is fudged in this regard by
+  ;; allowing to specify input-buffer as either. -- jd 2019-06-21
+  (multiple-value-bind (event-queue input-buffer)
+      (typecase input-buffer
+        (event-queue (values input-buffer nil))
+        (vector      (values nil input-buffer))
+        (otherwise   (values nil nil)))
+    (let* ((fm (find-frame-manager :port port))
+           (frame (make-application-frame 'a-window-stream
+                                          :event-queue event-queue
+                                          :input-buffer input-buffer
+                                          :frame-manager fm
+                                          :pretty-name (or label "")
+					  :left left
+					  :top top
+					  :right right
+					  :bottom bottom
+					  :width width
+					  :height height
+                                          :scroll-bars scroll-bars)))
+      ;; Adopt and enable the pane
+      (when (eq (frame-state frame) :disowned)
+        (adopt-frame fm frame))
+      (unless (or (eq (frame-state frame) :enabled)
+		  (eq (frame-state frame) :shrunk))
+        (enable-frame frame))
+      ;; Start a new thread to run the event loop, if necessary.
+      (let ((*application-frame* frame))
+        (stream-set-input-focus (encapsulating-stream-stream frame)))
+      #+clim-mp
+      (unless input-buffer
+        (redisplay-frame-panes frame :force-p t)
+        (clim-sys:make-process (lambda () (let ((*application-frame* frame))
+                                            (standalone-event-loop)))))
+      (encapsulating-stream-stream frame))))
 
 (defun standalone-event-loop ()
   "An simple event loop for applications that want all events to be handled by

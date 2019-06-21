@@ -953,7 +953,7 @@ history will be unchanged."
 
 ;;; For ACCEPT-FROM-STRING, use this barebones input-editing-stream.
 (defclass string-input-editing-stream (input-editing-stream fundamental-character-input-stream)
-  ((input-buffer :accessor stream-input-buffer)
+  ((input-buffer :accessor stream-input-buffer :type vector)
    (insertion-pointer :accessor stream-insertion-pointer
                       :initform 0
                       :documentation "This is not used for anything at any point.")

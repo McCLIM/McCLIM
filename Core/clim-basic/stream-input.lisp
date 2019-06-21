@@ -68,13 +68,17 @@
   (let ((new-char (car (rassoc char +read-char-map+))))
     (or new-char char)))
 
+(defclass input-kernel ()
+  ((input-buffer :initarg :input-buffer :accessor stream-input-buffer :type vector)))
+
 ;;; Streams are subclasses of standard-sheet-input-mixin regardless of whether
 ;;; or not we are multiprocessing.  In single-process mode the blocking calls to
 ;;; stream-read-char, stream-read-gesture are what cause process-next-event to
 ;;; be called.  It's most convenient to let process-next-event queue up events
 ;;; for the stream and then see what we've got after it returns.
 
-(defclass standard-input-stream (fundamental-character-input-stream
+(defclass standard-input-stream (input-kernel
+                                 fundamental-character-input-stream
                                  standard-sheet-input-mixin)
   ((unread-chars :initform nil :accessor stream-unread-chars)))
 
@@ -169,10 +173,10 @@ keys read."))
         (call-next-method stream last-deadie-gesture))
       (call-next-method)))
 
-(defclass standard-extended-input-stream (extended-input-stream
-                                          ;; FIXME: is this still needed?
-                                          standard-sheet-input-mixin
-                                          dead-key-merging-mixin)
+(defclass standard-extended-input-stream (input-kernel
+                                          extended-input-stream
+                                          dead-key-merging-mixin
+                                          standard-sheet-input-mixin)
   ((pointer)
    (cursor :initarg :text-cursor)
    (last-gesture :accessor last-gesture :initform nil
@@ -232,9 +236,6 @@ keys read."))
       (event-queue-peek buffer)
       (event-queue-read-no-hang buffer)))
 
-(defun repush-gesture (gesture buffer)
-  (event-queue-prepend buffer gesture))
-
 (defmethod stream-process-gesture ((stream standard-extended-input-stream) gesture type)
   (declare (ignore type))
   (typecase gesture
@@ -261,7 +262,7 @@ keys read."))
     (let ((*input-wait-test* input-wait-test)
           (*input-wait-handler* input-wait-handler)
           (*pointer-button-press-handler* pointer-button-press-handler)
-          (buffer (stream-input-buffer stream)))
+          (buffer (sheet-event-queue stream)))
       (tagbody
          ;; Wait for input... or not
          ;; XXX decay timeout.
@@ -318,11 +319,11 @@ keys read."))
                     (return-from stream-read-gesture gesture))))
          (go wait-for-char)))))
 
-
+;;; XXX: this should look in the stream-input-buffer not in the queue.
 (defmethod stream-input-wait ((stream standard-extended-input-stream)
                               &key timeout input-wait-test)
   (block exit
-    (let ((buffer (stream-input-buffer stream)))
+    (let ((buffer (sheet-event-queue stream)))
       (tagbody
        check-buffer
          (when-let ((event (event-queue-peek buffer)))
@@ -339,6 +340,7 @@ keys read."))
 (defun unread-gesture (gesture &key (stream *standard-input*))
   (stream-unread-gesture stream gesture))
 
+;;; XXX: this should look in the stream-input-buffer not in the queue.
 (defmethod stream-unread-gesture ((stream standard-extended-input-stream)
                                   gesture)
   (declare (ignore gesture))
@@ -346,7 +348,7 @@ keys read."))
     (let ((gesture (last-gesture stream)))
       (when gesture
         (setf (last-gesture stream) nil)
-        (repush-gesture gesture (stream-input-buffer estream))))))
+        (event-queue-prepend (sheet-event-queue estream) gesture)))))
 
 ;;; Standard stream methods on standard-extended-input-stream.  Ignore any
 ;;; pointer gestures in the input buffer.
@@ -450,7 +452,8 @@ keys read."))
                                   gesture)
   (unread-char gesture stream))
 
-;;; Gestures
+
+;;; 22.3 Gestures and Gesture Names
 
 (defparameter *gesture-names* (make-hash-table))
 
@@ -665,6 +668,7 @@ known gestures."
        :test (lambda (c) (typep c 'abort-gesture))
        nil)))
 
+
 ;;; 22.4 The Pointer Protocol
 ;;;
 ;;; Implemented by the back end.  Sort of.
@@ -702,6 +706,7 @@ known gestures."
 (defgeneric (setf pointer-cursor) (cursor pointer))
 
 ;;; Should this go in sheets.lisp?  That comes before events and ports...
+;;; it certainly should!
 
 (defmethod handle-event :before ((sheet mirrored-sheet-mixin)
                                  (event pointer-enter-event))
@@ -712,7 +717,6 @@ known gestures."
   (with-accessors ((port-pointer-sheet port-pointer-sheet))
       (port sheet)
     (when (eq port-pointer-sheet sheet)
-
       (setq port-pointer-sheet nil))))
 
 (defmethod pointer-button-state ((pointer standard-pointer))

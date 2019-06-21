@@ -1270,8 +1270,9 @@ function lambda list"))
                           This shouldn't happen!"
                          object type)))))
 
+;;; XXX: this should look in the stream-input-buffer not in the queue.
 (defun input-context-wait-test (stream)
-  (let* ((queue (stream-input-buffer stream))
+  (let* ((queue (sheet-event-queue stream))
          (event (event-queue-peek queue)))
     (when event
       (let ((sheet (event-sheet event)))

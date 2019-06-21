@@ -798,9 +798,10 @@ a presentation"
                                          :modifier-state 0
                                          :button +pointer-left-button+)))
 
+;;; XXX: this should look in the stream-input-buffer not in the queue.
 (defun highlight-applicable-presentation (frame stream input-context
                                           &optional (prefer-pointer-window t))
-  (let* ((queue (stream-input-buffer stream))
+  (let* ((queue (sheet-event-queue stream))
          (event (event-queue-peek queue))
          (sheet (and event (event-sheet event))))
     (when (and event

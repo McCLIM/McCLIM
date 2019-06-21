@@ -191,10 +191,16 @@
 
 ;;;; Part VI: Extended Stream Input Facilities
 
+;;; This class is only hinted in the spec (hence it will remain in the
+;;; internals).
+(define-protocol-class input-stream
+    (fundamental-input-stream)
+  ())
+
 ;;; 22.2 Extended Input Streams
 
 (define-protocol-class extended-input-stream
-    (fundamental-character-input-stream)
+    (input-stream)
   ())
 
 ;;; 22.4 The Pointer Protocol
