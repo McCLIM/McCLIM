@@ -105,14 +105,28 @@
         (to-type (selection-object-type requested-object))
         (table (climi::get-object-table requested-object)))
     (labels ((wait-for-request ()
-               (or (not (clipboard-outstanding-request port))
-                   (not (eq selection (selection-object-content requested-object)))))
+               (flet ((wait-fn ()
+                        (or (not (clipboard-outstanding-request port))
+                            (not (eq selection (selection-object-content requested-object))))))
+                 (declare (dynamic-extent #'wait-fn))
+                 ;; event-listen-or-wait will return on any event
+                 ;; becoming available in the queue, that's why we
+                 ;; loop until our condition is met (or timeout).
+                 (loop
+                    with timeout-time = (1+ (climi::now))
+                    for decay = (- timeout-time (climi::now))
+                    do
+                      (cond ((wait-fn)   (return t))
+                            ((< decay 0) (return nil))
+                            (t (event-listen-or-wait sheet
+                                                     :wait-function #'wait-fn
+                                                     :timeout decay))))))
              (negotiate-selection-type ()
                (xlib:convert-selection selection :targets window :mcclim nil)
-               (event-listen-or-wait sheet :wait-function #'wait-for-request :timeout 1)
                ;; Either window is closed or peer does not understand
                ;; targets. We will try to request string in that case.
-               (unless (clipboard-outstanding-request port)
+               (unless (and (wait-for-request)
+                            (clipboard-outstanding-request port))
                  (setf (clipboard-outstanding-request port) requested-object
                        (selection-object-content requested-object) '(:utf8_string)))
                ;; We look for the first proposed type which is suitable for the
@@ -134,12 +148,12 @@
       (when-let ((from-type (selection-object-type requested-object)))
         (setf (selection-object-content requested-object) selection)
         (xlib:convert-selection selection from-type window :mcclim nil)
-        (when (event-listen-or-wait sheet :wait-function #'wait-for-request :timeout 1)
-          (when-let ((result (clipboard-outstanding-request port)))
-            (call-selection-translator (selection-object-content result)
-                                       (selection-object-type result)
-                                       to-type
-                                       table)))))))
+        (when-let ((result (and (wait-for-request)
+                                (clipboard-outstanding-request port))))
+          (call-selection-translator (selection-object-content result)
+                                     (selection-object-type result)
+                                     to-type
+                                     table))))))
 
 (macrolet ((frob (selection)
              `(defmethod request-selection ((port clx-selection-mixin)
