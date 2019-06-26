@@ -307,15 +307,16 @@ use condition-variables nor locks."))
         (timeout-time (and timeout (+ timeout (now)))))
     ;; timeout-time may be past-due already but we may have an event waiting to be
     ;; processed for some time. Do preemptive check. -- jd 2018-12-30
-    (process-next-event port :timeout 0 :wait-function wait-function)
+    (process-next-event port :timeout 0)
     (loop
-       with pred = (or wait-function (lambda () (event-queue-head queue)))
        as decay = (compute-decay timeout-time (event-schedule-time queue))
        do
          (when decay (maxf decay 0))
          (check-schedule queue)
-         (cond ((funcall pred)
+         (cond ((event-queue-head queue)
                 (return t))
+               ((maybe-funcall wait-function)
+                (return (values nil :wait-function)))
                ((and timeout-time (> (now) timeout-time))
                 (return (values nil :timeout)))
                (T
@@ -374,10 +375,10 @@ use condition-variables nor locks."))
        (with-recursive-lock-held (lock)
          (if-let ((event (%event-queue-read queue)))
            (return event)
-           (cond ((and timeout-time (> (now) timeout-time))
-                  (return (values nil :timeout)))
-                 ((maybe-funcall wait-function)
+           (cond ((maybe-funcall wait-function)
                   (return (values nil :wait-function)))
+                 ((and timeout-time (> (now) timeout-time))
+                  (return (values nil :timeout)))
                  (t
                   (condition-wait cv lock decay)))))))
 
@@ -412,7 +413,6 @@ use condition-variables nor locks."))
   (do-port-force-output queue)
   ;; We need to LOOP because of possible spurious wakeup (sbcl/bt quirk).
   (loop
-     with pred = (or wait-function #'(lambda () (event-queue-head queue)))
      with lock = (event-queue-lock queue)
      with cv = (event-queue-processes queue)
      with timeout-time = (and timeout (+ timeout (now)))
@@ -426,8 +426,10 @@ use condition-variables nor locks."))
                        (maxf decay 0)))
        (with-recursive-lock-held (lock)
          (check-schedule queue)
-         (cond ((funcall pred)
+         (cond ((event-queue-head queue)
                 (return t))
+               ((maybe-funcall wait-function)
+                (return (values nil :wait-function)))
                ((and timeout-time (> (now) timeout-time))
                 (return (values nil :timeout)))
                (T
