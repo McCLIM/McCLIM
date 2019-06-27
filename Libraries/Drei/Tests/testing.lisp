@@ -101,6 +101,10 @@ display. Used for testing.")
            (with-bound-drei-special-variables (,drei :minibuffer nil)
              ,@body))))))
 
+(defmethod climb:publish-selection (port selection object object-type)
+  "Empty implementation to allow with-drei-environment to contain editing operations."
+  (declare (ignore port selection object object-type)))
+
 (def-suite drei-tests :description "The test suite for all Drei
 test cases. Has nested test suites for the actual tests.")
 
