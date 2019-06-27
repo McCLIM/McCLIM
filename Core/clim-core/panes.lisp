@@ -872,7 +872,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
     (real x)
     (cons (destructuring-bind (value type) x
             (ecase type
-              (:pixels    value)
+              (:pixel     value)
               (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
               (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
               (:character (* value (stream-character-width pane #\m)))
@@ -889,7 +889,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
     (real x)
     (cons (destructuring-bind (value type) x
             (ecase type
-              (:pixels    value)
+              (:pixel     value)
               (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
               (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
               (:character 0)
