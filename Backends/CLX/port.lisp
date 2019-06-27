@@ -47,7 +47,7 @@
     (let* (; this code courtesy telent-clx.
            (slash-i (or (position #\/ name) -1))
            (colon-i (position #\: name :start (1+ slash-i)))
-           (decnet-colon-p (eql (elt name (1+ colon-i)) #\:))
+           (decnet-colon-p (and colon-i (eql (elt name (1+ colon-i)) #\:)))
            (host (subseq name (1+ slash-i) colon-i))
            (dot-i (and colon-i (position #\. name :start colon-i)))
            (display (and colon-i
