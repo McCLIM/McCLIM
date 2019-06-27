@@ -285,7 +285,7 @@ lambda lists."
                                    (reduce #'append (mapcar #'package-nicknames (list-all-packages))))))))
         (is-false (set-difference (find-possible-completions "")
                                   all-external-symbols-in-cl-and-all-package-names
-                                  :test #'equal))))))
+                                  :test #'string-equal))))))
 
 (swine-test with-code-insight
   "Test the `with-code-insight' macro."
