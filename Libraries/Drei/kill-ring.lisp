@@ -147,7 +147,7 @@ of type `empty-kill-ring' is signalled."))
 (defun push-start-and-copy (chain vector)
   (push-start chain vector)
   (when (every #'characterp vector)
-    (let ((pane (drei:editor-pane (drei:drei-instance))))
+    (alexandria:when-let ((pane (drei:editor-pane (drei:drei-instance))))
       (clime:publish-selection pane :clipboard (coerce vector 'string) 'string))))
 
 (defmethod kill-ring-standard-push ((kr kill-ring) vector)
