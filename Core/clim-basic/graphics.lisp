@@ -297,7 +297,11 @@
 ;;;; 10.3.2 Contrasting Dash Patterns
 
 (defconstant +contrasting-dash-patterns+
-  #(#(2 2) #(4 4) #(8 8) #(8 2) #(2 2 8 2)))
+  ;; Must be at least eight according to the specification (Section
+  ;; 10.3.2 Contrasting Dash Patterns).
+  #(#(2 2) #(2 4)     #(2 8)     #(2 16) ; dots with varying empty space
+           #(4 2)     #(8 2)     #(16 2) ; varying dashes with minimum empty space
+           #(2 2 4 2) #(2 2 8 2)))       ; mixed
 
 (defmethod contrasting-dash-pattern-limit (port)
   (length +contrasting-dash-patterns+))
