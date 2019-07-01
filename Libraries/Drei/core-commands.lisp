@@ -475,8 +475,8 @@ Must be given immediately following a Yank or Rotate Yank command.
 The replacement objects are those before the previously yanked 
 objects in the kill ring."
   (handler-case (let ((last-yank (kill-ring-yank *kill-ring*)))
-                  (if (eq (command-name *previous-command*)
-                          'com-rotate-yank)
+                  (if (member (command-name *previous-command*)
+                              '(com-yank com-rotate-yank))
                       (progn
                         (delete-range (point) (* -1 (length last-yank)))
                         (rotate-yank-position *kill-ring*)))
