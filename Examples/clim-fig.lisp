@@ -26,6 +26,16 @@
   ((first-point-x :initform nil)
    (first-point-y :initform nil)))
 
+(defclass clim-fig-move-event ()
+  ((record :initarg :record :reader record :initform (error "clim-fig-move-event needs a record"))
+   (delta-x :initarg :delta-x :reader delta-x :initform 0)
+   (delta-y :initarg :delta-y :reader delta-y :initform 0)))
+
+(defmethod print-object ((object clim-fig-move-event) stream)
+  (print-unreadable-object (object stream :type T)
+   (format stream "moving ~a by (~D,~D)>"
+           (record object) (delta-x object) (delta-y object))))
+
 (defun set-status-line (string)
   (setf (gadget-value (clim-fig-status *application-frame*))
 	string))
@@ -128,55 +138,69 @@
               (values x1 y1)
               (tracking-pointer (pane)
                 (:pointer-motion (&key window x y)
-                                 (declare (ignore window))
-                                 (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)"
-                                                          (slot-value *application-frame*
-                                                                      'drawing-mode)
-                                                          (round x1) (round y1)
-                                                          (round x) (round y)))
-                                 (with-output-recording-options (pane :record nil)
-                                   (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
-                                   (draw-figure pane
-                                                x1 y1 x y
-                                                :fastp t
-						:cp-x1 cp-x1 :cp-y1 cp-y1
-						:cp-x2 cp-x2 :cp-y2 cp-y2)))
+                   (declare (ignore window))
+                   (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)"
+                                            (slot-value *application-frame*
+                                                        'drawing-mode)
+                                            (round x1) (round y1)
+                                            (round x) (round y)))
+                   (with-output-recording-options (pane :record nil)
+                     (copy-from-pixmap canvas-pixmap 0 0
+                                       pixmap-width pixmap-height pane 0 0)
+                     (draw-figure pane
+                                  x1 y1 x y
+                                  :fastp t
+				  :cp-x1 cp-x1 :cp-y1 cp-y1
+				  :cp-x2 cp-x2 :cp-y2 cp-y2)))
 		(:pointer-button-release (&key event x y)
-                                         (when (= (pointer-event-button event)
-                                                  +pointer-left-button+)
-                                           (return-from processor (values x y))))
+                  (when (= (pointer-event-button event)
+                           +pointer-left-button+)
+                    (return-from processor (values x y))))
                 (:pointer-button-press (&key event x y)
-				       (cond
-					 ((= (pointer-event-button event)
-					     +pointer-right-button+)
-					   (setf cp-x1 x cp-y1 y))
-					 ((= (pointer-event-button event)
-					     +pointer-middle-button+)
-					   (setf cp-x2 x cp-y2 y)))))))
+		  (cond
+		    ((= (pointer-event-button event)
+			+pointer-right-button+)
+		     (setf cp-x1 x cp-y1 y))
+		    ((= (pointer-event-button event)
+			+pointer-middle-button+)
+		     (setf cp-x2 x cp-y2 y)))))))
       (set-status-line " ")
       (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
       (deallocate-pixmap canvas-pixmap)
-      (let ((new-record (with-output-to-output-record (*standard-output*)
-                          (draw-figure pane x1 y1 x y
-		                       :cp-x1 cp-x1 :cp-y1 cp-y1
-		                       :cp-x2 cp-x2 :cp-y2 cp-y2))))
-        (push new-record (clim-fig-undo-list *application-frame*))
-        (with-output-as-presentation (pane nil 'figure)
-            (stream-add-output-record *standard-output* new-record))
-        (replay new-record *standard-output* (bounding-rectangle new-record)))
-      (setf (clim-fig-redo-list *application-frame*) nil))))
+      (let ((new-presentation (with-output-as-presentation (pane nil 'figure)
+                                (draw-figure pane x1 y1 x y
+		                             :cp-x1 cp-x1 :cp-y1 cp-y1
+		                             :cp-x2 cp-x2 :cp-y2 cp-y2))))
+        (push new-presentation (clim-fig-undo-list *application-frame*))
+        (replay new-presentation *standard-output* (bounding-rectangle new-presentation)))
+      (setf (clim-fig-redo-list *application-frame*) nil)
+      (deactivate-gadget (find-pane-named *application-frame* 'redo))
+      (activate-gadget (find-pane-named *application-frame* 'undo))
+      (activate-gadget (find-pane-named *application-frame* 'clear)))))
 
 (defun handle-move-object (pane figure first-point-x first-point-y)
-  (tracking-pointer (pane)
-    (:pointer-button-release (&key event x y)
-      (when (= (pointer-event-button event) +pointer-right-button+)
-        (multiple-value-bind (old-x old-y)
-            (output-record-position figure)
-          (setf (output-record-position figure)
-                (values (+ old-x (- x first-point-x))
-                        (+ old-y (- y first-point-y)))))
-        (window-refresh pane)
-        (return-from handle-move-object)))))
+  (multiple-value-bind (figure-x figure-y)
+      (output-record-position figure)
+    (let ((offset-x (- figure-x first-point-x))
+          (offset-y (- figure-y first-point-y)))
+     (tracking-pointer (pane)
+       (:pointer-motion (&key window x y)
+         (declare (ignore window))
+         (setf (output-record-position figure)
+               (values (+ x offset-x)
+                       (+ y offset-y)))
+         (window-refresh pane))
+       (:pointer-button-release (&key event x y)
+         (when (= (pointer-event-button event) +pointer-right-button+)
+           (push (make-instance 'clim-fig-move-event
+                                :record figure
+                                :delta-x (- x first-point-x)
+                                :delta-y (- y first-point-y))
+                 (clim-fig-undo-list *application-frame*))
+           (setf (clim-fig-redo-list *application-frame*) (list))
+           (deactivate-gadget (find-pane-named *application-frame* 'redo))
+           (window-refresh pane)
+           (return-from handle-move-object)))))))
 
 (defun clim-fig ()
   (run-frame-top-level (make-application-frame 'clim-fig)))
@@ -303,16 +327,19 @@
 
    (undo :push-button
          :label "Undo"
+         :active nil
          :activate-callback #'(lambda (x)
                                 (declare (ignore x))
                                 (com-undo)))
    (redo :push-button
          :label "Redo"
+         :active nil
          :activate-callback #'(lambda (x)
                                 (declare (ignore x))
                                 (com-redo)))
    (clear :push-button
           :label "Clear"
+          :active nil
           :activate-callback #'(lambda (x)
                                  (declare (ignore x))
                                  (com-clear)))
@@ -321,19 +348,19 @@
   (:layouts
    (default
      (vertically ()
-       (horizontally ()
-         (vertically (:width 150)
-           (tabling (:height 60)
-             (list black-button blue-button green-button cyan-button)
-             (list red-button magenta-button yellow-button white-button)
-             (list turquoise-button grey-button brown-button orange-button))
-           line-width-slider
-           round-shape-toggle
-           (horizontally () fill-mode-toggle constrict-toggle)
-           point-button line-button arrow-button
-           ellipse-button rectangle-button
-	   bezier-button)
-         (scrolling (:width 600 :height 400) canvas))
+       (:fill (horizontally ()
+                (vertically (:width 150)
+                  (tabling (:height 60)
+                    (list black-button blue-button green-button cyan-button)
+                    (list red-button magenta-button yellow-button white-button)
+                    (list turquoise-button grey-button brown-button orange-button))
+                  line-width-slider
+                  round-shape-toggle
+                  (horizontally () fill-mode-toggle constrict-toggle)
+                  point-button line-button arrow-button
+                  ellipse-button rectangle-button
+	          bezier-button)
+                (:fill (scrolling (:width 600 :height 400) canvas))))
        (horizontally (:height 30) clear undo redo)
        status)))
   (:top-level (default-frame-top-level :prompt 'clim-fig-prompt)))
@@ -376,28 +403,55 @@
 
 (define-clim-fig-command com-undo ()
   "Undo the previous command, which might have been either 'draw a new object',
-   or the CLEAR command. In the former case, remove the record and add it to the
-   redo list; in the latter case, replay the output-history."
-  (let ((latest-undo-entry (pop (clim-fig-undo-list *application-frame*))))
+   'move an object', or the CLEAR command.
+
+   In the first case, remove the record and add it to the redo list;
+   in the second case, move the object back to its previous position;
+   to undo a CLEAR, replay the output-history."
+  (alexandria:when-let ((latest-undo-entry (pop (clim-fig-undo-list *application-frame*))))
     (cond
-      ((not latest-undo-entry) (beep))
+      ((typep latest-undo-entry 'clim-fig-move-event)
+       (multiple-value-bind (x y)
+           (output-record-position (record latest-undo-entry))
+         (setf (output-record-position (record latest-undo-entry))
+               (values (- x (delta-x latest-undo-entry))
+                       (- y (delta-y latest-undo-entry))))
+         (window-refresh *standard-output*))
+       (push latest-undo-entry (clim-fig-redo-list *application-frame*))
+       (activate-gadget (find-pane-named *application-frame* 'redo)))
       ((listp latest-undo-entry)
        (loop for record in latest-undo-entry do
-            (with-output-as-presentation (*standard-output* nil 'figure)
-              (stream-add-output-record *standard-output* record))
-            (replay record *standard-output* (bounding-rectangle record))))
+            (stream-add-output-record *standard-output* record)
+            (replay record *standard-output* (bounding-rectangle record)))
+       (activate-gadget (find-pane-named *application-frame* 'clear))
+       (deactivate-gadget (find-pane-named *application-frame* 'redo)))
       (T
        (erase-output-record latest-undo-entry *standard-output*)
-       (push latest-undo-entry (clim-fig-redo-list *application-frame*))))))
+       (push latest-undo-entry (clim-fig-redo-list *application-frame*))
+       (activate-gadget (find-pane-named *application-frame* 'clear))))
+    (unless (clim-fig-undo-list *application-frame*)
+      (deactivate-gadget (find-pane-named *application-frame* 'undo))
+      (deactivate-gadget (find-pane-named *application-frame* 'clear)))))
 
 (define-clim-fig-command com-redo ()
-  (alexandria:if-let ((record (pop (clim-fig-redo-list *application-frame*))))
-    (progn
-      (push record (clim-fig-undo-list *application-frame*))
-      (with-output-as-presentation (*standard-output* nil 'figure)
-        (stream-add-output-record *standard-output* record))
-      (replay record *standard-output* (bounding-rectangle record)))
-    (beep)))
+  (alexandria:when-let ((current-redo-entry (pop (clim-fig-redo-list
+                                                *application-frame*))))
+    (push current-redo-entry (clim-fig-undo-list *application-frame*))
+    (activate-gadget (find-pane-named *application-frame* 'undo))
+    (activate-gadget (find-pane-named *application-frame* 'clear))
+    (cond
+      ((typep current-redo-entry 'clim-fig-move-event)
+       (multiple-value-bind (x y)
+           (output-record-position (record current-redo-entry))
+         (setf (output-record-position (record current-redo-entry))
+               (values (+ x (delta-x current-redo-entry))
+                       (+ y (delta-y current-redo-entry)))))
+       (window-refresh *standard-output*))
+      (T (stream-add-output-record *standard-output* current-redo-entry)
+         (replay current-redo-entry *standard-output*
+                 (bounding-rectangle current-redo-entry))))
+    (unless (clim-fig-redo-list *application-frame*)
+      (deactivate-gadget (find-pane-named *application-frame* 'redo)))))
 
 (define-clim-fig-command com-clear ()
   (push (coerce (output-record-children (clim-fig-output-record
@@ -405,6 +459,8 @@
 		'list)
         (clim-fig-undo-list *application-frame*))
   (setf (clim-fig-redo-list *application-frame*) (list))
+  (deactivate-gadget (find-pane-named *application-frame* 'redo))
+  (deactivate-gadget (find-pane-named *application-frame* 'clear))
   (window-clear *standard-output*))
 
 (define-clim-fig-command (com-add-figure :name nil) ((x real) (y real))
