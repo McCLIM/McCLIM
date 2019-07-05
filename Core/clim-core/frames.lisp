@@ -1562,10 +1562,10 @@ have a `pointer-documentation-pane' as pointer documentation,
           (:presentation (&key presentation window event x y)
             (let ((dest-translator (find-dest-translator presentation window x y)))
               (multiple-value-call #'do-feedback (last-point) :unhighlight)
-              (setq feedback-activated t
-                    last-event event)
+              (setq feedback-activated t)
               (do-hilighte last-presentation (last-point) :unhighlight)
-              (setf last-presentation presentation)
+              (setq last-event event
+                    last-presentation presentation)
               (if dest-translator
                   (setf feedback-fn (feedback dest-translator)
                         hilighte-fn (highlighting dest-translator))
@@ -1581,10 +1581,10 @@ have a `pointer-documentation-pane' as pointer documentation,
                 x y)))
           (:pointer-motion (&key event window x y)
             (multiple-value-call #'do-feedback (last-point) :unhighlight)
-            (setq feedback-activated t
-                  last-event event)
+            (setq feedback-activated t)
             (do-hilighte last-presentation (last-point) :unhighlight)
-            (setq last-presentation nil)
+            (setq last-event event
+                  last-presentation nil)
             (do-feedback window x y :highlight)
             (document-drag-n-drop translator nil
                                   context-type frame event window
