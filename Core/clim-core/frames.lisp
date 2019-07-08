@@ -1558,7 +1558,7 @@ have a `pointer-documentation-pane' as pointer documentation,
       (block do-tracking
         (tracking-pointer (window :context-type `(or ,@(mapcar #'destination-ptype translators))
                                   :highlight nil
-                                  :multiple-window nil)	;XXX
+                                  :multiple-window t)
           (:presentation (&key presentation window event x y)
             (let ((dest-translator (find-dest-translator presentation window x y)))
               (multiple-value-call #'do-feedback (last-point) :unhighlight)
