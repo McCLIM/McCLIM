@@ -1533,12 +1533,12 @@ have a `pointer-documentation-pane' as pointer documentation,
     ;; gonna do?
     (flet ((find-dest-translator (presentation window x y)
              (loop for translator in translators
-                when (and (presentation-subtypep
-                           (presentation-type presentation)
-                           (destination-ptype translator))
+                when (and (presentation-subtypep (presentation-type presentation)
+                                                 (destination-ptype translator))
                           (test-presentation-translator translator
                                                         presentation
-                                                        context-type frame
+                                                        context-type
+                                                        frame
                                                         window x y))
                 do (return-from find-dest-translator translator))
              nil)
@@ -1556,7 +1556,7 @@ have a `pointer-documentation-pane' as pointer documentation,
                          (pointer-event-y last-event))
                  (values nil nil nil))))
       (block do-tracking
-        (tracking-pointer (window :context-type `(or ,(mapcar #'from-type translators))
+        (tracking-pointer (window :context-type `(or ,@(mapcar #'destination-ptype translators))
                                   :highlight nil
                                   :multiple-window nil)	;XXX
           (:presentation (&key presentation window event x y)
