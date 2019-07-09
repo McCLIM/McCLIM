@@ -631,10 +631,6 @@ known gestures."
 (define-gesture-name :newline :keyboard (#\newline))
 (define-gesture-name :return :keyboard (#\return))
 
-;;; The standard delimiter
-
-(define-gesture-name command-delimiter :keyboard (#\space))
-
 ;;; Extension: support for handling abort gestures that appears to be
 ;;; in real CLIM
 

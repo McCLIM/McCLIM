@@ -1112,7 +1112,7 @@ examine the type of the command menu item to see if it is
 		      :stream stream
 		      :view view
 		      :default 'stream-destination
-		      :additional-delimiter-gestures '(#\space))))
+		      :additional-delimiter-gestures '())))
     (read-char stream)
     (accept type :stream stream :view view)))
 
@@ -1247,9 +1247,9 @@ examine the type of the command menu item to see if it is
 			#'(lambda (so-far mode)
 			    (complete-from-generator so-far
 						     #'generator
-						     '(#\space)
+						     '()
 						     :action mode))
-			:partial-completers '(#\space))
+			:partial-completers '())
       (if success
 	  (values object type)
 	  (simple-parse-error "No command named ~S" string)))))
