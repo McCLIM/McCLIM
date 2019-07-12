@@ -28,6 +28,8 @@
 
 (defgeneric X-pixel (port color))
 
+(defconstant +x11-pixmap-dimension-limit+ 2048)
+
 (defmethod X-pixel ((port clx-basic-port) color)
   (let ((table (slot-value port 'color-table)))
     (or (gethash color table)
@@ -359,6 +361,21 @@ translated, so they begin at different position than [0,0])."))
 
 
 
+(defun put-image-recursively (pixmap pixmap-context pixmap-image width height x0 y0)
+  (labels ((put-partial-image (width height x0 y0)
+             (cond
+               ((and (< width +x11-pixmap-dimension-limit+) (< height +x11-pixmap-dimension-limit+))
+                (xlib:put-image pixmap pixmap-context pixmap-image
+                                :src-x x0 :src-y y0 :x x0 :y y0
+                                :width width :height height))
+               ((> width height)
+                (put-partial-image (ceiling width 2) height x0 y0)
+                (put-partial-image (floor width 2) height (+ x0 (ceiling width 2)) y0))
+               (T
+                (put-partial-image width (ceiling height 2) x0 y0)
+                (put-partial-image width (floor height 2) x0 (+ y0 (ceiling height 2)))))))
+    (put-partial-image width height x0 y0)))
+
 ;;; XXX: both PM and MM pixmaps should be freed with (xlib:free-pixmap pixmap)
 ;;; when not used. We do not do that right now.
 (defun compute-rgb-mask (drawable image)
@@ -384,9 +401,7 @@ translated, so they begin at different position than [0,0])."))
                   (if (< (ldb (byte 8 0) elt) #x80)
                       (setf (aref mdata y x) 0)
                       (setf (aref mdata y x) 1)))))
-      (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
-        (xlib:put-image mm mm-gc mm-image :src-x 0 :src-y 0 :x 0 :y 0
-                        :width width :height height :bitmap-p nil))
+      (put-image-recursively mm mm-gc mm-image width height 0 0)
       (xlib:free-gcontext mm-gc)
       (push #'(lambda () (xlib:free-pixmap mm)) ^cleanup)
       mm)))
@@ -412,9 +427,7 @@ translated, so they begin at different position than [0,0])."))
            (loop for y fixnum from 0 below height do
                 (let ((elt (aref idata y x)))
                   (setf (aref pdata y x) (ash elt -8)))))
-      (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
-        (xlib:put-image pm pm-gc pm-image :src-x 0 :src-y 0 :x 0 :y 0
-                        :width width :height height))
+      (put-image-recursively pm pm-gc pm-image width height 0 0)
       (xlib:free-gcontext pm-gc)
       (push #'(lambda () (xlib:free-pixmap pm)) ^cleanup)
       pm)))
@@ -659,6 +672,7 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled
                                    &aux (ink (medium-ink medium)))
+  (declare (ignore ink))
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
