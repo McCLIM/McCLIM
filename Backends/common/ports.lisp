@@ -10,6 +10,9 @@
 (defmethod set-sheet-pointer-cursor :before ((port standard-port) sheet cursor)
   (setf (gethash sheet (slot-value port 'mirrored-sheet->current-pointer-cursor)) cursor))
 
+(defmethod port-unregister-mirror :after ((port standard-port) sheet mirror)
+  (remhash sheet (slot-value port 'mirrored-sheet->current-pointer-cursor)))
+
 (defun stored-object (port selection)
   (check-type port standard-port)
   (check-type selection symbol)
