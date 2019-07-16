@@ -128,9 +128,8 @@
 (defmethod set-sheet-pointer-cursor ((port clx-basic-port) (sheet mirrored-sheet-mixin) cursor)
   (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port)))
 	(mirror (sheet-direct-xmirror sheet)))
-    (when (and cursor
-	       (typep mirror 'xlib:window))
-      (setf (xlib:window-cursor (sheet-direct-xmirror sheet)) cursor))))
+    (when (and cursor (typep mirror 'xlib:window))
+      (setf (xlib:window-cursor mirror) cursor))))
 ;;;
 ;;;
 ;;;
