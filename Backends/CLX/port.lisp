@@ -334,6 +334,9 @@
 
 (defmethod destroy-mirror ((port clx-port) (pixmap pixmap))
   (alexandria:when-let ((mirror (port-lookup-mirror port pixmap)))
+    (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
+                                 (xlib:pixmap-plist mirror))))
+      (xlib:render-free-picture picture))
     (xlib:free-pixmap mirror)
     (port-unregister-mirror port pixmap mirror)))
 
