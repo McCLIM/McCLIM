@@ -1,4 +1,3 @@
-
 (defpackage :mcclim-bezier-clx
   (:use #:clim #:clim-lisp #:mcclim-bezier)
   (:import-from #:clim-clx
@@ -15,11 +14,11 @@
 (defun bezier-region-to-coord-vec (region)
   (let* ((poly (polygonalize region))
          (points (polygon-points poly))
-         (coord-vec (make-array 4 :fill-pointer 0)))
+         (coord-vec (make-array (* 2 (length points)) :fill-pointer 0)))
     (map nil (lambda (point)
                (multiple-value-bind (x y) (point-position point)
-                 (vector-push-extend (round-coordinate x) coord-vec)
-                 (vector-push-extend (round-coordinate y) coord-vec)))
+                 (vector-push (round-coordinate x) coord-vec)
+                 (vector-push (round-coordinate y) coord-vec)))
          points)
     coord-vec))
 
@@ -101,4 +100,3 @@
               ;; 7. free the clipmask
               (xlib:free-gcontext mask-gc)
               (xlib:free-pixmap mask-pixmap))))))))
-
