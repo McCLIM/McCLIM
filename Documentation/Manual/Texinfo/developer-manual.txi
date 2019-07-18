@@ -94,8 +94,6 @@ synthesize-pointer-motion-event
 @verbatim
 GRAFT (in grafts.lisp)
 -----------------------------------
-;;; Use climb:standard-graft as superclass
-
 ;;; Originally in CLIM
 graft        ; root window/screen
 graft-height ; screen height

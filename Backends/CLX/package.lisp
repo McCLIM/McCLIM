@@ -69,7 +69,6 @@
   (:import-from #:climi
 		#:standard-event-port-mixin
                 #:event-listen-or-wait
-		#:standard-graft
 		#:pointer-grab-sheet
 		#:%sheet-mirror-region
                 #:%sheet-mirror-transformation
