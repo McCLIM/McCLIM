@@ -75,7 +75,7 @@ supply different debugger for recursive debugger calls.
 
 @deffn {macro} {with-debugger} options &body body
 
-Wraps the code in @t{body} to invoke clim debugger when condition is
+Wraps the code in @t{body} to invoke @clim debugger when condition is
 signalled (binds @t{*debugger-hook*} to @t{#'debugger}). Bindings are
 inherited by new threads. @t{options} are not used at the moment.
 @end deffn

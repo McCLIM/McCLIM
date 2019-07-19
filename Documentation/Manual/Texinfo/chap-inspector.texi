@@ -32,7 +32,7 @@ To get up and running quickly with Clouseau:
 
 @enumerate
 @item
- With ASDF and McCLIM loaded, load the file
+ With ASDF and @mcclim loaded, load the file
 
   @t{mcclim/Apps/Inspector/inspector.asd}.
 @item
@@ -211,7 +211,7 @@ compactly, before they are clicked on, we can define an
 @genfun{inspect-object-briefly} method for our @cl{sample} class. To
 change the full, detailed inspection of samples, we define
 @genfun{inspect-object} for the class. Both of these methods take two
-arguments: the object to inspect and a CLIM output stream. They are
+arguments: the object to inspect and a @clim output stream. They are
 expected to print a representation of the object to the stream.
 
 Because we defined @genfun{print-object} for the @cl{sample} class to
@@ -235,7 +235,7 @@ should, however, define @genfun{inspect-object}.
 
 Here, we introduce two new macros. @fmacro{inspector-table} sets up a box
 in which we can display our representation of the sample. It handles
-quite a bit of CLIM work for us. When possible, you should use it
+quite a bit of @clim work for us. When possible, you should use it
 instead of making your own, since using the standard facilities helps
 ensure consistency.
 
@@ -249,7 +249,7 @@ But what we really want is something more closely adapted to our
 needs. It would be nice if we could just have a table of things like
 @math{ \overline {x} = 12.125776 } and have them come out formatted
 nicely. Before we attempt mathematical symbols, let's focus on getting
-the basic layout right. For this, we can use CLIM's table formatting.
+the basic layout right. For this, we can use @clim's table formatting.
 
 @lisp
 (defmethod inspect-object ((object sample) pane)
