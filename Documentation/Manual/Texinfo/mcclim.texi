@@ -1,6 +1,7 @@
 % @c -*- Coding: utf-8; Mode: Texinfo -*-
-% @c Note that Texinfo does not support UTF-8. Please do not use literal
-% @c UTF-8 characters in this document.
+
+@documentencoding utf-8
+
 \input texinfo
 
 @setfilename mcclim
@@ -9,7 +10,7 @@
 @set MCCLIMVERSION 0.9.7-dev
 
 @copying
-Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
+Copyright @copyright{} 2004,2005,2006,2007,2008,2017,2019 the McCLIM hackers.
 @end copying
 
 @dircategory Common Lisp
