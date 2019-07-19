@@ -34,13 +34,13 @@ To get up and running quickly with Clouseau:
 @item
  With ASDF and @mcclim loaded, load the file
 
-  @t{mcclim/Apps/Inspector/inspector.asd}.
+  @file{mcclim/Apps/Clouseau/clouseau.asd}.
 @item
  Load Clouseau with:
 
-@t{(asdf:operate 'asdf:load-op :clouseau)}
+ @cl{(asdf:load-system :clouseau)}
 @item
- Inspect an object with @t{(clouseau:inspector @i{object})}. If you use
+ Inspect an object with @cl{(clouseau:inspector @var{object})}. If you use
     a multithreaded Lisp implementation, you can also include the
     @cl{:new-process} keyword argument. If it is @cl{t}, then Clouseau
     is started in a seperate process. This should be relatively safe; it
@@ -54,7 +54,7 @@ To get up and running quickly with Clouseau:
 Once you inspect something, you will see a full representation of the
 object you are inspecting and short representations of objects contained
 within it. This short representation may be something like
-@cl{#<STANDARD-CLASS SALAD-MIXIN>} or something as short as ``@dots{}''.
+@t{#<STANDARD-CLASS SALAD-MIXIN>} or something as short as ``@dots{}''.
 To see these objects inspected more fully, left-click on them and they
 will be expanded. To shrink expanded objects, left-click on them again
 and they will go back to a brief form.
@@ -97,7 +97,7 @@ commands to trace and untrace the function bound to it.
 @item Lists and Conses
 
 Lists and conses can be displayed in either the classic format (such as
-@t{(1 3 (4 . 6) "Hello" 42)}) or a more graphical cons-cell diagram
+@cl{(1 3 (4 . 6) "Hello" 42)}) or a more graphical cons-cell diagram
 format. The default is the classic format, but this can be toggled with
 the @t{Toggle Show List Cells} command.
 
