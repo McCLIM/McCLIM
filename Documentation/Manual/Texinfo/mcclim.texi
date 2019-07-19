@@ -35,9 +35,7 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017,2019 the McCLIM hackers.
 
 @end titlepage
 
-@iftex
 @contents
-@end iftex
 
 @ifnottex
 @node Top
