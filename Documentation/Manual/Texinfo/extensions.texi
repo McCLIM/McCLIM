@@ -1,4 +1,3 @@
-
 @node Extensions
 @chapter Extensions
 
@@ -115,7 +114,7 @@ exactly one child is visible at any time, with a row of buttons
 allowing the user to choose between them.
 
 See also the tabdemo.lisp example code located under Examples/ in the
-McCLIM distribution.  It can be started using demodemo.
+@mcclim distribution.  It can be started using demodemo.
 
 @include class-clim-tab-layout-tab-layout.texi
 @include class-clim-tab-layout-tab-layout-pane.texi
@@ -154,9 +153,9 @@ McCLIM distribution.  It can be started using demodemo.
 @node Extended Text Styles
 @subsection Extended Text Styles
 
-McCLIM extends the legal values for the @cl{family} and @cl{face}
+@mcclim extends the legal values for the @cl{family} and @cl{face}
 arguments to @cl{make-text-style} to include strings (in additional to
-the portable keyword symbols), as permitted by the CLIM spec, section
+the portable keyword symbols), as permitted by the @clim spec, section
 11.1.
 
 Each backend defines its own specific syntax for these family and face
@@ -183,7 +182,7 @@ documentation for details on the syntax of face names.  Example:
 @node Listing Fonts
 @subsection Listing Fonts
 
-McCLIM's font listing functions allow applications to list all
+@mcclim's font listing functions allow applications to list all
 available fonts available on a @class{port} and create text style
 instances for them.
 
@@ -260,9 +259,9 @@ may be also used as an ink in other drawing functions.
 
 Raster image backend includes a medium that implements:
 @itemize @bullet
-@item CLIM's medium protocol,
-@item CLIM's output stream protocol, and
-@item CLIM's Pixmap protocol.
+@item @clim's medium protocol,
+@item @clim's output stream protocol, and
+@item @clim's Pixmap protocol.
 @end itemize
 
 @anchor{Macro clime:with-output-to-image-stream}
@@ -277,7 +276,7 @@ Raster image backend includes a medium that implements:
 
 Within @code{body}, @code{stream-var} is bound to a stream that produces
 a raster image.  This stream is suitable as a stream or medium argument
-to any CLIM output utility, such as @code{draw-line*} or
+to any @clim output utility, such as @code{draw-line*} or
 @code{write-string}.
 
 The value of @code{options} is a list consisting of alternating keyword and value

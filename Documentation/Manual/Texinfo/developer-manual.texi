@@ -41,9 +41,9 @@ part of @emph{CLIM II} specification.
 
 @item Basic backend
 
-OpenGL, X, or HTML 5 canvas are resources which provide only drawing
-and event handling primitives. In this case we need to wrap their APIs
-for McCLIM to use. McCLIM will then use these drawing and windowing
+OpenGL, X, or HTML 5 canvas are resources which provide only drawing and
+event handling primitives. In this case we need to wrap their APIs
+for @mcclim to use. @mcclim will then use these drawing and windowing
 primitives to implement portable widgets.
 
 @item Native backend
@@ -51,7 +51,7 @@ primitives to implement portable widgets.
 Native backend is based on already complete GUI library which provides
 a rich set of widgets (for example Cocoa or Win32 API). Additionally
 to the things needed to be implement in the first two cases, we can
-also map these native look and feel widgets in McCLIM.
+also map these native look and feel widgets in @mcclim.
 @end table
 
 The @code{clim-null} backend can be used as a template to start with a

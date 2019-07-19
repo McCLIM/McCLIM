@@ -14,18 +14,18 @@
 @cindex Direct mirror
 
 A @gloss{mirror} of a sheet which is not shared with any of the
-ancestors of the sheet.  All grafted McCLIM sheets have mirrors, but not
-all have direct mirrors.  A McCLIM sheet that does not have a direct
+ancestors of the sheet.  All grafted @mcclim sheets have mirrors, but not
+all have direct mirrors.  A @mcclim sheet that does not have a direct
 mirror uses the direct mirror of its first ancestor having a direct
 mirror for graphics output.  Asking for the direct mirror of a sheet
 that does not have a direct mirror returns nil.
 
-Whether a McCLIM sheet has a direct mirror or not, is decided by the
+Whether a @mcclim sheet has a direct mirror or not, is decided by the
 frame manager.  Some frame managers may only allow for the graft to be a
 mirrored sheet.  Even frame managers that @emph{allow} hierarchical
 mirrors may decide not to allocate a direct mirror for a particular
 sheet.  Although sheets with a direct mirror must be instances of the
-class mirrored-sheet-mixin, whether a McCLIM sheet has a direct mirror
+class mirrored-sheet-mixin, whether a @mcclim sheet has a direct mirror
 or not is not determined statically by the class of a sheet, but
 dynamically by the frame manager.
 
@@ -34,13 +34,13 @@ dynamically by the frame manager.
 @cindex Mirror
 
 A device window such as an X11 window that parallels a @gloss{sheet} in
-the CLIM @gloss{sheet hierarchy}.  A @gloss{sheet} having such a
+the @clim @gloss{sheet hierarchy}.  A @gloss{sheet} having such a
 @emph{direct} mirror is called a @gloss{mirrored sheet}.  When
 @gloss{drawing functions} are called on a @gloss{mirrored sheet}, they
 are forwarded to the host windowing system as drawing commands on the
 @gloss{mirror}.
 
-CLIM @gloss{sheet}s that are not mirrored must be @gloss{descendents}
+@clim @gloss{sheet}s that are not mirrored must be @gloss{descendents}
 (direct or indirect) of a @gloss{mirrored sheet}, which will then be the
 @gloss{sheet} that receives the drawing commands.
 
@@ -48,7 +48,7 @@ CLIM @gloss{sheet}s that are not mirrored must be @gloss{descendents}
 @b{Mirrored sheet}
 @cindex Mirrored sheet
 
-A @gloss{sheet} in the CLIM @gloss{sheet hiearchy} that has a direct
+A @gloss{sheet} in the @clim @gloss{sheet hiearchy} that has a direct
 parallel (called the @gloss{direct mirror}) in the host windowing
 system.  A mirrored sheet is always an instance of the class
 @class{mirrored-sheet-mixin}, but instances of that class are not
@@ -171,7 +171,7 @@ transformations, etc.
 
 @c @glossentry{User Clipping region }
 @b{User Clipping region }
-@cindex User Clipping region 
+@cindex User Clipping region
 
 A @gloss{clipping region} used to limit the effect of @gloss{drawing
 functions}.  The user @gloss{clipping region} is stored in the
@@ -203,7 +203,7 @@ A transformation used to transform @gloss{user coordinates} into
 @node Development History
 @section Development History
 
-Mike McDonald started developing McCLIM in 1998.  His initial objective
+Mike McDonald started developing @mcclim in 1998.  His initial objective
 was to be able to run the famous ``address book'' demo, and to
 distribute the first version when this demo ran.  With this in mind, he
 worked ``horizontally'', i.e., writing enough of the code for many of
@@ -217,7 +217,7 @@ Also in 1998, Gilbert Baumann started working ``vertically'', writing a
 mostly-complete implementation of the chapters 3 (Regions) and 5 (Affine
 Transformations).  At the end of 1999, he realized that he was not going
 to be able to finish the project by himself.  He therfore posted his
-code to the free-CLIM mailing list.  Gilbert's code was distributed
+code to the free-@clim mailing list.  Gilbert's code was distributed
 according to the GNU Lesser General Public Licence (LGPL).
 
 Robert Strandh picked up the project in 2000, starting from Gilbert's
@@ -262,17 +262,17 @@ worked together to make sure the manipulation of sheet transformations
 and sheet regions as part of scrolling and space-allocation respected
 the specification.
 
-Robert had initially planned for Iban and Julien to work on McCLIM for
+Robert had initially planned for Iban and Julien to work on @mcclim for
 their fifth-year student project starting late 2000 and continuing until
 end of march 2001.  For reasons beyond his control, however, he was
 forced to suggest a different project.  Thus, Iban and Julien, together
 with two other students, were assigned to work on Gsharp, an interactive
 score editor.  Gsharp was the original reason for Robert to start
-working on CLIM as he needed a toolkit for writing a graphical user
+working on @clim as he needed a toolkit for writing a graphical user
 interface for Ghsarp.  The lack of a freely-available version of a
-widely-accepted toolkit such as CLIM made him decide to give it a shot.
+widely-accepted toolkit such as @clim made him decide to give it a shot.
 Robert's idea was to define the student project so that a maximum of
-code could be written as part of McCLIM.  The result was a complete
+code could be written as part of @mcclim.  The result was a complete
 rewrite of the space-allocation and space-composition protocols, and
 many minor code snippets.
 
@@ -280,8 +280,8 @@ As part of the Gsharp project, Robert wrote the code for menu bars and
 for a large part of chapter 27 (Command Processing).
 
 Julien was hired for six months (April to September of 2001) by Robert
-to make major progress on McCLIM.  Julien's first task was to create a
-large demo that showed many of the existing features of McCLIM (a
+to make major progress on @mcclim.  Julien's first task was to create a
+large demo that showed many of the existing features of @mcclim (a
 ``killer app'').  It was decided to use Gsharp since Julien was already
 familiar with the application and since it was a sufficiently
 complicated application that most of the features would be tested.  An
@@ -291,7 +291,7 @@ been made.  As part of the Gsharp project, Julien first worked on adding
 the possibility of using images as button labels.
 
 Early 2001, Robert had already written the beginning of a library for
-manipulating 2-dimensional images as part of McCLIM.  A group of four
+manipulating 2-dimensional images as part of @mcclim.  A group of four
 fourth-year students (Gregory Bossard, Michel Cabot, Cyrille Dindart,
 Lionel Verg@'e) at the university of Bordeaux was assigned the task of
 writing efficient code for displaying such images subject to arbitrary
@@ -308,13 +308,13 @@ directories, to select files, etc.  The project lasted from January to
 May of 2001.
 
 One student in particular, Arnaud Rouanet started becoming interested in
-the rest of CLIM as well.  During early 2001, he fixed several bugs and
+the rest of @clim as well.  During early 2001, he fixed several bugs and
 also added new code, in particular in the code for regions, graphics,
 and clx-mediums.
 
 Arnaud and Lionel were hired by Robert for the summer of 2001 to work on
 several things.  In particular, they worked on getting output recording
-to work and wrote CLIM-fig, a demo that shows how output recording is
+to work and wrote @clim~-fig, a demo that shows how output recording is
 used.  They also worked on various sheet protocols, and wrote the first
 version of the PostScript backend.
 
@@ -328,12 +328,12 @@ method dispatch.  Wanting to see that work do something useful, he went
 on to implement present and accept methods, extended input streams,
 encapsulating streams, and the beginnings of input editing streams.  In
 the spring of 2002 he wrote the core of Goatee, an Emacs-like editor.
-This is used to implement CLIM input editing.
+This is used to implement @clim input editing.
 
 Brian Spilsbury became involved towards the beginning of 2001.  His
 motivation for getting involved was in order to have
 internationalization support.  He quickly realized that the first step
 was to make SBCL and CMUCL support Unicode.  He therefore worked to make
 that happen.  So far (summer 2001) he has contributed a number of
-cosmetic fixes to McCLIM and also worked on a GTK-like gadget set.  He
+cosmetic fixes to @mcclim and also worked on a GTK-like gadget set.  He
 finally started work to get the OpenGL backend operational.

@@ -1,3 +1,11 @@
+@macro clim{}
+CLIM
+@end macro
+@macro mcclim{}
+McCLIM
+@end macro
+
+
 @macro glossentry{ENTRY}
 @b{\ENTRY\}
 @cindex \ENTRY\
