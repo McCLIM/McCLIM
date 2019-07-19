@@ -61,23 +61,23 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 
 @node Introduction
 @unnumbered Introduction
-@include introduction.txi
+@include introduction.texi
 
 @c @node User manual
 @c @chapter User manual
-@include user-manual.txi
+@include user-manual.texi
 
 @c @node Reference manual
 @c @chapter Reference manual
-@include reference-manual.txi
+@include reference-manual.texi
 
 @c @node Developer manual
 @c @chapter Developer manual
-@include developer-manual.txi
+@include developer-manual.texi
 
 @c @node Extensions
 @c @chapter Extensions
-@include extensions.txi
+@include extensions.texi
 
 @node Applications
 @chapter Applications
@@ -87,7 +87,7 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 
 @c @node Auxiliary material
 @c @unnumbered Auxiliary material
-@include auxiliary-material.txi
+@include auxiliary-material.texi
 
 @node Concept index
 @unnumbered Concept index
