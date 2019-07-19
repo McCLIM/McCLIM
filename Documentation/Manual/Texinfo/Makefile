@@ -4,6 +4,8 @@ SOURCES=mcclim.texi user-manual.texi reference-manual.texi developer-manual.texi
 
 INCLUDES=-I docstrings -I examples -I figures
 
+RESULTS=mcclim.pdf mcclim.info mcclim mcclim.html
+
 VPATH=./figures
 
 .PHONY: all clean distclean
@@ -11,15 +13,23 @@ VPATH=./figures
 %.pdf: figures/%.fig
 	fig2dev -Lpdftex -m 0.75  $< $@
 
-all: mcclim.pdf mcclim.info mcclim
+all: $(RESULTS)
+
 mcclim.info: $(SOURCES)
-	makeinfo mcclim.texi $(INCLUDES) --output mcclim.info
+	makeinfo $(INCLUDES) --output mcclim.info mcclim.texi
+
 mcclim.pdf: $(SOURCES)
-	texi2pdf mcclim.texi $(INCLUDES)
+	texi2pdf $(INCLUDES) mcclim.texi
+
 mcclim: $(SOURCES)
-	makeinfo mcclim.texi $(INCLUDES) --html
+	makeinfo $(INCLUDES) --html --css-include=style-multi.css mcclim.texi
+
+mcclim.html: $(SOURCES)
+	makeinfo $(INCLUDES) --html --no-split --css-include=style-common.css --css-include=style-single.css mcclim.texi
+
 clean:
 	rm -rf mcclim.cp mcclim.cps mcclim.fn mcclim.fns mcclim.toc \
 		mcclim.tp mcclim.tps mcclim.vr mcclim.vrs mcclim.aux mcclim.log
+
 distclean: clean
-	rm -rf mcclim.info mcclim.pdf mcclim
+	rm -rf $(RESULTS)
