@@ -1,7 +1,6 @@
-
 IMAGES=ex2.pdf inspect-as-cells.pdf inspect-object-1.pdf inspect-object-2.pdf inspect-object-3.pdf
 
-SOURCES=mcclim.texi user-manual.txi reference-manual.txi developer-manual.txi extensions.txi auxiliary-material.txi chap-debugger.texi chap-inspector.texi chap-listener.texi docstrings $(IMAGES)
+SOURCES=mcclim.texi user-manual.texi reference-manual.texi developer-manual.texi extensions.texi auxiliary-material.texi chap-debugger.texi chap-inspector.texi chap-listener.texi docstrings $(IMAGES)
 
 INCLUDES=-I docstrings -I examples -I figures
 
