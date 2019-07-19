@@ -11,6 +11,7 @@
 
 @menu
 * Different types of backends::
+* Backend protocol::
 * Event handling::
 * Graft protocol::
 * Medium drawing::
@@ -62,7 +63,7 @@ handles into native windowing system. Mirrored and ``native lisp''
 sheets may be freely mixed in the pane hierarchy.
 
 @node Backend protocol
-@subheading Backend protocol
+@subsection Backend protocol
 
 @verbatim
 NEW CLASS FOR BACKEND `FOO'
@@ -76,7 +77,7 @@ foo-pointer
 @end verbatim
 
 @node Event handling
-@subheading Event handling
+@subsection Event handling
 
 @verbatim
 EVENT HANDLING (in port.lisp)
@@ -89,7 +90,7 @@ synthesize-pointer-motion-event
 @end verbatim
 
 @node Graft protocol
-@subheading Graft protocol
+@subsection Graft protocol
 
 @verbatim
 GRAFT (in grafts.lisp)
@@ -101,7 +102,7 @@ graft-width  ; screen width
 @end verbatim
 
 @node Medium drawing
-@subheading Medium drawing
+@subsection Medium drawing
 
 @verbatim
 MEDIUM DRAWING (in medium.lisp)
@@ -120,7 +121,7 @@ medium-draw-text*
 @end verbatim
 
 @node Medium operations
-@subheading Medium operationMiscellanies protocol
+@subsection Medium operation
 
 @verbatim
 MEDIUM OPERATIONS (in medium.lisp)
@@ -138,7 +139,7 @@ medium-text-style
 @end verbatim
 
 @node Port protocol
-@subheading Port protocol
+@subsection Port protocol
 
 @verbatim
 PORT (BRIDGE) TO GUI (A SERVER LIKE)
@@ -158,7 +159,7 @@ set-sheet-pointer-cursor
 @end verbatim
 
 @node Frame manager
-@subheading Frame manager, panes and gadgets
+@subsection Frame manager, panes and gadgets
 
 @verbatim
 FRAME MANAGER, PANES AND GADGETS
@@ -177,7 +178,7 @@ realize-mirror
 @end verbatim
 
 @node Pointer protocol (events?)
-@subheading Pointer protocol (events?)
+@subsection Pointer protocol (events?)
 
 @verbatim
 POINTER (port.lisp or pointer.lisp)
@@ -189,7 +190,7 @@ pointer-position
 @end verbatim
 
 @node Text size
-@subheading Text size
+@subsection Text size
 
 @verbatim
 TEXT SIZE (medium.lisp)
@@ -206,7 +207,7 @@ text-style-width
 @end verbatim
 
 @node Miscellaneous
-@subheading Miscellaneous
+@subsection Miscellaneous
 
 @verbatim
 MISC
@@ -216,7 +217,7 @@ medium-miter-limit          ; determine a draw for miter < sina/2
 @end verbatim
 
 @node Obsolete
-@subheading Obsolete
+@subsection Obsolete
 
 @verbatim
 NO LONGER NEEDED IN BACKEND
