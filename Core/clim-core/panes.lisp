@@ -384,9 +384,8 @@ order to produce a double-click")
 (defmethod (setf medium-background) (ink (pane pane))
   (setf (medium-background (sheet-medium pane)) ink))
 
-(defmethod compose-space ((pane pane) &key width height)
-  (make-space-requirement :width (or width 200)
-			  :height (or height 200)))
+(defmethod compose-space ((pane pane) &key (width 100) (height 100))
+  (make-space-requirement :width width :height height))
 
 (defmethod allocate-space ((pane pane) width height)
   (declare (ignorable pane width height))
@@ -1808,9 +1807,8 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   (dolist (child (alexandria:ensure-list contents))
     (sheet-adopt-child sheet child)))
 
-(defmethod compose-space ((bboard bboard-pane) &key width height)
-  (declare (ignore width height))
-  (make-space-requirement :width 300 :height 300))
+(defmethod compose-space ((bboard bboard-pane) &key (width 100) (height 100))
+  (make-space-requirement :width width :height height))
 
 ;;; VIEWPORT
 
@@ -2536,8 +2534,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    (user-min-height :accessor %pane-user-min-height)
    (user-max-height :accessor %pane-user-max-height)
    ;; size required by the stream
-   (stream-width :initform 0 :accessor stream-width)
-   (stream-height :initform 0 :accessor stream-height))
+   (stream-width :initform 100 :accessor stream-width)
+   (stream-height :initform 100 :accessor stream-height))
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
