@@ -156,6 +156,7 @@ port-force-output
 port-set-mirror-region
 port-set-mirror-transformation
 set-sheet-pointer-cursor
+port-set-mirror-name
 @end verbatim
 
 @node Frame manager

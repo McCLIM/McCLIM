@@ -1,0 +1,8 @@
+@anchor{Generic-Function clim-extensions:sheet-pretty-name}
+@deffn {Generic Function} {clim-extensions:sheet-pretty-name} sheet
+@findex clim-extensions:sheet-pretty-name
+Return the pretty name of @var{sheet}.
+The returned name is a string and may change over time.
+Only top-level sheets have a pretty name. It usually corresponds to the
+title of the associated window.
+@end deffn

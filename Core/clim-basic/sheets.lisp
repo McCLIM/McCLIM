@@ -735,6 +735,9 @@ might be different from the sheet's native region."
         (port-enable-sheet (port sheet) sheet)
         (port-disable-sheet (port sheet) sheet))))
 
+(defmethod (setf sheet-pretty-name) :after (new-name (sheet mirrored-sheet-mixin))
+  (climb:port-set-mirror-name (port sheet) (sheet-direct-mirror sheet) new-name))
+
 (defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
   (with-slots (native-transformation device-transformation) sheet
     (setf ;;native-transformation nil
@@ -747,16 +750,16 @@ might be different from the sheet's native region."
   (with-slots (native-region) sheet
     (unless native-region
       (let ((this-region (transform-region (sheet-native-transformation sheet)
-        				   (sheet-region sheet)))
+                                           (sheet-region sheet)))
             (parent (sheet-parent sheet)))
         (setf native-region
               (if parent
-        	  (region-intersection this-region
-        			       (transform-region
-        				(invert-transformation
-        				 (%sheet-mirror-transformation sheet))
-        				(sheet-native-region parent)))
-        	  this-region))))
+                  (region-intersection this-region
+                                       (transform-region
+                                        (invert-transformation
+                                         (%sheet-mirror-transformation sheet))
+                                        (sheet-native-region parent)))
+                  this-region))))
     native-region))
 
 #+ (or) ;; XXX: is this needed?
@@ -772,6 +775,15 @@ might be different from the sheet's native region."
               (sheet-native-transformation (sheet-parent sheet))
               (sheet-transformation sheet)))))
     native-transformation))
+
+;;; Named sheets
+
+(defclass named-sheet-mixin ()
+  (;; The NAME slot intentionally uses the same slot name as the NAME
+   ;; in the PANE class so that both collapse into a single effective
+   ;; slot in e.g. the TOP-LEVEL-SHEET-PANE class.
+   (name :initarg :name :reader sheet-name)
+   (%pretty-name :initarg :pretty-name :accessor clime:sheet-pretty-name)))
 
 
 ;;; Sheets as bounding rectangles

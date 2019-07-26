@@ -244,6 +244,14 @@ documentation produced by presentations.")
       (setf (slot-value frame 'layouts) nil))
     (setf (%frame-manager frame) fm)))
 
+(defmethod (setf frame-pretty-name) :after (new-value frame)
+  ;; If there is a top-level sheet, set its pretty name. The port can
+  ;; reflect this change in the window title.
+  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-pretty-name top-level-sheet) new-value))
+  ;; Let client code know.
+  (clime:note-frame-pretty-name-changed (frame-manager frame) frame new-value))
+
 (define-condition frame-layout-changed (condition)
   ((frame :initarg :frame :reader frame-layout-changed-frame)))
 
@@ -636,7 +644,8 @@ documentation produced by presentations.")
         (event-queue (frame-event-queue frame)))
     (setf (slot-value frame 'top-level-sheet)
           (make-pane-1 fm frame 'top-level-sheet-pane
-                       :name 'top-level-sheet
+                       :name (frame-name frame)
+                       :pretty-name (frame-pretty-name frame)
                        ;; sheet is enabled from enable-frame
                        :enabled-p nil))
     (generate-panes fm frame)
@@ -740,8 +749,8 @@ documentation produced by presentations.")
                                  :name ',name
                                  ,@(cdr form)))
        (:command-menu `(make-clim-command-menu-pane
-       			:name ',name
-       			,@(cdr form)))
+                                :name ',name
+                                ,@(cdr form)))
        (otherwise `(make-pane ,(first form) :name ',name ,@(cdr form)))))
     ;; Non-standard pane designator fed to the `make-pane'
     (t `(make-pane ',(first form) :name ',name ,@(cdr form)))))

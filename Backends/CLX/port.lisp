@@ -214,33 +214,24 @@
                       :map (sheet-enabled-p sheet)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
-  (let ((q (compose-space sheet))
-        (frame (pane-frame sheet)))
-    (let ((window (realize-mirror-aux
-                   port sheet
-                   :map nil
-                   :width (round-coordinate (space-requirement-width q))
-                   :height (round-coordinate (space-requirement-height q))))
-	  (name (frame-pretty-name frame)))
-      (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
-      (setf (xlib:wm-name window) name)
-      (xlib:change-property window
-                            :_NET_WM_NAME
-                            (babel:string-to-octets name :encoding :utf-8)
-                            :UTF8_STRING 8)
-      (setf (xlib:wm-icon-name window) name)
-      (xlib:change-property window
-                            :_NET_WM_ICON_NAME
-                            (babel:string-to-octets name :encoding :utf-8)
-                            :UTF8_STRING 8)
-      (xlib:set-wm-class
-       window
-       (string-downcase (frame-name frame))
-       (string-capitalize (frame-name frame)))
-      (setf (xlib:wm-protocols window) `(:wm_delete_window))
-      (xlib:change-property window
-                            :WM_CLIENT_LEADER (list (xlib:window-id window))
-                            :WINDOW 32))))
+  (let* ((q (compose-space sheet))
+         (window (realize-mirror-aux
+                  port sheet
+                  :map nil
+                  :width (round-coordinate (space-requirement-width q))
+                  :height (round-coordinate (space-requirement-height q))))
+         (name (clime:sheet-name sheet))
+         (instance-name (string-downcase name))
+         (class-name (string-capitalize name))
+         (pretty-name (clime:sheet-pretty-name sheet)))
+    (xlib:set-wm-class window instance-name class-name)
+    (%set-window-name window pretty-name)
+    (%set-window-icon-name window pretty-name)
+    (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
+    (setf (xlib:wm-protocols window) `(:wm_delete_window))
+    (xlib:change-property window
+                          :WM_CLIENT_LEADER (list (xlib:window-id window))
+                          :WINDOW 32)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
   (realize-mirror-aux port sheet
@@ -271,8 +262,6 @@
 				    :button-motion
 				    :owner-grab-button)
                       :map (sheet-enabled-p sheet)))
-
-
 
 (defmethod port-motion-hints ((port clx-port) (sheet mirrored-sheet-mixin))
   (let ((event-mask (xlib:window-event-mask (sheet-direct-xmirror sheet))))

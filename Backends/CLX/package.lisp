@@ -12,7 +12,9 @@
 	   #:x-keysym-to-clim-modifiers))
 
 (defpackage :clim-clx
-    (:use :clim :clim-lisp :clim-backend)
+  (:use :clim :clim-lisp :clim-backend)
+  (:import-from :alexandria
+                #:when-let*)
   (:import-from :climi
                 #:+alt-key+
                 ;;
@@ -23,7 +25,7 @@
                 #:port-grafts
 		#:%%sheet-native-transformation
 		#:%%set-sheet-native-transformation
-		#:device-transformation	
+		#:device-transformation
                 ;;
                 #:clamp
                 #:get-environment-variable
@@ -34,7 +36,7 @@
                 #:map-repeated-sequence
                 #:pixmap-mirror
 		#:do-sequence
-                #:with-double-buffering 
+                #:with-double-buffering
                 #:with-transformed-position
                 #:with-transformed-positions
                 #:with-medium-options
