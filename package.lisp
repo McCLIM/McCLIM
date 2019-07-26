@@ -1883,6 +1883,8 @@
    ;; sheets
    #:sheet-name
    #:sheet-pretty-name
+   #:named-sheet-mixin
+
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
    #:background
