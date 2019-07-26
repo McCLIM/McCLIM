@@ -21,6 +21,12 @@ top-level sheets in form of the following protocol:
 @include docstrings/fun-clim-extensions-sheet-pretty-name.texi
 @include docstrings/fun-clim-extensions-setf-sheet-pretty-name.texi
 
+The class @code{clim-extensions:named-sheet-mixin} can be added as a
+superclass to sheet classes that implement the above protocol. Otherwise
+default methods on @code{clim-extensions:sheet-name} and
+@code{clim-extensions:sheet-pretty-name} return @t{nil} and @t{"(Unnamed
+sheet)"} respectively.
+
 Furthermore @mcclim provides a way for clients to be notified when the
 pretty name of frame changes:
 
