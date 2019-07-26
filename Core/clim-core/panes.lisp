@@ -926,7 +926,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 ;;; TOP-LEVEL-SHEET
 
-(defclass top-level-sheet-pane (single-child-composite-pane)
+(defclass top-level-sheet-pane (named-sheet-mixin single-child-composite-pane)
   ()
   (:documentation "For the first pane in the architecture"))
 

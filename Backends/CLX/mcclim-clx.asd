@@ -1,7 +1,8 @@
 (in-package #:asdf-user)
 
 (defsystem #:mcclim-clx
-  :depends-on (#:clx
+  :depends-on (#:alexandria
+               #:clx
                #:cl-unicode
                #:mcclim-backend-common
                #:mcclim-fonts)

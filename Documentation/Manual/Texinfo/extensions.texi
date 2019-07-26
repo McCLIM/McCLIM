@@ -2,12 +2,29 @@
 @chapter Extensions
 
 @menu
+* Frame and sheet names::
 * Text editor substrate::
 * Extended text formatting::
 * Tab Layout::
 * Fonts and Extended Text Styles::
 * Raster Images::
 @end menu
+
+@node Frame and sheet names
+@section Frame and sheet names
+
+According to the @clim specification, a frame has a name and a pretty
+name the latter of which can be changed. @mcclim extends this design to
+top-level sheets in form of the following protocol:
+
+@include docstrings/fun-clim-extensions-sheet-name.texi
+@include docstrings/fun-clim-extensions-sheet-pretty-name.texi
+@include docstrings/fun-clim-extensions-setf-sheet-pretty-name.texi
+
+Furthermore @mcclim provides a way for clients to be notified when the
+pretty name of frame changes:
+
+@include docstrings/fun-clim-extensions-note-frame-pretty-name-changed.texi
 
 @node Text editor substrate
 @section Text editor substrate
