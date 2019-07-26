@@ -347,7 +347,7 @@ order to produce a double-click")
 			     basic-sheet)
   (
    (text-style :initarg :text-style :initform nil :reader pane-text-style)
-   (name :initarg :name :initform "(Unnamed Pane)" :reader pane-name)
+   (name :initarg :name :initform nil :reader pane-name)
    (manager :initarg :manager)
    (port :initarg :port)
    (frame :initarg :frame :initform *application-frame* :reader pane-frame)
