@@ -964,7 +964,7 @@ used.")
 	      (eql modifiers +shift-key+))
       (setq char (keyboard-event-character ev)))
     (if char
-        (climi::char-for-read char)
+        (climi::voodoo char)
 	event)))
 
 (defmethod convert-to-gesture ((ev pointer-button-press-event))

@@ -798,18 +798,13 @@ a presentation"
                                          :modifier-state 0
                                          :button +pointer-left-button+)))
 
-;;; XXX: this should look in the stream-input-buffer not in the queue.
 (defun highlight-applicable-presentation (frame stream input-context
                                           &optional (prefer-pointer-window t))
-  (let* ((queue (sheet-event-queue stream))
-         (event (event-queue-peek queue))
-         (sheet (and event (event-sheet event))))
-    (when (and event
-               (or (and (typep event 'pointer-event)
-                        (or prefer-pointer-window
-                            (eq stream sheet)))
-                   (typep event 'keyboard-event)))
-      (frame-input-context-track-pointer frame input-context sheet event)
+  (when-let ((event (stream-gesture-available-p stream)))
+    (when (or (and (typep event 'pointer-event)
+                   prefer-pointer-window)
+              (typep event 'keyboard-event))
+      (frame-input-context-track-pointer frame input-context stream event)
       ;; Stream only needs to see button press events.
       ;; XXX Need to think about this more.  Should any pointer events be
       ;; passed through?  If there's no presentation, maybe?
@@ -817,7 +812,10 @@ a presentation"
       ;; If we don't pass through other pointer events we let stream eat
       ;; scrolling events and similar - nacceptable. -- jd, 2017-11-26
       (when (typep event 'pointer-button-press-event)
-        (event-queue-read queue)
+        (stream-read-gesture stream
+                             :input-wait-test nil
+                             :input-wait-handler nil
+                             :pointer-button-press-handler nil)
         (funcall *pointer-button-press-handler* stream event)))))
 
 ;;; FIXME missing functions

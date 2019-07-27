@@ -1270,29 +1270,21 @@ function lambda list"))
                           This shouldn't happen!"
                          object type)))))
 
-;;; XXX: this should look in the stream-input-buffer not in the queue.
 (defun input-context-wait-test (stream)
-  (let* ((queue (sheet-event-queue stream))
-         (event (event-queue-peek queue)))
-    (when event
-      (let ((sheet (event-sheet event)))
-        (when (and (output-recording-stream-p sheet)
-                   (or (typep event 'pointer-event)
-                       (typep event 'keyboard-event))
-                   (not (gadgetp sheet)))
-          (return-from input-context-wait-test t))))
+  (if-let ((event (stream-gesture-available-p stream)))
+    (and (output-recording-stream-p stream)
+         (or (typep event 'pointer-event)
+             (typep event 'keyboard-event)))
     nil))
 
 (defun input-context-event-handler (stream)
-  (highlight-applicable-presentation *application-frame*
-                                     stream
-                                     *input-context*))
+  (highlight-applicable-presentation
+   *application-frame* stream *input-context*))
 
 (defun input-context-button-press-handler (stream button-event)
   (declare (ignore stream))
-  (frame-input-context-button-press-handler *application-frame*
-                                            (event-sheet button-event)
-                                            button-event))
+  (frame-input-context-button-press-handler
+   *application-frame* (event-sheet button-event) button-event))
 
 (defun highlight-current-presentation (frame input-context)
   (alexandria:when-let* ((port-pointer (port-pointer (port *application-frame*)))
@@ -1322,8 +1314,7 @@ function lambda list"))
                                     (return-from ,context-block
                                       (values object type event options))))
                           ,(if override nil '*input-context*)))
-                   (*pointer-button-press-handler*
-                    #'input-context-button-press-handler)
+                   (*pointer-button-press-handler* #'input-context-button-press-handler)
                    (*input-wait-test* #'input-context-wait-test)
                    (*input-wait-handler* #'input-context-event-handler))
                (return-from ,return-block ,form )))

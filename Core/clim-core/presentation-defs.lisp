@@ -885,6 +885,7 @@ history will be unchanged."
                       ;; XXX what about pointer gestures?
                       ;; XXX and delimiter gestures?
                       (unless *recursive-accept-p*
+                        ;; XXX: read-char-no-hang on seos? cyt
                         (let ((ag (read-char-no-hang stream nil stream t)))
                           (unless (or (null ag) (eq ag stream))
                             (unless (activation-gesture-p ag)
