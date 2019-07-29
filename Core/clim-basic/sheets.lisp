@@ -736,7 +736,10 @@ might be different from the sheet's native region."
         (port-disable-sheet (port sheet) sheet))))
 
 (defmethod (setf sheet-pretty-name) :after (new-name (sheet mirrored-sheet-mixin))
-  (climb:port-set-mirror-name (port sheet) (sheet-direct-mirror sheet) new-name))
+  ;; SHEET might not yet have a mirror if this is called e.g. during
+  ;; the pane generation phase of an application frame.
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (climb:port-set-mirror-name (port sheet) mirror new-name)))
 
 (defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
   (with-slots (native-transformation device-transformation) sheet
