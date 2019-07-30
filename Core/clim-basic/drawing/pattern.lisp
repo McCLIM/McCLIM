@@ -99,6 +99,8 @@ pattern, stencil, image etc)."))
   ((array :type (simple-array (unsigned-byte 32) 2)))
   (:documentation "Helper class of RGBA result of another pattern."))
 
+(declaim (ftype (function (t) (values (unsigned-byte 32) &optional nil))
+                %rgba-value))
 (defun %rgba-value (element)
   "Helper function collapsing uniform design into 4-byte RGBA value."
   (flet ((transform (parameter)

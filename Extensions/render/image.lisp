@@ -116,43 +116,124 @@
                                      (width (pattern-width image))
                                      (height (pattern-height image))
                                      stencil (stencil-dx 0) (stencil-dy 0)
-                                     clip-region
-                                &aux (dst-array (climi::pattern-array image))
-                                     (x2 (+ x width -1))
-                                     (y2 (+ y height -1)))
-  "Blends DESIGN onto IMAGE with STENCIL and CLIP-REGION."
-  (let ((stencil-array (and stencil (climi::pattern-array stencil))))
-    (do-regions ((src-j j y y y2)
-                 (src-i i x x x2))
-      (when (or (null clip-region)
-                (region-contains-position-p clip-region src-i src-j))
-        (let ((alpha (if stencil-array
-                         (let ((stencil-x (+ stencil-dx i))
-                               (stencil-y (+ stencil-dy j)))
-                           (if
-                            (array-in-bounds-p stencil-array stencil-y stencil-x)
-                            (aref stencil-array stencil-y stencil-x)
-                            #xff))
-                         #xff))
-              (ink (clime:design-ink design src-i src-j)))
-          (if (typep ink 'standard-flipping-ink)
-              (let-rgba ((r.fg g.fg b.fg a.fg) (let ((d1 (slot-value ink 'climi::design1))
-                                                     (d2 (slot-value ink 'climi::design2)))
-                                                 (logior (logxor (climi::%rgba-value d1)
-                                                                 (climi::%rgba-value d2))
-                                                         #xff)))
-                (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
-                  (setf (aref dst-array j i)
-                        (octet-blend-function* (color-octet-xor r.fg r.bg)
-                                               (color-octet-xor g.fg g.bg)
-                                               (color-octet-xor b.fg b.bg)
-                                               (octet-mult a.fg alpha)
-                                               r.bg g.bg b.bg a.bg))))
-              (let-rgba ((r.fg g.fg b.fg a.fg) (climi::%rgba-value ink))
-                (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
-                  (setf (aref dst-array j i)
-                        (octet-blend-function* r.fg g.fg b.fg (octet-mult a.fg alpha)
-                                               r.bg g.bg b.bg a.bg)))))))))
+                                     clip-region)
+  "Blends DESIGN onto IMAGE with STENCIL and a CLIP-REGION."
+  (declare (optimize (speed 3))
+           (type fixnum x y width height stencil-dx stencil-dy))
+  ;; Disregard CLIP-REGION if x,y,width,height is entirely contained.
+  (when (and clip-region
+             (region-contains-region-p
+              clip-region (make-rectangle* x y (+ x width) (+ y height)))) ; TODO we create almost this rectangle as our return value
+    (setf clip-region nil))
+  (let ((dst-array (climi::pattern-array image))
+        (stencil-array (and stencil (climi::pattern-array stencil)))
+        (x2 (+ x width -1))
+        (y2 (+ y height -1))
+        old-alpha old-ink
+        alpha ink mode
+        source-rgba source-r source-g source-b source-a
+
+        old-mode)
+    (declare (type (simple-array (unsigned-byte 32) 2) dst-array))
+    (flet ((update-alpha (i j)
+             (locally (declare (type (simple-array (unsigned-byte 8) 2) stencil-array))
+               (let ((stencil-x (+ stencil-dx i))
+                     (stencil-y (+ stencil-dy j)))
+                 (setf alpha
+                       (cond ((not (array-in-bounds-p stencil-array stencil-y stencil-x))
+                              nil)
+                             ((let ((value (aref stencil-array stencil-y stencil-x)))
+                                (if (= #xff value)
+                                    nil
+                                    value))))))))
+           (update-ink (i j)
+             (setf ink (clime:design-ink design i j))
+             (when (and (eq old-ink ink) (eql old-alpha alpha))
+               (return-from update-ink))
+
+             (cond ((typep ink 'standard-flipping-ink)
+                    (let-rgba ((r.fg g.fg b.fg a.fg) (let ((d1 (slot-value ink 'climi::design1))
+                                                           (d2 (slot-value ink 'climi::design2)))
+                                                       (logior (logxor (climi::%rgba-value d1)
+                                                                       (climi::%rgba-value d2))
+                                                               #xff)))
+                      (setf source-r r.fg
+                            source-g g.fg
+                            source-b b.fg)
+                      (cond (alpha
+                             (setf source-a (octet-mult a.fg alpha)
+                                   mode     :flipping/blend))
+                            (t
+                             (setf source-a    #x00
+                                   source-rgba (%vals->rgba source-r source-g source-b #xff)
+                                   mode        :flipping)))))
+                   ((not alpha)
+                    (let ((ink-rgba (climi::%rgba-value ink)))
+                      (if (= #xff (logand #xff ink-rgba))
+                          (setf source-rgba ink-rgba
+                                mode        :copy)
+                          (let-rgba ((r g b a) ink-rgba)
+                            (setf source-r r
+                                  source-g g
+                                  source-b b
+                                  source-a a
+                                  mode     :blend)))))
+                   (t
+                    (let-rgba ((r.fg g.fg b.fg a.fg) (climi::%rgba-value ink))
+                      (setf source-r r.fg
+                            source-g g.fg
+                            source-b b.fg
+                            source-a (octet-mult a.fg alpha)
+                            mode     (case source-a
+                                       (0
+                                        nil)
+                                       (255
+                                        (setf source-rgba (climi::%rgba-value ink))
+                                        :copy)
+                                       (t
+                                        :blend))))))))
+      (do-regions ((src-j j y y y2)
+                   (src-i i x x x2))
+        (when (or (null clip-region)
+                  (region-contains-position-p clip-region src-i src-j))
+          (when stencil-array
+            (update-alpha i j))
+          (update-ink i j)
+
+          #+debug (unless (and (eq mode old-mode) (eql old-alpha alpha))
+                    (format t "~A -> ~A ~A -> ~A @ ~D,~D ~D,~D~%"
+                            old-mode mode old-alpha alpha
+                            i j width height)
+                    (when (eq mode :blend)
+                      (format t "  ~D ~D ~D ~D~%"
+                              source-r source-g source-b source-a))
+                    (setf old-mode mode))
+
+          (setf old-alpha alpha
+                old-ink   ink)
+
+          (case mode
+            ((nil))
+            (:flipping
+             (setf (aref dst-array j i) (logxor source-rgba
+                                                (aref dst-array j i))))
+            (:flipping/blend
+             (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
+               (setf (aref dst-array j i)
+                     (octet-blend-function*
+                      (color-octet-xor source-r r.bg)
+                      (color-octet-xor source-g b.bg)
+                      (color-octet-xor source-b g.bg)
+                      source-a
+                      r.bg g.bg b.bg a.bg))))
+            (:copy
+             (setf (aref dst-array j i) source-rgba))
+            (:blend
+             (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
+               (setf (aref dst-array j i)
+                     (octet-blend-function*
+                      source-r source-g source-b source-a
+                      r.bg     g.bg     b.bg     a.bg)))))))))
   ;; XXX These #'1- are fishy. We don't capture correct region (rounding
   ;; issue?). This problem is visible when scrolling.
   (make-rectangle* (1- x) (1- y) (+ x width) (+ y height)))
