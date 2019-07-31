@@ -7,7 +7,7 @@ McCLIM
 
 
 @macro glossentry{ENTRY}
-@b{\ENTRY\}
+@noindent @b{\ENTRY\}
 @cindex \ENTRY\
 @end macro
 
