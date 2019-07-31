@@ -410,7 +410,7 @@ defined yourself, in this case @t{quit} and @t{parity}.
 @ref{fig:figex2} shows what ought to be visible on the screen.
 
 @float Figure,fig:figex2
-@image{ex2,5in,5in,View of the improved example}
+@image{figures/ex2-screenshot,5in,5in,View of the improved example}
 @end float
 
 Notice that commands, in order to be available from the command line,

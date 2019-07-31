@@ -1,4 +1,5 @@
-IMAGES=ex2.pdf inspect-as-cells.pdf inspect-object-1.pdf inspect-object-2.pdf inspect-object-3.pdf
+IMAGES=figures/inspect-as-cells.pdf                                                             \
+       figures/inspect-object-1.pdf figures/inspect-object-2.pdf figures/inspect-object-3.pdf
 
 SOURCES=mcclim.texi user-manual.texi reference-manual.texi developer-manual.texi extensions.texi auxiliary-material.texi chap-debugger.texi chap-inspector.texi chap-listener.texi docstrings $(IMAGES)
 
@@ -10,7 +11,7 @@ VPATH=./figures
 
 .PHONY: all clean distclean
 
-%.pdf: figures/%.fig
+figures/%.pdf: figures/%.fig
 	fig2dev -Lpdftex -m 0.75  $< $@
 
 all: $(RESULTS)

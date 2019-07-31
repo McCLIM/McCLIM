@@ -103,7 +103,7 @@ the @t{Toggle Show List Cells} command.
 
 The new cons cell diagram format looks like this:
 
-@center @image{inspect-as-cells}
+@center @image{figures/inspect-as-cells}
 @end table
 
 @node Extending Clouseau
@@ -243,7 +243,7 @@ The second macro, @fmacro{inspector-table-row}, creates a row with the
 output of one form bolded on the left and the output of the other on the
 right. This gives us some reasonably nice-looking output:
 
-@center @image{inspect-object-1}
+@center @image{figures/inspect-object-1}
 
 But what we really want is something more closely adapted to our
 needs. It would be nice if we could just have a table of things like
@@ -274,7 +274,7 @@ it should be.
 Then, in the @fmacro{inspector-table} body, we insert a couple of calls
 to @cl{x=y} and we're done. It looks like this:
 
-@center @image{inspect-object-2}
+@center @image{figures/inspect-object-2}
 
 Finally, for our amusement and further practice, we'll try to get some
 mathematical symbols---in this case we'll just need @math{\overline
@@ -335,7 +335,7 @@ It should wrap its output in @fmacro{with-output-as-presentation}.
 
 Our final version looks like this:
 
-@center @image{inspect-object-3}
+@center @image{figures/inspect-object-3}
 
 For more examples of how to extend the inspector, you can look at
 @t{inspector.lisp}.
