@@ -316,7 +316,7 @@ frame.  These slots are typically used for holding all
 application-specific data.  The current instance of the application
 frame will always be the value of the special variable
 @t{*application-frame*},
-@vindex *application-frame*
+@vindex @symbol{*application-frame*,clim}
 so that the values of these slots can be accessed.  In our example, we
 do not initially have any further slots.
 
@@ -726,9 +726,7 @@ the application frame.
 Each command table has a @emph{name} and that @clim{} manages a global
 @emph{namespace} for command tables.
 
-@defun {clim:find-command-table} name &key (errorp t)
-@findex find-command-table
-
+@defun {@symbol{find-command-table,clim}} name &key (errorp t)
 This function returns the command table with the name @var{name}.  If
 there is no command table with that name, then what happens depends on
 the value of @var{errorp}.  If @var{errorp} is @emph{true}, then an

@@ -73,14 +73,14 @@ Quit debugger
 @node Debugger API
 @subsection Debugger API
 
-@deffn {function} {debugger} condition me-or-my-encapsulation
+@deffn {function} {@symbol{debugger,clim-debugger}} condition me-or-my-encapsulation
 
 Starts debugger with @var{condition}.  @var{me-or-my-encapsulation}
 should be supplied by the Lisp implementation allowing to encapsulate or
 supply different debugger for recursive debugger calls.
 @end deffn
 
-@deffn {macro} {with-debugger} options &body body
+@deffn {macro} {@symbol{with-debugger,clim-debugger}} options &body body
 
 Executes the code in @var{body} invoking the @clim debugger when an
 unhandled condition is signalled.  The macro binds @cl{*debugger-hook*}
@@ -88,7 +88,7 @@ to @cl{#'debugger}.  Bindings are inherited by new threads.
 @var{options} are not used at the moment.
 @end deffn
 
-@deffn {function} {install-debugger}
+@deffn {function} {@symbol{install-debugger,clim-debugger}}
 
 Installs @t{clim-debugger} globally (no need to wrap body in
 @code{with-debugger}).

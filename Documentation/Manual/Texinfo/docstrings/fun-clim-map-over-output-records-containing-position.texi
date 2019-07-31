@@ -1,6 +1,5 @@
 @anchor{Generic-Function clim:map-over-output-records-containing-position}
-@deffn {Generic Function} {clim:map-over-output-records-containing-position} function record x y &optional x-offset y-offset &rest function-args
-@findex clim:map-over-output-records-containing-position
+@deffn {Generic Function} {@symbol{map-over-output-records-containing-position,clim}} function record x y &optional x-offset y-offset &rest function-args
 Maps over all of the children of RECORD that
 contain the point at (X,Y), calling FUNCTION on each one. FUNCTION is
 a function of one or more arguments, the first argument being the

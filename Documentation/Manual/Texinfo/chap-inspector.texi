@@ -345,13 +345,13 @@ For more examples of how to extend the inspector, you can look at
 
 The following symbols are exported from the @cl{clouseau} package:
 
-@deftp {Function} {inspector} object &key new-process
+@deftp {Function} {@symbol{inspector,clouseau}} object &key new-process
 
 Inspect @cl{object}. If @cl{new-process} is @cl{t}, Clouseau will be run
 in a new process.
 @end deftp
 
-@deffn {Generic Function} {inspect-object} object pane
+@deffn {Generic Function} {@symbol{inspect-object,clouseau}} object pane
 
 Display inspected representation of @cl{object} to the extended output
 stream @cl{pane}. This requires that @cl{*application-frame*} be bound
@@ -359,27 +359,27 @@ to an inspector application frame, so it isn't safe to use in other
 applications.
 @end deffn
 
-@deffn {Generic Function} {inspect-object-briefly} object pane
+@deffn {Generic Function} {@symbol{inspect-object-briefly,clouseau}} object pane
 
 A brief version of @genfun{inspect-object}. The output should be short,
 and should try to fit on one line.
 @end deffn
 
-@deffn {Generic Function} {define-inspector-command} name args &rest body
+@deffn {Generic Function} {@symbol{define-inspector-command,clouseau}} name args &rest body
 
 This is just an inspector-specific version of
 @genfun{define-command}. If you want to define an inspector command for
 some reason, use this.
 @end deffn
 
-@deffn {Macro} {inspector-table} (object pane) header \body body
+@deffn {Macro} {@symbol{inspector-table,clouseau}} (object pane) header \body body
 
 Present @cl{object} in tabular form on @cl{pane}, with @cl{header}
 evaluated to print a label in a box at the top. @cl{body} should output
 the rows of the table, possibly using @cl{inspector-table-row}.
 @end deffn
 
-@deffn {Macro} {inspector-table-row} (pane) left right
+@deffn {Macro} {@symbol{inspector-table-row,clouseau}} (pane) left right
 
 Output a table row with two items, produced by evaluating @cl{left} and
 @cl{right}, on @cl{pane}. This should be used only within

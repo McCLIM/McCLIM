@@ -421,8 +421,7 @@ update could be the result of a timer event, or of communication with
 an external process.
 
 @anchor{Generic-Function clim:redisplay-frame-pane}
-@deffn {Generic Function} {clim:redisplay-frame-pane} frame pane &key force-p
-@findex clim:redisplay-frame-pane
+@deffn {Generic Function} {@symbol{redisplay-frame-pane,clim}} frame pane &key force-p
 @end deffn
 
 Calling this generic function causes an immediate redisplay of
@@ -437,8 +436,7 @@ function @t{pane-needs-redisplay}.  It results in an unconditional
 redisplay of @var{pane}.
 
 @anchor{Generic-Function clim:redisplay-frame-panes}
-@deffn {Generic Function} {clim:redisplay-frame-panes} frame &key force-p
-@findex clim:redisplay-frame-panes
+@deffn {Generic Function} {@symbol{redisplay-frame-panes,clim}} frame &key force-p
 @end deffn
 
 Calling this generic function causes an immediate redisplay of all the
@@ -627,11 +625,9 @@ doesn't have to) trigger @gloss{layout-protocol}.  Macro
 @cindex command processing
 @cindex command tables
 
-@defmac {clim:define-command-table} name &key inherit-from menu inherit-menu
-@findex define-command-table
+@defmac {@symbol{define-command-table,clim}} name &key inherit-from menu inherit-menu
 @end defmac
-@defun {clim:make-command-table} {name &key inherit-from inherit-menu (errorp t)}
-@findex make-command-table
+@defun {@symbol{make-command-table,clim}} {name &key inherit-from inherit-menu (errorp t)}
 @end defun
 
 By default command tables inherit from

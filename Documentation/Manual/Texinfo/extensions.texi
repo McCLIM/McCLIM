@@ -63,10 +63,8 @@ alignment.
 
 @anchor{Function clime:page-initial-position}
 @anchor{Function clime:page-final-position}
-@deffn {Function} {clime:page-initial-position} stream
-@deffnx {Function} {clime:page-final-position} stream
-@findex clime:page-initial-position
-@findex clime:page-final-position
+@deffn {Function} {@symbol{page-initial-position,clime}} stream
+@deffnx {Function} {@symbol{page-final-position,clime}} stream
 Both functions return two values, x and y coordinates of the respective
 position.  Initial position is where the cursor is placed on a fresh
 page, and the final position is where the cursor is placed right before
@@ -75,15 +73,13 @@ alignment.
 @end deffn
 
 @anchor{Function clime:stream-page-region}
-@deffn {Function} {clime:stream-page-region} stream
-@findex clime:stream-page-region
+@deffn {Function} {@symbol{stream-page-region,clime}} stream
 This function returns a region which corresponds to the stream page
 format.  This region corresponds the stream margins.
 @end deffn
 
 @anchor{Macro clime:with-temporary-margins}
-@deffn {Macro} {clime:with-temporary-margins} (stream &key (move-cursor t) left right top bottom) &body body
-@findex clime:with-temporary-margins
+@deffn {Macro} {@symbol{with-temporary-margins,clime}} (stream &key (move-cursor t) left right top bottom) &body body
 Execute @var{body} in a dynamic environment where @var{stream}'s
 margins are augmented with @var{left}, @var{right}, @var{top} and
 @var{bottom}.  Not all margins have to be specified.  If they are not
@@ -291,13 +287,11 @@ Raster image backend includes a medium that implements:
 @end itemize
 
 @anchor{Macro clime:with-output-to-image-stream}
-@deffn {Macro} {clime:with-output-to-image-stream} (stream-var file-stream format &rest options) &body body
-@findex clime:with-output-to-raster-image-stream
+@deffn {Macro} {@symbol{with-output-to-image-stream,clime}} (stream-var file-stream format &rest options) &body body
 @end deffn
 
 @anchor{Macro clime:with-output-to-rgba-pattern}
-@deffn {Macro} {clime:with-output-to-rgba-pattern} (stream-var image &rest options) &body body
-@findex clime:with-output-to-rgba-pattern
+@deffn {Macro} {@symbol{with-output-to-rgba-pattern,clime}} (stream-var image &rest options) &body body
 @end deffn
 
 Within @code{body}, @code{stream-var} is bound to a stream that produces
@@ -314,7 +308,7 @@ pairs.  These are the supported keywords:
   @code{:height} --- specifies the height of the image. Its default value is 1000.
 @end itemize
 
-@defmac {clime:with-output-to-raster-image-stream}
+@defmac {@symbol{with-output-to-raster-image-stream,clime}}
 An image describing the output to the @code{stream-var} stream will be
 written to the stream @code{file-stream} using the format
 @code{format}. @code{format} is a symbol that names the type of the
@@ -323,7 +317,7 @@ image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
 @code{ppm}. Its default value is @code{:png}.
 @end defmac
 
-@defmac {clime:with-output-to-rgba-pattern}
+@defmac {@symbol{with-output-to-rgba-pattern,clime}}
 An image describing the output to the @code{stream-var} stream will be
 returned as an rgba pattern (of class @code{clime:image-pattern}).
 @end defmac
