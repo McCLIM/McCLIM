@@ -38,13 +38,13 @@ There are three types of backends:
 
 This type doesn't implement any kind of events and allows only drawing
 on it. A good example of it is the @xref{PostScript Backend} which is
-part of @emph{CLIM II} specification.
+part of @emph{@clim{} II} specification.
 
 @item Basic backend
 
 OpenGL, X, or HTML 5 canvas are resources which provide only drawing and
 event handling primitives. In this case we need to wrap their APIs
-for @mcclim to use. @mcclim will then use these drawing and windowing
+for @mcclim{} to use. @mcclim{} will then use these drawing and windowing
 primitives to implement portable widgets.
 
 @item Native backend
@@ -52,7 +52,7 @@ primitives to implement portable widgets.
 Native backend is based on already complete GUI library which provides
 a rich set of widgets (for example Cocoa or Win32 API). Additionally
 to the things needed to be implement in the first two cases, we can
-also map these native look and feel widgets in @mcclim.
+also map these native look and feel widgets in @mcclim{}.
 @end table
 
 The @code{clim-null} backend can be used as a template to start with a

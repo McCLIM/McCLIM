@@ -1,20 +1,20 @@
-@clim is a large layered software system that allows the user to
-customize it at each level.  The most simple ways of using @clim is to
+@clim{} is a large layered software system that allows the user to
+customize it at each level.  The most simple ways of using @clim{} is to
 directly use its top layer, which contains application frames, panes,
 and gadgets, very similar to those of traditional windowing system
 toolkits such as GTK, Tk, and Motif.
 
-But there is much more to using @clim.  In @clim, the upper layer with
+But there is much more to using @clim{}.  In @clim{}, the upper layer with
 panes and gadgets is written on top of a basic layer containing more
 basic functionality in the form of sheets.  Objects in the upper layer
 are typically instances of classes derived from those of the lower
 layer.  Thus, nothing prevents a user from adding new gadgets and panes
 by writing code that uses the sheet layer.
 
-Finally, since @clim is written in Common Lisp, essentially all parts of
+Finally, since @clim{} is written in Common Lisp, essentially all parts of
 it can be modified, replaced, or extended.
 
-For that reason, a user's manual for @clim must contain not only a
+For that reason, a user's manual for @clim{} must contain not only a
 description of the protocols of the upper layer, but also of all
 protocols, classes, functions, macros, etc. that are part of the
 specification.
@@ -27,33 +27,33 @@ specification.
 @node Standards
 @section Standards
 
-This manual documents @mcclim @value{MCCLIMVERSION} which is a mostly
-complete implementation of the @clim 2.0 specification and its revision
-2.2. To our knowledge version~2.2 of the @clim specification is only
+This manual documents @mcclim{} @value{MCCLIMVERSION} which is a mostly
+complete implementation of the @clim{} 2.0 specification and its revision
+2.2. To our knowledge version~2.2 of the @clim{} specification is only
 documented in the ``CLIM 2 User's Guide'' by Franz. While that document
 is not a formal specification, it does contain many cleanups and is
 often clearer than the official specification; on the other hand, the
 original specification is a useful reference. This manual will note
-where @mcclim has followed the 2.2 API.
+where @mcclim{} has followed the 2.2 API.
 @cindex specification
 
 Also, some protocols mentioned in the 2.0 specification, such as parts
-of the incremental redisplay protocol, are clearly internal to @clim and
+of the incremental redisplay protocol, are clearly internal to @clim{} and
 not well described.  It will be noted here when they are partially
-implemented in @mcclim or not implemented at all.
+implemented in @mcclim{} or not implemented at all.
 
 @node How CLIM Is Different
 @section How CLIM Is Different
 
-Many new users of @clim have a hard time trying to understand how it
+Many new users of @clim{} have a hard time trying to understand how it
 works and how to use it.  A large part of the problem is that many such
 users are used to more traditional GUI toolkits, and they try to fit
-@clim into their mental model of how GUI toolkits should work.
+@clim{} into their mental model of how GUI toolkits should work.
 
-But @clim is much more than just a GUI toolkit, as suggested by its name,
+But @clim{} is much more than just a GUI toolkit, as suggested by its name,
 it is an @emph{interface manager}, i.e. it is a complete mediator
 between application ``business logic'' and the way the user interacts
-with objects of the application.  In fact, @clim doesn't have to be used
+with objects of the application.  In fact, @clim{} doesn't have to be used
 with graphics output at all, as it contains a large collection of
 functionality to manage text.
 @cindex interface manager
@@ -70,9 +70,9 @@ that it becomes hard to even remember two consecutive events.  The
 effect of event-driven programming is that applications written that way
 have very rudimentary interaction policies.
 
-At the lowest level, @clim also has an event loop, but most application
-programmers never have any reason to program at that level with @clim.
-Instead, @clim has a @emph{command loop}
+At the lowest level, @clim{} also has an event loop, but most application
+programmers never have any reason to program at that level with @clim{}.
+Instead, @clim{} has a @emph{command loop}
 @cindex command loop
 at a much higher level than the event loop.  At each iteration of the
 command loop:
@@ -99,12 +99,12 @@ command loop:
   incremental redisplay.
 @end enumerate
 
-Instead of attaching event handlers to gadgets, writing a @clim
+Instead of attaching event handlers to gadgets, writing a @clim{}
 application therefore consists of:
 
 @itemize @bullet
 @item
- writing @clim commands that modify the application data structures
+ writing @clim{} commands that modify the application data structures
   independently of how those commands are invoked, and which may take
   application objects as arguments;
 @item
@@ -119,7 +119,7 @@ application therefore consists of:
   presentations, textual commands, etc).
 @end itemize
 
-By using @clim as a mediator of command invocation and argument
+By using @clim{} as a mediator of command invocation and argument
 acquisition, you can obtain some very modular code.  Application logic
 is completely separate from interaction policies, and the two can evolve
 separately and independently.
