@@ -15,23 +15,26 @@
 @node Building McCLIM
 @section Building McCLIM
 
-@subsection Examples and demos
-The @mcclim{} source distribution comes with a number of demos and
-applications.  They are intended to showcase specific @clim{} features,
-demonstrate programming techniques or provide useful tools.
+The @mcclim{} source distribution comes with a number of demos, examples
+and applications.  They are intended to showcase specific @clim{}
+features, demonstrate programming techniques or provide useful tools.
 
-These demos and applications are available in the @t{Examples} and
-@t{Apps} subdirectories of the source tree's root directory.
-Instructions for compiling, loading and running some of the demos are
-included in the files with the @mcclim{} installation instructions for
-your Common Lisp implementation.
+These demos and applications are available in the @file{Examples} and
+@file{Apps} subdirectories of the source tree's root directory.  The
+following sections give a brief overview of the included examples and
+applications and explain how to compile, load and run them.
+Furthermore, the @file{INSTALL} file in the source tree's root directory
+contains more detailed @mcclim{} installation instructions for your Common
+Lisp implementation.
+
+@subsection Examples and demos
 
 Demos are meant to be run after loading the @t{clim-examples} system
-from the frame created with @t{(clim-demo:demodemo)}.
+from the frame created with @code{(clim-demo:demodemo)}.
 
-The easiest way to try this is to use @emph{Quicklisp} library
-manager. Assuming that this is already setup, trying out the demos is
-straightforward:
+The easiest way to try this is to use the @emph{Quicklisp} library
+manager. Assuming that Quicklisp has already been set up, trying out the
+demos is straightforward:
 
 @lisp
 (ql:quickload 'clim-examples)
@@ -47,18 +50,18 @@ also works well starting from the @mcclim{} source code directory.
 (clim-demo:demodemo)
 @end lisp
 
-Available demos may be explored by a programmer in @t{Examples}
+The source code of all demos can be found in the @file{Examples}
 directory.
 
 @subsection Applications
 
 Additionally @mcclim{} has a few bundled applications:
 
-@table @t
+@table @file
 @item Apps/Listener
 
-  @clim{}-enabled Lisp listener. System name is @t{clim-listener}. See
-  instructions in @t{Apps/Listener/README} for more information.
+@clim{}-enabled Lisp listener.  System name is @t{clim-listener}.  See
+instructions in @file{Apps/Listener/README} for more information.
 
 @lisp
 (asdf:load-system 'clim-listener)
@@ -67,8 +70,8 @@ Additionally @mcclim{} has a few bundled applications:
 
 @item Apps/Inspector
 
-  @clim{}-enabled Lisp inspector. System name is @t{clouseau}. See
-  instructions in @t{Apps/Inspector/INSTALL} for more information..
+@clim{}-enabled Lisp inspector.  System name is
+@t{clouseau}.  @xref{Inspector} for more information.
 
 @lisp
 (asdf:load-system 'clouseau)
@@ -77,9 +80,9 @@ Additionally @mcclim{} has a few bundled applications:
 
 @item Apps/Debugger
 
-  Common Lisp debugger implemented in @mcclim{}. It uses a portable
-  debugger interface for @t{sldb} (part of Slime project). System name
-  is @t{clim-debugger}.
+Common Lisp debugger implemented in @mcclim{}.  It uses the portable
+debugger interface for @t{sldb} (part of Slime project).  System name is
+@t{clim-debugger}.  @xref{Debugger} for more information.
 
 @lisp
 (asdf:load-system 'clim-debugger)
@@ -89,11 +92,11 @@ Additionally @mcclim{} has a few bundled applications:
 
 @item Apps/Functional-Geometry
 
-  Peter Henderson idea, see
-  @uref{http://www.ecs.soton.ac.uk/~ph/funcgeo.pdf} and
-  @uref{http://www.ecs.soton.ac.uk/~ph/papers/funcgeo2.pdf} implemented
-  in Lisp by Frank Buss. @clim{} Listener interface by Rainer
-  Joswig. System name is @t{functional-geometry}.
+Peter Henderson idea, see
+@uref{http://www.ecs.soton.ac.uk/~ph/funcgeo.pdf} and
+@uref{http://www.ecs.soton.ac.uk/~ph/papers/funcgeo2.pdf} implemented in
+Lisp by Frank Buss.  @clim{} Listener interface by Rainer Joswig. System
+name is @t{functional-geometry}.
 
 @lisp
 (asdf:load-system 'functional-geometry)
@@ -103,9 +106,6 @@ Additionally @mcclim{} has a few bundled applications:
 
 @end table
 
-@c
-@c The first application
-@c
 @node The first application
 @section The first application
 @cindex building an application
@@ -133,20 +133,20 @@ A @clim{} application is made up of a hierarchy of an @gloss{application
 frame}, @gloss{panes} and @gloss{gadgets} (gadgets are special kinds
 of panes):
 
-@table @samp
+@table @asis
 @item application frame
-  An @emph{application frame} is what would usually be called an
-  application.
+An @emph{application frame} is what would usually be called an
+application.
 
 @item panes
-  At a very high level, panes describe an application frame's visual
-  building blocks: a side bar, a menu bar, a table displaying a list
-  of items, a text input are all panes. They can be used by
-  application programmers to compose the top-level user interface of
-  their applications, as well as auxiliary components such as menus
-  and dialogs. In addition, panes can be more abstract such as layout
-  panes such as @t{hbox}, @t{vbox} to arrange other panes horizontally
-  or vertically, etc.
+At a very high level, panes describe an application frame's visual
+building blocks: a side bar, a menu bar, a table displaying a list of
+items, a text input are all panes. They can be used by application
+programmers to compose the top-level user interface of their
+applications, as well as auxiliary components such as menus and
+dialogs. In addition, panes can be more abstract such as layout panes
+such as @t{hbox}, @t{vbox} to arrange other panes horizontally or
+vertically, etc.
 
 @item gadgets
 @emph{gadgets} correspond to what other toolkits call @emph{widgets}
@@ -178,7 +178,7 @@ chronological order) to redraw the contents of the area.
 An application can have a pane establish this display list in several
 fundamentally different ways, each more sophisticated:
 
-@table @samp
+@table @asis
 @item Simple application
 Very simple applications have no internal data structure to keep track
 of application objects, and simply produce output to the pane from
@@ -402,7 +402,7 @@ including @t{(:pointer-documentation t)} in the frame definition.
 If you execute this example, you will find that you now have three
 different panes, the application pane, the interactor pane and the
 pointer documentation pane.  In the pointer documentation pane, you will
-see the text @t{R possibilities} which indicates that if you click the
+see the text @samp{R possibilities} which indicates that if you click the
 right mouse button, you will automatically see a popup menu that lets
 you choose a command.  In our case, you will have the default commands
 that are automatically proposed by @mcclim{} plus the commands that you
@@ -411,7 +411,8 @@ defined yourself, in this case @t{quit} and @t{parity}.
 @ref{fig:figex2} shows what ought to be visible on the screen.
 
 @float Figure,fig:figex2
-@image{figures/ex2-screenshot,5in,5in,View of the improved example}
+@center @image{figures/ex2-screenshot,5in,5in,View of the improved example}
+@caption{View of the improved example.}
 @end float
 
 Notice that commands, in order to be available from the command line,
@@ -434,7 +435,7 @@ that by making sure that the order between (partially) overlapping
 output records is respected.
 
 Not all panes support output recording, but certainly application panes
-do, so it is good to use some subclass of @t{application-pane} to
+do, so it is good to use some subclass of @class{application-pane} to
 display application-specific object, because output recording is then
 automatic.
 
@@ -513,7 +514,7 @@ that automates a large part of this task.  As we mentioned earlier,
 @clim{} captures output in the form of @emph{output records}.  The same
 mechanism is used to obtain incremental redisplay.
 
-To use incremental redisplay, Client code remains structured in the
+To use incremental redisplay, client code remains structured in the
 simple way that was mention above: after each iteration of the command
 loop, the display function output the entire data structure as usual,
 except that it helps the incremental redisplay mechanism by telling @clim{}
@@ -536,7 +537,7 @@ Here is the code:
 @include ex2c.lisp
 @end lisp
 
-We store the numbers in a slot called @t{numbers} of the application
+We store the numbers in a slot called @slot{numbers} of the application
 frame.  However, we store each number in its own list.  This is a simple
 way to provide a unique identity for each number.  We could not use the
 number itself, because two numbers could be the same and the identities
@@ -551,8 +552,8 @@ itself as the cache value and @t{eql} as the test to determine whether
 the output is going to be the same as last time.
 
 For convenience, we display a @t{*} at the beginning of the current
-line, and we provide two commands @t{next} and @t{previous} to navigate
-between the lines.
+line, and we provide two commands @command{next} and @command{previous}
+to navigate between the lines.
 
 Notice that in the declaration of the pane in the application frame, we
 have given the option @t{:incremental-redisplay t}.  This informs @clim{}
@@ -627,16 +628,17 @@ underlying object being the number 15.  The argument @t{t} to
 is @t{*standard-output*}.
 
 Thus, if the @t{out} command has been executed, and then the user types
-``Get Date'' in the interactor pane, the @t{get-date} command will try
-to acquire its arguments, the first of presentation type
+@samp{Get Date} in the interactor pane, the @t{get-date} command will
+try to acquire its arguments, the first of presentation type
 @t{name-of-month} and the second of type @t{day-of-month}.  At the first
-prompt, the user can click on the string ``March'' but not on the string
-``fifteen'' in the application pane.  At the second prompt it is the
-string ``fifteen'' that is clickable, whereas ``March'' is not.
+prompt, the user can click on the string @samp{March} but not on the
+string @samp{fifteen} in the application pane.  At the second prompt it
+is the string @samp{fifteen} that is clickable, whereas @samp{March} is
+not.
 
 The @t{get-date} command will acquire the underlying objects.  What is
 finally displayed (in the interactor pane, which is the standard input
-of the frame), is ``the 15 of The third month''.
+of the frame), is @samp{the 15 of The third month}.
 
 @node Using views
 @section Using views
@@ -655,7 +657,7 @@ extended output streams.
 
 The example shown here has been stripped to a bare minimum in order to
 illustrate the important concepts.  A more complete version can be found
-in @t{Examples/views.lisp} in the @mcclim{} source tree.
+in @file{Examples/views.lisp} in the @mcclim{} source tree.
 
 Here is the example:
 
@@ -671,15 +673,15 @@ function that is declared to be the display function of the main pane in
 the application frame.  The @t{display-main-pane} function trampolines
 to a generic function called @t{display-pane-with-view}, and which takes
 an additional argument compared to the display functions of @clim{} panes.
-This additional argument is of type @t{view} which allows us to dispatch
+This additional argument is of type @class{view} which allows us to dispatch
 not only on the type of frame and the type of pane, but also on the type
 of the current default view.  In this example the view argument is
 simply taken from the default view of the pane.
 
-A possibility that is not obvious from reading the @clim{} specification is
-to have views that contain additional slots.  Our example defines two
-subclasses of the @clim{} @t{view} class, namely @t{members-view} and
-@t{person-view}.
+A possibility that is not obvious from reading the @clim{} specification
+is to have views that contain additional slots.  Our example defines two
+subclasses of the @clim{} @class{view} class, namely
+@class{members-view} and @class{person-view}.
 
 The first one of these does not contain any additional slots, and is
 used when a global view of the members of our organization is wanted.
@@ -727,10 +729,10 @@ Each command table has a @emph{name} and that @clim{} manages a global
 @defun {clim:find-command-table} name &key (errorp t)
 @findex find-command-table
 
-This function returns the command table with the name @emph{name}.  If
+This function returns the command table with the name @var{name}.  If
 there is no command table with that name, then what happens depends on
-the value of @emph{errorp}.  If @emph{errorp} is @emph{true}, then an
-error of type @t{command-table-not-found} is signaled.  If @emph{errorp}
+the value of @var{errorp}.  If @var{errorp} is @emph{true}, then an
+error of type @class{command-table-not-found} is signaled.  If @var{errorp}
 is @emph{false}, otherwise @t{nil} is returned.
 @end defun
 
@@ -765,10 +767,10 @@ while accessing the sub-menus.
 @end lisp
 
 The only argument for @t{:menu-bar} can be:
-@table @samp
+@table @code
 @item T (default)
 @mcclim{} will provide the menu bar. Later, when you start defining
-commands, you can provide a @t{(:menu t)} argument to command
+commands, you can provide a @code{(:menu t)} argument to command
 definition that will add this command to menu bar.
 
 @item NIL
@@ -805,37 +807,38 @@ function) with @t{new-command-table}.
 @include fun-clim-add-menu-item-to-command-table.texi
 
 Function arguments:
-@table @samp
+@table @var
 
 @item command-table
 Command table to which we want to add the menu item.
 
 @item string
 Name of the menu item as it will appear on the menu bar. Its character
-case is ignored e.g. you may give it @t{file} or @t{FILE} but it will
-appear as @t{File}.
+case is ignored e.g. you may give it @samp{file} or @samp{FILE} but it
+will appear as @samp{File}.
 
 @item type and value
-type can be one of @t{:command}, @t{:function}, @t{:menu} and
-@t{:divider}. Value of @t{value} depends on @t{type}:
+@var{type} can be one of @t{:command}, @t{:function}, @t{:menu} and
+@t{:divider}. Value of @var{value} depends on @var{type}:
 
-@table @samp
+@table @code
 @item :command
-@t{value} must be a command or a cons of command name and it's
+@var{value} must be a command or a cons of command name and its
 arguments. If you omit the arguments @mcclim{} will prompt for them.
 
 @item :function
-@t{value} must be a function having indefinite extent that, when
-called, returns a command. Function must accept two arguments, the
+@var{value} must be a function having indefinite extent that, when
+called, returns a command.  The function must accept two arguments: the
 gesture (keyboard or mouse press event) and a @t{numeric argument}.
 
 @item :menu
-@t{value} must be another command table. This type is used to add
+@var{value} must be another command table. This type is used to add
 sub-menus to the menu.
 
 @item :divider
-@t{value} is ignored and @t{string} is used as a divider string. Using
-@t{|} as string will make it obvious to users that it is a divider.
+@var{value} is ignored and @var{string} is used as a divider
+string. Using @samp{|} as string will make it obvious to users that it is a
+divider.
 @end table
 
 @item documentation
@@ -849,9 +852,9 @@ is to add it to the end. Other values could be @t{:start}, @t{:sort}
 menu-item to add after it.
 
 @item keystroke
-If keystroke is supplied, it will be added to comand tables keystroke
-accelerator table. Value must be a keyboard gesture name
-e.g. @code{(:s :control)} for @t{Control + s}.
+If @var{keystroke} is supplied, it will be added to comand tables
+keystroke accelerator table. Value must be a keyboard gesture name
+e.g. @code{(:s :control)} for @kbd{Control + s}.
 
 @item text-style
 Either a text style spec or @t{NIL}. It is used to indicate that the
@@ -860,7 +863,7 @@ command menus.
 
 @item error-p
 If @t{T} and the item already exists in the menu, it signal a
-@t{command-already-present} error. If @t{NIL}, it will first remove
+@class{command-already-present} error. If @t{NIL}, it will first remove
 the existing item and add the new item to the command-table.
 @end table
 
@@ -868,8 +871,8 @@ To remove items from command table, the following function is used:
 
 @include fun-clim-remove-menu-item-from-command-table.texi
 
-Where @t{command-table} is command-table-designator and @t{string} is
-the menu item's name (it is case-insensitive). You can provide
+Where @var{command-table} is command-table-designator and @var{string}
+is the menu item's name (it is case-insensitive). You can provide
 @code{:error-p nil} to suppress the error if item is not in the
 command-table.
 

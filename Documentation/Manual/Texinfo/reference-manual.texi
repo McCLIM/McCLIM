@@ -174,25 +174,26 @@ points in a plane.  @clim{} allows this set to be described as a
 combination (union, intersection, difference) of elementary regions made
 up of rectangles, polygons and ellipses.
 
-Even rectangular regions in @clim{} are generalizations of the width+height
-concept of windows in most windowing systems.  While the upper left
-corner of a window in a typical windowing system has coordinates (0,0),
-that is not necessarily the case of a @clim{} region.  @clim{} uses that
-generalization to implement various ways of scrolling the contents of a
-sheet.  To see that, imagine just a slight generalization of the
-width+height concept of a windowing system into a rectangular region
-with x+y+width+height.  Don't confuse the x and y here with the position
-of a window within its parent, they are different.  Instead, imagine
-that the rectangular region is a hole into the (infinite) drawing plane
-defined by all possible coordinates that can be given to drawing
-functions.  If graphical objects appear in the window with respect to
-the origin of some coordinate system, and the upper-left corner of the
-window has coordinates (x,y) in that coordinate system, then changing x
-and y will have the effect of scrolling.
+Even rectangular regions in @clim{} are generalizations of the
+width+height concept of windows in most windowing systems.  While the
+upper left corner of a window in a typical windowing system has
+coordinates @math{(0,0)}, that is not necessarily the case of a @clim{}
+region.  @clim{} uses that generalization to implement various ways of
+scrolling the contents of a sheet.  To see that, imagine just a slight
+generalization of the @math{width+height} concept of a windowing system
+into a rectangular region with @math{x+y+width+height}.  Don't confuse
+the @math{x} and @math{y} here with the position of a window within its
+parent, they are different.  Instead, imagine that the rectangular
+region is a hole into the (infinite) drawing plane defined by all
+possible coordinates that can be given to drawing functions.  If
+graphical objects appear in the window with respect to the origin of
+some coordinate system, and the upper-left corner of the window has
+coordinates @math{(x,y)} in that coordinate system, then changing
+@math{x} and @math{y} will have the effect of scrolling.
 
 @clim{} sheets also generalize windows in that a window typically has
-pixels with integer-value coordinates.  @clim{} sheets, on the other hand,
-have infinte resolution.  Drawing functions accept non-integer
+pixels with integer-value coordinates.  @clim{} sheets, on the other
+hand, have infinte resolution.  Drawing functions accept non-integer
 coordinate values which are only translated into integers just before
 the physical rendering on the screen.
 
@@ -359,16 +360,17 @@ may not become the name of the pane that is constructed by the
 expression that defines a pane in the @code{:panes} option is
 @code{(name . body)}.  Currently, @mcclim{} does the following:
 
-@itemize @bullet
+@itemize
 @item
-  If the @code{body} creates a pane by using a keyword, or by using an
-  explicitly mentioned call to @code{make-pane}, then the name is given
-  to the pane of the type explicitly mentioned, even when the option
-  @code{:scroll-bars} is given.
+If the @code{body} creates a pane by using a keyword, or by using an
+explicitly mentioned call to @code{make-pane}, then the name is given to
+the pane of the type explicitly mentioned, even when the option
+@code{:scroll-bars} is given.
+
 @item
-  If the @code{body} creates a pane by calling some arbitrary form other
-  than a call to @code{make-pane}, then the name is given to the topmost
-  pane returned by the evaluation of that form.
+If the @code{body} creates a pane by calling some arbitrary form other
+than a call to @code{make-pane}, then the name is given to the topmost
+pane returned by the evaluation of that form.
 @end itemize
 
 We reserve the right to modify this behavior in the future.  Application
@@ -384,24 +386,25 @@ history:
 
 @itemize
 @item
-  The application maintains some data structure that needs to be
-  reflected in the text and graphics of the pane.  In this case, a
-  pane of type @t{application-pane} is typically used, and the default
-  value of the @t{:display-time} option is used, which means that some
-  kind of application-supplied @emph{display function} is executed at
-  the end of each iteration of the command loop.  In this situation,
-  the output history is either recomputed from scratch in each
-  iteration, or the programmer can use the @emph{incremental
-  redisplay} facility to reuse some of the existing output records in
-  the history.
-@item The application does not keep any data structure, and instead
-  generates output incrementally, either as a result of some user
-  action, or of some data arriving from an external source.  In this
-  case, the @t{:display-time} option is either going to be @t{t} or
-  @t{nil}.  With both of these options, the output history is
-  maintained intact after each iteration of the command loop.
-  Instead, when user actions are issued, more output records are
-  simply added to the existing output history.
+The application maintains some data structure that needs to be reflected
+in the text and graphics of the pane.  In this case, a pane of type
+@t{application-pane} is typically used, and the default value of the
+@t{:display-time} option is used, which means that some kind of
+application-supplied @emph{display function} is executed at the end of
+each iteration of the command loop.  In this situation, the output
+history is either recomputed from scratch in each iteration, or the
+programmer can use the @emph{incremental redisplay} facility to reuse
+some of the existing output records in the history.
+
+@item
+The application does not keep any data structure, and instead generates
+output incrementally, either as a result of some user action, or of some
+data arriving from an external source.  In this case, the
+@t{:display-time} option is either going to be @t{t} or @t{nil}.  With
+both of these options, the output history is maintained intact after
+each iteration of the command loop.  Instead, when user actions are
+issued, more output records are simply added to the existing output
+history.
 @end itemize
 
 For the second possibility, the pane is never redisplayed.  Instead,
@@ -570,14 +573,16 @@ compute their space requirements independently of those of their
 children.  Thus, we stop calling @genfun{note-space-requirement-changed}
 in the following cases:
 
-@itemize @bullet
+@itemize
 @item
- when @var{P} is a @pane{restraining-pane},
+when @var{P} is a @pane{restraining-pane},
+
 @item
- when @var{P} is a @pane{top-level-sheet-pane}, or
+when @var{P} is a @pane{top-level-sheet-pane}, or
+
 @item
- when @var{P} has been given explicit values for @initarg{:width} and
-  @initarg{:height}
+when @var{P} has been given explicit values for @initarg{:width} and
+@initarg{:height}
 @end itemize
 
 In either of those cases, @genfun{allocate-space} is called.
@@ -631,15 +636,14 @@ doesn't have to) trigger @gloss{layout-protocol}.  Macro
 
 By default command tables inherit from
 @cl{global-command-table}. According to the @clim{} 2.0 specification, a
-command table inherits from no command table if \nil\ is passed as an
-explicit argument to @var{inherit-from}. In revision~2.2 all command
+command table inherits from no command table if @t{nil} is passed as an
+explicit argument to @var{inherit-from}. In revision 2.2 all command
 tables must inherit from @cl{global-command-table}. @mcclim{} treats a
-\nil\ value of @var{inherit-from} as specifying
+@t{nil} value of @var{inherit-from} as specifying
 @cl{'(global-command-table)}.
 
 @node Incremental redisplay
 @section Incremental redisplay
-
 @cindex incremental redisplay
 
 @clim{} applications are most often structured around the @emph{command
@@ -660,7 +664,6 @@ supply the arguments.
 @item
 The command is @emph{executed} with the acquired arguments.
 Typically, the command modifies some part of the @emph{model}
-
 @footnote{Some authors use the term @emph{business logic} instead of
 @emph{model}.  Both words refer to the representation of the intrinsic
 purpose of the application, as opposed to superficial characteristics

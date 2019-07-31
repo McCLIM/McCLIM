@@ -29,7 +29,7 @@ specification.
 
 This manual documents @mcclim{} @value{MCCLIMVERSION} which is a mostly
 complete implementation of the @clim{} 2.0 specification and its revision
-2.2. To our knowledge version~2.2 of the @clim{} specification is only
+2.2. To our knowledge version 2.2 of the @clim{} specification is only
 documented in the ``CLIM 2 User's Guide'' by Franz. While that document
 is not a formal specification, it does contain many cleanups and is
 often clearer than the official specification; on the other hand, the
@@ -79,44 +79,50 @@ command loop:
 
 @enumerate
 @item
- A command is acquired.  You might satisfy this demand by clicking on a
-  menu item, by typing the name of a command, by hitting some kind of
-  keystroke, by pressing a button, or by pressing some visible object
-  with a command associated with it;
+A command is acquired.  You might satisfy this demand by clicking on a
+menu item, by typing the name of a command, by hitting some kind of
+keystroke, by pressing a button, or by pressing some visible object with
+a command associated with it;
+
 @item
- Arguments that are required by the command are acquired.  Each argument
-    is often associated with a @emph{presentation type}, and visible
-    objects of the right presentation type can be clicked on to satisfy
-    this demand.  You can also type a textual representation of the
-    argument, using completion, or you can use a context menu;
+Arguments that are required by the command are acquired.  Each argument
+is often associated with a @emph{presentation type}, and visible objects
+of the right presentation type can be clicked on to satisfy this demand.
+You can also type a textual representation of the argument, using
+completion, or you can use a context menu;
+
 @item
- The command is called on the arguments, usually resulting in some
-    significant modification of the data structure representing your
-    application logic;
+The command is called on the arguments, usually resulting in some
+significant modification of the data structure representing your
+application logic;
+
 @item
- A @emph{display routine} is called to update the views of the
-  application logic.  The display routine may use features such as
-  incremental redisplay.
+A @emph{display routine} is called to update the views of the
+application logic.  The display routine may use features such as
+incremental redisplay.
 @end enumerate
 
 Instead of attaching event handlers to gadgets, writing a @clim{}
 application therefore consists of:
 
-@itemize @bullet
+@itemize
 @item
- writing @clim{} commands that modify the application data structures
-  independently of how those commands are invoked, and which may take
-  application objects as arguments;
+writing @clim{} commands that modify the application data structures
+independently of how those commands are invoked, and which may take
+application objects as arguments;
+
 @item
- writing display routines that turn the application data structures (and
-  possibly some "view" object) into a collection of visible
-  representations (having presentation types) of application objects;
+writing display routines that turn the application data structures (and
+possibly some "view" object) into a collection of visible
+representations (having presentation types) of application objects;
+
 @item
- writing completion routines that allow you to type in application
-  objects (of a certain presentation type) using completions;
+writing completion routines that allow you to type in application
+objects (of a certain presentation type) using completions;
+
 @item
- independently deciding how commands are to be invoked (menus, buttons,
-  presentations, textual commands, etc).
+independently deciding how commands are to be invoked (menus, buttons,
+presentations, textual commands, etc).
 @end itemize
 
 By using @clim{} as a mediator of command invocation and argument

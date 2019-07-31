@@ -74,7 +74,7 @@ sheets have mirrors.  For the sheet to be a mirrored sheet it has to
 have a @emph{direct} mirror.  Also, a call to @genfun{sheet-mirror}
 returns a mirror for all grafted sheets, whether the sheet is a mirrored
 sheet or not.  A call to @genfun{sheet-direct-mirror}, on the other
-hand, returns nil if the sheet is not a mirrored sheet.
+hand, returns @t{nil} if the sheet is not a mirrored sheet.
 
 @glossentry{Mirror transformation}
 
@@ -122,15 +122,15 @@ coordinates}.  The location of the visible part of a sheet within its
 transformation} and the position of the sheet region.
 
 For instance, assuming that the sheet region is a rectangle with its
-upper-left corner at (2, 1) and that the sheet transformation is a
-simple translation (3, 2).  Then the origin of the @gloss{sheet
-coordinate system} is at the point (3, 2) within the @gloss{sheet
-coordinate system} of its @gloss{parent sheet}.  The origin of its the
+upper-left corner at @math{(2, 1)} and that the sheet transformation is
+a simple translation @math{(3, 2)}.  Then the origin of the @gloss{sheet
+coordinate system} is at the point @math{(3, 2)} within the @gloss{sheet
+coordinate system} of its @gloss{parent sheet}.  The origin of its
 coordinate system is not visible, however, because the visible region
-has its upper-left corner at (2, 1) in the @gloss{sheet coordinate
-system}.  Thus, the visible part will be a rectangle whose upper-left
-corner is at (5, 3) in the @gloss{sheet coordinate system} of the
-@gloss{parent sheet}.
+has its upper-left corner at @math{(2, 1)} in the @gloss{sheet
+coordinate system}.  Thus, the visible part will be a rectangle whose
+upper-left corner is at @math{(5, 3)} in the @gloss{sheet coordinate
+system} of the @gloss{parent sheet}.
 
 Panes and gadgets alter the region and @gloss{sheet transformation} of
 the underlying sheets (panes and gadgets are special kinds of sheets) to
