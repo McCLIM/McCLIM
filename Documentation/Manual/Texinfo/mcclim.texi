@@ -1,8 +1,9 @@
 % @c -*- Coding: utf-8; Mode: Texinfo -*-
 
-@documentencoding utf-8
-
 \input texinfo
+
+@documentencoding UTF-8
+@documentlanguage en
 
 @setfilename mcclim
 @settitle McCLIM User's Manual
