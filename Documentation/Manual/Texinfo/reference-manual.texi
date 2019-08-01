@@ -22,7 +22,7 @@
 @node Coordinate systems
 @subsection Coordinate systems
 
-@clim uses a number of different coordinate systems and transformations
+@clim{} uses a number of different coordinate systems and transformations
 to transform coordinates between them.
 
 The coordinate system used for the arguments of drawing functions is
@@ -88,7 +88,7 @@ windowing system.
 * Scrolling::
 @end menu
 
-@clim sheets are organized into a hierarchy.  Each sheet has a sheet
+@clim{} sheets are organized into a hierarchy.  Each sheet has a sheet
 transformation and a sheet region.  The sheet tranformation determines
 how coordinates in the sheet's own coordinate system get translated
 into coordinates in the coordinate system of its parent.  The sheet
@@ -96,17 +96,17 @@ region determines the @gloss{potentially visible area} of the
 otherwise infinite drawing plane of the sheet.  The sheet region is
 given in the coordinate system of the sheet.
 
-In @mcclim, every grafted sheet has a @gloss{native transformation}.
+In @mcclim{}, every grafted sheet has a @gloss{native transformation}.
 The native transformation is used by drawing functions to translate
 sheet coordinates to @gloss{native coordinates}, so that drawing can
 occur on the (not necessarily immediate) mirror of the sheet.  It
 would therefore be enough for sheets that support the @gloss{output
 protocol} to have a native transformation.  However, it is easier to
 generalize it to all sheets, in order to simplify the programming of
-the computation of the native transformation.  Thus, in @mcclim, even
+the computation of the native transformation.  Thus, in @mcclim{}, even
 sheets that are mute for output have a native transformation.
 
-In @mcclim, every grafted sheet also has a @gloss{native region}.  The
+In @mcclim{}, every grafted sheet also has a @gloss{native region}.  The
 native region is intersection the sheet region and the region of all
 of its ancestors, except that the native region is given in
 @gloss{native coordinates}, i.e. the coordinates obtained after the
@@ -158,48 +158,49 @@ and such.
 @node CLIM drawing
 @subsection CLIM drawing
 
-@clim generalizes the concept of a hierarchy of window in a windowing
+@clim{} generalizes the concept of a hierarchy of window in a windowing
 system in several different ways.  A window in a windowing system
-generalizes to a @gloss{sheet} in @clim.  More precisely, a window in a
+generalizes to a @gloss{sheet} in @clim{}.  More precisely, a window in a
 windowing system generalizes to the @gloss{sheet region} of a sheet.  A
-@clim sheet is an abstract concept with an infinite @gloss{drawing plane}
+@clim{} sheet is an abstract concept with an infinite @gloss{drawing plane}
 and the @gloss{region} of the sheet is the potentially visible part of
 that drawing plane.
 
-@clim @gloss{sheet region}s don't have to be rectangular the way windows
+@clim{} @gloss{sheet region}s don't have to be rectangular the way windows
 in most windowing systems have to be.  Thus, the width and the height of
 a window in a windowing system generalizes to an arbitrary
-@gloss{region} in @clim.  A @clim region is simply a set of mathematical
-points in a plane.  @clim allows this set to be described as a
+@gloss{region} in @clim{}.  A @clim{} region is simply a set of mathematical
+points in a plane.  @clim{} allows this set to be described as a
 combination (union, intersection, difference) of elementary regions made
 up of rectangles, polygons and ellipses.
 
-Even rectangular regions in @clim are generalizations of the width+height
-concept of windows in most windowing systems.  While the upper left
-corner of a window in a typical windowing system has coordinates (0,0),
-that is not necessarily the case of a @clim region.  @clim uses that
-generalization to implement various ways of scrolling the contents of a
-sheet.  To see that, imagine just a slight generalization of the
-width+height concept of a windowing system into a rectangular region
-with x+y+width+height.  Don't confuse the x and y here with the position
-of a window within its parent, they are different.  Instead, imagine
-that the rectangular region is a hole into the (infinite) drawing plane
-defined by all possible coordinates that can be given to drawing
-functions.  If graphical objects appear in the window with respect to
-the origin of some coordinate system, and the upper-left corner of the
-window has coordinates (x,y) in that coordinate system, then changing x
-and y will have the effect of scrolling.
+Even rectangular regions in @clim{} are generalizations of the
+width+height concept of windows in most windowing systems.  While the
+upper left corner of a window in a typical windowing system has
+coordinates @math{(0,0)}, that is not necessarily the case of a @clim{}
+region.  @clim{} uses that generalization to implement various ways of
+scrolling the contents of a sheet.  To see that, imagine just a slight
+generalization of the @math{width+height} concept of a windowing system
+into a rectangular region with @math{x+y+width+height}.  Don't confuse
+the @math{x} and @math{y} here with the position of a window within its
+parent, they are different.  Instead, imagine that the rectangular
+region is a hole into the (infinite) drawing plane defined by all
+possible coordinates that can be given to drawing functions.  If
+graphical objects appear in the window with respect to the origin of
+some coordinate system, and the upper-left corner of the window has
+coordinates @math{(x,y)} in that coordinate system, then changing
+@math{x} and @math{y} will have the effect of scrolling.
 
-@clim sheets also generalize windows in that a window typically has
-pixels with integer-value coordinates.  @clim sheets, on the other hand,
-have infinte resolution.  Drawing functions accept non-integer
+@clim{} sheets also generalize windows in that a window typically has
+pixels with integer-value coordinates.  @clim{} sheets, on the other
+hand, have infinte resolution.  Drawing functions accept non-integer
 coordinate values which are only translated into integers just before
 the physical rendering on the screen.
 
 The x and y positions of a window in the coordinate system of its parent
 window in a typical windowing system is a translation transformation
 that takes coordinates in a window and transform them into coordinates
-in the parent window.  @clim generalizes this concepts to arbitrary
+in the parent window.  @clim{} generalizes this concepts to arbitrary
 affine transformations (combinations of translations, rotations, and
 scalings).  This generalization makes it possible for points in a sheet
 to be not only translated compared to the parent sheet, but also rotated
@@ -212,13 +213,13 @@ When the shapes of, and relationship between sheets are as simple as
 those of a typical windowing system, each sheet typically has an
 associated window in the underlying windowing system.  In that case,
 drawing on a sheet translates in a relativly straightforward way into
-drawing on the corresponding window.  @clim sheets that have associated
+drawing on the corresponding window.  @clim{} sheets that have associated
 windows in the underlying windowing system are called @gloss{mirrored
 sheets} and the system-dependent window object is called the
 @gloss{mirror}.  When shapes and relationships are more complicated,
-@clim uses its own transformations to transform coordinates from a sheet
+@clim{} uses its own transformations to transform coordinates from a sheet
 to its parent and to its grandparent, etc., until a @gloss{mirrored
-sheet} is found.  To the user of @clim, the net effect is to have a
+sheet} is found.  To the user of @clim{}, the net effect is to have a
 windowing system with more general shapes of, and relationships between
 windows.
 
@@ -231,16 +232,17 @@ that determine the size and position of its children according to rules
 specific to each particular type of layout pane.  Examples of layout
 panes are vertical and horizontal boxes, tables etc.
 
-According to the @clim specification, all @clim panes are
-@emph{rectangular objects}.  For @mcclim, we interpret that phrase to
+According to the @clim{} specification, all @clim{} panes are
+@emph{rectangular objects}.  For @mcclim{}, we interpret that phrase to
 mean that:
 
 @itemize
 @item
- @clim panes appear rectangular in the native windowing system;
+@clim{} panes appear rectangular in the native windowing system;
+
 @item
- @clim panes have a native transformation that does not have a rotation
-  component, only translation and scaling.
+@clim{} panes have a native transformation that does not have a rotation
+component, only translation and scaling.
 @end itemize
 
 Of course, the specification is unclear here.  Panes are subclasses of
@@ -256,14 +258,15 @@ enough that the @gloss{sheet-transformation} of some ancestor of the
 pane contain a rotation component.  In that case, the layout protocol
 would be insufficient in its current version.
 
-@mcclim panes have the following additional restrictions:
+@mcclim{} panes have the following additional restrictions:
 
 @itemize
 @item
- @mcclim panes have a coordinate system that is only a translation
-  compared to that of the frame manager;
+@mcclim{} panes have a coordinate system that is only a translation
+compared to that of the frame manager;
+
 @item
- The parent of a pane is either nil or another pane.
+The parent of a pane is either nil or another pane.
 @end itemize
 
 Thus, the panes form a @emph{prefix} in the hierarchy of sheets.  It is
@@ -301,7 +304,7 @@ these application panes do not in themselves contain any scroll bars,
 using that option results in a pane hierarchy being created with the
 topmost pane being a pane of type @cl{scroller-pane}.
 
-As far as @mcclim is concerned, this option to @cl{make-pane} is
+As far as @mcclim{} is concerned, this option to @cl{make-pane} is
 obsolete. @footnote{In the specification, there is no example of the
 use of this option to @code{make-pane} or to the equivalent keywords
 in the @code{:panes} section of @code{define-application-frame}.
@@ -318,10 +321,10 @@ scroll bars are added in the @code{layouts} section of
 @cindex Panes order
 
 When specification talks about panes in a fashion implying some order
-(i.e ``first application-pane'') @mcclim assumes order of definition, not
-order of appearing in layout. Particularly that means, that if one pane
-is put before another in @code{:panes} option, then it precedes it. It
-is relevant to @code{frame-standard-output} (therefore binding of
+(i.e ``first application-pane'') @mcclim{} assumes order of definition,
+not order of appearing in layout.  Particularly that means, that if one
+pane is put before another in @code{:panes} option, then it precedes
+it. It is relevant to @code{frame-standard-output} (therefore binding of
 @code{*standard-output*}) and other similar functions.
 
 @node Pane names
@@ -339,8 +342,8 @@ dictionary.
 
 The function @code{find-pane-named} searches the pane hierarchy of the
 application frame, consulting the names of each pane until a matching
-name is found.  The @clim specification does not say what happens if a
-name is given that does not correspond to any pane.  @mcclim returns
+name is found.  The @clim{} specification does not say what happens if a
+name is given that does not correspond to any pane.  @mcclim{} returns
 @code{nil} in that case.  If pane names are not unique, it is
 unspecified which of several panes is returned by a call to this
 function.
@@ -355,18 +358,19 @@ If that advice is not followed, then the name given to a pane in the
 may not become the name of the pane that is constructed by the
 @code{body} that follows the name.  Recall that the syntax of the
 expression that defines a pane in the @code{:panes} option is
-@code{(name . body)}.  Currently, @mcclim does the following:
+@code{(name . body)}.  Currently, @mcclim{} does the following:
 
-@itemize @bullet
+@itemize
 @item
-  If the @code{body} creates a pane by using a keyword, or by using an
-  explicitly mentioned call to @code{make-pane}, then the name is given
-  to the pane of the type explicitly mentioned, even when the option
-  @code{:scroll-bars} is given.
+If the @code{body} creates a pane by using a keyword, or by using an
+explicitly mentioned call to @code{make-pane}, then the name is given to
+the pane of the type explicitly mentioned, even when the option
+@code{:scroll-bars} is given.
+
 @item
-  If the @code{body} creates a pane by calling some arbitrary form other
-  than a call to @code{make-pane}, then the name is given to the topmost
-  pane returned by the evaluation of that form.
+If the @code{body} creates a pane by calling some arbitrary form other
+than a call to @code{make-pane}, then the name is given to the topmost
+pane returned by the evaluation of that form.
 @end itemize
 
 We reserve the right to modify this behavior in the future.  Application
@@ -382,24 +386,25 @@ history:
 
 @itemize
 @item
-  The application maintains some data structure that needs to be
-  reflected in the text and graphics of the pane.  In this case, a
-  pane of type @t{application-pane} is typically used, and the default
-  value of the @t{:display-time} option is used, which means that some
-  kind of application-supplied @emph{display function} is executed at
-  the end of each iteration of the command loop.  In this situation,
-  the output history is either recomputed from scratch in each
-  iteration, or the programmer can use the @emph{incremental
-  redisplay} facility to reuse some of the existing output records in
-  the history.
-@item The application does not keep any data structure, and instead
-  generates output incrementally, either as a result of some user
-  action, or of some data arriving from an external source.  In this
-  case, the @t{:display-time} option is either going to be @t{t} or
-  @t{nil}.  With both of these options, the output history is
-  maintained intact after each iteration of the command loop.
-  Instead, when user actions are issued, more output records are
-  simply added to the existing output history.
+The application maintains some data structure that needs to be reflected
+in the text and graphics of the pane.  In this case, a pane of type
+@t{application-pane} is typically used, and the default value of the
+@t{:display-time} option is used, which means that some kind of
+application-supplied @emph{display function} is executed at the end of
+each iteration of the command loop.  In this situation, the output
+history is either recomputed from scratch in each iteration, or the
+programmer can use the @emph{incremental redisplay} facility to reuse
+some of the existing output records in the history.
+
+@item
+The application does not keep any data structure, and instead generates
+output incrementally, either as a result of some user action, or of some
+data arriving from an external source.  In this case, the
+@t{:display-time} option is either going to be @t{t} or @t{nil}.  With
+both of these options, the output history is maintained intact after
+each iteration of the command loop.  Instead, when user actions are
+issued, more output records are simply added to the existing output
+history.
 @end itemize
 
 For the second possibility, the pane is never redisplayed.  Instead,
@@ -416,8 +421,7 @@ update could be the result of a timer event, or of communication with
 an external process.
 
 @anchor{Generic-Function clim:redisplay-frame-pane}
-@deffn {Generic Function} {clim:redisplay-frame-pane} frame pane &key force-p
-@findex clim:redisplay-frame-pane
+@deffn {Generic Function} {@symbol{redisplay-frame-pane,clim}} frame pane &key force-p
 @end deffn
 
 Calling this generic function causes an immediate redisplay of
@@ -432,8 +436,7 @@ function @t{pane-needs-redisplay}.  It results in an unconditional
 redisplay of @var{pane}.
 
 @anchor{Generic-Function clim:redisplay-frame-panes}
-@deffn {Generic Function} {clim:redisplay-frame-panes} frame &key force-p
-@findex clim:redisplay-frame-panes
+@deffn {Generic Function} {@symbol{redisplay-frame-panes,clim}} frame &key force-p
 @end deffn
 
 Calling this generic function causes an immediate redisplay of all the
@@ -459,7 +462,7 @@ redisplay in each iteration of the command loop.
 @subsection Layout protocol
 @cindex layout protocol
 
-There is a set of fundamental rules of @clim dividing responsibility
+There is a set of fundamental rules of @clim{} dividing responsibility
 between a parent pane and a child pane, with respect to the size and
 position of the region of the child and the @gloss{sheet transformation}
 of the child.  This set of rules is called the @gloss{layout protocol}.
@@ -568,20 +571,22 @@ compute their space requirements independently of those of their
 children.  Thus, we stop calling @genfun{note-space-requirement-changed}
 in the following cases:
 
-@itemize @bullet
+@itemize
 @item
- when @var{P} is a @pane{restraining-pane},
+when @var{P} is a @pane{restraining-pane},
+
 @item
- when @var{P} is a @pane{top-level-sheet-pane}, or
+when @var{P} is a @pane{top-level-sheet-pane}, or
+
 @item
- when @var{P} has been given explicit values for @initarg{:width} and
-  @initarg{:height}
+when @var{P} has been given explicit values for @initarg{:width} and
+@initarg{:height}
 @end itemize
 
 In either of those cases, @genfun{allocate-space} is called.
 
 @issue{JD, This description is wrong. @genfun{note-space-requirement-change}
-is called by @clim after the space requirements has changed. Application
+is called by @clim{} after the space requirements has changed. Application
 programmer should call @genfun{change-space-requirements} to indicate that
 @genfun{compose-space} may now return something different from the previous
 invocation and/or to update user space requirements options. This may (but
@@ -620,27 +625,24 @@ doesn't have to) trigger @gloss{layout-protocol}.  Macro
 @cindex command processing
 @cindex command tables
 
-@defmac {clim:define-command-table} name &key inherit-from menu inherit-menu
-@findex define-command-table
+@defmac {@symbol{define-command-table,clim}} name &key inherit-from menu inherit-menu
 @end defmac
-@defun {clim:make-command-table} {name &key inherit-from inherit-menu (errorp t)}
-@findex make-command-table
+@defun {@symbol{make-command-table,clim}} {name &key inherit-from inherit-menu (errorp t)}
 @end defun
 
 By default command tables inherit from
-@cl{global-command-table}. According to the @clim~2.0 specification, a
-command table inherits from no command table if \nil\ is passed as an
-explicit argument to @var{inherit-from}. In revision~2.2 all command
-tables must inherit from @cl{global-command-table}. @mcclim treats a
-\nil\ value of @var{inherit-from} as specifying
+@cl{global-command-table}. According to the @clim{} 2.0 specification, a
+command table inherits from no command table if @t{nil} is passed as an
+explicit argument to @var{inherit-from}. In revision 2.2 all command
+tables must inherit from @cl{global-command-table}. @mcclim{} treats a
+@t{nil} value of @var{inherit-from} as specifying
 @cl{'(global-command-table)}.
 
 @node Incremental redisplay
 @section Incremental redisplay
-
 @cindex incremental redisplay
 
-@clim applications are most often structured around the @emph{command
+@clim{} applications are most often structured around the @emph{command
 loop}.  The various steps that such an application follow are:
 
 @itemize
@@ -658,7 +660,6 @@ supply the arguments.
 @item
 The command is @emph{executed} with the acquired arguments.
 Typically, the command modifies some part of the @emph{model}
-
 @footnote{Some authors use the term @emph{business logic} instead of
 @emph{model}.  Both words refer to the representation of the intrinsic
 purpose of the application, as opposed to superficial characteristics
@@ -690,7 +691,7 @@ programmer must then rewrite the code for manipulating the model, and
 especially for incrementally altering the output according to the
 modification of the model resulting from the execution of a command.
 
-In @clim, a different mechanism is provided called @emph{incremental
+In @clim{}, a different mechanism is provided called @emph{incremental
 redisplay}.  This mechanism allows the user to preserve the simple
 logic of the display function with only minor modifications while
 still being able to benefit in terms of performance.

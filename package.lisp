@@ -1870,7 +1870,7 @@
    #:condition-notify
    ;;
    #:defgeneric*
-   #:defmethod* ) )
+   #:defmethod*))
 
 (defpackage :clim-extensions
   (:use)
@@ -1881,6 +1881,10 @@
    #:event-listen-or-wait
    #:schedule-event
    ;; sheets
+   #:sheet-name
+   #:sheet-pretty-name
+   #:named-sheet-mixin
+
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
    #:background
@@ -1962,8 +1966,9 @@
    #:unsupported-bitmap-format
    #:bitmap-format
    #:*default-vertical-scroll-bar-position*
-
+   ;; frame manager
    #:find-frame-type
+   #:note-frame-pretty-name-changed
    ;; images
    #:rgb-image
    #:xpm-parse-file
@@ -1996,6 +2001,7 @@
    #:port-frame-keyboard-input-focus
    #:port-grab-pointer
    #:port-motion-hints
+   #:port-set-mirror-name
    #:port-set-mirror-region
    #:port-set-mirror-transformation
    #:port-ungrab-pointer

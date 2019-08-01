@@ -1,6 +1,6 @@
 This file contains the logs of the mail conversations between various
 copyright holders in "A guided tour of CLIM" published in ACM Lisp
-Pointers 1991. It purpose is to document that we got permission for
+Pointers 1991. Its purpose is to document that we got permission for
 reusing the original authors' work.
 
 ========================================================================
@@ -31,8 +31,8 @@ sure if that's ok for ACM. Is any of that possible?
 Thanks in advance!
 
 P.S.: I found your article here http://lemonodor.com/archives/000765.html
--- 
-Fruhwirth Clemens - http://clemens.endorphin.org 
+--
+Fruhwirth Clemens - http://clemens.endorphin.org
 for robots: sp4mtrap@endorphin.org
 
 From: Clemens Fruhwirth <clemens@endorphin.org>
@@ -45,7 +45,7 @@ Hello Mr. Doughty,
 
 Together with Ramana Rao and Bill York, you have authored the article "A
 guided tour of CLIM" for ACM in 1991. CLIM has changed much since 1991,
-especially with the release of the CLIM 2 specification. 
+especially with the release of the CLIM 2 specification.
 
 The CLIM community lacks a good and short introduction to CLIM like your
 article was. I would like to update the examples in your article and
@@ -55,12 +55,12 @@ update on my webpage to aid the CLIM community.
 
 Ramano Rao as well as Bill York give me permission for this update. ACM
 also acknowledged this step. Now, I would like to ask, if this is ok
-with you. 
+with you.
 
 Thank you,
 Clemens
 
-P.S. Here are the mails from Ramana Rao, ACM and Bill York: 
+P.S. Here are the mails from Ramana Rao, ACM and Bill York:
 
 Subject: RE: CLIM a guided tour
 Date: Mon, 28 Nov 2005 12:47:05 -0800
@@ -91,12 +91,12 @@ From: Deborah Cotton <cotton@hq.acm.org>
 To: 'Clemens Fruhwirth' <clemens@endorphin.org>
 Cc: permissions@acm.org
 Subject: RE: Update to http://portal.acm.org/citation.cfm?id=121996
-Date: Wed, 7 Dec 2005 14:56:15 -0500 
+Date: Wed, 7 Dec 2005 14:56:15 -0500
 X-Mailer: Internet Mail Service (5.5.2657.72)
 
 Dear Mr. Fruhwirth,
 
-Thank you for your inquiry, and interest in ACM publications.  
+Thank you for your inquiry, and interest in ACM publications.
 
 Because the article in question appeared in a SIG newsletter, rather than a
 journal or conference proceedings, the authors retained copyright. In
@@ -115,10 +115,10 @@ Copyright & Permissions
 ACM Publications
 212.869.7440 ext. 652
 212.869.0481 fax
-permissions@acm.org 
+permissions@acm.org
 
--- 
-Fruhwirth Clemens - http://clemens.endorphin.org 
+--
+Fruhwirth Clemens - http://clemens.endorphin.org
 for robots: sp4mtrap@endorphin.org
 
 From: Robert Strandh <strandh@labri.fr>
@@ -191,9 +191,9 @@ Dennis Doughty
 > Date: Dec 17, 2005 4:37 PM
 > Subject: permission to update your CLIM article
 > To: dennis.doughty@pantero.com <mailto:dennis.doughty@pantero.com>
-> 
+>
 > Dear Dennis Doughty,
-> 
+>
 > I am one of the original authors of McCLIM, the free implementation of
 > CLIM that we started writing in 2000 and which is now quite usable.
 > One of the things we lack at the moment to spread the use of CLIM is a
@@ -201,7 +201,7 @@ Dennis Doughty
 > some very good ones, but it was apparently written for CLIM 1, and the
 > examples do not necessarily run unmodified on a CLIM 2
 > implementation.
-> 
+>
 > Clemens Fruhwirth has suggested updating the examples of your article,
 > but for that, he needs the permission of all the authors.  He has
 > already obtained the permission from your co-authors, so we need a
@@ -209,22 +209,22 @@ Dennis Doughty
 > naturally accept a refusal on your part, and is willing to write a
 > similar article from scratch, updated for CLIM 2, but that would be
 > unnecessary work, should you agree to let him update yours.
-> 
+>
 > We therefore kindly ask for your permission to update the article, or
 > at least a clear message indicating that you do not give us such a
 > permission.  I am sure you are very busy like the rest of us, but I
 > would very much appreciate this effort on your part.
-> 
+>
 > Thanks in advance,
 > --
 > Robert Strandh
-> 
+>
 > ---------------------------------------------------------------------
 > Greenspun's Tenth Rule of Programming: any sufficiently complicated C
 > or Fortran program contains an ad hoc informally-specified bug-ridden
 > slow implementation of half of Common Lisp.
 > ---------------------------------------------------------------------
-> 
+>
 
 
 --U9PbTyCujO
@@ -233,7 +233,7 @@ Content-Description: .signature
 Content-Transfer-Encoding: 7bit
 
 
--- 
+--
 Robert Strandh
 
 ---------------------------------------------------------------------

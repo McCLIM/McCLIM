@@ -1,6 +1,5 @@
 @anchor{Class clim-tab-layout:tab-layout}
-@deftp {Class} {clim-tab-layout:tab-layout}
-@tindex clim-tab-layout:tab-layout
+@deftp {Class} {@symbol{tab-layout,clim-tab-layout}}
 Class precedence list: @code{@w{tab-layout}, @w{sheet-multiple-child-mixin}, @w{basic-pane}, @w{sheet-parent-mixin}, @w{pane}, @w{standard-repainting-mixin}, @w{standard-sheet-input-mixin}, @w{sheet-transformation-mixin}, @w{basic-sheet}, @w{sheet}, @w{bounding-rectangle}, @w{standard-object}, @w{slot-object}, @w{t}}
 
 The abstract tab layout pane is a composite pane arranging

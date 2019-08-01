@@ -1,6 +1,5 @@
 @anchor{Class clim-extensions:font-face}
-@deftp {Class} {clim-extensions:font-face}
-@tindex clim-extensions:font-face
+@deftp {Class} {@symbol{font-face,clim-extensions}}
 Class precedence list: @code{@w{font-face}, @w{standard-object}, @w{slot-object}, @w{t}}
 
 The protocol class for font faces  Each backend

@@ -1,6 +1,5 @@
 @anchor{Macro clim:with-output-to-output-record}
-@deffn {Macro} {clim:with-output-to-output-record} (stream &optional record-type record &rest initargs) &body body
-@findex clim:with-output-to-output-record
+@deffn {Macro} {@symbol{with-output-to-output-record,clim}} (stream &optional record-type record &rest initargs) &body body
 Creates a new output record of type RECORD-TYPE and then captures
 the output of BODY into the new output record. The cursor position of
 STREAM is initially bound to (0,0)

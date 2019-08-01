@@ -196,6 +196,24 @@
 (defgeneric sheet-occluding-sheets (sheet child))
 (defgeneric map-over-sheets (function sheet))
 
+(defgeneric sheet-name (sheet)
+  (:documentation "McCLIM extension: Return the name of SHEET.
+The returned name is a symbol and does not change.
+For sheets which are also panes, the returned name is identical to the
+pane name.")
+  (:method (sheet) nil))
+(defgeneric sheet-pretty-name (sheet)
+  (:documentation "McCLIM extension: Return the pretty name of SHEET.
+The returned name is a string and may change over time.
+The pretty name usually corresponds to the title of the associated
+window.")
+  (:method (sheet) "(Unnamed sheet)"))
+(defgeneric (setf sheet-pretty-name) (new-value sheet)
+  (:documentation "McCLIM extension: Set SHEET's pretty name to NEW-VALUE.
+NEW-NAME must be a string.
+Changing the pretty name of SHEET usually changes the title of the
+window associated with it."))
+
 ;;; 7.3.1 Sheet Geometry Functions [complete]
 
 (defgeneric sheet-transformation (sheet))
@@ -960,6 +978,12 @@ and `cell-align-y' are as for `formatting-item-list'."))
 (defgeneric note-frame-deiconified (frame-manager frame))
 (defgeneric note-command-enabled (frame-manager frame command-name))
 (defgeneric note-command-disabled (frame-manager frame command-name))
+(defgeneric note-frame-pretty-name-changed (frame-manager frame new-name)
+  (:documentation "McMCLIM extension: Notify client that the pretty
+name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME.
+FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
+the time of the change.")
+  (:method (frame-manager frame new-name)))
 
 (defgeneric frame-manager-notify-user
     (framem message-string &key frame associated-window title

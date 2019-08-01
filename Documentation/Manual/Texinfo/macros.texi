@@ -5,9 +5,23 @@ CLIM
 McCLIM
 @end macro
 
+@macro setf{NAME}
+(setf \NAME\)
+@end macro
+
+@iftex
+@macro symbol{NAME,PACKAGE}
+\NAME\ @smallertt [\PACKAGE\]
+@end macro
+@end iftex
+@ifnottex
+@macro symbol{NAME,PACKAGE}
+\NAME\ [\PACKAGE\]
+@end macro
+@end ifnottex
 
 @macro glossentry{ENTRY}
-@b{\ENTRY\}
+@noindent @b{\ENTRY\}
 @cindex \ENTRY\
 @end macro
 

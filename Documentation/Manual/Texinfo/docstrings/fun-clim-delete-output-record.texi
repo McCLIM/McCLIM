@@ -1,6 +1,5 @@
 @anchor{Generic-Function clim:delete-output-record}
-@deffn {Generic Function} {clim:delete-output-record} child record &optional errorp
-@findex clim:delete-output-record
+@deffn {Generic Function} {@symbol{delete-output-record,clim}} child record &optional errorp
 If CHILD is a child of RECORD, sets the parent of
 CHILD to NIL.
 @end deffn

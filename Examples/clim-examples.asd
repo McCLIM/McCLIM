@@ -51,7 +51,8 @@
      (:file "text-transformation-test")
      (:file "text-multiline-positioning")
      (:file "indentation")
-     (:file "selection")))
+     (:file "selection")
+     (:file "frame-sheet-name-test")))
 
 (defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)

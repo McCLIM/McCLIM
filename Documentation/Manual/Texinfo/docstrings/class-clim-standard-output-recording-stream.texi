@@ -1,11 +1,10 @@
 @anchor{Class clim:standard-output-recording-stream}
-@deftp {Class} {clim:standard-output-recording-stream}
-@tindex clim:standard-output-recording-stream
+@deftp {Class} {@symbol{standard-output-recording-stream,clim}}
 Class precedence list: @code{@w{standard-output-recording-stream}, @w{output-recording-stream}, @w{standard-object}, @w{slot-object}, @w{t}}
 
 Slots:
 @itemize
-@item @code{local-record-p} 
+@item @code{local-record-p}
 
 This flag is used for dealing with streams outputting strings char-by-char.
 @end itemize

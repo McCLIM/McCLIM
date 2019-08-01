@@ -244,6 +244,14 @@ documentation produced by presentations.")
       (setf (slot-value frame 'layouts) nil))
     (setf (%frame-manager frame) fm)))
 
+(defmethod (setf frame-pretty-name) :after (new-value frame)
+  ;; If there is a top-level sheet, set its pretty name. The port can
+  ;; reflect this change in the window title.
+  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-pretty-name top-level-sheet) new-value))
+  ;; Let client code know.
+  (clime:note-frame-pretty-name-changed (frame-manager frame) frame new-value))
+
 (define-condition frame-layout-changed (condition)
   ((frame :initarg :frame :reader frame-layout-changed-frame)))
 
@@ -278,25 +286,24 @@ documentation produced by presentations.")
      if  parent
      do (sheet-disown-child parent pane)))
 
-(defmethod generate-panes :after (fm  (frame application-frame))
+(defmethod generate-panes :after (fm (frame application-frame))
   (declare (ignore fm))
-  (sheet-adopt-child (frame-top-level-sheet frame) (frame-panes frame))
-  (unless (sheet-parent (frame-top-level-sheet frame))
-    (sheet-adopt-child (graft frame) (frame-top-level-sheet frame)))
-  ;; Find the size of the new frame
-  (multiple-value-bind (w h x y) (frame-geometry* frame)
-    (declare (ignore x y))
-    ;; automatically generates a window-configuation-event
-    ;; which then calls allocate-space
-    ;;
-    ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
-    ;; window is mapped and do the space allocation now, so that all
-    ;; sheets will have their correct geometry at once. --GB
-    (change-space-requirements (frame-top-level-sheet frame) :width w :height h
-			       :resize-frame t)
-    (setf (sheet-region (frame-top-level-sheet frame))
-	  (make-bounding-rectangle 0 0 w h))
-    (allocate-space (frame-top-level-sheet frame) w h) ))
+  (let ((top-level-sheet (frame-top-level-sheet frame)))
+    (sheet-adopt-child top-level-sheet (frame-panes frame))
+    (unless (sheet-parent top-level-sheet)
+      (sheet-adopt-child (graft frame) top-level-sheet))
+    ;; Find the size of the new frame
+    (multiple-value-bind (w h) (frame-geometry* frame)
+      ;; automatically generates a window-configuation-event
+      ;; which then calls allocate-space
+      ;;
+      ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
+      ;; window is mapped and do the space allocation now, so that all
+      ;; sheets will have their correct geometry at once. --GB
+      (change-space-requirements top-level-sheet :width w :height h
+                                                 :resize-frame t)
+      (setf (sheet-region top-level-sheet) (make-bounding-rectangle 0 0 w h))
+      (allocate-space top-level-sheet w h))))
 
 (defmethod layout-frame ((frame application-frame) &optional width height)
   (let ((pane (frame-panes frame)))
@@ -636,7 +643,8 @@ documentation produced by presentations.")
         (event-queue (frame-event-queue frame)))
     (setf (slot-value frame 'top-level-sheet)
           (make-pane-1 fm frame 'top-level-sheet-pane
-                       :name 'top-level-sheet
+                       :name (frame-name frame)
+                       :pretty-name (frame-pretty-name frame)
                        ;; sheet is enabled from enable-frame
                        :enabled-p nil))
     (generate-panes fm frame)
@@ -740,8 +748,8 @@ documentation produced by presentations.")
                                  :name ',name
                                  ,@(cdr form)))
        (:command-menu `(make-clim-command-menu-pane
-       			:name ',name
-       			,@(cdr form)))
+                                :name ',name
+                                ,@(cdr form)))
        (otherwise `(make-pane ,(first form) :name ',name ,@(cdr form)))))
     ;; Non-standard pane designator fed to the `make-pane'
     (t `(make-pane ',(first form) :name ',name ,@(cdr form)))))
@@ -832,42 +840,48 @@ documentation produced by presentations.")
 (defmacro define-application-frame (name superclasses slots &rest options)
   (when (null superclasses)
     (setq superclasses '(standard-application-frame)))
-  (let ((pane nil)
-	(panes nil)
-	(layouts nil)
-	(current-layout nil)
-	(command-table (list name))
-	(menu-bar t)
-	(disabled-commands nil)
-	(command-definer t)
-	(top-level '(default-frame-top-level))
-	(others nil)
-	(pointer-documentation nil)
-	(geometry nil)
-	(user-default-initargs nil)
-	(frame-arg (gensym "FRAME-ARG")))
+  (let ((pretty-name (string-capitalize name))
+        (pane nil)
+        (panes nil)
+        (layouts nil)
+        (current-layout nil)
+        (command-table (list name))
+        (menu-bar t)
+        (disabled-commands nil)
+        (command-definer t)
+        (top-level '(default-frame-top-level))
+        (others nil)
+        (pointer-documentation nil)
+        (geometry nil)
+        (user-default-initargs nil)
+        (frame-arg (gensym "FRAME-ARG")))
     (loop for (prop . values) in options
-	do (case prop
-	     (:pane (setq pane values))
-	     (:panes (setq panes values))
-	     (:layouts (setq layouts values))
-	     (:command-table (setq command-table (first values)))
-	     (:menu-bar (setq menu-bar (if (listp values)
+        do (case prop
+             (:pane (setq pane values))
+             (:panes (setq panes values))
+             (:layouts (setq layouts values))
+             (:command-table (setq command-table (first values)))
+             (:menu-bar (setq menu-bar (if (listp values)
                                            (first values)
                                            values)))
-	     (:disabled-commands (setq disabled-commands values))
-	     (:command-definer (setq command-definer (first values)))
-	     (:top-level (setq top-level (first values)))
-	     (:pointer-documentation (setq pointer-documentation (car values)))
-	     (:geometry (setq geometry values))
-	     (:default-initargs (setq user-default-initargs values))
-	     (t (push (cons prop values) others))))
+             (:disabled-commands (setq disabled-commands values))
+             (:command-definer (setq command-definer (first values)))
+             (:top-level (setq top-level (first values)))
+             (:pointer-documentation (setq pointer-documentation (car values)))
+             (:geometry (setq geometry values))
+             (:default-initargs
+              (destructuring-bind
+                  (&key ((:pretty-name user-pretty-name) nil pretty-name-p)
+                   &allow-other-keys)
+                  values
+                (when pretty-name-p
+                  (setf pretty-name user-pretty-name)))
+              (setf user-default-initargs
+                    (alexandria:remove-from-plist values :pretty-name)))
+             (t (push (cons prop values) others))))
     (when (eq command-definer t)
       (setf command-definer
-            (intern (concatenate 'string
-                                 (symbol-name '#:define-)
-                                 (symbol-name name)
-                                 (symbol-name '#:-command)))))
+            (alexandria:symbolicate '#:define- name '#:-command)))
     (when (or (and pane panes)
               (and pane layouts))
       (error ":pane cannot be specified along with either :panes or :layouts"))
@@ -882,7 +896,7 @@ documentation produced by presentations.")
         ,slots
         (:default-initargs
          :name ',name
-         :pretty-name ,(string-capitalize name)
+         :pretty-name ,pretty-name
          :command-table (find-command-table ',(first command-table))
          :disabled-commands ',disabled-commands
          :menu-bar ',menu-bar
@@ -892,8 +906,8 @@ documentation produced by presentations.")
          :top-level-lambda (lambda (,frame-arg)
                              (,(car top-level) ,frame-arg
                                ,@(cdr top-level)))
-	 ,@geometry
-	 ,@user-default-initargs)
+         ,@geometry
+         ,@user-default-initargs)
         ,@others)
 
       (defmethod frame-all-layouts ((frame ,name))
@@ -918,30 +932,27 @@ documentation produced by presentations.")
                      ,arguments ,@body))))))))
 
 (defun make-application-frame (frame-name
-			       &rest options
-			       &key (pretty-name
-				     (string-capitalize frame-name))
-			            (frame-manager nil frame-manager-p)
-			            enable
-			            (state nil state-supplied-p)
-			            save-under (frame-class frame-name)
-			       &allow-other-keys)
+                               &rest options
+                               &key (frame-manager nil frame-manager-p)
+                                    enable
+                                    (state nil state-supplied-p)
+                                    save-under (frame-class frame-name)
+                               &allow-other-keys)
   (declare (ignore save-under))
-  (with-keywords-removed (options (:pretty-name :frame-manager :enable :state
-				   :save-under :frame-class))
+  (with-keywords-removed (options (:frame-manager :enable :state
+                                   :save-under :frame-class))
     (let ((frame (apply #'make-instance frame-class
-			:name frame-name
-			:pretty-name pretty-name
-			options)))
+                        :name frame-name
+                        options)))
       (when frame-manager-p
-	(adopt-frame frame-manager frame))
+        (adopt-frame frame-manager frame))
       (cond ((or enable (eq state :enabled))
-	     (enable-frame frame))
-	    ((and (eq state :disowned)
-		  (not (eq (frame-state frame) :disowned)))
-	     (disown-frame (frame-manager frame) frame))
-	    (state-supplied-p
-	     (warn ":state ~S not supported yet." state)))
+             (enable-frame frame))
+            ((and (eq state :disowned)
+                  (not (eq (frame-state frame) :disowned)))
+             (disown-frame (frame-manager frame) frame))
+            (state-supplied-p
+             (warn ":state ~S not supported yet." state)))
       frame)))
 
 (defgeneric clim-extensions:find-frame-type (frame)

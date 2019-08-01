@@ -2,12 +2,35 @@
 @chapter Extensions
 
 @menu
+* Frame and sheet names::
 * Text editor substrate::
 * Extended text formatting::
 * Tab Layout::
 * Fonts and Extended Text Styles::
 * Raster Images::
 @end menu
+
+@node Frame and sheet names
+@section Frame and sheet names
+
+According to the @clim specification, a frame has a name and a pretty
+name the latter of which can be changed. @mcclim extends this design to
+top-level sheets in form of the following protocol:
+
+@include docstrings/fun-clim-extensions-sheet-name.texi
+@include docstrings/fun-clim-extensions-sheet-pretty-name.texi
+@include docstrings/fun-clim-extensions-setf-sheet-pretty-name.texi
+
+The class @code{clim-extensions:named-sheet-mixin} can be added as a
+superclass to sheet classes that implement the above protocol. Otherwise
+default methods on @code{clim-extensions:sheet-name} and
+@code{clim-extensions:sheet-pretty-name} return @t{nil} and @t{"(Unnamed
+sheet)"} respectively.
+
+Furthermore @mcclim provides a way for clients to be notified when the
+pretty name of frame changes:
+
+@include docstrings/fun-clim-extensions-note-frame-pretty-name-changed.texi
 
 @node Text editor substrate
 @section Text editor substrate
@@ -40,56 +63,54 @@ alignment.
 
 @anchor{Function clime:page-initial-position}
 @anchor{Function clime:page-final-position}
-@deffn {Function} {clime:page-initial-position} stream
-@deffnx {Function} {clime:page-initial-position} stream
-@findex clime:page-initial-position
-@findex clime:page-final-position
-Both functions return two values, x and y coordinates of the
-corresponding position. Initial position is where the cursor is placed
-on a fresh page, and the final position is where the cursor is placed
-right before the page ends. Coordinates depend on current margins and
-text alignment.
+@deffn {Function} {@symbol{page-initial-position,clime}} stream
+@deffnx {Function} {@symbol{page-final-position,clime}} stream
+Both functions return two values, x and y coordinates of the respective
+position.  Initial position is where the cursor is placed on a fresh
+page, and the final position is where the cursor is placed right before
+the page ends.  Coordinates depend on current margins and text
+alignment.
 @end deffn
 
 @anchor{Function clime:stream-page-region}
-@deffn {Function} {clime:stream-page-region} stream
-@findex clime:stream-page-region
-Functions returns a region which corresponds to the stream page
-format. This region implies the stream margins.
+@deffn {Function} {@symbol{stream-page-region,clime}} stream
+This function returns a region which corresponds to the stream page
+format.  This region corresponds the stream margins.
 @end deffn
 
 @anchor{Macro clime:with-temporary-margins}
-@deffn {Macro} {clime:with-temporary-margins} (stream &key (move-cursor t) left right top bottom) &body body
-@findex clime:with-temporary-margins
-Executes a body in a dynamic environment where stream's margins are
-augumented with provided one. Not all margins have to be specified. If
-they are not current margin values are taken as defaults.
+@deffn {Macro} {@symbol{with-temporary-margins,clime}} (stream &key (move-cursor t) left right top bottom) &body body
+Execute @var{body} in a dynamic environment where @var{stream}'s
+margins are augmented with @var{left}, @var{right}, @var{top} and
+@var{bottom}.  Not all margins have to be specified.  If they are not
+current margin values are taken as defaults.
 
 Each margin must be in one of following formats: @code{(:relative
-space)} or @code{(:absolute space)}. Space may be specified as for
-@code{:x-spacing} and @code{:y-spacing} for horizontal and vertical
-margins accordingly. If margin is ``absolute'' then it corresponds to
-its exact placement in stream coordinates. ``relative'' margins are
-relative to the stream viewport region.
+@var{space})} or @code{(:absolute @var{space})}.  @var{space} may be
+specified as for @code{:x-spacing} and @code{:y-spacing} for horizontal
+and vertical margins accordingly.  If a margin is ``absolute'' then it
+corresponds to its exact placement in stream coordinates.  ``relative''
+margins are relative to the stream viewport region.
 
-If the boolean @code{move-cursor} is T then the cursor is left where
-it was placed after the last operation. Otherwise upon body completion
-cursor-position is restored to its previous value.
+If the Boolean @var{move-cursor} is @code{T} then the cursor is left
+where it was placed after the last operation.  Otherwise upon completion
+of @var{body}, the cursor position is restored to its previous value.
 
-Programmers using clime:with-temporary-margins should begin the body
-with a call to a function @code{clim:stream-set-cursor-position} which
-will set the cursor at the @code{clime:page-initial-position}.
+Programmers using @code{clime:with-temporary-margins} should begin
+@var{body} with a call to the function
+@code{clim:stream-set-cursor-position} which will set the cursor to
+@code{clime:page-initial-position}.
 @end deffn
 
 @subsection FILLING-OUTPUT extension
 
-The macro @code{filling-output} behaves the same as before with a few
-additions:
+The macro @code{clim:filling-output} behaves the same as before with a
+few additions:
 
 @code{:after-line-break-subsequent} is complementary to
 @code{:after-line-break-initially}, it decides whether
 @code{:after-line-break} is printed for lines after the first
-break. It defaults to @code{T}.
+break.  It defaults to @code{T}.
 
 @code{:after-line-break-composed} decides whether
 @code{after-line-break} from the external @code{filling-output} should
@@ -97,13 +118,13 @@ be called as well (defaults to @code{T}).
 
 @code{:after-line-break} may be a string or a function accepting two
 arguments: a stream and a flag indicating whether it is a soft newline
-or not. The function will be executed conditionally depending on
-values of @code{:after-line-break-initially} and
+or not.  The function will be executed conditionally depending on values
+of @code{:after-line-break-initially} and
 @code{:after-line-break-subsequent} flags.
 
-The macro preserves a @code{text-style}, @code{ink} and indentation
-from state in which it was invoked. That means in particular that
-@code{indenting-output} may be called from insde @code{filling-output}
+The macro preserves a @code{text-style}, @code{ink} and indentation from
+state in which it was invoked.  That means in particular that
+@code{indenting-output} may be called from inside @code{filling-output}
 and @code{after-line-break} will be printed without this indent.
 
 @node Tab Layout
@@ -113,8 +134,9 @@ The tab layout is a composite pane arranging its children so that
 exactly one child is visible at any time, with a row of buttons
 allowing the user to choose between them.
 
-See also the tabdemo.lisp example code located under Examples/ in the
-@mcclim distribution.  It can be started using demodemo.
+See also the @file{tabdemo.lisp} example code located under
+@file{Examples} in the @mcclim distribution.  It can be started using
+@code{(clim-demo:demodemo)}.
 
 @include class-clim-tab-layout-tab-layout.texi
 @include class-clim-tab-layout-tab-layout-pane.texi
@@ -265,13 +287,11 @@ Raster image backend includes a medium that implements:
 @end itemize
 
 @anchor{Macro clime:with-output-to-image-stream}
-@deffn {Macro} {clime:with-output-to-image-stream} (stream-var file-stream format &rest options) &body body
-@findex clime:with-output-to-raster-image-stream
+@deffn {Macro} {@symbol{with-output-to-image-stream,clime}} (stream-var file-stream format &rest options) &body body
 @end deffn
 
 @anchor{Macro clime:with-output-to-rgba-pattern}
-@deffn {Macro} {clime:with-output-to-rgba-pattern} (stream-var image &rest options) &body body
-@findex clime:with-output-to-rgba-pattern
+@deffn {Macro} {@symbol{with-output-to-rgba-pattern,clime}} (stream-var image &rest options) &body body
 @end deffn
 
 Within @code{body}, @code{stream-var} is bound to a stream that produces
@@ -288,7 +308,7 @@ pairs.  These are the supported keywords:
   @code{:height} --- specifies the height of the image. Its default value is 1000.
 @end itemize
 
-@defmac {clime:with-output-to-raster-image-stream}
+@defmac {@symbol{with-output-to-raster-image-stream,clime}}
 An image describing the output to the @code{stream-var} stream will be
 written to the stream @code{file-stream} using the format
 @code{format}. @code{format} is a symbol that names the type of the
@@ -297,7 +317,7 @@ image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
 @code{ppm}. Its default value is @code{:png}.
 @end defmac
 
-@defmac {clime:with-output-to-rgba-pattern}
+@defmac {@symbol{with-output-to-rgba-pattern,clime}}
 An image describing the output to the @code{stream-var} stream will be
 returned as an rgba pattern (of class @code{clime:image-pattern}).
 @end defmac
