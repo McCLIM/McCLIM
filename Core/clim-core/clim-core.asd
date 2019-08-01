@@ -1,4 +1,3 @@
-
 (defsystem #:clim-core
   :depends-on (#:clim-basic #:clim-postscript #+sbcl (:require #:sb-introspect))
   :components
@@ -11,7 +10,7 @@
    (:file "graph-formatting")
    (:file "frames" :depends-on ("commands" "presentations" "presentation-defs" "incremental-redisplay"))
    (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay"
-                                      "bordered-output" "presentation-defs" "gadgets"))
+                                      "bordered-output" "presentation-defs" "gadgets" "dialog"))
    (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
    (:file "gadgets" :depends-on ("commands" "input-editing"
                                  "frames" "incremental-redisplay" "panes"))
@@ -27,7 +26,6 @@
    (:file "dialog" :depends-on ("panes" "frames" "incremental-redisplay"
                                 "table-formatting" "presentations"
                                 "bordered-output" "presentation-defs"
-                                "dialog-views" "input-editing"
-                                "commands" "gadgets"))
+                                "input-editing" "commands" "gadgets"))
    (:file "builtin-commands" :depends-on ("table-formatting" "commands" "presentations"
                                           "dialog" "presentation-defs" "input-editing"))))
