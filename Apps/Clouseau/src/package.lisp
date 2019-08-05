@@ -100,4 +100,13 @@
    #:root-place                     ; also setf
    #:root-object                    ; also setf
    #:change-hook
-   #:present-inspected-object-graph))
+   #:present-inspected-object-graph)
+
+  ;; Inspector pane protocol and classes
+  (:export
+   #:queue-redisplay
+
+   #:inspector-pane-mixin
+   #:inspector-pane
+
+   #:inspector-pane-command-table))

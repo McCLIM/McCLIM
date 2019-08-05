@@ -40,5 +40,6 @@
                               (:file       "place-formatting")
                               ;; Presentations for places and values
                               (:file       "presentations")
-                              ;; Inspector state
-                              (:file       "state")))))
+                              ;; Inspector state, pane mixin and pane
+                              (:file       "state")
+                              (:file       "pane")))))
