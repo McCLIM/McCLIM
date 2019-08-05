@@ -20,11 +20,6 @@ McCLIM
 @end macro
 @end ifnottex
 
-@macro glossentry{ENTRY}
-@noindent @b{\ENTRY\}
-@cindex \ENTRY\
-@end macro
-
 @macro func{FUN}
 @b{\FUN\}
 @end macro
@@ -42,7 +37,6 @@ McCLIM
 @b{Issue:} @i{\COMMENT\ --- \AUTHOR\}
 @end macro
 
-@alias gloss = i
 @alias func = code
 @alias class = code
 @alias package = code
@@ -53,3 +47,27 @@ McCLIM
 @alias longref = t
 @alias cl = code
 @alias initarg = code
+
+@c ===================================================================
+@c Glossary entries
+@c ===================================================================
+
+@macro glossentry{ENTRY}
+@anchor{\ENTRY\}
+@noindent @b{\ENTRY\}
+@cindex \ENTRY\
+@end macro
+
+@iftex
+@alias gloss = i
+@macro glossref{LABEL,CONCEPT}
+@i{\LABEL\}
+@end macro
+@end iftex
+
+@ifnottex
+@alias gloss = i
+@macro glossref{LABEL,CONCEPT}
+@i{@ref{\CONCEPT\,\LABEL\,\LABEL\}}
+@end macro
+@end ifnottex

@@ -26,20 +26,21 @@
 to transform coordinates between them.
 
 The coordinate system used for the arguments of drawing functions is
-called the @gloss{user coordinate system},
+called the @glossref{user coordinate system,User coordinates},
 @cindex user coordinate system
- and coordinate values expressed in the user coordinate system are known
-as @gloss{user coordinates}.
+and coordinate values expressed in the user coordinate system are known
+as @glossref{user coordinates,User coordinates}.
 @cindex user coordinates
 
-Each sheet has its own coordinate system called the @gloss{sheet
-coordinate system},
+Each sheet has its own coordinate system called the @glossref{sheet
+coordinate system,Sheet coordinates},
 @cindex sheet coordinate system
- and positions expressed in this coordinate system are said to be
-expressed in @gloss{sheet coordinates}.
+and positions expressed in this coordinate system are said to be
+expressed in @glossref{sheet coordinates,Sheet coordinates}.
 @cindex sheet coordinates
-  User coordinates are translated to @gloss{sheet coordinates} by means
-of the @gloss{user transformation} also called the @gloss{medium
+User coordinates are translated to @glossref{sheet coordinates,Sheet
+coordinates} by means of the @glossref{user transformation,User
+transformation} also called the @glossref{medium transformation,Medium
 transformation}.  This transformation is stored in the @gloss{medium}
 used for drawing.  The medium transformation can be composed temporarily
 with a transformation given as an explicit argument to a drawing
@@ -47,28 +48,29 @@ function.  In that case, the user transformation is temporarily modified
 for the duration of the drawing.
 
 Before drawing can occur, coordinates in the sheet coordinate system
-must be transformed to @gloss{native coordinates}, which are coordinates
-of the coordinate system of the native windowing system.  The
-transformation responsible for computing native coordinates from sheet
-coordinates is called the @gloss{native transformation}.  Notice that
-each sheet potentially has its own native coordinate system, so that the
-native transformation is specific for each sheet.  Another way of
-putting it is that each sheet has a mirror, which is a window in the
-underlying windowing system.  If the sheet has its own mirror, it is the
-@emph{direct mirror} of the sheet.  Otherwise its mirror is the direct
-mirror of one of its ancestors.  In any case, the native transformation
-of the sheet determines how sheet coordinates are to be translated to
-the coordinates of that mirror, and the native coordinate system of the
-sheet is that of its mirror.
+must be transformed to @glossref{native coordinates,Native coordinates},
+which are coordinates of the coordinate system of the native windowing
+system.  The transformation responsible for computing native coordinates
+from sheet coordinates is called the @glossref{native
+transformation,Native transformation}.  Notice that each sheet
+potentially has its own native coordinate system, so that the native
+transformation is specific for each sheet.  Another way of putting it is
+that each sheet has a mirror, which is a window in the underlying
+windowing system.  If the sheet has its own mirror, it is the
+@glossref{direct mirror,Direct mirror} of the sheet.  Otherwise its
+mirror is the direct mirror of one of its ancestors.  In any case, the
+native transformation of the sheet determines how sheet coordinates are
+to be translated to the coordinates of that mirror, and the native
+coordinate system of the sheet is that of its mirror.
 
 The composition of the user transformation and the native transformation
-is called the @gloss{device transformation}.  It allows drawing
-functions to transform coordinates only once before obtaining native
-coordinates.
+is called the @glossref{device transformation,Device transformation}.
+It allows drawing functions to transform coordinates only once before
+obtaining native coordinates.
 
 Sometimes, it is useful to express coordinates of a sheet in the
 coordinate of its parent.  The transformation responsible for that is
-called the @gloss{sheet transformation}.
+called the @glossref{sheet transformation,Sheet transformation}.
 
 @node Arguments to drawing functions
 @subsection Arguments to drawing functions
@@ -90,27 +92,29 @@ windowing system.
 
 @clim{} sheets are organized into a hierarchy.  Each sheet has a sheet
 transformation and a sheet region.  The sheet tranformation determines
-how coordinates in the sheet's own coordinate system get translated
-into coordinates in the coordinate system of its parent.  The sheet
-region determines the @gloss{potentially visible area} of the
-otherwise infinite drawing plane of the sheet.  The sheet region is
-given in the coordinate system of the sheet.
+how coordinates in the sheet's own coordinate system get translated into
+coordinates in the coordinate system of its parent.  The sheet region
+determines the @glossref{potentially visible area,Potentially visible
+area} of the otherwise infinite drawing plane of the sheet.  The sheet
+region is given in the coordinate system of the sheet.
 
-In @mcclim{}, every grafted sheet has a @gloss{native transformation}.
-The native transformation is used by drawing functions to translate
-sheet coordinates to @gloss{native coordinates}, so that drawing can
-occur on the (not necessarily immediate) mirror of the sheet.  It
-would therefore be enough for sheets that support the @gloss{output
-protocol} to have a native transformation.  However, it is easier to
-generalize it to all sheets, in order to simplify the programming of
-the computation of the native transformation.  Thus, in @mcclim{}, even
-sheets that are mute for output have a native transformation.
+In @mcclim{}, every grafted sheet has a @glossref{native
+transformation,Native transformation}.  The native transformation is
+used by drawing functions to translate sheet coordinates to
+@glossref{native coordinates,Native coordinates}, so that drawing can
+occur on the (not necessarily immediate) mirror of the sheet.  It would
+therefore be enough for sheets that support the @gloss{output protocol}
+to have a native transformation.  However, it is easier to generalize it
+to all sheets, in order to simplify the programming of the computation
+of the native transformation.  Thus, in @mcclim{}, even sheets that are
+mute for output have a native transformation.
 
-In @mcclim{}, every grafted sheet also has a @gloss{native region}.  The
-native region is intersection the sheet region and the region of all
-of its ancestors, except that the native region is given in
-@gloss{native coordinates}, i.e. the coordinates obtained after the
-application of the @gloss{native transformation} of the sheet.
+In @mcclim{}, every grafted sheet also has a @glossref{native
+region,Native region}.  The native region is intersection the sheet
+region and the region of all of its ancestors, except that the native
+region is given in @gloss{native coordinates}, i.e. the coordinates
+obtained after the application of the @gloss{native transformation} of
+the sheet.
 
 @node Computing the native transformation
 @subsection Computing the native transformation
@@ -160,11 +164,11 @@ and such.
 
 @clim{} generalizes the concept of a hierarchy of window in a windowing
 system in several different ways.  A window in a windowing system
-generalizes to a @gloss{sheet} in @clim{}.  More precisely, a window in a
-windowing system generalizes to the @gloss{sheet region} of a sheet.  A
-@clim{} sheet is an abstract concept with an infinite @gloss{drawing plane}
-and the @gloss{region} of the sheet is the potentially visible part of
-that drawing plane.
+generalizes to a @gloss{sheet} in @clim{}.  More precisely, a window in
+a windowing system generalizes to the @glossref{sheet region,Sheet
+region} of a sheet.  A @clim{} sheet is an abstract concept with an
+infinite @gloss{drawing plane} and the @gloss{region} of the sheet is
+the potentially visible part of that drawing plane.
 
 @clim{} @gloss{sheet region}s don't have to be rectangular the way windows
 in most windowing systems have to be.  Thus, the width and the height of
