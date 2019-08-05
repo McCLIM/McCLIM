@@ -102,6 +102,10 @@
    #:change-hook
    #:present-inspected-object-graph)
 
+  ;; Command table
+  (:export
+   #:inspector-command-table)
+
   ;; Inspector pane protocol and classes
   (:export
    #:queue-redisplay

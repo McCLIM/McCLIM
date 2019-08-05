@@ -40,6 +40,8 @@
                               (:file       "place-formatting")
                               ;; Presentations for places and values
                               (:file       "presentations")
+                              ;; Commands applicable to all objects
+                              (:file       "commands")
                               ;; Inspector state, pane mixin and pane
                               (:file       "state")
                               (:file       "pane")))))
