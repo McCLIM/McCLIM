@@ -27,4 +27,18 @@
   :version     (:read-file-form "version-string.sexp")
   :depends-on  ("mcclim")
   ;; Files
-  :components  ())
+  :components  ((:module     "base"
+                 :pathname   "src"
+                 :serial     t
+                 :components ((:file       "package")
+                              ;; Formatting utilities
+                              (:file       "formatting")
+                              ;; Generic functions
+                              (:file       "protocol")
+                              ;; Places and place formatting
+                              (:file       "place")
+                              (:file       "place-formatting")
+                              ;; Presentations for places and values
+                              (:file       "presentations")
+                              ;; Inspector state
+                              (:file       "state")))))
