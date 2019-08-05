@@ -1,9 +1,17 @@
+@c ===================================================================
+@c Abbreviations
+@c ===================================================================
+
 @macro clim{}
 CLIM
 @end macro
 @macro mcclim{}
 McCLIM
 @end macro
+
+@c ===================================================================
+@c Semantic markup and references
+@c ===================================================================
 
 @macro setf{NAME}
 (setf \NAME\)
@@ -20,24 +28,27 @@ McCLIM
 @end macro
 @end ifnottex
 
-@macro func{FUN}
-@b{\FUN\}
+@macro func{NAME}
+@b{\NAME\}
+@end macro
+@macro funref{NAME}
+@ref{Function \NAME\,@b{\NAME\}}
 @end macro
 
-@macro fmacro{MACRO}
-@b{\MACRO\}
+@macro fmacro{NAME}
+@b{\NAME\}
+@end macro
+@macro macroref{NAME}
+@ref{Macro \NAME\,@b{\NAME\}}
 @end macro
 
 @macro genfun{FUN}
 @b{\FUN\}
 @end macro
-
-@macro issue{AUTHOR,COMMENT}
-@noindent
-@b{Issue:} @i{\COMMENT\ --- \AUTHOR\}
+@macro genfunref{NAME}
+@ref{Generic-Function \NAME\,@b{\NAME\}}
 @end macro
 
-@alias func = code
 @alias class = code
 @alias package = code
 @alias gadget = code
@@ -47,6 +58,11 @@ McCLIM
 @alias longref = t
 @alias cl = code
 @alias initarg = code
+
+@macro issue{AUTHOR,COMMENT}
+@noindent
+@b{Issue:} @i{\COMMENT\ --- \AUTHOR\}
+@end macro
 
 @c ===================================================================
 @c Glossary entries
