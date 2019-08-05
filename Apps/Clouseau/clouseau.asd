@@ -25,7 +25,8 @@
   :author      "Jan Moringen <jmoringe@techfak.uni-bielefeld.de>"
   ;; Version and dependencies
   :version     (:read-file-form "version-string.sexp")
-  :depends-on  ("mcclim")
+  :depends-on  ("closer-mop"
+                "mcclim")
   ;; Files
   :components  ((:module     "base"
                  :pathname   "src"
@@ -44,4 +45,26 @@
                               (:file       "commands")
                               ;; Inspector state, pane mixin and pane
                               (:file       "state")
-                              (:file       "pane")))))
+                              (:file       "pane")))
+                ;; Display functions and commands
+                (:module     "objects"
+                 :pathname   "src/objects"
+                 :depends-on ("base")
+                 :serial     t
+                 :components ((:file       "generic")
+                              (:file       "documentation")
+                              ;; Standard object kinds
+                              (:file       "number")
+                              (:file       "character")
+                              (:file       "sequence")
+                              (:file       "list")
+                              (:file       "array")
+                              (:file       "instance")
+                              (:file       "symbol")
+                              (:file       "pathname")
+                              (:file       "hash-table")
+                              (:file       "function")
+                              (:file       "class")
+                              (:file       "extended-sequence")
+                              ;; Generic disassembly display
+                              (:file       "disassembly")))))

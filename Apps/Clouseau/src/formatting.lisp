@@ -46,14 +46,33 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *styles*
     (alist-hash-table
-     `((:header              . (                    :text-face :bold))
-       (:changable           . (:ink ,+dark-violet+))
-       (:slot-like           . (:ink ,+dark-orange+                    :text-size :small))
-       (:slot-like/same-size . (:ink ,+dark-orange+))
-       (:inactive            . (:ink ,+dark-gray+))
-       (:unbound             . (:ink ,+darkp-gray+  :text-face :italic))
-       (:note                . (                    :text-face :italic :text-size :small))
-       (:error               . (:ink ,+dark-red+    :text-face :italic)))))
+     `((:header                      . (                                                    :text-face :bold))
+       (:changable                   . (:ink ,+dark-violet+))
+       (:slot-like                   . (:ink ,+dark-orange+                                                    :text-size :small))
+       (:slot-like/same-size         . (:ink ,+dark-orange+))
+       (:inactive                    . (:ink ,+dark-gray+))
+       (:unbound                     . (:ink ,+dark-gray+                                   :text-face :italic))
+       (:note                        . (                                                    :text-face :italic :text-size :small))
+       (:error                       . (:ink ,+dark-red+                                    :text-face :italic))
+
+       (:identity                    . (:ink ,+dark-slate-blue+                                                :text-size :smaller))
+
+       (:float-sign                  . (:ink ,(make-contrasting-inks 8 0)))
+       (:float-significand           . (:ink ,(make-contrasting-inks 8 1)))
+       (:float-radix                 . (:ink ,(make-contrasting-inks 8 3)))
+       (:float-exponent              . (:ink ,(make-contrasting-inks 8 4)))
+
+       (:complex-realpart            . (:ink ,(make-contrasting-inks 8 0)))
+       (:complex-imagpart            . (:ink ,(make-contrasting-inks 8 1)))
+       (:complex-magnitude           . (:ink ,(make-contrasting-inks 8 3)))
+       (:complex-phase               . (:ink ,(make-contrasting-inks 8 4)))
+
+       (:hash-table-count            . (:ink ,(make-contrasting-inks 8 4)))
+       (:hash-table-size             . ())
+       (:hash-table-rehash-size      . (:ink ,(make-contrasting-inks 8 5)))
+       (:hash-table-rehash-threshold . (:ink ,(make-contrasting-inks 8 6)))
+
+       (:disassembly                 . (                                  :text-family :fix)))))
 
   (defun style-drawing-options (style)
     (gethash style *styles*)))
