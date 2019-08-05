@@ -67,4 +67,9 @@
                               (:file       "class")
                               (:file       "extended-sequence")
                               ;; Generic disassembly display
-                              (:file       "disassembly")))))
+                              (:file       "disassembly")))
+                ;; History of inspected objects
+                (:module     "navigation"
+                 :pathname   "src/navigation"
+                 :depends-on ("base")
+                 :components ((:file       "navigation")))))
