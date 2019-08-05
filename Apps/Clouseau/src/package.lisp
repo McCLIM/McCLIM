@@ -113,4 +113,8 @@
    #:inspector-pane-mixin
    #:inspector-pane
 
-   #:inspector-pane-command-table))
+   #:inspector-pane-command-table)
+
+  ;; User interface
+  (:export
+   #:inspect))

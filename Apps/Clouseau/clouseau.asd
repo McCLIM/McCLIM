@@ -72,4 +72,10 @@
                 (:module     "navigation"
                  :pathname   "src/navigation"
                  :depends-on ("base")
-                 :components ((:file       "navigation")))))
+                 :components ((:file       "navigation")))
+                ;; Application frame, command table user-face
+                ;; functions
+                (:module     "application"
+                 :pathname   "src"
+                 :depends-on ("base" "navigation")
+                 :components ((:file       "application")))))

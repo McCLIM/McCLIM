@@ -106,7 +106,11 @@
                                  (pane  inspector-pane-mixin)
                                  &key force-p)
   (declare (ignore force-p))
-  (present-inspected-object-graph (state pane) pane))
+  (present-inspected-object-graph (state pane) pane)
+  ;; Place the cursor on a fresh line so prompts work predictably when
+  ;; the frame does not have an interactor pane and PANE is used for
+  ;; command input/output.
+  (fresh-line pane))
 
 ;;; Redisplay
 
