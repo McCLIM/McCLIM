@@ -68,14 +68,14 @@ instructions in @file{Apps/Listener/README} for more information.
 (clim-listener:run-listener)
 @end lisp
 
-@item Apps/Inspector
+@item Apps/Clouseau
 
 @clim{}-enabled Lisp inspector.  System name is
 @t{clouseau}.  @xref{Inspector} for more information.
 
 @lisp
 (asdf:load-system 'clouseau)
-(clouseau:inspector clim:+indian-red+)
+(clouseau:inspect clim:+indian-red+)
 @end lisp
 
 @item Apps/Debugger

@@ -1,0 +1,12 @@
+@anchor{Function clouseau:inspect}
+@deffn {Function} {@symbol{inspect,clouseau}} object &key new-process
+Inspect @var{object} in a new inspector window.
+
+Return two values: 1) @var{object} 2) the created inspector application
+frame.
+
+If @var{new-process} is false (the default), this function returns to
+the caller after the inspector window has been closed. If
+@var{new-process} is true, this function returns to the caller
+immediately and the inspector frame executes in a separate thread.
+@end deffn
