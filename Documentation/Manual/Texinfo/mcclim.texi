@@ -8,6 +8,8 @@
 @syncodeindex vr fn
 @syncodeindex tp fn
 
+@paragraphindent 0
+
 @setfilename mcclim
 @settitle McCLIM User's Manual
 
