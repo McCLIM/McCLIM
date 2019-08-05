@@ -61,11 +61,13 @@
 ;;; `inspected-object'
 
 (defclass inspected-object ()
-  ((%place :initarg  :place
-           :reader   place)
-   (%style :initarg  :style
-           :accessor style
-           :initform :collapsed)))
+  ((%place       :initarg  :place
+                 :reader   place)
+   (%style       :initarg  :style
+                 :accessor style
+                 :initform :collapsed)
+   (%occurrences :accessor occurrences
+                 :initform nil)))
 
 (defmethod object ((object inspected-object))
   (value (place object)))
@@ -79,3 +81,66 @@
 (defmethod make-object-state ((object t) (place t))
   (let ((class (object-state-class object place)))
     (make-instance class :place place)))
+
+;;; Indicating circular structure using presentation highlighting
+
+(flet ((map-other-occurrences (function presentation)
+         (when-let ((occurrences (cdr (occurrences
+                                       (presentation-object presentation)))))
+           (map nil (lambda (other)
+                      (unless (eq other presentation)
+                        (funcall function other)))
+                occurrences)))
+       (draw-arc-arrow (stream from to ink)
+         (multiple-value-bind (x1 y1) (bounding-rectangle-position from)
+           (multiple-value-bind (x2 y2) (bounding-rectangle-position to)
+             (let ((design (mcclim-bezier:make-bezier-curve*
+                            (list x1              y1
+                                  (lerp .3 x1 x2) y1
+                                  x2              (lerp .7 y1 y2)
+                                  x2              y2))))
+               (draw-design stream design :ink ink :line-thickness 2)
+               (draw-arrow* stream
+                            x2 (lerp .99 y1 y2)
+                            x2               y2
+                            :ink ink :line-thickness 2))))))
+
+  (define-presentation-method highlight-presentation
+    :after ((type   inspected-object)
+            (record t)
+            (stream t)
+            (state  (eql :highlight)))
+    ;; Draw bezier arcs to other occurrences.
+    (let ((i 0))
+      (map-other-occurrences
+       (lambda (other-presentation)
+         (let ((ink (make-contrasting-inks 8 (mod i 8))))
+           (when (zerop i)
+             (multiple-value-call #'draw-circle* stream
+               (bounding-rectangle-position record) 5 :ink ink))
+           (draw-arc-arrow stream record other-presentation ink))
+         (incf i))
+       record)))
+
+  (define-presentation-method highlight-presentation
+    :after ((type   inspected-object)
+            (record t)
+            (stream t)
+            (state  (eql :unhighlight)))
+    ;; Repaint a region that is the union of the bounding regions of
+    ;; all bezier arcs.
+    (let ((i      0)
+          (region +nowhere+))
+      (map-other-occurrences
+       (lambda (other-presentation)
+         (let ((new-region
+                 (with-output-to-output-record (stream)
+                   (when (zerop i)
+                     (multiple-value-call #'draw-circle* stream
+                       (bounding-rectangle-position record) 5))
+                   (draw-arc-arrow stream record other-presentation +black+))))
+           (setf region (region-union region new-region)))
+         (incf i))
+       record)
+      (unless (eq region +nowhere+)
+        (repaint-sheet stream region)))))

@@ -123,6 +123,8 @@ Return the existing or newly made object state."))
 
 (defvar *depth*)
 
+(defvar *seen*)
+
 (defgeneric call-with-root-place (thunk place stream &key view))
 
 (defgeneric inspect-place (place stream)
@@ -169,12 +171,22 @@ Example:
       (present-place stream)
       (present-object stream)))"))
 
+(defgeneric note-object-occurence (object state presentation stream)
+  (:documentation
+   "Note that PRESENTATION is a representation of OBJECT in STREAM.
+
+STATE is the state associated with OBJECT.
+
+The main purpose of this generic function is tracking multiple
+occurrences of objects so the circularity can be indicated."))
+
 ;;; Default behavior
 
 (defmethod call-with-root-place (thunk place stream
                                  &key (view (make-instance 'inspector-view)))
   (climi::letf (((stream-default-view stream) view))
     (let ((*depth*        -1)
+          (*seen*         (make-hash-table :test #'eq))
           (*parent-place* place))
       (funcall thunk))))
 
@@ -192,17 +204,42 @@ Example:
             (format stream "Could not inspect place: ~A" condition))))))
 
 (defmethod inspect-object ((object t) (stream t))
-  (let* ((place *place*)
-         (state (ensure-state object place
-                              (lambda ()
-                                (make-object-state object place))))
-         (style (style state)))
-    (with-output-as-presentation (stream state (presentation-type-of state)
-                                         :single-box t)
-      (let ((*place*        nil)
-            (*parent-place* place))
-        (inspect-object-using-state object state style stream)))
+  (let* ((place        *place*)
+         (state        (ensure-state object place
+                                     (lambda ()
+                                       (make-object-state object place))))
+         (style        (style state))
+         (presentation (with-output-as-presentation
+                           (stream state (presentation-type-of state)
+                                   :single-box t)
+                         (let ((*place*        nil)
+                               (*parent-place* place))
+                           (inspect-object-using-state
+                            object state style stream)))))
+    (note-object-occurence object state presentation stream)
     state))
+
+(defmethod note-object-occurence ((object       t)
+                                  (state        t)
+                                  (presentation t)
+                                  (stream       t))
+  ;; Slight optimization: for the first occurrence of, put
+  ;; PRESENTATION instead of a list into the hash-table. When
+  ;; encountering a second occurrence, replace the presentation with a
+  ;; list.
+  (let* ((seen     *seen*)
+         (existing (gethash object seen)))
+    (cond ((null existing)
+           (setf (gethash object seen) presentation
+                 (occurrences state)   nil))
+          ((not (consp existing))
+           (let ((cell (cons nil (list presentation existing))))
+             (setf (gethash object seen)                        cell
+                   (occurrences (presentation-object existing)) cell
+                   (occurrences state)                          cell)))
+          (t
+           (push presentation (cdr existing))
+           (setf (occurrences state) existing)))))
 
 ;;; Inspector state protocol
 
