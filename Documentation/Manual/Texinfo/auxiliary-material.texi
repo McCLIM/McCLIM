@@ -9,42 +9,54 @@
 @node Glossary
 @section Glossary
 
+@glossentry{Device transformation}
+
+TODO
+
 @glossentry{Direct mirror}
 
-A @gloss{mirror} of a sheet which is not shared with any of the
-ancestors of the sheet.  All grafted @mcclim sheets have mirrors, but not
-all have direct mirrors.  A @mcclim sheet that does not have a direct
+A @glossref{mirror, Mirror} of a sheet which is not shared with any of the
+ancestors of the sheet.  All grafted @mcclim{} sheets have mirrors, but not
+all have direct mirrors.  A @mcclim{} sheet that does not have a direct
 mirror uses the direct mirror of its first ancestor having a direct
 mirror for graphics output.  Asking for the direct mirror of a sheet
 that does not have a direct mirror returns nil.
 
-Whether a @mcclim sheet has a direct mirror or not, is decided by the
+Whether a @mcclim{} sheet has a direct mirror or not, is decided by the
 frame manager.  Some frame managers may only allow for the graft to be a
 mirrored sheet.  Even frame managers that @emph{allow} hierarchical
 mirrors may decide not to allocate a direct mirror for a particular
 sheet.  Although sheets with a direct mirror must be instances of the
-class mirrored-sheet-mixin, whether a @mcclim sheet has a direct mirror
+class mirrored-sheet-mixin, whether a @mcclim{} sheet has a direct mirror
 or not is not determined statically by the class of a sheet, but
 dynamically by the frame manager.
+
+@glossentry{Medium}
+
+TODO
+
+@glossentry{Medium transformation}
+
+TODO
 
 @glossentry{Mirror}
 
 A device window such as an X11 window that parallels a @gloss{sheet} in
-the @clim @gloss{sheet hierarchy}.  A @gloss{sheet} having such a
-@emph{direct} mirror is called a @gloss{mirrored sheet}.  When
-@gloss{drawing functions} are called on a @gloss{mirrored sheet}, they
-are forwarded to the host windowing system as drawing commands on the
-@gloss{mirror}.
+the @clim{} @gloss{sheet hierarchy}.  A @gloss{sheet} having such a
+@emph{direct} mirror is called a @glossref{mirrored sheet,Mirrored
+sheet}.  When @gloss{drawing functions} are called on a
+@gloss{mirrored sheet}, they are forwarded to the host windowing system
+as drawing commands on the @gloss{mirror}.
 
 @clim{} @gloss{sheet}s that are not mirrored must be @gloss{descendents}
-(direct or indirect) of a @gloss{mirrored sheet}, which will then be the
-@gloss{sheet} that receives the drawing commands.
+(direct or indirect) of a @glossref{mirrored sheet,Mirrored sheet}, which
+will then be the @gloss{sheet} that receives the drawing commands.
 
 @glossentry{Mirrored sheet}
 
 A @gloss{sheet} in the @clim{} @gloss{sheet hiearchy} that has a direct
-parallel (called the @gloss{direct mirror}) in the host windowing
-system.  A mirrored sheet is always an instance of the class
+parallel (called the @glossref{direct mirror,Direct mirror}) in the host
+windowing system.  A mirrored sheet is always an instance of the class
 @class{mirrored-sheet-mixin}, but instances of that class are not
 necessarily mirrored sheets.  The sheet is called a mirrored sheet only
 if it currently has a direct mirror.  There may be several reasons for
@@ -94,43 +106,48 @@ impose a native coordinate system with other units, such as millimeters.
 The native coordinate system of a sheet is the native coordinate system
 of its mirror (direct or not).  Thus, a sheet without a direct mirror
 has the same native coordinate system as its parent.  To obtain native
-coordinates of the parent of a mirror, use the @gloss{mirror
-transformation}.
+coordinates of the parent of a mirror, use the @glossref{mirror
+transformation,Mirror transformation}.
 
 @glossentry{Native region}
 
 The native region of a sheet is the intersection of its region and the
-sheet region of all of its parents, expressed in the @gloss{native
-coordinates} of the sheet.
+sheet region of all of its parents, expressed in the @glossref{native
+coordinates,Native coordinates} of the sheet.
+
+@glossentry{Native transformation}
+
+TODO
 
 @glossentry{Potentially visible area}
 
 A bounded area of an otherwise infinte drawing plane that is visible
-unless it is covered by other visible areas.
+unless it is covered by other @glossref{visible areas,Visible area}.
 
 @glossentry{Sheet coordinates}
 
 The coordinate system of coordinates obtained by application of the
-@gloss{user transformation}.
+@glossref{user transformation,User transformation}.
 
 @glossentry{Sheet region}
 
 The @gloss{region} of a sheet determines the visible part of the drawing
-plane.  The dimensions of the sheet region are given in @gloss{sheet
-coordinates}.  The location of the visible part of a sheet within its
-@gloss{parent sheet} is determined by a combination of the @gloss{sheet
-transformation} and the position of the sheet region.
+plane.  The dimensions of the sheet region are given in @glossref{sheet
+coordinates,Sheet coordinates}.  The location of the visible part of a
+sheet within its @gloss{parent sheet} is determined by a combination of
+the @glossref{sheet transformation,Sheet transformation} and the position
+of the sheet region.
 
 For instance, assuming that the sheet region is a rectangle with its
 upper-left corner at @math{(2, 1)} and that the sheet transformation is
-a simple translation @math{(3, 2)}.  Then the origin of the @gloss{sheet
-coordinate system} is at the point @math{(3, 2)} within the @gloss{sheet
-coordinate system} of its @gloss{parent sheet}.  The origin of its
-coordinate system is not visible, however, because the visible region
-has its upper-left corner at @math{(2, 1)} in the @gloss{sheet
-coordinate system}.  Thus, the visible part will be a rectangle whose
-upper-left corner is at @math{(5, 3)} in the @gloss{sheet coordinate
-system} of the @gloss{parent sheet}.
+a simple translation @math{(3, 2)}.  Then the origin of the
+@glossref{sheet coordinate system,Sheet coordinates} is at the point
+@math{(3, 2)} within the @gloss{sheet coordinate system} of its
+@gloss{parent sheet}.  The origin of its coordinate system is not
+visible, however, because the visible region has its upper-left corner
+at @math{(2, 1)} in the @gloss{sheet coordinate system}.  Thus, the
+visible part will be a rectangle whose upper-left corner is at @math{(5,
+3)} in the @gloss{sheet coordinate system} of the @gloss{parent sheet}.
 
 Panes and gadgets alter the region and @gloss{sheet transformation} of
 the underlying sheets (panes and gadgets are special kinds of sheets) to
@@ -139,38 +156,45 @@ transformations, etc.
 
 @glossentry{Sheet transformation}
 
-The transformation used to transform @gloss{sheet coordinates} of a
-sheet to @gloss{sheet coordinates} of its @gloss{parent sheet}.  The
-sheet transformation determine the position, shape, etc. of a sheet
-within the coordinate system of its parent.
+The transformation used to transform @glossref{sheet coordinates,Sheet
+coordinates} of a sheet to @gloss{sheet coordinates} of its
+@gloss{parent sheet}.  The sheet transformation determines the position,
+shape, etc. of a sheet within the coordinate system of its parent.
 
-Panes and gadgets alter the transformation and @gloss{sheet region} of
-the underlying sheets (panes and gadgets are special kinds of sheets) to
-obtain effects such as scrolling, zooming, coordinate system
-transformations, etc.
+Panes and gadgets alter the transformation and @glossref{sheet
+region,Sheet region} of the underlying sheets (panes and gadgets are
+special kinds of sheets) to obtain effects such as scrolling, zooming,
+coordinate system transformations, etc.
 
-@glossentry{User Clipping region }
+@glossentry{Clipping region}
 
-A @gloss{clipping region} used to limit the effect of @gloss{drawing
-functions}.  The user @gloss{clipping region} is stored in the
-@gloss{medium}.  It can be altered either by updating the
-@gloss{medium}, or by passing a value for the :clipping-region
+TODO
+
+@glossentry{User clipping region}
+
+A @glossref{clipping region,Clipping region} used to limit the effect of
+@gloss{drawing functions}.  The user @gloss{clipping region} is stored
+in the @glossref{medium,Medium}.  It can be altered either by updating the
+@gloss{medium}, or by passing a value for the @code{:clipping-region}
 @gloss{drawing option} to a @gloss{drawing function}.
 
-@glossentry{User Coordinates}
+@glossentry{User coordinates}
 
 The coordinate system of coordinates passed to the @gloss{drawing
 functions}.
 
-@glossentry{User Transformation}
+@glossentry{User transformation}
 
-A transformation used to transform @gloss{user coordinates} into
-@gloss{sheet coordinates}.  The user transformation is stored in the
-@gloss{medium}.  It can be altered either by updating the
-@gloss{medium}, or by passing a value for the :transformation
-@gloss{drawing option} to a @gloss{drawing function}.
+A transformation used to transform @glossref{user coordinates,User
+coordinates} into @glossref{sheet coordinates,Sheet coordinates}.  The
+user transformation is stored in the @glossref{medium,Medium}.  It can be
+altered either by updating the @gloss{medium}, or by passing a value for
+the :transformation @gloss{drawing option} to a @gloss{drawing
+function}.
 
 @glossentry{Visible area}
+
+TODO
 
 @node Development History
 @section Development History

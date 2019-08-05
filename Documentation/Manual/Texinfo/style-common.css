@@ -50,6 +50,15 @@ var {
     font-size: 0.8em;
 }
 
+kbd {
+    padding-left: .25em;
+    padding-right: .25em;
+    border: solid 1px #C2C2C2;
+    border-radius: 4px;
+    background-color: #F0F0F0;
+    box-shadow: 1px 1px silver;
+}
+
 div.example,
 div.lisp {
     margin: 0px;
@@ -124,13 +133,15 @@ div.verbatim {
 div.example,
 div.lisp,
 div.verbatim {
-    background-color: #F5F5F5; /* #2D3743;*/
-    border-color: #000;
-    border-style: solid;
-    border-width: thin;
-    /*color: #E1E1E1;*/
+    background-color: #F5F5F5;
     font-size: smaller;
     padding: 1em;
+
+    /* border with rounded corner */
+    border-color: #000;
+    border-radius: 4px;
+    border-style: solid;
+    border-width: thin;
 }
 
 pre {
@@ -174,6 +185,11 @@ th {
 /* CLASSES */
 .contents {
     margin-bottom: 4em;
+}
+
+/* Restrict TOC to depth 3 */
+.contents > ul ul ul ul {
+    display: none;
 }
 
 .float {

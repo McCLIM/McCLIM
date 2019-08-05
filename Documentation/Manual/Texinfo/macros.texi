@@ -1,9 +1,17 @@
+@c ===================================================================
+@c Abbreviations
+@c ===================================================================
+
 @macro clim{}
 CLIM
 @end macro
 @macro mcclim{}
 McCLIM
 @end macro
+
+@c ===================================================================
+@c Semantic markup and references
+@c ===================================================================
 
 @macro setf{NAME}
 (setf \NAME\)
@@ -20,30 +28,27 @@ McCLIM
 @end macro
 @end ifnottex
 
-@macro glossentry{ENTRY}
-@noindent @b{\ENTRY\}
-@cindex \ENTRY\
+@macro func{NAME}
+@b{\NAME\}
+@end macro
+@macro funref{NAME}
+@ref{Function \NAME\,@b{\NAME\}}
 @end macro
 
-@macro func{FUN}
-@b{\FUN\}
+@macro fmacro{NAME}
+@b{\NAME\}
 @end macro
-
-@macro fmacro{MACRO}
-@b{\MACRO\}
+@macro macroref{NAME}
+@ref{Macro \NAME\,@b{\NAME\}}
 @end macro
 
 @macro genfun{FUN}
 @b{\FUN\}
 @end macro
-
-@macro issue{AUTHOR,COMMENT}
-@noindent
-@b{Issue:} @i{\COMMENT\ --- \AUTHOR\}
+@macro genfunref{NAME}
+@ref{Generic-Function \NAME\,@b{\NAME\}}
 @end macro
 
-@alias gloss = i
-@alias func = code
 @alias class = code
 @alias package = code
 @alias gadget = code
@@ -53,3 +58,32 @@ McCLIM
 @alias longref = t
 @alias cl = code
 @alias initarg = code
+
+@macro issue{AUTHOR,COMMENT}
+@noindent
+@b{Issue:} @i{\COMMENT\ --- \AUTHOR\}
+@end macro
+
+@c ===================================================================
+@c Glossary entries
+@c ===================================================================
+
+@macro glossentry{ENTRY}
+@anchor{\ENTRY\}
+@noindent @b{\ENTRY\}
+@cindex \ENTRY\
+@end macro
+
+@iftex
+@alias gloss = i
+@macro glossref{LABEL,CONCEPT}
+@i{\LABEL\}
+@end macro
+@end iftex
+
+@ifnottex
+@alias gloss = i
+@macro glossref{LABEL,CONCEPT}
+@i{@ref{\CONCEPT\,\LABEL\,\LABEL\}}
+@end macro
+@end ifnottex
