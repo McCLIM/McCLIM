@@ -1889,15 +1889,16 @@ add output recording facilities. It is not instantiable."))
 (defmethod erase-output-record (record (stream standard-output-recording-stream)
                                 &optional (errorp t))
   (with-output-recording-options (stream :record nil)
-    (let ((region (rounded-bounding-rectangle record)))
+    (let ((region (rounded-bounding-rectangle record))
+          (parent (output-record-parent record)))
+      (cond
+        ((output-record-ancestor-p (stream-output-history stream) record)
+         (delete-output-record record parent))
+        (errorp
+         (error "~S is not contained in ~S." record stream)))
       (with-bounding-rectangle* (x1 y1 x2 y2) region
-        (if (output-record-ancestor-p (stream-output-history stream) record)
-            (progn
-              (delete-output-record record (output-record-parent record))
-              (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+)
-              (stream-replay stream region))
-            (when errorp
-              (error "~S is not contained in ~S." record stream)))))))
+        (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+)
+        (stream-replay stream region)))))
 
 ;;; 16.4.3. Text Output Recording
 (defmethod stream-text-output-record
