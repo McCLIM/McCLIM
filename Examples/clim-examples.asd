@@ -52,7 +52,8 @@
      (:file "text-multiline-positioning")
      (:file "indentation")
      (:file "selection")
-     (:file "frame-sheet-name-test")))
+     (:file "frame-sheet-name-test")
+     (:file "tracking-pointer")))
 
 (defsystem #:clim-examples/superapp
   :depends-on (#:mcclim #:bordeaux-threads)
