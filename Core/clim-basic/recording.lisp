@@ -1498,10 +1498,10 @@ were added."
       (if filled
           (values min-x min-y max-x max-y)
           (let ((border (graphics-state-line-style-border graphic medium)))
-            (values (- min-x border)
-                    (- min-y border)
-                    (+ max-x border)
-                    (+ max-y border)))))))
+            (values (floor (- min-x border))
+                    (floor (- min-y border))
+                    (ceiling (+ max-x border))
+                    (ceiling (+ max-y border))))))))
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-ellipse-output-record))
