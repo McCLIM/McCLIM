@@ -5,7 +5,8 @@
                #:clx
                #:cl-unicode
                #:mcclim-backend-common
-               #:mcclim-fonts)
+               #:mcclim-fonts
+               #:cl-vectors)
   :serial t
   :components
   ((:module "basic" :pathname "" :components
@@ -24,7 +25,8 @@
             ((:file "bidi" :depends-on ())
              (:file "fonts" :depends-on ("bidi"))
              (:file "medium" :depends-on ("fonts"))
-             (:file "medium-xrender" :depends-on ("medium"))))
+             (:file "path")
+             (:file "medium-xrender" :depends-on ("medium" "path"))))
    (:file "input")))
 
 (defsystem #:mcclim-clx/truetype

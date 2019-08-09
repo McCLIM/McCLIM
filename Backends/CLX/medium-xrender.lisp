@@ -9,6 +9,57 @@
                              climb:multiline-text-medium-mixin)
   ((picture :initform nil)))
 
+(defun find-rgba-format (display)
+  (or (getf (xlib:display-plist display) 'rgba-format)
+      (let* ((formats (xlib::render-query-picture-formats display))
+             (format (find-if (lambda (v)
+                                (and (= (byte-size (xlib:picture-format-red-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-green-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-blue-byte v)) 8)
+                                     (= (byte-size (xlib:picture-format-alpha-byte v)) 8)))
+                              formats)))
+        (unless format
+          (error "Can't find 8-bit RGBA format"))
+        (setf (getf (xlib:display-plist display) 'rgba-format) format))))
+
+(defun create-pen (drawable gc)
+  "Return a picture that can be used as a source for Xrender drawing operations."
+  (let* ((fg (xlib::gcontext-foreground gc))
+         (cached-pen (getf (xlib:gcontext-plist gc) 'cached-pen)))
+    (cond ((and cached-pen (equal (second cached-pen) fg))
+           (first cached-pen))
+          (t
+           (when cached-pen
+             (xlib:render-free-picture (first cached-pen)))
+           (let* ((pixmap (xlib:create-pixmap :drawable (xlib:drawable-root drawable)
+                                              :width 1
+                                              :height 1
+                                              :depth 32))
+                  (picture (xlib:render-create-picture pixmap
+                                                       :format (find-rgba-format (xlib::drawable-display drawable))
+                                                       :repeat :on))
+                  (colour (list (ash (ldb (byte 8 16) fg) 8)
+                                (ash (ldb (byte 8 8) fg) 8)
+                                (ash (ldb (byte 8 0) fg) 8)
+                                #xFFFF)))
+             (xlib:render-fill-rectangle picture :src colour 0 0 1 1)
+             (xlib:free-pixmap pixmap)
+             (setf (getf (xlib:gcontext-plist gc) 'cached-pen) (list picture fg))
+             picture)))))
+
+(defun find-alpha-mask-format (display)
+  (or (getf (xlib:display-plist display) 'alpha-mask-format)
+      (let* ((formats (xlib::render-query-picture-formats display))
+             (format (find-if (lambda (v)
+                                (and (= (byte-size (xlib:picture-format-red-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-green-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-blue-byte v)) 0)
+                                     (= (byte-size (xlib:picture-format-alpha-byte v)) 8)))
+                              formats)))
+        (unless format
+          (error "Can't find 8-bit RGBA format"))
+        (setf (getf (xlib:display-plist display) 'alpha-mask-format) format))))
+
 (defun clx-render-medium-picture (medium)
   (with-slots (picture) medium
     (alexandria:when-let* ((mirror (port-lookup-mirror (port medium) (medium-sheet medium)))
@@ -65,7 +116,38 @@
 
 
 (defmethod clim:medium-draw-polygon* ((medium clx-render-medium) coord-seq closed filled)
-  (call-next-method medium coord-seq closed filled))
+  (let ((style (clim:medium-line-style medium)))
+    (when (> (clim:line-style-thickness style) 1)
+      (log:info "Drawing coord seq (~a): js=~s cs=~s tn=~s"
+                (length coord-seq)
+                (clim:line-style-joint-shape style)
+                (clim:line-style-cap-shape style)
+                (clim:line-style-thickness style)))
+    ;;
+    (let* ((tr (sheet-native-transformation (medium-sheet medium)))
+           (transformed (loop
+                          for (x y) on coord-seq by #'cddr
+                          collect (with-transformed-position (tr x y)
+                                    (cons x y)))))
+      (when transformed
+        (let ((triangle-list (triangulate-path transformed (line-style-thickness style)
+                                               :line-joint-shape (line-style-joint-shape style)
+                                               :line-cap-shape (line-style-cap-shape style))))
+          (alexandria:when-let ((dest (clx-render-medium-picture medium)))
+            (with-clx-graphics () medium
+              (let ((src (create-pen mirror gc)))
+                (setf (xlib:picture-clip-mask dest)
+                      (clipping-region->rect-seq
+                       (or (last-medium-device-region medium)
+                           (medium-device-region medium))))
+                (xlib:render-triangles dest :over src 0 0
+                                       (find-alpha-mask-format (xlib:drawable-display mirror))
+                                       (coerce (loop
+                                                 for (p1 p2 p3) in triangle-list
+                                                 append (list (car p1) (cdr p1)
+                                                              (car p2) (cdr p2)
+                                                              (car p3) (cdr p3)))
+                                               'vector))))))))))
 
 
 (defun medium-draw-rectangle-xrender (medium x1 y1 x2 y2 filled)
