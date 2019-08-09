@@ -136,9 +136,9 @@ input focus. This is a McCLIM extension."))
               :reader frame-top-level)
    (top-level-lambda :initarg :top-level-lambda
                      :reader frame-top-level-lambda)
-   (hilited-presentation :initform nil
-                         :initarg :hilited-presentation
-                         :accessor frame-hilited-presentation)
+   (highlited-presentation :initform nil
+                           :initarg :highlited-presentation
+                           :accessor frame-highlited-presentation)
    (process :accessor frame-process :initform nil)
    (client-settings :accessor client-settings :initform nil)
    (event-queue :initarg :frame-event-queue
@@ -426,10 +426,10 @@ documentation produced by presentations.")
             (setq redisplayp (or redisplayp t)
                   clearp t))
           (when redisplayp
-            (let ((hilited (frame-hilited-presentation frame)))
-              (when hilited
-                (highlight-presentation-1 (car hilited) (cdr hilited) :unhighlight)
-                (setf (frame-hilited-presentation frame) nil)))
+            (let ((highlited (frame-highlited-presentation frame)))
+              (when highlited
+                (highlight-presentation-1 (car highlited) (cdr highlited) :unhighlight)
+                (setf (frame-highlited-presentation frame) nil)))
             (with-possible-double-buffering (frame pane-object)
               (when clearp
                 (window-clear pane-object))
@@ -1388,14 +1388,14 @@ have a `pointer-documentation-pane' as pointer documentation,
   "Given stream x,y; key modifiers; input-context, find the applicable
    presentation and maybe highlight it."
   (flet ((maybe-unhighlight (presentation)
-           (when (and (frame-hilited-presentation frame)
+           (when (and (frame-highlited-presentation frame)
                       (or (not highlight)
                           (not (eq presentation
-                               (car (frame-hilited-presentation frame))))))
-             (highlight-presentation-1 (car (frame-hilited-presentation frame))
-                                       (cdr (frame-hilited-presentation frame))
+                                   (car (frame-highlited-presentation frame))))))
+             (highlight-presentation-1 (car (frame-highlited-presentation frame))
+                                       (cdr (frame-highlited-presentation frame))
                                        :unhighlight)
-             (setf (frame-hilited-presentation frame) nil))))
+             (setf (frame-highlited-presentation frame) nil))))
     (if (output-recording-stream-p stream)
         (let ((presentation (find-innermost-applicable-presentation
                              input-context
@@ -1407,8 +1407,8 @@ have a `pointer-documentation-pane' as pointer documentation,
           (when (and presentation
                      highlight
                      (not (eq presentation
-                              (car (frame-hilited-presentation frame)))))
-            (setf (frame-hilited-presentation frame)
+                              (car (frame-highlited-presentation frame)))))
+            (setf (frame-highlited-presentation frame)
                   (cons presentation stream))
             (highlight-presentation-1 presentation stream :highlight))
           presentation)
@@ -1467,19 +1467,19 @@ have a `pointer-documentation-pane' as pointer documentation,
     ;; Offset from origin of presentation is preserved throughout
     (let* ((x-off (-  fp-x1 initial-x))
            (y-off (-  fp-y1 initial-y))
-           (hilite-x1 (+ x-off x))
-           (hilite-y1 (+ y-off y))
-           (hilite-x2 (+ hilite-x1 (- fp-x2 fp-x1)))
-           (hilite-y2 (+ hilite-y1 (- fp-y2 fp-y1))))
+           (highlite-x1 (+ x-off x))
+           (highlite-y1 (+ y-off y))
+           (highlite-x2 (+ highlite-x1 (- fp-x2 fp-x1)))
+           (highlite-y2 (+ highlite-y1 (- fp-y2 fp-y1))))
       (with-identity-transformation (stream)
         (ecase state
           (:highlight
            (with-output-recording-options (stream :record nil)
-             (draw-rectangle* stream hilite-x1 hilite-y1 hilite-x2 hilite-y2
+             (draw-rectangle* stream highlite-x1 highlite-y1 highlite-x2 highlite-y2
                               :filled nil :line-dashes #(4 4))))
           (:unhighlight
            (with-double-buffering
-               ((stream hilite-x1 hilite-y1 (1+ hilite-x2) (1+ hilite-y2))
+               ((stream highlite-x1 highlite-y1 (1+ highlite-x2) (1+ highlite-y2))
                 (buffer-rectangle))
              (stream-replay stream buffer-rectangle))))))))
 
@@ -1521,7 +1521,7 @@ have a `pointer-documentation-pane' as pointer documentation,
          ;; to be unhighlighted at start. -- jd 2019-07-06
          (translator (find translator-name translators :key #'name))
          (feedback-fn (feedback translator))
-         (hilighte-fn nil)
+         (highlight-fn nil)
          (destination-presentation nil)
          (initial-x x)
          (initial-y y)
@@ -1546,9 +1546,9 @@ have a `pointer-documentation-pane' as pointer documentation,
              (when (and feedback-activated window)
                (maybe-funcall feedback-fn frame from-presentation window
                               initial-x initial-y x y state)))
-           (do-hilighte (presentation window state)
+           (do-highlight (presentation window state)
              (when presentation
-               (maybe-funcall hilighte-fn frame presentation window state)))
+               (maybe-funcall highlight-fn frame presentation window state)))
            (last-point ()
              (if last-event
                  (values (event-sheet last-event)
@@ -1563,15 +1563,15 @@ have a `pointer-documentation-pane' as pointer documentation,
             (let ((dest-translator (find-dest-translator presentation window x y)))
               (multiple-value-call #'do-feedback (last-point) :unhighlight)
               (setq feedback-activated t)
-              (do-hilighte last-presentation (last-point) :unhighlight)
+              (do-highlight last-presentation (last-point) :unhighlight)
               (setq last-event event
                     last-presentation presentation)
               (if dest-translator
                   (setf feedback-fn (feedback dest-translator)
-                        hilighte-fn (highlighting dest-translator))
+                        highlight-fn (highlighting dest-translator))
                   (setf feedback-fn (feedback translator)
-                        hilighte-fn (highlighting translator)))
-              (do-hilighte presentation window :highlight)
+                        highlight-fn (highlighting translator)))
+              (do-highlight presentation window :highlight)
               (do-feedback window x y :highlight)
               (multiple-value-call #'document-drag-n-drop
                 (if dest-translator
@@ -1582,7 +1582,7 @@ have a `pointer-documentation-pane' as pointer documentation,
           (:pointer-motion (&key event window x y)
             (multiple-value-call #'do-feedback (last-point) :unhighlight)
             (setq feedback-activated t)
-            (do-hilighte last-presentation (last-point) :unhighlight)
+            (do-highlight last-presentation (last-point) :unhighlight)
             (setq last-event event
                   last-presentation nil)
             (do-feedback window x y :highlight)
@@ -1603,7 +1603,7 @@ have a `pointer-documentation-pane' as pointer documentation,
       ;; XXX Assumes x y from :button-release are the same as for the preceding
       ;; button-motion; is that correct?
       (multiple-value-call #'do-feedback (last-point) :unhighlight)
-      (do-hilighte last-presentation (last-point) :unhighlight)
+      (do-highlight last-presentation (last-point) :unhighlight)
       (when-let ((stream *pointer-documentation-output*))
         (window-clear stream))
 
