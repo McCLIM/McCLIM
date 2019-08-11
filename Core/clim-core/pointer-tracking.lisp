@@ -42,30 +42,8 @@
        args
        (cons '&key args))))
 
-(defmacro with-pointer-grabbed ((port sheet &key pointer) &body body)
-  (with-gensyms (the-port the-sheet the-pointer grabbed)
-    `(let* ((,the-port ,port)
-	    (,the-sheet ,sheet)
-	    (,the-pointer (or ,pointer (port-pointer ,the-port)))
-	    (,grabbed nil))
-       ;; Don't end up in the debugger with the pointer grabbed! 
-       (handler-bind ((error #'(lambda (c)
-				 (declare (ignore c))
-				 (when ,grabbed
-				   (port-ungrab-pointer ,the-port
-							,the-pointer
-							,the-sheet)
-				   (setq ,grabbed nil)))))
-	 (unwind-protect
-	      (when (port-grab-pointer ,the-port ,the-pointer ,the-sheet)
-		(setq ,grabbed t)
-		,@body)
-	   (when ,grabbed
-	     (port-ungrab-pointer ,the-port ,the-pointer ,the-sheet)))))))
-
 ;;; tracking-pointer. The functionality that deals with presentations has been
 ;;; split off into frames.lisp.
-
 
 (defgeneric tracking-pointer-loop (state frame sheet
 				   &key pointer multiple-window

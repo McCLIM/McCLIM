@@ -2000,11 +2000,12 @@
    #:port-force-output
    #:port-frame-keyboard-input-focus
    #:port-grab-pointer
+   #:port-ungrab-pointer
+   #:with-pointer-grabbed
    #:port-motion-hints
    #:port-set-mirror-name
    #:port-set-mirror-region
    #:port-set-mirror-transformation
-   #:port-ungrab-pointer
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event

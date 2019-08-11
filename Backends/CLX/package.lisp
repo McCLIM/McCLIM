@@ -70,7 +70,6 @@
                 #:if-let)
   (:import-from #:climi
                 #:event-listen-or-wait
-		#:pointer-grab-sheet
 		#:%sheet-mirror-region
                 #:%sheet-mirror-transformation
 		#:standard-port)

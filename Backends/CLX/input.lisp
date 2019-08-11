@@ -397,30 +397,17 @@
 (defmethod (setf port-frame-keyboard-input-focus) (focus (port clx-basic-port) frame)
   (setf (frame-properties frame 'focus) focus))
 
-;; FIXME: What happens when CLIM code calls tracking-pointer recursively?
-;; I expect the xlib:grab-pointer call will fail, and so the call to
-;; xlib:ungrab-pointer will ungrab prematurely.
-
-;;; XXX Locks around pointer-grab-sheet!!!
-
 (defmethod port-grab-pointer ((port clx-basic-port) pointer sheet)
-  ;; FIXME: Use timestamps?
-  (let ((grab-result (xlib:grab-pointer
-		      (sheet-xmirror sheet)
-		      '(:button-press :button-release
-			:leave-window :enter-window
-			:pointer-motion :pointer-motion-hint)
-		      ;; Probably we want to set :cursor here..
-		      :owner-p t)))
-    (if (eq grab-result :success)
-	(setf (pointer-grab-sheet port) sheet)
-	nil)))
+  (let ((mirror (sheet-xmirror sheet))
+        (events '(:button-press :button-release
+	          :leave-window :enter-window
+	          :pointer-motion :pointer-motion-hint)))
+    ;; Probably we want to set :cursor here..
+    (eq :success (xlib:grab-pointer mirror events :owner-p t))))
 
 (defmethod port-ungrab-pointer ((port clx-basic-port) pointer sheet)
-  (declare (ignore pointer))
-  (when (eq (pointer-grab-sheet port) sheet)
-    (xlib:ungrab-pointer (clx-port-display port))
-    (setf (pointer-grab-sheet port) nil)))
+  (declare (ignore pointer sheet))
+  (xlib:ungrab-pointer (clx-port-display port)))
 
 ;;; Modifier cache support
 

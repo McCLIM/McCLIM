@@ -355,19 +355,47 @@
 (defmethod port-force-output ((port basic-port))
   (values))
 
+;;; Design decision: Recursive grabs are a no-op.
+
 (defgeneric port-grab-pointer (port pointer sheet)
-  (:documentation "Grab the specified pointer, for implementing TRACKING-POINTER."))
+  (:documentation "Grab the specified pointer.")
+  (:method ((port basic-port) pointer sheet)
+    (declare (ignorable port pointer sheet))
+    (warn "Port ~A has not implemented pointer grabbing." port))
+  (:method :around ((port basic-port) pointer sheet)
+    (declare (ignorable port pointer sheet))
+    (unless (port-grabbed-sheet port)
+      (setf (port-grabbed-sheet port) sheet)
+      (call-next-method))))
 
 (defgeneric port-ungrab-pointer (port pointer sheet)
-  (:documentation "Ungrab the specified pointer, for implementing TRACKING-POINTER."))
+  (:documentation "Ungrab the specified pointer.")
+  (:method ((port basic-port) pointer sheet)
+    (declare (ignorable port pointer sheet))
+    (warn "Port ~A  has not implemented pointer grabbing." port))
+  (:method :before ((port basic-port) pointer sheet)
+    (declare (ignorable port pointer sheet))
+    (when (port-grabbed-sheet port)
+      (setf (port-grabbed-sheet port) nil)
+      (call-next-method))))
 
-(defmethod port-grab-pointer ((port basic-port) pointer sheet)
-  (declare (ignorable port pointer sheet))
-  (warn "Port ~A has not implemented pointer grabbing." port))
-
-(defmethod port-ungrab-pointer ((port basic-port) pointer sheet)
-  (declare (ignorable port pointer sheet))
-  (warn "Port ~A  has not implemented pointer grabbing." port))
+(defmacro with-pointer-grabbed ((port sheet &key pointer) &body body)
+  (with-gensyms (the-port the-sheet the-pointer)
+    `(let* ((,the-port ,port)
+	    (,the-sheet ,sheet)
+	    (,the-pointer (or ,pointer (port-pointer ,the-port))))
+       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet))
+           (warn "Port ~A failed to grab a pointer." ,the-port)
+           (unwind-protect
+                (handler-bind
+                    ((serious-condition
+                      #'(lambda (c)
+			  (declare (ignore c))
+			  (port-ungrab-pointer ,the-port
+                                               ,the-pointer
+                                               ,the-sheet))))
+                  ,@body)
+	     (port-ungrab-pointer ,the-port ,the-pointer ,the-sheet))))))
 
 (defgeneric set-sheet-pointer-cursor (port sheet cursor)
   (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))
