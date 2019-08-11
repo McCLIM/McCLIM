@@ -103,25 +103,21 @@
      &key pointer multiple-window transformp context-type highlight)
   (declare (ignore args pointer context-type highlight frame))
   (with-sheet-medium (medium sheet)
-    (flet ((do-tracking ()
-	     (loop
-		for event = (event-read sheet)
-		do (if (typep event 'pointer-event)
-		       (multiple-value-bind (sheet-x sheet-y)
-			   (pointer-event-position* event)
-			 (multiple-value-bind (x y)
-			     (if transformp
-				 (transform-position
-				  (medium-transformation medium)
-				  sheet-x
-				  sheet-y)
-				 (values sheet-x sheet-y))
-			   (tracking-pointer-loop-step state event x y)))
-		       (tracking-pointer-loop-step state event 0 0)))))
-      (if multiple-window
-	  (with-pointer-grabbed ((port medium) sheet)
-	    (do-tracking))
-	  (do-tracking)))))
+    (loop
+       for event = (event-read sheet)
+       do (cond ((not (typep event 'pointer-event))
+                 (tracking-pointer-loop-step state event 0 0))
+                ((or multiple-window
+                     (eql (event-sheet event) sheet))
+                 (multiple-value-bind (sheet-x sheet-y)
+                     (pointer-event-position* event)
+                   (multiple-value-bind (x y)
+                       (if transformp
+                           (transform-position (medium-transformation medium)
+                                               sheet-x
+                                               sheet-y)
+                           (values sheet-x sheet-y))
+                     (tracking-pointer-loop-step state event x y))))))))
 
 (defmethod tracking-pointer-loop-step
     ((state tracking-pointer-state) (event pointer-motion-event) x y)
@@ -235,7 +231,7 @@
      &key (repaint t) (erase #'erase-output-record)
      feedback finish-on-release multiple-window
      feedback-event erase-final)
-  (declare (ignore erase repaint multiple-window))
+  (declare (ignore erase repaint))
   (let ((feedback-event-fn
 	 (cond (feedback-event
 		feedback-event)
@@ -254,7 +250,7 @@
       (multiple-value-bind (x0 y0)
 	  (stream-pointer-position stream)
 	(funcall feedback-event-fn record stream x0 y0 x0 y0 nil)
-	(tracking-pointer (stream)
+	(tracking-pointer (stream :multiple-window multiple-window)
 	 (:pointer-motion (&key event x y)
 	   ;; XXX What about the sheet?
 	   (funcall feedback-event-fn record stream x0 y0 x y event)
@@ -309,20 +305,18 @@ symbol)."
                  (draw x y)
                  (setf ox x oy y))
                (end (event x y)
-                 (when (eql (event-sheet event) stream)
-                   (when ox (draw ox oy))
-                   (return-from dragging-drawing
-                     (values x y)))))
+                 (when ox (draw ox oy))
+                 (return-from dragging-drawing
+                   (values x y))))
         (tracking-pointer (stream :pointer pointer
                                   :multiple-window multiple-window)
           (:pointer-motion (window x y)
-                           (when (eql window stream)
-                             (motion x y)))
+            (motion x y))
           (:pointer-button-press (event x y)
-                                 (end event x y))
+            (end event x y))
           (:pointer-button-release (event x y)
-                                   (when finish-on-release
-                                     (end event x y))))))))
+            (when finish-on-release
+              (end event x y))))))))
 
 (defun pointer-place-rubber-band-line* (&key (stream *standard-output*)
                                         (pointer (port-pointer (port stream)))
