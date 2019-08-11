@@ -5,5 +5,4 @@
   :components
   ((:file "ports")
    (:file "fonts")
-   (:file "medium" :depends-on ("fonts"))
-   (:file "events" :depends-on ("ports"))))
+   (:file "medium" :depends-on ("fonts"))))

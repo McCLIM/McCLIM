@@ -1617,9 +1617,6 @@
    #:+list-pane-view+                   ;constant
    #:option-pane-view                   ;class
    #:+option-pane-view+                 ;constant
-   #:pointer-input-rectangle            ;function (in franz user guide)
-   #:pointer-input-rectangle*           ;function (in franz user guide)
-   #:pointer-place-rubber-band-line*    ;function (in franz user guide)
    #:port-modifier-state		;generic function (in franz user guide)
    #:port-pointer			;generic function (in franz user guide)
    #:push-button-view                   ;class
@@ -2000,11 +1997,12 @@
    #:port-force-output
    #:port-frame-keyboard-input-focus
    #:port-grab-pointer
+   #:port-ungrab-pointer
+   #:with-pointer-grabbed
    #:port-motion-hints
    #:port-set-mirror-name
    #:port-set-mirror-region
    #:port-set-mirror-transformation
-   #:port-ungrab-pointer
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
