@@ -468,13 +468,9 @@ The following files should exist:~&~{  ~A~^~%~}"
                                     (or *truetype-font-path* "")))))))
            (if (and font-path (probe-file font-path))
                (make-truetype-font port font-path size)
-               ;; We could error here, but we want to fallback to
-               ;; fonts provided by CLX server. Its better to have
-               ;; ugly fonts than none at all.
-               (or (call-next-method)
-                   (error 'missing-font
-                          :filename font-path
-                          :text-style text-style)))))
+               (error 'missing-font
+                      :filename font-path
+                      :text-style text-style))))
        (find-font ()
          (multiple-value-call #'find-and-make-truetype-font
            (clim:text-style-components text-style))))
