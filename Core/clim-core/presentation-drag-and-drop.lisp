@@ -117,7 +117,7 @@
          ;; Default feedback and highlight functions are those of the
          ;; translator that got us here. Initial highlight value nil
          ;; will cause the source presentation of the dragged object
-         ;; to be unhighlighted at start. -- jd 2019-07-06
+         ;; to be unhighlighted at the start. -- jd 2019-07-06
          (translator (find translator-name translators :key #'name))
          (feedback-fn (feedback translator))
          (highlight-fn nil)
@@ -125,7 +125,6 @@
          (initial-x x)
          (initial-y y)
          (last-presentation nil)
-         (feedback-activated nil)
          (last-event nil))
     (flet ((find-dest-translator (presentation window x y)
              (loop for translator in translators
@@ -138,19 +137,16 @@
                                                         window x y))
                 do (return-from find-dest-translator translator))
              nil)
-           (do-feedback (window x y state)
-             (when (and feedback-activated window)
-               (maybe-funcall feedback-fn frame from-presentation window
-                              initial-x initial-y x y state)))
-           (do-highlight (presentation window state)
-             (when presentation
-               (maybe-funcall highlight-fn frame presentation window state)))
-           (last-point ()
-             (if last-event
-                 (values (event-sheet last-event)
-                         (pointer-event-x last-event)
-                         (pointer-event-y last-event))
-                 (values nil nil nil))))
+           (erase-old ()
+             (when last-event
+               (let ((window (event-sheet last-event))
+                     (x (pointer-event-x last-event))
+                     (y (pointer-event-y last-event)))
+                 (maybe-funcall feedback-fn frame from-presentation
+                                window initial-x initial-y x y :unhighlight)
+                 (when last-presentation
+                   (maybe-funcall highlight-fn frame last-presentation
+                                  window :unhighlight))))))
       (block do-tracking
         (tracking-pointer (window :context-type `(or ,@(mapcar #'destination-type translators))
                                   ;; context-type should be T and we
@@ -160,31 +156,30 @@
                                   :multiple-window t)
           (:presentation (&key presentation window event x y)
             (let ((dest-translator (find-dest-translator presentation window x y)))
-              (multiple-value-call #'do-feedback (last-point) :unhighlight)
-              (setq feedback-activated t)
-              (do-highlight last-presentation (last-point) :unhighlight)
-              (setq last-event event
-                    last-presentation presentation)
+              (erase-old)
               (if dest-translator
-                  (setf feedback-fn (feedback dest-translator)
+                  (setf last-event event
+                        last-presentation presentation
+                        feedback-fn (feedback dest-translator)
                         highlight-fn (highlighting dest-translator))
-                  (setf feedback-fn (feedback translator)
+                  (setf last-event event
+                        last-presentation nil
+                        feedback-fn (feedback translator)
                         highlight-fn (highlighting translator)))
-              (do-highlight presentation window :highlight)
-              (do-feedback window x y :highlight)
-              (multiple-value-call #'document-drag-n-drop
-                (if dest-translator
-                    (values dest-translator presentation)
-                    (values translator      nil))
-                context-type frame event window
-                x y)))
+              ;; Do not highlight the presentation if there is no
+              ;; applicable translator. -- jd 2019-08-20
+              (when dest-translator
+                (maybe-funcall highlight-fn frame presentation window :highlight))
+              (maybe-funcall feedback-fn frame from-presentation
+                             window initial-x initial-y x y :highlight)
+              (document-drag-n-drop (or dest-translator translator) last-presentation
+                                    context-type frame event window x y)))
           (:pointer-motion (&key event window x y)
-            (multiple-value-call #'do-feedback (last-point) :unhighlight)
-            (setq feedback-activated t)
-            (do-highlight last-presentation (last-point) :unhighlight)
+            (erase-old)
             (setq last-event event
                   last-presentation nil)
-            (do-feedback window x y :highlight)
+            (maybe-funcall feedback-fn frame from-presentation
+                           window initial-x initial-y x y :highlight)
             (document-drag-n-drop translator nil
                                   context-type frame event window
                                   x y))
@@ -198,31 +193,26 @@
           (:pointer-button-release (&key event)
             (setq last-event event)
             (return-from do-tracking nil))))
-      ;;
-      ;; XXX Assumes x y from :button-release are the same as for the preceding
-      ;; button-motion; is that correct?
-      (multiple-value-call #'do-feedback (last-point) :unhighlight)
-      (do-highlight last-presentation (last-point) :unhighlight)
+      (erase-old)
       (when-let ((stream *pointer-documentation-output*))
         (window-clear stream))
-
-      (if destination-presentation
-          (let ((final-translator (multiple-value-call #'find-dest-translator
-                                    destination-presentation (last-point))))
-            (if final-translator
-                (funcall (destination-translator final-translator)
-                         *dragged-object*
-                         :presentation *dragged-presentation*
-                         :destination-object (presentation-object destination-presentation)
-                         :destination-presentation destination-presentation
-                         :context-type context-type
-                         :frame frame
-                         :event event
-                         :window window
-                         :x x
-                         :y y)
-                (values nil nil)))
-          (values nil nil)))))
+      (if-let ((final-translator (and destination-presentation
+                                      (find-dest-translator destination-presentation
+                                                            (event-sheet last-event)
+                                                            (pointer-event-x last-event)
+                                                            (pointer-event-y last-event)))))
+        (funcall (destination-translator final-translator)
+                 *dragged-object*
+                 :presentation *dragged-presentation*
+                 :destination-object (presentation-object destination-presentation)
+                 :destination-presentation destination-presentation
+                 :context-type context-type
+                 :frame frame
+                 :event event
+                 :window window
+                 :x x
+                 :y y)
+        (values nil nil)))))
 
 (defun document-drag-n-drop
     (translator presentation context-type frame event window x y)
