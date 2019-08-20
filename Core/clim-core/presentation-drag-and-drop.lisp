@@ -13,12 +13,16 @@
 (defvar *dragged-object* nil
   "Bound to the object dragged in a drag-and-drop context")
 
+(defparameter *finish-on-release* t
+  "Default behavior for drag-and-drop.")
+
 (defclass drag-n-drop-translator (presentation-translator)
   ((destination-type :reader destination-type :initarg :destination-type)
    (feedback :reader feedback :initarg :feedback)
    (highlighting :reader highlighting :initarg :highlighting)
-   (destination-translator :reader destination-translator
-                           :initarg :destination-translator)))
+   (finish-on-release :reader finish-on-release :initarg :finish-on-release)
+   (destination-translator :reader destination-translator :initarg :destination-translator))
+  (:default-initargs :finish-on-release *finish-on-release*))
 
 ;;; According to the Franz User's guide, the destination object is
 ;;; available in the tester, documentation, and translator function
@@ -51,12 +55,12 @@
                      (menu t)
                      (priority 0)
                      (feedback 'frame-drag-and-drop-feedback)
-                     (highlighting 'frame-drag-and-drop-highlighting))
+                     (highlighting 'frame-drag-and-drop-highlighting)
+                     (finish-on-release *finish-on-release*))
      arglist &body body)
   (declare (ignore tester gesture documentation pointer-documentation
-                   menu priority))
-  (let* ((real-dest-type (expand-presentation-type-abbreviation
-                          destination-type))
+                   menu priority finish-on-release))
+  (let* ((real-dest-type (expand-presentation-type-abbreviation destination-type))
          (name-string (command-name-from-symbol name))
          (drag-string (format nil "Drag to ~A" name-string))
          (pointer-doc (if pointer-doc-p
@@ -119,6 +123,7 @@
          ;; will cause the source presentation of the dragged object
          ;; to be unhighlighted at the start. -- jd 2019-07-06
          (translator (find translator-name translators :key #'name))
+         (finish-on-release (finish-on-release translator))
          (feedback-fn (feedback translator))
          (highlight-fn nil)
          (destination-presentation nil)
@@ -183,16 +188,24 @@
             (document-drag-n-drop translator nil
                                   context-type frame event window
                                   x y))
-          ;; XXX only support finish-on-release for now.
-          #-(and)(:presentation-button-press ())
+          (:presentation-button-press (&key presentation event)
+            (unless finish-on-release
+              (setq destination-presentation presentation
+                    last-event event)
+              (return-from do-tracking nil)))
+          (:pointer-button-press ()
+            (unless finish-on-release
+              (setq last-event event)
+              (return-from do-tracking nil)))
           (:presentation-button-release (&key presentation event)
-            (setq destination-presentation presentation
-                  last-event event)
-            (return-from do-tracking nil))
-          #-(and)(:button-press ())
+            (when finish-on-release
+              (setq destination-presentation presentation
+                    last-event event)
+              (return-from do-tracking nil)))
           (:pointer-button-release (&key event)
-            (setq last-event event)
-            (return-from do-tracking nil))))
+            (when finish-on-release
+              (setq last-event event)
+              (return-from do-tracking nil)))))
       (erase-old)
       (when-let ((stream *pointer-documentation-output*))
         (window-clear stream))
