@@ -14,7 +14,7 @@
   "Bound to the object dragged in a drag-and-drop context")
 
 (defclass drag-n-drop-translator (presentation-translator)
-  ((destination-ptype :reader destination-ptype :initarg :destination-ptype)
+  ((destination-type :reader destination-type :initarg :destination-type)
    (feedback :reader feedback :initarg :feedback)
    (highlighting :reader highlighting :initarg :highlighting)
    (destination-translator :reader destination-translator
@@ -29,8 +29,8 @@
 ;;; translator because we can call that ourselves in frame-drag-and-drop.
 ;;;
 ;;; Also, in Classic CLIM the destination presentation is passed as a
-;;; destination-presentation keyword argument; hence the presentation argument
-;;; is the dragged presentation.
+;;; destination-presentation keyword argument; hence the presentation
+;;; argument is the dragged presentation.
 
 (defmethod initialize-instance :after ((obj drag-n-drop-translator)
                                        &key documentation
@@ -77,7 +77,7 @@
                          ,@pointer-doc
                          :feedback #',feedback
                          :highlighting #',highlighting
-                         :destination-ptype ',real-dest-type
+                         :destination-type ',real-dest-type
                          :destination-translator #',(make-translator-fun arglist body)
                          :translator-class drag-n-drop-translator)
              (,object presentation context-type frame event window x y)
@@ -127,14 +127,10 @@
          (last-presentation nil)
          (feedback-activated nil)
          (last-event nil))
-    ;; We shouldn't need to use find-innermost-presentation-match
-    ;; This repeats what tracking-pointer has already done, but what are you
-    ;; gonna do?
-    ;;
     (flet ((find-dest-translator (presentation window x y)
              (loop for translator in translators
                 when (and (presentation-subtypep (presentation-type presentation)
-                                                 (destination-ptype translator))
+                                                 (destination-type translator))
                           (test-presentation-translator translator
                                                         presentation
                                                         context-type
@@ -156,7 +152,7 @@
                          (pointer-event-y last-event))
                  (values nil nil nil))))
       (block do-tracking
-        (tracking-pointer (window :context-type `(or ,@(mapcar #'destination-ptype translators))
+        (tracking-pointer (window :context-type `(or ,@(mapcar #'destination-type translators))
                                   ;; context-type should be T and we
                                   ;; should do closer examination
                                   ;; inside :presentation clause
