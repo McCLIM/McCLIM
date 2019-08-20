@@ -21,20 +21,10 @@
    (feedback :reader feedback :initarg :feedback)
    (highlighting :reader highlighting :initarg :highlighting)
    (finish-on-release :reader finish-on-release :initarg :finish-on-release)
+   (destination-tester :reader destination-tester :initarg :destination-tester)
    (destination-translator :reader destination-translator :initarg :destination-translator))
-  (:default-initargs :finish-on-release *finish-on-release*))
-
-;;; According to the Franz User's guide, the destination object is
-;;; available in the tester, documentation, and translator function
-;;; as destination-object. Therefore OBJECT is the dragged object. In
-;;; our scheme the tester function, translator function etc. is
-;;; really called on the destination object. So, we do a little
-;;; shuffling of arguments here. We don't do that for the destination
-;;; translator because we can call that ourselves in frame-drag-and-drop.
-;;;
-;;; Also, in Classic CLIM the destination presentation is passed as a
-;;; destination-presentation keyword argument; hence the presentation
-;;; argument is the dragged presentation.
+  (:default-initargs :finish-on-release *finish-on-release*
+                     :destination-tester 'default-translator-tester))
 
 (defmethod initialize-instance :after ((obj drag-n-drop-translator)
                                        &key documentation
@@ -50,6 +40,7 @@
                      &rest args &key
                      (gesture :select)
                      (tester 'default-translator-tester)
+                     (destination-tester 'default-translator-tester)
                      documentation
                      (pointer-documentation nil pointer-doc-p)
                      (menu t)
@@ -72,7 +63,7 @@
                                                ,name-string
                                                ,drag-string)
                                            stream))))))
-    (with-keywords-removed (args (:feedback :highlighting))
+    (with-keywords-removed (args (:feedback :highlighting :destination-tester))
       (with-gensyms (object)
         `(define-presentation-translator ,name
              (,from-type ,to-type ,command-table
@@ -83,6 +74,10 @@
                          :highlighting #',highlighting
                          :destination-type ',real-dest-type
                          :destination-translator #',(make-translator-fun arglist body)
+                         :destination-tester ,(if (symbolp destination-tester)
+                                                  `',destination-tester
+                                                  `#',(make-translator-fun (car destination-tester)
+                                                                           (cdr destination-tester)))
                          :translator-class drag-n-drop-translator)
              (,object presentation context-type frame event window x y)
            (declare (ignore ,object))
@@ -131,15 +126,12 @@
          (initial-y y)
          (last-presentation nil)
          (last-event nil))
-    (flet ((find-dest-translator (presentation window x y)
+    (flet ((find-dest-translator (presentation event window x y)
              (loop for translator in translators
                 when (and (presentation-subtypep (presentation-type presentation)
                                                  (destination-type translator))
-                          (test-presentation-translator translator
-                                                        presentation
-                                                        context-type
-                                                        frame
-                                                        window x y))
+                          (test-drag-and-drop translator presentation
+                                              context-type frame event window x y))
                 do (return-from find-dest-translator translator))
              nil)
            (erase-old ()
@@ -160,7 +152,7 @@
                                   :highlight nil
                                   :multiple-window t)
           (:presentation (&key presentation window event x y)
-            (let ((dest-translator (find-dest-translator presentation window x y)))
+            (let ((dest-translator (find-dest-translator presentation event window x y)))
               (erase-old)
               (if dest-translator
                   (setf last-event event
@@ -211,6 +203,7 @@
         (window-clear stream))
       (if-let ((final-translator (and destination-presentation
                                       (find-dest-translator destination-presentation
+                                                            last-event
                                                             (event-sheet last-event)
                                                             (pointer-event-x last-event)
                                                             (pointer-event-y last-event)))))
@@ -226,6 +219,17 @@
                  :x x
                  :y y)
         (values nil nil)))))
+
+(defun test-drag-and-drop
+    (translator presentation context-type frame event window x y)
+  (let ((function (destination-tester translator)))
+    (or (null function)
+        (funcall function *dragged-object*
+                 :presentation *dragged-presentation*
+                 :destination-object (presentation-object presentation)
+                 :destination-presentation presentation
+                 :context-type context-type
+                 :frame frame :event event :window window :x x :y y))))
 
 (defun document-drag-n-drop
     (translator presentation context-type frame event window x y)
