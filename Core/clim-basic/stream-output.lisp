@@ -3,6 +3,8 @@
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000, 2014 by
 ;;;           Robert Strandh (robert.strandh@gmail.com)
+;;;  (c) copyright 2019 by
+;;;           Nir B. (go.prodml@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -27,7 +29,7 @@
 ;;;       happens to be an output-recording-stream. - MikeMac 1/7/99
 
 ;;; Standard-Output-Stream class
-(defclass standard-output-stream (output-stream text-selection-mixin) ())
+(defclass standard-output-stream (output-stream text-selection-mixin thread-safe-stream-mixin) ())
 
 (defmethod stream-recording-p ((stream output-stream)) nil)
 (defmethod stream-drawing-p ((stream output-stream)) t)
@@ -260,7 +262,8 @@
     (let ((bottom-margin (nth-value 1 (stream-cursor-final-position stream)))
           (end-of-page-action (stream-end-of-page-action stream)))
       (when (> y bottom-margin)
-        (%note-stream-end-of-page stream end-of-page-action y)
+        (queue-lambda-event stream (lambda()
+          (%note-stream-end-of-page stream end-of-page-action y)))
         (ecase end-of-page-action
           ((:scroll :allow)  nil)
           ((:wrap :wrap*)
@@ -370,6 +373,14 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
 
 ;;; The cursor is in stream coordinates.
 (defmethod stream-write-output ((stream standard-extended-output-stream)
+                                line string-width
+                                &optional (start 0) end)
+  (declare (ignore string-width))
+    (unless (eql end nil)
+      (queue-lambda-event stream (lambda()
+                                  (safe-stream-write-output stream line start end)))))
+
+(defmethod safe-stream-write-output ((stream standard-extended-output-stream)
                                 line string-width
                                 &optional (start 0) end)
   (declare (ignore string-width))

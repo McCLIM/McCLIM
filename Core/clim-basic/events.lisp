@@ -5,6 +5,8 @@
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2019 by
+;;;           Nir B. (go.prodml@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -96,6 +98,9 @@
 	   ,@options)
 	 (defmethod event-type ((event ,name))
 	   ',type)))))
+
+(define-event-class lambda-event (standard-event)
+  ((fun :initarg :fun :reader fun)))
 
 (define-event-class device-event (standard-event)
   ((modifier-state :initarg :modifier-state

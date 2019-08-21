@@ -22,6 +22,7 @@
      (:file "tabledemo")
      (:file "image-transform-demo")
      (:file "stream-test")
+     (:file "stream-scroll-test")
      (:file "presentation-test")
      (:file "dragndrop")
      (:file "gadget-test")

@@ -2,6 +2,8 @@
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
+;;;  (c) copyright 2019 by
+;;;           Nir B. (go.prodml@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -19,6 +21,9 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
+
+(defclass thread-safe-stream-mixin ()
+  ((thread :initarg :thread :accessor stream-thread :initform (current-process))))
 
 (defclass standard-sheet-output-mixin ()
   ())
@@ -64,6 +69,10 @@
 
 (defclass permanent-medium-sheet-output-mixin (sheet-with-medium-mixin)
   ())
+
+(defmethod handle-event ((client thread-safe-stream-mixin) (event lambda-event))
+  (declare (ignore client))
+  (funcall (fun event)))
 
 (defmethod initialize-instance :after
     ((sheet permanent-medium-sheet-output-mixin) &key port)
@@ -136,3 +145,12 @@
                   (funcall continuation new-medium))
              (setf (%sheet-medium sheet) old-medium)
              (degraft-medium new-medium (port sheet) sheet) )))))
+
+;;; Output events
+
+(defmethod queue-event ((sheet thread-safe-stream-mixin) (event lambda-event))
+  (with-slots (queue) sheet
+    (event-queue-append queue event)))
+
+(defun queue-lambda-event (sheet callback)
+  (queue-event sheet (make-instance 'lambda-event :sheet sheet :fun callback)))
