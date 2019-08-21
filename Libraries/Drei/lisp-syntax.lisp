@@ -50,6 +50,8 @@
 ;;;
 ;;; the syntax object
 
+(declaim (special |initial-state |))    ; defined (class and var) further below
+
 (define-syntax lisp-syntax (lr-syntax-mixin fundamental-syntax)
   ((%package-list :accessor package-list
                   :documentation "An alist mapping the end offset
@@ -321,47 +323,47 @@ along with any default values) that can be used in a
 (defmethod skip-inter ((syntax lisp-syntax) state scan)
   (macrolet ((fo () `(forward-object scan)))
     (loop when (end-of-buffer-p scan)
-	    do (return nil)
-	  until (not (whitespacep syntax (object-after scan)))
-	  do (fo)
-	  finally (return t))))
+            do (return nil)
+          until (not (whitespacep syntax (object-after scan)))
+          do (fo)
+          finally (return t))))
 
 (defmethod lex ((syntax lisp-syntax) (state lexer-toplevel-state) scan)
   (macrolet ((fo () `(forward-object scan)))
     (let ((object (object-after scan)))
       (case object
-	(#\( (fo) (make-instance 'left-parenthesis-lexeme))
-	(#\) (fo) (make-instance 'unmatched-right-parenthesis-lexeme))
-	(#\' (fo) (make-instance 'quote-lexeme))
-	(#\; (fo)
-	     (loop until (or (end-of-buffer-p scan)
-			     (end-of-line-p scan)
-			     (not (eql (object-after scan) #\;)))
-		   do (fo))
-	     (make-instance 'line-comment-start-lexeme))
-	(#\" (fo) (make-instance 'string-start-lexeme))
-	(#\` (fo) (make-instance 'backquote-lexeme))
-	(#\, (fo)
-	     (cond ((end-of-buffer-p scan)
-		    (make-instance 'incomplete-lexeme))
-		   (t
-		    (case (object-after scan)
-		      (#\@ (fo) (make-instance 'comma-at-lexeme))
-		      (#\. (fo) (make-instance 'comma-dot-lexeme))
-		      (t (make-instance 'comma-lexeme))))))
-	(#\# (fo)
-	     (cond ((end-of-buffer-p scan)
-		    (make-instance 'incomplete-lexeme))
-		   (t
-		    (let ((prefix 0))
-		      (loop until (end-of-buffer-p scan)
-			    while (and (characterp (object-after scan))
+        (#\( (fo) (make-instance 'left-parenthesis-lexeme))
+        (#\) (fo) (make-instance 'unmatched-right-parenthesis-lexeme))
+        (#\' (fo) (make-instance 'quote-lexeme))
+        (#\; (fo)
+             (loop until (or (end-of-buffer-p scan)
+                             (end-of-line-p scan)
+                             (not (eql (object-after scan) #\;)))
+                   do (fo))
+             (make-instance 'line-comment-start-lexeme))
+        (#\" (fo) (make-instance 'string-start-lexeme))
+        (#\` (fo) (make-instance 'backquote-lexeme))
+        (#\, (fo)
+             (cond ((end-of-buffer-p scan)
+                    (make-instance 'incomplete-lexeme))
+                   (t
+                    (case (object-after scan)
+                      (#\@ (fo) (make-instance 'comma-at-lexeme))
+                      (#\. (fo) (make-instance 'comma-dot-lexeme))
+                      (t (make-instance 'comma-lexeme))))))
+        (#\# (fo)
+             (cond ((end-of-buffer-p scan)
+                    (make-instance 'incomplete-lexeme))
+                   (t
+                    (let ((prefix 0))
+                      (loop until (end-of-buffer-p scan)
+                            while (and (characterp (object-after scan))
                                        (digit-char-p (object-after scan)))
-			    do (setf prefix
-				     (+ (* 10 prefix)
-					(digit-char-p (object-after scan))))
-			       (fo))
-		    (if (or (end-of-buffer-p scan)
+                            do (setf prefix
+                                     (+ (* 10 prefix)
+                                        (digit-char-p (object-after scan))))
+                               (fo))
+                    (if (or (end-of-buffer-p scan)
                             (not (characterp (object-after scan))))
                         (make-instance 'incomplete-lexeme)
                         (case (object-after scan)
@@ -453,8 +455,8 @@ along with any default values) that can be used in a
                           (#\< (fo)
                                (make-instance 'error-lexeme))
                           (t (fo) (make-instance 'undefined-reader-macro-lexeme))))))))
-	(#\| (fo) (make-instance 'multiple-escape-start-lexeme))
-	(t (cond ((or (constituentp object)
+        (#\| (fo) (make-instance 'multiple-escape-start-lexeme))
+        (t (cond ((or (constituentp object)
                       (eql object #\\))
                   (lex-token syntax scan))
                  (t (fo) (make-instance 'literal-object-form))))))))
@@ -463,24 +465,24 @@ along with any default values) that can be used in a
   (macrolet ((fo () `(forward-object scan)))
     (let ((object (object-after scan)))
       (case object
-	(#\) (fo) (make-instance 'right-parenthesis-lexeme))
-	(t (call-next-method))))))
+        (#\) (fo) (make-instance 'right-parenthesis-lexeme))
+        (t (call-next-method))))))
 
 (defmethod lex ((syntax lisp-syntax) (state lexer-string-state) scan)
   (macrolet ((fo () `(forward-object scan)))
     (let ((object (object-after scan)))
       (cond ((eql object #\") (fo) (make-instance 'string-end-lexeme))
-	    ((eql object #\\)
-	     (fo)
-	     (unless (end-of-buffer-p scan)
-	       (fo))
-	     (make-instance 'delimiter-lexeme))
-	    ((constituentp object)
-	     (loop until (or (end-of-buffer-p scan)
-			     (not (constituentp (object-after scan))))
-		   do (fo))
-	     (make-instance 'word-lexeme))
-	    (t (fo) (make-instance
+            ((eql object #\\)
+             (fo)
+             (unless (end-of-buffer-p scan)
+               (fo))
+             (make-instance 'delimiter-lexeme))
+            ((constituentp object)
+             (loop until (or (end-of-buffer-p scan)
+                             (not (constituentp (object-after scan))))
+                   do (fo))
+             (make-instance 'word-lexeme))
+            (t (fo) (make-instance
                      (if (characterp object)
                          'delimiter-lexeme
                          'literal-object-delimiter-lexeme)))))))
@@ -489,23 +491,23 @@ along with any default values) that can be used in a
   (flet ((fo () (forward-object scan)))
     (let ((object (object-after scan)))
       (cond ((eql object #\|)
-	     (fo)
-	     (cond ((or (end-of-buffer-p scan)
-			(not (eql (object-after scan) #\#)))
-		    (make-instance 'delimiter-lexeme))
-		   (t (fo) (make-instance 'comment-end-lexeme))))
-	    ((eql object #\#)
-	     (fo)
-	     (cond ((or (end-of-buffer-p scan)
-			(not (eql (object-after scan) #\|)))
-		    (make-instance 'delimiter-lexeme))
-		   (t (fo) (make-instance 'long-comment-start-lexeme))))
-	    ((constituentp object)
-	     (loop until (or (end-of-buffer-p scan)
-			     (not (constituentp (object-after scan))))
-		   do (fo))
-	     (make-instance 'word-lexeme))
-	    (t (fo) (make-instance
+             (fo)
+             (cond ((or (end-of-buffer-p scan)
+                        (not (eql (object-after scan) #\#)))
+                    (make-instance 'delimiter-lexeme))
+                   (t (fo) (make-instance 'comment-end-lexeme))))
+            ((eql object #\#)
+             (fo)
+             (cond ((or (end-of-buffer-p scan)
+                        (not (eql (object-after scan) #\|)))
+                    (make-instance 'delimiter-lexeme))
+                   (t (fo) (make-instance 'long-comment-start-lexeme))))
+            ((constituentp object)
+             (loop until (or (end-of-buffer-p scan)
+                             (not (constituentp (object-after scan))))
+                   do (fo))
+             (make-instance 'word-lexeme))
+            (t (fo) (make-instance
                      (if (characterp object)
                          'delimiter-lexeme
                          'literal-object-delimiter-lexeme)))))))
@@ -513,20 +515,20 @@ along with any default values) that can be used in a
 (defmethod skip-inter ((syntax lisp-syntax) (state lexer-line-comment-state) scan)
   (macrolet ((fo () `(forward-object scan)))
     (loop until (or (end-of-line-p scan)
-		    (not (whitespacep syntax (object-after scan))))
-	  do (fo)
-	  finally (return t))))
+                    (not (whitespacep syntax (object-after scan))))
+          do (fo)
+          finally (return t))))
 
 (defmethod lex ((syntax lisp-syntax) (state lexer-line-comment-state) scan)
   (macrolet ((fo () `(forward-object scan)))
     (cond ((end-of-line-p scan)
-	   (make-instance 'comment-end-lexeme))
-	  ((constituentp (object-after scan))
-	   (loop until (or (end-of-buffer-p scan)
-			   (not (constituentp (object-after scan))))
-		 do (fo))
-	   (make-instance 'word-lexeme))
-	  (t (fo) (make-instance
+           (make-instance 'comment-end-lexeme))
+          ((constituentp (object-after scan))
+           (loop until (or (end-of-buffer-p scan)
+                           (not (constituentp (object-after scan))))
+                 do (fo))
+           (make-instance 'word-lexeme))
+          (t (fo) (make-instance
                    (if (characterp (object-before scan))
                        'delimiter-lexeme
                        'literal-object-delimiter-lexeme))))))
@@ -1290,18 +1292,18 @@ list. If no such package is specified, return \"CLIM-USER\"."
   "Returns the remainder of the list after the first non-comment,
 stripping leading comments."
   (loop for rest on list
-	count (not (comment-p (car rest)))
-	  into forms
-	until (= forms 2)
-	finally (return rest)))
+        count (not (comment-p (car rest)))
+          into forms
+        until (= forms 2)
+        finally (return rest)))
 
 (defun nth-noncomment (n list)
   "Returns the nth non-comment in list."
   (loop for item in list
-	count (not (comment-p item))
-	  into forms
-	until (> forms n)
-	finally (return item)))
+        count (not (comment-p item))
+          into forms
+        until (> forms n)
+        finally (return item)))
 
 (defun elt-noncomment (list n)
   "Returns the nth non-comment in list."
@@ -1527,29 +1529,29 @@ the form that `token' quotes, peeling away all quote forms."
 
 (defmethod eval-feature-conditional ((conditional token-mixin) (syntax lisp-syntax))
   (let* ((string (form-string syntax conditional))
-	 (symbol (parse-symbol string :package +keyword-package+)))
+         (symbol (parse-symbol string :package +keyword-package+)))
     (member symbol *features*)))
 
 (defmethod eval-feature-conditional ((conditional list-form) (syntax lisp-syntax))
   (let ((children (children conditional)))
     (when (third-noncomment children)
       (flet ((eval-fc (conditional)
-	       (funcall #'eval-feature-conditional conditional syntax)))
-	(let* ((type (second-noncomment children))
-	       (conditionals  (butlast
-			       (nthcdr
-				2
-				(remove-if
-				 #'comment-p
-				 children))))
-	       (type-string (form-string syntax type))
-	       (type-symbol (parse-symbol type-string :package +keyword-package+)))
-	  (case type-symbol
-	    (:and (funcall #'every #'eval-fc conditionals))
-	    (:or (funcall #'some #'eval-fc conditionals))
-	    (:not (when conditionals
-		    (funcall #'(lambda (f l) (not (apply f l)))
-			     #'eval-fc conditionals)))))))))
+               (funcall #'eval-feature-conditional conditional syntax)))
+        (let* ((type (second-noncomment children))
+               (conditionals  (butlast
+                               (nthcdr
+                                2
+                                (remove-if
+                                 #'comment-p
+                                 children))))
+               (type-string (form-string syntax type))
+               (type-symbol (parse-symbol type-string :package +keyword-package+)))
+          (case type-symbol
+            (:and (funcall #'every #'eval-fc conditionals))
+            (:or (funcall #'some #'eval-fc conditionals))
+            (:not (when conditionals
+                    (funcall #'(lambda (f l) (not (apply f l)))
+                             #'eval-fc conditionals)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -2117,7 +2119,7 @@ cannot be found, return nil."
 (defmethod backward-one-expression (mark (syntax lisp-syntax))
   (update-parse syntax 0 (offset mark))
   (let ((potential-form (or (form-before syntax (offset mark))
-			    (form-around syntax (offset mark)))))
+                            (form-around syntax (offset mark)))))
     (loop until (null potential-form)
        do (cond ((= (offset mark) (start-offset potential-form))
                  (setf potential-form
@@ -2129,7 +2131,7 @@ cannot be found, return nil."
 (defmethod forward-one-expression (mark (syntax lisp-syntax))
   (update-parse syntax 0 (offset mark))
   (let ((potential-form (or (form-after syntax (offset mark))
-			    (form-around syntax (offset mark)))))
+                            (form-around syntax (offset mark)))))
     (when (not (null potential-form))
       (when (and (not (form-at-top-level-p potential-form))
                  (= (offset mark) (end-offset potential-form)))
@@ -2304,9 +2306,9 @@ successful, or NIL if the buffer limit was reached."))
   (update-parse syntax 0 (offset mark))
   (with-slots (stack-top) syntax
      (loop for form in (children stack-top)
-	   when (and (mark<= (start-offset form) mark)
-		     (mark<= mark (end-offset form)))
-	     do (return (eval-form-for-drei
+           when (and (mark<= (start-offset form) mark)
+                     (mark<= mark (end-offset form)))
+             do (return (eval-form-for-drei
                          (get-usable-image syntax)
                          (form-to-object syntax form :read t))))))
 
@@ -2321,48 +2323,48 @@ successful, or NIL if the buffer limit was reached."))
   "Return a string and a list of escaped character positions.
 Uses part of the READ algorithm in CLTL2 22.1.1."
   (let ((length (length string))
-	(index 0)
-	irreplaceables chars)
+        (index 0)
+        irreplaceables chars)
     (tagbody
      step-8
        (unless (< index length) (go end))
        (cond
-	 ((char/= (char string index) #\\ #\|)
-	  (push (char string index) chars)
-	  (incf index)
-	  (go step-8))
-	 ((char= (char string index) #\\)
-	  (push (length chars) irreplaceables)
-	  (incf index)
-	  (unless (< index length) (go end))
-	  (push (char string index) chars)
-	  (incf index)
-	  (go step-8))
-	 ((char= (char string index) #\|)
-	  (incf index)
-	  (go step-9)))
+         ((char/= (char string index) #\\ #\|)
+          (push (char string index) chars)
+          (incf index)
+          (go step-8))
+         ((char= (char string index) #\\)
+          (push (length chars) irreplaceables)
+          (incf index)
+          (unless (< index length) (go end))
+          (push (char string index) chars)
+          (incf index)
+          (go step-8))
+         ((char= (char string index) #\|)
+          (incf index)
+          (go step-9)))
      step-9
        (unless (< index length) (go end))
        (cond
-	 ((char/= (char string index) #\\ #\|)
-	  (push (length chars) irreplaceables)
-	  (push (char string index) chars)
-	  (incf index)
-	  (go step-9))
-	 ((char= (char string index) #\\)
-	  (push (length chars) irreplaceables)
-	  (incf index)
-	  (unless (< index length) (go end))
-	  (push (char string index) chars)
-	  (incf index)
-	  (go step-9))
-	 ((char= (char string index) #\|)
-	  (incf index)
-	  (go step-8)))
+         ((char/= (char string index) #\\ #\|)
+          (push (length chars) irreplaceables)
+          (push (char string index) chars)
+          (incf index)
+          (go step-9))
+         ((char= (char string index) #\\)
+          (push (length chars) irreplaceables)
+          (incf index)
+          (unless (< index length) (go end))
+          (push (char string index) chars)
+          (incf index)
+          (go step-9))
+         ((char= (char string index) #\|)
+          (incf index)
+          (go step-8)))
      end
        (return-from parse-escapes
-	 (values (coerce (nreverse chars) 'string)
-		 (nreverse irreplaceables))))))
+         (values (coerce (nreverse chars) 'string)
+                 (nreverse irreplaceables))))))
 
 (defun invert-cases (string &optional (irreplaceables nil))
   "Returns two flags: unescaped upper-case and lower-case chars in STRING."
@@ -2377,7 +2379,7 @@ Uses part of the READ algorithm in CLTL2 22.1.1."
      finally (return (values upper lower))))
 
 (defun replace-case (string &optional (case (readtable-case *readtable*))
-		                      (irreplaceables nil))
+                                      (irreplaceables nil))
   "Convert string according to readtable-case."
   (multiple-value-bind (upper lower) (invert-cases string irreplaceables)
     (loop for index below (length string)
@@ -2386,13 +2388,13 @@ Uses part of the READ algorithm in CLTL2 22.1.1."
          collect char into chars
        else
          collect (ecase case
-		   (:preserve char)
-		   (:upcase (char-upcase char))
-		   (:downcase (char-downcase char))
-		   (:invert (cond ((and lower upper) char)
-				  (lower (char-upcase char))
-				  (upper (char-downcase char))
-				  (t char)))) into chars
+                   (:preserve char)
+                   (:upcase (char-upcase char))
+                   (:downcase (char-downcase char))
+                   (:invert (cond ((and lower upper) char)
+                                  (lower (char-upcase char))
+                                  (upper (char-downcase char))
+                                  (t char)))) into chars
        finally (return (coerce chars 'string)))))
 
 (defun parse-token (string &optional (case (readtable-case *readtable*)))
@@ -2400,20 +2402,20 @@ Uses part of the READ algorithm in CLTL2 22.1.1."
 and whether the symbol-name was separated from the package by a double colon."
   (multiple-value-bind (string irreplaceables) (parse-escapes string)
     (let ((string (replace-case string case irreplaceables))
-	  package-name symbol-name internalp)
+          package-name symbol-name internalp)
       (loop for index below (length string)
-	   with symbol-start = 0
-	   when (and (char= (char string index) #\:)
-		     (not (member index irreplaceables)))
-	        do (setf package-name (subseq string 0 index))
-	           (if (and (< (incf index) (length string))
-			    (char= (char string index) #\:)
-			    (not (member index irreplaceables)))
-		       (setf symbol-start (1+ index)
-			     internalp t)
-		       (setf symbol-start index))
-	           (loop-finish)
-	   finally (setf symbol-name (subseq string symbol-start)))
+           with symbol-start = 0
+           when (and (char= (char string index) #\:)
+                     (not (member index irreplaceables)))
+                do (setf package-name (subseq string 0 index))
+                   (if (and (< (incf index) (length string))
+                            (char= (char string index) #\:)
+                            (not (member index irreplaceables)))
+                       (setf symbol-start (1+ index)
+                             internalp t)
+                       (setf symbol-start index))
+                   (loop-finish)
+           finally (setf symbol-name (subseq string symbol-start)))
       (values symbol-name package-name internalp))))
 
 #|
@@ -2425,13 +2427,13 @@ and whether the symbol-name was separated from the package by a double colon."
              ~%")
     (dolist (readtable-case '(:upcase :downcase :preserve :invert))
       (dolist (input '("ZEBRA" "Zebra" "zebra" "\\zebra" "\\Zebra" "z|ebr|a"
-		       "|ZE\\bRA|" "ze\\|bra"))
-	(format t "~&:~A~16T~A~30T~A~44T~A"
-		(string-upcase readtable-case)
-		input
-		(progn (setf (readtable-case *readtable*) readtable-case)
-		       (symbol-name (read-from-string input)))
-		(parse-token input readtable-case))))))
+                       "|ZE\\bRA|" "ze\\|bra"))
+        (format t "~&:~A~16T~A~30T~A~44T~A"
+                (string-upcase readtable-case)
+                input
+                (progn (setf (readtable-case *readtable*) readtable-case)
+                       (symbol-name (read-from-string input)))
+                (parse-token input readtable-case))))))
 |#
 
 (defun form-string (syntax form)
@@ -2691,7 +2693,7 @@ erroneous form is in."))
          :initform (error "You must provide the erroneous form."))
    (problem :reader problem :initarg :problem :initform "invalid form"))
   (:report (lambda (condition stream)
-	     (format stream "Syntax problem: ~A" (problem condition))))
+             (format stream "Syntax problem: ~A" (problem condition))))
   (:documentation "This condition (or a subclass) is signalled by
 `form-to-object' when a form cannot be converted to a proper Lisp
 object."))
@@ -3147,7 +3149,7 @@ be a readable representation of some object.")
     nil)
   (:method ((syntax lisp-syntax) (form1 form) (form2 string))
     nil))
-  
+
 (defmethod form-equal ((syntax lisp-syntax)
                        (form1 complete-token-form) (form2 complete-token-form))
   (multiple-value-bind (symbol1 package1 status1)
@@ -3226,7 +3228,7 @@ including implementation-specific lambda list keywords."
      with in-&aux                       ; If non-NIL, we are in the
                                         ; &aux parameters that should
                                         ; not be displayed.
-                    
+
      with in-garbage                    ; If non-NIL, the next
                                         ; argument is a garbage
                                         ; parameter that should not be
@@ -3255,8 +3257,8 @@ including implementation-specific lambda list keywords."
   (print-unreadable-object (ll stream :type t :identity t)
     (when (compute-applicable-methods #'lambda-list-as-list `(,ll))
       (let ((*print-length* (or *print-length* 10)))
-	;; PRINC because the names of KEYWORD-PARAMETERs are keywords.
-	(princ (lambda-list-as-list ll) stream)))))
+        ;; PRINC because the names of KEYWORD-PARAMETERs are keywords.
+        (princ (lambda-list-as-list ll) stream)))))
 
 (defgeneric required-parameters (lambda-list)
   (:documentation "Return a list containing objects representing
@@ -3625,7 +3627,7 @@ processing."))
                              :initarg :misplaced-element-index
                              :initform (error "Must provide a misplaced element index for condition")))
   (:report (lambda (condition stream)
-	     (format stream "Element ~A is not allowed at position ~A in ~A"
+             (format stream "Element ~A is not allowed at position ~A in ~A"
                      (misplaced-element condition)
                      (misplaced-element-index condition)
                      (invalid-lambda-list condition))))
@@ -3642,7 +3644,7 @@ list."))
 (define-condition &optional-after-&key (misplaced-&optional)
   ()
   (:report (lambda (condition stream)
-	     (format stream "&optional found after &key in: ~A"
+             (format stream "&optional found after &key in: ~A"
                      (invalid-lambda-list condition))))
   (:documentation "This condition is signalled whenever an
 &optional parameter is found after a &key argument in an argument
@@ -3651,7 +3653,7 @@ list."))
 (define-condition &optional-after-&rest (misplaced-&optional)
   ()
   (:report (lambda (condition stream)
-	     (format stream "&optional found after &rest in: ~A"
+             (format stream "&optional found after &rest in: ~A"
                      (invalid-lambda-list condition))))
   (:documentation "This condition is signalled whenever an
 &optional parameter is found after a &rest argument in an argument
@@ -3665,7 +3667,7 @@ whenever a &rest parameter is misplaced in an argument list."))
 (define-condition &rest-after-&key (misplaced-&rest)
   ()
   (:report (lambda (condition stream)
-	     (format stream "&rest found after &key in: ~A"
+             (format stream "&rest found after &key in: ~A"
                      (invalid-lambda-list condition))))
   (:documentation "This condition is signalled whenever a &rest
 parameter is found after a &key argument in a lambda list."))
@@ -3678,7 +3680,7 @@ whenever a &body parameter is misplaced in an argument list."))
 (define-condition &body-after-&key (misplaced-&body)
   ()
   (:report (lambda (condition stream)
-	     (format stream "&body found after &key in: ~A"
+             (format stream "&body found after &key in: ~A"
                      (invalid-lambda-list condition))))
   (:documentation "This condition is signalled whenever a &body
 parameter is found after a &key argument in a lambda list."))
@@ -3686,7 +3688,7 @@ parameter is found after a &key argument in a lambda list."))
 (define-condition &body-and-&rest-found (misplaced-&body misplaced-&rest)
   ()
   (:report (lambda (condition stream)
-	     (format stream "&body and &rest found in same lambda list: ~A"
+             (format stream "&body and &rest found in same lambda list: ~A"
                      (invalid-lambda-list condition))))
   (:documentation "This condition is signalled whenever both a
 &body and a &rest parameter is found in the same lambda list."))
@@ -3694,7 +3696,7 @@ parameter is found after a &key argument in a lambda list."))
 (define-condition symbol-after-&allow-other-keys (misplaced-element)
   ()
   (:report (lambda (condition stream)
-	     (format stream "Element ~A at position ~A is not allowed after &allow-other-keys in ~A"
+             (format stream "Element ~A at position ~A is not allowed after &allow-other-keys in ~A"
                      (misplaced-element condition)
                      (misplaced-element-index condition)
                      (invalid-lambda-list condition)))))
@@ -3986,21 +3988,21 @@ lambda list parameter objects to symbols or lists."))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree form*) path)
   (cond ((or (null path)
-	     (and (null (cdr path)) (zerop (car path))))
-	 (values tree 0))
-	((null (cdr path))
-	 (values (elt-noncomment (children tree) (1- (car path))) 0))
-	(t (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))
+             (and (null (cdr path)) (zerop (car path))))
+         (values tree 0))
+        ((null (cdr path))
+         (values (elt-noncomment (children tree) (1- (car path))) 0))
+        (t (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree string-form) path)
   (values (form-toplevel syntax tree) 0))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree reader-conditional-form) path)
   (cond ((or (null path)
-	     (and (null (cdr path)) (zerop (car path))))
-	 (values tree 0))
-	((null (cdr path))
-	 (values (first-form (children tree)) 0))))
+             (and (null (cdr path)) (zerop (car path))))
+         (values tree 0))
+        ((null (cdr path))
+         (values (first-form (children tree)) 0))))
 
 (defmethod indent-form ((syntax lisp-syntax) (tree readtime-evaluation-form) path)
   (if (null (cdr path))
@@ -4085,14 +4087,14 @@ lambda list parameter objects to symbols or lists."))
   (if (null (cdr path))
       ;; top level
       (cond ((= (car path) 1)
-	     ;; before variable, indent 1
-	     (values tree 1))
-	    ((= (car path) 2)
-	     ;; between variable and value
-	     (values (elt-noncomment (children tree) 1) 0))
-	    (t
-	     ;; after value
-	     (values (elt-noncomment (children tree) 2) 0)))
+             ;; before variable, indent 1
+             (values tree 1))
+            ((= (car path) 2)
+             ;; between variable and value
+             (values (elt-noncomment (children tree) 1) 0))
+            (t
+             ;; after value
+             (values (elt-noncomment (children tree) 2) 0)))
       (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
 
 (defgeneric indent-bindings (syntax tree path))
@@ -4101,10 +4103,10 @@ lambda list parameter objects to symbols or lists."))
   (if (null (cdr path))
       ;; entire bind form
       (if (= (car path) 1)
-	  ;; before first binding, indent 1
-	  (values tree 1)
-	  ;; after some bindings, align with first binding
-	  (values (elt-noncomment (children tree) 1) 0))
+          ;; before first binding, indent 1
+          (values tree 1)
+          ;; after some bindings, align with first binding
+          (values (elt-noncomment (children tree) 1) 0))
       ;; inside a bind form
       (indent-binding syntax (elt-noncomment (children tree) (car path)) (cdr path))))
 
@@ -4184,14 +4186,14 @@ lambda list parameter objects to symbols or lists."))
 (defmacro define-list-indentor (name element-indentor)
   `(defun ,name (syntax tree path)
      (if (null (cdr path))
-	 ;; top level
-	 (if (= (car path) 1)
-	     ;; indent one more than the list
-	     (values tree 1)
-	     ;; indent like the first element
-	     (values (elt-noncomment (children tree) 1) 0))
-	 ;; inside an element
-	 (,element-indentor syntax (elt-noncomment (children tree) (car path)) (cdr path)))))
+         ;; top level
+         (if (= (car path) 1)
+             ;; indent one more than the list
+             (values tree 1)
+             ;; indent like the first element
+             (values (elt-noncomment (children tree) 1) 0))
+         ;; inside an element
+         (,element-indentor syntax (elt-noncomment (children tree) (car path)) (cdr path)))))
 
 ;;; line up the elements vertically
 (define-list-indentor indent-list indent-list)
@@ -4209,12 +4211,12 @@ lambda list parameter objects to symbols or lists."))
   `(defmethod compute-list-indentation
        ((syntax lisp-syntax) (symbol (eql ',(car template))) tree path)
      (cond ((null (cdr path))
-	    (values tree (if (<= (car path) ,(length template)) 4 2)))
-	   ,@(loop for fun in (cdr template)
-		  for i from 2
-		  collect `((= (car path) ,i)
-			    (,fun syntax (elt-noncomment (children tree) ,i) (cdr path))))
-	   (t (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
+            (values tree (if (<= (car path) ,(length template)) 4 2)))
+           ,@(loop for fun in (cdr template)
+                  for i from 2
+                  collect `((= (car path) ,i)
+                            (,fun syntax (elt-noncomment (children tree) ,i) (cdr path))))
+           (t (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
 
 (define-simple-indentor (prog1 indent-form))
 (define-simple-indentor (prog2 indent-form indent-form))
@@ -4245,15 +4247,15 @@ lambda list parameter objects to symbols or lists."))
       ;; top level
       (values tree (if (<= (car path) 3) 4 2))
       (case (car path)
-	((2 3)
-	 ;; in the class name or superclasses respectively
-	 (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
-	(4
-	 ;; in the slot specs
-	 (indent-slot-specs syntax (elt-noncomment (children tree) 4) (cdr path)))
-	(t
-	 ;; this is an approximation, might want to do better
-	 (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
+        ((2 3)
+         ;; in the class name or superclasses respectively
+         (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
+        (4
+         ;; in the slot specs
+         (indent-slot-specs syntax (elt-noncomment (children tree) 4) (cdr path)))
+        (t
+         ;; this is an approximation, might want to do better
+         (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
 
 (defmethod compute-list-indentation
     ((syntax lisp-syntax) (symbol (eql 'defgeneric)) tree path)
@@ -4261,33 +4263,33 @@ lambda list parameter objects to symbols or lists."))
       ;; top level
       (values tree (if (<= (car path) 3) 4 2))
       (case (car path)
-	(2
-	 ;; in the function name
-	 (indent-list syntax (elt-noncomment (children tree) 2) (cdr path)))
-	(3
-	 ;; in the lambda-list
-	 (indent-ordinary-lambda-list syntax (elt-noncomment (children tree) 3) (cdr path)))
-	(t
-	 ;; in the options or method specifications
-	 (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
+        (2
+         ;; in the function name
+         (indent-list syntax (elt-noncomment (children tree) 2) (cdr path)))
+        (3
+         ;; in the lambda-list
+         (indent-ordinary-lambda-list syntax (elt-noncomment (children tree) 3) (cdr path)))
+        (t
+         ;; in the options or method specifications
+         (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
 
 (defmethod compute-list-indentation
     ((syntax lisp-syntax) (symbol (eql 'defmethod)) tree path)
   (let ((lambda-list-pos (position-if #'form-list-p
-				      (remove-if #'comment-p (children tree)))))
+                                      (remove-if #'comment-p (children tree)))))
     (cond ((null (cdr path))
-	   ;; top level
-	   (values tree (if (or (null lambda-list-pos)
-				(<= (car path) lambda-list-pos))
-			    4
-			    2)))
-	  ((or (null lambda-list-pos)
-	       (< (car path) lambda-list-pos))
-	   (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
-	  ((= (car path) lambda-list-pos)
-	   (indent-ordinary-lambda-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
-	  (t
-	   (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
+           ;; top level
+           (values tree (if (or (null lambda-list-pos)
+                                (<= (car path) lambda-list-pos))
+                            4
+                            2)))
+          ((or (null lambda-list-pos)
+               (< (car path) lambda-list-pos))
+           (indent-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
+          ((= (car path) lambda-list-pos)
+           (indent-ordinary-lambda-list syntax (elt-noncomment (children tree) (car path)) (cdr path)))
+          (t
+           (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))))
 
 (defun indent-clause (syntax tree path)
   (if (null (cdr path))
@@ -4303,10 +4305,10 @@ lambda list parameter objects to symbols or lists."))
   (if (null (cdr path))
       ;; top level
       (if (= (car path) 2)
-	  ;; after `cond'
-	  (values tree 2)
-	  ;; indent like the first clause
-	  (values (elt-noncomment (children tree) 2) 0))
+          ;; after `cond'
+          (values tree 2)
+          ;; indent like the first clause
+          (values (elt-noncomment (children tree) 2) 0))
       ;; inside a clause
       (indent-clause syntax (elt-noncomment (children tree) (car path)) (cdr path))))
 
@@ -4341,20 +4343,20 @@ lambda list parameter objects to symbols or lists."))
 
 (defmethod indent-local-function-definition ((syntax lisp-syntax) tree path)
   (cond ((null (cdr path))
-	 ;; top level
-	 (cond ((= (car path) 1)
-		;; before name, indent 1
-		(values tree 1))
-	       ((= (car path) 2)
-		;; between name and lambda list, indent 4
-		(values (elt-noncomment (children tree) 1) 4))
-	       (t
-		;; after lambda list, indent 2
-		(values (elt-noncomment (children tree) 1) 2))))
-	((= (car path) 1)
-	 ;; inside lambda list
-	 (indent-ordinary-lambda-list syntax (elt-noncomment (children tree) 1) (cdr path)))
-	(t (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))
+         ;; top level
+         (cond ((= (car path) 1)
+                ;; before name, indent 1
+                (values tree 1))
+               ((= (car path) 2)
+                ;; between name and lambda list, indent 4
+                (values (elt-noncomment (children tree) 1) 4))
+               (t
+                ;; after lambda list, indent 2
+                (values (elt-noncomment (children tree) 1) 2))))
+        ((= (car path) 1)
+         ;; inside lambda list
+         (indent-ordinary-lambda-list syntax (elt-noncomment (children tree) 1) (cdr path)))
+        (t (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path)))))
 
 (define-list-indentor indent-local-function-definitions indent-local-function-definition)
 
@@ -4375,12 +4377,12 @@ lambda list parameter objects to symbols or lists."))
 
 (defun compute-path-in-trees (trees n offset)
   (cond ((or (null (first-noncomment trees))
-	     (>= (start-offset (first-noncomment trees)) offset))
-	 (list n))
-	((or (< (start-offset (first-noncomment trees)) offset (end-offset (first-noncomment trees)))
-	     (typep (first-noncomment trees) 'incomplete-form-mixin))
-	 (cons n (compute-path-in-tree (first-noncomment trees) offset)))
-	(t (compute-path-in-trees (rest-noncomments trees) (1+ n) offset))))
+             (>= (start-offset (first-noncomment trees)) offset))
+         (list n))
+        ((or (< (start-offset (first-noncomment trees)) offset (end-offset (first-noncomment trees)))
+             (typep (first-noncomment trees) 'incomplete-form-mixin))
+         (cons n (compute-path-in-tree (first-noncomment trees) offset)))
+        (t (compute-path-in-trees (rest-noncomments trees) (1+ n) offset))))
 
 (defun compute-path-in-tree (tree offset)
   (if (null (children tree))
@@ -4395,12 +4397,12 @@ lambda list parameter objects to symbols or lists."))
   (let ((mark2 (clone-mark mark)))
     (beginning-of-line mark2)
     (loop with column = 0
-	  until (mark= mark mark2)
-	  do (if (eql (object-after mark2) #\Tab)
-		 (loop do (incf column)
-		       until (zerop (mod column tab-width)))
-		 (incf column))
-	  do (incf (offset mark2))
+          until (mark= mark mark2)
+          do (if (eql (object-after mark2) #\Tab)
+                 (loop do (incf column)
+                       until (zerop (mod column tab-width)))
+                 (incf column))
+          do (incf (offset mark2))
           finally (return column))))
 
 (defmethod syntax-line-indentation ((syntax lisp-syntax) mark tab-width)
@@ -4410,10 +4412,10 @@ lambda list parameter objects to symbols or lists."))
   (with-slots (stack-top) syntax
     (let ((path (compute-path syntax (offset mark))))
       (multiple-value-bind (tree offset)
-	  (indent-form syntax stack-top path)
-	(setf (offset mark) (start-offset tree))
-	(+ (real-column-number mark tab-width)
-	   offset)))))
+          (indent-form syntax stack-top path)
+        (setf (offset mark) (start-offset tree))
+        (+ (real-column-number mark tab-width)
+           offset)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
