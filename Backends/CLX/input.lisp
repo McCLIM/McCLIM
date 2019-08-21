@@ -141,27 +141,29 @@
       ((:button-press :button-release)
        (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port* state))
              (button (decode-x-button-code code)))
-         (if (and (eq event-key :button-press)
-                  (member button '(#.+pointer-wheel-up+
-                                   #.+pointer-wheel-down+
-                                   #.+pointer-wheel-left+
-                                   #.+pointer-wheel-right+)))
-             (make-instance 'climi::pointer-scroll-event
-                            :pointer 0
-                            :button button :x x :y y
-                            :graft-x root-x
-                            :graft-y root-y
-                            :sheet sheet
-                            :modifier-state modifier-state
-                            :delta-x (case button
-                                       (#.+pointer-wheel-left+ -1)
-                                       (#.+pointer-wheel-right+ 1)
-                                       (otherwise 0))
-                            :delta-y (case button
-                                       (#.+pointer-wheel-up+ -1)
-                                       (#.+pointer-wheel-down+ 1)
-                                       (otherwise 0))
-                            :timestamp time)
+         (if (member button '(#.+pointer-wheel-up+
+                              #.+pointer-wheel-down+
+                              #.+pointer-wheel-left+
+                              #.+pointer-wheel-right+))
+             ;; Pointer scroll generates button press and button
+             ;; release event. We ignore the latter. -- jd 2019-09-01
+             (when (eq event-key :button-press)
+               (make-instance 'climi::pointer-scroll-event
+                              :pointer 0
+                              :button button :x x :y y
+                              :graft-x root-x
+                              :graft-y root-y
+                              :sheet sheet
+                              :modifier-state modifier-state
+                              :delta-x (case button
+                                         (#.+pointer-wheel-left+ -1)
+                                         (#.+pointer-wheel-right+ 1)
+                                         (otherwise 0))
+                              :delta-y (case button
+                                         (#.+pointer-wheel-up+ -1)
+                                         (#.+pointer-wheel-down+ 1)
+                                         (otherwise 0))
+                              :timestamp time))
              (make-instance (if (eq event-key :button-press)
                                 'pointer-button-press-event
                                 'pointer-button-release-event)
