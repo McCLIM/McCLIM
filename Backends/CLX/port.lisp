@@ -193,7 +193,8 @@
                                        event-mask))))
       (port-register-mirror (port sheet) sheet window)
       (when map
-        (xlib:map-window window))))
+        (xlib:map-window window)
+        (xlib:display-finish-output (clx-port-display port)))))
   (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
