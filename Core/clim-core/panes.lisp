@@ -913,10 +913,11 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
       (error 'sheet-supports-only-one-child :sheet pane))
     (sheet-adopt-child pane (first contents))))
 
-(defmethod compose-space ((pane single-child-composite-pane) &key width height)
+(defmethod compose-space ((pane single-child-composite-pane)
+                          &rest args &key width height)
+  (declare (ignore width height))
   (if (sheet-child pane)
-      (compose-space (sheet-child pane)
-                     :width width :height height)
+      (apply #'compose-space (sheet-child pane) args)
       (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
