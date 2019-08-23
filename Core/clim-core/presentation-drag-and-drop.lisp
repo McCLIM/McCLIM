@@ -47,7 +47,8 @@
                      (priority 0)
                      (feedback 'frame-drag-and-drop-feedback)
                      (highlighting 'frame-drag-and-drop-highlighting)
-                     (finish-on-release *finish-on-release*))
+                     (finish-on-release *finish-on-release*)
+                     (multiple-window nil))
      arglist &body body)
   (declare (ignore tester gesture documentation pointer-documentation
                    menu priority finish-on-release))
@@ -83,7 +84,8 @@
            (declare (ignore ,object))
            (invoke-drag-and-drop ',name ',command-table
                                  presentation context-type
-                                 frame event window x y))))))
+                                 frame event
+                                 ,multiple-window window x y))))))
 
 ;;; It is unspecified what happens when there are multiple dnd
 ;;; translators which are applicable at the same time. McCLIM sets
@@ -92,8 +94,9 @@
 ;;; which has applicable dnd translator we use its functions until the
 ;;; sensitive area is left. -- jd 2019-07-06
 (defun invoke-drag-and-drop (translator-name command-table
-                            from-presentation context-type frame event window
-                            x y)
+                             from-presentation context-type frame event
+                             multiple-window window
+                             x y)
   (declare (ignore command-table))
   (let* ((*dragged-presentation* from-presentation)
          (*dragged-object* (presentation-object from-presentation))
@@ -150,7 +153,7 @@
                                   ;; should do closer examination
                                   ;; inside :presentation clause
                                   :highlight nil
-                                  :multiple-window t)
+                                  :multiple-window multiple-window)
           (:presentation (&key presentation window event x y)
             (let ((dest-translator (find-dest-translator presentation event window x y)))
               (erase-old)
