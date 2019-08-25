@@ -126,7 +126,7 @@
     ;;
     (let* ((tr (sheet-native-transformation (medium-sheet medium)))
            (transformed (loop
-                          for (x y) on coord-seq by #'cddr
+                          for (x y) on (coerce coord-seq 'list) by #'cddr
                           collect (with-transformed-position (tr x y)
                                     (cons x y)))))
       (when transformed
