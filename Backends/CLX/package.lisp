@@ -69,9 +69,7 @@
                 #:when-let
                 #:if-let)
   (:import-from #:climi
-		#:standard-event-port-mixin
                 #:event-listen-or-wait
-		#:pointer-grab-sheet
 		#:%sheet-mirror-region
                 #:%sheet-mirror-transformation
 		#:standard-port)

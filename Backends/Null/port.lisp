@@ -148,15 +148,6 @@
 (defmethod port-force-output ((port null-port))
   nil)
 
-;; FIXME: What happens when CLIM code calls tracking-pointer recursively?
-(defmethod port-grab-pointer ((port null-port) pointer sheet)
-  (declare (ignore pointer sheet))
-  nil)
-
-(defmethod port-ungrab-pointer ((port null-port) pointer sheet)
-  (declare (ignore pointer sheet))
-  nil)
-
 (defmethod distribute-event :around ((port null-port) event)
   (declare (ignore event))
   nil)

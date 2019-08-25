@@ -81,7 +81,7 @@ want to do the same.")
     ;; things such as the listener wholine from overexposing their text.
     (let ((msheet (sheet-mirrored-ancestor sheet)))
       ;; Do not call bounding-rectangle on region here. For +nowhere+ it gives
-      ;; 0:0 0:0 (disregarding the nativer region). -- jd 2019-03-23
+      ;; 0:0 0:0 (disregarding the native region). -- jd 2019-03-23
       (if (eql msheet sheet)
           (handle-repaint sheet (region-intersection (sheet-region sheet) region))
           (handle-repaint sheet (untransform-region

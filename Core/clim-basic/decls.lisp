@@ -707,6 +707,14 @@ unspecified. "))
 (defgeneric accelerator-gesture-event (condition))
 (defgeneric accelerator-gesture-numeric-argument (condition))
 
+;;; 22.5 Pointer Tracking
+
+;; tracking-pointer
+;; dragging-output
+
+(defgeneric drag-output-record
+    (stream output &key repaint erase feedback finish-on-release multiple-window))
+
 
 ;;; 23.5 Context-dependent (Typed) Input
 

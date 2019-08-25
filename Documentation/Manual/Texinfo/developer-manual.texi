@@ -84,8 +84,6 @@ EVENT HANDLING (in port.lisp)
 -----------------------------
 ;;; Originally in CLIM-INTERNALS
 port-frame-keyboard-input-focus
-port-grab-pointer
-port-ungrab-pointer
 synthesize-pointer-motion-event
 @end verbatim
 

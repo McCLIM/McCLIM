@@ -1,7 +1,4 @@
-IMAGES=figures/inspect-as-cells.pdf                                                             \
-       figures/inspect-object-1.pdf figures/inspect-object-2.pdf figures/inspect-object-3.pdf
-
-SOURCES=mcclim.texi user-manual.texi reference-manual.texi developer-manual.texi extensions.texi auxiliary-material.texi chap-debugger.texi chap-inspector.texi chap-listener.texi docstrings $(IMAGES)
+SOURCES=mcclim.texi user-manual.texi reference-manual.texi developer-manual.texi extensions.texi auxiliary-material.texi chap-debugger.texi chap-inspector.texi chap-listener.texi docstrings
 
 INCLUDES=-I docstrings -I examples -I figures
 
@@ -10,9 +7,6 @@ RESULTS=mcclim.pdf mcclim.info mcclim mcclim.html
 VPATH=./figures
 
 .PHONY: all clean distclean
-
-figures/%.pdf: figures/%.fig
-	fig2dev -Lpdftex -m 0.75  $< $@
 
 all: $(RESULTS)
 

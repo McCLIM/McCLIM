@@ -34,6 +34,16 @@ McCLIM
 @macro funref{NAME}
 @ref{Function \NAME\,@b{\NAME\}}
 @end macro
+@ifhtml
+@macro codefunref{NAME}
+@funref{\NAME\}
+@end macro
+@end ifhtml
+@ifnothtml
+@macro codefunref{NAME}
+\NAME\
+@end macro
+@end ifnothtml
 
 @macro fmacro{NAME}
 @b{\NAME\}
@@ -41,6 +51,16 @@ McCLIM
 @macro macroref{NAME}
 @ref{Macro \NAME\,@b{\NAME\}}
 @end macro
+@ifhtml
+@macro codemacroref{NAME}
+@macroref{\NAME\}
+@end macro
+@end ifhtml
+@ifnothtml
+@macro codemacroref{NAME}
+\NAME\
+@end macro
+@end ifnothtml
 
 @macro genfun{FUN}
 @b{\FUN\}
@@ -48,6 +68,16 @@ McCLIM
 @macro genfunref{NAME}
 @ref{Generic-Function \NAME\,@b{\NAME\}}
 @end macro
+@ifhtml
+@macro codegenfunref{NAME}
+@genfunref{\NAME\}
+@end macro
+@end ifhtml
+@ifnothtml
+@macro codegenfunref{NAME}
+\NAME\
+@end macro
+@end ifnothtml
 
 @alias class = code
 @alias package = code
@@ -58,11 +88,6 @@ McCLIM
 @alias longref = t
 @alias cl = code
 @alias initarg = code
-
-@macro issue{AUTHOR,COMMENT}
-@noindent
-@b{Issue:} @i{\COMMENT\ --- \AUTHOR\}
-@end macro
 
 @c ===================================================================
 @c Glossary entries
@@ -87,3 +112,12 @@ McCLIM
 @i{@ref{\CONCEPT\,\LABEL\,\LABEL\}}
 @end macro
 @end ifnottex
+
+@c ===================================================================
+@c Annotations
+@c ===================================================================
+
+@macro issue{AUTHOR,COMMENT}
+@noindent
+@b{Issue:} @i{\COMMENT\ --- \AUTHOR\}
+@end macro
