@@ -229,7 +229,7 @@
     (%set-window-name window pretty-name)
     (%set-window-icon-name window pretty-name)
     (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
-    (setf (xlib:wm-protocols window) `(:wm_delete_window))
+    (setf (xlib:wm-protocols window) `(:wm_take_focus :wm_delete_window))
     (xlib:change-property window
                           :WM_CLIENT_LEADER (list (xlib:window-id window))
                           :WINDOW 32)))

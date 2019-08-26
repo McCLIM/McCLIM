@@ -2007,6 +2007,7 @@
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
+   #:window-manager-focus-event
    ;; Text-style
    #:text-style-to-font
    #:text-style-character-width

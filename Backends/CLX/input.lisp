@@ -298,16 +298,23 @@
 ;;; top-level-sheet REALIZE-MIRROR method should be adjusted to add
 ;;; :WM_TAKE_FOCUS to XLIB:WM-PROTOCOLS.  CSR, 2009-02-18
 
+;;; And that's what we do. top-level-sheet maintains last focused
+;;; sheet among its children and upon :WM_TAKE_FOCUS it assigns back
+;;; the focus to it. Currently we have implemented click-to-focus
+;;; policy which is enforced in basic-port's distribute-event
+;;; method. -- jd 2019-08-26
+
 (defun port-client-message (sheet time type data)
   (case type
     (:wm_protocols
      (let ((message (xlib:atom-name (slot-value *clx-port* 'display) (aref data 0))))
        (case message
          (:wm_take_focus
+          ;; hmm, this message seems to be sent twice.
           (when-let ((mirror (sheet-xmirror sheet)))
             (xlib:set-input-focus (clx-port-display *clx-port*)
                                   mirror :parent (elt data 1)))
-          nil)
+          (make-instance 'window-manager-focus-event :sheet sheet :timestamp time))
          (:wm_delete_window
           (make-instance 'window-manager-delete-event :sheet sheet :timestamp time))
          (otherwise

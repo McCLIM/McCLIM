@@ -51,6 +51,7 @@
 ;;       window-repaint-event
 ;;     window-manager-event
 ;;       window-manager-delete-event
+;;       window-manager-focus-event
 ;;     timer-event
 ;;
 
@@ -256,26 +257,18 @@
                                (window-configuration-event-native-height event))
       height)))
 
-(define-event-class window-unmap-event (window-event)
-  ())
+(define-event-class window-unmap-event   (window-event) ())
+(define-event-class window-destroy-event (window-event) ())
+(define-event-class window-repaint-event (window-event) ())
 
-(define-event-class window-destroy-event (window-event)
-  ())
-
-(define-event-class window-repaint-event (window-event)
-  ())
-
-(define-event-class window-manager-event (standard-event) ())
-
-(define-event-class window-manager-delete-event (window-manager-event)
-  ;; sheet (inherited from standard-event) is not required by the spec but we
-  ;; need to know which window to delete - mikemac
-  ())
+(define-event-class window-manager-event        (standard-event)       ())
+(define-event-class window-manager-delete-event (window-manager-event) ())
+(define-event-class window-manager-focus-event  (window-manager-event) ())
 
 (define-event-class timer-event (standard-event)
   ((token
-     :initarg :token
-     :reader  event-token)))
+    :initarg :token
+    :reader  event-token)))
 
 ;;; Constants dealing with events
 
