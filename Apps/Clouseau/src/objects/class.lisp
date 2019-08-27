@@ -78,13 +78,14 @@
 
 (defclass inspected-slot-definition (inspected-instance
                                      remembered-collapsed-style-mixin)
-  ()
-  (:default-initargs
-   :style :name-only))
+  ())
 
-(defmethod object-state-class ((object c2mop:slot-definition)
-                               (place  slot-definition-place))
+(defmethod object-state-class ((object c2mop:slot-definition) (place t))
   'inspected-slot-definition)
+
+(defmethod make-object-state ((object t) (place slot-definition-place))
+  (make-instance (object-state-class object place) :place place
+                                                   :style :name-only))
 
 ;;; `inspected-class-list'
 
@@ -118,7 +119,7 @@
 
 ;;;; Object inspection methods
 
-;;; `slot-definition'
+;;; `inspected-slot-definition'
 
 (defmethod inspect-object-using-state ((object c2mop:slot-definition)
                                        (state  inspected-slot-definition)

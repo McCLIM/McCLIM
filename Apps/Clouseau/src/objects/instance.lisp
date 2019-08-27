@@ -17,6 +17,9 @@
 
 (cl:in-package #:clouseau)
 
+
+;;;; Places
+
 ;;; `slot-place'
 
 (defclass slot-place (key-value-place)
@@ -63,8 +66,7 @@
 (defclass class-of-place (pseudo-place)
   ())
 
-(defmethod make-object-state ((object t)
-                              (place  class-of-place))
+(defmethod make-object-state ((object t) (place class-of-place))
   (make-instance (object-state-class object place) :place place
                                                    :style :name-only))
 
@@ -74,7 +76,27 @@
   (formatting-place (nil 'class-of-place class nil inspect)
     (inspect stream)))
 
-;;; Object states
+;;; `slot-definition-of-place'
+;;;
+;;; This is just like `pseudo-place' except that it passes
+;;; :style :name-only to the object state it creates.
+
+(defclass slot-definition-of-place (pseudo-place)
+  ())
+
+(defmethod make-object-state ((object t) (place slot-definition-of-place))
+  (make-instance (object-state-class object place) :place place
+                                                   :style :name-only))
+
+(defun inspect-as-slot-name (instance slot-definition stream)
+  ;; This presents the name of SLOT-DEFINITION as a collapsed
+  ;; inspectable object that expands into SLOT-DEFINITION.
+  (formatting-place
+      (instance 'slot-definition-of-place slot-definition nil inspect)
+    (inspect stream)))
+
+
+;;;; Object states
 
 (defclass inspected-instance (inspected-identity-object-mixin
                               inspected-object)
@@ -91,6 +113,7 @@
 (defmethod object-state-class ((object condition) (place t))
   'inspected-instance)
 
+
 ;;; Object inspection methods
 
 (defmethod inspect-object-using-state ((object t)
@@ -101,12 +124,11 @@
 
 (defun inspect-slot (slot object stream &key (place-class 'mutable-slot-place))
   (formatting-place (object place-class slot present inspect :place-var place)
-    (let ((name       (c2mop:slot-definition-name slot))
-          (allocation (c2mop:slot-definition-allocation slot)))
+    (let ((allocation (c2mop:slot-definition-allocation slot)))
       (formatting-row (stream)
-        (formatting-cell (stream :align-y :center) ; TODO must be able to inspect slot
+        (formatting-cell (stream :align-y :center)
           (with-style (stream :slot-like)
-            (write-string (symbol-name name) stream))
+            (inspect-as-slot-name object slot stream))
           (when (not (eq allocation :instance))
             (write-char #\Space stream)
             (badge stream "~A-allocated" allocation)))
@@ -116,13 +138,9 @@
           (with-error-handling (stream "Error accessing slot")
             (inspect stream)))))))
 
-(defmethod inspect-slots ((object t)
-                          (style  (eql nil))
-                          (stream t)))
+(defmethod inspect-slots ((object t) (style (eql nil)) (stream t)))
 
-(defmethod inspect-slots ((object t)
-                          (style  (eql :flat))
-                          (stream t))
+(defmethod inspect-slots ((object t) (style (eql :flat)) (stream t))
   (let* ((class (class-of object))
          (slots (c2mop:class-slots class)))
     (with-placeholder-if-emtpy (stream)
@@ -132,9 +150,7 @@
        (formatting-table (stream)
          (map nil (rcurry #'inspect-slot object stream) slots))))))
 
-(defmethod inspect-slots ((object t)
-                          (style  (eql :by-class))
-                          (stream t))
+(defmethod inspect-slots ((object t) (style (eql :by-class)) (stream t))
   (let ((class (class-of object))
         (slots (make-hash-table :test #'eq)))
     (loop :for super :in (c2mop:class-precedence-list class)
@@ -163,6 +179,7 @@
   ;; TODO first line of documentation string?
   (inspect-slots object (slot-style state) stream))
 
+
 ;;; Commands
 
 (define-command (com-slot-style-flat :command-table inspector-command-table
