@@ -102,8 +102,7 @@
 
 ;;; Commands
 
-(define-command (com-adjust-range :command-table inspector-command-table
-                                  :name          t)
+(define-command (com-adjust-range :command-table inspector-command-table)
     ((object 'sequence-range :gesture (:select :priority 1)))
   (with-command-error-handling ("Could not adjust range of ~A" object)
       (let ((stream    *standard-output*)
@@ -111,7 +110,7 @@
             (old-end   (end object))
             old-x)
         (block nil
-          (tracking-pointer (stream :transformp t)
+          (tracking-pointer (stream :transformp t :multiple-window t)
             (:pointer-button-press (x)
               (setf old-x x))
             (:pointer-motion (x)
