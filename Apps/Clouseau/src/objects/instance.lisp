@@ -76,7 +76,7 @@
 
 ;;; Object states
 
-(defclass inspected-instance (inspected-identity-object
+(defclass inspected-instance (inspected-identity-object-mixin
                               inspected-object)
   ((%slot-style :initarg  :slot-style
                 :accessor slot-style

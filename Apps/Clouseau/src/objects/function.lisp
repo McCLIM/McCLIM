@@ -89,7 +89,7 @@
 
 ;;; Object states
 
-(defclass inspected-function (inspected-identity-object
+(defclass inspected-function (inspected-identity-object-mixin
                               inspected-object)
   ((%disassembly-style :initarg  :disassembly-style
                        :type     (member nil t) ; could be text vs. graph later
@@ -115,7 +115,8 @@
 (defmethod object-state-class ((object generic-function) (place t))
   'inspected-generic-function)
 
-(defclass inspected-method (inspected-instance)
+(defclass inspected-method (inspected-instance
+                            remembered-collapsed-style-mixin)
   ()
   (:default-initargs
    :slot-style nil))

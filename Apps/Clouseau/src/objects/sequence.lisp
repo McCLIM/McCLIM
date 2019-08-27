@@ -38,7 +38,7 @@
 
 ;;; Object states
 
-(defclass inspected-sequence (inspected-identity-object
+(defclass inspected-sequence (inspected-identity-object-mixin
                               inspected-object)
   ((%start :initarg  :start
            :accessor start

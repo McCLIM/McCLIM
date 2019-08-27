@@ -133,7 +133,7 @@
 (defmethod object-state-class ((object vector) (place t))
   'inspected-vector)
 
-(defclass inspected-array (inspected-identity-object
+(defclass inspected-array (inspected-identity-object-mixin
                            inspected-object)
   ())
 
