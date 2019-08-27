@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
@@ -246,7 +246,7 @@ designator) inherits menu items."
     (if (null item)
 	(when errorp
 	  (error 'command-not-present :command-table-name (command-table-name command-table)))
-	(progn 
+	(progn
 	  (when (typep item '%menu-item)
 	    (remove-menu-item-from-command-table table
 						 (command-menu-item-name item)
@@ -261,7 +261,7 @@ designator) inherits menu items."
 				     &key name menu keystroke (errorp t)
 				     (menu-command (and menu
 							`(,command-name))))
-  
+
   (let ((table (find-command-table command-table))
 	(name (cond ((stringp name)
 		     name)
@@ -301,7 +301,7 @@ designator) inherits menu items."
 	  (setf (gethash name (command-line-names table)) command-name))
 	(when menu
 	  (%add-menu-item table item after))))))
-						  
+
 
 (defun apply-with-command-table-inheritance (fun command-table)
   (funcall fun command-table)
@@ -630,7 +630,7 @@ examine the type of the command menu item to see if it is
                           (declare (ignore foo))
                           *unsupplied-argument-marker*)
                       (required-args parser))))))
-  
+
 ;;; XXX The spec says that GESTURE may be a gesture name, but also that the
 ;;; default test is event-matches-gesture-name-p.  Uh...
 
@@ -673,7 +673,7 @@ examine the type of the command menu item to see if it is
 		      :initarg :argument-unparser)
    (required-args :accessor required-args :initarg :required-args)
    (keyword-args :accessor keyword-args :initarg :keyword-args))
-  
+
   (:documentation "A container for a command's parsing functions and
   data for unparsing"))
 
@@ -754,7 +754,7 @@ examine the type of the command menu item to see if it is
     (return-from make-key-acceptors nil))
   (setq keyword-args (mapcar #'(lambda (arg)
 				 (cons (make-keyword (car arg)) (cdr arg)))
-			     keyword-args))  
+			     keyword-args))
   (let ((key-possibilities (gensym "KEY-POSSIBILITIES"))
 	(member-ptype (gensym "MEMBER-PTYPE"))
 	(key-result (gensym "KEY-RESULT"))
@@ -794,9 +794,9 @@ examine the type of the command menu item to see if it is
 			  keyword-args))))
 	       (setq ,key-results (list* ,key-result
 					 ,val-result
-					 ,key-results)))	     
+					 ,key-results)))
 	     (eat-delimiter-or-activator))))
-       
+
        ,key-results)))
 
 (defun make-argument-accept-fun (name required-args keyword-args)
@@ -897,7 +897,7 @@ examine the type of the command menu item to see if it is
 	 for (arg ptype-form) in key-args
 	 for arg-key = (make-keyword arg)
 	 collect `(,arg-key
-		   
+
 		   (format ,stream "~C:~A~C"
 			   ,seperator
 			   ,(keyword-arg-name-from-symbol arg)
@@ -942,7 +942,7 @@ examine the type of the command menu item to see if it is
 							  ".~A-ARG~D."
 							  command-name
 							  arg-index)
-						  (symbol-package name))))
+						  (symbol-package command-name))))
 		     (multiple-value-bind (gesture translator-options)
 			 (if (listp gesture)
 			     (values (car gesture) (cdr gesture))
@@ -1233,7 +1233,7 @@ examine the type of the command menu item to see if it is
     ;; commands to work ] works really badly if (frame-command-table
     ;; *application-frame*) is set/bound to the dispatching
     ;; command-table itself.
-    ;; 
+    ;;
     ;; Instead we now use the knowledge of how disabled commands are
     ;; implemented to satisfy the constraint that only enabeled
     ;; commands are acceptable (with the "accessible" constraint being
@@ -1504,4 +1504,3 @@ examine the type of the command menu item to see if it is
 	      (accept 'form :stream stream :view view :prompt nil :history 'command-or-form)))
       (t
        (funcall (cdar *input-context*) object type event options)))))
-
