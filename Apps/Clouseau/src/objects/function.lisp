@@ -19,19 +19,27 @@
 
 ;;; Utilities
 
+(defun safe-function-lambda-expression (function)
+  ;; SBCL can signal UNBOUND-SLOT if FUNCTION is the prototype of a
+  ;; funcallable instance class.
+  #+sbcl (handler-case
+             (function-lambda-expression function)
+           (unbound-slot () nil))
+  #-sbcl (function-lambda-expression function))
+
 (defun function-name (function)
-  (when-let ((name (nth-value 2 (function-lambda-expression function))))
+  (when-let ((name (nth-value 2 (safe-function-lambda-expression function))))
     (unless (typep name '(cons (eql lambda)))
       name)))
 
 (defun function-lambda-list
-    (function &optional (expression (function-lambda-expression function)))
+    (function &optional (expression (safe-function-lambda-expression function)))
   #+sbcl (declare (ignore expression))
   (values #+sbcl (sb-introspect:function-lambda-list function) #+sbcl t
           #-sbcl (second expression) #-sbcl expression))
 
 (defun function-closure-p (function)
-  (and (nth-value 1 (function-lambda-expression function))
+  (and (nth-value 1 (safe-function-lambda-expression function))
        #+sbcl (sb-kernel:closurep function)))
 
 (defun function-traced-p (function)
@@ -163,7 +171,7 @@
                                        (style  (eql :expanded-body))
                                        (stream t))
   (multiple-value-bind (expression closurep)
-      (function-lambda-expression object)
+      (safe-function-lambda-expression object)
     (with-preserved-cursor-x (stream)
       (formatting-table (stream)
         (multiple-value-bind (lambda-list lambda-list-p)
