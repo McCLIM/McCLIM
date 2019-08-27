@@ -1,14 +1,20 @@
 (in-package :clim-clx)
 
+;;; Return a string in which every non-STANDARD-CHAR in STRING has
+;;; been replaced with #\_. The result is guaranteed to be an ASCII
+;;; string.
+(defun %ensure-standard-characters (string)
+  (substitute-if-not #\_ (alexandria:of-type 'standard-char) string))
+
 (defun %set-window-name (window name)
-  (setf (xlib:wm-name window) name)
+  (setf (xlib:wm-name window) (%ensure-standard-characters name))
   (xlib:change-property window
                         :_NET_WM_NAME
                         (babel:string-to-octets name :encoding :utf-8)
                         :UTF8_STRING 8))
 
 (defun %set-window-icon-name (window icon-name)
-  (setf (xlib:wm-icon-name window) icon-name)
+  (setf (xlib:wm-icon-name window) (%ensure-standard-characters icon-name))
   (xlib:change-property window
                         :_NET_WM_ICON_NAME
                         (babel:string-to-octets icon-name :encoding :utf-8)
