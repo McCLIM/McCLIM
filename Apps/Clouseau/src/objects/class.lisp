@@ -120,17 +120,11 @@
 
 ;;; `slot-definition'
 
-(defmethod inspect-object-using-state ((object c2mop:effective-slot-definition)
+(defmethod inspect-object-using-state ((object c2mop:slot-definition)
                                        (state  inspected-slot-definition)
                                        (style  (eql :name-only))
                                        (stream t))
   (prin1 (c2mop:slot-definition-name object) stream))
-
-(defmethod inspect-object-using-state ((object c2mop:effective-slot-definition)
-                                       (state  inspected-slot-definition)
-                                       (style  (eql :expanded-body))
-                                       (stream t))
-  (call-next-method))
 
 ;;; `inspected-class-list'
 
