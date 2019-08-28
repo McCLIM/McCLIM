@@ -32,6 +32,9 @@
   (pop (elements history))
   (first (elements history)))
 
+(defmethod clear ((history history))
+  (setf (elements history) '()))
+
 ;;; Presentations
 
 (define-presentation-type element (&key (selectedp nil)))
@@ -70,7 +73,8 @@
 ;;; Pane
 
 (defclass history-pane (application-pane)
-  ((%state   :initarg  :state
+  (;; The inspector state this history should observe and manipulate.
+   (%state   :initarg  :state
              :reader   state)
    (%history :initarg  :history
              :reader   history
@@ -80,6 +84,8 @@
    :state              (error "Missing required initarg :state")))
 
 (defmethod initialize-instance :after ((instance history-pane) &key)
+  ;; Observe the inspector state, extending or at least redisplaying
+  ;; the history when the root object changes.
   (let ((history (history instance)))
     (push (lambda (old-root-place new-root-place)
             (unless (or (eq old-root-place new-root-place)
@@ -109,29 +115,42 @@
 
 (define-command-table navigation-command-table)
 
-(define-command (com-select :command-table navigation-command-table
-                            :name          "Inspect object")
-    ((object inspected-object :gesture :describe))
-  (let* ((frame   *application-frame*)
-         (pane    (find-pane-named frame 'history))
-         (state   (state pane)))
-    (setf (root-object state :run-hook-p t) (object object)))) ; TODO getting the object can fail
+(defun history-pane ()
+  (map-over-sheets (lambda (sheet)
+                     (when (typep sheet 'history-pane)
+                       (return-from history-pane sheet)))
+                   (frame-panes *application-frame*)))
 
-(define-command (com-visit :command-table navigation-command-table
-                           :name          t)
-    ((object element :gesture :select))
-  (let* ((frame   *application-frame*)
-         (pane    (find-pane-named frame 'history))
-         (state   (state pane))
-         (history (history pane)))
-    (declare (ignore history))
-    (setf (root-place state :run-hook-p t) object)))
+(macrolet ((with-history ((state-var &optional history-var) &body body)
+             (with-unique-names (pane)
+               `(let* ((,pane (history-pane))
+                       ,@(when state-var
+                           `((,state-var (state ,pane))))
+                       ,@(when history-var
+                           `((,history-var (history ,pane)))))
+                  ,@body))))
 
-(define-command (com-back :command-table navigation-command-table
-                          :name          t
-                          :keystroke     (#\l :meta))
-    ()
-  (let* ((frame   *application-frame*)
-         (pane    (find-pane-named frame 'inspector))
-         (history (history (find-pane-named frame 'history))))
-    (setf (root-place pane :run-hook-p t) (pop-element history))))
+  (define-command (com-select :command-table navigation-command-table
+                              :name          "Inspect object")
+      ((object inspected-object :gesture :describe))
+    (with-history (state)
+      (setf (root-object state :run-hook-p t) (object object)))) ; TODO getting the object can fail
+
+  (define-command (com-visit :command-table navigation-command-table
+                             :name          t)
+      ((object element :gesture :select))
+    (with-history (state)
+      (setf (root-place state :run-hook-p t) object)))
+
+  (define-command (com-back :command-table navigation-command-table
+                            :name          t
+                            :keystroke     (#\l :meta))
+      ()
+    (with-history (state history)
+      (setf (root-place state :run-hook-p t) (pop-element history))))
+
+  (define-command (com-clear :command-table navigation-command-table
+                             :name          t)
+      ()
+    (with-history (nil history)
+      (clear history))))

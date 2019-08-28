@@ -22,7 +22,8 @@
 ;;; direct methods
 ;;; add/remove slots
 
-;;; Place classes
+
+;;;; Place classes
 
 ;;; `slot-definition-place'
 
@@ -39,85 +40,126 @@
 (defmethod remove-value ((place slot-definition-place))
   (error "not implemented"))
 
-;;; `class-precedence-list-place'
+;;; `class-list-place'
+;;;
+;;; Places of this kind contain a list of classes among which a
+;;; certain relation such as "subclass" or "superclass" is of
+;;; interest. As a result, such lists can be shown as a list or as the
+;;; graph induced by the relation.
 
-(defclass class-precedence-list-place (read-only-place)
+(defclass class-list-place (read-only-place)
   ())
 
-(defmethod value ((place class-precedence-list-place))
-  (c2mop:class-precedence-list (container place)))
+(macrolet
+    ((def (name reader
+           &key (relation reader)
+                (default-class-list-style :graph))
+       `(progn
+          (defclass ,name (class-list-place)
+            ((%relation                 :allocation :class
+                                        :reader     relation
+                                        :initform   #',relation)
+             (%default-class-list-style :allocation :class
+                                        :reader     default-class-list-style
+                                        :initform   ',default-class-list-style)))
 
-;;; Object states
+          (defmethod value ((place ,name))
+            (,reader (container place))))))
+  (def subclass-list-place         c2mop:class-direct-subclasses)
+  (def superclass-list-place       c2mop:class-direct-superclasses)
+  (def class-precedence-list-place c2mop:class-precedence-list
+    :relation                 c2mop:class-direct-superclasses
+    :default-class-list-style list))
 
-(defclass inspected-slot-definition (inspected-instance)
-  ()
-  (:default-initargs
-   :style :name-only))
+
+;;;; Object states
 
-(defmethod object-state-class ((object c2mop:slot-definition)
-                               (place  slot-definition-place))
+;;; `inspected-slot-definition'
+
+(defclass inspected-slot-definition (inspected-instance
+                                     remembered-collapsed-style-mixin)
+  ())
+
+(defmethod object-state-class ((object c2mop:slot-definition) (place t))
   'inspected-slot-definition)
 
-(defclass inspected-class-precedence-list (inspected-proper-list)
-  ())
+(defmethod make-object-state ((object t) (place slot-definition-place))
+  (make-instance (object-state-class object place) :place place
+                                                   :style :name-only))
+
+;;; `inspected-class-list'
+
+(defclass inspected-class-list (inspected-proper-list)
+  ((%class-list-style :type     (member list :graph)
+                      :accessor class-list-style
+                      :initform :graph)))
+
+(defmethod initialize-instance :after
+    ((instance inspected-class-list)
+     &key
+     place
+     (class-list-style (default-class-list-style place)))
+  (setf (class-list-style instance) class-list-style))
 
 (defmethod object-state-class ((object cons)
-                               (place  class-precedence-list-place))
-  'inspected-class-precedence-list)
+                               (place  class-list-place))
+  'inspected-class-list)
 
-(defclass inspected-class (inspected-instance)
-  ((%collapsed-style :initarg  :collapsed-style
-                     :accessor collapsed-style))
+;;; `inspected-class'
+
+(defclass inspected-class (inspected-instance
+                           remembered-collapsed-style-mixin)
+  ()
   (:default-initargs
    :slot-style nil))
-
-(defmethod initialize-instance :after  ; TODO mixin for collapsed-style
-    ((instance inspected-class)
-     &key
-     (collapsed-style nil collapsed-style-supplied-p))
-  (declare (ignore collapsed-style))
-  (unless collapsed-style-supplied-p
-    (setf (collapsed-style instance) (style instance))))
-
-(defmethod (setf style) :around ((new-value (eql :collapsed))
-                                 (object    inspected-class))
-  (let ((collapsed-style (collapsed-style object)))
-    (if (eq new-value collapsed-style)
-        (call-next-method)
-        (setf (style object) collapsed-style))))
 
 (defmethod object-state-class ((object class) (place t))
   'inspected-class)
 
-;;; Object inspection methods
+
+;;;; Object inspection methods
 
-;;; `slot-definition'
+;;; `inspected-slot-definition'
 
-(defmethod inspect-object-using-state ((object c2mop:effective-slot-definition)
+(defmethod inspect-object-using-state ((object c2mop:slot-definition)
                                        (state  inspected-slot-definition)
                                        (style  (eql :name-only))
                                        (stream t))
   (prin1 (c2mop:slot-definition-name object) stream))
 
-(defmethod inspect-object-using-state ((object c2mop:effective-slot-definition)
-                                       (state  inspected-slot-definition)
-                                       (style  (eql :expanded-body))
-                                       (stream t))
-  (call-next-method))
-
-;;; Class precedence list
+;;; `inspected-class-list'
 
 (defmethod inspect-object-using-state ((object cons)
-                                       (state  inspected-class-precedence-list)
+                                       (state  inspected-class-list)
                                        (style  (eql :expanded-body))
                                        (stream t))
-  (format-graph-from-roots
-   object
-   (lambda (class stream)
-     (inspect-class-as-name class stream))
-   #'c2mop:class-direct-superclasses
-   :stream stream :orientation :vertical
-   :graph-type :dag :merge-duplicates t :maximize-generations t))
+  (case (class-list-style state)
+    (list
+     (call-next-method))
+    (:graph
+     (inspect-object-using-state object state :inheritance-graph stream))))
+
+(defmethod inspect-object-using-state ((object cons)
+                                       (state  inspected-class-list)
+                                       (style  (eql :inheritance-graph))
+                                       (stream t))
+  ;; Present a graph that shows CLASS in relation to the classes in
+  ;; the list OBJECT and other related classes.
+  (let ((class (container (place state))))
+    (format-graph-from-roots
+     (list* class object)
+     (lambda (other-class stream)
+       (cond ((eq other-class class)
+              (with-style (stream :header)
+                (inspect-class-as-name other-class stream)))
+             ((find other-class object :test #'eq)
+              (inspect-class-as-name other-class stream))
+             (t
+              (with-style (stream :unbound)
+                (inspect-class-as-name other-class stream)))))
+     (relation (place state))
+     :stream stream :orientation :vertical
+     :graph-type :dag :merge-duplicates t :maximize-generations t)))
 
 ;;; `class'
 
@@ -252,9 +294,9 @@
           (format-place-cells stream object 'reader-place 'class-name :label "Name")
           (format-place-cells stream object 'reader-place 'class-of :label "Metaclass"))
         (formatting-row (stream)
-          (format-place-cells stream object 'reader-place 'c2mop:class-direct-superclasses
+          (format-place-cells stream object 'superclass-list-place nil
                               :label "Superclasses")
-          (format-place-cells stream object 'reader-place 'c2mop:class-direct-subclasses
+          (format-place-cells stream object 'subclass-list-place nil
                               :label "Subclasses"))
         (when finalizedp ; TODO else display placeholders
           (formatting-row (stream)
@@ -299,7 +341,34 @@
 
   (call-next-method))
 
-;;; Commands
+
+;;;; Commands
+
+;;; Class lists
+
+(define-command (com-class-list-as-graph :command-table inspector-command-table
+                                         :name          t)
+    ((object 'inspected-class-list
+             :gesture (:select
+                       :priority -1
+                       :tester   ((object)
+                                  (not (eq (class-list-style object)
+                                           :graph)))
+                       :documentation "Show class list as graph")))
+  (setf (class-list-style object) :graph))
+
+(define-command (com-class-list-as-list :command-table inspector-command-table
+                                        :name          t)
+    ((object 'inspected-class-list
+             :gesture (:select
+                       :priority -1
+                       :tester   ((object)
+                                  (not (eq (class-list-style object)
+                                           'list)))
+                       :documentation "Show class list as list")))
+  (setf (class-list-style object) 'list))
+
+;;; Finalization
 
 (define-command (com-finalize :command-table inspector-command-table
                               :name          "Finalize Class")
