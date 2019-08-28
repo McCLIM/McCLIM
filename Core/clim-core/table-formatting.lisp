@@ -101,11 +101,11 @@
 
 
 ;;; Generic block formatting
-(defclass block-output-record-mixn ()
+(defclass block-output-record-mixin ()
   ()
   (:documentation "The class representing one-dimensional blocks of cells."))
 
-(defmethod replay-output-record ((bl block-output-record-mixn) stream
+(defmethod replay-output-record ((bl block-output-record-mixin) stream
                                  &optional region (x-offset 0) (y-offset 0))
   (when (null region)
     (setq region (or (pane-viewport-region stream) +everywhere+)))
@@ -124,7 +124,7 @@
 (defgeneric map-over-block-cells (function block)
   (:documentation "Applies the FUNCTION to all cells in the BLOCK."))
 
-(defmethod map-over-block-cells (function (block block-output-record-mixn))
+(defmethod map-over-block-cells (function (block block-output-record-mixin))
   ;; ### we need to do better -- yeah! how?
   (labels ((foo (row-record)
              (map-over-output-records
@@ -147,7 +147,7 @@ to a table cell within the row."))
 
 ;;; STANDARD-ROW-OUTPUT-RECORD class
 (defclass standard-row-output-record (row-output-record
-                                      block-output-record-mixn
+                                      block-output-record-mixin
                                       standard-sequence-output-record)
   ())
 
@@ -185,7 +185,7 @@ corresponding to a table cell within the column."))
 
 ;;; STANDARD-COLUMN-OUTPUT-RECORD class
 (defclass standard-column-output-record (column-output-record
-                                         block-output-record-mixn
+                                         block-output-record-mixin
                                          standard-sequence-output-record)
   ())
 
@@ -369,7 +369,7 @@ skips intervening non-table output record structures."))
 (defgeneric adjust-item-list-cells (item-list-record stream))
 
 (defclass standard-item-list-output-record (item-list-output-record
-                                            block-output-record-mixn
+                                            block-output-record-mixin
                                             standard-sequence-output-record)
   ((x-spacing :initarg :x-spacing)
    (y-spacing :initarg :y-spacing)

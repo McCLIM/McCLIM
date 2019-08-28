@@ -22,18 +22,19 @@
 (defun initialize-clx-framebuffer (port)
   (clim-sys:make-process (lambda ()
                            (loop
-                              (handler-case
-                                  (maphash #'(lambda (key val)
-                                               (when (typep key 'clx-fb-mirrored-sheet-mixin)
-                                                 (image-mirror-to-x (sheet-mirror key))))
-                                           (slot-value port 'climi::sheet->mirror))
-                                (condition (condition)
-                                  (format *debug-io* "~A~%" condition)))
-                              (xlib:display-force-output (clx-port-display port))
-                              (sleep 0.01)))
+                             (handler-case
+                                 (alexandria:maphash-keys
+                                  (lambda (key)
+                                    (when (typep key 'clx-fb-mirrored-sheet-mixin)
+                                      (image-mirror-to-x (sheet-mirror key))))
+                                  (slot-value port 'climi::sheet->mirror))
+                               (condition (condition)
+                                 (format *debug-io* "~A~%" condition)))
+                             (xlib:display-force-output (clx-port-display port))
+                             (sleep 0.01)))
                          :name (format nil "~S's event process." port)))
 
-(defparameter *event-mask* '(:exposure 
+(defparameter *event-mask* '(:exposure
 			     :key-press :key-release
 			     :button-press :button-release
 			     :owner-grab-button
@@ -62,7 +63,7 @@
 				      :event-mask *event-mask*
                                       :map nil
                                       :width (clim-clx::round-coordinate (space-requirement-width q))
-                                      :height (clim-clx::round-coordinate (space-requirement-height q)))))           
+                                      :height (clim-clx::round-coordinate (space-requirement-height q)))))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
@@ -84,9 +85,9 @@
 
 
 (defmethod make-medium ((port clx-fb-port) sheet)
-  (make-instance 'clx-fb-medium 
-		 ;; :port port 
-		 ;; :graft (find-graft :port port) 
+  (make-instance 'clx-fb-medium
+		 ;; :port port
+		 ;; :graft (find-graft :port port)
 		 :sheet sheet))
 
 
@@ -106,10 +107,11 @@
 
 
 (defmethod port-force-output ((port clx-fb-port))
-  (maphash #'(lambda (key val)
-               (when (typep key 'clx-fb-mirrored-sheet-mixin)
-                 (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
-           (slot-value port 'climi::sheet->mirror))
+  (alexandria:maphash-keys
+   (lambda (key)
+     (when (typep key 'clx-fb-mirrored-sheet-mixin)
+       (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
+   (slot-value port 'climi::sheet->mirror))
   (xlib:display-force-output (clx-port-display port)))
 
 ;;; Pixmap
@@ -136,4 +138,3 @@
 (defmethod port-deallocate-pixmap ((port clx-fb-port) pixmap)
   (when (port-lookup-mirror port pixmap)
     (destroy-mirror port pixmap)))
-

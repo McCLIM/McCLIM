@@ -223,41 +223,35 @@
    (width :initarg :width :reader window-configuration-event-native-width)
    (height :initarg :height :reader window-configuration-event-native-height)))
 
-(defmacro get-window-position ((sheet event) &body body)
-  `(multiple-value-bind (x y)
-       (untransform-position (sheet-native-transformation (sheet-parent ,sheet))
-			   (window-configuration-event-native-x ,event)
-			   (window-configuration-event-native-y ,event))
-     (declare (ignorable x y))
-     ,@body))
+(macrolet ((get-window-property (kind which event)
+             (multiple-value-bind (transform x y)
+                 (ecase kind
+                   (:position (values 'untransform-position
+                                      'window-configuration-event-native-x
+                                      'window-configuration-event-native-y))
+                   (:size (values 'untransform-distance
+                                  'window-configuration-event-native-width
+                                  'window-configuration-event-native-height)))
+               `(nth-value
+                 ,which (,transform (sheet-native-transformation
+                                     (sheet-parent (event-sheet ,event)))
+                                    (,x ,event) (,y ,event))))))
 
-(defgeneric window-configuration-event-x (window-configuration-event))
+  (defgeneric window-configuration-event-x (event)
+    (:method ((event window-configuration-event))
+      (get-window-property :position 0 event)))
 
-(defmethod window-configuration-event-x ((event window-configuration-event))
-  (get-window-position ((event-sheet event) event) x))
+  (defgeneric window-configuration-event-y (event)
+    (:method ((event window-configuration-event))
+      (get-window-property :position 1 event)))
 
-(defgeneric window-configuration-event-y (window-configuration-event))
+  (defgeneric window-configuration-event-width (event)
+    (:method ((event window-configuration-event))
+      (get-window-property :size 0 event)))
 
-(defmethod window-configuration-event-y ((event window-configuration-event))
-  (get-window-position ((event-sheet event) event) y))
-
-(defgeneric window-configuration-event-width (window-configuration-event)
-  (:method ((event window-configuration-event))
-    (multiple-value-bind (width height)
-        (untransform-distance  (sheet-native-transformation
-                                (sheet-parent (event-sheet event)))
-                               (window-configuration-event-native-width event)
-                               (window-configuration-event-native-height event))
-      width)))
-
-(defgeneric window-configuration-event-height (window-configuration-event)
-  (:method ((event window-configuration-event))
-    (multiple-value-bind (width height)
-        (untransform-distance  (sheet-native-transformation
-                                (sheet-parent (event-sheet event)))
-                               (window-configuration-event-native-width event)
-                               (window-configuration-event-native-height event))
-      height)))
+  (defgeneric window-configuration-event-height (event)
+    (:method ((event window-configuration-event))
+      (get-window-property :size 1 event))))
 
 (define-event-class window-unmap-event (window-event)
   ())
