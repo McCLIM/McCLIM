@@ -45,7 +45,9 @@
 ;;         pointer-motion-event
 ;;           pointer-boundary-event
 ;;             pointer-enter-event
+;;               pointer-ungrab-enter-event
 ;;             pointer-exit-event
+;;               pointer-ungrab-leave-event
 ;;     window-event
 ;;       window-configuration-event
 ;;       window-repaint-event
@@ -191,18 +193,14 @@
 (defclass pointer-motion-hint-event (pointer-motion-event motion-hint-mixin)
   ())
 
-(define-event-class pointer-boundary-event (pointer-motion-event)
-  ())
+(define-event-class pointer-boundary-event (pointer-motion-event) ())
 
-(define-event-class pointer-enter-event (pointer-boundary-event)
-  ())
+(define-event-class pointer-enter-event (pointer-boundary-event) ())
+(define-event-class pointer-exit-event  (pointer-boundary-event) ())
 
-(define-event-class pointer-exit-event (pointer-boundary-event)
-  ())
-
-
-(define-event-class pointer-ungrab-event (pointer-exit-event)
-  ())
+;;; Menu implementation uses pointer-ungrab-leave-event.
+(define-event-class pointer-ungrab-enter-event (pointer-enter-event) ())
+(define-event-class pointer-ungrab-leave-event (pointer-exit-event) ())
 
 (define-event-class window-event (standard-event)
   ((region :initarg :region

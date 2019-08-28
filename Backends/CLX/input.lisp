@@ -174,7 +174,11 @@
                             :sheet sheet :modifier-state modifier-state
                             :timestamp time))))
       (:enter-notify
-       (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
+       (make-instance (if (eq mode :ungrab)
+                          'pointer-ungrab-enter-event
+                          'pointer-enter-event)
+                      :pointer 0 :button code
+                      :x x :y y
                       :graft-x root-x
                       :graft-y root-y
                       :sheet sheet
@@ -183,7 +187,7 @@
                       :timestamp time))
       (:leave-notify
        (make-instance (if (eq mode :ungrab)
-                          'pointer-ungrab-event
+                          'pointer-ungrab-leave-event
                           'pointer-exit-event)
                       :pointer 0 :button code
                       :x x :y y
