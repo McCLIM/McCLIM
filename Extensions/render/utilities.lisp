@@ -67,19 +67,18 @@ top-left. Useful when we iterate over the same array and mutate its state."
   (logxor d1 d2))
 
 (declaim (inline octet-mult)
-         (ftype (function (octet octet) octet) octet-mult))
+         (ftype (function (octet (integer -255 255)) (integer -255 255)) octet-mult))
 (defun octet-mult (a b)
-  (let ((temp (+ (* a b) #x80)))
-    (logand #xFF (ash (+ (ash temp -8) temp) -8))))
+  (declare (optimize speed))
+  (truncate (* a (+ b (logxor #x1 (ldb (byte 1 8) b)))) 256))
 
 ;;; blend functions
 
 (declaim (inline %lerp)
          (ftype (function (octet octet octet) octet) %lerp))
 (defun %lerp (p q a)
-  (logand #xFF (if (>= q p)
-                   (+ p (octet-mult a (- q p)))
-                   (- p (octet-mult a (- p q))))))
+  (declare (optimize speed))
+  (logand #xFF (+ p (octet-mult a (- q p)))))
 
 (declaim (inline %prelerp)
          (ftype (function (octet octet octet) octet) %prelerp))
@@ -89,11 +88,12 @@ top-left. Useful when we iterate over the same array and mutate its state."
 (declaim (inline %byte-blend-value)
          (ftype (function (octet octet octet octet) octet) %byte-blend-value))
 (defun %byte-blend-value (fg bg a.fg a.bg)
+  (declare (optimize speed))
   (let ((gamma (%prelerp a.fg a.bg a.bg)))
-    (when (= gamma 0)
-      (setf gamma 1))
     (let ((value (%lerp (octet-mult bg a.bg) fg a.fg)))
-      (floor (* 255 value) gamma))))
+      (if (<= gamma 1)
+          (* 255 value)
+          (values (truncate (* 255 value) gamma))))))
 
 (declaim (inline octet-blend-function)
          (ftype (function (octet octet octet octet octet octet octet octet)
@@ -106,6 +106,7 @@ top-left. Useful when we iterate over the same array and mutate its state."
           (%prelerp a.fg a.bg a.bg)))
 
 (defun octet-blend-function* (r.fg g.fg b.fg a.fg r.bg g.bg b.bg a.bg)
+  (declare (optimize speed))
   (dpb (%prelerp a.fg a.bg a.bg) (byte 8 24)
        (dpb (%byte-blend-value r.fg r.bg a.fg a.bg) (byte 8 16)
             (dpb (%byte-blend-value g.fg g.bg a.fg a.bg) (byte 8 8)

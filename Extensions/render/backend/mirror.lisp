@@ -51,7 +51,7 @@
   (when region
     (with-slots (dirty-region) mirror
       (setf dirty-region (if dirty-region
-                             (region-union dirty-region region)
+                             (region-union dirty-region region) ; TODO this can be extremely expensive
                              region)))))
 
 ;;; XXX: this is used for scroll

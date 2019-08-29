@@ -1,8 +1,8 @@
-
-(defsystem #:mcclim-clx-fb
-  :depends-on (#:mcclim-backend-common
-               #:mcclim-clx
-               #:mcclim-render)
+(defsystem "mcclim-clx-fb"
+  :depends-on ("mcclim-backend-common"
+               "mcclim-clx"
+               "mcclim-render"
+               "nibbles")
   :components
   ((:file "package")
    (:file "port" :depends-on ("package" "medium"))
@@ -10,5 +10,3 @@
    (:file "medium" :depends-on ("package"))
    (:file "mirror" :depends-on ("port" "package"))
    (:file "mirrored-sheets" :depends-on ("port" "package" "mirror"))))
-
-
