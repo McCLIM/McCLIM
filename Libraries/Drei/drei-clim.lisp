@@ -165,6 +165,7 @@ function that calls `visible-1' with `cursor' and the view of
   (:default-initargs
    :incremental-redisplay nil
    :end-of-line-action :scroll
+   :width nil :height nil ; as opposed to :compute which is the default for stream panes
    :background *background-color*
    :foreground *foreground-color*
    :display-function 'display-drei-pane
