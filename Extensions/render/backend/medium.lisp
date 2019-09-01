@@ -3,7 +3,8 @@
 (defclass render-medium-mixin (basic-medium
                                climb:multiline-text-medium-mixin
                                climb:font-rendering-medium-mixin)
-  ())
+  ((%delay-repaint-p :accessor delay-repaint-p
+                     :initform nil)))
 
 (defun %medium-stroke-paths (medium paths)
   (when-let* ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
@@ -240,10 +241,23 @@
                                   (- max-x min-x) (- max-y min-y)
                                   min-x min-y))))))))
 
+(defvar *traces* '())
+
 (defmethod medium-finish-output ((medium render-medium-mixin))
-  (when-let ((mirror (sheet-mirror (medium-sheet medium))))
-    (%mirror-force-output mirror)))
+                                        ; (push (sb-debug:list-backtrace) *traces*)
+  (case (delay-repaint-p medium)
+    (:repaint-needed)
+    ((t)
+     (setf (delay-repaint-p medium) :repaint-needed))
+    ((nil)
+     (alexandria:when-let ((mirror (sheet-mirror (medium-sheet medium))))
+       (%mirror-force-output mirror)))))
 
 (defmethod medium-force-output ((medium render-medium-mixin))
-  (when-let ((mirror (sheet-mirror (medium-sheet medium))))
-    (%mirror-force-output mirror)))
+  (case (delay-repaint-p medium)
+    (:repaint-needed)
+    ((t)
+     (setf (delay-repaint-p medium) :repaint-needed))
+    ((nil)
+     (alexandria:when-let ((mirror (sheet-mirror (medium-sheet medium))))
+       (%mirror-force-output mirror)))))

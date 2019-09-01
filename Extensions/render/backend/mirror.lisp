@@ -43,16 +43,31 @@
 (defmethod %create-mirror-image (mirror width height)
   (check-type mirror image-mirror-mixin)
   (with-slots (image dirty-region) mirror
-    (setf image (make-image width height))
-    (setf dirty-region nil)))
+    (setf image (make-image width height)
+          dirty-region nil)))
 
 (defun %notify-image-updated (mirror region)
   (check-type mirror image-mirror-mixin)
   (when region
-    (with-slots (dirty-region) mirror
-      (setf dirty-region (if dirty-region
-                             (region-union dirty-region region) ; TODO this can be extremely expensive
-                             region)))))
+    (with-slots (dirty-region) mirror ; TODO don't read slot so many times
+      (cond ((not dirty-region)
+             (setf dirty-region region))
+            ((and (typep dirty-region 'climi::standard-rectangle-set)
+                  (> (length (climi::standard-rectangle-set-bands dirty-region)) 30))
+             (setf dirty-region (make-rectangle* 0 0 (pattern-width (slot-value mirror 'image)) (pattern-height (slot-value mirror 'image)))))
+            (t
+             (setf dirty-region (region-union dirty-region region))) ; TODO this can be extremely expensive
+            ))))
+
+#+maybe (defmacro when-let-image ((image-var mirror &key (lockp t)) &body body)
+          (flet ((lock (forms)
+                   `(with-slots (image-lock) mirror
+                     (clim-sys:with-lock-held (image-lock)
+                       ,@forms))))
+            `(alexandria:when-let ((image (image-mirror-image mirror)))
+               ,(if lockp
+                    (lock body)
+                    `(progn ,@body)))))
 
 ;;; XXX: this is used for scroll
 (defun %draw-image (mirror src-image x y width height to-x to-y clip-region)

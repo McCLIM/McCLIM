@@ -44,7 +44,7 @@
 
 (defmethod clim-clx::realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
    (clim-clx::%realize-mirror port sheet)
-   (port-register-mirror (port sheet) sheet (make-instance 'clx-fb-mirror :xmirror (port-lookup-mirror port sheet)))
+   (port-register-mirror (port sheet) sheet (make-instance 'clx-fb-mirror :x-mirror (port-lookup-mirror port sheet)))
    (port-lookup-mirror port sheet))
 
 (defmethod clim-clx::realize-mirror ((port clx-fb-port) (pixmap pixmap))
@@ -105,7 +105,7 @@
 
 
 (defmethod port-force-output ((port clx-fb-port))
-  (alexandria:maphash-keys
+  #+no (alexandria:maphash-keys
    (lambda (key)
      (when (typep key 'clx-fb-mirrored-sheet-mixin)
        (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
