@@ -26,13 +26,19 @@
   (:documentation
    "Mixin class for gadgets, whose appearence depends on its activatated state."))
 
-(defmethod activate-gadget :after ((gadget activate/deactivate-repaint-mixin))
-  (dispatch-repaint gadget (or (pane-viewport-region gadget)
-                               (sheet-region gadget))))
+(flet ((maybe-repaint (thunk gadget)
+         (let ((old (gadget-active-p gadget)))
+           (prog1
+               (funcall thunk)
+             (unless (eq (gadget-active-p gadget) old)
+               (dispatch-repaint gadget (or (pane-viewport-region gadget)
+                                            (sheet-region gadget))))))))
 
-(defmethod deactivate-gadget :after ((gadget activate/deactivate-repaint-mixin))
-  (dispatch-repaint gadget (or (pane-viewport-region gadget)
-                               (sheet-region gadget))))
+  (defmethod activate-gadget :around ((gadget activate/deactivate-repaint-mixin))
+    (maybe-repaint #'call-next-method gadget))
+
+  (defmethod deactivate-gadget :around ((gadget activate/deactivate-repaint-mixin))
+    (maybe-repaint #'call-next-method gadget)))
 
 (defclass value-changed-repaint-mixin ()
   ()
