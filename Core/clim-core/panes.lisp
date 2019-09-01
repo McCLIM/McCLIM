@@ -2575,10 +2575,9 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmethod interactive-stream-p ((stream clim-stream-pane))
   t)
 
-(defvar *changing-computed-space-requirements* nil)
 (defmethod redisplay-frame-pane :after ((frame application-frame)
-				        (pane clim-stream-pane)
-				        &key force-p)
+                                        (pane clim-stream-pane)
+                                        &key force-p)
   (declare (ignore frame force-p))
   (when (or (eql :compute (pane-user-width pane))
             (eql :compute (pane-user-min-width pane))
@@ -2586,16 +2585,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
             (eql :compute (pane-user-height pane))
             (eql :compute (pane-user-min-height pane))
             (eql :compute (pane-user-max-height pane)))
-    (let ((changing *changing-computed-space-requirements*))
-      (when (or (not changing)
-                (not (gethash pane changing)))
-        (flet ((change ()
-                 (setf (gethash pane changing) t)))
-          (if changing
-              (change)
-              (let ((*changing-computed-space-requirements*
-                      (setf changing (make-hash-table :test #'eq))))
-                (change-space-requirements pane))))))))
+    (changing-space-requirements ()
+      (change-space-requirements pane))))
 
 (defun invoke-display-function (frame pane)
   (let ((display-function (pane-display-function pane)))
