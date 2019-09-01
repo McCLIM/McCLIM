@@ -519,9 +519,13 @@ documentation produced by presentations.")
               (*partial-command-parser* partial-command-parser))
          (restart-case
              (flet ((execute-command ()
-                      (when-let ((command (read-frame-command frame :stream frame-query-io)))
-                        (setq needs-redisplay t)
-                        (execute-frame-command frame command))))
+                      (multiple-value-bind (command command-frame)
+                          (read-frame-command frame :stream frame-query-io)
+                        (when command
+                          (setq needs-redisplay t) ; TODO redisplay correct frame
+                          (let ((frame (or command-frame frame)))
+                            (let ((*application-frame* frame)) ; TODO should execute-frame-command bind this?
+                              (execute-frame-command frame command)))))))
                (when needs-redisplay
                  (redisplay-frame-panes frame :force-p first-time)
                  (setq first-time nil
@@ -545,8 +549,7 @@ documentation produced by presentations.")
 
 (defmethod read-frame-command :around ((frame application-frame)
                                        &key (stream *standard-input*))
-  (with-input-context ('menu-item)
-      (object)
+  (with-input-context ('menu-item) (object nil nil nil frame)
       (call-next-method)
     (menu-item
      (let ((command (command-menu-item-value object))
@@ -555,7 +558,7 @@ documentation produced by presentations.")
          (setq command (partial-command-from-name command table)))
        (if (partial-command-p command)
            (funcall *partial-command-parser* table stream command 0)
-           command)))))
+           (values command frame))))))
 
 (defmethod read-frame-command ((frame application-frame)
                                &key (stream *standard-input*))

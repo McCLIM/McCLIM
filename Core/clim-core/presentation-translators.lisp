@@ -692,11 +692,12 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defun throw-highlighted-presentation (presentation input-context event)
   (let ((x (pointer-event-x event))
         (y (pointer-event-y event))
-        (window (event-sheet event)))
+        (window (event-sheet event))
+        (frame *application-frame*))
     (multiple-value-bind (p translator context)
         (find-innermost-presentation-match input-context
                                            presentation
-                                           *application-frame*
+                                           frame
                                            (event-sheet event)
                                            x y
                                            event
@@ -707,12 +708,12 @@ and used to ensure that presentation-translators-caches are up to date.")
             (call-presentation-translator translator
                                           p
                                           (input-context-type context)
-                                          *application-frame*
+                                          frame
                                           event
                                           window
                                           x y)
           (when ptype
-            (funcall (cdr context) object ptype event options)))))))
+            (funcall (cdr context) object ptype event options frame)))))))
 
 (defun throw-object-ptype (object type &key (input-context *input-context*) sheet)
   "Throw an object and presentation type within input-context without

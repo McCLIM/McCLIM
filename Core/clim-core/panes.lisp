@@ -2567,7 +2567,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    (stream-width :initform 100 :accessor stream-width)
    (stream-height :initform 100 :accessor stream-height))
   (:default-initargs
-   :width :compute :height :compute)
+   ; :width :compute :height :compute
+   )
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))

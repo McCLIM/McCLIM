@@ -1321,28 +1321,37 @@ suitable for SUPER-NAME"))
 
 (defmacro with-input-context ((type &key override)
                               (&optional (object-var (gensym))
-                                         (type-var (gensym))
+                                         type-var
                                          event-var
-                                         options-var)
+                                         options-var
+                                         frame-var)
                               form
                               &body pointer-cases)
-  (let ((vars `(,object-var
-                ,type-var
-                ,@(and event-var `(,event-var))
-                ,@(and options-var `(,options-var))))
-        (return-block (gensym "RETURN-BLOCK"))
-        (context-block (gensym "CONTEXT-BLOCK")))
+  (let* ((type-var (or type-var (gensym)))
+         (vars `(,object-var
+                 ,type-var
+                 ,@(when event-var `(,event-var))
+                 ,@(when options-var `(,options-var))
+                 ,@(when frame-var `(,frame-var))))
+         (return-block (gensym "RETURN-BLOCK"))
+         (context-block (gensym "CONTEXT-BLOCK")))
     `(block ,return-block
        (multiple-value-bind ,vars
            (block ,context-block
              (let ((*input-context*
-                    (cons (cons (expand-presentation-type-abbreviation ,type)
-                                #'(lambda (object type event options)
-                                    (return-from ,context-block
-                                      (values object type event options))))
-                          ,(if override nil '*input-context*)))
+                     (cons (cons (expand-presentation-type-abbreviation ,type)
+                                 #'(lambda (object type event options &optional frame)
+                                     (declare (ignore ,@(unless event-var '(event))
+                                                      ,@(unless options-var '(options))
+                                                      ,@(unless frame-var '(frame))))
+                                     (return-from ,context-block
+                                       (values object type
+                                               ,@(when event-var '(event))
+                                               ,@(when options-var '(options))
+                                               ,@(when frame-var '(frame))))))
+                           ,(if override nil '*input-context*)))
                    (*pointer-button-press-handler*
-                    #'input-context-button-press-handler)
+                     #'input-context-button-press-handler)
                    (*input-wait-test* #'input-context-wait-test)
                    (*input-wait-handler* #'input-context-event-handler))
                (return-from ,return-block ,form )))

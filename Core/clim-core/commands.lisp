@@ -1408,9 +1408,9 @@ examine the type of the command menu item to see if it is
 	       (terpri *query-io*)
 	       nil)))
 	  (t (with-input-context (`(command :command-table ,command-table))
-	       (object)
-	       (loop (read-gesture :stream stream))
-	       (t object))))))
+	         (object nil nil nil frame)
+	         (loop (read-gesture :stream stream))
+	       (t (values object frame)))))))
 
 
 (defun read-command-using-keystrokes (command-table keystrokes
