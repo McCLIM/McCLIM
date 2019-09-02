@@ -2038,7 +2038,8 @@ according to the flags RECORD and DRAW."
                       ;; fallback to the sheet's region for +everwhere+.
                       (sheet-region stream)
                       (bounding-rectangle region))))
-      (stream-replay stream region))))
+      (stream-replay stream region)
+      (force-output stream))))
 
 (defmethod scroll-extent :around ((stream output-recording-stream) x y)
   (declare (ignore x y))

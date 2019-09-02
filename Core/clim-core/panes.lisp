@@ -2683,7 +2683,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmethod window-refresh ((pane clim-stream-pane))
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
-  (stream-replay pane))
+  (stream-replay pane)
+  (force-output pane))
 
 (defun clim-stream-pane-default-display-function (frame pane)
   (declare (ignore frame))
