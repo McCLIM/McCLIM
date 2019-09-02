@@ -13,7 +13,7 @@
 
 (defmethod armed-callback :after ((gadget arm/disarm-repaint-mixin) client id)
   (declare (ignore client id))
-  (dispatch-repaint gadget (or (pane-viewport-region gadget)
+  (dispatch-repaint gadget (or (pane-viewport-region gadget) ; TODO sheet-visible-region
                                (sheet-region gadget))))
 
 (defmethod disarmed-callback :after ((gadget arm/disarm-repaint-mixin) client id)
