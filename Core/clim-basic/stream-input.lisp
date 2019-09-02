@@ -179,7 +179,8 @@ keys read."))
     :documentation "Holds the last gesture returned by stream-read-gesture
 (not peek-p), untransformed, so it can easily be unread.")))
 
-(defmethod stream-set-input-focus ((stream standard-extended-input-stream))
+;; Deliberely not specialized to work on sheets too. -- jd 2019-08-23
+(defmethod stream-set-input-focus (stream)
   (let ((port (or (port stream)
                   (port *application-frame*))))
     (prog1 (port-keyboard-input-focus port)
@@ -700,20 +701,6 @@ known gestures."
 (defgeneric pointer-cursor (pointer))
 
 (defgeneric (setf pointer-cursor) (cursor pointer))
-
-;;; Should this go in sheets.lisp?  That comes before events and ports...
-
-(defmethod handle-event :before ((sheet mirrored-sheet-mixin)
-                                 (event pointer-enter-event))
-  (setf (port-pointer-sheet (port sheet)) sheet))
-
-(defmethod handle-event :before ((sheet mirrored-sheet-mixin)
-                                 (event pointer-exit-event))
-  (with-accessors ((port-pointer-sheet port-pointer-sheet))
-      (port sheet)
-    (when (eq port-pointer-sheet sheet)
-
-      (setq port-pointer-sheet nil))))
 
 (defmethod pointer-button-state ((pointer standard-pointer))
   (with-lock-held ((state-lock pointer))

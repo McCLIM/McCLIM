@@ -82,9 +82,8 @@ foo-pointer
 @verbatim
 EVENT HANDLING (in port.lisp)
 -----------------------------
-;;; Originally in CLIM-INTERNALS
-port-frame-keyboard-input-focus
-synthesize-pointer-motion-event
+;;; Originally in CLIM
+process-next-event
 @end verbatim
 
 @node Graft protocol

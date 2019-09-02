@@ -782,7 +782,8 @@ might be different from the sheet's native region."
 ;;; Top-level sheets
 
 (defclass top-level-sheet-mixin ()
-  (;; The NAME slot intentionally uses the same slot name as the NAME
+  ((focused-sheet :initform nil :accessor focused-sheet)
+   ;; The NAME slot intentionally uses the same slot name as the NAME
    ;; in the PANE class so that both collapse into a single effective
    ;; slot in e.g. the TOP-LEVEL-SHEET-PANE class.
    (name :initarg :name :reader sheet-name)
