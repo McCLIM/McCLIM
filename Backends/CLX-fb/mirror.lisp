@@ -86,7 +86,7 @@
   ;; TODO can check whether dirty-r is completely within mirror-region
   (when (and x-mirror x-image)
     (let* ((pixels (climi::pattern-array (image-mirror-image sheet)))
-           (mirror-region (make-rectangle* 0 0 (1- width) (1- height)))
+           (mirror-region (make-rectangle* 0 0 width height))
            (fn (etypecase pixels
                  ((simple-array (unsigned-byte 32) 2)
                   (lambda (region)
