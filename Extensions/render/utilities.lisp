@@ -43,9 +43,6 @@ top-left. Useful when we iterate over the same array and mutate its state."
 
 ;;; color functions
 
-(deftype octet ()
-  '(unsigned-byte 8))
-
 (defmacro let-rgba (((r g b a) elt) &body body)
   (alexandria:once-only (elt)
     `(let ((,r (ldb (byte 8 24) ,elt))
@@ -55,12 +52,12 @@ top-left. Useful when we iterate over the same array and mutate its state."
        ,@body)))
 
 (declaim (inline color-value->octet)
-         (ftype (function (real) octet) color-value->octet))
+         (ftype (function (color-value) octet) color-value->octet))
 (defun color-value->octet (v)
   (round (* 255 v)))
 
 (declaim (inline color-octet->value)
-         (ftype (function (octet) real) color-octet->value))
+         (ftype (function (octet) color-value) color-octet->value))
 (defun color-octet->value (o)
   (/ o 255))
 

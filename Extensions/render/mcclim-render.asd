@@ -7,6 +7,7 @@
                "mcclim-backend-common")
   :serial t
   :components ((:file "package")
+               (:file "types")
                (:file "utilities")
                (:file "image")
                (:module "render"
