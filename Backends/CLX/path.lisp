@@ -94,7 +94,7 @@
       (loop
         for points on (cons (car (last polygon)) polygon)
         for p1 = (car points)
-        for p2 = (cadr points) 
+        for p2 = (cadr points)
         for x1 = (car p1) for y1 = (cdr p1)
         for x2 = (car p2) for y2 = (cdr p2)
         while (cdr points)
@@ -182,41 +182,55 @@ of a pen-stroked polyline, as cl-vectors generates it:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun triangulate-line (pt-a pt-b stroke-width)
-  "Returns a list of two triangles, covering the STROKE-WIDTH from PT-A to PT-B."
+(declaim (inline insert-point-into insert-triangle-into))
+(defun insert-point-into (tris pt)
+  "Inserts the x and y coordinate of pt (a cons) into the vector TRIS."
+  (vector-push-extend (car pt) tris)
+  (vector-push-extend (cdr pt) tris))
+
+(defun insert-triangle-into (tris pt-1 pt-2 pt-3)
+  "Inserts the x and y coordinates of pt-1,2,3 into the vector TRIS."
+  (insert-point-into tris pt-1)
+  (insert-point-into tris pt-2)
+  (insert-point-into tris pt-3))
+
+(defun triangulate-line (tris pt-a pt-b stroke-width)
+  "Inserts into TRIS two triangles, covering the STROKE-WIDTH from PT-A to PT-B."
   (let* ((v-delta (point-- pt-b pt-a))
          (v-perp-width/2 (normalized (point-perp v-delta) (/ stroke-width 2)))
          (pt-1 (point-- pt-a v-perp-width/2))
          (pt-2 (point-+ pt-a v-perp-width/2))
          (pt-3 (point-+ pt-b v-perp-width/2))
          (pt-4 (point-- pt-b v-perp-width/2)))
-    (list (list pt-1 pt-2 pt-3)
-          (list pt-1 pt-3 pt-4))))
 
-(defun triangulate-end-cap (pt-a pt-b stroke-width &key (type :round) (steps 10))
-  "Returns a list of triangles (or NIL) covering the end cap at PT-B. TYPE is one of :no-end-point, :butt, :square, and :round."
+    (insert-triangle-into tris pt-1 pt-2 pt-3)
+    (insert-triangle-into tris pt-1 pt-3 pt-4)))
+
+(defun triangulate-end-cap (tris pt-a pt-b stroke-width &key (type :round) (steps 10))
+  "Inserts point coordinates (if any) into TRIS covering the end cap at PT-B. TYPE is one of :no-end-point, :butt, :square, and :round."
   (ecase type
     ((:no-end-point :butt nil) nil)
     (:square
      (let* ((v-delta (normalized (point-- pt-b pt-a) (/ stroke-width 2))))
-       (triangulate-line pt-b (point-+ pt-b v-delta) stroke-width)))
+       (triangulate-line tris pt-b (point-+ pt-b v-delta) stroke-width)))
     (:round (let* ((v-delta (point-- pt-b pt-a))
                    (v-xx (normalized v-delta (/ stroke-width 2)))
                    (v-yy (normalized (point-perp v-delta) (/ stroke-width 2)))
                    (delta (/ pi steps)))
               (loop
-                 for i from 1 to steps
-                 for rad = (* delta i)
-                 for pt-3 = (points-+ pt-b
-                                      (point-scale v-yy (cos rad))
-                                      (point-scale v-xx (sin rad)))
-                 and pt-2 = (point-+ pt-b v-yy) then pt-3
-                 collect
-                   (list pt-b pt-2 pt-3))))))
+                for i from 1 to steps
+                for rad = (* delta i)
+                for pt-3 = (points-+ pt-b
+                                     (point-scale v-yy (cos rad))
+                                     (point-scale v-xx (sin rad)))
+                and pt-2 = (point-+ pt-b v-yy) then pt-3
+                do
+                   (insert-triangle-into tris  pt-b pt-2 pt-3))))))
 
-(defun triangulate-joint (pt-a pt-b pt-c stroke-width &key (type :miter) (round-steps 5))
+(defun triangulate-joint (tris pt-a pt-b pt-c stroke-width &key (type :miter) (round-steps 5))
   "Connect the stroked lines pt-a..pt-b and pt-b..pt-c with a joint of the specified type.
-TYPE is is one of :miter, :bevel, :round and :none."
+TYPE is is one of :miter, :bevel, :round and :none.
+Add the resulting triangles (if any) into the vector TRIS."
   (ecase type
     ((:none nil) nil)
     (:bevel
@@ -230,7 +244,7 @@ TYPE is is one of :miter, :bevel, :round and :none."
             (p-b-outer-a (point-+ p-a-outer v-ab))
             (p-c-outer (point-+ pt-c v-bc-perp-width/2))
             (p-b-outer-c (point-- p-c-outer v-bc)))
-       (list (list pt-b p-b-outer-a p-b-outer-c))))
+       (insert-triangle-into tris pt-b p-b-outer-a p-b-outer-c )))
     (:miter
      (let* ((v-ab (point-- pt-b pt-a))
             (v-bc (point-- pt-c pt-b))
@@ -246,8 +260,8 @@ TYPE is is one of :miter, :bevel, :round and :none."
 
             (point-of-intersection (point-of-intersection p-a-outer p-b-outer-a p-b-outer-c p-c-outer)))
        (and point-of-intersection
-            (list (list p-b-outer-a point-of-intersection p-b-outer-c)
-                  (list p-b-outer-a p-b-outer-c pt-b)))))
+            (insert-triangle-into tris p-b-outer-a point-of-intersection p-b-outer-c)
+            (insert-triangle-into tris p-b-outer-a p-b-outer-c pt-b))))
     (:round
      (let* ((v-ab (point-- pt-b pt-a))
             (v-bc (point-- pt-c pt-b))
@@ -268,35 +282,37 @@ TYPE is is one of :miter, :bevel, :round and :none."
                                (point-scale v-bc-perp-width/2 (cos rad))
                                (point-scale v-yy (sin rad)))
           and pt-2 = p-b-outer-c then pt-3
-          collect (list pt-b pt-2 pt-3))))))
+          do
+             (insert-triangle-into tris pt-b pt-2 pt-3))))))
+
+(defun estimate-triangle-count (points joint-type cap-type)
+  (let* ((segment-count (1- (length points)))
+         (joint-count (1- segment-count))
+         (triangles-per-joint-estimate (case joint-type (:none 0) (:bevel 1) (:miter 2) (:round 5)))
+         (triangles-per-cap-estimate (case cap-type ((:none :butt) 0) (:square 2) (:round 10))))
+    (+ (* 2 segment-count)
+       (* joint-count triangles-per-joint-estimate)
+       (* 2 triangles-per-cap-estimate))))
 
 (defun triangulate-path (points-list stroke-width &key (line-joint-shape :miter) (line-cap-shape :butt))
-  (let* ((triangles nil)
-         (tail triangles)
-         (start-cap (triangulate-end-cap (cadr points-list) (car points-list) stroke-width :type line-cap-shape)))
-    (setf triangles start-cap
-          tail (last start-cap))
-    (flet ((append-triangles (new-triangles)
-             (when new-triangles
-               (if tail
-                   (rplacd tail new-triangles)
-                   (setf triangles new-triangles))
-               (setf tail (last new-triangles)))))
-      (loop
-         for points on points-list
-         while (cdr points)
-         for pt-a = (car points)
-         for pt-b = (cadr points)
-         for pt-c = (caddr points)
-         for line-triangles = (triangulate-line pt-a pt-b stroke-width)
-         for joint-triangles = (and pt-c (triangulate-joint pt-a pt-b pt-c stroke-width :type line-joint-shape))
-         do
-           (append-triangles line-triangles)
-           (append-triangles joint-triangles)
-         finally
-           (let ((last-points (last points-list 2)))
-             (rplacd tail (triangulate-end-cap (car last-points)
-                                               (cadr last-points)
-                                               stroke-width
-                                               :type line-cap-shape)))))
-    triangles))
+  (let* ((tris-vector (make-array (estimate-triangle-count points-list line-joint-shape line-cap-shape)
+                                :adjustable T :fill-pointer 0)))
+    (triangulate-end-cap tris-vector (cadr points-list) (car points-list) stroke-width :type line-cap-shape)
+    (loop
+      for points on points-list
+      and last-points = nil then points
+      while (cdr points)
+      for pt-a = (car points)
+      for pt-b = (cadr points)
+      for pt-c = (caddr points)
+      do
+         (triangulate-line tris-vector pt-a pt-b stroke-width)
+         (when pt-c
+           (triangulate-joint tris-vector pt-a pt-b pt-c stroke-width :type line-joint-shape))
+      finally
+         (triangulate-end-cap tris-vector
+                              (car last-points)
+                              (cadr last-points)
+                              stroke-width
+                              :type line-cap-shape))
+    tris-vector))

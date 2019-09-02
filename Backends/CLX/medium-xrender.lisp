@@ -130,9 +130,9 @@
                           collect (with-transformed-position (tr x y)
                                     (cons x y)))))
       (when transformed
-        (let ((triangle-list (triangulate-path transformed (line-style-thickness style)
-                                               :line-joint-shape (line-style-joint-shape style)
-                                               :line-cap-shape (line-style-cap-shape style))))
+        (let ((flat-triangle-vector (triangulate-path transformed (line-style-thickness style)
+                                                      :line-joint-shape (line-style-joint-shape style)
+                                                      :line-cap-shape (line-style-cap-shape style))))
           (alexandria:when-let ((dest (clx-render-medium-picture medium)))
             (with-clx-graphics () medium
               (let ((src (create-pen mirror gc)))
@@ -142,12 +142,7 @@
                            (medium-device-region medium))))
                 (xlib:render-triangles dest :over src 0 0
                                        (find-alpha-mask-format (xlib:drawable-display mirror))
-                                       (coerce (loop
-                                                 for (p1 p2 p3) in triangle-list
-                                                 append (list (car p1) (cdr p1)
-                                                              (car p2) (cdr p2)
-                                                              (car p3) (cdr p3)))
-                                               'vector))))))))))
+                                       flat-triangle-vector)))))))))
 
 
 (defun medium-draw-rectangle-xrender (medium x1 y1 x2 y2 filled)
