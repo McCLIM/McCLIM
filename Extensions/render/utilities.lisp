@@ -110,10 +110,10 @@ top-left. Useful when we iterate over the same array and mutate its state."
 
 (defun octet-blend-function* (r.fg g.fg b.fg a.fg r.bg g.bg b.bg a.bg)
   (declare (optimize speed))
-  (logior (ash (%byte-blend-value r.fg r.bg a.fg a.bg) 24)
-          (ash (%byte-blend-value g.fg g.bg a.fg a.bg) 16)
-          (ash (%byte-blend-value b.fg b.bg a.fg a.bg) 8)
-          (%prelerp a.fg a.bg a.bg)))
+  (logior (ash (%prelerp a.fg a.bg a.bg)               24)
+          (ash (%byte-blend-value r.fg r.bg a.fg a.bg) 16)
+          (ash (%byte-blend-value g.fg g.bg a.fg a.bg) 8)
+          (ash (%byte-blend-value b.fg b.bg a.fg a.bg) 0)))
 
 (declaim (inline octet-rgba-blend-function)
          (ftype (function (octet octet octet octet octet octet octet octet)

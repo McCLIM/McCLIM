@@ -11,7 +11,7 @@
 (defun make-x-image (width height)
   (let* ((pixels (make-array (list height width)
                              :element-type '(unsigned-byte 32)
-                             :initial-element #x00FFFFFF))
+                             :initial-element #xffffffff))
          (image (xlib:create-image :bits-per-pixel 32
                                    :data pixels
                                    :depth 24
@@ -25,7 +25,7 @@
    (height :initform 0)
    ;;
    (x-mirror :initform nil
-            :initarg :x-mirror
+             :initarg :x-mirror
              :reader x-mirror
              :reader sheet-direct-xmirror)
    (x-pixels :initform nil)
@@ -83,24 +83,21 @@
 (defun image-mirror-pre-put (width height x-mirror sheet x-image x-pixels dirty-r)
   (declare (type (simple-array (unsigned-byte 32) 2) x-pixels)
            (optimize speed))
-  (let* ((pixels (climi::pattern-array (image-mirror-image sheet)))
-         (mirror-region (make-rectangle* 0 0 (1- width) (1- height)))
-         (fn (etypecase pixels
-               ((simple-array (unsigned-byte 32) 2)
-                (lambda (region)
-                  (locally (declare (type (simple-array (unsigned-byte 32) 2) pixels))
-                    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-                        (region-intersection region mirror-region)
-                      (locally (declare (type (unsigned-byte 32) min-x min-y max-x max-y))
-                        (when (and x-mirror x-image)
-                          (do ((x min-x)
-                               (y min-y (1+ y)))
-                              ((> x max-x))
-                            (setf (aref x-pixels y x) (ash (aref pixels y x) -8))
-                            (when (= y max-y)
-                              (incf x)
-                              (setf y min-y))))))))))))
-    (map-over-region-set-regions fn dirty-r)))
+  ;; TODO can check whether dirty-r is completely within mirror-region
+  (when (and x-mirror x-image)
+    (let* ((pixels (climi::pattern-array (image-mirror-image sheet)))
+           (mirror-region (make-rectangle* 0 0 (1- width) (1- height)))
+           (fn (etypecase pixels
+                 ((simple-array (unsigned-byte 32) 2)
+                  (lambda (region)
+                    (locally (declare (type (simple-array (unsigned-byte 32) 2) pixels))
+                      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+                          (region-intersection region mirror-region)
+                        (locally (declare (type (unsigned-byte 32) min-x min-y max-x max-y))
+                          (loop :for y :of-type alexandria:array-index :from min-y :below max-y
+                                :do (loop :for x :of-type alexandria:array-index :from min-x :below max-x
+                                          :do (setf (aref x-pixels y x) (aref pixels y x))))))))))))
+      (map-over-region-set-regions fn dirty-r))))
 
 (defmethod image-mirror-to-x ((sheet clx-fb-mirror))
   (declare (optimize speed))
