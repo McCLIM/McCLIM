@@ -74,7 +74,7 @@
                         (do ((x min-x)
                              (y min-y (1+ y)))
                             ((> x max-x))
-                          (setf (aref xlib-image y x) (ash (aref pixels y x) -8))
+                          (setf (aref xlib-image y x) (aref pixels y x))
                           (when (= y max-y)
                             (incf x)
                             (setf y min-y))))))))))
