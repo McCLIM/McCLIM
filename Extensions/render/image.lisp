@@ -23,25 +23,21 @@
 
 ;;; Unsafe versions of COPY-IMAGE. Caller must ensure that all arguments are
 ;;; valid and arrays are of proper type.
-(declaim (inline %copy-image %copy-image*))
-
-(defun %copy-image (src-array dst-array x1s y1s x1d y1d x2 y2)
-  (declare (type fixnum x1s y1s x1d y1d x2 y2)
-           (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
-           (optimize (speed 3) (safety 0)))
-  (do-regions ((src-j dest-j y1s y1d y2)
-               (src-i dest-i x1s x1d x2))
-    (setf (aref dst-array dest-j dest-i)
-          (aref src-array src-j src-i))))
-
-(defun %copy-image* (src-array dst-array x1s y1s x1d y1d x2 y2)
-  (declare (type fixnum x1s y1s x1d y1d x2 y2)
-           (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
-           (optimize (speed 3) (safety 0)))
-  (do-regions ((src-j dest-j y1s y1d y2)
-               (src-i dest-i x1s x1d x2) :backward t)
-    (setf (aref dst-array dest-j dest-i)
-          (aref src-array src-j src-i))))
+(macrolet
+    ((define-copy-image (name backwardp)
+       `(progn
+          (declaim (inline ,name))
+          (defun ,name (src-array dst-array x1s y1s x1d y1d x2 y2)
+            (declare (type fixnum x1s y1s x1d y1d x2 y2)
+                     (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
+                     (optimize (speed 3) (safety 0)))
+            (do-regions ((src-j dest-j y1s y1d y2)
+                         (src-i dest-i x1s x1d x2) ,@(when backwardp
+                                                       `(:backward t)))
+              (setf (aref dst-array dest-j dest-i)
+                    (aref src-array src-j src-i)))))))
+  (define-copy-image %copy-image nil)
+  (define-copy-image %copy-image* t))
 
 ;;; XXX: We should unify it with COPY-AREA and MEDIUM-COPY-AREA. That means that
 ;;; raster images should be mediums on their own rights (aren't they?).
@@ -70,31 +66,24 @@
           (t nil)))
   (make-rectangle* (1- dx) (1- dy) (+ dx width) (+ dy height)))
 
-(declaim (inline %blend-image %blend-image*))
-
-(defun %blend-image (src-array dst-array x1s y1s x1d y1d x2 y2)
-  (declare (type fixnum x1s y1s x1d y1d x2 y2)
-           (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
-           (optimize (speed 3) (safety 0)))
-  (do-regions ((src-j dest-j y1s y1d y2)
-               (src-i dest-i x1s x1d x2))
-    (let-rgba ((r.fg g.fg b.fg a.fg) (aref src-array src-j src-i))
-      (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array dest-j dest-i))
-        (setf (aref dst-array dest-j dest-i)
-              (octet-blend-function* r.fg g.fg b.fg a.fg
-                                     r.bg g.bg b.bg a.bg))))))
-
-(defun %blend-image* (src-array dst-array x1s y1s x1d y1d x2 y2)
-  (declare (type fixnum x1s y1s x1d y1d x2 y2)
-           (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
-           (optimize (speed 3) (safety 0)))
-  (do-regions ((src-j dest-j y1s y1d y2)
-               (src-i dest-i x1s x1d x2) :backward t)
-    (let-rgba ((r.fg g.fg b.fg a.fg) (aref src-array src-j src-i))
-      (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array dest-j dest-i))
-        (setf (aref dst-array dest-j dest-i)
-              (octet-blend-function* r.fg g.fg b.fg a.fg
-                                     r.bg g.bg b.bg a.bg))))))
+(macrolet
+    ((define-blend-image (name backwardp)
+       `(progn
+          (declaim (inline ,name))
+          (defun ,name (src-array dst-array x1s y1s x1d y1d x2 y2)
+            (declare (type fixnum x1s y1s x1d y1d x2 y2)
+                     (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
+                     (optimize (speed 3) (safety 0)))
+            (do-regions ((src-j dest-j y1s y1d y2)
+                         (src-i dest-i x1s x1d x2) ,@(when backwardp
+                                                       `(:backward t)))
+              (let-rgba ((r.fg g.fg b.fg a.fg) (aref src-array src-j src-i))
+                (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array dest-j dest-i))
+                  (setf (aref dst-array dest-j dest-i)
+                        (octet-blend-function* r.fg g.fg b.fg a.fg
+                                               r.bg g.bg b.bg a.bg)))))))))
+  (define-blend-image %blend-image nil)
+  (define-blend-image %blend-image* t))
 
 (defun blend-image (src-image sx sy width height dst-image dx dy
                     &aux
