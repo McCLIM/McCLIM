@@ -1974,7 +1974,11 @@
    #:define-selection-translator
    #:release-selection
    #:publish-selection
-   #:request-selection))
+   #:request-selection
+   ;; franz
+   #:pointer-place-rubber-band-line*
+   #:pointer-input-rectangle*
+   #:pointer-input-rectangle))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
