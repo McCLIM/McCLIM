@@ -1878,9 +1878,10 @@
    #:event-listen-or-wait
    #:schedule-event
    ;; sheets
+   #:top-level-sheet-mixin
+   #:unmanaged-sheet-mixin
    #:sheet-name
    #:sheet-pretty-name
-   #:named-sheet-mixin
 
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
@@ -2006,6 +2007,7 @@
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
+   #:window-manager-focus-event
    ;; Text-style
    #:text-style-to-font
    #:text-style-character-width

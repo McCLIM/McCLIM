@@ -45,12 +45,15 @@
 ;;         pointer-motion-event
 ;;           pointer-boundary-event
 ;;             pointer-enter-event
+;;               pointer-ungrab-enter-event
 ;;             pointer-exit-event
+;;               pointer-ungrab-leave-event
 ;;     window-event
 ;;       window-configuration-event
 ;;       window-repaint-event
 ;;     window-manager-event
 ;;       window-manager-delete-event
+;;       window-manager-focus-event
 ;;     timer-event
 ;;
 
@@ -130,19 +133,16 @@
    (graft-y :reader pointer-event-native-graft-y) ))
 
 (defmacro get-pointer-position ((sheet event) &body body)
-   (with-gensyms (event-var sheet-var x-var y-var)
-     `(let* ((,sheet-var ,sheet)
-	     (,event-var ,event)
-	     (,x-var (device-event-native-x ,event-var))
-	     (,y-var (device-event-native-y ,event-var)))
-	(multiple-value-bind (x y)
-	    (if ,sheet-var
-		(untransform-position (sheet-native-transformation ,sheet-var)
-				      ,x-var
-				      ,y-var)
-		(values ,x-var ,y-var))
-	  (declare (ignorable x y))
-	  ,@body))))
+  (alexandria:once-only (sheet event)
+    `(multiple-value-bind (x y)
+         (if ,sheet
+             (untransform-position (sheet-delta-transformation ,sheet (graft ,sheet))
+                                   (device-event-native-graft-x ,event)
+                                   (device-event-native-graft-y ,event))
+             (values (device-event-native-x ,event)
+                     (device-event-native-y ,event)))
+       (declare (ignorable x y))
+       ,@body)))
 
 (defmethod pointer-event-x ((event pointer-event))
   (get-pointer-position ((event-sheet event) event) x))
@@ -193,18 +193,14 @@
 (defclass pointer-motion-hint-event (pointer-motion-event motion-hint-mixin)
   ())
 
-(define-event-class pointer-boundary-event (pointer-motion-event)
-  ())
+(define-event-class pointer-boundary-event (pointer-motion-event) ())
 
-(define-event-class pointer-enter-event (pointer-boundary-event)
-  ())
+(define-event-class pointer-enter-event (pointer-boundary-event) ())
+(define-event-class pointer-exit-event  (pointer-boundary-event) ())
 
-(define-event-class pointer-exit-event (pointer-boundary-event)
-  ())
-
-
-(define-event-class pointer-ungrab-event (pointer-exit-event)
-  ())
+;;; Menu implementation uses pointer-ungrab-leave-event.
+(define-event-class pointer-ungrab-enter-event (pointer-enter-event) ())
+(define-event-class pointer-ungrab-leave-event (pointer-exit-event) ())
 
 (define-event-class window-event (standard-event)
   ((region :initarg :region
@@ -253,26 +249,18 @@
     (:method ((event window-configuration-event))
       (get-window-property :size 1 event))))
 
-(define-event-class window-unmap-event (window-event)
-  ())
+(define-event-class window-unmap-event   (window-event) ())
+(define-event-class window-destroy-event (window-event) ())
+(define-event-class window-repaint-event (window-event) ())
 
-(define-event-class window-destroy-event (window-event)
-  ())
-
-(define-event-class window-repaint-event (window-event)
-  ())
-
-(define-event-class window-manager-event (standard-event) ())
-
-(define-event-class window-manager-delete-event (window-manager-event)
-  ;; sheet (inherited from standard-event) is not required by the spec but we
-  ;; need to know which window to delete - mikemac
-  ())
+(define-event-class window-manager-event        (standard-event)       ())
+(define-event-class window-manager-delete-event (window-manager-event) ())
+(define-event-class window-manager-focus-event  (window-manager-event) ())
 
 (define-event-class timer-event (standard-event)
   ((token
-     :initarg :token
-     :reader  event-token)))
+    :initarg :token
+    :reader  event-token)))
 
 ;;; Constants dealing with events
 

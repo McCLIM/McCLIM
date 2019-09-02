@@ -141,27 +141,29 @@
       ((:button-press :button-release)
        (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port* state))
              (button (decode-x-button-code code)))
-         (if (and (eq event-key :button-press)
-                  (member button '(#.+pointer-wheel-up+
-                                   #.+pointer-wheel-down+
-                                   #.+pointer-wheel-left+
-                                   #.+pointer-wheel-right+)))
-             (make-instance 'climi::pointer-scroll-event
-                            :pointer 0
-                            :button button :x x :y y
-                            :graft-x root-x
-                            :graft-y root-y
-                            :sheet sheet
-                            :modifier-state modifier-state
-                            :delta-x (case button
-                                       (#.+pointer-wheel-left+ -1)
-                                       (#.+pointer-wheel-right+ 1)
-                                       (otherwise 0))
-                            :delta-y (case button
-                                       (#.+pointer-wheel-up+ -1)
-                                       (#.+pointer-wheel-down+ 1)
-                                       (otherwise 0))
-                            :timestamp time)
+         (if (member button '(#.+pointer-wheel-up+
+                              #.+pointer-wheel-down+
+                              #.+pointer-wheel-left+
+                              #.+pointer-wheel-right+))
+             ;; Pointer scroll generates button press and button
+             ;; release event. We ignore the latter. -- jd 2019-09-01
+             (when (eq event-key :button-press)
+               (make-instance 'climi::pointer-scroll-event
+                              :pointer 0
+                              :button button :x x :y y
+                              :graft-x root-x
+                              :graft-y root-y
+                              :sheet sheet
+                              :modifier-state modifier-state
+                              :delta-x (case button
+                                         (#.+pointer-wheel-left+ -1)
+                                         (#.+pointer-wheel-right+ 1)
+                                         (otherwise 0))
+                              :delta-y (case button
+                                         (#.+pointer-wheel-up+ -1)
+                                         (#.+pointer-wheel-down+ 1)
+                                         (otherwise 0))
+                              :timestamp time))
              (make-instance (if (eq event-key :button-press)
                                 'pointer-button-press-event
                                 'pointer-button-release-event)
@@ -172,7 +174,11 @@
                             :sheet sheet :modifier-state modifier-state
                             :timestamp time))))
       (:enter-notify
-       (make-instance 'pointer-enter-event :pointer 0 :button code :x x :y y
+       (make-instance (if (eq mode :ungrab)
+                          'pointer-ungrab-enter-event
+                          'pointer-enter-event)
+                      :pointer 0 :button code
+                      :x x :y y
                       :graft-x root-x
                       :graft-y root-y
                       :sheet sheet
@@ -181,7 +187,7 @@
                       :timestamp time))
       (:leave-notify
        (make-instance (if (eq mode :ungrab)
-                          'pointer-ungrab-event
+                          'pointer-ungrab-leave-event
                           'pointer-exit-event)
                       :pointer 0 :button code
                       :x x :y y
@@ -296,16 +302,23 @@
 ;;; top-level-sheet REALIZE-MIRROR method should be adjusted to add
 ;;; :WM_TAKE_FOCUS to XLIB:WM-PROTOCOLS.  CSR, 2009-02-18
 
+;;; And that's what we do. top-level-sheet maintains last focused
+;;; sheet among its children and upon :WM_TAKE_FOCUS it assigns back
+;;; the focus to it. Currently we have implemented click-to-focus
+;;; policy which is enforced in basic-port's distribute-event
+;;; method. -- jd 2019-08-26
+
 (defun port-client-message (sheet time type data)
   (case type
     (:wm_protocols
      (let ((message (xlib:atom-name (slot-value *clx-port* 'display) (aref data 0))))
        (case message
          (:wm_take_focus
+          ;; hmm, this message seems to be sent twice.
           (when-let ((mirror (sheet-xmirror sheet)))
             (xlib:set-input-focus (clx-port-display *clx-port*)
                                   mirror :parent (elt data 1)))
-          nil)
+          (make-instance 'window-manager-focus-event :sheet sheet :timestamp time))
          (:wm_delete_window
           (make-instance 'window-manager-delete-event :sheet sheet :timestamp time))
          (otherwise

@@ -84,7 +84,7 @@
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
   (arm-branch pane))
 
-(defmethod handle-event ((pane menu-button-pane) (event pointer-ungrab-event))
+(defmethod handle-event ((pane menu-button-pane) (event pointer-ungrab-leave-event))
   (destroy-substructure (menu-root pane)))
 
 ;;; menu-button-leaf-pane
@@ -112,7 +112,7 @@
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-exit-event))
   (disarm-menu pane))
 
-(defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-ungrab-event))
+(defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-ungrab-leave-event))
   (destroy-substructure (menu-root pane)))
 
 ;;; menu-button-submenu-pane

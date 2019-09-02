@@ -329,11 +329,7 @@ maximum size according to `frame')."
                                   :resize-frame t)))
 
     ;; Modify the size and location of the frame as well.
-    (let* ((top-level-pane (labels ((searching (pane)
-				      (if (typep pane 'top-level-sheet-pane)
-					  pane
-					  (searching (sheet-parent pane)))))
-			     (searching menu))))
+    (let ((top-level-pane (get-top-level-sheet menu)))
       (multiple-value-bind (frame-width frame-height)
           (menu-size top-level-pane *application-frame*)
         (multiple-value-bind (res-max-x res-max-y) (max-x-y *application-frame*)

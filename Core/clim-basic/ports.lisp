@@ -373,7 +373,7 @@
   (:method ((port basic-port) pointer sheet)
     (declare (ignorable port pointer sheet))
     (warn "Port ~A  has not implemented pointer grabbing." port))
-  (:method :before ((port basic-port) pointer sheet)
+  (:method :around ((port basic-port) pointer sheet)
     (declare (ignorable port pointer sheet))
     (when (port-grabbed-sheet port)
       (setf (port-grabbed-sheet port) nil)
