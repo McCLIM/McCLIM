@@ -32,6 +32,7 @@
              #p"/usr/X11R6/lib/X11/fonts/TTF/"
              #p"/opt/X11/share/fonts/TTF/"
              #p"/opt/X11/share/fonts/"
+             #p"~/.guix-profile/share/fonts/truetype/"
              #p"/Library/Fonts/"
              #p"C:/Windows/Fonts/")))
 
