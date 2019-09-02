@@ -1,4 +1,4 @@
-(defpackage :mcclim-render
+(cl:defpackage #:mcclim-render
   (:nicknames #:clim-render)
   (:use)
   (:export
@@ -20,7 +20,7 @@
    #:rgba-image
    #:gray-image))
 
-(defpackage :mcclim-render-extensions
+(cl:defpackage #:mcclim-render-extensions
   (:use)
   (:export
    ;; colors
@@ -45,12 +45,14 @@
    #:gray->rgb
    #:gray->alpha))
 
-(defpackage :mcclim-render-internals
+(cl:defpackage #:mcclim-render-internals
   (:use #:clim #:clim-lisp #:mcclim-render #:mcclim-render-extensions)
   (:import-from #:alexandria
                 #:minf
-                #:maxf)
-  (:import-from :clim-internals
+                #:maxf
+                #:when-let
+                #:when-let*)
+  (:import-from #:clim-internals
                 #:standard-color
                 #:named-color
                 #:standard-flipping-ink
@@ -88,7 +90,7 @@
                 #:port-lookup-sheet
                 #:pixmap-mirror
                 #:pixmap-medium)
-  (:import-from :mcclim-truetype
+  (:import-from #:mcclim-truetype
                 #:glyph-info
                 #:font-glyph-info
                 #:font-generate-glyph
@@ -115,6 +117,6 @@
                 #:truetype-font
                 #:truetype-face
                 #:zpb-ttf-font-units->pixels)
-  (:import-from :clim-backend
+  (:import-from #:clim-backend
                 #:port-set-mirror-region
                 #:port-set-mirror-transformation))

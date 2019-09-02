@@ -1,8 +1,6 @@
-(in-package :mcclim-render-internals)
+(cl:in-package #:mcclim-render-internals)
 
-;;;
 ;;; Image
-;;;
 
 (defun draw-image* (medium image x y
                     &rest args
@@ -13,9 +11,7 @@
 
 (clim-internals::def-graphic-op draw-image* (image x y))
 
-;;;
 ;;; Image operations
-;;;
 
 (defun make-image (width height)
   "Create an empty transparent image of size WIDTH x HEIGHT."
@@ -51,27 +47,27 @@
 ;;; raster images should be mediums on their own rights (aren't they?).
 (defun copy-image (src-image sx sy width height dst-image dx dy
                    &aux
-                     (sx (round sx))
-                     (sy (round sy))
-                     (dx (round dx))
-                     (dy (round dy))
-                     (width (round width))
-                     (height (round height))
-                     (src-array (climi::pattern-array src-image))
-                     (dst-array (climi::pattern-array dst-image)))
-  "Copies SRC-IMAGE to DST-IMAGE region-wise. Both may be the same image."
+                   (sx (round sx))
+                   (sy (round sy))
+                   (dx (round dx))
+                   (dy (round dy))
+                   (width (round width))
+                   (height (round height))
+                   (src-array (climi::pattern-array src-image))
+                   (dst-array (climi::pattern-array dst-image)))
+  "Copy SRC-IMAGE to DST-IMAGE region-wise. Both may be the same image."
   (unless (%check-coords src-array dst-array sx sy dx dy width height)
     (return-from copy-image nil))
   (let ((max-x (+ dx width -1))
         (max-y (+ dy height -1)))
     (declare (fixnum max-x max-y))
-    (if (eq src-array dst-array)
-        (cond ((> sy dy) #1=(%copy-image src-array dst-array sx sy dx dy max-x max-y))
-              ((< sy dy) #2=(%copy-image* src-array dst-array sx sy dx dy max-x max-y))
-              ((> sx dx) #1#)
-              ((< sx dx) #2#)
-              (T NIL))
-        #1#))
+    (cond ((not (eq src-array dst-array))
+           #1=(%copy-image src-array dst-array sx sy dx dy max-x max-y))
+          ((> sy dy) #1#)
+          ((< sy dy) #2=(%copy-image* src-array dst-array sx sy dx dy max-x max-y))
+          ((> sx dx) #1#)
+          ((< sx dx) #2#)
+          (t nil)))
   (make-rectangle* (1- dx) (1- dy) (+ dx width) (+ dy height)))
 
 (declaim (inline %blend-image %blend-image*))
@@ -102,26 +98,26 @@
 
 (defun blend-image (src-image sx sy width height dst-image dx dy
                     &aux
-                      (sx (round sx))
-                      (sy (round sy))
-                      (dx (round dx))
-                      (dy (round dy))
-                      (width (round width))
-                      (height (round height))
-                      (src-array (climi::pattern-array src-image))
-                      (dst-array (climi::pattern-array dst-image)))
-  "Copies SRC-IMAGE to DST-IMAGE region-wise. Both may be the same image."
+                    (sx (round sx))
+                    (sy (round sy))
+                    (dx (round dx))
+                    (dy (round dy))
+                    (width (round width))
+                    (height (round height))
+                    (src-array (climi::pattern-array src-image))
+                    (dst-array (climi::pattern-array dst-image)))
+  "Blend SRC-IMAGE into DST-IMAGE region-wise. Both may be the same image."
   (unless (%check-coords src-array dst-array sx sy dx dy width height)
     (return-from blend-image nil))
   (let ((max-x (+ dx width -1))
         (max-y (+ dy height -1)))
-    (if (eq src-array dst-array)
-        (cond ((> sy dy) #1=(%blend-image src-array dst-array sx sy dx dy max-x max-y))
-              ((< sy dy) #2=(%blend-image* src-array dst-array sx sy dx dy max-x max-y))
-              ((> sx dx) #1#)
-              ((< sx dx) #2#)
-              (T NIL))
-        #1#))
+    (cond ((eq src-array dst-array)
+           #1=(%blend-image src-array dst-array sx sy dx dy max-x max-y))
+          ((> sy dy) #1#)
+          ((< sy dy) #2=(%blend-image* src-array dst-array sx sy dx dy max-x max-y))
+          ((> sx dx) #1#)
+          ((< sx dx) #2#)
+          (t nil)))
   (make-rectangle* (1- dx) (1- dy) (+ dx width) (+ dy height)))
 
 (defun clone-image (image)
@@ -130,15 +126,14 @@
     (make-instance 'climi::%rgba-pattern :array (alexandria:copy-array src-array))))
 
 (defun fill-image (image design &key (x 0) (y 0)
-                                  (width (pattern-width image))
-                                  (height (pattern-height image))
-                                  stencil (stencil-dx 0) (stencil-dy 0)
-                                  clip-region
-                   &aux
-                     (dst-array (climi::pattern-array image))
-                     (x2 (+ x width -1))
-                     (y2 (+ y height -1)))
-  "Blends DESIGN onto IMAGE with STENCIL and a CLIP-REGION."
+                                     (width (pattern-width image))
+                                     (height (pattern-height image))
+                                     stencil (stencil-dx 0) (stencil-dy 0)
+                                     clip-region
+                                &aux (dst-array (climi::pattern-array image))
+                                     (x2 (+ x width -1))
+                                     (y2 (+ y height -1)))
+  "Blends DESIGN onto IMAGE with STENCIL and CLIP-REGION."
   (let ((stencil-array (and stencil (climi::pattern-array stencil))))
     (do-regions ((src-j j y y y2)
                  (src-i i x x x2))

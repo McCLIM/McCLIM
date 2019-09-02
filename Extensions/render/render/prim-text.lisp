@@ -1,14 +1,11 @@
-(in-package :mcclim-render-internals)
+(cl:in-package #:mcclim-render-internals)
 
-;;;
 ;;; Converting string into paths
-;;;
-
 
 (defun string-primitive-paths (medium x y string align-x align-y transform-glyphs
                                &aux
-                                 (transformation (sheet-device-transformation (medium-sheet medium)))
-                                 (font (text-style-mapping (port medium) (medium-text-style medium))))
+                               (transformation (sheet-device-transformation (medium-sheet medium)))
+                               (font (text-style-mapping (port medium) (medium-text-style medium))))
   (flet ((adjust-positions ()
            (ecase align-x
              (:left)
@@ -34,20 +31,20 @@
                  (clim:transform-position transformation x y))
                (adjust-positions))))
   (loop
-     with glyph-transformation = (multiple-value-bind (x0 y0)
-                                     (transform-position transformation 0 0)
-                                   (compose-translation-with-transformation transformation (- x0) (- y0)))
-     for code across (climb:font-string-glyph-codes font string)
-     for origin-x fixnum = (round x) then (+ origin-x (glyph-info-advance-width info))
-     for origin-y fixnum = (round y) then (+ origin-y (glyph-info-advance-height info))
-     for info = (if (null transform-glyphs)
-                    (font-glyph-info font code)
-                    (font-generate-glyph font code glyph-transformation))
-     for dx fixnum = (glyph-info-left info)
-     for dy fixnum = (glyph-info-top info)
-     for opacity-image = (glyph-info-pixarray info)
-     do
-       (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
+    with glyph-transformation = (multiple-value-bind (x0 y0)
+                                    (transform-position transformation 0 0)
+                                  (compose-translation-with-transformation
+                                   transformation (- x0) (- y0)))
+    for code across (climb:font-string-glyph-codes font string)
+    for origin-x fixnum = (round x) then (+ origin-x (glyph-info-advance-width info))
+    for origin-y fixnum = (round y) then (+ origin-y (glyph-info-advance-height info))
+    for info = (if (null transform-glyphs)
+                   (font-glyph-info font code)
+                   (font-generate-glyph font code glyph-transformation))
+    for dx fixnum = (glyph-info-left info)
+    for dy fixnum = (glyph-info-top info)
+    for opacity-image = (glyph-info-pixarray info)
+    do (let ((msheet (sheet-mirrored-ancestor (medium-sheet medium)))
              (opacity-image (make-instance 'climi::%ub8-stencil :array opacity-image))
              (transformation (make-translation-transformation origin-x origin-y)))
          (when (and msheet (sheet-mirror msheet))

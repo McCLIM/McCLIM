@@ -1,4 +1,4 @@
-(in-package :mcclim-render-internals)
+(cl:in-package #:mcclim-render-internals)
 
 (defmacro do-regions (((src-j dest-j y1s y1d y2)
                        (src-i dest-i x1s x1d x2)
@@ -37,13 +37,11 @@ top-left. Useful when we iterate over the same array and mutate its state."
     (error "mcclim-render operation: some coordinates are out of image bounds:~@
              src array ~s, P1 ~s, P2 ~s,~@
              dst array ~s, P1 ~s, P2 ~s."
-           (nreverse (array-dimensions src-array)) (cons sx sy) (cons (+ sx width) (+ sy height))
-           (nreverse (array-dimensions dst-array)) (cons dx dy) (cons (+ dx width) (+ dy height))))
-  T)
+           (reverse (array-dimensions src-array)) (cons sx sy) (cons (+ sx width) (+ sy height))
+           (reverse (array-dimensions dst-array)) (cons dx dy) (cons (+ dx width) (+ dy height))))
+  t)
 
-;;;
 ;;; color functions
-;;;
 
 (deftype octet ()
   '(unsigned-byte 8))
@@ -77,9 +75,7 @@ top-left. Useful when we iterate over the same array and mutate its state."
   (let ((temp (+ (* a b) #x80)))
     (logand #xFF (ash (+ (ash temp -8) temp) -8))))
 
-;;;
 ;;; blend functions
-;;;
 
 (declaim (inline %lerp)
          (ftype (function (octet octet octet) octet) %lerp))
@@ -107,11 +103,10 @@ top-left. Useful when we iterate over the same array and mutate its state."
                           (values octet octet octet octet))
                 octet-blend-function))
 (defun octet-blend-function (r.fg g.fg b.fg a.fg r.bg g.bg b.bg a.bg)
-  (values
-   (%byte-blend-value r.fg r.bg a.fg a.bg)
-   (%byte-blend-value g.fg g.bg a.fg a.bg)
-   (%byte-blend-value b.fg b.bg a.fg a.bg)
-   (%prelerp a.fg a.bg a.bg)))
+  (values (%byte-blend-value r.fg r.bg a.fg a.bg)
+          (%byte-blend-value g.fg g.bg a.fg a.bg)
+          (%byte-blend-value b.fg b.bg a.fg a.bg)
+          (%prelerp a.fg a.bg a.bg)))
 
 (defun octet-blend-function* (r.fg g.fg b.fg a.fg r.bg g.bg b.bg a.bg)
   (dpb (%byte-blend-value r.fg r.bg a.fg a.bg) (byte 8 24)
@@ -123,7 +118,6 @@ top-left. Useful when we iterate over the same array and mutate its state."
          (ftype (function (octet octet octet octet octet octet octet octet)
                           (values octet octet octet octet))
                 octet-rgba-blend-function))
-
 (defun octet-rgba-blend-function (r.fg g.fg b.fg a.fg r.bg g.bg b.bg a.bg)
   (octet-blend-function r.fg g.fg b.fg a.fg r.bg g.bg b.bg a.bg))
 
@@ -132,33 +126,27 @@ top-left. Useful when we iterate over the same array and mutate its state."
                           (values octet octet octet))
                 octet-rgb-blend-function))
 (defun octet-rgb-blend-function (r.fg g.fg b.fg a.fg r.bg g.bg b.bg)
-  (values
-   (%byte-blend-value r.fg r.bg a.fg 255)
-   (%byte-blend-value g.fg g.bg a.fg 255)
-   (%byte-blend-value b.fg b.bg a.fg 255)))
+  (values (%byte-blend-value r.fg r.bg a.fg 255)
+          (%byte-blend-value g.fg g.bg a.fg 255)
+          (%byte-blend-value b.fg b.bg a.fg 255)))
 
 (declaim (inline octet-gray-blend-function)
-         (ftype (function (octet octet octet)
-                          octet)
+         (ftype (function (octet octet octet) octet)
                 octet-gray-blend-function))
 (defun octet-gray-blend-function (g.fg a.fg g.bg)
   (%byte-blend-value g.fg g.bg a.fg 255))
 
 (declaim (inline octet-alpha-blend-function)
-         (ftype (function (octet octet)
-                          octet)
+         (ftype (function (octet octet) octet)
                 octet-alpha-blend-function))
 (defun octet-alpha-blend-function (a.fg a.bg)
   (%prelerp a.fg a.bg a.bg))
 
-;;;
 ;;; conversion
-;;;
 
 (defgeneric color->octets (color)
   (:method ((color standard-color))
-    (multiple-value-bind (r g b)
-        (climi::color-rgb color)
+    (multiple-value-bind (r g b) (climi::color-rgb color)
       (values (color-value->octet r)
               (color-value->octet g)
               (color-value->octet b)))))
@@ -173,24 +161,19 @@ top-left. Useful when we iterate over the same array and mutate its state."
   (values red green blue))
 
 (declaim (inline rgba->gray)
-         (ftype (function (octet octet octet octet)
-                          octet)
-                rgba->gray))
+         (ftype (function (octet octet octet octet) octet) rgba->gray))
 (defun rgba->gray (red green blue alpha)
   (declare (ignore alpha))
   (values (round (+ red green blue) 3)))
 
 (declaim (inline rgba->gray-alpha)
-         (ftype (function (octet octet octet octet)
-                          (values octet octet))
+         (ftype (function (octet octet octet octet) (values octet octet))
                 rgba->gray-alpha))
 (defun rgba->gray-alpha (red green blue alpha)
   (values (round (+ red green blue) 3) alpha))
 
 (declaim (inline rgba->alpha)
-         (ftype (function (octet octet octet octet)
-                          octet)
-                rgba->alpha))
+         (ftype (function (octet octet octet octet) octet) rgba->alpha))
 (defun rgba->alpha (red green blue alpha)
   (declare (ignore red green blue))
   alpha)
@@ -219,23 +202,18 @@ top-left. Useful when we iterate over the same array and mutate its state."
 
 ;;; gray->
 (declaim (inline gray->rgba)
-         (ftype (function (octet)
-                          (values octet octet octet octet))
+         (ftype (function (octet) (values octet octet octet octet))
                 gray->rgba))
 (defun gray->rgba (gray)
   (values gray gray gray 255))
 
 (declaim (inline gray->rgb)
-         (ftype (function (octet)
-                          (values octet octet octet))
-                gray->rgb))
+         (ftype (function (octet) (values octet octet octet)) gray->rgb))
 (defun gray->rgb (gray)
   (values gray gray gray))
 
 (declaim (inline gray->alpha)
-         (ftype (function (octet)
-                          octet)
-                gray->alpha))
+         (ftype (function (octet) octet) gray->alpha))
 (defun gray->alpha (gray)
   gray)
 
