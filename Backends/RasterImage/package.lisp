@@ -13,7 +13,6 @@
 		  #:port-lookup-sheet
 		  #:destroy-mirror
 		  #:realize-mirror
-		  #:unmanaged-top-level-sheet-pane
 		  #:vbox-pane
 		  )
     (:import-from :mcclim-render-internals

@@ -232,7 +232,7 @@ use condition-variables nor locks."))
       ;; Resize event compression
       ;;
       (window-configuration-event
-       (when (typep (event-sheet item) 'top-level-sheet-pane)
+       (when (typep (event-sheet item) 'top-level-sheet-mixin)
          (let ((sheet (event-sheet item)))
            (event-delete-if
             #'(lambda (ev)

@@ -214,7 +214,7 @@
 				    :structure-notify)
                       :map (sheet-enabled-p sheet)))
 
-(defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
   (let* ((q (compose-space sheet))
          (window (realize-mirror-aux
                   port sheet
@@ -234,7 +234,7 @@
                           :WM_CLIENT_LEADER (list (xlib:window-id window))
                           :WINDOW 32)))
 
-(defmethod %realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet unmanaged-sheet-mixin))
   (realize-mirror-aux port sheet
 		      :override-redirect :on
                       :save-under :on
@@ -347,7 +347,7 @@
 ;; Top-level-sheet
 
 ;; this is evil.
-(defmethod allocate-space :after ((pane top-level-sheet-pane) width height)
+(defmethod allocate-space :after ((pane top-level-sheet-mixin) width height)
   (when (sheet-direct-xmirror pane)
     (with-slots (space-requirement) pane
       '(setf (xlib:wm-normal-hints (sheet-direct-xmirror pane))

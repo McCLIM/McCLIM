@@ -31,6 +31,8 @@
                 ;;
                 #:border-pane
                 #:pixmap
+                #:top-level-sheet-mixin
+                #:unmanaged-sheet-mixin
                 #:top-level-sheet-pane
                 #:unmanaged-top-level-sheet-pane
                 #:menu-frame

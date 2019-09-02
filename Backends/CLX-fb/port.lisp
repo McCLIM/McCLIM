@@ -55,7 +55,7 @@
                       :border-width 0
                       :map (sheet-enabled-p sheet)))
 
-(defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet top-level-sheet-pane))
+(defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet top-level-sheet-mixin))
   (let ((q (compose-space sheet)))
     (let ((frame (pane-frame sheet))
           (window (clim-clx::realize-mirror-aux port sheet
@@ -75,7 +75,7 @@
                             :WM_CLIENT_LEADER (list (xlib:window-id window))
                             :WINDOW 32))))
 
-(defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet unmanaged-top-level-sheet-pane))
+(defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet unmanaged-sheet-mixin))
   (clim-clx::realize-mirror-aux port sheet
 		      :event-mask *event-mask*
 		      :override-redirect :on
