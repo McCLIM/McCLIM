@@ -6,7 +6,8 @@
                #:cl-unicode
                #:mcclim-backend-common
                #:mcclim-fonts
-               #:cl-vectors)
+               #:cl-vectors
+               #:log4cl)
   :serial t
   :components
   ((:module "basic" :pathname "" :components
