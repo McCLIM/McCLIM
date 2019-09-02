@@ -44,7 +44,7 @@
                    (color-octet-xor r.fg r.bg)
                    (color-octet-xor g.fg g.bg)
                    (color-octet-xor b.fg b.bg)
-                   (%octet-mult a.fg alpha)
+                   (octet-mult a.fg alpha)
                    r.bg g.bg b.bg a.bg))))))))
 
 (defun aa-render-alpha-draw-fn (image clip-region)
