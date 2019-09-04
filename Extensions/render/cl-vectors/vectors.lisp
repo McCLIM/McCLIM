@@ -57,36 +57,31 @@
                                     (line-style-cap-shape line-style))))
 
 (defun aa-cells-sweep/rectangle (image ink state clip-region)
-  (let ((current-clip-region (if (rectanglep clip-region)
-                                 nil
-                                 clip-region)))
+  (let* ((complex-clip-region (if (rectanglep clip-region)
+                                  nil
+                                  clip-region))
+         (draw-function (if (typep ink 'standard-flipping-ink)
+                            (aa-render-xor-draw-fn image complex-clip-region ink)
+                            (aa-render-draw-fn image complex-clip-region ink))))
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y) clip-region
       (%aa-cells-sweep/rectangle state
                                  (floor min-x)
                                  (floor min-y)
                                  (ceiling max-x)
                                  (ceiling max-y)
-                                 (if (typep ink 'standard-flipping-ink)
-                                     (aa-render-xor-draw-fn image current-clip-region ink)
-                                     (aa-render-draw-fn image current-clip-region ink))))))
+                                 draw-function))))
 
-;;; XXX: ink is not used
-(defun aa-cells-alpha-sweep/rectangle (image ink state clip-region)
-  (let ((draw-function nil)
-        (current-clip-region
-         (if (rectanglep clip-region)
-             nil
-             clip-region)))
-    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-        clip-region
-      (setf draw-function
-            (aa-render-alpha-draw-fn image current-clip-region))
+(defun aa-cells-alpha-sweep/rectangle (image state clip-region)
+  (let ((draw-function (aa-render-alpha-draw-fn image (if (rectanglep clip-region)
+                                                          nil
+                                                          clip-region))))
+    (clim:with-bounding-rectangle* (min-x min-y max-x max-y) clip-region
       (%aa-cells-sweep/rectangle state
-                                (floor min-x)
-                                (floor min-y)
-                                (ceiling max-x)
-                                (ceiling max-y)
-                                draw-function))))
+                                 (floor min-x)
+                                 (floor min-y)
+                                 (ceiling max-x)
+                                 (ceiling max-y)
+                                 draw-function))))
 
 (defun aa-stroke-paths (medium image design paths line-style state transformation clip-region)
   (vectors::state-reset state)
@@ -103,36 +98,37 @@
   (aa-update-state state paths transformation)
   (aa-cells-sweep/rectangle image design state clip-region))
 
-(defun %aa-scanline-sweep (scanline function &key start end)
+(defun %aa-scanline-sweep (scanline function start end)
   "Call FUNCTION for each pixel on the polygon covered by
 SCANLINE. The pixels are scanned in increasing X. The sweep can
 be limited to a range by START (included) or/and END (excluded)."
   (declare (optimize speed (debug 0) (safety 0) (space 2))
-           (type (function (fixnum fixnum fixnum) *) function))
-  (let ((x-min (aa::cell-x (car scanline)))
-        (x-max (aa::cell-x (car scanline)))
-        (cover 0)
-        (y (aa::scanline-y scanline))
-        (cells scanline)
-        (last-x nil))
-    (when start
-      ;; skip initial cells that are before START
-      (loop while (and cells (< (aa::cell-x (car cells)) start))
-         do (incf cover (aa::cell-cover (car cells)))
-         (setf last-x (aa::cell-x (car cells))
-               cells (cdr cells))))
+           (type (function (fixnum fixnum fixnum) *) function)
+           (type fixnum start end))
+  (let* ((x-min (max start (aa::cell-x (first scanline))))
+         (x-max x-min)
+         (cover 0)
+         (y (aa::scanline-y scanline))
+         (cells scanline)
+         (last-x nil))
+    (declare (type (or null fixnum) x-min x-max last-x))
+    ;; skip initial cells that are before START
+    (loop while (and cells (< (aa::cell-x (car cells)) start))
+          do (incf cover (aa::cell-cover (car cells)))
+             (setf last-x (aa::cell-x (car cells))
+                   cells (cdr cells)))
     (when cells
       (dolist (cell cells)
         (let ((x (aa::cell-x cell)))
           (when (and last-x (> x (1+ last-x)))
             (let ((alpha (aa::compute-alpha cover 0)))
               (unless (zerop alpha)
-                (let ((start-x (if start (max start (1+ last-x)) (1+ last-x)))
-                      (end-x (if end (min end x) x)))
-                  (setf x-min (min x-min start-x))
+                (let ((start-x (max start (1+ last-x)))
+                      (end-x   (min end x)))
+                  ; (setf x-min (max x-min start-x))
                   (setf x-max (max x-max end-x))
                   (loop for ix from start-x below end-x
-                     do (funcall function ix y alpha))))))
+                        do (funcall function ix y alpha))))))
           (when (and end (>= x end))
             (return (values x-min x-max)))
           (incf cover (aa::cell-cover cell))
@@ -155,13 +151,14 @@ non-empty region.)"
         (y-min y2)
         (y-max y1))
     (dolist (scanline scanlines)
-      (setf y-min (min y-min (aa::scanline-y scanline)))
-      (setf y-max (max y-max (aa::scanline-y scanline)))
-      (when (<= y1 (aa::scanline-y scanline) (1- y2))
-        (multiple-value-bind (xa xb)
-            (%aa-scanline-sweep scanline function :start x1 :end x2)
-          (setf x-min (min x-min xa))
-          (setf x-max (max x-max xb)))))
+      (let ((y (aa::scanline-y scanline)))
+        (when (<= y1 y (1- y2))
+          (setf y-min (min y-min y))
+          (setf y-max (max y-max y))
+          (multiple-value-bind (xa xb)
+              (%aa-scanline-sweep scanline function x1 x2)
+            (setf x-min (min x-min xa))
+            (setf x-max (max x-max xb))))))
     (make-rectangle* x-min y-min x-max y-max)))
 
 (declaim (inline aa-line-f))
