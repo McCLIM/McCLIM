@@ -2,7 +2,11 @@
 
 (defsystem #:mcclim-render
   :description "Support for raster images McCLIM."
-  :depends-on (#:clim-basic #:mcclim-fonts/truetype #:cl-vectors)
+  :depends-on (#:alexandria
+               #:clim-basic
+               #:mcclim-fonts/truetype
+               #:mcclim-backend-common
+               #:cl-vectors)
   :serial t
   :components ((:file "package")
                (:file "utilities")
