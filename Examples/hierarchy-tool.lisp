@@ -8,6 +8,9 @@
   (lambda (pane region)
     (declare (ignore region))
     (with-bounding-rectangle* (x1 y1 x2 y2) pane
+      (if (eql pane (port-keyboard-input-focus (port pane)))
+          (draw-rectangle* pane x1 y1 x2 y2 :ink +dark-goldenrod+)
+          (draw-rectangle* pane x1 y1 x2 y2 :ink +grey+))
       (draw-rectangle* pane x1 y1 x2 y2
                        :ink (if (typep pane 'clim:mirrored-sheet-mixin)
                                 clim:+dark-red+
@@ -17,13 +20,26 @@
                                          (make-rectangle* (+ x1 10) (+ y1 10)
                                                           (- x2 10) (- y2 10))))
       (draw-rectangle* pane x1 y1 x2 y2 :filled nil)
-      (draw-circle* pane (/ (- x2 x1) 2) (/ (- y2 y1) 2) 15
+      (let ((cx (/ (- x2 x1) 2))
+            (cy (/ (- y2 y1) 2)))
+        (draw-circle* pane cx cy 15
+                      :ink (if (slot-value pane 'state)
+                               clim:+yellow+
+                               clim:+blue+))
+        (draw-text* pane (format nil "~a" (slot-value pane 'kchar))
+                    cx cy :align-x :center :align-y :center
                     :ink (if (slot-value pane 'state)
-                             clim:+yellow+
-                             clim:+blue+))
-      (draw-text* pane
-                  name
-                  (+ x1 10) (+ y1 10) :align-y :top))))
+                             clim:+blue+
+                             clim:+yellow+)
+                    :text-size :large
+                    :text-face :bold))
+      (draw-text* pane name (+ x1 10) (+ y1 10) :align-y :top)
+      (draw-text* pane (format nil "~a" (slot-value pane 'counter))
+                  (- x2 10) (+ y1 10)
+                  :align-y :top
+                  :align-x :right
+                  :ink clim:+blue+
+                  :text-family :fix))))
 
 ;;; 1. If none of the panes is stream-input-pane then keystroke gestures doesn't
 ;;; work.
@@ -33,6 +49,8 @@
 
 (defclass layout-protocol-gadget (clim:basic-gadget)
   ((state :initform nil)
+   (kchar :initform "X")
+   (counter :initform 0)
    (repaint-function :initarg :repaint-function :initform (error "no repaint function"))))
 
 (defclass layout-protocol-gadget* (layout-protocol-gadget)
@@ -43,11 +61,26 @@
 
 (defmethod handle-event ((sheet layout-protocol-gadget) (event pointer-enter-event))
   (setf (slot-value sheet 'state) t)
+  (incf (slot-value sheet 'counter))
   (handle-repaint sheet +everywhere+))
 
 (defmethod handle-event ((sheet layout-protocol-gadget) (event pointer-exit-event))
   (setf (slot-value sheet 'state) nil)
+  (decf (slot-value sheet 'counter))
   (handle-repaint sheet +everywhere+))
+
+(defmethod handle-event ((sheet layout-protocol-gadget) (event key-press-event))
+  (alexandria:when-let ((ch (keyboard-event-character event)))
+    (setf (slot-value sheet 'kchar) ch)
+    (handle-repaint sheet +everywhere+)))
+
+(defmethod handle-event ((sheet layout-protocol-gadget)
+                         (event clime:window-manager-focus-event))
+  (setf (port-keyboard-input-focus (port sheet)) sheet))
+
+
+(defmethod clime:note-input-focus-changed ((sheet layout-protocol-gadget) status)
+  (queue-repaint sheet (make-instance 'window-repaint-event :sheet sheet :region +everywhere+)))
 
 (defparameter *panes* (make-hash-table :test #'equalp))
 (defparameter *rpanes* (make-hash-table :test #'equalp))
@@ -135,7 +168,7 @@ really draw a rectangle :-)."
   "Provides ~proportional scaling wrt sheet parent (so the offset is kept - we
 need that if we want to see composite sheets."
   (compose-transformations
-   (if (climi::top-level-sheet-pane-p sheet)
+   (if (typep sheet 'clime:top-level-sheet-mixin)
        (make-scaling-transformation .8 .8)
        (sheet-transformation sheet))
    (fix-scaling sheet)))
@@ -196,47 +229,47 @@ need that if we want to see composite sheets."
         ((and fr tp)
          (draw-sheet tp))
         (t
-         (format pane "
+         (format pane "~
+This application is meant to help with debugging CLIM pane~
+hierarchies, mirrors, layout protocol and such. It may morph into~
+inspector definitions in the future. Some useful notes:
 
-This application is meant to help with debugging CLIM pane hierarchies, mirrors,
-layout protocol and such. It may morth into inspector definitions in the
-future. Some useful notes:
+- Updates to display are not automatic. Sometimes after changing size~
+of panes something change in it, but there might be extra window~
+configuration event from display server later which change more. To~
+have the newest preview of pane hierarchy press C-r.
 
-- Updates to display are not automatic. Sometimes after changing size of panes
-something change in it, but there might be extra window configuration event from
-display server later which change more. To have the newest preview of pane
-hierarchy press C-r.
+- Proportions are little distorted to show composite panes surrounding~
+their children. Nested scaling and translation transformations are~
+involved (deeper in the hierarchy bigger the distortion is).
 
-- Proportions are little distorted to show composite panes surrounding their
-children. Some scaling and translation is involved (deeper in the hierarchy
-bigger the distortion is).
+- If the sheet is mirrored it is drawn with a red border. Otherwise a~
+green border is used. If background is grey then sheet is a composite~
+pane, if the background is white it is not.
 
-- If sheet is mirrored it is drawn with red border. Otherwise green border is
-used. If background is grey then sheet is a composite pane, if the background is
-white it is not.
+- Limited drag and drop functionality is present. Drag the pane label~
+to move the pane itself, drag a circle at lower right corner to~
+resize it. Note, that due to a distortion you won't get exact~
+coordinates you have dragged to. This fixable with untransforming~
+positions. Actual resize and move point will be slightly off.
 
-- Some drag and drop support is provided. Drag pane label to move the pane
-itself, drag circle at lower right corner to resize it. Note that due to
-distortion you won't get exact coordinates you have dragged to. This could be
-fixed with untransforming positions, but it's not worth it at this point of
-time. Actual resize and move point will be a little off (but just a little).
+- Resizing and moving panes doesn't invoke layout protocol. The~
+exception is size change of the top level sheet (the topmost window).
 
-- Resizing and moving panes doesn't invoke layout protocol. The exception is
-size change of the top-level-sheet-pane (the topmost window).
+- Application which starts should react on mouse moving over the~
+panes (circle should be yellow if pointer is above the~
+sheet). Clicking on the sheet activates its keyboard focus. Inside~
+the circle the last typed keyboard character is printed. On the top~
+right corner a balance of enter/exit events is displayed.
 
-- To make CLX-fb button working load system mcclim-clx-fb. This should load
-backend definitions. First button should work right of the bat if you run on
-Linux.
-
-- Application which starts should react on mouse moving over the panes (circle
-should be yellow if pointer is above the sheet).
-
-- Clip children toggle button is used to limit drawing space to the parent area
-in the representation (this should be the case for \"real\" drawing too."))))))
+- Clip children toggle button is used to limit drawing space to the~
+parent area in the representation (this should be the case for~
+\"real\" drawing too."))))))
 
 (defun mb (name path)
-  "Helper creating a button which starts the application and dispatching
-refresh-event to redisplay pane hierarchy when we start new application."
+  "Helper creating a button which starts the application and
+dispatching refresh-event to redisplay pane hierarchy when we start
+new application."
   (make-pane :push-button :label name
              :activate-callback
              (let ((hfr *application-frame*))
@@ -260,8 +293,9 @@ refresh-event to redisplay pane hierarchy when we start new application."
   ((frame :initform nil :initarg :iframe :accessor inspected-frame)
    (clipp :initform nil :accessor clipped-hierarchy)
    (native :initform nil :accessor native-hierarchy))
-  (:panes (app :application :display-function 'display-hierarchy-tool :scroll-bars nil
-               :width 800 :height 600)
+  (:panes (app :application :display-function 'display-hierarchy-tool
+               :scroll-bars t :end-of-line-action :wrap*
+               :width 620 :height 620)
           (buttons
            (vertically ()
              (mb "Run CLX (full)" '(:clx :mirroring :full))
@@ -293,7 +327,7 @@ refresh-event to redisplay pane hierarchy when we start new application."
                 (vertically ()
                   (horizontally ()
                     (200 buttons)
-                    (scrolling (:width 1280 :height 800) app))
+                    app)
                   (150 interactor))))
   (:menu-bar nil))
 
