@@ -171,7 +171,7 @@ Example:
       (present-place stream)
       (present-object stream)))"))
 
-(defgeneric note-object-occurence (object state presentation stream)
+(defgeneric note-object-occurrence (object state presentation stream)
   (:documentation
    "Note that PRESENTATION is a representation of OBJECT in STREAM.
 
@@ -217,13 +217,13 @@ occurrences of objects so the circularity can be indicated."))
                                (*parent-place* place))
                            (inspect-object-using-state
                             object state style stream)))))
-    (note-object-occurence object state presentation stream)
+    (note-object-occurrence object state presentation stream)
     state))
 
-(defmethod note-object-occurence ((object       t)
-                                  (state        t)
-                                  (presentation t)
-                                  (stream       t))
+(defmethod note-object-occurrence ((object       t)
+                                   (state        t)
+                                   (presentation t)
+                                   (stream       t))
   ;; Slight optimization: for the first occurrence of, put
   ;; PRESENTATION instead of a list into the hash-table. When
   ;; encountering a second occurrence, replace the presentation with a
