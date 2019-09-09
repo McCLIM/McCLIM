@@ -713,6 +713,8 @@ object types to Clouseau:
 
 @include docstrings/fun-clouseau-inspect-object-using-state.texi
 
+@include docstrings/fun-clouseau-note-object-occurrence.texi
+
 @include docstrings/macro-clouseau-formatting-place.texi
 
 @include docstrings/fun-clouseau-format-place-cells.texi
