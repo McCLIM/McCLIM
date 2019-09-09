@@ -326,8 +326,9 @@
           ((not (setf slots (c2mop:class-slots object)))
            "No slots~%")
           (t
-           (with-drawing-options (stream :text-size :smaller)
-             (inspect-effective-slot-list object slots stream)))))))
+           (without-noting-object-occurrences ()
+             (with-drawing-options (stream :text-size :smaller)
+               (inspect-effective-slot-list object slots stream))))))))
 
   (with-section (stream) "Specializer usage"
     (let ((methods (c2mop:specializer-direct-methods object)))
@@ -335,9 +336,10 @@
         ((not methods)
          "Not used as a specializer~%")
         (t
-         (with-drawing-options (stream :text-size :smaller)
-           (inspect-method-list nil methods stream
-                                :generic-function-name t))))))
+         (without-noting-object-occurrences ()
+           (with-drawing-options (stream :text-size :smaller)
+             (inspect-method-list nil methods stream
+                                  :generic-function-name t)))))))
 
   (call-next-method))
 

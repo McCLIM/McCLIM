@@ -289,6 +289,12 @@
      :stream stream :graph-type :digraph :merge-duplicates t
      :maximize-generations t :arc-drawer #'draw-arc)))
 
+;;; No circularity tracking for NIL.
+(defmethod note-object-occurrence ((object       null)
+                                   (state        inspected-object)
+                                   (presentation t)
+                                   (stream       t)))
+
 ;;; Commands
 
 (define-command (com-cons-style-as-list :command-table inspector-command-table
