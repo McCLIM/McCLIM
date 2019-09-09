@@ -94,7 +94,10 @@
    #:inspect-place
    #:inspect-object
    #:inspect-object-using-state
-   #:note-object-occurrence)
+
+   #:note-object-occurrence
+   #:call-without-noting-occurrences
+   #:without-noting-occurrences)
 
   ;; Inspector state protocol
   (:export
