@@ -189,13 +189,12 @@
       (let* ((menu-stream (make-pane-1 fm associated-frame 'menu-pane))
              (container (scrolling (:scroll-bar scroll-bars)
                           menu-stream))
-             (frame (make-menu-frame (raising ()
-                                       (if label
-                                           (labelling (:label label
-                                                       :name 'label
-                                                       :label-alignment :top)
-                                             container)
-                                           container))
+             (frame (make-menu-frame (if label
+                                         (labelling (:label label
+                                                     :name 'label
+                                                     :label-alignment :top)
+                                           container)
+                                         container)
                                      :left nil
                                      :top nil)))
         (adopt-frame fm frame)

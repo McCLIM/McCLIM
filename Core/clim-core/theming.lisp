@@ -1,7 +1,4 @@
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Themes
-;;;   Created: 2020-06-26 15:00
-;;;    Author: Daniel Kochmański <daniel@turtleware.eu>
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -20,7 +17,6 @@
 
 ;;; Default Color Scheme Options
 
-
 ;;; Motif-ish
 ;;;
 ;;; (defparameter *3d-dark-color*   (make-gray-color .45))
@@ -34,6 +30,7 @@
 (defparameter *3d-normal-color* (make-gray-color .84))
 (defparameter *3d-light-color*  (make-gray-color 1.0))
 (defparameter *3d-inner-color*  (make-gray-color .75))
+(defparameter *highlight-color* (make-rgb-color .2 .3 .8)) ; Gtk-ish blue
 
 ;;;
 ;;; gadget's colors
@@ -76,7 +73,7 @@
                   (pane-background gadget))))
 
 (defgeneric effective-gadget-foreground (gadget)
-  (:method  ((gadget gadget))
+  (:method ((gadget gadget))
     (if (gadget-active-p gadget)
         +foreground-ink+
         (compose-over (compose-in (pane-foreground gadget)
@@ -84,13 +81,13 @@
                       (pane-background gadget)))))
 
 (defgeneric effective-gadget-background (gadget)
-  (:method  ((gadget gadget))
+  (:method ((gadget gadget))
     (if (slot-value gadget 'armed)
         (gadget-highlight-background gadget)
         (pane-background gadget))))
 
 (defgeneric effective-gadget-input-area-color (gadget)
-  (:method  ((gadget gadget))
+  (:method ((gadget gadget))
     (if (gadget-active-p gadget)
         +lemonchiffon+
         (compose-over (compose-in +lemonchiffon+ (make-opacity .5))
@@ -118,15 +115,13 @@
 ;;;
 ;;; --GB
 
-(defparameter *3d-border-thickness* 2)
-
 (defclass 3D-border-mixin ()
   ((border-width :initarg :border-width :initform 2)
    (border-style :initarg :border-style :initform :outset)
    (border-color :initarg :border-color :initform "???")))
 
 (defgeneric pane-inner-region (pane)
-  (:method  ((pane 3D-border-mixin))
+  (:method ((pane 3D-border-mixin))
     (with-slots (border-width) pane
       (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
         (make-rectangle* (+ x1 border-width) (+ y1 border-width)
@@ -144,8 +139,6 @@
 ;; DRAW-BORDERED-POLYGON medium point-seq &key border-width style
 ;;
 ;; -GB
-(defgeneric compose-label-space (gadget &key wider higher))
-(defgeneric draw-label* (pane x1 y1 x2 y2 &key ink))
 
 (labels ((line-hnf (x1 y1 x2 y2)
            (values (- y2 y1) (- x1 x2) (- (* x1 y2) (* y1 x2))))
@@ -174,10 +167,10 @@
              (let* ((min-i 0)
                     (min-val (point-x (elt point-seq min-i))))
                ;;
-               (loop for i from 1 below n do
-                 (when (< (point-x (elt point-seq i)) min-val)
-                   (setf min-val (point-x (elt point-seq i))
-                         min-i i)))
+               (loop for i from 1 below n
+                     do (when (< (point-x (elt point-seq i)) min-val)
+                          (setf min-val (point-x (elt point-seq i))
+                                min-i i)))
                ;;
                (let ((p0 (elt point-seq (mod (+ min-i -1) n)))
                      (p1 (elt point-seq (mod (+ min-i 0) n)))
@@ -196,7 +189,7 @@
                          for p1 = (elt point-seq (mod (+ i 0) n))
                          unless (and (< (abs (- (point-x p0) (point-x p1))) 10e-8)
                                      (< (abs (- (point-y p0) (point-y p1))) 10e-8))
-                           collect p1)))
+                         collect p1)))
            ;; second step: remove colinear points
            (setf point-seq
                  (let ((n (length point-seq)))
@@ -207,7 +200,7 @@
                          unless (< (abs (- (* (- (point-x p1) (point-x p0)) (- (point-y p2) (point-y p0)))
                                            (* (- (point-x p2) (point-x p0)) (- (point-y p1) (point-y p0)))))
                                    10e-8)
-                           collect p1)))
+                         collect p1)))
            ;; third step: care for the orientation
            (if (and (not (null point-seq))
                     (minusp (polygon-orientation point-seq)))
@@ -224,34 +217,34 @@
                for p1 = (elt point-seq (mod (+ i  0) n))
                for p2 = (elt point-seq (mod (+ i +1) n))
                collect
-               (let* ((dx1 (- (point-x p1) (point-x p0)))
-                      (dy1 (- (point-y p1) (point-y p0)))
-                      (dx2 (- (point-x p2) (point-x p1)))
-                      (dy2 (- (point-y p2) (point-y p1)))
-                      ;;
-                      (m1  (/ width (sqrt (+ (* dx1 dx1) (* dy1 dy1)))))
-                      (m2  (/ width (sqrt (+ (* dx2 dx2) (* dy2 dy2)))))
-                      ;;
-                      (q0  (make-point (+ (point-x p0) (* m1 dy1))
-                                       (- (point-y p0) (* m1 dx1))))
-                      (q1  (make-point (+ (point-x p1) (* m1 dy1))
-                                       (- (point-y p1) (* m1 dx1))))
-                      (q2  (make-point (+ (point-x p1) (* m2 dy2))
-                                       (- (point-y p1) (* m2 dx2))))
-                      (q3  (make-point (+ (point-x p2) (* m2 dy2))
-                                       (- (point-y p2) (* m2 dx2)))) )
-                 ;;
-                 (multiple-value-bind (x y)
-                     (multiple-value-call #'line-line-intersection
-                       (point-position q0) (point-position q1)
-                       (point-position q2) (point-position q3))
-                   (if x
-                       (make-point x y)
-                       (make-point 0 0)))))))))
+                  (let* ((dx1 (- (point-x p1) (point-x p0)))
+                         (dy1 (- (point-y p1) (point-y p0)))
+                         (dx2 (- (point-x p2) (point-x p1)))
+                         (dy2 (- (point-y p2) (point-y p1)))
+                         ;;
+                         (m1  (/ width (sqrt (+ (* dx1 dx1) (* dy1 dy1)))))
+                         (m2  (/ width (sqrt (+ (* dx2 dx2) (* dy2 dy2)))))
+                         ;;
+                         (q0  (make-point (+ (point-x p0) (* m1 dy1))
+                                          (- (point-y p0) (* m1 dx1))))
+                         (q1  (make-point (+ (point-x p1) (* m1 dy1))
+                                          (- (point-y p1) (* m1 dx1))))
+                         (q2  (make-point (+ (point-x p1) (* m2 dy2))
+                                          (- (point-y p1) (* m2 dx2))))
+                         (q3  (make-point (+ (point-x p2) (* m2 dy2))
+                                          (- (point-y p2) (* m2 dx2)))) )
+                    ;;
+                    (multiple-value-bind (x y)
+                        (multiple-value-call #'line-line-intersection
+                          (point-position q0) (point-position q1)
+                          (point-position q2) (point-position q3))
+                      (if x
+                          (make-point x y)
+                          (make-point 0 0)))))))))
 
   (defun draw-bordered-polygon (medium point-seq
                                 &key (border-width 2)
-                                  (style        :inset))
+                                     (style        :inset))
     (labels ((draw-pieces (outer-points inner-points dark light)
                (let ((n (length outer-points)))
                  (dotimes (i n)
@@ -327,14 +320,14 @@
                (multiple-value-bind (outer-points omiddle-points)
                    (shrink-polygon point-seq (* 1/3 border-width))
                  (draw-pieces outer-points omiddle-points +black+ +black+)
-                 (draw-pieces imiddle-points inner-points +black+ +black+))))))))) 
+                 (draw-pieces imiddle-points inner-points +black+ +black+))))))))))
 
-  (defun draw-bordered-rectangle* (medium x1 y1 x2 y2 &rest options)
-    (apply #'draw-bordered-polygon
-           medium
-           (polygon-points (make-rectangle* x1 y1 x2 y2))
-           options))
+(defun draw-bordered-rectangle* (medium x1 y1 x2 y2 &rest options)
+  (apply #'draw-bordered-polygon
+         medium
+         (polygon-points (make-rectangle* x1 y1 x2 y2))
+         options))
 
-  (defun draw-engraved-label* (pane x1 y1 x2 y2)
-    (draw-label* pane (1+ x1) (1+ y1) (1+ x2) (1+ y2) :ink *3d-light-color*)
-    (draw-label* pane x1 y1 x2 y2 :ink *3d-dark-color*)))
+(defun draw-engraved-label* (pane x1 y1 x2 y2)
+  (draw-label* pane (1+ x1) (1+ y1) (1+ x2) (1+ y2) :ink *3d-light-color*)
+  (draw-label* pane x1 y1 x2 y2 :ink *3d-dark-color*))

@@ -100,12 +100,6 @@
         (sheet-children (first (sheet-children (frame-panes submenu-frame))))
         '())))
 
-(defclass submenu-border (border-pane) ())
-
-(defclass submenu-border-pane (raised-pane)
-  ()
-  (:default-initargs :border-width 2 :background *3d-normal-color*))
-
 (defun make-menu-buttons (command-table-name client)
   "Map over the available menu items in the command table with
 name `command-table-name', taking inherited menu items into
@@ -126,8 +120,7 @@ account, and create a list of menu buttons."
          (command-table-name (slot-value sub-menu 'command-table))
          (items (make-menu-buttons command-table-name client))
          (rack (make-pane-1 manager frame 'vrack-pane
-                            :background *3d-normal-color* :contents items))
-         (raised (make-pane-1 manager frame 'submenu-border :contents (list rack))))
+                            :background *3d-normal-color* :contents items)))
     (with-slots (bottomp) sub-menu
       (with-bounding-rectangle* (xmin ymin xmax ymax) (sheet-region sub-menu)
         (multiple-value-bind (x y)
@@ -136,10 +129,10 @@ account, and create a list of menu buttons."
                                 (if bottomp ymax ymin))
           (with-slots (frame-manager submenu-frame) sub-menu
             (setf frame-manager manager
-                  submenu-frame (make-menu-frame raised :left x :top y))
+                  submenu-frame (make-menu-frame rack :left x :top y))
             (adopt-frame manager submenu-frame)
             (enable-frame submenu-frame)
-            (with-sheet-medium (medium raised)
+            (with-sheet-medium (medium rack)
               (medium-force-output medium))))))))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
@@ -155,8 +148,9 @@ account, and create a list of menu buttons."
   (with-slots (client frame-manager submenu-frame) sub-menu
     (arm-menu client)
     (if submenu-frame
-        (progn (mapc #'destroy-substructure (menu-children sub-menu))
-               (mapc #'disarm-menu (menu-children sub-menu)))
+        (let ((children (menu-children sub-menu)))
+          (mapc #'destroy-substructure children)
+          (mapc #'disarm-menu children))
         (progn
           (mapc #'destroy-substructure (menu-children client))
           (create-substructure sub-menu sub-menu)))
@@ -252,7 +246,8 @@ account, and create a list of menu buttons."
                                         &key (bottomp nil)
                                              (vertical nil)
                                              command-table
-                                             (presentation-type 'menu-item))
+                                             (presentation-type 'menu-item)
+                                             (background *3d-normal-color*))
   (declare (ignore command-table))
   (let* ((name (command-menu-item-name item))
          (type (command-menu-item-type item))
@@ -263,6 +258,7 @@ account, and create a list of menu buttons."
     (flet ((make-sub-pane (class &rest initargs &key &allow-other-keys)
              (apply #'make-pane-1 manager frame class
                     :label name :client client :text-style text-style
+                    :background background
                     initargs)))
       (case type
         (:command
@@ -308,7 +304,8 @@ account, and create a list of menu buttons."
 
 (defclass menu-bar (hrack-pane)
   ((items :initform nil)
-   (armed :initform nil)))
+   (armed :initform nil))
+  (:default-initargs :x-spacing 8))
 
 (defmethod (setf %pane-contents) :after (contents (pane menu-bar))
   (declare (ignore contents))
@@ -339,7 +336,9 @@ account, and create a list of menu buttons."
                            item client
                            :bottomp t
                            :vertical nil
-                           :command-table command-table))
+                           :command-table command-table
+                           :background (compose-over (compose-in +black+ (make-opacity .2))
+                                                     *3d-normal-color*)))
             (list +fill+))))
 
 (defun make-menu-bar (command-table
@@ -347,7 +346,8 @@ account, and create a list of menu buttons."
                            (max-width +fill+) max-height
                            min-width min-height)
   (let ((menu-bar (make-pane-1 *pane-realizer* *application-frame* 'menu-bar
-                               :background *3d-normal-color*
+                               :background (compose-over (compose-in +black+ (make-opacity .2))
+                                                         *3d-normal-color*)
                                :width width :height height
                                :max-width max-width :max-height max-height
                                :min-width min-width :min-height min-height)))
@@ -360,15 +360,6 @@ account, and create a list of menu buttons."
     (setf (%pane-contents menu-bar-pane)
           (%make-menu-contents command-table menu-bar-pane)))
   (change-space-requirements menu-bar-pane))
-
-(defmethod handle-repaint ((pane menu-bar) region)
-  (declare (ignore region))
-  (with-slots (border-width) pane
-    (multiple-value-call #'draw-bordered-rectangle*
-      pane
-      (bounding-rectangle* (sheet-region pane))
-      :style :outset
-      :border-width 2)))
 
 (defmethod compose-space ((pane menu-bar) &key width height)
   (declare (ignore width height))

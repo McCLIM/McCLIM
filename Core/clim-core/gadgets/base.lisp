@@ -216,25 +216,27 @@
 ;;; Activation
 ;;;
 
-(defmethod activate-gadget ((gadget basic-gadget))
+(defmethod activate-gadget ((gadget gadget))
   (with-slots (active-p) gadget
     (unless active-p
       (setf active-p t)
       (note-gadget-activated (gadget-client gadget) gadget))))
 
-(defmethod deactivate-gadget ((gadget basic-gadget))
+(defmethod deactivate-gadget ((gadget gadget))
   (with-slots (active-p) gadget
     (when active-p
       (setf active-p nil)
       (note-gadget-deactivated (gadget-client gadget) gadget))))
 
-(defmethod note-gadget-activated (client gadget)
+(defmethod note-gadget-activated (client (gadget gadget))
+  (declare (ignore client))
   ;; Default: do nothing
-  (declare (ignore client gadget)))
+  )
 
-(defmethod note-gadget-deactivated (client gadget)
+(defmethod note-gadget-deactivated (client (gadget gadget))
+  (declare (ignore client))
   ;; Default: do nothing
-  (declare (ignore client gadget)))
+  )
 
 ;;;
 ;;; Value-gadget
@@ -244,9 +246,8 @@
   ((value :initarg :value
           :reader gadget-value)
    (value-changed-callback :initarg :value-changed-callback
-                           :reader gadget-value-changed-callback))
-  (:default-initargs :value nil
-                     :value-changed-callback nil))
+                           :initform nil
+                           :reader gadget-value-changed-callback)))
 
 (defmethod (setf gadget-value) (value (gadget value-gadget) &key invoke-callback)
   (declare (ignore invoke-callback))
@@ -277,8 +278,8 @@
 
 (defclass action-gadget (basic-gadget)
   ((activate-callback :initarg :activate-callback
-                      :reader gadget-activate-callback))
-  (:default-initargs :activate-callback nil))
+                      :initform nil
+                      :reader gadget-activate-callback)))
 
 (defmethod activate-callback ((gadget action-gadget) client gadget-id)
   (declare (ignore client gadget-id))
@@ -329,10 +330,12 @@
 ;;;
 
 (defclass range-gadget ()
-  ((min-value :initarg :min-value :accessor gadget-min-value)
-   (max-value :initarg :max-value :accessor gadget-max-value))
-  (:default-initargs :min-value 0
-                     :max-value 1))
+  ((min-value :initarg :min-value
+              :accessor gadget-min-value
+              :initform 0)
+   (max-value :initarg :max-value
+              :accessor gadget-max-value
+              :initform 1)))
 
 (defmethod reinitialize-instance :after ((instance range-gadget)
                                          &key (min-value nil min-value-p)
