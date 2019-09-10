@@ -213,7 +213,7 @@
                                               (style  (eql :badges))
                                               (stream t))
   (write-string " " stream)
-  (badge stream "fucallable"))
+  (badge stream "funcallable"))
 
 (defmethod inspect-object-using-state ((object c2mop:funcallable-standard-object)
                                        (state  inspected-funcallable-standard-object)
