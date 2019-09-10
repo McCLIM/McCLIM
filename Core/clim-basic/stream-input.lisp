@@ -701,20 +701,6 @@ known gestures."
 
 (defgeneric (setf pointer-cursor) (cursor pointer))
 
-;;; Should this go in sheets.lisp?  That comes before events and ports...
-
-(defmethod handle-event :before ((sheet mirrored-sheet-mixin)
-                                 (event pointer-enter-event))
-  (setf (port-pointer-sheet (port sheet)) sheet))
-
-(defmethod handle-event :before ((sheet mirrored-sheet-mixin)
-                                 (event pointer-exit-event))
-  (with-accessors ((port-pointer-sheet port-pointer-sheet))
-      (port sheet)
-    (when (eq port-pointer-sheet sheet)
-
-      (setq port-pointer-sheet nil))))
-
 (defmethod pointer-button-state ((pointer standard-pointer))
   (with-lock-held ((state-lock pointer))
     (slot-value pointer 'button-state)))
