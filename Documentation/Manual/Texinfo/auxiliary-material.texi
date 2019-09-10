@@ -212,9 +212,9 @@ busy with other projects, and nothing really moved.
 Also in 1998, Gilbert Baumann started working ``vertically'', writing a
 mostly-complete implementation of the chapters 3 (Regions) and 5 (Affine
 Transformations).  At the end of 1999, he realized that he was not going
-to be able to finish the project by himself.  He therfore posted his
+to be able to finish the project by himself.  He therefore posted his
 code to the free-@clim{} mailing list.  Gilbert's code was distributed
-according to the GNU Lesser General Public Licence (LGPL).
+according to the GNU Lesser General Public License (LGPL).
 
 Robert Strandh picked up the project in 2000, starting from Gilbert's
 code and writing large parts of chapters 7 (Properties of Sheets) and 8
@@ -230,7 +230,7 @@ Robert then spent a few months merging his code into that produced by
 Mike.
 
 Arthur Lemmens wrote the initial version of the code for the gadgets in
-june of 2000.
+June of 2000.
 
 Bordeaux students Iban Hatchondo and Julien Boninfante were hired by
 Robert for a 3-month summer project during the summer of 2000.  Their
@@ -239,7 +239,7 @@ space composition and space allocation) as well as some of the gadgets
 not already written by Arthur, in particular push buttons.  The
 calculator demo was written to show the capabilities of their code.
 
-In July of 2000, Robert invited Gilbert to the LSM-2000 metting in
+In July of 2000, Robert invited Gilbert to the LSM-2000 meeting in
 Bordeaux (libre software meeting).  This meeting is a gathering of
 developers of free software with the purpose of discussing strategy,
 planning future projects, starting new ones, and working on existing
