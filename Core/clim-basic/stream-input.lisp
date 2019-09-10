@@ -179,7 +179,8 @@ keys read."))
     :documentation "Holds the last gesture returned by stream-read-gesture
 (not peek-p), untransformed, so it can easily be unread.")))
 
-(defmethod stream-set-input-focus ((stream standard-extended-input-stream))
+;; Deliberely not specialized to work on sheets too. -- jd 2019-08-23
+(defmethod stream-set-input-focus (stream)
   (let ((port (or (port stream)
                   (port *application-frame*))))
     (prog1 (port-keyboard-input-focus port)
