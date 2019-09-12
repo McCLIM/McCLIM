@@ -148,14 +148,18 @@
 
 ;;; Badges
 
+(defparameter *badge-text-style*
+  (make-text-style nil :roman :smaller))
+
 (defun call-with-output-as-badge (thunk stream)
   (with-preserved-cursor-y (stream)
     (surrounding-output-with-border (stream :shape      :rounded
                                             :background +light-blue+
                                             :radius     2
                                             :padding    2)
-      (with-drawing-options (stream :text-face :roman :text-size :smaller)
-        (funcall thunk stream)))))
+      (with-drawing-options (stream :text-style *badge-text-style*)
+        (with-end-of-line-action (stream :allow)
+          (funcall thunk stream))))))
 
 (defmacro with-output-as-badge ((stream) &body body)
   (check-type stream symbol)

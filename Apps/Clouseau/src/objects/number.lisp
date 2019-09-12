@@ -185,3 +185,9 @@
             (draw-circle* stream 0 0 (* 0.5 magnitude)
                           :filled nil :start-angle start :end-angle end
                           :ink (make-contrasting-inks 8 4))))))))
+
+;;; No circularity tracking for numbers.
+(defmethod note-object-occurrence ((object       number)
+                                   (state        inspected-object)
+                                   (presentation t)
+                                   (stream       t)))
