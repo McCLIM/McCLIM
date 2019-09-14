@@ -8,7 +8,7 @@
                (:file "top-level-pane")
                (:file "port")
                (:file "stream")
-               (:file "output-to-png")
+               (:file "output-to-image")
                (:file "rgb-port"))
   :in-order-to ((test-op (test-op "mcclim-raster-image/test"))))
 
