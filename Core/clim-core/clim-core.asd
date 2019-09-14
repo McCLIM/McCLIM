@@ -1,5 +1,5 @@
 (defsystem #:clim-core
-  :depends-on (#:clim-basic #:clim-postscript #+sbcl (:require #:sb-introspect))
+  :depends-on (#:clim-basic #+sbcl (:require #:sb-introspect))
   :components
   ((:file "defresource")
    (:file "presentations")

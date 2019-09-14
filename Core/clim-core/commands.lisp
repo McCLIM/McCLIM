@@ -1089,21 +1089,8 @@ examine the type of the command menu item to see if it is
 	(format *debug-io* "file destination type = ~S~%" type)
 	(make-instance type-name :file path))))
 
-(defclass postscript-destination (file-destination)
-  ())
-
-(defmethod invoke-with-standard-output
-    (continuation (destination postscript-destination))
-  (call-next-method #'(lambda ()
-			(with-output-to-postscript-stream
-			    (ps-stream *standard-output*)
-			  (let ((*standard-output* ps-stream))
-			    (funcall continuation))))
-		    destination))
-
 (defparameter *output-destination-types*
   '(("File" file-destination)
-    ("Postscript File" postscript-destination)
     ("Stream" stream-destination)))
 
 (define-presentation-method accept
