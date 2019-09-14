@@ -20,6 +20,7 @@
   :components ((:module "test"
                 :serial t
                 :components ((:file "package")
-                             (:file "smoke"))))
+                             (:file "smoke")
+                             (:file "output-to-image"))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:mcclim-raster-image.test '#:run-tests)))

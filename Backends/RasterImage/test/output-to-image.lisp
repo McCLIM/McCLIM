@@ -15,18 +15,23 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:defpackage #:mcclim-raster-image.test
-  (:use
-   #:cl
-   #:alexandria
-   #:fiveam)
-
-  (:export
-   #:run-tests))
-
 (cl:in-package #:mcclim-raster-image.test)
 
-(def-suite* :mcclim-raster-image)
+(in-suite :mcclim-raster-image)
 
-(defun run-tests ()
-  (run! :mcclim-raster-image))
+(test with-output-to-raster-image.smoke
+  "Smoke test for the WITH-OUTPUT-TO-RASTER-IMAGE macro."
+
+  (flet ((do-it (width height border-width)
+           (let* ((name (format nil "with-output-to-raster-image-~A-~A-~A"
+                                width height border-width))
+                  (pathname (make-pathname :name name :type "png")))
+             (mcclim-raster-image:with-output-to-raster-image-file
+                 (stream pathname :width width
+                                  :height height
+                                  :border-width border-width)
+               (let ((*standard-output* stream))
+                 (room))))))
+    (map-product (lambda (&rest args)
+                   (finishes (apply #'do-it args)))
+                 '(60 :compute) '(60 :compute) '(0 20))))

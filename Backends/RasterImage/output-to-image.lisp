@@ -70,9 +70,9 @@
      ,@body))
 
 (defun invoke-with-output-to-raster-image (continuation enter-fn exit-fn server format
-                                           &key (width 1000) (height 1000)
+                                           &key (width :compute) (height :compute)
                                                 (border-width 0) (recording-p t))
-  (with-port (port server :width width :height height)
+  (with-port (port server :width 1 :height 1)
     (let ((top-level-sheet (make-raster-top-level-sheet port format))
           (vbox (make-instance 'vbox-pane :port port))
           (border-pane (make-instance 'climi::border-pane
@@ -82,10 +82,40 @@
       (sheet-adopt-child border-pane stream)
       (sheet-adopt-child vbox border-pane)
       (sheet-adopt-child top-level-sheet vbox)
-      (funcall enter-fn top-level-sheet stream)
       (realize-mirror port top-level-sheet)
-      (setf (sheet-region top-level-sheet)
-            (make-rectangle* 0 0 width height))
+      (funcall enter-fn top-level-sheet stream)
+
+      ;; When WIDTH or HEIGHT is :COMPUTE, render into an output
+      ;; record and use its dimensions to change the space
+      ;; requirements of STREAM. When WIDTH is :COMPUTE, do this two
+      ;; times: one time to determine the required width and a second
+      ;; time to determine the resulting height when using the
+      ;; computed width.
+      (if (or (eq width :compute) (eq height :compute))
+          (flet ((try ()
+                   (let ((record (with-output-to-output-record (stream)
+                                   (funcall continuation stream))))
+                     ;; FIXME Enlarging the space requirements a bits
+                     ;; is needed to prevent things from getting
+                     ;; clipped.
+                     (change-space-requirements
+                      stream
+                      :width (if (eq width :compute)
+                                 (+ (bounding-rectangle-width record) 2)
+                                 width)
+                      :height (if (eq height :compute)
+                                  (+ (bounding-rectangle-height record) 2)
+                                  height)))))
+            ;; Ensure STREAM's preferred width is set to something
+            ;; reasonable, then call CONTINUATION and update STREAM's
+            ;; space requirements.
+            (change-space-requirements
+             stream :width (if (eq width :compute) 1000 width))
+            (try)
+            (when (eq width :compute)
+              (try)))
+          (change-space-requirements stream))
+
       (with-output-recording-options (stream :record recording-p :draw t)
         (funcall continuation stream)
         (medium-finish-output (sheet-medium stream)))
