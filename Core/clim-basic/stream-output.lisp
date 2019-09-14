@@ -471,3 +471,54 @@ to computed distance to scroll in response to mouse wheel events."))
 
 (defmethod scroll-quantum ((sheet standard-extended-output-stream))
   (stream-line-height sheet))
+
+;;; Backend part of the output destination mechanism
+;;;
+;;; See clim-core/commands.lisp for the "user interface" part.
+
+(defgeneric invoke-with-standard-output (continuation destination)
+  (:documentation
+   "Call CONTINUATION (with no arguments) with *STANDARD-OUTPUT*
+rebound according to DESTINATION."))
+
+(defmethod invoke-with-standard-output (continuation (destination null))
+  ;; Call CONTINUATION without rebinding *STANDARD-OUTPUT* at all.
+  (funcall continuation))
+
+(defclass output-destination ()
+  ())
+
+(defclass stream-destination (output-destination)
+  ((destination-stream :accessor destination-stream
+                       :initarg :destination-stream)))
+
+(defmethod invoke-with-standard-output
+    (continuation (destination stream-destination))
+  (let ((*standard-output* (destination-stream destination)))
+    (funcall continuation)))
+
+(defclass file-destination (output-destination)
+  ((file :reader destination-file :initarg :file)))
+
+(defmethod destination-element-type ((destination file-destination))
+  :default)
+
+(defmethod invoke-with-standard-output
+    (continuation (destination file-destination))
+  (with-open-file (*standard-output* (destination-file destination)
+                                     :element-type (destination-element-type
+                                                    destination)
+                                     :direction :output
+                                     :if-exists :supersede)
+    (funcall continuation)))
+
+(defparameter *output-destination-types*
+  '(("Stream" stream-destination)))
+
+(defun register-output-destination-type (name class-name)
+  (let ((class (find-class class-name nil)))
+    (cond ((null class)
+           (error "~@<~S is not the name of a class.~@:>" class-name))
+          ((not (subtypep class #1='output-destination))
+           (error "~@<~A is not a subclass of ~S.~@:>" class #1#))))
+  (pushnew (list name class-name) *output-destination-types* :test #'equal))

@@ -2093,7 +2093,16 @@
    #:selection-object
    #:selection-object-content
    #:selection-object-type
-   #:selection-object-owner))
+   #:selection-object-owner
+   ;; command output destinations
+   #:invoke-with-standard-output
+   #:register-output-destination-type
+   #:output-destination
+   #:stream-destination
+   #:destination-stream
+   #:file-destination
+   #:destination-file
+   #:destination-element-type))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)

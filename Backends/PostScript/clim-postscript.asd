@@ -6,7 +6,6 @@
 
 (defsystem "clim-postscript"
   :depends-on ("clim-basic"
-               "clim-core"
                "clim-postscript-font")
   :serial t
   :components ((:file "package")

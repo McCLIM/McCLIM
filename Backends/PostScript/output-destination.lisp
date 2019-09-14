@@ -21,10 +21,10 @@
 
 (cl:in-package #:clim-postscript)
 
-(defclass postscript-destination (climi::file-destination)
+(defclass postscript-destination (climb:file-destination)
   ())
 
-(defmethod climi::invoke-with-standard-output
+(defmethod climb:invoke-with-standard-output
     (continuation (destination postscript-destination))
   (call-next-method (lambda ()
                       (with-output-to-postscript-stream
@@ -32,5 +32,5 @@
                         (funcall continuation)))
                     destination))
 
-(pushnew '("Postscript File" postscript-destination)
-         climi::*output-destination-types* :test #'equal)
+(climb:register-output-destination-type
+ "Postscript File" 'postscript-destination)

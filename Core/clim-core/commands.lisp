@@ -1033,76 +1033,42 @@ examine the type of the command menu item to see if it is
 			       :argument-unparser #',arg-unparser-fun-name))
 	  ',func)))))
 
-;;; define-command with output destination extension
-
-(defclass output-destination ()
-  ())
-
-(defgeneric invoke-with-standard-output (continuation destination)
-  (:documentation "Invokes `continuation' (with no arguments) with
-  *standard-output* rebound according to `destination'"))
-
-(defclass standard-output-destination (output-destination)
-  ())
-
-(defmethod invoke-with-standard-output (continuation (destination null))
-  "Calls `continuation' without rebinding *standard-output* at all."
-  (funcall continuation))
-
-(defclass stream-destination (output-destination)
-  ((destination-stream :accessor destination-stream
-		       :initarg :destination-stream)))
-
-(defmethod invoke-with-standard-output
-    (continuation (destination stream-destination))
-  (let ((*standard-output* (destination-stream destination)))
-    (funcall continuation)))
+;;; Output destination extension for DEFINE-COMMAND
+;;;
+;;; The backend part, i.e. INVOKE-WITH-STANDARD-OUTPUT and the
+;;; destination classes, is defined in clim-basic/stream-output.lisp.
 
 (define-presentation-method accept
     ((type stream-destination) stream (view textual-view)
-     &key)
-  (let ((dest (eval (accept 'form
-			    :stream stream
-			    :view view
-			    :default *standard-output*))))
+                               &key
+                               (default '*standard-output*)
+                               (prompt "stream form"))
+  (let ((dest (eval (accept 'form :stream stream :view view
+                                  :default default :prompt prompt))))
     (if (and (streamp dest)
-	     (output-stream-p dest))
-	(make-instance 'stream-destination :destination-stream dest)
-	(input-not-of-required-type dest type))))
-
-(defclass file-destination (output-destination)
-  ((file :accessor file :initarg :file)))
-
-(defmethod invoke-with-standard-output
-    (continuation (destination file-destination))
-  (with-open-file (*standard-output* (file destination)
-				     :direction :output :if-exists :supersede)
-    (funcall continuation)))
+             (output-stream-p dest))
+        (make-instance 'stream-destination :destination-stream dest)
+        (input-not-of-required-type dest type))))
 
 (define-presentation-method accept
     ((type file-destination) stream (view textual-view)
-     &key)
-  (let ((path (accept 'pathname :stream stream :prompt nil)))
+                             &key (prompt "destination file"))
+  (let ((path (accept 'pathname :stream stream :view view :prompt prompt)))
     ;; Give subclasses a shot
-    (with-presentation-type-decoded (type-name)
-        type
-	(format *debug-io* "file destination type = ~S~%" type)
-	(make-instance type-name :file path))))
-
-(defparameter *output-destination-types*
-  '(("File" file-destination)
-    ("Stream" stream-destination)))
+    (with-presentation-type-decoded (type-name) type
+      (make-instance type-name :file path))))
 
 (define-presentation-method accept
     ((type output-destination) stream (view textual-view)
-     &key)
+                               &key
+                               (default "Stream")
+                               (prompt nil))
   (let ((type (accept `(member-alist ,*output-destination-types*)
-		      :stream stream
-		      :view view
-		      :default 'stream-destination
-		      :additional-delimiter-gestures '(#\space))))
+                      :stream stream :view view
+                      :default default :prompt prompt
+                      :additional-delimiter-gestures '(#\space))))
     (read-char stream)
-    (accept type :stream stream :view view)))
+    (accept type :stream stream :view view :prompt nil)))
 
 ;;; The default for :provide-output-destination-keyword is nil until we fix
 ;;; some unfortunate problems with completion, defaulting, and keyword
@@ -1123,10 +1089,10 @@ examine the type of the command menu item to see if it is
           (unless (eq argument-description '&key)
             ;; Ensure correct structure and valid keywords.
             (destructuring-bind (parameter type &key
-                                default default-type display-default mentioned-default
-                                prompt documentation when gesture
-                                ;; These two are not standard, but ESA uses them.
-                                prompt-mode insert-default)
+                                 default default-type display-default mentioned-default
+                                 prompt documentation when gesture
+                                 ;; These two are not standard, but ESA uses them.
+                                 prompt-mode insert-default)
                 argument-description
               (declare (ignore parameter default default-type display-default mentioned-default
                                prompt documentation when gesture
@@ -1136,30 +1102,30 @@ examine the type of the command menu item to see if it is
                 (setf (second argument-description) `(quote ,type))))))
         args)
   (destructuring-bind (func &rest options
-		       &key (provide-output-destination-keyword nil)
-		       &allow-other-keys)
+                       &key (provide-output-destination-keyword nil)
+                       &allow-other-keys)
       name-and-options
     (with-keywords-removed (options (:provide-output-destination-keyword))
       (if provide-output-destination-keyword
-          (let ((key-supplied (find '&key args)))
-            (let* ((destination-arg '(output-destination 'output-destination
-                                      :default nil))
-                   (new-args (if key-supplied
-                                 `(,@args ,destination-arg)
-                                 `(,@args &key ,destination-arg))))
-              (multiple-value-bind (decls new-body)
-                  (get-body-declarations body)
-                (with-gensyms (destination-continuation)
-                  `(%define-command (,func ,@options) ,new-args
-                     ,@decls
-                     (flet ((,destination-continuation ()
-                              ,@new-body))
-                       (declare (dynamic-extent #',destination-continuation))
-                       (invoke-with-standard-output #',destination-continuation
-                                                    output-destination)))))))
-	  `(%define-command (,func ,@options)
-			    ,args
-	     ,@body)))))
+          (let* ((key-supplied (find '&key args))
+                 (destination-arg '(output-destination 'output-destination
+                                    :default nil :display-default nil))
+                 (new-args (if key-supplied
+                               `(,@args ,destination-arg)
+                               `(,@args &key ,destination-arg))))
+            (multiple-value-bind (decls new-body)
+                (get-body-declarations body)
+              (with-gensyms (destination-continuation)
+                `(%define-command (,func ,@options) ,new-args
+                   ,@decls
+                   (flet ((,destination-continuation ()
+                            ,@new-body))
+                     (declare (dynamic-extent #',destination-continuation))
+                     (invoke-with-standard-output #',destination-continuation
+                                                  output-destination))))))
+          `(%define-command (,func ,@options)
+                            ,args
+             ,@body)))))
 
 ;;; Note that command table inheritance is the opposite of Common Lisp
 ;;; subclassing / subtyping: the inheriting table defines a superset
