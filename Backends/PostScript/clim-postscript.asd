@@ -4,14 +4,26 @@
 ;;;
 ;;; Move the whole system to the Modules/ directory - dk
 
-(defsystem #:clim-postscript
-  :depends-on (#:clim-basic
-               #:clim-core
-               #:clim-postscript-font)
+(defsystem "clim-postscript"
+  :depends-on ("clim-basic"
+               "clim-core"
+               "clim-postscript-font")
   :serial t
   :components ((:file "package")
                (:file "paper")
                (:file "class")
                (:file "graphics")
                (:file "sheet")
-               (:file "output-destination")))
+               (:file "output-destination"))
+  :in-order-to ((test-op (test-op "clim-postscript/test"))))
+
+(defsystem "clim-postscript/test"
+  :depends-on ("clim-postscript"
+               "fiveam"
+               "mcclim/test-util")
+  :components ((:module "test"
+                :serial t
+                :components ((:file "package")
+                             (:file "smoke"))))
+  :perform (test-op (operation component)
+             (uiop:symbol-call '#:clim-postscript.test '#:run-tests)))
