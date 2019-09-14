@@ -9,6 +9,17 @@
 @node Glossary
 @section Glossary
 
+@glossentry{Active gadget}
+
+An active gadget is available for input. For most gadgets, this means
+processing events when active and ignoring events when not active.
+
+@glossentry{Armed gadget}
+
+The exact definition of arming and disarming varies between kinds of
+gadgets, but typically a gadget becomes armed when the pointer is moved
+into its region.
+
 @glossentry{Device transformation}
 
 TODO
