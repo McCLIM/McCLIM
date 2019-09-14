@@ -23,6 +23,7 @@
   :components ((:module "test"
                 :serial t
                 :components ((:file "package")
-                             (:file "smoke"))))
+                             (:file "smoke")
+                             (:file "output-destination"))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-postscript.test '#:run-tests)))
