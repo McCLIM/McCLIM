@@ -133,7 +133,7 @@
 (defmethod object-state-class ((object vector) (place t))
   'inspected-vector)
 
-(defclass inspected-array (inspected-identity-object
+(defclass inspected-array (inspected-identity-object-mixin
                            inspected-object)
   ())
 
@@ -211,7 +211,7 @@
         (t
          (let ((place-class (if (adjustable-array-p object)
                                 'adjustable-vector-element-place
-                                'array-element-place)))
+                                'vector-element-place)))
            (multiple-value-bind (start end truncated?)
                (effective-bounds state length)
              (with-preserved-cursor-x (stream)

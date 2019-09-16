@@ -779,14 +779,17 @@ might be different from the sheet's native region."
               (sheet-transformation sheet)))))
     native-transformation))
 
-;;; Named sheets
+;;; Top-level sheets
 
-(defclass named-sheet-mixin ()
+(defclass top-level-sheet-mixin ()
   (;; The NAME slot intentionally uses the same slot name as the NAME
    ;; in the PANE class so that both collapse into a single effective
    ;; slot in e.g. the TOP-LEVEL-SHEET-PANE class.
    (name :initarg :name :reader sheet-name)
    (%pretty-name :initarg :pretty-name :accessor clime:sheet-pretty-name)))
+
+;;; Unmanaged sheet is not managed by the window manager.
+(defclass unmanaged-sheet-mixin () ())
 
 
 ;;; Sheets as bounding rectangles

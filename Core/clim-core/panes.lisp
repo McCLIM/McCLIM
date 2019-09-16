@@ -913,10 +913,11 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
       (error 'sheet-supports-only-one-child :sheet pane))
     (sheet-adopt-child pane (first contents))))
 
-(defmethod compose-space ((pane single-child-composite-pane) &key width height)
+(defmethod compose-space ((pane single-child-composite-pane)
+                          &rest args &key width height)
+  (declare (ignore width height))
   (if (sheet-child pane)
-      (compose-space (sheet-child pane)
-                     :width width :height height)
+      (apply #'compose-space (sheet-child pane) args)
       (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
@@ -925,7 +926,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 ;;; TOP-LEVEL-SHEET
 
-(defclass top-level-sheet-pane (named-sheet-mixin single-child-composite-pane)
+(defclass top-level-sheet-pane (top-level-sheet-mixin single-child-composite-pane)
   ()
   (:documentation "For the first pane in the architecture"))
 
@@ -990,7 +991,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 ;;; UNMANAGED-TOP-LEVEL-SHEET PANE
 
-(defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
+(defclass unmanaged-top-level-sheet-pane (unmanaged-sheet-mixin top-level-sheet-pane)
   ()
   (:documentation "Top-level sheet without window manager intervention"))
 
@@ -2271,9 +2272,9 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
            (gadget-max-value scroll-bar)))))
 
 (defmethod pane-viewport ((pane basic-pane))
-  (let ((parent (sheet-parent pane)))
-    (when (and parent (typep parent 'viewport-pane))
-	parent)))
+  (when-let ((parent (sheet-parent pane)))
+    (when (typep parent 'viewport-pane)
+      parent)))
 
 ;;; Default for streams that aren't even panes.
 
@@ -2281,22 +2282,19 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   nil)
 
 (defmethod pane-viewport-region ((pane basic-pane))
-  (let ((viewport (pane-viewport pane)))
-    (and viewport
-         (untransform-region
-          (sheet-delta-transformation pane viewport)
-          (sheet-region viewport)))))
+  (when-let ((viewport (pane-viewport pane)))
+    (untransform-region (sheet-delta-transformation pane viewport)
+                        (sheet-region viewport))))
 
 (defmethod pane-scroller ((pane basic-pane))
-  (let ((viewport (pane-viewport pane)))
-    (when viewport
-      (sheet-parent viewport))))
+  (when-let ((viewport (pane-viewport pane)))
+    (sheet-parent viewport)))
 
 (defmethod scroll-extent ((pane basic-pane) x y)
   (when (pane-viewport pane)
     (move-sheet pane (- x) (- y))
-    (when (pane-scroller pane)
-      (scroller-pane/update-scroll-bars (pane-scroller pane)))))
+    (when-let  ((scroller (pane-scroller pane)))
+      (scroller-pane/update-scroll-bars scroller))))
 
 
 ;;; LABEL PANE

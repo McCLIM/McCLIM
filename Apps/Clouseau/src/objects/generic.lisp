@@ -88,20 +88,41 @@
                                        (style  (eql :expanded-body))
                                        (stream t)))
 
-;;; Object identity
+;;; Object identity mixin
 
-(defclass inspected-identity-object () ; TODO should be called -mixin
+(defclass inspected-identity-object-mixin ()
   ())
 
 (defmethod inspect-object-using-state :after ((object t)
-                                              (state  inspected-identity-object)
+                                              (state  inspected-identity-object-mixin)
                                               (style  (eql :expanded-header))
                                               (stream t))
   (write-char #\Space stream)
   (inspect-object-using-state object state :object-identity stream))
 
 (defmethod inspect-object-using-state ((object t)
-                                       (state  inspected-identity-object)
+                                       (state  inspected-identity-object-mixin)
                                        (style  (eql :object-identity))
                                        (stream t))
   (print-object-identity object stream))
+
+;;; Collapsed state mixin
+
+(defclass remembered-collapsed-style-mixin ()
+  ((%collapsed-style :initarg  :collapsed-style
+                     :accessor collapsed-style)))
+
+(defmethod initialize-instance :after
+    ((instance remembered-collapsed-style-mixin)
+     &key
+     (collapsed-style nil collapsed-style-supplied-p))
+  (declare (ignore collapsed-style))
+  (unless collapsed-style-supplied-p
+    (setf (collapsed-style instance) (style instance))))
+
+(defmethod (setf style) :around ((new-value (eql :collapsed))
+                                 (object    remembered-collapsed-style-mixin))
+  (let ((collapsed-style (collapsed-style object)))
+    (if (eq new-value collapsed-style)
+        (call-next-method)
+        (setf (style object) collapsed-style))))

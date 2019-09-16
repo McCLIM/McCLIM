@@ -83,64 +83,136 @@
     (make-instance class :place place)))
 
 ;;; Indicating circular structure using presentation highlighting
+;;;
+;;; Other occurrences of the object underlying the presentation being
+;;; highlighted are indicated using Bezier arrows pointing at them.
+;;;
+;;; *OCCURRENCE-HIGHLIGHT-LIMIT* controls how many occurrences are
+;;; highlighted using Bezier arrows.
+;;;
+;;; *OCCURRENCE-HIGHLIGHT-DISABLE-THRESHOLD* controls at which number
+;;; of occurrences highlighting using Bezier arrows is disabled
+;;; entirely.
 
-(flet ((map-other-occurrences (function presentation)
-         (when-let ((occurrences (cdr (occurrences
-                                       (presentation-object presentation)))))
-           (map nil (lambda (other)
-                      (unless (eq other presentation)
-                        (funcall function other)))
-                occurrences)))
-       (draw-arc-arrow (stream from to ink)
-         (multiple-value-bind (x1 y1) (bounding-rectangle-position from)
-           (multiple-value-bind (x2 y2) (bounding-rectangle-position to)
-             (let ((design (mcclim-bezier:make-bezier-curve*
-                            (list x1              y1
-                                  (lerp .3 x1 x2) y1
-                                  x2              (lerp .7 y1 y2)
-                                  x2              y2))))
-               (draw-design stream design :ink ink :line-thickness 2)
-               (draw-arrow* stream
-                            x2 (lerp .99 y1 y2)
-                            x2               y2
-                            :ink ink :line-thickness 2))))))
+(defparameter *occurrence-highlight-limit* 10)
+
+(defparameter *occurrence-highlight-disable-threshold* 10)
+
+(labels ((map-other-occurrences (function presentation &key count)
+           (when-let ((occurrences (cdr (occurrences
+                                         (presentation-object presentation)))))
+             (let ((i 0))
+               (map nil (lambda (other)
+                          (unless (eq other presentation)
+                            (funcall function i other)
+                            (incf i)
+                            (when (and count (>= i count))
+                              (return-from map-other-occurrences))))
+                    occurrences))))
+         (count-other-occurrences (presentation)
+           (let ((count 0))
+             (map-other-occurrences (lambda (i other)
+                                      (declare (ignore i other))
+                                      (incf count))
+                                    presentation)
+             count))
+         (plan (record)
+           (let* ((count      (count-other-occurrences record))
+                  (highlightp
+                    (when-let ((threshold *occurrence-highlight-disable-threshold*))
+                      (< count threshold)))
+                  (end        (if-let ((limit *occurrence-highlight-limit*))
+                                limit
+                                count))
+                  (omitted    (if highlightp
+                                  (- count end)
+                                  count)))
+             (values end omitted highlightp)))
+         (draw-arc-arrow (stream from to ink)
+           (multiple-value-bind (x1 y1) (bounding-rectangle-position from)
+             (multiple-value-bind (x2 y2) (bounding-rectangle-position to)
+               (let ((design (mcclim-bezier:make-bezier-curve*
+                              (list x1              y1
+                                    (lerp .3 x1 x2) y1
+                                    x2              (lerp .7 y1 y2)
+                                    x2              y2))))
+                 (draw-design stream design :ink ink :line-thickness 2)
+                 (draw-arrow* stream
+                              x2 (lerp .99 y1 y2)
+                              x2               y2
+                              :ink ink :line-thickness 2)))))
+         (draw-occurrence-count (stream record count)
+           (let ((visible-region (or (pane-viewport-region stream)
+                                     (sheet-region stream)))
+                 (text           (format nil "~:D other occurrence~:P in ~
+                                             current view"
+                                         count)))
+             ;; Put TEXT below RECORD if it is visible at that
+             ;; position, otherwise put it into the top right corner of
+             ;; the visible region of STREAM.
+             (with-bounding-rectangle* (x1 y1 x2 y2) record
+               (declare (ignore y1 x2))
+               (multiple-value-bind (x y)
+                   (if (region-contains-position-p
+                        visible-region x1 (+ y2 8 16))
+                       (values x1 (+ y2 8))
+                       (with-bounding-rectangle* (x1 y1 x2 y2) visible-region
+                         (declare (ignore x1 y2))
+                         (values (- x2
+                                    (text-size stream text
+                                               :text-style *badge-text-style*)
+                                    8)
+                                 (+ y1 8))))
+                 (setf (stream-cursor-position stream) (values x y))))
+             (with-output-as-badge (stream)
+               (write-string text stream)))))
 
   (define-presentation-method highlight-presentation
     :after ((type   inspected-object)
             (record t)
             (stream t)
             (state  (eql :highlight)))
-    ;; Draw bezier arcs to other occurrences.
-    (let ((i 0))
-      (map-other-occurrences
-       (lambda (other-presentation)
-         (let ((ink (make-contrasting-inks 8 (mod i 8))))
-           (when (zerop i)
-             (multiple-value-call #'draw-circle* stream
-               (bounding-rectangle-position record) 5 :ink ink))
-           (draw-arc-arrow stream record other-presentation ink))
-         (incf i))
-       record)))
+    (multiple-value-bind (count omitted highlightp) (plan record)
+      ;; Draw bezier arcs to other occurrences.
+      (when highlightp
+        (map-other-occurrences
+         (lambda (i other-presentation)
+           (let ((ink (make-contrasting-inks 8 (mod i 8))))
+             (when (zerop i)
+               (multiple-value-call #'draw-circle* stream
+                 (bounding-rectangle-position record) 5 :ink ink))
+             (draw-arc-arrow stream record other-presentation ink)))
+         record :count count))
+      ;; Indicate number of omitted (i.e. not highlighted)
+      ;; occurrences.
+      (when (plusp omitted)
+        (draw-occurrence-count stream record omitted))))
 
   (define-presentation-method highlight-presentation
     :after ((type   inspected-object)
             (record t)
             (stream t)
             (state  (eql :unhighlight)))
-    ;; Repaint a region that is the union of the bounding regions of
-    ;; all bezier arcs.
-    (let ((i      0)
-          (region +nowhere+))
-      (map-other-occurrences
-       (lambda (other-presentation)
-         (let ((new-region
-                 (with-output-to-output-record (stream)
-                   (when (zerop i)
-                     (multiple-value-call #'draw-circle* stream
-                       (bounding-rectangle-position record) 5))
-                   (draw-arc-arrow stream record other-presentation +black+))))
-           (setf region (region-union region new-region)))
-         (incf i))
-       record)
-      (unless (eq region +nowhere+)
-        (repaint-sheet stream region)))))
+    (multiple-value-bind (count omitted highlightp) (plan record)
+      ;; Repaint a region that is the union of the bounding regions of
+      ;; all bezier arcs.
+      (when highlightp
+        (let ((region +nowhere+))
+          (map-other-occurrences
+           (lambda (i other-presentation)
+             (let ((new-region
+                     (with-output-to-output-record (stream)
+                       (when (zerop i)
+                         (multiple-value-call #'draw-circle* stream
+                           (bounding-rectangle-position record) 5))
+                       (draw-arc-arrow
+                        stream record other-presentation +black+))))
+               (setf region (region-union region new-region))))
+           record :count count)
+          (unless (eq region +nowhere+)
+            (repaint-sheet stream region))))
+      ;; Repaint region occupied by textual note.
+      (when (plusp omitted)
+        (let ((region (with-output-to-output-record (stream)
+                        (draw-occurrence-count stream record omitted))))
+          (repaint-sheet stream region))))))

@@ -941,3 +941,9 @@ to the BREAK-STRATEGY whenever it assigns any meaning to to them."
 (defmacro nest (&rest things)
   (reduce #'(lambda (outer inner) `(,@outer ,inner))
           things :from-end t))
+
+(defun get-top-level-sheet (sheet)
+  "Returns the root window for sheet or nil."
+  (if (typep sheet '(or top-level-sheet-mixin null))
+      sheet
+      (get-top-level-sheet (sheet-parent sheet))))

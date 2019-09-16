@@ -171,7 +171,7 @@ Example:
       (present-place stream)
       (present-object stream)))"))
 
-(defgeneric note-object-occurence (object state presentation stream)
+(defgeneric note-object-occurrence (object state presentation stream)
   (:documentation
    "Note that PRESENTATION is a representation of OBJECT in STREAM.
 
@@ -179,6 +179,15 @@ STATE is the state associated with OBJECT.
 
 The main purpose of this generic function is tracking multiple
 occurrences of objects so the circularity can be indicated."))
+
+(defun call-without-noting-object-occurrences (thunk)
+  "Call THUNK with NOTE-OBJECT-OCCURRENCE calls devoid of effects."
+  (let ((*seen* nil))
+    (funcall thunk)))
+
+(defmacro without-noting-object-occurrences (() &body body)
+  "Execute BODY with NOTE-OBJECT-OCCURRENCE calls devoid of effects."
+  `(call-without-noting-object-occurrences (lambda () ,@body)))
 
 ;;; Default behavior
 
@@ -188,7 +197,8 @@ occurrences of objects so the circularity can be indicated."))
     (let ((*depth*        -1)
           (*seen*         (make-hash-table :test #'eq))
           (*parent-place* place))
-      (funcall thunk))))
+      (with-end-of-line-action (stream :allow)
+        (funcall thunk)))))
 
 (defmethod inspect-place ((place t) (stream t))
   (if (not (valuep place))
@@ -216,30 +226,30 @@ occurrences of objects so the circularity can be indicated."))
                                (*parent-place* place))
                            (inspect-object-using-state
                             object state style stream)))))
-    (note-object-occurence object state presentation stream)
+    (note-object-occurrence object state presentation stream)
     state))
 
-(defmethod note-object-occurence ((object       t)
-                                  (state        t)
-                                  (presentation t)
-                                  (stream       t))
-  ;; Slight optimization: for the first occurrence of, put
-  ;; PRESENTATION instead of a list into the hash-table. When
-  ;; encountering a second occurrence, replace the presentation with a
-  ;; list.
-  (let* ((seen     *seen*)
-         (existing (gethash object seen)))
-    (cond ((null existing)
-           (setf (gethash object seen) presentation
-                 (occurrences state)   nil))
-          ((not (consp existing))
-           (let ((cell (cons nil (list presentation existing))))
-             (setf (gethash object seen)                        cell
-                   (occurrences (presentation-object existing)) cell
-                   (occurrences state)                          cell)))
-          (t
-           (push presentation (cdr existing))
-           (setf (occurrences state) existing)))))
+(defmethod note-object-occurrence ((object       t)
+                                   (state        t)
+                                   (presentation t)
+                                   (stream       t))
+  (when-let ((seen *seen*))
+    ;; Slight optimization: for the first occurrence of OBJECT, put
+    ;; PRESENTATION instead of a list into the hash-table. When
+    ;; encountering a second occurrence, replace the presentation with
+    ;; a list.
+    (let ((existing (gethash object seen)))
+      (cond ((null existing)
+             (setf (gethash object seen) presentation
+                   (occurrences state)   nil))
+            ((not (consp existing))
+             (let ((cell (cons nil (list presentation existing))))
+               (setf (gethash object seen)                        cell
+                     (occurrences (presentation-object existing)) cell
+                     (occurrences state)                          cell)))
+            (t
+             (push presentation (cdr existing))
+             (setf (occurrences state) existing))))))
 
 ;;; Inspector state protocol
 

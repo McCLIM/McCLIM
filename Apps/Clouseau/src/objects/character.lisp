@@ -51,3 +51,9 @@
     (format-place-row stream object 'reader-place 'char-code :label "Code")
     (when-let ((weight (digit-char-p object)))
       (format-place-row stream object 'pseudo-place weight :label "Weight"))))
+
+;;; No circularity tracking for characters.
+(defmethod note-object-occurrence ((object       character)
+                                   (state        inspected-object)
+                                   (presentation t)
+                                   (stream       t)))

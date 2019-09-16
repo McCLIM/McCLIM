@@ -193,7 +193,8 @@
                                        event-mask))))
       (port-register-mirror (port sheet) sheet window)
       (when map
-        (xlib:map-window window))))
+        (xlib:map-window window)
+        (xlib:display-finish-output (clx-port-display port)))))
   (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
@@ -213,7 +214,7 @@
 				    :structure-notify)
                       :map (sheet-enabled-p sheet)))
 
-(defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
   (let* ((q (compose-space sheet))
          (window (realize-mirror-aux
                   port sheet
@@ -228,12 +229,12 @@
     (%set-window-name window pretty-name)
     (%set-window-icon-name window pretty-name)
     (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
-    (setf (xlib:wm-protocols window) `(:wm_delete_window))
+    (setf (xlib:wm-protocols window) `(:wm_take_focus :wm_delete_window))
     (xlib:change-property window
                           :WM_CLIENT_LEADER (list (xlib:window-id window))
                           :WINDOW 32)))
 
-(defmethod %realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet unmanaged-sheet-mixin))
   (realize-mirror-aux port sheet
 		      :override-redirect :on
                       :save-under :on
@@ -346,7 +347,7 @@
 ;; Top-level-sheet
 
 ;; this is evil.
-(defmethod allocate-space :after ((pane top-level-sheet-pane) width height)
+(defmethod allocate-space :after ((pane top-level-sheet-mixin) width height)
   (when (sheet-direct-xmirror pane)
     (with-slots (space-requirement) pane
       '(setf (xlib:wm-normal-hints (sheet-direct-xmirror pane))

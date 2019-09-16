@@ -93,7 +93,11 @@
    #:call-with-root-place
    #:inspect-place
    #:inspect-object
-   #:inspect-object-using-state)
+   #:inspect-object-using-state
+
+   #:note-object-occurrence
+   #:call-without-noting-occurrences
+   #:without-noting-occurrences)
 
   ;; Inspector state protocol
   (:export

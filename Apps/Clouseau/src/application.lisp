@@ -138,9 +138,17 @@ inspector frame executes in a separate thread."
          (frame (make-application-frame 'inspector
                                         :object      object
                                         :pretty-name name)))
-    (flet ((run ()
-             (run-frame-top-level frame)))
+    (labels ((run ()
+               (run-frame-top-level frame))
+             (run-with-defaults (default-server-path)
+               (let ((*default-server-path* default-server-path))
+                 (run))))
       (if new-process
-          (clim-sys:make-process #'run :name name)
+          ;; Install the current value *DEFAULT-SERVER-PATH* in the
+          ;; new process so that the new inspector will usually use
+          ;; the same port as the caller.
+          (clim-sys:make-process
+           (curry #'run-with-defaults *default-server-path*)
+           :name name)
           (run))
       (values object frame))))

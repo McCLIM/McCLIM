@@ -41,16 +41,30 @@
                               sequence-element-place)
   ())
 
-(defmethod supportsp ((place list-element-place) (operation (eql 'remove-value)))
-  t)
+;;; We can remove a list element
+;;; * if the cons cell containing the element is not the first one by
+;;;   changing the cdr of the previous cons cell
+;;; * if the cons cell containing the element is the first one by
+;;;   changing the value of the parent place to the rest of the list
+(defmethod supportsp ((place     list-element-place)
+                      (operation (eql 'remove-value)))
+  (let ((list (container place)))
+    (or (not (eq (cell place) list))
+        (let ((parent (parent place)))
+          (and (safe-valuep parent)
+               (eq (value parent) list)
+               (supportsp parent 'setf))))))
 
 (defmethod remove-value ((place list-element-place))
-  (loop :for predecessor :on (container place)
-        :for middle = (rest predecessor)
-        :for successor = (rest middle)
-        :when (eq middle (cell place))
-        :do (setf (cdr predecessor) successor)
-            (return)))
+  (let ((list (container place)))
+    (if (eq (cell place) list)
+        (setf (value (parent place)) (rest list))
+        (loop :for predecessor :on list
+              :for middle = (rest predecessor)
+              :for successor = (rest middle)
+              :when (eq middle (cell place))
+              :do (setf (cdr predecessor) successor)
+                  (return)))))
 
 (defclass alist-element-place (list-element-place)
   ())
@@ -274,6 +288,12 @@
      object #'format-node #'node-children
      :stream stream :graph-type :digraph :merge-duplicates t
      :maximize-generations t :arc-drawer #'draw-arc)))
+
+;;; No circularity tracking for NIL.
+(defmethod note-object-occurrence ((object       null)
+                                   (state        inspected-object)
+                                   (presentation t)
+                                   (stream       t)))
 
 ;;; Commands
 
