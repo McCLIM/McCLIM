@@ -49,6 +49,31 @@
              (maybe-special-float sb-ext:float-nan-p          "nan")
              (maybe-special-float sb-ext:float-trapping-nan-p "trapping-nan"))))
 
+(defmethod inspect-object-using-state :after ((object number)
+                                              (state  inspected-object)
+                                              (style  (eql :badges))
+                                              (stream t))
+  (macrolet
+      ((limits ()
+         (labels ((constant (constant-name)
+                    `((= object ,constant-name)
+                      (write-char #\Space stream)
+                      (badge stream ,(string-downcase
+                                      (symbol-name constant-name)))))
+                  (type (type)
+                    (let ((lower (let ((*package* (find-package "CL")))
+                                   (symbolicate '#:most-negative- type)))
+                          (upper (let ((*package* (find-package "CL")))
+                                   (symbolicate '#:most-positive- type))))
+                      `(,(constant lower)
+                        ,(constant upper)))))
+           `(cond
+              ,@(mappend #'type '(fixnum
+                                  single-float
+                                  double-float))
+              ,(constant 'pi)))))
+    (limits)))
+
 (defmethod inspect-object-using-state ((object integer)
                                        (state  inspected-object)
                                        (style  (eql :expanded-body))
