@@ -149,8 +149,7 @@
                                   :object-style :float-exponent)))))
       ;; Value
       (when has-value-p
-        (let ((exponent-offset (* 0.3 (nth-value 1 (text-size stream "0")))))
-          (clim:stream-increment-cursor-position stream 0 exponent-offset)
+        (with-superscript (stream sup)
           (format stream "~A = " object)
           (with-style (stream :float-sign)
             (format stream "~F" sign))
@@ -160,9 +159,8 @@
           (write-string " × " stream)
           (with-style (stream :float-radix)
             (format stream "~D" radix))
-          (clim:stream-increment-cursor-position stream 0 (- exponent-offset))
-          (with-style (stream :float-exponent)
-            (format stream "~D" exponent)))))))
+          (sup (with-style (stream :float-exponent)
+                 (format stream "~D" exponent))))))))
 
 (defmethod inspect-object-using-state ((object complex)
                                        (state  inspected-object)
