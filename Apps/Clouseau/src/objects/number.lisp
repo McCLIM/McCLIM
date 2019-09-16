@@ -26,7 +26,8 @@
   (let ((class (class-of object))
         (type  (type-of object)))
     (inspect-class-as-name class stream)
-    (unless (eql (class-name class) type)
+    (when (and (not (consp type))
+               (not (eql type (class-name class))))
       (write-char #\space stream)
       (with-style (stream :note)
         (princ type stream))))
@@ -53,14 +54,27 @@
                                        (style  (eql :expanded-body))
                                        (stream t))
   (formatting-table (stream)
+    ;; Value in different bases.
+    (macrolet ((value-in-base (label format-control)
+                 `(progn
+                    (with-style (stream :slot-like)
+                      (formatting-cell (stream) (write-string ,label stream))
+                      (formatting-cell (stream) (declare (ignore stream))))
+                    (formatting-cell (stream)
+                      (format stream ,format-control object)))))
+      (formatting-row (stream)
+        (value-in-base "Decimal value"     "~:D")
+        (value-in-base "Hexadecimal value" "#x~X"))
+      (formatting-row (stream)
+        (value-in-base "Octal value"       "#o~O")
+        (value-in-base "Binary value"      "#b~B")))
+
+    ;; Bit statistics
     (formatting-row (stream)
-      (with-style (stream :slot-like)
-        (formatting-cell (stream) (write-string "Value" stream))
-        (formatting-cell (stream) (declare (ignore stream))))
-      (formatting-cell (stream)
-        (format stream "~:D = ~:*#x~X = ~:*#o~O = ~:*#b~B" object)))
-    (format-place-row stream object 'reader-place 'integer-length
-                      :label "Length")))
+      (format-place-cells stream object 'reader-place 'integer-length
+                          :label "Length (bits)")
+      (format-place-cells stream object 'reader-place 'logcount
+                          :label "Hamming weight"))))
 
 (defmethod inspect-object-using-state ((object ratio)
                                        (state  inspected-object)
