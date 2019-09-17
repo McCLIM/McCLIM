@@ -41,6 +41,26 @@
   (check-type stream symbol)
   `(call-with-preserved-cursor-y (lambda (,stream) ,@body) ,stream))
 
+(defun call-with-superscript (thunk stream)
+  (let ((exponent-offset (* 0.25 (nth-value 1 (text-size stream "0")))))
+    (clim:stream-increment-cursor-position stream 0 exponent-offset)
+    (flet ((superscript (thunk)
+             (with-preserved-cursor-y (stream)
+               (clim:stream-increment-cursor-position stream 0 (- exponent-offset))
+               (with-text-size (stream :smaller)
+                 (funcall thunk stream)))))
+      (funcall thunk #'superscript))))
+
+(defmacro with-superscript ((stream superscript-var) &body body)
+  (check-type stream symbol)
+  (with-unique-names (superscript)
+    `(call-with-superscript
+      (lambda (,superscript)
+        (macrolet ((,superscript-var (&body body)
+                     `(funcall ,',superscript (lambda (,',stream) ,@body))))
+          ,@body))
+      ,stream)))
+
 ;;; Styles
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
