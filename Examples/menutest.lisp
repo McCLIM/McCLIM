@@ -36,17 +36,26 @@
   (format *standard-output* "You pressed the File button.~%")
   (finish-output *standard-output*))
 
-(define-menutest-command com-hello ()
-  (format *standard-output* "You pressed the Hello button.~%")
+(define-menutest-command com-kenobi ()
+  (format *standard-output* "You pressed the General Kenobi button.~%")
+  (finish-output *standard-output*))
+
+(define-menutest-command com-konichiwa ()
+  (format *standard-output* "You pressed the Konichiwa button.~%")
   (finish-output *standard-output*))
 
 (define-menutest-command com-hi ()
   (format *standard-output* "You pressed the Hi button.~%")
   (finish-output *standard-output*))
 
+(make-command-table 'kenobi-command-table
+                    :errorp nil
+                    :menu '(("General Kenobi" :command com-kenobi)
+                            ("Konichiwa"      :command com-konichiwa)))
+
 (make-command-table 'buffer-command-table
 		    :errorp nil
-		    :menu '(("Hello there" :command com-hello)
+		    :menu '(("Hello there" :menu kenobi-command-table)
 			    ("Hi there"    :command com-hi)))
 
 (make-command-table 'menubar-command-table
