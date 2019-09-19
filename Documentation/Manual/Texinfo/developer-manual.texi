@@ -221,7 +221,6 @@ medium-miter-limit          ; determine a draw for miter < sina/2
 @verbatim
 NO LONGER NEEDED IN BACKEND
 ---------------------------
-medium-draw-glyph               ; X-specific concept
 port-motion-hints               ; X-specific concept
 queue-callback                  ; moved to clim-core
 medium-clipping-                ; moved to clim-basic

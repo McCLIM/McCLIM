@@ -177,14 +177,6 @@
 (defmethod (setf medium-buffering-output-p) (buffer-p (medium null-medium))
   buffer-p)
 
-(defmethod medium-draw-glyph ((medium null-medium) element x y
-			      align-x align-y toward-x toward-y
-			      transform-glyphs)
-  (declare (ignore element x y
-		   align-x align-y toward-x toward-y
-		   transform-glyphs))
-  nil)
-
 (defmethod medium-finish-output ((medium null-medium))
   nil)
 

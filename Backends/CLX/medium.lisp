@@ -922,18 +922,6 @@ translated, so they begin at different position than [0,0])."))
 (defmethod (setf medium-buffering-output-p) (buffer-p (medium clx-medium))
   buffer-p)
 
-(defmethod medium-draw-glyph ((medium clx-medium) element x y
-                              align-x align-y toward-x toward-y
-                              transform-glyphs)
-  (declare (ignore toward-x toward-y transform-glyphs align-x align-y))
-  (with-transformed-position ((clim:compose-transformations
-                               (sheet-native-transformation (medium-sheet medium))
-                               (medium-transformation medium))
-                              x y)
-    (with-clx-graphics () medium
-      (xlib:draw-glyph mirror gc (round-coordinate x) (round-coordinate y)
-                       element :size 16 :translate #'translate))))
-
 
 ;;; Other Medium-specific Output Functions
 

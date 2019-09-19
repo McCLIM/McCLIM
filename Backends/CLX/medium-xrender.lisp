@@ -179,12 +179,6 @@
                                :transformation (sheet-device-transformation (medium-sheet medium))
                                :transform-glyphs transform-glyphs))))
 
-(defmethod clime:medium-draw-glyph ((medium clx-render-medium) element x y
-                                    align-x align-y toward-x toward-y
-                                    transform-glyphs)
-  (clim:medium-draw-text* medium (string element) x y 0 1
-                          align-x align-y toward-x toward-y
-                          transform-glyphs))
 
 
 (defmethod clim:medium-buffering-output-p ((medium clx-render-medium))

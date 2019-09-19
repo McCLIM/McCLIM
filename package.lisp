@@ -1891,13 +1891,12 @@
    ;; #:line-style-effective-dashes
    ;; medium
    #:medium-miter-limit
-   #:medium-draw-glyph
    #:medium-draw-circle*
    ;; panes
    #:raised-pane #:raising
    #:lowered-pane #:lowering
    #:viewport-pane
-   #:draw-glyph #:device-font-text-style-p
+   #:device-font-text-style-p
    #:draw-image
    #:image-pane
    #:draw-label
@@ -1993,7 +1992,6 @@
    ;; Originally in CLIM-INTERNALS
    #:make-graft
    #:medium-draw-circle*
-   #:medium-draw-glyph
    #:mirror-transformation
    #:port-allocate-pixmap
    #:port-deallocate-pixmap
@@ -2087,7 +2085,6 @@
    #:text-style-width
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
-   #:medium-draw-glyph
    #:medium-draw-circle*
    ;; selection
    #:release-selection
