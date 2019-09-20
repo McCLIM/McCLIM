@@ -122,7 +122,6 @@
 
 (defun realize-mirror-aux (port sheet
 				&key (width 100) (height 100) (x 0) (y 0)
-				(border-width 0) (border 0)
 				(override-redirect :off)
 				(map t)
 				(backing-store :not-useful)
@@ -135,10 +134,6 @@
 					      :structure-notify
 					      :pointer-motion
 					      :button-motion)))
-  ;; I am declaring BORDER-WIDTH ignore to get a cleaner build, but I
-  ;; don't really understand why the use of it is commented out in favor
-  ;; of the constant 0.  -- RS 2007-07-22
-  (declare (ignore border-width))
   (when (null (port-lookup-mirror port sheet))
     ;;(update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
@@ -176,8 +171,6 @@
                                                            mirror-transformation
                                                            0 0)))
                            y)
-                    :border-width 0 ;;border-width
-                    :border border
                     :override-redirect override-redirect
                     :backing-store backing-store
                     :save-under save-under
