@@ -224,25 +224,6 @@
                       :save-under :on
 		      :map nil))
 
-(defmethod port-motion-hints ((port clx-port) (sheet mirrored-sheet-mixin))
-  (let ((event-mask (xlib:window-event-mask (sheet-direct-xmirror sheet))))
-    (if (zerop (logand event-mask
-		       #.(xlib:make-event-mask :pointer-motion-hint)))
-	nil
-	t)))
-
-(defmethod (setf port-motion-hints)
-    (val (port clx-port) (sheet mirrored-sheet-mixin))
-  (let* ((mirror (sheet-direct-xmirror sheet))
-	 (event-mask (xlib:window-event-mask mirror)))
-    (setf (xlib:window-event-mask mirror)
-	  (if val
-	      (logior event-mask #.(xlib:make-event-mask :pointer-motion-hint))
-	      (logandc2 event-mask
-			#.(xlib:make-event-mask :pointer-motion-hint)))))
-  val)
-
-
 (defmethod make-graft ((port clx-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'clx-graft
 		 :port port :mirror (clx-port-window port)

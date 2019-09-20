@@ -51,11 +51,9 @@
                 #:window-destroy-event
                 #:pointer-ungrab-leave-event
                 #:pointer-ungrab-enter-event
-		#:pointer-motion-hint-event
                 #:device-font-text-style
                 ;;
-		#:make-medium
-                )
+		#:make-medium)
    (:import-from :mcclim-render-internals
 		  #:render-medium-mixin
 		  #:render-port-mixin

@@ -75,13 +75,6 @@
 (defmethod destroy-port :before ((port null-port))
   nil)
 
-(defmethod port-motion-hints ((port null-port) (mirror mirrored-sheet-mixin))
-  nil)
-
-(defmethod (setf port-motion-hints)
-    (value (port null-port) (sheet mirrored-sheet-mixin))
-  value)
-
 (defmethod process-next-event ((port null-port) &key wait-function (timeout nil))
   (declare (ignore wait-function timeout))
   (values nil :null-backend))

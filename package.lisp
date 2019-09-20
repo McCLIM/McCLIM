@@ -1903,7 +1903,6 @@
    #:box-adjuster-gadget
    #:compose-space-aux
    #:simple-event-loop
-   #:pointer-motion-hint-event
    #:invoke-with-output-to-pointer-documentation
    #:with-output-to-pointer-documentation
    #:frame-display-pointer-documentation-string
@@ -2002,7 +2001,6 @@
    #:port-grab-pointer
    #:port-ungrab-pointer
    #:with-pointer-grabbed
-   #:port-motion-hints
    #:port-set-mirror-name
    #:port-set-mirror-region
    #:port-set-mirror-transformation

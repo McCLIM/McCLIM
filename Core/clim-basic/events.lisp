@@ -183,24 +183,14 @@
    (delta-y :initform 0 :initarg :delta-y
             :reader pointer-event-delta-y)))
 
-(define-event-class pointer-motion-event (pointer-button-event) ())
-
-(defclass motion-hint-mixin ()
-  ()
-  (:documentation "A mixin class for events that are a motion hint;
-    pointer location coordinates need to be fetched explicitly."))
-
-(defclass pointer-motion-hint-event (pointer-motion-event motion-hint-mixin)
-  ())
-
-(define-event-class pointer-boundary-event (pointer-motion-event) ())
-
-(define-event-class pointer-enter-event (pointer-boundary-event) ())
-(define-event-class pointer-exit-event  (pointer-boundary-event) ())
+(define-event-class pointer-motion-event   (pointer-button-event)   ())
+(define-event-class pointer-boundary-event (pointer-motion-event)   ())
+(define-event-class pointer-enter-event    (pointer-boundary-event) ())
+(define-event-class pointer-exit-event     (pointer-boundary-event) ())
 
 ;;; Menu implementation uses pointer-ungrab-leave-event.
 (define-event-class pointer-ungrab-enter-event (pointer-enter-event) ())
-(define-event-class pointer-ungrab-leave-event (pointer-exit-event) ())
+(define-event-class pointer-ungrab-leave-event (pointer-exit-event)  ())
 
 (define-event-class window-event (standard-event)
   ((region :initarg :region

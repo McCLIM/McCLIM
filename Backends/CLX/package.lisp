@@ -63,7 +63,6 @@
                 #:window-destroy-event
                 #:pointer-ungrab-leave-event
                 #:pointer-ungrab-enter-event
-		#:pointer-motion-hint-event
                 #:device-font-text-style
                 ;; utils
                 #:dolines
