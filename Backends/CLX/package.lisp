@@ -41,7 +41,6 @@
                 #:with-transformed-positions
                 #:with-medium-options
                 ;;
-                #:border-pane
                 #:pixmap
                 #:top-level-sheet-mixin
                 #:unmanaged-sheet-mixin

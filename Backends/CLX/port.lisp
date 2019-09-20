@@ -203,15 +203,6 @@
 
 (defmethod %realize-mirror ((port clx-port) (sheet basic-sheet))
   (realize-mirror-aux port sheet
-                      :border-width 0
-                      :map (sheet-enabled-p sheet)))
-
-(defmethod %realize-mirror ((port clx-port) (sheet border-pane))
-  ;;(rotatef (medium-background (sheet-medium sheet)) (medium-foreground (sheet-medium sheet)))
-  (realize-mirror-aux port sheet
-		      :border-width 0 ; (border-pane-width sheet)
-		      :event-mask '(:exposure
-				    :structure-notify)
                       :map (sheet-enabled-p sheet)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
@@ -239,30 +230,6 @@
 		      :override-redirect :on
                       :save-under :on
 		      :map nil))
-
-(defmethod %realize-mirror ((port clx-port) (sheet menu-button-pane))
-  (realize-mirror-aux port sheet
-		      :event-mask '(:exposure
-				    :key-press :key-release
-				    :button-press :button-release
-				    :enter-window :leave-window
-				    :structure-notify
-				   ;:pointer-motion
-				    :button-motion
-				    :owner-grab-button)
-                      :map (sheet-enabled-p sheet)))
-
-(defmethod %realize-mirror ((port clx-port) (sheet clim-stream-pane))
-  (realize-mirror-aux port sheet
-		      :event-mask '(:exposure
-				    :key-press :key-release
-				    :button-press :button-release
-				    :enter-window :leave-window
-				    :structure-notify
-				    :pointer-motion :pointer-motion-hint
-				    :button-motion
-				    :owner-grab-button)
-                      :map (sheet-enabled-p sheet)))
 
 (defmethod port-motion-hints ((port clx-port) (sheet mirrored-sheet-mixin))
   (let ((event-mask (xlib:window-event-mask (sheet-direct-xmirror sheet))))
