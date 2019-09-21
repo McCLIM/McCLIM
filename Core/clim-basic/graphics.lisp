@@ -583,24 +583,6 @@
 		       align-x align-y
 		       toward-x toward-y transform-glyphs)))
 
-;; This function belong to the extensions package.
-(defun draw-glyph (sheet string x y
-		   &rest args
-		   &key (align-x :left) (align-y :baseline)
-		     toward-x toward-y transform-glyphs
-		     ink clipping-region transformation
-		     text-style text-family text-face text-size)
-  "Draws a single character of filled text represented by the given
-element.  element is a character or other object to be translated
-into a font index.  The given x and y specify the left baseline
-position for the character."
-  (declare (ignore ink clipping-region transformation
-		   text-style text-family text-face text-size))
-  (with-medium-options (sheet args)
-    (medium-draw-glyph medium string x y
-		       align-x align-y
-		       toward-x toward-y transform-glyphs)))
-
 (defun draw-arrow (sheet point-1 point-2
 		   &rest args
 		   &key ink clipping-region transformation

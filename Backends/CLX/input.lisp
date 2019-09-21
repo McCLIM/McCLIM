@@ -114,7 +114,7 @@
 
 (defun event-handler (&key display window event-key code state mode time
                         type width height x y root-x root-y
-                        data override-redirect-p send-event-p hint-p
+                        data override-redirect-p send-event-p
                         target property requestor selection
                         request first-keycode count
                         &allow-other-keys)
@@ -229,30 +229,14 @@
       (:motion-notify
        (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
                                                                    state)))
-         (if hint-p
-             (multiple-value-bind (x y same-screen-p child mask
-                                     root-x root-y)
-                 (xlib:query-pointer window)
-               (declare (ignore mask))
-               ;; If not same-screen-p or the child is different
-               ;; from the original event, assume we're way out of date
-               ;; and don't return an event.
-               (when (and same-screen-p (not child))
-                 (make-instance 'pointer-motion-hint-event
-                                :pointer 0 :button code
-                                :x x :y y
-                                :graft-x root-x :graft-y root-y
-                                :sheet sheet
-                                :modifier-state modifier-state
-                                :timestamp time)))
-             (make-instance 'pointer-motion-event
-                            :pointer 0 :button code
-                            :x x :y y
-                            :graft-x root-x
-                            :graft-y root-y
-                            :sheet sheet
-                            :modifier-state modifier-state
-                            :timestamp time))))
+         (make-instance 'pointer-motion-event
+                        :pointer 0 :button code
+                        :x x :y y
+                        :graft-x root-x
+                        :graft-y root-y
+                        :sheet sheet
+                        :modifier-state modifier-state
+                        :timestamp time)))
       ((:exposure :display :graphics-exposure)
        ;; Notes:
        ;; . Do not compare count with 0 here, last rectangle in an
@@ -414,7 +398,7 @@
   (let ((mirror (sheet-xmirror sheet))
         (events '(:button-press :button-release
 	          :leave-window :enter-window
-	          :pointer-motion :pointer-motion-hint)))
+	          :pointer-motion)))
     ;; Probably we want to set :cursor here..
     (eq :success (xlib:grab-pointer mirror events :owner-p t))))
 

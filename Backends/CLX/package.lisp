@@ -41,7 +41,6 @@
                 #:with-transformed-positions
                 #:with-medium-options
                 ;;
-                #:border-pane
                 #:pixmap
                 #:top-level-sheet-mixin
                 #:unmanaged-sheet-mixin
@@ -64,7 +63,6 @@
                 #:window-destroy-event
                 #:pointer-ungrab-leave-event
                 #:pointer-ungrab-enter-event
-		#:pointer-motion-hint-event
                 #:device-font-text-style
                 ;; utils
                 #:dolines

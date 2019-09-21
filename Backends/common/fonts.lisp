@@ -11,8 +11,7 @@
     (let* ((codes (climb:font-string-glyph-codes font (string character)))
            (code (alexandria:first-elt codes)))
       (assert (alexandria:length= 1 codes))
-      (+ (climb:font-glyph-left font code)
-         (climb:font-glyph-width font code))))
+      (climb:font-glyph-dx font code)))
   (:documentation "Returns width of the character. Character may be composed of
 many codepoints, but argument must constitute exactly one character."))
 

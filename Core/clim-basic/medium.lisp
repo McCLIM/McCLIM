@@ -758,18 +758,6 @@
     (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
       (call-next-method medium center-x center-y radius start-angle end-angle filled))))
 
-(defgeneric medium-draw-glyph
-  (medium element x y align-x align-y toward-x toward-y transform-glyphs))
-
-(defmethod medium-draw-glyph :around ((medium transform-coordinates-mixin) element x y
-                                      align-x align-y toward-x toward-y
-                                      transform-glyphs)
-  (let ((tr (medium-transformation medium)))
-    (with-transformed-position (tr x y)
-      (call-next-method medium element x y
-                        align-x align-y toward-x toward-y
-                        transform-glyphs))))
-
 (defmethod medium-copy-area :around ((from-drawable transform-coordinates-mixin)
                                      from-x from-y width height
                                      to-drawable to-x to-y)

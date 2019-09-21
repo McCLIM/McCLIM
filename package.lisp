@@ -1891,20 +1891,18 @@
    ;; #:line-style-effective-dashes
    ;; medium
    #:medium-miter-limit
-   #:medium-draw-glyph
    #:medium-draw-circle*
    ;; panes
    #:raised-pane #:raising
    #:lowered-pane #:lowering
    #:viewport-pane
-   #:draw-glyph #:device-font-text-style-p
+   #:device-font-text-style-p
    #:draw-image
    #:image-pane
    #:draw-label
    #:box-adjuster-gadget
    #:compose-space-aux
    #:simple-event-loop
-   #:pointer-motion-hint-event
    #:invoke-with-output-to-pointer-documentation
    #:with-output-to-pointer-documentation
    #:frame-display-pointer-documentation-string
@@ -1993,7 +1991,6 @@
    ;; Originally in CLIM-INTERNALS
    #:make-graft
    #:medium-draw-circle*
-   #:medium-draw-glyph
    #:mirror-transformation
    #:port-allocate-pixmap
    #:port-deallocate-pixmap
@@ -2004,7 +2001,6 @@
    #:port-grab-pointer
    #:port-ungrab-pointer
    #:with-pointer-grabbed
-   #:port-motion-hints
    #:port-set-mirror-name
    #:port-set-mirror-region
    #:port-set-mirror-transformation
@@ -2087,7 +2083,6 @@
    #:text-style-width
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
-   #:medium-draw-glyph
    #:medium-draw-circle*
    ;; selection
    #:release-selection
