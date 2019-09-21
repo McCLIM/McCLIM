@@ -339,26 +339,28 @@
    (status :label-pane :label "CLIM Fig"))
   (:layouts
    (default
-     (vertically ()
-       (:fill (horizontally ()
-                (vertically (:width 150)
-                  (tabling (:height 60)
-                    (list black-button blue-button green-button cyan-button)
-                    (list red-button magenta-button yellow-button white-button)
-                    (list turquoise-button grey-button brown-button orange-button))
-                  line-width-slider
-                  (horizontally (:spacing 4)
-                    (labelling (:label "Dashes"))
-                    dashes)
-                  round-shape-toggle
-                  (horizontally () fill-mode-toggle constrict-toggle)
-                  point-button line-button arrow-button
-                  ellipse-button rectangle-button
-                  bezier-button
-                  :fill)
-                (:fill (scrolling (:width 600 :height 400) canvas))))
-       (horizontally (:height 30) clear undo redo)
-       status)))
+    (vertically ()
+      (:fill (horizontally ()
+               (spacing (:thickness 4)
+                 (vertically (:width 150 :y-spacing 4)
+                   (tabling (:height 60 :x-spacing 2 :y-spacing 2)
+                     (list black-button blue-button green-button cyan-button)
+                     (list red-button magenta-button yellow-button white-button)
+                     (list turquoise-button grey-button brown-button orange-button))
+                   line-width-slider
+                   (horizontally (:spacing 4)
+                     (labelling (:label "Dashes"))
+                     dashes)
+                   round-shape-toggle
+                   (horizontally () fill-mode-toggle constrict-toggle)
+                   point-button line-button arrow-button
+                   ellipse-button rectangle-button
+                   bezier-button
+                   :fill))
+               (:fill (scrolling (:width 600 :height 400) canvas))))
+      (spacing (:thickness 4)
+        (horizontally (:height 30 :x-spacing 4) clear undo redo))
+      status)))
   (:top-level (default-frame-top-level :prompt 'prompt)))
 
 (defmethod frame-standard-output ((frame clim-fig))
