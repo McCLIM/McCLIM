@@ -98,10 +98,12 @@
     (gethash style *styles*)))
 
 (defun call-with-style (thunk stream style)
-  (apply #'invoke-with-drawing-options stream thunk
-         (etypecase style
-           (list   style)
-           (symbol (style-drawing-options style)))))
+  (if (null style)
+      (funcall thunk stream)
+      (apply #'invoke-with-drawing-options stream thunk
+             (etypecase style
+               (list   style)
+               (symbol (style-drawing-options style))))))
 
 (defmacro with-style ((stream style) &body body)
   (check-type stream symbol)
@@ -109,7 +111,7 @@
              (not (nth-value 1 (style-drawing-options (eval style)))))
     (warn "~@<~S is not a know style.~@:>" style))
   `(call-with-style (lambda (,stream) (declare (ignorable ,stream)) ,@body)
-                    ,stream ',style))
+                    ,stream ,style))
 
 (defun call-with-section (body-thunk title-thunk stream)
   (with-preserved-cursor-x (stream)
