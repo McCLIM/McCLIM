@@ -23,36 +23,36 @@
 ;;; package dependency lists.
 (in-package #:asdf-user)
 
-(defsystem :mcclim
-  :author "Alessandro Serra
-Alexey Dejneka
-Andreas Fuchs
-Andy Hefner
-Arnaud Rouanet
-Brian Mastenbrook
-Brian Spilsbury
-Christophe Rhodes
-Clemens Fruhwirth
-Cyrus Harmon
-Daniel Barlow
-Daniel Kochmański
-Duncan Rose
-Edena Pixel
-Elias Mårtenson
-Frank Buss
-Gilbert Baumann
-Iban Hatchondo
-Julien Boninfan
-Lionel Salabartan
-Max-Gerd Retzlaff
-Mike McDonald
-Nisar Ahmad
-Peter Mechleborg
-Rainer Joswig
-Robert Goldman
-Robert Strandh
-Rudi Schlatte
-Timothy Moore"
+(defsystem "mcclim"
+  :author ("Alessandro Serra"
+           "Alexey Dejneka"
+           "Andreas Fuchs"
+           "Andy Hefner"
+           "Arnaud Rouanet"
+           "Brian Mastenbrook"
+           "Brian Spilsbury"
+           "Christophe Rhodes"
+           "Clemens Fruhwirth"
+           "Cyrus Harmon"
+           "Daniel Barlow"
+           "Daniel Kochmański"
+           "Duncan Rose"
+           "Edena Pixel"
+           "Elias Mårtenson"
+           "Frank Buss"
+           "Gilbert Baumann"
+           "Iban Hatchondo"
+           "Julien Boninfan"
+           "Lionel Salabartan"
+           "Max-Gerd Retzlaff"
+           "Mike McDonald"
+           "Nisar Ahmad"
+           "Peter Mechleborg"
+           "Rainer Joswig"
+           "Robert Goldman"
+           "Robert Strandh"
+           "Rudi Schlatte"
+           "Timothy Moore")
   :license "LGPL-2.1+"
   :version "0.9.7"
   :description "McCLIM is an implementation of the CLIM 2.0 specification."
@@ -85,7 +85,7 @@ interface management system."
                #:mcclim-franz))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
-  (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.
+  (pushnew :clim *features*)) ; The fact that CLIM itself is available is true when all is loaded.
 
 (defsystem "mcclim/test"
   :depends-on ("mcclim")
@@ -101,7 +101,7 @@ interface management system."
                              (:file "text-selection")
                              (:file "postscript")))))
 
-;; The fact that our CLIM implementation is McCLIM is already true now.
-;; This feature is notably used by ESA and DREI, in cases where they need to
-;; know whether they are compiled with McCLIM or another CLIM implementation.
+;;; The fact that our CLIM implementation is McCLIM is already true now.
+;;; This feature is notably used by ESA and DREI, in cases where they need to
+;;; know whether they are compiled with McCLIM or another CLIM implementation.
 (pushnew :mcclim *features*)
