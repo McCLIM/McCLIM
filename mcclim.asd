@@ -1,6 +1,5 @@
-
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000, 2014 by 
+;;;  (c) copyright 2000, 2014 by
 ;;;           Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2005 by
 ;;;           Andreas Fuchs (asf@boinkor.net)
@@ -16,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; The actual McCLIM system that people should to use in their ASDF
@@ -61,7 +60,8 @@ Timothy Moore"
 
 CLIM (Common Lisp Interface Manager) is an advanced graphical user
 interface management system."
-  :depends-on (#:mcclim/looks #:mcclim/extensions))
+  :depends-on ("mcclim/looks" "mcclim/extensions")
+  :in-order-to ((test-op (test-op "mcclim/test"))))
 
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
@@ -87,7 +87,21 @@ interface management system."
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.
 
+(defsystem "mcclim/test"
+  :depends-on ("mcclim")
+  :components ((:module "Tests"
+                :serial t
+                :components ((:file "package")
+                             (:file "utils")
+                             (:file "transforms")
+                             (:file "regions")
+                             (:file "input-editing")
+                             (:file "commands")
+                             (:file "presentations")
+                             (:file "text-selection")
+                             (:file "postscript")))))
+
 ;; The fact that our CLIM implementation is McCLIM is already true now.
 ;; This feature is notably used by ESA and DREI, in cases where they need to
 ;; know whether they are compiled with McCLIM or another CLIM implementation.
-(pushnew :mcclim *features*) 
+(pushnew :mcclim *features*)
