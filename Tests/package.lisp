@@ -13,4 +13,4 @@
 (def-suite :mcclim)
 
 (defun run-tests ()
-  (run!))
+  (run! :mcclim))

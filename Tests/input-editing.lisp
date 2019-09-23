@@ -1,29 +1,30 @@
 (cl:in-package #:clim-tests)
 
-(assert (null *activation-gestures*))
+(def-suite* :mcclim.input-editing
+  :in :mcclim)
 
-;;; SIMPLE-PARSE-ERROR
-(assert (subtypep 'simple-parse-error 'parse-error))
+(test input-editing.*activation-gestures*
+  (is (null *activation-gestures*)))
 
-(make-condition 'simple-parse-error
-                :format-control "~A" :format-arguments (list 3))
+(test input-editing.simple-parse-error
+  (is (subtypep 'simple-parse-error 'parse-error))
 
-(handler-case
-    (simple-parse-error "foo: ~A" 3)
-  (simple-parse-error (c)
-    (assert (search "foo: 3" (format nil "~A" c))))
-  (:no-error (&rest values)
-    (error "~S returned ~S" 'simple-parse-error values)))
+  (finishes
+    (make-condition 'simple-parse-error
+                    :format-control "~A" :format-arguments (list 3)))
+  (handler-case
+      (simple-parse-error "foo: ~A" 3)
+    (simple-parse-error (c)
+      (is (search "foo: 3" (format nil "~A" c))))
+    (:no-error (&rest values)
+      (fail "~S returned ~S" 'simple-parse-error values))))
 
-;;; INPUT-NOT-OF-REQUIRED-TYPE
-(assert (subtypep 'input-not-of-required-type 'parse-error))
+(test input-editing.input-not-of-required-type
+  (is (subtypep 'input-not-of-required-type 'parse-error))
 
-(let ((c (make-condition 'input-not-of-required-type
-                         :string "not an INTEGER" :type 'integer)))
-  (assert (search "not an INTEGER" (format nil "~A" c))))
+  (let ((c (make-condition 'input-not-of-required-type
+                           :string "not an INTEGER" :type 'integer)))
+    (is (search "not an INTEGER" (format nil "~A" c))))
 
-(handler-case
-    (input-not-of-required-type 3 'float)
-  (input-not-of-required-type ())
-  (:no-error (&rest values)
-    (error "~S returned ~S" 'input-not-of-required-type values)))
+  (signals input-not-of-required-type
+    (input-not-of-required-type 3 'float)))

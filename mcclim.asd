@@ -88,7 +88,8 @@ interface management system."
   (pushnew :clim *features*)) ; The fact that CLIM itself is available is true when all is loaded.
 
 (defsystem "mcclim/test"
-  :depends-on ("mcclim")
+  :depends-on ("mcclim"
+               "fiveam")
   :components ((:module "Tests"
                 :serial t
                 :components ((:file "package")
@@ -99,7 +100,9 @@ interface management system."
                              (:file "commands")
                              (:file "presentations")
                              (:file "text-selection")
-                             (:file "postscript")))))
+                             (:file "postscript"))))
+  :perform (test-op (operation component)
+             (uiop:symbol-call '#:clim-tests '#:run-tests)))
 
 ;;; The fact that our CLIM implementation is McCLIM is already true now.
 ;;; This feature is notably used by ESA and DREI, in cases where they need to

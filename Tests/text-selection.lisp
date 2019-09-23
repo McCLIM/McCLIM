@@ -1,6 +1,10 @@
 (cl:in-package #:clim-tests)
 
-(macrolet ((is (form) `(assert ,form)))
+(def-suite* :mcclim.text-selection
+  :in :mcclim)
+
+(test text-selection.smoke
+  "Smoke test for the text selection protocol."
   (let ((port (make-instance 'climi::standard-port))
         (sheet-1 (make-instance 'basic-sheet))
         (sheet-2 (make-instance 'basic-sheet))
