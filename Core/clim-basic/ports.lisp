@@ -24,6 +24,8 @@
 
 (in-package :clim-internals)
 
+;;; Server path and global port registry
+
 (defvar *default-server-path* nil)
 
 ;;; - CLX is the de-facto reference backend. We have few flavours of
@@ -43,11 +45,45 @@
 
 (defun find-default-server-path ()
   (loop for port in *server-path-search-order*
-	if (get port :port-type)
-	   do (return-from find-default-server-path (list port))
-	finally (error "No CLIM backends have been loaded!")))
+        if (get port :port-type)
+           do (return-from find-default-server-path (list port))
+        finally (error "No CLIM backends have been loaded!")))
 
 (defvar *all-ports* nil)
+
+(defun find-port (&key (server-path *default-server-path*))
+  (if (null server-path)
+      (setq server-path (find-default-server-path)))
+  (if (atom server-path)
+      (setq server-path (list server-path)))
+  (setq server-path
+        (funcall (get (first server-path) :server-path-parser) server-path))
+  (loop for port in *all-ports*
+        if (equal server-path (port-server-path port))
+        do (return port)
+        finally (let ((port-type (get (first server-path) :port-type))
+                      port)
+                  (if (null port-type)
+                      (error "Don't know how to make a port of type ~S"
+                             server-path))
+                  (setq port
+                        (funcall 'make-instance port-type
+                                 :server-path server-path))
+                  (push port *all-ports*)
+                  (return port))))
+
+(defmacro with-port ((port-var server &rest args &key &allow-other-keys)
+                     &body body)
+  `(invoke-with-port (lambda (,port-var) ,@body) ,server ,@args))
+
+(defun invoke-with-port (continuation server &rest args &key &allow-other-keys)
+  (let* ((path (list* server args))
+         (port (find-port :server-path path)))
+    (unwind-protect
+         (funcall continuation port)
+      (destroy-port port))))
+
+;;; Basic port
 
 (defclass basic-port (port)
   ((server-path :initform nil
@@ -107,31 +143,13 @@
 (defgeneric port-frame-keyboard-input-focus (port frame))
 (defgeneric (setf port-frame-keyboard-input-focus) (focus port frame))
 
-(defun find-port (&key (server-path *default-server-path*))
-  (if (null server-path)
-      (setq server-path (find-default-server-path)))
-  (if (atom server-path)
-      (setq server-path (list server-path)))
-  (setq server-path
-	(funcall (get (first server-path) :server-path-parser) server-path))
-  (loop for port in *all-ports*
-     if (equal server-path (port-server-path port))
-     do (return port)
-     finally (let ((port-type (get (first server-path) :port-type))
-		   port)
-	       (if (null port-type)
-		   (error "Don't know how to make a port of type ~S"
-			  server-path))
-	       (setq port
-		     (funcall 'make-instance port-type
-			      :server-path server-path))
-	       (push port *all-ports*)
-	       (return port))))
-
 (defmethod destroy-port :before ((port basic-port))
   (when (and *multiprocessing-p* (port-event-process port))
     (destroy-process (port-event-process port))
     (setf (port-event-process port) nil)))
+
+
+;;; Mirrors
 
 (defmethod port-lookup-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
   (gethash sheet (slot-value port 'sheet->mirror)))
