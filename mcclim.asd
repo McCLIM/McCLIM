@@ -104,6 +104,13 @@ interface management system."
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
 
+(defsystem "mcclim/test-util"
+  :depends-on ("mcclim")
+  :components ((:module "Tests/util"
+                :serial t
+                :components ((:file "package")
+                             (:file "test-page")))))
+
 ;;; The fact that our CLIM implementation is McCLIM is already true now.
 ;;; This feature is notably used by ESA and DREI, in cases where they need to
 ;;; know whether they are compiled with McCLIM or another CLIM implementation.
