@@ -45,8 +45,10 @@
 ;;         pointer-motion-event
 ;;           pointer-boundary-event
 ;;             pointer-enter-event
+;;               pointer-grab-enter-event
 ;;               pointer-ungrab-enter-event
 ;;             pointer-exit-event
+;;               pointer-grab-leave-event
 ;;               pointer-ungrab-leave-event
 ;;     window-event
 ;;       window-configuration-event
@@ -188,6 +190,8 @@
 (define-event-class pointer-enter-event    (pointer-boundary-event) ())
 (define-event-class pointer-exit-event     (pointer-boundary-event) ())
 
+(define-event-class pointer-grab-enter-event   (pointer-enter-event) ())
+(define-event-class pointer-grab-leave-event   (pointer-exit-event)  ())
 (define-event-class pointer-ungrab-enter-event (pointer-enter-event) ())
 (define-event-class pointer-ungrab-leave-event (pointer-exit-event)  ())
 

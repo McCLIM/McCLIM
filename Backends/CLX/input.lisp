@@ -191,12 +191,14 @@
        (when (or (not (eq kind :inferior))
                  (member mode '(:grab :ungrab)))
          (make-instance (case event-key
-                          (:leave-notify (if (eq mode :ungrab)
-                                             'pointer-ungrab-leave-event
-                                             'pointer-exit-event))
-                          (:enter-notify (if (eq mode :ungrab)
-                                             'pointer-ungrab-enter-event
-                                             'pointer-enter-event)))
+                          (:leave-notify (case mode
+                                           (:grab 'pointer-grab-leave-event)
+                                           (:ungrab 'pointer-ungrab-leave-event)
+                                           (t 'pointer-exit-event)))
+                          (:enter-notify (case mode
+                                           (:grab 'pointer-grab-enter-event)
+                                           (:ungrab 'pointer-ungrab-enter-event)
+                                           (t 'pointer-enter-event))))
                         :pointer 0 :button code
                         :x x :y y
                         :graft-x root-x
