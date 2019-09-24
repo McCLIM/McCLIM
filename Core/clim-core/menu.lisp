@@ -84,9 +84,6 @@
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
   (arm-branch pane))
 
-(defmethod handle-event ((pane menu-button-pane) (event pointer-ungrab-leave-event))
-  (destroy-substructure (menu-root pane)))
-
 ;;; menu-button-leaf-pane
 
 (defclass menu-button-leaf-pane (menu-button-pane)
@@ -103,17 +100,14 @@
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-button-release-event))
   (with-slots (armed label client id) pane
-    (when armed
-      (unwind-protect
-	   (value-changed-callback pane client id label)
-	(disarm-menu pane)
-	(destroy-substructure (menu-root pane))))))
+    (unwind-protect
+         (when armed
+           (value-changed-callback pane client id label))
+      (disarm-menu pane)
+      (destroy-substructure (menu-root pane)))))
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-exit-event))
   (disarm-menu pane))
-
-(defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-ungrab-leave-event))
-  (destroy-substructure (menu-root pane)))
 
 ;;; menu-button-submenu-pane
 
@@ -193,7 +187,12 @@ account, and create a list of menu buttons."
     (arm-menu sub-menu)))
 
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
-  (destroy-substructure (menu-root pane)))
+  (let ((pointer-sheet (port-pointer-sheet (port pane))))
+    (unless (and (not (eq pane pointer-sheet))
+                 (typep pointer-sheet 'menu-button-pane)
+                 (gadget-active-p pointer-sheet)
+                 (eq (menu-root pointer-sheet) (menu-root pane)))
+      (destroy-substructure (menu-root pane)))))
 
 ;;; menu-button-vertical-submenu-pane
 (defclass menu-button-vertical-submenu-pane (menu-button-submenu-pane) ())
