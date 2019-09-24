@@ -141,22 +141,22 @@ name `command-table-name', taking inherited menu items into
 account, and create a list of menu buttons."
   (let ((menu-buttons '()))
     (map-over-command-table-menu-items
-     #'(lambda (name gesture item)
-         (declare (ignore name gesture))
-         (push (make-menu-button-from-menu-item
-                item client :command-table command-table-name :vertical t)
-               menu-buttons))
+     (lambda (name gesture item)
+       (declare (ignore name gesture))
+       (push (make-menu-button-from-menu-item
+              item client :command-table command-table-name :vertical t)
+             menu-buttons))
      command-table-name)
     (nreverse menu-buttons)))
 
 (defun create-substructure (sub-menu client)
-  (let* ((frame *application-frame*)
-	 (manager (frame-manager frame))
-	 (command-table-name (slot-value sub-menu 'command-table))
-	 (items (make-menu-buttons command-table-name client))
-	 (rack (make-pane-1 manager frame 'vrack-pane
-			    :background *3d-normal-color* :contents items))
-	 (raised (make-pane-1 manager frame 'submenu-border :contents (list rack))))
+  (let* ((frame (pane-frame client))
+         (manager (frame-manager frame))
+         (command-table-name (slot-value sub-menu 'command-table))
+         (items (make-menu-buttons command-table-name client))
+         (rack (make-pane-1 manager frame 'vrack-pane
+                            :background *3d-normal-color* :contents items))
+         (raised (make-pane-1 manager frame 'submenu-border :contents (list rack))))
     (with-slots (bottomp) sub-menu
       (multiple-value-bind (xmin ymin xmax ymax)
 	  (bounding-rectangle* (sheet-region sub-menu))
@@ -185,11 +185,11 @@ account, and create a list of menu buttons."
   (with-slots (client frame-manager submenu-frame) sub-menu
     (arm-menu client)
     (if submenu-frame
-	(progn (mapc #'destroy-substructure (menu-children sub-menu))
-	       (mapc #'disarm-menu (menu-children sub-menu)))
-	(progn
-	  (mapc #'destroy-substructure (menu-children client))
-	  (create-substructure sub-menu sub-menu)))
+        (progn (mapc #'destroy-substructure (menu-children sub-menu))
+               (mapc #'disarm-menu (menu-children sub-menu)))
+        (progn
+          (mapc #'destroy-substructure (menu-children client))
+          (create-substructure sub-menu sub-menu)))
     (arm-menu sub-menu)))
 
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
@@ -283,16 +283,16 @@ account, and create a list of menu buttons."
 ;;; Menu creation from command tables
 
 (defun make-menu-button-from-menu-item (item client
-					&key (bottomp nil)
+                                        &key (bottomp nil)
                                         (vertical nil)
-					command-table
-					(presentation-type 'menu-item))
+                                        command-table
+                                        (presentation-type 'menu-item))
   (declare (ignore command-table))
-  (let ((name (command-menu-item-name item))
-	(type (command-menu-item-type item))
-	(value (command-menu-item-value item))
-	(frame *application-frame*)
-	(manager (frame-manager *application-frame*)))
+  (let* ((name (command-menu-item-name item))
+         (type (command-menu-item-type item))
+         (value (command-menu-item-value item))
+         (frame (pane-frame client))
+         (manager (frame-manager frame)))
     (case type
       (:command
        (let ((command-name (if (consp value) (car value) value)))
@@ -352,9 +352,7 @@ account, and create a list of menu buttons."
 
 (defmethod (setf %pane-contents) :after (contents (pane menu-bar))
   (declare (ignore contents))
-  (setf (slot-value pane 'items) (copy-list (sheet-children pane)))
-  (loop for child in (menu-children pane)
-	do (setf (gadget-client child) pane)))
+  (setf (slot-value pane 'items) (copy-list (sheet-children pane))))
 
 (defmethod menu-children ((menu-bar menu-bar))
   (slot-value menu-bar 'items))
@@ -374,35 +372,33 @@ account, and create a list of menu buttons."
 (defmethod disarm-menu ((object menu-bar))
   (setf (slot-value object 'armed) nil))
 
-(defun %make-menu-contents (command-table)
+(defun %make-menu-contents (command-table client)
   (with-slots (menu) (find-command-table command-table)
-    (append
-     (loop for item in menu
-	collect
-	  (make-menu-button-from-menu-item
-	   item nil
-	   :bottomp t
-	   :vertical nil
-	   :command-table command-table))
-     (list +fill+))))
+    (append (loop for item in menu
+                  collect (make-menu-button-from-menu-item
+                           item client
+                           :bottomp t
+                           :vertical nil
+                           :command-table command-table))
+            (list +fill+))))
 
 (defun make-menu-bar (command-table
-		      &key width height
-		           (max-width +fill+) max-height
-			   min-width min-height)
-  (with-slots (menu) (find-command-table command-table)
-    (make-pane-1 *pane-realizer* *application-frame*
-		 'menu-bar
-		 :background *3d-normal-color*
-		 :width width :height height
-		 :max-width max-width :max-height max-height
-		 :min-width min-width :min-height min-height
-		 :contents (%make-menu-contents command-table))))
+                      &key width height
+                           (max-width +fill+) max-height
+                           min-width min-height)
+  (let ((menu-bar (make-pane-1 *pane-realizer* *application-frame* 'menu-bar
+                               :background *3d-normal-color*
+                               :width width :height height
+                               :max-width max-width :max-height max-height
+                               :min-width min-width :min-height min-height)))
+    (setf (%pane-contents menu-bar)
+          (%make-menu-contents command-table menu-bar))
+    menu-bar))
 
 (defun update-menu-bar (menu-bar-pane command-table)
   (when command-table
     (setf (%pane-contents menu-bar-pane)
-	  (%make-menu-contents command-table)))
+          (%make-menu-contents command-table menu-bar-pane)))
   (change-space-requirements menu-bar-pane))
 
 (defmethod handle-repaint ((pane menu-bar) region)
