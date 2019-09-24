@@ -1,10 +1,9 @@
-
-(defsystem #:drei-mcclim
+(defsystem "drei-mcclim"
   :description "Drei Replaces EINE's Inheritor – McCLIM editor substrate"
   :depends-on ((:version "flexichain" "1.5.1")
-               #:esa-mcclim #:clim-core #-clim-without-swank #:swank
-               #:automaton #:persistent
-               #:mcclim-fonts)
+               "esa-mcclim" "clim-core" #-clim-without-swank "swank"
+               "automaton" "persistent"
+               "mcclim-fonts")
   :components
   ((:file "packages")
    (:file "buffer" :depends-on ("packages"))
@@ -44,13 +43,14 @@
    (:file "lisp-syntax-commands" :depends-on ("lisp-syntax-swine" "misc-commands"))
    (:file "lisp-syntax-swank"
           :if-feature (:not :clim-without-swank)
-          :depends-on ("lisp-syntax"))))
+          :depends-on ("lisp-syntax")))
+  :in-order-to ((test-op (test-op "drei-mcclim/test"))))
 
-(defsystem #:drei-mcclim/test
-  :depends-on (#:drei-mcclim #:fiveam #:automaton)
+(defsystem "drei-mcclim/test"
+  :depends-on ("drei-mcclim" "fiveam" "automaton")
   :components
   ((:module "Tests"
-    :components 
+    :components
     ((:file "packages")
      (:file "testing" :depends-on ("packages"))
      (:file "buffer-tests" :depends-on ("testing"))
@@ -63,8 +63,6 @@
      (:file "rectangle-tests" :depends-on ("testing"))
      (:file "undo-tests" :depends-on ("testing"))
      (:file "lisp-syntax-tests" :depends-on ("testing" "motion-tests"))
-     (:file "lisp-syntax-swine-tests" :depends-on ("lisp-syntax-tests"))))))
-
-(defmethod perform ((o test-op) (c (eql (find-system '#:drei-mcclim))))
-  (load-system '#:drei-mcclim/test)
-  (symbol-call '#:drei-tests '#:run-tests))
+     (:file "lisp-syntax-swine-tests" :depends-on ("lisp-syntax-tests")))))
+  :perform (test-op (operation component)
+             (uiop:symbol-call '#:drei-tests '#:run-tests)))
