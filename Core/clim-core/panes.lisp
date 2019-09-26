@@ -1379,8 +1379,6 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 (defmethod initialize-instance :after ((pane box-pane) &key contents)
   (setf (%pane-contents pane) contents))
 
-(defgeneric %pane-contests (pane contents))
-
 (defmethod (setf %pane-contents) (contents (pane box-pane))
   (labels ((parse-box-content (content)
 	     "Parses a box/rack content and returns a BOX-CLIENT instance."

@@ -188,7 +188,6 @@
 (define-event-class pointer-enter-event    (pointer-boundary-event) ())
 (define-event-class pointer-exit-event     (pointer-boundary-event) ())
 
-;;; Menu implementation uses pointer-ungrab-leave-event.
 (define-event-class pointer-ungrab-enter-event (pointer-enter-event) ())
 (define-event-class pointer-ungrab-leave-event (pointer-exit-event)  ())
 

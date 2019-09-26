@@ -270,8 +270,7 @@ documentation produced by presentations.")
         (prog1
             (call-next-method)
           (alexandria:when-let ((menu-bar-pane (frame-menu-bar-pane frame)))
-                               (update-menu-bar menu-bar-pane
-                                                new-command-table)))
+            (update-menu-bar menu-bar-pane new-command-table)))
         (call-next-method))))
 
 (defmethod generate-panes :before (fm  (frame application-frame))
