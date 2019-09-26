@@ -70,19 +70,23 @@
 ;;;; Part II: Geometry Substrate
 
 ;;; 3.1 General Regions
-(define-protocol-class bounding-rectangle ())
-
 (define-protocol-class region (design))
+
+(define-protocol-class point (region bounding-rectangle))
 (define-protocol-class path (region bounding-rectangle))
 (define-protocol-class area (region bounding-rectangle))
-(define-protocol-class region-set  (region bounding-rectangle))
-(define-protocol-class point (region bounding-rectangle))
+(define-protocol-class region-set (region bounding-rectangle))
+
 (define-protocol-class polyline (path))
-(define-protocol-class polygon (area))
 (define-protocol-class line (polyline))
+(define-protocol-class elliptical-arc (path))
+
+(define-protocol-class polygon (area))
 (define-protocol-class rectangle (polygon))
 (define-protocol-class ellipse (area))
-(define-protocol-class elliptical-arc (path))
+
+;;; 4.1 Bounding Rectangles
+(define-protocol-class bounding-rectangle ())
 
 ;;; 5.1 Transformations
 (define-protocol-class transformation ())

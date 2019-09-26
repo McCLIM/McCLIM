@@ -66,13 +66,6 @@
 (defmethod bounding-rectangle* ((x nowhere-region))
   (values 0 0 0 0))
 
-;;; 2.5.1.1 Region Predicates in CLIM
-
-(defgeneric region-equal (region1 region2))
-(defgeneric region-contains-region-p (region1 region2))
-(defgeneric region-contains-position-p (region x y))
-(defgeneric region-intersects-region-p (region1 region2))
-
 ;;; 2.5.1.2 Composition of CLIM Regions
 
 (defclass standard-region-union (region-set)
@@ -84,17 +77,6 @@
 (defclass standard-region-difference (region-set)
   ((a :initarg :a :reader standard-region-difference-a)
    (b :initarg :b :reader standard-region-difference-b)))
-
-;;; Protocol:
-(defgeneric region-set-regions (region &key normalize))
-(defgeneric map-over-region-set-regions (function region &key normalize))
-(defgeneric region-union (region1 region2))
-(defgeneric region-intersection (region1 region2)
-  (:method :around ((a region) (b region))
-           (cond ((ignore-errors (region-contains-region-p a b)) b)
-                 ((ignore-errors (region-contains-region-p b a)) a)
-                 (t (call-next-method)))))
-(defgeneric region-difference (region1 region2))
 
 ;;; -- 2.5.2 CLIM Point Objects ----------------------------------------------
 
@@ -117,8 +99,6 @@
         (format sink "~S ~S" x y)))))
 
 ;;; Point protocol: point-position
-
-(defgeneric point-position (point))
 
 (defmethod point-position ((self standard-point))
   (with-slots (x y) self
@@ -1913,6 +1893,10 @@ and RADIUS2-DY"
   (funcall fun (standard-region-difference-a self))
   (funcall fun (standard-region-difference-b self)))
 
+(defmethod map-over-region-set-regions
+    (fun (self region-set) &key normalize)
+  (mapc fun (region-set-regions self :normalize normalize)))
+
 (defmethod map-over-region-set-regions (fun (self region) &key normalize)
   (declare (ignorable normalize))
   (funcall fun self))
@@ -2674,14 +2658,6 @@ and RADIUS2-DY"
 
 (defmethod region-union ((a nowhere-region) (b nowhere-region))
   +nowhere+)
-
-;;; The generic function REGION-EXCLUSIVE-OR is not part of the CLIM
-;;; II specification, which is why it does not have a corresponding
-;;; DEFGENERIC form in the "Protocol" section in the beginning of this
-;;; file.  However, to avoid a style warning emitted by certain
-;;; compilers, we still want an explicit DEFGENERIC form.  This is why
-;;; we include it here.
-(defgeneric region-exclusive-or (region1 region2))
 
 (defmethod region-exclusive-or ((a region) (b region))
   (region-union (region-difference a b) (region-difference b a)))
