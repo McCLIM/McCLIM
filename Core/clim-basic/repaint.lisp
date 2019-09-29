@@ -209,3 +209,41 @@ want to do the same.")
               (with-bounding-rectangle* (left top right bottom)
                   native-sheet-region
                 (medium-draw-rectangle* medium left top right bottom t)))))))
+
+;;; Integration with region and transformation changes
+
+(defmethod (setf sheet-region) :around (region (sheet basic-sheet))
+  (let ((old-region (sheet-region sheet)))
+    (unless (region-equal region old-region)
+      (let ((*inhibit-dispatch-repaint* nil)) ; broken, don't use
+        (call-next-method))
+      (when (sheet-viewable-p sheet)
+        (dispatch-repaint (sheet-parent sheet)
+                          (transform-region (sheet-transformation sheet)
+                                            (region-union (sheet-region sheet)
+                                                          old-region)))))))
+
+(defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
+  (let ((old-transformation (sheet-transformation sheet)))
+    (unless (transformation-equal transformation old-transformation)
+      (let ((*inhibit-dispatch-repaint* nil)) ; broken, don't use
+        (call-next-method))
+      (when (sheet-viewable-p sheet)
+        (let* ((region (sheet-region sheet))
+               (new-region (transform-region (sheet-transformation sheet) region))
+               (old-region (transform-region old-transformation region)))
+          (dispatch-repaint (sheet-parent sheet)
+                            (region-union new-region old-region)))))))
+
+(defun %set-sheet-region-and-transformation (sheet region transformation)
+  (let ((old-transformation (sheet-transformation sheet))
+        (old-region (sheet-region sheet)))
+    (let ((*inhibit-dispatch-repaint* nil)) ; broken, don't use
+      (setf (sheet-region sheet) region
+            (sheet-transformation sheet) transformation))
+    (when (sheet-viewable-p sheet)
+      (let ((new-region (transform-region (sheet-transformation sheet)
+                                          (sheet-region sheet)))
+            (old-region (transform-region old-transformation old-region)))
+        (dispatch-repaint (sheet-parent sheet)
+                          (region-union new-region old-region))))))
