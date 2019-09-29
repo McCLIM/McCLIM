@@ -566,8 +566,11 @@ if there is one, or STREAM"
 (def-stream-method stream-pointer-position
     ((stream standard-encapsulating-stream) &key pointer))
 
-(def-stream-method (setf stream-pointer-position)
-    (x y (stream standard-encapsulating-stream) &key pointer))
+(defmethod* (setf stream-pointer-position)
+    (x y (stream standard-encapsulating-stream))
+  (let ((*original-stream* stream)
+        (stream (slot-value stream 'stream)))
+    (setf (stream-pointer-position stream) (values x y))))
 
 (def-stream-method stream-set-input-focus
     ((stream standard-encapsulating-stream)))
