@@ -931,6 +931,7 @@ examine the type of the command menu item to see if it is
 		 (destructuring-bind (name ptype
 				      &key gesture &allow-other-keys)
 		     arg
+                   (declare (ignore name))
 		   (let ((command-args (loop for a in args
 					     for i from 0
 					     if (eql i arg-index)
