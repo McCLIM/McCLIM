@@ -18,27 +18,21 @@ using `+flipping-ink+' for drawing and ignoring the state
 symbol)."
   (with-output-recording-options (stream :draw t :record nil)
     (let ((ox nil) (oy nil))           ; So we can erase the old line.
-      (labels ((draw (x y)
-                 (funcall drawer x y :draw))
-               (erase (x y)
-                 (funcall drawer x y :erase))
-               (motion (x y)
-                 (when ox (erase ox oy))
-                 (draw x y)
-                 (setf ox x oy y))
-               (end (event x y)
-                 (when ox (draw ox oy))
+      (labels ((end (x y)
+                 (when ox (funcall drawer ox oy :draw))
                  (return-from dragging-drawing
                    (values x y))))
         (tracking-pointer (stream :pointer pointer
                                   :multiple-window multiple-window)
-          (:pointer-motion (window x y)
-            (motion x y))
-          (:pointer-button-press (event x y)
-            (end event x y))
-          (:pointer-button-release (event x y)
+          (:pointer-motion (x y)
+            (when ox (funcall drawer x y :erase))
+            (funcall drawer x y :draw)
+            (setf ox x oy y))
+          (:pointer-button-press (x y)
+            (end x y))
+          (:pointer-button-release (x y)
             (when finish-on-release
-              (end event x y))))))))
+              (end x y))))))))
 
 (defun clime:pointer-place-rubber-band-line* (&key (stream *standard-output*)
                                         (pointer (port-pointer (port stream)))
