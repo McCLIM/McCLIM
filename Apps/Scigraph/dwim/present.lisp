@@ -271,7 +271,9 @@ advised of the possiblity of such damages.
                (format stream "~A" window)))
    :description "a window")
 
-(clim:define-presentation-type-abbreviation alist-member (&key alist (test 'eql))
+(clim:define-presentation-type-abbreviation alist-member
+    (&key (alist (error "The :ALIST keyword argument is required"))
+          (test 'eql))
   `(clim:member-alist ,alist :test ,test))
 
 (defun menu-execute-no-side-effects (item)
@@ -282,7 +284,7 @@ advised of the possiblity of such damages.
 
 (defun token-element-string (element)
   (typecase element
-    (null (symbol-name element))		
+    (null (symbol-name element))
     (cons (string (first element)))
     (symbol (string-capitalize (symbol-name element)))
     (string element)
