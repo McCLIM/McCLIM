@@ -1187,7 +1187,7 @@ and RADIUS2-DY"
 
 ;;; -- Rectangle Sets --------------------------------------------------------
 
-(defclass standard-rectangle-set (region-set bounding-rectangle)
+(defclass standard-rectangle-set (region-set)
   ((bands
     ;; Represents the set of rectangles. This is list like:
     ;;
