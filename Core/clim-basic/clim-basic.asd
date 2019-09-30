@@ -20,7 +20,12 @@
     :serial t
     :components ((:file "coordinates")
                  (:file "transforms")
-                 (:file "regions")))
+                 (:file "regions")
+                 (:file "bounding-rectangle")
+                 (:file "region-bounding-rectangles")
+                 (:file "region-transformations")
+                 (:file "region-predicates")
+                 (:file "region-composition")))
    (:file "pattern" :depends-on ("decls" "protocol-classes" "utils" "design"))
    (:file "sheets" :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "geometry"))
    (:file "mirrors" :depends-on ("sheets"))
