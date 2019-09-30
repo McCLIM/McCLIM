@@ -215,45 +215,6 @@
                       (transform-region (sheet-transformation sheet)
                                         (sheet-region sheet)))))
 
-(defmethod (setf sheet-region) :around (region (sheet basic-sheet))
-  (unless (region-equal region (sheet-region sheet))
-    (let ((old-region (sheet-region sheet)))
-      (let ((*inhibit-dispatch-repaint* t))
-        (call-next-method))
-      (when (sheet-viewable-p sheet)
-        (dispatch-repaint (sheet-parent sheet)
-                          (transform-region (sheet-transformation sheet)
-                                            (region-union (sheet-region sheet)
-                                                          old-region)))))))
-
-(defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
-  (unless (transformation-equal transformation (sheet-transformation sheet))
-    (let ((old-transformation (sheet-transformation sheet)))
-      (let ((*inhibit-dispatch-repaint* t))
-        (call-next-method))
-      (when (sheet-viewable-p sheet)
-        (let ((new-region (transform-region (sheet-transformation sheet) (sheet-region sheet)))
-              (old-region (transform-region old-transformation (sheet-region sheet))))
-          (dispatch-repaint (sheet-parent sheet)
-                            (region-union new-region old-region)))))))
-
-(defun %set-sheet-region-and-transformation
-    (sheet &optional
-             (region (sheet-region sheet) new-region-p)
-             (transformation (sheet-transformation sheet) new-transformation-p))
-  (unless (or new-region-p new-transformation-p)
-    (return-from %set-sheet-region-and-transformation nil))
-  (let ((old-transformation (sheet-transformation sheet))
-        (old-region (sheet-region sheet)))
-    (let ((*inhibit-dispatch-repaint* t))
-      (setf (sheet-region sheet) region
-            (sheet-transformation sheet) transformation))
-    (when (sheet-viewable-p sheet)
-      (let ((new-region (transform-region transformation region))
-            (old-region (transform-region old-transformation old-region)))
-        (dispatch-repaint (sheet-parent sheet)
-                          (region-union new-region old-region))))))
-
 (defmethod sheet-transformation ((sheet basic-sheet))
   (error "Attempting to get the TRANSFORMATION of a SHEET that doesn't contain one"))
 
