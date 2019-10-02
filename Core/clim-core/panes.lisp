@@ -2536,6 +2536,10 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
 
+(defmethod handle-event ((sheet clim-stream-pane)
+                         (event window-manager-focus-event))
+  (setf (port-keyboard-input-focus (port sheet)) sheet))
+
 (defmethod interactive-stream-p ((stream clim-stream-pane))
   t)
 
