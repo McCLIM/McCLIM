@@ -46,7 +46,7 @@
                                    (expt (* h cos) 2))))))))
       (values (- cx x) (- cy y) (+ cx x) (+ cy y)))))
 
-(defmethod bounding-rectangle* ((region standard-ellipse))
+(defmethod bounding-rectangle* ((region elliptical-thing))
   (with-slots (tr start-angle end-angle) region
     (multiple-value-bind (cx cy) (ellipse-center-point* region)
       (if (every #'zerop (multiple-value-list (ellipse-radii region)))
