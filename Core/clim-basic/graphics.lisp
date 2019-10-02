@@ -146,8 +146,9 @@
 			     (line-style-unit line-style))
 		   :thickness (or line-thickness
 				  (line-style-thickness line-style))
-		   :dashes (or line-dashes
-			       (line-style-dashes line-style))
+		   :dashes (if dashes-p
+                               line-dashes
+                               (line-style-dashes line-style))
 		   :joint-shape (or line-joint-shape
 				    (line-style-joint-shape line-style))
 		   :cap-shape (or line-cap-shape
