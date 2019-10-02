@@ -489,7 +489,7 @@
                       radius-1-dx radius-1-dy
                       radius-2-dx radius-2-dy
                       &key start-angle end-angle)
-  (make-ellipical-thing 'standard-ellipse
+  (make-elliptical-thing 'standard-ellipse
                         center-x center-y
                         radius-1-dx radius-1-dy
                         radius-2-dx radius-2-dy
@@ -508,13 +508,13 @@
                              radius-1-dx radius-1-dy
                              radius-2-dx radius-2-dy
                              &key start-angle end-angle)
-  (make-ellipical-thing 'standard-elliptical-arc
+  (make-elliptical-thing 'standard-elliptical-arc
                         center-x center-y
                         radius-1-dx radius-1-dy
                         radius-2-dx radius-2-dy
                         start-angle end-angle))
 
-(defun make-ellipical-thing (class
+(defun make-elliptical-thing (class
                              center-x center-y
                              radius-1-dx radius-1-dy
                              radius-2-dx radius-2-dy
@@ -527,7 +527,6 @@
         radius-2-dy (coordinate radius-2-dy)
         start-angle (and start-angle (coordinate start-angle))
         end-angle (and end-angle (coordinate end-angle)))
-
   (let ((tr (make-3-point-transformation*
              0 0 1 0 0 1
              center-x center-y
