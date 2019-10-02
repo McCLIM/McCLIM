@@ -672,6 +672,8 @@ index being halfway between INDEX-1 and INDEX-2."
 (defun remove-duplicated-points (point-sequence &optional closed)
   "Given points A B C ... Z removes consecutive points which are duplicated. If
 a flag CLOSED is T then beginning and end of the list are consecutive too."
+  (when (alexandria:emptyp point-sequence)
+    (return-from remove-duplicated-points point-sequence))
   (collect (collect-point)
     (let* ((first-point (elt point-sequence 0))
            (last-point first-point))
