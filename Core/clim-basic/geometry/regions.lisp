@@ -465,12 +465,30 @@
 
 ;;; -- 2.5.6 Ellipses and Elliptical Arcs in CLIM ----------------------------
 
+;;; internal protocol
+(defgeneric polar->screen (ellipse)
+  ;; specialized on t, we expect that ellipse protocol is implemented.
+  (:method (ellipse)
+    (nest
+     (multiple-value-bind (rdx1 rdy1 rdx2 rdy2) (ellipse-radii ellipse))
+     (multiple-value-bind (cx cy) (ellipse-center-point* ellipse))
+     (let ((cx (coordinate cx))
+           (cy (coordinate cy))
+           (rdx1 (coordinate rdx1))
+           (rdy1 (coordinate rdy1))
+           (rdx2 (coordinate rdx2))
+           (rdy2 (coordinate rdy2)))
+       (make-3-point-transformation* 0 0 1 0 0 1
+                                     cx cy
+                                     (+ cx rdx1) (+ cy rdy1)
+                                     (+ cx rdx2) (+ cy rdy2))))))
+
 (defclass elliptical-thing ()
   ((start-angle :initarg :start-angle)
    (end-angle   :initarg :end-angle)
    ;; A transformation from the unit circle to get the elliptical
    ;; object.
-   (tr          :initarg :tr)))
+   (tr          :initarg :tr :reader polar->screen)))
 
 (defmethod slots-for-pprint-object append ((object elliptical-thing))
   '(start-angle end-angle tr))
