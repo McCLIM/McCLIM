@@ -406,10 +406,19 @@ translated, so they begin at different position than [0,0])."))
       (push #'(lambda () (xlib:free-pixmap mm)) ^cleanup)
       mm)))
 
+
+;;; The purpose of this is to reduce local network traffic for the case of many
+;;; calls to compute-rgb-image, for example when drawing a pattern.
+;;; For more details, see also: https://github.com/sharplispers/clx/pull/146
+(defun cached-drawable-depth (drawable)
+  (or (getf (xlib:drawable-plist drawable) :clim-cache)
+      (setf (getf (xlib:drawable-plist drawable) :clim-cache)
+            (xlib:drawable-depth drawable))))
+
 (defun compute-rgb-image (drawable image)
   (let* ((width (pattern-width image))
          (height (pattern-height image))
-         (depth (xlib:drawable-depth drawable))
+         (depth (cached-drawable-depth drawable))
          (idata (climi::pattern-array image)))
     (let* ((pm (xlib:create-pixmap :drawable drawable
                                    :width width
