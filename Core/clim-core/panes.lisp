@@ -2752,10 +2752,25 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 ;;; TITLE PANE
 
 (defclass title-pane (clim-stream-pane)
-  ()
+  ((title :initarg :title-string
+	  :accessor title-string))
   (:default-initargs :display-time t
+		     :title-string "Default Title"
                      :scroll-bars nil
+		     :text-style (make-text-style :serif :bold :very-large)
                      :display-function 'display-title))
+
+(defmethod display-title (frame (pane title-pane))
+  (declare (ignore frame))
+  (let* ((title-string (title-string pane))
+	 (a (text-style-ascent (pane-text-style pane) pane))
+	 (tw (text-size pane title-string)))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (declare (ignore y2))
+      (multiple-value-bind (tx ty)
+	  (values (- (/ (- x2 x1) 2) (/ tw 2))
+		  (+ y1 2 a))
+	(draw-text* pane title-string tx ty)))))
 
 ;;; Pointer Documentation Pane
 
