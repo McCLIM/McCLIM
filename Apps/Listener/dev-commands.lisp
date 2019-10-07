@@ -14,7 +14,7 @@
 (define-command-table application-commands)
 
 (define-command-table lisp-dev-commands :inherit-from nil) ;; Translators live here
-(define-command-table lisp-commands 
+(define-command-table lisp-commands
     :inherit-from (lisp-dev-commands)
     :menu (("ASDF" :menu asdf-commands)))
 
@@ -34,7 +34,7 @@
 (define-presentation-type class-name () :inherit-from 'symbol)
 (define-presentation-type slot-definition () :inherit-from 'expression)
 
-(define-presentation-type-abbreviation function-name () 
+(define-presentation-type-abbreviation function-name ()
   `(and expression (satisfies legal-and-fboundp)))
 
 (defun legal-and-fboundp (object)
@@ -125,7 +125,7 @@
 			       (t (caar arg)))
 	   do (format stream " ~S" key-arg))
       (write-char #\) stream))))
-  
+
 
 (define-presentation-method present (object (type generic-function)
                                      stream (view textual-view)
@@ -321,7 +321,7 @@
 (defmethod apropos-applicable-p ((spec (eql 'symbols)) symbol) t)
 
 (defmethod apropos-applicable-p ((spec (eql 'classes)) symbol)
-  (find-class symbol nil))  
+  (find-class symbol nil))
 
 (defmethod apropos-applicable-p ((spec (eql 'functions)) symbol)
   (fboundp symbol))
@@ -363,7 +363,7 @@
 			   :provide-output-destination-keyword nil)
     ((fsym 'function-name :prompt "function name"))
   (if (fboundp fsym)
-      (progn 
+      (progn
 	(eval `(trace ,fsym))
 	(format t "~&Tracing ~W.~%" fsym))
     (format t "~&Function ~W is not defined.~%" fsym)))
@@ -414,7 +414,7 @@
                      :documentation "Room"
                      :pointer-documentation "Room")
     (object))
-  
+
 
 (define-presentation-to-command-translator com-show-class-subclasses-translator
   (class-name com-show-class-subclasses lisp-commands
@@ -510,9 +510,9 @@
 					   :provide-output-destination-keyword t)
     ((class-spec 'class-name :prompt "class")
      &key
-     (orientation 'keyword :prompt "orientation" :default :horizontal))     
-  (let ((class (frob-to-class class-spec)))    
-    (if (not (null class))        
+     (orientation 'keyword :prompt "orientation" :default :horizontal))
+  (let ((class (frob-to-class class-spec)))
+    (if (not (null class))
         (class-grapher *standard-output* class #'c2mop:class-direct-subclasses
                        :orientation orientation)
         (note "~A is not a defined class." class-spec))))
@@ -534,7 +534,7 @@
          (initargs (c2mop:slot-definition-initargs slot))
          (initfunc (c2mop:slot-definition-initfunction slot))
          (initform (c2mop:slot-definition-initform slot))
-         (direct-slots (direct-slot-definitions class name))         
+         (direct-slots (direct-slot-definitions class name))
          (readers (mapcan (lambda (x) (copy-list (c2mop:slot-definition-readers x))) direct-slots))
          (writers (mapcan (lambda (x) (copy-list (c2mop:slot-definition-writers x))) direct-slots))
          (documentation (first (remove nil (mapcar (lambda (x) (documentation x t)) direct-slots))))
@@ -546,7 +546,7 @@
              (fcell ((var align-x &rest cell-opts) &body body)
                 `(formatting-cell (t :align-x ,align-x ,@cell-opts)
                    (with-ink (,var) ,@body) )))
-    
+
     (fcell (name :left)
      (with-output-as-presentation (t slot 'slot-definition :single-box t)
        (princ name))
@@ -561,24 +561,24 @@
     (fcell (initform :left)
       (if initfunc
           (format t "~W" initform)
-        (note "No initform")))
+        (italic (stream) (write-string "No initform" stream))))
 
     (formatting-cell (t :align-x :left)
       (if (not (or readers writers))
-          (note "No accessors")
+          (italic (stream) (write-string "No accessors" stream))
         (progn
           (with-ink (readers)
-            (if readers 
+            (if readers
                 (dolist (reader readers)
                   (present reader (presentation-type-of reader))
                   (terpri))
-                (note "No readers~%")))
+                (italic (stream) (write-string "No readers" stream))))
           (with-ink (writers)
-            (if writers 
-                (dolist (writer writers) 
+            (if writers
+                (dolist (writer writers)
                   (present writer (presentation-type-of writer))
                   (terpri))
-              (note "No writers"))))))
+              (italic (stream) (write-string "No writers" stream)))))))
 
     (fcell (documentation :left)
       (when documentation (with-text-family (t :serif) (princ documentation)))) )))
@@ -621,7 +621,7 @@
       (class-name allocation)
     allocation))
 
-(defun present-the-slots (class)  
+(defun present-the-slots (class)
   (let* ((slots (class-sorted-slots class))
          (instance-slots (remove-if (lambda (x) (not (eq :instance (c2mop:slot-definition-allocation x)))) slots))
          (other-slots (set-difference slots instance-slots))
@@ -641,7 +641,7 @@
                                       :command-table show-commands
                                       :menu "Class Slots"
                                       :provide-output-destination-keyword t)
-    ((class-name 'clim:symbol :prompt "class name"))  
+    ((class-name 'clim:symbol :prompt "class name"))
   (let* ((class (find-class class-name nil))
          (finalized-p (and class
                            (typep class 'standard-class)
@@ -685,14 +685,14 @@
   #+lispworks (clos:specializer-direct-generic-functions specializer)
   #+allegro (mop:specializer-direct-generic-functions specializer)
   #-(or PCL SBCL scl lispworks clisp openmcl-partial-mop)
-  (error "Sorry, not supported in your CL implementation. 
-See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION 
+  (error "Sorry, not supported in your CL implementation.
+See the function X-SPECIALIZER-DIRECT-GENERIC-FUNCTION
 if you are interested in fixing this."))
 
 (defun class-funcs (class)
   (remove-duplicates
-   (mapcan 
-    (lambda (class) 
+   (mapcan
+    (lambda (class)
       (copy-list (x-specializer-direct-generic-functions class)))
     (remove-ignorable-classes (c2mop:class-precedence-list
                                (c2mop:ensure-finalized class))))))
@@ -705,7 +705,7 @@ if you are interested in fixing this."))
                     (second x))
                x)))
     (let ((a (slot-name-symbol a))
-          (b (slot-name-symbol b)))  
+          (b (slot-name-symbol b)))
       (if (and (symbolp a) (symbolp b))
           (cond ((not (eq (symbol-package a)
                           (symbol-package b)))
@@ -728,7 +728,7 @@ if you are interested in fixing this."))
       (let ((funcs (sort (class-funcs class) #'slot-name-sortp
                          :key #'c2mop:generic-function-name)))
         (with-text-size (t :small)
-          (format-items funcs 
+          (format-items funcs
             :printer (lambda (item stream)
                        (present item 'generic-function :stream stream))
             :move-cursor t))))))
@@ -1035,7 +1035,7 @@ if you are interested in fixing this."))
 ;;; -------------------
 
 (defun pathname-printing-name (pathname &optional relative-to)
-  (if relative-to 
+  (if relative-to
       (native-enough-namestring pathname relative-to)
       (native-namestring pathname)))
 
@@ -1073,7 +1073,7 @@ if you are interested in fixing this."))
           (and (char= first #\#)
                (char= last  #\#))))))
 
-(defun hidden-name-p (name) 
+(defun hidden-name-p (name)
   (and (> (length name) 1) (char= (elt name 0) #\.)))
 
 (defun filter-garbage-pathnames (seq show-hidden hide-garbage)
@@ -1128,7 +1128,7 @@ if you are interested in fixing this."))
                                         'clim:pathname :single-box t)
           ;; Workaround new mcclim-images draw-icon silliness using
           ;; table formatter
-          (formatting-table (t :move-cursor nil)          
+          (formatting-table (t :move-cursor nil)
             (formatting-row ()
               (formatting-cell ()
                 (draw-icon t (standard-icon "up-folder.xpm")
@@ -1143,11 +1143,11 @@ if you are interested in fixing this."))
           (setf group (filter-garbage-pathnames group show-hidden hide-garbage)))
         (ecase style
           (:items
-           (abbreviating-format-items 
+           (abbreviating-format-items
             group
             :row-wise nil :x-spacing "  " :y-spacing 1
-            :printer (lambda (x stream) 
-                       (pretty-pretty-pathname x stream (if full-names 
+            :printer (lambda (x stream)
+                       (pretty-pretty-pathname x stream (if full-names
                                                             nil
                                                             base-pathname))))
            (multiple-value-bind (x y) (stream-cursor-position *standard-output*)
@@ -1182,7 +1182,7 @@ if you are interested in fixing this."))
         (format t "~&The current directory is now ")
         (present (truename parent))
         (terpri)))))
-  
+
 (define-gesture-name :change-directory :pointer-button-press
   (:middle))
 
@@ -1192,7 +1192,7 @@ if you are interested in fixing this."))
 					 (format stream "Change to this directory"))
                  :documentation ((object stream)  (declare (ignore object))
                                  (format stream "Change to this directory"))
-                 
+
 		 :tester ((object)
 			  (cl-fad:directory-pathname-p object)))
   (object)
@@ -1267,9 +1267,9 @@ if you are interested in fixing this."))
                           (automagic-translator object))
                  :documentation ((object stream)
                                  (princ (nth-value 1 (automagic-translator object)) stream))
-                 :pointer-documentation ((object stream)                                         
+                 :pointer-documentation ((object stream)
                                          (princ (nth-value 2 (automagic-translator object)) stream)))
-  (object)  
+  (object)
   (values
    (automagic-translator object)
    'command))
@@ -1281,7 +1281,7 @@ if you are interested in fixing this."))
 
 (defun compute-dirstack-command-eligibility (frame)
   (let* ((stack *directory-stack*)
-         (state (if stack t nil)))    
+         (state (if stack t nil)))
     (setf (command-enabled 'com-drop-directory frame) state
           (command-enabled 'com-pop-directory  frame) state
           (command-enabled 'com-swap-directory frame) state)))
@@ -1354,7 +1354,7 @@ if you are interested in fixing this."))
 
 (define-command (com-edit-file :name "Edit File"
                                :menu t
-			       :command-table filesystem-commands                               
+			       :command-table filesystem-commands
 			       :provide-output-destination-keyword nil)
   ((pathname 'pathname  :prompt "pathname"))
   (clim-sys:make-process (lambda () (ed pathname))))
@@ -1398,7 +1398,8 @@ if you are interested in fixing this."))
   (list object))
 
 (define-command (com-display-image :name t :command-table filesystem-commands
-                                           :menu t)
+                                   :menu t
+                                   :provide-output-destination-keyword t)
     ((image-pathname 'pathname
       :default (user-homedir-pathname) :insert-default t))
   (if (probe-file image-pathname)
@@ -1431,7 +1432,7 @@ if you are interested in fixing this."))
                           (format stream "Edit Definition")))
     (object)
   (list object))
-		   
+
 
 (defun show-file (pathname)
   (let ((content (alexandria:read-file-into-string pathname))
@@ -1444,7 +1445,7 @@ if you are interested in fixing this."))
 
 (defun display-evalues (values)
   (labels
-      ((present-value (value)         
+      ((present-value (value)
          ;; I would really prefer this to behave as below, as presenting
          ;; things as expressions causes translators applicable to expression
          ;; to override those which would be otherwise applicable (such as
@@ -1461,7 +1462,7 @@ if you are interested in fixing this."))
          ;; Okay, set-current-package translator now mysteriously works, but
          ;; I stand by the notion that 'expression should not be the type of
          ;; the innermost presentation.
-         
+
          #+(or)
          (with-output-as-presentation (t value 'expression :single-box t)
            (present value (presentation-type-of value) :single-box t))
@@ -1471,7 +1472,7 @@ if you are interested in fixing this."))
            (present value 'expression))))
     (with-drawing-options (t :ink +olivedrab+)
       (cond ((null values) #+NIL (format t "No values.~%"))
-            ((= 1 (length values))             
+            ((= 1 (length values))
              (present-value (first values))
              (fresh-line))
             (t (do* ((i 0 (1+ i))
@@ -1609,7 +1610,7 @@ if you are interested in fixing this."))
                             :move-cursor t)
               (note "Command table is empty.~%~%") ))))))
 
- 
+
 ;;; Various Lisp goodies
 
 (define-presentation-type package ()
@@ -1657,4 +1658,3 @@ if you are interested in fixing this."))
              :tester ((object) (not (eql *package* object))))
     (object)
   (list object))
-    

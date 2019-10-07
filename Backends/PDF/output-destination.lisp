@@ -1,7 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
-
-;;;  (c) copyright 2002 by
-;;;           Alexey Dejneka (adejneka@comail.ru)
+;;;  (c) copyright 2019 Jan Moringen
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -18,21 +15,17 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:defpackage #:clim-postscript
-  (:use #:clim #:clim-extensions #:clim-lisp #:clim-postscript-font)
-  (:import-from #:clim-internals
-                #:get-environment-variable
-                #:map-repeated-sequence
-                #:atan*
+(cl:in-package #:clim-pdf)
 
-                #:ellipse-normal-radii*
+(defclass pdf-destination (climb:file-destination)
+  ())
 
-                #:get-transformation
-                #:untransform-angle
-                #:with-transformed-position
+(defmethod climb:invoke-with-standard-output
+    (continuation (destination pdf-destination))
+  (call-next-method (lambda ()
+                      (with-output-to-pdf-stream
+                          (*standard-output* *standard-output*)
+                        (funcall continuation)))
+                    destination))
 
-                #:maxf
-
-                #:port-text-style-mappings)
-  (:export #:load-afm-file
-           #:with-output-to-postscript-stream))
+(climb:register-output-destination-type "PDF File" 'pdf-destination)

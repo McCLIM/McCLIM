@@ -23,13 +23,12 @@
 (defclass rgb-image-pixmap (image-pixmap-mixin basic-pane)
   ((region :initform +nowhere+)))
 
-
 (defmethod port-allocate-pixmap ((port rgb-image-port) sheet width height)
   (let ((pixmap (make-instance 'rgb-image-pixmap
-			       :sheet sheet
-			       :width width
-			       :height height
-			       :port port)))
+                               :sheet sheet
+                               :width width
+                               :height height
+                               :port port)))
     (when (sheet-grafted-p sheet)
       (realize-mirror port pixmap))
     pixmap))
@@ -37,4 +36,3 @@
 (defmethod port-deallocate-pixmap ((port rgb-image-port) pixmap)
   (when (climi::port-lookup-mirror port pixmap)
     (destroy-mirror port pixmap)))
-

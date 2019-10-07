@@ -1,7 +1,8 @@
 ;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
 
-;;;  (c) copyright 2002 by
-;;;           Alexey Dejneka (adejneka@comail.ru)
+;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
+;;;  (c) copyright 2000 by Robert Strandh (strandh@labri.u-bordeaux.fr)
+;;;  (c) copyright 2002 by Tim Moore (moore@bricoworks.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -18,21 +19,18 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:defpackage #:clim-postscript
-  (:use #:clim #:clim-extensions #:clim-lisp #:clim-postscript-font)
-  (:import-from #:clim-internals
-                #:get-environment-variable
-                #:map-repeated-sequence
-                #:atan*
+(cl:in-package #:clim-postscript)
 
-                #:ellipse-normal-radii*
+(defclass postscript-destination (climb:file-destination)
+  ())
 
-                #:get-transformation
-                #:untransform-angle
-                #:with-transformed-position
+(defmethod climb:invoke-with-standard-output
+    (continuation (destination postscript-destination))
+  (call-next-method (lambda ()
+                      (with-output-to-postscript-stream
+                          (*standard-output* *standard-output*)
+                        (funcall continuation)))
+                    destination))
 
-                #:maxf
-
-                #:port-text-style-mappings)
-  (:export #:load-afm-file
-           #:with-output-to-postscript-stream))
+(climb:register-output-destination-type
+ "Postscript File" 'postscript-destination)

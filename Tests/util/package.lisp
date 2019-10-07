@@ -1,7 +1,8 @@
 (cl:defpackage #:clim-test-util
   (:use
    #:clim-lisp
-   #:clim)
+   #:clim
+   #:clime)
 
   (:export
    #:print-test-page))

@@ -82,6 +82,7 @@ interface management system."
                #:mcclim-bezier
                #:mcclim-image
                #:clim-pdf
+               #:clim-postscript
                #:mcclim-franz))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))

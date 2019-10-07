@@ -1019,10 +1019,12 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   ;;
   ;; --GB 2003-03-16
   (declare (ignore space-req-keys resize-frame))
-  (let ((w (space-requirement-width (compose-space pane)))
-        (h (space-requirement-height (compose-space pane))))
-    (resize-sheet pane w h)
-    (allocate-space pane w h) ))
+
+  (let* ((space-requirements (compose-space pane))
+         (width (space-requirement-width space-requirements))
+         (height (space-requirement-height space-requirements)))
+    (resize-sheet pane width height)
+    (allocate-space pane width height)))
 
 ;;; Now each child (client) of a box-layout pane is described by the
 ;;; following class:

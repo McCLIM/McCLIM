@@ -1,7 +1,4 @@
-;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
-
-;;;  (c) copyright 2002 by
-;;;           Alexey Dejneka (adejneka@comail.ru)
+;;;  (c) copyright 2019 Jan Moringen
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -18,21 +15,14 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:defpackage #:clim-postscript
-  (:use #:clim #:clim-extensions #:clim-lisp #:clim-postscript-font)
-  (:import-from #:clim-internals
-                #:get-environment-variable
-                #:map-repeated-sequence
-                #:atan*
+(cl:in-package #:mcclim-raster-image.test)
 
-                #:ellipse-normal-radii*
+(in-suite :mcclim-raster-image)
 
-                #:get-transformation
-                #:untransform-angle
-                #:with-transformed-position
+(test smoke
+  "Smoke test for the raster image backend."
 
-                #:maxf
-
-                #:port-text-style-mappings)
-  (:export #:load-afm-file
-           #:with-output-to-postscript-stream))
+  (finishes
+    (mcclim-raster-image:with-output-to-raster-image-file
+        (stream "raster-image-test.png")
+      (clim-test-util:print-test-page stream))))
