@@ -86,8 +86,8 @@
 
 (defun make-point (x y)
   (make-instance 'standard-point
-    :x (coerce x 'coordinate)
-    :y (coerce y 'coordinate)))
+    :x (coordinate x)
+    :y (coordinate y)))
 
 (defmethod slots-for-pprint-object append ((object standard-point))
   '(x y))
@@ -215,8 +215,8 @@
              points))))
 
 (defmethod region-contains-position-p ((self standard-polyline) x y)
-  (setf x (coerce x 'coordinate)
-        y (coerce y 'coordinate))
+  (setf x (coordinate x)
+        y (coordinate y))
   (block nil
     (map-over-polygon-segments
      (lambda (x1 y1 x2 y2)
@@ -251,10 +251,10 @@
               (point-x end-point) (point-y end-point)))
 
 (defun make-line* (start-x start-y end-x end-y)
-  (setf start-x (coerce start-x 'coordinate)
-        start-y (coerce start-y 'coordinate)
-        end-x (coerce end-x 'coordinate)
-        end-y (coerce end-y 'coordinate))
+  (setf start-x (coordinate start-x)
+        start-y (coordinate start-y)
+        end-x (coordinate end-x)
+        end-y (coordinate end-y))
   (if (and (coordinate= start-x end-x)
            (coordinate= start-y end-y))
       +nowhere+
@@ -520,8 +520,8 @@
 (defmethod region-contains-position-p ((self standard-rectangle) x y)
   (with-standard-rectangle (x1 y1 x2 y2)
       self
-    (and (<= x1 (coerce x 'coordinate) x2)
-         (<= y1 (coerce y 'coordinate) y2))))
+    (and (<= x1 (coordinate x) x2)
+         (<= y1 (coordinate y) y2))))
 
 ;;; -- 2.5.6 Ellipses and Elliptical Arcs in CLIM ----------------------------
 
@@ -592,14 +592,14 @@
                              radius-1-dx radius-1-dy
                              radius-2-dx radius-2-dy
                              start-angle end-angle)
-  (setf center-x (coerce center-x 'coordinate)
-        center-y (coerce center-y 'coordinate)
-        radius-1-dx (coerce radius-1-dx 'coordinate)
-        radius-1-dy (coerce radius-1-dy 'coordinate)
-        radius-2-dx (coerce radius-2-dx 'coordinate)
-        radius-2-dy (coerce radius-2-dy 'coordinate)
-        start-angle (and start-angle (coerce start-angle 'coordinate))
-        end-angle (and end-angle (coerce end-angle 'coordinate)))
+  (setf center-x (coordinate center-x)
+        center-y (coordinate center-y)
+        radius-1-dx (coordinate radius-1-dx)
+        radius-1-dy (coordinate radius-1-dy)
+        radius-2-dx (coordinate radius-2-dx)
+        radius-2-dy (coordinate radius-2-dy)
+        start-angle (and start-angle (coordinate start-angle))
+        end-angle (and end-angle (coordinate end-angle)))
 
   (let ((tr (make-3-point-transformation*
              0 0 1 0 0 1
@@ -2182,8 +2182,8 @@ and RADIUS2-DY"
        (flet ((is-left (x0 y0 x1 y1 x2 y2)
                 (- (* (- x1 x0) (- y2 y0))
                    (* (- x2 x0) (- y1 y0)))))
-         (let ((x (coerce x 'coordinate))
-               (y (coerce y 'coordinate))
+         (let ((x (coordinate x))
+               (y (coordinate y))
                (wn 0))
            (map-over-polygon-segments
             (lambda (x1 y1 x2 y2)
