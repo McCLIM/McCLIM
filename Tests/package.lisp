@@ -4,7 +4,9 @@
    #:clim
    #:clime
    #:fiveam)
-
+  (:import-from
+   #:climi
+   #:coordinate=)
   (:export
    #:run-tests))
 

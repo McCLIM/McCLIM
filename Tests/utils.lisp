@@ -3,6 +3,17 @@
 (def-suite* :mcclim.utils
   :in :mcclim)
 
+(test remove-duplicated-points
+  (is (equal nil (climi::remove-duplicated-points nil)))
+  (let ((p1 (make-point 1 1))
+        (p2 (make-point 2 2)))
+    (is (equal (list p1 p2)    (climi::remove-duplicated-points (list p1 p2))))
+    (is (equal (list p1 p2)    (climi::remove-duplicated-points (list p1 p2 p2))))
+    (is (equal (list p1 p2)    (climi::remove-duplicated-points (list p1 p2 p2 p2))))
+    (is (equal (list p1 p2 p1) (climi::remove-duplicated-points (list p1 p2 p2 p1))))
+    (is (equal (list p1 p2 p1) (climi::remove-duplicated-points (list p1 p2 p2 p1 p1))))
+    (is (equal (list p1 p2)    (climi::remove-duplicated-points (list p1 p2 p2 p1 p1) t)))))
+
 
 ;;; Line splitting utility
 ;;; ============================================================================

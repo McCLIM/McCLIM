@@ -25,27 +25,28 @@
 
 (in-package :clim-internals)
 
-#||
-(deftype coordinate () 'double-float)
 
-(defun coordinate (n)
-  "Coerces N to be a coordinate."
-  (declare (type number n))
-  (coerce n 'coordinate))
+#+ (or)
+(progn
+  (deftype coordinate () 'double-float)
 
-(defun coordinate-epsilon ()
-  ;; tweak if you like
-  (* #.(expt 2 10) double-float-epsilon))
+  (defun coordinate (n)
+    "Coerces N to be a coordinate."
+    (declare (type number n))
+    (coerce n 'coordinate))
 
-(defun coordinate= (x y)
-  (< (abs (- x y)) (coordinate-epsilon)))
+  (defun coordinate-epsilon ()
+    ;; tweak if you like
+    (* #.(expt 2 10) double-float-epsilon))
 
-(defun coordinate<= (x y)
-  (<= (- x y) (coordinate-epsilon)))
+  (defun coordinate= (x y)
+    (< (abs (- x y)) (coordinate-epsilon)))
 
-(defun coordinate/= (x y)
-  (not (coordinate= x y)))
-||#
+  (defun coordinate<= (x y)
+    (<= (- x y) (coordinate-epsilon)))
+
+  (defun coordinate/= (x y)
+    (not (coordinate= x y))))
 
 (deftype coordinate () 'real)
 

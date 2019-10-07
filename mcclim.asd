@@ -97,6 +97,7 @@ interface management system."
                              (:file "utils")
                              (:file "transforms")
                              (:file "regions")
+                             (:file "bounding-rectangles")
                              (:file "input-editing")
                              (:file "commands")
                              (:file "presentations")
