@@ -62,9 +62,9 @@ invoking the debugger)."))
               :initform *use-tabs-for-indentation*
               :initarg :use-tabs)
    (%tab-stops :accessor tab-stops
-	       :initform '()
-	       :initarg :tab-stops
-	       :documentation "A list of tab-stops in device units.
+               :initform '()
+               :initarg :tab-stops
+               :documentation "A list of tab-stops in device units.
 If empty, tabs every TAB-WIDTH are assumed.")))
 
 (defun maybe-update-recordings (stream tabify)
@@ -74,8 +74,8 @@ If empty, tabs every TAB-WIDTH are assumed.")))
     (unless (eq stream recorded-stream)
       ;; Update the recorded values.
       (setf space-width (climb:text-style-character-width (medium-text-style stream)
-							  stream
-							  #\Space)
+                                                          stream
+                                                          #\Space)
             tab-width (stream-character-width stream #\Tab)
             recorded-stream stream))))
 
@@ -99,21 +99,21 @@ If empty, tabs every TAB-WIDTH are assumed.")))
 on `stream' in device units (most likely pixels).")
   (:method ((stream extended-output-stream) (tabify tabify-mixin) x)
     (flet ((round-up (x width)
-	     (- width (mod x width))))
+             (- width (mod x width))))
       (if (tab-stops tabify)
-	(let ((next (find-if (lambda (pos) (> pos x)) (tab-stops tabify))))
-	  (or (and next (- next x)) (round-up x (space-width stream tabify))))
-	(round-up x (tab-width stream tabify))))))
+          (let ((next (find-if (lambda (pos) (> pos x)) (tab-stops tabify))))
+            (or (and next (- next x)) (round-up x (space-width stream tabify))))
+          (round-up x (tab-width stream tabify))))))
 
 (defgeneric (setf tab-stop-columns) (column-list tabify)
   (:documentation "Set the TAB-STOPS of view at the character column offsets
 in `column-list'.")
   (:method (column-list (tabify tabify-mixin))
     (setf (tab-stops tabify) 
-	  (and column-list
-	       (sort (mapcar (lambda (col) (* col (space-width (recorded-stream tabify) tabify)))
-			     column-list) 
-		     #'<)))))
+          (and column-list
+               (sort (mapcar (lambda (col) (* col (space-width (recorded-stream tabify) tabify)))
+                             column-list) 
+                     #'<)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -173,7 +173,7 @@ position at which the undo operation is to be executed."))
 buffer contents at a specific offset."))
 
 (defclass insert-record (simple-undo-record)
- ((objects :initarg :objects
+  ((objects :initarg :objects
             :documentation "The sequence of objects that are to
 be inserted whenever flip-undo-record is called on an instance of
 insert-record."))
@@ -191,7 +191,7 @@ undo tree."))
 
 (defclass change-record (simple-undo-record)
   ((objects :initarg :objects
-	    :documentation "The sequence of objects that are to 
+            :documentation "The sequence of objects that are to 
 replace the records that are currently in the buffer at the 
 offset whenever flip-undo-record is called on an instance of 
 change-record"))
@@ -228,28 +228,28 @@ records."))
   (unless (performing-undo buffer)
     (push (make-instance 'delete-record
                          :buffer buffer :offset offset :length 1)
-	  (undo-accumulate buffer))))
+          (undo-accumulate buffer))))
 
 (defmethod insert-buffer-sequence :before ((buffer undo-mixin) offset sequence)
   (unless (performing-undo buffer)
     (push (make-instance 'delete-record
                          :buffer buffer :offset offset :length (length sequence))
-	  (undo-accumulate buffer))))
+          (undo-accumulate buffer))))
 
 (defmethod delete-buffer-range :before ((buffer undo-mixin) offset n)
   (unless (performing-undo buffer)
     (push (make-instance 'insert-record
                          :buffer buffer :offset offset
                          :objects (buffer-sequence buffer offset (+ offset n)))
-	  (undo-accumulate buffer))))
+          (undo-accumulate buffer))))
 
 (defmethod (setf buffer-object) :before (new-object (buffer undo-mixin) offset)
   (unless (performing-undo buffer)
     (push (make-instance 'change-record
-			 :buffer buffer
-			 :offset offset
-			 :objects (buffer-sequence buffer offset (1+ offset)))
-	  (undo-accumulate buffer))))
+                         :buffer buffer
+                         :offset offset
+                         :objects (buffer-sequence buffer offset (1+ offset)))
+          (undo-accumulate buffer))))
 
 (defmacro with-undo ((get-buffers-exp) &body body)
   "This macro executes the forms of `body', registering changes
@@ -288,25 +288,25 @@ all."
 (defmethod flip-undo-record ((record insert-record))
   (with-slots (buffer offset objects) record
     (let ((%buffer buffer)
-	  (%offset offset)
-	  (%objects objects))
-    (change-class record 'delete-record
-                  :length (length %objects))
-    (insert-buffer-sequence %buffer %offset %objects))))
+          (%offset offset)
+          (%objects objects))
+      (change-class record 'delete-record
+                    :length (length %objects))
+      (insert-buffer-sequence %buffer %offset %objects))))
 
 (defmethod flip-undo-record ((record delete-record))
   (with-slots (buffer offset length) record
     (let ((%buffer buffer)
-	  (%offset offset)
-	  (%length length))
-    (change-class record 'insert-record
-                  :objects (buffer-sequence %buffer %offset (+ %offset %length)))
-    (delete-buffer-range %buffer %offset %length))))
+          (%offset offset)
+          (%length length))
+      (change-class record 'insert-record
+                    :objects (buffer-sequence %buffer %offset (+ %offset %length)))
+      (delete-buffer-range %buffer %offset %length))))
 
 (defmethod flip-undo-record ((record change-record))
   (with-slots (buffer offset objects) record
     (loop for i from 0 below (length objects)
-	  do (rotatef (aref objects i) (buffer-object buffer (+ i offset))))))
+          do (rotatef (aref objects i) (buffer-object buffer (+ i offset))))))
 
 (defmethod flip-undo-record ((record compound-record))
   (with-slots (records) record
@@ -355,8 +355,8 @@ preventing the undoing to before the state of whatever
 (define-condition buffer-read-only (user-condition-mixin simple-error)
   ((buffer :reader condition-buffer :initarg :buffer))
   (:report (lambda (condition stream)
-	     (format stream "Attempt to change read only buffer: ~a"
-		     (condition-buffer condition))))
+             (format stream "Attempt to change read only buffer: ~a"
+                     (condition-buffer condition))))
   (:documentation "This condition is signalled whenever an attempt
 is made to alter a buffer which has been set read only."))
 
@@ -434,13 +434,13 @@ single-line buffer."))
   (:documentation "Extensions accessible via marks."))
 
 (defclass drei-buffer (delegating-buffer esa-buffer-mixin
-                                         observable-buffer-mixin)
+                       observable-buffer-mixin)
   ((point :initarg :point :initform nil :accessor point-of))
   (:default-initargs :implementation (make-instance 'extended-standard-buffer)))
 
 (defmethod initialize-instance :after ((buffer drei-buffer) &rest args
                                        &key read-only single-line
-                                       initial-contents)
+                                         initial-contents)
   (declare (ignore args))
   (with-accessors ((point point)
                    (implementation implementation)) buffer
@@ -548,8 +548,8 @@ displayed on `output-stream'.")
   (:method nconc (output-stream (view drei-view))
     '())
   (:method :around (output-stream (view drei-view))
-           (unless (no-cursors view)
-             (call-next-method)))
+    (unless (no-cursors view)
+      (call-next-method)))
   (:method-combination nconc))
 
 (defgeneric clear-redisplay-information (view)
@@ -571,11 +571,11 @@ been defined that should be appropriate for most view classes.")
     (apply #'make-instance (class-of view)
            (append initargs
                    (loop for slot in (c2mop:class-slots (class-of view))
-                      for slot-initarg = (first (c2mop:slot-definition-initargs slot))
-                      for slot-name = (c2mop:slot-definition-name slot)
-                      for slot-boundp = (slot-boundp view slot-name)
-                      when (and slot-initarg slot-boundp)
-                      nconc (list slot-initarg (slot-value view slot-name)))))))
+                         for slot-initarg = (first (c2mop:slot-definition-initargs slot))
+                         for slot-name = (c2mop:slot-definition-name slot)
+                         for slot-boundp = (slot-boundp view slot-name)
+                         when (and slot-initarg slot-boundp)
+                           nconc (list slot-initarg (slot-value view slot-name)))))))
 
 (defgeneric page-down (pane view)
   (:documentation "Scroll `view', which is displayed on `pane', a
@@ -651,7 +651,7 @@ are automatically set if applicable."))
 
 (defmethod initialize-instance :after ((view drei-buffer-view) &rest initargs
                                        &key buffer single-line read-only
-                                       initial-contents)
+                                         initial-contents)
   (declare (ignore initargs))
   (with-accessors ((top top) (bot bot)
                    (lines-prefix lines-prefix-size)
@@ -661,9 +661,9 @@ are automatically set if applicable."))
       ;; So many fun things are defined on (setf buffer) that we use
       ;; slot-value here. This is just a glorified initform anyway.
       (setf (slot-value view '%buffer) (make-instance 'drei-buffer
-                                        :single-line single-line
-                                        :read-only read-only
-                                        :initial-contents initial-contents)))
+                                                      :single-line single-line
+                                                      :read-only read-only
+                                                      :initial-contents initial-contents)))
     (setf top (make-buffer-mark (buffer view) 0 :left)
           bot (clone-mark top :right)
           lines-prefix 0
@@ -719,8 +719,8 @@ are automatically set if applicable."))
               :documentation "The mark at which this line ends.")
    (%chunks :accessor chunks
             :initform (make-array 5
-                       :adjustable t
-                       :fill-pointer 0)
+                                  :adjustable t
+                                  :fill-pointer 0)
             :documentation "A list of cons-cells, with the car
 being a buffer offset relative to the `start-mark' of the line,
 and the cdr being T if the chunk covers a non-character, and NIL
@@ -739,10 +739,10 @@ buffer associated with a `drei-buffer-view'"))
                                     line-start-offset
                                     chunk-start-offset line-end-offset)
         do (vector-push-extend chunk-info (chunks line))
-        (setf chunk-start-offset (+ (car chunk-info)
-                                    line-start-offset))
+           (setf chunk-start-offset (+ (car chunk-info)
+                                       line-start-offset))
         when (= chunk-start-offset line-end-offset)
-        do (loop-finish)))
+          do (loop-finish)))
 
 (defmethod start-offset ((line buffer-line))
   (offset (start-mark line)))
@@ -813,8 +813,8 @@ start at `chunk-start-offset' and extend no further than
                   do (progn (let ((line-start-mark (clone-mark low-mark :left))
                                   (line-end-mark (clone-mark (end-of-line low-mark) :right)))
                               (insert* lines i (make-instance 'buffer-line
-                                                :start-mark line-start-mark
-                                                :end-mark line-end-mark))
+                                                              :start-mark line-start-mark
+                                                              :end-mark line-end-mark))
                               (if (end-of-buffer-p low-mark)
                                   (loop-finish)
                                   ;; skip newline
@@ -833,17 +833,17 @@ start at `chunk-start-offset' and extend no further than
       (let* ((line-index (index-of-line-containing-offset view start-offset))
              (line (element* (lines view) line-index))
              (newline-change
-              (or (loop for index from start-offset below end-offset
-                        when (equal (buffer-object (buffer view) index) #\Newline)
-                        return t)
-                  ;; If the line is joined with the one before or
-                  ;; after it, a newline object has been removed.
-                  (or (when (< (1+ line-index) (nb-elements (lines view)))
-                        (= (start-offset (element* (lines view) (1+ line-index)))
-                           (end-offset line)))
-                      (when (plusp line-index)
-                        (= (end-offset (element* (lines view) (1- line-index)))
-                           (start-offset line)))))))
+               (or (loop for index from start-offset below end-offset
+                         when (equal (buffer-object (buffer view) index) #\Newline)
+                           return t)
+                   ;; If the line is joined with the one before or
+                   ;; after it, a newline object has been removed.
+                   (or (when (< (1+ line-index) (nb-elements (lines view)))
+                         (= (start-offset (element* (lines view) (1+ line-index)))
+                            (end-offset line)))
+                       (when (plusp line-index)
+                         (= (end-offset (element* (lines view) (1- line-index)))
+                            (start-offset line)))))))
         ;; If the line structure changed, everything after the newline is suspect.
         (invalidate-strokes-in-region view start-offset
                                       (if newline-change
@@ -999,7 +999,7 @@ potentially out of date. Return false otherwise."
 
 (defmethod synchronize-view ((view drei-syntax-view)
                              &key (begin 0) (end (size (buffer view)))
-                             force-p)
+                               force-p)
   "Synchronize the syntax view with the underlying
 buffer. `Begin' and `end' are offsets specifying the region of
 the buffer that must be synchronised, defaulting to 0 and the
@@ -1037,10 +1037,10 @@ size of the buffer respectively."
 
 (defun make-syntax-for-view (view syntax-symbol &rest args)
   (apply #'make-instance syntax-symbol
-   :buffer (buffer view)
-   :updater-fns (list (lambda (begin end)
-                        (synchronize-view view :begin begin :end end)))
-   args))
+         :buffer (buffer view)
+         :updater-fns (list (lambda (begin end)
+                              (synchronize-view view :begin begin :end end)))
+         args))
 
 (defgeneric pump-state-for-offset-with-syntax (view syntax offset)
   (:documentation "Return a pump state that will enable pumping
@@ -1131,7 +1131,7 @@ buffer offsets delimiting regions."
         do (as-region (start end)
              (when (overlaps start end top-offset bot-offset)
                (invalidate-strokes-in-region view start end
-                :modified t :to-line-end t)))))
+                                             :modified t :to-line-end t)))))
 
 (defmethod display-drei-view-contents :around (stream (view textual-drei-syntax-view))
   (let ((invalid-regions (invalidate-strokes view (syntax view))))
