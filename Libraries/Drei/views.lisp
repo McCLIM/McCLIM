@@ -73,7 +73,9 @@ If empty, tabs every TAB-WIDTH are assumed.")))
                    (recorded-stream recorded-stream)) tabify
     (unless (eq stream recorded-stream)
       ;; Update the recorded values.
-      (setf space-width (stream-character-width stream #\Space)
+      (setf space-width (climb:text-style-character-width (medium-text-style stream)
+							  stream
+							  #\Space)
             tab-width (stream-character-width stream #\Tab)
             recorded-stream stream))))
 
