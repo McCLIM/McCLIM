@@ -100,7 +100,6 @@
 (defgeneric region-union (region1 region2))
 (defgeneric region-intersection (region1 region2))
 (defgeneric region-difference (region1 region2))
-(defgeneric region-exclusive-or (region1 region2))
 
 ;;; 3.2.1.1 The Point Protocol
 

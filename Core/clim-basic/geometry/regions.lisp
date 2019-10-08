@@ -68,11 +68,57 @@
 (defclass nowhere-region    (region nowhere-mixin)    ())
 (defclass everywhere-region (region everywhere-mixin) ())
 
-;;; Note that these are named as constants, but aren't truly
-;;; constants.
+(defconstant +everywhere+ (make-instance 'everywhere-region))
+(defconstant +nowhere+    (make-instance 'nowhere-region))
 
-(defvar +everywhere+ (make-instance 'everywhere-region))
-(defvar +nowhere+ (make-instance 'nowhere-region))
+;;; Unbounded regions have very general (and very mundane!)
+;;; methods. They are all defined here.
+;;;
+;;; Other region protocol methods should specialize at least on
+;;; bounded-rectangle to prevent superseding methods for unbounded
+;;; regions. For instance the following would supersede
+;;; implementation for an unbounded region:
+;;;
+;;;    (defmethod region-difference ((a rectangle) (b region))
+;;;      (make-instance 'standard-region-difference a b))
+;;;
+(macrolet
+    ((def-method (name e-vs-e e-vs-n e-vs-r
+                       n-vs-e n-vs-n n-vs-r
+                       r-vs-e r-vs-n)
+       (let ((bodies (list e-vs-e e-vs-n e-vs-r
+                           n-vs-e n-vs-n n-vs-r
+                           r-vs-e r-vs-n)))
+         (collect (methods)
+           (dolist (a '(everywhere-region nowhere-region region))
+             (dolist (b '(everywhere-region nowhere-region region))
+               (methods
+                `(defmethod ,name ((a ,a) (b ,b))
+                   (declare (ignorable a b))
+                   ,(pop bodies)))))
+           `(progn ,@(butlast (methods)))))))
+  (def-method region-intersects-region-p t nil t nil nil nil t nil)
+  (def-method region-contains-region-p t t t nil nil nil nil t)
+  (def-method region-equal t nil nil nil t nil nil nil)
+  (def-method region-union a a a b b b b a)
+  (def-method region-intersection b b b a a a a b)
+  ;; We don't support unbounded regions which are not +everywhere+ or
+  ;; +nowhere+ (that would complicate the geometry module). If we
+  ;; decide otherwise don't use standard-region-difference because it
+  ;; is a subclass of a bounded-rectangle so it can't represent
+  ;; unbounded region.  -- jd 2019-09-10
+  (def-method region-difference
+    +nowhere+ a (error "Unsupported unbounded region operation.")
+    a a a
+    +nowhere+ a))
+
+(defmethod region-contains-position-p ((self everywhere-region) x y)
+  (declare (ignore x y))
+  t)
+
+(defmethod region-contains-position-p ((self nowhere-region) x y)
+  (declare (ignore x y))
+  nil)
 
 ;;; 2.5.1.2 Composition of CLIM Regions
 

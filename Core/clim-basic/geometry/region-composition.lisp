@@ -6,7 +6,7 @@
     (map-over-region-set-regions (lambda (r) (push r res)) rs)
     (make-instance 'standard-region-union :regions res)))
 
-(defmethod region-exclusive-or ((a region) (b region))
+(defun region-exclusive-or (a b)
   (region-union (region-difference a b) (region-difference b a)))
 
 (defmethod region-union ((a point) (b point))
@@ -30,12 +30,6 @@
   (region-union (rectangle->standard-rectangle-set xs)
                 (rectangle->standard-rectangle-set ys)))
 
-;;; Trivial set operations
-(defmethod region-union ((a everywhere-region) (b region)) +everywhere+)
-(defmethod region-union ((a region) (b everywhere-region)) +everywhere+)
-(defmethod region-union ((a nowhere-region) (b region)) b)
-(defmethod region-union ((a region) (b nowhere-region)) a)
-
 ;;; dimensionally rule
 (defmethod region-union ((a area) (b path)) a)
 (defmethod region-union ((a path) (b point)) a)
@@ -54,19 +48,11 @@
 (defmethod region-union ((a standard-rectangle) (b standard-polygon))
   (polygon-op a b #'logior))
 
-(defmethod region-union ((a standard-region-union) (b nowhere-region))
-  a)
-
-(defmethod region-union ((b nowhere-region) (a standard-region-union))
-  a)
-
-(defmethod region-union ((a standard-region-union) (b region))
-  (assert (not (eq b +nowhere+)))
+(defmethod region-union ((a standard-region-union) (b bounding-rectangle))
   (make-instance 'standard-region-union
     :regions (cons b (standard-region-set-regions a))))
 
-(defmethod region-union ((b region) (a standard-region-union))
-  (assert (not (eq b +nowhere+)))
+(defmethod region-union ((b bounding-rectangle) (a standard-region-union))
   (make-instance 'standard-region-union
     :regions (cons b (standard-region-set-regions a))))
 
@@ -77,7 +63,7 @@
     :regions (append (standard-region-set-regions a)
                      (standard-region-set-regions b))))
 
-(defmethod region-union ((a region) (b region))
+(defmethod region-union ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-union :regions (list a b)))
 
 (defmethod region-union ((a standard-rectangle-set) (b path)) a)
@@ -156,14 +142,11 @@
 (defmethod region-union ((a polygon) (b standard-rectangle-set))
   (region-union a (rectangle-set->polygon-union b)))
 
-(defmethod region-union ((a standard-region-difference) (b region))
+(defmethod region-union ((a standard-region-difference) (b bounding-rectangle))
   (make-instance 'standard-region-union :regions (list a b)))
 
-(defmethod region-union ((a region) (b standard-region-difference))
+(defmethod region-union ((a bounding-rectangle) (b standard-region-difference))
   (make-instance 'standard-region-union :regions (list a b)))
-
-(defmethod region-union ((a nowhere-region) (b nowhere-region))
-  +nowhere+)
 
 
 (defmethod region-intersection ((line line) (ellipse standard-ellipse))
@@ -249,12 +232,6 @@
   (region-intersection (rectangle->standard-rectangle-set xr)
                        (rectangle->standard-rectangle-set yr)))
 
-;;; Trivial set operations
-(defmethod region-intersection ((a everywhere-region) (b region)) b)
-(defmethod region-intersection ((a region) (b everywhere-region)) a)
-(defmethod region-intersection ((a nowhere-region) (b region)) +nowhere+)
-(defmethod region-intersection ((a region) (b nowhere-region)) +nowhere+)
-
 (defmethod region-intersection ((a standard-line) (b standard-line))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
@@ -269,7 +246,7 @@
 
 ;;; IHMO the CLIM dimensionality rule is brain dead! --gb
 
-(defmethod region-intersection ((a standard-polyline) (b region))
+(defmethod region-intersection ((a standard-polyline) (b bounding-rectangle))
   (let ((res +nowhere+))
     ;; hack alert
     (map-over-polygon-segments
@@ -280,51 +257,51 @@
      a)
     res))
 
-(defmethod region-intersection ((b region) (a standard-polyline))
+(defmethod region-intersection ((b bounding-rectangle) (a standard-polyline))
   (region-intersection a b))
 
-(defmethod region-intersection ((a region) (p point))
+(defmethod region-intersection ((a bounding-rectangle) (p point))
   (multiple-value-bind (x y) (point-position p)
     (if (region-contains-position-p a x y)
         p
       +nowhere+)))
 
-(defmethod region-intersection ((p point) (a region))
+(defmethod region-intersection ((p point) (a bounding-rectangle))
   (region-intersection a p))
 
-(defmethod region-intersection ((a standard-region-union) (b region))
+(defmethod region-intersection ((a standard-region-union) (b bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-region-set-regions
      (lambda (r) (setf res (region-union res (region-intersection r b)))) a)
     res))
 
-(defmethod region-intersection ((a region) (b standard-region-union))
+(defmethod region-intersection ((a bounding-rectangle) (b standard-region-union))
   (region-intersection b a))
 
-(defmethod region-intersection ((a standard-rectangle-set) (b region))
+(defmethod region-intersection ((a standard-rectangle-set) (b bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-region-set-regions (lambda (r) (setf res (region-union res (region-intersection r b)))) a)
     res))
 
-(defmethod region-intersection ((a region) (b standard-rectangle-set))
+(defmethod region-intersection ((a bounding-rectangle) (b standard-rectangle-set))
   (region-intersection b a))
 
-(defmethod region-intersection ((a region) (b standard-region-intersection))
+(defmethod region-intersection ((a bounding-rectangle) (b standard-region-intersection))
   (map-over-region-set-regions (lambda (r) (setf a (region-intersection a r))) b)
   a)
 
-(defmethod region-intersection ((a standard-region-intersection) (b region))
+(defmethod region-intersection ((a standard-region-intersection) (b bounding-rectangle))
   (region-intersection b a))
 
-(defmethod region-intersection ((a region) (b region))
+(defmethod region-intersection ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-intersection :regions (list a b)))
 
 
-(defmethod region-intersection ((x region) (y standard-region-difference))
+(defmethod region-intersection ((x bounding-rectangle) (y standard-region-difference))
   (with-slots (a b) y
     (region-difference (region-intersection x a) b)))
 
-(defmethod region-intersection ((x standard-region-difference) (y region))
+(defmethod region-intersection ((x standard-region-difference) (y bounding-rectangle))
   (with-slots (a b) x
     (region-difference (region-intersection y a) b)))
 
@@ -400,12 +377,7 @@
   (region-difference (rectangle->standard-rectangle-set xs)
                      (rectangle->standard-rectangle-set ys)))
 
-;;; Trivial set operations
-(defmethod region-difference ((a region) (b everywhere-region)) +nowhere+)   ;mit ohne alles
-(defmethod region-difference ((a nowhere-region) (b region)) +nowhere+)
-(defmethod region-difference ((a region) (b nowhere-region)) a)
-
-(defmethod region-difference ((a standard-polyline) (b region))
+(defmethod region-difference ((a standard-polyline) (b bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-polygon-segments
      (lambda (x1 y1 x2 y2)
@@ -415,7 +387,7 @@
      a)
     res))
 
-(defmethod region-difference ((a region) (b standard-polyline))
+(defmethod region-difference ((a bounding-rectangle) (b standard-polyline))
   (map-over-polygon-segments
      (lambda (x1 y1 x2 y2)
        (setf a (region-difference a (make-line* x1 y1 x2 y2))))
@@ -426,20 +398,11 @@
 (defmethod region-difference ((x area) (y point)) x)
 (defmethod region-difference ((x path) (y point)) x)
 
-(defmethod region-difference ((x everywhere-region) (y region))
-  (make-instance 'standard-region-difference :a x :b y))
-
-(defmethod region-difference ((x everywhere-region) (y nowhere-region))
-  x)
-
-(defmethod region-difference ((x everywhere-region) (y everywhere-region))
-  +nowhere+)
-
-(defmethod region-difference ((x region) (y standard-region-difference))
+(defmethod region-difference ((x bounding-rectangle) (y standard-region-difference))
   (with-slots (a b) y
     (region-union (region-difference x a) (region-intersection x b))))
 
-(defmethod region-difference ((x region) (y standard-region-union))
+(defmethod region-difference ((x bounding-rectangle) (y standard-region-union))
   ;; A \ (B1 u B2 .. u Bn) = ((((A \ B1) \ B2) ... ) \ Bn)
   (let ((res x))
     (map-over-region-set-regions (lambda (a)
@@ -447,7 +410,7 @@
                                  y)
     res))
 
-(defmethod region-difference ((x standard-region-union) (y region))
+(defmethod region-difference ((x standard-region-union) (y bounding-rectangle))
   ;; (A u B) \ C = A\C u B\C
   (let ((res +nowhere+))
     (map-over-region-set-regions
@@ -456,7 +419,7 @@
      x)
     res))
 
-(defmethod region-difference ((x region) (y standard-rectangle-set))
+(defmethod region-difference ((x bounding-rectangle) (y standard-rectangle-set))
   (let ((res x))
     (map-over-region-set-regions
      (lambda (a)
@@ -464,7 +427,7 @@
      y)
     res))
 
-(defmethod region-difference ((x standard-rectangle-set) (y region))
+(defmethod region-difference ((x standard-rectangle-set) (y bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-region-set-regions
      (lambda (a)
@@ -472,18 +435,18 @@
      x)
     res))
 
-(defmethod region-difference ((x point) (y region))
+(defmethod region-difference ((x point) (y bounding-rectangle))
   (multiple-value-bind (px py) (point-position x)
     (if (region-contains-position-p y px py)
         +nowhere+
       x)))
 
-(defmethod region-difference ((x standard-region-difference) (y region))
+(defmethod region-difference ((x standard-region-difference) (y bounding-rectangle))
   ;; (A\B)\C = A \ (B u C)
   (with-slots (a b) x
     (region-difference a (region-union b y))))
 
-(defmethod region-difference ((x region) (y standard-region-intersection))
+(defmethod region-difference ((x bounding-rectangle) (y standard-region-intersection))
   (let ((res +nowhere+))
     (map-over-region-set-regions
      (lambda (b)

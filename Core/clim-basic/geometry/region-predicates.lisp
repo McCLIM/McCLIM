@@ -10,9 +10,9 @@
 ;;;
 ;;; Regions which must be handled:
 ;;;
-;;;   - 0 dimensions: nowhere-region, point
+;;;   - 0 dimensions: point
 ;;;   - 1 dimensions: polyline, elliptical-arc
-;;;   - 2 dimensions: everywhere-reigon, polygon, ellipse
+;;;   - 2 dimensions: polygon, ellipse
 ;;;   - region-set: standard-region-union, standard-region-difference,
 ;;;     standard-region-intersection, standard-rectangle-set
 ;;;
@@ -21,8 +21,9 @@
 ;;;
 ;;; Methods should be defined from the most general to the most
 ;;; specific. Methods specialized on REGION, methods being a
-;;; consequence of the dimensionality rule, unbounded regions, region
-;;; sets, and finally methods specific to a particular region type.
+;;; consequence of the dimensionality rule, region sets, and finally
+;;; methods specific to a particular region type.
+
 
 (declaim (inline line-contains-point-p))
 (defun line-contains-point-p (x1 y1 x2 y2 px py)
@@ -50,14 +51,6 @@
             (coordinate<= delta omega)))))
 
 
-(defmethod region-contains-position-p ((self everywhere-region) x y)
-  (declare (ignore x y))
-  t)
-
-(defmethod region-contains-position-p ((self nowhere-region) x y)
-  (declare (ignore x y))
-  nil)
-
 (defmethod region-contains-position-p ((self standard-rectangle-set) x y)
   (block nil
     (map-over-bands (lambda (y1 y2 isum)
@@ -190,7 +183,7 @@
 ;;
 
 ;; "generic" version
-(defmethod region-intersects-region-p ((a region) (b region))
+(defmethod region-intersects-region-p ((a bounding-rectangle) (b bounding-rectangle))
   (not (region-equal +nowhere+ (region-intersection a b))))
 
 (defmethod region-intersects-region-p :around ((a bounding-rectangle) (b bounding-rectangle))
@@ -218,7 +211,7 @@
 ;;
 
 ;;; "generic" version
-(defmethod region-contains-region-p ((a region) (b region))
+(defmethod region-contains-region-p ((a bounding-rectangle) (b bounding-rectangle))
   (or (eq a b)
       (region-equal +nowhere+ (region-difference b a))))
 
@@ -264,35 +257,13 @@
        polygon))
   T)
 
-(defmethod region-contains-region-p ((xs standard-rectangle-set) (point point))
-  (multiple-value-bind (x y) (point-position point)
-    (region-contains-position-p xs x y)))
-
-(defmethod region-contains-region-p ((a region) (b point))
+(defmethod region-contains-region-p ((a bounding-rectangle) (b point))
   (region-contains-position-p a (point-x b) (point-y b)))
-
-;; xxx what about (region-contains-region-p x +nowhere+) ?
-
-(defmethod region-contains-region-p ((a everywhere-region) (b region))
-  t)
-
-(defmethod region-contains-region-p ((a nowhere-region) (b region))
-  nil)
-
-(defmethod region-contains-region-p ((a everywhere-region) (b everywhere-region))
-  t)
-
-(defmethod region-contains-region-p ((a region) (b everywhere-region))
-  ;; ??? what about (region-union (region-difference +everywhere+ X) X) ???
-  nil)
-
-(defmethod region-contains-region-p ((a region) (b nowhere-region))
-  t)
 
 
 
 ;; "generic" version
-(defmethod region-equal ((a region) (b region))
+(defmethod region-equal ((a bounding-rectangle) (b bounding-rectangle))
   (region-equal +nowhere+ (region-exclusive-or a b)))
 
 (defmethod region-equal ((a point) (b point))
@@ -303,24 +274,6 @@
   ;; Our bands representation is canonic
   (equal (standard-rectangle-set-bands xs)
          (standard-rectangle-set-bands ys)))
-
-(defmethod region-equal ((a everywhere-region) (b everywhere-region))
-  t)
-
-(defmethod region-equal ((a nowhere-region) (b nowhere-region))
-  t)
-
-(defmethod region-equal ((a everywhere-region) (b region))
-  nil)
-
-(defmethod region-equal ((a nowhere-region) (b region))
-  nil)
-
-(defmethod region-equal ((a region) (b everywhere-region))
-  nil)
-
-(defmethod region-equal ((a region) (b nowhere-region))
-  nil)
 
 (defmethod region-equal ((a standard-rectangle) (b standard-rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* a)

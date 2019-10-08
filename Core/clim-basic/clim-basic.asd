@@ -19,8 +19,8 @@
     :serial t
     :components ((:file "coordinates")
                  (:file "transforms")
-                 (:file "regions")
                  (:file "bounding-rectangle")
+                 (:file "regions")
                  (:file "region-bounding-rectangles")
                  (:file "region-transformations")
                  (:file "region-predicates")
