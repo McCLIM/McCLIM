@@ -239,25 +239,13 @@
 (defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
   (region-intersection line ellipse))
 
-(defmethod region-intersection ((a standard-line) (b standard-polygon))
+(defmethod region-intersection ((b polygon) (a line))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
       (schnitt-line/polygon x1 y1 x2 y2 b))))
 
-(defmethod region-intersection ((b standard-polygon) (a standard-line))
-  (multiple-value-bind (x1 y1) (line-start-point* a)
-    (multiple-value-bind (x2 y2) (line-end-point* a)
-      (schnitt-line/polygon x1 y1 x2 y2 b))))
-
-(defmethod region-intersection ((a standard-line) (b standard-rectangle))
-  (multiple-value-bind (x1 y1) (line-start-point* a)
-    (multiple-value-bind (x2 y2) (line-end-point* a)
-      (schnitt-line/polygon x1 y1 x2 y2 b))))
-
-(defmethod region-intersection ((b standard-rectangle) (a standard-line))
-  (multiple-value-bind (x1 y1) (line-start-point* a)
-    (multiple-value-bind (x2 y2) (line-end-point* a)
-      (schnitt-line/polygon x1 y1 x2 y2 b))))
+(defmethod region-intersection ((a line) (b polygon))
+  (region-intersection b a))
 
 ;;; areas
 (defmethod region-intersection ((xr rectangle) (yr rectangle))
@@ -337,12 +325,6 @@
                  a)))))))
 
 ;;; paths/areas
-(defmethod region-difference ((a standard-line) (b standard-polygon))
-  (multiple-value-bind (x1 y1) (line-start-point* a)
-    (multiple-value-bind (x2 y2) (line-end-point* a)
-      (differenz-line/polygon x1 y1 x2 y2 b))))
-
-(defmethod region-difference ((a standard-line) (b standard-rectangle))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
       (differenz-line/polygon x1 y1 x2 y2 b))))
