@@ -7,22 +7,22 @@
 ;;; - when possible provide a method for a protocol class, and when
 ;;;   beneficial provide (also) a method for a standard class
 ;;; - all "region" arguments must be specialized
+;;; - the most general specialization is bounding-rectangle
 ;;;
 ;;; Regions which must be handled:
 ;;;
 ;;;   - 0 dimensions: point
 ;;;   - 1 dimensions: polyline, elliptical-arc
 ;;;   - 2 dimensions: polygon, ellipse
-;;;   - region-set: standard-region-union, standard-region-difference,
-;;;     standard-region-intersection, standard-rectangle-set
 ;;;
-;;; Additionally line and rectangle should be handled (they are
-;;; frequently used special cases of the polyline and the polygon).
+;;; Additionally a line and a rectangle should be handled (they are
+;;; frequently used special cases of a polyline and a polygon).
 ;;;
 ;;; Methods should be defined from the most general to the most
 ;;; specific. Methods specialized on REGION, methods being a
-;;; consequence of the dimensionality rule, region sets, and finally
-;;; methods specific to a particular region type.
+;;; consequence of the dimensionality rule and finally methods
+;;; specific to a particular region type. Unbounded regions and region
+;;; sets have their methods defined elsewhere.
 
 
 (declaim (inline line-contains-point-p))
@@ -51,31 +51,6 @@
             (coordinate<= delta omega)))))
 
 
-(defmethod region-contains-position-p ((self standard-rectangle-set) x y)
-  (block nil
-    (map-over-bands (lambda (y1 y2 isum)
-                      (when (<= y1 y y2)
-                        (when (isum-member x isum)
-                          (return t)))
-                      (when (< y y2)
-                        (return nil)))
-                    (standard-rectangle-set-bands self))
-    nil))
-
-(defmethod region-contains-position-p ((self standard-region-union) x y)
-  (some (lambda (r) (region-contains-position-p r x y))
-        (standard-region-set-regions self)))
-
-(defmethod region-contains-position-p ((self standard-region-intersection) x y)
-  (every (lambda (r) (region-contains-position-p r x y))
-         (standard-region-set-regions self)))
-
-(defmethod region-contains-position-p ((region standard-region-difference) x y)
-  (let ((region-a (standard-region-difference-a region))
-        (region-b (standard-region-difference-b region)))
-    (and (region-contains-position-p region-a x y)
-         (not (region-contains-position-p region-b x y)))))
-
 (defmethod region-contains-position-p ((self point) x y)
   (multiple-value-bind (px py) (point-position self)
     (and (coordinate= px x)

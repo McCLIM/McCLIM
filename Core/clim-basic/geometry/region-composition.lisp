@@ -1,34 +1,40 @@
 (in-package #:climi)
 
 
-(defun rectangle-set->polygon-union (rs)
-  (let ((res nil))
-    (map-over-region-set-regions (lambda (r) (push r res)) rs)
-    (make-instance 'standard-region-union :regions res)))
-
+;;; utilities
 (defun region-exclusive-or (a b)
   (region-union (region-difference a b) (region-difference b a)))
 
-(defmethod region-union ((a point) (b point))
-  (cond ((region-equal a b)
-         a)
-        (t
-         (make-instance 'standard-region-union :regions (list a b)))))
+(defun differenz-line/polygon (x1 y1 x2 y2 polygon)
+  (let ((ks (schnitt-gerade/polygon-prim x1 y1 x2 y2 (polygon-points polygon))))
+    (assert (evenp (length ks)))
+    (let ((res nil)
+          (res2 nil))
+      (push 0d0 res)
+      (do ((q ks (cddr q)))
+          ((null q))
+        (let ((k1 (max 0d0 (min 1d0 (car q))))
+              (k2 (max 0d0 (min 1d0 (cadr q)))))
+          (when (/= k1 k2)
+            (push k1 res)
+            (push k2 res))))
+      (push 1d0 res)
+      (setf res (nreverse res))
+      (do ((q res (cddr q)))
+          ((null q))
+        (let ((k1 (car q))
+              (k2 (cadr q)))
+          (when (/= k1 k2)
+            (push (make-line* (+ x1 (* k1 (- x2 x1))) (+ y1 (* k1 (- y2 y1)))
+                              (+ x1 (* k2 (- x2 x1))) (+ y1 (* k2 (- y2 y1))))
+                  res2))))
+      (cond ((null res2) +nowhere+)
+            ((null (cdr res2)) (car res2))
+            (t (make-instance 'standard-region-union :regions res2))))))
 
-(defmethod region-union ((xs standard-rectangle-set) (ys standard-rectangle-set))
-  (make-standard-rectangle-set
-   (bands-union (standard-rectangle-set-bands xs)
-                (standard-rectangle-set-bands ys))))
-
-(defmethod region-union ((xs standard-rectangle-set) (ys standard-rectangle))
-  (region-union xs (rectangle->standard-rectangle-set ys)))
-
-(defmethod region-union ((xs standard-rectangle) (ys standard-rectangle-set))
-  (region-union (rectangle->standard-rectangle-set xs) ys))
-
-(defmethod region-union ((xs standard-rectangle) (ys standard-rectangle))
-  (region-union (rectangle->standard-rectangle-set xs)
-                (rectangle->standard-rectangle-set ys)))
+
+(defmethod region-union ((a bounding-rectangle) (b bounding-rectangle))
+  (make-instance 'standard-region-union :regions (list a b)))
 
 ;;; dimensionally rule
 (defmethod region-union ((a area) (b path)) a)
@@ -38,39 +44,14 @@
 (defmethod region-union ((a point) (b path)) b)
 (defmethod region-union ((a point) (b area)) b)
 
+;;; points
+(defmethod region-union ((a point) (b point))
+  (cond ((region-equal a b)
+         a)
+        (t
+         (make-instance 'standard-region-union :regions (list a b)))))
 
-(defmethod region-union ((a standard-polygon) (b standard-polygon))
-  (polygon-op a b #'logior))
-
-(defmethod region-union ((a standard-polygon) (b standard-rectangle))
-  (polygon-op a b #'logior))
-
-(defmethod region-union ((a standard-rectangle) (b standard-polygon))
-  (polygon-op a b #'logior))
-
-(defmethod region-union ((a standard-region-union) (b bounding-rectangle))
-  (make-instance 'standard-region-union
-    :regions (cons b (standard-region-set-regions a))))
-
-(defmethod region-union ((b bounding-rectangle) (a standard-region-union))
-  (make-instance 'standard-region-union
-    :regions (cons b (standard-region-set-regions a))))
-
-(defmethod region-union ((a standard-region-union) (b standard-region-union))
-  (assert (not (eq b +nowhere+)))
-  (assert (not (eq a +nowhere+)))
-  (make-instance 'standard-region-union
-    :regions (append (standard-region-set-regions a)
-                     (standard-region-set-regions b))))
-
-(defmethod region-union ((a bounding-rectangle) (b bounding-rectangle))
-  (make-instance 'standard-region-union :regions (list a b)))
-
-(defmethod region-union ((a standard-rectangle-set) (b path)) a)
-(defmethod region-union ((b path) (a standard-rectangle-set)) a)
-(defmethod region-union ((a standard-rectangle-set) (b point)) a)
-(defmethod region-union ((b point) (a standard-rectangle-set)) a)
-
+;;; paths
 (defmethod region-union ((a standard-line) (b standard-line))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
@@ -100,24 +81,6 @@
                 (t
                  (make-instance 'standard-region-union :regions (list a b)))))))))
 
-(defmethod region-union ((a standard-polyline) (b standard-line))
-  (with-slots (points) a
-    (cond ((polyline-closed a)
-           (make-instance 'standard-region-union :regions (list a b)))
-          ((region-equal (car points) (line-end-point b))
-           (make-polyline (cons (line-start-point b) points)))
-          ((region-equal (car points) (line-start-point b))
-           (make-polyline (cons (line-end-point b) points)))
-          ((region-equal (car (last points)) (line-end-point b))
-           (make-polyline (append points (list (line-start-point b)))))
-          ((region-equal (car (last points)) (line-start-point b))
-           (make-polyline (append points (list (line-end-point b)))))
-          (t
-           (make-instance 'standard-region-union :regions (list a b))))))
-
-(defmethod region-union ((a standard-line) (b standard-polyline))
-  (region-union b a))
-
 (defmethod region-union ((a standard-polyline) (b standard-polyline))
   (with-slots ((a-points points)) a
     (with-slots ((b-points points)) b
@@ -136,19 +99,87 @@
             (t
              (make-instance 'standard-region-union :regions (list a b)))))))
 
-(defmethod region-union ((a standard-rectangle-set) (b polygon))
-  (region-union (rectangle-set->polygon-union a) b))
+(defmethod region-union ((a standard-polyline) (b standard-line))
+  (with-slots (points) a
+    (cond ((polyline-closed a)
+           (make-instance 'standard-region-union :regions (list a b)))
+          ((region-equal (car points) (line-end-point b))
+           (make-polyline (cons (line-start-point b) points)))
+          ((region-equal (car points) (line-start-point b))
+           (make-polyline (cons (line-end-point b) points)))
+          ((region-equal (car (last points)) (line-end-point b))
+           (make-polyline (append points (list (line-start-point b)))))
+          ((region-equal (car (last points)) (line-start-point b))
+           (make-polyline (append points (list (line-end-point b)))))
+          (t
+           (make-instance 'standard-region-union :regions (list a b))))))
 
-(defmethod region-union ((a polygon) (b standard-rectangle-set))
-  (region-union a (rectangle-set->polygon-union b)))
+(defmethod region-union ((a standard-line) (b standard-polyline))
+  (region-union b a))
 
-(defmethod region-union ((a standard-region-difference) (b bounding-rectangle))
-  (make-instance 'standard-region-union :regions (list a b)))
+;;; areas
+(defmethod region-union ((xs standard-rectangle) (ys standard-rectangle))
+  (region-union (rectangle->standard-rectangle-set xs)
+                (rectangle->standard-rectangle-set ys)))
 
-(defmethod region-union ((a bounding-rectangle) (b standard-region-difference))
-  (make-instance 'standard-region-union :regions (list a b)))
+(defmethod region-union ((a standard-polygon) (b standard-polygon))
+  (polygon-op a b #'logior))
+
+(defmethod region-union ((a standard-polygon) (b standard-rectangle))
+  (polygon-op a b #'logior))
+
+(defmethod region-union ((a standard-rectangle) (b standard-polygon))
+  (polygon-op a b #'logior))
 
 
+;;; IHMO the CLIM dimensionality rule is brain dead! --gb
+
+(defmethod region-intersection ((a bounding-rectangle) (b bounding-rectangle))
+  (make-instance 'standard-region-intersection :regions (list a b)))
+
+;;; points
+(defmethod region-intersection ((a bounding-rectangle) (p point))
+  (multiple-value-bind (x y) (point-position p)
+    (if (region-contains-position-p a x y)
+        p
+        +nowhere+)))
+
+(defmethod region-intersection ((p point) (a bounding-rectangle))
+  (region-intersection a p))
+
+(defmethod region-intersection ((a point) (b point))
+  (cond
+    ((region-equal a b) a)
+    (t +nowhere+)))
+
+;;; paths
+(defmethod region-intersection ((a standard-polyline) (b bounding-rectangle))
+  (let ((res +nowhere+))
+    ;; hack alert
+    (map-over-polygon-segments
+     (lambda (x1 y1 x2 y2)
+       (setf res
+             (region-union
+              res (region-intersection (make-line* x1 y1 x2 y2) b))))
+     a)
+    res))
+
+(defmethod region-intersection ((b bounding-rectangle) (a standard-polyline))
+  (region-intersection a b))
+
+(defmethod region-intersection ((a standard-line) (b standard-line))
+  (multiple-value-bind (x1 y1) (line-start-point* a)
+    (multiple-value-bind (x2 y2) (line-end-point* a)
+      (multiple-value-bind (u1 v1) (line-start-point* b)
+        (multiple-value-bind (u2 v2) (line-end-point* b)
+          (multiple-value-bind (r sx1 sy1 sx2 sy2)
+              (line-intersection* x1 y1 x2 y2 u1 v1 u2 v2)
+            (case r
+              (:hit (make-point sx1 sy1))
+              (:coincident (make-line* sx1 sy1 sx2 sy2))
+              ((nil) +nowhere+))))))))
+
+;;; paths/areas
 (defmethod region-intersection ((line line) (ellipse standard-ellipse))
   (let (p1x p1y p2x p2y)
     (multiple-value-setq (p1x p1y) (line-start-point* line))
@@ -197,9 +228,9 @@
                    ;; region difference may not work here due to float rounding
                    (let ((guess-line (make-line p1 si)))
                      (let ((intersection-line
-                            (if (not (region-intersects-region-p guess-line end-ray))
-                                (region-union guess-line (make-line p2 ei))
-                                (region-union (make-line p1 ei) (make-line p2 si)))))
+                             (if (not (region-intersects-region-p guess-line end-ray))
+                                 (region-union guess-line (make-line p2 ei))
+                                 (region-union (make-line p1 ei) (make-line p2 si)))))
                        intersection-line)))
                   ;; line intersect only one angle ray
                   (t (make-line (if p1p p1 p2)
@@ -207,112 +238,6 @@
 
 (defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
   (region-intersection line ellipse))
-
-(defmethod region-intersection ((a point) (b point))
-  (cond
-    ((region-equal a b) a)
-    (t +nowhere+)))
-
-(defmethod region-intersection ((xs standard-rectangle-set) (ys standard-rectangle-set))
-  (make-standard-rectangle-set
-   (bands-intersection (standard-rectangle-set-bands xs)
-                       (standard-rectangle-set-bands ys))))
-
-(defmethod region-intersection ((xs standard-rectangle-set) (ys standard-rectangle))
-  (region-intersection xs (rectangle->standard-rectangle-set ys)))
-
-(defmethod region-intersection ((xs standard-rectangle) (ys standard-rectangle-set))
-  (region-intersection (rectangle->standard-rectangle-set xs) ys))
-
-(defmethod region-intersection ((xs standard-rectangle) (ys standard-rectangle))
-  (region-intersection (rectangle->standard-rectangle-set xs)
-                       (rectangle->standard-rectangle-set ys)))
-
-(defmethod region-intersection ((xr rectangle) (yr rectangle))
-  (region-intersection (rectangle->standard-rectangle-set xr)
-                       (rectangle->standard-rectangle-set yr)))
-
-(defmethod region-intersection ((a standard-line) (b standard-line))
-  (multiple-value-bind (x1 y1) (line-start-point* a)
-    (multiple-value-bind (x2 y2) (line-end-point* a)
-      (multiple-value-bind (u1 v1) (line-start-point* b)
-        (multiple-value-bind (u2 v2) (line-end-point* b)
-          (multiple-value-bind (r sx1 sy1 sx2 sy2)
-              (line-intersection* x1 y1 x2 y2 u1 v1 u2 v2)
-            (case r
-              (:hit (make-point sx1 sy1))
-              (:coincident (make-line* sx1 sy1 sx2 sy2))
-              ((nil) +nowhere+))))))))
-
-;;; IHMO the CLIM dimensionality rule is brain dead! --gb
-
-(defmethod region-intersection ((a standard-polyline) (b bounding-rectangle))
-  (let ((res +nowhere+))
-    ;; hack alert
-    (map-over-polygon-segments
-     (lambda (x1 y1 x2 y2)
-       (setf res
-             (region-union
-              res (region-intersection (make-line* x1 y1 x2 y2) b))))
-     a)
-    res))
-
-(defmethod region-intersection ((b bounding-rectangle) (a standard-polyline))
-  (region-intersection a b))
-
-(defmethod region-intersection ((a bounding-rectangle) (p point))
-  (multiple-value-bind (x y) (point-position p)
-    (if (region-contains-position-p a x y)
-        p
-      +nowhere+)))
-
-(defmethod region-intersection ((p point) (a bounding-rectangle))
-  (region-intersection a p))
-
-(defmethod region-intersection ((a standard-region-union) (b bounding-rectangle))
-  (let ((res +nowhere+))
-    (map-over-region-set-regions
-     (lambda (r) (setf res (region-union res (region-intersection r b)))) a)
-    res))
-
-(defmethod region-intersection ((a bounding-rectangle) (b standard-region-union))
-  (region-intersection b a))
-
-(defmethod region-intersection ((a standard-rectangle-set) (b bounding-rectangle))
-  (let ((res +nowhere+))
-    (map-over-region-set-regions (lambda (r) (setf res (region-union res (region-intersection r b)))) a)
-    res))
-
-(defmethod region-intersection ((a bounding-rectangle) (b standard-rectangle-set))
-  (region-intersection b a))
-
-(defmethod region-intersection ((a bounding-rectangle) (b standard-region-intersection))
-  (map-over-region-set-regions (lambda (r) (setf a (region-intersection a r))) b)
-  a)
-
-(defmethod region-intersection ((a standard-region-intersection) (b bounding-rectangle))
-  (region-intersection b a))
-
-(defmethod region-intersection ((a bounding-rectangle) (b bounding-rectangle))
-  (make-instance 'standard-region-intersection :regions (list a b)))
-
-
-(defmethod region-intersection ((x bounding-rectangle) (y standard-region-difference))
-  (with-slots (a b) y
-    (region-difference (region-intersection x a) b)))
-
-(defmethod region-intersection ((x standard-region-difference) (y bounding-rectangle))
-  (with-slots (a b) x
-    (region-difference (region-intersection y a) b)))
-
-(defmethod region-intersection ((a standard-polygon) (b standard-polygon))
-  (polygon-op a b #'logand))
-
-(defmethod region-intersection ((a standard-polygon) (b standard-rectangle))
-  (polygon-op a b #'logand))
-
-(defmethod region-intersection ((a standard-rectangle) (b standard-polygon))
-  (polygon-op a b #'logand))
 
 (defmethod region-intersection ((a standard-line) (b standard-polygon))
   (multiple-value-bind (x1 y1) (line-start-point* a)
@@ -334,49 +259,37 @@
     (multiple-value-bind (x2 y2) (line-end-point* a)
       (schnitt-line/polygon x1 y1 x2 y2 b))))
 
+;;; areas
+(defmethod region-intersection ((xr rectangle) (yr rectangle))
+  (region-intersection (rectangle->standard-rectangle-set xr)
+                       (rectangle->standard-rectangle-set yr)))
+
+(defmethod region-intersection ((a standard-polygon) (b standard-polygon))
+  (polygon-op a b #'logand))
+
+(defmethod region-intersection ((a standard-polygon) (b standard-rectangle))
+  (polygon-op a b #'logand))
+
+(defmethod region-intersection ((a standard-rectangle) (b standard-polygon))
+  (polygon-op a b #'logand))
+
 
-(defun differenz-line/polygon (x1 y1 x2 y2 polygon)
-  (let ((ks (schnitt-gerade/polygon-prim x1 y1 x2 y2 (polygon-points polygon))))
-    (assert (evenp (length ks)))
-    (let ((res nil)
-          (res2 nil))
-      (push 0d0 res)
-      (do ((q ks (cddr q)))
-          ((null q))
-        (let ((k1 (max 0d0 (min 1d0 (car q))))
-              (k2 (max 0d0 (min 1d0 (cadr q)))))
-          (when (/= k1 k2)
-            (push k1 res)
-            (push k2 res))))
-      (push 1d0 res)
-      (setf res (nreverse res))
-      (do ((q res (cddr q)))
-          ((null q))
-        (let ((k1 (car q))
-              (k2 (cadr q)))
-          (when (/= k1 k2)
-            (push (make-line* (+ x1 (* k1 (- x2 x1))) (+ y1 (* k1 (- y2 y1)))
-                              (+ x1 (* k2 (- x2 x1))) (+ y1 (* k2 (- y2 y1))))
-                  res2))))
-      (cond ((null res2) +nowhere+)
-            ((null (cdr res2)) (car res2))
-            (t (make-instance 'standard-region-union :regions res2))))))
+(defmethod region-difference ((x bounding-rectangle) (y bounding-rectangle))
+  (make-instance 'standard-region-difference :a x :b y))
 
-(defmethod region-difference ((xs standard-rectangle-set) (ys standard-rectangle-set))
-  (make-standard-rectangle-set
-   (bands-difference (standard-rectangle-set-bands xs)
-                     (standard-rectangle-set-bands ys))))
+;;; dimensionality rule
+(defmethod region-difference ((x area) (y path)) x)
+(defmethod region-difference ((x area) (y point)) x)
+(defmethod region-difference ((x path) (y point)) x)
 
-(defmethod region-difference ((xs standard-rectangle-set) (ys standard-rectangle))
-  (region-difference xs (rectangle->standard-rectangle-set ys)))
+;;; points
+(defmethod region-difference ((x point) (y bounding-rectangle))
+  (multiple-value-bind (px py) (point-position x)
+    (if (region-contains-position-p y px py)
+        +nowhere+
+        x)))
 
-(defmethod region-difference ((xs standard-rectangle) (ys standard-rectangle-set))
-  (region-difference (rectangle->standard-rectangle-set xs) ys))
-
-(defmethod region-difference ((xs standard-rectangle) (ys standard-rectangle))
-  (region-difference (rectangle->standard-rectangle-set xs)
-                     (rectangle->standard-rectangle-set ys)))
-
+;;; paths
 (defmethod region-difference ((a standard-polyline) (b bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-polygon-segments
@@ -389,89 +302,10 @@
 
 (defmethod region-difference ((a bounding-rectangle) (b standard-polyline))
   (map-over-polygon-segments
-     (lambda (x1 y1 x2 y2)
-       (setf a (region-difference a (make-line* x1 y1 x2 y2))))
-     b)
+   (lambda (x1 y1 x2 y2)
+     (setf a (region-difference a (make-line* x1 y1 x2 y2))))
+   b)
   a)
-
-(defmethod region-difference ((x area) (y path)) x)
-(defmethod region-difference ((x area) (y point)) x)
-(defmethod region-difference ((x path) (y point)) x)
-
-(defmethod region-difference ((x bounding-rectangle) (y standard-region-difference))
-  (with-slots (a b) y
-    (region-union (region-difference x a) (region-intersection x b))))
-
-(defmethod region-difference ((x bounding-rectangle) (y standard-region-union))
-  ;; A \ (B1 u B2 .. u Bn) = ((((A \ B1) \ B2) ... ) \ Bn)
-  (let ((res x))
-    (map-over-region-set-regions (lambda (a)
-                                   (setf res (region-difference res a)))
-                                 y)
-    res))
-
-(defmethod region-difference ((x standard-region-union) (y bounding-rectangle))
-  ;; (A u B) \ C = A\C u B\C
-  (let ((res +nowhere+))
-    (map-over-region-set-regions
-     (lambda (a)
-       (setf res (region-union res (region-difference a y))))
-     x)
-    res))
-
-(defmethod region-difference ((x bounding-rectangle) (y standard-rectangle-set))
-  (let ((res x))
-    (map-over-region-set-regions
-     (lambda (a)
-       (setf res (region-difference res a)))
-     y)
-    res))
-
-(defmethod region-difference ((x standard-rectangle-set) (y bounding-rectangle))
-  (let ((res +nowhere+))
-    (map-over-region-set-regions
-     (lambda (a)
-       (setf res (region-union res (region-difference a y))))
-     x)
-    res))
-
-(defmethod region-difference ((x point) (y bounding-rectangle))
-  (multiple-value-bind (px py) (point-position x)
-    (if (region-contains-position-p y px py)
-        +nowhere+
-      x)))
-
-(defmethod region-difference ((x standard-region-difference) (y bounding-rectangle))
-  ;; (A\B)\C = A \ (B u C)
-  (with-slots (a b) x
-    (region-difference a (region-union b y))))
-
-(defmethod region-difference ((x bounding-rectangle) (y standard-region-intersection))
-  (let ((res +nowhere+))
-    (map-over-region-set-regions
-     (lambda (b)
-       (setf res (region-union res (region-difference x b))))
-     y)
-    res))
-
-(defmethod region-difference ((a standard-polygon) (b standard-polygon))
-  (polygon-op a b #'logandc2))
-
-(defmethod region-difference ((a standard-polygon) (b standard-rectangle))
-  (polygon-op a b #'logandc2))
-
-(defmethod region-difference ((a standard-rectangle) (b standard-polygon))
-  (polygon-op a b #'logandc2))
-
-(defmethod region-difference ((a standard-line) (b standard-polygon))
-  (multiple-value-bind (x1 y1) (line-start-point* a)
-    (multiple-value-bind (x2 y2) (line-end-point* a)
-      (differenz-line/polygon x1 y1 x2 y2 b))))
-
-(defmethod region-difference ((a standard-line) (b standard-rectangle))
-  (multiple-value-bind (x1 y1) (line-start-point* a)
-    (multiple-value-bind (x2 y2) (line-end-point* a)
-      (differenz-line/polygon x1 y1 x2 y2 b))))
 
 (defmethod region-difference ((a standard-line) (b standard-line))
   (multiple-value-bind (x1 y1) (line-start-point* a)
@@ -485,14 +319,44 @@
                    (psetq k1 (max 0 (min k1 k2))
                           k2 (min 1 (max k1 k2)))
                    (let ((r (nconc (if (> k1 0)
-                                       (list (make-line* x1 y1 (+ x1 (* k1 (- x2 x1))) (+ y1 (* k1 (- y2 y1)))))
-                                     nil)
+                                       (list (make-line* x1
+                                                         y1
+                                                         (+ x1 (* k1 (- x2 x1)))
+                                                         (+ y1 (* k1 (- y2 y1)))))
+                                       nil)
                                    (if (< k2 1)
-                                       (list (make-line* (+ x1 (* k2 (- x2 x1))) (+ y1 (* k2 (- y2 y1))) x2 y2))
-                                     nil))))
+                                       (list (make-line* (+ x1 (* k2 (- x2 x1)))
+                                                         (+ y1 (* k2 (- y2 y1)))
+                                                         x2
+                                                         y2))
+                                       nil))))
                      (cond ((null r) +nowhere+)
                            ((null (cdr r)) (car r))
                            (t (make-instance 'standard-region-union :regions r))))))
                 (t
                  a)))))))
 
+;;; paths/areas
+(defmethod region-difference ((a standard-line) (b standard-polygon))
+  (multiple-value-bind (x1 y1) (line-start-point* a)
+    (multiple-value-bind (x2 y2) (line-end-point* a)
+      (differenz-line/polygon x1 y1 x2 y2 b))))
+
+(defmethod region-difference ((a standard-line) (b standard-rectangle))
+  (multiple-value-bind (x1 y1) (line-start-point* a)
+    (multiple-value-bind (x2 y2) (line-end-point* a)
+      (differenz-line/polygon x1 y1 x2 y2 b))))
+
+;;; areas
+(defmethod region-difference ((xs standard-rectangle) (ys standard-rectangle))
+  (region-difference (rectangle->standard-rectangle-set xs)
+                     (rectangle->standard-rectangle-set ys)))
+
+(defmethod region-difference ((a standard-polygon) (b standard-polygon))
+  (polygon-op a b #'logandc2))
+
+(defmethod region-difference ((a standard-polygon) (b standard-rectangle))
+  (polygon-op a b #'logandc2))
+
+(defmethod region-difference ((a standard-rectangle) (b standard-polygon))
+  (polygon-op a b #'logandc2))
