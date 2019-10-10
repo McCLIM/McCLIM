@@ -215,6 +215,14 @@
 (defmethod region-equal ((a bounding-rectangle) (b bounding-rectangle))
   (region-equal +nowhere+ (region-exclusive-or a b)))
 
+;;; dimensionality rule
+(defmethod region-equal ((a point) (b path))  nil)
+(defmethod region-equal ((a point) (b area))  nil)
+(defmethod region-equal ((a path)  (b point)) nil)
+(defmethod region-equal ((a path)  (b area))  nil)
+(defmethod region-equal ((a area)  (b point)) nil)
+(defmethod region-equal ((a area)  (b path))  nil)
+
 (defmethod region-equal ((a point) (b point))
   (and (coordinate= (point-x a) (point-x b))
        (coordinate= (point-y a) (point-y b))))
