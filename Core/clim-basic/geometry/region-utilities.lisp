@@ -168,28 +168,19 @@ y2."
                          q)))
                (values x y)))))))
 
-(defun geraden-schnitt/prim (x1 y1 x12 y12  x2 y2 x22 y22)
-  (let ((dx1 (- x12 x1)) (dy1 (- y12 y1))
-        (dx2 (- x22 x2)) (dy2 (- y22 y2)))
-    ;; two straights (lines) given as
-    ;; g : s -> (x1 + s*dx1, y1 + s*dy1)
-    ;; h : t -> (x2 + t*dx2, y2 + t*dy2)
-    ;; -> NIL | (s ; t)
-    (let ((quot (- (* DX2 DY1) (* DX1 DY2))))
-      (if (coordinate= quot 0)
-          nil
-        (values
-         (- (/ (+ (* DX2 (- Y1 Y2)) (* DY2 X2) (- (* DY2 X1))) quot))
-         (- (/ (+ (* DX1 (- Y1 Y2)) (* DY1 X2) (- (* DY1 X1))) quot)))))))
-
-(defun geraden-gleichung (x0 y0 x1 y1 px py)
+(defun line-equation (x0 y0 x1 y1 px py)
   ;; ??? This somehow tries to calculate the distance between a point
   ;; and a line. The sign of the result depends upon the side the point
   ;; is on wrt to the line. --GB
   (- (* (- py y0) (- x1 x0))
      (* (- px x0) (- y1 y0))))
 
-(defun position->geraden-fktn-parameter (x0 y0 x1 y1 px py)
+(defun position->line-fktn (x0 y0 x1 y1 px py)
+  ;; This function assumes that (px py) lies on the same line as the
+  ;; segment (x0 y0 x1 y1). Returned value is a scalar which denotes a
+  ;; position of the point on the segment where 0d0 is (x0 y0) and 1d0
+  ;; is (x1 y1). 0.5d0 is in a middle of the segment and not in the
+  ;; interval (0d0 1d0) don't belong to the segment. -- jd 2019-10-10
   (let ((dx (- x1 x0)) (dy (- y1 y0)))
     (if (> (abs dx) (abs dy))
         (/ (- px x0) dx)
@@ -353,57 +344,91 @@ y2."
 
 ;;; -- Intersection Line/Polygon ---------------------------------------------
 
-(defun map-over-schnitt-gerade/polygon (fun x1 y1 x2 y2 points)
-  ;; This calles 'fun' with the "Geradenfunktionsparameter" of each
-  ;; intersection of the line (x1,y1),(x2,y2) and the polygon denoted
-  ;; by 'points' in a "sensible" way. --GB
-  (let ((n (length points)))
+;;; By "overcut" we mean a scalar computed from the intersection point
+;;; between a polygon segment and an unbounded line.
+(defun map-over-overcuts-line/polygon (fun x1 y1 x2 y2 points
+                                       &aux
+                                         (n (length points))
+                                         (fun (alexandria:ensure-function fun)))
+  ;; FUN is called for some intersection points between a line going
+  ;; through the segment (x1 y1 x2 y2) and the polygon. Each of these
+  ;; points may be potentially a vertice of a segment which is the
+  ;; intersection of the polygon and the line. Function argument is a
+  ;; parameter indicating where on the segment S the intersection
+  ;; point is positioned (where 0d0 is [x1,y1] and 1d0 is [x2,y2]). If
+  ;; parameter is not (<= 0d0 param 1d0) position falls outside the
+  ;; segment (but is still on the line). -- jd 2019-10-10
+  (flet ((call-fun (point)
+           (multiple-value-bind (px py)
+               (point-position point)
+             (funcall fun (position->line-fktn x1 y1 x2 y2 px py)))))
+    (declare (inline call-fun))
     (dotimes (i n)
-      (let ((pv  (elt points (mod (- i 1) n)))          ;the point before
-            (po  (elt points (mod i n)))                ;the "current" point
-            (pn  (elt points (mod (+ i 1) n)))          ;the point after
-            (pnn (elt points (mod (+ i 2) n))))         ;the point after**2
+      (let ((pv  (elt points (mod (- i 1) n)))  ;the point before
+            (po  (elt points (mod i n)))        ;the "current" point
+            (pn  (elt points (mod (+ i 1) n)))  ;the point after
+            (pnn (elt points (mod (+ i 2) n)))) ;the point after**2
         (cond
-         ;; The line goes directly thru' po
-         ((line-contains-point-p x1 y1 x2 y2 (point-x po) (point-y po))
-           (let ((sign-1 (geraden-gleichung x1 y1 x2 y2 (point-x pn) (point-y pn)))
-                 (sign-2 (geraden-gleichung x1 y1 x2 y2 (point-x pv) (point-y pv))))
-             (cond ((or (and (> sign-1 0) (< sign-2 0))
-                        (and (< sign-1 0) (> sign-2 0)))
-                    ;; clear cases: the line croses the polygon's border
-                    (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po))))
-                   ((= sign-1 0)
-                    ;; more difficult:
-                    ;; The line is coincident with the edge po/pn
-                    (let ((sign-1 (geraden-gleichung x1 y1 x2 y2 (point-x pnn) (point-y pnn))))
-                      (cond ((or (and (> sign-1 0) (< sign-2 0))
-                                 (and (< sign-1 0) (> sign-2 0)))
-                             ;; The line goes through the polygons border, by edge po/pn
-                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po))))
-                            (t
-                             ;; otherwise the line touches the polygon at the edge po/pn,
-                             ;; return both points
-                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x po) (point-y po)))
-                             (funcall fun (position->geraden-fktn-parameter x1 y1 x2 y2 (point-x pn) (point-y pn)))))))
-                   (t
-                    ;; all other cases: Line either touches polygon in
-                    ;; a point or in an edge [handled above]. --GB
-                    nil))))
-         ((line-contains-point-p x1 y1 x2 y2 (point-x pn) (point-y pn))
-          nil)
-         (t
-          (multiple-value-bind (k m)
-              (geraden-schnitt/prim x1 y1 x2 y2 (point-x po) (point-y po) (point-x pn) (point-y pn))
-            (when (and k (<= 0 m 1))    ;Possible numerical instability
-              (funcall fun k)))))))))
+          ;; The line goes directly through PO
+          ((multiple-value-bind (px py) (point-position po)
+             (line-contains-point-p x1 y1 x2 y2 px py))
+           (multiple-value-bind (pnx pny) (point-position pn)
+             (multiple-value-bind (pvx pvy) (point-position pv)
+               (let ((sign-1 (line-equation x1 y1 x2 y2 pnx pny))
+                     (sign-2 (line-equation x1 y1 x2 y2 pvx pvy)))
+                 (cond ((or (and (> sign-1 0) (< sign-2 0))
+                            (and (< sign-1 0) (> sign-2 0)))
+                        ;; clear cases: the line croses the polygon's border
+                        (call-fun po))
+                       ((= sign-1 0)
+                        ;; more difficult:
+                        ;; The line is coincident with the edge po/pn
+                        (multiple-value-bind (px py) (point-position pnn)
+                          (let ((sign-1 (line-equation x1 y1 x2 y2 px py)))
+                            (cond ((or (and (> sign-1 0) (< sign-2 0))
+                                       (and (< sign-1 0) (> sign-2 0)))
+                                   ;; The line goes through the polygons border, by edge po/pn
+                                   (call-fun po))
+                                  (t
+                                   ;; otherwise the line touches the polygon at the edge po/pn,
+                                   ;; return both points
+                                   (call-fun po)
+                                   (call-fun pn))))))
+                       (t
+                        ;; all other cases: Line either touches polygon in
+                        ;; a point or in an edge [handled above]. --GB
+                        nil))))))
+          ;; The line goes directly through PN (handled later)
+          ((multiple-value-bind (px py) (point-position pn)
+             (line-contains-point-p x1 y1 x2 y2 px py))
+           nil)
+          ;; The line doesn't go throuh PO nor PN points. It may cross
+          ;; a segment PO-PN or fall outside.
+          (t
+           (multiple-value-bind (x3 y3) (point-position po)
+             (multiple-value-bind (x4 y4) (point-position pn)
+               (let* ((dx12 (- x2 x1))
+                      (dy12 (- y2 y1))
+                      (dx34 (- x4 x3))
+                      (dy34 (- y4 y3))
+                      (quot (- (* dx34 dy12) (* dx12 dy34))))
+                 ;; two straights (lines) given as
+                 ;; g : s -> (x1 + s*dx12, y1 + s*dy12)
+                 ;; h : t -> (x3 + t*dx34, y3 + t*dy34)
+                 ;; -> NIL | (s ; t)
+                 (unless (coordinate= quot 0)
+                   (let ((k (- (/ (+ (* dx34 (- y1 y3)) (* dy34 x3) (- (* dy34 x1))) quot)))
+                         (m (- (/ (+ (* dx12 (- y1 y3)) (* dy12 x3) (- (* dy12 x1))) quot))))
+                     (when (<= 0 m 1) ; possible numerical instability
+                       (funcall fun k)))))))))))))
 
-(defun schnitt-gerade/polygon-prim (x1 y1 x2 y2 points)
+(defun overcuts-line/polygon (x1 y1 x2 y2 points)
   (let ((res nil))
-    (map-over-schnitt-gerade/polygon (lambda (k) (push k res)) x1 y1 x2 y2 points)
+    (map-over-overcuts-line/polygon (lambda (k) (push k res)) x1 y1 x2 y2 points)
     (sort res #'<)))
 
 (defun intersection-segment/polygon (x1 y1 x2 y2 polygon)
-  (let ((ks (schnitt-gerade/polygon-prim x1 y1 x2 y2 (polygon-points polygon))))
+  (let ((ks (overcuts-line/polygon x1 y1 x2 y2 (polygon-points polygon))))
     (assert (evenp (length ks)))
     (let ((res nil))
       (do ((q ks (cddr q)))
@@ -419,7 +444,7 @@ y2."
             (t (make-instance 'standard-region-union :regions res))))))
 
 (defun difference-segment/polygon (x1 y1 x2 y2 polygon)
-  (let ((ks (schnitt-gerade/polygon-prim x1 y1 x2 y2 (polygon-points polygon))))
+  (let ((ks (overcuts-line/polygon x1 y1 x2 y2 (polygon-points polygon))))
     (assert (evenp (length ks)))
     (let ((res nil)
           (res2 nil))
