@@ -53,6 +53,7 @@
      (:file "frame-sheet-name-test")
      (:file "dnd-commented")
      (:file "tracking-pointer")
+     (:file "file-manager")
      (:file "demodemo")))
 
 (defsystem #:clim-examples/superapp
