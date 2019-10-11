@@ -100,22 +100,18 @@
   (declare (ignore command-table))
   (let* ((*dragged-presentation* from-presentation)
          (*dragged-object* (presentation-object from-presentation))
-         (translators (mapcan (lambda (trans)
-                                (and (typep trans 'drag-n-drop-translator)
-                                     (funcall (tester trans)
-                                              (presentation-object from-presentation)
-                                              :presentation from-presentation
-                                              :context-type context-type
-                                              :frame frame
-                                              :window window
-                                              :x x
-                                              :y y
-                                              :event event)
-                                     (list trans)))
-                              (find-presentation-translators
-                               (presentation-type from-presentation)
-                               context-type
-                               (frame-command-table frame))))
+         (translators (collect (collect-translator)
+                        ;; Translator order matters.
+                        (map-applicable-translators
+                         (lambda (trans presentation context)
+                           (declare (ignore presentation context))
+                           (when (typep trans 'drag-n-drop-translator)
+                             (collect-translator trans)))
+                         from-presentation (list context-type) frame
+                         window x y
+                         :modifier-state (window-modifier-state window)
+                         :event event)
+                        (collect-translator)))
          ;; Default feedback and highlight functions are those of the
          ;; translator that got us here. Initial highlight value nil
          ;; will cause the source presentation of the dragged object
