@@ -225,19 +225,34 @@
                        mode))
 	     :width width :height height))
 
+(defun make-dashes-string (dashes)
+  (if dashes
+      (with-output-to-string (stream)
+        (flet ((add-segment (length character)
+                 (write-string (make-string length :initial-element character)
+                               stream)))
+         (loop for (dash space) on (append dashes dashes) by #'cddr
+               do (add-segment dash #\-) (add-segment space #\Space))))
+      "none"))
+
 (defun make-merged-line-style (line-style &key unit thickness joint-shape cap-shape
-                               (dashes nil dashes-p))
-  (make-line-style :unit (or unit
-                             (line-style-unit line-style))
-                   :thickness (or thickness
-                                 (line-style-thickness line-style))
-                   :joint-shape (or joint-shape
-                                    (line-style-joint-shape line-style))
-                   :cap-shape (or cap-shape
-                                  (line-style-cap-shape line-style))
-                   :dashes (if dashes-p
-                               dashes
-                               (line-style-dashes line-style))))
+                                               (dashes nil dashes-p))
+  (flet ((scale-dashes (dashes factor)
+           (map (class-of dashes) (alexandria:curry #'* factor) dashes)))
+    (let* ((old-thickness (line-style-thickness line-style))
+           (thickness (or thickness old-thickness))
+           (old-dashes (line-style-dashes line-style))
+           (dashes (if dashes-p
+                       dashes
+                       (scale-dashes old-dashes (/ old-thickness)))))
+      (make-line-style :unit (or unit
+                                 (line-style-unit line-style))
+                       :thickness thickness
+                       :joint-shape (or joint-shape
+                                        (line-style-joint-shape line-style))
+                       :cap-shape (or cap-shape
+                                      (line-style-cap-shape line-style))
+                       :dashes (scale-dashes dashes thickness)))))
 
 (define-application-frame clim-fig ()
   ((drawing-mode :initform :line :accessor clim-fig-drawing-mode)
@@ -270,6 +285,17 @@
                       :decimal-places 0
 		      :height 50
 		      :orientation :horizontal)
+   (dashes :option-pane
+           :value nil
+           :items '(nil (2 2) (4 4) (2 4) (4 2))
+           :name-key 'make-dashes-string
+           :value-changed-callback
+           (lambda (gadget value)
+             (declare (ignore gadget))
+             (with-slots (line-style) *application-frame*
+               (setf line-style
+                     (make-merged-line-style line-style :dashes value))))
+           :text-style (make-text-style :fix nil nil))
    (round-shape-toggle :toggle-button
                        :label "Round Cap/Joint"
                        :value nil
@@ -353,11 +379,14 @@
                     (list red-button magenta-button yellow-button white-button)
                     (list turquoise-button grey-button brown-button orange-button))
                   line-width-slider
+                  (horizontally (:spacing 4)
+                    (labelling (:label "Dashes"))
+                    dashes)
                   round-shape-toggle
                   (horizontally () fill-mode-toggle constrict-toggle)
                   point-button line-button arrow-button
                   ellipse-button rectangle-button
-	          bezier-button)
+                  bezier-button)
                 (:fill (scrolling (:width 600 :height 400) canvas))))
        (horizontally (:height 30) clear undo redo)
        status)))
