@@ -40,15 +40,13 @@
   (setf (clime:label-pane-label (find-pane-named *application-frame* 'status))
 	string))
 
-(defun draw-figure (pane x y x1 y1 &key fastp cp-x1 cp-y1 cp-x2 cp-y2)
+(defun draw-figure (pane mode x y x1 y1 &key cp-x1 cp-y1 cp-x2 cp-y2)
   (with-slots (line-style current-color fill-mode constrict-mode)
       *application-frame*
     (let* ((radius-x (- x1 x))
-           (radius-y (- y1 y))
-           (line-style (if fastp (medium-line-style pane) line-style))
-           (fill-mode (if fastp nil fill-mode)))
+           (radius-y (- y1 y)))
       (when constrict-mode
-        (case (clim-fig-drawing-mode *application-frame*)
+        (case mode
           ((:line :arrow)
            (if (> (abs radius-x) (abs radius-y))
                (setf y1 y)
@@ -59,7 +57,7 @@
                    radius-y (* (signum-1 radius-y) radius-max)
                    x1 (+ x radius-x)
                    y1 (+ y radius-y))))))
-      (case (clim-fig-drawing-mode *application-frame*)
+      (case mode
         (:point
          (draw-point* pane x y :ink current-color
                       :line-style line-style))
@@ -81,38 +79,20 @@
                         :filled fill-mode
                         :ink current-color :line-style line-style))
         (:bezier
-	  (when fastp
-	    (draw-text* pane
-			"[Use the middle and right mouse button to set control points]"
-			0
-			20))
-          (if fill-mode
-              (let* ((cp-x1 (or cp-x1 x))
-                     (cp-y1 (or cp-y1 y1))
-                     (cp-x2 (or cp-x2 x1))
-                     (cp-y2 (or cp-y2 y)))
-                (unless (or (= x cp-x1 x1 cp-x2)
-                            (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
-                  (let ((design (mcclim-bezier::make-bezier-area*
-                                 (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1 x1 y1 x y x y))))
-                    (mcclim-bezier:draw-bezier-design* pane design
-                                                       :ink current-color
-                                                       :line-style line-style))
-                  (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
-                  (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+)))
-              (let* ((cp-x1 (or cp-x1 x))
-                     (cp-y1 (or cp-y1 y1))
-                     (cp-x2 (or cp-x2 x1))
-                     (cp-y2 (or cp-y2 y))
-                     (design (mcclim-bezier::make-bezier-curve*
-                              (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1))))
-                (unless (or (= x cp-x1 x1 cp-x2)
-                            (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
-                  (mcclim-bezier:draw-bezier-design* pane design
-                                                     :ink current-color
-                                                     :line-style line-style)
-                  (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
-                  (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+)))))))))
+         (let* ((cp-x1 (or cp-x1 x))
+                (cp-y1 (or cp-y1 y1))
+                (cp-x2 (or cp-x2 x1))
+                (cp-y2 (or cp-y2 y)))
+           (unless (or (= x cp-x1 x1 cp-x2)
+                       (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
+             (let ((design (if fill-mode
+                               (mcclim-bezier::make-bezier-area*
+                                (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1 x1 y1 x y x y))
+                               (mcclim-bezier::make-bezier-curve*
+                                (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1)))))
+               (draw-design pane design :ink current-color :line-style line-style))
+             (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
+             (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+))))))))
 
 (defun signum-1 (value)
   (if (zerop value)
@@ -127,55 +107,59 @@
   nil)
 
 (defun handle-draw-object (pane x1 y1)
-  (let* ((pixmap-width (round (bounding-rectangle-width (sheet-region pane))))
-         (pixmap-height (round (bounding-rectangle-height (sheet-region pane))))
-         (canvas-pixmap (allocate-pixmap pane pixmap-width pixmap-height))
-	 cp-x1 cp-y1 cp-x2 cp-y2)
-    (copy-to-pixmap pane 0 0 pixmap-width pixmap-height canvas-pixmap)
-    (multiple-value-bind (x y)
-        (block processor
-          (if (eq (slot-value *application-frame* 'drawing-mode) :point)
-              (values x1 y1)
-              (tracking-pointer (pane)
-                (:pointer-motion (&key window x y)
-                   (declare (ignore window))
-                   (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)"
-                                            (slot-value *application-frame*
-                                                        'drawing-mode)
-                                            (round x1) (round y1)
-                                            (round x) (round y)))
-                   (with-output-recording-options (pane :record nil)
-                     (copy-from-pixmap canvas-pixmap 0 0
-                                       pixmap-width pixmap-height pane 0 0)
-                     (draw-figure pane
-                                  x1 y1 x y
-                                  :fastp t
-				  :cp-x1 cp-x1 :cp-y1 cp-y1
-				  :cp-x2 cp-x2 :cp-y2 cp-y2)))
-		(:pointer-button-release (&key event x y)
-                  (when (= (pointer-event-button event)
-                           +pointer-left-button+)
-                    (return-from processor (values x y))))
-                (:pointer-button-press (&key event x y)
-		  (cond
-		    ((= (pointer-event-button event)
-			+pointer-right-button+)
-		     (setf cp-x1 x cp-y1 y))
-		    ((= (pointer-event-button event)
-			+pointer-middle-button+)
-		     (setf cp-x2 x cp-y2 y)))))))
+  (let* ((frame *application-frame*)
+         (mode (slot-value frame 'drawing-mode))
+         cp-x1 cp-y1 cp-x2 cp-y2
+         output-record)
+    (flet ((make-figure-output-record (x y)
+             ;; Note that this can be NIL if (= x x1) and (= y y1).
+             (setf output-record
+                   (with-output-to-output-record (pane)
+                     (with-output-as-presentation (pane nil 'figure)
+                       (draw-figure pane mode x1 y1 x y
+                                    :cp-x1 cp-x1 :cp-y1 cp-y1
+                                    :cp-x2 cp-x2 :cp-y2 cp-y2))))))
+      (case mode
+        (:point
+         (make-figure-output-record x1 y1)
+         (replay output-record pane))
+        (t
+         (block processor
+           (tracking-pointer (pane)
+             (:pointer-motion (&key window x y)
+               (declare (ignore window))
+               (set-status-line
+                (format nil "~:(~A~) from (~D,~D) to (~D,~D)~@[ - Use ~
+                             the middle and right mouse button to set ~
+                             control points~]"
+                        mode
+                        (round x1) (round y1) (round x) (round y)
+                        (eq mode :bezier)))
+               (when output-record
+                 (repaint-sheet
+                  pane
+                  (with-bounding-rectangle* (x1 y1 x2 y2) output-record
+                    (make-rectangle* (1- x1) (1- y1) (1+ x2) (1+ y2)))))
+               (make-figure-output-record x y)
+               (when output-record
+                 (replay output-record pane)))
+             (:pointer-button-release (&key event x y)
+               (when (= (pointer-event-button event)
+                        +pointer-left-button+)
+                 (return-from processor (values x y))))
+             (:pointer-button-press (&key event x y)
+               (let ((button (pointer-event-button event)))
+                 (cond ((= button +pointer-right-button+)
+                        (setf cp-x1 x cp-y1 y))
+                       ((= button +pointer-middle-button+)
+                        (setf cp-x2 x cp-y2 y)))))))))
       (set-status-line " ")
-      (copy-from-pixmap canvas-pixmap 0 0 pixmap-width pixmap-height pane 0 0)
-      (deallocate-pixmap canvas-pixmap)
-      (let ((new-presentation (with-output-as-presentation (pane nil 'figure)
-                                (draw-figure pane x1 y1 x y
-		                             :cp-x1 cp-x1 :cp-y1 cp-y1
-		                             :cp-x2 cp-x2 :cp-y2 cp-y2))))
-        (push new-presentation (clim-fig-undo-list *application-frame*))
-        (replay new-presentation *standard-output* (bounding-rectangle new-presentation)))
-      (setf (clim-fig-redo-list *application-frame*) nil)
-      (disable-commands *application-frame* 'com-redo)
-      (enable-commands *application-frame* 'com-undo 'com-clear))))
+      (when output-record
+        (push output-record (clim-fig-undo-list frame))
+        (stream-add-output-record pane output-record)
+        (setf (clim-fig-redo-list *application-frame*) nil)
+        (disable-commands frame 'com-redo)
+        (enable-commands frame 'com-undo 'com-clear)))))
 
 (defun handle-move-object (pane figure first-point-x first-point-y)
   (multiple-value-bind (figure-x figure-y)
