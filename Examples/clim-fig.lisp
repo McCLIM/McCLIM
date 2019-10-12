@@ -174,9 +174,8 @@
         (push new-presentation (clim-fig-undo-list *application-frame*))
         (replay new-presentation *standard-output* (bounding-rectangle new-presentation)))
       (setf (clim-fig-redo-list *application-frame*) nil)
-      (deactivate-gadget (find-pane-named *application-frame* 'redo))
-      (activate-gadget (find-pane-named *application-frame* 'undo))
-      (activate-gadget (find-pane-named *application-frame* 'clear)))))
+      (disable-commands *application-frame* 'com-redo)
+      (enable-commands *application-frame* 'com-undo 'com-clear))))
 
 (defun handle-move-object (pane figure first-point-x first-point-y)
   (multiple-value-bind (figure-x figure-y)
@@ -198,7 +197,7 @@
                                 :delta-y (- y first-point-y))
                  (clim-fig-undo-list *application-frame*))
            (setf (clim-fig-redo-list *application-frame*) (list))
-           (deactivate-gadget (find-pane-named *application-frame* 'redo))
+           (disable-commands *application-frame* 'com-redo)
            (window-refresh pane)
            (return-from handle-move-object)))))))
 
@@ -397,6 +396,26 @@
 (defun clim-fig-prompt (stream frame)
   (declare (ignore stream frame)))
 
+(defmethod note-command-enabled :after (frame-manager (frame clim-fig) command-name)
+  (case command-name
+    (com-undo (activate-gadget (find-pane-named frame 'undo)))
+    (com-redo (activate-gadget (find-pane-named frame 'redo)))
+    (com-clear (activate-gadget (find-pane-named frame 'clear)))))
+
+(defmethod note-command-disabled :after (frame-manager (frame clim-fig) command-name)
+  (case command-name
+    (com-undo (deactivate-gadget (find-pane-named frame 'undo)))
+    (com-redo (deactivate-gadget (find-pane-named frame 'redo)))
+    (com-clear (deactivate-gadget (find-pane-named frame 'clear)))))
+
+(defun enable-commands (frame &rest command-names)
+  (dolist (command-name command-names)
+    (setf (command-enabled command-name frame) t)))
+
+(defun disable-commands (frame &rest command-names)
+  (dolist (command-name command-names)
+    (setf (command-enabled command-name frame) nil)))
+
 (define-clim-fig-command com-exit ()
   (frame-exit *application-frame*))
 
@@ -417,28 +436,25 @@
                        (- y (delta-y latest-undo-entry))))
          (window-refresh *standard-output*))
        (push latest-undo-entry (clim-fig-redo-list *application-frame*))
-       (activate-gadget (find-pane-named *application-frame* 'redo)))
+       (enable-commands *application-frame* 'com-redo))
       ((listp latest-undo-entry)
        (loop for record in latest-undo-entry do
             (stream-add-output-record *standard-output* record)
             (replay record *standard-output* (bounding-rectangle record)))
-       (activate-gadget (find-pane-named *application-frame* 'clear))
-       (deactivate-gadget (find-pane-named *application-frame* 'redo)))
+       (enable-commands *application-frame* 'com-clear)
+       (disable-commands *application-frame* 'com-redo))
       (T
        (erase-output-record latest-undo-entry *standard-output*)
        (push latest-undo-entry (clim-fig-redo-list *application-frame*))
-       (activate-gadget (find-pane-named *application-frame* 'clear))
-       (activate-gadget (find-pane-named *application-frame* 'redo))))
+       (enable-commands *application-frame* 'com-clear 'com-redo)))
     (unless (clim-fig-undo-list *application-frame*)
-      (deactivate-gadget (find-pane-named *application-frame* 'undo))
-      (deactivate-gadget (find-pane-named *application-frame* 'clear)))))
+      (disable-commands *application-frame* 'com-undo 'com-clear))))
 
 (define-clim-fig-command com-redo ()
   (alexandria:when-let ((current-redo-entry (pop (clim-fig-redo-list
                                                 *application-frame*))))
     (push current-redo-entry (clim-fig-undo-list *application-frame*))
-    (activate-gadget (find-pane-named *application-frame* 'undo))
-    (activate-gadget (find-pane-named *application-frame* 'clear))
+    (enable-commands *application-frame* 'com-undo 'com-clear)
     (cond
       ((typep current-redo-entry 'clim-fig-move-event)
        (multiple-value-bind (x y)
@@ -451,7 +467,7 @@
          (replay current-redo-entry *standard-output*
                  (bounding-rectangle current-redo-entry))))
     (unless (clim-fig-redo-list *application-frame*)
-      (deactivate-gadget (find-pane-named *application-frame* 'redo)))))
+      (disable-commands *application-frame* 'com-redo))))
 
 (define-clim-fig-command com-clear ()
   (push (coerce (output-record-children (clim-fig-output-record
@@ -459,8 +475,7 @@
 		'list)
         (clim-fig-undo-list *application-frame*))
   (setf (clim-fig-redo-list *application-frame*) (list))
-  (deactivate-gadget (find-pane-named *application-frame* 'redo))
-  (deactivate-gadget (find-pane-named *application-frame* 'clear))
+  (disable-commands *application-frame* 'com-redo 'com-clear)
   (window-clear *standard-output*))
 
 (define-clim-fig-command (com-add-figure :name nil) ((x real) (y real))
