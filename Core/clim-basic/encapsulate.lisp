@@ -527,8 +527,16 @@ if there is one, or STREAM"
 (def-stream-method (setf stream-end-of-page-action)
     (action (stream standard-encapsulating-stream)))
 
-(def-stream-method invoke-with-temporary-page
-    ((stream standard-encapsulating-stream) continuation &key margins (move-cursor t)))
+(defmethod invoke-with-temporary-page ((stream standard-encapsulating-stream)
+                                       continuation
+                                       &rest args &key margins move-cursor)
+  (declare (ignore margins move-cursor))
+  (flet ((trampoline (old-stream)
+           (declare (ignore old-stream))
+           (funcall continuation stream)))
+    (declare (dynamic-extent #'trampoline))
+    (apply #'invoke-with-temporary-page
+           (slot-value stream 'stream) #'trampoline args)))
 
 (def-stream-method medium-buffering-output-p
     ((stream standard-encapsulating-stream)))
@@ -538,12 +546,12 @@ if there is one, or STREAM"
 
 (defmethod invoke-with-drawing-options ((medium standard-encapsulating-stream)
                                         continuation &rest drawing-options)
-  (apply #'invoke-with-drawing-options
-         (slot-value medium 'stream)
-         #'(lambda (old-medium)
-             (declare (ignore old-medium))
-             (funcall continuation medium))
-         drawing-options))
+  (flet ((trampoline (old-medium)
+           (declare (ignore old-medium))
+           (funcall continuation medium)))
+    (declare (dynamic-extent #'trampoline))
+    (apply #'invoke-with-drawing-options
+           (slot-value medium 'stream) #'trampoline drawing-options)))
 
 (def-stream-method do-graphics-with-options-internal
     ((stream standard-encapsulating-stream) (orig-medium t) function
