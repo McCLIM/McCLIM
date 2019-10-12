@@ -366,7 +366,8 @@ advised of the possiblity of such damages.
                     :x-spacing '(2 :character))
 	 (draw-all sequence stream))))))
 
-(define-presentation-type alist-subset (&key alist)
+(define-presentation-type alist-subset
+    (&key (alist (error "The :ALIST keyword argument is required")))
   ;; Yes, I know clim 1.0 has one of these, but it doesn't work in avv mode!.
   :parser ((stream)
 	   (accept `(sequence (alist-member :alist ,alist))
