@@ -37,7 +37,7 @@
            (record object) (delta-x object) (delta-y object))))
 
 (defun set-status-line (string)
-  (setf (gadget-value (clim-fig-status *application-frame*))
+  (setf (clime:label-pane-label (find-pane-named *application-frame* 'status))
 	string))
 
 (defun draw-figure (pane x y x1 y1 &key fastp cp-x1 cp-y1 cp-x2 cp-y2)
@@ -343,8 +343,7 @@
           :activate-callback #'(lambda (x)
                                  (declare (ignore x))
                                  (com-clear)))
-   (status :text-field :value "CLIM Fig"
-           :editable-p nil))
+   (status :label-pane :label "CLIM Fig"))
   (:layouts
    (default
      (vertically ()
