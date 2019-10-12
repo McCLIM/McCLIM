@@ -131,7 +131,7 @@
     (return-from text-size (values 0 0 0 0 (text-style-ascent text-style medium))))
   (let* ((text-style (merge-text-styles text-style
                                         (medium-merged-text-style medium)))
-         (font (text-style-to-font (port medium) text-style))
+         (font (text-style-mapping (port medium) text-style))
          (text (subseq (string string) start end))
          (ascent (climb:font-ascent font))
          (line-height (+ ascent (climb:font-descent font)))

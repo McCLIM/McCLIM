@@ -212,22 +212,20 @@ of letters specified in a separate kerning-table."))
          (parse-text-style* (apply #'make-text-style style)))
         (t (error "Invalid text style specification ~S." style))))
 
-(defgeneric climb:text-style-to-font (port text-style))
-
 (defmethod text-style-ascent (text-style medium)
-  (let ((font (text-style-to-font (port medium) text-style)))
+  (let ((font (text-style-mapping (port medium) text-style)))
     (climb:font-ascent font)))
 
 (defmethod text-style-descent (text-style medium)
-  (let ((font (text-style-to-font (port medium) text-style)))
+  (let ((font (text-style-mapping (port medium) text-style)))
     (climb:font-descent font)))
 
 (defmethod text-style-height (text-style medium)
-  (let ((font (text-style-to-font (port medium) text-style)))
+  (let ((font (text-style-mapping (port medium) text-style)))
     (+ (climb:font-ascent font) (climb:font-descent font))))
 
 (defmethod text-style-character-width (text-style medium char)
-  (climb:font-character-width (text-style-to-font (port medium) text-style) char))
+  (climb:font-character-width (text-style-mapping (port medium) text-style) char))
 
 (defmethod text-style-width (text-style medium)
   (text-style-character-width text-style medium #\M))
@@ -258,7 +256,7 @@ xmin ymin xmax ymax."))
   (when (= start end)
     (return-from climb:text-bounding-rectangle* (values 0 0 0 0)))
   (let ((text (string string))
-        (font (climb:text-style-to-font (clim:port medium)
+        (font (text-style-mapping (clim:port medium)
                                         (clim:merge-text-styles text-style
                                                                 (clim:medium-merged-text-style medium)))))
     (multiple-value-bind (xmin ymin xmax ymax)
@@ -275,7 +273,7 @@ xmin ymin xmax ymax."))
   (when (= start end)
     (return-from climb:text-size (values 0 0 0 0 (clim:text-style-ascent text-style medium))))
   (let ((text (string string))
-        (font (climb:text-style-to-font (clim:port medium) text-style)))
+        (font (text-style-mapping (clim:port medium) text-style)))
     (multiple-value-bind (xmin ymin xmax ymax
                                left top width height
                                ascent descent linegap

@@ -2012,7 +2012,6 @@
    #:with-port
    #:invoke-with-port
    ;; Text-style
-   #:text-style-to-font
    #:text-style-character-width
    #:text-bounding-rectangle*
    #:normalize-font-size
