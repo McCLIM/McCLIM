@@ -41,8 +41,9 @@
     (when fonts
       (xlib:open-font display (first fonts)))))
 
-(defmethod climb:text-style-to-font ((port clx-port) text-style
-                                     &aux (text-style (climb:parse-text-style* text-style)))
+(defmethod text-style-mapping ((port clx-port) text-style &optional character-set
+                               &aux (text-style (climb:parse-text-style* text-style)))
+  (declare (ignore character-set))
   (labels
       ((find-and-make-xlib-face (display family face size)
          (let* ((family-name (if (stringp family)
@@ -75,9 +76,7 @@
            (setf size (max 2 size))
            (let ((display (clim-clx::clx-port-display port)))
              (find-and-make-xlib-face display family face size)))))
-    (or (text-style-mapping port text-style)
-        (setf (climi::text-style-mapping port text-style)
-              (find-font)))))
+    (find-font)))
 
 
 
