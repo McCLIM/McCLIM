@@ -427,7 +427,8 @@
       (T
        (erase-output-record latest-undo-entry *standard-output*)
        (push latest-undo-entry (clim-fig-redo-list *application-frame*))
-       (activate-gadget (find-pane-named *application-frame* 'clear))))
+       (activate-gadget (find-pane-named *application-frame* 'clear))
+       (activate-gadget (find-pane-named *application-frame* 'redo))))
     (unless (clim-fig-undo-list *application-frame*)
       (deactivate-gadget (find-pane-named *application-frame* 'undo))
       (deactivate-gadget (find-pane-named *application-frame* 'clear)))))
