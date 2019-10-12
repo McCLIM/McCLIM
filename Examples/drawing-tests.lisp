@@ -1819,7 +1819,8 @@ outside the clipping area should be grey.")
   (clim:formatting-table (stream :x-spacing 50
                                  :y-spacing 20)
     (clim:formatting-row (stream)
-      (clim:formatting-cell (stream))
+      (clim:formatting-cell (stream)
+        (declare (ignore stream)))
       (clim:formatting-cell (stream :align-x :center
                                     :align-y :bottom
                                     :min-height 100)
