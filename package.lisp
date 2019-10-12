@@ -1900,6 +1900,7 @@
    #:draw-image
    #:image-pane
    #:draw-label
+   #:label-pane-label
    #:box-adjuster-gadget
    #:compose-space-aux
    #:simple-event-loop

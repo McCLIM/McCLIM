@@ -2302,7 +2302,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defclass label-pane (multiple-child-composite-pane)
   ((label :type string
           :initarg :label
-          :accessor label-pane-label
+          :accessor clime:label-pane-label
           :initform "")
    (alignment :type (member :bottom :top)
               :initform :top
@@ -2313,6 +2313,9 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    :align-y    :center
    :text-style (make-text-style :sans-serif nil nil))
   (:documentation ""))
+
+(defmethod (setf clime:label-pane-label) :after (new-value (pane label-pane))
+  (repaint-sheet pane (sheet-region pane)))
 
 (defmacro labelling ((&rest options) &body contents)
   `(make-pane 'label-pane ,@options :contents (list ,@contents)))
@@ -2342,7 +2345,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 (defmethod compose-space ((pane label-pane) &key width height)
   (declare (ignore width height))
-  (let* ((w (text-size pane (label-pane-label pane)))
+  (let* ((w (text-size pane (clime:label-pane-label pane)))
          (a (text-style-ascent (pane-text-style pane) pane))
          (d (text-style-descent (pane-text-style pane) pane))
          (m0 2)
@@ -2393,7 +2396,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (let ((m0 2)
         (a (text-style-ascent (pane-text-style pane) pane))
         (d (text-style-descent (pane-text-style pane) pane))
-        (tw (text-size pane (label-pane-label pane))))
+        (tw (text-size pane (clime:label-pane-label pane))))
     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
       (multiple-value-bind (iright itop ileft ibottom
                                    bright btop bleft bbottom)
@@ -2412,7 +2415,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                     (ecase (label-pane-label-alignment pane)
                       (:top (+ y1 m0 a))
                       (:bottom (- y2 m0 d))))
-          (draw-text* pane (label-pane-label pane)
+	  (draw-rectangle* pane x1 (- ty a) x2 (+ ty d) :ink (pane-background pane))
+          (draw-text* pane (clime:label-pane-label pane)
                       tx ty)
           ;;;
           (when (sheet-children pane)
