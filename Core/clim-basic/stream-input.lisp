@@ -75,10 +75,8 @@
 ;;; for the stream and then see what we've got after it returns.
 
 (defclass standard-input-stream (fundamental-character-input-stream
-                                 standard-sheet-input-mixin
-                                 cut-and-paste-mixin)
-  ((unread-chars :initform nil
-                 :accessor stream-unread-chars)))
+                                 standard-sheet-input-mixin)
+  ((unread-chars :initform nil :accessor stream-unread-chars)))
 
 ;;; XXX: fixing stream shisophrenia is a subject of the next input-refactor pass.
 ;;; 1. What about EOF?
@@ -703,20 +701,6 @@ known gestures."
 
 (defgeneric (setf pointer-cursor) (cursor pointer))
 
-;;; Should this go in sheets.lisp?  That comes before events and ports...
-
-(defmethod handle-event :before ((sheet mirrored-sheet-mixin)
-                                 (event pointer-enter-event))
-  (setf (port-pointer-sheet (port sheet)) sheet))
-
-(defmethod handle-event :before ((sheet mirrored-sheet-mixin)
-                                 (event pointer-exit-event))
-  (with-accessors ((port-pointer-sheet port-pointer-sheet))
-      (port sheet)
-    (when (eq port-pointer-sheet sheet)
-
-      (setq port-pointer-sheet nil))))
-
 (defmethod pointer-button-state ((pointer standard-pointer))
   (with-lock-held ((state-lock pointer))
     (slot-value pointer 'button-state)))
@@ -744,23 +728,17 @@ known gestures."
           (logandc2 (slot-value pointer 'button-state)
                     (pointer-event-button event)))))
 
-
-(defgeneric sheet-pointer-position (sheet pointer))
-
-(defmethod sheet-pointer-position (sheet pointer)
-  (multiple-value-bind (x y)
-      (pointer-position pointer)
-    (let ((pointer-sheet (port-pointer-sheet (port sheet))))
-      (if (eq sheet pointer-sheet)
-          (values x y)
-          ;; Is this right?
-          (multiple-value-bind (native-x native-y)
-              (transform-position (sheet-native-transformation sheet) x y)
-            (untransform-position (sheet-native-transformation pointer-sheet)
-                                  native-x
-                                  native-y))))))
-
 (defmethod stream-pointer-position ((stream standard-extended-input-stream)
                                     &key (pointer
                                           (port-pointer (port stream))))
-  (sheet-pointer-position stream pointer))
+  (multiple-value-bind (x y)
+      (pointer-position pointer)
+    (let ((graft (graft (port pointer))))
+      (untransform-position (sheet-delta-transformation stream graft) x y))))
+
+(defmethod* (setf stream-pointer-position) (x y (stream standard-extended-input-stream))
+  (let ((graft (graft stream))
+        (pointer (port-pointer (port stream))))
+    (multiple-value-bind (x y)
+        (transform-position (sheet-delta-transformation stream graft) x y)
+      (setf (pointer-position pointer) (values x y)))))

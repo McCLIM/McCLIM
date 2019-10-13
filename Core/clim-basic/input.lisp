@@ -43,16 +43,15 @@
 (declaim (inline now compute-decay))
 (defun now ()
   (/ (get-internal-real-time)
-     1.0
-     internal-time-units-per-second))
+     #.(float internal-time-units-per-second)))
 
 ;; Given two alarm times compute remaining time (in seconds). If both times are
 ;; NIL returns NIL.
 (defun compute-decay (time-1 time-2)
-  (cond ((and time-1 time-2) (- (min time-1 time-2) (now)))
-        (time-1 (- time-1 (now)))
-        (time-2 (- time-2 (now)))
-        (T NIL)))
+  (cond ((and time-1 time-2) (max 0 (- (min time-1 time-2) (now))))
+        (time-1              (max 0 (- time-1 (now))))
+        (time-2              (max 0 (- time-2 (now))))
+        (T                   NIL)))
 
 ;; See if it's time to inject a scheduled event into the queue.
 (defgeneric check-schedule (queue)
@@ -120,10 +119,11 @@ is no such event."))
   (:documentation "Returns true if there are any events in the queue. Otherwise
 returns NIL."))
 
-(defgeneric event-queue-listen-or-wait (event-queue &key timeout)
-  (:documentation "Returns true if there are any events in the queue. Otherwise
-blocks until event arives or timeout is reached. If there is no event before
-timeout returns NIL."))
+(defgeneric event-queue-listen-or-wait (event-queue &key timeout wait-function)
+  (:documentation "Returns true if wait-function returns true. If
+wait-function is not supplied it returns true if there are any events
+in the queue. Function blocks until condition is met or timeout is
+reached. If timeout occurs function returns NIL."))
 
 
 (defclass simple-event-queue (event-queue schedule-mixin)
@@ -148,7 +148,6 @@ use condition-variables nor locks."))
     (port-force-output port)))
 
 (defun %event-queue-read (queue)
-  (check-schedule queue)
   (let ((res (pop (event-queue-head queue))))
     (when (null (event-queue-head queue))
       (setf (event-queue-tail queue) nil))
@@ -156,37 +155,46 @@ use condition-variables nor locks."))
 
 (defmethod event-queue-read ((queue simple-event-queue))
   (do-port-force-output queue)
-  (let ((decay (compute-decay nil (event-schedule-time queue)))
-        (port (event-queue-port queue)))
-    (when decay (maxf decay 0))
-    (loop
-       as result = (%event-queue-read queue)
-       if result do (return result)
-       else do (process-next-event port :timeout decay))))
+  (check-schedule queue)
+  (process-next-event (event-queue-port queue) :timeout 0)
+  (loop
+     with port = (event-queue-port queue)
+     as result = (%event-queue-read queue)
+     if result do (return result)
+     else do
+       (if-let ((decay (compute-decay nil (event-schedule-time queue))))
+         (process-next-event port :timeout decay)
+         (process-next-event port))
+       (check-schedule queue)))
 
 (defmethod event-queue-read-no-hang ((queue simple-event-queue))
   (do-port-force-output queue)
+  (check-schedule queue)
   (process-next-event (event-queue-port queue) :timeout 0)
   (%event-queue-read queue))
 
 (defmethod event-queue-read-with-timeout ((queue simple-event-queue) timeout wait-function)
   (do-port-force-output queue)
-  (when wait-function
-    (warn "EVENT-QUEUE-READ-WITH-TIMEOUT: ignoring WAIT-FUNCTION."))
-  (let ((port (event-queue-port queue))
-        (timeout-time (and timeout (+ timeout (now)))))
-    ;; timeout-time may be past-due already but we may have an event waiting to be
-    ;; processed for some time. Do preemptive check. -- jd 2018-12-30
-    (process-next-event port :timeout 0)
-    (loop
-       as decay = (compute-decay timeout-time (event-schedule-time queue))
-       do
-         (when decay (maxf decay 0))
-         (if-let ((event (%event-queue-read queue)))
-           (return event)
-           (if (and timeout-time (> (now) timeout-time))
-               (return nil)
-               (process-next-event port :wait-function wait-function :timeout decay))))))
+  ;; Preemptive check (timeout may be past due). -- jd 2018-12-30
+  (check-schedule queue)
+  (process-next-event (event-queue-port queue) :timeout 0)
+  (loop
+     with port = (event-queue-port queue)
+     with timeout-time = (and timeout (+ timeout (now)))
+     do
+       (cond ((event-queue-head queue)
+              (return (%event-queue-read queue)))
+             ((and timeout-time (> (now) timeout-time))
+              (return (values nil :timeout)))
+             ((multiple-value-bind (available reason)
+                  (let* ((schedule-time (event-schedule-time queue))
+                         (decay (compute-decay timeout-time schedule-time)))
+                    (process-next-event port
+                                        :timeout decay
+                                        :wait-function wait-function))
+                (and (null available) (eql reason :wait-function)))
+              (return (values nil :wait-function)))
+             (t (check-schedule queue)))))
 
 (defmethod event-queue-append ((queue simple-event-queue) item)
   (labels ((append-event ()
@@ -224,7 +232,7 @@ use condition-variables nor locks."))
       ;; Resize event compression
       ;;
       (window-configuration-event
-       (when (typep (event-sheet item) 'top-level-sheet-pane)
+       (when (typep (event-sheet item) 'top-level-sheet-mixin)
          (let ((sheet (event-sheet item)))
            (event-delete-if
             #'(lambda (ev)
@@ -293,140 +301,149 @@ use condition-variables nor locks."))
 (defmethod event-queue-peek ((queue simple-event-queue))
   (do-port-force-output queue)
   (check-schedule queue)
-  (or (first (event-queue-head queue))
-      (when (process-next-event (event-queue-port queue) :timeout 0)
-        (first (event-queue-head queue)))))
+  (process-next-event (event-queue-port queue) :timeout 0)
+  (first (event-queue-head queue)))
 
 (defmethod event-queue-peek-if (predicate (queue simple-event-queue))
   (do-port-force-output queue)
+  (check-schedule queue)
   ;; Slurp as many elements as available.
   (loop until (null (process-next-event (event-queue-port queue) :timeout 0)))
-  ;; Check-schedule may append scheduled event in a queue.
-  (check-schedule queue)
   (find-if predicate (event-queue-head queue)))
 
-(defmethod event-queue-listen-or-wait ((queue simple-event-queue) &key timeout)
+(defmethod event-queue-listen-or-wait ((queue simple-event-queue)
+                                       &key timeout wait-function)
   (do-port-force-output queue)
-  (let ((port (event-queue-port queue))
-        (timeout-time (and timeout (+ timeout (now)))))
-    ;; timeout-time may be past-due already but we may have an event waiting to be
-    ;; processed for some time. Do preemptive check. -- jd 2018-12-30
-    (process-next-event port :timeout 0)
-    (loop
-       as decay = (compute-decay timeout-time (event-schedule-time queue))
-       do
-         (when decay (maxf decay 0))
-         (check-schedule queue)
-         (cond ((event-queue-head queue)
-                (return t))
-               ((and timeout-time (> (now) timeout-time))
-                (return nil))
-               (T
-                (process-next-event port :timeout decay))))))
+  (check-schedule queue)
+  (process-next-event (event-queue-port queue) :timeout 0)
+  (loop
+     with port = (event-queue-port queue)
+     with timeout-time = (and timeout (+ timeout (now)))
+     do
+       (cond ((event-queue-head queue)
+              (return t))
+             ((and timeout-time (> (now) timeout-time))
+              (return (values nil :timeout)))
+             ((multiple-value-bind (available reason)
+                  (let* ((schedule-time (event-schedule-time queue))
+                         (decay (compute-decay timeout-time schedule-time)))
+                    (process-next-event port
+                                        :timeout decay
+                                        :wait-function wait-function))
+                (and (null available)
+                     (eql reason :wait-function)))
+              (return (values nil :wait-function)))
+             (t (check-schedule queue)))))
 
 (defmethod event-queue-listen ((queue simple-event-queue))
   (event-queue-listen-or-wait queue :timeout 0))
 
 
+;;; XXX SBCL doesn't reacquire lock when condition-variable
+;;; prematurely returns (i.e due to timeout). That means we can't use
+;;; recursive locks for the concurrent-event-queue. --jd 2019-06-26
+
 (defclass concurrent-event-queue (simple-event-queue)
-  ((lock :initform (make-recursive-lock "event queue")
+  ((lock :initform (make-lock "Event queue")
          :reader event-queue-lock)
    (processes
-         :initform (make-condition-variable)
-         :accessor event-queue-processes
-         :documentation "Condition variable for waiting processes")))
-
-(defmethod check-schedule :around ((queue concurrent-event-queue))
-  (with-recursive-lock-held ((event-queue-lock queue))
-    (call-next-method)))
-
-(defmethod schedule-event-queue :around ((queue concurrent-event-queue) event delay)
-  (with-recursive-lock-held ((event-queue-lock queue))
-    (call-next-method)))
+    :initform (make-condition-variable)
+    :accessor event-queue-processes
+    :documentation "Condition variable for waiting processes")))
 
 (defmethod event-queue-read ((queue concurrent-event-queue))
   (do-port-force-output queue)
   (let ((lock (event-queue-lock queue))
         (cv (event-queue-processes queue)))
     (loop
-       as decay = (compute-decay nil (event-schedule-time queue))
-       do (with-recursive-lock-held (lock)
-            (if-let ((result (%event-queue-read queue)))
-              (return result)
-              (condition-wait cv lock decay))))))
+       (check-schedule queue)
+       (with-lock-held (lock)
+         (if-let ((result (%event-queue-read queue)))
+           (return result)
+           (let* ((schedule-time (event-schedule-time queue))
+                  (decay (compute-decay nil schedule-time)))
+             (condition-wait cv lock decay)))))))
 
 (defmethod event-queue-read-no-hang ((queue concurrent-event-queue))
   (do-port-force-output queue)
-  (with-recursive-lock-held ((event-queue-lock queue))
+  (check-schedule queue)
+  (with-lock-held ((event-queue-lock queue))
     (%event-queue-read queue)))
-
-;;; XXX Should we do something with the wait function? I suspect that
-;;; it's not compatible with the brave new world of native threads.
 
 (defmethod event-queue-read-with-timeout ((queue concurrent-event-queue)
                                           timeout wait-function)
   (do-port-force-output queue)
-  (when wait-function
-    (warn "EVENT-QUEUE-READ-WITH-TIMEOUT: ignoring WAIT-FUNCTION."))
   ;; We need to LOOP because of possible spurious wakeup (sbcl/bt quirk).
   (loop
      with lock = (event-queue-lock queue)
      with cv = (event-queue-processes queue)
      with timeout-time = (and timeout (+ timeout (now)))
-     as decay = (compute-decay timeout-time (event-schedule-time queue))
      do
-       (when decay (maxf decay 0))
-       (with-recursive-lock-held (lock)
+       (check-schedule queue)
+       (with-lock-held (lock)
          (if-let ((event (%event-queue-read queue)))
            (return event)
-           (if (and timeout-time (> (now) timeout-time))
-               (return nil)
-               (condition-wait cv lock decay))))))
+           (cond ((maybe-funcall wait-function)
+                  (return (values nil :wait-function)))
+                 ((and timeout-time (> (now) timeout-time))
+                  (return (values nil :timeout)))
+                 (t
+                  (let* ((schedule-time (event-schedule-time queue))
+                         (decay (compute-decay timeout-time schedule-time)))
+                    (condition-wait cv lock decay))))))))
 
 (defmethod event-queue-append ((queue concurrent-event-queue) item)
-  (with-recursive-lock-held ((event-queue-lock queue))
+  (with-lock-held ((event-queue-lock queue))
     (call-next-method)
     (condition-notify (event-queue-processes queue))))
 
 (defmethod event-queue-prepend ((queue concurrent-event-queue) item)
-  (with-recursive-lock-held ((event-queue-lock queue))
+  (with-lock-held ((event-queue-lock queue))
     (call-next-method)
     (condition-notify (event-queue-processes queue))))
 
 (defmethod event-queue-peek ((queue concurrent-event-queue))
   (do-port-force-output queue)
-  (with-recursive-lock-held ((event-queue-lock queue))
-    (check-schedule queue)
+  (check-schedule queue)
+  (with-lock-held ((event-queue-lock queue))
     (first (event-queue-head queue))))
 
 (defmethod event-queue-peek-if (predicate (queue concurrent-event-queue))
   (do-port-force-output queue)
-  (with-recursive-lock-held ((event-queue-lock queue))
+  (check-schedule queue)
+  (with-lock-held ((event-queue-lock queue))
     (find-if predicate (event-queue-head queue))))
 
-(defmethod event-queue-listen ((queue concurrent-event-queue))
-  (do-port-force-output queue)
-  (check-schedule queue)
-  (not (null (event-queue-head queue))))
-
-(defmethod event-queue-listen-or-wait ((queue concurrent-event-queue) &key timeout)
+(defmethod event-queue-listen-or-wait ((queue concurrent-event-queue)
+                                       &key timeout wait-function)
   (do-port-force-output queue)
   ;; We need to LOOP because of possible spurious wakeup (sbcl/bt quirk).
   (loop
      with lock = (event-queue-lock queue)
      with cv = (event-queue-processes queue)
      with timeout-time = (and timeout (+ timeout (now)))
-     as decay = (compute-decay timeout-time (event-schedule-time queue))
      do
-       (when decay (maxf decay 0))
-       (with-recursive-lock-held (lock)
-         (check-schedule queue)
+       (check-schedule queue)
+       (with-lock-held (lock)
          (cond ((event-queue-head queue)
                 (return t))
+               ((maybe-funcall wait-function)
+                (return (values nil :wait-function)))
                ((and timeout-time (> (now) timeout-time))
-                (return nil))
-               (T
-                (condition-wait cv lock decay))))))
+                (return (values nil :timeout)))
+               (wait-function
+                ;; We CLAMP decay when wait-function is present to
+                ;; ensure that we don't get stuck until next event
+                ;; arrives (or the timeout happens). It is busy wait
+                ;; with a lousy grain. -- jd 2019-06-06
+                (if-let ((decay (compute-decay timeout-time
+                                               (event-schedule-time queue))))
+                  (condition-wait cv lock (min 0.01 decay))
+                  (condition-wait cv lock 0.01)))
+               (t
+                (let ((decay (compute-decay timeout-time
+                                            (event-schedule-time queue))))
+                  (condition-wait cv lock decay)))))))
 
 
 ;;; STANDARD-SHEET-INPUT-MIXIN
@@ -467,13 +484,6 @@ use condition-variables nor locks."))
 (defmethod event-read ((sheet standard-sheet-input-mixin))
   (with-slots (queue) sheet
     (event-queue-read queue)))
-
-(defgeneric clim-extensions:event-read-with-timeout (sheet &key timeout wait-function)
-  (:method ((sheet standard-sheet-input-mixin)
-            &key (timeout nil) (wait-function nil))
-    ;; This one is not in the spec ;-( --GB
-    (with-slots (queue) sheet
-      (event-queue-read-with-timeout queue timeout wait-function))))
 
 (defmethod event-read-no-hang ((sheet standard-sheet-input-mixin))
   (with-slots (queue) sheet
@@ -544,11 +554,6 @@ use condition-variables nor locks."))
 (defmethod event-read ((sheet sheet-mute-input-mixin))
   (error 'sheet-is-mute-for-input))
 
-(defmethod event-read-with-timeout ((sheet sheet-mute-input-mixin)
-                                    &key (timeout nil) (wait-function nil))
-  (declare (ignore timeout wait-function))
-  (error 'sheet-is-mute-for-input))
-
 (defmethod event-read-no-hang ((sheet sheet-mute-input-mixin))
   (error 'sheet-is-mute-for-input))
 
@@ -599,11 +604,6 @@ use condition-variables nor locks."))
 (defmethod event-read ((sheet delegate-sheet-input-mixin))
   (event-read (delegate-sheet-delegate sheet)))
 
-(defmethod event-read-with-timeout ((sheet delegate-sheet-input-mixin)
-                                    &key (timeout nil) (wait-function nil))
-  (event-read-with-timeout (delegate-sheet-delegate sheet)
-                           :timeout timeout :wait-function wait-function))
-
 (defmethod event-read-no-hang ((sheet delegate-sheet-input-mixin))
   (event-read-no-hang (delegate-sheet-delegate sheet)))
 
@@ -615,6 +615,48 @@ use condition-variables nor locks."))
 
 (defmethod event-listen ((sheet delegate-sheet-input-mixin))
   (event-listen (delegate-sheet-delegate sheet)))
+
+;;; Extensions involving wait-function
+;;;
+;;; wait-function in principle behaves like for process-next-event
+;;; (and for single-threaded run it is exactly what happens - we pass
+;;; it to the port method). It is not called in a busy loop but rather
+;;; after some input wakes up blocking backend-specific wait
+;;; function. Then we call wait-function. -- jd 2019-03-26
+
+(defgeneric event-read-with-timeout (sheet &key timeout wait-function)
+  (:documentation "Reads event from the event queue. Function returns
+when event is succesfully read, timeout expires or wait-function
+returns true. Time of wait-function call depends on a port.")
+  (:method ((sheet standard-sheet-input-mixin)
+            &key (timeout nil) (wait-function nil))
+    (with-slots (queue) sheet
+      (event-queue-read-with-timeout queue timeout wait-function)))
+  (:method ((sheet sheet-mute-input-mixin)
+            &key (timeout nil) (wait-function nil))
+    (declare (ignore timeout wait-function))
+    (error 'sheet-is-mute-for-input))
+  (:method ((sheet delegate-sheet-input-mixin)
+            &key (timeout nil) (wait-function nil))
+    (event-read-with-timeout (delegate-sheet-delegate sheet)
+                             :timeout timeout :wait-function wait-function)))
+
+(defgeneric event-listen-or-wait (sheet &key timeout wait-function)
+  (:documentation "When wait-function is nil then function waits for
+available event. Otherwise function returns when wait-function
+predicate yields true. Time of wait-function call depends on a port.")
+  (:method ((sheet standard-sheet-input-mixin)
+            &key (timeout nil) (wait-function nil))
+    (with-slots (queue) sheet
+      (event-queue-listen-or-wait queue :timeout timeout :wait-function wait-function)))
+  (:method ((sheet sheet-mute-input-mixin)
+            &key (timeout nil) (wait-function nil))
+    (declare (ignore timeout wait-function))
+    (error 'sheet-is-mute-for-input))
+  (:method ((sheet delegate-sheet-input-mixin)
+            &key (timeout nil) (wait-function nil))
+    (event-listen-or-wait (delegate-sheet-delegate sheet)
+                          :timeout timeout :wait-function wait-function)))
 
 ;;; Class actually used by panes.
 

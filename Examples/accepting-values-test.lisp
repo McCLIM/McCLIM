@@ -1,6 +1,4 @@
-(in-package :clim-demo)
-
-(in-package #:clim-demo)
+(cl:in-package #:clim-demo)
 
 (define-application-frame av-test ()
   ((own-window-p :initform nil))
@@ -158,4 +156,3 @@
   (with-slots (own-window-p) clim:*application-frame*
     (format t "Result: ~S~%" (multiple-value-list (accepting-with-gadgets :ow own-window-p))))
   (finish-output *standard-output*))
-

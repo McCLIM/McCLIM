@@ -80,7 +80,6 @@
          (graph-record (output-record-parent node-record))
          (erase-region))
     (assert (typep graph-record 'graph-output-record))
-    (erase-output-record node-record stream)
     (drag-output-record stream node-record
                         :feedback (lambda (record stream old-x old-y x y mode)
                                     (declare (ignore old-x old-y))
@@ -98,7 +97,7 @@
                                        (repaint-sheet
                                         stream (region-union (or erase-region +nowhere+)
                                                              (node-and-edges-region record edge-records))))))
-                        :finish-on-release t :multiple-window t)))
+                        :finish-on-release t :multiple-window nil)))
 
 (define-presentation-to-command-translator record-dragging-translator
     (t com-drag-node draggable-graph-demo

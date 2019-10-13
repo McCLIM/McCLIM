@@ -20,72 +20,46 @@
 
 (in-package :clim-internals)
 
+(defgeneric menu-root (button))
+
+(defgeneric menu-children (pane))
+
+(defgeneric arm-menu (button))
+
+(defgeneric disarm-menu (button))
+
+(defgeneric arm-branch (pane))
+
+(defgeneric destroy-substructure (pane))
+
 (defmethod stream-force-output ((pane menu-button-pane))
   (with-sheet-medium (medium pane)
     (medium-force-output medium)))
 
-(defgeneric menu-root (button))
-
 (defmethod menu-root ((button menu-button-pane))
   (menu-root (gadget-client button)))
 
-(defgeneric arm-menu (button))
-
-(defgeneric menu-children (pane))
-
 (defmethod arm-menu ((button menu-button-pane))
-  (with-slots (client armed id) button
+  (with-slots (client armed) button
     (unless armed
       (arm-menu client)
       (mapc #'disarm-menu (menu-children client))
       (arm-gadget button t))
     (dispatch-repaint button (sheet-region button))))
 
-(defgeneric disarm-menu (button))
-
 (defmethod disarm-menu ((button menu-button-pane))
-  (with-slots (client armed id) button
+  (with-slots (armed) button
     (when armed
       (disarm-gadget button)
       (dispatch-repaint button (sheet-region button))
       (stream-force-output button))))
 
-(defun menu-draw-highlighted (gadget)
-  (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
-    (with-slots (label) gadget
-      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
-        (let ((w (- x2 x1))
-              (h (- y2 y1)))
-          (draw-rectangle* gadget -1 -1 x2 y2
-                           :ink (gadget-highlighted-color gadget)
-                           :filled t)
-          (draw-edges-lines* gadget +white+ 0 0 +black+ (1- w) (1- h))
-          (draw-label* gadget x1 y1 x2 y2))))))
-
-(defun menu-draw-unhighlighted (gadget)
-  (when (sheet-mirror gadget)           ;XXX only do this when the gadget is realized.
-    (with-slots (label) gadget
-      (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
-        (let ((w (- x2 x1))
-              (h (- y2 y1)))
-          (draw-rectangle* gadget -1 -1 w h ;-1 -1 x2 y2
-                           :ink +background-ink+
-                           :filled t)
-          (draw-label* gadget x1 y1 x2 y2))))))
-
-(defgeneric arm-branch (pane))
-
-(defgeneric destroy-substructure (pane))
-
 (defmethod handle-event ((pane menu-button-pane) (event pointer-enter-event))
-  (when (slot-value (slot-value pane 'client) 'armed)
+  (when (slot-value (gadget-client pane) 'armed)
     (arm-branch pane)))
 
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
   (arm-menu pane))
-
-(defmethod handle-event ((pane menu-button-pane) (event pointer-ungrab-event))
-  (destroy-substructure (menu-root pane)))
 
 ;;; menu-button-leaf-pane
 
@@ -103,17 +77,14 @@
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-button-release-event))
   (with-slots (armed label client id) pane
-    (when armed
-      (unwind-protect
-	   (value-changed-callback pane client id label)
-	(disarm-menu pane)
-	(destroy-substructure (menu-root pane))))))
+    (unwind-protect
+         (when armed
+           (value-changed-callback pane client id label))
+      (disarm-menu pane)
+      (destroy-substructure (menu-root pane)))))
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-exit-event))
   (disarm-menu pane))
-
-(defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-ungrab-event))
-  (destroy-substructure (menu-root pane)))
 
 ;;; menu-button-submenu-pane
 
@@ -126,8 +97,8 @@
 (defmethod menu-children ((submenu menu-button-submenu-pane))
   (with-slots (submenu-frame) submenu
     (if submenu-frame
-	(sheet-children (first (sheet-children (frame-panes submenu-frame))))
-	'())))
+        (sheet-children (first (sheet-children (frame-panes submenu-frame))))
+        '())))
 
 (defclass submenu-border (border-pane) ())
 
@@ -141,37 +112,36 @@ name `command-table-name', taking inherited menu items into
 account, and create a list of menu buttons."
   (let ((menu-buttons '()))
     (map-over-command-table-menu-items
-     #'(lambda (name gesture item)
-         (declare (ignore name gesture))
-         (push (make-menu-button-from-menu-item
-                item client :command-table command-table-name :vertical t)
-               menu-buttons))
+     (lambda (name gesture item)
+       (declare (ignore name gesture))
+       (push (make-menu-button-from-menu-item
+              item client :command-table command-table-name :vertical t)
+             menu-buttons))
      command-table-name)
     (nreverse menu-buttons)))
 
 (defun create-substructure (sub-menu client)
-  (let* ((frame *application-frame*)
-	 (manager (frame-manager frame))
-	 (command-table-name (slot-value sub-menu 'command-table))
-	 (items (make-menu-buttons command-table-name client))
-	 (rack (make-pane-1 manager frame 'vrack-pane
-			    :background *3d-normal-color* :contents items))
-	 (raised (make-pane-1 manager frame 'submenu-border :contents (list rack))))
+  (let* ((frame (pane-frame client))
+         (manager (frame-manager frame))
+         (command-table-name (slot-value sub-menu 'command-table))
+         (items (make-menu-buttons command-table-name client))
+         (rack (make-pane-1 manager frame 'vrack-pane
+                            :background *3d-normal-color* :contents items))
+         (raised (make-pane-1 manager frame 'submenu-border :contents (list rack))))
     (with-slots (bottomp) sub-menu
-      (multiple-value-bind (xmin ymin xmax ymax)
-	  (bounding-rectangle* (sheet-region sub-menu))
-	(multiple-value-bind (x y)
-	    (transform-position (sheet-delta-transformation sub-menu nil)
-				(if bottomp xmin xmax)
-				(if bottomp ymax ymin))
-	  (with-slots (frame-manager submenu-frame) sub-menu
-	    (setf frame-manager manager
-		  submenu-frame (make-menu-frame raised :left x :top y))
-	    (adopt-frame manager submenu-frame)
-	    (enable-frame submenu-frame)
-	    (with-sheet-medium (medium raised)
-	      (medium-force-output medium))))))
-    (setf (%frame-active-menu frame) sub-menu)))
+      (with-bounding-rectangle* (xmin ymin xmax ymax) (sheet-region sub-menu)
+        (multiple-value-bind (x y)
+            (transform-position (sheet-delta-transformation sub-menu nil)
+                                (if bottomp xmin xmax)
+                                (if bottomp ymax ymin))
+          (with-slots (frame-manager submenu-frame) sub-menu
+            (setf frame-manager manager
+                  submenu-frame (make-menu-frame raised :left x :top y))
+            (adopt-frame manager submenu-frame)
+            (enable-frame submenu-frame)
+            (with-sheet-medium (medium raised)
+			       (medium-force-output medium)))))
+      (setf (%frame-active-menu frame) sub-menu))))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
   (with-slots (frame-manager submenu-frame) sub-menu
@@ -189,11 +159,11 @@ account, and create a list of menu buttons."
   (with-slots (client frame-manager submenu-frame) sub-menu
     (arm-menu client)
     (if submenu-frame
-	(progn (mapc #'destroy-substructure (menu-children sub-menu))
-	       (mapc #'disarm-menu (menu-children sub-menu)))
-	(progn
-	  (mapc #'destroy-substructure (menu-children client))
-	  (create-substructure sub-menu sub-menu)))
+        (progn (mapc #'destroy-substructure (menu-children sub-menu))
+               (mapc #'disarm-menu (menu-children sub-menu)))
+        (progn
+          (mapc #'destroy-substructure (menu-children client))
+          (create-substructure sub-menu sub-menu)))
     (arm-menu sub-menu)))
 
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-press-event))
@@ -235,8 +205,7 @@ account, and create a list of menu buttons."
 
   (defmethod handle-repaint ((pane menu-button-vertical-submenu-pane) region)
     (call-next-method)
-    (multiple-value-bind (x1 y1 x2 y2)
-        (bounding-rectangle* (sheet-region pane))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
       (when (and (> (- x2 x1) total-width)
                  (> (- y2 y1) total-height))
         (let* ((center (/ (+ y1 y2) 2))
@@ -260,114 +229,96 @@ account, and create a list of menu buttons."
 
 (defmethod compose-space ((gadget menu-divider-leaf-pane) &key width height)
   (declare (ignorable width height))
-  (flet ((make-sr (w h)
-           (make-space-requirement :min-width w   :width w
-                                   :min-height h  :height h :max-height h)))
-    (let ((label (slot-value gadget 'label)))
-      (if label
-          (multiple-value-bind (width height fx fy baseline)
-              (text-size gadget label :text-style *labelled-divider-text-style*)
-            (declare (ignore fx fy height baseline))
-            (make-sr width (+ 0
-                              (text-style-ascent *labelled-divider-text-style* gadget)
-                              (text-style-descent *labelled-divider-text-style* gadget))))
-          (make-sr 0 4)))))
-
+  (multiple-value-bind (width height)
+      (if-let ((label (slot-value gadget 'label)))
+        (text-size gadget label :text-style *labelled-divider-text-style*)
+        (values 0 4))
+    (make-space-requirement
+     :min-width width :width width
+     :min-height height :height height :max-height height)))
 
 (defmethod handle-repaint ((pane menu-divider-leaf-pane) region)
-  (let ((label (slot-value pane 'label)))
-    (multiple-value-bind (x1 y1 x2 y2)
-        (bounding-rectangle* (sheet-region pane))
-      (declare (ignore y2))
-      (if label
-          (multiple-value-bind (width height fx fy baseline)
-              (text-size pane label :text-style *labelled-divider-text-style*)
-            (declare (ignore height fx fy))
-            (let ((tx0 (+ x1 (/ (- (- x2 x1) width) 2)))
-                  (ty0 (+ 1 y1 baseline)))
-            (draw-line* pane tx0 (1+ ty0) (+ tx0 width) (1+ ty0) :ink *3d-dark-color*)
-            (draw-text* pane label tx0 ty0
-                        :text-style *labelled-divider-text-style*)))
-          (progn
-            (draw-line* pane x1 (1+ y1) x2 (1+ y1) :ink *3d-dark-color*)
-            (draw-line* pane x1 (+ 2 y1) x2 (+ 2 y1) :ink *3d-light-color*))))))
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+    (declare (ignore y2))
+    (if-let ((label (slot-value pane 'label)))
+      (multiple-value-bind (width height fx fy baseline)
+          (text-size pane label :text-style *labelled-divider-text-style*)
+        (declare (ignore height fx fy))
+        (let ((tx0 (+ x1 (/ (- (- x2 x1) width) 2)))
+              (ty0 (+ 1 y1 baseline)))
+          (draw-line* pane tx0 (1+ ty0) (+ tx0 width) (1+ ty0) :ink *3d-dark-color*)
+          (draw-text* pane label tx0 ty0
+                      :text-style *labelled-divider-text-style*)))
+      (progn
+        (draw-line* pane x1 (1+ y1) x2 (1+ y1) :ink *3d-dark-color*)
+        (draw-line* pane x1 (+ 2 y1) x2 (+ 2 y1) :ink *3d-light-color*)))))
 
 
 ;;; Menu creation from command tables
 
 (defun make-menu-button-from-menu-item (item client
-					&key (bottomp nil)
-                                        (vertical nil)
-					command-table
-					(presentation-type 'menu-item))
+                                        &key (bottomp nil)
+                                             (vertical nil)
+                                             command-table
+                                             (presentation-type 'menu-item))
   (declare (ignore command-table))
-  (let ((name (command-menu-item-name item))
-	(type (command-menu-item-type item))
-	(value (command-menu-item-value item))
-	(frame *application-frame*)
-	(manager (frame-manager *application-frame*)))
-    (case type
-      (:command
-       (let ((command-name (if (consp value) (car value) value)))
-         (if (command-enabled command-name frame)
-             (make-pane-1 manager frame 'menu-button-leaf-pane
-                          :label name
-                          :client client
-                          :value-changed-callback
-                          #'(lambda (gadget val)
-                              (declare (ignore gadget val))
-                              (throw-object-ptype item presentation-type)))
-             (let ((pane (make-pane-1 manager frame 'menu-button-leaf-pane
-                            :label name
-                            :client client
-                            :value-changed-callback
-                            #'(lambda (gadget val)
+  (let* ((name (command-menu-item-name item))
+         (type (command-menu-item-type item))
+         (value (command-menu-item-value item))
+         (frame (pane-frame client))
+         (manager (frame-manager frame)))
+    (flet ((make-sub-pane (class &rest initargs &key &allow-other-keys)
+             (apply #'make-pane-1 manager frame class
+                    :label name :client client initargs)))
+      (case type
+        (:command
+         (let ((command-name (if (consp value) (car value) value)))
+           (if (command-enabled command-name frame)
+               (make-sub-pane 'menu-button-leaf-pane
+                              :value-changed-callback
+                              (lambda (gadget val)
                                 (declare (ignore gadget val))
-                                nil))))
-               (deactivate-gadget pane)
-               pane))))
-      (:function
-        (make-pane-1 manager frame 'menu-button-leaf-pane
-                     :label name
-                     :client client
-                     :value-changed-callback
-                     #'(lambda (gadget val)
-                         (declare (ignore gadget val))
-                         ;; FIXME: the spec requires us to pass a gesture to the
-                         ;; function, but value-changed-callback doesn't provide
-                         ;; one, so we pass NIL for now.
-                         ;; FIXME: We don't have a numeric argument, either.
-                         (let ((command (funcall value nil nil)))
-                           (throw-object-ptype command 'command)))))
-      (:divider
-       (make-pane-1 manager frame 'menu-divider-leaf-pane
-                    :label name
-                    :client client))
-      (:menu
-        (make-pane-1 manager frame (if vertical
-                                       'menu-button-vertical-submenu-pane
-                                       'menu-button-submenu-pane)
-		     :label name
-		     :client client
-		     :frame-manager manager
-		     :command-table value
-		     :bottomp bottomp))
-      (otherwise (error "Don't know how to create a menu button for ~W" type)))))
+                                (throw-object-ptype item presentation-type)))
+               (let ((pane (make-sub-pane 'menu-button-leaf-pane
+                                          :value-changed-callback
+                                          (lambda (gadget val)
+                                            (declare (ignore gadget val))
+                                            nil))))
+                 (deactivate-gadget pane)
+                 pane))))
+        (:function
+         (make-sub-pane 'menu-button-leaf-pane
+                        :value-changed-callback
+                        (lambda (gadget val)
+                          (declare (ignore gadget val))
+                          ;; FIXME: the spec requires us to pass a gesture to the
+                          ;; function, but value-changed-callback doesn't provide
+                          ;; one, so we pass NIL for now.
+                          ;; FIXME: We don't have a numeric argument, either.
+                          (let ((command (funcall value nil nil)))
+                            (throw-object-ptype command 'command)))))
+        (:divider
+         (make-sub-pane 'menu-divider-leaf-pane))
+        (:menu
+         (make-sub-pane (if vertical
+                            'menu-button-vertical-submenu-pane
+                            'menu-button-submenu-pane)
+                        :frame-manager manager
+                        :command-table value
+                        :bottomp bottomp))
+        (otherwise (error "Don't know how to create a menu button for ~W" type))))))
 
 ;;
 ;; MENU-BAR
 ;;
-(defclass menu-button-hrack-pane (hrack-pane) ())
 
-(defclass menu-bar (menu-button-hrack-pane)
+(defclass menu-bar (hrack-pane)
   ((items :initform nil)
    (armed :initform nil)))
 
 (defmethod (setf %pane-contents) :after (contents (pane menu-bar))
   (declare (ignore contents))
-  (setf (slot-value pane 'items) (copy-list (sheet-children pane)))
-  (loop for child in (menu-children pane)
-	do (setf (gadget-client child) pane)))
+  (setf (slot-value pane 'items) (copy-list (sheet-children pane))))
 
 (defmethod menu-children ((menu-bar menu-bar))
   (slot-value menu-bar 'items))
@@ -377,8 +328,8 @@ account, and create a list of menu buttons."
 
 (defmethod destroy-substructure ((object menu-bar))
   (loop for child in (menu-children object)
-	do (progn (destroy-substructure child)
-		  (dispatch-repaint child (sheet-region child))))
+        do (destroy-substructure child)
+           (dispatch-repaint child (sheet-region child)))
   (setf (slot-value object 'armed) nil))
 
 (defmethod arm-menu ((object menu-bar))
@@ -387,35 +338,33 @@ account, and create a list of menu buttons."
 (defmethod disarm-menu ((object menu-bar))
   (setf (slot-value object 'armed) nil))
 
-(defun %make-menu-contents (command-table)
+(defun %make-menu-contents (command-table client)
   (with-slots (menu) (find-command-table command-table)
-    (append
-     (loop for item in menu
-	collect
-	  (make-menu-button-from-menu-item
-	   item nil
-	   :bottomp t
-	   :vertical nil
-	   :command-table command-table))
-     (list +fill+))))
+    (append (loop for item in menu
+                  collect (make-menu-button-from-menu-item
+                           item client
+                           :bottomp t
+                           :vertical nil
+                           :command-table command-table))
+            (list +fill+))))
 
 (defun make-menu-bar (command-table
-		      &key width height
-		           (max-width +fill+) max-height
-			   min-width min-height)
-  (with-slots (menu) (find-command-table command-table)
-    (make-pane-1 *pane-realizer* *application-frame*
-		 'menu-bar
-		 :background *3d-normal-color*
-		 :width width :height height
-		 :max-width max-width :max-height max-height
-		 :min-width min-width :min-height min-height
-		 :contents (%make-menu-contents command-table))))
+                      &key width height
+                           (max-width +fill+) max-height
+                           min-width min-height)
+  (let ((menu-bar (make-pane-1 *pane-realizer* *application-frame* 'menu-bar
+                               :background *3d-normal-color*
+                               :width width :height height
+                               :max-width max-width :max-height max-height
+                               :min-width min-width :min-height min-height)))
+    (setf (%pane-contents menu-bar)
+          (%make-menu-contents command-table menu-bar))
+    menu-bar))
 
 (defun update-menu-bar (menu-bar-pane command-table)
   (when command-table
     (setf (%pane-contents menu-bar-pane)
-	  (%make-menu-contents command-table)))
+          (%make-menu-contents command-table menu-bar-pane)))
   (change-space-requirements menu-bar-pane))
 
 (defmethod handle-repaint ((pane menu-bar) region)
@@ -437,23 +386,21 @@ account, and create a list of menu buttons."
     ((pane menu-bar) real-width real-height)
   (with-slots (x-spacing) pane
     (let ((widths
-	   (box-layout-mixin/horizontally-allocate-space-aux*
-	    pane real-width real-height))
-	  (x 2))
-      (loop
-	  for child in (box-layout-mixin-clients pane)
-	  for width in widths
-	  do
-	    (when (box-client-pane child)
-	      (layout-child (box-client-pane child)
-			    :expand
-			    :expand
-			    x
-			    2
-			    width
-			    (- real-height 4)))
-	    (incf x width)
-	    (incf x x-spacing)))))
+            (box-layout-mixin/horizontally-allocate-space-aux*
+             pane real-width real-height))
+          (x 2))
+      (loop for child in (box-layout-mixin-clients pane)
+            for width in widths
+            do (when (box-client-pane child)
+                 (layout-child (box-client-pane child)
+                               :expand
+                               :expand
+                               x
+                               2
+                               width
+                               (- real-height 4)))
+               (incf x width)
+               (incf x x-spacing)))))
 
 (defmethod display-command-table-menu ((command-table standard-command-table)
                                        (stream fundamental-output-stream)

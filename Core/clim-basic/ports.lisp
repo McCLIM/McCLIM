@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000, 2014 by
@@ -24,11 +24,14 @@
 
 (in-package :clim-internals)
 
+;;; Server path and global port registry
+
 (defvar *default-server-path* nil)
 
-;;; - CLX is the de-facto reference backend.
-;;; - Prefer Beagle over CLX, since it gets installed only
-;;;   on explicit user request anyway.
+;;; - CLX is the de-facto reference backend. We have few flavours of
+;;;   it where the one using Lisp TTF renderer implementation and
+;;;   Xrender extensions is default.
+;;;
 ;;; - Null are in this list mostly to document its existence, and is
 ;;;   not currently a complete backend we would want to make a
 ;;;   default.  Put it after CLX, so that it won't actually be
@@ -42,11 +45,45 @@
 
 (defun find-default-server-path ()
   (loop for port in *server-path-search-order*
-	if (get port :port-type)
-	   do (return-from find-default-server-path (list port))
-	finally (error "No CLIM backends have been loaded!")))
+        if (get port :port-type)
+           do (return-from find-default-server-path (list port))
+        finally (error "No CLIM backends have been loaded!")))
 
 (defvar *all-ports* nil)
+
+(defun find-port (&key (server-path *default-server-path*))
+  (if (null server-path)
+      (setq server-path (find-default-server-path)))
+  (if (atom server-path)
+      (setq server-path (list server-path)))
+  (setq server-path
+        (funcall (get (first server-path) :server-path-parser) server-path))
+  (loop for port in *all-ports*
+        if (equal server-path (port-server-path port))
+        do (return port)
+        finally (let ((port-type (get (first server-path) :port-type))
+                      port)
+                  (if (null port-type)
+                      (error "Don't know how to make a port of type ~S"
+                             server-path))
+                  (setq port
+                        (funcall 'make-instance port-type
+                                 :server-path server-path))
+                  (push port *all-ports*)
+                  (return port))))
+
+(defmacro with-port ((port-var server &rest args &key &allow-other-keys)
+                     &body body)
+  `(invoke-with-port (lambda (,port-var) ,@body) ,server ,@args))
+
+(defun invoke-with-port (continuation server &rest args &key &allow-other-keys)
+  (let* ((path (list* server args))
+         (port (find-port :server-path path)))
+    (unwind-protect
+         (funcall continuation port)
+      (destroy-port port))))
+
+;;; Basic port
 
 (defclass basic-port (port)
   ((server-path :initform nil
@@ -71,21 +108,27 @@
    (lock
     :initform (make-recursive-lock "port lock")
     :accessor port-lock)
-   (event-count :initform 0)
    (text-style-mappings :initform (make-hash-table :test #'eq)
                         :reader port-text-style-mappings)
    (pointer-sheet :initform nil :accessor port-pointer-sheet
-		  :documentation "The sheet the pointer is over, if any")))
+		  :documentation "The sheet the pointer is over, if any")
+   ;; The difference between grabbed-sheet and pressed-sheet is that
+   ;; the former takes all pointer events while pressed-sheet receives
+   ;; replicated pointer motion events. -- jd 2019-08-21
+   (grabbed-sheet :initform nil :accessor port-grabbed-sheet
+		  :documentation "The sheet the pointer is grabbing, if any")
+   (pressed-sheet :initform nil :accessor port-pressed-sheet
+		  :documentation "The sheet the pointer is pressed on, if any")))
 
 (defmethod port-keyboard-input-focus (port)
   (when (null *application-frame*)
-    (error "~S called with null ~S" 
+    (error "~S called with null ~S"
            'port-keyboard-input-focus '*application-frame*))
   (port-frame-keyboard-input-focus port *application-frame*))
 
 (defmethod (setf port-keyboard-input-focus) (focus port)
   (when (null *application-frame*)
-    (error "~S called with null ~S" 
+    (error "~S called with null ~S"
            '(setf port-keyboard-input-focus) '*application-frame*))
   ;; XXX: pane frame is not defined for all streams (for instance not for
   ;; CLIM:STANDARD-EXTENDED-INPUT-STREAM), so this sanity check would lead to
@@ -100,31 +143,13 @@
 (defgeneric port-frame-keyboard-input-focus (port frame))
 (defgeneric (setf port-frame-keyboard-input-focus) (focus port frame))
 
-(defun find-port (&key (server-path *default-server-path*))
-  (if (null server-path)
-      (setq server-path (find-default-server-path)))
-  (if (atom server-path)
-      (setq server-path (list server-path)))
-  (setq server-path
-	(funcall (get (first server-path) :server-path-parser) server-path))
-  (loop for port in *all-ports*
-      if (equal server-path (port-server-path port))
-      do (return port)
-      finally (let ((port-type (get (first server-path) :port-type))
-		    port)
-		(if (null port-type)
-		    (error "Don't know how to make a port of type ~S"
-			   server-path))
-		(setq port
-		      (funcall 'make-instance port-type
-			       :server-path server-path))
-		(push port *all-ports*)
-		(return port))))
-
 (defmethod destroy-port :before ((port basic-port))
   (when (and *multiprocessing-p* (port-event-process port))
     (destroy-process (port-event-process port))
     (setf (port-event-process port) nil)))
+
+
+;;; Mirrors
 
 (defmethod port-lookup-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
   (gethash sheet (slot-value port 'sheet->mirror)))
@@ -169,36 +194,245 @@
   (with-slots (properties) port
     (setf (getf properties indicator) value)))
 
-(defgeneric get-next-event (port &key wait-function timeout))
+;;; This function determines the sheet to which the pointer event
+;;; should be delivered. The right thing is not obvious:
+;;;
+;;; - we may assume that event-sheet is set correctly by port
+;;; - we may find the innermost sheet's child and deliver to it
+;;; - we may deliver event to sheet's graft and let it dispatch
+;;;
+;;; Third option would require a default handle-event method to call
+;;; handle-event on its child under the cursor. For now we implement
+;;; the second option with the innermost child. In general case we
+;;; need z-ordering for both strategies. -- jd 2019-08-21
+(defun compute-pointer-event-sheet (event &aux (sheet (event-sheet event)))
+  ;; Traverse all descendants of EVENT's sheet which contain EVENT's
+  ;; pointer position. The innermost such child that does not have a
+  ;; direct mirror should be the new pointer event sheet (we do not
+  ;; consider children with a direct mirror since for those EVENT's
+  ;; sheet would have been the child in question).
+  (labels ((rec (sheet x y)
+             (if-let ((child (child-containing-position sheet x y))) ; TODO this only considers enabled children
+               (if (sheet-direct-mirror child)
+                   sheet
+                   (multiple-value-call #'rec
+                     child (untransform-position
+                            (sheet-transformation child) x y)))
+               sheet)))
+    (get-pointer-position (sheet event)
+      (rec sheet x y))))
 
-(defmethod get-next-event ((port basic-port) &key wait-function timeout)
-  (declare (ignore wait-function timeout))
-  (error "Calling GET-NEXT-EVENT on a PORT protocol class"))
+(defun common-ancestor (sheet-a sheet-b)
+  (flet ((candidatep (sheet)
+           (not (or (null sheet) (graftp sheet)))))
+    (loop (cond ((eq sheet-a sheet-b)
+                 (return sheet-a))
+                ((or (not (candidatep sheet-a))
+                     (not (candidatep sheet-b)))
+                 (return nil))
+                ((sheet-ancestor-p sheet-b sheet-a)
+                 (return sheet-a))
+                (t
+                 (setf sheet-a (sheet-parent sheet-a)))))))
 
-(defmethod get-next-event :after ((port basic-port) &key wait-function timeout)
-  (declare (ignore wait-function timeout))
-  (with-slots (event-count) port
-    (incf event-count)))
+;;; Function is responsible for making a copy of an immutable event
+;;; and adjusting its coordinates to be in the target-sheet
+;;; coordinates. Optionally it may change event's class.
+(defun dispatch-event-copy (target-sheet event &optional new-class
+                            &aux (sheet (event-sheet event)))
+  (if (and (eql target-sheet sheet)
+           (or (null new-class)
+               (eql new-class (class-of event))))
+      (dispatch-event sheet event)
+      (let* ((event-class (if (null new-class)
+                              (class-of event)
+                              (find-class new-class)))
+             (new-event (shallow-copy-object event event-class)))
+        (when (typep new-event 'pointer-event)
+          (get-pointer-position (target-sheet new-event)
+            (setf (slot-value new-event 'x) x
+                  (slot-value new-event 'y) y
+                  (slot-value new-event 'sheet) target-sheet)))
+        (dispatch-event target-sheet new-event))))
 
-(defmethod process-next-event ((port basic-port) &key wait-function timeout)
-  (let ((event (get-next-event port
-			       :wait-function wait-function
-			       :timeout timeout)))
-    (cond
-     ((null event) nil)
-     ((eq event :timeout) (values nil :timeout))
-     (t
-      (distribute-event port event)
-      t))))
+;;; Synthesizing and dispatching boundary events
+;;;
+;;; PORT only generates boundary-events for mirrored sheets. For
+;;; sheets without a mirror, we must synthesize boundary-events.
+;;;
+;;; This function works in two phases:
+;;;
+;;; 1) Retrieve the current pointer sheet of PORT and compute a new
+;;;    pointer sheet for PORT. This has to be done differently,
+;;;    depending on whether EVENT is an enter, exit or any other kind
+;;;    of event.
+;;;
+;;; 2) Based on the old and new pointer sheets, synthesize and
+;;;    dispatch boundary events and potentially dispatch EVENT.
+;;;
+;;; In the first phase, if EVENT is not an exit event, the new port
+;;; pointer sheet is the innermost unmirrored child containing the
+;;; pointer position of EVENT. If EVENT is an exit event, the new
+;;; pointer sheet is the parent of the sheet of EVENT or NIL if the
+;;; parent is a graft.
+;;;
+;;; In the second phase, exit and enter events are synthesized and
+;;; dispatched based on the old and new pointer sheet of PORT (both
+;;; can be NIL). If EVENT is an enter or exit event, it is dispatched
+;;; as part of this process.
+(defun synthesize-boundary-events (port event)
+  (let* ((event-sheet (event-sheet event))
+         (old-pointer-sheet (port-pointer-sheet port))
+         (new-pointer-sheet old-pointer-sheet)
+         (dispatch-event-p nil))
+    ;; First phase: compute new pointer sheet for PORT.
+    (flet ((update-pointer-sheet (new-sheet)
+             (unless (eql old-pointer-sheet new-sheet)
+               (setf (port-pointer-sheet port) new-sheet
+                     new-pointer-sheet new-sheet))))
+      (typecase event
+        ;; Ignore grab-enter and ungrab-leave boundary events.
+        ((or pointer-grab-enter-event pointer-ungrab-leave-event))
+        ;; For enter events, update PORT's pointer sheet to the
+        ;; innermost child of EVENT's sheet containing EVENT's pointer
+        ;; position. Mark EVENT to be dispatched together with
+        ;; synthesize events.
+        (pointer-enter-event
+         ;; Only perform the update and dispatch EVENT if either
+         ;; 1) EVENT is not a POINTER-UNGRAB-ENTER-EVENT
+         ;; 2) EVENT is a POINTER-UNGRAB-ENTER-EVENT and its sheet is
+         ;;    not an ancestor of the old pointer sheet (i.e. ensure
+         ;;    that processing EVENT does not re-enter any sheets)
+         (when (or (not (typep event 'pointer-ungrab-enter-event))
+                   (not (and old-pointer-sheet
+                             (sheet-ancestor-p old-pointer-sheet event-sheet))))
+           (update-pointer-sheet (compute-pointer-event-sheet event))
+           (setf dispatch-event-p t)))
+        ;; For exit events, update PORT's pointer sheet to the parent
+        ;; of EVENT's sheet, or NIL if that parent is a graft. Mark
+        ;; EVENT to be dispatched together with synthesize events.
+        (pointer-exit-event
+         ;; Only perform the update and dispatch EVENT if either
+         ;; 1) EVENT is not a POINTER-GRAB-ENTER-EVENT
+         ;; 2) EVENT is a POINTER-GRAB-ENTER-EVENT and the old pointer
+         ;;    sheet is an ancestor of its sheet (i.e. ensure that
+         ;;    processing EVENT only exits sheets that are currently
+         ;;    on the (imaginary) stack of entered sheets).
+         (when (or (not (typep event 'pointer-grab-leave-event))
+                   (and old-pointer-sheet
+                        (sheet-ancestor-p event-sheet old-pointer-sheet)))
+           (when (and event-sheet old-pointer-sheet)
+             (let ((parent (sheet-parent event-sheet)))
+               (update-pointer-sheet (if (graftp parent) nil parent))))
+           (setf dispatch-event-p t)))
+        ;; For non-boundary events, update PORT's pointer sheet to the
+        ;; innermost child of EVENT's sheet containing EVENT's pointer
+        ;; position (like for enter events). However, do not dispatch
+        ;; EVENT (will be done elsewhere).
+        (otherwise
+         ;; Only update the pointer sheet if the current pointer sheet
+         ;; is non-NIL since we can get such events with the current
+         ;; pointer sheet being NIL and the pointer position being
+         ;; outside of the top-level sheet's region due to grabbing.
+         (when old-pointer-sheet
+           (update-pointer-sheet (compute-pointer-event-sheet event))))))
 
-(defgeneric distribute-event (port event))
+    ;; Second phase: synthesize and dispatch boundary events.
+    (flet ((should-synthesize-for-sheet-p (sheet)
+             (or (and dispatch-event-p
+                      (eq sheet event-sheet))
+                 (not (sheet-direct-mirror sheet))))
+           (synthesize-enter (sheet)
+             (dispatch-event-copy sheet event 'pointer-enter-event))
+           (synthesize-exit (sheet)
+             (dispatch-event-copy sheet event 'pointer-exit-event)))
+      (let ((common-ancestor (when (and old-pointer-sheet new-pointer-sheet)
+                               (common-ancestor old-pointer-sheet
+                                                new-pointer-sheet))))
+        ;; Distribute exit events for OLD-POINTER-SHEET and its
+        ;; non-direct-mirrored ancestors (innermost first).
+        (do ((sheet old-pointer-sheet (sheet-parent sheet)))
+            ((or (eq sheet common-ancestor)
+                 (graftp sheet)))
+          (when (should-synthesize-for-sheet-p sheet)
+            (synthesize-exit sheet)))
+        ;; Distribute enter events for NEW-POINTER-SHEET and its
+        ;; non-direct-mirrored ancestors (innermost last).
+        (do ((sheet new-pointer-sheet (sheet-parent sheet))
+             (sheets '()))
+            ((or (eq sheet common-ancestor)
+                 (graftp sheet))
+             (map nil #'synthesize-enter sheets))
+          (when (should-synthesize-for-sheet-p sheet)
+            (push sheet sheets)))))
+
+    new-pointer-sheet))
+
+(defmethod distribute-event ((port basic-port) event)
+  (dispatch-event (event-sheet event) event))
+
+;;; In the most general case we can't tell whether all sheets are
+;;; mirrored or not. So this default method for pointer-events
+;;; operates under the assumption that we must deliver events to
+;;; sheets which doesn't have a mirror and that the sheet grabbing and
+;;; pressing is implemented locally. -- jd 2019-08-21
+(defmethod distribute-event ((port basic-port) (event pointer-event))
+  ;; When we receive pointer event we need to take into account
+  ;; unmirrored sheets and grabbed/pressed sheets.
+  ;;
+  ;; - Grabbed sheet steals all pointer events (non-local exit)
+  ;; - Pressed sheet receives replicated motion events
+  ;; - Pressing/releasing the button assigns pressed-sheet
+  ;; - Pressing the button sends the focus event
+  ;; - Pointer motion may result in synthesized boundary events
+  ;; - Events are delivered to the innermost child of the sheet
+  (when-let ((grabbed-sheet (port-grabbed-sheet port)))
+    (return-from distribute-event
+      (unless (typep event 'pointer-boundary-event)
+        (dispatch-event-copy grabbed-sheet event))))
+  ;; Synthesize boundary events and update the port-pointer-sheet.
+  (let ((pressed-sheet (port-pressed-sheet port))
+        (new-pointer-sheet (synthesize-boundary-events port event)))
+    ;; Set the pointer cursor.
+    (when-let ((cursor-sheet (or pressed-sheet new-pointer-sheet)))
+      (let* ((event-sheet (event-sheet event))
+             (old-pointer-cursor (port-lookup-current-pointer-cursor
+                                  port event-sheet))
+             (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
+        (unless (eql old-pointer-cursor new-pointer-cursor)
+          (set-sheet-pointer-cursor port event-sheet new-pointer-cursor))))
+    ;; Handle some events specially.
+    (typecase event
+      ;; Pressing pointer button over a sheet makes a sheet
+      ;; pressed. Pressed sheet is assigned only when there is
+      ;; currently none.
+      (pointer-button-press-event
+       (when (null pressed-sheet)
+         (setf (port-pressed-sheet port) new-pointer-sheet)))
+      ;; Releasing the button sets the pressed sheet to NIL.
+      (pointer-button-release-event
+       (when pressed-sheet
+         (unless (eql pressed-sheet new-pointer-sheet)
+           (dispatch-event-copy pressed-sheet event))
+         (setf (port-pressed-sheet port) nil)))
+      ;; Boundary events are dispatched in SYNTHESIZE-BOUNDARY-EVENTS.
+      (pointer-boundary-event
+       (return-from distribute-event))
+      ;; Unless pressed sheet is already a target of the motion event,
+      ;; event is duplicated and dispatched to it.
+      (pointer-motion-event
+       (when (and pressed-sheet (not (eql pressed-sheet new-pointer-sheet)))
+         (dispatch-event-copy pressed-sheet event))))
+    ;; Distribute event to the innermost child (may be none).
+    (when new-pointer-sheet
+      (dispatch-event-copy new-pointer-sheet event))))
 
 (defmacro with-port-locked ((port) &body body)
   (let ((fn (gensym "CONT.")))
     `(labels ((,fn ()
-               ,@body))
-      (declare (dynamic-extent #',fn))
-      (invoke-with-port-locked ,port #',fn))))
+                ,@body))
+       (declare (dynamic-extent #',fn))
+       (invoke-with-port-locked ,port #',fn))))
 
 (defgeneric invoke-with-port-locked (port continuation))
 
@@ -270,24 +504,52 @@
 
 
 (defgeneric port-force-output (port)
-  (:documentation "Flush the output buffer of PORT, if there is one.")) 
+  (:documentation "Flush the output buffer of PORT, if there is one."))
 
 (defmethod port-force-output ((port basic-port))
   (values))
 
+;;; Design decision: Recursive grabs are a no-op.
+
 (defgeneric port-grab-pointer (port pointer sheet)
-  (:documentation "Grab the specified pointer, for implementing TRACKING-POINTER."))
+  (:documentation "Grab the specified pointer.")
+  (:method ((port basic-port) pointer sheet)
+    (declare (ignorable port pointer sheet))
+    (warn "Port ~A has not implemented pointer grabbing." port))
+  (:method :around ((port basic-port) pointer sheet)
+    (declare (ignorable port pointer sheet))
+    (unless (port-grabbed-sheet port)
+      (setf (port-grabbed-sheet port) sheet)
+      (call-next-method))))
 
 (defgeneric port-ungrab-pointer (port pointer sheet)
-  (:documentation "Ungrab the specified pointer, for implementing TRACKING-POINTER."))
+  (:documentation "Ungrab the specified pointer.")
+  (:method ((port basic-port) pointer sheet)
+    (declare (ignorable port pointer sheet))
+    (warn "Port ~A  has not implemented pointer grabbing." port))
+  (:method :around ((port basic-port) pointer sheet)
+    (declare (ignorable port pointer sheet))
+    (when (port-grabbed-sheet port)
+      (setf (port-grabbed-sheet port) nil)
+      (call-next-method))))
 
-(defmethod port-grab-pointer ((port basic-port) pointer sheet)
-  (declare (ignorable port pointer sheet))
-  (warn "Port ~A has not implemented pointer grabbing." port))
-
-(defmethod port-ungrab-pointer ((port basic-port) pointer sheet)
-  (declare (ignorable port pointer sheet))
-  (warn "Port ~A  has not implemented pointer grabbing." port))
+(defmacro with-pointer-grabbed ((port sheet &key pointer) &body body)
+  (with-gensyms (the-port the-sheet the-pointer)
+    `(let* ((,the-port ,port)
+	    (,the-sheet ,sheet)
+	    (,the-pointer (or ,pointer (port-pointer ,the-port))))
+       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet))
+           (warn "Port ~A failed to grab a pointer." ,the-port)
+           (unwind-protect
+                (handler-bind
+                    ((serious-condition
+                      #'(lambda (c)
+			  (declare (ignore c))
+			  (port-ungrab-pointer ,the-port
+                                               ,the-pointer
+                                               ,the-sheet))))
+                  ,@body)
+	     (port-ungrab-pointer ,the-port ,the-pointer ,the-sheet))))))
 
 (defgeneric set-sheet-pointer-cursor (port sheet cursor)
   (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))

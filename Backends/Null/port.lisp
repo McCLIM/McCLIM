@@ -75,17 +75,9 @@
 (defmethod destroy-port :before ((port null-port))
   nil)
 
-(defmethod port-motion-hints ((port null-port) (mirror mirrored-sheet-mixin))
-  nil)
-
-(defmethod (setf port-motion-hints)
-    (value (port null-port) (sheet mirrored-sheet-mixin))
-  value)
-
-(defmethod get-next-event
-    ((port null-port) &key wait-function (timeout nil))
+(defmethod process-next-event ((port null-port) &key wait-function (timeout nil))
   (declare (ignore wait-function timeout))
-  nil)
+  (values nil :null-backend))
 
 (defmethod make-graft
     ((port null-port) &key (orientation :default) (units :device))
@@ -149,15 +141,6 @@
 (defmethod port-force-output ((port null-port))
   nil)
 
-;; FIXME: What happens when CLIM code calls tracking-pointer recursively?
-(defmethod port-grab-pointer ((port null-port) pointer sheet)
-  (declare (ignore pointer sheet))
-  nil)
-
-(defmethod port-ungrab-pointer ((port null-port) pointer sheet)
-  (declare (ignore pointer sheet))
-  nil)
-
 (defmethod distribute-event :around ((port null-port) event)
   (declare (ignore event))
   nil)
@@ -165,23 +148,3 @@
 (defmethod set-sheet-pointer-cursor ((port null-port) sheet cursor)
   (declare (ignore sheet cursor))
   nil)        
-
-(defmethod bind-selection ((port null-port) window &optional time)
-  (declare (ignore window time))
-  nil)
-
-(defmethod release-selection ((port null-port) &optional time)
-  (declare (ignore time))
-  nil)
-
-(defmethod request-selection ((port null-port) requestor time)
-  (declare (ignore requestor time))
-  nil)
-
-(defmethod get-selection-from-event ((port null-port) event)
-  (declare (ignore event))
-  nil)
-
-(defmethod send-selection ((port null-port) event string)
-  (declare (ignore event string))
-  nil)

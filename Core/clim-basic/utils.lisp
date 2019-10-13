@@ -592,14 +592,20 @@ index being halfway between INDEX-1 and INDEX-2."
   (let ((name (symbol-name symbol)))
     (string-capitalize (substitute #\Space #\- name))))
 
-;;; taken from https://stackoverflow.com/questions/11067899/is-there-a-generic-method-for-cloning-clos-objects#11068536, use with care (should work for "ordinary" classes though).
-(defun shallow-copy-object (original)
-  (let* ((class (class-of original))
-         (copy (allocate-instance class)))
-    (dolist (slot (mapcar #'c2mop:slot-definition-name (c2mop:class-slots class)))
-      (when (slot-boundp original slot)
-        (setf (slot-value copy slot)
-              (slot-value original slot))))
+;;; Taken from a stackoverflow thread[1] then extended per suggestion
+;;; in peer review[2]. Use with care (should work for "ordinary"
+;;; classes).
+;;;
+;;; [1] https://stackoverflow.com/questions/11067899/is-there-a-generic-method-for-cloning-clos-objects#11068536
+;;; [2] https://github.com/McCLIM/McCLIM/pull/833#discussion_r322010160
+(defun shallow-copy-object (original &optional (new-class (class-of original)))
+  (let ((copy (allocate-instance new-class)))
+    (mapc (lambda (slot &aux (slot-name (c2mop:slot-definition-name slot)))
+            (when (and (slot-exists-p original slot-name)
+                       (slot-boundp original slot-name))
+              (setf (slot-value copy slot-name)
+                    (slot-value original slot-name))))
+          (c2mop:class-slots new-class))
     copy))
 
 (defmacro dolines ((line string &optional result) &body body)
@@ -666,6 +672,8 @@ index being halfway between INDEX-1 and INDEX-2."
 (defun remove-duplicated-points (point-sequence &optional closed)
   "Given points A B C ... Z removes consecutive points which are duplicated. If
 a flag CLOSED is T then beginning and end of the list are consecutive too."
+  (when (alexandria:emptyp point-sequence)
+    (return-from remove-duplicated-points point-sequence))
   (collect (collect-point)
     (let* ((first-point (elt point-sequence 0))
            (last-point first-point))
@@ -936,3 +944,14 @@ to the BREAK-STRATEGY whenever it assigns any meaning to to them."
                          (vector
                           break-strategy))))
     (%line-breaks-2 string width initial-offset margin start end opportunities)))
+
+;;; curbed from uiop
+(defmacro nest (&rest things)
+  (reduce #'(lambda (outer inner) `(,@outer ,inner))
+          things :from-end t))
+
+(defun get-top-level-sheet (sheet)
+  "Returns the root window for sheet or nil."
+  (if (typep sheet '(or top-level-sheet-mixin null))
+      sheet
+      (get-top-level-sheet (sheet-parent sheet))))

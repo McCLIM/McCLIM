@@ -581,24 +581,27 @@ queue.  The exact representation of an event queue is explicitly unspecified.
 
 \Defgeneric {process-next-event} {port \key wait-function timeout}
 
-This function provides a standard interface for one pass through a port's event
-processing loop.  \arg{wait-function} is either \cl{nil} or a function of no
-arguments that acts as a predicate; it has dynamic extent.  The predicate should
-wait until one of three conditions occurs:
+This function provides a standard interface for one pass through a
+port's event processing loop. \arg{wait-function} is either \cl{nil}
+or a function of no arguments that acts as a predicate; it has dynamic
+extent. \cl{process-next-event} should wait until one of three
+conditions occurs:
 
 \begin{itemize}
-\item If an event was received and processed, the predicate should return
-\term{true}.
-
-\item If a timeout occurs, the predicate should return \term{false}.
-
-\item If the wait function returns \term{true}, the predicate should return the
-two values \term{false} and \cl{:timeout}.
+\item If an event was received and processed, the predicate should return \term{true}.
+\item If a timeout occurs, the function should return the two values \term{false} and \cl{:timeout}.
+\item If the wait function returns \term{true}, the function should return the two values \term{false} and \cl{:wait-function}.
 \end{itemize}
 
-A port implementation must provide a method for this function that reads the
-next window server-specific device event, blocking if necessary, and then
-invokes the event distributor.
+A port implementation must provide a method for this function that
+reads the next window server-specific device event, blocking if
+necessary, and then invokes the event distributor.
+
+\issue {DK} {When \arg{wait-function} should be called? Either we busy
+  wait for the predicate returning true (and compute timeout decay on
+  our own) or call wait-function after some input for port has been
+  processed (then wait-function won't be able to notice asynchronous
+  changes to the state it tries to monitor).}
 
 \defgeneric {port-keyboard-input-focus} {port}
 \Defgeneric {(setf port-keyboard-input-focus)} {focus port}

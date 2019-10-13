@@ -1,6 +1,5 @@
 @anchor{Function clim-tab-layout:add-page}
-@deffn {Function} {clim-tab-layout:add-page} page tab-layout &optional enable
-@findex clim-tab-layout:add-page
+@deffn {Function} {@symbol{add-page,clim-tab-layout}} page tab-layout &optional enable
 Add @code{page} at the left side of @code{tab-layout}.  When @code{enable} is true, move focus
 to the new page.  This function is a convenience wrapper; you can also
 push page objects directly into @code{tab-layout-pages} and enable them using

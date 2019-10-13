@@ -26,23 +26,53 @@
 
 (in-package :clim-internals)
 
+;;; Delayed repainting mechanism
+;;;
+;;; A region of code the execution of which will result in multiple
+;;; redundant repaints of one or more sheets can be surrounded in
+;;; [CALL-]WITH-DELAYED-DISPATCH-REPAINT. In that case, repaints
+;;; dispatched in the body code are not processed immediately but are
+;;; recorded for later. When exiting from the
+;;; [CALL-]WITH-DELAYED-DISPATCH-REPAINT call, all recorded repaints
+;;; are merged (i.e. for each involved sheet, the effective repaint
+;;; region is the union of all recorded repaint regions) and executed.
+
+(defvar *delayed-repaints* nil)
+
+(defmethod dispatch-repaint :around ((sheet basic-sheet) region)
+  ;; If *DELAYED-REPAINTS* is non-NIL, push REGION onto the repaint
+  ;; queue for SHEET instead of dispatching the repaint. Otherwise,
+  ;; just call the next method.
+  (if-let ((delayed-repaints *delayed-repaints*))
+    (push region (gethash sheet delayed-repaints '()))
+    (call-next-method)))
+
+(defun invoke-with-inhibited-dispatch-repaint (continuation)
+  ;; If *DELAYED-REPAINTS* is non-NIL, there must be a surrounding
+  ;; call of this function, so we don't have to do anything.
+  (if *delayed-repaints*
+      (funcall continuation)
+      (progn
+        (let ((delayed-repaints (make-hash-table :test #'eq)))
+          ;; DISPATCH-REPAINT calls in continuation populate
+          ;; DELAYED-REPAINTS.
+          (let ((*delayed-repaints* delayed-repaints))
+            (funcall continuation))
+          ;; Merge and execute recorded repaint requests.
+          (maphash (lambda (sheet regions)
+                     (dispatch-repaint sheet (reduce #'region-union regions)))
+                   delayed-repaints)))))
+
+(defmacro with-inhibited-dispatch-repaint (() &body body)
+  (gen-invoke-trampoline
+   'invoke-with-inhibited-dispatch-repaint '() '() body))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Repaint protocol functions.
 
 (defmethod dispatch-repaint ((sheet graft) region)
   (declare (ignore sheet region)))
-
-;;; Internal flag used in sheets module. We could make it a macro which
-;;; accumulates regions to repaint with region-union and at the end repaints
-;;; whole bunch at one go. Could be useful for presentation highlighting when we
-;;; have many small areas to redraw. That could improve the performance.
-(defvar *inhibit-dispatch-repaint* nil
-  "Used when we plan to repaint whole sheet and we suspect that children may
-want to do the same.")
-
-(defmethod dispatch-repaint :around ((sheet basic-sheet) region)
-  (unless *inhibit-dispatch-repaint* (call-next-method)))
 
 (defmethod queue-repaint ((sheet basic-sheet) (event window-repaint-event))
   (queue-event sheet event))
@@ -81,7 +111,7 @@ want to do the same.")
     ;; things such as the listener wholine from overexposing their text.
     (let ((msheet (sheet-mirrored-ancestor sheet)))
       ;; Do not call bounding-rectangle on region here. For +nowhere+ it gives
-      ;; 0:0 0:0 (disregarding the nativer region). -- jd 2019-03-23
+      ;; 0:0 0:0 (disregarding the native region). -- jd 2019-03-23
       (if (eql msheet sheet)
           (handle-repaint sheet (region-intersection (sheet-region sheet) region))
           (handle-repaint sheet (untransform-region
@@ -209,3 +239,41 @@ want to do the same.")
               (with-bounding-rectangle* (left top right bottom)
                   native-sheet-region
                 (medium-draw-rectangle* medium left top right bottom t)))))))
+
+;;; Integration with region and transformation changes
+
+(defmethod (setf sheet-region) :around (region (sheet basic-sheet))
+  (let ((old-region (sheet-region sheet)))
+    (unless (region-equal region old-region)
+      (with-inhibited-dispatch-repaint ()
+        (call-next-method))
+      (when (sheet-viewable-p sheet)
+        (dispatch-repaint (sheet-parent sheet)
+                          (transform-region (sheet-transformation sheet)
+                                            (region-union (sheet-region sheet)
+                                                          old-region)))))))
+
+(defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
+  (let ((old-transformation (sheet-transformation sheet)))
+    (unless (transformation-equal transformation old-transformation)
+      (with-inhibited-dispatch-repaint ()
+        (call-next-method))
+      (when (sheet-viewable-p sheet)
+        (let* ((region (sheet-region sheet))
+               (new-region (transform-region (sheet-transformation sheet) region))
+               (old-region (transform-region old-transformation region)))
+          (dispatch-repaint (sheet-parent sheet)
+                            (region-union new-region old-region)))))))
+
+(defun %set-sheet-region-and-transformation (sheet region transformation)
+  (let ((old-transformation (sheet-transformation sheet))
+        (old-region (sheet-region sheet)))
+    (with-inhibited-dispatch-repaint ()
+      (setf (sheet-region sheet) region
+            (sheet-transformation sheet) transformation))
+    (when (sheet-viewable-p sheet)
+      (let ((new-region (transform-region (sheet-transformation sheet)
+                                          (sheet-region sheet)))
+            (old-region (transform-region old-transformation old-region)))
+        (dispatch-repaint (sheet-parent sheet)
+                          (region-union new-region old-region))))))

@@ -24,18 +24,15 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
+(cl:in-package #:clim-pdf)
 
-(in-package :clim-pdf)
-
-(defmacro with-output-to-pdf-stream ((stream-var file-stream
-                                             &rest options)
-                                            &body body)
+(defmacro with-output-to-pdf-stream ((stream-var file-stream &rest options)
+                                     &body body)
   (let ((cont (gensym)))
     `(flet ((,cont (,stream-var)
               ,@body))
        (declare (dynamic-extent #',cont))
-       (invoke-with-output-to-pdf-stream #',cont
-                                                ,file-stream ,@options))))
+       (invoke-with-output-to-pdf-stream #',cont ,file-stream ,@options))))
 
 (defun invoke-with-output-to-pdf-stream (continuation
                                          file-stream
@@ -44,45 +41,39 @@
                                               trim-page-to-output-size
                                               (orientation :portrait)
                                               header-comments)
-  (let* ((port (find-port :server-path `(:pdf :stream ,file-stream)))
-         (stream (make-clim-pdf-stream file-stream port device-type
-                                  multi-page scale-to-fit
-                                  orientation header-comments))
-         translate-x translate-y)
-    (declare (ignore translate-x translate-y))
-    (unwind-protect
-         (progn
-           (with-output-recording-options (stream :record t :draw nil)
-             (funcall continuation stream)
-             (new-page stream))
-           (with-slots (file-stream title for orientation paper) stream
-             (let ((flexi-stream
-                    (flexi-streams:make-flexi-stream
-                     file-stream
-                     :external-format :latin-1)))
-               (with-output-recording-options (stream :draw t :record nil)
-                 (let ((pdf:*compress-streams* nil))
-                   (pdf:with-document ()
-                     (let ((last-page (first (pdf-pages stream))))
-                       (dolist (page (reverse (pdf-pages stream)))
-                         (let ((page-region (if trim-page-to-output-size
-                                                page
-                                                (sheet-region stream))))
-                           (let ((transform (make-pdf-transformation page-region
-                                                                     (orientation stream))))
-                             (multiple-value-bind (left top right bottom)
-                                 (bounding-rectangle* page-region)
-                               (pdf:with-page (:bounds
-                                               (if (eq orientation :landscape)
-                                                   (vector top left bottom right)
-                                                   (vector left top right bottom)))
-                                 (climi::letf (((sheet-native-transformation stream)
-                                                transform))
-                                   (replay page stream))))))
-                         (unless (eql page last-page)
-                           (emit-new-page stream))))
-                     (pdf:write-document flexi-stream)))))))
-      (destroy-port port))))
+  (climb:with-port (port :pdf :stream file-stream)
+    (let* ((stream (make-clim-pdf-stream file-stream port device-type
+                                         multi-page scale-to-fit
+                                         orientation header-comments)))
+      (with-output-recording-options (stream :record t :draw nil)
+        (funcall continuation stream)
+        (new-page stream))
+      (with-slots (file-stream title for orientation paper) stream
+        (let ((flexi-stream
+                (flexi-streams:make-flexi-stream
+                 file-stream
+                 :external-format :latin-1))
+              (pdf:*compress-streams* nil))
+          (with-output-recording-options (stream :draw t :record nil)
+            (pdf:with-document ()
+              (let ((last-page (first (pdf-pages stream))))
+                (dolist (page (reverse (pdf-pages stream)))
+                  (let* ((page-region (if trim-page-to-output-size
+                                          page
+                                          (sheet-region stream)))
+                         (transform (make-pdf-transformation
+                                     page-region (orientation stream))))
+                    (with-bounding-rectangle* (left top right bottom) page-region
+                      (pdf:with-page (:bounds
+                                      (if (eq orientation :landscape)
+                                          (vector top left bottom right)
+                                          (vector left top right bottom)))
+                        (climi::letf (((sheet-native-transformation stream)
+                                       transform))
+                          (replay page stream)))))
+                  (unless (eql page last-page)
+                    (emit-new-page stream))))
+              (pdf:write-document flexi-stream))))))))
 
 ;; FIXME! Not yet implemented.
 (defun start-page (stream)
@@ -100,7 +91,8 @@
 (defun emit-new-page (stream)
   (error "not yet! ~S" stream))
 
-;;;; Output Protocol
+;;; Output Protocol
+
 (defmethod medium-drawable ((medium pdf-medium))
   (pdf-medium-file-stream medium))
 
@@ -135,9 +127,7 @@
   (declare (ignore x y))
   (values))
 
-;;;;
-;;;; PDF-GRAFT
-;;;;
+;;; PDF-GRAFT
 
 (defclass pdf-graft (basic-sheet sheet-leaf-mixin)
   ((width  :initform 210 :reader pdf-graft-width)
@@ -149,29 +139,27 @@
 (defmethod graft-units ((graft pdf-graft))
   :device)
 
+(defun graft-length (length units)
+  (* length (ecase units
+              (:device       (/ 720 254))
+              (:inches       (/ 10 254))
+              (:millimeters  1)
+              (:screen-sized (/ length)))))
+
 (defmethod graft-width ((graft pdf-graft) &key (units :device))
-  (* (pdf-graft-width graft)
-     (ecase units
-       (:device         (/ 720 254))
-       (:inches         (/ 10 254))
-       (:millimeters    1)
-       (:screen-sized   (/ (pdf-graft-width graft))))))
+  (graft-length (pdf-graft-width graft) units))
 
 (defmethod graft-height ((graft pdf-graft) &key (units :device))
-  (* (pdf-graft-height graft)
-     (ecase units
-       (:device         (/ 720 254))
-       (:inches         (/ 10 254))
-       (:millimeters    1)
-       (:screen-sized   (/ (pdf-graft-height graft))))))
+  (graft-length (pdf-graft-height graft) units))
 
 (defun make-pdf-graft ()
   (make-instance 'pdf-graft))
 
 (defmethod sheet-region ((sheet pdf-graft))
-  (make-rectangle* 0 0
-                   (graft-width sheet :units (graft-units sheet))
-                   (graft-height sheet :units (graft-units sheet))))
+  (let ((units (graft-units sheet)))
+    (make-rectangle* 0 0
+                     (graft-width sheet :units units)
+                     (graft-height sheet :units units))))
 
 (defmethod graft ((sheet pdf-graft))
   sheet)

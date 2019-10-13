@@ -523,6 +523,9 @@ or NIL if the current transformation is the identity transformation."
             (t
              (text-extents font string start end))))))
 
+(defmethod climb:font-glyph-dx ((font freetype-font) character)
+  (nth-value 2 (climb:font-text-extents font (format nil "~c" (code-char character)))))
+
 (defmethod climb:text-bounding-rectangle* ((medium clx-freetype-medium) string
                                            &key
                                              text-style

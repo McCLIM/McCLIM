@@ -93,25 +93,29 @@ DREI-EDITING related tests." :in drei-tests)
                                   ',kill-ring-end-contents)))
       `(progn 
          (test ,forward-delete
-           (with-buffer-action-test-functions
-            ,(make-deletion-test-function-case forward-delete 1 0 fromstart-contents1 nil)
-            ,(make-deletion-test-function-case forward-delete 2 0 fromstart-contents2 nil)
-            ,(make-deletion-test-function-case forward-delete count offset forward-contents nil)))
+           (with-drei-environment (:initial-contents ,initial-contents)
+             (with-buffer-action-test-functions
+               ,(make-deletion-test-function-case forward-delete 1 0 fromstart-contents1 nil)
+               ,(make-deletion-test-function-case forward-delete 2 0 fromstart-contents2 nil)
+               ,(make-deletion-test-function-case forward-delete count offset forward-contents nil))))
          (test ,backward-delete
-           (with-buffer-action-test-functions
-            ,(make-deletion-test-function-case backward-delete 1 end fromend-contents1 nil)
-            ,(make-deletion-test-function-case backward-delete 2 end fromend-contents2 nil)
-            ,(make-deletion-test-function-case backward-delete count offset backward-contents nil)))
+           (with-drei-environment (:initial-contents ,initial-contents)
+             (with-buffer-action-test-functions
+               ,(make-deletion-test-function-case backward-delete 1 end fromend-contents1 nil)
+               ,(make-deletion-test-function-case backward-delete 2 end fromend-contents2 nil)
+               ,(make-deletion-test-function-case backward-delete count offset backward-contents nil))))
          (test ,forward-kill
-           (with-buffer-action-test-functions
-            ,(make-deletion-test-function-case forward-kill 1 0 fromstart-contents1 fromstart-contents1-killed)
-            ,(make-deletion-test-function-case forward-kill 2 0 fromstart-contents2 fromstart-contents2-killed)
-            ,(make-deletion-test-function-case forward-kill count offset forward-contents forward-contents-killed)))
+           (with-drei-environment (:initial-contents ,initial-contents)
+             (with-buffer-action-test-functions
+               ,(make-deletion-test-function-case forward-kill 1 0 fromstart-contents1 fromstart-contents1-killed)
+               ,(make-deletion-test-function-case forward-kill 2 0 fromstart-contents2 fromstart-contents2-killed)
+               ,(make-deletion-test-function-case forward-kill count offset forward-contents forward-contents-killed))))
          (test ,backward-kill
-           (with-buffer-action-test-functions
-            ,(make-deletion-test-function-case backward-kill 1 end fromend-contents1 fromend-contents1-killed)
-            ,(make-deletion-test-function-case backward-kill 2 end fromend-contents2 fromend-contents2-killed)
-            ,(make-deletion-test-function-case backward-kill count offset backward-contents backward-contents-killed)))))))
+           (with-drei-environment (:initial-contents ,initial-contents)
+             (with-buffer-action-test-functions
+               ,(make-deletion-test-function-case backward-kill 1 end fromend-contents1 fromend-contents1-killed)
+               ,(make-deletion-test-function-case backward-kill 2 end fromend-contents2 fromend-contents2-killed)
+               ,(make-deletion-test-function-case backward-kill count offset backward-contents backward-contents-killed))))))))
 
 (deletion/killing-test line
                        (("It has multiple lines.

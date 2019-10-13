@@ -347,7 +347,7 @@ order to produce a double-click")
 			     basic-sheet)
   (
    (text-style :initarg :text-style :initform nil :reader pane-text-style)
-   (name :initarg :name :initform "(Unnamed Pane)" :reader pane-name)
+   (name :initarg :name :initform nil :reader pane-name)
    (manager :initarg :manager)
    (port :initarg :port)
    (frame :initarg :frame :initform *application-frame* :reader pane-frame)
@@ -384,9 +384,8 @@ order to produce a double-click")
 (defmethod (setf medium-background) (ink (pane pane))
   (setf (medium-background (sheet-medium pane)) ink))
 
-(defmethod compose-space ((pane pane) &key width height)
-  (make-space-requirement :width (or width 200)
-			  :height (or height 200)))
+(defmethod compose-space ((pane pane) &key (width 100) (height 100))
+  (make-space-requirement :width width :height height))
 
 (defmethod allocate-space ((pane pane) width height)
   (declare (ignorable pane width height))
@@ -823,7 +822,6 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 (defclass basic-pane (standard-space-requirement-options-mixin
                       sheet-parent-mixin ;mirrored-sheet-mixin
                       ;; UX mixins
-                      ;cut-and-paste-mixin
                       mouse-wheel-scroll-mixin
                       permanent-medium-sheet-output-mixin
                       ;; protocol class with million mixins goes last
@@ -873,7 +871,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
     (real x)
     (cons (destructuring-bind (value type) x
             (ecase type
-              (:pixels    value)
+              (:pixel     value)
               (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
               (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
               (:character (* value (stream-character-width pane #\m)))
@@ -890,7 +888,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
     (real x)
     (cons (destructuring-bind (value type) x
             (ecase type
-              (:pixels    value)
+              (:pixel     value)
               (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
               (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
               (:character 0)
@@ -915,10 +913,11 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
       (error 'sheet-supports-only-one-child :sheet pane))
     (sheet-adopt-child pane (first contents))))
 
-(defmethod compose-space ((pane single-child-composite-pane) &key width height)
+(defmethod compose-space ((pane single-child-composite-pane)
+                          &rest args &key width height)
+  (declare (ignore width height))
   (if (sheet-child pane)
-      (compose-space (sheet-child pane)
-                     :width width :height height)
+      (apply #'compose-space (sheet-child pane) args)
       (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
@@ -927,7 +926,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 ;;; TOP-LEVEL-SHEET
 
-(defclass top-level-sheet-pane (single-child-composite-pane)
+(defclass top-level-sheet-pane (top-level-sheet-mixin single-child-composite-pane)
   ()
   (:documentation "For the first pane in the architecture"))
 
@@ -975,8 +974,8 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod handle-event ((sheet top-level-sheet-pane)
                          (event window-configuration-event))
-  (let ((x (window-configuration-event-native-x event))
-        (y (window-configuration-event-native-y event))
+  (let ((x (window-configuration-event-x event))
+        (y (window-configuration-event-y event))
         (width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
     (let ((*configuration-event-p* sheet))
@@ -984,7 +983,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
        sheet
        (make-bounding-rectangle 0 0 width height)
        ;; negative offsets are handled by the native transformation?
-       (make-translation-transformation (max 0 x) (max 0 y))))))
+       (make-translation-transformation x y)))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-manager-delete-event))
@@ -992,7 +991,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 ;;; UNMANAGED-TOP-LEVEL-SHEET PANE
 
-(defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
+(defclass unmanaged-top-level-sheet-pane (unmanaged-sheet-mixin top-level-sheet-pane)
   ()
   (:documentation "Top-level sheet without window manager intervention"))
 
@@ -1020,10 +1019,12 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   ;;
   ;; --GB 2003-03-16
   (declare (ignore space-req-keys resize-frame))
-  (let ((w (space-requirement-width (compose-space pane)))
-        (h (space-requirement-height (compose-space pane))))
-    (resize-sheet pane w h)
-    (allocate-space pane w h) ))
+
+  (let* ((space-requirements (compose-space pane))
+         (width (space-requirement-width space-requirements))
+         (height (space-requirement-height space-requirements)))
+    (resize-sheet pane width height)
+    (allocate-space pane width height)))
 
 ;;; Now each child (client) of a box-layout pane is described by the
 ;;; following class:
@@ -1379,8 +1380,6 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod initialize-instance :after ((pane box-pane) &key contents)
   (setf (%pane-contents pane) contents))
-
-(defgeneric %pane-contests (pane contents))
 
 (defmethod (setf %pane-contents) (contents (pane box-pane))
   (labels ((parse-box-content (content)
@@ -1809,9 +1808,8 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
   (dolist (child (alexandria:ensure-list contents))
     (sheet-adopt-child sheet child)))
 
-(defmethod compose-space ((bboard bboard-pane) &key width height)
-  (declare (ignore width height))
-  (make-space-requirement :width 300 :height 300))
+(defmethod compose-space ((bboard bboard-pane) &key (width 100) (height 100))
+  (make-space-requirement :width width :height height))
 
 ;;; VIEWPORT
 
@@ -2274,9 +2272,9 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
            (gadget-max-value scroll-bar)))))
 
 (defmethod pane-viewport ((pane basic-pane))
-  (let ((parent (sheet-parent pane)))
-    (when (and parent (typep parent 'viewport-pane))
-	parent)))
+  (when-let ((parent (sheet-parent pane)))
+    (when (typep parent 'viewport-pane)
+      parent)))
 
 ;;; Default for streams that aren't even panes.
 
@@ -2284,22 +2282,19 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   nil)
 
 (defmethod pane-viewport-region ((pane basic-pane))
-  (let ((viewport (pane-viewport pane)))
-    (and viewport
-         (untransform-region
-          (sheet-delta-transformation pane viewport)
-          (sheet-region viewport)))))
+  (when-let ((viewport (pane-viewport pane)))
+    (untransform-region (sheet-delta-transformation pane viewport)
+                        (sheet-region viewport))))
 
 (defmethod pane-scroller ((pane basic-pane))
-  (let ((viewport (pane-viewport pane)))
-    (when viewport
-      (sheet-parent viewport))))
+  (when-let ((viewport (pane-viewport pane)))
+    (sheet-parent viewport)))
 
 (defmethod scroll-extent ((pane basic-pane) x y)
   (when (pane-viewport pane)
     (move-sheet pane (- x) (- y))
-    (when (pane-scroller pane)
-      (scroller-pane/update-scroll-bars (pane-scroller pane)))))
+    (when-let  ((scroller (pane-scroller pane)))
+      (scroller-pane/update-scroll-bars scroller))))
 
 
 ;;; LABEL PANE
@@ -2537,8 +2532,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    (user-min-height :accessor %pane-user-min-height)
    (user-max-height :accessor %pane-user-max-height)
    ;; size required by the stream
-   (stream-width :initform 0 :accessor stream-width)
-   (stream-height :initform 0 :accessor stream-height))
+   (stream-width :initform 100 :accessor stream-width)
+   (stream-height :initform 100 :accessor stream-height))
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
@@ -2759,10 +2754,25 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 ;;; TITLE PANE
 
 (defclass title-pane (clim-stream-pane)
-  ()
+  ((title :initarg :title-string
+	  :accessor title-string))
   (:default-initargs :display-time t
+		     :title-string "Default Title"
                      :scroll-bars nil
+		     :text-style (make-text-style :serif :bold :very-large)
                      :display-function 'display-title))
+
+(defmethod display-title (frame (pane title-pane))
+  (declare (ignore frame))
+  (let* ((title-string (title-string pane))
+	 (a (text-style-ascent (pane-text-style pane) pane))
+	 (tw (text-size pane title-string)))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (declare (ignore y2))
+      (multiple-value-bind (tx ty)
+	  (values (- (/ (- x2 x1) 2) (/ tw 2))
+		  (+ y1 2 a))
+	(draw-text* pane title-string tx ty)))))
 
 ;;; Pointer Documentation Pane
 

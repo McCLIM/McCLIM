@@ -1164,10 +1164,10 @@ and must never be nil.")
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-release-event))
   (with-slots (armed pressedp) pane
-    (setf pressedp nil)
-    (when armed
-      (activate-callback pane (gadget-client pane) (gadget-id pane))
+    (when pressedp
       (setf pressedp nil)
+      (when armed
+        (activate-callback pane (gadget-client pane) (gadget-id pane)))
       (dispatch-repaint pane +everywhere+))))
 
 (defmethod handle-repaint ((pane push-button-pane) region)
@@ -1763,7 +1763,7 @@ and must never be nil.")
 
 (defmethod handle-event ((pane slider-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
-    (when armed
+    (when (eq armed ':button-press)
       (setf armed t
             (gadget-value pane :invoke-callback t)
             (convert-position-to-value pane event))

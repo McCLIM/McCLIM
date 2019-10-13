@@ -123,8 +123,8 @@ infinite recursion on (setf sheet-*).")
       ;; manager - decorations and such. We can't pinpoint exact translation. On
       ;; the other hand UNMANAGED-TOP-LEVEL-SHEET-PANE is essential for menus
       ;; and has exact position set (thanks to not being managed by WM).
-      (unless (and (typep sheet 'top-level-sheet-pane)
-                   (null (typep sheet 'unmanaged-top-level-sheet-pane)))
+      (unless (and (typep sheet 'top-level-sheet-mixin)
+                   (null (typep sheet 'unmanaged-sheet-mixin)))
        (port-set-mirror-transformation port mirror MT)))
     (when invalidate-transformations
       (with-slots (native-transformation device-transformation) sheet
@@ -176,10 +176,16 @@ very hard)."
   (let* ((parent (sheet-parent sheet))
          (sheet-region-in-native-parent
            ;; this now is the wanted sheet mirror region
-           (transform-region (sheet-native-transformation parent)
+          (if (graftp parent)
+              ;; For the TOP-LEVEL-SHEET-PANE (when the parent is a GRAFT) we don't
+              ;; clip the sheet-region with the parent-region. -- admich 2019-05-30
+              (transform-region (sheet-native-transformation parent)
+                                (transform-region (sheet-transformation sheet)
+                                                  (sheet-region sheet)))
+              (transform-region (sheet-native-transformation parent)
                              (region-intersection (sheet-region parent)
                                                   (transform-region (sheet-transformation sheet)
-                                                                    (sheet-region sheet))))))
+                                                                    (sheet-region sheet)))))))
     (when (region-equal sheet-region-in-native-parent +nowhere+)
       (%set-mirror-geometry sheet :invalidate-transformations t)
       (return-from update-mirror-geometry))
