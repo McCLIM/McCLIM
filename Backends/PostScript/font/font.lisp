@@ -299,3 +299,12 @@
       (define-font-metrics dict-name ascent descent angle char-infos font-name))
     (setf (text-style-mapping port text-style) font-name)
     text-style))
+
+(defmethod climb:font-character-width ((font postscript-font-name) character)
+  (let* ((size (font-name-size font))
+         (metrics-key (font-name-metrics-key font)))
+    (multiple-value-bind (width height final-x final-y baseline)
+        (text-size-in-font metrics-key size
+                           (string character) 0 1)
+      (declare (ignore height final-x final-y baseline))
+      width)))
