@@ -53,13 +53,26 @@
 
 (in-package :clim-internals)
 
-(defclass nowhere-region (region nowhere-mixin) ())
+;;;; Design <-> Region Equivalences
+
+;;; As Gilbert points in his notes, transparent ink is in every
+;;; respect interchangable with the nowhere region, and likewise
+;;; foreground ink is interchangable with the everywhere region.
+;;; By defining the following mixins and adding them to the
+;;; appropriate ink/region class pairs, we can reduce the number
+;;; of methods necessary (in design.lisp).
+
+(defclass everywhere-mixin () ())
+(defclass nowhere-mixin    () ())
+
+(defclass nowhere-region    (region nowhere-mixin)    ())
 (defclass everywhere-region (region everywhere-mixin) ())
 
-;;; coordinate is defined in coordinates.lisp
+;;; Note that these are named as constants, but aren't truly
+;;; constants.
 
-(setf +everywhere+ (make-instance 'everywhere-region))
-(setf +nowhere+ (make-instance 'nowhere-region))
+(defvar +everywhere+ (make-instance 'everywhere-region))
+(defvar +nowhere+ (make-instance 'nowhere-region))
 
 ;;; 2.5.1.2 Composition of CLIM Regions
 

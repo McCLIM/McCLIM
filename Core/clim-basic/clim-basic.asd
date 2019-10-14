@@ -13,7 +13,6 @@
    (:file "multiprocessing" :depends-on ("decls")) ; legacy mp backends are in Lisp-Dep/mp-*.lisp
    (:file "utils" :depends-on ("decls" "multiprocessing"))
    (:file "X11-colors" :depends-on ("decls" "protocol-classes" "multiprocessing" "design" "geometry"))
-   (:file "design" :depends-on ("decls" "protocol-classes" "utils"))
    (:file "dead-keys" :depends-on ("decls"))
    (:module "geometry"
     :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "setf-star")
@@ -26,6 +25,7 @@
                  (:file "region-transformations")
                  (:file "region-predicates")
                  (:file "region-composition")))
+   (:file "design" :depends-on ("decls" "protocol-classes" "utils" "geometry"))
    (:file "pattern" :depends-on ("decls" "protocol-classes" "utils" "design"))
    (:file "sheets" :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "geometry"))
    (:file "mirrors" :depends-on ("sheets"))
