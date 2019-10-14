@@ -277,26 +277,6 @@
         (subseq contrasting-colors 0 n)
         (aref contrasting-colors k))))
 
-;;;; Design <-> Region Equivalences
-
-;;; As Gilbert points in his notes, transparent ink is in every
-;;; respect interchangable with the nowhere region, and likewise
-;;; foreground ink is interchangable with the everywhere region.
-;;; By defining the following mixins and adding them to the
-;;; appropriate ink/region class pairs, we can reduce the number
-;;; of methods necessary.
-
-;;;
-;;; define these variables here so we can use them here in
-;;; design.lisp, but don't set them to their eventual values until we
-;;; get to region.lisp. Note that these are named as constants, but
-;;; aren't truly constants.
-(defvar +everywhere+)
-(defvar +nowhere+)
-
-(defclass everywhere-mixin () ())
-(defclass nowhere-mixin    () ())
-
 ;;; The two default colors
 
 (defconstant +white+ (make-named-color "white" 1.0000 1.0000 1.0000))
@@ -509,16 +489,12 @@ identity-transformation) then source design is returned."
 (defclass in-compositum (masked-compositum) ())
 
 (defmethod compose-in ((ink design) (mask design))
-  (make-instance 'in-compositum
-    :ink ink
-    :mask mask))
+  (make-instance 'in-compositum :ink ink :mask mask))
 
 (defclass out-compositum (masked-compositum) ())
 
 (defmethod compose-out ((ink design) (mask design))
-  (make-instance 'out-compositum
-    :ink ink
-    :mask mask))
+  (make-instance 'out-compositum :ink ink :mask mask))
 
 (defclass over-compositum (design)
   ((foreground :initarg :foreground :reader compositum-foreground)
