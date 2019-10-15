@@ -84,7 +84,6 @@ foo-pointer
 EVENT HANDLING (in port.lisp)
 -----------------------------
 ;;; Originally in CLIM-INTERNALS
-port-frame-keyboard-input-focus
 synthesize-pointer-motion-event
 @end verbatim
 
