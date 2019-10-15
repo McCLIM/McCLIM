@@ -206,16 +206,14 @@
                               (style2 device-font-text-style))
   (eq style1 style2))
 
-;; the standard-text-style are registered in a port slot.
-(defmethod text-style-mapping :around ((port basic-port) text-style
+(defmethod text-style-mapping :around ((port basic-port)
+                                       (text-style standard-text-style)
                                        &optional character-set
                                        &aux (text-style (parse-text-style text-style)))
   (declare (ignore character-set))
-  (if  (typep text-style 'standard-text-style)
-       (alexandria:if-let (font (gethash text-style (port-text-style-mappings port)))
-         font
-         (setf (gethash text-style (port-text-style-mappings port)) (call-next-method)))
-       (call-next-method)))
+  ;; Cache `standard-text-style' instances.
+  (ensure-gethash text-style (port-text-style-mappings port)
+                  (call-next-method)))
 
 (defmethod (setf text-style-mapping) (mapping (port basic-port)
                                       text-style
