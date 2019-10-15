@@ -36,11 +36,22 @@
                     stream (loop :for i :from 0 :to end :by .1
                                  :collect (sqrt i)
                                  :collect (* (/ i end) (sin i)))
-                    :filled nil :closed nil :line-thickness 2))))))
+                    :filled nil :closed nil :line-thickness 2)))))
+           (character-width (x y)
+             (with-translation (stream x y)
+               (loop :with width = (stream-character-width stream #\M)
+                     :with height = (nth-value 1 (text-size stream "Ty"))
+                     :for position :from 0 :by width
+                     :for character :across "AILTMy"
+                     :do (draw-text* stream (string character) position 0)
+                         (draw-rectangle* stream position 0 (+ position width) (- height)
+                                          :filled nil :ink +red+
+                                          :line-dashes '(4 4) :line-thickness .3)))))
     (text 0 0 200)
     (wheels 208 0 80)
-    (graph 0 0 200 100)))
+    (graph 0 -108 200 100)
+    (character-width 0 140)))
 
 (defun print-test-page (stream)
-  (with-room-for-graphics (stream)
+  (with-room-for-graphics (stream :first-quadrant nil)
     (%print-test-page stream)))
