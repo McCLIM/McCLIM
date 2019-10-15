@@ -53,7 +53,7 @@
          (multiple-value-call #'find-and-make-truetype-font
            (clim:text-style-components text-style))))
     (or (find-truetype-font port text-style)
-                  (invoke-with-truetype-path-restart #'find-font))))
+        (invoke-with-truetype-path-restart #'find-font))))
 
 (defmethod text-style-mapping ((port render-port-mixin) (gs-text-style cons) &optional character-set)
   (declare (ignore character-set))

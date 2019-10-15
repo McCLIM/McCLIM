@@ -514,7 +514,7 @@ or NIL if the current transformation is the identity transformation."
                   with sizes = nil
                   for (string family style) in blocks
                   for new-text-style = (if family (clim:make-text-style family style size) text-style)
-                  do (let ((font (text-style-mapping port new-text-style)))
+                  do (let ((font (clim:text-style-mapping port new-text-style)))
                        (setf sizes (multiple-value-list (text-extents font string 0 (length string))))
                        (incf curr-x (car sizes)))
                   finally
