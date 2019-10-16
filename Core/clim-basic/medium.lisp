@@ -206,14 +206,16 @@
                               (style2 device-font-text-style))
   (eq style1 style2))
 
-(defmethod text-style-mapping :around ((port basic-port)
-                                       (text-style standard-text-style)
+(defmethod text-style-mapping :around ((port basic-port) text-style
                                        &optional character-set
                                        &aux (text-style (parse-text-style text-style)))
   (declare (ignore character-set))
-  ;; Cache `standard-text-style' instances.
-  (ensure-gethash text-style (port-text-style-mappings port)
-                  (call-next-method)))
+  ;; If the /parsed/ TEXT-STYLE is a `standard-text-style', cache the
+  ;; font association.
+  (if (typep text-style 'standard-text-style)
+      (ensure-gethash text-style (port-text-style-mappings port)
+                      (call-next-method))
+      (call-next-method)))
 
 (defmethod (setf text-style-mapping) (mapping (port basic-port)
                                       text-style
