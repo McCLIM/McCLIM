@@ -408,11 +408,12 @@ highlighting, etc." ))
     (flet ((do-prompt (stream)
              (apply #'prompt-for-accept stream type view rest-args))
            (do-accept-present-default (stream)
-             (funcall-presentation-generic-function
-              accept-present-default
-              type (encapsulating-stream-stream stream) view
-              (value query)
-              default-supplied-p nil query-identifier)))
+	     (with-encapsulating-stream (maybe-encapsulating-stream stream)
+	       (funcall-presentation-generic-function
+		accept-present-default
+		type (encapsulating-stream-stream maybe-encapsulating-stream) view
+		(value query)
+		default-supplied-p nil query-identifier))))
       (let ((query-record nil))
         (if align
             (formatting-row (stream)
