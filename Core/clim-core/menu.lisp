@@ -75,13 +75,16 @@
 (defmethod destroy-substructure ((button menu-button-leaf-pane))
   (disarm-gadget button))
 
+(defun close-menu (pane)
+  (disarm-menu pane)
+  (destroy-substructure (menu-root pane)))
+
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-button-release-event))
   (with-slots (armed label client id) pane
     (unwind-protect
          (when armed
            (value-changed-callback pane client id label))
-      (disarm-menu pane)
-      (destroy-substructure (menu-root pane)))))
+      (close-menu pane))))
 
 (defmethod handle-event ((pane menu-button-leaf-pane) (event pointer-exit-event))
   (disarm-menu pane))
@@ -141,7 +144,7 @@ account, and create a list of menu buttons."
             (enable-frame submenu-frame)
             (with-sheet-medium (medium raised)
 			       (medium-force-output medium)))))
-      (setf (%frame-active-menu frame) sub-menu))))
+      )))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
   (with-slots (frame-manager submenu-frame) sub-menu
@@ -150,10 +153,7 @@ account, and create a list of menu buttons."
       (disown-frame frame-manager submenu-frame)
       (disarm-gadget sub-menu)
       (dispatch-repaint sub-menu +everywhere+)
-      (setf submenu-frame nil)))
-  (with-application-frame (frame)
-    (when frame
-      (setf (%frame-active-menu frame) nil))))
+      (setf submenu-frame nil))))
 
 (defmethod arm-branch ((sub-menu menu-button-submenu-pane))
   (with-slots (client frame-manager submenu-frame) sub-menu
@@ -167,16 +167,14 @@ account, and create a list of menu buttons."
     (arm-menu sub-menu)))
 
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-press-event))
+  (stream-set-input-focus pane)
   (if (slot-value pane 'armed)
       (destroy-substructure pane)
       (arm-branch pane)))
 
-(defmethod handle-event :before (pane (event pointer-button-release-event))
-  (unless (typep pane 'menu-button)
-    (with-application-frame (frame)
-      (with-accessors ((active-menu %frame-active-menu)) frame
-	(when (and frame active-menu)
-	  (destroy-substructure (menu-root active-menu)))))))
+(defmethod note-input-focus-changed ((menu menu-button) has-focus)
+  (unless has-focus
+    (close-menu menu)))
 
 ;;; menu-button-vertical-submenu-pane
 (defclass menu-button-vertical-submenu-pane (menu-button-submenu-pane) ())

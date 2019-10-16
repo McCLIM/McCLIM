@@ -224,6 +224,8 @@ keys read."))
                                (typep event 'pointer-button-press-event))))))
         (progn
           (event-queue-read buffer)	;eat it
+	  (when (typep event 'pointer-button-release-event)
+	    (stream-set-input-focus (event-sheet event)))
           (handle-event (event-sheet event) event)
           t)
         nil)))

@@ -335,13 +335,6 @@ modifier key."))
             (propagate-changed-value gadget))))
       (call-next-method)))
 
-(defmethod handle-event :before
-    ((gadget drei-gadget-pane) (event pointer-button-press-event))
-  (let ((previous (stream-set-input-focus gadget)))
-    (when (and previous (typep previous 'gadget))
-      (disarmed-callback previous (gadget-client previous) (gadget-id previous)))
-    (armed-callback gadget (gadget-client gadget) (gadget-id gadget))))
-
 (defmethod invoke-accepting-from-user ((drei drei-gadget-pane) (continuation function))
   ;; When an `accept' is called during the execution of a command for
   ;; the Drei gadget, we must deactivate the gadget in order to not
