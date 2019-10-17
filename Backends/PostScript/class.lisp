@@ -53,10 +53,9 @@
              "Unknown")
   #-unix "")
 
-(defclass postscript-stream 
+(defclass postscript-stream
     (basic-sheet
      sheet-leaf-mixin sheet-mute-input-mixin
-     permanent-medium-sheet-output-mixin
      sheet-mute-repainting-mixin
      ;; ?
      mirrored-sheet-mixin
@@ -66,12 +65,14 @@
      ;; when we grow another non-interactive backend (maybe a cl-pdf
      ;; backend?).  -- CSR.
      climi::updating-output-stream-mixin
-     standard-extended-output-stream standard-output-recording-stream)
+     standard-extended-output-stream
+     standard-output-recording-stream
+     permanent-medium-sheet-output-mixin)
   ((file-stream :initarg :file-stream :reader postscript-stream-file-stream)
    (title :initarg :title)
    (for :initarg :for)
    (orientation :initarg :orientation)
-   (paper :initarg :paper)   
+   (paper :initarg :paper)
    (transformation :initarg :transformation
                    :reader sheet-native-transformation)
    (current-page :initform 0)
