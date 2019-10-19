@@ -95,14 +95,17 @@ interface management system."
                 :serial t
                 :components ((:file "package")
                              (:file "utils")
-                             (:file "transforms")
-                             (:file "regions")
-                             (:file "bounding-rectangles")
                              (:file "input-editing")
                              (:file "commands")
                              (:file "presentations")
                              (:file "text-selection")
-                             (:file "text-formatting"))))
+                             (:file "text-formatting")
+                             (:module "geometry"
+                              :depends-on ("package")
+                              :serial t
+                              :components ((:file "transforms")
+                                           (:file "regions")
+                                           (:file "bounding-rectangles"))))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
 
