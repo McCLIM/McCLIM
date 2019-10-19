@@ -27,5 +27,6 @@
                                            :if-does-not-exist :create
                                            :if-exists :supersede
                                            :element-type '(unsigned-byte 8))
-      (clim-pdf:with-output-to-pdf-stream (stream stream)
+      (clim-pdf:with-output-to-pdf-stream
+          (stream stream :header-comments '(:title "Test Page"))
         (clim-test-util:print-test-page stream)))))
