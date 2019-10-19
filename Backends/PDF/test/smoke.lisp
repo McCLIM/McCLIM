@@ -22,11 +22,19 @@
 (test smoke
   "Smoke test for the PDF backend."
 
-  (finishes
-    (with-open-file (stream "pdf-test.pdf" :direction :output
-                                           :if-does-not-exist :create
-                                           :if-exists :supersede
-                                           :element-type '(unsigned-byte 8))
-      (clim-pdf:with-output-to-pdf-stream
-          (stream stream :header-comments '(:title "Test Page"))
-        (clim-test-util:print-test-page-1 stream)))))
+  (flet ((invoke-with-pdf-stream (continuation
+                                  &key filename title scale-to-fit)
+           (with-open-file (stream filename :direction :output
+                                            :if-does-not-exist :create
+                                            :if-exists :supersede
+                                            :element-type '(unsigned-byte 8))
+             (clim-pdf:with-output-to-pdf-stream
+                 (stream stream :header-comments `(:title ,title)
+                                :scale-to-fit scale-to-fit)
+               (funcall continuation stream)))))
+    (loop for i from 1
+          for filename = (format nil "pdf-test-~D.pdf" i)
+          for title = (format nil "Test Page ~D" i)
+          for page in clim-test-util:*all-test-pages*
+          do (finishes
+               (invoke-with-pdf-stream page :filename filename :title title)))))
