@@ -153,7 +153,7 @@
 ;;;
 ;;; polyline
 
-(test regins.polyline
+(test regions.polyline
   (is (subtypep 'polyline 'path))
   (is (subtypep 'standard-polyline 'polyline))
 
