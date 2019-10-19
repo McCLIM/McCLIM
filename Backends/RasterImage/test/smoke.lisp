@@ -25,4 +25,4 @@
   (finishes
     (mcclim-raster-image:with-output-to-raster-image-file
         (stream "raster-image-test.png")
-      (clim-test-util:print-test-page stream))))
+      (clim-test-util:print-test-page-1 stream))))

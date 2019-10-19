@@ -25,7 +25,7 @@
                       :command-table output-destination-test-command-table
                       :provide-output-destination-keyword t)
     ()
-  (clim-test-util:print-test-page *standard-output*))
+  (clim-test-util:print-test-page-1 *standard-output*))
 
 (test output-destination.smoke
   "Smoke test for raster image command output destination."

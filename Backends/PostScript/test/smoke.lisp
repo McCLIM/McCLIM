@@ -27,7 +27,7 @@
                                                  :if-does-not-exist :create
                                                  :if-exists :supersede)
       (clim-postscript:with-output-to-postscript-stream (stream stream)
-        (clim-test-util:print-test-page stream)))))
+        (clim-test-util:print-test-page-1 stream)))))
 
 (defun invoke-with-output-file (write-continuation read-continuation filename)
   (unwind-protect
