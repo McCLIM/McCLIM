@@ -22,7 +22,7 @@
   (ignore-errors ; destructuring-bind may error; that yields invalid spec
     (destructuring-bind (&key left top right bottom) margins
       (flet ((margin-spec-p (m)
-               (and (member (first m) '(:absolute :relative))
+               (and (member (first m) '(:relative :absolute))
                     (not (null (second m))))))
         (every #'margin-spec-p (list left top right bottom))))))
 
@@ -31,8 +31,8 @@
 
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))
-   (margins :initform '(:left   (:absolute 0)
-                        :top    (:absolute 0)
+   (margins :initform '(:left   (:relative 0)
+                        :top    (:relative 0)
                         :right  (:relative 0)
                         :bottom (:relative 0))
             :accessor stream-text-margins :type margin-spec)))
@@ -40,14 +40,16 @@
 (defmethod initialize-instance :after ((instance standard-page-layout)
                                        &key text-margins text-margin)
   (macrolet ((thunk (edge default)
-               `(unless (getf text-margins ,edge)
-                  (setf (getf text-margins ,edge) ,default))))
-    (thunk :left   '(:absolute 0))
-    (thunk :top    '(:absolute 0))
+               `(let ((spec (getf text-margins ,edge)))
+                  (typecase spec
+                    (null (setf (getf text-margins ,edge) ,default))
+                    (atom (setf (getf text-margins ,edge) `(:relative ,spec)))))))
+    (thunk :left   `(:relative 0))
+    (thunk :top    `(:relative 0))
     (thunk :right  (if text-margin
                        `(:absolute ,text-margin)
                        `(:relative 0)))
-    (thunk :bottom '(:relative 0))
+    (thunk :bottom `(:relative 0))
     (setf (stream-text-margins instance) text-margins)))
 
 (defgeneric stream-cursor-initial-position (stream)
@@ -74,10 +76,10 @@
           (y2 (* 43 (text-style-height (stream-text-style stream) stream))))
       (setf sheet-region (make-rectangle* 0 0 x2 y2))))
   (with-bounding-rectangle* (x1 y1 x2 y2) sheet-region
-    (macrolet ((thunk (margin edge sign direction)
+    (macrolet ((thunk (margin edge sign orientation)
                  `(if (eql (first ,margin) :absolute)
-                      (parse-space stream (second ,margin) ,direction)
-                      (,sign ,edge (parse-space stream (second ,margin) ,direction)))))
+                      (parse-space stream (second ,margin) ,orientation)
+                      (,sign ,edge (parse-space stream (second ,margin) ,orientation)))))
       (destructuring-bind (&key left top right bottom) (stream-text-margins stream)
         (setf (%page-region stream)
               (make-rectangle* (thunk left   x1 + :horizontal)
@@ -93,9 +95,10 @@
     (new-margins (stream standard-page-layout)
      &aux (old-margins (stream-text-margins stream)))
   (macrolet ((thunk (edge)
-               `(unless (getf new-margins ,edge)
-                  (setf (getf new-margins ,edge)
-                        (getf old-margins ,edge)))))
+               `(let ((spec (getf new-margins ,edge)))
+                  (typecase spec
+                    (null (setf (getf new-margins ,edge) (getf old-margins ,edge)))
+                    (atom (setf (getf new-margins ,edge) `(:relative ,spec)))))))
     (thunk :left)
     (thunk :top)
     (thunk :right)
