@@ -456,8 +456,29 @@
                           (draw-line* stream left bottom right bottom
                                       :ink ink
                                       :line-style line-style)))
-                       (updating-output-record  nil)
-                       (compound-output-record  (fn child))))))
+                       (updating-output-record nil)
+                       (compound-output-record (fn child))))))
+      (fn record))))
+
+(define-border-type :crossout (stream record
+                                       (ink (medium-ink stream))
+                                       line-style
+                                       line-unit
+                                       line-thickness
+                                       line-cap-shape
+                                       line-dashes)
+  (let ((line-style (%%line-style-for-method)))
+    (labels ((fn (record)
+               (loop for child across (output-record-children record) do
+                     (typecase child
+                       (text-displayed-output-record
+                        (with-bounding-rectangle* (left top right bottom) child
+                          (let ((middle (/ (+ bottom top) 2)))
+                            (draw-line* stream left middle right middle
+                                        :ink ink
+                                        :line-style line-style))))
+                       (updating-output-record nil)
+                       (compound-output-record (fn child))))))
       (fn record))))
 
 (define-border-type :inset (stream left top right bottom
