@@ -99,20 +99,21 @@
   (:method (continuation medium (sheet temporary-medium-sheet-output-mixin))
     (if-let ((sheet-medium (sheet-medium sheet)))
       (funcall continuation sheet-medium)
-      (if (null medium)
-          (let ((new-medium (allocate-medium (port sheet) sheet)))
+      (let ((port (port sheet)))
+        (if (null medium)
+            (let ((new-medium (allocate-medium port sheet)))
+              (unwind-protect
+                   (progn
+                     (engraft-medium new-medium port sheet)
+                     (setf (%sheet-medium sheet) new-medium)
+                     (funcall continuation new-medium))
+                (setf (%sheet-medium sheet) nil)
+                (degraft-medium new-medium port sheet)
+                (deallocate-medium port new-medium)))
             (unwind-protect
                  (progn
-                   (engraft-medium new-medium (port sheet) sheet)
-                   (setf (%sheet-medium sheet) new-medium)
-                   (funcall continuation new-medium))
+                   (engraft-medium medium port sheet)
+                   (setf (%sheet-medium sheet) medium)
+                   (funcall continuation medium))
               (setf (%sheet-medium sheet) nil)
-              (degraft-medium new-medium (port sheet) sheet)
-              (deallocate-medium (port sheet) new-medium)))
-          (unwind-protect
-               (progn
-                 (engraft-medium medium (port sheet) sheet)
-                 (setf (%sheet-medium sheet) medium)
-                 (funcall continuation medium))
-            (setf (%sheet-medium sheet) nil)
-            (degraft-medium medium (port sheet) sheet))))))
+              (degraft-medium medium port sheet)))))))
