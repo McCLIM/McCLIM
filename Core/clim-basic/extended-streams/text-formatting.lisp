@@ -44,7 +44,9 @@
                   (setf (getf text-margins ,edge) ,default))))
     (thunk :left   '(:absolute 0))
     (thunk :top    '(:absolute 0))
-    (thunk :right  (or text-margin '(:relative 0)))
+    (thunk :right  (if text-margin
+                       `(:absolute ,text-margin)
+                       `(:relative 0)))
     (thunk :bottom '(:relative 0))
     (setf (stream-text-margins instance) text-margins)))
 
