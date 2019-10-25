@@ -5,7 +5,7 @@
 ;;;
 ;;; - use coordinate functions for comparisons
 ;;; - when possible provide a method for a protocol class, and when
-;;;   beneficial provide (also) a method for a standard class
+;;;   beneficial provide, also provide a method for standard class
 ;;; - all "region" arguments must be specialized
 ;;; - the most general specialization is bounding-rectangle
 ;;;
@@ -53,7 +53,7 @@
          (position-contains-p (polar->screen)
            (multiple-value-bind (polar-x polar-y)
                (untransform-position polar->screen x y)
-             ;; FIXME we don't need to factor the additonal epsilon
+             ;; FIXME we don't need to factor the additional epsilon
              ;; but rotated elliptoids are naively rendered in clx.
              (multiple-value-bind (polar-dx polar-dy)
                  (untransform-distance polar->screen 1 1)
@@ -79,7 +79,7 @@
                (wn 0))
            (map-over-polygon-segments
             (lambda (x1 y1 x2 y2)
-              ;; Algorithm is not predictible for polygon edges - we
+              ;; Algorithm is not predictable for polygon edges - we
               ;; need to test for them explicitly. -- jd 2019-09-27
               (when (segment-contains-point-p x1 y1 x2 y2 x y)
                 (return-from region-contains-position-p t))
@@ -147,7 +147,7 @@
 (defmethod region-intersects-region-p ((a standard-rectangle) (b standard-rectangle))
   (declare (ignorable a b))
   ;; for rectangles, the bounding rectangle test is correct, so if we
-  ;; wind up here, we just can return T.
+  ;; wind up here, we can just return T.
   t)
 
 

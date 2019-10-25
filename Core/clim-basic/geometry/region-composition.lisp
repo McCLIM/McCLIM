@@ -9,7 +9,7 @@
 (defmethod region-union ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-union :regions (list a b)))
 
-;;; dimensionally rule
+;;; dimensionality rule
 (defmethod region-union ((a area) (b path)) a)
 (defmethod region-union ((a path) (b point)) a)
 (defmethod region-union ((a area) (b point)) a)
@@ -105,7 +105,7 @@
   (polygon-op a b #'logior))
 
 
-;;; IHMO the CLIM dimensionality rule is brain dead! --gb
+;;; IMHO the CLIM dimensionality rule is brain dead! --gb
 
 (defmethod region-intersection ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-intersection :regions (list a b)))

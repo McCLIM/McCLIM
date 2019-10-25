@@ -5,8 +5,8 @@
 
 ;;; CLIM "native" coordinate system is left-handed (y grows down).
 ;;; Angles are specified to grow in the counter-clockwise direction
-;;; (disregarding of the coordinate system), so we need to invert the
-;;; y coordinate in a call to atan.
+;;; (disregarding the coordinate system), so we need to invert the y
+;;; coordinate in a call to atan.
 
 (declaim (inline angle-contains-angle-p))
 (defun angle-contains-angle-p (alpha omega delta)
@@ -80,9 +80,9 @@ y2."
                   (rotatef ,y1 ,y2))))
     (sort-points ax ay bx by)
     (sort-points cx cy dx dy))
-  ;; We already know that lines ar colienar, no need to use
-  ;; segment-contains-point-p (it is enough to compare a
-  ;; single coordinate).
+  ;; We already know that lines are colienar, no need to use
+  ;; segment-contains-point-p (it is enough to compare a single
+  ;; coordinate).
   (let ((a-in-cd (coordinate-between* cx ax dx))
         (b-in-cd (coordinate-between* cx bx dx))
         (c-in-ab (coordinate-between* ax cx bx))
@@ -352,7 +352,7 @@ y2."
                                          (fun (alexandria:ensure-function fun)))
   ;; FUN is called for some intersection points between a line going
   ;; through the segment (x1 y1 x2 y2) and the polygon. Each of these
-  ;; points may be potentially a vertice of a segment which is the
+  ;; points may be potentially a vertex of a segment which is the
   ;; intersection of the polygon and the line. Function argument is a
   ;; parameter indicating where on the segment S the intersection
   ;; point is positioned (where 0d0 is [x1,y1] and 1d0 is [x2,y2]). If
@@ -530,7 +530,7 @@ y2."
 
 ;;; The empty band could have been representated as
 ;;;  ((x . nil))  x arbitrary
-;;; But to get a cononic representation, I'll choose simply NIL.
+;;; But to get a canonic representation, I'll choose simply NIL.
 
 ;;; A better representation would be
 ;;;  (x_0 a_0 x_1 a_1 ... x_n)
@@ -636,8 +636,8 @@ y2."
 ;;; -- Ellipse simplified representation ---------------------------------------
 
 (defun ellipse-coefficients (ell)
-  ;; Returns the coefficients of the equation specifing the ellipse as in
-  ;;  ax^2 + by^2 + cxy + dx + dy - f = 0
+  ;; Returns the coefficients of the equation specifying the ellipse
+  ;; as in ax^2 + by^2 + cxy + dx + dy - f = 0
 
   ;; Note 1:
   ;;   The `f' here may seem to be superfluous, since you
@@ -785,13 +785,14 @@ y2."
                 (+ (* myx x) (* myy y) ty))))))
 
 (defun ellipse-simplified-representation (el)
-  ;; returns H (horizontal radius), V (vertical radius) and rotation angle in
-  ;; screen coordinates. `ellipse-normal-radii*' returns vectors with correct
-  ;; direction, but radius length is shorter than in reality (verified with
-  ;; experimentation, not analitically), so we compute radius from phi.
-  ;; If the length were right, we'd compute h/v with the following:
-  ;;   (sqrt (+ (expt (* hx (cos phi)) 2) (expt (* hy (sin phi)) 2)))
-  ;;   (sqrt (+ (expt (* vx (sin phi)) 2) (expt (* vy (cos phi)) 2)))
+  ;; returns H (horizontal radius), V (vertical radius) and rotation
+  ;; angle in screen coordinates. `ellipse-normal-radii*' returns
+  ;; vectors with correct direction, but radius length is shorter than
+  ;; in reality (verified with experimentation, not analytically), so
+  ;; we compute radius from phi.  If the length were right, we'd
+  ;; compute h/v with the following: (sqrt (+ (expt (* hx (cos phi))
+  ;; 2) (expt (* hy (sin phi)) 2))) (sqrt (+ (expt (* vx (sin phi)) 2)
+  ;; (expt (* vy (cos phi)) 2)))
   (multiple-value-bind (center-x center-y) (ellipse-center-point* el)
     (multiple-value-bind (hx hy) (ellipse-normal-radii* el)
       (let* ((phi (atan* hx hy)))
@@ -849,7 +850,7 @@ y2."
       (values (+ cx x) (+ cy y1) (+ cx x) (+ cy y2)))))
 
 (defun intersection-line/ellipse (el lx1 ly1 lx2 ly2)
-  "Returns coordinates where ellipse intersects with arbitral line (except vertical)."
+  "Returns coordinates where ellipse intersects with arbitrary line (except vertical)."
   (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
     (let* ((lx1 (- lx1 cx)) (ly1 (- ly1 cy)) (lx2 (- lx2 cx)) (ly2 (- ly2 cy))
            (m-slope (/ (- ly1 ly2) (- lx1 lx2)))
@@ -1131,11 +1132,11 @@ to the major axis."
 (defun ellipse-derivative (eta a b theta)
   "Given an ellipse having two radii of length A and B, with angle
 THETA between the radii from the center of the ellipse, returns two
-values, the x and y coordinates of the derivative of the parametric
-curve of ellipse at the parametric angle eta. Note that this eta is
-not the angle ANGLE, as in ellipse-derivative*, but rather is computed
-parametricly from theta. See the paper from Luc Maisonobe for
-details."
+values, the x and y coordinates of the derivative of the
+parametrically curve of ellipse at the parametric angle eta. Note that
+this eta is not the angle ANGLE, as in ellipse-derivative*, but rather
+is computed parametricly from theta. See the paper from Luc Maisonobe
+for details."
   (values (+ (- (* a (cos theta) (sin eta)))
              (- (* b (sin theta) (cos eta))))
           (+ (- (* a (sin theta) (sin eta)))
