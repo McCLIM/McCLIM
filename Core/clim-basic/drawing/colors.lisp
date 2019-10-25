@@ -17,6 +17,11 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
+;;; To regenerate this file use a function defined in the file
+;;; Tools/generate-named-colors.lisp. Notice, that colors +white+ and
+;;; +black+ are defined in design.lisp, so they should be removed from
+;;; the generated file. -- jd 2019-10-25
+
 (in-package :clim-internals)
 
 ; $XConsortium: rgb.txt,v 10.41 94/02/20 18:39:36 rws Exp $
