@@ -411,14 +411,12 @@
   (with-slots (device-region) sheet
     (unless device-region
       (setf device-region
-            (let ((medium (sheet-medium sheet)))
+            (if-let ((medium (sheet-medium sheet)))
               (region-intersection
                (sheet-native-region sheet)
-               (if medium
-                   (transform-region
-                    (sheet-device-transformation sheet)
-                    (medium-clipping-region medium))
-                   +everywhere+)))))
+               (transform-region (sheet-device-transformation sheet)
+                                 (medium-clipping-region medium)))
+              (sheet-native-region sheet))))
     device-region))
 
 (defmethod invalidate-cached-transformations ((sheet basic-sheet))
