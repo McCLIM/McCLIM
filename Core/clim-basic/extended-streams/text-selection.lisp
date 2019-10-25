@@ -166,10 +166,10 @@
       (repaint-markings pane old-markings (slot-value pane 'markings)))))
 
 (defun shift-rl-click-event-p (event)
-  (let ((b (pointer-event-button event)))
-    (and (eql (event-modifier-state event) +shift-key+)
-         (or (eql b +pointer-left-button+)
-             (eql b +pointer-right-button+)))))
+  (and (eql (event-modifier-state event) +shift-key+)
+       (let ((button (pointer-event-button event)))
+         (or (eql button +pointer-left-button+)
+             (eql button +pointer-right-button+)))))
 
 (defmethod dispatch-event :around ((pane text-selection-mixin)
                                    (event pointer-button-press-event))
@@ -179,18 +179,19 @@
 
 (defmethod dispatch-event :around ((pane text-selection-mixin)
                                    (event pointer-button-release-event))
-  (if (shift-rl-click-event-p event)
-      (eos/shift-release pane event)
-      (call-next-method)))
+  (with-slots (dragging-p) pane
+    (if (and (shift-rl-click-event-p event)
+             dragging-p)
+        (eos/shift-release pane event)
+        (call-next-method))))
 
 (defmethod dispatch-event :around ((pane text-selection-mixin)
                                    (event pointer-motion-event))
-  (with-slots (point-1-x dragging-p) pane
-    (if (eql (event-modifier-state event) +shift-key+)
-        (when dragging-p
-          (eos/shift-drag pane event))
+  (with-slots (dragging-p) pane
+    (if (and (eql (event-modifier-state event) +shift-key+)
+             dragging-p)
+        (eos/shift-drag pane event)
         (call-next-method))))
-
 
 (defun pane-clear-markings (pane &optional time)
   (declare (ignore time))
@@ -198,7 +199,7 @@
                     (setf (slot-value pane 'markings) nil))
   (release-selection pane :primary t)
   (release-selection pane :local-selection t))
- 
+
 (defun repaint-markings (pane old-markings new-markings)
   (let ((old-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) old-markings)
                             :initial-value +nowhere+))
@@ -206,7 +207,7 @@
                             :initial-value +nowhere+)))
     (handle-repaint pane (region-exclusive-or old-region new-region))))
 
-(defun map-over-text (record function)  
+(defun map-over-text (record function)
   (cond ((typep record 'standard-text-displayed-output-record)
          (with-slots (strings baseline max-height start-y wrapped x1 y1) record
            (loop for substring in strings do
@@ -255,7 +256,7 @@
           (start-record (fifth (cadar lines)))
           (end-i 0)
           (end-record (fifth (cadar (last lines)))))
-      
+
       (loop for chunk in (cdr (first lines)) do
         (destructuring-bind (x y string ts record full-record) chunk
           (declare (ignorable x y string ts record full-record))
