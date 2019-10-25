@@ -31,11 +31,11 @@
 
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))
-   (margins :initform '(:left   (:relative 0)
-                        :top    (:relative 0)
-                        :right  (:relative 0)
-                        :bottom (:relative 0))
-            :accessor stream-text-margins :type margin-spec)))
+   (margins :accessor stream-text-margins :type margin-spec))
+  (:default-initargs :text-margins '(:left   (:relative 0)
+                                     :top    (:relative 0)
+                                     :right  (:relative 0)
+                                     :bottom (:relative 0))))
 
 (defmethod initialize-instance :after ((instance standard-page-layout)
                                        &key text-margins text-margin)
@@ -50,7 +50,7 @@
                        `(:absolute ,text-margin)
                        `(:relative 0)))
     (thunk :bottom `(:relative 0))
-    (setf (stream-text-margins instance) text-margins)))
+    (setf (slot-value instance 'margins) text-margins)))
 
 (defgeneric stream-cursor-initial-position (stream)
   (:documentation "Returns two values: x and y initial position for a cursor on page.")
