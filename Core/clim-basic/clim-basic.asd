@@ -12,9 +12,8 @@
   ((:file "setf-star")
    (:file "decls" :depends-on ("setf-star"))
    (:file "protocol-classes" :depends-on ("decls"))
-   (:file "multiprocessing" :depends-on ("decls")) ; legacy mp backends are in Lisp-Dep/mp-*.lisp
+   (:file "multiprocessing" :depends-on ("decls"))
    (:file "utils" :depends-on ("decls" "multiprocessing"))
-   (:file "dead-keys" :depends-on ("decls"))
    (:module "geometry"
     :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "setf-star")
     :serial t
@@ -44,11 +43,14 @@
                  (:file "pattern"  :depends-on ("design"))
                  (:file "medium"   :depends-on ("design" "colors"))
                  (:file "graphics" :depends-on ("design" "medium"))))
-   (:file "views" :depends-on ("utils" "protocol-classes"))
-   (:file "text-formatting" :depends-on ("utils" "protocol-classes"))
-   (:file "stream-output" :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "views" "windowing" "geometry" "drawing" "setf-star"))
-   (:file "recording" :depends-on ("decls" "protocol-classes" "multiprocessing" "windowing" "drawing" "utils" "stream-output"))
-   (:file "encapsulate" :depends-on ("decls" "protocol-classes" "multiprocessing" "windowing" "drawing" "utils" "stream-output" "recording"))
-   (:file "stream-input" :depends-on ("decls" "protocol-classes" "multiprocessing" "windowing" "encapsulate" "utils" "dead-keys"))
-   (:file "pointer-tracking" :depends-on ("decls" "protocol-classes" "windowing" "stream-output" "stream-input"))
-   (:file "text-selection" :depends-on ("decls" "protocol-classes" "multiprocessing" "drawing" "windowing" "stream-output" "recording" "geometry"))))
+   (:module "extended-streams"
+    :depends-on ("setf-star" "decls" "utils" "protocol-classes" "multiprocessing" "geometry" "windowing" "drawing")
+    :components ((:file "text-formatting") ; standard-page-layout
+                 (:file "views")           ; stream-default-view
+                 (:file "dead-keys")       ; dead-key merging
+                 (:file "stream-output"    :depends-on ("text-formatting" "views"))
+                 (:file "recording"        :depends-on ("stream-output"))
+                 (:file "text-selection"   :depends-on ("recording"))
+                 (:file "encapsulate"      :depends-on ("stream-output" "recording"))
+                 (:file "stream-input"     :depends-on ("encapsulate" "dead-keys"))
+                 (:file "pointer-tracking" :depends-on ("stream-output" "stream-input"))))))
