@@ -90,49 +90,30 @@
       (declare (dynamic-extent #',fn))
       (invoke-with-sheet-medium-bound #',fn ,medium ,sheet))))
 
-(defgeneric invoke-with-sheet-medium-bound (continuation medium sheet))
-
-(defmethod invoke-with-sheet-medium-bound
-    (continuation (medium null) (sheet permanent-medium-sheet-output-mixin))
-  (funcall continuation (sheet-medium sheet)))
-
-; BTS added this. CHECKME
-(defmethod invoke-with-sheet-medium-bound
-    (continuation (medium null) (sheet mirrored-pixmap))
-  (funcall continuation (pixmap-medium sheet)))
-
-(defmethod invoke-with-sheet-medium-bound
-    (continuation (medium null) (sheet temporary-medium-sheet-output-mixin))
-  (let ((old-medium (sheet-medium sheet))
-        (new-medium (allocate-medium (port sheet) sheet)))
-    (unwind-protect
-         (progn
-           (engraft-medium new-medium (port sheet) sheet)
-           (setf (%sheet-medium sheet) new-medium)
-           (funcall continuation new-medium))
-      (setf (%sheet-medium sheet) old-medium)
-      (degraft-medium new-medium (port sheet) sheet)
-      (deallocate-medium (port sheet) new-medium))))
-
-;;; The description of WITH-SHEET-MEDIUM-BOUND in the spec, seems to be
-;;; extremly bogus, what is its purpose?
-
-(defmethod invoke-with-sheet-medium-bound
-    (continuation (medium basic-medium) (sheet permanent-medium-sheet-output-mixin))
-  ;; this seems to be extremly bogus to me.
-  (funcall continuation medium))
-
-(defmethod invoke-with-sheet-medium-bound
-    (continuation (medium basic-medium) (sheet temporary-medium-sheet-output-mixin))
-  (cond ((not (null (sheet-medium sheet)))
-         (funcall continuation medium))
-        (t
-         (let ((old-medium (sheet-medium sheet))
-               (new-medium medium))
-           (unwind-protect
-                (progn
-                  (engraft-medium new-medium (port sheet) sheet)
-                  (setf (%sheet-medium sheet) new-medium)
-                  (funcall continuation new-medium))
-             (setf (%sheet-medium sheet) old-medium)
-             (degraft-medium new-medium (port sheet) sheet) )))))
+(defgeneric invoke-with-sheet-medium-bound (continuation medium sheet)
+  (:argument-precedence-order sheet medium continuation)
+  (:method (continuation medium sheet)
+    (funcall continuation medium))
+  (:method (continuation medium (sheet permanent-medium-sheet-output-mixin))
+    (funcall continuation (sheet-medium sheet)))
+  (:method (continuation medium (sheet temporary-medium-sheet-output-mixin))
+    (if-let ((sheet-medium (sheet-medium sheet)))
+      (funcall continuation sheet-medium)
+      (let ((port (port sheet)))
+        (if (null medium)
+            (let ((new-medium (allocate-medium port sheet)))
+              (unwind-protect
+                   (progn
+                     (engraft-medium new-medium port sheet)
+                     (setf (%sheet-medium sheet) new-medium)
+                     (funcall continuation new-medium))
+                (setf (%sheet-medium sheet) nil)
+                (degraft-medium new-medium port sheet)
+                (deallocate-medium port new-medium)))
+            (unwind-protect
+                 (progn
+                   (engraft-medium medium port sheet)
+                   (setf (%sheet-medium sheet) medium)
+                   (funcall continuation medium))
+              (setf (%sheet-medium sheet) nil)
+              (degraft-medium medium port sheet)))))))

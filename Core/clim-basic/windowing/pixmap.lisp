@@ -28,8 +28,8 @@
 (defgeneric pixmap-mirror (mirrored-pixmap))
 (defgeneric allocate-pixmap (sheet width height))
 (defgeneric deallocate-pixmap (pixmap))
-(defgeneric copy-to-pixmap (medium medium-x medium-y width height 
-			    &optional pixmap pixmap-x pixmap-y))
+(defgeneric copy-to-pixmap (medium medium-x medium-y width height
+                            &optional pixmap pixmap-x pixmap-y))
 (defgeneric copy-from-pixmap (pixmap from-x from-y width height
                               medium medium-x medium-y))
 (defgeneric copy-area (medium from-x from-y width height to-x to-y))
@@ -53,12 +53,16 @@
 (defmethod invalidate-cached-regions ((sheet mirrored-pixmap))
   (values))
 
+(defmethod invoke-with-sheet-medium-bound
+    (continuation medium (sheet mirrored-pixmap))
+  (funcall continuation (pixmap-medium sheet)))
+
 ;;;; BTS stopped adding. ^-- CHECKME
 
 (defmethod initialize-instance :after ((pixmap mirrored-pixmap) &rest args)
   (declare (ignore args))
   (with-slots (width height region) pixmap
-     (setf region (make-bounding-rectangle 0 0 width height))))
+    (setf region (make-bounding-rectangle 0 0 width height))))
 
 (defmethod pixmap-mirror ((pixmap mirrored-pixmap))
   (port-lookup-mirror (port pixmap) pixmap))

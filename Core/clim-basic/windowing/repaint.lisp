@@ -93,8 +93,8 @@
     (everywhere-region
      (call-next-method))
     (otherwise
-     (let ((medium (sheet-medium sheet)))
-       (with-drawing-options (medium :clipping-region region)
+     (with-sheet-medium (medium sheet)
+       (letf (((medium-clipping-region medium) region))
          (call-next-method))))))
 
 (defmethod repaint-sheet ((sheet basic-sheet) region)
@@ -232,13 +232,13 @@
                                                                                   (sheet-region sheet)))))))
     (let* ((parent (sheet-mirrored-ancestor sheet))
            (native-sheet-region (effective-repaint-region parent sheet region)))
-          (with-sheet-medium (medium parent)
-            (with-drawing-options (medium :clipping-region native-sheet-region
-                                          :ink (pane-background sheet)
-                                          :transformation +identity-transformation+)
-              (with-bounding-rectangle* (left top right bottom)
-                  native-sheet-region
-                (medium-draw-rectangle* medium left top right bottom t)))))))
+      (with-sheet-medium (medium parent)
+        (letf (((medium-clipping-region medium) native-sheet-region)
+               ((medium-background medium) (pane-background parent))
+               ((medium-transformation medium) +identity-transformation+))
+          (with-bounding-rectangle* (left top right bottom)
+              native-sheet-region
+            (medium-clear-area medium left top right bottom)))))))
 
 ;;; Integration with region and transformation changes
 
