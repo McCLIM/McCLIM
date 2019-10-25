@@ -93,6 +93,7 @@
     (everywhere-region
      (call-next-method))
     (otherwise
+     (call-next-method)
      (with-sheet-medium (medium sheet)
        (letf (((medium-clipping-region medium) region))
          (call-next-method))))))

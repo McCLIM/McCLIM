@@ -125,7 +125,7 @@ infinite recursion on (setf sheet-*).")
       ;; and has exact position set (thanks to not being managed by WM).
       (unless (and (typep sheet 'top-level-sheet-mixin)
                    (null (typep sheet 'unmanaged-sheet-mixin)))
-       (port-set-mirror-transformation port mirror MT)))
+        (port-set-mirror-transformation port mirror MT)))
     (when invalidate-transformations
       (with-slots (native-transformation device-transformation) sheet
         (setf native-transformation nil
