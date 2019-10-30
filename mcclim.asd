@@ -101,7 +101,8 @@ interface management system."
                              (:file "input-editing")
                              (:file "commands")
                              (:file "presentations")
-                             (:file "text-selection"))))
+                             (:file "text-selection")
+                             (:file "text-formatting"))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
 

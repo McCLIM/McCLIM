@@ -1452,6 +1452,27 @@ outside the clipping area should be grey.")
     (format stream "~&We all live in a yellow subroutine.~%")
     (format stream "~&We all live in a yellow subroutine.~%")))
 
+(define-drawing-test "Text" "Crossing out" (frame stream)
+    ""
+  (declare (ignore frame))
+  (with-text-family (stream :sans-serif)
+    (format stream "~&We all live in a yellow subroutine.~%")
+    (format stream "~&We ")
+    (surrounding-output-with-border (stream :shape :crossout
+                                            :line-thickness 2
+                                            :move-cursor nil)
+      (format stream "all live"))
+    (format stream " in a yellow subroutine.~%")
+    (format stream "~&We ")
+    (surrounding-output-with-border (stream :shape :crossout
+                                            :ink +red+
+                                            :line-dashes t
+                                            :move-cursor nil)
+      (format stream "all live"))
+    (format stream " in a yellow subroutine.~%")
+    (format stream "~&We all live in a yellow subroutine.~%")
+    (format stream "~&We all live in a yellow subroutine.~%")))
+
 (define-drawing-test "Text" "Fonts" (frame stream)
     ""
   (declare (ignore frame))

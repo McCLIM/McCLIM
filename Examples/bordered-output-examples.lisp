@@ -45,6 +45,8 @@
                                     :background +white+)
 			      (list :underline :ink +red+ :line-thickness 2)
                               (list :underline :ink +red+ :line-dashes t)
+                              (list :crossout :ink +red+ :line-thickness 2)
+                              (list :crossout :ink +red+ :line-dashes t)
                               (list :rectangle
                                     :ink +gray50+
                                     :background +white+

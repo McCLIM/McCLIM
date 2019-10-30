@@ -20,33 +20,47 @@
 
 (defun valid-margin-spec-p (margins)
   (ignore-errors ; destructuring-bind may error; that yields invalid spec
-    (destructuring-bind (&key left top right bottom) margins
-      (flet ((margin-spec-p (m)
-               (and (member (first m) '(:absolute :relative))
-                    (not (null (second m))))))
-        (every #'margin-spec-p (list left top right bottom))))))
+   (destructuring-bind (&key left top right bottom) margins
+     (flet ((margin-spec-p (margin)
+              (destructuring-bind (anchor value) margin
+                (and (member anchor '(:relative :absolute))
+                     (realp value)))))
+       (every #'margin-spec-p (list left top right bottom))))))
 
 (deftype margin-spec ()
   `(satisfies valid-margin-spec-p))
 
+(defun normalize-margin-spec (plist defaults)
+  (loop with plist = (copy-list plist)
+        for edge in '(:left :top :right :bottom)
+        for value = (getf plist edge)
+        do
+           (typecase value
+             (null (setf (getf plist edge) (getf defaults edge)))
+             (atom (setf (getf plist edge) `(:relative ,value)))
+             (list #| do nothing |#))
+        finally
+           (check-type plist margin-spec)
+           (return plist)))
+
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))
-   (margins :initform '(:left   (:absolute 0)
-                        :top    (:absolute 0)
-                        :right  (:relative 0)
-                        :bottom (:relative 0))
-            :accessor stream-text-margins :type margin-spec)))
+   (margins :accessor stream-text-margins :type margin-spec))
+  (:default-initargs :text-margins '(:left   (:relative 0)
+                                     :top    (:relative 0)
+                                     :right  (:relative 0)
+                                     :bottom (:relative 0))))
 
 (defmethod initialize-instance :after ((instance standard-page-layout)
                                        &key text-margins text-margin)
-  (macrolet ((thunk (edge default)
-               `(unless (getf text-margins ,edge)
-                  (setf (getf text-margins ,edge) ,default))))
-    (thunk :left   '(:absolute 0))
-    (thunk :top    '(:absolute 0))
-    (thunk :right  (or text-margin '(:relative 0)))
-    (thunk :bottom '(:relative 0))
-    (setf (stream-text-margins instance) text-margins)))
+  (let ((right-margin (if text-margin
+                          `(:absolute ,text-margin)
+                          `(:relative 0))))
+    (setf (slot-value instance 'margins)
+          (normalize-margin-spec text-margins `(:left   (:relative 0)
+                                                :top    (:relative 0)
+                                                :right  ,right-margin
+                                                :bottom (:relative 0))))))
 
 (defgeneric stream-cursor-initial-position (stream)
   (:documentation "Returns two values: x and y initial position for a cursor on page.")
@@ -72,10 +86,10 @@
           (y2 (* 43 (text-style-height (stream-text-style stream) stream))))
       (setf sheet-region (make-rectangle* 0 0 x2 y2))))
   (with-bounding-rectangle* (x1 y1 x2 y2) sheet-region
-    (macrolet ((thunk (margin edge sign direction)
+    (macrolet ((thunk (margin edge sign orientation)
                  `(if (eql (first ,margin) :absolute)
-                      (parse-space stream (second ,margin) ,direction)
-                      (,sign ,edge (parse-space stream (second ,margin) ,direction)))))
+                      (parse-space stream (second ,margin) ,orientation)
+                      (,sign ,edge (parse-space stream (second ,margin) ,orientation)))))
       (destructuring-bind (&key left top right bottom) (stream-text-margins stream)
         (setf (%page-region stream)
               (make-rectangle* (thunk left   x1 + :horizontal)
@@ -90,15 +104,7 @@
 (defmethod (setf stream-text-margins) :around
     (new-margins (stream standard-page-layout)
      &aux (old-margins (stream-text-margins stream)))
-  (macrolet ((thunk (edge)
-               `(unless (getf new-margins ,edge)
-                  (setf (getf new-margins ,edge)
-                        (getf old-margins ,edge)))))
-    (thunk :left)
-    (thunk :top)
-    (thunk :right)
-    (thunk :bottom))
-  (check-type new-margins margin-spec)
+  (setf new-margins (normalize-margin-spec new-margins old-margins))
   (unless (equal new-margins old-margins)
     (call-next-method new-margins stream)
     (slot-unbound (class-of stream) stream '%page-region)))
