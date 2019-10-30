@@ -22,7 +22,10 @@
 (test smoke
   "Smoke test for the raster image backend."
 
-  (finishes
-    (mcclim-raster-image:with-output-to-raster-image-file
-        (stream "raster-image-test.png")
-      (clim-test-util:print-test-page stream))))
+  (loop for i from 1
+        for filename = (format nil "raster-image-test-~D.png" i)
+        for page in clim-test-util:*all-test-pages*
+        do (finishes
+             (mcclim-raster-image:with-output-to-raster-image-file
+                 (stream filename)
+               (funcall page stream)))))

@@ -22,12 +22,22 @@
 (test smoke
   "Smoke test for the PostScript backend."
 
-  (finishes
-    (with-open-file (stream "postscript-test.ps" :direction :output
-                                                 :if-does-not-exist :create
-                                                 :if-exists :supersede)
-      (clim-postscript:with-output-to-postscript-stream (stream stream)
-        (clim-test-util:print-test-page stream)))))
+  (flet ((invoke-with-postscript-stream (continuation
+                                         &key filename title scale-to-fit)
+           (with-open-file (stream filename :direction :output
+                                            :if-does-not-exist :create
+                                            :if-exists :supersede)
+             (clim-postscript:with-output-to-postscript-stream
+                 (stream stream :header-comments `(:title ,title)
+                                :scale-to-fit scale-to-fit)
+               (funcall continuation stream)))))
+    (loop for i from 1
+          for filename = (format nil "postscript-test-~D.ps" i)
+          for title = (format nil "Test Page ~D" i)
+          for page in clim-test-util:*all-test-pages*
+          do (finishes
+               (invoke-with-postscript-stream
+                page :filename filename :title title)))))
 
 (defun invoke-with-output-file (write-continuation read-continuation filename)
   (unwind-protect

@@ -48,14 +48,14 @@
       (with-output-recording-options (stream :record t :draw nil)
         (funcall continuation stream)
         (new-page stream))
-      (with-slots (file-stream title for orientation paper) stream
+      (with-slots (file-stream title author subject) stream
         (let ((flexi-stream
                 (flexi-streams:make-flexi-stream
                  file-stream
                  :external-format :latin-1))
               (pdf:*compress-streams* nil))
           (with-output-recording-options (stream :draw t :record nil)
-            (pdf:with-document ()
+            (pdf:with-document (:title title :author author :subject subject)
               (let ((last-page (first (pdf-pages stream))))
                 (dolist (page (reverse (pdf-pages stream)))
                   (let* ((page-region (if trim-page-to-output-size

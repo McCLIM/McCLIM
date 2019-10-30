@@ -13,7 +13,6 @@
      (:file "address-book")
      (:file "traffic-lights")
      (:file "clim-fig")
-     (:file "postscript-test")
      (:file "puzzle")
      (:file "transformations-test")
      (:file "town-example")

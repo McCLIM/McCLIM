@@ -95,7 +95,7 @@
           (flet ((try ()
                    (let ((record (with-output-to-output-record (stream)
                                    (funcall continuation stream))))
-                     ;; FIXME Enlarging the space requirements a bits
+                     ;; FIXME Enlarging the space requirements a bit
                      ;; is needed to prevent things from getting
                      ;; clipped.
                      (change-space-requirements
@@ -114,7 +114,7 @@
             (try)
             (when (eq width :compute)
               (try)))
-          (change-space-requirements stream))
+          (change-space-requirements stream :width width :height height))
 
       (with-output-recording-options (stream :record recording-p :draw t)
         (funcall continuation stream)
