@@ -18,31 +18,6 @@
 ;;;
 (in-package :clim-internals)
 
-(defun valid-margin-spec-p (margins)
-  (ignore-errors ; destructuring-bind may error; that yields invalid spec
-   (destructuring-bind (&key left top right bottom) margins
-     (flet ((margin-spec-p (margin)
-              (destructuring-bind (anchor value) margin
-                (and (member anchor '(:relative :absolute))
-                     (realp value)))))
-       (every #'margin-spec-p (list left top right bottom))))))
-
-(deftype margin-spec ()
-  `(satisfies valid-margin-spec-p))
-
-(defun normalize-margin-spec (plist defaults)
-  (loop with plist = (copy-list plist)
-        for edge in '(:left :top :right :bottom)
-        for value = (getf plist edge)
-        do
-           (typecase value
-             (null (setf (getf plist edge) (getf defaults edge)))
-             (atom (setf (getf plist edge) `(:relative ,value)))
-             (list #| do nothing |#))
-        finally
-           (check-type plist margin-spec)
-           (return plist)))
-
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))
    (margins :accessor stream-text-margins :type margin-spec))

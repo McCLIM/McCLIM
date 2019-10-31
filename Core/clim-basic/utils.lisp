@@ -538,20 +538,47 @@ STREAM in the direction DIRECTION."
                     (:vertical   (values 0 1))))
               (/ value (sqrt (+ (* dx dx) (* dy dy))))))))))))
 
+(defun valid-margin-spec-p (margins)
+  (ignore-errors ; destructuring-bind may error; that yields invalid spec
+   (destructuring-bind (&key left top right bottom) margins
+     (flet ((margin-spec-p (margin)
+              (destructuring-bind (anchor value) margin
+                (and (member anchor '(:relative :absolute))
+                     ;; Value must be a valid argument to PARSE-SPACE,
+                     ;; not necessarily a number. -- jd 2019-10-31
+                     (typep value 'space-spec)))))
+       (every #'margin-spec-p (list left top right bottom))))))
+
+(deftype margin-spec ()
+  `(satisfies valid-margin-spec-p))
+
+(defun normalize-margin-spec (plist defaults)
+  (loop with plist = (copy-list plist)
+        for edge in '(:left :top :right :bottom)
+        for value = (getf plist edge)
+        do
+           (typecase value
+             (null (setf (getf plist edge) (getf defaults edge)))
+             (atom (setf (getf plist edge) `(:relative ,value)))
+             (list #| do nothing |#))
+        finally
+           (check-type plist margin-spec)
+           (return plist)))
+
 (defun delete-1 (item list &key (test #'eql) (key #'identity))
   "Delete 1 ITEM from LIST. Second value is T if item was deleted."
   (loop
-     for tail on list
-       and tail-prev = nil then tail
-     for (list-item) = tail
-     if (funcall test item (funcall key list-item))
-       do (return-from delete-1
-	    (if tail-prev
-		(progn
-		  (setf (cdr tail-prev) (cdr tail))
-		  (values list t))
-		(values (cdr tail) t)))
-     finally (return (values list nil))))
+    for tail on list
+    and tail-prev = nil then tail
+    for (list-item) = tail
+    if (funcall test item (funcall key list-item))
+      do (return-from delete-1
+	   (if tail-prev
+	       (progn
+		 (setf (cdr tail-prev) (cdr tail))
+		 (values list t))
+	       (values (cdr tail) t)))
+    finally (return (values list nil))))
 
 (defun rebind-arguments (arg-list)
   "Create temporary variables for non keywords in a list of
