@@ -23,6 +23,27 @@ to the supplied `pane` argument.
   (format t "hi2"))
 ```
 
+### Defining application frames
+
+`defapp name-and-opts args &body body`
+
+Works like defun except that function starts the application frame and
+executes the body as the frame display-function (when the frame is
+redisplayed body will be run again). Binds `clim:*application-frame*`
+and `*standard-output*`. All function arguments are available for the
+display function. First argument may be a list, then first element is
+a name and the rest are parameters used when creating the application
+pane.
+
+```common-lisp
+(defapp (example :text-margins `(:left 20 :top 10 :right 20 :bottom 10))
+    (x y z)
+  (clim:draw-rectangle* *standard-output* x y (+ x 100) (+ y 200))
+  (format t "~&Z is ~s" z))
+
+(example 100 100 "jackdaniel")
+```
+
 ### Tables
 
 `with-table (&optional pane &rest options) &body body`
