@@ -76,3 +76,17 @@ Example:
           (slim:cell (princ "Extra:"))
           (slim:cell (format t "~A" 'quux)))))))
 ```
+
+### Sheet and output-record protocols unification
+
+Sheet and output record have separate protocols doing the same thing
+for them. We provide a unified protocol which spans them with this
+regard.
+
+| unified function  | sheet function          | output-record function      |
+|-------------------|-------------------------|-----------------------------|
+| slim:parent       | clim:sheet-parent       | clim:output-record-parent   |
+| slim:children     | clim:sheet-children     | clim:output-record-children |
+| slim:add-child    | clim:sheet-adopt-child  | clim:add-output-record      |
+| slim:delete-child | clim:sheet-disown-child | clim:delete-output-record   |
+| slim:repaint      | clim:repaint-sheet      | clim:replay-output-record   |
