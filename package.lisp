@@ -1926,6 +1926,7 @@
    #:stream-cursor-final-position
    #:stream-page-region
    #:stream-text-margins
+   #:stream-line-width
    #:with-temporary-margins
    #:invoke-with-temporary-page
    ;; designs and patterns
