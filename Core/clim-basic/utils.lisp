@@ -468,10 +468,27 @@ in KEYWORDS removed."
 
 ;;;; ----------------------------------------------------------------------
 
+;;; FIXME valid space specification format is described in the section
+;;; describing a FORMATTING-TABLE macro. This should be generalized
+;;; for other possible space definitions and described in a separate
+;;; section. This functionality partially overlaps with a space
+;;; specification format described for the layout macros like
+;;; VERTICALLY, We should scram a superset of both in PARSE-SPACE and
+;;; add a special handling for the non-stream panes. -- jd 2019-11-02
+
+(deftype space-spec ()
+  `(or real
+       string
+       character
+       function
+       (cons real
+             (cons (member :character :line :point :pixel :mm)
+                   null))))
+
 (defun parse-space (stream specification direction)
   "Returns the amount of space given by SPECIFICATION relating to the
 STREAM in the direction DIRECTION."
-  ;; This implementation lives unter the assumption that an
+  ;; This implementation lives under the assumption that an
   ;; extended-output stream is also a sheet and has a graft.
   ;; --GB 2002-08-14
   (etypecase specification
@@ -481,7 +498,6 @@ STREAM in the direction DIRECTION."
                              (ecase direction
                                (:horizontal width)
                                (:vertical height))))
-    #+nil ; WITH-OUTPUT-TO-OUTPUT-RECORD not yet defined as a macro
     (function (let ((record (with-output-to-output-record (stream)
                               (funcall specification))))
                 (ecase direction
@@ -492,17 +508,21 @@ STREAM in the direction DIRECTION."
          specification
        (ecase unit
          (:character
-          (* value (stream-character-width stream #\M)))
+          (ecase direction
+            (:horizontal (* value (stream-character-width stream #\M)))
+            (:vertical   (* value (stream-line-height stream)))))
          (:line
-          (* value (stream-line-height stream)))
+          (ecase direction
+            (:horizontal (* value (stream-line-width stream)))
+            (:vertical   (* value (stream-line-height stream)))))
          ((:point :pixel :mm)
           (let* ((graft (graft stream))
                  (gunit (graft-units graft)))
             ;; mungle specification into what grafts talk about
             (case unit
-              ((:point)  (setf value (/ value 72) unit :inches))
-              ((:pixel)  (setf unit :device))
-              ((:mm)     (setf unit :millimeters)))
+              ((:point) (setf value (/ value 72) unit :inches))
+              ((:pixel) (setf unit :device))
+              ((:mm)    (setf unit :millimeters)))
             ;;
             (multiple-value-bind (dx dy)
                 (multiple-value-call
