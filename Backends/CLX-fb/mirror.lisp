@@ -96,7 +96,7 @@
                         (locally (declare (type (unsigned-byte 32) min-x min-y max-x max-y))
                           (loop :for y :of-type alexandria:array-index :from min-y :below max-y
                                 :do (loop :for x :of-type alexandria:array-index :from min-x :below max-x
-                                          :do (setf (aref x-pixels y x) (aref pixels y x))))))))))))
+                                          :do (setf (aref x-pixels y x) (logand (logior #xc0c0c0 (random #xffffff)) (aref pixels y x)))))))))))))
       (map-over-region-set-regions fn dirty-r))))
 
 (defmethod image-mirror-to-x ((sheet clx-fb-mirror))
