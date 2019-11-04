@@ -516,6 +516,9 @@ window associated with it."))
 (defgeneric stream-text-margin (stream))
 (defgeneric (setf stream-text-margin) (margin stream))
 (defgeneric stream-line-height (stream &key text-style))
+(defgeneric stream-line-width (stream)
+  (:documentation "McCLIM extension which returns a space between left
+and right margin for text output."))
 (defgeneric stream-vertical-spacing (stream))
 (defgeneric stream-baseline (stream))
 

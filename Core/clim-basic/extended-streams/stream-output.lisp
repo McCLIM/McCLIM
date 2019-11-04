@@ -432,6 +432,9 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
                         (sheet-medium stream))
      (stream-vertical-spacing stream)))
 
+(defmethod stream-line-width ((stream standard-extended-output-stream))
+  (bounding-rectangle-width (stream-page-region stream)))
+
 (defmethod stream-line-column ((stream standard-extended-output-stream))
   (let ((line-width (- (stream-cursor-position stream)
                        (stream-cursor-initial-position stream))))
