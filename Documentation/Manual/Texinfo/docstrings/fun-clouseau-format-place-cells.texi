@@ -1,9 +1,9 @@
 @anchor{Function clouseau:format-place-cells}
 @deffn {Function} {@symbol{format-place-cells,clouseau}} stream object place-class cell &key label label-style place-style object-style
-Present @var{object}'s child selected by @var{place-class} and @var{cell} to @var{stream}.
+Present the child of @var{object} selected by @var{place-class} and @var{cell} to @var{stream}.
 
-Retrieve an existing place instance for @var{object}'s child selected by
-@var{place-class} and @var{cell} or make a new instance of
+Retrieve an existing place instance for the child of @var{object}
+selected by @var{place-class} and @var{cell} or make a new instance of
 @var{place-class}.
 
 Each of the following is written to @var{stream} within a separate
@@ -26,8 +26,8 @@ presentation type @class{clouseau:place}.
 @var{place-style} works like @var{label-style}.
 
 @item
-@var{object}'s child selected by @var{place-class} and @var{cell} is
-inspected using @genfunref{clouseau:inspect-place}.
+The child of @var{object} selected by @var{place-class} and @var{cell}
+is inspected using @genfunref{clouseau:inspect-place}.
 
 @var{object-style} works like @var{label-style}.
 @end enumerate

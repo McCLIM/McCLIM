@@ -27,7 +27,7 @@
   2. Circular structure should not pose a problem. Circular structure
      should be explorable in a step-wise fashion. A command to expand
      one object should never lead to an attempt to display an infinite
-     amount of objects.
+     number of objects.
 
      The previous inspector architecture mitigated potential problems
      with circular structure to some degree by placing objects being

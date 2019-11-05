@@ -309,7 +309,7 @@
 
     (with-section (stream) "Initargs"
       (let (initargs)
-        (with-placeholder-if-emtpy (stream)
+        (with-placeholder-if-empty (stream)
           ((not finalizedp)
            "Not finalized - initargs not available~%")
           ((not (setf initargs (c2mop:class-default-initargs object)))
@@ -320,7 +320,7 @@
 
     (with-section (stream) "Effective slots"
       (let (slots)
-        (with-placeholder-if-emtpy (stream)
+        (with-placeholder-if-empty (stream)
           ((not finalizedp)
            "Not finalized - effective slots not available~%")
           ((not (setf slots (c2mop:class-slots object)))
@@ -332,7 +332,7 @@
 
   (with-section (stream) "Specializer usage"
     (let ((methods (c2mop:specializer-direct-methods object)))
-      (with-placeholder-if-emtpy (stream)
+      (with-placeholder-if-empty (stream)
         ((not methods)
          "Not used as a specializer~%")
         (t

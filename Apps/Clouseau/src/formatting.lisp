@@ -140,7 +140,7 @@
             test-thunks empty-thunks)
       (funcall non-empty-thunk stream)))
 
-(defmacro with-placeholder-if-emtpy ((stream) &body clauses)
+(defmacro with-placeholder-if-empty ((stream) &body clauses)
   (check-type stream symbol)
   (loop :for (test . body) :in clauses
         :unless (eq test t)

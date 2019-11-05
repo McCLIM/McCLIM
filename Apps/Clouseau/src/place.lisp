@@ -41,7 +41,7 @@
                          (place     basic-place)
                          (thunk     function))
   ;; Lookup: container -> cell -> class
-  ;; * There will typically be a single container, so we an alist
+  ;; * There will typically be a single container, so we use an alist
   ;;   which will typically have a single entry.
   ;; * There can be many cells within a container, so we use a
   ;;   hash-table for that step.

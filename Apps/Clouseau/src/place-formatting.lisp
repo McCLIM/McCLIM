@@ -40,8 +40,8 @@
                             &body body)
   "Execute BODY with PRESENT-PLACE and PRESENT-OBJECT bound to print functions.
 
-Before executing BODY, an instance of PLACE-CLASS representing
-CONTAINER's child selected by PLACE-CLASS and CELL is created and
+Before BODY is executed, an instance of PLACE-CLASS representing the
+child of CONTAINER selected by PLACE-CLASS and CELL is created and
 stored in the place associated with CONTAINER unless such an instance
 already exists.
 
@@ -51,8 +51,8 @@ created place to the stream. The produced presentation will be of
 presentation-type `place'.
 
 PRESENT-OBJECT is bound to a function that, when called with a stream
-as its sole argument, outputs a presentation corresponding to
-CONTAINER's child selected by PLACE-CLASS and CELL.
+as its sole argument, outputs a presentation corresponding to the
+child of CONTAINER selected by PLACE-CLASS and CELL.
 
 Example:
 
@@ -91,10 +91,10 @@ outputs the name of SYMBOL as an immutable place to STREAM like this:
                                 label-style
                                 (place-style :slot-like)
                                 object-style)
-  "Present OBJECT's child selected by PLACE-CLASS and CELL to STREAM.
+  "Present the child of OBJECT selected by PLACE-CLASS and CELL to STREAM.
 
-Retrieve an existing place instance for OBJECT's child selected by
-PLACE-CLASS and CELL or make a new instance of PLACE-CLASS.
+Retrieve an existing place instance for the child of OBJECT selected
+by PLACE-CLASS and CELL or make a new instance of PLACE-CLASS.
 
 Each of the following is written to STREAM within a separate
 `clim:formatting-cell':
@@ -112,8 +112,8 @@ Each of the following is written to STREAM within a separate
 
    PLACE-STYLE works like LABEL-STYLE.
 
-3. OBJECT's child selected by PLACE-CLASS and CELL is inspected using
-   `clouseau:inspect-place'.
+3. The child of OBJECT selected by PLACE-CLASS and CELL is inspected
+   using `clouseau:inspect-place'.
 
    OBJECT-STYLE works like LABEL-STYLE.
 

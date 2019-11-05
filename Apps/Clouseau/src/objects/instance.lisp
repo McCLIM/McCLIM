@@ -143,7 +143,7 @@
 (defmethod inspect-slots ((object t) (style (eql :flat)) (stream t))
   (let* ((class (class-of object))
          (slots (c2mop:class-slots class)))
-    (with-placeholder-if-emtpy (stream)
+    (with-placeholder-if-empty (stream)
       ((null slots)
        "no slots")
       (t

@@ -71,7 +71,7 @@
 
   (let ((length (length object)))
     (with-section (stream) "Elements"
-      (with-placeholder-if-emtpy (stream)
+      (with-placeholder-if-empty (stream)
         ((zerop length)
          "no elements")
         (t
