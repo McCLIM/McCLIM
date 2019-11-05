@@ -149,6 +149,7 @@ User code normally does not have to define methods on this generic
 functions."))
 
 (defgeneric inspect-object-using-state (object state style stream)
+  (:argument-precedence-order state object style stream)
   (:documentation
    "Present OBJECT to STREAM according to STATE and STYLE.
 
