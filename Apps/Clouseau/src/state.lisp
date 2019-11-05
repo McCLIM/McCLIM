@@ -25,12 +25,17 @@
 (defvar *old-root-place* nil)
 
 (defclass inspector-state ()
-  ((%root-place  :accessor %root-place)
+  ((%root-place    :accessor %root-place)
    ;; Change hook
-   (%change-hook :initarg  :change-hook
-                 :type     list #|of function|#
-                 :accessor change-hook
-                 :initform '())))
+   (%change-hook   :initarg  :change-hook
+                   :type     list #|of function|#
+                   :accessor change-hook
+                   :initform '())
+   ;; Mainly for debugging
+   (%handle-errors :initarg  :handle-errors
+                   :type     boolean
+                   :accessor handle-errors
+                   :initform t)))
 
 (defmethod initialize-instance :after ((instance inspector-state)
                                        &key
