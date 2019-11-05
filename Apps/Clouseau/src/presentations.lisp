@@ -27,9 +27,10 @@
 
 ;;; Place presentations
 ;;;
-;;; These visually represent the in which an inspected object
-;;; resides. Also indicates whether the place can be changed (by
-;;; assigning a different value or removing the value).
+;;; Such a presentation visually represents the place in which an
+;;; inspected object resides. The presentation also indicates whether
+;;; the place can be changed (by assigning a different value or
+;;; removing the value).
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (define-presentation-type place ()))

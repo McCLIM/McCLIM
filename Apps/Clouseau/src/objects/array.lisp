@@ -205,7 +205,7 @@
                             :label "Fill pointer"))))
 
     (with-section (stream) "Elements"
-      (with-placeholder-if-emtpy (stream)
+      (with-placeholder-if-empty (stream)
         ((zerop length)
          "no elements")
         (t
@@ -254,7 +254,7 @@
         (inspect-displacement object stream)))
 
     (with-section (stream) "Elements"
-      (with-placeholder-if-emtpy (stream)
+      (with-placeholder-if-empty (stream)
         ((zerop length)
          "no elements")
         (t

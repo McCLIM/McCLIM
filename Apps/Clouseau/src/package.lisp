@@ -34,7 +34,7 @@
 
    #:with-style
    #:call-with-section                 #:with-section
-   #:call-with-placeholder-if-empty    #:with-placeholder-if-emtpy
+   #:call-with-placeholder-if-empty    #:with-placeholder-if-empty
    #:call-with-output-as-badge         #:with-output-as-badge
    #:badge
 

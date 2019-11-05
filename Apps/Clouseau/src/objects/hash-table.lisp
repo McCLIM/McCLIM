@@ -126,7 +126,7 @@
   (call-next-method)
 
   (with-section (stream) "Entries"
-    (with-placeholder-if-emtpy (stream)
+    (with-placeholder-if-empty (stream)
       ((zerop (hash-table-count object)) ; TODO don't call count twice
        "No entries~%")
       (t

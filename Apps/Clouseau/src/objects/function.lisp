@@ -140,7 +140,7 @@
 
   (write-char #\Space stream)
   (let ((name (function-name object)))
-    (with-placeholder-if-emtpy (stream)
+    (with-placeholder-if-empty (stream)
       ((not name) "no name")
       (t          (princ name stream)))))
 
@@ -187,7 +187,7 @@
                 (formatting-cell (stream) (write-string "Lambda list" stream))
                 (formatting-cell (stream) (present stream)))
               (formatting-cell (stream)
-                (with-placeholder-if-emtpy (stream)
+                (with-placeholder-if-empty (stream)
                   ((not lambda-list-p)
                    "not available")
                   (t
@@ -282,7 +282,7 @@
   ;; Methods
   (with-section (stream) "Methods"
     (let ((methods (c2mop:generic-function-methods object)))
-      (with-placeholder-if-emtpy (stream)
+      (with-placeholder-if-empty (stream)
         ((null methods)
          "No methods~%")
         (t

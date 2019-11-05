@@ -3,9 +3,9 @@
 Execute @var{body} with @var{present-place} and @var{present-object}
 bound to print functions.
 
-Before executing @var{body}, an instance of @var{place-class}
-representing @var{container}'s child selected by @var{place-class} and
-@var{cell} is created and stored in the place associated with
+Before @var{body} is executed, an instance of @var{place-class}
+representing the child of @var{container} selected by @var{place-class}
+and @var{cell} is created and stored in the place associated with
 @var{container} unless such an instance already exists.
 
 @var{present-place} is bound to a function that, when called with a
@@ -14,8 +14,8 @@ created place to the stream. The produced presentation will be of
 presentation-type @class{place}.
 
 @var{present-object} is bound to a function that, when called with a
-stream as its sole argument, outputs a presentation corresponding to
-@var{container}'s child selected by @var{place-class} and @var{cell}.
+stream as its sole argument, outputs a presentation corresponding to the
+child of @var{container} selected by @var{place-class} and @var{cell}.
 
 Example:
 

@@ -153,7 +153,7 @@
           (formatting-cell (stream) (write-string "Factors" stream))
           (formatting-cell (stream) (declare (ignore stream))))
         (formatting-cell (stream)
-          (with-placeholder-if-emtpy (stream)
+          (with-placeholder-if-empty (stream)
             ((not (prime-factors-p state))
              "Cowardly refusing to compute prime factors")
             (t
