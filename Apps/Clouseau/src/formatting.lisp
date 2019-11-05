@@ -131,7 +131,8 @@
          (t      title)))
     ,stream))
 
-(defun call-with-placeholder-if-empty (test-thunks empty-thunks non-empty-thunk stream)
+(defun call-with-placeholder-if-empty
+    (test-thunks empty-thunks non-empty-thunk stream)
   (or (some (lambda (test-thunk empty-thunk)
               (when (funcall test-thunk)
                 (with-style (stream :unbound)
@@ -141,19 +142,34 @@
       (funcall non-empty-thunk stream)))
 
 (defmacro with-placeholder-if-empty ((stream) &body clauses)
+  "Print normal output or a placeholder to STREAM according to CLAUSES.
+
+Each clause in CLAUSES is of the form (TEST . BODY) where TEST is a
+single form which tests the applicability of the clause for all but
+the final clause and TEST must be T for the final clause. BODY can
+either be a list of forms suitable for an implicit PROGN or a string.
+
+The body of the first clause the TEST of which evaluates to true or
+the body of the final clause will be executed to produce output on
+STREAM. Output produced by clauses other than the final one will use
+the :UNBOUND style."
   (check-type stream symbol)
-  (loop :for (test . body) :in clauses
-        :unless (eq test t)
+  (loop :for ((test . body) . rest) :on clauses
+        :for body-thunk = `(lambda (,stream)
+                             ,@(typecase body
+                                 ((cons string)
+                                  `((format ,stream ,(first body))))
+                                 (t
+                                  body)))
+        :when (and (not rest) (not (eq test t)))
+          :do (error "~@<Final clause must be of the form (T ~
+                      . BODY).~@:>")
+        :when rest
           :collect `(lambda () ,test) :into test-thunks
-          :and :collect `(lambda (,stream)
-                           ,@(typecase body
-                               ((cons string) `((format ,stream ,(first body))))
-                               (t             body)))
-                 :into empty-thunks
+          :and :collect body-thunk :into empty-thunks
         :finally (return `(call-with-placeholder-if-empty
                            (list ,@test-thunks) (list ,@empty-thunks)
-                           (lambda (,stream) ,@body)
-                           ,stream))))
+                           ,body-thunk ,stream))))
 
 ;;; Tables
 
