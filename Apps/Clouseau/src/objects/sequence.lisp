@@ -116,7 +116,8 @@
             (:pointer-motion (x)
               (unless old-x
                 (setf old-x x))
-              (let ((delta-x (clamp (- x old-x) (- old-start) most-positive-fixnum))) ; TODO length
+              (let ((delta-x (clamp (floor (- x old-x) 2)
+                                    (- old-start) most-positive-fixnum))) ; TODO length
                 (setf (start object) (+ old-start delta-x)
                       (end   object) (+ old-end   delta-x)))
               (note-changed (place object)))
