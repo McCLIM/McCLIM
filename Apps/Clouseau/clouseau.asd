@@ -32,6 +32,8 @@
                  :pathname   "src"
                  :serial     t
                  :components ((:file       "package")
+                              ;; Special variables
+                              (:file       "variables")
                               ;; Formatting utilities
                               (:file       "formatting")
                               ;; Generic functions

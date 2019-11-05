@@ -64,8 +64,12 @@
   (:default-initargs
    :object (error "~@<Missing required initarg ~S.~@:>" :object)))
 
-(defmethod initialize-instance :after ((instance inspector) &key object)
-  (setf (%state instance) (make-instance 'inspector-state :root-object object)))
+(defmethod initialize-instance :after ((instance inspector)
+                                       &key object
+                                            (handle-errors t))
+  (setf (%state instance) (make-instance 'inspector-state
+                                         :root-object   object
+                                         :handle-errors handle-errors)))
 
 (defmethod (setf %state) :after ((new-value t) (inspector inspector))
   (push (lambda (old-root-place new-root-place)
@@ -114,7 +118,7 @@
 
 ;;; Interface
 
-(defun inspect (object &key (new-process nil))
+(defun inspect (object &key (new-process nil) (handle-errors t))
   "Inspect OBJECT in a new inspector window.
 
 Return two values: 1) OBJECT 2) the created inspector application
@@ -123,7 +127,14 @@ frame.
 If NEW-PROCESS is false (the default), this function returns to the
 caller after the inspector window has been closed. If NEW-PROCESS is
 true, this function returns to the caller immediately and the
-inspector frame executes in a separate thread."
+inspector frame executes in a separate thread.
+
+HANDLE-ERRORS controls whether errors signaled when printing and
+inspecting objects should be handled. HANDLE-ERRORS must be a valid
+type specifier (T and NIL are legal values). Signaled errors of the
+specified type will be handled by printing an error messages in place
+of the inspected object. Other errors will not be handled and might
+invoke the debugger in the usual way."
   (when (and (not new-process) (typep *application-frame* 'inspector))
     (restart-case
         (error "~@<Clouseau called from inside Clouseau, possibly ~
@@ -136,8 +147,9 @@ inspector frame executes in a separate thread."
 
   (let* ((name  (inspector-name object))
          (frame (make-application-frame 'inspector
-                                        :object      object
-                                        :pretty-name name)))
+                                        :object        object
+                                        :handle-errors handle-errors
+                                        :pretty-name   name)))
     (labels ((run ()
                (run-frame-top-level frame))
              (run-with-defaults (default-server-path)

@@ -279,13 +279,15 @@ the :UNBOUND style."
   `(call-with-safe-and-terse-printing (lambda () ,@body)))
 
 (defun call-with-error-handling (thunk stream message)
-  (handler-case
-      (funcall thunk)
-    (error (condition)
-      (with-style (stream :error)
-        (write-string message stream)
-        (fresh-line stream)
-        (ignore-errors (princ condition stream))))))
+  (handler-bind
+      ((error (lambda (condition)
+                (when (typep condition *handle-errors*)
+                  (with-style (stream :error)
+                    (write-string message stream)
+                    (fresh-line stream)
+                    (ignore-errors (princ condition stream)))
+                  (return-from call-with-error-handling)))))
+    (funcall thunk)))
 
 (defmacro with-error-handling ((stream message) &body body)
   `(call-with-error-handling (lambda () ,@body) ,stream ,message))

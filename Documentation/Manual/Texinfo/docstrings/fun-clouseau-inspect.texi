@@ -9,4 +9,12 @@ If @var{new-process} is false (the default), this function returns to
 the caller after the inspector window has been closed. If
 @var{new-process} is true, this function returns to the caller
 immediately and the inspector frame executes in a separate thread.
+
+@var{handle-errors} controls whether errors signaled when printing and
+inspecting objects should be handled. @var{handle-errors} must be a
+valid type specifier (@code{t} and @code{nil} are legal
+values). Signaled errors of the specified type will be handled by
+printing an error messages in place of the inspected object. Other
+errors will not be handled and might invoke the debugger in the usual
+way.
 @end deffn
