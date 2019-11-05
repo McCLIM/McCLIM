@@ -25,6 +25,16 @@
 (defclass slot-place (key-value-place)
   ())
 
+(defmethod object-state-class ((object null) (place slot-place))
+  ;; If OBJECT is NIL and the slot type is a subtype of LIST, use
+  ;; INSPECTED-PROPER-LIST instead of the class that would otherwise
+  ;; be used. If OBJECT is not NIL, no action is required since one of
+  ;; the list-related state classes will be selected by default.
+  (let ((type (c2mop:slot-definition-type (cell place))))
+    (if (and type (subtypep type 'list))
+        'inspected-proper-list
+        (call-next-method))))
+
 (defclass immutable-slot-place (slot-place)
   ())
 
