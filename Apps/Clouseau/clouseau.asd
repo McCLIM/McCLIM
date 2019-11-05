@@ -80,4 +80,23 @@
                 (:module     "application"
                  :pathname   "src"
                  :depends-on ("base" "navigation")
-                 :components ((:file       "application")))))
+                 :components ((:file       "application"))))
+
+  :in-order-to ((test-op (test-op "clouseau/test"))))
+
+(defsystem "clouseau/test"
+  :depends-on ("clouseau"
+               "fiveam")
+
+  :components ((:module     "test"
+                :components ((:file       "package")))
+
+               (:module     "objects"
+                :pathname   "test/objects"
+                :depends-on ("test")
+                :serial     t
+                :components ((:file        "util")
+                             (:file        "sequence")
+                             (:file        "list"))))
+  :perform    (test-op (operation component)
+                (uiop:symbol-call '#:clouseau.test '#:run-tests)))
