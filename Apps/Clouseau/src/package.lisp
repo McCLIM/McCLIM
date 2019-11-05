@@ -27,7 +27,7 @@
   (:shadowing-import-from #:alexandria
    #:simple-parse-error)
 
-  ;; Formatting Utilities
+  ;; Formatting utilities
   (:export
    #:call-with-preserved-cursor-x      #:with-preserved-cursor-x
    #:call-with-preserved-cursor-y      #:with-preserved-cursor-y
