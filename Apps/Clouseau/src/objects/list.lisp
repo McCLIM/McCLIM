@@ -83,7 +83,8 @@
 
 ;;; Object states
 
-(defclass inspected-list (inspected-sequence)
+(defclass inspected-list (inspected-identity-object-mixin
+                          inspected-object)
   ((%cell-style :initarg  :cell-style
                 :type     (member :element-list :graph)
                 :accessor cell-style
@@ -92,7 +93,8 @@
 (defclass inspected-improper-list (inspected-list)
   ())
 
-(defclass inspected-proper-list (inspected-list)
+(defclass inspected-proper-list (inspected-list
+                                 inspected-sequence)
   ())
 
 (defclass inspected-alist (inspected-proper-list)
