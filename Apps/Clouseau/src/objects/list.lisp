@@ -111,7 +111,14 @@
 
 ;;; Object inspection methods
 
-(defmethod inspect-object-using-state ((object cons)
+(defmethod inspect-object-using-state ((object null)
+                                       (state  inspected-list)
+                                       (style  (eql :collapsed))
+                                       (stream t))
+  (with-safe-and-terse-printing (stream)
+    (format stream "~:A" object)))
+
+(defmethod inspect-object-using-state ((object list)
                                        (state  inspected-proper-list)
                                        (style  (eql :expanded-header))
                                        (stream t))
@@ -149,14 +156,14 @@
     (write-char #\Space stream)
     (badge stream "circular")))
 
-(defmethod inspect-object-using-state ((object cons)
+(defmethod inspect-object-using-state ((object list)
                                        (state  inspected-list)
                                        (style  (eql :expanded-body))
                                        (stream t))
   (let ((style (cell-style state)))
     (inspect-object-using-state object state style stream)))
 
-(defmethod inspect-object-using-state ((object cons)
+(defmethod inspect-object-using-state ((object list)
                                        (state  inspected-proper-list)
                                        (style  (eql :element-list))
                                        (stream t))
