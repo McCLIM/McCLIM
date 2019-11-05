@@ -81,6 +81,17 @@
                              alist-element-place)
   ())
 
+(defclass plist-element-place (list-element-place)
+  ())
+
+(defclass plist-key-place (key-place
+                           plist-element-place)
+  ())
+
+(defclass plist-value-place (value-place
+                             plist-element-place)
+  ())
+
 ;;; Object states
 
 (defclass inspected-list (inspected-identity-object-mixin
@@ -100,14 +111,35 @@
 (defclass inspected-alist (inspected-proper-list)
   ())
 
+(defclass inspected-plist (inspected-proper-list)
+  ())
+
 (defmethod object-state-class ((object cons) (place t))
-  (cond ((not (proper-list-p object))
-         'inspected-improper-list)
-        ((and (not (length= 1 object))
-              (every (of-type '(cons (not cons) t)) object))
-         'inspected-alist)
-        (t
-         'inspected-proper-list)))
+  (flet ((possible-plist-p (thing &optional known-proper-p)
+           (and (or known-proper-p (proper-list-p thing))
+                (evenp (length thing))
+                (loop for (key value) on thing by #'cddr
+                      always (keywordp key)))))
+    ;; Pick off improper lists first. Otherwise, try to choose a good
+    ;; presentation for proper lists.
+    (cond ((not (proper-list-p object))
+           'inspected-improper-list)
+          ;; Non-singleton list of conses that are not all plists =>
+          ;; alist
+          ((and (not (length= 1 object))
+                (every (of-type '(cons (not cons) t)) object)
+                (not (every #'possible-plist-p object)))
+           'inspected-alist)
+          ;; Non-singleton, even-length list of alternating keywords
+          ;; and values => plist
+          ((and (not (length= 1 object))
+                (possible-plist-p object t))
+           'inspected-plist)
+          ;; Otherwise => general proper list (including a list of
+          ;; plists which we had to explicitly check and reject when
+          ;; testing for alist)
+          (t
+           'inspected-proper-list))))
 
 ;;; Object inspection methods
 
@@ -118,25 +150,33 @@
   (with-safe-and-terse-printing (stream)
     (format stream "~:A" object)))
 
-(defmethod inspect-object-using-state ((object list)
-                                       (state  inspected-proper-list)
-                                       (style  (eql :expanded-header))
-                                       (stream t))
-  (write-string "Proper " stream)
-  (inspect-class-as-name (find-class 'list) stream)
-  (write-char #\Space stream)
-  (with-output-as-presentation (stream state 'sequence-range)
-    (print-sequence-header stream (length object) (start state) (end state))))
+(flet ((print-class-and-sequence-header (object state stream)
+         (inspect-class-as-name (find-class 'list) stream)
+         (write-char #\Space stream)
+         (with-output-as-presentation (stream state 'sequence-range)
+           (print-sequence-header
+            stream (length object) (start state) (end state)))))
 
-(defmethod inspect-object-using-state ((object cons)
-                                       (state  inspected-alist)
-                                       (style  (eql :expanded-header))
-                                       (stream t))
-  (write-string "Alist-shaped " stream)
-  (inspect-class-as-name (find-class 'list) stream)
-  (write-char #\Space stream)
-  (print-sequence-header
-   stream (length object) (start state) (end state)))
+  (defmethod inspect-object-using-state ((object list)
+                                         (state  inspected-proper-list)
+                                         (style  (eql :expanded-header))
+                                         (stream t))
+    (write-string "Proper " stream)
+    (print-class-and-sequence-header object state stream))
+
+  (defmethod inspect-object-using-state ((object cons)
+                                         (state  inspected-alist)
+                                         (style  (eql :expanded-header))
+                                         (stream t))
+    (write-string "Alist-shaped " stream)
+    (print-class-and-sequence-header object state stream))
+
+  (defmethod inspect-object-using-state ((object cons)
+                                         (state  inspected-plist)
+                                         (style  (eql :expanded-header))
+                                         (stream t))
+    (write-string "Plist-shaped " stream)
+    (print-class-and-sequence-header object state stream)))
 
 (defmethod inspect-object-using-state ((object cons)
                                        (state  inspected-improper-list)
@@ -192,6 +232,24 @@
                 :do (formatting-row (stream)
                       (format-place-cells stream object 'alist-key-place cell)
                       (format-place-cells stream object 'alist-value-place cell)))))
+      (when truncated?
+        (note-truncated stream length (- end start))))))
+
+(defmethod inspect-object-using-state ((object cons)
+                                       (state  inspected-plist)
+                                       (style  (eql :element-list))
+                                       (stream t))
+  (let ((length (length object)))
+    (multiple-value-bind (start end truncated?)
+        (effective-bounds state length)
+      (with-preserved-cursor-x (stream)
+        (formatting-table (stream)
+          (loop :for i :from start :below end
+                :for key+rest :on (nthcdr (* 2 start) object) :by #'cddr
+                :for value+rest = (rest key+rest)
+                :do (formatting-row (stream)
+                      (format-place-cells stream object 'plist-key-place key+rest)
+                      (format-place-cells stream object 'plist-value-place value+rest)))))
       (when truncated?
         (note-truncated stream length (- end start))))))
 
