@@ -81,7 +81,8 @@
 ;;; non standard protocol
 
 (defgeneric %invalidate-cached-device-transformations (sheet))
-(defgeneric %invalidate-cached-device-regions (sheet))
+(defgeneric %invalidate-cached-device-regions (sheet)
+  (:method (sheet) nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;
