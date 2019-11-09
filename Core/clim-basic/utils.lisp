@@ -498,8 +498,12 @@ STREAM in the direction DIRECTION."
                              (ecase direction
                                (:horizontal width)
                                (:vertical height))))
-    (function (let ((record (with-output-to-output-record (stream)
-                              (funcall specification))))
+    (function (let ((record
+                      (invoke-with-output-to-output-record
+                       stream (lambda (s o)
+                                (declare (ignore s o))
+                                (funcall specification))
+                       'standard-sequence-output-record)))
                 (ecase direction
                   (:horizontal (bounding-rectangle-width record))
                   (:vertical (bounding-rectangle-height record)))))
