@@ -14,6 +14,7 @@
    (:file "protocol-classes" :depends-on ("decls"))
    (:file "multiprocessing" :depends-on ("decls"))
    (:file "utils" :depends-on ("decls" "multiprocessing"))
+   (:file "space")
    (:module "geometry"
     :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "setf-star")
     :serial t
@@ -45,9 +46,7 @@
                  (:file "graphics" :depends-on ("design" "medium"))))
    (:module "extended-streams"
     :depends-on ("setf-star" "decls" "utils" "protocol-classes" "multiprocessing" "geometry" "windowing" "drawing")
-    :components ((:file "early-record")
-                 (:file "space")
-                 (:file "text-formatting") ; standard-page-layout
+    :components ((:file "text-formatting") ; standard-page-layout
                  (:file "views")           ; stream-default-view
                  (:file "dead-keys")       ; dead-key merging
                  (:file "stream-output"    :depends-on ("text-formatting" "views"))

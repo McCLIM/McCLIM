@@ -905,3 +905,52 @@ to the BREAK-STRATEGY whenever it assigns any meaning to to them."
   (if (typep sheet '(or top-level-sheet-mixin null))
       sheet
       (get-top-level-sheet (sheet-parent sheet))))
+
+
+;;;
+;;; output-record convenience macros
+(defmacro define-invoke-with (macro-name func-name record-type doc-string)
+  `(defmacro ,macro-name ((stream
+                           &optional
+                           (record-type '',record-type)
+                           (record (gensym))
+                           &rest initargs)
+                          &body body)
+     ,doc-string
+     (setq stream (stream-designator-symbol stream '*standard-output*))
+     (with-gensyms (continuation)
+       (multiple-value-bind (bindings m-i-args)
+           (rebind-arguments initargs)
+         `(let ,bindings
+            (flet ((,continuation (,stream ,record)
+                     ,(declare-ignorable-form* stream record)
+                     ,@body))
+              (declare (dynamic-extent #',continuation))
+              (,',func-name ,stream #',continuation ,record-type ,@m-i-args)))))))
+
+(define-invoke-with with-new-output-record invoke-with-new-output-record
+  standard-sequence-output-record
+  "Creates a new output record of type RECORD-TYPE and then captures
+the output of BODY into the new output record, and inserts the new
+record into the current \"open\" output record assotiated with STREAM.
+    If RECORD is supplied, it is the name of a variable that will be
+lexically bound to the new output record inside the body. INITARGS are
+CLOS initargs that are passed to MAKE-INSTANCE when the new output
+record is created.
+    It returns the created output record.
+    The STREAM argument is a symbol that is bound to an output
+recording stream. If it is T, *STANDARD-OUTPUT* is used.")
+
+(define-invoke-with with-output-to-output-record
+    invoke-with-output-to-output-record
+  standard-sequence-output-record
+  "Creates a new output record of type RECORD-TYPE and then captures
+the output of BODY into the new output record. The cursor position of
+STREAM is initially bound to (0,0)
+    If RECORD is supplied, it is the name of a variable that will be
+lexically bound to the new output record inside the body. INITARGS are
+CLOS initargs that are passed to MAKE-INSTANCE when the new output
+record is created.
+    It returns the created output record.
+    The STREAM argument is a symbol that is bound to an output
+recording stream. If it is T, *STANDARD-OUTPUT* is used.")
