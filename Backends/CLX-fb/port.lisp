@@ -53,7 +53,6 @@
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
   (clim-clx::realize-mirror-aux port sheet
 		      :event-mask *event-mask*
-                      :border-width 0
                       :map (sheet-enabled-p sheet)))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet top-level-sheet-mixin))

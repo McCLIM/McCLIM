@@ -85,8 +85,26 @@
 (defvar *pointer-documentation-output* nil)
 
 
+;;; 3.1.1 The Region Predicate Protocol
+
+(defgeneric region-equal               (region1 region2))
+(defgeneric region-contains-region-p   (region1 region2))
+(defgeneric region-contains-position-p (region x y))
+(defgeneric region-intersects-region-p (region1 region2))
+
+;;; 3.1.2 Region Composition Protocol
+
+(defgeneric region-set-regions (region &key normalize))
+(defgeneric map-over-region-set-regions (function region &key normalize)
+  (:argument-precedence-order region function))
+(defgeneric region-union (region1 region2))
+(defgeneric region-intersection (region1 region2))
+(defgeneric region-difference (region1 region2))
+(defgeneric region-exclusive-or (region1 region2))
+
 ;;; 3.2.1.1 The Point Protocol
 
+(defgeneric point-position (point))
 (defgeneric point-x (point))
 (defgeneric point-y (point))
 
@@ -498,6 +516,9 @@ window associated with it."))
 (defgeneric stream-text-margin (stream))
 (defgeneric (setf stream-text-margin) (margin stream))
 (defgeneric stream-line-height (stream &key text-style))
+(defgeneric stream-line-width (stream)
+  (:documentation "McCLIM extension which returns a space between left
+and right margin for text output."))
 (defgeneric stream-vertical-spacing (stream))
 (defgeneric stream-baseline (stream))
 

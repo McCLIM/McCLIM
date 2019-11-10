@@ -20,6 +20,7 @@
 * Frame manager::
 * Pointer protocol (events?)::
 * Text size::
+* Additional Output Destinations::
 * Miscellaneous::
 * Obsolete::
 @end menu
@@ -205,6 +206,36 @@ text-style-mapping
 text-style-width
 @end verbatim
 
+@node Additional Output Destinations
+@subsection Additional Output Destinations
+
+A backend implementation may register additional output destination
+types for the @cl{:output-destination} keyword parameter accepted by
+some commands.  Doing so allows the command to be invoked with
+@cl{*standard-output*} bound to a stream provided by the backend that
+redirects the command's output to a non-default destination such as a
+vector graphics or raster image file.
+
+To support this protocol in a backend, three things are required:
+
+@enumerate
+@item
+A new output destination class (usually a subclass of
+@class{clim-backend:output-destination} or one of its subclasses).
+
+@item
+A method on @genfunref{clim-backend:invoke-with-standard-output}
+specialized to the new output destination class.
+
+@item
+A call to @funref{clim-backend:register-output-destination-type} in
+order to register the new output destination.
+@end enumerate
+
+@include docstrings/fun-clim-backend-invoke-with-standard-output.texi
+
+@include docstrings/fun-clim-backend-register-output-destination-type.texi
+
 @node Miscellaneous
 @subsection Miscellaneous
 
@@ -221,8 +252,6 @@ medium-miter-limit          ; determine a draw for miter < sina/2
 @verbatim
 NO LONGER NEEDED IN BACKEND
 ---------------------------
-medium-draw-glyph               ; X-specific concept
-port-motion-hints               ; X-specific concept
 queue-callback                  ; moved to clim-core
 medium-clipping-                ; moved to clim-basic
 mirror-transformation           ; never used

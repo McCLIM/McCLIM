@@ -112,9 +112,9 @@
 (defvar *clx-port*)
 (defvar *wait-function*)
 
-(defun event-handler (&key display window event-key code state mode time
+(defun event-handler (&key display window kind event-key code state mode time
                         type width height x y root-x root-y
-                        data override-redirect-p send-event-p hint-p
+                        data override-redirect-p send-event-p
                         target property requestor selection
                         request first-keycode count
                         &allow-other-keys)
@@ -173,30 +173,40 @@
                             :graft-y root-y
                             :sheet sheet :modifier-state modifier-state
                             :timestamp time))))
-      (:enter-notify
-       (make-instance (if (eq mode :ungrab)
-                          'pointer-ungrab-enter-event
-                          'pointer-enter-event)
-                      :pointer 0 :button code
-                      :x x :y y
-                      :graft-x root-x
-                      :graft-y root-y
-                      :sheet sheet
-                      :modifier-state (clim-xcommon:x-event-state-modifiers
-                                       *clx-port* state)
-                      :timestamp time))
-      (:leave-notify
-       (make-instance (if (eq mode :ungrab)
-                          'pointer-ungrab-leave-event
-                          'pointer-exit-event)
-                      :pointer 0 :button code
-                      :x x :y y
-                      :graft-x root-x
-                      :graft-y root-y
-                      :sheet sheet
-                      :modifier-state (clim-xcommon:x-event-state-modifiers
-                                       *clx-port* state)
-                      :timestamp time))
+      ((:leave-notify :enter-notify)
+       ;; Ignore :{ENTER,LEAVE}-NOTIFY events of kind :INFERIOR unless
+       ;; the mode is :[UN]GRAB.
+       ;;
+       ;; The :INFERIOR kind corresponds to the pointer moving from a
+       ;; parent window to a child window which we do not consider
+       ;; leaving the parent.
+       ;;
+       ;; But we cannot ignore any :[UN]GRAB events since doing so
+       ;; would violate the stack-properties of enter/exit event
+       ;; sequences.
+       ;;
+       ;; The event kinds filtered here must be coordinated with the
+       ;; processing in the DISTRIBUTE-EVENTS method for BASIC-PORT
+       ;; and related methods.
+       (when (or (not (eq kind :inferior))
+                 (member mode '(:grab :ungrab)))
+         (make-instance (case event-key
+                          (:leave-notify (case mode
+                                           (:grab 'pointer-grab-leave-event)
+                                           (:ungrab 'pointer-ungrab-leave-event)
+                                           (t 'pointer-exit-event)))
+                          (:enter-notify (case mode
+                                           (:grab 'pointer-grab-enter-event)
+                                           (:ungrab 'pointer-ungrab-enter-event)
+                                           (t 'pointer-enter-event))))
+                        :pointer 0 :button code
+                        :x x :y y
+                        :graft-x root-x
+                        :graft-y root-y
+                        :sheet sheet
+                        :modifier-state (clim-xcommon:x-event-state-modifiers
+                                         *clx-port* state)
+                        :timestamp time)))
       (:configure-notify
        (cond ((and (eq (sheet-parent sheet) (graft sheet))
                    (graft sheet)
@@ -229,30 +239,14 @@
       (:motion-notify
        (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
                                                                    state)))
-         (if hint-p
-             (multiple-value-bind (x y same-screen-p child mask
-                                     root-x root-y)
-                 (xlib:query-pointer window)
-               (declare (ignore mask))
-               ;; If not same-screen-p or the child is different
-               ;; from the original event, assume we're way out of date
-               ;; and don't return an event.
-               (when (and same-screen-p (not child))
-                 (make-instance 'pointer-motion-hint-event
-                                :pointer 0 :button code
-                                :x x :y y
-                                :graft-x root-x :graft-y root-y
-                                :sheet sheet
-                                :modifier-state modifier-state
-                                :timestamp time)))
-             (make-instance 'pointer-motion-event
-                            :pointer 0 :button code
-                            :x x :y y
-                            :graft-x root-x
-                            :graft-y root-y
-                            :sheet sheet
-                            :modifier-state modifier-state
-                            :timestamp time))))
+         (make-instance 'pointer-motion-event
+                        :pointer 0 :button code
+                        :x x :y y
+                        :graft-x root-x
+                        :graft-y root-y
+                        :sheet sheet
+                        :modifier-state modifier-state
+                        :timestamp time)))
       ((:exposure :display :graphics-exposure)
        ;; Notes:
        ;; . Do not compare count with 0 here, last rectangle in an
@@ -414,7 +408,7 @@
   (let ((mirror (sheet-xmirror sheet))
         (events '(:button-press :button-release
 	          :leave-window :enter-window
-	          :pointer-motion :pointer-motion-hint)))
+	          :pointer-motion)))
     ;; Probably we want to set :cursor here..
     (eq :success (xlib:grab-pointer mirror events :owner-p t))))
 

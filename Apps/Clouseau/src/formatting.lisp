@@ -41,6 +41,26 @@
   (check-type stream symbol)
   `(call-with-preserved-cursor-y (lambda (,stream) ,@body) ,stream))
 
+(defun call-with-superscript (thunk stream)
+  (let ((exponent-offset (* 0.25 (nth-value 1 (text-size stream "0")))))
+    (clim:stream-increment-cursor-position stream 0 exponent-offset)
+    (flet ((superscript (thunk)
+             (with-preserved-cursor-y (stream)
+               (clim:stream-increment-cursor-position stream 0 (- exponent-offset))
+               (with-text-size (stream :smaller)
+                 (funcall thunk stream)))))
+      (funcall thunk #'superscript))))
+
+(defmacro with-superscript ((stream superscript-var) &body body)
+  (check-type stream symbol)
+  (with-unique-names (superscript)
+    `(call-with-superscript
+      (lambda (,superscript)
+        (macrolet ((,superscript-var (&body body)
+                     `(funcall ,',superscript (lambda (,',stream) ,@body))))
+          ,@body))
+      ,stream)))
+
 ;;; Styles
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -78,10 +98,12 @@
     (gethash style *styles*)))
 
 (defun call-with-style (thunk stream style)
-  (apply #'invoke-with-drawing-options stream thunk
-         (etypecase style
-           (list   style)
-           (symbol (style-drawing-options style)))))
+  (if (null style)
+      (funcall thunk stream)
+      (apply #'invoke-with-drawing-options stream thunk
+             (etypecase style
+               (list   style)
+               (symbol (style-drawing-options style))))))
 
 (defmacro with-style ((stream style) &body body)
   (check-type stream symbol)
@@ -89,7 +111,7 @@
              (not (nth-value 1 (style-drawing-options (eval style)))))
     (warn "~@<~S is not a know style.~@:>" style))
   `(call-with-style (lambda (,stream) (declare (ignorable ,stream)) ,@body)
-                    ,stream ',style))
+                    ,stream ,style))
 
 (defun call-with-section (body-thunk title-thunk stream)
   (with-preserved-cursor-x (stream)

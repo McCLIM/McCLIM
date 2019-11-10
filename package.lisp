@@ -287,60 +287,60 @@
   (:use)
   ;;
   (:import-from :clim-lisp
-   #:and 
-   #:boolean 
-   #:character 
-   #:close 
-   #:complex 
-   #:float 
-   #:fundamental-binary-input-stream 
-   #:fundamental-binary-output-stream 
-   #:fundamental-binary-stream 
-   #:fundamental-character-input-stream 
-   #:fundamental-character-output-stream 
-   #:fundamental-character-stream 
-   #:fundamental-input-stream 
-   #:fundamental-output-stream 
-   #:fundamental-stream 
-   #:input-stream-p 
-   #:integer 
-   #:interactive-stream-p 
-   #:keyword 
+   #:and
+   #:boolean
+   #:character
+   #:close
+   #:complex
+   #:float
+   #:fundamental-binary-input-stream
+   #:fundamental-binary-output-stream
+   #:fundamental-binary-stream
+   #:fundamental-character-input-stream
+   #:fundamental-character-output-stream
+   #:fundamental-character-stream
+   #:fundamental-input-stream
+   #:fundamental-output-stream
+   #:fundamental-stream
+   #:input-stream-p
+   #:integer
+   #:interactive-stream-p
+   #:keyword
    #:member
    #:nil
-   #:null 
-   #:number 
-   #:open-stream-p 
-   #:or 
-   #:output-stream-p 
-   #:pathname 
-   #:ratio 
-   #:rational 
-   #:real 
-   #:sequence 
-   #:stream-advance-to-column 
+   #:null
+   #:number
+   #:open-stream-p
+   #:or
+   #:output-stream-p
+   #:pathname
+   #:ratio
+   #:rational
+   #:real
+   #:sequence
+   #:stream-advance-to-column
    #:stream-clear-input
    #:stream-clear-output
-   #:stream-element-type 
-   #:stream-finish-output 
-   #:stream-force-output 
-   #:stream-fresh-line 
-   #:stream-line-column 
-   #:stream-listen 
-   #:stream-peek-char 
-   #:stream-read-byte 
-   #:stream-read-char 
-   #:stream-read-char-no-hang 
-   #:stream-read-line 
-   #:stream-start-line-p 
-   #:stream-terpri 
-   #:stream-unread-char 
-   #:stream-write-byte 
-   #:stream-write-char 
-   #:stream-write-string 
-   #:streamp 
-   #:string 
-   #:symbol 
+   #:stream-element-type
+   #:stream-finish-output
+   #:stream-force-output
+   #:stream-fresh-line
+   #:stream-line-column
+   #:stream-listen
+   #:stream-peek-char
+   #:stream-read-byte
+   #:stream-read-char
+   #:stream-read-char-no-hang
+   #:stream-read-line
+   #:stream-start-line-p
+   #:stream-terpri
+   #:stream-unread-char
+   #:stream-write-byte
+   #:stream-write-char
+   #:stream-write-string
+   #:streamp
+   #:string
+   #:symbol
    #:t)
   ;;
   (:export
@@ -1605,7 +1605,7 @@
   (:export
    ;; I forget where the wheel symbols come from. They aren't in the
    ;; Franz guide. Are they from Lispworks, or did McCLIM invent them?
-   #:+pointer-wheel-up+                 
+   #:+pointer-wheel-up+
    #:+pointer-wheel-down+
    #:+pointer-wheel-left+
    #:+pointer-wheel-right+
@@ -1634,7 +1634,7 @@
    #:toggle-button-view                 ;class
    #:+toggle-button-view+               ;constant
    #:sheet-pointer-cursor)
-  
+
    ;;; x11 color names - some are not in the spec - mikemac
   (:export
    #:+snow+ #:+ghost-white+ #:+ghostwhite+ #:+white-smoke+
@@ -1891,27 +1891,26 @@
    ;; #:line-style-effective-dashes
    ;; medium
    #:medium-miter-limit
-   #:medium-draw-glyph
    #:medium-draw-circle*
    ;; panes
    #:raised-pane #:raising
    #:lowered-pane #:lowering
    #:viewport-pane
-   #:draw-glyph #:device-font-text-style-p
+   #:device-font-text-style-p
    #:draw-image
    #:image-pane
    #:draw-label
+   #:label-pane-label
    #:box-adjuster-gadget
    #:compose-space-aux
    #:simple-event-loop
-   #:pointer-motion-hint-event
    #:invoke-with-output-to-pointer-documentation
    #:with-output-to-pointer-documentation
    #:frame-display-pointer-documentation-string
    #:list-pane-items
    #:output-record-baseline
    #:merging-dead-keys
-   
+
    #:draw-output-border-over
    #:draw-output-border-under
    #:make-bordered-output-record
@@ -1927,6 +1926,7 @@
    #:stream-cursor-final-position
    #:stream-page-region
    #:stream-text-margins
+   #:stream-line-width
    #:with-temporary-margins
    #:invoke-with-temporary-page
    ;; designs and patterns
@@ -1993,7 +1993,6 @@
    ;; Originally in CLIM-INTERNALS
    #:make-graft
    #:medium-draw-circle*
-   #:medium-draw-glyph
    #:mirror-transformation
    #:port-allocate-pixmap
    #:port-deallocate-pixmap
@@ -2004,7 +2003,6 @@
    #:port-grab-pointer
    #:port-ungrab-pointer
    #:with-pointer-grabbed
-   #:port-motion-hints
    #:port-set-mirror-name
    #:port-set-mirror-region
    #:port-set-mirror-transformation
@@ -2012,8 +2010,9 @@
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
    #:window-manager-focus-event
+   #:with-port
+   #:invoke-with-port
    ;; Text-style
-   #:text-style-to-font
    #:text-style-character-width
    #:text-bounding-rectangle*
    #:normalize-font-size
@@ -2087,7 +2086,6 @@
    #:text-style-width
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
-   #:medium-draw-glyph
    #:medium-draw-circle*
    ;; selection
    #:release-selection
@@ -2096,7 +2094,16 @@
    #:selection-object
    #:selection-object-content
    #:selection-object-type
-   #:selection-object-owner))
+   #:selection-object-owner
+   ;; command output destinations
+   #:invoke-with-standard-output
+   #:register-output-destination-type
+   #:output-destination
+   #:stream-destination
+   #:destination-stream
+   #:file-destination
+   #:destination-file
+   #:destination-element-type))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)

@@ -1,9 +1,10 @@
 (defsystem #:clim-core
-  :depends-on (#:clim-basic #:clim-postscript #+sbcl (:require #:sb-introspect))
+  :depends-on (#:clim-basic #+sbcl (:require #:sb-introspect))
   :components
   ((:file "defresource")
    (:file "presentations")
    (:file "presentation-translators" :depends-on ("presentations"))
+   (:file "presentation-drag-and-drop" :depends-on ("presentations" "presentation-translators"))
    (:file "bordered-output" :depends-on ("presentations"))
    (:file "table-formatting" :depends-on ("presentations"))
    (:file "input-editing" :depends-on ("presentations" "bordered-output" "table-formatting"))

@@ -468,10 +468,27 @@ in KEYWORDS removed."
 
 ;;;; ----------------------------------------------------------------------
 
+;;; FIXME valid space specification format is described in the section
+;;; describing a FORMATTING-TABLE macro. This should be generalized
+;;; for other possible space definitions and described in a separate
+;;; section. This functionality partially overlaps with a space
+;;; specification format described for the layout macros like
+;;; VERTICALLY, We should scram a superset of both in PARSE-SPACE and
+;;; add a special handling for the non-stream panes. -- jd 2019-11-02
+
+(deftype space-spec ()
+  `(or real
+       string
+       character
+       function
+       (cons real
+             (cons (member :character :line :point :pixel :mm)
+                   null))))
+
 (defun parse-space (stream specification direction)
   "Returns the amount of space given by SPECIFICATION relating to the
 STREAM in the direction DIRECTION."
-  ;; This implementation lives unter the assumption that an
+  ;; This implementation lives under the assumption that an
   ;; extended-output stream is also a sheet and has a graft.
   ;; --GB 2002-08-14
   (etypecase specification
@@ -481,9 +498,12 @@ STREAM in the direction DIRECTION."
                              (ecase direction
                                (:horizontal width)
                                (:vertical height))))
-    #+nil ; WITH-OUTPUT-TO-OUTPUT-RECORD not yet defined as a macro
-    (function (let ((record (with-output-to-output-record (stream)
-                              (funcall specification))))
+    (function (let ((record
+                      (invoke-with-output-to-output-record
+                       stream (lambda (s o)
+                                (declare (ignore s o))
+                                (funcall specification))
+                       'standard-sequence-output-record)))
                 (ecase direction
                   (:horizontal (bounding-rectangle-width record))
                   (:vertical (bounding-rectangle-height record)))))
@@ -492,17 +512,21 @@ STREAM in the direction DIRECTION."
          specification
        (ecase unit
          (:character
-          (* value (stream-character-width stream #\M)))
+          (ecase direction
+            (:horizontal (* value (stream-character-width stream #\M)))
+            (:vertical   (* value (stream-line-height stream)))))
          (:line
-          (* value (stream-line-height stream)))
+          (ecase direction
+            (:horizontal (* value (stream-line-width stream)))
+            (:vertical   (* value (stream-line-height stream)))))
          ((:point :pixel :mm)
           (let* ((graft (graft stream))
                  (gunit (graft-units graft)))
             ;; mungle specification into what grafts talk about
             (case unit
-              ((:point)  (setf value (/ value 72) unit :inches))
-              ((:pixel)  (setf unit :device))
-              ((:mm)     (setf unit :millimeters)))
+              ((:point) (setf value (/ value 72) unit :inches))
+              ((:pixel) (setf unit :device))
+              ((:mm)    (setf unit :millimeters)))
             ;;
             (multiple-value-bind (dx dy)
                 (multiple-value-call
@@ -518,20 +542,47 @@ STREAM in the direction DIRECTION."
                     (:vertical   (values 0 1))))
               (/ value (sqrt (+ (* dx dx) (* dy dy))))))))))))
 
+(defun valid-margin-spec-p (margins)
+  (ignore-errors ; destructuring-bind may error; that yields invalid spec
+   (destructuring-bind (&key left top right bottom) margins
+     (flet ((margin-spec-p (margin)
+              (destructuring-bind (anchor value) margin
+                (and (member anchor '(:relative :absolute))
+                     ;; Value must be a valid argument to PARSE-SPACE,
+                     ;; not necessarily a number. -- jd 2019-10-31
+                     (typep value 'space-spec)))))
+       (every #'margin-spec-p (list left top right bottom))))))
+
+(deftype margin-spec ()
+  `(satisfies valid-margin-spec-p))
+
+(defun normalize-margin-spec (plist defaults)
+  (loop with plist = (copy-list plist)
+        for edge in '(:left :top :right :bottom)
+        for value = (getf plist edge)
+        do
+           (typecase value
+             (null (setf (getf plist edge) (getf defaults edge)))
+             (atom (setf (getf plist edge) `(:relative ,value)))
+             (list #| do nothing |#))
+        finally
+           (check-type plist margin-spec)
+           (return plist)))
+
 (defun delete-1 (item list &key (test #'eql) (key #'identity))
   "Delete 1 ITEM from LIST. Second value is T if item was deleted."
   (loop
-     for tail on list
-       and tail-prev = nil then tail
-     for (list-item) = tail
-     if (funcall test item (funcall key list-item))
-       do (return-from delete-1
-	    (if tail-prev
-		(progn
-		  (setf (cdr tail-prev) (cdr tail))
-		  (values list t))
-		(values (cdr tail) t)))
-     finally (return (values list nil))))
+    for tail on list
+    and tail-prev = nil then tail
+    for (list-item) = tail
+    if (funcall test item (funcall key list-item))
+      do (return-from delete-1
+	   (if tail-prev
+	       (progn
+		 (setf (cdr tail-prev) (cdr tail))
+		 (values list t))
+	       (values (cdr tail) t)))
+    finally (return (values list nil))))
 
 (defun rebind-arguments (arg-list)
   "Create temporary variables for non keywords in a list of
@@ -592,14 +643,20 @@ index being halfway between INDEX-1 and INDEX-2."
   (let ((name (symbol-name symbol)))
     (string-capitalize (substitute #\Space #\- name))))
 
-;;; taken from https://stackoverflow.com/questions/11067899/is-there-a-generic-method-for-cloning-clos-objects#11068536, use with care (should work for "ordinary" classes though).
-(defun shallow-copy-object (original)
-  (let* ((class (class-of original))
-         (copy (allocate-instance class)))
-    (dolist (slot (mapcar #'c2mop:slot-definition-name (c2mop:class-slots class)))
-      (when (slot-boundp original slot)
-        (setf (slot-value copy slot)
-              (slot-value original slot))))
+;;; Taken from a stackoverflow thread[1] then extended per suggestion
+;;; in peer review[2]. Use with care (should work for "ordinary"
+;;; classes).
+;;;
+;;; [1] https://stackoverflow.com/questions/11067899/is-there-a-generic-method-for-cloning-clos-objects#11068536
+;;; [2] https://github.com/McCLIM/McCLIM/pull/833#discussion_r322010160
+(defun shallow-copy-object (original &optional (new-class (class-of original)))
+  (let ((copy (allocate-instance new-class)))
+    (mapc (lambda (slot &aux (slot-name (c2mop:slot-definition-name slot)))
+            (when (and (slot-exists-p original slot-name)
+                       (slot-boundp original slot-name))
+              (setf (slot-value copy slot-name)
+                    (slot-value original slot-name))))
+          (c2mop:class-slots new-class))
     copy))
 
 (defmacro dolines ((line string &optional result) &body body)
@@ -666,6 +723,8 @@ index being halfway between INDEX-1 and INDEX-2."
 (defun remove-duplicated-points (point-sequence &optional closed)
   "Given points A B C ... Z removes consecutive points which are duplicated. If
 a flag CLOSED is T then beginning and end of the list are consecutive too."
+  (when (alexandria:emptyp point-sequence)
+    (return-from remove-duplicated-points point-sequence))
   (collect (collect-point)
     (let* ((first-point (elt point-sequence 0))
            (last-point first-point))

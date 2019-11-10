@@ -1763,7 +1763,7 @@ and must never be nil.")
 
 (defmethod handle-event ((pane slider-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
-    (when armed
+    (when (eq armed ':button-press)
       (setf armed t
             (gadget-value pane :invoke-callback t)
             (convert-position-to-value pane event))

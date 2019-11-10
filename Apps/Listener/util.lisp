@@ -147,7 +147,6 @@ this point, increment it by SPACING, which defaults to zero."
 
 (defun find-text-record (record)
   "If RECORD contains exactly one text-displayed-output-record, we can abbreviate it. Otherwise, give up. Returns a string containing the contents of the record, and a text style."
-  (declare (optimize (debug 3) (speed 1) (safety 3)))
   (let ((count 0)
         text-style
         result)
@@ -160,9 +159,8 @@ this point, increment it by SPACING, which defaults to zero."
                   (setf text-style (text-output-record-style record))
                   (incf count)))))
       (walk record)
-      (values
-       (if (= count 1) result  nil)
-       (or text-style (medium-text-style (slot-value record 'climi::medium)))))))
+      (when (= count 1)
+        (values result text-style)))))
 
 (defun abbrev-guess-pos (medium string text-style desired-width start end)
   "Makes a guess where to split STRING between START and END in order to fit within WIDTH. Returns the ending character index."
@@ -194,7 +192,6 @@ as it would be displayed on MEDIUM using TEXT-STYLE"
 
 (defun abbreviate-record (stream record width abbreviator)
   "Attempts to abbreviate the text contained in an output RECORD on STREAM to fit within WIDTH, using the function ABBREVIATOR to produce a shortened string."
-  (declare (optimize (debug 3)))
   (multiple-value-bind (text-record text-style)
       (find-text-record record)
     (when text-record

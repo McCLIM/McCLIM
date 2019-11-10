@@ -230,7 +230,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                   align-x align-y
                                   translate direction
                                   transformation transform-glyphs
-                                &aux (font (climb:text-style-to-font
+                                &aux (font (text-style-mapping
                                             (port medium) (medium-text-style medium))))
   (declare (optimize (speed 3))
            (ignore translate direction)
@@ -425,7 +425,8 @@ The following files should exist:~&~{  ~A~^~%~}"
                      *truetype-font-path*
                      (mapcar #'cdr *families/faces*)))))
 
-(defmethod climb:text-style-to-font ((port clx-ttf-port) (text-style climi::device-font-text-style))
+(defmethod text-style-mapping ((port clx-ttf-port) (text-style climi::device-font-text-style) &optional character-set)
+  (declare (ignore character-set))
   (let ((font-name (climi::device-font-name text-style)))
     (when (stringp font-name)
       (setf (climi::device-font-name text-style)
@@ -438,7 +439,7 @@ The following files should exist:~&~{  ~A~^~%~}"
                            (namestring (truetype-device-font-name-font-file font-name))
                            (truetype-device-font-name-size font-name)))
       (fontconfig-font-name
-       (climb:text-style-to-font
+       (text-style-mapping
         port
         (or (fontconfig-font-name-device-name font-name)
             (setf (fontconfig-font-name-device-name font-name)
@@ -452,8 +453,10 @@ The following files should exist:~&~{  ~A~^~%~}"
                                         (fontconfig-font-name-options font-name)))
                     :size (fontconfig-font-name-size font-name))))))))))
 
-(defmethod climb:text-style-to-font ((port clx-ttf-port) (text-style standard-text-style)
-                                     &aux (text-style (climb:parse-text-style* text-style)))
+(defmethod text-style-mapping ((port clx-ttf-port) (text-style standard-text-style)
+                               &optional character-set
+                               &aux (text-style (climb:parse-text-style* text-style)))
+  (declare (ignore character-set))
   (labels
       ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative
@@ -475,7 +478,5 @@ The following files should exist:~&~{  ~A~^~%~}"
        (find-font ()
          (multiple-value-call #'find-and-make-truetype-font
            (clim:text-style-components text-style))))
-    (or (text-style-mapping port text-style)
-        (setf (climi::text-style-mapping port text-style)
-              (or (find-truetype-font port text-style)
-                  (invoke-with-truetype-path-restart #'find-font))))))
+    (or (find-truetype-font port text-style)
+                  (invoke-with-truetype-path-restart #'find-font))))

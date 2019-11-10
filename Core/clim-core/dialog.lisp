@@ -405,9 +405,9 @@ highlighting, etc." ))
     (unless (equal default (default query))
       (setf (default query) default)
       (setf (value query) default))
-    (flet ((do-prompt ()
+    (flet ((do-prompt (stream)
              (apply #'prompt-for-accept stream type view rest-args))
-           (do-accept-present-default ()
+           (do-accept-present-default (stream)
              (funcall-presentation-generic-function
               accept-present-default
               type (encapsulating-stream-stream stream) view
@@ -417,12 +417,12 @@ highlighting, etc." ))
         (if align
             (formatting-row (stream)
               (formatting-cell (stream :align-x align :align-y :center)
-                (do-prompt))
+                (do-prompt stream))
               (formatting-cell (stream)
-                (setq query-record (do-accept-present-default))))
+                (setq query-record (do-accept-present-default stream))))
             (progn
-              (do-prompt)
-              (setq query-record (do-accept-present-default))))
+              (do-prompt stream)
+              (setq query-record (do-accept-present-default stream))))
         (setf (record query) query-record)
         (when (and (last-pass stream) (accept-condition query))
           (signal (accept-condition query)))

@@ -24,8 +24,10 @@
 ;;; Fonts
 ;;;
 
-(defmethod climb:text-style-to-font ((port render-port-mixin) (text-style standard-text-style)
-                                     &aux (text-style (climb:parse-text-style* text-style)))
+(defmethod text-style-mapping ((port render-port-mixin) (text-style standard-text-style)
+                               &optional character-set
+                               &aux (text-style (climb:parse-text-style* text-style)))
+  (declare (ignore character-set))
   (labels
       ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative
@@ -50,13 +52,12 @@
        (find-font ()
          (multiple-value-call #'find-and-make-truetype-font
            (clim:text-style-components text-style))))
-    (or (text-style-mapping port text-style)
-        (setf (climi::text-style-mapping port text-style)
-              (or (find-truetype-font port text-style)
-                  (invoke-with-truetype-path-restart #'find-font))))))
+    (or (find-truetype-font port text-style)
+        (invoke-with-truetype-path-restart #'find-font))))
 
-(defmethod climb:text-style-to-font ((port render-port-mixin) (gs-text-style cons))
-  (text-style-to-font port (apply #'make-text-style gs-text-style)))
+(defmethod text-style-mapping ((port render-port-mixin) (gs-text-style cons) &optional character-set)
+  (declare (ignore character-set))
+  (text-style-mapping port (apply #'make-text-style gs-text-style)))
 
 (defmethod clim-internals::text-style-size ((gs-text-style cons))
   (caddr gs-text-style))

@@ -270,8 +270,7 @@ documentation produced by presentations.")
         (prog1
             (call-next-method)
           (alexandria:when-let ((menu-bar-pane (frame-menu-bar-pane frame)))
-                               (update-menu-bar menu-bar-pane
-                                                new-command-table)))
+            (update-menu-bar menu-bar-pane new-command-table)))
         (call-next-method))))
 
 (defmethod generate-panes :before (fm  (frame application-frame))
@@ -306,20 +305,21 @@ documentation produced by presentations.")
       (allocate-space top-level-sheet w h))))
 
 (defmethod layout-frame ((frame application-frame) &optional width height)
-  (let ((pane (frame-panes frame)))
-    (when (and (or width height)
-               (not (and width height)))
-      (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
-    (when (and (null width) (null height))
-      (let (;;I guess this might be wrong. --GB 2004-06-01
-            (space (compose-space pane)))
-        (setq width (space-requirement-width space))
-        (setq height (space-requirement-height space))))
-    (let ((tpl-sheet (frame-top-level-sheet frame)))
-      (unless (and (= width (bounding-rectangle-width tpl-sheet))
-                   (= height (bounding-rectangle-height tpl-sheet)))
-        (resize-sheet (frame-top-level-sheet frame) width height)))
-    (allocate-space pane width height)))
+  (when (and (or width height)
+             (not (and width height)))
+    (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
+  (with-inhibited-dispatch-repaint ()
+    (let ((pane (frame-panes frame)))
+      (when (and (null width) (null height))
+        (let (;;I guess this might be wrong. --GB 2004-06-01
+              (space (compose-space pane)))
+          (setq width (space-requirement-width space))
+          (setq height (space-requirement-height space))))
+      (let ((tpl-sheet (frame-top-level-sheet frame)))
+        (unless (and (= width (bounding-rectangle-width tpl-sheet))
+                     (= height (bounding-rectangle-height tpl-sheet)))
+          (resize-sheet tpl-sheet width height)))
+      (allocate-space pane width height))))
 
 (defun find-pane-of-type (parent type)
   "Returns a pane of `type' in the forest growing from `parent'."
@@ -1449,6 +1449,7 @@ have a `pointer-documentation-pane' as pointer documentation,
   (loop for (setting value) on client-settings by #'cddr
         do (setf (client-setting frame setting) value)))
 
+
 (defmethod frame-drag-and-drop-feedback
     ((frame standard-application-frame) from-presentation stream
      initial-x initial-y x y state))
@@ -1486,162 +1487,3 @@ have a `pointer-documentation-pane' as pointer documentation,
 (defmethod frame-drag-and-drop-highlighting
     ((frame standard-application-frame) to-presentation stream state)
   (highlight-presentation-1 to-presentation stream state))
-
-;;; It is unspecified what happens when there are multiple dnd
-;;; translators which are applicable at the same time. McCLIM sets
-;;; default feedback and highlight functions to those associated with
-;;; the translator which got us here. When we drag over presentation
-;;; which has applicable dnd translator we use its functions until the
-;;; sensitive area is left. -- jd 2019-07-06
-(defun frame-drag-and-drop (translator-name command-table
-                            from-presentation context-type frame event window
-                            x y)
-  (declare (ignore command-table))
-  (let* ((*dragged-presentation* from-presentation)
-         (*dragged-object* (presentation-object from-presentation))
-         (translators (mapcan (lambda (trans)
-                                (and (typep trans 'drag-n-drop-translator)
-                                     (funcall (tester trans)
-                                              (presentation-object from-presentation)
-                                              :presentation from-presentation
-                                              :context-type context-type
-                                              :frame frame
-                                              :window window
-                                              :x x
-                                              :y y
-                                              :event event)
-                                     (list trans)))
-                              (find-presentation-translators
-                               (presentation-type from-presentation)
-                               context-type
-                               (frame-command-table frame))))
-         ;; Default feedback and highlight functions are those of the
-         ;; translator that got us here. Initial highlight value nil
-         ;; will cause the source presentation of the dragged object
-         ;; to be unhighlighted at start. -- jd 2019-07-06
-         (translator (find translator-name translators :key #'name))
-         (feedback-fn (feedback translator))
-         (highlight-fn nil)
-         (destination-presentation nil)
-         (initial-x x)
-         (initial-y y)
-         (last-presentation nil)
-         (feedback-activated nil)
-         (last-event nil))
-    ;; We shouldn't need to use find-innermost-presentation-match
-    ;; This repeats what tracking-pointer has already done, but what are you
-    ;; gonna do?
-    (flet ((find-dest-translator (presentation window x y)
-             (loop for translator in translators
-                when (and (presentation-subtypep (presentation-type presentation)
-                                                 (destination-ptype translator))
-                          (test-presentation-translator translator
-                                                        presentation
-                                                        context-type
-                                                        frame
-                                                        window x y))
-                do (return-from find-dest-translator translator))
-             nil)
-           (do-feedback (window x y state)
-             (when (and feedback-activated window)
-               (maybe-funcall feedback-fn frame from-presentation window
-                              initial-x initial-y x y state)))
-           (do-highlight (presentation window state)
-             (when presentation
-               (maybe-funcall highlight-fn frame presentation window state)))
-           (last-point ()
-             (if last-event
-                 (values (event-sheet last-event)
-                         (pointer-event-x last-event)
-                         (pointer-event-y last-event))
-                 (values nil nil nil))))
-      (block do-tracking
-        (tracking-pointer (window :context-type `(or ,@(mapcar #'destination-ptype translators))
-                                  :highlight nil
-                                  :multiple-window t)
-          (:presentation (&key presentation window event x y)
-            (let ((dest-translator (find-dest-translator presentation window x y)))
-              (multiple-value-call #'do-feedback (last-point) :unhighlight)
-              (setq feedback-activated t)
-              (do-highlight last-presentation (last-point) :unhighlight)
-              (setq last-event event
-                    last-presentation presentation)
-              (if dest-translator
-                  (setf feedback-fn (feedback dest-translator)
-                        highlight-fn (highlighting dest-translator))
-                  (setf feedback-fn (feedback translator)
-                        highlight-fn (highlighting translator)))
-              (do-highlight presentation window :highlight)
-              (do-feedback window x y :highlight)
-              (multiple-value-call #'document-drag-n-drop
-                (if dest-translator
-                    (values dest-translator presentation)
-                    (values translator      nil))
-                context-type frame event window
-                x y)))
-          (:pointer-motion (&key event window x y)
-            (multiple-value-call #'do-feedback (last-point) :unhighlight)
-            (setq feedback-activated t)
-            (do-highlight last-presentation (last-point) :unhighlight)
-            (setq last-event event
-                  last-presentation nil)
-            (do-feedback window x y :highlight)
-            (document-drag-n-drop translator nil
-                                  context-type frame event window
-                                  x y))
-          ;; XXX only support finish-on-release for now.
-          #-(and)(:presentation-button-press ())
-          (:presentation-button-release (&key presentation event)
-            (setq destination-presentation presentation
-                  last-event event)
-            (return-from do-tracking nil))
-          #-(and)(:button-press ())
-          (:pointer-button-release (&key event)
-            (setq last-event event)
-            (return-from do-tracking nil))))
-      ;;
-      ;; XXX Assumes x y from :button-release are the same as for the preceding
-      ;; button-motion; is that correct?
-      (multiple-value-call #'do-feedback (last-point) :unhighlight)
-      (do-highlight last-presentation (last-point) :unhighlight)
-      (when-let ((stream *pointer-documentation-output*))
-        (window-clear stream))
-
-      (if destination-presentation
-          (let ((final-translator (multiple-value-call #'find-dest-translator
-                                    destination-presentation (last-point))))
-            (if final-translator
-                (funcall (destination-translator final-translator)
-                         *dragged-object*
-                         :presentation *dragged-presentation*
-                         :destination-object (presentation-object destination-presentation)
-                         :destination-presentation destination-presentation
-                         :context-type context-type
-                         :frame frame
-                         :event event
-                         :window window
-                         :x x
-                         :y y)
-                (values nil nil)))
-          (values nil nil)))))
-
-(defun document-drag-n-drop
-    (translator presentation context-type frame event window x y)
-  (when-let ((stream *pointer-documentation-output*))
-    (let ((function (pointer-documentation translator)))
-      (window-clear stream)
-      (with-end-of-page-action (stream :allow)
-        (with-end-of-line-action (stream :allow)
-          (funcall function
-                   *dragged-object*
-                   :presentation *dragged-presentation*
-                   :destination-object (and presentation
-                                            (presentation-object presentation))
-                   :destination-presentation presentation
-                   :context-type context-type
-                   :frame frame
-                   :event event
-                   :window window
-                   :x x
-                   :y y
-                   :stream stream))))))

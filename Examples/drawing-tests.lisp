@@ -1452,6 +1452,27 @@ outside the clipping area should be grey.")
     (format stream "~&We all live in a yellow subroutine.~%")
     (format stream "~&We all live in a yellow subroutine.~%")))
 
+(define-drawing-test "Text" "Crossing out" (frame stream)
+    ""
+  (declare (ignore frame))
+  (with-text-family (stream :sans-serif)
+    (format stream "~&We all live in a yellow subroutine.~%")
+    (format stream "~&We ")
+    (surrounding-output-with-border (stream :shape :crossout
+                                            :line-thickness 2
+                                            :move-cursor nil)
+      (format stream "all live"))
+    (format stream " in a yellow subroutine.~%")
+    (format stream "~&We ")
+    (surrounding-output-with-border (stream :shape :crossout
+                                            :ink +red+
+                                            :line-dashes t
+                                            :move-cursor nil)
+      (format stream "all live"))
+    (format stream " in a yellow subroutine.~%")
+    (format stream "~&We all live in a yellow subroutine.~%")
+    (format stream "~&We all live in a yellow subroutine.~%")))
+
 (define-drawing-test "Text" "Fonts" (frame stream)
     ""
   (declare (ignore frame))
@@ -1819,7 +1840,8 @@ outside the clipping area should be grey.")
   (clim:formatting-table (stream :x-spacing 50
                                  :y-spacing 20)
     (clim:formatting-row (stream)
-      (clim:formatting-cell (stream))
+      (clim:formatting-cell (stream)
+        (declare (ignore stream)))
       (clim:formatting-cell (stream :align-x :center
                                     :align-y :bottom
                                     :min-height 100)
@@ -2283,7 +2305,8 @@ outside the clipping area should be grey.")
   (declare (ignore frame))
   (formatting-table (stream :x-spacing 20 :y-spacing 20)
     (formatting-row (stream)
-      (formatting-cell (stream :min-height 80)))
+      (formatting-cell (stream :min-height 80)
+        (declare (ignore stream))))
     (formatting-row (stream)
       (formatting-cell (stream :align-x :left
                                :align-y :top)

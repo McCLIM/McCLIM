@@ -17,6 +17,51 @@
 
 (cl:in-package #:clouseau)
 
+;;; Utilities
+
+(defun prime-factors (integer)
+  (declare (optimize speed (debug 1) (safety 1))
+           (type (unsigned-byte 32) integer))
+  (let ((factors '()))
+    (labels ((add-factor (factor)
+               (declare (type (unsigned-byte 32) factor))
+               (let ((first (first factors)))
+                 (if (or (null first) (/= factor (the (unsigned-byte 32)
+                                                      (car first))))
+                     (push (cons factor 1) factors)
+                     (incf (the (unsigned-byte 32) (cdr first))))))
+             (try (n d upper-bound)
+               (declare (type (unsigned-byte 32) n d upper-bound))
+               (if (> d upper-bound)
+                   (add-factor n)
+                   (multiple-value-bind (quotient remainder) (truncate n d)
+                     (cond ((zerop remainder)
+                            (add-factor d)
+                            (rec quotient))
+                           (t
+                            (try n (if (evenp d) (1+ d) (+ d 2)) upper-bound))))))
+             (rec (n)
+               (declare (type (unsigned-byte 32) n))
+               (when (>= n 2)
+                 (try n 2 (isqrt n)))))
+      (rec integer))
+    factors))
+
+;;; Object states
+
+(defclass inspected-integer (inspected-object)
+  ((%prime-factors-p :initarg  :prime-factors-p
+                     :accessor prime-factors-p
+                     :initform nil)))
+
+(defmethod object-state-class ((object integer) (place t))
+  'inspected-integer)
+
+(defmethod make-object-state ((object integer) (place t))
+  (make-instance (object-state-class object place)
+                 :place           place
+                 :prime-factors-p (< (abs object) (ash 1 32))))
+
 ;;; Object inspection methods
 
 (defmethod inspect-object-using-state ((object number)
@@ -26,7 +71,8 @@
   (let ((class (class-of object))
         (type  (type-of object)))
     (inspect-class-as-name class stream)
-    (unless (eql (class-name class) type)
+    (when (and (not (consp type))
+               (not (eql type (class-name class))))
       (write-char #\space stream)
       (with-style (stream :note)
         (princ type stream))))
@@ -48,19 +94,83 @@
              (maybe-special-float sb-ext:float-nan-p          "nan")
              (maybe-special-float sb-ext:float-trapping-nan-p "trapping-nan"))))
 
+(defmethod inspect-object-using-state :after ((object number)
+                                              (state  inspected-object)
+                                              (style  (eql :badges))
+                                              (stream t))
+  (macrolet
+      ((limits ()
+         (labels ((constant (constant-name)
+                    `((= object ,constant-name)
+                      (write-char #\Space stream)
+                      (badge stream ,(string-downcase
+                                      (symbol-name constant-name)))))
+                  (type (type)
+                    (let ((lower (let ((*package* (find-package "CL")))
+                                   (symbolicate '#:most-negative- type)))
+                          (upper (let ((*package* (find-package "CL")))
+                                   (symbolicate '#:most-positive- type))))
+                      `(,(constant lower)
+                        ,(constant upper)))))
+           `(cond
+              ,@(mappend #'type '(fixnum
+                                  single-float
+                                  double-float))
+              ,(constant 'pi)))))
+    (limits)))
+
 (defmethod inspect-object-using-state ((object integer)
-                                       (state  inspected-object)
+                                       (state  inspected-integer)
                                        (style  (eql :expanded-body))
                                        (stream t))
   (formatting-table (stream)
+    ;; Value in different bases.
+    (macrolet ((value-in-base (label format-control)
+                 `(progn
+                    (with-style (stream :slot-like)
+                      (formatting-cell (stream) (write-string ,label stream))
+                      (formatting-cell (stream) (declare (ignore stream))))
+                    (formatting-cell (stream)
+                      (format stream ,format-control object)))))
+      (formatting-row (stream)
+        (value-in-base "Decimal value"     "~:D")
+        (value-in-base "Hexadecimal value" "#x~X"))
+      (formatting-row (stream)
+        (value-in-base "Octal value"       "#o~O")
+        (value-in-base "Binary value"      "#b~B")))
+
+    ;; Bit statistics
     (formatting-row (stream)
-      (with-style (stream :slot-like)
-        (formatting-cell (stream) (write-string "Value" stream))
-        (formatting-cell (stream) (declare (ignore stream))))
-      (formatting-cell (stream)
-        (format stream "~:D = ~:*#x~X = ~:*#o~O = ~:*#b~B" object)))
-    (format-place-row stream object 'reader-place 'integer-length
-                      :label "Length")))
+      (format-place-cells stream object 'reader-place 'integer-length
+                          :label "Length (bits)")
+      (format-place-cells stream object 'reader-place 'logcount
+                          :label "Hamming weight"))
+
+    ;; Prime factors.
+    (unless (<= -3 object 3)
+      (formatting-row (stream)
+        (with-style (stream :slot-like)
+          (formatting-cell (stream) (write-string "Factors" stream))
+          (formatting-cell (stream) (declare (ignore stream))))
+        (formatting-cell (stream)
+          (with-placeholder-if-emtpy (stream)
+            ((not (prime-factors-p state))
+             "Cowardly refusing to compute prime factors")
+            (t
+             ;; Print prime factors with exponents. Avoid offsetting
+             ;; the whole line if all exponents are 1.
+             (let ((factors (prime-factors (abs object))))
+               (flet ((print-factors (&optional sup)
+                        (when (minusp object)
+                          (write-string "-1 × " stream))
+                        (loop for ((factor . exponent) . rest) on factors
+                              do (princ factor stream)
+                                 (unless (= exponent 1)
+                                   (funcall sup (curry #'princ exponent)))
+                                 (when rest (write-string " × " stream)))))
+                 (if (find 1 factors :test #'/= :key #'cdr)
+                     (call-with-superscript #'print-factors stream)
+                     (print-factors)))))))))))
 
 (defmethod inspect-object-using-state ((object ratio)
                                        (state  inspected-object)
@@ -110,8 +220,7 @@
                                   :object-style :float-exponent)))))
       ;; Value
       (when has-value-p
-        (let ((exponent-offset (* 0.3 (nth-value 1 (text-size stream "0")))))
-          (clim:stream-increment-cursor-position stream 0 exponent-offset)
+        (with-superscript (stream sup)
           (format stream "~A = " object)
           (with-style (stream :float-sign)
             (format stream "~F" sign))
@@ -121,9 +230,8 @@
           (write-string " × " stream)
           (with-style (stream :float-radix)
             (format stream "~D" radix))
-          (clim:stream-increment-cursor-position stream 0 (- exponent-offset))
-          (with-style (stream :float-exponent)
-            (format stream "~D" exponent)))))))
+          (sup (with-style (stream :float-exponent)
+                 (format stream "~D" exponent))))))))
 
 (defmethod inspect-object-using-state ((object complex)
                                        (state  inspected-object)

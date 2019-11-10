@@ -122,7 +122,6 @@
 
 (defun realize-mirror-aux (port sheet
 				&key (width 100) (height 100) (x 0) (y 0)
-				(border-width 0) (border 0)
 				(override-redirect :off)
 				(map t)
 				(backing-store :not-useful)
@@ -135,10 +134,6 @@
 					      :structure-notify
 					      :pointer-motion
 					      :button-motion)))
-  ;; I am declaring BORDER-WIDTH ignore to get a cleaner build, but I
-  ;; don't really understand why the use of it is commented out in favor
-  ;; of the constant 0.  -- RS 2007-07-22
-  (declare (ignore border-width))
   (when (null (port-lookup-mirror port sheet))
     ;;(update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
@@ -176,8 +171,6 @@
                                                            mirror-transformation
                                                            0 0)))
                            y)
-                    :border-width 0 ;;border-width
-                    :border border
                     :override-redirect override-redirect
                     :backing-store backing-store
                     :save-under save-under
@@ -203,15 +196,6 @@
 
 (defmethod %realize-mirror ((port clx-port) (sheet basic-sheet))
   (realize-mirror-aux port sheet
-                      :border-width 0
-                      :map (sheet-enabled-p sheet)))
-
-(defmethod %realize-mirror ((port clx-port) (sheet border-pane))
-  ;;(rotatef (medium-background (sheet-medium sheet)) (medium-foreground (sheet-medium sheet)))
-  (realize-mirror-aux port sheet
-		      :border-width 0 ; (border-pane-width sheet)
-		      :event-mask '(:exposure
-				    :structure-notify)
                       :map (sheet-enabled-p sheet)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
@@ -239,49 +223,6 @@
 		      :override-redirect :on
                       :save-under :on
 		      :map nil))
-
-(defmethod %realize-mirror ((port clx-port) (sheet menu-button-pane))
-  (realize-mirror-aux port sheet
-		      :event-mask '(:exposure
-				    :key-press :key-release
-				    :button-press :button-release
-				    :enter-window :leave-window
-				    :structure-notify
-				   ;:pointer-motion
-				    :button-motion
-				    :owner-grab-button)
-                      :map (sheet-enabled-p sheet)))
-
-(defmethod %realize-mirror ((port clx-port) (sheet clim-stream-pane))
-  (realize-mirror-aux port sheet
-		      :event-mask '(:exposure
-				    :key-press :key-release
-				    :button-press :button-release
-				    :enter-window :leave-window
-				    :structure-notify
-				    :pointer-motion :pointer-motion-hint
-				    :button-motion
-				    :owner-grab-button)
-                      :map (sheet-enabled-p sheet)))
-
-(defmethod port-motion-hints ((port clx-port) (sheet mirrored-sheet-mixin))
-  (let ((event-mask (xlib:window-event-mask (sheet-direct-xmirror sheet))))
-    (if (zerop (logand event-mask
-		       #.(xlib:make-event-mask :pointer-motion-hint)))
-	nil
-	t)))
-
-(defmethod (setf port-motion-hints)
-    (val (port clx-port) (sheet mirrored-sheet-mixin))
-  (let* ((mirror (sheet-direct-xmirror sheet))
-	 (event-mask (xlib:window-event-mask mirror)))
-    (setf (xlib:window-event-mask mirror)
-	  (if val
-	      (logior event-mask #.(xlib:make-event-mask :pointer-motion-hint))
-	      (logandc2 event-mask
-			#.(xlib:make-event-mask :pointer-motion-hint)))))
-  val)
-
 
 (defmethod make-graft ((port clx-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'clx-graft

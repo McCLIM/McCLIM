@@ -156,7 +156,7 @@ Gray circles do not inherit from FIGURE and they are not accepted in ~
 figure baskets. There is a GREY-CIRCLE-ACCEPTOR for them. We define ~
 two additional compound (OR-ed) presentation types:
 
-SIDEFUL-FIGURE  -- (or SQUARE TRIANGLE) 
+SIDEFUL-FIGURE  -- (or SQUARE TRIANGLE)
 SIDELESS-FIGURE -- (or CIRCLE GREY-CIRCLE)
 
 For both these types there are SIDEFUL-FIGURE-BASKET and ~
@@ -252,7 +252,7 @@ any presentation in tracking-pointer and check type as we go.")))
           (:pointer-button-release
            (&key event x y)
            (draw-cursor-state :motion)
-           (draw-cursor (event-sheet event) x y))      
+           (draw-cursor (event-sheet event) x y))
           (:pointer-motion
            (&key window x y)
            (draw-cursor window x y))
@@ -366,6 +366,7 @@ any presentation in tracking-pointer and check type as we go.")))
     (make-point x y)))
 
 (define-dnd-commented-command (com-drag-cross) ((original cross))
+  (declare (ignore original))
   (let ((stream (find-pane-named *application-frame* 'scr)))
     (dragging-output (stream :multiple-window t)
       (draw-circle stream (get-pointer-position stream) 20 :filled nil))))

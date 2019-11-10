@@ -34,6 +34,7 @@ Launching of external programs sensitive to file type (determined by
 * Listener Usage::
 * The #! Macro Character::
 * Calling Commands from Lisp::
+* Command Output Destinations::
 @end menu
 
 @node Listener Usage
@@ -189,3 +190,22 @@ the pretty names used at the interactor map to a function name which
 implements the command body by upcasing the name, replacing spaces with
 hyphens, and prepending @t{COM-} (e.g., @command{Show Directory} becomes
 @t{COM-SHOW-DIRECTORY}).
+
+@node Command Output Destinations
+@subsection Command Output Destinations
+
+@clim{}'s implementation of the @fmacro{clim:define-command} macro
+accepts a @cl{:provide-output-destination-keyword} keyword argument
+which allows redirecting the commands output from @cl{*standard-output*}
+to some other destination.  The Listener code supplies this argument for
+many of the defined commands.  As a result, many Listener commands can
+be invoked with the @cl{:output-destination} keyword, for example
+
+@lisp
+CLIM-USER> ,Show Class Superclasses (class) standard-class
+  (keywords) :output-destination
+  (output-destination) Postscript File
+  (destination file) /tmp/output.ps
+@end lisp
+
+will redirect the command's output to the file @file{/tmp/output.ps}.

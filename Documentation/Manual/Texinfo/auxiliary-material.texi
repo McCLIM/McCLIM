@@ -31,24 +31,27 @@ ancestors of the sheet.  All grafted @mcclim{} sheets have mirrors, but not
 all have direct mirrors.  A @mcclim{} sheet that does not have a direct
 mirror uses the direct mirror of its first ancestor having a direct
 mirror for graphics output.  Asking for the direct mirror of a sheet
-that does not have a direct mirror returns nil.
+that does not have a direct mirror returns @t{nil}.
 
 Whether a @mcclim{} sheet has a direct mirror or not, is decided by the
 frame manager.  Some frame managers may only allow for the graft to be a
 mirrored sheet.  Even frame managers that @emph{allow} hierarchical
 mirrors may decide not to allocate a direct mirror for a particular
 sheet.  Although sheets with a direct mirror must be instances of the
-class mirrored-sheet-mixin, whether a @mcclim{} sheet has a direct mirror
-or not is not determined statically by the class of a sheet, but
-dynamically by the frame manager.
+class @class{mirrored-sheet-mixin}, whether a @mcclim{} sheet has a
+direct mirror or not is not determined statically by the class of a
+sheet, but dynamically by the frame manager.
 
 @glossentry{Medium}
 
-TODO
+An object that contains the state information required for producing
+output on a particular sheet.
 
 @glossentry{Medium transformation}
 
-TODO
+A transformation that converts the coordinates presented to the drawing
+functions to the medium's coordinate system.  The identity
+transformation by default.
 
 @glossentry{Mirror}
 

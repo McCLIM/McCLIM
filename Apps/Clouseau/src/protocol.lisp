@@ -229,6 +229,19 @@ occurrences of objects so the circularity can be indicated."))
     (note-object-occurrence object state presentation stream)
     state))
 
+(defmethod note-object-occurrence :around ((object t)
+                                           (state  t)
+                                           (presentation t)
+                                           (stream       t))
+  ;; If we encounter OBJECT for the first time within this traversal,
+  ;; reset the occurrences recorded within STATE in case. The
+  ;; NOTE-OBJECT-OCCURRENCE method for OBJECT might be a no-op, so
+  ;; here is the only place we can do this.
+  (when-let ((seen *seen*))
+    (unless (gethash object seen)
+      (setf (occurrences state) nil)))
+  (call-next-method))
+
 (defmethod note-object-occurrence ((object       t)
                                    (state        t)
                                    (presentation t)
@@ -240,8 +253,7 @@ occurrences of objects so the circularity can be indicated."))
     ;; a list.
     (let ((existing (gethash object seen)))
       (cond ((null existing)
-             (setf (gethash object seen) presentation
-                   (occurrences state)   nil))
+             (setf (gethash object seen) presentation))
             ((not (consp existing))
              (let ((cell (cons nil (list presentation existing))))
                (setf (gethash object seen)                        cell

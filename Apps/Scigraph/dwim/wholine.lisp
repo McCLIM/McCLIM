@@ -44,16 +44,16 @@ advised of the possiblity of such damages.
 ;;;      a slot on your frame whose :initform is (MAKE-STATUS-LINE stream) and
 ;;;      whose :accessor is STATUS-LINE.  (The stream argument to MAKE-STATUS-LINE
 ;;;      should be the status pane.)
-;;;  c. Initialize the status line (and for clim-0.9, 
+;;;  c. Initialize the status line (and for clim-0.9,
 ;;;     bind *frame-for-status-line*):
 ;;;
 ;;;      (defmethod dart-frame-top-level ((frame dart-frame))
 ;;;         (initialize-status-line)
 ;;;         (let ((*frame-for-status-line* frame))
 ;;;           (loop
-;;;      	(lcl:with-simple-restart
+;;;             (lcl:with-simple-restart
 ;;;                   (dart-top-level "Abort to DART Top Level")
-;;;       	  (clim:clim-top-level frame)))))
+;;;               (clim:clim-top-level frame)))))
 ;;;
 ;;;
 ;;;
@@ -63,7 +63,7 @@ advised of the possiblity of such damages.
 ;;; itself rather hastily.
 
 ;;; default width of a field;
-(defconstant *status-width* 150)
+(defparameter *status-width* 150)
 
 ;;; leftmost positions of each field, as a percentage of pane width:
 (defconstant time-left .05)
@@ -168,27 +168,27 @@ advised of the possiblity of such damages.
 		(with-output-recording-disabled (stream)
 		  (draw-status-element status-line field-name string
 				       minx (+ miny fudge-factor) stream)))
-	    (force-output stream)		
+	    (force-output stream)
 	    ))))))
 
 (defmethod set-status-line ((frame t) (field (eql 'status-line-time)) string
 			    &optional (record-p t))
   (let* ((status-line (status-line frame)))
-    (when status-line 
+    (when status-line
       (process-status-element status-line 'time 'ptime
 			      string time-left record-p))))
 
 (defmethod set-status-line ((frame t) (field (eql 'status-line-username)) string
 			    &optional (record-p t))
   (let* ((status-line (status-line frame)))
-    (when status-line 
+    (when status-line
       (process-status-element status-line 'username 'pusername
 			      string username-left record-p))))
 
 (defmethod set-status-line ((frame t) (field (eql 'status-line-process)) string
 			    &optional (record-p t))
   (let* ((status-line (status-line frame)))
-    (when status-line 
+    (when status-line
       (process-status-element status-line 'process 'pprocess
 			      string process-left record-p))))
 
@@ -484,4 +484,3 @@ advised of the possiblity of such damages.
 	       (ignore-errors
 		(set-all-status-lines run-string 'status-line-process)
 		))))))))
-

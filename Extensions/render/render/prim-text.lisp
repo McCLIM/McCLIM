@@ -8,7 +8,7 @@
 (defun string-primitive-paths (medium x y string align-x align-y transform-glyphs
                                &aux
                                  (transformation (sheet-device-transformation (medium-sheet medium)))
-                                 (font (text-style-to-font (port medium) (medium-text-style medium))))
+                                 (font (text-style-mapping (port medium) (medium-text-style medium))))
   (flet ((adjust-positions ()
            (ecase align-x
              (:left)

@@ -685,8 +685,8 @@ Our final version looks like this:
 
 @center @image{figures/clouseau-inspect-object-4,5cm}
 
-For more examples of how to extend the inspector, you can look the files
-in the @file{Apps/Clouseau/src/objects/} directory.
+For more examples of how to extend the inspector, you can look at the
+files in the @file{Apps/Clouseau/src/objects/} directory.
 
 @node API
 @subsection API

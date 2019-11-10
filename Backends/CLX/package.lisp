@@ -5,11 +5,11 @@
 (defpackage :clim-xcommon
   (:use :clim :clim-lisp)
   (:export #:keysym-port-mixin
-	   #:keysym-to-keysym-name
-	   #:modifier-mapping
-	   #:keysym-name-to-keysym
-	   #:x-event-state-modifiers
-	   #:x-keysym-to-clim-modifiers))
+           #:keysym-to-keysym-name
+           #:modifier-mapping
+           #:keysym-name-to-keysym
+           #:x-event-state-modifiers
+           #:x-keysym-to-clim-modifiers))
 
 (defpackage :clim-clx
   (:use :clim :clim-lisp :clim-backend)
@@ -23,25 +23,24 @@
                 #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
-		#:%%sheet-native-transformation
-		#:%%set-sheet-native-transformation
-		#:device-transformation
+                #:%%sheet-native-transformation
+                #:%%set-sheet-native-transformation
+                #:device-transformation
                 ;;
                 #:clamp
                 #:get-environment-variable
                 #:pixmap-sheet
                 #:port-lookup-sheet
                 #:port-unregister-mirror
-		#:port-pointer-sheet
+                #:port-pointer-sheet
                 #:map-repeated-sequence
                 #:pixmap-mirror
-		#:do-sequence
+                #:do-sequence
                 #:with-double-buffering
                 #:with-transformed-position
                 #:with-transformed-positions
                 #:with-medium-options
                 ;;
-                #:border-pane
                 #:pixmap
                 #:top-level-sheet-mixin
                 #:unmanaged-sheet-mixin
@@ -62,9 +61,10 @@
                 ;; classes
                 #:mirrored-pixmap
                 #:window-destroy-event
+                #:pointer-grab-enter-event
+                #:pointer-grab-leave-event
                 #:pointer-ungrab-leave-event
                 #:pointer-ungrab-enter-event
-		#:pointer-motion-hint-event
                 #:device-font-text-style
                 ;; utils
                 #:dolines
@@ -73,9 +73,9 @@
                 #:if-let)
   (:import-from #:climi
                 #:event-listen-or-wait
-		#:%sheet-mirror-region
+                #:%sheet-mirror-region
                 #:%sheet-mirror-transformation
-		#:standard-port)
+                #:standard-port)
   (:export
    #:clx-port
    #:clx-render-port
