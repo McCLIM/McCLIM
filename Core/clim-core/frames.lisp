@@ -1366,7 +1366,38 @@ have a `pointer-documentation-pane' as pointer documentation,
 
 (defun frame-display-pointer-documentation-string (frame string)
   (with-output-to-pointer-documentation (stream frame)
-    (write-string string stream)))
+      (write-string string stream))
+  (let ((*pointer-documentation-output* (frame-pointer-documentation-output frame)))
+    ;; To see the string it is necessary to trigger the redisplay of
+    ;; pointer-documentation-pane with FRAME-UPDATE-POINTER-DOCUMENTATION.
+    ;; As INPUT-CONTEXT we pass NIL. FRAME-COMPUTE-POINTER-DOCUMENTATION-STATE and
+    ;; FRAME-PRINT-POINTER-DOCUMENTATION specialize on that.
+    ;; We pass the STRING as EVENT argument in this way
+    ;; FRAME-COMPUTE-POINTER-DOCUMENTATION-STATE calculate a new state
+    ;; value cached for icremental-redisplay machinery.  -- admich 2019-11-15
+    (frame-update-pointer-documentation frame nil nil string)))
+
+(defmethod frame-compute-pointer-documentation-state
+    ((frame standard-application-frame) (input-context null) stream event)
+  (list :string event))
+
+(defmethod frame-print-pointer-documentation
+    ((frame standard-application-frame) (input-context null) stream state event)
+  (unless state
+    (return-from frame-print-pointer-documentation nil))
+  (destructuring-bind (current-modifier new-translators)
+      state
+    (let ((pstream *pointer-documentation-output*))
+      (when (and (background-message pstream)
+                     (not (record-on-display pstream (background-message pstream))))
+            (cond ((> (get-universal-time)
+                      (+ (background-message-time pstream)
+                         *background-message-minimum-lifetime*))
+                   (setf (background-message pstream) nil))
+                  (t
+                   (setf (output-record-parent (background-message pstream)) nil)
+                   (stream-add-output-record pstream (background-message pstream))
+                   (replay (background-message pstream) pstream)))))))
 
 (defgeneric frame-input-context-track-pointer
     (frame input-context stream event))
