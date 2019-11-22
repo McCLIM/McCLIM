@@ -83,121 +83,128 @@
   (make-pane-constructor toggle-button))
 
 (define-application-frame gadget-test ()
-    ()
-    (:menu-bar
-     (("Lisp"   :menu lisp-menu)
-      ("Edit"   :menu edit-menu)
-      ("View"   :menu view-menu)
-      ("Search" :menu search-menu)))
-    (:panes
-     (tf1        :push-button
-                 :text-style (make-text-style :fix :roman 24)
-                 :label "Text Field")
-     (tf2        :push-button
-                 :text-style (make-text-style :serif :roman 24)
-                 :label "Text Field")
-     (tf3        :push-button
-                 :text-style (make-text-style :serif :italic 24)
-                 :label "Text Field")
-     (tf4        :push-button
-                 :text-style (make-text-style :sans-serif '(:bold :italic) 24)
-                 :label "Text Field")
-    (text-edit  :text-editor
-                :value "Text Editor")
-     (slider-h   :slider
-                 :min-value 0
-                 :max-value 100
-                 :value 0
-                 :show-value-p t
-                 :orientation :horizontal)
-     (slider-v   :slider
-                 :min-value 0
-                 :show-value-p t
-                 :max-value 100
-                 :orientation :vertical
-                 :value 0)
-     (slider-v2  :slider
-                 :min-value 0
-                 :max-value 100
-                 :orientation :vertical
-                 :value 0)
-     (slider-v3  :slider
-                 :min-value 0
-                 :max-value 100
-                 :show-value-p t
-                 :orientation :vertical
-                 :value 0)
-     (radar      (make-pane 'radar-pane :name 'radar))
-     (push-btn   (lowering (:border-width 3 :background +Gray83+)
-                   (horizontally ()
+  ()
+  (:menu-bar
+   (("Lisp"   :menu lisp-menu)
+    ("Edit"   :menu edit-menu)
+    ("View"   :menu view-menu)
+    ("Search" :menu search-menu)))
+  (:panes
+   (tf1        :push-button
+               :text-style (make-text-style :fix :roman 24)
+               :label "Text Field")
+   (tf2        :push-button
+               :text-style (make-text-style :serif :roman 24)
+               :label "Text Field")
+   (tf3        :push-button
+               :text-style (make-text-style :serif :italic 24)
+               :label "Text Field")
+   (tf4        :push-button
+               :text-style (make-text-style :sans-serif '(:bold :italic) 24)
+               :label "Text Field")
+   (text-edit  :text-editor
+               :value "Text Editor")
+   (slider-h   :slider
+               :min-value 0
+               :max-value 100
+               :value 0
+               :show-value-p t
+               :orientation :horizontal)
+   (slider-v   :slider
+               :min-value 0
+               :show-value-p t
+               :max-value 100
+               :orientation :vertical
+               :value 0)
+   (slider-v1  :slider
+               :min-value 0
+               :max-value 100
+               :orientation :vertical
+               :value 0)
+   (slider-v2  :slider
+               :min-value 0
+               :max-value 100
+               :orientation :vertical
+               :value 0)
+   (slider-v3  :slider
+               :min-value 0
+               :max-value 100
+               :show-value-p t
+               :orientation :vertical
+               :value 0)
+   (radar      (make-pane 'radar-pane :name 'radar))
+   (push-btn   (outlining (:thickness 1 :background +black+)
+                 (spacing (:thickness 7)
+                   (horizontally (:spacing 8)
                      (push-button
-                       :name  "Radiate"
-                       :label "Radiate"
-                       :activate-callback
-                         (lambda (pane &rest args)
-                           (declare (ignore pane args))
-                           nil))
+                      :name  "Radiate"
+                      :label "Radiate"
+                      :activate-callback
+                      (lambda (pane &rest args)
+                        (declare (ignore pane args))
+                        nil))
                      (push-button
-                       :label "No, Push Me")
+                      :label "No, Push Me")
                      (push-button
-                       :label "Me!"))))
-     (table (lowering (:border-width 3 :background +Gray83+)
-              (tabling (:height 50)
+                      :label "Me!" :show-as-default-p t)))))
+   (table (outlining (:thickness 1 :background +black+)
+            (spacing (:thickness 7)
+              (tabling (:height 50 :spacing 8)
                 (list (push-button :label "A") (push-button :label "B"))
                 (list (push-button :label "C") (push-button :label "D"))
-                (list (push-button :label "E") (push-button :label "F")))))
-     (toggle-btn :toggle-button
-                 :label "Toggle"
-                 :value t
-                 :normal +red+
-                 :highlighted +red+
-                 :pushed-and-highlighted +red+)
-     (scroll    (raising (:border-width 1 :background +Gray83+)
-                   (scrolling (:background +Gray83+ :width 100 :height 100)
-                     (horizontally ()
-                       (vertically ()
-                         (push-button :label "This is a button")
-                         (push-button :label "That is a button")
-                         (push-button :label "This is a button too"))
-                       (with-radio-box (:orientation :vertical)
-                         (clim:radio-box-current-selection "First")
-                         "Second" "Third"
-                         "Red" "Blue" "Orange"
-                         "Elephant" "Dog" "Cat")
-                       (with-radio-box (:orientation :vertical :type :some-of)
-                         (clim:radio-box-current-selection "Fourth") "Fifth" "Sixth")
-                       (with-radio-box (:orientation :vertical)
-                         (clim:radio-box-current-selection "Seventh") "Eighth" "Ninth")
-                       (with-radio-box (:orientation :vertical :type :some-of)
-                         (clim:radio-box-current-selection "Tenth") "Eleventh" "Twelth")))))
-     (radio-box  (with-radio-box (:orientation :horizontal)
-                   (clim:radio-box-current-selection "One") "Two" "Three"))
-     (check-box  (with-radio-box (:type :some-of :orientation :horizontal)
-                   (clim:radio-box-current-selection "First") "Second" "Third")))
-    (:layouts
-     (default
-       (raising (:border-width 5 :background +Gray83+)
-         (horizontally ()
-           (vertically ()
-             (horizontally ()
-               (horizontally ()
-                 (vertically ()
-                   slider-v
-                   slider-v2)
-                 slider-v3)
-               (vertically ()
-                 tf1 tf2 tf3 tf4
-                 slider-h))
-             radar
-             text-edit)
-           (vertically ()
-             push-btn
-             table
-             toggle-btn
-             scroll
-             radio-box
-             check-box)))))
-    (:top-level (gadget-test-frame-top-level . nil)))
+                (list (push-button :label "E") (push-button :label "F"))))))
+   (toggle-btn :toggle-button
+               :label "Toggle"
+               :value t
+               :normal +red+
+               :highlighted +red+
+               :pushed-and-highlighted +red+)
+   (scroll    (outlining (:thickness 1)
+                (spacing (:thickness 7)
+                  (scrolling (:width 100 :height 100)
+                    (horizontally (:spacing 8)
+                      (vertically (:spacing 8)
+                        (push-button :label "This is a button")
+                        (push-button :label "That is a button")
+                        (push-button :label "This is a button too"))
+                      (with-radio-box (:orientation :vertical)
+                        (clim:radio-box-current-selection "First")
+                        "Second" "Third"
+                        "Red" "Blue" "Orange"
+                        "Elephant" "Dog" "Cat")
+                      (with-radio-box (:orientation :vertical :type :some-of)
+                        (clim:radio-box-current-selection "Fourth") "Fifth" "Sixth")
+                      (with-radio-box (:orientation :vertical)
+                        (clim:radio-box-current-selection "Seventh") "Eighth" "Ninth")
+                      (with-radio-box (:orientation :vertical :type :some-of)
+                        (clim:radio-box-current-selection "Tenth") "Eleventh" "Twelth"))))))
+   (radio-box  (with-radio-box (:orientation :horizontal)
+                 (clim:radio-box-current-selection "One") "Two" "Three"))
+   (check-box  (with-radio-box (:type :some-of :orientation :horizontal)
+                 (clim:radio-box-current-selection "First") "Second" "Third")))
+  (:layouts
+   (default
+    (horizontally (:spacing 8)
+      (vertically (:spacing 8)
+        (horizontally (:spacing 8)
+          (horizontally (:spacing 8)
+            (vertically (:spacing 8)
+              slider-v
+              slider-v2)
+            slider-v3)
+          (vertically (:spacing 8)
+            tf1 tf2 tf3 tf4
+            slider-h))
+        radar
+        text-edit)
+      (vertically (:spacing 8)
+        push-btn
+        table
+        toggle-btn
+        scroll
+        radio-box
+        check-box))))
+  (:top-level (gadget-test-frame-top-level . nil)))
 
 (define-command (test :command-table gadget-test) ()
   (format *trace-output* "That was just a test~%")
