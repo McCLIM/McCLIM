@@ -21,6 +21,7 @@
                  (:file "transforms")
                  (:file "bounding-rectangle")
                  (:file "regions")
+                 (:file "region-utilities")
                  (:file "region-bounding-rectangles")
                  (:file "region-transformations")
                  (:file "region-predicates")

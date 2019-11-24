@@ -735,7 +735,7 @@ translated, so they begin at different position than [0,0])."))
                        (multiple-value-bind (x y) (untransform-position climi::tr x-orig y-orig)
                          (and (<= (- 1.0 .05) (+ (* x x) (* y y)) (+ 1.0 .05))
                               (or (null climi::start-angle)
-                                  (climi::%angle-between-p
+                                  (climi::angle-contains-angle-p
                                    (climi::%ellipse-position->angle ellipse x-orig y-orig)
                                    climi::start-angle climi::end-angle))))))
                    (draw-point (x y)

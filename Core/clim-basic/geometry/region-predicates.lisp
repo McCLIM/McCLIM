@@ -25,32 +25,6 @@
 ;;; sets have their methods defined elsewhere.
 
 
-(declaim (inline line-contains-point-p))
-(defun line-contains-point-p (x1 y1 x2 y2 px py)
-  (coordinate= (* (- py y1) (- x2 x1))
-               (* (- px x1) (- y2 y1))))
-
-(declaim (inline segment-contains-point-p))
-(defun segment-contains-point-p (x1 y1 x2 y2 x y)
-  (and (coordinate-between x1 x x2)
-       (coordinate-between y1 y y2)
-       (line-contains-point-p x1 y1 x2 y2 x y)))
-
-;;; CLIM "native" coordinate system is left-handed (y grows down).
-;;; Angles are specified to grow in the counter-clockwise direction
-;;; (disregarding of the coordinate system), so we need to invert the
-;;; y coordinate in a call to atan.
-(declaim (inline angle-contains-point-p))
-(defun angle-contains-point-p (alpha omega x y)
-  (when (= 0 x y)
-    (return-from angle-contains-point-p t))
-  (let ((delta (atan* x (- y))))
-    (if (< alpha omega)
-        (coordinate-between* alpha delta omega)
-        (or (coordinate<= alpha delta)
-            (coordinate<= delta omega)))))
-
-
 (defmethod region-contains-position-p ((self point) x y)
   (multiple-value-bind (px py) (point-position self)
     (and (coordinate= px x)

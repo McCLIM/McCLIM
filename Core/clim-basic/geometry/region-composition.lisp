@@ -5,33 +5,6 @@
 (defun region-exclusive-or (a b)
   (region-union (region-difference a b) (region-difference b a)))
 
-(defun differenz-line/polygon (x1 y1 x2 y2 polygon)
-  (let ((ks (schnitt-gerade/polygon-prim x1 y1 x2 y2 (polygon-points polygon))))
-    (assert (evenp (length ks)))
-    (let ((res nil)
-          (res2 nil))
-      (push 0d0 res)
-      (do ((q ks (cddr q)))
-          ((null q))
-        (let ((k1 (max 0d0 (min 1d0 (car q))))
-              (k2 (max 0d0 (min 1d0 (cadr q)))))
-          (when (/= k1 k2)
-            (push k1 res)
-            (push k2 res))))
-      (push 1d0 res)
-      (setf res (nreverse res))
-      (do ((q res (cddr q)))
-          ((null q))
-        (let ((k1 (car q))
-              (k2 (cadr q)))
-          (when (/= k1 k2)
-            (push (make-line* (+ x1 (* k1 (- x2 x1))) (+ y1 (* k1 (- y2 y1)))
-                              (+ x1 (* k2 (- x2 x1))) (+ y1 (* k2 (- y2 y1))))
-                  res2))))
-      (cond ((null res2) +nowhere+)
-            ((null (cdr res2)) (car res2))
-            (t (make-instance 'standard-region-union :regions res2))))))
-
 
 (defmethod region-union ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-union :regions (list a b)))
@@ -242,7 +215,7 @@
 (defmethod region-intersection ((b polygon) (a line))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
-      (schnitt-line/polygon x1 y1 x2 y2 b))))
+      (intersection-segment/polygon x1 y1 x2 y2 b))))
 
 (defmethod region-intersection ((a line) (b polygon))
   (region-intersection b a))
@@ -325,9 +298,10 @@
                  a)))))))
 
 ;;; paths/areas
+(defmethod region-difference ((a line) (b polygon))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
-      (differenz-line/polygon x1 y1 x2 y2 b))))
+      (difference-segment/polygon x1 y1 x2 y2 b))))
 
 ;;; areas
 (defmethod region-difference ((xs standard-rectangle) (ys standard-rectangle))
