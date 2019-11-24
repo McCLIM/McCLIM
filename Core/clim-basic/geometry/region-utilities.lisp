@@ -8,18 +8,18 @@
 ;;; (disregarding the coordinate system), so we need to invert the y
 ;;; coordinate in a call to atan.
 
-(declaim (inline angle-contains-angle-p))
-(defun angle-contains-angle-p (alpha omega delta)
-  (if (< alpha omega)
-      (coordinate-between* alpha delta omega)
-      (or (coordinate<= alpha delta)
-          (coordinate<= delta omega))))
+(declaim (inline arc-contains-angle-p))
+(defun arc-contains-angle-p (start-angle end-angle delta)
+  (if (< start-angle end-angle)
+      (coordinate-between* start-angle delta end-angle)
+      (or (coordinate<= start-angle delta)
+          (coordinate<= delta end-angle))))
 
-(declaim (inline angle-contains-point-p))
-(defun angle-contains-point-p (alpha omega x y)
+(declaim (inline arc-contains-point-p))
+(defun arc-contains-point-p (start-angle end-angle x y)
   (when (= 0 x y)
-    (return-from angle-contains-point-p t))
-  (angle-contains-angle-p alpha omega (atan* x (- y))))
+    (return-from arc-contains-point-p t))
+  (arc-contains-angle-p start-angle end-angle (atan* x (- y))))
 
 (defun colinear-p (p1 p2 p3)
   (multiple-value-bind (x1 y1) (point-position p1)

@@ -47,10 +47,7 @@
       (segment-contains-point-p x1 y1 x2 y2 x y))))
 
 (defmethod region-contains-position-p ((self elliptical-arc) x y)
-  (flet ((angle-contains-p (alpha omega)
-           (multiple-value-bind (cx cy) (ellipse-center-point* self)
-             (angle-contains-point-p alpha omega (- x cx) (- y cy))))
-         (position-contains-p (polar->screen)
+  (flet ((position-contains-p (polar->screen)
            (multiple-value-bind (polar-x polar-y)
                (untransform-position polar->screen x y)
              ;; FIXME we don't need to factor the additional epsilon
@@ -62,7 +59,8 @@
                                       (+ (square polar-x) (square polar-y))
                                       (+ 1 point-radii)))))))
     (if-let ((alpha (ellipse-start-angle self)))
-      (and (angle-contains-p alpha (ellipse-end-angle self))
+      (and (multiple-value-bind (cx cy) (ellipse-center-point* self)
+             (arc-contains-point-p alpha (ellipse-end-angle self) (- x cx) (- y cy)))
            (position-contains-p (polar->screen self)))
       (position-contains-p (polar->screen self)))))
 
@@ -105,10 +103,7 @@
          (coordinate-between* y1 y y2))))
 
 (defmethod region-contains-position-p ((self ellipse) x y)
-  (flet ((angle-contains-p (alpha omega)
-           (multiple-value-bind (cx cy) (ellipse-center-point* self)
-             (angle-contains-point-p alpha omega (- x cx) (- y cy))))
-         (position-contains-p (polar->screen)
+  (flet ((position-contains-p (polar->screen)
            (multiple-value-bind (polar-x polar-y)
                (untransform-position polar->screen x y)
              ;; FIXME we don't need to factor the additonal epsilon
@@ -118,7 +113,8 @@
                (coordinate<= (+ (square polar-x) (square polar-y))
                              (+ 1 (square polar-dx) (square polar-dy)))))))
     (if-let ((alpha (ellipse-start-angle self)))
-      (and (angle-contains-p alpha (ellipse-end-angle self))
+      (and (multiple-value-bind (cx cy) (ellipse-center-point* self)
+             (arc-contains-point-p alpha (ellipse-end-angle self) (- x cx) (- y cy)))
            (position-contains-p (polar->screen self)))
       (position-contains-p (polar->screen self)))))
 
