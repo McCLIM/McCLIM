@@ -1,77 +1,71 @@
 (in-package #:climi)
 
-
-(defmethod region-contains-position-p ((self standard-point) px py)
-  (with-slots (x y) self
-    (and (coordinate= x px) (coordinate= y py))))
+;;; This file contains implementation of the region predicate protocol
+;;; for several region classes. A few rules to follow:
+;;;
+;;; - use coordinate functions for comparisons
+;;; - when possible provide a method for a protocol class, and when
+;;;   beneficial provide, also provide a method for standard class
+;;; - all "region" arguments must be specialized
+;;; - the most general specialization is bounding-rectangle
+;;;
+;;; Regions which must be handled:
+;;;
+;;;   - 0 dimensions: point
+;;;   - 1 dimensions: polyline, elliptical-arc
+;;;   - 2 dimensions: polygon, ellipse
+;;;
+;;; Additionally a line and a rectangle should be handled (they are
+;;; frequently used special cases of a polyline and a polygon).
+;;;
+;;; Methods should be defined from the most general to the most
+;;; specific. Methods specialized on REGION, methods being a
+;;; consequence of the dimensionality rule and finally methods
+;;; specific to a particular region type. Unbounded regions and region
+;;; sets have their methods defined elsewhere.
 
-(defmethod region-contains-position-p ((self standard-polyline) x y)
+
+(defmethod region-contains-position-p ((region point) x y)
+  (multiple-value-bind (px py) (point-position region)
+    (and (coordinate= px x)
+         (coordinate= py y))))
+
+(defmethod region-contains-position-p ((region polyline) x y)
   (setf x (coordinate x)
         y (coordinate y))
   (block nil
     (map-over-polygon-segments
      (lambda (x1 y1 x2 y2)
-       (when (line-contains-point-p* x1 y1 x2 y2 x y)
+       (when (segment-contains-point-p x1 y1 x2 y2 x y)
          (return t)))
-     self)
+     region)
     nil))
 
-(defmethod region-contains-position-p ((self standard-line) x y)
-  (multiple-value-bind (x1 y1) (line-start-point* self)
-    (multiple-value-bind (x2 y2) (line-end-point* self)
-      (line-contains-point-p* x1 y1 x2 y2 x y))))
+(defmethod region-contains-position-p ((region line) x y)
+  (multiple-value-bind (x1 y1) (line-start-point* region)
+    (multiple-value-bind (x2 y2) (line-end-point* region)
+      (segment-contains-point-p x1 y1 x2 y2 x y))))
 
-(defmethod region-contains-position-p ((self standard-rectangle) x y)
-  (with-standard-rectangle (x1 y1 x2 y2)
-      self
-    (and (<= x1 (coordinate x) x2)
-         (<= y1 (coordinate y) y2))))
+(defmethod region-contains-position-p ((region elliptical-arc) x y)
+  (flet ((position-contains-p (polar->screen)
+           (multiple-value-bind (polar-x polar-y)
+               (untransform-position polar->screen x y)
+             ;; FIXME we don't need to factor the additional epsilon
+             ;; but rotated elliptoids are naively rendered in clx.
+             (multiple-value-bind (polar-dx polar-dy)
+                 (untransform-distance polar->screen 1 1)
+               (let ((point-radii (+ (square polar-dx) (square polar-dy))))
+                 (coordinate-between* (- 1 point-radii)
+                                      (+ (square polar-x) (square polar-y))
+                                      (+ 1 point-radii)))))))
+    (if-let ((alpha (ellipse-start-angle region)))
+      (and (multiple-value-bind (cx cy) (ellipse-center-point* region)
+             (arc-contains-point-p alpha (ellipse-end-angle region) (- x cx) (- y cy)))
+           (position-contains-p (polar->screen region)))
+      (position-contains-p (polar->screen region)))))
 
-(defmethod region-contains-position-p ((self standard-ellipse) x-orig y-orig)
-  (with-slots (tr start-angle end-angle) self
-    (multiple-value-bind (x y) (untransform-position tr x-orig y-orig)
-      (and (<= (+ (* x x) (* y y)) (+ 1.0 (* 4 single-float-epsilon)))
-           (or (and (zerop y) (zerop x))
-               ;; start-angle being null implies that end-angle is null as well
-               (null start-angle)
-               ;; we check angle in screen coordinates
-               (%angle-between-p (%ellipse-position->angle self x-orig y-orig)
-                                 start-angle
-                                 end-angle))))))
-
-(defmethod region-contains-position-p ((self standard-rectangle-set) x y)
-  (block nil
-    (map-over-bands (lambda (y1 y2 isum)
-                      (when (<= y1 y y2)
-                        (when (isum-member x isum)
-                          (return t)))
-                      (when (< y y2)
-                        (return nil)))
-                    (standard-rectangle-set-bands self))
-    nil))
-
-(defmethod region-contains-position-p ((self everywhere-region) x y)
-  (declare (ignore x y))
-  t)
-
-(defmethod region-contains-position-p ((self nowhere-region) x y)
-  (declare (ignore x y))
-  nil)
-
-(defmethod region-contains-position-p ((self standard-region-union) x y)
-  (some (lambda (r) (region-contains-position-p r x y))
-        (standard-region-set-regions self)))
-
-(defmethod region-contains-position-p ((self standard-region-intersection) x y)
-  (every (lambda (r) (region-contains-position-p r x y))
-         (standard-region-set-regions self)))
-
-(defmethod region-contains-position-p ((self standard-region-difference) x y)
-  (and (region-contains-position-p (standard-region-difference-a self) x y)
-       (not (region-contains-position-p (standard-region-difference-b self) x y))))
-
-(defmethod region-contains-position-p ((self standard-polygon) x y)
-  (and (region-contains-position-p (bounding-rectangle self) x y)
+(defmethod region-contains-position-p ((region polygon) x y)
+  (and (region-contains-position-p (bounding-rectangle region) x y)
        ;; The following algorithm is a Winding Number (wn) method implementation
        ;; based on a description by Dan Sunday "Inclusion of a Point in a
        ;; Polygon" (http://geomalgorithms.com/a03-_inclusion.html).
@@ -83,6 +77,10 @@
                (wn 0))
            (map-over-polygon-segments
             (lambda (x1 y1 x2 y2)
+              ;; Algorithm is not predictable for polygon edges - we
+              ;; need to test for them explicitly. -- jd 2019-09-27
+              (when (segment-contains-point-p x1 y1 x2 y2 x y)
+                (return-from region-contains-position-p t))
               (if (<= y1 y)
                   (when (and (> y2 y)
                              (> (is-left x1 y1 x2 y2 x y) 0))
@@ -90,20 +88,75 @@
                   (when (and (<= y2 y)
                              (< (is-left x1 y1 x2 y2 x y) 0))
                     (decf wn))))
-            self)
+            region)
            (not (zerop wn))))))
+
+(defmethod region-contains-position-p ((region rectangle) x y)
+  (multiple-value-bind (x1 y1 x2 y2)
+      (rectangle-edges* region)
+    (and (coordinate-between* x1 x x2)
+         (coordinate-between* y1 y y2))))
+
+(defmethod region-contains-position-p ((region standard-rectangle) x y)
+  (with-standard-rectangle (x1 y1 x2 y2) region
+    (and (coordinate-between* x1 x x2)
+         (coordinate-between* y1 y y2))))
+
+(defmethod region-contains-position-p ((region ellipse) x y)
+  (flet ((position-contains-p (polar->screen)
+           (multiple-value-bind (polar-x polar-y)
+               (untransform-position polar->screen x y)
+             ;; FIXME we don't need to factor the additonal epsilon
+             ;; but rotated elliptoids are naively rendered in clx.
+             (multiple-value-bind (polar-dx polar-dy)
+                 (untransform-distance polar->screen 1 1)
+               (coordinate<= (+ (square polar-x) (square polar-y))
+                             (+ 1 (square polar-dx) (square polar-dy)))))))
+    (if-let ((alpha (ellipse-start-angle region)))
+      (and (multiple-value-bind (cx cy) (ellipse-center-point* region)
+             (arc-contains-point-p alpha (ellipse-end-angle region) (- x cx) (- y cy)))
+           (position-contains-p (polar->screen region)))
+      (position-contains-p (polar->screen region)))))
+
+
+;;   REGION-INTERSECTS-REGION-P region1 region2
+;;
+;;        Returns nil if region-intersection of the two regions region1 and
+;;        region2 would be +nowhere+; otherwise, it returns t.
+;;
+;;        aka region1 and region2 are not disjoint, aka A ∩ B ≠ ∅
+;;
+
+;; "generic" version
+(defmethod region-intersects-region-p ((a bounding-rectangle) (b bounding-rectangle))
+  (not (region-equal +nowhere+ (region-intersection a b))))
+
+(defmethod region-intersects-region-p :around ((a bounding-rectangle) (b bounding-rectangle))
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
+    (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
+      (cond ((and (<= u1 x2) (<= x1 u2)
+                  (<= v1 y2) (<= y1 v2))
+             (call-next-method))
+            (t
+             nil)))))
+
+(defmethod region-intersects-region-p ((a standard-rectangle) (b standard-rectangle))
+  (declare (ignorable a b))
+  ;; for rectangles, the bounding rectangle test is correct, so if we
+  ;; wind up here, we can just return T.
+  t)
 
 
 ;;   REGION-CONTAINS-REGION-P region1 region2
 ;;
-;;        Returns t if all points in the region region2 are members of the
-;;        region region1; otherwise, it returns nil.
+;;        Returns T if all points in the region REGION1 are members of
+;;        the region REGION2; otherwise, it returns NIL.
 ;;
-;;        aka region2 ist teilmenge von region1  aka B\A = 0
+;;        aka region2 is a subset of region1, aka B\A = ∅
 ;;
 
 ;;; "generic" version
-(defmethod region-contains-region-p ((a region) (b region))
+(defmethod region-contains-region-p ((a bounding-rectangle) (b bounding-rectangle))
   (or (eq a b)
       (region-equal +nowhere+ (region-difference b a))))
 
@@ -149,71 +202,22 @@
        polygon))
   T)
 
-(defmethod region-contains-region-p ((xs standard-rectangle-set) (point point))
-  (multiple-value-bind (x y) (point-position point)
-    (region-contains-position-p xs x y)))
-
-(defmethod region-contains-region-p ((a region) (b point))
+(defmethod region-contains-region-p ((a bounding-rectangle) (b point))
   (region-contains-position-p a (point-x b) (point-y b)))
 
-;; xxx what about (region-contains-region-p x +nowhere+) ?
-
-(defmethod region-contains-region-p ((a everywhere-region) (b region))
-  t)
-
-(defmethod region-contains-region-p ((a nowhere-region) (b region))
-  nil)
-
-(defmethod region-contains-region-p ((a everywhere-region) (b everywhere-region))
-  t)
-
-(defmethod region-contains-region-p ((a region) (b everywhere-region))
-  ;; ??? what about (region-union (region-difference +everywhere+ X) X) ???
-  nil)
-
-(defmethod region-contains-region-p ((a region) (b nowhere-region))
-  t)
-
-
-
-
-;;   REGION-INTERSECTS-REGION-P region1 region2
-;;
-;;        Returns nil if region-intersection of the two regions region1 and
-;;        region2 would be +nowhere+; otherwise, it returns t.
-;;
-;;        aka region1 und region2 sind nicht disjunkt  aka AB /= 0
-;;
-
-;; "generic" version
-(defmethod region-intersects-region-p ((a region) (b region))
-  (not (region-equal +nowhere+ (region-intersection a b))))
-
-(defmethod region-intersects-region-p :around ((a bounding-rectangle) (b bounding-rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
-    (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
-      (cond ((and (<= u1 x2) (<= x1 u2)
-                  (<= v1 y2) (<= y1 v2))
-             (call-next-method))
-            (t
-             nil)))))
-
-(defmethod region-intersects-region-p ((a standard-rectangle) (b standard-rectangle))
-  (declare (ignorable a b))
-  ;; for rectangles, the bounding rectangle test is correct, so if we
-  ;; wind up here, we just can return T.
-  t
-  ;;(multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* a)
-  ;;  (multiple-value-bind (u1 v1 u2 v2) (rectangle-edges* b)
-  ;;    (and (<= u1 x2) (<= x1 u2)
-  ;;         (<= v1 y2) (<= y1 v2))))
-  )
-
 
 
 ;; "generic" version
-(defmethod region-equal ((a region) (b region))
+(defmethod region-equal ((a bounding-rectangle) (b bounding-rectangle))
   (region-equal +nowhere+ (region-exclusive-or a b)))
+
+;;; dimensionality rule
+(defmethod region-equal ((a point) (b path))  nil)
+(defmethod region-equal ((a point) (b area))  nil)
+(defmethod region-equal ((a path)  (b point)) nil)
+(defmethod region-equal ((a path)  (b area))  nil)
+(defmethod region-equal ((a area)  (b point)) nil)
+(defmethod region-equal ((a area)  (b path))  nil)
 
 (defmethod region-equal ((a point) (b point))
   (and (coordinate= (point-x a) (point-x b))
@@ -223,24 +227,6 @@
   ;; Our bands representation is canonic
   (equal (standard-rectangle-set-bands xs)
          (standard-rectangle-set-bands ys)))
-
-(defmethod region-equal ((a everywhere-region) (b everywhere-region))
-  t)
-
-(defmethod region-equal ((a nowhere-region) (b nowhere-region))
-  t)
-
-(defmethod region-equal ((a everywhere-region) (b region))
-  nil)
-
-(defmethod region-equal ((a nowhere-region) (b region))
-  nil)
-
-(defmethod region-equal ((a region) (b everywhere-region))
-  nil)
-
-(defmethod region-equal ((a region) (b nowhere-region))
-  nil)
 
 (defmethod region-equal ((a standard-rectangle) (b standard-rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* a)

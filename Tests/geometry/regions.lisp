@@ -300,18 +300,21 @@
          (some-el (list el1 el2 el3 el4))
          (all-el (list* el0 some-el)))
     (declare (ignorable el0 el1 el2 el3 el4))
-    (flet ((rcpt (xc yc elts)
-             (mapcar (lambda (el)
-                       (is-true (region-contains-position-p el xc yc)))
-                     elts))
-           (rcpn (xc yc elts)
-             (mapcar (lambda (el)
-                       (is-false (region-contains-position-p el xc yc)))
-                     elts)))
+    (macrolet ((rcpt (xc yc elts)
+                 `(mapcar (lambda (el)
+                            (is-true (region-contains-position-p el ,xc ,yc)))
+                          ,elts))
+               (rcpn (xc yc elts)
+                 `(mapcar (lambda (el)
+                            (is-false (region-contains-position-p el ,xc ,yc)))
+                          ,elts)))
       ;; trivial cases which may be judged based on distance from the center
       (rcpt xc yc             all-el)
       (rcpt (+ xc 100) yc     all-el)
-      (rcpn (1+ xc) (- yc 50) all-el)
+      ;; FIXME this test may fail because we add an additional epsilon
+      ;; for sake of CLX rendering of rotated ellipses. -- jd 2019-11-19
+      (rcpn (+ xc 1) (- yc 50) all-el)
+      (rcpn (+ xc 3) (- yc 50) all-el)
       ;; less trivial cases (we accept only 1st quadrent in el1-el4)
       ;; point between 4th and 1st quadrent (on the start-angle)
       (rcpt (+ xc 10) yc all-el)
@@ -352,7 +355,11 @@
               (is-true (region-contains-position-p el 210 210))
               (is-false (region-contains-position-p el 100 300)) ; outside the angle
               ;; points outside the ellipse
+              ;;
+              ;; FIXME this test may fail because we add an additional epsilon
+              ;; for sake of CLX rendering of rotated ellipses. -- jd 2019-11-19
               (is-false (region-contains-position-p el 301 101)) ; too far away
+              (is-false (region-contains-position-p el 303 103)) ; too far away
               (is-false (region-contains-position-p el 200 100)) ; y-aligned tip
               (is-false (region-contains-position-p el 300 200)) ; x-aligned tip
               )

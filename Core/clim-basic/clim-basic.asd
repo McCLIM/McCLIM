@@ -19,12 +19,15 @@
     :serial t
     :components ((:file "coordinates")
                  (:file "transforms")
-                 (:file "regions")
                  (:file "bounding-rectangle")
+                 (:file "regions")
+                 (:file "region-utilities")
                  (:file "region-bounding-rectangles")
                  (:file "region-transformations")
                  (:file "region-predicates")
-                 (:file "region-composition")))
+                 (:file "region-composition")
+                 (:file "region-set-predicates")
+                 (:file "region-set-composition")))
    (:module "windowing"
     :depends-on ("utils" "decls" "protocol-classes" "multiprocessing" "geometry")
     :components ((:file "events")

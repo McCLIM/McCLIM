@@ -45,6 +45,15 @@
   (defun coordinate<= (x y)
     (<= (- x y) (coordinate-epsilon)))
 
+  (declaim (inline coordinate-between))
+  (defun coordinate-between (c1 x c2)
+    (or (and (coordinate<= c1 x) (coordinate<= x c2))
+        (and (coordinate<= c2 x) (coordinate<= x c1))))
+
+  (declaim (inline coordinate-between*))
+  (defun coordinate-between* (low x high)
+    (and (coordinate<= low x) (coordinate<= x high)))
+
   (defun coordinate/= (x y)
     (not (coordinate= x y))))
 
@@ -64,6 +73,15 @@
 (declaim (inline coordinate<=))
 (defun coordinate<= (x y)
   (<= x y))
+
+(declaim (inline coordinate-between))
+(defun coordinate-between (c1 x c2)
+  (or (<= c1 x c2)
+      (>= c1 x c2)))
+
+(declaim (inline coordinate-between*))
+(defun coordinate-between* (low x high)
+  (<= low x high))
 
 (declaim (inline coordinate/=))
 (defun coordinate/= (x y)

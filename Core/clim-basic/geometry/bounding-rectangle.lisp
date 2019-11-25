@@ -31,7 +31,6 @@
 ;;; 4.1.2 Bounding Rectangle Convenience Functions
 
 (defmacro with-bounding-rectangle* ((min-x min-y max-x max-y) region &body body)
-  ;; What is the purpose of this macro; IHMO m.-v.-b. looks as nice as with-b.-.r. .
   `(multiple-value-bind (,min-x ,min-y ,max-x ,max-y) (bounding-rectangle* ,region)
      ,@body))
 
