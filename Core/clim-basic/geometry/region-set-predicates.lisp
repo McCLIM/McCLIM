@@ -1,6 +1,6 @@
 (in-package #:climi)
 
-(defmethod region-contains-position-p ((self standard-rectangle-set) x y)
+(defmethod region-contains-position-p ((region standard-rectangle-set) x y)
   (block nil
     (map-over-bands (lambda (y1 y2 isum)
                       (when (<= y1 y y2)
@@ -8,16 +8,16 @@
                           (return t)))
                       (when (< y y2)
                         (return nil)))
-                    (standard-rectangle-set-bands self))
+                    (standard-rectangle-set-bands region))
     nil))
 
-(defmethod region-contains-position-p ((self standard-region-union) x y)
+(defmethod region-contains-position-p ((region standard-region-union) x y)
   (some (lambda (r) (region-contains-position-p r x y))
-        (standard-region-set-regions self)))
+        (standard-region-set-regions region)))
 
-(defmethod region-contains-position-p ((self standard-region-intersection) x y)
+(defmethod region-contains-position-p ((region standard-region-intersection) x y)
   (every (lambda (r) (region-contains-position-p r x y))
-         (standard-region-set-regions self)))
+         (standard-region-set-regions region)))
 
 (defmethod region-contains-position-p ((region standard-region-difference) x y)
   (let ((region-a (standard-region-difference-a region))

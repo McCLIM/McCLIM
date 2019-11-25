@@ -25,12 +25,12 @@
 ;;; sets have their methods defined elsewhere.
 
 
-(defmethod region-contains-position-p ((self point) x y)
-  (multiple-value-bind (px py) (point-position self)
+(defmethod region-contains-position-p ((region point) x y)
+  (multiple-value-bind (px py) (point-position region)
     (and (coordinate= px x)
          (coordinate= py y))))
 
-(defmethod region-contains-position-p ((self polyline) x y)
+(defmethod region-contains-position-p ((region polyline) x y)
   (setf x (coordinate x)
         y (coordinate y))
   (block nil
@@ -38,15 +38,15 @@
      (lambda (x1 y1 x2 y2)
        (when (segment-contains-point-p x1 y1 x2 y2 x y)
          (return t)))
-     self)
+     region)
     nil))
 
-(defmethod region-contains-position-p ((self line) x y)
-  (multiple-value-bind (x1 y1) (line-start-point* self)
-    (multiple-value-bind (x2 y2) (line-end-point* self)
+(defmethod region-contains-position-p ((region line) x y)
+  (multiple-value-bind (x1 y1) (line-start-point* region)
+    (multiple-value-bind (x2 y2) (line-end-point* region)
       (segment-contains-point-p x1 y1 x2 y2 x y))))
 
-(defmethod region-contains-position-p ((self elliptical-arc) x y)
+(defmethod region-contains-position-p ((region elliptical-arc) x y)
   (flet ((position-contains-p (polar->screen)
            (multiple-value-bind (polar-x polar-y)
                (untransform-position polar->screen x y)
@@ -58,11 +58,11 @@
                  (coordinate-between* (- 1 point-radii)
                                       (+ (square polar-x) (square polar-y))
                                       (+ 1 point-radii)))))))
-    (if-let ((alpha (ellipse-start-angle self)))
-      (and (multiple-value-bind (cx cy) (ellipse-center-point* self)
-             (arc-contains-point-p alpha (ellipse-end-angle self) (- x cx) (- y cy)))
-           (position-contains-p (polar->screen self)))
-      (position-contains-p (polar->screen self)))))
+    (if-let ((alpha (ellipse-start-angle region)))
+      (and (multiple-value-bind (cx cy) (ellipse-center-point* region)
+             (arc-contains-point-p alpha (ellipse-end-angle region) (- x cx) (- y cy)))
+           (position-contains-p (polar->screen region)))
+      (position-contains-p (polar->screen region)))))
 
 (defmethod region-contains-position-p ((region polygon) x y)
   (and (region-contains-position-p (bounding-rectangle region) x y)
@@ -91,18 +91,18 @@
             region)
            (not (zerop wn))))))
 
-(defmethod region-contains-position-p ((self rectangle) x y)
+(defmethod region-contains-position-p ((region rectangle) x y)
   (multiple-value-bind (x1 y1 x2 y2)
-      (rectangle-edges* self)
+      (rectangle-edges* region)
     (and (coordinate-between* x1 x x2)
          (coordinate-between* y1 y y2))))
 
-(defmethod region-contains-position-p ((self standard-rectangle) x y)
-  (with-standard-rectangle (x1 y1 x2 y2) self
+(defmethod region-contains-position-p ((region standard-rectangle) x y)
+  (with-standard-rectangle (x1 y1 x2 y2) region
     (and (coordinate-between* x1 x x2)
          (coordinate-between* y1 y y2))))
 
-(defmethod region-contains-position-p ((self ellipse) x y)
+(defmethod region-contains-position-p ((region ellipse) x y)
   (flet ((position-contains-p (polar->screen)
            (multiple-value-bind (polar-x polar-y)
                (untransform-position polar->screen x y)
@@ -112,11 +112,11 @@
                  (untransform-distance polar->screen 1 1)
                (coordinate<= (+ (square polar-x) (square polar-y))
                              (+ 1 (square polar-dx) (square polar-dy)))))))
-    (if-let ((alpha (ellipse-start-angle self)))
-      (and (multiple-value-bind (cx cy) (ellipse-center-point* self)
-             (arc-contains-point-p alpha (ellipse-end-angle self) (- x cx) (- y cy)))
-           (position-contains-p (polar->screen self)))
-      (position-contains-p (polar->screen self)))))
+    (if-let ((alpha (ellipse-start-angle region)))
+      (and (multiple-value-bind (cx cy) (ellipse-center-point* region)
+             (arc-contains-point-p alpha (ellipse-end-angle region) (- x cx) (- y cy)))
+           (position-contains-p (polar->screen region)))
+      (position-contains-p (polar->screen region)))))
 
 
 ;;   REGION-INTERSECTS-REGION-P region1 region2

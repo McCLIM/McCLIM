@@ -88,24 +88,24 @@ transformation protocol."))
 (defmethod slots-for-pprint-object append ((object standard-hairy-transformation))
   '(mxx mxy myx myy tx ty))
 
-(defmethod print-object ((self standard-hairy-transformation) sink)
-  (maybe-print-readably (self sink)
-    (print-unreadable-object (self sink :identity nil :type t)
+(defmethod print-object ((transformation standard-hairy-transformation) sink)
+  (maybe-print-readably (transformation sink)
+    (print-unreadable-object (transformation sink :identity nil :type t)
       (apply #'format sink "~S ~S ~S ~S ~S ~S"
-             (multiple-value-list (get-transformation self))))))
+             (multiple-value-list (get-transformation transformation))))))
 
-(defmethod print-object ((self standard-transformation) sink)
-  (print-unreadable-object (self sink :identity nil :type t)
+(defmethod print-object ((transformation standard-transformation) sink)
+  (print-unreadable-object (transformation sink :identity nil :type t)
     (apply #'format sink "~S ~S ~S ~S ~S ~S"
-           (multiple-value-list (get-transformation self)))))
+           (multiple-value-list (get-transformation transformation)))))
 
-(defmethod print-object ((self standard-translation) sink)
-  (print-unreadable-object (self sink :identity nil :type t)
-    (with-slots (dx dy) self
+(defmethod print-object ((transformation standard-translation) sink)
+  (print-unreadable-object (transformation sink :identity nil :type t)
+    (with-slots (dx dy) transformation
       (format sink ":DX ~s :DY ~s" dx dy))))
 
-(defmethod print-object ((self standard-identity-transformation) sink)
-  (print-unreadable-object (self sink :identity t :type t)))
+(defmethod print-object ((transformation standard-identity-transformation) sink)
+  (print-unreadable-object (transformation sink :identity t :type t)))
 
 (defun make-transformation (mxx mxy myx myy tx ty)
   ;; Make a transformation, which will map a point (x,y) into
@@ -262,47 +262,47 @@ real numbers, and default to 0."
   ((coords :initarg :coords
 	   :reader transformation-error-coords))
   (:report
-   (lambda (self sink)
+   (lambda (transformation sink)
      (apply #'format sink
 	    "The three points (~D,~D), (~D,~D), and (~D,~D) are propably collinear."
-	    (subseq (transformation-error-coords self) 0 6)))))
+	    (subseq (transformation-error-coords transformation) 0 6)))))
 
 (define-condition reflection-underspecified (transformation-error)
   ((coords :initarg :coords
 	   :reader transformation-error-coords)
    (why :initarg :why :initform nil
 	:reader transformation-error-why))
-  (:report (lambda (self sink)
+  (:report (lambda (transformation sink)
 	     (apply #'format sink
 		    "The two points (~D,~D) and (~D,~D) are coincident."
-		    (transformation-error-coords self))
-	     (when (transformation-error-why self)
+		    (transformation-error-coords transformation))
+	     (when (transformation-error-why transformation)
 	       (format sink " (That was determined by the following error:~%~A)"
-		       (transformation-error-why self))))))
+		       (transformation-error-why transformation))))))
 
 (define-condition singular-transformation (transformation-error) 
   ((transformation :initarg :transformation
 		   :reader transformation-error-transformation)
    (why :initarg :why :initform nil
 	:reader transformation-error-why))
-  (:report (lambda (self sink)
+  (:report (lambda (transformation sink)
 	     (format sink
 		     "Attempt to invert the probably singular transformation ~S."
-		     (transformation-error-transformation self))
-	     (when (transformation-error-why self)
+		     (transformation-error-transformation transformation))
+	     (when (transformation-error-why transformation)
 	       (format sink
 		       "~%Another error occurred while computing the inverse:~%    ~A"
-		       (transformation-error-why self))))))
+		       (transformation-error-why transformation))))))
 
 (define-condition rectangle-transformation-error (transformation-error)
   ((transformation :initarg :transformation
 		   :reader transformation-error-transformation)
    (rect :initarg :rect
 	 :reader transformation-error-rect))
-  (:report (lambda (self sink)
+  (:report (lambda (transformation sink)
 	     (format sink "Attempt to transform the rectangle ~S through the non-rectilinear transformation ~S."
-		     (transformation-error-rect self)
-		     (transformation-error-transformation self)))))
+		     (transformation-error-rect transformation)
+		     (transformation-error-transformation transformation)))))
 
 (defmethod transformation-equal ((transformation1 standard-transformation)
                                  (transformation2 standard-transformation))

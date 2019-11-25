@@ -112,12 +112,12 @@
     a a a
     +nowhere+ a))
 
-(defmethod region-contains-position-p ((self everywhere-region) x y)
-  (declare (ignore x y))
+(defmethod region-contains-position-p ((region everywhere-region) x y)
+  (declare (ignore region x y))
   t)
 
-(defmethod region-contains-position-p ((self nowhere-region) x y)
-  (declare (ignore x y))
+(defmethod region-contains-position-p ((region nowhere-region) x y)
+  (declare (ignore region x y))
   nil)
 
 ;;; 2.5.1.2 Composition of CLIM Regions
@@ -146,23 +146,23 @@
 (defmethod slots-for-pprint-object append ((object standard-point))
   '(x y))
 
-(defmethod print-object ((self standard-point) sink)
-  (maybe-print-readably (self sink)
-    (print-unreadable-object (self sink :identity nil :type t)
-      (with-slots (x y) self
+(defmethod print-object ((region standard-point) sink)
+  (maybe-print-readably (region sink)
+    (print-unreadable-object (region sink :identity nil :type t)
+      (with-slots (x y) region
         (format sink "~S ~S" x y)))))
 
 ;;; Point protocol: point-position
 
-(defmethod point-position ((self standard-point))
-  (with-slots (x y) self
+(defmethod point-position ((region standard-point))
+  (with-slots (x y) region
     (values x y)))
 
-(defmethod point-x ((self point))
-  (nth-value 0 (point-position self)))
+(defmethod point-x ((region point))
+  (nth-value 0 (point-position region)))
 
-(defmethod point-y ((self point))
-  (nth-value 1 (point-position self)))
+(defmethod point-y ((region point))
+  (nth-value 1 (point-position region)))
 
 ;;; -- 2.5.3 Polygons and Polylines in CLIM ----------------------------------
 
@@ -180,9 +180,9 @@
 (defmethod slots-for-pprint-object append ((object standard-polyline))
   '(points closed))
 
-(defmethod print-object ((self standard-polyline) sink)
-  (maybe-print-readably (self sink)
-    (print-unreadable-object (self sink :identity t :type t))))
+(defmethod print-object ((region standard-polyline) sink)
+  (maybe-print-readably (region sink)
+    (print-unreadable-object (region sink :identity t :type t))))
 
 ;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
 
@@ -206,12 +206,12 @@
 (defun make-polygon* (coord-seq)
   (make-polygon (coord-seq->point-seq coord-seq)))
 
-(defmethod map-over-polygon-coordinates (fun (self standard-polygon))
-  (with-slots (points) self
+(defmethod map-over-polygon-coordinates (fun (region standard-polygon))
+  (with-slots (points) region
     (mapc (lambda (p) (funcall fun (point-x p) (point-y p))) points)))
 
-(defmethod map-over-polygon-segments (fun (self standard-polygon))
-  (with-slots (points) self
+(defmethod map-over-polygon-segments (fun (region standard-polygon))
+  (with-slots (points) region
     (do ((q points (cdr q)))
         ((null (cdr q))
          (funcall fun
@@ -221,12 +221,12 @@
                (point-x (car q)) (point-y (car q))
                (point-x (cadr q)) (point-y (cadr q))))))
 
-(defmethod map-over-polygon-coordinates (fun (self standard-polyline))
-  (with-slots (points) self
+(defmethod map-over-polygon-coordinates (fun (region standard-polyline))
+  (with-slots (points) region
     (mapc (lambda (p) (funcall fun (point-x p) (point-y p))) points)))
 
-(defmethod map-over-polygon-segments (fun (self standard-polyline))
-  (with-slots (points closed) self
+(defmethod map-over-polygon-segments (fun (region standard-polyline))
+  (with-slots (points closed) region
     (do ((q points (cdr q)))
         ((null (cdr q))
          (when closed
@@ -236,8 +236,8 @@
       (funcall fun (point-x (car q)) (point-y (car q))
                (point-x (cadr q)) (point-y (cadr q))))))
 
-(defmethod polyline-closed ((self standard-polyline))
-  (with-slots (closed) self
+(defmethod polyline-closed ((region standard-polyline))
+  (with-slots (closed) region
     closed))
 
 
@@ -302,10 +302,10 @@
 (defmethod slots-for-pprint-object append ((object standard-line))
   '(x1 y1 x2 y2))
 
-(defmethod print-object ((self standard-line) sink)
-  (maybe-print-readably (self sink)
-    (print-unreadable-object (self sink :identity nil :type t)
-         (with-slots (x1 y1 x2 y2) self
+(defmethod print-object ((region standard-line) sink)
+  (maybe-print-readably (region sink)
+    (print-unreadable-object (region sink :identity nil :type t)
+         (with-slots (x1 y1 x2 y2) region
            (format sink "~D ~D ~D ~D" x1 y1 x2 y2)))))
 
 ;;; -- 2.5.5 Rectangles in CLIM ----------------------------------------------
@@ -605,26 +605,26 @@
 
 ;;; -- 2.5.6.2 Accessors for CLIM Elliptical Objects -------------------------
 
-(defmethod ellipse-center-point* ((self elliptical-thing))
-  (with-slots (tr) self
+(defmethod ellipse-center-point* ((region elliptical-thing))
+  (with-slots (tr) region
     (transform-position tr 0 0)))
 
-(defmethod ellipse-center-point ((self elliptical-thing))
-  (with-slots (tr) self
+(defmethod ellipse-center-point ((region elliptical-thing))
+  (with-slots (tr) region
     (transform-region tr (make-point 0 0))))
 
-(defmethod ellipse-radii ((self elliptical-thing))
-  (with-slots (tr) self
+(defmethod ellipse-radii ((region elliptical-thing))
+  (with-slots (tr) region
     (multiple-value-bind (dx1 dy1) (transform-distance tr 1 0)
       (multiple-value-bind (dx2 dy2) (transform-distance tr 0 1)
         (values dx1 dy1 dx2 dy2)))))
 
-(defmethod ellipse-start-angle ((self elliptical-thing))
-  (with-slots (start-angle) self
+(defmethod ellipse-start-angle ((region elliptical-thing))
+  (with-slots (start-angle) region
     start-angle))
 
-(defmethod ellipse-end-angle ((self elliptical-thing))
-  (with-slots (end-angle) self
+(defmethod ellipse-end-angle ((region elliptical-thing))
+  (with-slots (end-angle) region
     end-angle))
 
 ;;; -- Rectangle Sets --------------------------------------------------------
@@ -658,8 +658,8 @@
     :initform nil)))
 
 (defmethod map-over-region-set-regions
-    (fun (self standard-rectangle-set) &key normalize)
-  (with-slots (bands) self
+    (fun (region standard-rectangle-set) &key normalize)
+  (with-slots (bands) region
     (cond ((or (null normalize) (eql normalize :x-banding))
            (map-over-bands-rectangles
             (lambda (x1 y1 x2 y2)
@@ -674,11 +674,11 @@
            (error "Bad ~S argument to ~S: ~S"
                   :normalize 'map-over-region-set-regions normalize)))))
 
-(defmethod region-set-regions ((self standard-rectangle-set) &key normalize)
+(defmethod region-set-regions ((region standard-rectangle-set) &key normalize)
   (let ((res nil))
     (map-over-region-set-regions
      (lambda (r) (push r res))
-     self :normalize normalize)
+     region :normalize normalize)
     res))
 
 (defun make-standard-rectangle-set (bands)
@@ -695,46 +695,46 @@
 
 ;;; ============================================================================
 
-(defmethod region-set-regions ((self standard-region-union) &key normalize)
+(defmethod region-set-regions ((region standard-region-union) &key normalize)
   (declare (ignorable normalize))
-  (standard-region-set-regions self))
+  (standard-region-set-regions region))
 
-(defmethod region-set-regions ((self standard-region-intersection) &key normalize)
+(defmethod region-set-regions ((region standard-region-intersection) &key normalize)
   (declare (ignorable normalize))
-  (standard-region-set-regions self))
+  (standard-region-set-regions region))
 
-(defmethod region-set-regions ((self standard-region-difference) &key normalize)
+(defmethod region-set-regions ((region standard-region-difference) &key normalize)
   (declare (ignorable normalize))
-  (list (standard-region-difference-a self)
-        (standard-region-difference-b self)))
+  (list (standard-region-difference-a region)
+        (standard-region-difference-b region)))
 
-(defmethod region-set-regions ((self region) &key normalize)
+(defmethod region-set-regions ((region region) &key normalize)
   (declare (ignorable normalize))
-  (list self))
-
-(defmethod map-over-region-set-regions
-    (fun (self standard-region-union) &key normalize)
-  (declare (ignorable normalize))
-  (mapc fun (standard-region-set-regions self)))
+  (list region))
 
 (defmethod map-over-region-set-regions
-    (fun (self standard-region-intersection) &key normalize)
+    (fun (region standard-region-union) &key normalize)
   (declare (ignorable normalize))
-  (mapc fun (standard-region-set-regions self)))
+  (mapc fun (standard-region-set-regions region)))
 
 (defmethod map-over-region-set-regions
-    (fun (self standard-region-difference) &key normalize)
+    (fun (region standard-region-intersection) &key normalize)
   (declare (ignorable normalize))
-  (funcall fun (standard-region-difference-a self))
-  (funcall fun (standard-region-difference-b self)))
+  (mapc fun (standard-region-set-regions region)))
 
 (defmethod map-over-region-set-regions
-    (fun (self region-set) &key normalize)
-  (mapc fun (region-set-regions self :normalize normalize)))
-
-(defmethod map-over-region-set-regions (fun (self region) &key normalize)
+    (fun (region standard-region-difference) &key normalize)
   (declare (ignorable normalize))
-  (funcall fun self))
+  (funcall fun (standard-region-difference-a region))
+  (funcall fun (standard-region-difference-b region)))
+
+(defmethod map-over-region-set-regions
+    (fun (region region-set) &key normalize)
+  (mapc fun (region-set-regions region :normalize normalize)))
+
+(defmethod map-over-region-set-regions (fun (region region) &key normalize)
+  (declare (ignorable normalize))
+  (funcall fun region))
 
 ;;;; ===========================================================================
 
@@ -754,11 +754,11 @@
            (princ "'" stream))
          (write slot-value :stream stream))))
 
-(defmethod print-object ((self standard-rectangle) stream)
-  (maybe-print-readably (self stream)
-    (print-unreadable-object (self stream :type t :identity nil)
+(defmethod print-object ((region standard-rectangle) stream)
+  (maybe-print-readably (region stream)
+    (print-unreadable-object (region stream :type t :identity nil)
       (with-standard-rectangle (x1 y1 x2 y2)
-          self
+          region
         (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2)))))
 
 ;;; Internal helpers

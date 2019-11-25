@@ -1,12 +1,12 @@
 (in-package #:climi)
 
-(defmethod transform-region (transformation (self standard-point))
-  (with-slots (x y) self
+(defmethod transform-region (transformation (region standard-point))
+  (with-slots (x y) region
     (multiple-value-bind (x* y*) (transform-position transformation x y)
       (make-point x* y*))))
 
-(defmethod transform-region (transformation (self standard-polyline))
-  (with-slots (points closed) self
+(defmethod transform-region (transformation (region standard-polyline))
+  (with-slots (points closed) region
     (make-polyline
      (mapcar (lambda (p)
                (multiple-value-bind (x* y*)
@@ -15,8 +15,8 @@
              points)
      :closed closed)))
 
-(defmethod transform-region (transformation (self standard-polygon))
-  (with-slots (points) self
+(defmethod transform-region (transformation (region standard-polygon))
+  (with-slots (points) region
     (make-polygon
      (mapcar (lambda (p)
                (multiple-value-bind (x* y*)
@@ -43,8 +43,8 @@
          (make-polygon (mapcar (lambda (p) (transform-region transformation p))
                                (polygon-points rect))))))
 
-(defmethod transform-region (transformation (self elliptical-thing))
-  (with-slots (start-angle end-angle tr) self
+(defmethod transform-region (transformation (region elliptical-thing))
+  (with-slots (start-angle end-angle tr) region
     ;; I think this should be untransform-angle below, as the ellipse angles
     ;; go counter-clockwise in screen coordinates, whereas our transformations
     ;; rotate clockwise..  -Hefner
@@ -54,12 +54,12 @@
                              (untransform-angle transformation end-angle))))
       (when (reflection-transformation-p transformation)
         (rotatef start-angle* end-angle*))
-      (make-instance (type-of self)
+      (make-instance (type-of region)
         :tr (compose-transformations transformation tr)
         :start-angle start-angle*
         :end-angle end-angle*))))
 
-(defmethod transform-region (tr (self standard-rectangle-set))
+(defmethod transform-region (tr (region standard-rectangle-set))
   (cond ((scaling-transformation-p tr)
          (multiple-value-bind (mxx mxy myx myy tx ty)
              (get-transformation tr)
@@ -70,7 +70,7 @@
                       (loop for ((y . nil) (nil . xs)) on (nreverse bands)
                          collect `(,y . ,xs))))
                (make-standard-rectangle-set
-                (loop for band in (standard-rectangle-set-bands self)
+                (loop for band in (standard-rectangle-set-bands region)
                    for new-band = (loop for x in (cdr band)
                                      collect (+ (* mxx x) tx) into new-xs
                                      finally (return (cons (+ (* myy (car band)) ty)
@@ -89,29 +89,29 @@
            (map-over-region-set-regions
             (lambda (rect)
               (setf res (region-union res (transform-region tr rect))))
-            self)
+            region)
            res))))
 
-(defmethod transform-region (tr (self everywhere-region))
+(defmethod transform-region (tr (region everywhere-region))
   (declare (ignore tr))
   +everywhere+)
 
-(defmethod transform-region (tr (self nowhere-region))
+(defmethod transform-region (tr (region nowhere-region))
   (declare (ignore tr))
   +nowhere+)
 
-(defmethod transform-region (tr (self standard-region-difference))
-  (with-slots (a b) self
+(defmethod transform-region (tr (region standard-region-difference))
+  (with-slots (a b) region
     (make-instance 'standard-region-difference
       :a (transform-region tr a)
       :b (transform-region tr b))))
 
-(defmethod transform-region (tr (self standard-region-union))
-  (with-slots (regions) self
+(defmethod transform-region (tr (region standard-region-union))
+  (with-slots (regions) region
     (make-instance 'standard-region-union
       :regions (mapcar (lambda (r) (transform-region tr r)) regions))))
 
-(defmethod transform-region (tr (self standard-region-intersection))
-  (with-slots (regions) self
+(defmethod transform-region (tr (region standard-region-intersection))
+  (with-slots (regions) region
     (make-instance 'standard-region-intersection
       :regions (mapcar (lambda (r) (transform-region tr r)) regions))))

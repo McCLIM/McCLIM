@@ -7,17 +7,17 @@
   (values 0 0 0 0))
 
 ;;; Lazy evaluation of a bounding rectangle.
-(defmethod slot-unbound (class (self cached-polygon-bbox-mixin) (slot-name (eql 'bbox)))
-  (setf (slot-value self 'bbox)
+(defmethod slot-unbound (class (region cached-polygon-bbox-mixin) (slot-name (eql 'bbox)))
+  (setf (slot-value region 'bbox)
         (make-instance 'standard-bounding-rectangle
-                       :x1 (reduce #'min (mapcar #'point-x (polygon-points self)))
-                       :y1 (reduce #'min (mapcar #'point-y (polygon-points self)))
-                       :x2 (reduce #'max (mapcar #'point-x (polygon-points self)))
-                       :y2 (reduce #'max (mapcar #'point-y (polygon-points self))))))
+                       :x1 (reduce #'min (mapcar #'point-x (polygon-points region)))
+                       :y1 (reduce #'min (mapcar #'point-y (polygon-points region)))
+                       :x2 (reduce #'max (mapcar #'point-x (polygon-points region)))
+                       :y2 (reduce #'max (mapcar #'point-y (polygon-points region))))))
 
-(defmethod bounding-rectangle* ((self cached-polygon-bbox-mixin))
+(defmethod bounding-rectangle* ((region cached-polygon-bbox-mixin))
   (with-standard-rectangle (x1 y1 x2 y2)
-      (bounding-rectangle self)
+      (bounding-rectangle region)
     (values x1 y1 x2 y2)))
 
 (defun ellipse-bounding-rectangle (el)
@@ -64,8 +64,8 @@
     (values x1 y1 x2 y2)))
 
 ;;; - STANDARD-RECTANGLE-SET: has a slot BOUNDING-RECTANGLE for caching
-(defmethod bounding-rectangle* ((self standard-rectangle-set))
-  (with-slots (bands bounding-rectangle) self
+(defmethod bounding-rectangle* ((region standard-rectangle-set))
+  (with-slots (bands bounding-rectangle) region
     (values-list (or bounding-rectangle
                      (setf bounding-rectangle
                        (let (bx1 by1 bx2 by2)
@@ -77,11 +77,11 @@
                                                     bands)
                          (list bx1 by1 bx2 by2)))))))
 
-(defmethod bounding-rectangle* ((self standard-point))
-  (with-slots (x y) self
+(defmethod bounding-rectangle* ((region standard-point))
+  (with-slots (x y) region
     (values x y x y)))
 
-(defmethod bounding-rectangle* ((self standard-region-union))
+(defmethod bounding-rectangle* ((region standard-region-union))
   (let (bx1 by1 bx2 by2)
     (map-over-region-set-regions (lambda (r)
                                    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
@@ -89,11 +89,11 @@
                                            bx2 (max (or bx2 x2) x2)
                                            by1 (min (or by1 y1) y1)
                                            by2 (max (or by2 y2) y2))))
-                                 self)
+                                 region)
     (values bx1 by1 bx2 by2)))
 
-(defmethod bounding-rectangle* ((self standard-region-difference))
-  (with-slots (a b) self
+(defmethod bounding-rectangle* ((region standard-region-difference))
+  (with-slots (a b) region
     (cond ((eq a +everywhere+)
            (bounding-rectangle* b))
           (t
@@ -102,7 +102,7 @@
                (values (min x1 u1) (min y1 v1)
                        (max x2 u2) (min y2 v2))))))))
 
-(defmethod bounding-rectangle* ((self standard-region-intersection))
+(defmethod bounding-rectangle* ((region standard-region-intersection))
   ;; kill+yank alert
   (let (bx1 by1 bx2 by2)
     (map-over-region-set-regions (lambda (r)
@@ -111,5 +111,5 @@
                                            bx2 (max (or bx2 x2) x2)
                                            by1 (min (or by1 y1) y1)
                                            by2 (max (or by2 y2) y2))))
-                                 self)
+                                 region)
     (values bx1 by1 bx2 by2)))
