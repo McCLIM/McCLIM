@@ -440,19 +440,23 @@ highlighting, etc." ))
   (apply #'prompt-for-accept-1 stream type :display-default nil args))
 
 (define-command (com-query-exit :command-table accept-values
-                                :keystroke (#\] :control)
+                                :keystroke (#\[ :control)
                                 :name nil
                                 :provide-output-destination-keyword nil)
     ()
   (signal 'av-exit))
 
+(add-keystroke-to-command-table 'accept-values '(#\Return :meta) :command #'com-query-exit)
+
 (define-command (com-query-abort :command-table accept-values
-                                 :keystroke (#\z :control)
+                                 :keystroke (#\] :control)
                                  :name nil
                                  :provide-output-destination-keyword nil)
     ()
   (and (find-restart 'abort)
        (invoke-restart 'abort)))
+
+(add-keystroke-to-command-table 'accept-values '(#\g :control) :command #'com-query-abort)
 
 (define-command (com-change-query :command-table accept-values
                                   :name nil
