@@ -85,6 +85,9 @@
                    #-(or excl cmu sbcl clisp lispworks) "( ??? )"))
       (when arglist
         (present-simply arglist stream)))
+    (when (documentation (symbol-function object) t)
+      (format stream "~%      and has the docstring:~%")
+      (format stream "      ~S" (documentation (symbol-function object) t)))
     (terpri))
   (format stream "   it has a property list of ~S~%" (symbol-plist object)))
 
