@@ -69,7 +69,7 @@ subscripts, superscripts, etc.}
 
 \Defconst {*default-text-style*}
 
-The default text style used on a CLIM medium if no text style it explicitly
+The default text style used on a CLIM medium if no text style is explicitly
 specified for the medium when it it created.  This must be a fully merged text
 style.
 
@@ -77,7 +77,7 @@ style.
 
 The text style that is used as a fallback if no mapping exists for some other
 text style when some text is about to be rendered on a display device (via
-\cl{write-string} and \cl{draw-string*}, for example).  This text style be fully
+\cl{write-string} and \cl{draw-string*}, for example).  This text style should be fully
 merged, and it must have a mapping for all display devices.
 
 
@@ -157,7 +157,7 @@ representative character in the font.
 
 The methods for these generic functions will typically specialize both the
 \arg{text-style} and \arg{medium} arguments.  Implementations should also
-provide ``trampoline'' for these generic functions on output sheets; the
+provide ``trampolines'' for these generic functions on output sheets; the
 trampolines will simply call the method for the medium.
 
 
@@ -209,7 +209,7 @@ correspond to the new text style.  \arg{text-style} may either a text style
 object or a style spec (that is, a list of the a family, a face code, and a
 size).  \arg{body} is executed with the new text style in effect.
 
-The \arg{medium} argument is not evaluated, and must be a symbol that is bound
+The \arg{medium} argument is not evaluated and must be a symbol that is bound
 to a sheet or medium.  If \arg{medium} is \cl{t}, \cl{*standard-output*} is
 used.  \arg{body} may have zero or more declarations as its first forms.
 
@@ -221,7 +221,7 @@ the \arg{continuation} argument to \cl{invoke-with-text-style}.
 
 Binds the current text style of the \term{medium} \arg{medium} to correspond to
 the new text style, and calls the function \arg{continuation} with the new text
-style in effect.  \arg{text-style} may either a text style object or a style
+style in effect.  \arg{text-style} may either be a text style object or a style
 spec (that is, a list of the a family, a face code, and a size).  \arg{continuation}
 is a function of one argument, the medium; it has dynamic extent.
 
@@ -251,7 +251,7 @@ into calls to \cl{invoke-with-text-style}.
 \section {Controlling Text Style Mappings}
 
 Text styles are mapped to fonts using the \cl{text-style-mapping} function,
-which takes a port, a character set, and a text style and returns a font
+which takes a port, a character set, and a text style, and returns a font
 object.  All ports must implement methods for the following generic functions,
 for all classes of text style.
 

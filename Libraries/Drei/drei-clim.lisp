@@ -120,8 +120,7 @@ will be active when the associated Drei view has focus.")
 (defclass point-cursor (drei-cursor)
   ()
   (:default-initargs
-   :mark nil
-   :active t)
+   :mark nil)
   (:documentation "A class that should be used for the visual
 representation of the point of a Drei instance."))
 
@@ -132,9 +131,8 @@ representation of the point of a Drei instance."))
   ()
   (:default-initargs
    :active-ink +dark-green+
-    :inactive-ink +dark-green+
-    :mark nil
-    :active t)
+   :inactive-ink +dark-green+
+   :mark nil)
   (:documentation "A class that should be used for the visual
 representation of the mark of a Drei instance."))
 
@@ -170,7 +168,6 @@ function that calls `visible-1' with `cursor' and the view of
    :background *background-color*
    :foreground *foreground-color*
    :display-function 'display-drei-pane
-   :width 900
    :active nil)
   (:metaclass modual-class)
   (:documentation "An actual, instantiable Drei pane that
@@ -214,20 +211,21 @@ command loop completely."))
 
 ;;; The fun is that in the gadget version of Drei, we do not control
 ;;; the application command loop, and in fact, need to operate
-;;; completely independently of it - we can only act when the our port
+;;; completely independently of it - we can only act when our port
 ;;; deigns to bestow an event upon the gadget. So, we basically have
 ;;; to manually take care of reading gestures (asynchronously),
-;;; redisplaying, updating the syntax and all the other fun
-;;; details. On top of this, we have to account for the fact that some
-;;; other part of the application might catch the users fancy, and
-;;; since we do not (and can not) control the command loop, we can not
-;;; prevent the user from "leaving" the gadget at inconvenient times
-;;; (such as in the middle of entering a complex set of gestures, or
-;;; answering questions asked by a command). So, we keep some state
-;;; information in the `drei-gadget-pane' object and use it to cobble
-;;; together our own poor man's version of an ESA command loop. Syntax
-;;; updating is done after a command has been executed, and only then
-;;; (or by commands at their own discretion).
+;;; redisplaying, updating the syntax and all the other fun details.
+;;;
+;;; On top of this, we have to account for the fact that some other
+;;; part of the application might catch the user's fancy, and since we
+;;; do not (and can not) control the command loop, we can not prevent
+;;; the user from "leaving" the gadget at inconvenient times (such as
+;;; in the middle of entering a complex set of gestures, or answering
+;;; questions asked by a command). So, we keep some state information
+;;; in the `drei-gadget-pane' object and use it to cobble together our
+;;; own poor man's version of an ESA command loop. Syntax updating is
+;;; done after a command has been executed, and only then (or by
+;;; commands at their own discretion).
 (defclass drei-gadget-pane (drei-pane value-gadget action-gadget
                                       asynchronous-command-processor
                                       dead-key-merging-command-processor)
@@ -324,17 +322,20 @@ modifier key."))
           (with-bound-drei-special-variables (gadget :prompt (format nil "~A " (gesture-name gesture)))
             (handle-gesture gadget gesture)))))))
 
-(defmethod handle-event ((gadget drei-gadget-pane)
-                         (event clim-backend:selection-notify-event))
-  ;; Cargo-culted from above:
-  (unless (and (currently-processing-p gadget) (directly-processing-p gadget))
-    (letf (((currently-processing-p gadget) t))
-      (insert-sequence (point (view gadget)) 
-                       (clim-backend:get-selection-from-event (port gadget) event))
-      (display-drei gadget :redisplay-minibuffer t)
-      (propagate-changed-value gadget))))
+(defmethod handle-event ((gadget drei-gadget-pane) (event pointer-button-press-event))
+  (if (and (eql (event-modifier-state event) +shift-key+)
+           (eql (pointer-event-button event) +pointer-middle-button+))
+      (multiple-value-bind (content type presentp)
+          (clime:request-selection gadget :primary 'string)
+        (declare (ignore type))
+        (when presentp
+          (letf (((currently-processing-p gadget) t))
+            (insert-sequence (point (view gadget)) content)
+            (display-drei gadget :redisplay-minibuffer t)
+            (propagate-changed-value gadget))))
+      (call-next-method)))
 
-(defmethod handle-event :before 
+(defmethod handle-event :before
     ((gadget drei-gadget-pane) (event pointer-button-press-event))
   (let ((previous (stream-set-input-focus gadget)))
     (when (and previous (typep previous 'gadget))
@@ -502,22 +503,22 @@ record."))
 (defmethod rectangle-edges* ((rectangle drei-area))
   (bounding-rectangle* rectangle))
 
-(defmethod region-union ((region1 drei-area) region2)
+(defmethod region-union ((region1 drei-area) (region2 region))
   (region-union (bounding-rectangle region1) region2))
 
-(defmethod region-union (region1 (region2 drei-area))
+(defmethod region-union ((region1 region) (region2 drei-area))
   (region-union region1 (bounding-rectangle region2)))
 
-(defmethod region-intersection ((region1 drei-area) region2)
+(defmethod region-intersection ((region1 drei-area) (region2 region))
   (region-intersection (bounding-rectangle region1) region2))
 
-(defmethod region-intersection (region1 (region2 drei-area))
+(defmethod region-intersection ((region1 region) (region2 drei-area))
   (region-intersection region1 (bounding-rectangle region2)))
 
-(defmethod region-difference ((region1 drei-area) region2)
+(defmethod region-difference ((region1 drei-area) (region2 region))
   (region-difference (bounding-rectangle region1) region2))
 
-(defmethod region-difference (region1 (region2 drei-area))
+(defmethod region-difference ((region1 region) (region2 drei-area))
   (region-difference region1 (bounding-rectangle region2)))
 
 (defmethod transform-region (transformation (region drei-area))

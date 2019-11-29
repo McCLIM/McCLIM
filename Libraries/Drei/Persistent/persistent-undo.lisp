@@ -59,7 +59,7 @@
     (setf (slot-value buffer 'drei-buffer::contents) contents)
     (drei-buffer::filter-and-update
      (drei-buffer::cursors buffer)
-     #'(lambda (c) (flexichain::weak-pointer-value c buffer))
+     #'(lambda (c) (flexichain::weak-pointer-value c))
      #'(lambda (wpc)
 	 (setf (cursor-pos wpc)
 	       (max 0 (min (cursor-pos wpc) (1- (size buffer)))))))))

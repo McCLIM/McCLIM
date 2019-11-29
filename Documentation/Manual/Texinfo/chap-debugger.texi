@@ -4,10 +4,10 @@
 @cindex CLIM Debugger
 @cindex Debugger
 
-The debugger is used for interactively inspecting stack frame when the
-unhandled conditions are signalled. Given high enough debug settings
-it lets you inspecting frame local variables, evaluating code in it,
-examining backtrace and choosing available restarts.
+The debugger is used for interactively inspecting stack frames when an
+unhandled condition is encountered. Given high enough @t{debug}
+settings, the debugger can inspect frame-local variables, evaluate code
+in particular stack frame and invoke available restarts.
 
 @menu
 * Debugger usage::
@@ -22,59 +22,74 @@ To get up and running quickly with Debugger:
 
 @enumerate
 @item
- With Quicklisp loaded, invoke in repl:
+With Quicklisp loaded, invoke in REPL:
 
-  @t{(ql:quickload 'clim-debugger)}
+@cl{(ql:quickload 'clim-debugger)}
+
 @item
 Run simple test condition:
 
-  @t{(clim-debugger:with-debugger (error "test"))}
+@cl{(clim-debugger:with-debugger () (error "test"))}
 @end enumerate
 
-Debugger is highly inspired by Slime and uses Swank to gain
-portability across implementations. Module is still under development
-and some details may change in the future.
+The debugger is inspired by SLIME's debugger and uses Swank to gain
+portability across implementations.  The application is still under
+development and some details may change in the future.
 
-Selecting frame with a pointer switches its details and marks it
-active. Each locale value may be inspected by selection with mouse
-pointer. Active frame is distinguished from others with red
-color. @t{Eval in frame} command evaluates expression in the active
-frame.
+Clicking frame with the mouse pointer toggles the display of its details
+and selects it.  Each locale value may be inspected by selection with
+mouse pointer.  The selected frame is distinguished from others with red
+color.  The @command{Eval in frame} command evaluates expression in the
+selected frame.
 
 @node Keyboard shortcuts
 @subsection Keyboard shortcuts
 
 Warning: these key accelerators may change in the future.
 
-@table @samp
-@item M-m
- Show more frames
+@table @kbd
 @item M-p
- Mark previous frame active
+Mark previous frame active
+
 @item M-n
- Mark next frame active
-@item M-e
- Eval in active frame
+Mark next frame active
+
+@item m
+Show more frames
+
+@item e
+Eval in active frame
+
 @item TAB
- Toggle active frame details
-@item M-[0-9]
- Invoke nth restart
-@item M-q
- Quit debugger
+Toggle active frame details
+
+@item [0-9]
+Invoke nth restart
+
+@item q
+Quit debugger
 @end table
 
 @node Debugger API
 @subsection Debugger API
 
-@deffn {Function} {debugger} condition me-or-my-encapsulation
+@deffn {function} {@symbol{debugger,clim-debugger}} condition me-or-my-encapsulation
 
-Starts debugger with supplied condition. Second argument should be
-supplied by an underlying implementation allowing to encapsulate or
+Starts debugger with @var{condition}.  @var{me-or-my-encapsulation}
+should be supplied by the Lisp implementation allowing to encapsulate or
 supply different debugger for recursive debugger calls.
 @end deffn
 
-@deffn {macro} {with-debugger} &body body
+@deffn {macro} {@symbol{with-debugger,clim-debugger}} options &body body
 
-Wraps the code in @t{body} to invoke clim debugger when condition is
-signalled (binds @t{*debugger-hook*} to @t{#'debugger}).
+Executes the code in @var{body} invoking the @clim debugger when an
+unhandled condition is signalled.  The macro binds @cl{*debugger-hook*}
+to @cl{#'debugger}.  Bindings are inherited by new threads.
+@var{options} are not used at the moment.
+@end deffn
+
+@deffn {function} {@symbol{install-debugger,clim-debugger}}
+
+Installs @t{clim-debugger} globally (no need to wrap body in
+@code{with-debugger}).
 @end deffn

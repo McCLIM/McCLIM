@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; Support and port mixin for X based backends, handling keycode to
@@ -89,12 +89,12 @@
 ;;; reflect the post event state.
 
 (defun x-keysym-to-clim-modifiers (port event-key keychar keysym-name state)
-  "event-key is :key-press or :key-release"
-  (multiple-value-bind (clim-modifiers shift-lock? caps-lock? mode-switch?)
+  "Return modifiers for PORT with STATE. If KEYCHAR is a special key(like shift, caps-lock, etc.), update the modifiers cache. EVENT-KEY is :key-press or :key-release"
+  (multiple-value-bind (clim-modifiers caps-lock? mode-switch?)
       (x-event-state-modifiers port state)
-    (declare (ignore shift-lock? caps-lock? mode-switch?))
+    (declare (ignore caps-lock? mode-switch?))
     (if (characterp keychar)
-	clim-modifiers	;; ?? true?
+	clim-modifiers
 	(modify-modifiers event-key keysym-name clim-modifiers))))
 
 ;;; Modifier cache
@@ -115,10 +115,8 @@
 
 ;;; Definition of constants for the backend-specific modifier mask.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-(defconstant +shift-lock+ 1)
-(defconstant +caps-lock+ 2)
-(defconstant +mode-switch+ 4)
-)
+  (defconstant +caps-lock+ 1)
+  (defconstant +mode-switch+ 4))
 
 ;;; This dictionary maps CLX keysym names to the power-of-two
 ;;; constants that the CLIM II specification requires.
@@ -134,8 +132,7 @@
 ;;; that we need anyway, in order to determine what keysym to choose
 ;;; based on current modifiers.
 (defconstant +other-modifiers+
-  '((:shift-lock #.+shift-lock+)
-    (:caps-lock #.+caps-lock+)
+  '((:caps-lock #.+caps-lock+)
     (:mode-switch #.+mode-switch+)))
 
 ;;; We need a way to interpret the individual bits of an X11 modifier
@@ -177,7 +174,7 @@
   (defconstant +control-bit+    #b00000100)
   (defparameter *meta-bit*      #b00001000)
   (defparameter *hyper-bit*     #b00100000)
-  (defparameter *super-bit*     #b00100000))
+  (defparameter *super-bit*     #b01000000))
 
 ;;; Given an X11/CLX modifier mask, return a CLIM modifier mask with
 ;;; the relevant bits set.  Recall that the CLIM modifier mask does
@@ -225,22 +222,13 @@
   (find :caps-lock (nth-value 1 (xlib:modifier-mapping display))
 	:key (lambda (keycode) (code-to-name keycode display))))
 
-;;; Return true if and only if the lock modifier should be interpreted
-;;; as SHIFT-LOCK.
-(defun lock-is-shift-lock-p (display)
-  (and (not (lock-is-caps-lock-p display))
-       (find :shift-lock (nth-value 1 (xlib:modifier-mapping display))
-	     :key (lambda (keycode) (code-to-name keycode display)))))
-
 ;;; Given an X11/CLX modifier mask, return a backend-specific modifier
 ;;; mask with the relevant bits set.
 (defun create-other-modifier-mask (clx-modifier-mask
 				   caps-lock-mask
-				   shift-lock-mask
 				   mode-switch-mask)
   (let ((m clx-modifier-mask))
     (logior (if (plusp (logand m caps-lock-mask)) +caps-lock+ 0)
-	    (if (plusp (logand m shift-lock-mask)) +shift-lock+ 0)
 	    (if (plusp (logand m mode-switch-mask)) +mode-switch+ 0))))
 
 ;;; Recall that the function MODIFIER-MAPPING is similar to the one
@@ -293,8 +281,7 @@
 (defun make-modifier-cache (port)
   (let* ((cache (make-array 256))
 	 (display (clim-clx::clx-port-display port))
-	 (caps-lock-mask (if (lock-is-caps-lock-p display) #b00 #b10))
-	 (shift-lock-mask (if (lock-is-shift-lock-p display) #b00 #b10))
+	 (caps-lock-mask (if (lock-is-caps-lock-p display) +lock-bit+ #b00))
 	 (mode-switch-position (mode-switch-position display))
 	 (mode-switch-mask (position-to-mask mode-switch-position)))
     (loop for x-modifier-mask from 0 below 256
@@ -302,9 +289,8 @@
 		   (cons (create-clim-modifier-mask x-modifier-mask)
 			 (create-other-modifier-mask x-modifier-mask
 						     caps-lock-mask
-						     shift-lock-mask
 						     mode-switch-mask))))
-    (setf (modifier-cache port) cache)))
+    cache))
 
 (defgeneric x-event-state-modifiers (port state)
   (:documentation "For the X STATE, returns as multiple values, the
@@ -321,7 +307,6 @@
 	(aref modifier-cache
 	      (mod state (length modifier-cache)))
       (values clim-modifiers
-	      (logtest +shift-lock+ other-modifiers)
 	      (logtest +caps-lock+ other-modifiers)
 	      (logtest +mode-switch+ other-modifiers)))))
 

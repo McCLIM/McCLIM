@@ -65,3 +65,10 @@ Questions and comments should be addressed to the authors.
 Jeff Morrill (jmorrill@bbn.com)
 Ken Anderson (kanderson@bbn.com)
 
+---
+
+McCLIM distribution doesn't seem to have scigraph.doc file. Mr. Rainer
+Joswig was kind enough to share the documentation he had which is now
+available at the following url:
+
+https://common-lisp.net/project/mcclim/static/files/scigraph.zip

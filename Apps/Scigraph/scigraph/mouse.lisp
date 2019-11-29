@@ -38,80 +38,21 @@ advised of the possiblity of such damages.
 
 (defmacro button-case (button &key left middle right)
   "Implementation-specific way to dispatch based on the button pushed."
-  #FEATURE-CASE
-  (((not :clim)
-    `(case ,button
-       ,@(if left `((#\mouse-l ,left)))
-       ,@(if middle `((#\mouse-m ,middle)))
-       ,@(if right `((#\mouse-r ,right)))))
-   (:clim-0.9
-    `(case ,button
-       ,@(if left `((:left ,left)))
-       ,@(if middle `((:middle ,middle)))
-       ,@(if right `((:right ,right)))))
-   (:clim-1.0
-    `(cond
-      ,@(if left
-	    `(((clim::button-press-event-matches-gesture-name ,button :select)
-	       ,left)))
-      ,@(if middle
-	    `(((clim::button-press-event-matches-gesture-name ,button :describe)
-	       ,middle)))
-      ,@(if right
-	    `(((clim::button-press-event-matches-gesture-name ,button :menu)
-	       ,right)))))
-   ((and :clim-2 (not :mcclim))
-    `(cond
-      ,@(if left
-	    `(((clim-internals::button-press-event-matches-gesture-name-p ,button :select)
-	       ,left)))
-      ,@(if middle
-	    `(((clim-internals::button-press-event-matches-gesture-name-p ,button :describe)
-	       ,middle)))
-      ,@(if right
-	    `(((clim-internals::button-press-event-matches-gesture-name-p ,button :menu)
-	       ,right)))))
-   (:mcclim
-    `(cond
-       ,@(when left
-	  `(((event-matches-gesture-name-p ,button :select)
-	     ,left)))
-       ,@(when middle
-	  `(((event-matches-gesture-name-p ,button :describe)
-	     ,middle)))
-       ,@(when right
-	  `(((event-matches-gesture-name-p ,button :menu)
-	     ,right)))))))
+  `(cond
+    ,@(when left
+        `(((event-matches-gesture-name-p ,button :select)
+           ,left)))
+    ,@(when middle
+        `(((event-matches-gesture-name-p ,button :describe)
+           ,middle)))
+    ,@(when right
+        `(((event-matches-gesture-name-p ,button :menu)
+           ,right)))))
 
 (defmethod post-mouse-documentation (stream string)
-  #FEATURE-CASE
-  ((:clim-0.9
-    (let ((frame (pane-frame stream)))
-      ;; In 0.9, we can take advantage of one of the BBN clim extensions.
-      (notify-user frame string)))
-   (:clim-1.0
-    (locally (declare (ignore stream))
-      (let ((stream clim::*pointer-documentation-output*)
-	    #+genera (documentation-window (clim::mouse-documentation-window stream)))
-	#+genera
-	(when documentation-window
-	  (scl:send documentation-window :clear-window)
-	  (scl:send documentation-window :string-out string))
-	(when stream
-	  (window-clear stream)
-	  (format stream string)))))
-   ((and :clim-2 (not :mcclim))
-    (locally (declare (ignore stream))
-      (clim:frame-manager-display-pointer-documentation-string
-       (frame-manager *application-frame*)
-       *application-frame*
-       clim:*pointer-documentation-output*
-       string)))
-   (:mcclim
-    (locally (declare (ignore stream))
-      (clim-extensions:frame-display-pointer-documentation-string
-       *application-frame* string)))
-   ((not :clim) nil)))
+  (declare (ignore stream))
+  (clim-extensions:frame-display-pointer-documentation-string
+   *application-frame* string))
 
 (defmacro with-mouse-documentation ((window string) &body body)
   `(unwind-protect
@@ -119,10 +60,6 @@ advised of the possiblity of such damages.
      (post-mouse-documentation ,window " ")))
 
 (defmacro with-pointer-cursor ((sheet cursor) &body body)
-  ;; XXX McCLIM will get pointer-cursors soon... -- moore
-  #+(or (not clim-2) mcclim)
-  `(progn ,@body)
-  #+(and clim-2 (not mcclim))
   `(let ((.old. (sheet-pointer-cursor ,sheet)))
      (unwind-protect
 	 (progn (setf (sheet-pointer-cursor ,sheet) ,cursor)
@@ -142,12 +79,7 @@ advised of the possiblity of such damages.
   ;; This requirement gives the caller the freedom to use an "abbreviated"
   ;; drawing for the inner loop, which may be necessary to create the
   ;; illusion of animation.
-  #+nil
-  (declare (downward-funarg draw-it erase-it move-it) (values gesture x y)
-	   (compiled-function draw-it erase-it move-it))
-
-  (unless #-clim (scl:send stream :interactive)
-	  #+clim (extended-input-stream-p stream)
+  (unless (extended-input-stream-p stream)
 	  (error "Cannot track the mouse on this stream (~S)" stream))
   (with-pointer-cursor (stream cursor)
     (let (last-x last-y
@@ -155,18 +87,16 @@ advised of the possiblity of such damages.
 	  ;; If we have had some movement and then the mouse is released, we
 	  ;; probably want to quit the loop.  We don't count the first few because the
 	  ;; user might still be releasing the button that got him here.
-	  (down-threshold #+clim-0.9 5 #-clim-0.9 0)
-	  (up-threshold #+clim-0.9 15 #-clim-0.9 0))
+	  (down-threshold 0)
+	  (up-threshold 0))
       ;; Sometimes we get rationals.
       ;; (declare (fixnum last-x last-y movements))
       (unless documentation
 	(setq documentation "Click/Release mouse to set new position"))
       (multiple-value-setq (last-x last-y) (stream-pointer-position* stream))
       (unless (and last-x last-y) (beep) (setq last-x 0 last-y 0))
-      #+clim-0.9 (stream-clear-input stream)	
       (flet ((update-position (x y)
 	       ;; "pixel" positions are often ratios and floats in clim
-	       #+(or clim-1.0 clim-2)
 	       (post-mouse-documentation stream documentation)
 	       (let ((dx (- x last-x))
 		     (dy (- y last-y)))
@@ -190,39 +120,12 @@ advised of the possiblity of such damages.
 			 (> movements up-threshold)
 		       (> movements down-threshold))
 		 (return-from drag-icon (values button last-x last-y)))))
-	#-clim (sleep .33)		; Kludge.  Seems (empirically) to
-					; solve some synchronization problems
-					; involved with dynamic windows.
-	(with-output-recording-disabled (stream)
+        (with-output-recording-disabled (stream)
 	  (unwind-protect
 	      (progn
 		(funcall draw-it stream)
 		(force-output stream)
-		#-clim
-		(dw:tracking-mouse
-		 (stream :who-line-documentation-string documentation)
-		 (:mouse-motion-hold (x y) (update-position x y))
-		 (:mouse-motion (x y) (update-position x y))
-		 (:mouse-click (click x y)
-			       (declare (ignore x y))
-			       (button-clicked click nil))
-		 (:release-mouse () (button-clicked nil t)))
-		#+clim
 		(with-mouse-documentation (stream documentation)
-		  #+clim-0.9
-		  (tracking-pointer
-		   (stream)
-		   (:pointer-motion-hold
-		    (sheet x y)
-		    (DECLARE (IGNORE sheet))
-		    (update-position x y))
-		   (:pointer-motion
-		    (sheet x y)
-		    (DECLARE (IGNORE sheet))
-		    (update-position x y))
-		   (:button-release (button-name) (button-clicked button-name t))
-		   (:button-press (button-name) (button-clicked button-name nil)))
-		  #+(or clim-1.0 clim-2)
 		  (tracking-pointer (stream)
 					 (:pointer-motion
 					  (x y)
@@ -237,7 +140,6 @@ advised of the possiblity of such damages.
 					  (button-clicked event t)))))
 	    ;; CLIM leaves the button event resulting from :button-press in the input
 	    ;; buffer, so take it out now.
-	    #+clim-0.9 (stream-clear-input stream)	
 	    (funcall erase-it stream)
 	    (force-output stream)))))))
 
@@ -279,20 +181,8 @@ advised of the possiblity of such damages.
 
 (defun shift-p (window)
   "Determine whether the shift key is depressed."
-  #-clim (declare (ignore window))
-  #FEATURE-CASE
-  (((not :clim)
-    (sys:console-key-state (scl:send (tv:console-default-superior) :console) :shift))
-   (:clim-0.9 (multiple-value-bind (x y mask)
-		  (ci::do-poll-pointer
-		      (port window)
-		    (silica::fetch-mirrored-sheet window))
-		(declare (ignore x y))
-		(= mask +shift-key+)))
-   (:clim-1.0 (= #.(clim::make-shift-mask :shift) (clim::window-shift-mask window)))
-   (:clim-2 (logtest +shift-key+
-		       (port-modifier-state (port window)))
-	      )))
+  (logtest +shift-key+
+           (port-modifier-state (port window))))
 
 (defun mouse-input-rectangle (stream)
   "Return edges of rectangle in stream coordinates."
@@ -353,7 +243,6 @@ advised of the possiblity of such damages.
 (defun draw-screen-polygon (corners stream alu)
   (map-polygon-edges
     #'(lambda (x1 y1 x2 y2)
-	(declare (downward-function))
 	(draw-line x1 y1 x2 y2 :stream stream :alu alu))
     corners))
 
@@ -387,7 +276,6 @@ advised of the possiblity of such damages.
 			     (rubberband (x0 y0)
 			       (draw-line lastx lasty x0 y0 :stream stream :alu %flip))
 			     (update-position (x0 y0)
-			       #+(or clim-1.0 clim-2)
 			       (post-mouse-documentation stream documentation)
 			       (Rubberband x y)
 			       (setq x x0 y y0)
@@ -418,31 +306,7 @@ advised of the possiblity of such damages.
 				       ;; select another point
 				       (push (list (truncate x) (truncate y)) points)
 				       (setq lastx x lasty y))))))
-		      #-clim
-		      (dw:tracking-mouse
-		       (stream :who-line-documentation-string documentation)
-		       (:mouse-motion-hold (x y) (update-position x y))
-		       (:mouse-motion (x y) (update-position x y))
-		       (:mouse-click (click x y)
-				     (declare (ignore x y))
-				     (button-clicked click)))
-		      #+clim
 		      (with-mouse-documentation (stream documentation)
-			#+clim-0.9
-			(tracking-pointer
-			 (stream)
-			 (:pointer-motion-hold 
-			  (sheet x y)
-			  (DECLARE (IGNORE sheet))
-			  (update-position x y))
-			 (:pointer-motion 
-			  (sheet x y)
-			  (DECLARE (IGNORE sheet))
-			  (update-position x y))
-			 (:button-press
-			  (button-name)
-			  (button-clicked button-name)))
-			#+(or clim-1.0 clim-2)
 			(tracking-pointer
 			 (stream)
 			 (:pointer-motion (x y) (update-position x y))

@@ -174,7 +174,7 @@ highest ancestor is not a graft.
 participating in the windowing relationship with its parent.  If a sheet is
 enabled and grafted, and all its ancestors are enabled (they are grafted by
 definition), then the sheet will be visible if it occupies a portion of the
-graft region that isn't clipped by its ancestors or ancestor's siblings.
+graft region that isn't clipped by its ancestors or ancestors' siblings.
 
 \item [Disabled] The opposite of enabled is \concept{disabled}.
 \end{description}
@@ -217,7 +217,7 @@ not actually a child of \arg{sheet} and \arg{errorp} is \term{true}, then the
 \Defgeneric {sheet-siblings} {sheet}
 
 Returns a list of all of the siblings of the \term{sheet} \arg{sheet}.  The
-sibling are all of the children of \arg{sheet}'s parent excluding \arg{sheet}
+sibling are all the children of \arg{sheet}'s parent excluding \arg{sheet}
 itself.
 \FreshOutputs
 
@@ -228,7 +228,7 @@ Returns a list of those children of the \term{sheet} \arg{sheet} that are enable
 
 \Defgeneric {sheet-ancestor-p} {sheet putative-ancestor}
 
-Returns \term{true} if the the \term{sheet} \arg{putative-ancestor} is in fact
+Returns \term{true} if the \term{sheet} \arg{putative-ancestor} is in fact
 an ancestor of the \term{sheet} \arg{sheet}, otherwise returns \term{false}.
 
 \defgeneric {raise-sheet} {sheet}
@@ -256,13 +256,13 @@ If \arg{new-ordering} does not contain all of the children of \arg{sheet}, the
 
 \Defgeneric {sheet-enabled-p} {sheet}
 
-Returns \term{true} if the the \term{sheet} \arg{sheet} is enabled by its
+Returns \term{true} if the \term{sheet} \arg{sheet} is enabled by its
 parent, otherwise returns \term{false}.  Note that all of a sheet's ancestors
 must be enabled before the sheet is viewable.
 
 \Defgeneric {(setf sheet-enabled-p)} {enabled-p sheet}
 
-When \arg{enabled-p} is \term{true}, this enables the the \term{sheet}
+When \arg{enabled-p} is \term{true}, this enables the \term{sheet}
 \arg{sheet}.  When \arg{enabled-p} is \term{false}, this disables the sheet.
 
 Note that a sheet is not visible unless it and all of its ancestors are enabled.
@@ -296,7 +296,7 @@ Function is a function of one argument, the sheet; it has dynamic extent.
 \subsection {Sheet Genealogy Classes}
 
 Different ``mixin'' classes are provided that implement the relationship
-protocol.  None of the four following classes is instantiable.
+protocol.  None of the four following classes are instantiable.
 
 \Defclass {sheet-parent-mixin}
 
@@ -334,7 +334,7 @@ system.  Using \cl{setf} on this accessor will modify the sheet's coordinate
 system, including moving its region in its parent's coordinate system.
 
 When the sheet's transformation is changed,
-\cl{note-sheet-transformation-changed} is called on the to notify the sheet of
+\cl{note-sheet-transformation-changed} is called on the \arg{sheet} to notify the sheet of
 the change.
 
 \defgeneric {sheet-region} {sheet}
@@ -344,7 +344,7 @@ Returns a region object that represents the set of points to which the
 \term{sheet} \arg{sheet} refers.  The region is in the sheet's coordinate
 system.  Using \cl{setf} on this accessor modifies the sheet's region.
 
-When the sheet's region is changed, \cl{note-sheet-region-region} is called on
+When the sheet's region is changed, \cl{note-sheet-region-changed} is called on
 \arg{sheet} to notify the sheet of the change.
 
 \issue {RSL} {To reshape and move a region, you generally have to manipulate
@@ -437,7 +437,7 @@ bounding rectangle delimited by the corner points $(x1,y1)$ and $(x2,y2)$
 (represented in \arg{sheet}'s parent's coordinate system), returning the
 bounding rectangle of the transformed region as four values, \arg{min-x},
 \arg{min-y}, \arg{max-x}, and \arg{max-y}.  The arguments \arg{x1}, \arg{y1},
-\arg{x2}, and \arg{y1} are canonicalized in the same way as for
+\arg{x2}, and \arg{y2} are canonicalized in the same way as for
 \cl{make-bounding-rectangle}.
 
 \issue {SWM} {I now think that \cl{map-} in these names is misleading; maybe
@@ -500,7 +500,7 @@ from \arg{child}'s actual region.
 
 Each of the following implements the sheet geometry protocol in a different
 manner, according to the sheet's requirements.  None of the four following
-classes is instantiable.
+classes are instantiable.
 
 \Defclass {sheet-identity-transformation-mixin}
 
@@ -541,7 +541,7 @@ Sheets either participate fully in the input protocol or are mute for input.  If
 any functions in the input protocol are called on a sheet that is mute for
 input, the \cl{sheet-is-mute-for-input} error will be signalled.
 
-In addition to handling input event, a sheet is also responsible for providing
+In addition to handling input events, a sheet is also responsible for providing
 other input services, such as controlling the pointer's appearance, and polling
 for current pointer and keyboard state.
 
@@ -581,24 +581,27 @@ queue.  The exact representation of an event queue is explicitly unspecified.
 
 \Defgeneric {process-next-event} {port \key wait-function timeout}
 
-This function provides a standard interface for one pass through a port's event
-processing loop.  \arg{wait-function} is either \cl{nil} or a function of no
-arguments that acts as a predicate; it has dynamic extent.  The predicate should
-wait until one of three conditions occurs:
+This function provides a standard interface for one pass through a
+port's event processing loop. \arg{wait-function} is either \cl{nil}
+or a function of no arguments that acts as a predicate; it has dynamic
+extent. \cl{process-next-event} should wait until one of three
+conditions occurs:
 
 \begin{itemize}
-\item If an event if received and processed, the predicate should return
-\term{true}.
-
-\item If a timeout occurs, the predicate should return \term{false}.
-
-\item If the wait function returns \term{true}, the predicate should return the
-two values \term{false} and \cl{:timeout}.
+\item If an event was received and processed, the predicate should return \term{true}.
+\item If a timeout occurs, the function should return the two values \term{false} and \cl{:timeout}.
+\item If the wait function returns \term{true}, the function should return the two values \term{false} and \cl{:wait-function}.
 \end{itemize}
 
-A port implementation must provide a method for this function that reads the
-next window server-specific device event, blocking if necessary, and then
-invokes the event distributor.
+A port implementation must provide a method for this function that
+reads the next window server-specific device event, blocking if
+necessary, and then invokes the event distributor.
+
+\issue {DK} {When \arg{wait-function} should be called? Either we busy
+  wait for the predicate returning true (and compute timeout decay on
+  our own) or call wait-function after some input for port has been
+  processed (then wait-function won't be able to notice asynchronous
+  changes to the state it tries to monitor).}
 
 \defgeneric {port-keyboard-input-focus} {port}
 \Defgeneric {(setf port-keyboard-input-focus)} {focus port}
@@ -678,7 +681,7 @@ delegate all other events to some other input client.  Such a sheet should have
 \cl{delegate-sheet-input-mixin} as a superclass, and have a more specific method
 for \cl{dispatch-event} on its class and \cl{pointer-button-click-event}.
 
-None of the five following classes is instantiable.
+None of the five following classes are instantiable.
 
 \Defclass {standard-sheet-input-mixin}
 
@@ -687,7 +690,7 @@ This class of sheet provides a method for \cl{dispatch-event} that calls
 \cl{handle-event} immediately.
 
 The \cl{standard-sheet-input-mixin} class will also provide a
-\cl{sheet-event-queue} method, describe above.
+\cl{sheet-event-queue} method, described above.
 
 \Defclass {immediate-sheet-input-mixin}
 
@@ -695,11 +698,11 @@ This class of sheet provides a method for \cl{dispatch-event} that calls
 \cl{handle-event} immediately for all events.
 
 The \cl{immediate-sheet-input-mixin} class will also provide a
-\cl{sheet-event-queue} method, describe above.
+\cl{sheet-event-queue} method, described above.
 
 \Defclass {sheet-mute-input-mixin}
 
-This is mixed in to any sheet class the does not handle any input events.
+This is mixed in to any sheet class that does not handle any input events.
 
 \Defclass {delegate-sheet-input-mixin}
 
@@ -725,7 +728,7 @@ An \concept{event} is a CLIM object that represents some sort of user gesture
 (such as moving the pointer or pressing a key on the keyboard) or that
 corresponds to some sort of notification from the display server.  Event objects
 store such things as the sheet associated with the event, the $x$ and $y$
-bposition of the pointer within that sheet, the key name or character
+position of the pointer within that sheet, the key name or character
 corresponding to a key on the keyboard, and so forth.
 
 Figure~\ref{event-hier} shows all the event classes.
@@ -752,7 +755,7 @@ XX\=XX\=XX\=XX\=XX\=XX\=  \kill
 \>\>\cl{window-configuration-event} \\
 \>\>\cl{window-repaint-event}       \\
 \>\cl{window-manager-event}           \\
-\>\>\cl{window-manager-delete--event} \\
+\>\>\cl{window-manager-delete-event} \\
 \>\cl{timer-event} \\
 \end{tabbing}
 \caption{\label{event-hier} CLIM event classes.  All classes that appear
@@ -784,7 +787,7 @@ to specify the timestamp for the event.
 
 \Defgeneric {event-timestamp} {event}
 
-Returns an integer that is a monotonically increasing timestamp for the the
+Returns an integer that is a monotonically increasing timestamp for the
 \term{event} \arg{event}.  The timestamp must have at least as many bits of
 precision as a fixnum.
 
@@ -998,7 +1001,7 @@ host window to be deleted.  This is a subclass of \cl{window-manager-event}.
 
 \Defclass {timer-event}
 
-The instantiable class that corresponds to a timeout event.  This is a subclass
+The instantiable class that corresponds to a timer event.  This is a subclass
 of \cl{event}.
 
 
@@ -1190,7 +1193,7 @@ Section~\ref{graphics-protocols}.
 \subsection {Output Protocol Classes}
 
 The following classes implement the standard output protocols.  None of the five
-following classes is instantiable.
+following classes are instantiable.
 
 \Defclass {standard-sheet-output-mixin}
 
@@ -1249,14 +1252,14 @@ the values of \cl{with-sheet-medium}.
 This macro will signal a runtime error if sheet is not a subclass of
 \cl{sheet-with-medium-mixin}.
 
-The \arg{medium} argument is not evaluated, and must be a symbol that is bound
+The \arg{medium} argument is not evaluated, and must be a symbol that will be bound
 to a medium.  \arg{body} may have zero or more declarations as its first forms.
 
 \Defmacro {with-sheet-medium-bound} {(sheet medium) \body body}
 
 \cl{with-sheet-medium-bound} is used to associate the specific medium
 \arg{medium} with the sheet \arg{sheet} for the duration of the body \arg{body}.
-Typically, a single medium will be allocated an passed to several different
+Typically, a single medium will be allocated and passed to several different
 sheets that can use the same medium.
 
 If the sheet already has a medium allocated to it, the new medium will not be
@@ -1292,7 +1295,7 @@ mirrored on a display server, \cl{medium-drawable} returns \cl{nil}.
 
 Programmers can use this function to get a host window system object that can be
 manipulated using the functions of the host window system.  This might be done
-in order to explicitly trade of performance against portability.
+in order to explicitly trade performance against portability.
 
 \Defmethod {port} {(medium \cl{basic-medium})}
 
@@ -1381,7 +1384,7 @@ or region sets composed entirely of rectangles.
 \subsection {Repaint Protocol Classes}
 
 The following classes implement the standard repaint protocols.  None of the
-three following classes is instantiable.
+three following classes are instantiable.
 
 \Defclass {standard-repainting-mixin}
 
@@ -1427,7 +1430,7 @@ the \term{sheet} \arg{sheet}.
 \Defgeneric {note-sheet-transformation-changed} {sheet}
 
 These notification functions are invoked when the region or transformation of
-the \term{sheet}\arg{sheet} has been changed.  When the regions and
+the \term{sheet} \arg{sheet} has been changed.  When the regions and
 transformations of a sheet are changed directly, the client is required to call
 \cl{note-sheet-region-changed} or \cl{note-sheet-transformation-changed}.
 
@@ -1689,8 +1692,8 @@ Returns the width and height of the \term{graft} \arg{graft} (and by extension
 the associated host window) in the units indicated.  \arg{Units} may be any of
 \cl{:device}, \cl{:inches}, \cl{:millimeters}, or \cl{:screen-sized}.  The
 meanings of these values are the same as described for the units argument to
-\cl{find-graft}.  Note if a \arg{unit} of \cl{:screen-sized} is specified, both
-of these functions will return a value of \cl{1}.
+\cl{find-graft}.  Note that if a \arg{unit} of \cl{:screen-sized} is specified, both
+functions will return a value of \cl{1}.
 
 \defun {graft-pixels-per-millimeter} {graft}
 \Defun {graft-pixels-per-inch} {graft}
@@ -1749,7 +1752,7 @@ the handle to the actual toolkit window or gadget?}
 Returns the mirror of the \term{sheet} \arg{sheet}.  If the sheet is not a
 subclass of \cl{mirrored-sheet-mixin}, this will return \cl{nil}.  If the sheet
 is a subclass of \cl{mirrored-sheet-mixin} and does not currently have a mirror,
-\cl{sheet-mirror} will return \cl{nil}.
+\cl{sheet-direct-mirror} will return \cl{nil}.
 
 \Defgeneric {sheet-mirrored-ancestor} {sheet}
 
@@ -1798,8 +1801,8 @@ with which \arg{sheet} is associated.  Otherwise it returns \cl{nil}.
 \subsection {Internal Interfaces for Native Coordinates}
 
 \issue {SWM} {Do these functions work on any sheet, or only on sheets that have
-a mirror, or only on sheets that have a direct mirror?  Also, define what a
-``native coordinate'' are.  Also, do \cl{sheet-device-transformation} and
+a mirror, or only on sheets that have a direct mirror?  Also, define what
+``native coordinates'' are.  Also, do \cl{sheet-device-transformation} and
 \cl{sheet-device-region} really account for the user's transformation and
 clipping region?}
 

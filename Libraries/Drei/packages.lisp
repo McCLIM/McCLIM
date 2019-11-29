@@ -29,6 +29,7 @@
 (defpackage :drei-buffer
   (:use :clim-lisp :flexichain :binseq :esa-utils)
   ;; Kludge to remove symbol conflicts.
+
   (:import-from :esa-io :buffer)
   (:import-from :esa :esa-command-table)
   (:export #:buffer #:standard-buffer
@@ -188,6 +189,7 @@ characters."))
   (:use :clim-lisp :clim-sys :clim :drei-buffer :drei-base :drei-abbrev
         :drei-syntax :flexichain :drei-undo :esa-buffer :esa-io :esa
         :esa-utils :drei-kill-ring)
+  (:import-from :climi :change-stream-space-requirements)
   (:export #:drei-buffer #:needs-saving
            #:filepath #:file-saved-p #:file-write-time
            #:read-only-p #:buffer-read-only
@@ -220,7 +222,7 @@ characters."))
            #:drei-view #:modified-p #:no-cursors
            
            #:drei-buffer-view #:buffer #:top #:bot #:buffer-view-p
-           #:lines
+           #:lines #:single-line-mixin
            #:buffer-line #:start-mark #:end-mark #:line-length #:chunks
            #:line-containing-offset #:offset-in-line-p
            #:buffer-view-pump-state-for-offset

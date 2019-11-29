@@ -112,13 +112,11 @@
 (defmethod compose-space ((pane drei-text-field-substrate) &key width height)
   (declare (ignore width height))
   (with-sheet-medium (medium pane)
-    (let ((as (text-style-ascent (medium-text-style medium) medium))
-          (ds (text-style-descent (medium-text-style medium) medium))
-          (w  (text-size medium (gadget-value pane))))
-      (let ((width w)
-            (height (+ as ds)))
-        (make-space-requirement :height height :max-height height :min-height height
-                                                                  :min-width width :width width)))))
+    (let ((width (text-size medium (gadget-value pane)))
+	  (height (+ (stream-vertical-spacing pane)
+		     (text-style-height (medium-text-style medium) medium))))
+      (make-space-requirement :height height :min-height height :max-height height
+			      :width width :min-width width))))
 
 (defclass drei-text-editor-substrate (text-editor-substrate-mixin
                                       drei-editor-substrate)
@@ -134,18 +132,17 @@
            (column-width (text-style-width text-style medium)))
       (with-accessors ((ncolumns text-editor-ncolumns)
                        (nlines text-editor-nlines)) pane
-        (apply #'space-requirement-combine* #'(lambda (req1 req2)
-                                                (or req2 req1))
-               (call-next-method)
-               (let ((width (if ncolumns
-                                (+ (* ncolumns column-width))
-                                width))
-                     (height (if nlines
-                                 (+ (* nlines line-height))
-                                 height)))
-                 (list
-                  :width width :max-width width :min-width width
-                  :height height :max-height height :min-height height)))))))
+        (let ((width (if ncolumns
+                         (+ (* ncolumns column-width))
+                         width))
+              (height (if nlines
+                          (+ (* nlines line-height))
+                          height)))
+          (space-requirement-combine* #'(lambda (req1 req2)
+                                          (or req2 req1))
+                                      (call-next-method)
+                                      :width width :max-width width :min-width column-width
+                                      :height height :max-height height :min-height line-height))))))
 
 (defmethod allocate-space ((pane drei-text-editor-substrate) w h)
   (resize-sheet pane w h))
@@ -154,10 +151,8 @@
 
 (defclass editor-substrate-user-mixin (value-gadget)
   ((substrate :accessor substrate
-              :documentation "The editing substrate used for this
-text field."))
-  (:documentation "A mixin class for creating gadgets using
-editor substrates."))
+              :documentation "The editing substrate used for this text field."))
+  (:documentation "A mixin class for creating gadgets using editor substrates."))
 
 (defmethod gadget-value ((gadget editor-substrate-user-mixin))
   (gadget-value (substrate gadget)))
@@ -171,10 +166,11 @@ editor substrates."))
 ;;;  30.4.8 The concrete text-field Gadget
 
 (defclass text-field-pane (text-field
-                           vrack-pane editor-substrate-user-mixin)
+                           vrack-pane
+                           editor-substrate-user-mixin)
   ((activation-gestures :accessor activation-gestures
-			:initarg :activation-gestures
-			:documentation "A list of gestures that
+                        :initarg :activation-gestures
+                        :documentation "A list of gestures that
 cause the activate callback to be called."))
   (:default-initargs
    :activation-gestures *standard-activation-gestures*))
@@ -183,8 +179,8 @@ cause the activate callback to be called."))
                                        &key id client armed-callback
                                        disarmed-callback
                                        activation-gestures activate-callback
-					 value value-changed-callback
-					 (editable-p t))
+                                         value value-changed-callback
+                                         (editable-p t))
   ;; Make an editor substrate object for the gadget.
   (let ((pane (make-pane 'drei-text-field-substrate
                          :user-gadget object
@@ -207,26 +203,27 @@ cause the activate callback to be called."))
 ;;;  30.4.9 The concrete text-editor Gadget
 
 (defclass text-editor-pane (text-editor
-                            vrack-pane editor-substrate-user-mixin)
+                            vrack-pane
+                            editor-substrate-user-mixin)
   ()
   (:default-initargs :activation-gestures '()))
 
 (defmethod initialize-instance :after ((object text-editor-pane)
-                                       &key id client armed-callback
+                                       &key armed-callback
                                          disarmed-callback
-					 activation-gestures activate-callback
-					 scroll-bars
-					 ncolumns nlines
-					 value value-changed-callback
-					 (editable-p t))
-  ;; Make an editor substrate object for the gadget.
+                                         activation-gestures activate-callback
+                                         scroll-bars
+                                         ncolumns nlines
+                                         value
+                                         (editable-p t))
+  ;; Make an editor substrate object for the gadget. Propagate the
+  ;; substrate's value-changed callback to our own
+  ;; `value-changed-callback' method.
   (let* ((minibuffer (when scroll-bars
                        (make-pane 'drei::drei-minibuffer-pane)))
          (substrate (make-pane 'drei-text-editor-substrate
                                :user-gadget object
                                :minibuffer minibuffer
-                               :id id
-                               :client client
                                :text-style (pane-text-style object)
                                :armed-callback armed-callback
                                :disarmed-callback disarmed-callback
@@ -235,8 +232,12 @@ cause the activate callback to be called."))
                                :scroll-bars scroll-bars
                                :ncolumns ncolumns
                                :nlines nlines
-                               :value value
-                               :value-changed-callback value-changed-callback
+                               :value-changed-callback
+                               (lambda (gadget value)
+                                 (declare (ignore gadget))
+                                 (value-changed-callback
+                                  object (gadget-client object) (gadget-id object)
+                                  value))
                                :editable-p editable-p))
          (sheet (cond ((and scroll-bars minibuffer)
                        (vertically ()
@@ -251,7 +252,6 @@ cause the activate callback to be called."))
                          substrate
                          minibuffer))
                       (:otherwise substrate))))
-    (setf (gadget-value substrate) value
-          (substrate object) substrate)
+    (setf (substrate object) substrate
+          (gadget-value substrate) value)
     (sheet-adopt-child object sheet)))
-

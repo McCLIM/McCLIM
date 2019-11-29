@@ -85,8 +85,25 @@
 (defvar *pointer-documentation-output* nil)
 
 
+;;; 3.1.1 The Region Predicate Protocol
+
+(defgeneric region-equal               (region1 region2))
+(defgeneric region-contains-region-p   (region1 region2))
+(defgeneric region-contains-position-p (region x y))
+(defgeneric region-intersects-region-p (region1 region2))
+
+;;; 3.1.2 Region Composition Protocol
+
+(defgeneric region-set-regions (region &key normalize))
+(defgeneric map-over-region-set-regions (function region &key normalize)
+  (:argument-precedence-order region function))
+(defgeneric region-union (region1 region2))
+(defgeneric region-intersection (region1 region2))
+(defgeneric region-difference (region1 region2))
+
 ;;; 3.2.1.1 The Point Protocol
 
+(defgeneric point-position (point))
 (defgeneric point-x (point))
 (defgeneric point-y (point))
 
@@ -196,6 +213,24 @@
 (defgeneric sheet-occluding-sheets (sheet child))
 (defgeneric map-over-sheets (function sheet))
 
+(defgeneric sheet-name (sheet)
+  (:documentation "McCLIM extension: Return the name of SHEET.
+The returned name is a symbol and does not change.
+For sheets which are also panes, the returned name is identical to the
+pane name.")
+  (:method (sheet) nil))
+(defgeneric sheet-pretty-name (sheet)
+  (:documentation "McCLIM extension: Return the pretty name of SHEET.
+The returned name is a string and may change over time.
+The pretty name usually corresponds to the title of the associated
+window.")
+  (:method (sheet) "(Unnamed sheet)"))
+(defgeneric (setf sheet-pretty-name) (new-value sheet)
+  (:documentation "McCLIM extension: Set SHEET's pretty name to NEW-VALUE.
+NEW-NAME must be a string.
+Changing the pretty name of SHEET usually changes the title of the
+window associated with it."))
+
 ;;; 7.3.1 Sheet Geometry Functions [complete]
 
 (defgeneric sheet-transformation (sheet))
@@ -217,7 +252,7 @@
 (defgeneric sheet-delta-transformation (sheet ancestor))
 (defgeneric sheet-allocated-region (sheet child))
 
-;;; 7.3.2 
+;;; 7.3.2
 
 ;; sheet-identity-transformation-mixin [class]
 ;; sheet-translation-mixin [class]
@@ -227,9 +262,9 @@
 
 ;;;; 8.1
 (defgeneric process-next-event (port &key wait-function timeout))
-
 (defgeneric port-keyboard-input-focus (port))
 (defgeneric (setf port-keyboard-input-focus) (focus port))
+(defgeneric distribute-event (port event))
 
 ;;; 8.2 Standard Device Events
 
@@ -385,6 +420,11 @@
 (defgeneric invoke-with-first-quadrant-coordinates (medium continuation x y))
 
 
+;;;; 10.3.2 Contrasting Dash Patterns
+
+(defgeneric contrasting-dash-pattern-limit (port))
+
+
 ;;; 11.1.1 Text Style Protocol and Text Style Suboptions
 
 (defgeneric text-style-components (text-style))
@@ -410,6 +450,11 @@
 (defgeneric medium-force-output (medium))
 (defgeneric medium-clear-area (medium left top right bottom))
 (defgeneric medium-beep (medium))
+
+
+;;; 13.3.2 Contrasting Colors
+
+(defgeneric contrasting-inks-limit (port))
 
 
 ;;; 14.2
@@ -445,7 +490,7 @@
 ;; standard-text-cursor [class]
 (defgeneric cursor-sheet (cursor))
 (defgeneric cursor-position (cursor))
-;;(defgeneric (setf* cursor-position) (x y cursor))
+(defgeneric* (setf cursor-position) (x y cursor))
 (defgeneric cursor-active (cursor))
 (defgeneric (setf cursor-active) (value cursor))
 (defgeneric cursor-state (cursor))
@@ -459,8 +504,8 @@
 (defgeneric stream-text-cursor (stream))
 (defgeneric (setf stream-text-cursor) (cursor stream))
 (defgeneric stream-cursor-position (stream))
-;; (defgeneric (setf* stream-cursor-position) (x y stream)) unsure how to declare this, can somebody help? --GB
-(defgeneric stream-set-cusor-position (stream x y)) ; This is actually in 19.3.1 in CLIM 2.2
+(defgeneric* (setf stream-cursor-position) (x y stream))
+(defgeneric stream-set-cursor-position (stream x y)) ; This is actually in 19.3.1 in CLIM 2.2
 (defgeneric stream-increment-cursor-position (stream dx dy))
 
 ;;; 15.4 Text Protocol [complete]
@@ -470,6 +515,9 @@
 (defgeneric stream-text-margin (stream))
 (defgeneric (setf stream-text-margin) (margin stream))
 (defgeneric stream-line-height (stream &key text-style))
+(defgeneric stream-line-width (stream)
+  (:documentation "McCLIM extension which returns a space between left
+and right margin for text output."))
 (defgeneric stream-vertical-spacing (stream))
 (defgeneric stream-baseline (stream))
 
@@ -640,22 +688,16 @@ unspecified. "))
 ;;; 16.4.4 Output Recording Utilities [complete]
 
 ;; with-output-recording-options (stream &key record draw) &body body [Macro]
-(defgeneric invoke-with-output-recording-options 
+(defgeneric invoke-with-output-recording-options
     (stream continuation record draw))
 
 ;;; with-new-output-record (stream &optional record-type record &rest initargs) &body body [Macro]
-
-;;; The 'constructor' arg is absent from the CLIM 2.0 spec but is documented
-;;; in the Allegro CLIM 2 User Guide and appears to exist in other 'classic'
-;;; CLIM implementations. I'm assuming it's an omission from the spec.
 (defgeneric invoke-with-new-output-record
-    (stream continuation record-type constructor &key &allow-other-keys)
-  (:documentation "Same as in CLIM 2.2 (missing CONSTRUCTOR added)."))
+    (stream continuation record-type &rest initargs &key parent &allow-other-keys))
 
 ;;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
-(defgeneric invoke-with-output-to-output-record 
-    (stream continuation record-type constructor 
-            &rest initargs &key &allow-other-keys))
+(defgeneric invoke-with-output-to-output-record
+    (stream continuation record-type &rest initargs))
 
 (defgeneric make-design-from-output-record (record))
 
@@ -671,10 +713,10 @@ unspecified. "))
 (defgeneric stream-input-buffer (stream))
 (defgeneric (setf stream-input-buffer) (buffer stream))
 (defgeneric stream-pointer-position (stream &key pointer))
-;; (defgeneric (setf* stream-pointer-position))
+(defgeneric* (setf stream-pointer-position) (x y stream))
 (defgeneric stream-set-input-focus (stream))
-(defgeneric stream-read-gesture 
-    (stream &key timeout peek-p input-wait-test 
+(defgeneric stream-read-gesture
+    (stream &key timeout peek-p input-wait-test
             input-wait-handler pointer-button-press-handler))
 (defgeneric stream-input-wait (stream &key timeout input-wait-test))
 (defgeneric stream-unread-gesture (stream gesture))
@@ -685,12 +727,20 @@ unspecified. "))
 (defgeneric accelerator-gesture-event (condition))
 (defgeneric accelerator-gesture-numeric-argument (condition))
 
+;;; 22.5 Pointer Tracking
+
+;; tracking-pointer
+;; dragging-output
+
+(defgeneric drag-output-record
+    (stream output &key repaint erase feedback finish-on-release multiple-window))
+
 
 ;;; 23.5 Context-dependent (Typed) Input
 
-(defgeneric stream-accept 
-    (stream 
-     type &key view default default-type provide-default insert-default 
+(defgeneric stream-accept
+    (stream
+     type &key view default default-type provide-default insert-default
      replace-input history active-p prompt prompt-mode display-default
      query-identifier activation-gestures additional-activation-gestures
      delimiter-gestures additional-delimiter-gestures))
@@ -792,7 +842,7 @@ returns the two values `gesture' and `type'."))
 
 ;;; 24.4 Reading and Writing of Tokens
 
-(defgeneric replace-input 
+(defgeneric replace-input
     (stream new-input &key start end buffer-start rescan)
   ;; XXX: Nonstandard behavior for :rescan.
   (:documentation "Replaces the part of the input editing stream
@@ -908,7 +958,7 @@ panes."))
 (defgeneric frame-maintain-presentation-histories (frame))
 (defgeneric frame-find-innermost-applicable-presentation
     (frame input-context stream x y &key event))
-(defgeneric frame-input-context-button-press-handler 
+(defgeneric frame-input-context-button-press-handler
     (frame stream button-press-event))
 (defgeneric frame-document-highlighted-presentation
     (frame presentation input-context window-context x y stream))
@@ -956,8 +1006,14 @@ and `cell-align-y' are as for `formatting-item-list'."))
 (defgeneric note-frame-deiconified (frame-manager frame))
 (defgeneric note-command-enabled (frame-manager frame command-name))
 (defgeneric note-command-disabled (frame-manager frame command-name))
+(defgeneric note-frame-pretty-name-changed (frame-manager frame new-name)
+  (:documentation "McMCLIM extension: Notify client that the pretty
+name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME.
+FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
+the time of the change.")
+  (:method (frame-manager frame new-name)))
 
-(defgeneric frame-manager-notify-user 
+(defgeneric frame-manager-notify-user
     (framem message-string &key frame associated-window title
             documentation exit-boxes name style text-style))
 (defgeneric generate-panes (frame-manager frame))
@@ -986,15 +1042,15 @@ and `cell-align-y' are as for `formatting-item-list'."))
 ;;;; 29.3.3 Scroller Pane Classes
 
 (defgeneric pane-viewport (pane))
-(defgeneric pane-viewport-region (pane)) 
-(defgeneric pane-scroller (pane)) 
-(defgeneric scroll-extent (pane x y)) 
+(defgeneric pane-viewport-region (pane))
+(defgeneric pane-scroller (pane))
+(defgeneric scroll-extent (pane x y))
 
 (deftype scroll-bar-spec () '(member t :both :vertical :horizontal nil))
 
 ;;;; 29.3.4 The Layout Protocol
 
-;; (define-protocol-class space-requirement ()) 
+;; (define-protocol-class space-requirement ())
 
 ;; make-space-requirement &key (width 0) (max-width 0) (min-width 0) (height 0) (max-height 0) (min-height 0) [Function]
 
@@ -1011,10 +1067,10 @@ and `cell-align-y' are as for `formatting-item-list'."))
 ;; space-requirement+* space-req &key width min-width max-width height min-height max-height [Function]
 
 (defgeneric compose-space (pane &key width height)
-  (:documentation "During the space composition pass, a composite pane will 
-typically ask each of its children how much space it requires by calling COMPOSE-SPACE. 
-They answer by returning space-requirement objects. The composite will then form 
-its own space requirement by composing the space requirements of its children 
+  (:documentation "During the space composition pass, a composite pane will
+typically ask each of its children how much space it requires by calling COMPOSE-SPACE.
+They answer by returning space-requirement objects. The composite will then form
+its own space requirement by composing the space requirements of its children
 according to its own rules for laying out its children.
 
 Returns a SPACE-REQUIREMENT object."))
@@ -1041,6 +1097,10 @@ Returns a SPACE-REQUIREMENT object."))
 (defgeneric stream-pathname (stream))
 (defgeneric stream-truename (stream))
 
+;; E.1
+
+(defgeneric new-page (stream))
+
 ;;;;
 (defgeneric gadget-value (gadget))
 (defgeneric (setf gadget-value) (new-value gadget &key invoke-callback))
@@ -1057,11 +1117,13 @@ Returns a SPACE-REQUIREMENT object."))
 
 (defgeneric (setf text-style-mapping)
     (mapping port text-style &optional character-set))
+
 (defgeneric medium-miter-limit (medium)
   (:documentation
    "If LINE-STYLE-JOINT-SHAPE is :MITER and the angle between two
    consequent lines is less than the values return by
    MEDIUM-MITER-LIMIT, :BEVEL is used instead."))
+
 (defgeneric line-style-effective-thickness (line-style medium)
   (:documentation
    "Returns the thickness in device units of a line,
@@ -1089,15 +1151,11 @@ rendered on MEDIUM with the style LINE-STYLE."))
 ;;; "exported" from a port
 
 (defgeneric mirror-transformation (port mirror))
-(defgeneric port-set-sheet-region (port sheet region))
-(defgeneric port-set-sheet-transformation (port sheet region))
 (defgeneric port-text-style-mappings (port))
 (defgeneric port-lookup-mirror (port sheet))
 (defgeneric port-register-mirror (port sheet mirror))
 (defgeneric port-allocate-pixmap (port sheet width height))
 (defgeneric port-deallocate-pixmap (port pixmap))
-(defgeneric port-mirror-width (port sheet))
-(defgeneric port-mirror-height (port sheet))
 (defgeneric port-enable-sheet (port sheet))
 (defgeneric port-disable-sheet (port sheet))
 (defgeneric port-pointer (port))
@@ -1131,28 +1189,15 @@ indicating if this baseline is definitive. McCLIM addition."))
 
 Further undeclared functions
 
-  FRAME-EVENT-QUEUE FRAME-EXIT PANE-FRAME
-  ALLOCATE-SPACE COMPOSE-SPACE FIND-INNERMOST-APPLICABLE-PRESENTATION 
-  HIGHLIGHT-PRESENTATION-1 PANE-DISPLAY-FUNCTION PANE-DISPLAY-TIME PANE-NAME 
-  PRESENTATION-OBJECT PRESENTATION-TYPE SPACE-REQUIREMENT-HEIGHT 
-  SPACE-REQUIREMENT-WIDTH THROW-HIGHLIGHTED-PRESENTATION WINDOW-CLEAR
+  FRAME-EVENT-QUEUE FRAME-EXIT PANE-FRAME ALLOCATE-SPACE COMPOSE-SPACE
+  FIND-INNERMOST-APPLICABLE-PRESENTATION HIGHLIGHT-PRESENTATION-1
+  PANE-DISPLAY-FUNCTION PANE-DISPLAY-TIME PANE-NAME PRESENTATION-OBJECT
+  PRESENTATION-TYPE SPACE-REQUIREMENT-HEIGHT SPACE-REQUIREMENT-WIDTH
+  THROW-HIGHLIGHTED-PRESENTATION WINDOW-CLEAR
 
-  (SETF GADGET-MAX-VALUE) (SETF GADGET-MIN-VALUE) (SETF SCROLL-BAR-THUMB-SIZE) 
-  SLOT-ACCESSOR-NAME::|CLIM-INTERNALS CLIENT slot READER| DRAW-EDGES-LINES* 
-  FORMAT-CHILDREN GADGET-VALUE MAKE-MENU-BAR TABLE-PANE-NUMBER 
-  MEDIUM WITH-GRAPHICS-STATE
-  PORT-MIRROR-HEIGHT PORT-MIRROR-WIDTH TEXT-STYLE-CHARACTER-WIDTH
-  FIND-INNERMOST-APPLICABLE-PRESENTATION HIGHLIGHT-PRESENTATION-1 
-  PRESENTATION-OBJECT PRESENTATION-TYPE THROW-HIGHLIGHTED-PRESENTATION
-  FORMAT-CHILDREN TABLE-PANE-NUMBER TEXT-STYLE-CHARACTER-WIDTH
-  PORT-MIRROR-HEIGHT PORT-MIRROR-WIDTH SCROLL-EXTENT TEXT-STYLE-CHARACTER-WIDTH
-  FRAME-EVENT-QUEUE FRAME-EXIT PANE-FRAME
-  ALLOCATE-SPACE COMPOSE-SPACE FIND-INNERMOST-APPLICABLE-PRESENTATION 
-  HIGHLIGHT-PRESENTATION-1 PANE-DISPLAY-FUNCTION PANE-DISPLAY-TIME PANE-NAME 
-  PRESENTATION-OBJECT PRESENTATION-TYPE SPACE-REQUIREMENT-HEIGHT 
-  SPACE-REQUIREMENT-WIDTH THROW-HIGHLIGHTED-PRESENTATION WINDOW-CLEAR
-  (SETF GADGET-MAX-VALUE) (SETF GADGET-MIN-VALUE) (SETF SCROLL-BAR-THUMB-SIZE) 
-  SLOT-ACCESSOR-NAME::|CLIM-INTERNALS CLIENT slot READER| DRAW-EDGES-LINES* 
-  FORMAT-CHILDREN GADGET-VALUE MAKE-MENU-BAR TABLE-PANE-NUMBER 
+  (SETF GADGET-MAX-VALUE) (SETF GADGET-MIN-VALUE) (SETF SCROLL-BAR-THUMB-SIZE)
+  SLOT-ACCESSOR-NAME::|CLIM-INTERNALS CLIENT slot READER| DRAW-EDGES-LINES*
+  FORMAT-CHILDREN GADGET-VALUE MAKE-MENU-BAR TABLE-PANE-NUMBER MEDIUM
+  WITH-GRAPHICS-STATE TEXT-STYLE-CHARACTER-WIDTH SCROLL-EXTENT
 
 ||#

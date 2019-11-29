@@ -697,7 +697,7 @@ outline of an ellipse.  Circular arcs are special cases of elliptical arcs.
 An ellipse is specified in a manner that is easy to transform, and treats all
 ellipses on an equal basis.  An ellipse is specified by its center point and two
 vectors that describe a bounding parallelogram of the ellipse.  The bounding
-parallelogram is made by adding and subtracting the vectors from the the center
+parallelogram is made by adding and subtracting the vectors from the center
 point in the following manner:
 
 \begin{tabular}{|c|cc|}
@@ -815,7 +815,7 @@ vectors are collinear, the ellipse is not well-defined and the
 an elliptical arc with its axes aligned with the coordinate axes can be obtained
 by setting both \arg{radius-1-dy} and \arg{radius-2-dx} to 0.
 
-If \arg{start-angle} and \arg{start-angle} are supplied, the arc is swept from
+If \arg{start-angle} and \arg{end-angle} are supplied, the arc is swept from
 \arg{start-angle} to \arg{end-angle}.  Angles are measured counter-clockwise
 with respect to the positive $x$ axis.  If \arg{end-angle} is supplied, the
 default for \arg{start-angle} is $0$; if \arg{start-angle} is supplied, the

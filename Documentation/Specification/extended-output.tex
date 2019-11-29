@@ -3,6 +3,8 @@
 \chapter {Extended Stream Output}
 \label {extended-output}
 
+\issue {PM} {Just remove that, and link to Gray streams?}
+
 CLIM provides a stream-oriented output layer that is implemented on top of the
 sheet output architecture.  The basic CLIM output stream protocol is based on
 the character output stream protocol proposal submitted to the ANSI Common Lisp
@@ -264,7 +266,7 @@ also called a cursor.
 
 An \concept{active} cursor is one that is being actively maintained by its
 owning sheet.  A active cursor has a \concept{state} that is either on or off.
-An active cursor can also has a state that indicates the the owning sheet has
+An active cursor can also have a state that indicates that the owning sheet has
 the input focus.
 
 \Defprotoclass {cursor}
@@ -329,7 +331,7 @@ These are convenience functions that combine the functionality of
 \cl{cursor-active} and \cl{cursor-state}.  The visibility can be either \cl{:on}
 (meaning that the cursor is active and visible at its current position),
 \cl{:off} (meaning that the cursor is active, but not visible at its current
-position), or \cl{nil} (meaning that the cursor is not activate).
+position), or \cl{nil} (meaning that the cursor is not active).
 
 
 \subsection {Stream Text Cursor Protocol}
@@ -361,7 +363,7 @@ for this is \cl{stream-set-cursor-position}.
 
 Moves the text cursor position of the \term{extended output stream} \arg{stream}
 relatively, adding \arg{dx} to the $x$ coordinate and \arg{dy} to the $y$
-coordinate.  Either of \arg{dx} or \arg{dy} may be \cl{nil}, meaning the the $x$
+coordinate.  Either of \arg{dx} or \arg{dy} may be \cl{nil}, meaning that the $x$
 or $y$ cursor position will be unaffected.  Otherwise, \arg{dx} and \arg{dy}
 must be integers.
 

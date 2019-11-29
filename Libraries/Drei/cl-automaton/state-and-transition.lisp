@@ -27,7 +27,7 @@
 (defconstant +min-char-code+ 0)
 (defconstant +max-char-code+ (1- char-code-limit))
 ;;; In Allegro (for one), defconstants aren't available as values at compile
-;;; time. 
+;;; time.
 (deftype char-code-type () `(integer 0 ,(1- char-code-limit)))
 
 (defclass state ()
@@ -206,7 +206,8 @@ does S."
   "Returns a vector of all transitions of S, sorted using TRANSITION<
 and *TO-FIRST*."
   (let ((v (make-array `(,(cnt (transitions s)))
-		       :element-type '(or null transition)))
+		       :element-type '(or null transition)
+                       :initial-element nil))
 	(i -1))
     (sort
      (progn

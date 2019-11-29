@@ -126,7 +126,7 @@ Some functions \concept{may capture} their mutable input objects.  That is, it
 is unspecified as to whether a CLIM implementation will or will not capture the
 mutable inputs to some function.  For such functions, programmers should assume
 that these objects will be captured and must not modify these objects
-capriciously.  Furthermore, it is unspecifed what will happen if these objects
+capriciously.  Furthermore, it is unspecified what will happen if these objects
 are later modified.
 
 Some programmers might choose to create a mutable subclass of an immutable
@@ -288,7 +288,7 @@ position of that variable is always before any forms or other ``inputs''.
 
 Some macros that take a ``body'' argument expand into a call to an advertised
 function that takes a functional argument.  This functional argument will
-execute the suppled body.  For a macro named ``{\it \cl{with-}environment}'',
+execute the supplied body.  For a macro named ``{\it \cl{with-}environment}'',
 the function is generally named ``{\it \cl{invoke-with-}environment}''.  For
 example, \cl{with-drawing-options} might be defined as follows:
 

@@ -67,11 +67,18 @@ and should be avoided in the future.  JPM 1-29-91.]
 
 |#
 
+(defun stream-height (stream)
+  "Height of the viewport."
+  (multiple-value-bind (ignore height)
+      (stream-viewport-size stream)
+    (declare (ignore ignore))
+    (truncate height)))
+
 (defmacro uv-to-screen (screen u v)
-  `(values ,u (- (the fixnum (sheet-inside-height ,screen)) (the fixnum ,v))))
+  `(values ,u (- (stream-height ,screen) ,v)))
 
 (defmacro screen-to-uv (screen u v)
-  `(values ,u (- (the fixnum (sheet-inside-height ,screen)) (the fixnum ,v))))
+  `(values ,u (- (the fixnum (stream-height ,screen)) (the fixnum ,v))))
 
 
 ;;; Clipping:  It is assumed that the underlying graphics system can do real
@@ -102,10 +109,8 @@ and should be avoided in the future.  JPM 1-29-91.]
        (with-clipping-screen-rectangle (,stream .le. .re. .te. .be.)	; -y
 	 ,@body))))
 
-#+clim
 (defvar *clim-clip-rectangle* 
-    #-clim-2 (make-rectangle* 0 0 1 1)
-    #+clim-2 (make-bounding-rectangle 0 0 1 1) 
+    (make-bounding-rectangle 0 0 1 1)
   "Reused by with-clipping-internal to reduce consing.")
 
 (defmacro WITH-CLIPPING-INTERNAL ((stream) &body body)
@@ -115,38 +120,10 @@ and should be avoided in the future.  JPM 1-29-91.]
 	  (re (pop r))
 	  (be (pop r))
 	  (te (pop r)))
-     #FEATURE-CASE
-     (((not :clim)
-       (graphics:with-clipping-from-output 
-	   (,stream (draw-rectangle le te re be :stream ,stream ))
-	 ,@body))
-      (:clim-0.9
-       (with-drawing-options
-	   (,stream :clipping-region
-		    (make-rectangle* le te re be
-					  :reuse *clim-clip-rectangle*))
-	 ,@body))
-      (:clim-1.0
-       (let ((.x. *clim-clip-rectangle*))
-	 (setf (slot-value .x. 'clim-utils::min-x) le
-	       (slot-value .x. 'clim-utils::min-y) te
-	       (slot-value .x. 'clim-utils::max-x) re
-	       (slot-value .x. 'clim-utils::max-y) be)
-	 (with-drawing-options (,stream :clipping-region .x.)
-	   ,@body)))
-      (:clim-2
-       (let ((.x. *clim-clip-rectangle*))
-	 (setf (bounding-rectangle-min-x .x.) le
-	       (bounding-rectangle-min-y .x.) te
-	       (bounding-rectangle-max-x .x.) re
-	       (bounding-rectangle-max-y .x.) be)
-	 (with-drawing-options (,stream :clipping-region .x.)
-	   ,@body))))))
-
-(eval-when (compile load eval)
-  (proclaim '(inline device-draw-point))
-  (proclaim '(inline POINT-IN-RECTANGLE-P))
-  (proclaim '(inline POINT-IN-CLIP-RECTANGLE-P)))
+    (setf (clim:rectangle-edges* *clim-clip-rectangle*)
+     (values le te re be))
+    (with-drawing-options (,stream :clipping-region *clim-clip-rectangle*)
+      ,@body)))
 
 (defun POINT-IN-RECTANGLE-P (x y left right bottom top)
   (declare (fixnum x y left right bottom top))
@@ -156,13 +133,6 @@ and should be avoided in the future.  JPM 1-29-91.]
   (point-in-rectangle-p x y
 			(pop region) (pop region)
 			(pop region) (pop region)))
-
-#+unused
-(defun ANY-POINT-IN-CLIP-RECTANGLE-P (xy-pairs &optional (region *clip-rectangle*))
-  (do ((xy xy-pairs (cddr xy)))
-      ((null xy) nil)
-    (when (point-in-clip-rectangle-p (first xy) (second xy) region)
-      (return t))))
 
 (defun RECTANGLES-OVERLAP-P (l1 r1 b1 t1 l2 r2 b2 t2)
   ;; clim does this sort of thing already
@@ -189,7 +159,6 @@ yb ----------------
 (defun %clip-line (x1 y1 x2 y2 xl xr yb yt)
   ;; After W.M. Newman, and R.F. Sproull, Principles of Interactive Computer
   ;; Graphics, McGraw-hill, 1973, p. 124
-  (declare (type (integer -1000000 1000000) x1 y1 x2 y2 xl xr yb yt))
   ;; Declaring the range of these integers helps inline more of the functions.  JPM.
   (macrolet
     ((code (x y)
@@ -208,12 +177,6 @@ yb ----------------
 				      d)))))
 	      ,x1 ,xl))
      (clip-point (c1 x1 y1 x2 y2)
-       #+original
-       `(unless (zerop ,c1)
-	  (if (ldb-test (byte 1 0) ,c1) (clip ,y1 ,y2 xl ,x1 ,x2)
-	      (if (ldb-test (byte 1 1) ,c1) (clip ,y1 ,y2 xr ,x1 ,x2)))
-	  (if (ldb-test (byte 1 2) ,c1) (clip ,x1 ,x2 yb ,y1 ,y2)
-	      (if (ldb-test (byte 1 3) ,c1) (clip ,x1 ,x2 yt ,y1 ,y2))))
        `(unless (zerop ,c1)
 	  (if (zerop (ldb (byte 1 0) ,c1))
 	      (if (not (zerop (ldb (byte 1 1) ,c1))) (clip ,y1 ,y2 xr ,x1 ,x2))
@@ -233,46 +196,6 @@ yb ----------------
 
 (defmacro clip-line-to-clip-rectangle (x1 y1 x2 y2)
   `(apply #'%clip-line ,x1 ,y1 ,x2 ,y2 *clip-rectangle*))
-
-#+debug
-(defun clip-test (e length &optional (size 500))
-  (let ((w size)
-	(h size))
-    (let ((cx (/ w 2))
-	  (cy (/ h 2)))
-      (scl:send e :expose)
-      (graphics:with-room-for-graphics  (e h)
-	(setq w (/ w 4) h (/ h 4))
-	(draw-rectangle (- cx w) (+ cy h) (+ cx w) (- cy h)
-				 :stream e :filled nil)	; Outline clipping region
-	(decf w 1) (decf h 1)
-	(dotimes (i length)
-	  (multiple-value-bind (x1 y1 x2 y2)
-	      (values (random size) (random size) (random size) (random size))
-	    (draw-line x1 y1 x2 y2 :stream e)
-	  (multiple-value-setq (x1 y1 x2 y2)
-	      (%clip-line x1 y1 x2 y2
-			 (- cx w) (+ cx w) (- cy h) (+ cy h)))
-	    (if x1 (draw-line x1 y1 x2 y2 :stream e :thickness 3))))))))
-
-#+debug
-(defun clip-test-2 (e length &optional (size 500))
-  (let ((w size)
-	(h size))
-    (let ((cx (/ w 2))
-	  (cy (/ h 2)))
-      (scl:send e :expose)
-      (setq w (/ w 4) h (/ h 4))
-      (device-draw-rectangle e (- cx w) (+ cx w) (- cy h) (+ cy h) 
-			     :filled nil)	; Outline clipping region
-      (decf w 1) (decf h 1)
-      (with-clipping-uv-rectangle (e (- cx w) (+ cx w) (- cy h) (+ cy h))
-	(dotimes (i length)
-	  (multiple-value-bind (x1 y1 x2 y2)
-	      (values (random size) (random size) (random size) (random size))
-;;	      (device-draw-circle e x1 y1 20)
-	    (device-draw-rectangle e x1 x2 y1 y2)
-	    (device-draw-line e x1 y1 x2 y2)))))))
 
 
 ;;; "PORTABLE" GRAPHICS DEVICE INTERFACE FOR GRAPHS.
@@ -309,13 +232,6 @@ without any way to override them.  So this is commented out.
   (multiple-value-setq (u v) (uv-to-screen stream u v))
   (when (point-in-clip-rectangle-p u v)
     (draw-point u v :stream stream :alu alu)))
-
-#+unused
-(defun %DEVICE-DRAW-LINE (stream u1 v1 u2 v2 alu)
-  ;; Optimized (hopefully) version of draw-line
-  (multiple-value-setq (u1 v1) (uv-to-screen stream u1 v1))
-  (multiple-value-setq (u2 v2) (uv-to-screen stream u2 v2))
-  (draw-line u1 v1 u2 v2 :stream stream :alu alu))
 
 
 (defconstant *DASH-PATTERN-SIZE* 64 "Length of dashed pattern in pixels.")
@@ -402,11 +318,7 @@ without any way to override them.  So this is commented out.
 
 (defun flip-alu-p (alu)
   "Determine if this alu represents XOR drawing."
-  #+clim (eq alu :flipping)
-  #-clim
-  (not (cond ((numberp alu) (= alu tv:alu-xor))	; Black and white.
-	     ((symbolp alu) (eq alu :flip))	
-	     ((scl:instancep alu) (= (scl:send alu :alu) tv:alu-xor)))))	; Color
+  (eq alu :flipping))	; Color
 
 (defun DEVICE-DRAW-LINE (stream x1 y1 x2 y2 
 			 &key (alu %alu) (dash-pattern %dash-pattern)
@@ -420,7 +332,6 @@ without any way to override them.  So this is commented out.
    Alters instance variables dash-ds and last-style."
   ;; KRA: Currently, we do not use with-clipping-internal here though for thick lines,
   ;; we should.  We also don't draw caps on thick dashed lines yet.
-  (declare (fixnum x1 y1 x2 y2 dash-pattern))
   (let ((end-point-p (flip-alu-p alu)))
     (when transform
       (multiple-value-setq (x1 y1) (uv-to-screen stream x1 y1))
@@ -573,97 +484,24 @@ without any way to override them.  So this is commented out.
 ;;; are (stream x1 y1 x2 y2).  Here we put all our smarts about how to draw lines
 ;;; as fast as possible.
 
-#+clim-0.9
 (defun make-optimized-line-displayer (alu thickness record-output-history)
-  (declare (ignore record-output-history))
-  #'(lambda (stream from-x from-y to-x to-y)
-      (with-drawing-options
-	  (stream :line-thickness thickness :ink alu)
-	(w::draw-line*-internal stream from-x from-y to-x to-y))))
-	
-#-clim-0.9
-(defun make-optimized-line-displayer (alu thickness record-output-history)
-  (let (#+clim
-	(line-style nil))
+  (let ((line-style nil))
     (cond (record-output-history
 	   #'(lambda (stream from-x from-y to-x to-y)
-	       #FEATURE-CASE
-	       (((not clim)
-		 (scl:send stream :draw-line from-x from-y to-x to-y alu))
-		(clim-1.0
-		 (progn
-		   ;; 152 bytes
-		   (unless line-style
-		     (setq line-style 
-		       (make-line-style :thickness thickness)))
-		   (clim::draw-line-internal
-		    stream 0 0 from-x from-y to-x to-y alu line-style)))
-		(clim-2
-		 (progn
-		   ;; 192 bytes
-		   (unless line-style
-		     (setq line-style 
-		       (make-line-style :thickness thickness)))
-		   (with-drawing-options (stream :ink alu 
-						      :line-style line-style)
-		     (medium-draw-line* 
-		      stream from-x from-y to-x to-y)))))))
+	       (progn
+                 ;; 192 bytes
+                 (unless line-style
+                   (setq line-style 
+                         (make-line-style :thickness thickness)))
+                 (with-drawing-options (stream :ink alu 
+                                               :line-style line-style)
+                   (medium-draw-line* 
+                    stream from-x from-y to-x to-y)))))
 	  (t
-	   #FEATURE-CASE
-	   ((:clim-2
-	     #'(lambda (stream from-x from-y to-x to-y)
-		 (unless line-style
-		   (setq line-style (make-line-style :thickness thickness)))
-		 (clim-internals::draw-line-internal
-		  stream 0 0 from-x from-y to-x to-y alu line-style)))
-	    ((AND :CLIM-0.9 :XLIB (NOT :GENERA))
-	     (let (drawable gcontext device-transformation xoff yoff)
-	       #'(lambda (stream from-x from-y to-x to-y)
-		   (unless drawable
-		     (multiple-value-setq (drawable gcontext device-transformation)
-		       (get-drawing-guts (sheet-medium stream)))
-		     (SETF (XLIB:GCONTEXT-LINE-WIDTH GCONTEXT) (max 0 thickness))
-		     (multiple-value-setq (xoff yoff)
-		       (transformation-offsets device-transformation)))
-		   (xlib:draw-line drawable gcontext
-				   (+ xoff from-x)  (+ yoff from-y)
-				   (+ xoff to-x) (+ yoff to-y)
-				   nil))))
-	    ((AND :CLIM-1.0 :XLIB (NOT :GENERA))
-	     (let (drawable gcontext gc device-transformation (xoff 0) (yoff 0))
-	       #'(lambda (stream from-x from-y to-x to-y)
-		   (unless drawable
-		     (clim::adjust-for-viewport-and-margins stream xoff yoff)
-		     (multiple-value-setq (drawable gcontext device-transformation)
-		       (get-drawing-guts  stream))
-		     (setf gc (xlib:create-gcontext :drawable drawable))
-		     (xlib:copy-gcontext gcontext gc)
-		     (SETF (XLIB:GCONTEXT-LINE-WIDTH GCONTEXT) (max 0 thickness))
-		     (setf (xlib:gcontext-foreground gc)
-		       (clim::clx-decode-color stream alu)))
-		   (xlib:draw-line drawable gc
-				   (+ xoff from-x)  (+ yoff from-y)
-				   (+ xoff to-x) (+ yoff to-y)
-				   nil))))
-	    ((not :CLIM)
-	     (let (screen carefully x-offset y-offset)
-	       #'(lambda (stream x1 y1 x2 y2)
-		   (unless (or screen carefully)
-		     (cond ((setq carefully
-			      (typep stream 'dw::encapsulating-output-stream)))
-			   (t
-			    (multiple-value-bind (left top)
-				(scl:send stream :visible-cursorpos-limits)
-			      (declare (ignore left))
-			      (setq screen (scl:send stream :screen)
-				    x-offset (tv:sheet-inside-left stream)
-				    y-offset (- (tv:sheet-inside-top stream) top))))))
-		   (if carefully
-		       (scl:send stream :draw-line x1 y1 x2 y2 alu t)
-		     (tv:prepare-sheet (stream)
-				       (scl:send screen :%draw-line
-						 (+ x1 x-offset) (+ y1 y-offset)
-						 (+ x2 x-offset) (+ y2 y-offset)
-						 alu t stream)))))))))))
+	   #'(lambda (stream from-x from-y to-x to-y)
+               (unless line-style
+                 (setq line-style (make-line-style :thickness thickness)))
+               (clim:draw-line* stream from-x from-y to-x to-y
+                                :ink alu :line-style line-style))))))
 
 

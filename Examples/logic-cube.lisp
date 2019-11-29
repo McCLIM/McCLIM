@@ -32,8 +32,8 @@
 
 ;; Pane definition and puzzle generator
 
-(defclass logic-cube-pane (climi::never-repaint-background-mixin basic-gadget)
-  ((background :initform (make-rgb-color 0.35 0.35 0.46) :reader background-color)
+(defclass logic-cube-pane (clime:never-repaint-background-mixin basic-gadget)
+  ((%background :initform (make-rgb-color 0.35 0.35 0.46) :reader background-color)
    (pitch :initform 0.0 :accessor pitch)
    (yaw   :initform 0.0 :accessor yaw)   
    (density :initform 5 :accessor density)
@@ -466,7 +466,10 @@
   (generate-better-cube-puzzle (find-cube))
   (cleanup-cube (find-cube)))
 
-(add-menu-item-to-command-table (find-command-table 'logic-cube-game-commands) nil :divider nil)
+(add-menu-item-to-command-table
+ (find-command-table 'logic-cube-game-commands)  nil
+ :divider nil
+ :errorp nil)
 
 (define-command (com-lc-quit :menu "Quit" :command-table logic-cube-game-commands) ()
   (frame-exit *application-frame*))

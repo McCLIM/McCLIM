@@ -216,28 +216,18 @@ Factor to reduce the size of the circles")
              (clim:present value 'town))
              *towns*))
 
-;;; accepting-values macro with a nice text-style
-
-(defmacro accepting-values-with-style-and-title ((stream) title &rest body)
-  `(let ((,stream *query-io*))
-     (window-clear ,stream)
-     (accepting-values (,stream :initially-select-query-identifier 'tag); :own-window t)
-       (with-text-style (,stream '(:sans-serif :bold 20))
-         ,title)
-       (with-text-style (,stream '(:serif :roman 15))
-         ,@body))))
-
-;;; show info about a town (using a pop-up window or embedded in the interactor-pane)
+;;; show info about a town (using a pop-up window)
 
 (define-town-example-command (com-show-town-info :name t :menu t
                                                  :keystroke (#\i :meta))
     ((town town :prompt " Which town? "))
   ;; (present town 'town :view +textual-view+)
-  (accepting-values-with-style-and-title (stream)
-    (format stream "~&Information on ~a~%" (town-name town))
-    (format stream "~%~A has ~:d inhabitants.~%~%"
-            (town-name town)
-            (or (town-population town) "some"))))
+  (notify-user *application-frame*
+	       (format nil "~A has ~:d inhabitants."
+		       (town-name town)
+		       (or (town-population town) "some"))
+	       :title (format nil "Information on ~A" (town-name town))
+	       :text-style '(:serif :roman 15)))
 
 ;;; show info on town :select gesture (left click)
 
@@ -264,13 +254,14 @@ Factor to reduce the size of the circles")
                                                :keystroke (#\d :meta))
     ((town-a town :prompt "Town a")
      (town-b town :prompt "Town b"))
-   (accepting-values-with-style-and-title (stream)
-    (format stream "~&Distance~%")
-    (format stream "~%It's ~d pixels from ~a to ~a.~%~%"
-            (get-distance-between-points (town-coordinates town-a)
-                                         (town-coordinates town-b))
-            (town-name town-a)
-            (town-name town-b))))
+  (notify-user *application-frame*
+	       (format nil "It's ~d pixels from ~a to ~a."
+		       (get-distance-between-points (town-coordinates town-a)
+						    (town-coordinates town-b))
+		       (town-name town-a)
+		       (town-name town-b))
+	       :title "Distance"
+	       :text-style '(:serif :roman 15)))
 
 ;;; get distance on :describe gesture (middle click)
 ;;; (ask via accept for the second town)

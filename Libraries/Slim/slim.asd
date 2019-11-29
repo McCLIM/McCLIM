@@ -1,4 +1,6 @@
+(in-package #:asdf-user)
 
 (defsystem #:slim
-  :depends-on (#:clim-core)
-  :components ((:file "slim")))
+  :depends-on (#:mcclim)
+  :components ((:file "slim")
+               (:doc-file "slim.md")))

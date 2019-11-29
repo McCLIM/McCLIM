@@ -165,3 +165,133 @@
       (setq val (accept ptype :stream stream :view climi::+pop-up-menu-view+
 			:prompt "Choose one:" :default val)))
     val))
+
+;;; Test of dialog with list-pane-view
+
+(defconstant +states+
+  '(("Alabama" AL)	
+    ("Alaska" AK)
+    ("Arizona" AZ)	
+    ("Arkansas" AR)	
+    ("California" CA)
+    ("Colorado" CO)
+    ("Connecticut" CT)
+    ("Delaware" DE)
+    ("Florida" FL)
+    ("Georgia" GA)	
+    ("Hawaii" HI)
+    ("Idaho" ID)	
+    ("Illinois" IL)
+    ("Indiana" IN)
+    ("Iowa" IA)
+    ("Kansas" KS)
+    ("Kentucky" KY)
+    ("Louisiana" LA)
+    ("Maine" ME)	
+    ("Maryland" MD)	
+    ("Massachusetts" MA)
+    ("Michigan" MI)
+    ("Minnesota" MN)
+    ("Mississippi" MS)
+    ("Missouri" MO)
+    ("Montana" MT)
+    ("Nebraska" NE)
+    ("Nevada" NV) 
+    ("New Hampshire" NH)
+    ("New Jersey" NJ)
+    ("New Mexico" NM)
+    ("New York" NY)
+    ("North Carolina" NC)
+    ("North Dakota" ND)
+    ("Ohio" OH)   
+    ("Oklahoma" OK)
+    ("Oregon" OR) 
+    ("Pennsylvania" PA)
+    ("Rhode Island" RI)
+    ("South Carolina" SC)
+    ("South Dakota" SD)
+    ("Tennessee" TN)
+    ("Texas" TX)  
+    ("Utah" UT)   
+    ("Vermont" VT)
+    ("Virginia" VA)
+    ("Washington" WA)
+    ("West Virginia" WV)
+    ("Wisconsin" WI)
+    ("Wyoming" WY)))
+
+(defconstant +presidential-candidates+
+  '(("Barak Obama" obama)
+    ("Mitt Romney" romney)))
+
+(defconstant +vp-candidates+
+  '(("Joseph Biden" biden)
+    ("Paul Ryan" ryan)))
+
+(defun accepting-with-list-pane-view (&key (stream *query-io*) (ow t))
+  "Tests a list pane gadget in an accepting-values dialog."
+  (let ((abbrev nil)
+        (prez nil)
+        (vp nil))
+    (accepting-values (stream :resynchronize-every-pass t :own-window ow
+                              :exit-boxes '((:exit "Accept") (:abort "Cancel")))
+      (formatting-table (stream :x-spacing 28)
+        (formatting-row (stream)
+          (formatting-cell (stream)
+            (format stream "STATE"))
+          (formatting-cell (stream)
+            (format stream "PRESIDENT"))
+          (formatting-cell (stream)
+            (format stream "VICE PRESIDENT")))
+        (formatting-row (stream)
+          (formatting-cell (stream)
+            (setq abbrev (accept `((completion ,+states+ :value-key cadr)
+                                   :name-key car)
+                                 :view `(list-pane-view :visible-items 10)
+                                 :stream stream
+                                 :prompt nil
+                                 :query-identifier 'abbrev))
+            (fresh-line stream)
+            (accept-values-command-button
+                (stream)
+                "cheer"
+              (notify-user *application-frame* "Go USA!")))
+          (formatting-cell (stream)
+            (setq prez (accept `((completion ,+presidential-candidates+
+                                             :value-key cadr)
+                                 :name-key car)
+                               :view 'list-pane-view
+                               :stream stream
+                               :prompt nil
+                               :query-identifier 'prez)))
+          (formatting-cell (stream)
+            (setq vp (accept `((completion ,+vp-candidates+ :value-key cadr)
+                               :name-key car)
+                             :view 'list-pane-view
+                             :stream stream
+                             :prompt nil
+                             :query-identifier 'vp))))))
+    (notify-user *application-frame*
+                 (format nil "~a, ~a, and ~a were selected." abbrev prez vp))
+    (values abbrev prez vp)))
+
+(defun accepting-with-gadgets (&key (stream *query-io*) (ow t))
+  (clim:accepting-values (stream :resynchronize-every-pass t :own-window ow)
+                         (fresh-line stream)
+
+                         (let (results)
+                           (macrolet ((generate-accept (type prompt view &rest keys)
+                                        `(progn
+                                           (push (accept ,type :prompt ,prompt :view ,view :stream stream ,@keys) results)
+                                           (fresh-line stream))))
+                             (generate-accept 'boolean "Toggle button [boolean]" +toggle-button-view+)
+                             (generate-accept '(member 1 2 3 4) "Radio Box [completion] " +radio-box-view+ :default 3)
+                             (generate-accept '(member "first" "second" "third") "Radio Box vertical [completion] " '(radio-box-view :orientation :vertical))
+                             (generate-accept '(member "Red" "Green" "Blue") "List pane [completion] " +list-pane-view+)
+                             (generate-accept '(member-sequence ("Male" "Female") :test string=) "Option pane [completion] " +option-pane-view+ :default "Male")
+                             (generate-accept '(subset 1 10 100 1000) "Check list [subset]" +check-box-view+ :default '(1 1000))
+                             (generate-accept '(subset :a :b :c :d) "List pane [subset]" +list-pane-view+ :default '(:a))
+                             (generate-accept '(float -1 1) "slider [float]" '(slider-view :orientation :horizontal :decimal-places 2) :default 0)
+                             (generate-accept '(integer 0 10) "slider [integer]" +slider-view+ :default 0)
+                             (generate-accept 'string "text editor [string]" '(text-editor-view :ncolumns 10 :nlines 10)))
+                           (nreverse results))))

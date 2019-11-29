@@ -11,19 +11,6 @@
 
 (in-package :esa-utils)
 
-;;; Cribbed from Paul Graham
-(defmacro with-gensyms (syms &body body)
-  `(let ,(mapcar #'(lambda (s) `(,s (gensym))) syms)
-     ,@body))
-
-;;; Cribbed from PCL by Seibel
-(defmacro once-only ((&rest names) &body body)
-  (let ((gensyms (loop for n in names collect (gensym))))
-    `(let (,@(loop for g in gensyms collect `(,g (gensym))))
-       `(let (,,@(loop for g in gensyms for n in names collect ``(,,g ,,n)))
-          ,(let (,@(loop for n in names for g in gensyms collect `(,n ,g)))
-                ,@body)))))
-
 (defun unlisted (obj &optional (fn #'first))
   (if (listp obj)
       (funcall fn obj)
@@ -116,16 +103,6 @@ evaluated."
                            ,expression)))
     #'(lambda ()
         ,@body)))
-
-;;; XXX This is currently broken with respect to declarations
-
-(defmacro letf* ((&rest forms) &body body)
-  (if (null forms)
-      `(locally
-	 ,@body)
-      `(letf (,(car forms))
-	 (letf* (,(cdr forms))
-	   ,@body))))
 
 (defun display-string (string)
   (with-output-to-string (result)
@@ -468,7 +445,7 @@ list of initargs"
   (:documentation "A metaclass for defining classes supporting
 changing of modes."))
 
-(defmethod validate-superclass ((c1 modual-class) (c2 standard-class))
+(defmethod c2mop:validate-superclass ((c1 modual-class) (c2 standard-class))
   t)
 
 (defmethod compute-slots ((c modual-class))

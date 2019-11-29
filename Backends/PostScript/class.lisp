@@ -36,9 +36,7 @@
 
 ;;;; Medium
 
-(defclass postscript-medium (basic-medium)
-  ((device-fonts :initform nil
-		 :accessor device-fonts)))
+(defclass postscript-medium (postscript-font-medium) ())
 
 (defmacro postscript-medium-graphics-state (medium)
   `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
@@ -55,10 +53,10 @@
              "Unknown")
   #-unix "")
 
-(defclass postscript-stream 
+(defclass postscript-stream
     (basic-sheet
-     sheet-leaf-mixin sheet-mute-input-mixin 
-     permanent-medium-sheet-output-mixin sheet-mute-repainting-mixin
+     sheet-leaf-mixin sheet-mute-input-mixin
+     sheet-mute-repainting-mixin
      ;; ?
      mirrored-sheet-mixin
      ;; FIXME: Tim Moore suggested (2006-02-06, mcclim-devel) that
@@ -67,12 +65,14 @@
      ;; when we grow another non-interactive backend (maybe a cl-pdf
      ;; backend?).  -- CSR.
      climi::updating-output-stream-mixin
-     standard-extended-output-stream standard-output-recording-stream)
+     standard-extended-output-stream
+     standard-output-recording-stream
+     permanent-medium-sheet-output-mixin)
   ((file-stream :initarg :file-stream :reader postscript-stream-file-stream)
    (title :initarg :title)
    (for :initarg :for)
    (orientation :initarg :orientation)
-   (paper :initarg :paper)   
+   (paper :initarg :paper)
    (transformation :initarg :transformation
                    :reader sheet-native-transformation)
    (current-page :initform 0)
@@ -106,7 +106,7 @@
 
 ;;;; Port
 
-(defclass postscript-port (basic-port)
+(defclass postscript-port (postscript-font-port)
   ((stream #| :initarg :stream |#
            #| :initform (error "Unspecified stream.") |#
            ;; I think this is right, but BASIC-PORT accepts only

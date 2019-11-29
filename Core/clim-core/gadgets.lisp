@@ -29,9 +29,6 @@
 
 ;;;; Notes
 
-;; There is STANDARD-GADGET in this file but not in the spec, where
-;; from? Lispworks?
-
 ;; The spec says ORIENTED-GADGET-MIXIN, we call it ORIENTED-GADGET and
 ;; later define ORIENTED-GADGET-MIXIN with the remark "Try to be
 ;; compatible with Lispworks' CLIM."
@@ -106,9 +103,6 @@
 
 ;; - The color of a 3Dish border should be derived from a gadget's
 ;;   background.
-
-;; - It seems that 3D-BORDER-MIXIN is only used for the scroll-bar, so
-;;   remove it
 
 ;; - Somehow engrafting the push button's medium does not work. The
 ;;   text-style initarg does not make it to the sheets medium.
@@ -196,8 +190,7 @@
               :text-style (gadget-label-text-style pane)))
 ||#
 
-(defclass basic-gadget (permanent-medium-sheet-output-mixin
-                        ;; sheet-leaf-mixin ; <- this cannot go here...
+(defclass basic-gadget (;; sheet-leaf-mixin ; <- this cannot go here...
                         gadget-color-mixin
                         ;; These are inherited from pane, via
                         ;; clim-sheet-input-mixin and clim-repainting-mixin
@@ -205,13 +198,8 @@
                         ;; immediate-repainting-mixin
                         basic-pane
                         gadget)
-  ())
-
-
-
-;; Where is this standard-gadget from? --GB
-(defclass standard-gadget (basic-gadget)
-  ())
+  ()
+  (:default-initargs :text-style (make-text-style :sans-serif nil nil)))
 
 (defgeneric armed-callback (gadget client gadget-id)
   (:argument-precedence-order client gadget-id gadget))
@@ -219,7 +207,7 @@
 (defgeneric disarmed-callback (gadget client gadget-id)
   (:argument-precedence-order client gadget-id gadget))
 
-;; "The default methods (on standard-gadget) call the function stored
+;; "The default methods (on basic-gadget) call the function stored
 ;; in gadget-armed-callback or gadget-disarmed-callback with one argument,
 ;; the gadget."
 
@@ -288,7 +276,7 @@
 ;;; Value-gadget
 ;;;
 
-(defclass value-gadget (standard-gadget)
+(defclass value-gadget (basic-gadget)
   ((value :initarg :value
           :reader gadget-value)
    (value-changed-callback :initarg :value-changed-callback
@@ -325,7 +313,7 @@
 ;;; Action-gadget
 ;;;
 
-(defclass action-gadget (standard-gadget)
+(defclass action-gadget (basic-gadget)
   ((activate-callback :initarg :activate-callback
                       :initform nil
                       :reader gadget-activate-callback)))
@@ -344,7 +332,8 @@
 (defclass oriented-gadget ()
   ((orientation :type    (member :vertical :horizontal)
                 :initarg :orientation
-                :reader  gadget-orientation)))
+                :reader  gadget-orientation))
+  (:default-initargs :orientation :horizontal))
 
 (defclass oriented-gadget-mixin (oriented-gadget)
   ;; Try to be compatible with Lispworks' CLIM.
@@ -379,9 +368,11 @@
 
 (defclass range-gadget ()
   ((min-value :initarg :min-value
-              :accessor gadget-min-value)
+              :accessor gadget-min-value
+              :initform 0)
    (max-value :initarg :max-value
-              :accessor gadget-max-value)))
+              :accessor gadget-max-value
+              :initform 1)))
 
 (defclass range-gadget-mixin (range-gadget)
   ;; Try to be compatible with Lispworks' CLIM.
@@ -512,28 +503,42 @@
 
 ;;; 30.4.5 The abstract slider Gadget
 
-(defclass slider-gadget (labelled-gadget-mixin
-                         value-gadget
-                         oriented-gadget-mixin
-                         range-gadget-mixin
-                         gadget-color-mixin
-                         ;;
-                         value-changed-repaint-mixin
-                         )
-  ()
+(defclass slider (labelled-gadget-mixin
+		  value-gadget
+		  oriented-gadget-mixin
+		  range-gadget-mixin)
+  ((drag-callback  :initform nil
+                   :initarg :drag-callback
+                   :reader slider-drag-callback)
+   (show-value-p   :type boolean
+                   :initform nil
+                   :initarg :show-value-p
+                   :accessor gadget-show-value-p)
+   (decimal-places :initform 0
+                   :initarg :decimal-places
+                   :reader slider-decimal-places)
+   (number-of-quanta :initform nil
+                     :initarg :number-of-quanta
+                     :reader slider-number-of-quanta))
   (:documentation "The value is a real number, and default value for orientation is :vertical,
-and must never be nil."))
+and must never be nil.")
+  (:default-initargs :orientation :vertical))
+
+(defmethod drag-callback ((pane slider) client gadget-id value)
+  (declare (ignore client gadget-id))
+  (when (slider-drag-callback pane)
+    (funcall (slider-drag-callback pane) pane value)))
 
 ;;; 30.4.6 The abstract radio-box and check-box Gadgets
 
-;; The only real different between a RADIO-BOX and a CHECK-BOX is the
+;; The only real difference between a RADIO-BOX and a CHECK-BOX is the
 ;; number of allowed selections.
 
 (defclass radio-box (value-gadget oriented-gadget-mixin)
   ()
   (:documentation "The value is a button")
   (:default-initargs
-    :value nil))
+   :value nil))
 
 ;; RADIO-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
 
@@ -649,16 +654,44 @@ and must never be nil."))
 
 ;;; 30.4.7 The abstract list-pane and option-pane Gadgets
 
-(defclass list-pane (value-gadget
-                     clim-extensions:mouse-wheel-scroll-mixin)
-  ()
+(defclass meta-list-pane ()
+  ((mode        :initarg :mode
+                :initform :exclusive
+                :reader list-pane-mode
+                :type (member :one-of :some-of :exclusive :nonexclusive))
+   (items       :initarg :items
+                :initform nil
+                :reader list-pane-items
+                :type sequence)
+   (name-key    :initarg :name-key
+                :initform #'princ-to-string
+                :reader list-pane-name-key
+                :documentation "A function to be applied to items to gain a printable representation")
+   (value-key   :initarg :value-key
+                :initform #'identity
+                :reader list-pane-value-key
+                :documentation "A function to be applied to items to gain its value
+                                for the purpose of GADGET-VALUE.")
+   (presentation-type-key :initarg :presentation-type-key
+                          :initform (constantly nil)
+                          :reader list-pane-presentation-type-key
+                          :documentation "A function to be applied to items to find the presentation types for their values, or NIL.")
+   (test        :initarg :test
+                :initform #'eql
+                :reader list-pane-test
+                :documentation "A function to compare two items for equality.")))
+
+(defclass list-pane (meta-list-pane value-gadget)
+  ((visible-items :initarg :visible-items ; Clim 2.2 compatibility
+                  :initform nil
+                  :documentation "Maximum number of visible items in list"))
   (:documentation
    "The instantiable class that implements an abstract list pane, that is, a gadget
     whose semantics are similar to a radio box or check box, but whose visual
     appearance is a list of buttons.")
   (:default-initargs :value nil))
 
-(defclass option-pane (value-gadget)
+(defclass option-pane (meta-list-pane value-gadget)
   ()
   (:documentation
    "The instantiable class that implements an abstract option pane, that is, a
@@ -681,22 +714,20 @@ and must never be nil."))
 ;;; 30.4.9 The abstract text-editor Gadget
 
 (defclass text-editor (text-field)
-  ()
+  ((ncolumns :reader text-editor-ncolumns
+             :initarg :ncolumns
+             :initform nil
+             :type (or null integer))
+   (nlines :reader text-editor-nlines
+           :initarg :nlines
+           :initform nil
+           :type (or null integer)))
   (:documentation "The value is a string"))
 
 ;;;; ------------------------------------------------------------------------------------------
 ;;;;
 ;;;;  Mixin Classes for Concrete Gadgets
 ;;;;
-
-(defclass standard-gadget-pane (;;permanent-medium-sheet-output-mixin
-                                ;;immediate-sheet-input-mixin
-                                ;;immediate-repainting-mixin
-                                sheet-leaf-mixin
-                                standard-gadget)
-  ()
-  (:documentation
-   "PANE class to include in gadget pane classes."))
 
 ;;;; Redrawing mixins
 
@@ -762,12 +793,12 @@ and must never be nil."))
   (:documentation
    "Mixin class for gadgets, which want invoke the layout protocol, if the label changes."))
 
-;;;; Common behavior on STANDARD-GADGET-PANE and BASIC-GADGET
+;;;; Common behavior on `basic-gadget'
 
 ;;
 ;; When a gadget is not activated, it receives no device events.
 ;;
-(defmethod handle-event :around ((pane standard-gadget) (event device-event))
+(defmethod handle-event :around ((pane basic-gadget) (event device-event))
   (when (gadget-active-p pane)
     (call-next-method)))
 
@@ -776,7 +807,7 @@ and must never be nil."))
 ;; Glitch: upon re-activation the mouse might happen to be in the
 ;; gadget and thus re-arm it immediately, that is not implemented.
 
-(defmethod note-gadget-deactivated :after (client (gadget standard-gadget))
+(defmethod note-gadget-deactivated :after (client (gadget basic-gadget))
   (declare (ignorable client))
   (disarm-gadget gadget))
 
@@ -791,21 +822,23 @@ and must never be nil."))
 
 (defmethod compose-label-space ((gadget labelled-gadget-mixin) &key (wider 0) (higher 0))
   (with-slots (label align-x align-y) gadget
-    (let* ((as (text-style-ascent (pane-text-style gadget) gadget))
-           (ds (text-style-descent (pane-text-style gadget) gadget))
-           (w  (+ (text-size gadget label :text-style (pane-text-style gadget)) wider))
+    (let* ((text-style (pane-text-style gadget))
+           (as (text-style-ascent text-style gadget))
+           (ds (text-style-descent text-style gadget))
+           (w  (+ (text-size gadget label :text-style text-style) wider))
            (h  (+ as ds higher)))
-      (make-space-requirement :width w  :min-width w  :max-width  w
-                              :height h :min-height h :max-height h))))
+      (make-space-requirement :width w  :min-width w  :max-width  +fill+
+                              :height h :min-height h :max-height +fill+))))
 
 (defgeneric draw-label* (pane x1 y1 x2 y2 &key ink))
 
 (defmethod draw-label* ((pane labelled-gadget-mixin) x1 y1 x2 y2
                         &key (ink +foreground-ink+))
   (with-slots (align-x align-y label) pane
-    (let ((as (text-style-ascent (pane-text-style pane) pane))
-          (ds (text-style-descent (pane-text-style pane) pane))
-          (w  (text-size pane label :text-style (pane-text-style pane))))
+    (let* ((text-style (pane-text-style pane))
+           (as (text-style-ascent text-style pane))
+           (ds (text-style-descent text-style pane))
+           (w  (text-size pane label :text-style text-style)))
       (draw-text* pane label
                   (case align-x
                     ((:left) x1)
@@ -818,7 +851,7 @@ and must never be nil."))
                     ((:bottom) (- y2 ds))
                     (otherwise (/ (+ y1 y2 (- as ds)) 2))) ;defensive programming
                   ;; Giving the text-style here shouldn't be neccessary --GB
-                  :text-style (pane-text-style pane)
+                  :text-style text-style
                   :ink ink))))
 
 ;;; 3D-ish Look
@@ -1094,35 +1127,35 @@ and must never be nil."))
                              arm/disarm-repaint-mixin
                              activate/deactivate-repaint-mixin
                              enter/exit-arms/disarms-mixin
-                             standard-gadget-pane)
+                             sheet-leaf-mixin)
   ((pressedp          :initform nil)
    (show-as-default-p :type boolean
                       :initform nil
                       :initarg :show-as-default-p
                       :accessor push-button-show-as-default-p))
   (:default-initargs
-    :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :align-x :center
     :align-y :center
     :x-spacing 4
-    :y-spacing 2))
+    :y-spacing 4))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
   (declare (ignore width height))
-  (space-requirement+* (space-requirement+* (compose-label-space gadget)
-                                            :min-width (* 2 (pane-x-spacing gadget))
-                                            :width (* 2 (pane-x-spacing gadget))
-                                            :max-width (* 2 (pane-x-spacing gadget))
-                                            :min-height (* 2 (pane-y-spacing gadget))
-                                            :height (* 2 (pane-y-spacing gadget))
-                                            :max-height (* 2 (pane-y-spacing gadget)))
-                       :min-width (* 2 *3d-border-thickness*)
-                       :width (* 2 *3d-border-thickness*)
-                       :max-width (* 2 *3d-border-thickness*)
-                       :min-height (* 2 *3d-border-thickness*)
-                       :height (* 2 *3d-border-thickness*)
-                       :max-height (* 2 *3d-border-thickness*)))
+  (let ((2*x-spacing (* 2 (pane-x-spacing gadget)))
+        (2*y-spacing (* 2 (pane-y-spacing gadget)))
+        (2*border-thickness (* 2 *3d-border-thickness*)))
+    (space-requirement+* (space-requirement+* (compose-label-space gadget)
+                                              :min-width 2*x-spacing
+                                              :width 2*x-spacing
+                                              :max-width +fill+
+                                              :min-height 2*y-spacing
+                                              :height 2*y-spacing
+                                              :max-height +fill+)
+                         :min-width 2*border-thickness
+                         :width 2*border-thickness
+                         :min-height 2*border-thickness
+                         :height 2*border-thickness)))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
   (with-slots (pressedp) pane
@@ -1131,24 +1164,27 @@ and must never be nil."))
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-release-event))
   (with-slots (armed pressedp) pane
-    (setf pressedp nil)
-    (when armed
-      (activate-callback pane (gadget-client pane) (gadget-id pane))
+    (when pressedp
       (setf pressedp nil)
+      (when armed
+        (activate-callback pane (gadget-client pane) (gadget-id pane)))
       (dispatch-repaint pane +everywhere+))))
 
 (defmethod handle-repaint ((pane push-button-pane) region)
   (declare (ignore region))
   (with-slots (armed pressedp) pane
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
       (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
       (draw-bordered-rectangle* pane x1 y1 x2 y2
                                 :border-width 1
                                 :style (if (and pressedp armed) :inset :outset))
-      (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 *3d-border-thickness* (pane-x-spacing pane))
-                                                 (+ y1 *3d-border-thickness* (pane-y-spacing pane))
-                                                 (- x2 *3d-border-thickness* (pane-x-spacing pane))
-                                                 (- y2 *3d-border-thickness* (pane-y-spacing pane)))
+      (let* ((x-spacing (pane-x-spacing pane))
+             (y-spacing (pane-y-spacing pane))
+             (border-thickness *3d-border-thickness*)
+             (x1 (+ x1 border-thickness x-spacing))
+             (y1 (+ y1 border-thickness y-spacing))
+             (x2 (- x2 border-thickness x-spacing))
+             (y2 (- y2 border-thickness y-spacing)))
         (if (gadget-active-p pane)
             (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
             (draw-engraved-label* pane x1 y1 x2 y2))))))
@@ -1168,14 +1204,13 @@ and must never be nil."))
                               ;; event handling:
                               enter/exit-arms/disarms-mixin
                               ;; other
-                              standard-gadget-pane)
+                              sheet-leaf-mixin)
   ((indicator-type :type (member :one-of :some-of)
                    :initarg :indicator-type
                    :reader toggle-button-indicator-type
                    :initform :some-of) )
   (:default-initargs
     :value nil
-    :text-style (make-text-style :sans-serif nil nil)
     :align-x :left
     :align-y :center
     :x-spacing 2
@@ -1189,20 +1224,18 @@ and must never be nil."))
      (space-requirement+* sr
                           :min-width  (* 3 (pane-x-spacing pane))
                           :width      (* 3 (pane-x-spacing pane))
-                          :max-width  (* 3 (pane-x-spacing pane))
+                          :max-width  +fill+
                           :min-height (* 2 (pane-y-spacing pane))
                           :height     (* 2 (pane-y-spacing pane))
-                          :max-height (* 2 (pane-y-spacing pane)))
+                          :max-height +fill+)
      :min-width (space-requirement-height sr)
      :width     (space-requirement-height sr)
-     :max-width (space-requirement-height sr)
      :min-height 0
-     :max-height 0
      :height 0)))
 
 (defgeneric draw-toggle-button-indicator (gadget type value x1 y1 x2 y2))
 
-(defmethod draw-toggle-button-indicator ((gadget standard-gadget-pane) (type (eql :one-of)) value x1 y1 x2 y2)
+(defmethod draw-toggle-button-indicator ((gadget toggle-button-pane) (type (eql :one-of)) value x1 y1 x2 y2)
   (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
     (let ((radius (/ (- y2 y1) 2)))
       (draw-circle* gadget cx cy radius
@@ -1219,7 +1252,7 @@ and must never be nil."))
         (draw-circle* gadget cx cy (max 1 (- radius 4))
                       :ink (effective-gadget-foreground gadget))))))
 
-(defmethod draw-toggle-button-indicator ((pane standard-gadget-pane) (type (eql :some-of)) value
+(defmethod draw-toggle-button-indicator ((pane toggle-button-pane) (type (eql :some-of)) value
                                          x1 y1 x2 y2)
   (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-input-area-color pane))
   (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :inset)
@@ -1232,23 +1265,22 @@ and must never be nil."))
 (defmethod handle-repaint ((pane toggle-button-pane) region)
   (declare (ignore region))
   (when (sheet-grafted-p pane)
-    (with-special-choices (pane)
-      (with-slots (armed) pane
-        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-          (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
-          (let* ((as (text-style-ascent (pane-text-style pane) pane))
-                 (ds (text-style-descent (pane-text-style pane) pane)) )
-            (multiple-value-bind (tx1 ty1 tx2 ty2)
-                (values (+ x1 (pane-x-spacing pane))
-                        (- (/ (+ y1 y2) 2) (/ (+ as ds) 2))
-                        (+ x1 (pane-x-spacing pane) (+ as ds))
-                        (+ (/ (+ y1 y2) 2) (/ (+ as ds) 2)))
-              (draw-toggle-button-indicator pane (toggle-button-indicator-type pane) (gadget-value pane)
-                                            tx1 ty1 tx2 ty2)
-              (if (gadget-active-p pane)
-                  (draw-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2
-                               :ink (effective-gadget-foreground pane))
-                  (draw-engraved-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2)))))))))
+    (with-slots (armed) pane
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+        (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
+        (let* ((as (text-style-ascent (pane-text-style pane) pane))
+               (ds (text-style-descent (pane-text-style pane) pane)) )
+          (multiple-value-bind (tx1 ty1 tx2 ty2)
+              (values (+ x1 (pane-x-spacing pane))
+                      (- (/ (+ y1 y2) 2) (/ (+ as ds) 2))
+                      (+ x1 (pane-x-spacing pane) (+ as ds))
+                      (+ (/ (+ y1 y2) 2) (/ (+ as ds) 2)))
+            (draw-toggle-button-indicator pane (toggle-button-indicator-type pane) (gadget-value pane)
+                                          tx1 ty1 tx2 ty2)
+            (if (gadget-active-p pane)
+                (draw-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2
+                             :ink (effective-gadget-foreground pane))
+                (draw-engraved-label* pane (+ tx2 (pane-x-spacing pane)) y1 x2 y2))))))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
@@ -1261,10 +1293,9 @@ and must never be nil."))
 
 (defclass menu-button-pane (menu-button
                             activate/deactivate-repaint-mixin
-                            standard-gadget-pane)
+                            sheet-leaf-mixin)
   ()
   (:default-initargs
-    :text-style (make-text-style :sans-serif nil nil)
     :background *3d-normal-color*
     :x-spacing 3
     :y-spacing 2
@@ -1274,37 +1305,34 @@ and must never be nil."))
 (defmethod handle-repaint ((pane menu-button-pane) region)
   (declare (ignore region))
   (with-slots (x-spacing y-spacing) pane
-    (with-special-choices (pane)
-      (let ((region (sheet-region pane)))
-        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-          (draw-rectangle* pane x1 y1 x2 y2
-                           :ink (effective-gadget-background pane)
-                           :filled t)
-          (cond ((slot-value pane 'armed)
-                 (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :outset :border-width *3d-border-thickness*))
-                (t))
-          (multiple-value-bind (x1 y1 x2 y2)
-              (values (+ x1 x-spacing) (+ y1 y-spacing)
-                      (- x2 x-spacing) (- y2 y-spacing))
-            (if (gadget-active-p pane)
-                (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
-                (draw-engraved-label* pane x1 y1 x2 y2))))))))
+    (let ((region (sheet-region pane)))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+        (draw-rectangle* pane x1 y1 x2 y2
+                         :ink (effective-gadget-background pane)
+                         :filled t)
+        (cond ((slot-value pane 'armed)
+               (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :outset :border-width *3d-border-thickness*))
+              (t))
+        (multiple-value-bind (x1 y1 x2 y2)
+            (values (+ x1 x-spacing) (+ y1 y-spacing)
+                    (- x2 x-spacing) (- y2 y-spacing))
+          (if (gadget-active-p pane)
+              (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
+              (draw-engraved-label* pane x1 y1 x2 y2)))))))
 
 (defmethod compose-space ((gadget menu-button-pane) &key width height)
   (declare (ignore width height))
   (space-requirement+* (space-requirement+* (compose-label-space gadget)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))
-                                            :max-width (* 2 (pane-x-spacing gadget))
+                                            :max-width +fill+
                                             :min-height (* 2 (pane-y-spacing gadget))
                                             :height (* 2 (pane-y-spacing gadget))
-                                            :max-height (* 2 (pane-y-spacing gadget)))
+                                            :max-height +fill+)
                        :min-width (* 2 *3d-border-thickness*)
                        :width (* 2 *3d-border-thickness*)
-                       :max-width (* 2 *3d-border-thickness*)
                        :min-height (* 2 *3d-border-thickness*)
-                       :height (* 2 *3d-border-thickness*)
-                       :max-height (* 2 *3d-border-thickness*)))
+                       :height (* 2 *3d-border-thickness*)))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.4 The concrete scroll-bar Gadget
@@ -1634,8 +1662,16 @@ and must never be nil."))
                              (scroll-bar/map-coordinate-to-value sb y-new-thumb-top)))) )
              (setf (gadget-value sb :invoke-callback t) new-value)))))
       (otherwise
-       (setf event-state nil) )))
+       (setf event-state nil))))
   (scroll-bar/update-display sb))
+
+(defmethod handle-event ((pane scroll-bar-pane) (event pointer-scroll-event))
+  (with-slots (event-state) pane
+    (when (eq event-state nil) ; when not currently processing a button press
+      (let ((function (if (minusp (pointer-event-delta-y event))
+                          'scroll-up-page-callback
+                          'scroll-down-page-callback)))
+        (funcall function pane (gadget-client pane) (gadget-id pane))))))
 
 (defmethod handle-repaint ((pane scroll-bar-pane) region)
   (with-slots (all-new-p) pane
@@ -1654,46 +1690,50 @@ and must never be nil."))
 ;; slider's sheet, probably his child).
 ;; ----------------------------------------------------------
 
+(defgeneric convert-position-to-value (slider-pane position)
+  (:documentation
+   "Return gadget value for SLIDER-PANE corresponding to POSITION.
+
+    POSITION can be a real number or a pointer event. Both designate a
+    horizontal or vertical position in the gadget's coordinate
+    system."))
+
+(defgeneric convert-value-to-position (slider-pane)
+  (:documentation
+   "Return a position for SLIDER-PANE's gadget value.
+
+    The returned position measures a distance along the horizontal or
+    vertical axis of the gadget's coordinate system."))
+
 ;; This values should be changeable by user. That's
 ;; why they are parameters, and not constants.
-(defparameter slider-button-long-dim 30)
 (defparameter slider-button-short-dim 10)
 
-(defclass slider-pane (slider-gadget activate/deactivate-repaint-mixin basic-pane)
-  ((drag-callback  :initform nil
-                   :initarg :drag-callback
-                   :reader slider-drag-callback)
-   (show-value-p   :type boolean
-                   :initform nil
-                   :initarg :show-value-p
-                   :accessor gadget-show-value-p)
-   (decimal-places :initform 0
-                   :initarg :decimal-places
-                   :reader slider-decimal-places)
-   (number-of-quanta :initform nil
-                     :initarg :number-of-quanta
-                     :reader slider-number-of-quanta)))
+(defclass slider-pane (slider
+                       gadget-color-mixin
+                       value-changed-repaint-mixin
+                       activate/deactivate-repaint-mixin
+                       basic-pane)
+  ())
 
 (defmethod compose-space ((pane slider-pane) &key width height)
   (declare (ignore width height))
-  (let ((minor (+ 50 (if (gadget-show-value-p pane) 30 0)))
-        (major 128))
-  (if (eq (gadget-orientation pane) :vertical)
-      (make-space-requirement :min-width  minor :width  minor
-                              :min-height major :height major)
-    (make-space-requirement :min-width  major :width  major
-                            :min-height minor :height minor))))
-
-
-
-(defmethod initialize-instance :before ((pane slider-pane) &rest rest)
-  (declare (ignore rest))
-  (setf (slot-value pane 'orientation) :vertical))
-
-(defmethod drag-callback ((pane slider-pane) client gadget-id value)
-  (declare (ignore client gadget-id))
-  (when (slider-drag-callback pane)
-    (funcall (slider-drag-callback pane) pane value)))
+  (let* ((value-size (ecase (gadget-orientation pane)
+                       (:horizontal (text-style-ascent (pane-text-style pane) pane))
+                       (:vertical (let* ((dp (slider-decimal-places pane))
+                                         (s1 (format-value (gadget-min-value pane) dp))
+                                         (s2 (format-value (gadget-max-value pane) dp)))
+                                    (* (max (length s1) (length s2))
+                                       (text-size pane #\0))))))
+         (minor (if (gadget-show-value-p pane)
+                    (* 2 (+ 10.0 value-size)) ; the value
+                    (* 2 (1+ 8.0)))) ; the knob
+         (major 128))
+    (if (eq (gadget-orientation pane) :vertical)
+        (make-space-requirement :min-width  minor :width  minor
+                                :min-height major :height major)
+        (make-space-requirement :min-width  major :width  major
+                                :min-height minor :height minor))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-enter-event))
   (with-slots (armed) pane
@@ -1713,50 +1753,33 @@ and must never be nil."))
      (when armed
        (setf armed ':button-press))))
 
-(defgeneric convert-position-to-value (slider-pane dim))
-
 (defmethod handle-event ((pane slider-pane) (event pointer-motion-event))
   (with-slots (armed) pane
     (when (eq armed ':button-press)
-      (let ((value (convert-position-to-value pane
-                                              (if (eq (gadget-orientation pane) :vertical)
-                                                  (pointer-event-y event)
-                                                  (pointer-event-x event)))))
+      (let ((value (convert-position-to-value pane event)))
         (setf (gadget-value pane :invoke-callback nil) value)
         (drag-callback pane (gadget-client pane) (gadget-id pane) value)
         (dispatch-repaint pane (sheet-region pane))))))
 
 (defmethod handle-event ((pane slider-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
-    (when armed
+    (when (eq armed ':button-press)
       (setf armed t
             (gadget-value pane :invoke-callback t)
-            (convert-position-to-value pane
-                                       (if (eq (gadget-orientation pane) :vertical)
-                                           (pointer-event-y event)
-                                           (pointer-event-x event))))
+            (convert-position-to-value pane event))
       (dispatch-repaint pane (sheet-region pane)))))
 
-
-(defmethod convert-position-to-value ((pane slider-pane) dim)
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (multiple-value-bind (good-dim1 good-dim2)
-        (if (eq (gadget-orientation pane) :vertical)
-            ;; vertical orientation
-            (values (+ y1 (ash slider-button-short-dim -1))
-                    (- y2 (ash slider-button-short-dim -1)))
-            ;; horizontal orientation
-            (values (+ x1 (ash slider-button-short-dim -1))
-                    (- x2 (ash slider-button-short-dim -1))))
-      (let ((displacement
-             (/ (- (max good-dim1 (min dim good-dim2)) good-dim1)
-                (- good-dim2 good-dim1)))
-            (quanta (slider-number-of-quanta pane)))
-        (+ (gadget-min-value pane)
-           (* (gadget-range pane)
-              (if quanta
-                  (/ (round (* displacement quanta)) quanta)
-                  displacement)))))))
+(defmethod handle-event ((pane slider-pane) (event pointer-scroll-event))
+  (with-slots (armed) pane
+    (when (eq armed t) ; when armed and not currently dragging
+      (let* ((old-value (gadget-value pane))
+             (new-value (+ old-value (- (pointer-event-delta-y event))))
+             (effective-new-value (alexandria:clamp new-value
+                                                    (gadget-min-value pane)
+                                                    (gadget-max-value pane))))
+        (unless (eql effective-new-value old-value)
+          (setf (gadget-value pane :invoke-callback t) effective-new-value)
+          (dispatch-repaint pane (sheet-region pane)))))))
 
 (defun format-value (value decimal-places)
   (if (<= decimal-places 0)
@@ -1764,105 +1787,99 @@ and must never be nil."))
       (let ((control-string (format nil "~~,~DF" decimal-places)))
         (format nil control-string value))))
 
-(defgeneric convert-value-to-position (slider-pane))
-
 (defmethod handle-repaint ((pane slider-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
-    (let ((position (convert-value-to-position pane))
-          (slider-button-half-short-dim (ash slider-button-short-dim -1))
-          ;(slider-button-half-long-dim  (ash slider-button-long-dim -1))
-          (background-color (pane-background pane))
-          (inner-color (gadget-current-color pane)))
-      (flet ((draw-thingy (x y)
+  (let ((position (convert-value-to-position pane))
+        (slider-button-half-short-dim (floor slider-button-short-dim 2))
+        (background-color (pane-background pane))
+        (inner-color (gadget-current-color pane)))
+    (flet ((draw-knob (x y)
+             (if (gadget-active-p pane)
+                 (progn
+                   (draw-circle* pane x y 8.0 :filled t :ink inner-color)
+                   (draw-circle* pane x y 8.0 :filled nil :ink +black+)
+                   (draw-circle* pane x y 7.0
+                                 :filled nil :ink +white+
+                                 :start-angle (* 0.25 pi)
+                                 :end-angle   (* 1.25 pi))
+                   (draw-circle* pane x y 7.0
+                                 :filled nil :ink +black+
+                                 :start-angle (* 1.25 pi)
+                                 :end-angle   (* 2.25 pi)))
+                 (progn
+                   (draw-circle* pane (1+ x) (1+ y) 8.0 :filled t :ink *3d-light-color*)
+                   (draw-circle* pane x y 8.0 :filled t :ink *3d-dark-color*))))
+           (draw-value (x y)
+             (let ((text (format-value (gadget-value pane)
+                                       (slider-decimal-places pane))))
                (if (gadget-active-p pane)
+                   (draw-text* pane text x y)
                    (progn
-                     (draw-circle* pane x y 8.0 :filled t :ink inner-color)
-                     (draw-circle* pane x y 8.0 :filled nil :ink +black+)
-                     (draw-circle* pane x y 7.0
-                                   :filled nil :ink +white+
-                                   :start-angle (* 0.25 pi)
-                                   :end-angle   (* 1.25 pi))
-                     (draw-circle* pane x y 7.0
-                                   :filled nil :ink +black+
-                                   :start-angle (* 1.25 pi)
-                                   :end-angle   (* 2.25 pi)))
-                   (progn
-                     (draw-circle* pane (1+ x) (1+ y) 8.0 :filled t :ink *3d-light-color*)
-                     (draw-circle* pane x y 8.0 :filled t :ink *3d-dark-color*))))
-             (draw-value (x y)
-               (let ((text (format-value (gadget-value pane)
-                                         (slider-decimal-places pane))))
-                 (if (gadget-active-p pane)
-                     (draw-text* pane text x y)
-                     (progn
-                       (draw-text* pane text (1+ x) (1+ y)
-                                   :ink *3d-light-color*)
-                       (draw-text* pane text x y
-                                   :ink *3d-dark-color*))))))
-        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-          (display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
-          (case (gadget-orientation pane)
-            ((:vertical)
-             (let ((middle (round (- x2 x1) 2)))
-               (draw-bordered-polygon pane
-                                      (polygon-points
-                                       (make-rectangle*
-                                        (- middle 2) (+ y1 slider-button-half-short-dim)
-                                        (+ middle 2) (- y2 slider-button-half-short-dim)))
-                                      :style :inset
-                                      :border-width 2)
-               (draw-thingy middle (- position slider-button-half-short-dim))
-               (when (gadget-show-value-p pane)
-                 (draw-value
-                  (+ middle 10.0)
-                  (- y2 (* 2 slider-button-half-short-dim))))))
-            ((:horizontal)
-             (let ((middle (round (- y2 y1) 2)))
-               (draw-bordered-polygon pane
-                                      (polygon-points
-                                       (make-rectangle*
-                                        (+ x1 slider-button-half-short-dim) (- middle 2)
-                                        (- x2 slider-button-half-short-dim) (+ middle 2)))
-                                      :style :inset
-                                      :border-width 2)
-               (draw-thingy (- position slider-button-half-short-dim) middle)
-               (when (gadget-show-value-p pane)
-                 (draw-value (+ x1 (* 2 slider-button-half-short-dim))
-                             (- middle 10.0)))))))))))
+                     (draw-text* pane text (1+ x) (1+ y)
+                                 :ink *3d-light-color*)
+                     (draw-text* pane text x y
+                                 :ink *3d-dark-color*))))))
+      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+        (display-gadget-background pane background-color 0 0 (- x2 x1) (- y2 y1))
+        (ecase (gadget-orientation pane)
+          ((:vertical)
+           (let ((middle (round (- x2 x1) 2)))
+             (draw-bordered-polygon pane
+                                    (polygon-points
+                                     (make-rectangle*
+                                      (- middle 2) (+ y1 slider-button-half-short-dim)
+                                      (+ middle 2) (- y2 slider-button-half-short-dim)))
+                                    :style :inset
+                                    :border-width 2)
+             (draw-knob middle position)
+             (when (gadget-show-value-p pane)
+               (draw-value (+ middle 10.0)
+                           (- y2 slider-button-short-dim)))))
+          ((:horizontal)
+           (let ((middle (round (- y2 y1) 2)))
+             (draw-bordered-polygon pane
+                                    (polygon-points
+                                     (make-rectangle*
+                                      (+ x1 slider-button-half-short-dim) (- middle 2)
+                                      (- x2 slider-button-half-short-dim) (+ middle 2)))
+                                    :style :inset
+                                    :border-width 2)
+             (draw-knob position middle)
+             (when (gadget-show-value-p pane)
+               (draw-value (+ x1 slider-button-short-dim)
+                           (- middle 10.0))))))))))
 
 
 #|
 (defmethod handle-repaint ((pane slider-pane) region)
   (declare (ignore region))
-  (with-special-choices (pane)
-    (let ((position (convert-value-to-position pane))
-          (slider-button-half-short-dim (ash slider-button-short-dim -1))
-          (slider-button-half-long-dim (ash slider-button-long-dim -1)))
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-        (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
-        (if (eq (gadget-orientation pane) :vertical)
-            ; vertical case
-            (let ((middle (round (- x2 x1) 2)))
-              (draw-line* pane
-                          middle (+ y1 slider-button-half-short-dim)
-                          middle (- y2 slider-button-half-short-dim)
-                          :ink +black+
-              (draw-rectangle* pane
-                               (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
-                               (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim)
-                               :ink +gray85+ :filled t)
-              (draw-edges-lines* pane
-                                 +white+
-                                 (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
-                                 +black+
-                                 (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim))
-              (when (gadget-show-value-p pane)
-                (draw-text* pane (format-value (gadget-value pane)
-                                               (slider-decimal-places pane))
-                            5 ;(- middle slider-button-half-short-dim)
-                            10))) ;(- position slider-button-half-long-dim)
-            ; horizontal case
+  (let ((position (convert-value-to-position pane))
+        (slider-button-half-short-dim (ash slider-button-short-dim -1))
+        (slider-button-half-long-dim (ash slider-button-long-dim -1)))
+    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+      (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
+      (if (eq (gadget-orientation pane) :vertical)
+            ; vertical case             ;
+          (let ((middle (round (- x2 x1) 2)))
+            (draw-line* pane
+                        middle (+ y1 slider-button-half-short-dim)
+                        middle (- y2 slider-button-half-short-dim)
+                        :ink +black+
+                        (draw-rectangle* pane
+                                         (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
+                                         (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim)
+                                         :ink +gray85+ :filled t)
+                        (draw-edges-lines* pane
+                                           +white+
+                                           (- middle slider-button-half-long-dim) (- position slider-button-half-short-dim)
+                                           +black+
+                                           (+ middle slider-button-half-long-dim) (+ position slider-button-half-short-dim))
+                        (when (gadget-show-value-p pane)
+                          (draw-text* pane (format-value (gadget-value pane)
+                                                         (slider-decimal-places pane))
+                                      5 ;(- middle slider-button-half-short-dim)
+                                      10))) ;(- position slider-button-half-long-dim)
+            ; horizontal case           ;
             (let ((middle (round (- y2 y1) 2)))
               (draw-line* pane
                           (+ x1 slider-button-half-short-dim) middle
@@ -1884,24 +1901,35 @@ and must never be nil."))
                             (- middle slider-button-half-long-dim)))))))))
 |#
 
+(flet ((compute-dims (slider)
+         (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region slider))
+           ;; Offset is the distance from the bounding region to the
+           ;; slider's "rail" and then some, so the knob doesn't go
+           ;; beyond the rail too much.
+           (let ((offset (+ (floor slider-button-short-dim 2) 4)))
+             (if (eq (gadget-orientation slider) :vertical)
+                 (values (+ y1 offset) (- y2 offset))
+                 (values (+ x1 offset) (- x2 offset)))))))
 
-(defmethod convert-value-to-position ((pane slider-pane))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-    (let ((x1 (+ x1 8.0)) ; replace this with some rectangle-inset transform or something
-          (y1 (+ y1 8.0)))
-      (multiple-value-bind (good-dim1 good-dim2)
-          (if (eq (gadget-orientation pane) :vertical)
-              ; vertical orientation
-              (values (+ y1 (ash slider-button-short-dim -1))
-                      (- y2 (ash slider-button-short-dim -1)))
-              ; horizontal orientation
-              (values (+ x1 (ash slider-button-short-dim -1))
-                      (- x2 (ash slider-button-short-dim -1))))
-        (+ good-dim1 (* (- good-dim2 good-dim1)
-                        (if (zerop (gadget-range pane))
-                            0.5
-                          (/ (- (gadget-value pane) (gadget-min-value pane))
-                             (gadget-range pane)))))))))
+  (defmethod convert-value-to-position ((pane slider-pane))
+    (multiple-value-bind (good-dim1 good-dim2) (compute-dims pane)
+      (alexandria:lerp (unlerp (gadget-value pane)
+                               (gadget-min-value pane) (gadget-max-value pane))
+                       good-dim1 good-dim2)))
+
+  (defmethod convert-position-to-value ((pane slider-pane) (position real))
+    (multiple-value-bind (good-dim1 good-dim2) (compute-dims pane)
+      (let* ((clamped (alexandria:clamp position good-dim1 good-dim2))
+             (displacement (unlerp clamped good-dim1 good-dim2))
+             (quantized (if-let ((quanta (slider-number-of-quanta pane)))
+                          (/ (round (* displacement quanta)) quanta)
+                          displacement)))
+        (alexandria:lerp quantized (gadget-min-value pane) (gadget-max-value pane))))))
+
+(defmethod convert-position-to-value ((pane slider-pane) (position pointer-event))
+  (convert-position-to-value pane (if (eq (gadget-orientation pane) :vertical)
+                                      (pointer-event-y position)
+                                      (pointer-event-x position))))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.6 The concrete radio-box and check-box Gadgets
@@ -1960,7 +1988,6 @@ and must never be nil."))
                           basic-pane)
   ()
   (:default-initargs
-   :text-style (make-text-style :sans-serif nil nil)
    :background *3d-normal-color*))
 
 (defmethod initialize-instance :after ((pane check-box-pane)
@@ -2028,37 +2055,12 @@ and must never be nil."))
 
 (define-abstract-pane-mapping 'list-pane 'generic-list-pane)
 
-(defclass meta-list-pane ()
-  ((mode        :initarg :mode
-                :initform :exclusive
-                :reader list-pane-mode
-                :type (member :one-of :some-of :exclusive :nonexclusive))
-   (items       :initarg :items
-                :initform nil
-                :reader list-pane-items
-                :type sequence)
-   (name-key    :initarg :name-key
-                :initform #'princ-to-string
-                :reader list-pane-name-key
-                :documentation "A function to be applied to items to gain a printable representation")
-   (value-key   :initarg :value-key
-                :initform #'identity
-                :reader list-pane-value-key
-                :documentation "A function to be applied to items to gain its value
-                                for the purpose of GADGET-VALUE.")
-   (presentation-type-key :initarg :presentation-type-key
-                          :initform (constantly nil)
-                          :reader list-pane-presentation-type-key
-                          :documentation "A function to be applied to items to find the presentation types for their values, or NIL.")
-   (test        :initarg :test
-                :initform #'eql
-                :reader list-pane-test
-                :documentation "A function to compare two items for equality.")))
 
-(defclass generic-list-pane (list-pane meta-list-pane
-                                       standard-sheet-input-mixin ;; Hmm..
-                                       activate/deactivate-repaint-mixin
-                                       value-changed-repaint-mixin)
+
+(defclass generic-list-pane (list-pane
+                             standard-sheet-input-mixin ;; Hmm..
+                             activate/deactivate-repaint-mixin
+                             value-changed-repaint-mixin)
   ((highlight-ink :initform +royalblue4+
                   :initarg :highlight-ink
                   :reader list-pane-highlight-ink)
@@ -2081,12 +2083,8 @@ selection via the control modifier.")
                  :documentation "Number of items")
    (items-origin :initform 0 :accessor items-origin
      :documentation "Index of the first item to be rendered. This changes in
-response to scroll wheel events.")
-   (visible-items :initarg :visible-items ; Clim 2.0 compatibility
-                  :initform nil
-                  :documentation "Maximum number of visible items in list"))
-  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)
-                     :background +white+ :foreground +black+))
+response to scroll wheel events."))
+  (:default-initargs :background +white+ :foreground +black+))
 
 (defmethod initialize-instance :after ((gadget meta-list-pane) &rest rest)
   (declare (ignorable rest))
@@ -2391,21 +2389,17 @@ Returns two values, the item itself, and the index within the item list."
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-press-event))
   (case (pointer-event-button event)
     (#.+pointer-left-button+
-      (generic-list-pane-handle-click-from-event pane event)
-      (setf (slot-value pane 'armed) nil))
+     (generic-list-pane-handle-click-from-event pane event)
+     (setf (slot-value pane 'armed) nil))
     (#.+pointer-right-button+
-      (generic-list-pane-handle-right-click pane event))
-    (#.+pointer-wheel-up+
-     (generic-list-pane-scroll pane -1))
-    (#.+pointer-wheel-down+
-     (generic-list-pane-scroll pane 1))
+     (generic-list-pane-handle-right-click pane event))
     (t
-      (when (next-method-p) (call-next-method)))))
+     (when (next-method-p) (call-next-method)))))
 
 (defmethod handle-event ((pane generic-list-pane) (event pointer-button-release-event))
   (if (eql (pointer-event-button event) +pointer-left-button+)
-      (and (slot-value pane 'armed)
-           (generic-list-pane-handle-click-from-event pane event))
+      (when (slot-value pane 'armed)
+        (generic-list-pane-handle-click-from-event pane event))
       (when (next-method-p) (call-next-method))))
 
 (defgeneric (setf list-pane-items)
@@ -2433,7 +2427,8 @@ if INVOKE-CALLBACK is given."))
                 (if (find (gadget-value pane) new-values :test test)
                     (gadget-value pane)
                     nil)
-                (intersection (gadget-value pane) new-values :test test))))))
+                (intersection (gadget-value pane) new-values :test test)))))
+  (change-space-requirements pane))
 
 (defmethod (setf list-pane-items)
     (newval (pane generic-list-pane) &key invoke-callback)
@@ -2464,14 +2459,12 @@ if INVOKE-CALLBACK is given."))
 (define-abstract-pane-mapping 'option-pane 'generic-option-pane)
 
 (defclass generic-option-pane (option-pane
-                               meta-list-pane
                                value-changed-repaint-mixin
                                3d-border-mixin
                                activate/deactivate-repaint-mixin
                                arm/disarm-repaint-mixin
                                enter/exit-arms/disarms-mixin)
-  ((current-label :initform "" :accessor generic-option-pane-label))
-  (:default-initargs :text-style (make-text-style :sans-serif :roman :normal)))
+  ((current-label :initform "" :accessor generic-option-pane-label)))
 
 (defun option-pane-evil-backward-map (pane value)
   (let ((key-fn (list-pane-value-key pane)))
@@ -2569,7 +2562,7 @@ if INVOKE-CALLBACK is given."))
                             :max-width +fill+
                             :min-height total-height
                             :height total-height
-                            :max-height total-height)))
+                            :max-height +fill+)))
 
 (defgeneric generic-option-pane-draw-widget (pane))
 
@@ -2658,10 +2651,10 @@ if INVOKE-CALLBACK is given."))
           ;;       which I could have easily worked around without adding kludges
           ;;       to the scroller-pane..
           (let* ((topmost-pane (if scroll-p
-                                  ;list-pane
-                                  (scrolling (:scroll-bar :vertical
-                                              :suggest-height height   ;; Doesn't appear to be working..
-                                              :suggest-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
+                                   ;; TODO investigate whether suggested-* arguments actually have an effect
+                                   (scrolling (:scroll-bar :vertical
+                                               :suggested-height height
+                                               :suggested-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
                                      list-pane)
                                   list-pane))
                  (topmost-pane    (outlining (:thickness 1) topmost-pane))
@@ -2879,24 +2872,19 @@ if INVOKE-CALLBACK is given."))
   (let ((gadget-output-record (gensym))
         (x (gensym))
         (y (gensym)))
-    `(multiple-value-bind (,x ,y)(stream-cursor-position ,stream)
+    `(multiple-value-bind (,x ,y) (stream-cursor-position ,stream)
        (flet ((with-output-as-gadget-continuation (,stream record)
                 (flet ((with-output-as-gadget-body (,stream)
                          (declare (ignorable ,stream))
                          (progn ,@body)))
                   (setf (gadget record)
-                        (with-output-as-gadget-body ,stream))))
-              (gadget-output-record-constructor ()
-                (make-instance 'gadget-output-record
-                               ,@options :x ,x :y ,y)))
-         (declare (dynamic-extent #'with-output-as-gadget-continuation
-                                  #'gadget-output-record-constructor))
+                        (with-output-as-gadget-body ,stream)))))
+         (declare (dynamic-extent #'with-output-as-gadget-continuation))
          (let ((,gadget-output-record
                 (invoke-with-output-to-output-record
                  ,stream
                  #'with-output-as-gadget-continuation
-                 nil
-                 #'gadget-output-record-constructor)))
+                 'gadget-output-record ,@options :x ,x :y ,y)))
            (setup-gadget-record ,stream ,gadget-output-record)
            (stream-add-output-record ,stream ,gadget-output-record)
            (values (gadget ,gadget-output-record) ,gadget-output-record))))))
@@ -2911,14 +2899,23 @@ if INVOKE-CALLBACK is given."))
     ((or hbox-pane hrack-pane) :vertical)
     ((or vbox-pane vrack-pane) :horizontal)))
 
+(cl:defconstant +box-adjuster-gadget-major-size+ 6)
+(cl:defconstant +box-adjuster-gadget-minor-size+ 1)
+
+(defclass box-adjuster-gadget-dragging-state ()
+  ((%left         :initarg :left
+                  :reader  dragging-state-left)
+   (%right        :initarg :right
+                  :reader  dragging-state-right)
+   (%clients-size :initarg :clients-size
+                  :reader  dragging-state-clients-size)
+   (%total-size   :initarg :total-size
+                  :reader  dragging-state-total-size)))
 
 (defclass clim-extensions::box-adjuster-gadget
-               (standard-gadget 3d-border-mixin orientation-from-parent-mixin)
-  ((drag-from :initform nil)
-   (left-sr)
-   (left-peer)
-   (right-sr)
-   (right-peer))
+    (basic-gadget 3d-border-mixin orientation-from-parent-mixin)
+  ((dragging-state :initform nil
+                   :accessor dragging-state))
   (:default-initargs :background *3d-inner-color*)
   (:documentation "The box-adjuster-gadget allows users to resize the panes
 in a layout by dragging the boundary between the panes.  To use it, insert
@@ -2931,62 +2928,96 @@ it in a layout between two panes that are to be resizeable.  E.g.:
 (defmethod compose-space ((gadget clim-extensions:box-adjuster-gadget)
                           &key width height)
   (declare (ignore width height))
-  (if (eq (orientation gadget) :vertical)
-      (make-space-requirement :min-width 6 :width 6 :max-width 6
-                              :min-height 1 :height 1)
-      (make-space-requirement :min-height 6 :height 6 :max-height 6
-                              :min-width 1 :width 1)))
+  (let ((major-size +box-adjuster-gadget-major-size+)
+        (minor-size +box-adjuster-gadget-minor-size+))
+    (ecase (orientation gadget)
+      (:vertical
+       (make-space-requirement :min-width major-size :width major-size :max-width major-size
+                               :min-height minor-size :height minor-size))
+      (:horizontal
+       (make-space-requirement :min-height major-size :height major-size :max-height major-size
+                               :min-width minor-size :width minor-size)))))
+
+(defmethod note-sheet-grafted ((sheet clim-extensions:box-adjuster-gadget))
+  (setf (sheet-pointer-cursor sheet) :move))
 
 (defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
                          (event pointer-button-press-event))
-  (with-slots (drag-from left-peer right-peer left-sr right-sr) gadget
-    (setf drag-from (if (eq (orientation gadget) :vertical)
-                        (pointer-event-native-graft-x event)
-                        (pointer-event-native-graft-y event))
-          (values left-peer right-peer)
-          (do ((current (box-layout-mixin-clients (sheet-parent gadget)) (rest current)))
-              ((or (null (third current))
-                   (eq gadget (box-client-pane (second current))))
-               (values (box-client-pane (first current))
-                       (box-client-pane (third current)))))
-          left-sr  (compose-space left-peer)
-          right-sr (compose-space right-peer))))
+  (let ((orientation (orientation gadget))
+        (parent (sheet-parent gadget)))
+    (multiple-value-bind (left right)
+        (loop for (first second third) on (box-layout-mixin-clients parent)
+              when (eq gadget (box-client-pane second))
+              do (return (values first third)))
+      (labels ((sheet-size (sheet)
+                 (ecase orientation
+                   (:vertical (bounding-rectangle-width sheet))
+                   (:horizontal (bounding-rectangle-height sheet)))))
+        (let ((clients-size (+ (sheet-size (box-client-pane left))
+                               (sheet-size (box-client-pane right))))
+              (total-size (sheet-size parent)))
+          (setf (dragging-state gadget)
+                (make-instance 'box-adjuster-gadget-dragging-state
+                               :left         left
+                               :right        right
+                               :clients-size clients-size
+                               :total-size   total-size)))))))
 
 (defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
                          (event pointer-button-release-event))
-  (setf (slot-value gadget 'drag-from) nil))
-
-(defun adjust-space-requirement (pane sr orientation delta)
-  (multiple-value-bind (major major-max major-min)
-      (if (eq orientation :vertical)
-          (values (space-requirement-width sr)
-                  (space-requirement-max-width sr)
-                  (space-requirement-min-width sr))
-          (values (space-requirement-height sr)
-                  (space-requirement-max-height sr)
-                  (space-requirement-min-height sr)))
-    (let ((new-major (max major-min (min major-max (+ major delta)))))
-      (if (eq orientation :vertical)
-          (change-space-requirements pane :width new-major)
-          (change-space-requirements pane :height new-major))
-      (- new-major major))))
+  (setf (dragging-state gadget) nil))
 
 (defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
-                         (event pointer-motion-event)
-                         &aux (orientation (orientation gadget)))
-  (with-slots (drag-from left-peer left-sr right-peer right-sr) gadget
-    (when (and drag-from
-               (typep (sheet-parent gadget) 'box-layout-mixin))
-      (let* ((major-pos (if (eq orientation :vertical)
-                            (pointer-event-native-graft-x event)
-                            (pointer-event-native-graft-y event)))
-             (delta (- major-pos drag-from)))
-        (changing-space-requirements (:resize-frame nil)
-          (adjust-space-requirement left-peer  left-sr  orientation delta)
-          (adjust-space-requirement right-peer right-sr orientation (- delta)))))))
+                         (event pointer-motion-event))
+  (when-let ((state (dragging-state gadget)))
+    (let ((orientation (orientation gadget))
+          (parent (sheet-parent gadget))
+          (left (dragging-state-left state))
+          (right (dragging-state-right state))
+          (clients-size (dragging-state-clients-size state))
+          (total-size (dragging-state-total-size state)))
+      ;; Compute cursor position in coordinate system of left
+      ;; child. Dividing by the combined size of left and right gives
+      ;; the ratio the user is going for.
+      (flet ((left-pointer-position ()
+               (untransform-position
+                (sheet-delta-transformation
+                 (sheet-mirrored-ancestor (box-client-pane left)) nil)
+                (climi::pointer-event-native-graft-x event)
+                (climi::pointer-event-native-graft-y event))))
+        (let ((position (- (ecase orientation
+                             (:vertical (left-pointer-position))
+                             (:horizontal (nth-value 1 (left-pointer-position))))
+                           ;; Make GADGET's center track the cursor,
+                           ;; not its edge.
+                           (/ +box-adjuster-gadget-major-size+ 2))))
+          (update-box-clients
+           left right position clients-size total-size)
+          (changing-space-requirements (:resize-frame nil)
+            (change-space-requirements parent)))))))
 
-(defmethod note-sheet-grafted ((sheet clim-extensions:box-adjuster-gadget))
-  (setf (sheet-pointer-cursor sheet) :rotate))
+(defun update-box-clients (left right position clients-size total-size)
+  (let* ((as-fixed (clamp position 0 clients-size))
+         (as-proportion (/ as-fixed clients-size))
+         (non-fill-p nil))
+    (flet ((update-client (client as-fixed as-proportion
+                           &optional (can-fill-p t))
+             (cond ((and (box-client-fillp client) can-fill-p))
+                   ((box-client-fixed-size client)
+                    (setf (box-client-fixed-size client) as-fixed
+                          non-fill-p                     t))
+                   (t ; proportional, fill with CAN-FILL-P false or none
+                    ;; Translate proportion from size of left and
+                    ;; right to parent's size (needed when the parent
+                    ;; has more than two children).
+                    (let ((proportion (* as-proportion
+                                         (/ clients-size total-size))))
+                      (setf (box-client-fillp client)      nil
+                            (box-client-proportion client) proportion
+                            non-fill-p                     t))))))
+      ;; Adjust both clients, making sure at least one does not use fill.
+      (update-client left  as-fixed                as-proportion       t)
+      (update-client right (- total-size as-fixed) (- 1 as-proportion) non-fill-p))))
 
 ;;; Support for definition of callbacks and associated callback events. A
 ;;; callback event is used by a backend when a high-level notification of a

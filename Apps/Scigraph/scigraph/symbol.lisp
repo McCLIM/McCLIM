@@ -87,9 +87,7 @@ advised of the possiblity of such damages.
   (declare (ignore thickness filled))
   #'(lambda (stream u v size)
       (declare (ignore size))
-      #-clim (graphics:draw-point u v :stream stream)
-      #+clim-0.9 (w::draw-point*-internal stream u v)
-      #+(or clim-1.0 clim-2) (draw-point* stream u v)))
+      (draw-point* stream u v)))
 
 (defmethod symbol-displayer ((type (eql :CIRCLE)) alu thickness filled)
   (if filled
@@ -124,27 +122,6 @@ advised of the possiblity of such damages.
 			  :alu %flip
 			  :filled t)))))
 
-#-clim-2
-(define-presentation-type graph-symbol (&key (symbols '(:+ :x :* :point :triangle
-							:box :diamond :circle))
-					     (size 10))
-  :description "a graph symbol"
-  :parser ((stream)
-	   (completing-from-suggestions (stream)
-					(dolist (symbol symbols)
-					  (suggest (string symbol) symbol))))
-  :printer ((object stream)
-	    (write-string (string object) stream))
-  :accept-values-displayer
-  ((stream object query-identifier)
-   (accept-values-choose-from-sequence
-    stream symbols object query-identifier
-    :drawer
-    #'(lambda (stream object pretty-name selected-p)
-	(declare (ignore pretty-name))
-	(draw-avv-symbol object size stream selected-p)))))
-
-#+clim-2 
 (define-presentation-type-abbreviation graph-symbol
     (&key (symbols '(:+ :x :* :point :triangle
 		     :box :diamond :circle))

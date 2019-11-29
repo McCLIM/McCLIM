@@ -224,8 +224,7 @@ facilities will automatically adapt to use whatever toolkit is
 available on and appropriate for the host environment. In addition,
 portable Lisp-based implementations of the abstract gadget pane
 protocols are provided.\footnote{\mcclim{} does not support look and
-  feel adaptiveness at the moment except for the experimental beagle
-  backend for Mac OS X's Cocoa platform. Hence, \mcclim{} mostly uses
+  feel adaptiveness at the moment. Hence, \mcclim{} mostly uses
   this portable Lisp-based implementation.}
 
 \paragraph*{Application Building} \CLIM{} provides a set of tools for
@@ -295,11 +294,11 @@ The central element of \CLIM{} application programming is the
   and Creating Application Frames'' in \cite{clim-spec}.} Here is
 the application frame definition for Hello World:
 \lstset{style=inlinestyle}
-\lstinputlisting{hello-world-def-app}
+\lstinputlisting{hello-world-def-app.cut}
 
 \begin{figure*}
 \lstset{style=framestyle}
-\lstinputlisting{hello-world-handle-repaint}
+\lstinputlisting{hello-world-handle-repaint.cut}
 \caption{\method{handle-repaint} for \class{hello-world-pane}}\label{hello-world-repaint}
 \end{figure*}
 \code{define-application-frame}'s basic syntax is similar to \code{defclass} because
@@ -334,7 +333,7 @@ constructor for panes.\footnote{See Section 29.2 ``Basic Pane
 \code{make-instance} especially made for pane classes.  Let us have a
 look at the definition of \class{hello-world-pane}.
 
-\lstset{style=inlinestyle} \lstinputlisting{hello-world-defclass} 
+\lstset{style=inlinestyle} \lstinputlisting{hello-world-defclass.cut}
 
 The one and only superclass of \class{hello-world-pane} is
 \class{clim-stream-pane}.\footnote{See Section 29.4 ``CLIM Stream
@@ -464,8 +463,7 @@ portable windowing model that insulates higher levels of \CLIM{} and
 the perspective of a \CLIM{} programmer, talking to the window system
 is equal to talking to this abstraction layer. The implementation
 details are hidden in \concept{backends}, like in \mcclim{} the CLX
-backend, which hides X11 details, or the beagle backend, which hides
-details for Mac OS X's toolkit. These backends will use the services
+backend, which hides X11 details. These backends will use the services
 of a host window system to provide efficient windowing, input and
 output facilities. Thanks to this middleware, \CLIM{} is portable
 across different host windowing systems.
@@ -774,8 +772,7 @@ requests them to draw themselves onto specific screen regions.
 push-button, toggle-button, slider, radio-box, text-field, text-editor
 panes ready for use by the \CLIM{} application programmer. These
 gadgets might be remapped to native system gadgets by the frame
-manager, so a native look and feel is possible.\footnote{Only possible
-  in \mcclim{} with the experimental beagle backend for Mac OS X.}
+manager, so a native look and feel is possible.
 
 Each gadget pane class is associated with a set of generic functions
 that act as callbacks do in traditional toolkits. For example, a pushbutton
@@ -974,7 +971,7 @@ top-level-loop. In the next example, commands will be explored in
 greater detail.
 
 \begin{figure*}[t] \lstset{style=framestyle}
-\lstinputlisting{draw-frame-def-app}
+\lstinputlisting{draw-frame-def-app.cut}
 \caption{define-application-frame for
 \class{draw-frame}}\label{fig-draw-defapp}\label{fig-draw-handlerepaint}
 \end{figure*}
@@ -1012,13 +1009,13 @@ multiple layouts with this option. We define two simple layouts,
 
 \begin{figure*}[t]
 \lstset{style=framestyle}
-\lstinputlisting{draw-frame-commands}
+\lstinputlisting{draw-frame-commands.cut}
 \caption{Commands for \class{draw-frame}}\label{fig-draw-commands}
 \end{figure*}
 
 \begin{figure*}
 \lstset{style=framestyle}
-\lstinputlisting{draw-frame-interfacing}
+\lstinputlisting{draw-frame-interfacing.cut}
 \caption{User Interfaces}\label{fig-draw-interfacing}
 \end{figure*}
 
@@ -1198,8 +1195,8 @@ execution (code bodies of \method{define-command}).
 % Notice that both functions are blocking.  The argument to
 % \method{stream-read-accept} signals that the predefined presentation
 % type 'pathname' is requested.
-% 
-% \lstinputlisting{accept-demo-handle-event} For the second pathname
+%
+% \lstinputlisting{accept-demo-handle-event.cut} For the second pathname
 % prompt, the user can either type a character-based representation of
 % the pathname into the query window or he can select a pathname that
 % is already present on screen with the pointer. accept-demo doesn't
@@ -1435,7 +1432,7 @@ is defined to take an argument of the selected presentation type.
 \subsection{A Directory Browser}
 \begin{figure*}
 \lstset{style=framestyle}
-\lstinputlisting{file-browser-all}
+\lstinputlisting{file-browser-all.cut}
 \caption{File Browser}\label{fig-file-browser}
 \end{figure*}
 
@@ -1528,12 +1525,12 @@ is associated with an abbreviated day name, ``Mon,'' ``Tue,'' etc.
 
 \begin{figure*}
 \lstset{style=framestyle}
-\lstinputlisting{scheduler-part1}
+\lstinputlisting{scheduler-part1.cut}
 \caption{Scheduler: application frame, presentation type and commands}\label{fig-scheduler1}
 \end{figure*}
 \begin{figure*}
 \lstset{style=framestyle}
-\lstinputlisting{scheduler-part2}
+\lstinputlisting{scheduler-part2.cut}
 \caption{Scheduler: display functions}\label{fig-scheduler2}
 \end{figure*}
 
@@ -1705,8 +1702,7 @@ interfaces not anticipated by the \CLIM{} designers.
 A free \CLIM{} implementation is available as \mcclim{}, found at
 \url{http://common-lisp.net/project/mcclim/}. In addition to the
 caveats in this document, note that \mcclim{} only works with an X
-windows backend as of January 2006.  An experimental port called
-beagle to the native toolkit of Mac OS X is in progress.
+windows backend as of January 2006.
 
 \section*{Acknowledgments}
 

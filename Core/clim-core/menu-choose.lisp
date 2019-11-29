@@ -131,7 +131,8 @@
                                   item
                                   `((,name ,@params)
                                     :description ,(getf (menu-item-options item) :documentation)
-                                    ,@options))
+                                    ,@options)
+                                  :single-box t)
                                (funcall item-printer item stream)))))))
                     (:label
                      ;; This is a static label, it should not be
@@ -181,9 +182,9 @@
        (declare (dynamic-extent #',with-menu-cont))
        (invoke-with-menu #',with-menu-cont
                          ,associated-window ; XXX
-                         ',deexpose ; XXX!!!
-			 ,label
-			 ,scroll-bars))))
+                         ',deexpose         ; XXX!!!
+                         ,label
+                         ,scroll-bars))))
 
 (defun invoke-with-menu (continuation associated-window deexpose
 			 label scroll-bars)
@@ -328,11 +329,7 @@ maximum size according to `frame')."
                                   :resize-frame t)))
 
     ;; Modify the size and location of the frame as well.
-    (let* ((top-level-pane (labels ((searching (pane)
-				      (if (typep pane 'top-level-sheet-pane)
-					  pane
-					  (searching (sheet-parent pane)))))
-			     (searching menu))))
+    (let ((top-level-pane (get-top-level-sheet menu)))
       (multiple-value-bind (frame-width frame-height)
           (menu-size top-level-pane *application-frame*)
         (multiple-value-bind (res-max-x res-max-y) (max-x-y *application-frame*)

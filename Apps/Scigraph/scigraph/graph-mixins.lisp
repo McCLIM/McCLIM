@@ -207,7 +207,6 @@ advised of the possiblity of such damages.
 	     (drawer (make-optimized-line-displayer %draw 1 t))
 	     (line-drawer
 	      #'(lambda (x1 y1 x2 y2)
-		  (declare (downward-function))
 		  (multiple-value-setq (x1 y1) (uv-to-screen stream x1 y1))
 		  (multiple-value-setq (x2 y2) (uv-to-screen stream x2 y2))
 		  (funcall drawer stream x1 y1 x2 y2))))
@@ -236,7 +235,6 @@ advised of the possiblity of such damages.
 	(linear-axis ull v0 uur v0 xll xur dtick 
 		     tick-size x-tick-numbering line-drawer
 		     #'(lambda (x y number)
-			 (declare (downward-function))
 			 (axis-number-horizontal
 			  self STREAM
 			 (if (zerop number) (+ x (stream-character-width stream)) x)
@@ -254,7 +252,6 @@ advised of the possiblity of such damages.
       (linear-axis ull vll uur vll xll xur dtick 
 		   tick-size x-tick-numbering line-drawer
 		   #'(lambda (x y number)
-		       (declare (downward-function))
 		       (axis-number-horizontal
 			 self STREAM x y
 			 (float-to-string number (x-digits self))
@@ -280,7 +277,6 @@ advised of the possiblity of such damages.
 	(linear-axis u0 vll u0 vur yll yur dtick 
 		     dtick-size y-tick-numbering line-drawer
 		     #'(lambda (x y number)
-			 (declare (downward-function))
 			 (axis-number-vertical
 			  self STREAM
 			  x
@@ -296,7 +292,6 @@ advised of the possiblity of such damages.
       (linear-axis ull vll ull vur yll yur dtick 
 		   dtick-size y-tick-numbering line-drawer
 		   #'(lambda (x y number)
-		       (declare (downward-function))
 		       (axis-number-vertical self STREAM x y
 					     (float-to-string number (y-digits self))
 					     dtick-size))
@@ -389,7 +384,7 @@ advised of the possiblity of such damages.
 (defmethod alu-for-grid ((self graph-grid-mixin) stream)
   (declare (ignore stream))
   ;; a dark gray.
-  (make-color-rgb .4 .4 .4))
+  (clim:make-rgb-color .4 .4 .4))
 
 ;;; find U value of first grid line from left (or bottom)
 (defun FIND-UFIRST (usmall interval)
@@ -759,18 +754,15 @@ advised of the possiblity of such damages.
   "Determine if a presentation is a part of an incremental redisplay."
   (if (not presentation) nil
     (or 
-     #-clim
-     (typep (presentation-object presentation) 'dw::redisplay-piece)
-     #+clim-2
      (typep presentation 'standard-updating-output-record)
      (incrementally-redisplayable-presentation
-      (presentation-superior presentation)))))
+      (clim:output-record-parent presentation)))))
 
 (defmethod erase ((self presentable-graph-mixin) stream)
   (with-output-truncation (stream)
     (let ((presentation (presentation self)))
       (when presentation
-	(erase-graphics-presentation presentation :stream stream)
+	(clim:erase-output-record presentation stream nil)
 	(setq presentation nil)))))
 
 (defmethod refresh :around ((self presentable-graph-mixin) stream)
@@ -778,7 +770,7 @@ advised of the possiblity of such damages.
    This breaks incremental redisplay, so watch out!"
   (let ((p (presentation self)))
     (cond ((and p (incrementally-redisplayable-presentation 
-		   (presentation-superior p)))
+		   (clim:output-record-parent p)))
 	   (incf (redisplay-tick self))
 	   ;; Do nothing.  Expect redisplay-frame-panes to do the rest.
 	   nil)

@@ -83,7 +83,7 @@ powerful, and you may want to remove some of the mixins.
 	   (thresh (let ((n (missing-data-threshold self)))
 		     (if n (float (abs n)))))
 	   (-thresh (and thresh (- thresh)))
-	   (H (sheet-inside-height stream))
+	   (H (stream-height stream))
 	   (Trans (xy-to-uv-transform graph))
 	   (start (float (xll graph)))
 	   (end (float (xur graph)))
@@ -121,7 +121,6 @@ powerful, and you may want to remove some of the mixins.
 					     :filled t
 					     :alu (alu self)))))))))
 	(map-data self #'(lambda (datum)
-			   (declare (downward-function))
 			   (multiple-value-bind (x y) (datum-position self datum)
 			     (or (floatp x) (setq x (float x)))
 			     (or (floatp y) (setq y (float y)))
@@ -152,7 +151,6 @@ powerful, and you may want to remove some of the mixins.
 	(let ((last-datum nil))
 	  (map-data dataset
 		    #'(lambda (datum)
-			(declare (downward-function))
 			(multiple-value-bind (x y) (datum-position dataset datum)
 			  (multiple-value-setq (x y) (xy-to-uv graph x y))
 			  (when (>= x u)
@@ -182,13 +180,12 @@ powerful, and you may want to remove some of the mixins.
       ;; KRA 27JUL93: We don't know how to rotate charaters yet.
       ;; However see CLASS ANNOTATED-GRAPH and
       ;; ANNOTATED-HORIZONTAL-Y-BORDER-MIXIN-KLUDGE
-      #-clim vertical-y-border-mixin
-      #+clim horizontal-y-border-mixin
+      horizontal-y-border-mixin
       graph-datasets-mixin
       graph-border-ob-mixin
       graph-border-mixin
       basic-graph
-      named-object
+      named-mixin
       )
   ()
   (:documentation "A bordered graph with datasets, and sliders."))

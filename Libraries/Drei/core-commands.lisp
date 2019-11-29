@@ -39,8 +39,8 @@ When overwrite is on, an object entered on the keyboard
 will replace the object after the point. 
 When overwrite is off (the default), objects are inserted at point. 
 In both cases point is positioned after the new object."
-  (with-slots (overwrite-mode) (current-view)
-    (setf overwrite-mode (not overwrite-mode))))
+  (setf (overwrite-mode (current-view))
+        (not (overwrite-mode (current-view)))))
 
 (set-key 'com-overwrite-mode
 	 'editing-table
@@ -437,9 +437,12 @@ will ask whether to sort in ascending or descending order."
 ;; Copies an element from a kill-ring to a buffer at the given offset
 (define-command (com-yank :name t :command-table editing-table) ()
   "Insert the objects most recently added to the kill ring at point."
-  (handler-case (insert-sequence (point) (kill-ring-yank *kill-ring*))
-    (empty-kill-ring ()
-      (display-message "Kill ring is empty"))))
+  (alexandria:if-let
+      ((string (clime:request-selection *standard-input* :clipboard 'string)))
+    (insert-sequence (point) string)
+    (handler-case (insert-sequence (point) (kill-ring-yank *kill-ring*))
+      (empty-kill-ring ()
+        (display-message "Kill ring is empty")))))
 
 (set-key 'com-yank
 	 'editing-table
@@ -472,8 +475,8 @@ Must be given immediately following a Yank or Rotate Yank command.
 The replacement objects are those before the previously yanked 
 objects in the kill ring."
   (handler-case (let ((last-yank (kill-ring-yank *kill-ring*)))
-                  (if (eq (command-name *previous-command*)
-                          'com-rotate-yank)
+                  (if (member (command-name *previous-command*)
+                              '(com-yank com-rotate-yank))
                       (progn
                         (delete-range (point) (* -1 (length last-yank)))
                         (rotate-yank-position *kill-ring*)))

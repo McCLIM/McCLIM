@@ -69,7 +69,7 @@ are also equivalent.
 
 This simplifies the conceptual framework of CLIM, and could eventually simplify
 the implementation as well.  Doing this work now opens the door for later
-unifications, such unifying the pane layout functionality with table formatting.}
+unifications, such as unifying the pane layout functionality with table formatting.}
 
 
 \section {Output Records}
@@ -205,14 +205,14 @@ Returns the output record that is the parent of the \term{output record}
 
 \Defun {replay} {record stream \optional region}
 
-This function bind \cl{stream-recording-p} of \arg{stream} to \term{false}, and
+This function binds \cl{stream-recording-p} of \arg{stream} to \term{false}, and
 then calls \cl{replay-output-record} on the arguments \arg{record},
 \arg{stream}, and \arg{region}.  If \cl{stream-drawing-p} of \arg{stream} is
 \term{false}, \cl{replay} does nothing.  \cl{replay} is typically called during
 scrolling, by repaint handlers, and so on.
 
 CLIM implementations are permitted to default \arg{region} either to \cl{nil} or
-to the region corresponding to viewport of \arg{stream}.
+to the region corresponding to the viewport of \arg{stream}.
 
 \Defgeneric {replay-output-record} {record stream \optional region x-offset y-offset}
 
@@ -244,9 +244,9 @@ is probably that case that \cl{replay} should not affect the cursor position.}
 \Defgeneric {output-record-hit-detection-rectangle*} {record}
 
 This method is used to establish the usual ``effective size'' of \arg{record}
-for hit detection queries.  Four values are returned corresponding to the edges
+for hit detection queries.  Four values are returned, corresponding to the edges
 of the bounding rectangle that is the hit detection rectangle.  The default
-method (on CLIM's standard output record class) is equivalent to calling calling
+method (on CLIM's standard output record class) is equivalent to calling
 \cl{bounding-rectangle*} on \arg{record}, but this method can be specialized to
 return a larger bounding rectangle in order to implement a form of hysteresis.
 
@@ -256,7 +256,7 @@ This is used to definitively answer hit detection queries, that is, determining
 that the point $(x,y)$ is contained within the output record \arg{record}.  Once
 the position $(x,y)$ has been determined to lie within
 \cl{output-record-hit-detection-rectangle*},
-\cl{output-record-refined-sensitivity-test} is invoked.  Output record
+\cl{output-record-refined-position-test} is invoked.  Output record
 subclasses can provide a method that provides a more precise definition of a
 hit, for example, output records for elliptical rings will implement a method
 that detects whether the pointing device is on the elliptical ring.
@@ -268,7 +268,7 @@ This method is called in order to draw a highlighting box around the
 \arg{stream}.  \arg{state} will be either \cl{:highlight} (meaning to draw the
 highlighting) or \cl{:unhighlight} (meaning to erase the highlighting).  The
 default method (on CLIM's standard output record class) will simply draw a
-rectangle that corresponds the the bounding rectangle of \arg{record}.
+rectangle that corresponds to the bounding rectangle of \arg{record}.
 
 \Defgeneric {displayed-output-record-ink} {displayed-output-record}
 
@@ -370,7 +370,7 @@ record} \arg{child}. The parent of \arg{record} must be notified by calling
 \Defgeneric {recompute-extent-for-changed-child} {record child 
                                                   old-min-x old-min-y old-max-x old-max-y} 
 
-This function is called whenever the bounding rectangle of one of the childs of
+This function is called whenever the bounding rectangle of one of the children of
 a record has been changed.  Its contract is to update the bounding rectangle of
 the \term{output record} \arg{record} to be large enough to completely contain
 the new bounding rectangle of the child \term{output record} \arg{child}.  All
@@ -678,7 +678,7 @@ Section~\ref{graphics-protocols} on an output recording stream results in the
 following series of function calls:
 
 \begin{itemize}
-\item A program calls \cl{draw-line*} on arguments \arg{stream} (and output
+\item A program calls \cl{draw-line*} on arguments \arg{stream} (an output
 recording stream), \arg{x1}, \arg{y1}, \arg{x2}, and \arg{y2}, and perhaps some
 drawing options.
 
@@ -807,7 +807,7 @@ If \arg{draw} is \term{false}, output to the stream is not drawn on the
 viewport, but recording proceeds according to \arg{record}; if \arg{draw} is
 \term{true}, the output is drawn.  If \arg{record} is \cl{nil}, output recording
 is disabled, but output otherwise proceeds according to \arg{draw}; if
-\arg{draw} is \term{true}, output recording is enabled.
+\arg{record} is \term{true}, output recording is enabled.
 
 All output recording streams must implement a method for
 \cl{invoke-with-output-recording-options}.
@@ -866,10 +866,10 @@ All output recording streams must implement a method for
 
 
 \Defmacro {with-output-to-output-record} {(stream \optional record-type record
-                                           \rest initargs))
+                                           \rest initargs)
                                           \body body}
 
-This is identical to \cl{with-new-output-record} except that the new output record
+This is identical to \cl{with-new-output-record}, except that the new output record
 is not inserted into the output record hierarchy, and the text cursor position
 of \arg{stream} is initially bound to $(0,0)$.
 
@@ -878,7 +878,7 @@ of \arg{stream} is initially bound to $(0,0)$.
 passed to \cl{make-instance} when the new output record is created.
 
 If \arg{record} is supplied, it is a variable that will be bound to the new
-output record while body is evaluated.
+output record while \arg{body} is evaluated.
 
 \cl{with-output-to-output-record} returns the output record it creates.
 

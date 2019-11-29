@@ -23,7 +23,7 @@
 ;;; - Check types: RATIONAL, COORDINATE, REAL?
 ;;; - Check default values of unsupplied arguments.
 ;;; - Better error detection.
-;;; - 
+;;; -
 ;;; - Multiple columns:
 ;;; - - all columns are assumed to have the same width;
 ;;; - - all columns have the same number of rows; they should have the
@@ -54,9 +54,6 @@
 
 (in-package :clim-internals)
 
-(defvar *table-suppress-update* nil
-  "Used to control whether changes to table cells propagate upwards.")
-
 ;;; Cell formatting
 
 ;;; STANDARD-CELL-OUTPUT-RECORD class
@@ -69,98 +66,72 @@
   (:default-initargs
    :align-x :left :align-y :baseline :min-width 0 :min-height 0))
 
-;;; If this were a primary method it wouldn't override the default
-;;; behavior for the parent being a compound-output-record because of
-;;; the order of the argument list.
-(defmethod recompute-extent-for-changed-child :around
-    (record (changed-child standard-cell-output-record)
-     old-min-x old-min-y old-max-x old-max-y)
-  (unless *table-suppress-update*
-    (call-next-method))
-  record)
-
-(defun table-cell-allowed-as-child-of (record)
-  "Internal. A predicate which decides whether 'record' can take a
-table cell as argument."
-  ;; We allow a cell output record here if any ancestor is a
-  ;; table-row, column or list-item. Note: This is probably not 100%
-  ;; correct, as I have no idea what happens when you nest graphs and
-  ;; tables ...
-  (or (row-output-record-p record)
-      (column-output-record-p record)
-      (item-list-output-record-p record)
-      (and (output-record-parent record)
-           (table-cell-allowed-as-child-of (output-record-parent record)))))
-
-(defun assert-table-cell-allowed (record)
-  "Internal. Assert that the a table cell is allowed here and if not
-   barf."
-  (unless (table-cell-allowed-as-child-of record)
-    (error "Sorry ~S not within ~S, ~S or ~S."
-           'formatting-cell
-           'formatting-row
-           'formatting-column
-           'formatting-item-list)))
-
-(defgeneric invoke-formatting-cell (stream cont
-                                    &key align-x align-y min-width min-height record-type
-                                    &allow-other-keys))
-
-(defmethod invoke-formatting-cell (stream cont
-                                   &key (align-x :left)
-                                        (align-y :baseline)
-                                        (min-width 0)
-                                        (min-height 0)
-                                        (record-type 'standard-cell-output-record)
-                                   &allow-other-keys)
-  (invoke-with-new-output-record
-   stream
-   (lambda (stream record)
-     (declare (ignore record))
-     (letf (((stream-cursor-position stream) (values 0 0)))
-       (funcall cont stream)))
-   record-type
-   nil
-   :align-x align-x
-   :align-y align-y
-   :min-width (parse-space stream min-width :horizontal)
-   :min-height (parse-space stream min-height :vertical)))
+(defgeneric invoke-formatting-cell
+    (stream cont &key align-x align-y min-width min-height record-type &allow-other-keys)
+  (:method (stream continuation &key
+                                  (align-x :left)
+                                  (align-y :baseline)
+                                  (min-width 0)
+                                  (min-height 0)
+                                  (record-type 'standard-cell-output-record)
+                                  &allow-other-keys)
+    (invoke-with-new-output-record
+     stream
+     (lambda (stream record)
+       (declare (ignore record))
+       (with-temporary-margins (stream :left '(:absolute 0))
+         (letf (((stream-cursor-position stream) (values 0 0)))
+           (funcall continuation stream))))
+     record-type
+     :align-x align-x
+     :align-y align-y
+     :min-width (parse-space stream min-width :horizontal)
+     :min-height (parse-space stream min-height :vertical))))
 
 (defmacro formatting-cell ((&optional (stream t)
-				      &rest more
-				      &key align-x align-y
-				      (min-width 0) (min-height 0)
-				      (record-type ''standard-cell-output-record))
+                            &rest args
+                            &key align-x align-y min-width min-height record-type)
                            &body body)
-  (declare (ignorable align-x align-y))
+  (declare (ignore align-x align-y min-width min-height record-type))
   (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-keywords-removed (more (:record-type :min-width :min-height))
-    (with-gensyms (record)
-      ;; Blow off order-of-evaluation issues for the moment...
-      `(with-new-output-record
-	   (,stream ,record-type ,record ,@more
-		    :min-width (parse-space ,stream ,min-width :horizontal)
-		    :min-height (parse-space ,stream ,min-height :vertical))
-	 (letf (((stream-cursor-position ,stream) (values 0 0)))
-	   ,@body)))))
+  (with-gensyms (continuation)
+    `(flet ((,continuation (,stream) ,@body))
+       (declare (dynamic-extent #',continuation))
+       (invoke-formatting-cell ,stream #',continuation ,@args))))
 
 
 ;;; Generic block formatting
-(defclass block-output-record-mixn ()
+(defclass block-output-record-mixin ()
   ()
   (:documentation "The class representing one-dimensional blocks of cells."))
+
+(defmethod replay-output-record ((bl block-output-record-mixin) stream
+                                 &optional region (x-offset 0) (y-offset 0))
+  (when (null region)
+    (setq region (or (pane-viewport-region stream) +everywhere+)))
+  (with-drawing-options (stream :clipping-region region)
+    (let (other-records)
+      (map-over-output-records-overlapping-region
+       #'(lambda (record)
+           (if (cell-output-record-p record)
+               (replay-output-record record stream region x-offset y-offset)
+               (push record other-records)))
+       bl region x-offset y-offset)
+      (mapc #'(lambda (record)
+                (replay-output-record record stream region x-offset y-offset))
+            (nreverse other-records)))))
 
 (defgeneric map-over-block-cells (function block)
   (:documentation "Applies the FUNCTION to all cells in the BLOCK."))
 
-(defmethod map-over-block-cells (function (block block-output-record-mixn))
-  ;; ### we need to do better
+(defmethod map-over-block-cells (function (block block-output-record-mixin))
+  ;; ### we need to do better -- yeah! how?
   (labels ((foo (row-record)
              (map-over-output-records
               (lambda (record)
                 (if (cell-output-record-p record)
-		    (funcall function record)
-		    (foo record)))
+                    (funcall function record)
+                    (foo record)))
               row-record)))
     (declare (dynamic-extent #'foo))
     (foo block)))
@@ -176,7 +147,7 @@ to a table cell within the row."))
 
 ;;; STANDARD-ROW-OUTPUT-RECORD class
 (defclass standard-row-output-record (row-output-record
-                                      block-output-record-mixn
+                                      block-output-record-mixin
                                       standard-sequence-output-record)
   ())
 
@@ -185,23 +156,23 @@ to a table cell within the row."))
   (map-over-block-cells function row-record))
 
 (defmacro formatting-row ((&optional (stream t)
-			  &rest more
-			  &key (record-type ''standard-row-output-record))
-			  &body body)
+                                     &rest more
+                                     &key (record-type ''standard-row-output-record))
+                          &body body)
   (setf stream (stream-designator-symbol stream '*standard-output*))
   (with-gensyms (record)
     (with-keywords-removed (more (:record-type))
       `(with-new-output-record (,stream ,record-type ,record ,@more)
-	 ,@body))))
+         ,@body))))
 
 (defgeneric invoke-formatting-row (stream cont record-type &rest initargs))
 
 (defmethod invoke-formatting-row (stream cont record-type &rest initargs)
   (apply #'invoke-with-new-output-record stream
-	 (lambda (s r)
-	   (declare (ignore r))
-	   (funcall cont s))
-	 record-type initargs))
+         (lambda (s r)
+           (declare (ignore r))
+           (funcall cont s))
+         record-type initargs))
 
 
 ;;; Column formatting
@@ -214,7 +185,7 @@ corresponding to a table cell within the column."))
 
 ;;; STANDARD-COLUMN-OUTPUT-RECORD class
 (defclass standard-column-output-record (column-output-record
-                                         block-output-record-mixn
+                                         block-output-record-mixin
                                          standard-sequence-output-record)
   ())
 
@@ -222,16 +193,15 @@ corresponding to a table cell within the column."))
   (map-over-block-cells function column-record))
 
 (defmacro formatting-column ((&optional (stream t)
-					&rest more
+                                        &rest more
                                         &key (record-type
-                                        ''standard-column-output-record))
-			     
+                                              ''standard-column-output-record))
                              &body body)
   (setf stream (stream-designator-symbol stream '*standard-output*))
   (with-gensyms (record)
     (with-keywords-removed (more (:record-type))
       `(with-new-output-record (,stream ,record-type ,record ,@more)
-	 ,@body))))
+         ,@body))))
 
 (defgeneric invoke-formatting-column (stream cont record-type &rest initargs))
 
@@ -272,13 +242,30 @@ skips intervening non-table output record structures."))
     (setf (slot-value table 'multiple-columns-x-spacing)
           (slot-value table 'x-spacing))))
 
+(defmethod replay-output-record ((table standard-table-output-record) stream
+                                 &optional region (x-offset 0) (y-offset 0))
+  (when (null region)
+    (setq region (or (pane-viewport-region stream) +everywhere+)))
+  (with-drawing-options (stream :clipping-region region)
+    (let (other-records)
+      (map-over-output-records-overlapping-region
+       #'(lambda (record)
+           (if (or (column-output-record-p record)
+                   (row-output-record-p record))
+               (replay-output-record record stream region x-offset y-offset)
+               (push record other-records)))
+       table region x-offset y-offset)
+      (mapc #'(lambda (record)
+                (replay-output-record record stream region x-offset y-offset))
+            (nreverse other-records)))))
+
 (defmacro formatting-table ((&optional (stream t)
                                        &rest args
                                        &key x-spacing y-spacing
-                                            multiple-columns
-                                            multiple-columns-x-spacing
-                                            equalize-column-widths (move-cursor t)
-                                            (record-type ''standard-table-output-record)
+                                       multiple-columns
+                                       multiple-columns-x-spacing
+                                       equalize-column-widths (move-cursor t)
+                                       (record-type ''standard-table-output-record)
                                        &allow-other-keys)
                             &body body)
   (declare (ignore x-spacing y-spacing multiple-columns
@@ -286,19 +273,19 @@ skips intervening non-table output record structures."))
                    equalize-column-widths move-cursor record-type))
   (gen-invoke-trampoline 'invoke-formatting-table
                          (list (stream-designator-symbol stream
-							 '*standard-output*))
+                                                         '*standard-output*))
                          args
                          body))
 
 (defun invoke-formatting-table
     (stream continuation
      &key x-spacing y-spacing
-     multiple-columns
-     multiple-columns-x-spacing
-     equalize-column-widths
-     (move-cursor t)
-     (record-type 'standard-table-output-record)
-     &allow-other-keys)
+       multiple-columns
+       multiple-columns-x-spacing
+       equalize-column-widths
+       (move-cursor t)
+       (record-type 'standard-table-output-record)
+       &allow-other-keys)
   (setq x-spacing (parse-space stream (or x-spacing #\Space) :horizontal))
   (setq y-spacing (parse-space stream (or y-spacing
                                           (stream-vertical-spacing stream))
@@ -315,28 +302,23 @@ skips intervening non-table output record structures."))
               :multiple-columns-x-spacing multiple-columns-x-spacing
               :equalize-column-widths equalize-column-widths)
     (multiple-value-bind (cursor-old-x cursor-old-y)
-	(stream-cursor-position stream)
-      (let ((*table-suppress-update* t))
-	(with-output-recording-options (stream :record t :draw nil)
-	  (funcall continuation stream)
-	  (force-output stream))
-	(with-output-recording-options (stream :record nil :draw nil)
-	  (adjust-table-cells table stream)
-	  (when multiple-columns (adjust-multiple-columns table stream))
-	  (setq *table-suppress-update* nil)
-	  (tree-recompute-extent table)))
-      #+NIL
-      (setf (output-record-position table)
-	    (values cursor-old-x cursor-old-y))
+        (stream-cursor-position stream)
+      (with-output-recording-options (stream :record t :draw nil)
+        (funcall continuation stream)
+        (force-output stream))
+      (setf (stream-cursor-position stream)
+            (values cursor-old-x cursor-old-y))
+      (with-output-recording-options (stream :record nil :draw nil)
+        (adjust-table-cells table stream)
+        (when multiple-columns (adjust-multiple-columns table stream))
+        (tree-recompute-extent table))
       (replay table stream)
       (if move-cursor
-	  ;; FIXME!!!
-	  ;; Yeah, fix me -- what is wrong with that?
-	  (setf (stream-cursor-position stream)
-		(values (bounding-rectangle-max-x table)
-			(bounding-rectangle-max-y table)))
-	  (setf (stream-cursor-position stream)
-		(values cursor-old-x cursor-old-y))))))
+          (setf (stream-cursor-position stream)
+                (values (bounding-rectangle-max-x table)
+                        (bounding-rectangle-max-y table)))
+          (setf (stream-cursor-position stream)
+                (values cursor-old-x cursor-old-y))))))
 
 ;;; Think about rewriting this using a common superclass for row and
 ;;; column records.
@@ -347,8 +329,8 @@ skips intervening non-table output record structures."))
              (map-over-output-records
               (lambda (record)
                 (if (row-output-record-p record)
-		    (funcall function record)
-		    (row-mapper record)))
+                    (funcall function record)
+                    (row-mapper record)))
               table-record)))
     (declare (dynamic-extent #'row-mapper))
     (row-mapper table-record)))
@@ -359,22 +341,22 @@ skips intervening non-table output record structures."))
              (map-over-output-records
               (lambda (record)
                 (if (column-output-record-p record)
-		    (funcall function record)
-		    (col-mapper record)))
+                    (funcall function record)
+                    (col-mapper record)))
               table-record)))
     (declare (dynamic-extent #'col-mapper))
     (col-mapper table-record)))
 
 (defmethod map-over-table-elements (function
-				    (table-record standard-table-output-record)
-				    (type (eql :row-or-column)))
+                                    (table-record standard-table-output-record)
+                                    (type (eql :row-or-column)))
   (labels ((row-and-col-mapper (table-record)
              (map-over-output-records
               (lambda (record)
                 (if (or (row-output-record-p record)
-			(column-output-record-p record)) 
-		    (funcall function record)
-		    (row-and-col-mapper record)))
+                        (column-output-record-p record))
+                    (funcall function record)
+                    (row-and-col-mapper record)))
               table-record)))
     (declare (dynamic-extent #'row-and-col-mapper))
     (row-and-col-mapper table-record)))
@@ -387,7 +369,7 @@ skips intervening non-table output record structures."))
 (defgeneric adjust-item-list-cells (item-list-record stream))
 
 (defclass standard-item-list-output-record (item-list-output-record
-                                            block-output-record-mixn
+                                            block-output-record-mixin
                                             standard-sequence-output-record)
   ((x-spacing :initarg :x-spacing)
    (y-spacing :initarg :y-spacing)
@@ -404,10 +386,10 @@ skips intervening non-table output record structures."))
 
 (defun invoke-format-item-list (stream continuation
                                 &key x-spacing y-spacing n-columns n-rows
-                                     max-width max-height
-                                     initial-spacing (row-wise t) (move-cursor t)
-                                (record-type
-                                 'standard-item-list-output-record))
+                                  max-width max-height
+                                  initial-spacing (row-wise t) (move-cursor t)
+                                  (record-type
+                                   'standard-item-list-output-record))
   (setq x-spacing (parse-space stream (or x-spacing #\Space) :horizontal))
   (setq y-spacing (parse-space stream (or y-spacing
                                           (stream-vertical-spacing stream))
@@ -434,17 +416,17 @@ skips intervening non-table output record structures."))
           (setf (stream-cursor-position stream)
                 (values (bounding-rectangle-max-x item-list)
                         (bounding-rectangle-max-y item-list)))
-        (setf (stream-cursor-position stream)
-              (values cursor-old-x cursor-old-y)))
+          (setf (stream-cursor-position stream)
+                (values cursor-old-x cursor-old-y)))
       (replay item-list stream)
       item-list)))
 
 (defun format-items (items
                      &rest args
                      &key (stream *standard-output*)
-                          printer presentation-type
-                          cell-align-x cell-align-y
-                     &allow-other-keys)
+                       printer presentation-type
+                       cell-align-x cell-align-y
+                       &allow-other-keys)
   (let ((printer (if printer
                      (if presentation-type
                          #'(lambda (item stream)
@@ -456,7 +438,7 @@ skips intervening non-table output record structures."))
                              (present item presentation-type :stream stream))
                          #'prin1))))
     (with-keywords-removed (args (:stream :printer :presentation-type
-                                  :cell-align-x :cell-align-y))
+                                          :cell-align-x :cell-align-y))
       (apply #'invoke-format-item-list
              stream
              #'(lambda (stream)
@@ -464,17 +446,17 @@ skips intervening non-table output record structures."))
                       #'(lambda (item)
                           (formatting-cell (stream :align-x cell-align-x
                                                    :align-y cell-align-y)
-                                           (funcall printer item stream)))
+                            (funcall printer item stream)))
                       items))
              args))))
 
 (defmacro formatting-item-list ((&optional (stream t)
-                                 &rest args
-                                 &key x-spacing y-spacing n-columns n-rows
-                                      stream-width stream-height
-                                      max-width max-height
-                                      initial-spacing (row-wise t) (move-cursor t)
-                                      record-type &allow-other-keys)
+                                           &rest args
+                                           &key x-spacing y-spacing n-columns n-rows
+                                           stream-width stream-height
+                                           max-width max-height
+                                           initial-spacing (row-wise t) (move-cursor t)
+                                           record-type &allow-other-keys)
                                 &body body)
   (declare (ignore x-spacing y-spacing n-columns n-rows
                    stream-width stream-height
@@ -493,67 +475,67 @@ skips intervening non-table output record structures."))
   "Given a table record, creates an array of arrays of cells in row major
   order. Returns (array-of-cells number-of-rows number-of-columns)"
   (let* ((row-based (block
-			find-table-type
-		      (map-over-table-elements
-		       (lambda (thing)
-			 (cond ((row-output-record-p thing)
-				(return-from find-table-type t))
-			       ((column-output-record-p thing)
-				(return-from find-table-type nil))
-			       (t
-				(error "Something is wrong."))))
-		       table-record
-		       :row-or-column)
-		      ;; It's empty
-		      (return-from make-table-array (values nil 0 0))))
-	 (rows (make-array 1
-			   :adjustable t
-			   :fill-pointer (if row-based
-					     0
-					     nil)
-			   :initial-element nil))
-	 (number-of-columns 0))
+                        find-table-type
+                      (map-over-table-elements
+                       (lambda (thing)
+                         (cond ((row-output-record-p thing)
+                                (return-from find-table-type t))
+                               ((column-output-record-p thing)
+                                (return-from find-table-type nil))
+                               (t
+                                (error "Something is wrong."))))
+                       table-record
+                       :row-or-column)
+                      ;; It's empty
+                      (return-from make-table-array (values nil 0 0))))
+         (rows (make-array 1
+                           :adjustable t
+                           :fill-pointer (if row-based
+                                             0
+                                             nil)
+                           :initial-element nil))
+         (number-of-columns 0))
     (if row-based
-	(map-over-table-elements
-	 (lambda (row)
-	   (let ((row-array (make-array 4 :adjustable t :fill-pointer 0)))
-	     (map-over-row-cells (lambda (cell)
-				   (vector-push-extend cell row-array))
-				 row)
-	     (vector-push-extend row-array rows)
-	     (maxf number-of-columns (length row-array))))
-	 table-record
-	 :row)
-	(let ((col-index 0))
-	  (map-over-table-elements
-	   (lambda (col)
-	     (let ((row-index 0))
-	       (map-over-column-cells
-		(lambda (cell)
-		  (when (>= row-index (length rows))
-		    (adjust-array rows (1+ row-index) :initial-element nil))
-		  (let ((row-array (aref rows row-index)))
-		    (cond ((null row-array)
-			   (setf row-array
-				 (make-array (1+ col-index)
-					     :adjustable t
-					     :initial-element nil))
-			   (setf (aref rows row-index) row-array))
-			  ((>= col-index (length row-array))
-			   (adjust-array row-array (1+ col-index)
-					 :initial-element nil))
-			  (t nil))
-		    (setf (aref row-array col-index) cell))
-		  (incf row-index))
-		col))
-	     (incf col-index))
-	   table-record
-	   :column)
-	  (setq number-of-columns col-index)))
+        (map-over-table-elements
+         (lambda (row)
+           (let ((row-array (make-array 4 :adjustable t :fill-pointer 0)))
+             (map-over-row-cells (lambda (cell)
+                                   (vector-push-extend cell row-array))
+                                 row)
+             (vector-push-extend row-array rows)
+             (maxf number-of-columns (length row-array))))
+         table-record
+         :row)
+        (let ((col-index 0))
+          (map-over-table-elements
+           (lambda (col)
+             (let ((row-index 0))
+               (map-over-column-cells
+                (lambda (cell)
+                  (when (>= row-index (length rows))
+                    (adjust-array rows (1+ row-index) :initial-element nil))
+                  (let ((row-array (aref rows row-index)))
+                    (cond ((null row-array)
+                           (setf row-array
+                                 (make-array (1+ col-index)
+                                             :adjustable t
+                                             :initial-element nil))
+                           (setf (aref rows row-index) row-array))
+                          ((>= col-index (length row-array))
+                           (adjust-array row-array (1+ col-index)
+                                         :initial-element nil))
+                          (t nil))
+                    (setf (aref row-array col-index) cell))
+                  (incf row-index))
+                col))
+             (incf col-index))
+           table-record
+           :column)
+          (setq number-of-columns col-index)))
     (values rows (length rows) number-of-columns)))
-  
+
 (defmethod adjust-table-cells ((table-record standard-table-output-record)
-			       stream)
+                               stream)
   (with-slots (x-spacing y-spacing equalize-column-widths) table-record
     ;; Note: for the purpose of layout it is pretty much irrelevant if
     ;;       this is a table by rows or a table by columns
@@ -561,61 +543,60 @@ skips intervening non-table output record structures."))
     ;; Since we have :baseline vertical alignment (and no :char
     ;; horizontal alignment like in HTML), we always work from rows.
     (multiple-value-bind (rows nrows ncols)
-	(make-table-array table-record)
+        (make-table-array table-record)
       (unless rows
-	(return-from adjust-table-cells nil))
+        (return-from adjust-table-cells nil))
 
       (let ((widthen  (make-array ncols :initial-element 0))
-	    (heights  (make-array nrows :initial-element 0))
-	    (ascents  (make-array nrows :initial-element 0))
-	    (descents (make-array nrows :initial-element 0)))
-	;; collect widthen, heights
-	(loop for row across rows
-	   for i from 0 do
-	   (loop for cell across row
-	      for j from 0 do
-	      ;; we have cell at row i col j at hand.
-	      ;; width:
-	      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* cell)
-		(maxf (aref widthen j)
-		      (max (- x2 x1) (cell-min-width cell)))
-		(maxf (aref heights i)
-		      (max (- y2 y1) (cell-min-height cell)))
-		(when (eq (cell-align-y cell) :baseline)
-		  (multiple-value-bind (baseline) (output-record-baseline cell)
-		    (maxf (aref ascents i) baseline)
-		    (maxf (aref descents i) (- y2 y1 baseline)))))))
+            (heights  (make-array nrows :initial-element 0))
+            (ascents  (make-array nrows :initial-element 0))
+            (descents (make-array nrows :initial-element 0)))
+        ;; collect widthen, heights
+        (loop for row across rows
+           for i from 0 do
+             (loop for cell across row
+                for j from 0 do
+                ;; we have cell at row i col j at hand.
+                ;; width:
+                  (when cell
+                    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* cell)
+                      (maxf (aref widthen j)
+                            (max (- x2 x1) (cell-min-width cell)))
+                      (maxf (aref heights i)
+                            (max (- y2 y1) (cell-min-height cell)))
+                      (when (eq (cell-align-y cell) :baseline)
+                        (multiple-value-bind (baseline) (output-record-baseline cell)
+                          (maxf (aref ascents i) baseline)
+                          (maxf (aref descents i) (- y2 y1 baseline))))))))
 
-	;; baseline aligned cells can force the row to be taller.
-	(loop for i from 0 below nrows do
-	     (maxf (aref heights i) (+ (aref ascents i) (aref descents i))))
+        ;; baseline aligned cells can force the row to be taller.
+        (loop for i from 0 below nrows do
+             (maxf (aref heights i) (+ (aref ascents i) (aref descents i))))
 
-	(when (slot-value table-record 'equalize-column-widths)
-	  (setf widthen (make-array ncols :initial-element (reduce #'max widthen :initial-value 0))))
+        (when (slot-value table-record 'equalize-column-widths)
+          (setf widthen (make-array ncols :initial-element (reduce #'max widthen :initial-value 0))))
 
-	(setf (slot-value table-record 'widths) widthen
-	      (slot-value table-record 'heights) heights
-	      (slot-value table-record 'rows) rows)
-          
-	;; Finally just put the cells where they belong.
+        (setf (slot-value table-record 'widths) widthen
+              (slot-value table-record 'heights) heights
+              (slot-value table-record 'rows) rows)
 
-	(multiple-value-bind (cx cy) (stream-cursor-position stream)
-	  (loop for row across rows
-	     for y = cy then (+ y h y-spacing)
-	     for h across heights
-	     for ascent across ascents
-	     do
-	     (loop for cell across row
-		for x = cx then (+ x w x-spacing) 
-		for w across widthen do
-		(adjust-cell* cell x y w h ascent))))))))
+        ;; Finally just put the cells where they belong.
 
-
-
+        (multiple-value-bind (cx cy) (stream-cursor-position stream)
+          (loop for row across rows
+             for y = cy then (+ y h y-spacing)
+             for h across heights
+             for ascent across ascents
+             do
+               (loop for cell across row
+                  for x = cx then (+ x w x-spacing)
+                  for w across widthen do
+                    (when cell
+                      (adjust-cell* cell x y w h ascent)))))))))
 
 (defmethod adjust-multiple-columns ((table standard-table-output-record) stream)
   (with-slots (widths heights rows
-               multiple-columns multiple-columns-x-spacing x-spacing y-spacing)
+                      multiple-columns multiple-columns-x-spacing x-spacing y-spacing)
       table
     (let* ((mcolumn-width
             ;; total width of a column of the "meta" table.
@@ -633,19 +614,19 @@ skips intervening non-table output record structures."))
            (column-size (ceiling (length rows) n-columns)) )
       (let ((y 0) (dy 0))
         (loop for row across rows
-              for h across heights
-              for i from 0
-              do
-              (multiple-value-bind (ci ri) (floor i column-size)
-                (when (zerop ri)
-                    (setf dy (- y)))
-                (let ((dx (* ci mcolumn-width)))
-                  (loop for cell across row do
-                        (multiple-value-bind (x y) (output-record-position cell)
-                          (setf (output-record-position cell)
-                                (values (+ x dx) (+ y dy))))))
-                (incf y h)
-                (incf y y-spacing)))) )))
+           for h across heights
+           for i from 0
+           do
+             (multiple-value-bind (ci ri) (floor i column-size)
+               (when (zerop ri)
+                 (setf dy (- y)))
+               (let ((dx (* ci mcolumn-width)))
+                 (loop for cell across row do
+                      (multiple-value-bind (x y) (output-record-position cell)
+                        (setf (output-record-position cell)
+                              (values (+ x dx) (+ y dy))))))
+               (incf y h)
+               (incf y y-spacing)))) )))
 
 (defmethod adjust-item-list-cells ((item-list standard-item-list-output-record)
                                    stream)
@@ -666,11 +647,11 @@ skips intervening non-table output record structures."))
       (setf heights (make-array (length items)))
       ;;
       (loop for item in items
-            for i from 0
-            do
-            (with-bounding-rectangle* (x1 y1 x2 y2) item
-              (maxf width (- x2 x1))
-              (setf (aref heights i) (- y2 y1))))
+         for i from 0
+         do
+           (with-bounding-rectangle* (x1 y1 x2 y2) item
+             (maxf width (- x2 x1))
+             (setf (aref heights i) (- y2 y1))))
       ;;
       ;; Now figure out the number of rows and the number of columns to
       ;; layout to.
@@ -712,34 +693,34 @@ skips intervening non-table output record structures."))
                  ;; ### do the cells put alongside expose baseline adjust?
                  (let ((y 0))
                    (loop for yi below n-rows
-                         while items
-                         do
-                         (let ((h 0))
-                           (loop for xi below n-columns
-                                 for x = (if initial-spacing (floor x-spacing 2) 0)
-                                 then (+ x width x-spacing)
-                                 while items
-                                 do
-                                 (let ((item (pop items)))
-                                   (maxf h (bounding-rectangle-height item))
-                                   (adjust-cell* item x y width
-                                                 (bounding-rectangle-height item)
-                                                 (output-record-baseline item))))
-                           (incf y (+ h y-spacing))))))
+                      while items
+                      do
+                        (let ((h 0))
+                          (loop for xi below n-columns
+                             for x = (if initial-spacing (floor x-spacing 2) 0)
+                             then (+ x width x-spacing)
+                             while items
+                             do
+                               (let ((item (pop items)))
+                                 (maxf h (bounding-rectangle-height item))
+                                 (adjust-cell* item x y width
+                                               (bounding-rectangle-height item)
+                                               (output-record-baseline item))))
+                          (incf y (+ h y-spacing))))))
                 (t
                  ;; This is somewhat easier ...
                  (let (h)
                    (loop for xi below n-columns
-                         for x = (if initial-spacing (floor x-spacing 2) 0)
-                         then (+ x width x-spacing)
-                         while items
-                         do
-                         (loop for yi below n-rows
-                               for y = 0 then (+ y y-spacing h)
-                               while items do
-                               (let ((item (pop items)))
-                                 (setf h (bounding-rectangle-height item))
-                                 (adjust-cell* item x y width h (output-record-baseline item)))))))))))))
+                      for x = (if initial-spacing (floor x-spacing 2) 0)
+                      then (+ x width x-spacing)
+                      while items
+                      do
+                        (loop for yi below n-rows
+                           for y = 0 then (+ y y-spacing h)
+                           while items do
+                             (let ((item (pop items)))
+                               (setf h (bounding-rectangle-height item))
+                               (adjust-cell* item x y width h (output-record-baseline item)))))))))))))
 
 (defun adjust-cell* (cell x y w h ascent)
   (setf (output-record-position cell)

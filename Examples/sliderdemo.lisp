@@ -48,7 +48,7 @@
      (do-operation t)
      (if (functionp (first (last *calc*)))
 	 (setf (first (last *calc*)) ,operator)
-       	 (setf *calc* (nconc *calc* (list ,operator))))))
+                (setf *calc* (nconc *calc* (list ,operator))))))
 
 (defun do-operation (gadget)
   (declare (ignore gadget))
@@ -99,15 +99,13 @@
 (eval-when (:compile-toplevel)
   (defun make-operator-button-form (name label operator)
     `(,name :push-button
-            :space-requirement (make-space-requirement
-                                :width 50 :height 50)
+            :width 50 :height 50
             :label ,label
             :activate-callback (queue-op #',operator)))
 
   (defun make-number-button-form (name label number)
     `(,name :push-button
-            :space-requirement (make-space-requirement
-                                :width 50 :height 50)
+            :width 50 :height 50
             :label ,label
             :activate-callback (queue-integer ,number))))
 
@@ -129,13 +127,13 @@
           #.(make-number-button-form 'zero "0" 0)
           (screen :text-field
                   :value "0"
-                  :space-requirement (make-space-requirement :width 200 :height 50))
+                  :width 200 :height 50)
           (ac     :push-button
-                  :space-requirement (make-space-requirement :width 50 :height 50)
+                  :width 50 :height 50
                   :label "AC"
                   :activate-callback #'initac)
           (ce     :push-button
-                  :space-requirement (make-space-requirement :width 50 :height 50)
+                  :width 50 :height 50
                   :label "CE"
                   :activate-callback #'initce)
           (slider :slider
@@ -159,4 +157,3 @@
 		      (list nine zero result)))
 		slider)))
   (:top-level (sliderdemo-frame-top-level . nil)))
-

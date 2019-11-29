@@ -32,27 +32,6 @@
                                  (defaults *default-pathname-defaults*))
   (native-namestring (enough-namestring pathname defaults)))
 
-;;; A farce of a  "portable" run-program, which grows as I need options from
-;;; the CMUCL run-program.
-;;; This ought to change the current directory to *default-pathname-defaults*..
-;;; (see above)
-
-(defun run-program (program args &key (wait t) (output *standard-output*) (input *standard-input*))    
-  #+(or CMU scl) (ext:run-program program args :input input
-				  :output output :wait wait)
-
-  #+SBCL (sb-ext:run-program program args :input input :search T
-                                          :output output :wait wait)
-  #+lispworks (system:call-system-showing-output       ; Contributed by Neonsquare.
-               (format nil "~A~{ ~A~}" program args)   ; I am uneasy about shell quoting issues here..
-               :shell-type "/bin/sh"
-               :output-stream output
-               :wait wait)
-  #+clisp (ext:run-program program :arguments args :wait wait)
-  #+openmcl (ccl:run-program program args :input input :output output :wait wait)
-  #-(or CMU scl SBCL lispworks clisp openmcl)
-  (format t "~&Sorry, don't know how to run programs in your CL.~%"))
-
 ;;;; CLIM/UI utilities
 
 (defmacro bold ((stream) &body body)
@@ -78,7 +57,7 @@
         (fresh-line stream)
         (apply #'format *query-io* string args)
         (fresh-line stream)))))
-          
+
 
 (defun vertical-gap (stream &optional (fraction 3))
   (when (eq stream t) (setf stream *standard-output*))
@@ -160,7 +139,7 @@ this point, increment it by SPACING, which defaults to zero."
 (defparameter *abbreviating-minimum-ratio* 1.2
   "A minimum ratio of item width to the mean width, below which abbreviation will not be invoked. This is a safeguard to treat very uniform inputs more sanely, where the test against the standard deviation might behave undesirably.")
 (defparameter *abbreviating-maximum-cutoff* 1.8
-  "A maximum ratio of item width to mean width, beyond which abbreviation will always be invoked. This is useful to handle cases where one extreme outlier throws the standard deviation all out of whack.") 
+  "A maximum ratio of item width to mean width, beyond which abbreviation will always be invoked. This is useful to handle cases where one extreme outlier throws the standard deviation all out of whack.")
 
 (defun text-output-record-style (record)
   "Returns the text style used in RECORD, a text-displayed-output-record."
@@ -168,22 +147,20 @@ this point, increment it by SPACING, which defaults to zero."
 
 (defun find-text-record (record)
   "If RECORD contains exactly one text-displayed-output-record, we can abbreviate it. Otherwise, give up. Returns a string containing the contents of the record, and a text style."
-  (declare (optimize (debug 3) (speed 1) (safety 3)))
   (let ((count 0)
         text-style
         result)
     (labels ((walk (record)
-               (typecase record                 
+               (typecase record
                  (climi::compound-output-record
                   (map-over-output-records #'walk record))
-                 (text-displayed-output-record                  
-                  (setf result record)                  
+                 (text-displayed-output-record
+                  (setf result record)
                   (setf text-style (text-output-record-style record))
                   (incf count)))))
       (walk record)
-      (values
-       (if (= count 1) result  nil)       
-       (or text-style (medium-text-style (slot-value record 'climi::medium)))))))
+      (when (= count 1)
+        (values result text-style)))))
 
 (defun abbrev-guess-pos (medium string text-style desired-width start end)
   "Makes a guess where to split STRING between START and END in order to fit within WIDTH. Returns the ending character index."
@@ -215,10 +192,9 @@ as it would be displayed on MEDIUM using TEXT-STYLE"
 
 (defun abbreviate-record (stream record width abbreviator)
   "Attempts to abbreviate the text contained in an output RECORD on STREAM to fit within WIDTH, using the function ABBREVIATOR to produce a shortened string."
-  (declare (optimize (debug 3)))  
   (multiple-value-bind (text-record text-style)
       (find-text-record record)
-    (when text-record      
+    (when text-record
       (multiple-value-bind (x y)
           (output-record-position text-record)
         (let* ((parent (output-record-parent text-record))
@@ -242,7 +218,7 @@ as it would be displayed on MEDIUM using TEXT-STYLE"
 function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 *ABBREVIATING-OUTLIER-THRESHOLD*, *ABBREVIATING-MINIMUM-RATIO*, and
 *ABBREVIATING-MAXIMUM-CUTOFF*."
-  (setf stream (resolve-stream-designator stream *standard-output*))  
+  (setf stream (resolve-stream-designator stream *standard-output*))
   (let* ((length  (length items))
          (printer (or printer (lambda (item stream)
                                (present item presentation-type :stream stream))))
@@ -253,7 +229,7 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
     (when (< length *abbreviating-minimum-items*)
       (apply #'format-items items args)
       (return-from abbreviating-format-items))
-    
+
     (dolist (item items)
       (let ((record (with-output-to-output-record (stream)
                       (with-end-of-line-action (stream :allow)
@@ -270,7 +246,7 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 
     (setf args (copy-list args))
     (remf args :printer)
-    
+
     (let* ((stddev-max-width (+ mean (* *abbreviating-outlier-threshold* deviation)))
            (ratio-max-width  (* mean *abbreviating-minimum-ratio*))
            (cutoff-width     (* mean *abbreviating-maximum-cutoff*))
@@ -299,16 +275,8 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
 ;;  * Environment variables?
 ;;  * Figure out what to do with the input/output streams
 ;;  * Ability to pipe programs together, input/output redirection.
-;;  * Utilities for getting data in and out of unix programs through streams    
+;;  * Utilities for getting data in and out of unix programs through streams
 ;;  * Pseudoterminal support (yeah, right)
-
-(defparameter *program-wait* t)
-
-;; Disgusting hacks to make input default to nil, as CMUCL's run-program seems
-;; to hang randomly unless I do that. But sometimes I'll need to really change these..
-;; ** Goddamn CMUCL's run-program likes to hang randomly even with this dumb hack. Beware..
-(defparameter *run-output* t)
-(defparameter *run-input* nil)
 
 ;; We attempt to translate keywords and a few types of lisp objects
 ;; used as arguments to make program wrappers feel more "lispy".
@@ -346,24 +314,24 @@ function specified by :ABBREVIATOR. Abbreviate is controlled by the variables
   "Returns a closure which invokes the NAMEd program through the operating system,
 with some attempt to convert arguments intelligently."
   (lambda (&rest args)
-    (run-program name (transform-program-arguments args)
-                 :wait *program-wait*
-                 :output (resolve-stream-designator *run-output* *standard-output*)
-                 :input  nil #+NIL (resolve-stream-designator *run-input* *standard-input*))
+    (let ((output *standard-output*))
+      (uiop:run-program (list* name (transform-program-arguments args))
+                        :force-shell nil :output output :error-output output
+                        :input nil #+NIL (resolve-stream-designator *run-input* *standard-input*)))
     ;; It might be useful to return the exit status of the process, but our run-program
-    ;; wrapper doesn't 
+    ;; wrapper doesn't
     (values)))
 
 (defun read-stringlet (stream)
   (with-output-to-string (out)
-    (unread-char                          
+    (unread-char
      (do ((c (read-char stream) (read-char stream)))
          ((or (member c '(#\Space #\Tab #\Newline #\Linefeed #\Page #\Return)) ;; What..??
               (multiple-value-bind (a b) (get-macro-character c)
                 (and a (not b))))
-          c)       
+          c)
        (when (eql c #\\)
-         (setf c (read-char stream)))       
+         (setf c (read-char stream)))
        (write-char c out))
      stream)))
 
@@ -392,7 +360,7 @@ with some attempt to convert arguments intelligently."
         for x = min then (+ x dx)
         do (draw-line* medium i 0 i (* scale (funcall function x)))))
 
-(defun draw-vector-bar-graph 
+(defun draw-vector-bar-graph
     (vector &key (stream *standard-output*) (scale-y 1) (ink +black+)
      (key 'identity) (start 0) (end nil))
   (let ((range (- (reduce 'max vector :start start :end end :key key)
@@ -404,18 +372,18 @@ with some attempt to convert arguments intelligently."
           (unless (zerop range)
             (when (eql t scale-y)
               (setf scale-y (/ 250 range)))
-            (draw-thin-bar-graph-1 
-             stream 
+            (draw-thin-bar-graph-1
+             stream
              (lambda (i) (funcall key (aref vector i)))
              scale-y start (or end (length vector)) 1)))))))
 
 ;(defun draw-coordinate-labels (stream value-min val-max stream-min stream-max)
-;  
+;
 ;  (text-size stream (format nil "~4F" value)
 
 ;; Broken - min-y/max-y aren't, in the sense that it won't clip to
-;; those values. 
-(defun draw-function-filled-graph 
+;; those values.
+(defun draw-function-filled-graph
     (function &key (stream *standard-output*)
      (min-x *min-x*) (max-x *max-x*)
      (min-y *min-y*) (max-y *max-y*)
@@ -430,4 +398,3 @@ with some attempt to convert arguments intelligently."
                                (float (/ height (- max-y min-y)) 0.0f0)
                                min-x max-x
                                (/ (- max-x min-x) width))))))
-

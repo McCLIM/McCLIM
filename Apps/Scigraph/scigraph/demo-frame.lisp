@@ -108,7 +108,7 @@ advised of the possiblity of such damages.
      create
      (left 0) (bottom 0)
      (width 600) (height 400)
-     (wait-until-done #+genera t #-genera nil))	; Start a new process?
+     (wait-until-done nil))	; Start a new process?
   "Start a demo scigraph frame."
   (let ((graph (make-sample-graph)))
     (add-dataset graph
@@ -167,7 +167,6 @@ to 100.
   (format nil "~A" data))
 
 (defmethod auto-scale-limits ((data plain-data) type xll xur yll yur)
-  (declare (ignore xll xur yll yur))
   (list
    (min 0 xll)
    (max 100 xur)

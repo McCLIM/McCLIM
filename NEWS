@@ -1,22 +1,26 @@
 * Changes in mcclim-0.9.7 relative to 0.9.6:
-** Housekeeping: Removed lingering goatee text substrate and pixie hack
-** Improvement: Removed assumption about panes that each one is morrored
-** Housekeeping: clim-looks system has been renamed to mcclim/looks     :api:
-** Housekeeping: tab-layout has it's own system now clim-layouts/tab    :api:
-** Housekeeping: remove clim-ffi package (not used, not in the spec)    :api:
-** Housekeeping: rename mcclim-truetype to clim-fonts/truetype          :api:
-** Housekeeping: fix dependencies of clim-fonts/truetype
-** Housekeeping: Major system cleanup and directory reordering
-** Housekeeping: Cleaning up chunks of code
-** Housekeeping: Removed non-functional graphic-forms backend (Windows specific)
-** Housekeeping: Removed non-functional OpenGL backend (ancient-CLX specific)
-** Housekeeping: Removed non-functional gtkairo backend
-** Housekeeping: Moved core systems to the Core/ and substrates to Libraries/
-** Housekeeping: fixed the dependency tree to be more sane
-** Improvement: Multiprocessing is now provided by the bordeaux-threads
-** Improvement: Provide clim-clx/pretty system for eyecandy             :api:
-** Improvement: Truetype is now default on SBCL
-** Improvements: Many! (given that the last release was in 2008 :-)
+** Bug fix: Many! (and some regressions).
+** Bug fix: tab-layout fixes.
+** Bug fix: formatting-table fixes.
+** Bug fix: scrolling and viewport fixes and refactor.
+** Feature: raster image draw backend extension.
+** Feature: bezier curves extension.
+** Feature: new tests and demos in clim-examples.
+** Feature: truetype rendering is now default on clx.
+** Feature: additions to region, clipping rectangles and drawing.
+** Feature: clim-debugger and clim-listener improvmenets.
+** Feature: mop is now done with CLOSER-MOP.
+** Feature: threading is now done with BORDEAUX-THREADS.
+** Feature: clx-fb backend (poc of framebuffer-based backend).
+** Feature: assumption that all panes must be mirrored has been removed.
+** Cleanup: many files cleaned up from style warnings and such.
+** Cleanup: removal of PIXIE.
+** Cleanup: removal of CLIM-FFI package.
+** Cleanup: changes to directory structure and asd definitions.
+** Cleanup: numerous manual additions and corrections.
+** Cleanup: broken backends has been removed.
+** Cleanup: goatee has been removed in favour of Drei.
+** Cleanup: all methods have now corresponding generic function declarations.
 
 * Changes in mcclim-0.9.6 relative to 0.9.5:
 ** Bug fix: ESA's help commands are better at finding bindings and

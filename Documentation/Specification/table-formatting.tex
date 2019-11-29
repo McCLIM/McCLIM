@@ -99,7 +99,7 @@ The advice that the programmer gives to CLIM on how to assemble the table
 consists of the following:
 \begin{itemize}
 \item How to place the contents of the cell within the cell (such as centered
-vertically, flush-left, and so forth)  The possibilities for this advice are
+vertically, flush-left, and so forth). The possibilities for this advice are
 described below.
 
 \item Optionally, how much additional space to insert between columns and
@@ -121,7 +121,7 @@ direction, and how to constrain them in the vertical direction.
                                     (move-cursor \cl{t}) record-type \allow)
                               \body body}
 
-Binds the local environment in such a way the output of \arg{body} will be done
+Binds the local environment in such a way that the output of \arg{body} will be done
 in a tabular format.  This must be used in conjunction with \cl{formatting-row}
 or \cl{formatting-column}, and \cl{formatting-cell}.  The table is placed so
 that its upper left corner is at the current text cursor position of
@@ -483,6 +483,7 @@ intervening non-table output record structure.  \arg{function} is a function of
 one argument, an output record corresponding to a table cell within the row; it
 has dynamic extent.
 
+\issue {PM} {All these map-* functions should mind the hierarchy, I guess. So if a table is put within a table cell ...}
 
 \Defprotoclass {column-output-record}
 
@@ -497,7 +498,7 @@ returns \term{false}.
 
 \Defclass {standard-column-output-record}
 
-The instantiable class of output record that represent a column of output within
+The instantiable class of output record that represents a column of output within
 a table.  Its children will be a sequence of cells, and its parent (skipping
 intervening non-tabular records such as presentations) will be a table output
 record; presentation output records may intervene.  This is a subclass of
@@ -588,7 +589,7 @@ subclass of \cl{item-list-output-record}.
 \Defgeneric {map-over-item-list-cells} {function item-list-record}
 
 Applies \arg{function} to all of the cells in \arg{item-list-record}.
-\cl{map-over-item-list-cells} must skip over intervening non-table output record
+\cl{map-over-item-list-cells} must skip over intervening non-list output record
 structure, such as presentations.  \arg{function} is a function of one argument,
 an output record corresponding to a cell in the item list; it has dynamic
 extent.

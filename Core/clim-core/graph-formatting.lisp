@@ -8,6 +8,7 @@
 
 ;;;  (c) copyright 2002 by Gilbert Baumann
 ;;;  (c) copyright 2005 by Robert P. Goldman
+;;;  (c) copyright 2017 by John A. Carroll
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -20,10 +21,10 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
- 
+
 (in-package :clim-internals)
 
 ;;;; Notes
@@ -115,80 +116,64 @@
 (define-graph-type :digraph digraph-graph-output-record)
 
 ;;;; Entry
+
 (defun format-graph-from-root (root-object &rest other-args)
   (apply #'format-graph-from-roots (list root-object) other-args))
 
 (defun format-graph-from-roots (root-objects object-printer inferior-producer
                                 &rest rest-args
-                                &key stream orientation cutoff-depth
+                                &key stream (orientation :horizontal) cutoff-depth
                                      merge-duplicates duplicate-key duplicate-test
                                      generation-separation
                                      within-generation-separation
                                      center-nodes
-                                     (arc-drawer #'clim-internals::standard-arc-drawer)
-                                     arc-drawing-options
-                                     graph-type (move-cursor t)
+                                     arc-drawer arc-drawing-options
+                                     graph-type maximize-generations (move-cursor t)
                                 &allow-other-keys)
-  (declare (ignore orientation generation-separation within-generation-separation center-nodes))
+  (declare (ignore generation-separation within-generation-separation center-nodes
+                   maximize-generations))
   ;; don't destructively modify the &rest arg
-  (let ((graph-options (copy-list rest-args)))
-    ;; Munge some arguments
+  (let ((graph-options (alexandria:remove-from-plist
+                        rest-args :stream :duplicate-key :duplicate-test
+                        :arc-drawer :arc-drawing-options
+                        :graph-type :move-cursor)))
+
+    ;; munge some of the arguments
     (check-type cutoff-depth (or null integer))
     (check-type root-objects sequence)
+    (check-type orientation (member :horizontal :vertical))
     (setf stream (or stream *standard-output*)
-	  graph-type (or graph-type (if merge-duplicates :digraph :tree))
-	  duplicate-key (or duplicate-key #'identity)
-	  duplicate-test (or duplicate-test #'eql) )
+          graph-type (or graph-type (if merge-duplicates :digraph :tree))
+          duplicate-key (or duplicate-key #'identity)
+          duplicate-test (or duplicate-test #'eql) )
 
-    ;; I'm not sure what to do here.  Saying you want a tree, but want
-    ;; duplicates merged seems wrong.  OTOH, if you go out of your way
-    ;; to do it, at your own risk, is it our place to say "no"?
-  ;; [2005/08/11:rpg]
-;;;  (when (and (eq graph-type :tree) merge-duplicates)
-;;;    (cerror "Substitute NIL for merge-duplicates"
-;;;	    "Merge duplicates specified to be true when using :tree layout.")
-;;;    (setf merge-duplicates nil))
-  
-    ;; clean the options
-    (remf graph-options :stream)
-    (remf graph-options :duplicate-key)
-    (remf graph-options :duplicate-test)
-    (remf graph-options :arc-drawer)
-    (remf graph-options :arc-drawing-options)
-    (remf graph-options :graph-type)
-    (remf graph-options :move-cursor)
-  
     (multiple-value-bind (cursor-old-x cursor-old-y)
-	(stream-cursor-position stream)
+        (stream-cursor-position stream)
       (let ((graph-output-record
-	     (labels ((cont (stream graph-output-record)
-			(with-output-recording-options (stream :draw nil :record t)
-			  (generate-graph-nodes graph-output-record stream root-objects
-						object-printer inferior-producer
-						:duplicate-key duplicate-key
-						:duplicate-test duplicate-test)
-			  (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
-			  (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options)) ))
-	       (apply #'invoke-with-new-output-record stream
-		      #'cont
-		      (find-graph-type graph-type)
-		      nil
-		      ;; moved to local variable... [2005/07/25:rpg]
-		      ;; :hash-table (make-hash-table :test duplicate-test)
-		      graph-options 
-		      ))))
-	(setf (output-record-position graph-output-record)
-	  (values cursor-old-x cursor-old-y))
-	(when (and (stream-drawing-p stream)
-		   (output-record-ancestor-p (stream-output-history stream)
-					     graph-output-record))
-	  (with-output-recording-options (stream :draw t :record nil)
-	    (replay graph-output-record stream)))
-	(when move-cursor
-	  (setf (stream-cursor-position stream)
-	    (values (bounding-rectangle-max-x graph-output-record)
-		    (bounding-rectangle-max-y graph-output-record))))
-	graph-output-record))))
+             (labels ((cont (stream graph-output-record)
+                        (with-output-recording-options (stream :draw nil :record t)
+                          (generate-graph-nodes graph-output-record stream root-objects
+                                                object-printer inferior-producer
+                                                :duplicate-key duplicate-key
+                                                :duplicate-test duplicate-test)
+                          (layout-graph-nodes graph-output-record stream arc-drawer arc-drawing-options)
+                          (layout-graph-edges graph-output-record stream arc-drawer arc-drawing-options))))
+               (apply #'invoke-with-new-output-record stream
+                      #'cont
+                      (find-graph-type graph-type)
+                      graph-options))))
+        (setf (output-record-position graph-output-record)
+          (values cursor-old-x cursor-old-y))
+        (when (and (stream-drawing-p stream)
+                   (output-record-ancestor-p (stream-output-history stream)
+                                             graph-output-record))
+          (with-output-recording-options (stream :draw t :record nil)
+            (replay graph-output-record stream)))
+        (when move-cursor
+          (setf (stream-cursor-position stream)
+            (values (bounding-rectangle-max-x graph-output-record)
+                    (bounding-rectangle-max-y graph-output-record))))
+        graph-output-record))))
 
 ;;;; Graph Output Records
 
@@ -212,22 +197,18 @@
       (within-generation-separation
        :initarg :within-generation-separation
        :initform '(1/2 :line))
-      ;; removed HASH-TABLE slot and stuffed it into
-      ;; GENERATE-GRAPH-NODES method definition [2005/07/25:rpg]
+      (maximize-generations
+       :initarg :maximize-generations
+       :initform nil)
       (root-nodes
        :accessor graph-root-nodes)
       ))
 
 (defclass tree-graph-output-record (standard-graph-output-record)
-     ())
-
-;;;(defmethod initialize-instance :after ((obj tree-graph-output-record) &key merge-duplicates)
-;;;  (when merge-duplicates
-;;;    (warn "Cannot use a TREE layout for graphs while merging duplicates.")))
+  ())
 
 (defclass dag-graph-output-record (standard-graph-output-record)
-  (
-   ))
+  ())
 
 (defclass digraph-graph-output-record (standard-graph-output-record)
   ())
@@ -267,7 +248,7 @@
   (with-slots (cutoff-depth merge-duplicates) graph-output-record
     (let* ((hash-table (when (and merge-duplicates (member duplicate-test (list #'eq #'eql #'equal #'equalp)))
 			 (make-hash-table :test duplicate-test)))
-	   node-list 
+	   node-list
 	   (hashed hash-table))
       (labels
 	  ((previous-node (obj)
@@ -325,14 +306,68 @@
                  (funcall continuation node (graph-node-children node) #'walk))))
       (funcall continuation graph (graph-root-nodes graph) #'walk))))
 
-(defmethod layout-graph-nodes ((graph-output-record tree-graph-output-record)
+(defmethod generate-graph-nodes ((graph-output-record tree-graph-output-record)
+                                 stream root-objects
+                                 object-printer inferior-producer
+                                 &key &allow-other-keys)
+;;;  (with-slots (merge-duplicates) graph-output-record
+;;;    (when merge-duplicates
+      ;; I'm not sure what to do here. Saying you want a tree, but want
+      ;; duplicates merged seems wrong. OTOH, if you go out of your way
+      ;; to do it, at your own risk, is it our place to say "no"?
+      ;; [2005/08/11:rpg]
+      ;; Let's not signal an error, but proceed such that that the output
+      ;; will be equivalent to the DAG graph type. --JAC 2017/09/04
+;;;     (cerror "Set to NIL and continue?"
+;;;	        "Merge duplicates specified to be true when using :tree layout")
+;;;     (setf merge-duplicates nil)))
+  (call-next-method))
+
+(defmethod generate-graph-nodes ((graph-output-record dag-graph-output-record)
+                                 stream root-objects
+                                 object-printer inferior-producer
+                                 &key &allow-other-keys)
+  (with-slots (merge-duplicates) graph-output-record
+    ;; This case is more serious than the converse above. If we're not allowed to
+    ;; merge duplicate nodes then we can't output a DAG... get the user to acknowledge
+    ;; this. --JAC 2017/09/04
+    (unless merge-duplicates
+      (cerror "Set to T and continue?"
+              "DAG graph-layout type only supports merge-duplicates to be T")
+      (setf merge-duplicates t)))
+  (call-next-method))
+
+(defmethod generate-graph-nodes ((graph-output-record digraph-graph-output-record)
+                                 stream root-objects
+                                 object-printer inferior-producer
+                                 &key &allow-other-keys)
+  (with-slots (merge-duplicates) graph-output-record
+    (unless merge-duplicates
+      (cerror "Set to T and continue?"
+              "Digraph graph-layout type only supports merge-duplicates to be T")
+      (setf merge-duplicates t)))
+  (call-next-method))
+
+
+;;; The CLIM II specification gives a broad hint that what we are doing here is fine:
+;;; "Typically, different graph types will use different output record classes and layout
+;;; engines to lay out the graph. However, it is permissible for all of the required graph
+;;; types to use exactly the same graph layout engine." We have specialized versions
+;;; of layout-graph-nodes since we have a single engine that works tolerably well for all.
+
+(defmethod layout-graph-nodes ((graph-output-record standard-graph-output-record)
                                stream arc-drawer arc-drawing-options)
-  ;; work in progress! --GB 2002-08-14
+  "Layout for DAGs, digraphs and trees. There are three phases that traverse the
+graph topologically. The first assigns a depth to each node, the second
+computes minor and major dimensions, and the final one lays nodes out by depth.
+Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-depth."
   (declare (ignore arc-drawer arc-drawing-options))
-  (with-slots (orientation center-nodes generation-separation within-generation-separation root-nodes) graph-output-record
-    (check-type orientation (member :horizontal :vertical)) ;xxx move to init.-inst.
-    ;; here major dimension is the dimension in which we grow the
-    ;; tree.
+  (with-slots (orientation center-nodes generation-separation within-generation-separation
+                           root-nodes maximize-generations)
+      graph-output-record
+
+    ;; major dimension is the dimension in which we grow the graph, i.e. horizontal for
+    ;; horizontal orientation
     (let ((within-generation-separation (parse-space stream within-generation-separation
                                                      (case orientation
                                                        (:horizontal :vertical)
@@ -340,73 +375,112 @@
           (generation-separation (parse-space stream generation-separation orientation)))
       ;; generation sizes is an adjustable array that tracks the major
       ;; dimension of each of the generations [2005/07/18:rpg]
-      (let ((generation-sizes (make-array 10 :adjustable t :initial-element 0)))
-        (labels ((node-major-dimension (node)
-                   (if (eq orientation :vertical)
-                       (bounding-rectangle-height node)
-                       (bounding-rectangle-width node)))
-                 (node-minor-dimension (node)
-                   (if (eq orientation :vertical)
-                       (bounding-rectangle-width node)
-                       (bounding-rectangle-height node)))
-		 ;; WALK returns a node minor dimension for the node,
-		 ;; AFAICT, allowing space for that node's children
-		 ;; along the minor dimension. [2005/07/18:rpg]
-                 (walk (node depth)
-                   (unless (graph-node-minor-size node)
-                     (when (>= depth (length generation-sizes))
-                       (setf generation-sizes (adjust-array generation-sizes (ceiling (* depth 1.2)) :initial-element 0)))
-                     (setf (aref generation-sizes depth)
-                           (max (aref generation-sizes depth) (node-major-dimension node)))
-                     (setf (graph-node-minor-size node) 0)
-                     (max (node-minor-dimension node)
-                          (setf (graph-node-minor-size node)
-                                (let ((sum 0) (n 0))
-                                  (map nil (lambda (child)
-                                             (let ((x (walk child (+ depth 1))))
-                                               (when x
-                                                 (incf sum x)
-                                                 (incf n))))
-                                       (graph-node-children node))
-                                  (+ sum
-                                     (* (max 0 (- n 1)) within-generation-separation))))))))
-          (map nil #'(lambda (x) (walk x 0)) root-nodes)
-          (let ((hash (make-hash-table :test #'eq)))
-            (labels ((foo (node majors u0 v0)
-                       (cond ((gethash node hash)
+      (let ((generation-sizes (make-array 10 :adjustable t :initial-element 0))
+	    (depth-hash (make-hash-table :test #'eq))
+	    (parent-hash (make-hash-table :test #'eq)))
+        (flet ((node-major-dimension (node)
+                 (if (eq orientation :vertical)
+                     (bounding-rectangle-height node)
+                     (bounding-rectangle-width node)))
+               (node-minor-dimension (node)
+                 (if (eq orientation :vertical)
+                     (bounding-rectangle-width node)
+                     (bounding-rectangle-height node))))
+          ;;
+          (labels ((assign-depth (node depth trail)
+                     ;; In a DAG or digraph, there may be multiple paths to a node ending up at
+                     ;; different depths, so in the major dimension - depending on
+                     ;; maximize-generations - put the node one generation beyond all of its parents
+                     ;; or one generation beyond the parent nearest the roots. Use a trail to
+                     ;; escape from circularity, while still processing reentrancies --JAC 2017/09/04
+		     (unless (member node trail :test #'eq)
+		       (let ((node-depth (gethash node depth-hash)))
+		         (when (or (null node-depth)
+                                   (if maximize-generations (> depth node-depth) (< depth node-depth)))
+		           (setf (gethash node depth-hash) depth)
+		           (map nil #'(lambda (child)
+		                        (assign-depth child (1+ depth) (cons node trail)))
+		                (graph-node-children node)))))))
+            (map nil #'(lambda (x) (assign-depth x 0 nil))
+                 root-nodes))
+          ;;
+          (labels ((compute-dimensions (node depth &optional parent)
+		     ;; compute the major dimension of all the nodes at this generation depth,
+		     ;; and the minor dimension of this individual node - which takes into account
+		     ;; the space for the node's children
+		     (when (eql (gethash node depth-hash) depth)
+		       (setf (gethash node depth-hash) nil) ; mark as done
+                       (when parent
+		         (setf (gethash node parent-hash) parent))
+		       (when (>= depth (length generation-sizes))
+			 (setf generation-sizes (adjust-array generation-sizes (ceiling (* depth 1.2))
+			                                      :initial-element 0)))
+		       (setf (aref generation-sizes depth)
+			     (max (aref generation-sizes depth) (node-major-dimension node)))
+		       (setf (graph-node-minor-size node) 0)
+		       (max (node-minor-dimension node)
+			    (setf (graph-node-minor-size node)
+				  (let ((sum 0) (n 0))
+				    (map nil #'(lambda (child)
+					         (let ((x (compute-dimensions child (+ depth 1) node)))
+						   (when x
+						     (incf sum x)
+						     (incf n))))
+					 (graph-node-children node))
+				    (+ sum
+				       (* (max 0 (- n 1)) within-generation-separation))))))))
+            (map nil #'(lambda (x) (compute-dimensions x 0))
+                 root-nodes))
+          ;;
+          (let ((visited (make-hash-table :test #'eq)))
+            (labels ((compute-position (node majors u0 v0)
+                       (cond ((gethash node visited)
                               v0)
                              (t
-                              (setf (gethash node hash) t)
+                              (setf (gethash node visited) t)
                               (let ((d (- (node-minor-dimension node)
                                           (graph-node-minor-size node))))
-                                (let ((v (+ v0 (/ (min 0 d) -2))))
+                                ;; center-nodes is meant to be "with respect to the widest node
+                                ;; in the same generation". Interpret "wide" as being the size in
+                                ;; the major dimension --JAC 2017/09/04
+                                (let ((u (if center-nodes
+                                             (+ u0 (/ (- (car majors) (node-major-dimension node)
+                                                         generation-separation)
+                                                      2))
+                                             u0))
+                                      (v (+ v0 (/ (min 0 d) -2))))
                                   (setf (output-record-position node)
                                         (if (eq orientation :vertical)
-                                            (transform-position (medium-transformation stream) v u0)
-                                            (transform-position (medium-transformation stream) u0 v)))
+                                            (transform-position (medium-transformation stream) v u)
+                                            (transform-position (medium-transformation stream) u v)))
                                   (add-output-record node graph-output-record))
                                 ;;
                                 (let ((u (+ u0 (car majors)))
                                       (v (+ v0 (max 0 (/ d 2))))
                                       (firstp t))
-                                  (map nil (lambda (q)
-                                             (unless (gethash q hash)
-                                               (if firstp
-                                                   (setf firstp nil)
-                                                   (incf v within-generation-separation))
-                                               (setf v (foo q (cdr majors)
-                                                            u v))))
-                                           (graph-node-children node)))
+                                  (map nil #'(lambda (q)
+                                               (unless (gethash q visited)
+                                                 (if firstp
+                                                     (setf firstp nil)
+                                                     (incf v within-generation-separation))
+                                                 (setf v (compute-position q (cdr majors) u v))))
+                                       ;; to make the tree style layout work for DAGs and digraphs,
+                                       ;; we must only recurse to those children whose dimensions
+                                       ;; were computed previously with this node as their
+                                       ;; principal parent --JAC 2017/09/04
+                                       (remove-if-not
+                                         #'(lambda (x) (eq (gethash x parent-hash) node))
+                                         (graph-node-children node))))
                                 ;;
                                 (+ v0 (max (node-minor-dimension node)
                                            (graph-node-minor-size node))))))))
               ;;
               (let ((majors (mapcar (lambda (x) (+ x generation-separation))
                                     (coerce generation-sizes 'list))))
-                (let ((u (+ 0 (car majors)))
+                (let ((u (/ generation-separation 2))
                       (v 0))
                   (maplist (lambda (rest)
-                             (setf v (foo (car rest) majors u v))
+                             (setf v (compute-position (car rest) majors u v))
                              (unless (null rest)
                                (incf v within-generation-separation)))
                            (graph-root-nodes graph-output-record)))))))))))
@@ -417,154 +491,8 @@
   ((stream)
    (arc-drawer)
    (arc-drawing-options)
-   (from-node :initarg :from-node)
-   (to-node :initarg :to-node)))
-
-
-(defmethod layout-graph-nodes ((graph-output-record dag-graph-output-record)
-                               stream arc-drawer arc-drawing-options)
-  "This is a first shot at a DAG layout.  First does a TOPO sort that associates 
-each node with a depth, then lays out by depth.  Tries to reuse a maximum of the
-tree graph layout code.
-PRECONDITION:  This code assumes that we have generated only nodes up to the 
-cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
-  (declare (ignore arc-drawer arc-drawing-options))
-  (with-slots (orientation center-nodes generation-separation within-generation-separation root-nodes
-			   merge-duplicates) graph-output-record
-    ;; this code is snarly enough, handling merge-duplicates.  If
-    ;; you're not merging duplicates, you're out of luck, at least for
-    ;; now... [2005/07/18:rpg]
-    (unless merge-duplicates
-      (cerror "Set to T and continue?" "DAG graph-layout type only supports merge-duplicates to be T")
-      (setf merge-duplicates t))
-	      
-    (check-type orientation (member :horizontal :vertical)) ;xxx move to init.-inst.
-
-    ;; here major dimension is the dimension in which we grow the
-    ;; tree.
-    (let ((within-generation-separation (parse-space stream within-generation-separation
-                                                     (case orientation
-                                                       (:horizontal :vertical)
-                                                       (:vertical :horizontal))))
-          (generation-separation (parse-space stream generation-separation orientation)))
-      ;; generation sizes is an adjustable array that tracks the major
-      ;; dimension of each of the generations [2005/07/18:rpg]
-      (let ((generation-sizes (make-array 10 :adjustable t :initial-element 0))
-	    (visited (make-hash-table :test #'eq))
-	    (parent-hash (make-hash-table :test #'eq)))
-        (labels ((node-major-dimension (node)
-                   (if (eq orientation :vertical)
-                       (bounding-rectangle-height node)
-                       (bounding-rectangle-width node)))
-                 (node-minor-dimension (node)
-                   (if (eq orientation :vertical)
-                       (bounding-rectangle-width node)
-                       (bounding-rectangle-height node)))
-		 ;; WALK returns a node minor dimension for the node,
-		 ;; AFAICT, allowing space for that node's children
-		 ;; along the minor dimension. [2005/07/18:rpg]
-                 (walk (node depth &optional parent)
-		   (unless (gethash node visited)
-		     (setf (gethash node visited) depth)
-		     (when parent
-		       (setf (gethash node parent-hash) parent))
-		     (unless (graph-node-minor-size node)
-		       (when (>= depth (length generation-sizes))
-			 (setf generation-sizes (adjust-array generation-sizes (ceiling (* depth 1.2))
-							      :initial-element 0)))
-		       (setf (aref generation-sizes depth)
-			     (max (aref generation-sizes depth) (node-major-dimension node)))
-		       (setf (graph-node-minor-size node) 0)
-		       (max (node-minor-dimension node)
-			    (setf (graph-node-minor-size node)
-				  (let ((sum 0) (n 0))
-				    (map nil (lambda (child)
-					       (let ((x (walk child (+ depth 1) node)))
-						 (when x
-						   (incf sum x)
-						   (incf n))))
-					 (graph-node-children node))
-				    (+ sum
-				       (* (max 0 (- n 1)) within-generation-separation)))))))))
-          (map nil #'(lambda (x) (walk x 0)) root-nodes)
-          (let ((hash (make-hash-table :test #'eq)))
-            (labels ((foo (node majors u0 v0)
-                       (cond ((gethash node hash)
-                              v0)
-                             (t
-                              (setf (gethash node hash) t)
-                              (let ((d (- (node-minor-dimension node)
-                                          (graph-node-minor-size node))))
-                                (let ((v (+ v0 (/ (min 0 d) -2))))
-                                  (setf (output-record-position node)
-                                        (if (eq orientation :vertical)
-                                            (transform-position (medium-transformation stream) v u0)
-                                            (transform-position (medium-transformation stream) u0 v)))
-                                  (add-output-record node graph-output-record))
-                                ;;
-                                (let ((u (+ u0 (car majors)))
-                                      (v (+ v0 (max 0 (/ d 2))))
-                                      (firstp t))
-                                  (map nil (lambda (q)
-                                             (unless (gethash q hash)
-                                               (if firstp
-                                                   (setf firstp nil)
-                                                   (incf v within-generation-separation))
-                                               (setf v (foo q (cdr majors)
-                                                            u v))))
-				       ;; when computing the sizes, to
-				       ;; make the tree-style layout
-				       ;; work, we have to have each
-				       ;; node have a unique
-				       ;; parent. [2005/07/18:rpg]
-				       (remove-if-not #'(lambda (x) (eq (gethash x parent-hash) node))
-						      (graph-node-children node))))
-                                ;;
-                                (+ v0 (max (node-minor-dimension node)
-                                           (graph-node-minor-size node))))))))
-              ;;
-              (let ((majors (mapcar (lambda (x) (+ x generation-separation))
-                                    (coerce generation-sizes 'list))))
-                (let ((u (+ 0 (car majors)))
-                      (v 0))
-                  (maplist (lambda (rest)
-                             (setf v (foo (car rest) majors u v))
-                             (unless (null rest)
-                               (incf v within-generation-separation)))
-                           (graph-root-nodes graph-output-record)))))))))))
-
-
-
-#+ignore
-(defmethod layout-graph-edges ((graph-output-record standard-graph-output-record)
-                               stream arc-drawer arc-drawing-options)
-  (with-slots (root-nodes orientation) graph-output-record
-    (let ((hash (make-hash-table)))
-      (labels ((walk (node)
-		 (unless (gethash node hash)
-                   (setf (gethash node hash) t)
-                   (dolist (k (graph-node-children node))
-                     (with-bounding-rectangle* (x1 y1 x2 y2) node
-                       (with-bounding-rectangle* (u1 v1 u2 v2) k
-                         (ecase orientation
-                           ((:horizontal)
-                            (multiple-value-bind (from to) (if (< x1 u1)
-                                                               (values x2 u1)
-                                                               (values x1 u2))
-                              (apply arc-drawer stream node k
-                                     from (/ (+ y1 y2) 2)
-                                     to   (/ (+ v1 v2) 2)
-                                     arc-drawing-options)))
-                           ((:vertical)
-                            (multiple-value-bind (from to) (if (< y1 v1)
-                                                               (values y2 v1)
-                                                               (values y1 v2))
-                              (apply arc-drawer stream node k
-                                     (/ (+ x1 x2) 2) from
-                                     (/ (+ u1 u2) 2) to
-                                     arc-drawing-options)) ))))
-                     (walk k)))))
-        (map nil #'walk root-nodes)))))
+   (from-node :initarg :from-node :reader from-node)
+   (to-node :initarg :to-node :reader to-node)))
 
 (defun layout-edges (graph node stream arc-drawer arc-drawing-options)
   (dolist (k (graph-node-children node))
@@ -584,12 +512,12 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
 	  record))))
 
 (defun layout-edge-1 (graph major-node minor-node)
-  (let ((edge-record (ensure-edge-record graph major-node minor-node)))    
+  (let ((edge-record (ensure-edge-record graph major-node minor-node)))
     (with-slots (stream arc-drawer arc-drawing-options) edge-record
       (with-bounding-rectangle* (x1 y1 x2 y2) major-node
         (with-bounding-rectangle* (u1 v1 u2 v2) minor-node
           (clear-output-record edge-record)  ;;; FIXME: repaint?
-           (letf (((stream-current-output-record stream) edge-record))
+          (letf (((stream-current-output-record stream) edge-record))
             (ecase (slot-value graph 'orientation)
 	      ((:horizontal)
 	       (multiple-value-bind (from to) (if (< x1 u1)
@@ -602,7 +530,7 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
 	      ((:vertical)
 	       (multiple-value-bind (from to) (if (< y1 v1)
 						  (values y2 v1)
-				     	          (values y1 v2))
+				                  (values y1 v2))
 		 (apply arc-drawer stream major-node minor-node
 			(/ (+ x1 x2) 2) from
 			(/ (+ u1 u2) 2) to
@@ -617,6 +545,8 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
 
 (defmethod layout-graph-edges ((graph standard-graph-output-record)
                                stream arc-drawer arc-drawing-options)
+  ;; If arc-drawer is unsupplied, the default behavior is to draw a thin line...
+  (setf arc-drawer (or arc-drawer #'standard-arc-drawer))
   (with-slots (orientation) graph
    ;; We tranformed the position of the nodes when we inserted them into
    ;; output history, so the bounding rectangles queried below will be
@@ -629,19 +559,11 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
 			      (layout-edges graph node stream arc-drawer arc-drawing-options))
                             (map nil continuation children))))))
 
-(defmethod layout-graph-edges :around ((graph-output-record tree-graph-output-record)
-                                       stream arc-drawer arc-drawing-options)
-  (setf arc-drawer (or arc-drawer #'standard-arc-drawer))
-  (call-next-method graph-output-record stream arc-drawer arc-drawing-options))
-
 (defmethod layout-graph-edges :around ((graph-output-record digraph-graph-output-record)
                                        stream arc-drawer arc-drawing-options)
+  ;; The default behaviour of a mere line is not appropriate for digraphs, so default to a
+  ;; more helpful alternative
   (setf arc-drawer (or arc-drawer #'arrow-arc-drawer))
-  (call-next-method graph-output-record stream arc-drawer arc-drawing-options))
-
-(defmethod layout-graph-edges :around ((graph-output-record dag-graph-output-record)
-                                       stream arc-drawer arc-drawing-options)
-  (setf arc-drawer (or arc-drawer #'standard-arc-drawer))
   (call-next-method graph-output-record stream arc-drawer arc-drawing-options))
 
 (defun standard-arc-drawer (stream from-node to-node x1 y1 x2 y2
@@ -651,10 +573,16 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
   (apply #'draw-line* stream x1 y1 x2 y2 drawing-options))
 
 (defun arrow-arc-drawer (stream from-node to-node x1 y1 x2 y2
-                            &rest drawing-options
-                            &key &allow-other-keys)
-  (declare (ignore from-node to-node))
-  (apply #'draw-arrow* stream x1 y1 x2 y2 drawing-options))
+                         &rest drawing-options
+                         &key &allow-other-keys)
+  (if (eq from-node to-node)
+      (let ((rad 8))
+        (apply #'draw-circle*
+               stream (- x1 rad -2) (- y1 rad) rad
+               :filled nil :end-angle (* pi 1.5) drawing-options)
+        (apply #'draw-arrow*
+               stream (- x1 rad -2) y1 x1 y1 drawing-options))
+      (apply #'draw-arrow* stream x1 y1 x2 y2 drawing-options)))
 
 #||
 
@@ -689,7 +617,9 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
 
 #||
 
-;;; Testing --GB 2002-08-14
+;;; Testing --GB 2002-08-14 --JAC 2017/09/04
+
+(in-package :clim-user)
 
 (define-application-frame graph-test ()
   ()
@@ -699,7 +629,7 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
    (default
        interactor)))
 
-(define-graph-test-command foo ()
+(define-graph-test-command (com-foo :name t) ()
   (with-text-style (*query-io* (make-text-style :sans-serif nil 12))
     (let ((*print-case* :downcase))
       (format-graph-from-roots
@@ -734,18 +664,15 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
        :orientation :horizontal))))
 
 (defun external-symbol-p (sym)
-  ;; *cough* *cough*
-  (< (count #\: (let ((*package* (find-package :keyword)))
-                  (prin1-to-string sym)))
-     2))
+  (eq (nth-value 1 (find-symbol (symbol-name sym) (symbol-package sym))) :external))
 
-(define-graph-test-command bar ()
+(define-graph-test-command (com-bar :name t) ()
   (with-text-style (*query-io* (make-text-style :sans-serif nil 10))
     (let ((*print-case* :downcase))
       (format-graph-from-roots
-       (list (clim-mop:find-class 'climi::basic-output-record))
+       (list (find-class 'climi::basic-output-record))
        #'(lambda (x s)
-           (progn ;;surrounding-output-with-border (s :shape :oval)
+           (surrounding-output-with-border (s :shape :oval)
              (with-text-style (s (make-text-style nil
                                                   (if (external-symbol-p (class-name x))
                                                       :bold
@@ -753,13 +680,38 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
                                                   nil))
                (prin1 (class-name x) s))))
        #'(lambda (x)
-           (clim-mop:class-direct-subclasses x))
+           (sb-mop:class-direct-subclasses x))
        :generation-separation '(4 :line)
        :within-generation-separation '(2 :character)
        :stream *query-io*
+       :orientation :horizontal))))
+
+(define-graph-test-command (com-baz :name t) ()
+  (with-text-style (*query-io* (make-text-style :sans-serif nil 10))
+    (let ((*print-case* :downcase))
+      (format-graph-from-roots
+       (list (find-class 'standard-graph-output-record)
+             ;;(find-class 'climi::basic-output-record)
+             ;;(find-class 'climi::graph-output-record)
+
+             )
+       #'(lambda (x s)
+           (with-text-style (s (make-text-style nil
+                                                (if (external-symbol-p (class-name x))
+                                                    :bold
+                                                    nil)
+                                                nil))
+             (prin1 (class-name x) s)))
+       #'(lambda (x)
+           (reverse (sb-mop:class-direct-superclasses x)))
+       ;; :duplicate-key #'(lambda (x) 't)
+       :merge-duplicates t
+       :graph-type :tree
+       :arc-drawer #'climi::arrow-arc-drawer
+       :stream *query-io*
        :orientation :vertical))))
 
-(define-graph-test-command bar ()
+(define-graph-test-command (com-qux :name t) ()
   (with-text-style (*query-io* (make-text-style :sans-serif nil 10))
     (format-graph-from-roots
      (list '(:foo
@@ -779,32 +731,7 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
      :stream *query-io*
      :orientation :vertical)))
 
-(define-graph-test-command baz ()
-  (with-text-style (*query-io* (make-text-style :sans-serif nil 10))
-    (let ((*print-case* :downcase))
-      (format-graph-from-roots
-       (list (clim-mop:find-class 'standard-graph-output-record)
-             ;;(clim-mop:find-class 'climi::basic-output-record)
-             ;;(clim-mop:find-class 'climi::graph-output-record)
-             
-             )
-       #'(lambda (x s)
-           (with-text-style (s (make-text-style nil
-                                                (if (external-symbol-p (class-name x))
-                                                    :bold
-                                                    nil)
-                                                nil))
-             (prin1 (class-name x) s)))
-       #'(lambda (x)
-           (reverse(clim-mop:class-direct-superclasses x)))
-       ;; :duplicate-key #'(lambda (x) 't)
-       :merge-duplicates t
-       :graph-type :tree
-       :arc-drawer #'arrow-arc-drawer
-       :stream *query-io*
-       :orientation :vertical))))
-
-(define-graph-test-command test ()
+(define-graph-test-command (com-test :name t) ()
   (let ((stream *query-io*)
         (orientation :vertical))
     (fresh-line stream)
@@ -825,21 +752,18 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
            #'(lambda (node s)
                (write-string (node-name node) s))
            #'node-children
-           :arc-drawer #'arrow-arc-drawer
+           :arc-drawer #'climi::arrow-arc-drawer
            :arc-drawing-options (list :ink +red+ :line-thickness 1)
            :orientation orientation
            :stream stream))))))
 
-(defun make-circ-list (list)
-  (nconc list list))
-
-(define-graph-test-command test2 ()
+(define-graph-test-command (com-test2 :name t) ()
   (let ((stream *query-io*)
         (orientation :vertical))
     (fresh-line stream)
     (format-graph-from-roots
      (list '(defun dcons (x) (cons x x))
-           (make-circ-list (list 1 '(2 . 4) 3)))
+           '#1=(1 (2 . 4) 3 . #1#))
      #'(lambda (node s)
          (if (consp node)
              (progn
@@ -847,10 +771,46 @@ cutoff-depth.  GENERATE-GRAPH-NODES seems to obey this precondition."
              (princ node s)))
      #'(lambda (x) (if (consp x) (list (car x) (cdr x))))
      :cutoff-depth nil
-     :graph-type :tree
+     :graph-type :digraph
      :merge-duplicates t
-     :arc-drawer #'arrow-arc-drawer
      :arc-drawing-options (list :ink +red+ :line-thickness 1)
      :orientation orientation
+     :within-generation-separation 30
      :stream stream)))
+
+(define-graph-test-command (com-test3 :name t) ()
+  (let ((stream *query-io*))
+    (fresh-line stream)
+    (format-graph-from-root
+      (find-class 'clim:gadget)
+      #'(lambda (object s)
+          (write-string (string (class-name object)) s))
+      #'sb-mop:class-direct-subclasses
+      :graph-type :dag :merge-duplicates t
+      :maximize-generations t
+      :center-nodes t
+      :stream stream)))
+
+(define-graph-test-command (com-test4 :name t) ()
+  (let ((stream *query-io*))
+    (fresh-line stream)
+    (format-graph-from-roots
+      '((4 (1 (1)
+           (3 (2 (1))
+              (5 (6 (7 (10 (9 (5) (11 (12 (13 (11) (15 (14 (13))))) (14)))
+                           (11 (14)) (14)))
+                    (8 (9) (10))
+                    (10))
+                 (8))))
+           (2) (12) (13)))
+      #'(lambda (x s) (princ (car x) s))
+      #'cdr
+      :graph-type :digraph :merge-duplicates t
+      :duplicate-key #'car
+      :generation-separation 40
+      :within-generation-separation 30
+      :stream stream)))
+
+(clim-sys:make-process
+  #'(lambda () (run-frame-top-level (make-application-frame 'graph-test))))
 ||#

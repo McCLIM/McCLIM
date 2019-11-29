@@ -49,10 +49,10 @@ SETF new value form."
 	 `(funcall #',',gf ,,@args ,,place))
        (defgeneric ,gf ,lambda-list ,@options))))
 
-(defmacro defmethod* (name &body body)
+(defmacro defmethod* (name lambda-list &body body)
   "Defines a SETF* method.  NAME is a SETF function name.  Otherwise,
 like DEFMETHOD except there must exist a corresponding DEFGENERIC* form."
   (unless (setf-name-p name)
     (error "~S is not a valid name for a SETF* generic function." name))
-  `(defmethod ,(make-setf*-gfn-name name) ,@body))
+  `(defmethod ,(make-setf*-gfn-name name) ,lambda-list ,@body))
 

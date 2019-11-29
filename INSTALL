@@ -96,9 +96,6 @@ OpenMCL
 McCLIM has been tested with openmcl-1.0. It is recommended that you
 download CLX from ftp://clozure.com/pub/CLX.
 
-An experimental Cocoa backend for McCLIM, called Beagle, is included
-in Backends/beagle.
-
 
 CLISP
 =====

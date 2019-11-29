@@ -1,10 +1,6 @@
 (defpackage #:clim-mop
   (:use #:clos))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (loop for sym being the symbols of :clim-mop
-     do (export sym :clim-mop)))
-
 ;; CLIM expects INPUT-STREAM-P to be a generic function.
 (ext:without-package-lock ("GRAY" "COMMON-LISP")
  (unless (typep #'input-stream-p 'generic-function)

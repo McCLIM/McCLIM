@@ -382,15 +382,15 @@ otherwise return false."
 
 (defun present (object &optional (type (presentation-type-of object))
                 &key
-                (stream *standard-output*)
-                (view (stream-default-view stream))
-                modifier
-                acceptably
-                (for-context-type type)
-                single-box
-                (allow-sensitive-inferiors t)
-                (sensitive t)
-                (record-type 'standard-presentation))
+                  (stream *standard-output*)
+                  (view (stream-default-view stream))
+                  modifier
+                  acceptably
+                  (for-context-type type)
+                  single-box
+                  (allow-sensitive-inferiors t)
+                  (sensitive t)
+                  (record-type 'standard-presentation))
   (let* ((real-type (expand-presentation-type-abbreviation type))
          (context-type (if (eq for-context-type type)
                            real-type
@@ -453,10 +453,10 @@ otherwise return false."
 
 (defun present-to-string (object &optional (type (presentation-type-of object))
                           &key (view +textual-view+)
-                          acceptably
-                          (for-context-type type)
-                          (string nil stringp)
-                          (index 0 indexp))
+                            acceptably
+                            (for-context-type type)
+                            (string nil stringp)
+                            (index 0 indexp))
   (let* ((real-type (expand-presentation-type-abbreviation type))
          (context-type (if (eq for-context-type type)
                            real-type
@@ -470,10 +470,10 @@ otherwise return false."
                              :for-context-type context-type)))
       (declare (dynamic-extent #'do-present))
       (let ((result (if stringp
-                         (with-output-to-string (stream string)
-                           (do-present stream))
-                         (with-output-to-string (stream)
-                           (do-present stream)))))
+                        (with-output-to-string (stream string)
+                          (do-present stream))
+                        (with-output-to-string (stream)
+                          (do-present stream)))))
         (if stringp
             (values string (fill-pointer string))
             result)))))
@@ -1168,15 +1168,17 @@ protocol retrieving gestures from a provided string."))
 
 (defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil))
   (let* ((token (read-token stream)))
-    (let ((result (handler-case (read-from-string token)
-                    (error (c)
-                      (declare (ignore c))
-                      (simple-parse-error "Error parsing ~S for presentation type ~S"
-                                          token
-                                          ptype)))))
-      (if (presentation-typep result ptype)
-          (values result ptype)
-          (input-not-of-required-type result ptype)))))
+    (if (string= "" token)
+	(values nil ptype)
+	(let ((result (handler-case (read-from-string token)
+			   (error (c)
+			     (declare (ignore c))
+			     (simple-parse-error "Error parsing ~S for presentation type ~S"
+						 token
+						 ptype)))))
+	     (if (presentation-typep result ptype)
+		 (values result ptype)
+		 (input-not-of-required-type result ptype))))))
 
 (defun accept-using-completion (type stream func
                                 &rest complete-with-input-key-args)
@@ -1284,8 +1286,12 @@ protocol retrieving gestures from a provided string."))
       (princ object stream)))
 
 (define-presentation-method accept ((type symbol) stream (view textual-view)
-                                    &key)
-  (accept-using-read stream type))
+                                                  &key (default-type type)
+                                                  default)
+  (let ((read-result (accept-using-read stream type)))
+    (if (and (null read-result) default)
+        (values default default-type)
+        (values read-result type))))
 
 (define-presentation-type keyword () :inherit-from 'symbol)
 
@@ -1380,10 +1386,14 @@ protocol retrieving gestures from a provided string."))
         (*print-radix* radix))
     (princ object stream)))
 
-(define-presentation-method accept ((type real) stream (view textual-view)
-                                    &key)
-  (let ((*read-base* base))
-    (accept-using-read stream type)))
+(define-presentation-method accept ((type real) stream (view textual-view) &key
+                                                (default-type type)
+                                                default)
+  (let ((*read-base* base)
+         (read-result (accept-using-read stream type)))
+    (if (and (null read-result) default)
+        (values default default-type)
+        (values read-result type))))
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of
@@ -1504,6 +1514,7 @@ protocol retrieving gestures from a provided string."))
   (frob real)
   (frob rational)
   (frob ratio)
+  (frob integer)
   (frob float))
 
 (define-presentation-type character ()
@@ -1584,8 +1595,8 @@ protocol retrieving gestures from a provided string."))
   (let ((pathname (if (equal object #.(make-pathname))
                       object
                       (merge-pathnames object (make-pathname :name :wild)))))
-    (princ object stream))
-  )
+    (declare (ignore pathname))
+    (princ object stream)))
 
 (define-presentation-method present ((object string) (type pathname)
                                      stream (view textual-view)
@@ -1596,77 +1607,82 @@ protocol retrieving gestures from a provided string."))
 (defmethod presentation-type-of ((object pathname))
   'pathname)
 
-(defun filename-completer (so-far mode)
-  (let* ((directory-prefix
-          (if (and (plusp (length so-far)) (eql (aref so-far 0) #\/))
-              ""
-              (namestring #+sbcl *default-pathname-defaults*
-                          #+cmu (ext:default-directory)
-                          #-(or sbcl cmu) *default-pathname-defaults*)))
-         (full-so-far (concatenate 'string directory-prefix so-far))
-         (pathnames
-          (loop with length = (length full-so-far)
-                and wildcard = (format nil "~A*.*"
-                                       (loop for start = 0 ; Replace * -> \*
-                                             for occurence = (position #\* so-far :start start)
-                                             until (= start (length so-far))
-                                             until (null occurence)
-                                             do (replace so-far "\\*" :start1 occurence)
-                                                (setf start (+ occurence 2))
-                                             finally (return so-far)))
-                for path in
-                #+(or sbcl cmu lispworks) (directory wildcard)
-                #+openmcl (directory wildcard :directories t)
-                #+allegro (directory wildcard :directories-are-files nil)
-                #+cormanlisp (nconc (directory wildcard)
-                                    (cl::directory-subdirs dirname))
-                #-(or sbcl cmu lispworks openmcl allegro cormanlisp)
-                (directory wildcard)
-                when (let ((mismatch (mismatch (namestring path) full-so-far)))
-                       (or (null mismatch) (= mismatch length)))
-                  collect path))
-         (strings (mapcar #'namestring pathnames))
-         (first-string (car strings))
-         (length-common-prefix nil)
-         (completed-string nil)
-         (full-completed-string nil)
-         (input-is-directory-p (when (plusp (length so-far))
-                                 (char= (aref so-far (1- (length so-far))) #\/))))
-    (unless (null pathnames)
-      (setf length-common-prefix
-            (loop with length = (length first-string)
-                  for string in (cdr strings)
-                  do (setf length (min length (or (mismatch string first-string) length)))
-                  finally (return length))))
-    (unless (null pathnames)
-      (setf completed-string
-            (subseq first-string (length directory-prefix)
-                    (if (null (cdr pathnames)) nil length-common-prefix)))
-      (setf full-completed-string
-            (concatenate 'string directory-prefix completed-string)))
-    (case mode
-      ((:complete-limited :complete-maximal)
-       (cond ((null pathnames)
-              (values so-far nil nil 0 nil))
-             ((null (cdr pathnames))
-              (values completed-string (plusp (length so-far)) (car pathnames) 1 nil))
-             (input-is-directory-p
-              (values completed-string t (parse-namestring so-far) (length pathnames) nil))
-             (t
-              (values completed-string nil nil (length pathnames) nil))))
-      (:complete
-       ;; This is reached when input is activated, if we did
-       ;; completion, that would mean that an input of "foo" would
-       ;; be expanded to "foobar" if "foobar" exists, even if the
-       ;; user actually *wants* the "foo" pathname (to create the
-       ;; file, for example).
-       (values so-far t so-far 1 nil))
-      (:possibilities
-       (values nil nil nil (length pathnames)
-               (loop with length = (length directory-prefix)
-                     for name in pathnames
-                     collect (list (subseq (namestring name) length nil)
-                                   name)))))))
+(defun filename-completer (string action)
+  (flet
+      ((deal-with-home (pathname his-directory)
+	 ;; SBCL (and maybe others) treat "~/xxx" specially, returning a pathname
+	 ;; whose directory is (:ABSOLUTE :HOME xxx)
+	 ;; But if you call Directory on that pathname the returned list
+	 ;; are all complete pathnames without the :Home part!.
+	 ;; So this replaces the :HOME with what it actually means
+	 (let* ((home-env-variable (get-environment-variable "HOME"))
+		(home (loop for pos = 1 then (1+ next-pos)
+			 for next-pos = (position #\/ home-env-variable :start pos)
+			 collect (subseq home-env-variable pos next-pos)
+			 until (null next-pos)))
+		(new-directory (cons
+				(first his-directory)
+				(append home (rest (rest his-directory))))))
+	     (make-pathname :host (pathname-host pathname)
+			    :device (pathname-device pathname)
+			    :name (pathname-name pathname)
+			    :version (pathname-version pathname)
+			    :type (pathname-type pathname)
+			    :directory new-directory))))
+    ;; Slow but accurate
+    (let* ((raw-pathname (pathname string))
+	   (raw-directory (pathname-directory raw-pathname))
+	   (original-pathname (if (and (listp raw-directory)
+				       (eql (first raw-directory) :absolute)
+				       (eql (second raw-directory) :Home))
+				  (deal-with-home raw-pathname raw-directory)
+				  raw-pathname))
+	   (original-string (namestring original-pathname))
+	   ;; Complete logical pathnames as well as regular pathnames
+	   ;; strategy is to keep track of both original string provided and translated string
+	   ;; but to return pathname built from original components except for the name.
+	   (logical-pathname-p (typep original-pathname 'logical-pathname))
+	   (actual-pathname (if logical-pathname-p
+				(translate-logical-pathname original-pathname)
+				original-pathname))
+	   (merged-pathname (merge-pathnames actual-pathname))
+	   completions)
+      (let ((search-pathname (make-pathname :host (pathname-host merged-pathname)
+					    :device (pathname-device merged-pathname)
+					    :directory (pathname-directory merged-pathname)
+					    :version :unspecific
+					    :type :wild
+					    :name :wild)))
+	(setq completions (directory search-pathname #+sbcl :resolve-symlinks #+sbcl nil)))
+      ;; Now prune out all completions that don't start with the string
+      (let ((type (pathname-type actual-pathname)))
+	(when (null type)
+	  ;; If the user didn't supply a file type, don't burden him with all
+	  ;; sorts of version numbers right now.
+	  (let ((new-completions nil))
+	    (dolist (pathname completions)
+	      (cond
+		;; meaning this is actually a directory
+		((and (null (pathname-name pathname))
+		      (null (pathname-type pathname)))
+		 (pushnew (make-pathname :host (pathname-host original-pathname)
+					 :device (pathname-device original-pathname)
+					 :directory (butlast (pathname-directory pathname))
+					 :name (first (last (pathname-directory pathname)))
+					 :type nil)
+			  new-completions))
+		(t
+		 (pushnew (make-pathname :host (pathname-host original-pathname)
+					 :device (pathname-device original-pathname)
+					 :directory (pathname-directory original-pathname)
+					 :name (pathname-name pathname)
+					 :type (pathname-type pathname))
+			  new-completions))))
+	    (setq completions (nreverse new-completions))))
+	(complete-from-possibilities original-string completions '(#\space)
+						    :action action
+						    :name-key #'namestring
+						    :value-key #'identity)))))
 
 (define-presentation-method accept ((type pathname) stream (view textual-view)
                                     &key (default *default-pathname-defaults* defaultp)
@@ -1738,10 +1754,17 @@ protocol retrieving gestures from a provided string."))
   (princ-to-string item))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; This function is copied from CLIM Franz code
+  (defun highlight-completion-choice (continuation object stream)
+    (with-text-face (stream :bold)
+      (funcall continuation object stream)))
+
   (defconstant +completion-options+
     '((name-key 'default-completion-name-key)
       documentation-key
-      (partial-completers '(#\Space)))))
+      (partial-completers '(#\Space))
+      (printer #'write-token)
+      (highlighter #'highlight-completion-choice))))
 
 (define-presentation-type completion (sequence
                                       &key (test 'eql) (value-key 'identity))
@@ -1815,7 +1838,9 @@ protocol retrieving gestures from a provided string."))
   (make-presentation-type-specifier `(completion ,elements)
                                     :name-key name-key
                                     :documentation-key documentation-key
-                                    :partial-completers partial-completers)
+                                    :partial-completers partial-completers
+                                    :printer printer
+                                    :highlighter highlighter)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation member-sequence (sequence
@@ -1824,7 +1849,9 @@ protocol retrieving gestures from a provided string."))
    `(completion ,sequence ,@(and testp `(:test ,test)))
    :name-key name-key
    :documentation-key documentation-key
-   :partial-completers partial-completers)
+   :partial-completers partial-completers
+   :printer printer
+   :highlighter highlighter)
   :options #.+completion-options+)
 
 (defun member-alist-value-key (element)
@@ -1847,10 +1874,14 @@ protocol retrieving gestures from a provided string."))
                 :value-key member-alist-value-key)
    :name-key name-key
    :documentation-key documentation-key
-   :partial-completers partial-completers)
+   :partial-completers partial-completers
+   :printer printer
+   :highlighter highlighter)
   :options ((name-key 'default-completion-name-key)
             (documentation-key 'member-alist-doc-key)
-            (partial-completers '(#\Space))))
+            (partial-completers '(#\Space))
+            (printer #'write-token)
+            (highlighter #'highlight-completion-choice)))
 
 (define-presentation-type subset-completion (sequence
                                              &key (test 'eql)
@@ -1859,7 +1890,9 @@ protocol retrieving gestures from a provided string."))
             documentation-key
             (partial-completers '(#\Space))
             (separator #\,)
-            (echo-space t))
+            (echo-space t)
+            (printer #'write-token)
+            (highlighter #'highlight-completion-choice))
   :inherit-from t)
 
 (define-presentation-method presentation-typep (object
@@ -1922,7 +1955,9 @@ protocol retrieving gestures from a provided string."))
   (make-presentation-type-specifier `(subset-completion ,elements)
                                     :name-key name-key
                                     :documentation-key documentation-key
-                                    :partial-completers partial-completers)
+                                    :partial-completers partial-completers
+                                    :printer printer
+                                    :highlighter highlighter)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation subset-sequence (sequence
@@ -1931,20 +1966,26 @@ protocol retrieving gestures from a provided string."))
    `(subset-completion ,sequence ,@(and testp `(:test ,test)))
    :name-key name-key
    :documentation-key documentation-key
-   :partial-completers partial-completers)
+   :partial-completers partial-completers
+   :printer printer
+   :highlighter highlighter)
   :options #.+completion-options+)
 
 (define-presentation-type-abbreviation subset-alist (alist
                                                      &key (test 'eql testp))
   (make-presentation-type-specifier
-   `(subset-completion ,@(and testp `(:test ,test))
+   `(subset-completion ,alist ,@(and testp `(:test ,test))
                        :value-key member-alist-value-key)
    :name-key name-key
    :documentation-key documentation-key
-   :partial-completers partial-completers)
+   :partial-completers partial-completers
+   :printer printer
+   :highlighter highlighter)
   :options ((name-key 'default-completion-name-key)
             (documentation-key 'member-alist-doc-key)
-            (partial-completers '(#\Space))))
+            (partial-completers '(#\Space))
+            (printer #'write-token)
+            (highlighter #'highlight-completion-choice)))
 
 (define-presentation-type sequence (type)
   :options ((separator #\,) (echo-space t))
@@ -2175,7 +2216,7 @@ protocol retrieving gestures from a provided string."))
       (object type-var)
       (let ((str (read-token stream)))
 	(loop for or-type in types
-	   do 
+	   do
 	     (handler-case
 		 (progn
 		   (return (accept-from-string or-type
@@ -2222,6 +2263,7 @@ protocol retrieving gestures from a provided string."))
   (let ((subtype (first types)))
     (multiple-value-bind (obj ptype)
         (apply-presentation-generic-function accept subtype stream view args)
+      (declare (ignore ptype))
       (unless (presentation-typep obj type)
         (simple-parse-error "Input object ~S is not of type ~S" obj type))
       obj)))
@@ -2253,99 +2295,3 @@ protocol retrieving gestures from a provided string."))
    stream view default default-supplied-p present-p query-identifier))
 
 ;;; All the expression and form reading stuff is in builtin-commands.lisp
-
-;;; drag-n-drop fun
-
-(defclass drag-n-drop-translator (presentation-translator)
-  ((destination-ptype :reader destination-ptype :initarg :destination-ptype)
-   (feedback :reader feedback :initarg :feedback)
-   (highlighting :reader highlighting :initarg :highlighting)
-   (destination-translator :reader destination-translator
-                           :initarg :destination-translator)))
-
-
-(defvar *dragged-presentation* nil
-  "Bound to the presentation dragged in a drag-and-drop context")
-(defvar *dragged-object* nil
-  "Bound to the object dragged in a drag-and-drop context")
-
-()
-;;; According to the Franz User's guide, the destination object is
-;;; available in the tester, documentation, and translator function
-;;; as destination-object. Therefore OBJECT is the dragged object. In
-;;; our scheme the tester function, translator function etc. is
-;;; really called on the destination object. So, we do a little
-;;; shuffling of arguments here. We don't do that for the destination
-;;; translator because we can call that ourselves in frame-drag-and-drop.
-;;;
-;;; Also, in Classic CLIM the destination presentation is passed as a
-;;; destination-presentation keyword argument; hence the presentation argument
-;;; is the dragged presentation.
-
-(defmethod initialize-instance :after ((obj drag-n-drop-translator)
-                                       &key documentation
-                                       pointer-documentation
-                                       destination-translator)
-  (declare (ignore destination-translator))
-  ;; This is starting to smell...
-  (flet ((make-adapter (func)
-           (lambda (object &rest args &key presentation &allow-other-keys)
-             (if *dragged-presentation*
-                 (apply func
-                        *dragged-object*
-                        :presentation *dragged-presentation*
-                        :destination-object object
-                        :destination-presentation presentation
-                        args)
-                 (apply func object args)))))
-    (setf (slot-value obj 'documentation) (make-adapter documentation))
-    (when pointer-documentation
-      (setf (slot-value obj 'pointer-documentation)
-            (make-adapter pointer-documentation)))))
-
-(defmacro define-drag-and-drop-translator
-    (name (from-type to-type destination-type command-table
-                     &rest args &key
-                     (gesture :select)
-                     (tester 'default-translator-tester)
-                     documentation
-                     (pointer-documentation nil pointer-doc-p)
-                     (menu t)
-                     (priority 0)
-                     (feedback 'frame-drag-and-drop-feedback)
-                     (highlighting 'frame-drag-and-drop-highlighting))
-                                  arglist
-     &body body)
-  (declare (ignore tester gesture documentation pointer-documentation
-                   menu priority))
-  (let* ((real-dest-type (expand-presentation-type-abbreviation
-                          destination-type))
-         (name-string (command-name-from-symbol name))
-         (drag-string (format nil "Drag to ~A" name-string))
-         (pointer-doc (if pointer-doc-p
-                          nil
-                          `(:pointer-documentation
-                            ((object destination-object stream)
-                             (declare (ignore object))
-                             (write-string (if destination-object
-                                               ,name-string
-                                               ,drag-string)
-                                           stream))))))
-    (with-keywords-removed (args (:feedback :highlighting))
-      (with-gensyms (object)
-        `(progn
-           (define-presentation-translator ,name
-               (,from-type ,to-type ,command-table
-                           :tester-definitive t
-                           ,@args
-                           ,@pointer-doc
-                           :feedback #',feedback
-                           :highlighting #',highlighting
-                           :destination-ptype ',real-dest-type
-                           :destination-translator #',(make-translator-fun arglist body)
-                           :translator-class drag-n-drop-translator)
-               (,object presentation context-type frame event window x y)
-             (declare (ignore ,object))
-             (frame-drag-and-drop ',name ',command-table
-                                  presentation context-type
-                                  frame event window x y)))))))

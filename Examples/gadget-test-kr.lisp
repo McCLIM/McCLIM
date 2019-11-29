@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
 
-;;;  (c) copyright 2000 by 
+;;;  (c) copyright 2000 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 
@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; Copied from colorslider
@@ -24,7 +24,7 @@
 (in-package :clim-internals)
 
 ;; example gadget definition
-(defclass gadget-test-pane (standard-gadget) ())
+(defclass gadget-test-pane (basic-gadget) ())
 
 (in-package :clim-demo)
 
@@ -140,37 +140,31 @@
                  :max-value 100
                  :value 0
                  :show-value-p t
-                 :orientation :horizontal
-                 :current-color +black+)
+                 :orientation :horizontal)
      (slider-v   :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      (slider-v1  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      (slider-v2  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      (slider-v3  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      (slider-v4  :slider
                  :min-value 0
                  :max-value 100
                  :orientation :vertical
-                 :current-color +black+
                  :value 0)
      (push-btn   (lowering (:border-width 3 :background +Gray83+)
                    (horizontally ()

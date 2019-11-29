@@ -184,6 +184,10 @@
            #:with-output-to-string #:with-package-iterator #:with-simple-restart #:with-slots
            #:with-standard-io-syntax #:write #:write-byte #:write-char #:write-line #:write-sequence
            #:write-string #:write-to-string #:y-or-n-p #:yes-or-no-p #:zerop))
+        ;; XXX: we could use `closer-common-lisp', but some of McCLIM
+        ;; MOP code is not conformant it seems (we have problems with
+        ;; unknown `:default' argument dropping us in the debugger).
+        ;(packages '(:closer-common-lisp))
         (packages '(:common-lisp))
         (gray-symbols
          '(#:fundamental-stream
@@ -283,60 +287,60 @@
   (:use)
   ;;
   (:import-from :clim-lisp
-   #:and 
-   #:boolean 
-   #:character 
-   #:close 
-   #:complex 
-   #:float 
-   #:fundamental-binary-input-stream 
-   #:fundamental-binary-output-stream 
-   #:fundamental-binary-stream 
-   #:fundamental-character-input-stream 
-   #:fundamental-character-output-stream 
-   #:fundamental-character-stream 
-   #:fundamental-input-stream 
-   #:fundamental-output-stream 
-   #:fundamental-stream 
-   #:input-stream-p 
-   #:integer 
-   #:interactive-stream-p 
-   #:keyword 
+   #:and
+   #:boolean
+   #:character
+   #:close
+   #:complex
+   #:float
+   #:fundamental-binary-input-stream
+   #:fundamental-binary-output-stream
+   #:fundamental-binary-stream
+   #:fundamental-character-input-stream
+   #:fundamental-character-output-stream
+   #:fundamental-character-stream
+   #:fundamental-input-stream
+   #:fundamental-output-stream
+   #:fundamental-stream
+   #:input-stream-p
+   #:integer
+   #:interactive-stream-p
+   #:keyword
    #:member
    #:nil
-   #:null 
-   #:number 
-   #:open-stream-p 
-   #:or 
-   #:output-stream-p 
-   #:pathname 
-   #:ratio 
-   #:rational 
-   #:real 
-   #:sequence 
-   #:stream-advance-to-column 
+   #:null
+   #:number
+   #:open-stream-p
+   #:or
+   #:output-stream-p
+   #:pathname
+   #:ratio
+   #:rational
+   #:real
+   #:sequence
+   #:stream-advance-to-column
    #:stream-clear-input
    #:stream-clear-output
-   #:stream-element-type 
-   #:stream-finish-output 
-   #:stream-force-output 
-   #:stream-fresh-line 
-   #:stream-line-column 
-   #:stream-listen 
-   #:stream-peek-char 
-   #:stream-read-byte 
-   #:stream-read-char 
-   #:stream-read-char-no-hang 
-   #:stream-read-line 
-   #:stream-start-line-p 
-   #:stream-terpri 
-   #:stream-unread-char 
-   #:stream-write-byte 
-   #:stream-write-char 
-   #:stream-write-string 
-   #:streamp 
-   #:string 
-   #:symbol 
+   #:stream-element-type
+   #:stream-finish-output
+   #:stream-force-output
+   #:stream-fresh-line
+   #:stream-line-column
+   #:stream-listen
+   #:stream-peek-char
+   #:stream-read-byte
+   #:stream-read-char
+   #:stream-read-char-no-hang
+   #:stream-read-line
+   #:stream-start-line-p
+   #:stream-terpri
+   #:stream-unread-char
+   #:stream-write-byte
+   #:stream-write-char
+   #:stream-write-string
+   #:streamp
+   #:string
+   #:symbol
    #:t)
   ;;
   (:export
@@ -560,6 +564,7 @@
    #:cursor-active                      ;generic function
    #:cursor-focus                       ;generic function
    #:cursor-position                    ;generic function
+   #:cursor-set-position                ;generic function
    #:cursor-sheet                       ;generic function
    #:cursor-state                       ;generic function
    #:cursor-visibility                  ;generic function
@@ -1573,61 +1578,34 @@
   ;; mute-repainting-mixin, through there is a sheet-mute-repainting-mixin
   ;; oriented-gadget, through there is a oriented-gadget-mixin
 
-  ;; output-record-refined-sensitivity-test:
-  ;; there is mention of this symbol in output-recording.tex. spelling error?
-
   ;; pointer-button-click-event
   ;; this is mentioned in silica.tex. spelling error?
 
-  ;;;; absolutly no mention of the following in the spec:
-  
-  ;; add-watcher
   ;; bordering
   ;; border-pane
-  ;; delete-watcher
+  ;; this is mentioned in LW CLIM documentation
+
+  ;; spacer-pane
+  ;; this is mentioned in our own documentation (!) but absent
+
+  ;;;; absolutly no mention of the following in the spec:
+
   ;; display-cursor
   ;; draw-triangle
   ;; draw-triangle*
-  ;; frame-pane
   ;; gadget-label-text-style
-  ;; gesture-processing-handler
   ;; key-modifier-state-match-p
-  ;; mute-sheet-input-mixin
-  ;; mute-sheet-output-mixin
-  ;; note-frame-state-changed
-  ;; panes-need-redisplay
   ;; pointer-button-click-and-hold-event
   ;; pointer-button-double-click-event
-  ;; pointer-buttons
   ;; pointer-port
-  ;; port-draw-character*
-  ;; port-draw-ellipse*
-  ;; port-draw-line*
-  ;; port-draw-lines*
-  ;; port-draw-point*
-  ;; port-draw-points*
-  ;; port-draw-polygon*
-  ;; port-draw-rectangle*
-  ;; port-draw-string*
   ;; push-button-show-as-default-p
-  ;; reset-watcher
-  ;; scroll-bar-drag-down-line-callback
-  ;; scroll-bar-drag-down-page-callback
-  ;; scroll-bar-drag-up-line-callback
-  ;; scroll-bar-drag-up-page-callback
-  ;; spacer-pane
-  ;; standard-gadget
-  ;; stream-pointers
-  ;; stream-primary-pointer
-  ;; stream-redisplayable-p
-  ;; stream-restore-input-focus
 
   ;;; Vendor extensions which are exported from the CLIM package,
   ;;; including CLIM 2.2 symbols.
   (:export
    ;; I forget where the wheel symbols come from. They aren't in the
    ;; Franz guide. Are they from Lispworks, or did McCLIM invent them?
-   #:+pointer-wheel-up+                 
+   #:+pointer-wheel-up+
    #:+pointer-wheel-down+
    #:+pointer-wheel-left+
    #:+pointer-wheel-right+
@@ -1639,17 +1617,14 @@
    #:+list-pane-view+                   ;constant
    #:option-pane-view                   ;class
    #:+option-pane-view+                 ;constant
-   #:pattern-array                      ;generic function (in franz user guide)
-   #:pattern-designs                    ;generic function (in franz user guide)
-   #:pointer-input-rectangle            ;function (in franz user guide)
-   #:pointer-input-rectangle*           ;function (in franz user guide)
-   #:pointer-place-rubber-band-line*    ;function (in franz user guide)
    #:port-modifier-state		;generic function (in franz user guide)
    #:port-pointer			;generic function (in franz user guide)
    #:push-button-view                   ;class
    #:+push-button-view+                 ;constant
    #:radio-box-view                     ;class
    #:+radio-box-view+                   ;class
+   #:check-box-view                     ;class
+   #:+check-box-view+                   ;class
    #:read-bitmap-file                   ;function
    #:slider-view                        ;slider-view
    #:+slider-view+                      ;constant
@@ -1659,7 +1634,7 @@
    #:toggle-button-view                 ;class
    #:+toggle-button-view+               ;constant
    #:sheet-pointer-cursor)
-  
+
    ;;; x11 color names - some are not in the spec - mikemac
   (:export
    #:+snow+ #:+ghost-white+ #:+ghostwhite+ #:+white-smoke+
@@ -1892,31 +1867,50 @@
    #:condition-notify
    ;;
    #:defgeneric*
-   #:defmethod* ) )
+   #:defmethod*))
 
 (defpackage :clim-extensions
   (:use)
+  (:nicknames :clime)
   (:export
-   #:line-style-effective-thickness
+   ;; events
+   #:event-read-with-timeout
+   #:event-listen-or-wait
+   #:schedule-event
+   ;; sheets
+   #:top-level-sheet-mixin
+   #:unmanaged-sheet-mixin
+   #:sheet-name
+   #:sheet-pretty-name
+
+   #:always-repaint-background-mixin
+   #:never-repaint-background-mixin
+   #:background
+   #:foreground
+   ;; #:line-style-effective-thickness
+   ;; #:line-style-effective-dashes
+   ;; medium
    #:medium-miter-limit
+   #:medium-draw-circle*
+   ;; panes
    #:raised-pane #:raising
    #:lowered-pane #:lowering
    #:viewport-pane
-   #:draw-glyph #:device-font-text-style-p
+   #:device-font-text-style-p
    #:draw-image
    #:image-pane
    #:draw-label
+   #:label-pane-label
    #:box-adjuster-gadget
    #:compose-space-aux
    #:simple-event-loop
-   #:pointer-motion-hint-event
    #:invoke-with-output-to-pointer-documentation
    #:with-output-to-pointer-documentation
    #:frame-display-pointer-documentation-string
    #:list-pane-items
    #:output-record-baseline
    #:merging-dead-keys
-   
+
    #:draw-output-border-over
    #:draw-output-border-under
    #:make-bordered-output-record
@@ -1925,9 +1919,34 @@
    #:draw-rounded-rectangle*
 
    #:highlight-output-record-tree
-   #:cut-and-paste-mixin
+   #:text-selection-mixin
    #:mouse-wheel-scroll-mixin
-   
+   ;; page abstraction (seos mixin)
+   #:stream-cursor-initial-position
+   #:stream-cursor-final-position
+   #:stream-page-region
+   #:stream-text-margins
+   #:stream-line-width
+   #:with-temporary-margins
+   #:invoke-with-temporary-page
+   ;; designs and patterns
+   #:pattern
+   #:image-pattern
+   #:rectangular-tile
+   #:transformed-design
+   #:transformed-pattern
+   #:effective-transformed-design
+   #:rectangular-tile-design
+   ;; readers
+   #:pattern-array
+   #:transformed-design-design
+   #:transformed-design-transformation
+   ;; inks
+   #:indirect-ink
+   #:indirect-ink-p
+   #:indirect-ink-ink
+   #:color-rgba
+   #:design-ink
    ;; Font listing extension:
    #:font-family
    #:font-face
@@ -1945,8 +1964,22 @@
    #:unsupported-bitmap-format
    #:bitmap-format
    #:*default-vertical-scroll-bar-position*
-
-   #:find-frame-type))
+   ;; frame manager
+   #:find-frame-type
+   #:note-frame-pretty-name-changed
+   ;; images
+   #:rgb-image
+   #:xpm-parse-file
+   #:*xpm-x11-colors*
+   ;; selection
+   #:define-selection-translator
+   #:release-selection
+   #:publish-selection
+   #:request-selection
+   ;; franz
+   #:pointer-place-rubber-band-line*
+   #:pointer-input-rectangle*
+   #:pointer-input-rectangle))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -1958,11 +1991,8 @@
   (:use :clim :clim-extensions)
   (:export
    ;; Originally in CLIM-INTERNALS
-   #:get-next-event
-   #:invoke-with-special-choices
    #:make-graft
    #:medium-draw-circle*
-   #:medium-draw-glyph
    #:mirror-transformation
    #:port-allocate-pixmap
    #:port-deallocate-pixmap
@@ -1971,24 +2001,55 @@
    #:port-force-output
    #:port-frame-keyboard-input-focus
    #:port-grab-pointer
-   #:port-mirror-height
-   #:port-mirror-width
-   #:port-motion-hints
+   #:port-ungrab-pointer
+   #:with-pointer-grabbed
+   #:port-set-mirror-name
    #:port-set-mirror-region
    #:port-set-mirror-transformation
-   #:port-set-sheet-region
-   #:port-set-sheet-transformation
-   #:port-ungrab-pointer
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
+   #:window-manager-focus-event
+   #:with-port
+   #:invoke-with-port
+   ;; Text-style
    #:text-style-character-width
+   #:text-bounding-rectangle*
+   #:normalize-font-size
+   #:parse-text-style*
+   ;; Font abstraction
+   #:font-face
+   #:font-size
+   #:font-character-width
+   #:font-string-width
+   #:font-string-glyph-codes
+   #:font-glyph-code-char
+   #:font-text-extents
+   #:font-ascent
+   #:font-descent
+   #:font-leading
+   #:font-tracking
+   #:font-fixed-width
+   #:font-kerning-p
+   #:font-glyph-width
+   #:font-glyph-height
+   #:font-glyph-top
+   #:font-glyph-left
+   #:font-glyph-bottom
+   #:font-glyph-right
+   #:font-glyph-dx
+   #:font-glyph-dy
+   ;; Mixins available for backends
+   #:multiline-text-medium-mixin
+   #:approx-bbox-medium-mixin
+   #:transform-coordinates-mixin
    ;; From CLIM (mentioned in the spec)
    #:adopt-frame
    #:allocate-space
    #:destroy-mirror
    #:destroy-port
    #:graft
+   #:graftp
    #:graft-height
    #:graft-width
    #:handle-repaint
@@ -2023,21 +2084,26 @@
    #:text-style-height
    #:text-style-mapping
    #:text-style-width
-   ;; Text selection protocol
-   #:selection-owner
-   #:selection-timestamp
-   #:selection-event
-   #:selection-clear-event
-   #:selection-notify-event
-   #:selection-request-event
-   #:selection-event-requestor
-   #:request-selection
-   #:release-selection
-   #:bind-selection
-   #:send-selection
-   #:get-selection-from-event
    ;; CLIM-EXTENSIONS
-   #:medium-miter-limit))
+   #:medium-miter-limit
+   #:medium-draw-circle*
+   ;; selection
+   #:release-selection
+   #:publish-selection
+   #:request-selection
+   #:selection-object
+   #:selection-object-content
+   #:selection-object-type
+   #:selection-object-owner
+   ;; command output destinations
+   #:invoke-with-standard-output
+   #:register-output-destination-type
+   #:output-destination
+   #:stream-destination
+   #:destination-stream
+   #:file-destination
+   #:destination-file
+   #:destination-element-type))
 
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)
@@ -2045,7 +2111,13 @@
   #+excl
   (:import-from :excl compile-system load-system)
   (:import-from #:alexandria
-                #:ensure-gethash)
+                #:clamp
+                #:make-keyword
+                #:ensure-gethash
+		#:last-elt
+		#:with-gensyms
+                #:if-let
+                #:when-let)
   (:intern #:letf))
 
 (defpackage :clim-user

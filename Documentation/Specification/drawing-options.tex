@@ -28,7 +28,7 @@ another process.
 
 The following functions read and write components of a medium related to drawing
 options.  While these functions are defined for mediums, they can also be called
-on sheets support the sheet output protocol and on streams that output to such
+on sheets that support the sheet output protocol and on streams that output to such
 sheets.  All classes that support the medium protocol must implement methods for
 these generic functions.  Often, a sheet class that supports the output protocol
 will implement a ``trampoline'' method that passes the operation on to
@@ -46,12 +46,16 @@ Chapter~\ref{color} for a more complete description of designs.
 Any indirect inks are resolved against the foreground and background at the time
 a design is rendered.
 
+\issue {PM} {Next paragraph says that indirect inks are not allowed?!}
+
 \defgeneric {(setf medium-foreground)} {design medium}
 \Defgeneric {(setf medium-background)} {design medium}
 
 Sets the foreground and background ink, respectively, for the \term{medium}
 \arg{medium} to \arg{design}.  You may not set \cl{medium-foreground} or
 \cl{medium-background} to an indirect ink.  
+
+--
 
 \arg{design} is an unbounded design.  If the background design is not completely
 opaque at all points, the consequences are unspecified.
@@ -74,6 +78,7 @@ Sets the current drawing ink for the \term{medium} \arg{medium} to \arg{design}.
 \arg{design} is as for \cl{medium-foreground}, and may be an indirect ink as
 well.
 
+\issue {PM} {\cl{medium-foreground} doesn't allow indirect inks!?}
 
 \Defgeneric {medium-transformation} {medium}
 
@@ -474,7 +479,7 @@ scaled by the medium's current transformation, whereas \cl{:normal} and
 
 The thickness, in the units indicated by \cl{line-style-unit}, of the lines or
 arcs drawn by a drawing function.  The thickness must be a real number.  The
-default is 1, which combined with the default unit of \cl{:normal}, means that
+default is 1, which, combined with the default unit of \cl{:normal}, means that
 the default line drawn is the ``comfortably visible thin line''.
 
 \defoption {:line-joint-shape}
@@ -489,6 +494,8 @@ window system, so not all platforms will necessarily fully support it.
 \centerline{\includegraphics{line-joint-shapes}}
 \caption{Line joint shapes.}
 \end{figure}
+
+\issue {PM} {PDF only show 3 different joints and caps}
 
 \defoption {:line-cap-shape}
 \Defgeneric {line-style-cap-shape} {line-style}

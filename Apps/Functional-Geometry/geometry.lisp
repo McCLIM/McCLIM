@@ -277,7 +277,8 @@
 (defun clim-plot-in-window (p &optional (stream *standard-output*))
   (clim-plot p stream))
 
-(defun clim-plot-to-postscript (p &optional (pathname "/Users/joswig/Desktop/test-clim.ps"))
+(defun clim-plot-to-postscript (p &optional (pathname (merge-pathnames "functional-geometry-test.ps"
+							     (user-homedir-pathname))))
   (with-open-file (file-stream pathname
                                :direction :output
                                :if-exists :supersede
@@ -290,49 +291,49 @@
 ;;; times when entering an expression (e.g., a variable name) as a picture
 ;;; value. This will be fixed after .9.2.2. -- moore
 (define-functional-geometry-command (plot :name t)
-  ((picture '(or picture expression) :provide-default nil :prompt "picture"))
+  ((picture '(or picture expression) :prompt "picture"))
   (unless (presentation-typep picture 'picture)
     (setq picture (eval picture))
     (clim-plot-in-window picture)
     picture))
 
 (define-functional-geometry-command(save-picture-as-postscript :name t)
-    ((picture 'picture :provide-default nil :prompt "picture")
-     (file 'pathname :provide-default nil :prompt "file"))
+    ((picture 'picture :prompt "picture")
+     (file 'pathname :prompt "file"))
   (clim-plot-to-postscript picture file)
   (values file picture))
 
 (define-functional-geometry-command (com-beside :name t)
-    ((picture0 'picture :provide-default nil :prompt "picture 0")
-     (picture1 'picture :provide-default nil :prompt "picture 1"))
+    ((picture0 'picture :prompt "picture 0")
+     (picture1 'picture :prompt "picture 1"))
   (let ((new-picture (beside picture0 picture1)))
     (clim-plot new-picture)
     new-picture))
 
 (define-functional-geometry-command (com-above :name t)
-    ((picture0 'picture :provide-default nil :prompt "picture 0")
-     (picture1 'picture :provide-default nil :prompt "picture 1"))
+    ((picture0 'picture :prompt "picture 0")
+     (picture1 'picture :prompt "picture 1"))
   (let ((new-picture (above picture0 picture1)))
     (clim-plot new-picture)
     new-picture))
 
 (define-functional-geometry-command (com-rot :name t)
-    ((picture 'picture :provide-default nil :prompt "picture"))
+    ((picture 'picture :prompt "picture"))
   (let ((new-picture (rot picture)))
     (clim-plot new-picture)
     new-picture))
 
 (define-functional-geometry-command (com-cycle :name t)
-    ((picture 'picture :provide-default nil :prompt "picture"))
+    ((picture 'picture :prompt "picture"))
   (let ((new-picture (cycle picture)))
     (clim-plot new-picture)
     new-picture))
 
 (define-functional-geometry-command (com-quartet :name t)
-    ((picture0 'picture :provide-default nil :prompt "picture 0")
-     (picture1 'picture :provide-default nil :prompt "picture 1")
-     (picture2 'picture :provide-default nil :prompt "picture 2")
-     (picture3 'picture :provide-default nil :prompt "picture 3"))
+    ((picture0 'picture :prompt "picture 0")
+     (picture1 'picture :prompt "picture 1")
+     (picture2 'picture :prompt "picture 2")
+     (picture3 'picture :prompt "picture 3"))
   (let ((new-picture (quartet picture0 picture1 picture2 picture3)))
     (clim-plot new-picture)
     new-picture))

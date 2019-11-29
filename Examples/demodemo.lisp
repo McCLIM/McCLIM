@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-demo)
@@ -41,7 +41,23 @@
                         #+nil
                         (destroy-frame frame)))))))
 
-(define-application-frame demodemo 
+(defun run-demo (name &key background)
+  "Coerces `name' into symbol in package `clim-demo' and runs application
+denoted by this symbol."
+  (let ((frame (make-application-frame
+                (find-symbol (string-upcase (string name))
+                             (find-package "CLIM-DEMO")))))
+    (if background
+        (bt:make-thread #'(lambda () (run-frame-top-level frame))
+                        :initial-bindings `((*default-server-path* . ',*default-server-path*)))
+        (run-frame-top-level frame))
+    frame))
+
+(defgeneric display (frame pane)
+  (:documentation "Generic method meant to be specialized at least on hte first
+argument to avoid creating too many functions with similar name."))
+
+(define-application-frame demodemo
     () ()
     (:menu-bar nil)
     (:layouts
@@ -63,12 +79,9 @@
                    (make-demo-button "Puzzle"  'puzzle)
                    (make-demo-button "Colorslider" 'colorslider)
                    (make-demo-button "Logic Cube" 'logic-cube)
-                   (make-demo-button "Menu Test"  'menutest:menutest)
                    (make-demo-button "Gadget Test"  'gadget-test)
-                   (make-demo-button "Drag and Drop" 'dragndrop)
                    (make-demo-button "D&D Translator" 'drag-test)
                    (make-demo-button "Draggable Graph" 'draggable-graph-demo)
-                   (make-demo-button "Image viewer" 'image-viewer)
 		   (make-pane 'push-button
 			      :label "Font Selector"
 			      :activate-callback
@@ -80,8 +93,11 @@
                    (make-demo-button "Summation" 'summation)
                    (make-demo-button "Slider demo" 'sliderdemo:sliderdemo)
                    (make-demo-button "German Towns" 'town-example:town-example)
-                   ;; this demo invokes the debugger
-                   #+ (or) (make-demo-button "Traffic lights" 'traffic-lights)))
+                   (make-demo-button "Data Graph Toy" 'graph-toy)
+                   (make-demo-button "Traffic lights" 'traffic-lights)
+                   (make-demo-button "Image Transform" 'image-transform-demo:image-transform-demo)
+                   (make-demo-button "Selection (clipboard)" 'selection-demo)
+                   (make-demo-button "DND various" 'drag-and-drop-example:dnd-commented)))
                (labelling (:label "Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Stream test" 'stream-test)
@@ -95,17 +111,36 @@
                    (make-demo-button "Drawing Benchmark" 'drawing-benchmark)
                    (make-demo-button "Border Styles Test" 'bordered-output)
                    (make-demo-button "Misc. Tests" 'misc-tests)
-		   (make-demo-button "Drawing Tests" 'drawing-tests)
-                   (make-demo-button "Accepting Values Test"  'av-test)))))))))
+                   (make-demo-button "Render Image Tests" 'render-image-tests)
+                   (make-demo-button "Drawing Tests" 'drawing-tests)
+                   (make-demo-button "Accepting Values Test"  'av-test)
+                   (make-demo-button "Frame and Sheet Names Test" 'frame-sheet-name-test)
+                   (make-demo-button "Tracking Pointer test" 'tracking-pointer-test)))
+               (labelling (:label "Regression Tests")
+                 (vertically (:equalize-width t)
+                   (make-demo-button "Image viewer" 'image-viewer)
+                   (make-demo-button "Coordinate swizzling" 'coordinate-swizzling)
+                   (make-demo-button "Scroll Test 2" 'Scroll-test-2)
+                   (make-demo-button "Tables with borders" 'table-demo)
+                   (make-demo-button "Menu Test"  'menutest:menutest)
+                   (make-demo-button "Drag and Drop" 'dragndrop)
+                   (make-demo-button "Pane hierarchy viewer" 'hierarchy)
+                   (make-demo-button "Patterns, designs and inks" 'pattern-design-test)
+                   (make-demo-button "Flipping ink" 'flipping-ink)
+                   (make-demo-button "Overlapping patterns" 'patterns-overlap)
+                   (make-demo-button "Text transformations" 'text-transformations-test)
+                   (make-demo-button "Text multiline positioning" 'text-multiline-positioning)
+                   (make-demo-button "SEOS baseline and wrapping" 'seos-baseline)
+                   (make-demo-button "Indentation" 'indentation)))))))))
 
 (defun demodemo ()
   (run-frame-top-level (make-application-frame 'demodemo)))
 
-(define-application-frame hbox-test 
+(define-application-frame hbox-test
     () ()
     (:layouts
      (default
-         (horizontally (:background climi::*3d-normal-color*)
+         (horizontally ()
            30
            (make-pane 'push-button :label "Okay"
                       :width '(50 :mm))
@@ -116,7 +151,7 @@
            5
            ) )))
 
-(define-application-frame table-test 
+(define-application-frame table-test
     () ()
     (:layouts
      (default
@@ -147,7 +182,7 @@
                      :background +PALETURQUOISE4+
                      :text-style (make-text-style :sans-serif :roman :normal))
     #+nil
-    (make-pane 'push-button :label 
+    (make-pane 'push-button :label
                :text-style (make-text-style :sans-serif :roman :normal)
                :max-width 1000
                :max-height 1000)))
@@ -192,7 +227,8 @@
                    5
                    (make-test-label2 :right :bottom))))))))))
 
-(defclass foo-pane (basic-pane permanent-medium-sheet-output-mixin) ())
+(defclass foo-pane (basic-pane clime:always-repaint-background-mixin)
+  ())
 
 (defmethod compose-space ((pane foo-pane) &key width height)
   (declare (ignore width height))
@@ -214,14 +250,51 @@
          (scrolling (:width 400 :height 400)
            (make-pane 'foo-pane)))))
 
+
+;;; Scroll test 2
+(define-application-frame scroll-test-2 ()
+  ()
+  (:geometry :width 1200 :height 400)
+  (:panes (out :application-pane :display-function #'scroll-test-display)
+          (bam :application-pane :display-function #'scroll-test-display)
+          (foo :application-pane :display-function #'scroll-test-display)
+          (qux :application-pane :display-function #'scroll-test-display))
+  (:layouts (default
+                (vertically ()
+                  (horizontally ()
+                    (labelling (:label "bam") (scrolling () bam))
+                    (labelling (:label "foo") (scrolling () foo))
+                    (labelling (:label "qux") (scrolling () qux)))
+                  (labelling (:label "Description") out)))))
+
+(defmethod scroll-test-display ((frame scroll-test-2) pane)
+  (when (member (pane-name pane) '(bam qux))
+    (draw-rectangle* pane -100 -100 +100 +100 :filled nil
+                     :ink +red+ :line-thickness 5 :line-dashes t))
+  (when (member (pane-name pane) '(foo qux))
+    (draw-rectangle* pane +300 +300 +500 +500 :filled nil
+                     :ink +red+ :line-thickness 5 :line-dashes t))
+
+  (when (member (pane-name pane) '(out))
+    (format pane "In this test we draw three panes: bam, foo and qux. You may try resizing the window and see what happens. If viewports are small enough, scroll-bars should appear to show bottom-right rectangle on \"foo\" and \"qux\". Upper-left rectangle has starting point having negative coordinates of its sheet, so scroll-bars won't update to uncover it (this may be supported in the future - in such case please change description of this test). Only bottom-right rectangle must be seen in full.
+
+\"bam\" should have only partially drawn rectangle (upper-left corner).
+\"foo\" is similar, but rectangle is drawn in bottom-right corner. This draw should extend scroll-bars, so user may see whole rectangle.
+\"qux\" combines both previous panes. Part of the rectangle in the upper-left corner and (after scrolling) full rectangle on the bottom-right corner.")))
+
 (define-application-frame list-test
     () ()
     (:panes
-     (substring :text-field :value "INTER")
+     (substring :text-field :value "INTER"
+                :value-changed-callback
+                (lambda (pane value)
+                  (declare (ignore value))
+                  (when (find-pane-named *application-frame* 'result-list)
+                    (update-list-test pane))))
      (result-list
       (make-pane 'list-pane
 		 :value 'clim:region-intersection
-		 :items (apropos-list "INTER" :clim t)
+		 :items (apropos-list "INTER" :clim)
 		 :presentation-type-key (constantly 'list-test-symbol)
 		 :name-key (lambda (x) (format nil "~(~S~)" x))))
      (interactor :interactor :height 200))
@@ -253,22 +326,23 @@
   (setf (list-pane-items (find-pane-named *application-frame* 'result-list))
 	(apropos-list (gadget-value
 		       (find-pane-named *application-frame* 'substring))
-		      :clim t)))
+		      :clim #+sbcl t)))
 
 (define-application-frame option-test
     () ()
-    (:panes (option-pane-1 :option-pane
-                           :value 1
-                           :items '(1 2 3 4 6 7)
-                           :value-changed-callback (constantly nil))
-            (option-pane-2 :option-pane
-                           :value "Option 1"
-                           :items '("Option 1" "Option 2" "Option 3" "Option 4" "Option 6" "Option 7")
-                           :value-changed-callback (constantly nil)))
-    (:layouts
-     (:default
-         (vertically (:label "Option panes example")
-           (1/2 option-pane-1)
-           (1/2 option-pane-2)))))
+  (:panes (option-pane-1 :option-pane
+                         :value 1
+                         :items '(1 2 3 4 6 7)
+                         :value-changed-callback (constantly nil))
+          (option-pane-2 :option-pane
+                         :value "Option 1"
+                         :items '("Option 1" "Option 2" "Option 3" "Option 4" "Option 6" "Option 7")
+                         :value-changed-callback (constantly nil)))
+  (:layouts
+   (:default
+    (labelling (:label "Option panes example")
+      (vertically ()
+        (1/2 option-pane-1)
+        (1/2 option-pane-2))))))
 
 (format t "~&;; try (CLIM-DEMO:DEMODEMO)~%")

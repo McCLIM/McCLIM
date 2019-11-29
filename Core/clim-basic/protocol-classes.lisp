@@ -23,50 +23,76 @@
 
 (defmacro define-protocol-class (name super-classes &optional slots &rest options)
   (let* ((sym-name (symbol-name name))
-	 (protocol-predicate
-	  (intern (concatenate 'string
-			       sym-name
-			       (if (find #\- sym-name) "-" "")
-			       (symbol-name '#:p))))
-	 (predicate-docstring
-	  (concatenate 'string
-		       "Protocol predicate checking for class " sym-name)))
+         (protocol-predicate (alexandria:symbolicate
+                              sym-name
+                              (if (find #\- sym-name) "-" "")
+                              '#:p))
+         (predicate-docstring
+           (concatenate 'string
+                        "Protocol predicate checking for class " sym-name)))
     `(progn
        (defclass ,name ,super-classes ,slots ,@options)
 
+       ;; This adds a DUMMY slot to the protocol class that signals an
+       ;; error in its initfunction. Thus attempting to make an
+       ;; instance of the class signals an error.
+       ;;
+       ;; For subclasses, the slot is not added (as the method is
+       ;; EQL-specialized on the protocol class itself) so that no
+       ;; runtime time or space overhead is incurred.
+       (defmethod c2mop:compute-slots ((class (eql (find-class ',name))))
+         (list* (make-instance 'c2mop:standard-effective-slot-definition
+                               :name         'dummy
+                               :allocation   :instance
+                               :initform     '#1=(error "~S is a protocol class ~
+                                                         and thus cannot be ~
+                                                         instantiated"
+                                                        ',name)
+                               :initfunction (lambda () #1#))
+                (call-next-method)))
+
        (let ((the-class (find-class ',name)))
-	 (setf (documentation the-class 'type) "CLIM protocol class")
-         (defmethod initialize-instance :after ((object ,name) &key &allow-other-keys)
-           (when (eq (class-of object) the-class)
-             (error "~S is a protocol class and thus can't be instantiated" ',name))))
+         (setf (documentation the-class 'type) "CLIM protocol class"))
 
        (defgeneric ,protocol-predicate (object)
-	 (:method ((object t))
-	   nil)
-	 (:method ((object ,name))
-	   t)
-	 (:documentation ,predicate-docstring))
+         (:method ((object t))
+           nil)
+         (:method ((object ,name))
+           t)
+         (:documentation ,predicate-docstring))
 
        ',name)))
 
+;; "Part I: Overview and Conventions" doesn't have any protocol
+;; classes defined, so no need for a separate page for it.
+
+
+;;;; Part II: Geometry Substrate
+
 ;;; 3.1 General Regions
-(define-protocol-class bounding-rectangle ())
-
-
 (define-protocol-class region (design))
+
+(define-protocol-class point (region bounding-rectangle))
 (define-protocol-class path (region bounding-rectangle))
 (define-protocol-class area (region bounding-rectangle))
-(define-protocol-class region-set  (region bounding-rectangle))
-(define-protocol-class point (region bounding-rectangle))
+(define-protocol-class region-set (region bounding-rectangle))
+
 (define-protocol-class polyline (path))
-(define-protocol-class polygon (area))
 (define-protocol-class line (polyline))
+(define-protocol-class elliptical-arc (path))
+
+(define-protocol-class polygon (area))
 (define-protocol-class rectangle (polygon))
 (define-protocol-class ellipse (area))
-(define-protocol-class elliptical-arc (path))
+
+;;; 4.1 Bounding Rectangles
+(define-protocol-class bounding-rectangle ())
 
 ;;; 5.1 Transformations
 (define-protocol-class transformation ())
+
+
+;;;; Part III: Windowing Substrate
 
 ;;; 7.1 Basic Sheet Classes
 (define-protocol-class sheet (bounding-rectangle))
@@ -82,6 +108,9 @@
 
 ;;; 9.2 Ports
 (define-protocol-class port ())
+
+
+;;;; Part IV: Sheet and Medium Output Facilities
 
 ;;; 10.3 Line Styles
 
@@ -104,11 +133,19 @@
 
 (define-protocol-class opacity (design))
 
+
+;;;; Part V: Extended Stream Output Facilities
+
+;; CLIM Specification says that E-O-S is a subclass of OUTPUT-STREAM,
+;; but it does not says what is it. We infere it is a base class for
+;; all clim output streams (output-recording-stream included).
+(define-protocol-class output-stream
+    (fundamental-character-output-stream)
+  ())
+
 ;;; 15.2 Extended Output Streams
 (define-protocol-class extended-output-stream
-    (fundamental-character-output-stream)
-  ;; CLIM Specification says that E-O-S is a subclass of
-  ;; OUTPUT-STREAM, but it does not says what is it.
+    (output-stream)
   ())
 
 ;;; 15.3 The Text Cursor
@@ -131,7 +168,7 @@
   ())
 
 ;;; 16.4 Output Recording Streams
-(define-protocol-class output-recording-stream ()
+(define-protocol-class output-recording-stream (output-stream)
   ())
 
 ;;; 17.3.1 Table Formatting Protocol
@@ -155,9 +192,12 @@
 ;;; 21.3 Incremental Redisplay Protocol
 (define-protocol-class updating-output-record (output-record))
 
+
+;;;; Part VI: Extended Stream Input Facilities
+
 ;;; 22.2 Extended Input Streams
 
-(define-protocol-class extended-input-stream 
+(define-protocol-class extended-input-stream
     (fundamental-character-input-stream)
   ())
 
@@ -174,6 +214,9 @@
 
 ;;; 24.1.1 The Input Editing Stream Protocol
 (define-protocol-class input-editing-stream ())
+
+
+;;;; Part VII: Building Applications
 
 ;;; 27.2 Command Tables
 (define-protocol-class command-table ()
@@ -220,7 +263,9 @@
 
    ))
 
+
+;;;; Part VIII: Appendices
+
 ;;; C.1 Encapsulating Streams
 (define-protocol-class encapsulating-stream ()
   ())
-

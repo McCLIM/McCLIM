@@ -162,11 +162,13 @@ See also the `:delimiter-gestures' and
 	(override-var (gensym)))
     `(let* ((,gestures ,gesture-form) ;Preserve evaluation order of arguments
 	    (,override-var ,override)
-	    (*delimiter-gestures* (make-delimiter-gestures
-				   (if ,override-var
-				       :delimiter-gestures
-				       :additional-delimiter-gestures)
-				   ,gestures)))
+	    (*delimiter-gestures* (if ,override-var
+                                      (make-delimiter-gestures
+                                       :delimiter-gestures
+                                       ,gestures)
+                                      (make-delimiter-gestures
+                                       :additional-delimiter-gestures
+                                       ,gestures))))
        ,@body)))
 
 (defun activation-gesture-p (gesture)
@@ -253,21 +255,23 @@ then repaint `sheet'."
                                    (stream-increment-cursor-position
                                     encapsulated-stream 0 old-height))
                                  (funcall continuation encapsulated-stream))))
-      (with-sheet-medium (medium encapsulated-stream)
-        (setf (output-record-position new-typeout-record) (values 0 old-min-y))
-        ;; Calculate the height difference between the old typeout and the new.
-        (let ((delta-y (- (bounding-rectangle-height new-typeout-record) old-height)))
-          (multiple-value-bind (typeout-x typeout-y)
-              (output-record-position new-typeout-record)
-            (declare (ignore typeout-x))
-            ;; Clear the old typeout...
-            (clear-output-record stream-typeout-record)
-            ;; Move stuff for the new typeout record...
-            (sheet-move-output-vertically encapsulated-stream typeout-y delta-y)
-            ;; Reuse the old stream-typeout-record...
-            (add-output-record new-typeout-record stream-typeout-record)
-            ;; Now, let there be light!
-            (repaint-sheet encapsulated-stream stream-typeout-record)))))))
+      (when (alexandria:emptyp (output-record-children new-typeout-record))
+        (clear-output-record stream-typeout-record)
+        (return-from invoke-with-input-editor-typeout))
+      (setf (output-record-position new-typeout-record) (values 0 old-min-y))
+      ;; Calculate the height difference between the old typeout and the new.
+      (let ((delta-y (- (bounding-rectangle-height new-typeout-record) old-height)))
+        (multiple-value-bind (typeout-x typeout-y)
+            (output-record-position new-typeout-record)
+          (declare (ignore typeout-x))
+          ;; Clear the old typeout...
+          (clear-output-record stream-typeout-record)
+          ;; Move stuff for the new typeout record...
+          (sheet-move-output-vertically encapsulated-stream typeout-y delta-y)
+          ;; Reuse the old stream-typeout-record...
+          (add-output-record new-typeout-record stream-typeout-record)
+          ;; Now, let there be light!
+          (repaint-sheet encapsulated-stream stream-typeout-record))))))
 
 (defun clear-typeout (&optional (stream t))
   "Blank out the input-editor typeout displayed on `stream',
@@ -276,10 +280,10 @@ defaulting to T for `*standard-output*'."
     (declare (ignore stream))))
 
 (defmacro with-input-editing ((&optional (stream t)
-			       &rest args
-			       &key input-sensitizer (initial-contents "")
-			       (class ''standard-input-editing-stream))
-			      &body body)
+                                         &rest args
+                                         &key input-sensitizer (initial-contents "")
+                                         (class ''standard-input-editing-stream))
+                              &body body)
   "Establishes a context in which the user can edit the input
 typed in on the interactive stream `stream'. `Body' is then
 executed in this context, and the values returned by `body' are
@@ -508,7 +512,7 @@ for format."
   ((string :reader not-required-type-string :initarg :string)
    (type :reader not-required-type-type :initarg :type))
   (:report (lambda (condition stream)
-	     (format stream "Input ~S is not of required type ~S"
+	     (format stream "Input ~S is not of required type ~S."
 		     (not-required-type-string condition)
 		     (not-required-type-type condition))))
   (:documentation "The error that is signalled by
@@ -686,8 +690,7 @@ stream. Output will be done to its typeout."
 		       partial-completers allow-any-input
                        (possibility-printer #'possibility-printer)
 		       (help-displays-possibilities t))
-  (let ((so-far (make-array 1 :element-type 'character :adjustable t
-			    :fill-pointer 0))
+  (let ((so-far (make-array 1 :element-type 'character :adjustable t :fill-pointer 0))
 	(*accelerator-gestures* (append *help-gestures*
 					*possibilities-gestures*
 					*accelerator-gestures*)))
@@ -732,12 +735,14 @@ stream. Output will be done to its typeout."
                      (print-possibilities possibilities possibility-printer stream)
                      (redraw-input-buffer stream)
                      (let ((possibility
-                            (handler-case
-                                (with-input-context (`(completion ,possibilities) :override nil)
-                                    (object type event)
-                                    (prog1 nil (read-gesture :stream stream :peek-p t))
-                                  (t object))
-                              (abort-gesture () nil))))
+                            (unwind-protect 
+                                 (handler-case
+                                     (with-input-context (`(completion ,possibilities) :override nil)
+                                         (object type event)
+                                         (prog1 nil (read-gesture :stream stream :peek-p t))
+                                       (t object))
+                                   (abort-gesture () nil))
+                              (clear-typeout stream))))
                        (if possibility
                            (setf (values input success object nmatches)
                                  (values (first possibility) t (second possibility) 1))

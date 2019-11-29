@@ -49,7 +49,6 @@ advised of the possiblity of such damages.
 
      (map-levels
        (min max function)
-       (declare (downward-funarg function))
        (let ((dlevel 2))
 	 (do ((level (* dlevel (values (round min dlevel))) (+ level dlevel)))
 	     ((> level max))
@@ -107,7 +106,6 @@ advised of the possiblity of such damages.
   ;; contour levels between MIN and MAX.
 
   ;; See Example TRY-CONTOUR.
-  (declare (downward-funarg surface plotter map-levels))
   (let ((x x-min)
 	(y y-min)
 	x2 y2
@@ -119,7 +117,6 @@ advised of the possiblity of such damages.
 	 ;; UL---UR  Consider all four bits, (level < ul,ur,lr,lr) = num
 	 ;; |    |   Then num and (not num) have same contours. Therefore, 
 	 ;; LL---LR  colapse num and (not num) into the 1<= 7.
-	 (declare (downward-function))
 	 (macrolet
 	   ((plot (dx1 dy1 dx2 dy2)
 	      `(funcall plotter
@@ -191,12 +188,6 @@ advised of the possiblity of such damages.
   (with-slots (contour-surface) self
     (funcall contour-surface x y)))
 
-#+obsolete
-(defmethod pop-edit-items ((self contour-data))
-  (with-slots (contour-dx contour-dy) self
-    `((,(ivar-locf contour-dx) "Contour dx"  :number-or-nil)
-      (,(ivar-locf contour-dy) "Contour dy"  :number-or-nil))))
-
 (defmethod contour-setup ((self contour-data) graph)
   (with-slots (contour-surface contour-dx contour-dy) self
     (multiple-value-bind (left right bottom top)
@@ -222,7 +213,6 @@ advised of the possiblity of such damages.
 	  y-max (float y-max 0.0))
     (multiple-value-bind (level-min level-max)
 	(contour-range surface x-min dx x-max y-min dy y-max)
-      #+ig (format *terminal-io* "~% ~A ~A" level-min level-max)
       (multiple-value-bind (major-interval minor-interval)
 	  (major-minor-intervals level-min level-max)
 	(with-slots (alu) self
@@ -233,7 +223,6 @@ advised of the possiblity of such damages.
 						   (* .01 major-interval))
 						3 0)))
 		 (map-levels (min max function)
-		   (declare (downward-funarg function))
 		   (let ((dlevel minor-interval))
 		     (do ((level (* dlevel (values (round min dlevel))) (+ level dlevel)))
 			 ((> level max))

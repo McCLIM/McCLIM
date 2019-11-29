@@ -30,8 +30,7 @@ advised of the possiblity of such damages.
 (define-presentation-type graph ()
   :description "a graph" 
   :printer ((object stream)
-	    (format #+broken redisplayable-format
-	     stream "~A" (name object)))
+	    (format stream "~A" (name object)))
   :parser ((stream)
 	   (read-char stream)
 	   (error "You must select a graph with the mouse.")))
@@ -39,8 +38,7 @@ advised of the possiblity of such damages.
 (define-presentation-type graph-data ()
   :description "a graph dataset" 
   :printer ((object stream)
-	    (format #+broken redisplayable-format
-	     stream "~A" (name object)))
+	    (format stream "~A" (name object)))
   :parser ((stream)
 	   (read-char stream)
 	   (error "You must select a graph dataset with the mouse.")))
@@ -51,8 +49,7 @@ advised of the possiblity of such damages.
 			    (width 500)
 			    (height 300))
   "Displays graph with upper-left corner starting at current cursor position."
-  #+clim (declare (ignore scroll-if-necessary))
-  #-clim (setq stream (si:follow-syn-stream stream))
+  (declare (ignore scroll-if-necessary))
   (let ((*standard-output* stream))
     (multiple-value-bind (x1 y1) (stream-cursor-position* stream)
       (setq width (truncate width))
@@ -64,14 +61,13 @@ advised of the possiblity of such damages.
 	  (if (> (+ y1 height) bottom)
 	      (scl:send-if-handles
 	       stream :set-viewport-position left (+ top height)))))
-      (stream-increment-cursor-position* stream 0 height)
+      (stream-increment-cursor-position stream 0 height)
       (multiple-value-bind (u v) (screen-to-uv stream x1 y1)
 	(set-uv-outside graph STREAM u (+ u width) (- v height) v)
 	(display graph stream)))))
 
 (defun save-postscript-graph (graph filename &key (width 400) (height 400))
   (with-open-file (s filename :direction :output)
-    #+(or clim-1 clim-2)
     (clim:with-output-to-postscript-stream (stream s)
       (display-graph graph :stream stream :width width :height height))))
 
@@ -88,31 +84,8 @@ advised of the possiblity of such damages.
 
 (defun window-reverse-video (window &optional (fore :white) (back :black))
   "Change the foreground/background colors of the window."
-  #FEATURE-CASE
-  (((not :clim)
-    (progn
-      ;; In Dynamic Windows, fore and back could be *real* colors rather than just
-      ;; black/white, but in practice that seems to cause some problems.  Try for
-      ;; example drawing on a color background using :flip alu.
-      (if (eq back :black)
-	  (setq fore tv:alu-andca back tv:alu-ior)
-	(setq fore tv:alu-ior back tv:alu-andca))
-      (scl:send window :set-char-aluf fore)
-      (scl:send window :set-erase-aluf back)))
-   (:clim-0.9
-    (let ((medium (sheet-medium window))
-	  (viewport (pane-viewport window)))
-      (setq fore (alu-for-stream window fore)
-	    back (alu-for-stream window back))
-      (setf (medium-background medium) back
-	    (medium-foreground medium) fore)
-      ;; This last part shouldn't be required, but it is because
-      ;; of the wierd way that CLIM repaints a window.
-      (setf (slot-value viewport 'windshield::background)
-	back)))
-   ((or :clim-1.0 :clim-2)
-    (setf (medium-foreground window) (alu-for-stream window fore)
-	  (medium-background window) (alu-for-stream window back)))))
+  (setf (medium-foreground window) (alu-for-stream window fore)
+        (medium-background window) (alu-for-stream window back)))
 
 (defun autoscale-graphs (graphs autoscale-type)
   "Let the graphs mutually decide what scaling limits to use.
@@ -155,17 +128,12 @@ advised of the possiblity of such damages.
 				(right-margin 0)
 				(columns 1)
 				(stream *standard-output*)
-				(reverse-video (color-stream-p stream)))
+				(reverse-video :own-color))
   "Fill the window with columns graphs."
-  ;; Ignore reverse-video in clim 2.  Use X resources for that.
-  #-clim-2
-  (when (and (color-stream-p stream) (not (eq reverse-video :own-color)))
-    ;; CLX gets very unhappy if you try to reverse video on a screen that
-    ;; doesn't support color (e.g. Sun 3/50).
+  (when (and (color-stream-p stream) (not (eql reverse-video :own-color)))
     (if reverse-video
 	(window-reverse-video stream :white :black)
-      (window-reverse-video stream :black :white)))
-  reverse-video			; quiet the compiler
+        (window-reverse-video stream :black :white)))
   (if autoscale (autoscale-graphs graphs autoscale))
   (window-clear stream)
   (when graphs
@@ -178,7 +146,6 @@ advised of the possiblity of such damages.
 	    (dotimes (column columns)
 	      (let ((g nil))
 		(dotimes (row rows)
-		  (declare (ignore row))
 		  (let ((temp (pop graphs)))
 		    (and temp (push temp g))))
 		(stream-set-cursor-position*
@@ -196,21 +163,21 @@ advised of the possiblity of such damages.
   (when (presentation-p presentation)
     (let ((object (presentation-object presentation)))
       (if (graph-p object) object
-	  (let ((superior (presentation-superior presentation)))
+	  (let ((superior (clim:output-record-parent presentation)))
 	    (when superior (graph-under-presentation superior)))))))
 
 (defun dataset-under-presentation (presentation)
   (when (presentation-p presentation)
     (let ((object (presentation-object presentation)))
       (if (graph-data-p object) object
-	  (let ((superior (presentation-superior presentation)))
+	  (let ((superior (clim:output-record-parent presentation)))
 	    (when superior (dataset-under-presentation superior)))))))
 
 (defun graph-under-annotation-under-presentation (presentation)
   (when (presentation-p presentation)
     (let ((object (presentation-object presentation)))
       (if (annotation-p object) (graph object)
-	  (let ((superior (presentation-superior presentation)))
+	  (let ((superior (clim:output-record-parent presentation)))
 	    (when superior
 	      (graph-under-annotation-under-presentation superior)))))))
 
@@ -219,11 +186,6 @@ advised of the possiblity of such damages.
     (let ((p (presentation-under-pointer stream)))
       (when p (graph-under-presentation p)))))
 
-#+debug
-(defun object-under-mouse ()
-  (let ((stream (window-under-mouse)))
-    (let ((p (presentation-under-pointer stream)))
-      (when p (presentation-object p)))))
 
 
 ;;;
@@ -350,7 +312,6 @@ advised of the possiblity of such damages.
      stream *dash-pattern-alist* object query-identifier
      :drawer #'draw-dash-sample)))
 
-#+clim-2
 (define-presentation-type-abbreviation dash-pattern ()
   `((member ,@(let ((numbers nil))
 		(dotimes (i 7) (push i numbers))
@@ -359,14 +320,12 @@ advised of the possiblity of such damages.
     :printer present-line-style
     :highlighter highlight-line-style))
 
-#+clim-2
 (defun present-line-style (object stream &key acceptably)
   (declare (ignore acceptably))
   (if (stringp object) (setq object (read-from-string object)))
   (with-room-for-graphics (stream)
     (draw-dash-sample stream object (princ-to-string object) nil)))
 
-#+clim-2
 (defun highlight-line-style (continuation object stream)
   (clim:surrounding-output-with-border
    (stream)
@@ -378,7 +337,6 @@ advised of the possiblity of such damages.
 ;;; probably because AND and OR are missing.  Here we kludge up 
 ;;; a solution until CLIM gets better.
 ;;; CLIM IS BETTER NOW (CLIM 2.0.BETA).  LETS GET RID OF THIS.  JPM.
-#+clim
 (define-presentation-type string-or-none ()
   :description "a string or None"
   :printer ((object stream)
@@ -393,11 +351,6 @@ advised of the possiblity of such damages.
 		 (values nil 'string-or-none)
 	       (values string 'string-or-none)))))
 
-#-clim
-(define-presentation-type string-or-none ()
-  :abbreviation-for '(dw:null-or-type string))
-
-#+clim
 (define-presentation-type number-or-none ()
   :description "a number or None"
   :printer ((object stream)
@@ -413,6 +366,3 @@ advised of the possiblity of such damages.
 		       (values number 'number-or-none)
 		       (input-not-of-required-type stream string 'number-or-none)))))))
 
-#-clim
-(define-presentation-type number-or-none ()
-  :abbreviation-for '(dw:null-or-type number))

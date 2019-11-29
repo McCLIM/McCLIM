@@ -64,9 +64,9 @@ classes are provided to allow programmers to draw on different sorts of devices,
 such as displays, printers, and virtual devices such as bitmaps.
 
 Many sheets can be used for doing output, so the drawing functions can also take
-a sheet as the output argument.  In this case, drawing function ``trampolines''
+a sheet as the output argument.  In this case, the drawing function ``trampolines''
 to the sheet's medium.  So, while the functions defined here are specified to be
-called on sheets, they can also be called on sheets.
+called on mediums, they can also be called on sheets.
 
 A stream is a special kind of sheet that implements the stream protocol; streams
 include additional state such as the current text cursor (which is some point in
@@ -336,7 +336,7 @@ Left figure is X11 definition.}
 
 \def\DrawingOptions{ink clipping-region transformation\ }
 \def\PointOptions{line-style line-thickness line-unit}
-\def\LineCapOptions{line-style line-thickness line-unit line-dashes line-cap-shape}
+\def\LineCapOptions{line-style line-thickness line-unit line-dashes line-cap-shape\ }
 \def\LineJointOptions{line-style line-thickness line-unit line-dashes line-joint-shape}
 \def\LineJointCapOptions{line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape}
 \def\TextOptions{text-style text-family text-face text-size}
@@ -430,8 +430,8 @@ Dashed lines start dashing at \arg{point1}.
 
 These functions (structured and spread arguments, respectively) draw a set of
 disconnected line segments.  \arg{points} is a sequence of point objects;
-\arg{position-seq} is a sequence of coordinate pairs.  It is an error if
-\arg{position-seq} does not contain an even number of elements.
+\arg{position-seq} is a sequence of coordinate pairs.  The number of elements in
+\arg{position-seq} must be divisible by four.
 
 Ignoring the drawing options, these functions are equivalent to
 \begin{verbatim}
@@ -472,7 +472,7 @@ If \arg{filled} is \term{true}, a closed polygon is drawn and filled in.  In
 this case, \arg{closed} is assumed to be \term{true} as well.
 
 
-\Defun {draw-rectangle} {medium point1 point2 \key (filled \cl{t})
+\defun {draw-rectangle} {medium point1 point2 \key (filled \cl{t})
                          \DrawingOptions \LineJointOptions}
 \Defun {draw-rectangle*} {medium x1 y1 x2 y2 \key (filled \cl{t})
                           \DrawingOptions \LineJointOptions} 
@@ -712,7 +712,7 @@ specified by (\arg{pixmap-x},\arg{pixmap-y}).  A rectangle whose width and
 height is specified by \arg{width} and \arg{height} is copied.  \arg{medium-x}
 and \arg{medium-y} are specified in user coordinates.  (If \arg{medium} is a
 medium or a stream, then \arg{medium-x} and \arg{medium-y} are transformed by the
-user transformation.)  The copying must be done by \cl{medium-copy-copy}.
+user transformation.)  The copying must be done by \cl{medium-copy-area}.
 
 If \arg{pixmap} is not supplied, a new pixmap will be allocated.  Otherwise,
 \arg{pixmap} must be an object returned by \cl{allocate-pixmap} that has the
@@ -729,7 +729,7 @@ position (\arg{medium-x},\arg{medium-y}).  A rectangle whose width and height is
 specified by \arg{width} and \arg{height} is copied.  \arg{medium-x} and
 \arg{medium-y} are specified in user coordinates.  (If \arg{medium} is a medium or
 a stream, then \arg{medium-x} and \arg{medium-y} are transformed by the user
-transformation.)  The copying must be done by \cl{medium-copy-copy}.
+transformation.)  The copying must be done by \cl{medium-copy-area}.
 
 \arg{pixmap} must be an object returned by \cl{allocate-pixmap} that has the
 appropriate characteristics for \arg{medium}.
@@ -744,7 +744,7 @@ on the same medium.  A rectangle whose width and height is specified by
 \arg{width} and \arg{height} is copied.  \arg{from-x}, \arg{from-y}, \arg{to-x},
 and \arg{to-y} are specified in user coordinates.  (If \arg{medium} is a medium
 or a stream, then the $x$ and $y$ values are transformed by the user
-transformation.)  The copying must be done by \cl{medium-copy-copy}.
+transformation.)  The copying must be done by \cl{medium-copy-area}.
 
 
 \Defgeneric {medium-copy-area} {from-drawable from-x from-y width height
@@ -774,7 +774,7 @@ not required, to have pixmap mediums support the stream output protocol
 (\cl{write-char} and \cl{write-string}).
 
 \arg{width} and \arg{height} are integers that give the width and height of the
-pixmap.  If they are unsupplied, the result pixmap will be large enough to
+pixmap.  If they are not supplied, the result pixmap will be large enough to
 contain all of the output done by \arg{body}.
 
 \arg{medium-var} must be a symbol; it is not evaluated.
@@ -805,7 +805,7 @@ transformation in order to produce device coordinates.  Note that the user
 transformation will have already been applied to the positions when the
 medium-specific drawing function is called.  However, the medium-specific
 drawing function will still need to apply the device transformation to the
-positions in order to draw the graphics in the appopriate place on the host
+positions in order to draw the graphics in the appropriate place on the host
 window.
 
 The ink, line style, text style, and clipping regions arguments are not part of
@@ -822,7 +822,7 @@ specified above results in the following series of function calls on a
 non-output recording sheet:
 
 \begin{itemize} 
-\item A program calls \cl{draw-line*} on either a sheet or a medium, \arg{x1},
+\item A program calls \cl{draw-line*} on either a sheet or a medium, additionally passing \arg{x1},
 \arg{y1}, \arg{x2}, and \arg{y2}, and perhaps some drawing options.
 
 \item \cl{draw-line*} merges the supplied drawing options into the medium, and
@@ -886,8 +886,7 @@ $(x1,y1)$ to $(x2,y2)$.
 Draws a set of disconnected lines on the \term{medium} \arg{medium}.
 \arg{coord-seq} is a sequence of coordinate pairs, which are real numbers.  Each
 successive pair of coordinate pairs is taken as the start and end position of
-each line.  It is an error if \arg{coord-seq} does not contain an even number of
-elements.
+each line. The number of numbers in \arg{coord-seq} must be divisible by four.
 
 \Defgeneric {medium-draw-polygon*} {medium coord-seq closed}
 
@@ -951,10 +950,10 @@ waiting for the output to complete.  This is used by \cl{force-output}.
 Clears an area on the {medium} \arg{medium} by filling the rectangle whose edges
 are at \arg{left}, \arg{top}, \arg{right}, and \arg{bottom} with the medium's
 background ink.  \arg{left}, \arg{top}, \arg{right}, and \arg{bottom} are in
-thed medium's coordinate system.
+the medium's coordinate system.
 
 The default method on \cl{basic-medium} simply uses \cl{draw-rectangle*} to
-clear the area.  Some host window systems has special functions that are faster
+clear the area.  Some host window systems may have special functions that are faster
 than \cl{draw-rectangle*}.
 
 \Defgeneric {medium-beep} {medium}

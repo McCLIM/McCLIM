@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
@@ -42,7 +42,7 @@ The closure of the root updating output record is called.  None of the
 closures  the child updating output records are called because any free
 variables captured in the UPDATING-OUTPUT forms need to see the fresh bindings
 from this run of the code.As UPDATING-OUTPUT forms are encountered, several
-things can happen: 
+things can happen:
 
 * The cache value of the form compares to the value stored in the record.  The
 record, and all the updating output records below it, are marked :clean.  The
@@ -387,7 +387,7 @@ spatially organized data structure.
 		 :documentation "Contains the output record tree for the
   current display.")
    (output-record-dirty :accessor output-record-dirty :initform :updating
-	  :documentation 
+	  :documentation
 	  ":updating
            :updated
            :clean")
@@ -495,7 +495,7 @@ updating-output-parent above this one in the tree.")
 (defmethod map-over-updating-output (function record use-old-records)
   (declare (ignore function record use-old-records))
   nil)
-;;; 
+;;;
 (defvar *current-updating-output* nil)
 
 (defgeneric compute-new-output-records (record stream))
@@ -510,19 +510,20 @@ updating-output-parent above this one in the tree.")
     (map-over-updating-output
      #'(lambda (r)
          (let ((sub-record (sub-record r)))
-           (setf (old-children r) sub-record)
-           (setf (output-record-dirty r) :updating)
-           (setf (rectangle-edges* (old-bounds r))
-                 (rectangle-edges* sub-record))))
+           (when sub-record
+             (setf (old-children r) sub-record)
+             (setf (output-record-dirty r) :updating)
+             (setf (rectangle-edges* (old-bounds r))
+                   (rectangle-edges* sub-record)))))
      record
      nil)
     (force-output stream)
     ;; Why is this binding here? We need the "environment" in this call that
     ;; computes the new records of an outer updating output record to resemble
-    ;; that when a record's contents are computed in invoke-updating-output. 
+    ;; that when a record's contents are computed in invoke-updating-output.
     (letf (((stream-current-output-record stream)
 	    (output-record-parent record)))
-      (compute-new-output-records-1 record 
+      (compute-new-output-records-1 record
 				    stream
 				    (output-record-displayer record)))))
 
@@ -750,7 +751,7 @@ in an equalp hash table"))
                         (pane-viewport-region (updating-output-stream record))))
         (was-table (make-hash-table :test #'equalp))
         (is-table (make-hash-table :test #'equalp)))
-    
+
     (labels ((collect-1-was (record)
                (push record was)
                (push record (gethash (output-record-hash record) was-table)))
@@ -836,7 +837,7 @@ in an equalp hash table"))
          ;; moves
          nil
          ;; draws
-         come
+         (nreverse come)
          ;; erase overlapping
          (append gone-overlap come-overlap)
          ;; move overlapping
@@ -847,15 +848,19 @@ in an equalp hash table"))
 (defvar *no-unique-id* (cons nil nil))
 
 (defun move-output-record (record dx dy)
-  (multiple-value-bind (sx sy) (output-record-start-cursor-position record)
-    (multiple-value-bind (ex ey) (output-record-end-cursor-position record)
-      (setf (output-record-position record)
-            (values (+ (nth-value 0 (output-record-position record)) dx)
-                    (+ (nth-value 1 (output-record-position record)) dy)))
+  (multiple-value-bind (x y) (output-record-position record)
+    (setf (output-record-position record)
+          (values (+ x dx) (+ y dy))))
+  ;; Cursor positions are only guaranteed to be non-nil for text
+  ;; output records (16.2.1 The Basic Output Record Protocol)
+  (multiple-value-bind (x y) (output-record-start-cursor-position record)
+    (when (and x y)
       (setf (output-record-start-cursor-position record)
-            (values (+ sx dx) (+ sy dy)))
+            (values (+ x dx) (+ y dy)))))
+  (multiple-value-bind (x y) (output-record-end-cursor-position record)
+    (when (and x y)
       (setf (output-record-end-cursor-position record)
-            (values (+ ex dx) (+ ey dy))))))
+            (values (+ x dx) (+ y dy))))))
 
 (defmethod invoke-updating-output ((stream updating-output-stream-mixin)
 				   continuation
@@ -1053,13 +1058,6 @@ in an equalp hash table"))
    record
    t))
 
-(defun convert-from-relative-to-absolute-coordinates (stream record)
-  (declare (ignore stream record))
-  "This compatibility function returns offsets that are suitable for
-  drawing records that are the children of `record'. In McCLIM this is
-  a noop because output records are kept in stream coordinates."
-  (values 0 0))
-
 
 ;;; Support for explicitly changing output records
 
@@ -1105,8 +1103,8 @@ in an equalp hash table"))
      &optional erases moves draws erase-overlapping move-overlapping
      &key check-overlapping)
   (declare (ignore record child mode old-position old-bounding-rectangle stream
-		   erases moves draws erase-overlapping move-overlapping
-		   check-overlapping))
+                   erases moves draws erase-overlapping move-overlapping
+                   check-overlapping))
   nil)
 
 (defmethod note-output-record-child-changed
@@ -1116,8 +1114,8 @@ in an equalp hash table"))
      &optional erases moves draws erase-overlapping move-overlapping
      &key (check-overlapping t))
   (declare (ignore old-position erases moves draws erase-overlapping
-		   move-overlapping
-		   check-overlapping))
+                   move-overlapping
+                   check-overlapping))
   (when (stream-redisplaying-p stream)
     (propagate-to-updating-output record child  mode old-bounding-rectangle)))
 

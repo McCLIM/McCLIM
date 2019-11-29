@@ -30,11 +30,11 @@
 \def\lparen{{\rm (}}
 \def\rparen{{\rm )}}
 
-\def\optional{{\tt\&optional\ }}
-\def\rest{{\tt\&rest\ }}
-\def\key{{\tt\&key\ }}
-\def\allow{{\tt\&allow-other-keys\ }}
-\def\body{{\tt\&body\ }}
+\def\optional{{\tt\&optional\,}}
+\def\rest{{\tt\&rest\,}}
+\def\key{{\tt\&key\,\hskip 0pt}}
+\def\allow{{\tt\&allow-other-keys}}
+\def\body{{\tt\&body\,}}
 
 \def\arg#1{{\it #1}}
 
@@ -79,11 +79,11 @@
 
 \def\outdent#1{\noindent\hbox to 0pc{\hskip -1.5pc #1\hss}\ignorespaces}
 
-\newcommand {\Dodocf} [3] {\outdent{$\Rightarrow$}{\tt #1 {\it #2} \hfill\mbox{\brac{\it #3\/}}}
-                           \index{{\tt #1} #3}
+\newcommand {\Dodocf} [3] {\outdent{$\Rightarrow$}{\tt #1 {\it #2} \hfill\mbox{\brac{\it #3\/}}}%
+                           \index{{\tt #1} #3}%
                            \Vskip\normalparskip!}
-\newcommand {\Dodocv} [2] {\outdent{$\Rightarrow$}{\tt #1 \hfill\mbox{\brac{\it #2\/}}}
-                           \index{{\tt #1} #2}
+\newcommand {\Dodocv} [2] {\outdent{$\Rightarrow$}{\tt #1 \hfill\mbox{\brac{\it #2\/}}}%
+                           \index{{\tt #1} #2}%
                            \Vskip\normalparskip!}
 
 %% Use these when you want to leave some vertical whitespace afterwards
@@ -107,11 +107,11 @@
 \def\Deferror #1 {\Dodocv {#1} {Error Condition}}
 \def\Defrestart #1 {\Dodocv {#1} {Restart}}
 
-\newcommand {\dodocf} [3] {\outdent{$\Rightarrow$}{\tt #1 {\it #2} \hfill\mbox{\brac{\it #3\/}}} 
-                           \index{{\tt #1} #3}
+\newcommand {\dodocf} [3] {\outdent{$\Rightarrow$}{\tt #1 {\it #2} \hfill\mbox{\brac{\it #3\/}}}%
+                           \index{{\tt #1} #3}%
                            \linebreak}
-\newcommand {\dodocv} [2] {\outdent{$\Rightarrow$}{\tt #1 \hfill\mbox{\brac{\it #2\/}}}
-                           \index{{\tt #1} #2}
+\newcommand {\dodocv} [2] {\outdent{$\Rightarrow$}{\tt #1 \hfill\mbox{\brac{\it #2\/}}}%
+                           \index{{\tt #1} #2}%
                            \linebreak}
 
 %% Use these when you don't want to leave any vertical whitespace afterwards

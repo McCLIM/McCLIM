@@ -52,13 +52,11 @@ value of the gadget is the image being displayed."))
       ;; Draw it in the center.
       (handler-case (draw-pattern*
                      pane (gadget-value pane)
-                     (/ (- (bounding-rectangle-width pane) image-width)
-                        2)
-                     (/ (- (bounding-rectangle-height pane) image-height)
-                        2))
-        (error ()
+                     (/ (- (bounding-rectangle-width pane) image-width) 2)
+                     (/ (- (bounding-rectangle-height pane) image-height) 2))
+        (error (e)
           (with-text-style (pane (make-text-style nil :italic nil))
-            (draw-text* pane (format nil "Error while drawing image")
+            (draw-text* pane (format nil "Error while drawing image: ~a" e)
                         0 0 :align-y :top)))))))
 
 (define-application-frame image-viewer ()

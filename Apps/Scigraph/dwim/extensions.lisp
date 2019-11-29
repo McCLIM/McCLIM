@@ -31,27 +31,6 @@ advised of the possiblity of such damages.
 ;;; Lisp Extensions
 ;;;*****************
 
-#-(and)
-(unless (fboundp 'ignore)
-  ;; Define IGNORE to be like our old friend from Genera.
-  ;; This practice is frowned upon because IGNORE is in the
-  ;; common lisp package (it is a declaration) and changing
-  ;; anything about those symbols is frowned upon.  So we
-  ;; should learn to live without this old friend some day.
-  #FEATURE-CASE
-  ((:allegro
-    (excl:without-package-locks 
-     (setf (symbol-function 'ignore)
-       #'(lambda (&rest args)
-	   (declare (ignore args) (dynamic-extent args))
-	   nil))))
-   ((not allegro)
-    (unless (fboundp 'ignore)
-      (setf (symbol-function 'ignore)
-	#'(lambda (&rest args)
-	    (declare (ignore args) (dynamic-extent args))
-	    nil))))))
-
 (defmacro with-rem-keywords ((new-list list keywords-to-remove) &body body)
   `(let ((,new-list (with-rem-keywords-internal ,list ,keywords-to-remove)))
     ,@body))
@@ -74,21 +53,7 @@ advised of the possiblity of such damages.
   (with-rem-keywords (new-list list keywords-to-remove)
     (copy-list new-list)))
 
-;;;Still need Genera
-(eval-when (compile eval load)
-  #+lucid (import '(#-clim-1.0 lcl:*load-pathname* lcl:*source-pathname*))
-  #+allegro (import 'excl:*source-pathname*))
 
-#1feature-case
-((:lucid 
-  (eval-when (compile eval load)
-    ;;Just use the existing Lucid definition
-    (import 'lcl:working-directory)))
- (:allegro
-  (defun working-directory ()
-    (excl:current-directory))
-  (defsetf working-directory excl:chdir)))
-  
 
 
 ;;; **************************
@@ -99,221 +64,34 @@ advised of the possiblity of such damages.
 (defun getenv (string)
   "Get the value of the environment variable named STRING."
   (assert (stringp string))
-  #FEATURE-CASE
-  ((:lucid (lucid::environment-variable string))
-   (:allegro (system:getenv string))
-   (:genera (let ((symbol (intern string :scl)))
-	      (and (boundp symbol) (symbol-value symbol))))
-   (:openmcl (ccl::getenv string))
-   (:sbcl (sb-ext:posix-getenv string))
-   (:scl (cdr (assoc string ext:*environment-list* :test #'string=)))
-   ))
+  #+lucid
+  (lucid::environment-variable string)
 
-#+allegro
-;;>> Allegro 4.2 supports SYSTEM:GETENV.  How do I set an environment variable?
-;;>> I expected a SETF method or a SETENV function.
-;;Franz sez: Well here's one way of doing it: foreign call putenv from libc.a.
-(progn
-  (load  "" :unreferenced-lib-names
-	 `(,(ff:convert-to-lang "putenv")))
-  (ff:defforeign 'putenv :arguments '(integer)))
+  #+lispworks
+  (lispworks:environment-variable name)
 
-#+sbcl
-(sb-alien:define-alien-routine ("putenv" putenv) sb-alien:int
-  (name sb-alien:c-string))
+  #+allegro
+  (system:getenv string)
 
-(defsetf getenv (string) (new-value)
-  #FEATURE-CASE
-  ((:allegro `(putenv (ff:string-to-char* (format nil "~A=~A" ,string ,new-value))))
-   (:lucid `(setf (lcl:environment-variable ,string) ,(princ-to-string new-value)))
-   (:genera `(setf (symbol-value ,(intern string :scl)) ,new-value))
-   (:openmcl `(ccl::setenv string new-value))
-   (:sbcl `(putenv (format nil "~A=~A" ,string ,new-value)))))
+  #+genera
+  (let ((symbol (intern string :scl)))
+    (and (boundp symbol) (symbol-value symbol)))
 
-(defun run-shell-command (command &rest args &key input output error-output (wait t)
-						  arguments
-						  if-input-does-not-exist 
-						  if-output-exists
-						  if-error-output-exists)
-  "Runs a shell command.  See documentation for Allegro CL version of this for return
-   value details.  Command can include the arguments, or they can be additionally be
-   specified by the :ARGUMENTS keyword arg."
-  (declare (ignore input output error-output if-input-does-not-exist
-		   if-output-exists if-error-output-exists #-lucid wait))
-  (assert (listp arguments)) ;;Should be a list of strings
-  (let ((command-with-arguments (format nil "~A~{ ~A~}" command arguments)))
-    #FEATURE-CASE
-    ((:allegro
-      (with-rem-keywords (args1 args '(:arguments))
-	(apply #'excl:run-shell-command command-with-arguments args1)))
-     (:lucid
-      (let* ((end-of-command-pos 
-	      (position #\space command-with-arguments :test #'char=))
-	     (command-only 
-	      (if end-of-command-pos
-		  (subseq command-with-arguments 0 end-of-command-pos)
-		command-with-arguments))
-	     (real-arguments 
-	      (string-trim " "
-			   (subseq command-with-arguments end-of-command-pos))))
-	(with-rem-keywords (args1 args '(:arguments))
-	  (multiple-value-bind (stream1 stream2 exit-status process-id)
-	      (apply #'lcl:run-program command-only :arguments real-arguments args1)
-	    (if wait
-		exit-status
-	      (values stream1 stream2 process-id))))))
-     ((and :mcl (not :openmcl))
-      (with-rem-keywords (args1 args '(:arguments))
-	(apply #'ccl:run-fred-command command-with-arguments args1)))
-     ((or :openmcl :sbcl)
-      (with-rem-keywords (args1 args '(:arguments))
-	(apply #+sbcl #'sb-ext:run-program
-	       #+openmcl #'ccl:run-program
-	       command arguments args1)))
-     (:genera (not-done)))))
-	      
-
-(defun current-process ()
-  #FEATURE-CASE
-  ((:genera process::*current-process*)
-   (:allegro mp::*current-process*)
-   (:lucid nil)
-   (:clim-1.0 clim-utils::*current-process*)
-   (:clim-2 (clim-sys:current-process))))
+  #+openmcl
+  (let ((symbol (intern string :scl)))
+    (and (boundp symbol) (symbol-value symbol)))
 
-(defun process-wait (whostate predicate)
-  #FEATURE-CASE
-  ((genera (scl:process-wait whostate predicate))
-   (lucid (lcl:process-wait whostate predicate))
-   (allegro (mp:process-wait whostate predicate))
-   (clim-1.0 (clim-utils:process-wait whostate predicate))
-   (clim-2   (clim-sys:process-wait whostate predicate))))
+  #+sbcl
+  (sb-ext:posix-getenv string)
+
+  #+scl
+  (cdr (assoc string ext:*environment-list* :test #'string=)))
 
 (defun process-run-function (name-or-keywords function &rest args)
   (let* ((new-args (copy-list args)) ; in case of stack-allocation
 	 (predicate
 	  (if args #'(lambda () (apply function new-args)) function)))
-    #FEATURE-CASE
-    ((:ALLEGRO
-      (funcall #'mp:process-run-function name-or-keywords predicate))
-     (:GENERA
-      (funcall #'scl:process-run-function name-or-keywords predicate))
-     (:LUCID
-      (flet ((lucid-procees-run-function-hack (NAME-OR-KEYWORDS
-					       &rest FNCT-LIST)
-	       (let ((FNCT-NAME (first FNCT-LIST))
-		     (FNCT-ARGS (copy-list (cdr FNCT-LIST))))
-		 (if (consp NAME-OR-KEYWORDS)
-		     (apply #'lcl::make-process
-			    :function FNCT-NAME
-			    :args FNCT-ARGS
-			    NAME-OR-KEYWORDS)
-		   (lcl::make-process
-		    :name NAME-OR-KEYWORDS
-		    :function FNCT-NAME
-		    :args FNCT-ARGS)))))
-	(apply #'lucid-procees-run-function-hack
-	       name-or-keywords function args)))
-     ((and :MCL (not :openmcl))
-      ;; No multiprocessing.  Fake it.
-      (funcall predicate))
-     (:CLIM-1.0
-      (clim-utils::make-process predicate :name name-or-keywords))
-     ((and :clim-2 :cmu (not :x86))
-      ;; This is a hack for CMUCL
-      (funcall predicate))
-     (:CLIM-2
-      ;; The Spec says that make-process takes a keyword arg... -- moore
-      (CLIM-SYS:make-process predicate #+mcclim :name name-or-keywords)))))
-
-(defun activate-process (p)
-  #FEATURE-CASE
-  ((:lucid (lcl::activate-process p))
-   (:allegro (mp:process-enable p))
-   (:clim-2 (clim-sys:enable-process p))))
-
-(defun deactivate-process (p)
-  #FEATURE-CASE
-  ((:lucid (lcl::deactivate-process p))
-   (:allegro (mp:process-disable p))
-   (:clim-2 (clim-sys:disable-process p))))
-
-(defun process-interrupt (p function &rest args)
-  #FEATURE-CASE
-  ((:allegro (apply #'mp:process-interrupt p function args))))
-
-(defun kill-process (p)
-  #FEATURE-CASE
-  ((:genera (process:kill p))
-   (:clim-0.9 (ci::destroy-process p))
-   (:clim-1.0 (clim-utils:destroy-process p))
-   (:clim-2 (clim-sys:destroy-process p))))
-
-(defmacro with-process-lock ((lock) &body body)
-  "Grant current process exclusive access to some resource.  Wait for access if necessary."
-  #+allegro
-  `(progn
-     (or ,lock (setf ,lock (mp:make-process-lock)))
-     (mp:with-process-lock (,lock) ,@body))
-  #+lucid
-  `(lucid::with-process-lock (,lock) ,@body)
-  #+clim-2
-  `(clim-sys:with-lock-held (,lock)
-     ,@body)
-  #+genera
-  (let ((me (gensym)))
-    `(let ((,me scl:*current-process*))
-       (if (eq ,lock ,me) (error "Lock already locked by this process."))
-       (unwind-protect
-	   (if (or (si:store-conditional (scl:locf ,lock) nil ,me)
-		   (and (process::safe-to-process-wait-p scl:*current-process*)
-			(scl:process-wait "Lock"
-			  #'(lambda (locative)
-			      (declare (sys:downward-function))
-			      (si:store-conditional locative nil ,me))
-			  (scl:locf ,lock))))
-	       (when (eq ,lock ,me) ,@body))
-	 (si:store-conditional (scl:locf ,lock) ,me nil)))))
-
-;;;Loop unrolling can increase the performance of big loops by 10 to 30% if the body
-;;;  is fast relative to the price of an iteration.  Here is a portable version of
-;;;  DOTIMES that unrolls its body.  The argument BLOCKING must be an integer; the
-;;;  compiler unrolls the loop BLOCKING number of times.  A good number to use is 8.
-;;;  Avoid choosing a really big integer because your compiled code will be huge.
-
-(defmacro dotimes-unrolled ((var init countform blocking &optional resultform) &body body)
-  (unless (integerp blocking)
-    (error "To unroll this loop, ~S must be an integer." blocking))
-  `(let ((,var ,init))
-     (dotimes (ignore (floor ,countform ,blocking))
-       ,@(let ((result nil))
-	   (setq body (append body `((incf ,var))))
-	   (dotimes (ignore blocking)
-	     (setq result (nconc (copy-list body) result)))
-	   result))
-     (dotimes (ignore (mod ,countform ,blocking) ,resultform)
-       ,@body)))				
-
-#+test
-(defun roll-test (n)
-  (let ((number 2.1))
-    (multiple-value-bind (val time)
-	(the-time
-	  (dotimes (i n)
-	    (* number number)))
-      (print val)
-      (print time))
-    (multiple-value-bind (val time)
-	(the-time
-	  (dotimes-unrolled (i 0 n 20)
-	    (* number number)))
-      (print val)
-      (print time))
-    ))
-
-;;; Zetalisp function.
-(defmethod instancep ((object t)) nil)
-(defmethod instancep ((object standard-object)) t)
+    (clim-sys:make-process predicate :name name-or-keywords)))
 
 (defun type-specifier-p (object)
   "Determine if OBJECT is a valid type specifier"
@@ -323,25 +101,6 @@ advised of the possiblity of such damages.
       (multiple-value-bind (v errorp) (ignore-errors (funcall test object))
 	(declare (ignore v))
 	(not errorp)))))
-
-(defun file-type-for-binaries ()
-  #FEATURE-CASE
-  ((:genera si:*default-binary-file-type*)
-   ((or :allegro :sbcl)
-    #.(if (fboundp 'compile-file-pathname)
-	  (pathname-type (compile-file-pathname "foo"))
-	  "fasl"))
-   (:scl (pathname-type (compile-file-pathname "foo")))
-   (:lucid (car lcl:*load-binary-pathname-types*))
-   (:mcl #.(pathname-type ccl:*.fasl-pathname*))
-   ))
-
-(defun file-type-for-sources ()
-  #FEATURE-CASE
-  ((:genera "LISP")
-   (:unix "lisp")
-   (:mcl  "lisp")
-   ))
 
 ;;;************
 ;;; DUMPER
@@ -412,8 +171,7 @@ advised of the possiblity of such damages.
 		 (if (tree-search element predicate)
 		     (return-from tree-search t)))))
 	   (need-full-dump (object)
-	     (or (instancep object)
-		 (and (arrayp object) (not (stringp object)))
+	     (or (and (arrayp object) (not (stringp object)))
 		 (hash-table-p object )))
 	   (traverse (form)
 	     (let (index)

@@ -33,12 +33,6 @@ advised of the possiblity of such damages.
 ;;; a menu. If a name is not provided one will be generated automatically like
 ;;; OBJECT-1, OBJECT-2 ....
 
-(eval-when (compile load eval)
-  (export '(named-mixin name name-string make-name))
-  (export '(named-object) 'tool)
-  (export 'declare-required-method)
-  )
-
 (defclass named-mixin
 	  ()
     ((name :initform nil :initarg :name :reader name))
@@ -78,7 +72,7 @@ advised of the possiblity of such damages.
 
 (defmethod print-object ((self named-mixin) stream)
   (if *print-escape*
-      (printing-random-object (self stream :no-pointer)
+      (dwim:printing-random-object (self stream :no-pointer)
 	(format stream "~a ~a" (class-name (class-of self)) (name self)))
       (format stream "~a" (name self))))
 
@@ -88,18 +82,6 @@ advised of the possiblity of such damages.
 ;;; methods for the OBJECT protocols are sometimes broken out into separate mixins
 ;;; with the suffix -OB-MIXIN.  This gives you better control over pop-edit etc.
 
-(defclass BASIC-OBJECT
-	  (copyable-mixin
-	    dumpable-mixin)
-    ()
-  (:documentation
-    "The base of all scigraph objects.
-     Any general capabilites can go here, rather than standard-object."))
-
-(defclass NAMED-OBJECT (named-mixin basic-object)
-    ())
-
-
 ;;; Handy macro.  
 ;;; Make a completely unspecific version of the method.  If this
 ;;; gets called, it's a bug in the setup of the code.

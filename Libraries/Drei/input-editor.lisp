@@ -56,6 +56,7 @@ instantiated."))
 				       &key stream
 				       (cursor-visibility t)
                                        (min-width 0))
+  (declare (ignore min-width))
   ;;(check-type min-width (or (integer 0) (eql t)))
   (check-type stream clim-stream-pane)
   (multiple-value-bind (cx cy)
@@ -584,13 +585,6 @@ if stuff is inserted after the insertion pointer."
                                                       finally (return 0))
                                                 t t)
                  (handler-case (process-gestures-or-command drei)
-                   (climi::selection-notify (c)
-                     (let* ((event (climi::event-of c))
-                            (sheet (event-sheet event))
-                            (port  (port sheet)))
-                       (when (eq *standard-input* sheet)
-                         (insert-sequence (point (view drei))
-                                          (clim-backend:get-selection-from-event port event)))))
                    (unbound-gesture-sequence (c)
                      (display-message "~A is unbound" (gesture-name (gestures c))))
                    (abort-gesture (c)
@@ -650,7 +644,14 @@ if stuff is inserted after the insertion pointer."
         (input-position stream) (min scan-pointer (input-position stream))))
 
 ;; This has been cribbed from SPLIT-SEQUENCE and lightly modified.
-(defun split-sequence (delimiter seq &key (count nil) (remove-empty-subseqs nil) (start 0) (end nil) (test nil test-supplied) (test-not nil test-not-supplied) (key nil key-supplied))
+(defun split-sequence (delimiter seq &key
+                                       (count nil)
+                                       (remove-empty-subseqs nil)
+                                       (start 0)
+                                       (end nil)
+                                       (test nil test-supplied)
+                                       (test-not nil test-not-supplied)
+                                       (key nil key-supplied))
   "Return a list of subsequences in seq delimited by delimiter.
 
 If :remove-empty-subseqs is NIL, empty subsequences will be

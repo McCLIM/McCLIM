@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-clx)
@@ -24,13 +24,43 @@
 ;;; CLX-FRAME-MANAGER class
 
 (defclass clx-frame-manager (frame-manager)
-  ())
+  ((mirroring-fn :initarg :mirroring
+                 :initform (mirror-factory :full)
+                 :reader mirroring-p)
+   (class-gensym :initarg :class-gensym
+                 :initform (gensym "CLX-")
+                 :reader class-gensym)))
+
+;;; We use &ALLOW-OTHER-KEYS since the INITIALIZE-INSTANCE for
+;;; CLX-PORT passes various initargs that CLX-FRAME-MANAGER doesn't
+;;; necessarily accept.
+(defmethod initialize-instance :after ((instance clx-frame-manager)
+                                       &key &allow-other-keys))
+
+;;; Default mirroring predicates
+(defun mirror-factory (kind)
+  (etypecase kind
+    (null nil)
+    (function kind)
+    ((eql :single)
+     #'(lambda (class)
+         (and (not (subtypep class 'mirrored-sheet-mixin))
+              (subtypep class 'top-level-sheet-pane))))
+    ((eql :full)
+     #'(lambda (class)
+         (and (not (subtypep class 'mirrored-sheet-mixin))
+              (subtypep class 'basic-pane))))
+    ((eql :random) ;; for testing
+     #'(lambda (class)
+         (and (not (subtypep class 'mirrored-sheet-mixin))
+              (or (subtypep class 'top-level-sheet-pane)
+                  (zerop (random 2))))))))
 
 ;; Abstract pane lookup logic
 
 (defun find-first-defined-class (types)
   (first
-   (remove-if #'null 
+   (remove-if #'null
               (mapcar (lambda (class-name)
                         (find-class class-name nil))
                       types))))
@@ -40,7 +70,7 @@
            (typecase name-elt
              (symbol (symbol-name name-elt))
              (sequence (coerce name-elt 'string))
-             (t (princ-to-string name-elt)))))    
+             (t (princ-to-string name-elt)))))
   (find-symbol
    (apply #'concatenate 'string (mapcar #'coerce-name-element name-components))
    package-spec)))
@@ -56,7 +86,7 @@
       (:climi ,type))))
 
 (defun generate-clx-pane-specs (type)
-  (append 
+  (append
    `((:clim-clx #:clx- ,type #:-pane)
      (:clim-clx #:clx- ,type)
      (:climi #:clx- ,type #:-pane)
@@ -73,43 +103,36 @@
 	  (get type 'climi::concrete-pane-class-name))
       (find-first-defined-class (find-symbols (generate-clx-pane-specs type)))
       type))
-  
-;;; This is an example of how make-pane-1 might create specialized
-;;; instances of the generic pane types based upon the type of the
-;;; frame-manager. However, in the CLX case, we don't expect there to
-;;; be any CLX specific panes. CLX uses the default generic panes
-;;; instead.
 
-;;; if the pane is a subclass of basic-pane and it is not mirrored we create a new class.
-(defun maybe-mirroring (concrete-pane-class)
-  (when (and (not (subtypep concrete-pane-class 'mirrored-sheet-mixin))
-	     (subtypep concrete-pane-class 'basic-pane))
-    (let* ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
+;;; This is an example of how make-pane-1 might create specialized instances of
+;;; the generic pane types based upon the type of the frame-manager. However, in
+;;; the CLX case, we don't expect there to be any CLX specific panes. CLX uses
+;;; the default generic panes instead.
+(defun maybe-mirroring (fm concrete-pane-class)
+  (when (funcall (mirroring-p fm) concrete-pane-class)
+    (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
                                           (class-name concrete-pane-class)
-                                          concrete-pane-class))
-	   (concrete-mirrored-pane-class (concatenate 'string
-						      "CLX-"
-						      (symbol-name concrete-pane-class-symbol)
-						      "-DUMMY"))
-	   (concrete-mirrored-pane-class-symbol (find-symbol concrete-mirrored-pane-class
-							     :clim-clx)))
-      #+(or) (format *debug-io* "use dummy mirrored class ~A~%" concrete-mirrored-pane-class)
-      (unless concrete-mirrored-pane-class-symbol
-	(setf concrete-mirrored-pane-class-symbol
-	      (intern concrete-mirrored-pane-class :clim-clx))
-	(eval
-	 `(defclass ,concrete-mirrored-pane-class-symbol
-	      (clx-mirrored-sheet-mixin
-	       ,concrete-pane-class-symbol)
-	    ()
-	    (:metaclass ,(type-of (find-class concrete-pane-class-symbol))))))
-      #+(or) (format *debug-io* "create class ~A~%" concrete-mirrored-pane-class-symbol)
-      (setf concrete-pane-class (find-class concrete-mirrored-pane-class-symbol))))
+                                          concrete-pane-class)))
+      (multiple-value-bind (class-symbol foundp)
+          (alexandria:ensure-symbol
+           (alexandria:symbolicate (class-gensym fm) "-" (symbol-name concrete-pane-class-symbol))
+           :clim-clx)
+        (unless foundp
+          (eval
+           `(defclass ,class-symbol
+                (mirrored-sheet-mixin
+                 ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
+                     '(permanent-medium-sheet-output-mixin))
+                 ,concrete-pane-class-symbol)
+              ()
+              (:metaclass ,(type-of (find-class concrete-pane-class-symbol))))))
+        ;; (format *debug-io* "dummy class mirror ~A: ~A~%" concrete-pane-class-symbol class-symbol)
+        (setf concrete-pane-class (find-class class-symbol)))))
   concrete-pane-class)
 
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
   (apply #'make-instance
-	 (maybe-mirroring (find-concrete-pane-class type))
+	 (maybe-mirroring fm (find-concrete-pane-class type))
 	 :frame frame
 	 :manager fm
 	 :port (port frame)
@@ -186,3 +209,20 @@
 
 (defmethod note-space-requirements-changed :after ((graft clx-graft) pane)
   (tell-window-manager-about-space-requirements pane))
+
+#+nil
+(defmethod (setf clim:sheet-transformation) :around (transformation (sheet clx-pane-mixin))
+  (log:info "transforming clx sheet: ~s" sheet)
+  (unless (transformation-equal transformation (sheet-transformation sheet))
+    (let ((old-transformation (sheet-transformation sheet)))
+      (let ((climi::*inhibit-dispatch-repaint* nil))
+        (call-next-method))
+      #+nil
+      (when (sheet-viewable-p sheet)
+        (let* ((sheet-region (sheet-region sheet))
+               (new-region (transform-region (sheet-transformation sheet) sheet-region))
+               (old-region (transform-region old-transformation sheet-region)))
+          (log:info "OLD: ~s    NEW: ~s" old-region new-region)
+          #+nil
+          (dispatch-repaint (sheet-parent sheet)
+                            (region-union new-region old-region)))))))

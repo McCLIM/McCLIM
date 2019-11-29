@@ -491,7 +491,7 @@ Command menu items are stored as a list of the form
 \cl{(\arg{type} \arg{value} . \arg{options})}, where \arg{type} and \arg{value}
 are as in \cl{add-menu-item-to-command-table}, and \arg{options} is a list of
 keyword-value pairs.  The allowable keywords are \cl{:documentation}, which is
-used to supply optional pointer documention for the command menu item, and
+used to supply optional pointer documentation for the command menu item, and
 \cl{:text-style}, which is used to indicate what text style should be used for
 this command menu item when it is displayed in a command menu.
 
@@ -1020,7 +1020,7 @@ command's arguments.  The parsers themselves must be implemented by accepting
 objects whose presentation type is \cl{command}.
 
 If the command parser returns a partial command, the \cl{accept} presentation
-method for the \cl{command} type must call the partial command prser stored in
+method for the \cl{command} type must call the partial command parser stored in
 \cl{*partial-command-parser*}.
 
 The \cl{present} presentation method for the \cl{command} type must call the

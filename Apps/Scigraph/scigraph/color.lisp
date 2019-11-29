@@ -85,51 +85,34 @@ advised of the possiblity of such damages.
    can choose from for drawing graphs.")
 
 (defvar *colors* nil "Used for pop-edit.")
+(defvar *color-hash* (make-hash-table :test 'equal))
 
-(let ((colors (make-hash-table)))
-  
-  (defun ALU-FOR-COLOR (color-name)
+(defun alu-for-color (color-name)
     "Translate a color name to an ink/alu"
     (or *colors* (initialize-color-system))
-    (or (gethash color-name colors nil)
-	(gethash :white colors nil)))
+    (or (gethash color-name *color-hash* nil)
+	(gethash :white *color-hash* nil)))
 
-  (defun MAKE-COLOR-CHOICES (color-specifications &optional reinitialize)
+(defun make-color-choices (color-specifications &optional reinitialize)
     "Makes an Alist of colors to choose from."
-    (if reinitialize (setq colors (make-hash-table)))
-    (cond ((color-exists-p)
-	   (loop for (name red green blue) in color-specifications
-		 do
-	     (setf (gethash name colors) (make-color-rgb red green blue))
-	     (pushnew (list (string-capitalize name) :value name)
-		      *colors*
-		      :test #'equal)))
-	  #+genera
-	  (t
-	   (pushnew (list "White" tv:alu-ior) *colors*)
-	   (pushnew (list "Black" tv:alu-andca) *colors*)
-	   (setf (gethash :white colors) tv:alu-ior)
-	   (setf (gethash :black colors) tv:alu-andca)))))
+    (if reinitialize (setq *color-hash* (make-hash-table)))
+    (loop for (name red green blue) in color-specifications
+       do
+         (setf (gethash name *color-hash*) (clim:make-rgb-color red green blue))
+         (pushnew (list (string-capitalize name) :value name)
+                  *colors*
+                  :test #'equal)))
 
 (defun initialize-color-system ()
   "Initialize the color screen if available."
   ;; Called by ALU-FOR-COLOR the first time an alu is needed.
-  #-clim (declare (special color:color-screen))
-  #+genera
-  (when (color:color-exists-p)
-    (or color:color-screen
-	;; Funcalls avoid compiler complaint when color system not
-	;; loaded at compile time.
-	(funcall 'color:create-color-screen))
-    (scl:send color:color-screen :standardize-color-map))
   (make-color-choices *color-specifications*))
 
 (defun alu-for-stream (stream color-name)
   "Translate a color name to an ink/alu"
   (if (color-stream-p stream)
       (alu-for-color color-name)
-      #+clim (if (eq color-name :black) %erase %draw)
-      #-clim (if (eq color-name :black) tv:alu-andca tv:alu-ior)))
+      (if (eq color-name :black) %erase %draw)))
 
 (defun draw-color-swatch (stream color-name pretty-name selected-p &optional size)
   "Draw a sample of the given color at the current cursor position."
@@ -151,7 +134,7 @@ advised of the possiblity of such damages.
     (setq color-name (third color-name))
     (terpri stream)
     (draw-color-swatch stream color-name nil nil)
-    (stream-increment-cursor-position* stream 15 0)
+    (stream-increment-cursor-position stream 15 0)
     (format stream " ~A " color-name)))
 
 (defun display-gray-wash (&optional
@@ -172,30 +155,11 @@ advised of the possiblity of such damages.
 	    bottom (- bottom (* .1 height)))
       (loop
 	(if (> intensity 1.0) (return))
-	(let ((gray (make-color-rgb intensity intensity intensity)))
+	(let ((gray (clim:make-rgb-color intensity intensity intensity)))
 	  (draw-rectangle left right bottom top :stream stream :alu gray :filled t)
 	  (setq left right right (+ right increment))
 	  (incf intensity quantum))))))
 
-#-clim-2
-(define-presentation-type color-presentation ()
-  :description "a color"
-  :parser ((stream)
-	   (completing-from-suggestions (stream)
-					(dolist (color *colors*)
-					  (suggest (first color) (third color)))))
-  :printer ((object stream)
-	    ;; Present the textual name, rather than a swatch of color.
-	    (write-string (string object) stream))
-  :accept-values-displayer
-  ((stream object query-identifier)
-   (accept-values-choose-from-sequence
-    stream *colors* object query-identifier
-    :drawer
-    #'(lambda (stream object name selected-p)
-	(draw-color-swatch stream object name selected-p)))))
-
-#+clim-2
 (clim:define-presentation-type-abbreviation color-presentation ()
   ;; Can't simply call this 'color' because that already names a class.
   `((member ,@(mapcar #'third *colors*))
@@ -203,7 +167,6 @@ advised of the possiblity of such damages.
     :printer present-color
     :highlighter highlight-color))
 
-#+clim-2
 (defun present-color (object stream &key acceptably)
   (declare (ignore acceptably))
   (with-room-for-graphics (stream)
@@ -211,7 +174,6 @@ advised of the possiblity of such damages.
 		       (string object)
 		       nil)))
 
-#+clim-2
 (defun highlight-color (continuation object stream)
   (clim:surrounding-output-with-border
    (stream)

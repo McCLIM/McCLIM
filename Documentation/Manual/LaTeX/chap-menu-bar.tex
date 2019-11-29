@@ -4,7 +4,7 @@
 Menu bar has become essential part of every GUI system, including
 McClim. Ideally, McClim should try to use the menu bar provided by
 host window system via McClim backends, but the current
-\texttt{clx-backend} doesn't supports native menu bars. That's why It
+\texttt{clx-backend} doesn't supports native menu bars. That's why it
 has some quirks of its own, like you need to keep mouse button pressed
 while accessing the sub-menus.
 
@@ -45,7 +45,7 @@ another \texttt{command-table} as argument) (See
 Menu bar can be changed anytime by changing \texttt{command-table}
 associated with the current \texttt{frame}. For example:
 \begin{verbatim}
-        (setf (frame-command-table *application-frame*) 
+        (setf (frame-command-table *application-frame*)
               new-command-table)
 \end{verbatim}
 changes menu bar of \texttt{*application-frame*} by replacing current
@@ -110,28 +110,24 @@ Arguments to this function are:
   used to indicate that the command menu item should be drawn with the
   supplied text style in command menus.
 \item
-  \texttt{error-p} : If this is \texttt{t}, adding an existing item to
-  the menu will signal error. If \texttt{nil}, it will first remove
-  the existing item and add the new item to the command-table.
+  \texttt{error-p} : If this is \texttt{t} and the item already exists
+  in the menu, it will signal a \texttt{command-already-present}
+  error. If \texttt{nil}, it will first remove the existing item and
+  add the new item to the command-table.
 \end{itemize}
 
-To remove items from command table, following function is used:
+To remove items from command table, the following function is used:
 
 \Defun {remove-menu-item-from-command-table} {command-table string \key (errorp t)}
 
 where \texttt{command-table} is command-table-designator and
-\texttt{string} is menu item's name (it is case-insensitive). You can
+\texttt{string} is the menu item's name (it is case-insensitive). You can
 provide \texttt{:error-p nil} to suppress the error if item is not in
 the command-table.
 
-Note that both of above functions \texttt{\emph{does not}}
-automatically update the menu bar. For that you need to replace
-existing \texttt{frame-command-table} with modified command table
-using \texttt{setf}. Ideal way to do this is use \texttt{let} to
-create the copy of \texttt{frame-command-table}, modify it and at the
+Note that both of the above functions \texttt{\emph{do not}}
+automatically update the menu bar. For that you need to replace the
+existing \texttt{frame-command-table} with the modified command table
+using \texttt{setf}. The typical way to do this is to use \texttt{let}
+to create a copy of \texttt{frame-command-table}, modify it and at the
 end call \texttt{setf} to replace the original.
-
-
-
-
-

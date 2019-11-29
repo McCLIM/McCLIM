@@ -23,6 +23,27 @@ to the supplied `pane` argument.
   (format t "hi2"))
 ```
 
+### Defining application frames
+
+`defapp name-and-opts args &body body`
+
+Works like defun except that function starts the application frame and
+executes the body as the frame display-function (when the frame is
+redisplayed body will be run again). Binds `clim:*application-frame*`
+and `*standard-output*`. All function arguments are available for the
+display function. First argument may be a list, then first element is
+a name and the rest are parameters used when creating the application
+pane.
+
+```common-lisp
+(defapp (example :text-margins `(:left 20 :top 10 :right 20 :bottom 10))
+    (x y z)
+  (clim:draw-rectangle* *standard-output* x y (+ x 100) (+ y 200))
+  (format t "~&Z is ~s" z))
+
+(example 100 100 "jackdaniel")
+```
+
 ### Tables
 
 `with-table (&optional pane &rest options) &body body`
@@ -55,3 +76,17 @@ Example:
           (slim:cell (princ "Extra:"))
           (slim:cell (format t "~A" 'quux)))))))
 ```
+
+### Sheet and output-record protocols unification
+
+Sheet and output record have separate protocols doing the same thing
+for them. We provide a unified protocol which spans them with this
+regard.
+
+| unified function  | sheet function          | output-record function      |
+|-------------------|-------------------------|-----------------------------|
+| slim:parent       | clim:sheet-parent       | clim:output-record-parent   |
+| slim:children     | clim:sheet-children     | clim:output-record-children |
+| slim:add-child    | clim:sheet-adopt-child  | clim:add-output-record      |
+| slim:delete-child | clim:sheet-disown-child | clim:delete-output-record   |
+| slim:repaint      | clim:repaint-sheet      | clim:replay-output-record   |

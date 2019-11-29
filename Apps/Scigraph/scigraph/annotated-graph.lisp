@@ -1,4 +1,4 @@
-;;; -*- Syntax: Common-lisp; Package: GRAPH -*-
+;; -*- Syntax: Common-lisp; Package: GRAPH -*-
 #|
 Copyright (c) 1987-1993 by BBN Systems and Technologies,
 A Division of Bolt, Beranek and Newman Inc.
@@ -386,25 +386,7 @@ about fonts and pointer sensitivity.  It would be better to either drop the
 older classes in favor of cleaned up newer ones.  Someday, ...
 
 ||#
-#-clim
-(defmethod compute-y-annotation ((self annotated-borders-mixin) STREAM)
-  (with-slots (y-annotation ull vll vur y-label) self
-    (when y-label
-      (when (not y-annotation)
-	(let* ((annotation (make-border-annotation
-			     self STREAM y-label :left
-			     ull vll
-			     'y-label (/ pi 2) nil))
-	       (height nil))
-	  (setf (style annotation) (y-label-text-style self stream))
-	  (setq height (* (length y-label) (stream-line-height stream)))
-	  (set-uv-position annotation
-			   (- ull (* (stream-character-width stream) 3))
-			   (+ (values (truncate (+ vll vur) 2))
-			      (values (truncate height 2))))
-	  (setq y-annotation annotation))))))
 
-#+clim
 (defmethod compute-y-annotation ((self annotated-borders-mixin) STREAM)
   (with-slots (y-annotation ull vll vur y-label y-digits) self
     (when y-label
@@ -412,14 +394,14 @@ older classes in favor of cleaned up newer ones.  Someday, ...
 	(let* ((annotation (make-border-annotation
 			     self STREAM y-label :left
 			     ull vll
-			     'y-label (/ pi 2) nil))
+			     'y-label #.(/ pi -2) nil))
 	       (height nil))
 	  (setf (style annotation) (y-label-text-style self stream))
 	  (setq height (* (length y-label) (stream-line-height stream)))
 	  (set-uv-position annotation
 			   (- ull (* (stream-character-width stream)
 				     (+ y-digits 2)))
-			   (+ (values (truncate (+ vll vur) 2))
+			   (- (values (truncate (+ vll vur) 2))
 			      (values (truncate height 2))))
 	  (setq y-annotation annotation))))))
 
@@ -558,7 +540,6 @@ older classes in favor of cleaned up newer ones.  Someday, ...
     (dolist (dataset (datasets graph))
       (map-data-xy dataset
 		   #'(lambda (x y)
-		       (declare (downward-function))
 		       (when (and (<= left x right)
 				  (<= bottom y top))
 			 (incf count)))
@@ -582,8 +563,8 @@ older classes in favor of cleaned up newer ones.  Someday, ...
       (apply #'xy-to-uv graph choice))))
 
 (defmethod legend-text-style ((self annotated-legend-mixin) (stream t))
-  (merge-text-styles (parse-text-style '(nil :roman :very-small)) 
-		     (stream-current-text-style stream)))
+  (merge-text-styles (parse-text-style '(nil :roman :normal))
+		     (medium-text-style stream)))
 
 (defmethod create-legend ((self annotated-legend-mixin) stream)
   "Make a legend annotation and position it."
@@ -601,7 +582,7 @@ older classes in favor of cleaned up newer ones.  Someday, ...
 
 (defmethod legend-exists-p ((self annotated-legend-mixin))
   (dolist (ann (annotations self))
-    (if (dwim::typep* ann 'legend-annotation) (return-from legend-exists-p t))) ;;;NLC
+    (if (typep ann 'legend-annotation) (return-from legend-exists-p t))) ;;;NLC
   nil)
 
 (defmethod display-annotations :before ((self annotated-legend-mixin) stream)

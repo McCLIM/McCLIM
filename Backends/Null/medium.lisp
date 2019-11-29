@@ -154,18 +154,19 @@
 	(setf height (+ height (text-style-height text-style medium)))
 	(setf baseline (+ baseline (text-style-height text-style medium)))))))
 
-(defmethod climi::text-bounding-rectangle*
-    ((medium null-medium) string &key text-style (start 0) end)
-  (text-size medium string :text-style text-style :start start :end end))
+(defmethod climb:text-bounding-rectangle*
+    ((medium null-medium) string &key text-style (start 0) end align-x align-y direction)
+  (declare (ignore align-x align-y direction)) ; implement me!
+  (multiple-value-bind (width height x y baseline)
+      (text-size medium string :text-style text-style :start start :end end)
+    (declare (ignore baseline))
+    (values x y (+ x width) (+ y height))))
 
 (defmethod medium-draw-text* ((medium null-medium) string x y
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
-  (declare (ignore string x y
-		   start end
-		   align-x align-y
-		   toward-x toward-y transform-glyphs))
+  (declare (ignore string x y start end align-x align-y toward-x toward-y transform-glyphs))
   nil)
 
 #+nil
@@ -175,14 +176,6 @@
 #+nil
 (defmethod (setf medium-buffering-output-p) (buffer-p (medium null-medium))
   buffer-p)
-
-(defmethod medium-draw-glyph ((medium null-medium) element x y
-			      align-x align-y toward-x toward-y
-			      transform-glyphs)
-  (declare (ignore element x y
-		   align-x align-y toward-x toward-y
-		   transform-glyphs))
-  nil)
 
 (defmethod medium-finish-output ((medium null-medium))
   nil)
@@ -196,10 +189,6 @@
 
 (defmethod medium-beep ((medium null-medium))
   nil)
-
-(defmethod invoke-with-special-choices (continuation (medium null-medium))
-  (let ((sheet (medium-sheet medium)))
-    (funcall continuation (sheet-medium sheet))))
 
 (defmethod medium-miter-limit ((medium null-medium))
   0)

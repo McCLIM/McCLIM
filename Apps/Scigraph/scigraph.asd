@@ -1,11 +1,8 @@
 
 (defsystem #:scigraph
-    :depends-on (#:mcclim #:scrigraph/dwim)
+    :depends-on (#:mcclim #:scigraph/dwim)
     :serial t
     :components ((:file "scigraph/package")
-                 (:file "scigraph/copy")
-                 (:file "scigraph/dump")
-                 (:file "scigraph/duplicate")
                  (:file "scigraph/random")
                  (:file "scigraph/menu-tools")
                  (:file "scigraph/basic-classes")
@@ -27,19 +24,15 @@
                  (:file "scigraph/equation")
                  (:file "scigraph/popup-accept")
                  (:file "scigraph/popup-accept-methods")
-                 (:file "scigraph/duplicate-methods")
                  (:file "scigraph/frame")
-                 (:file "scigraph/export")
                  (:file "scigraph/demo-frame")))
 
-(defsystem #:scrigraph/dwim
+(defsystem #:scigraph/dwim
   :depends-on (#:mcclim)
   :components ((:file "dwim/package")
-               (:file "dwim/feature-case")
                (:file "dwim/macros")
                (:file "dwim/tv")
                (:file "dwim/draw")
                (:file "dwim/present")
                (:file "dwim/extensions")
-               (:file "dwim/wholine")
-               (:file "dwim/export")))
+               (:file "dwim/wholine")))

@@ -55,7 +55,7 @@ patterns on adjacent sheets join seamlessly.
 contribute isn't good enough.  It is true if there are no other transformations
 and clipping regions present, and both are specified in the current drawing
 operation.  But it doesn't say what happens if things are nested.  I'm not sure
-it needs to.  Rather, I think it should just say that the the region is clipped
+it needs to.  Rather, I think it should just say that the region is clipped
 by the current clipping region in effect, then transformed by the current
 transform in effect, and that the rules for these are discussed in the drawing
 options section.}
@@ -177,6 +177,8 @@ Returns a member of class \cl{color}.  \arg{luminance} is a real number between
 white, and the values in between are shades of gray.  On a white-on-black
 display device, 0 means white, 1 means black, and the values in between are
 shades of gray.
+
+\issue {PM} {Why does the caller need to know the type of display?}
 
 
 The following two functions comprise the color protocol.  Both of them return
@@ -396,9 +398,9 @@ drawing plane.
 ${\cal F}$ performs linear interpolation on all four components:
 \[ \begin{array}{rcrcl}
 o_3 & = &        o_1 & + & (1 - o_1) * o_2 \\
-r_3 & = & (o_1 * r_1 & + & (1 - o_1) * o_2 * r_2) / o_3 \\
-g_3 & = & (o_1 * g_1 & + & (1 - o_1) * o_2 * g_2) / o_3 \\
-b_3 & = & (o_1 * b_1 & + & (1 - o_1) * o_2 * b_2) / o_3
+r_3 & = & (r_1 * o_1 & + & (1 - o_1) * o_2 * r_2) / o_3 \\
+g_3 & = & (g_1 * o_1 & + & (1 - o_1) * o_2 * g_2) / o_3 \\
+b_3 & = & (b_1 * o_1 & + & (1 - o_1) * o_2 * b_2) / o_3
 \end{array} \]
 Note that if $o_3$ is zero, these equations would divide zero by zero.
 In that case $r_3$, $g_3$, and $b_3$ are defined to be zero.

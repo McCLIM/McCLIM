@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-CLX; -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000,2001 by 
+;;;  (c) copyright 2000,2001 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000, 2001, 2014, 2016 by
@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-clx)
@@ -31,22 +31,23 @@
   ())
 
 (defclass clx-port (clim-xcommon:keysym-port-mixin
-		    standard-event-port-mixin
-		    clx-text-selection-port-mixin
+                    clx-selection-mixin
 		    clx-basic-port)
   ((color-table :initform (make-hash-table :test #'eq))
-   
+
    (design-cache :initform (make-hash-table :test #'eq))))
 
+(defclass clx-render-port (clx-port) ())
 
-(defun automagic-clx-server-path ()  
+
+(defun automagic-clx-server-path (port-type)
   (let ((name (get-environment-variable "DISPLAY")))
     (assert name (name)
             "Environment variable DISPLAY is not set")
     (let* (; this code courtesy telent-clx.
            (slash-i (or (position #\/ name) -1))
            (colon-i (position #\: name :start (1+ slash-i)))
-           (decnet-colon-p (eql (elt name (1+ colon-i)) #\:))
+           (decnet-colon-p (and colon-i (eql (elt name (1+ colon-i)) #\:)))
            (host (subseq name (1+ slash-i) colon-i))
            (dot-i (and colon-i (position #\. name :start colon-i)))
            (display (and colon-i
@@ -64,30 +65,35 @@
                                    (string-upcase (subseq name 0 slash-i))
                                    :keyword))
                   (t :internet))))
-      (list :clx
+      (list port-type
 	    :host host
 	    :display-id (or display 0)
 	    :screen-id (or screen 0)
 	    :protocol protocol))))
 
-(defun helpfully-automagic-clx-server-path ()
+(defun helpfully-automagic-clx-server-path (port-type)
   #+windows
   (parse-clx-server-path '(:clx :host "localhost" :protocol :internet))
   #-windows
-  (restart-case (automagic-clx-server-path)
+  (restart-case (automagic-clx-server-path port-type)
     (use-localhost ()
       :report "Use local unix display"
-      (parse-clx-server-path '(:clx :host "" :protocol :unix)))))
+      (parse-clx-server-path `(,port-type :host "" :protocol :unix)))))
 
 (defun parse-clx-server-path (path)
-  (pop path)
-  (if path
-      (list :clx
-	    :host       (getf path :host "localhost")
-	    :display-id (getf path :display-id 0)
-	    :screen-id  (getf path :screen-id 0)
-	    :protocol   (getf path :protocol :internet))
-      (helpfully-automagic-clx-server-path)))
+  (let* ((port-type (pop path))
+         (mirroring (mirror-factory (getf path :mirroring))))
+    (remf path :mirroring)
+    (if path
+        `(,port-type
+          :host ,(getf path :host "localhost")
+          :display-id ,(getf path :display-id 0)
+          :screen-id ,(getf path :screen-id 0)
+          :protocol ,(getf path :protocol :internet)
+          ,@(when mirroring (list :mirroring mirroring)))
+        (append (helpfully-automagic-clx-server-path port-type)
+                (when mirroring
+                  (list :mirroring mirroring))))))
 
 (setf (get :x11 :port-type) 'clx-port)
 (setf (get :x11 :server-path-parser) 'parse-clx-server-path)
@@ -96,12 +102,12 @@
 
 (defgeneric initialize-clx (port))
 
-(defmethod initialize-instance :after ((port clx-port) &rest args)
-  (declare (ignore args))
-  (push (make-instance 'clx-frame-manager :port port)
-	(slot-value port 'frame-managers))
-  (setf (slot-value port 'pointer)
-	(make-instance 'clx-pointer :port port))
+(defmethod initialize-instance :after ((port clx-port) &key)
+  (let ((options (cdr (port-server-path port))))
+    (push (apply #'make-instance 'clx-frame-manager :port port options)
+          (slot-value port 'frame-managers))
+    (setf (slot-value port 'pointer)
+          (make-instance 'clx-pointer :port port)))
   (initialize-clx port))
 
 (defmethod print-object ((object clx-port) stream)
@@ -116,22 +122,18 @@
 
 (defun realize-mirror-aux (port sheet
 				&key (width 100) (height 100) (x 0) (y 0)
-				(border-width 0) (border 0)
 				(override-redirect :off)
 				(map t)
 				(backing-store :not-useful)
                                 (save-under :off)
-				(event-mask `(:exposure 
+				(event-mask `(:exposure
 					      :key-press :key-release
 					      :button-press :button-release
+                                              :owner-grab-button
 					      :enter-window :leave-window
 					      :structure-notify
 					      :pointer-motion
 					      :button-motion)))
-  ;; I am declaring BORDER-WIDTH ignore to get a cleaner build, but I
-  ;; don't really understand why the use of it is commented out in favor
-  ;; of the constant 0.  -- RS 2007-07-22
-  (declare (ignore border-width))
   (when (null (port-lookup-mirror port sheet))
     ;;(update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
@@ -169,8 +171,6 @@
                                                            mirror-transformation
                                                            0 0)))
                            y)
-                    :border-width 0 ;;border-width
-                    :border border
                     :override-redirect override-redirect
                     :backing-store backing-store
                     :save-under save-under
@@ -186,7 +186,8 @@
                                        event-mask))))
       (port-register-mirror (port sheet) sheet window)
       (when map
-        (xlib:map-window window))))
+        (xlib:map-window window)
+        (xlib:display-finish-output (clx-port-display port)))))
   (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
@@ -195,104 +196,56 @@
 
 (defmethod %realize-mirror ((port clx-port) (sheet basic-sheet))
   (realize-mirror-aux port sheet
-                      :border-width 0
                       :map (sheet-enabled-p sheet)))
 
-(defmethod %realize-mirror ((port clx-port) (sheet border-pane))
-  ;;(rotatef (medium-background (sheet-medium sheet)) (medium-foreground (sheet-medium sheet)))
-  (realize-mirror-aux port sheet
-		      :border-width 0 ; (border-pane-width sheet)
-		      :event-mask '(:exposure
-				    :structure-notify)
-                      :map (sheet-enabled-p sheet)))
+(defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
+  (let* ((q (compose-space sheet))
+         (window (realize-mirror-aux
+                  port sheet
+                  :map nil
+                  :width (round-coordinate (space-requirement-width q))
+                  :height (round-coordinate (space-requirement-height q))))
+         (name (clime:sheet-name sheet))
+         (instance-name (string-downcase name))
+         (class-name (string-capitalize name))
+         (pretty-name (clime:sheet-pretty-name sheet)))
+    (xlib:set-wm-class window instance-name class-name)
+    (%set-window-name window pretty-name)
+    (%set-window-icon-name window pretty-name)
+    (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
+    (setf (xlib:wm-protocols window) `(:wm_take_focus :wm_delete_window))
+    (xlib:change-property window
+                          :WM_CLIENT_LEADER (list (xlib:window-id window))
+                          :WINDOW 32)))
 
-(defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-pane))
-  (let ((q (compose-space sheet)))
-    (let ((frame (pane-frame sheet))
-          (window (realize-mirror-aux port sheet
-                                      :map nil
-                                      :width (round-coordinate (space-requirement-width q))
-                                      :height (round-coordinate (space-requirement-height q))
-                                      :event-mask '(:key-press :key-release))))
-      (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
-      (setf (xlib:wm-name window) (frame-pretty-name frame))
-      (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
-      (xlib:set-wm-class
-       window
-       (string-downcase (frame-name frame))
-       (string-capitalize (string-downcase (frame-name frame))))
-      (setf (xlib:wm-protocols window) `(:wm_delete_window))
-      (xlib:change-property window
-                            :WM_CLIENT_LEADER (list (xlib:window-id window))
-                            :WINDOW 32))))
-
-(defmethod %realize-mirror ((port clx-port) (sheet unmanaged-top-level-sheet-pane))
+(defmethod %realize-mirror ((port clx-port) (sheet unmanaged-sheet-mixin))
   (realize-mirror-aux port sheet
 		      :override-redirect :on
                       :save-under :on
-		      :map nil
-		      :event-mask '(:structure-notify)))
-
-(defmethod %realize-mirror ((port clx-port) (sheet menu-button-pane))
-  (realize-mirror-aux port sheet
-		      :event-mask '(:exposure
-				    :key-press :key-release
-				    :button-press :button-release
-				    :enter-window :leave-window
-				    :structure-notify
-				   ;:pointer-motion
-				    :button-motion
-				    :owner-grab-button)
-                      :map (sheet-enabled-p sheet)))
-
-(defmethod %realize-mirror ((port clx-port) (sheet clim-stream-pane))
-  (realize-mirror-aux port sheet
-		      :event-mask '(:exposure
-				    :key-press :key-release
-				    :button-press :button-release
-				    :enter-window :leave-window
-				    :structure-notify
-				    :pointer-motion :pointer-motion-hint
-				    :button-motion
-				    :owner-grab-button)
-                      :map (sheet-enabled-p sheet)))
-
-
-
-(defmethod port-motion-hints ((port clx-port) (sheet mirrored-sheet-mixin))
-  (let ((event-mask (xlib:window-event-mask (sheet-direct-xmirror sheet))))
-    (if (zerop (logand event-mask
-		       #.(xlib:make-event-mask :pointer-motion-hint)))
-	nil
-	t)))
-
-(defmethod (setf port-motion-hints)
-    (val (port clx-port) (sheet mirrored-sheet-mixin))
-  (let* ((mirror (sheet-direct-xmirror sheet))
-	 (event-mask (xlib:window-event-mask mirror)))
-    (setf (xlib:window-event-mask mirror)
-	  (if val
-	      (logior event-mask #.(xlib:make-event-mask :pointer-motion-hint))
-	      (logandc2 event-mask
-			#.(xlib:make-event-mask :pointer-motion-hint)))))
-  val)
-
+		      :map nil))
 
 (defmethod make-graft ((port clx-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'clx-graft
 		 :port port :mirror (clx-port-window port)
-		 :orientation orientation :units units)))
-    (setf (sheet-region graft) (make-bounding-rectangle 0 0 (xlib:screen-width (clx-port-screen port)) (xlib:screen-height (clx-port-screen port))))
+		 :orientation orientation :units units))
+        (width (xlib:screen-width (clx-port-screen port)))
+        (height (xlib:screen-height (clx-port-screen port))))
+    (climi::%%set-sheet-region (make-bounding-rectangle 0 0 width height)
+                               graft)
     (push graft (port-grafts port))
     graft))
 
 (defmethod make-medium ((port clx-port) sheet)
-  (make-instance 'clx-medium 
-		 ;; :port port 
-		 ;; :graft (find-graft :port port) 
+  (make-instance 'clx-medium
+		 ;; :port port
+		 ;; :graft (find-graft :port port)
 		 :sheet sheet))
 
-
+(defmethod make-medium ((port clx-render-port) sheet)
+  (make-instance 'clx-render-medium
+		 ;; :port port
+		 ;; :graft (find-graft :port port)
+		 :sheet sheet))
 
 (defmethod graft ((port clx-port))
   (first (port-grafts port)))
@@ -302,7 +255,7 @@
 (defmethod realize-mirror ((port clx-port) (pixmap pixmap))
   (when (null (port-lookup-mirror port pixmap))
     (let* ((window (sheet-xmirror (pixmap-sheet pixmap)))
-	   (pix (xlib:create-pixmap 
+	   (pix (xlib:create-pixmap
 		    :width (round (pixmap-width pixmap))
 		    :height (round (pixmap-height pixmap))
 		    :depth (xlib:drawable-depth window)
@@ -311,9 +264,12 @@
     (values)))
 
 (defmethod destroy-mirror ((port clx-port) (pixmap pixmap))
-  (when (port-lookup-mirror port pixmap)
-    (xlib:free-pixmap (port-lookup-mirror port pixmap))
-    (port-unregister-mirror port pixmap (port-lookup-mirror port pixmap))))
+  (alexandria:when-let ((mirror (port-lookup-mirror port pixmap)))
+    (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
+                                 (xlib:pixmap-plist mirror))))
+      (xlib:render-free-picture picture))
+    (xlib:free-pixmap mirror)
+    (port-unregister-mirror port pixmap mirror)))
 
 (defmethod port-allocate-pixmap ((port clx-port) sheet width height)
   (let ((pixmap (make-instance 'mirrored-pixmap
@@ -332,11 +288,11 @@
 ;; Top-level-sheet
 
 ;; this is evil.
-(defmethod allocate-space :after ((pane top-level-sheet-pane) width height)
+(defmethod allocate-space :after ((pane top-level-sheet-mixin) width height)
   (when (sheet-direct-xmirror pane)
     (with-slots (space-requirement) pane
       '(setf (xlib:wm-normal-hints (sheet-direct-xmirror pane))
-            (xlib:make-wm-size-hints 
+            (xlib:make-wm-size-hints
              :width (round width)
              :height (round height)
              :max-width (min 65535 (round (space-requirement-max-width space-requirement)))
@@ -344,33 +300,5 @@
              :min-width (round (space-requirement-min-width space-requirement))
              :min-height (round (space-requirement-min-height space-requirement)))))))
 
-
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))
-
-
-        
-
-
-
-;;; XXX CLX in ACL doesn't use local sockets, so here's a fix. This is gross
-;;; and should obviously be included in Franz' clx and portable clx, but I
-;;; believe that enough users will find that their X servers don't listen for
-;;; TCP connections that it is worthwhile to include this code here
-;;; temporarily.
-
-#+allegro
-(defun xlib::open-x-stream (host display protocol)
-  (declare (ignore protocol)) ;; Derive from host
-  (let ((stream (if (or (string= host "") (string= host "unix"))
-		    (socket:make-socket
-		     :address-family :file
-		     :remote-filename (format nil "/tmp/.X11-unix/X~D" display)
-		     :format :binary)
-		    (socket:make-socket :remote-host (string host)
-					:remote-port (+ xlib::*x-tcp-port*
-                                                        display)
-					:format :binary))))
-    (if (streamp stream)
-	stream
-      (error "Cannot connect to server: ~A:~D" host display))))

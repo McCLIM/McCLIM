@@ -87,8 +87,7 @@ advised of the possiblity of such damages.
 		    collect parm-ass
 		    else collect (list parm 0))))
       (setq data-function
-	    (let ((*terminal-io* #+lucid lcl::*initial-io*
-				     #-lucid *terminal-io*))
+	    (let ((*terminal-io* *terminal-io*))
 	      (compile
 	       nil
 	       `(lambda (,variable ,@(map 'list #'(lambda (p) (first p)) parameters))
@@ -273,10 +272,7 @@ the equation."))
 	(y-label self) (label-this-accessor self y-accessor))
   ;; flush old annotations...
   ;; (setf (annotations self) nil)
-  #-genera
-  (setf (auto-scale self) :both)
-  #+genera
-  (funcall #'(setf auto-scale) self :both)) ; +++ Unresolved genera problem?
+  (setf (auto-scale self) :both))
 
 (defmethod initialize-instance :after ((self graph-with-reselectable-axes) &key)
   (when (and (x-accessor self) (y-accessor self))
@@ -370,17 +366,6 @@ the equation."))
      basic-graph-datum-symbology-mixin
      basic-graph-data)
   ())
-
-#+broken
-(defmethod display-data ((self line-data) ignore)
-  (declare (ignore ignore))
-  (with-slots (line-a line-b line-c graph line-style alu) self
-    (multiple-value-bind (left right bottom top) (xy-edges graph)
-      (cond ((> (abs line-a) (abs line-b))
-	     (move graph (line-x self bottom) bottom)
-	     (draw graph STREAM (line-x self top) top line-style alu))
-	    (t (move graph left (line-y self left))
-	       (draw graph STREAM right (line-y self right) line-style alu))))))
 
 ;;; Specialize this by providing a :COMPUTE method.
 (defclass BASIC-LINE-FIT (graph-sample-data-mixin line-data)

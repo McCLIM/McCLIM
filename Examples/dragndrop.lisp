@@ -2,6 +2,8 @@
 
 ;;;  (c) copyright 2004 by 
 ;;;           Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2017 by
+;;;           Nisar Ahmad (nisarahmad1324@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -27,27 +29,30 @@
    (interactor :interactor)
    (scratchpad :application :display-time nil :height 600 :scroll-bars nil))
   (:layouts
-    (default
-      (vertically ()
-	(scrolling (:height 300)
-	  scratchpad)
-	interactor))))
+   (default
+    (vertically ()
+      (scrolling (:height 300)
+	scratchpad)
+      interactor))))
 
-(defclass shape ()
-  ((x :accessor x :initarg :x)
-   (y :accessor y :initarg :y)))
+(defclass circle ()
+  ((center :accessor center :initarg :center)
+   (radius :accessor radius :initarg :radius))
+  (:default-initargs :radius 50 :center nil))
 
-(defclass circle (shape)
-  ((radius :accessor radius :initarg :radius))
-  (:default-initargs :radius 50))
+(defun get-pointer-position (pane)
+  (multiple-value-bind (x y) (stream-pointer-position pane)
+    (make-point x y)))
 
 (define-dragndrop-command (com-add-circle)
-    ((x real :prompt "x")
-     (y real :prompt "y")
+    ((center point :prompt "point")
      (radius real :prompt "radius"))
-  (with-output-as-presentation
-      (t (make-instance 'circle :x x :y y :radius radius) 'circle)
-    (draw-circle* *standard-output* x y radius )))
+  (let ((pane (get-frame-pane *application-frame* 'scratchpad)))
+    (with-output-as-presentation
+	(pane (make-instance 'circle :center center
+				     :radius radius)
+	      'circle)
+      (draw-circle pane center radius))))
 
 (define-dragndrop-command (com-quit-dragndrop :name "Quit")
     ()
@@ -55,30 +60,31 @@
 
 (define-presentation-to-command-translator translator-draw-circle
     (blank-area com-add-circle dragndrop
-                :documentation "Add a circle")
-    (object x y)
-  (list x y 50))
+                :documentation "Add a circle"
+		:tester
+		((object)
+		 (let ((frame *application-frame*))
+		   (eq (pointer-sheet (port-pointer (port frame)))
+		       (get-frame-pane frame 'scratchpad)))))
+    (object)
+  (list (get-pointer-position
+	    (get-frame-pane *application-frame* 'scratchpad))
+	50))
 
 (define-dragndrop-command (com-clone-circle)
-    ((original circle)
-     (start-x real)
-     (start-y real))
-  ;; Track the pointer offset from the center of the original object
-  (let ((x-offset (- (x original) start-x))
-	(y-offset (- (y original) start-y)))
-    (multiple-value-bind (final-x final-y)
-	(dragging-output (t :finish-on-release t)
-	  (draw-circle* *standard-output* (x original) (y original)
-			(radius original)
-			:filled nil ))
-      (com-add-circle (+ final-x x-offset)
-		      (+ final-y y-offset)
-		      (radius original)))))
+    ((original circle))
+  (let ((pane (get-frame-pane *application-frame* 'scratchpad)))
+    (multiple-value-bind (x y)
+	(dragging-output (pane :finish-on-release t)
+	  (draw-circle pane (get-pointer-position pane)
+		       (radius original)
+		       :filled nil))
+      (com-add-circle (make-point x y) (radius original)))))
 
 (define-presentation-to-command-translator translator-clone-circle
     (circle com-clone-circle dragndrop)
-    (object x y)
-  `(,object ,x ,y))
+    (object)
+  (list object))
 
 (defun drag-circles ()
   (run-frame-top-level (make-application-frame 'dragndrop)))

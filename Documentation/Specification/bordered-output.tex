@@ -60,17 +60,16 @@ There are several strategies for implementing borders.  One strategy is to
 create a ``border output record'' that contains the output records produced by
 the output of \arg{body}, plus one or more output records that represent the
 border.  Another strategy might be to arrange to call the border drawer at the
-approriate times without explicitly recording it.
+appropriate times without explicitly recording it.
 
 
 \Defmacro {define-border-type} {shape arglist \body body}
 
 Defines a new kind of border named \arg{shape}.  \arg{arglist} must be a subset
-of the ``canonical'' arglist below (using \cl{string-equal} to do the
-comparison):
-\\
+of the ``canonical'' arglist, using \cl{string-equal} to do the
+comparison:
 \arg{(\key stream record left top right bottom)}
-\\
+
 
 \arg{arglist} may include other keyword arguments that serve as the drawing options.
 

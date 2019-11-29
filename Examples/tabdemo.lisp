@@ -25,10 +25,11 @@
    (default
        (vertically ()
 	 (with-tab-layout ('tab-page :name 'tabdemo-layout :height 200)
-           ("A" a)
+           ("A" a :drawing-options `(:text-style ,(make-text-style nil :bold nil)))
            ("B" b)
            ("C" c)
-           ("Special Page" special-page :presentation-type 'special-page))
+           ("Special Page" special-page :presentation-type 'special-page
+                           :drawing-options `(:text-style ,(make-text-style nil nil :small))))
 	 io
 	 pointer-doc))))
 
@@ -40,7 +41,7 @@
 		    :errorp nil
 		    :menu '(("Add Extra Pane" :command com-add-extra-pane)
 			    ("Randomize" :command com-randomize-tabdemo)
-			    ("Quit" :command com-quit-tabdemo)))
+			    ("Quit" :command com-quit)))
 
 (make-command-table 'tabdemo-properties-menu
 		    :errorp nil
@@ -108,13 +109,7 @@
 (define-tabdemo-command (com-randomize-tabdemo :name t)
     ()
   (setf (tab-layout-pages (tabdemo-layout))
-	(let ((old (tab-layout-pages (tabdemo-layout)))
-	      (new '()))
-	  (loop while old
-		for i = (random (length old))
-		do (push (elt old i) new)
-		   (setf old (remove-if (constantly t) old :start i :count 1)))
-	  new)))
+	(alexandria:shuffle (tab-layout-pages (tabdemo-layout)))))
 
 (defmacro with-enabled-tab-layout-page (var &body body)
   `(let ((,var (tab-layout-enabled-page (tabdemo-layout))))
@@ -137,4 +132,7 @@
 (define-tabdemo-command (com-paint-page-green :name t)
     ()
   (with-enabled-tab-layout-page page
-    (setf (getf (tab-page-drawing-options page) :ink) +green+)))
+    (setf (getf (tab-page-drawing-options page) :ink)
+          +green+
+          (getf (tab-page-drawing-options page) :text-style)
+          (make-text-style nil nil :small))))

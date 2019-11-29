@@ -133,8 +133,7 @@
      :documentation ((object stream)
                      (declare (ignore object))
                      (format stream "Choose package")))
-    (object)
-  (declare (ignore object)))
+    (object))
 
 ;;; Lisp listener command loop
 
@@ -167,12 +166,16 @@
   (declare (ignore frame))
   (with-output-as-presentation (stream *package* 'package :single-box t)
     (print-package-name stream))
-  (princ "> " stream))
+  (princ "> " stream)
+  (let ((h (- (bounding-rectangle-height (stream-output-history stream))
+              (bounding-rectangle-height (or (pane-viewport stream) stream)))))
+    (scroll-extent stream 0 (max 0 h))))
 
 (defmethod frame-standard-output ((frame listener))
   (get-frame-pane frame 'interactor))
 
 (defun run-listener (&key (new-process nil)
+                          (debugger t)
                           (width 790)
                           (height 550)
                           port
@@ -186,7 +189,10 @@
                                        :height height)))
     (flet ((run () 
              (let ((*package* (find-package package)))
-               (unwind-protect (run-frame-top-level frame)
+               (unwind-protect
+                    (if debugger
+                        (clim-debugger:with-debugger () (run-frame-top-level frame))
+                        (run-frame-top-level frame))
                  (disown-frame fm frame)))))
       (if new-process
           (values (clim-sys:make-process #'run :name process-name)

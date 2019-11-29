@@ -12,24 +12,23 @@
 
 (defmethod realize-mirror ((port rgb-image-port) sheet)
   (setf (sheet-parent sheet) (graft port))
-  (let ((mirror (make-instance 'mcclim-render::opticl-image-mirror-mixin)))
+  (let ((mirror (make-instance 'image-mirror-mixin)))
     (port-register-mirror port sheet mirror)
-    (mcclim-render::%make-image mirror sheet)))
+    (%make-image mirror sheet)))
 
 ;;;
 ;;; Pixmap
 ;;;
 
 (defclass rgb-image-pixmap (image-pixmap-mixin basic-pane)
-  ())
-
+  ((region :initform +nowhere+)))
 
 (defmethod port-allocate-pixmap ((port rgb-image-port) sheet width height)
   (let ((pixmap (make-instance 'rgb-image-pixmap
-			       :sheet sheet
-			       :width width
-			       :height height
-			       :port port)))
+                               :sheet sheet
+                               :width width
+                               :height height
+                               :port port)))
     (when (sheet-grafted-p sheet)
       (realize-mirror port pixmap))
     pixmap))
@@ -37,4 +36,3 @@
 (defmethod port-deallocate-pixmap ((port rgb-image-port) pixmap)
   (when (climi::port-lookup-mirror port pixmap)
     (destroy-mirror port pixmap)))
-

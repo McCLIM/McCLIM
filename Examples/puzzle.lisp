@@ -12,7 +12,7 @@
   (:panes
     (display :application
 	     :display-function 'draw-puzzle
-	     :text-style '(:fix :bold :very-large)
+	     :text-style (make-text-style :fix :bold :very-large)
 	     :incremental-redisplay t
 	     :text-cursor nil
 	     :width :compute :height :compute
@@ -44,15 +44,10 @@
   :inherit-from '(integer 1 15))
 
 (define-presentation-method highlight-presentation ((type puzzle-cell) record stream state)
-  state
-  (multiple-value-bind (xoff yoff)
-      (climi::convert-from-relative-to-absolute-coordinates
-       stream (output-record-parent record))
-    (with-bounding-rectangle* (left top right bottom) record
-      (draw-rectangle* stream
-		       (+ left xoff) (+ top yoff)
-		       (+ right xoff) (+ bottom yoff)
-		       :ink +flipping-ink+))))
+  (with-bounding-rectangle* (left top right bottom) record
+    (draw-rectangle* stream
+		     left top right bottom
+		     :ink +flipping-ink+)))
 
 (defun encode-puzzle-cell (row column)
   (+ (* row 4) column))
@@ -79,7 +74,7 @@
 				       :cache-value value)
 		(formatting-cell (stream :align-x :right)
 		  (unless (zerop value)
-		    (with-output-as-presentation 
+		    (with-output-as-presentation
 			(stream cell-id 'puzzle-cell)
 		      (format stream "~2D" value))))))))))))
 

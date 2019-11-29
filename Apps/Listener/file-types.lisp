@@ -18,7 +18,7 @@
 (defclass text  (mime-media-type)
   ((media-type-name :initform 'text))
   (:documentation "Textual information"))
-  
+
 (defclass image (mime-media-type)
   ((media-type-name :initform 'image))
   (:documentation "Image data"))
@@ -108,7 +108,7 @@
     item))
 
 (defun pathname-mime-type (pathname)
-  (or (lookup-magic-name pathname)            
+  (or (lookup-magic-name pathname)
       (gethash (pathname-extension pathname) *extension-mapping*)))
 
 (defmacro define-mime-type ((media-type subtype) &rest options)
@@ -126,7 +126,7 @@
                           (:names `(defmagic ,full-type ,@(rest opt)))
                           (:icon `(setf (gethash ',full-type *icon-mapping*) ,(second opt)))))
                       options)
-            (clim-mop:finalize-inheritance (find-class ',full-type))
+            (c2mop:finalize-inheritance (find-class ',full-type))
 )))
 
 ;; ICON-OF is measurably slow here in CMUCL. Interesting..
@@ -139,13 +139,13 @@
         (t (let ((mime-class (find-class (pathname-mime-type pathname) nil)))
              (if mime-class
                  (or (gethash (class-name mime-class) *icon-mapping*)
-                     (icon-of (clim-mop:class-prototype (find-class (pathname-mime-type pathname) nil))))
+                     (icon-of (c2mop:class-prototype (find-class (pathname-mime-type pathname) nil))))
                *document-icon*)))))
 
 (defmethod icon-of ((obj mime-type))
 ;  (or (gethash (class-name (class-of obj)) *icon-mapping*)
 ;      (call-next-method)))
-  (let ((cpl (clim-mop:class-precedence-list (class-of obj))))
+  (let ((cpl (c2mop:class-precedence-list (class-of obj))))
     (dolist (class cpl)
       (let ((icon (gethash (class-name class) *icon-mapping*)))
         (when icon (return-from icon-of icon)))))
@@ -189,7 +189,7 @@
   (:icon (standard-icon "script.xpm")))
 
 ;; Magic name mappings (very silly things)
-;; It occurs to me for these types of mappings, a "prefix" mapping would be 
+;; It occurs to me for these types of mappings, a "prefix" mapping would be
 ;; vastly more useful than what I have here. That is, it would be more useful
 ;; to match patterns like Makefile*, INSTALL*, README*, etc.
 
@@ -224,7 +224,8 @@
     (or (position-if (lambda (c)
                        (and (graphic-char-p c)
                             (not (char= c #\space))))
-                     string :start start :end end) end)))
+                     string :start start :end end)
+        end)))
 
 (defun file-char-p (char)
   (and (graphic-char-p char)
@@ -241,17 +242,18 @@
 (defun read-mime-type (string &optional (start 0))
   (declare (optimize (debug 3)))
   (setf start (skip-whitespace string start))
-  (let* ((pos-slash (position #\/ string  :test #'char= :start start))
-         (pos-end (position-if (lambda (c) (member c '(#\space #\tab)))
-                               string  :start (if pos-slash (1+ pos-slash) start)))
-         (media-type (string-upcase (subseq string start pos-slash)))
-         (media-type-sym (intern media-type (find-package :clim-listener)))
-         (subtype (when pos-slash (string-upcase (subseq string (1+ pos-slash) pos-end))))
-         (full-symbol (intern (if subtype
-                                  (concatenate 'string media-type "/" subtype)
-                                media-type)
-                              (find-package :clim-listener))))
-    (values media-type-sym full-symbol (when subtype (intern subtype)) pos-end)))
+  (when start
+    (let* ((pos-slash (position #\/ string  :test #'char= :start start))
+           (pos-end (position-if (lambda (c) (member c '(#\space #\tab)))
+                                 string  :start (if pos-slash (1+ pos-slash) start)))
+           (media-type (string-upcase (subseq string start pos-slash)))
+           (media-type-sym (intern media-type (find-package :clim-listener)))
+           (subtype (when pos-slash (string-upcase (subseq string (1+ pos-slash) pos-end))))
+           (full-symbol (intern (if subtype
+                                    (concatenate 'string media-type "/" subtype)
+                                    media-type)
+                                (find-package :clim-listener))))
+      (values media-type-sym full-symbol (when subtype (intern subtype)) pos-end))))
 
 ;;; PARSE-NETSCAPE-MIME-TYPE and PARSE-STANDARD-MIME-TYPE return the various
 ;;; properties of each type in a hash table. The primary ones of concern are
@@ -335,7 +337,7 @@
           (eval `(define-mime-type (,media-type ,subtype)
                    (:extensions ,@exts))))
       #+nil(format t "Ignoring ~W, unknown media type.~%" (gethash :type elt)))))
-  
+
 (defun parse-mime-types-file (pathname)
   (mapcar (lambda (x) (process-mime-type (parse-mt-elt x)))
           (read-the-lines pathname)))
@@ -394,7 +396,7 @@
 (defun read-mailcap-field (string &optional (start 0))
   (let ((index start)
         (chars nil))
-    (loop named poop while (< index (length string)) do       
+    (loop named poop while (< index (length string)) do
       (let ((c (elt string index)))
         (cond ((eql c #\\)  ; quoted character?
                (when (< index (1- (length string)))
@@ -402,7 +404,7 @@
               ((eql c #\;) (return-from poop chars))
               (t (push c chars)))
         (incf index)))
-    (values 
+    (values
      (string-trim *whitespace* (concatenate 'string (nreverse chars)))
      (if (>= (1+ index) (length string)) nil (1+ index)))))
 
@@ -447,9 +449,9 @@
 
 (defun process-mailcap-entry (entry)
   (when entry
-    (setf (gethash (gethash :type entry) *view-command-mapping*) entry)))          
+    (setf (gethash (gethash :type entry) *view-command-mapping*) entry)))
 
-(defun parse-mailcap-file (pathname)  
+(defun parse-mailcap-file (pathname)
   (mapcar (lambda (x) (process-mailcap-entry
                        (parse-mailcap-entry x)))
           (read-the-lines pathname)))
@@ -457,7 +459,7 @@
 ;;; These functions invoke the parsing of the mime.types and mailcap files
 
 ;; Search paths - in addition to these, the user's home directory will
-;; be checked. 
+;; be checked.
 
 (defparameter *mime.types-search-path*
   '(#p"/etc/mime.types" #p"/usr/etc/mime.types" #p"/usr/local/etc/mime.types"))
@@ -500,7 +502,7 @@
   (if (or (alphanumericp char)
           (find char ";@&=+$,-_.!~*'()"))
       char
-      (format nil "%~2,'0X" (char-code char))))            
+      (format nil "%~2,'0X" (char-code char))))
 
 (defun encode-uri-path-element (string)
   (with-output-to-string (out)
@@ -521,10 +523,10 @@
 ;; called with one, as it makes litte sense.
 
 (defun translate-uri-pathname-directory (pathname)
-  (let ((dirs (pathname-directory pathname)))    
+  (let ((dirs (pathname-directory pathname)))
     (if (not (listp dirs))
         (progn (warn "Don't know how to convert ~A to a URI." pathname)
-               "")      
+               "")
         (ignore-errors (concatenate-uri-directory-elements (first dirs) (rest dirs))))))
 
 (defun translate-uri-pathname-name (pathname)
@@ -540,7 +542,7 @@
 (defun gen-view-command-line (spec pathname)
   (with-output-to-string (out)
     (with-input-from-string (in (gethash :view-command spec))
-      (loop for c = (read-char in nil) while c do 
+      (loop for c = (read-char in nil) while c do
         (if (char= c #\%)
             (let ((d (read-char in nil)))
               (cond ((eql d #\s)  (princ (quote-shell-characters (namestring (truename pathname))) out))
@@ -556,14 +558,12 @@
                (probe-file pathname)
                (gethash :view-command def)
                (not (gethash :needsterminal def)))
-      (values 
+      (values
        `(com-background-run "/bin/sh" ("-c" ,(gen-view-command-line def pathname)))
        (format nil "Open using ~A" (subseq (gethash :view-command def)
                                            0
                                            (position #\Space (gethash :view-command def))))
        (gen-view-command-line def pathname)))))
-       
-       
 
 (defun run-view-command (pathname)
   (let* ((type (pathname-mime-type pathname))
@@ -574,16 +574,12 @@
              (needsterminal (gethash :needsterminal def)))
         (if needsterminal
             (format t "Sorry, the viewer app needs a terminal (fixme!)~%")
-          (progn
-            (when test
-              (format *trace-output* "Sorry, ignoring TEST option ~W for ~A viewer " test type))
-            (if view-command 
-                (run-program "/bin/sh" `("-c" ,(gen-view-command-line def pathname) "&"))
-              (format t "~&No view-command!~%"))))))))
-
-
-
-
+            (progn
+              (when test
+                (format *trace-output* "Sorry, ignoring TEST option ~W for ~A viewer " test type))
+              (if view-command
+                  (uiop:run-program `("/bin/sh" "-c" ,(gen-view-command-line def pathname) "&"))
+                  (format t "~&No view-command!~%"))))))))
 
 (eval-when (:load-toplevel :execute)
   (load-mime-types)

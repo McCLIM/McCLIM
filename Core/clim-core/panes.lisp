@@ -185,7 +185,7 @@
   "Maximum time in seconds between clicks in order to produce a double-click")
 
 (defparameter *double-click-max-travel* 7
-  "Maximum distance in device units that the cursor may move between clicks in 
+  "Maximum distance in device units that the cursor may move between clicks in
 order to produce a double-click")
 
 ;;;
@@ -242,18 +242,23 @@ order to produce a double-click")
               min-height
               max-height))))
 
-(defun make-space-requirement (&key (width 1) (height 1)
-				    (min-width 0) (min-height 0)
-				    (max-width +fill+) (max-height +fill+))
-  (assert (<= 0 min-width width max-width) (min-width width max-width))
-  (assert (<= 0 min-height height max-height) (min-height height max-height))
+(defun make-space-requirement (&key (min-width 0) (min-height 0)
+                                 (width min-width) (height min-height)
+                                 (max-width +fill+) (max-height +fill+))
+  ;; Defensive programming. For instance SPACE-REQUIREMENT-+ may cause
+  ;; max-{width,height} to be (+ +fill+ +fill+), what exceeds our biggest
+  ;; allowed values. We fix that here.
+  (clampf min-width  0 +fill+) (clampf max-width  0 +fill+) (clampf width  min-width  max-width)
+  (clampf min-height 0 +fill+) (clampf max-height 0 +fill+) (clampf height min-height max-height)
+  (assert (<= min-width  max-width)  (min-width  max-width))
+  (assert (<= min-height max-height) (min-height max-height))
   (make-instance 'standard-space-requirement
-    :width width
-    :max-width max-width
-    :min-width min-width
-    :height height
-    :max-height max-height
-    :min-height min-height))
+                 :width width
+                 :max-width max-width
+                 :min-width min-width
+                 :height height
+                 :max-height max-height
+                 :min-height min-height))
 
 (defmethod space-requirement-components ((space-req standard-space-requirement))
   (with-slots (width min-width max-width height min-height max-height) space-req
@@ -334,7 +339,7 @@ order to produce a double-click")
                       :initform nil) ))
 
 ;;; XXX Move to protocol-classes.lisp. Should this really have all these
-;;; superclasses? 
+;;; superclasses?
 (define-protocol-class pane (clim-repainting-mixin
 			     clim-sheet-input-mixin
 			     sheet-transformation-mixin
@@ -342,11 +347,10 @@ order to produce a double-click")
 			     basic-sheet)
   (
    (text-style :initarg :text-style :initform nil :reader pane-text-style)
-   (name :initarg :name :initform "(Unnamed Pane)" :reader pane-name)
+   (name :initarg :name :initform nil :reader pane-name)
    (manager :initarg :manager)
    (port :initarg :port)
    (frame :initarg :frame :initform *application-frame* :reader pane-frame)
-   (enabledp :initform nil :initarg :enabledp :accessor pane-enabledp)
    (space-requirement :initform nil :accessor pane-space-requirement)
    ;; New sizes, for allocating protocol
    (new-width :initform nil)
@@ -380,9 +384,8 @@ order to produce a double-click")
 (defmethod (setf medium-background) (ink (pane pane))
   (setf (medium-background (sheet-medium pane)) ink))
 
-(defmethod compose-space ((pane pane) &key width height)
-  (make-space-requirement :width (or width 200)
-			  :height (or height 200)))
+(defmethod compose-space ((pane pane) &key (width 100) (height 100))
+  (make-space-requirement :width width :height height))
 
 (defmethod allocate-space ((pane pane) width height)
   (declare (ignorable pane width height))
@@ -401,7 +404,7 @@ order to produce a double-click")
 
 
 ;;;
-;;; Utilities 
+;;; Utilities
 ;;;
 
 ;; Since, I hate to duplicate code for HBOX and VBOX, I define this
@@ -441,7 +444,7 @@ order to produce a double-click")
 ;;;; Layout Utilities
 
 (defun layout-child (child align-x align-y x y width height)
-  "Allocates space to a child of a pane. 
+  "Allocates space to a child of a pane.
    x, y, width, height designate the area of available space.
    align-x, align-y name the desired child alignment.
    If the child does not have enough strechability to cover all of the
@@ -475,7 +478,7 @@ order to produce a double-click")
                          ((:bottom) (+ y (- height child-height)))
                          ((:expand)  y) )))
     ;; Actually layout the child
-    (move-sheet child child-x child-y)    
+    (move-sheet child child-x child-y)
     (resize-sheet child child-width child-height)
     (allocate-space child child-width child-height)))
 
@@ -485,12 +488,12 @@ order to produce a double-click")
 ;;; User Space Requirements
 
 (defclass space-requirement-options-mixin ()
-  ((user-width       
+  ((user-width
     :initarg  :width
     :initform nil
     :reader   pane-user-width
     :type     (or null spacing-value))
-   (user-min-width 
+   (user-min-width
     :initarg :min-width
     :initform nil
     :reader   pane-user-min-width
@@ -528,6 +531,23 @@ order to produce a double-click")
   (:documentation
    "Mixin class for panes which offer the standard user space requirements options."))
 
+(defmethod shared-initialize :after ((instance space-requirement-options-mixin)
+                                     (slot-names t)
+                                     &key
+                                     (x-spacing nil x-spacing-p)
+                                     (y-spacing nil y-spacing-p)
+                                     (spacing nil spacing-p))
+  (declare (ignore x-spacing y-spacing))
+  (cond ((not spacing-p))
+        (x-spacing-p
+         (error #1="~@<The initargs ~S and ~S are mutually exclusive~@:>"
+                :spacing :x-spacing))
+        (y-spacing-p
+         (error #1# :spacing :y-spacing))
+        (t
+         (setf (slot-value instance 'x-spacing) spacing
+               (slot-value instance 'y-spacing) spacing))))
+
 (defclass standard-space-requirement-options-mixin (space-requirement-options-mixin)
   ())
 
@@ -535,7 +555,7 @@ order to produce a double-click")
 
 (defun merge-one-option
     (pane foo user-foo user-min-foo user-max-foo min-foo max-foo)
-  
+
 
   ;; NOTE: The defaulting for :min-foo and :max-foo is different from MAKE-SPACE-REQUIREMENT.
   ;;       MAKE-SPACE-REQUIREMENT has kind of &key foo (min-foo 0) (max-foo +fill+)
@@ -543,7 +563,7 @@ order to produce a double-click")
   ;;       I as a user would pretty much expect the same behavior, therefore I'll take the
   ;;       following route:
   ;;       When the :foo option is given, I'll let MAKE-SPACE-REQUIREMENT decide.
-  ;;   
+  ;;
   ;; old code:
   ;;
   ;; ;; Then we resolve defaulting. sec 29.3.1 says:
@@ -563,7 +583,7 @@ order to produce a double-click")
     (setf user-min-foo (space-requirement-min-width
 			(make-space-requirement
 			 :width (spacing-value-to-device-units pane foo)))))
-	    
+
   ;; when the user has no idea about the preferred size just take the
   ;; panes preferred size.
   (setf user-foo (or user-foo foo))
@@ -572,7 +592,7 @@ order to produce a double-click")
   ;; dito for min/max
   (setf user-min-foo (or user-min-foo min-foo)
 	user-max-foo (or user-max-foo max-foo))
-	    
+
   ;; | :max-width, :min-width, :max-height, and :min-height can
   ;; | also be specified as a relative size by supplying a list of
   ;; | the form (number :relative). In this case, the number
@@ -586,18 +606,18 @@ order to produce a double-click")
 			    (resolve-relative user-min-foo  -1 user-foo))
 	  user-max-foo (and user-max-foo
 			    (resolve-relative user-max-foo  +1 user-foo))))
-	    
+
   ;; Now we have two space requirements which need to be 'merged'.
   (setf min-foo (clamp user-min-foo min-foo max-foo)
 	max-foo (clamp user-max-foo min-foo max-foo)
-	foo     (clamp user-foo     min-foo max-foo))
+	foo     (clamp user-foo min-foo max-foo))
   (values foo min-foo max-foo))
 
 (defgeneric merge-user-specified-options (pane sr))
 
 (defmethod merge-user-specified-options ((pane space-requirement-options-mixin)
 					 sr)
-  ;; ### I want proper error checking and in case there is an error we 
+  ;; ### I want proper error checking and in case there is an error we
   ;;     should just emit a warning and move on. CLIM should not die from
   ;;     garbage passed in here.
   (multiple-value-bind (width min-width max-width height min-height max-height)
@@ -721,9 +741,9 @@ order to produce a double-click")
   "Bound to non-NIL while within the execution of CHANGING-SPACE-REQUIREMENTS.")
 
 (defvar *changed-space-requirements* nil
-  "A list of (frame pane resize-frame) tuples recording frames and their panes which
-   changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
-   [This is expected to change]")
+  "A list of (frame pane resize-frame) tuples recording frames and their panes
+which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
+[This is expected to change]")
 
 (defmethod change-space-requirements :before ((pane layout-protocol-mixin)
                                               &rest space-req-keys
@@ -784,12 +804,16 @@ order to produce a double-click")
                       (cond (resize-frame
                              (layout-frame frame))
                             (t
-                             (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane)))))
+                             (layout-frame frame
+                                           (bounding-rectangle-width pane)
+                                           (bounding-rectangle-height pane)))))
                      (t
                       (cond (resize-frame-2
                              (layout-frame frame))
                             (t
-                             (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane)))))))) ))))
+                             (layout-frame frame
+                                           (bounding-rectangle-width pane)
+                                           (bounding-rectangle-height pane))))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -797,11 +821,17 @@ order to produce a double-click")
 
 (defclass basic-pane (standard-space-requirement-options-mixin
                       sheet-parent-mixin ;mirrored-sheet-mixin
+                      ;; UX mixins
+                      mouse-wheel-scroll-mixin
+                      permanent-medium-sheet-output-mixin
+                      ;; protocol class with million mixins goes last
                       pane)
   ((foreground       :initarg :foreground
-                     :reader pane-foreground)
+                     :reader pane-foreground
+                     :reader foreground)
    (background       :initarg :background
-                     :reader pane-background)
+                     :accessor pane-background
+                     :reader background)
    (text-style       :initarg :text-style
                      :reader pane-text-style)
    (align-x          :initarg :align-x
@@ -832,27 +862,45 @@ order to produce a double-click")
 ;;;; Composite Panes
 ;;;;
 
-(defclass composite-pane (sheet-multiple-child-mixin
-			  basic-pane)
+(defclass composite-pane (basic-pane)
   ()
   (:documentation "protocol class"))
 
-(defmethod spacing-value-to-device-units (pane x)
-  (cond ((realp x) x)
-        ((consp x)
-         (ecase (cadr x)
-           (:pixels (car x))
-           (:point  (* (car x) (graft-pixels-per-inch (graft pane)) 1/72))
-           (:mm     (* (car x) (graft-pixels-per-millimeter (graft pane))))
-           (:character (* (car x) (text-style-character-width (pane-text-style pane)
-                                                               (sheet-medium pane)
-                                                               #\m)))
-           (:line  (* (car x)
-                      (stream-line-height pane)))))))
+(defmethod spacing-value-to-device-units ((pane extended-output-stream) x)
+  (etypecase x
+    (real x)
+    (cons (destructuring-bind (value type) x
+            (ecase type
+              (:pixel     value)
+              (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
+              (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
+              (:character (* value (stream-character-width pane #\m)))
+              (:line      (* value (stream-line-height pane))))))))
+
+(defmethod spacing-value-to-device-units ((pane composite-pane) x)
+  (if (and (consp x) (member (second x) '(:character :line)))
+      (loop for sheet in (sheet-children pane)
+         maximize (spacing-value-to-device-units sheet x))
+      (call-next-method)))
+
+(defmethod spacing-value-to-device-units ((pane basic-pane) x)
+  (etypecase x
+    (real x)
+    (cons (destructuring-bind (value type) x
+            (ecase type
+              (:pixel     value)
+              (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
+              (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
+              (:character 0)
+              (:line      0))))))
+
+;;; MULTIPLE-CHILD-COMPOSITE PANE
+
+(defclass multiple-child-composite-pane (sheet-multiple-child-mixin composite-pane) ())
 
 ;;; SINGLE-CHILD-COMPOSITE PANE
 
-(defclass single-child-composite-pane (sheet-single-child-mixin basic-pane) ())
+(defclass single-child-composite-pane (sheet-single-child-mixin composite-pane) ())
 
 
 (defmethod initialize-instance :after ((pane single-child-composite-pane)
@@ -861,12 +909,15 @@ order to produce a double-click")
 				       &allow-other-keys)
   (declare (ignore args))
   (when contents
+    (when (cdr contents)
+      (error 'sheet-supports-only-one-child :sheet pane))
     (sheet-adopt-child pane (first contents))))
 
-(defmethod compose-space ((pane single-child-composite-pane) &key width height)
+(defmethod compose-space ((pane single-child-composite-pane)
+                          &rest args &key width height)
+  (declare (ignore width height))
   (if (sheet-child pane)
-      (compose-space (sheet-child pane)
-                     :width width :height height)
+      (apply #'compose-space (sheet-child pane) args)
       (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
@@ -875,9 +926,7 @@ order to produce a double-click")
 
 ;;; TOP-LEVEL-SHEET
 
-(defclass top-level-sheet-pane (;;permanent-medium-sheet-output-mixin
-				;;mirrored-sheet-mixin
-				composite-pane)
+(defclass top-level-sheet-pane (top-level-sheet-mixin single-child-composite-pane)
   ()
   (:documentation "For the first pane in the architecture"))
 
@@ -902,18 +951,20 @@ order to produce a double-click")
            (cond (resize-frame
                   (layout-frame frame))
                  (t
-                  (layout-frame frame (bounding-rectangle-width pane) (bounding-rectangle-height pane))))))))
+                  (layout-frame frame
+                                (bounding-rectangle-width pane)
+                                (bounding-rectangle-height pane))))))))
 
 (defmethod compose-space ((pane top-level-sheet-pane) &key width height)
   (declare (ignore width height))
-  (compose-space (first (sheet-children pane))))
+  (compose-space (sheet-child pane)))
 
 (defmethod allocate-space ((pane top-level-sheet-pane) width height)
   (unless (pane-space-requirement pane)
     (setf (pane-space-requirement pane)
 	  (compose-space pane)))
-  (when (first (sheet-children pane))
-    (allocate-space (first (sheet-children pane))
+  (alexandria:when-let ((child (sheet-child pane)))
+    (allocate-space child
 		    (clamp width  (sr-min-width pane)  (sr-max-width pane))
 		    (clamp height (sr-min-height pane) (sr-max-height pane)))))
 
@@ -921,6 +972,18 @@ order to produce a double-click")
   (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (allocate-space pane (- x2 x1) (- y2 y1))))
 
+(defmethod handle-event ((sheet top-level-sheet-pane)
+                         (event window-configuration-event))
+  (let ((x (window-configuration-event-x event))
+        (y (window-configuration-event-y event))
+        (width (window-configuration-event-width event))
+        (height (window-configuration-event-height event)))
+    (let ((*configuration-event-p* sheet))
+      (%set-sheet-region-and-transformation
+       sheet
+       (make-bounding-rectangle 0 0 width height)
+       ;; negative offsets are handled by the native transformation?
+       (make-translation-transformation x y)))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
 			 (event window-manager-delete-event))
@@ -928,13 +991,15 @@ order to produce a double-click")
 
 ;;; UNMANAGED-TOP-LEVEL-SHEET PANE
 
-(defclass unmanaged-top-level-sheet-pane (top-level-sheet-pane)
+(defclass unmanaged-top-level-sheet-pane (unmanaged-sheet-mixin top-level-sheet-pane)
   ()
   (:documentation "Top-level sheet without window manager intervention"))
 
 (defmethod sheet-native-transformation ((sheet top-level-sheet-pane))
   (with-slots (native-transformation) sheet
-    	native-transformation))
+    (unless native-transformation
+      (setf native-transformation +identity-transformation+))
+    native-transformation))
 
 (defmethod change-space-requirements ((pane unmanaged-top-level-sheet-pane)
                                       &rest space-req-keys
@@ -954,10 +1019,12 @@ order to produce a double-click")
   ;;
   ;; --GB 2003-03-16
   (declare (ignore space-req-keys resize-frame))
-  (let ((w (space-requirement-width (compose-space pane)))
-        (h (space-requirement-height (compose-space pane))))
-    (resize-sheet pane w h)
-    (allocate-space pane w h) ))
+
+  (let* ((space-requirements (compose-space pane))
+         (width (space-requirement-width space-requirements))
+         (height (space-requirement-height space-requirements)))
+    (resize-sheet pane width height)
+    (allocate-space pane width height)))
 
 ;;; Now each child (client) of a box-layout pane is described by the
 ;;; following class:
@@ -966,17 +1033,17 @@ order to produce a double-click")
   ((fillp
     :initarg       :fillp
     :initform      nil
-    :reader        box-client-fillp
-    :documentation "Whether this child can stretch infinitly.")
+    :accessor      box-client-fillp
+    :documentation "Whether this child can stretch infinitely.")
    (fixed-size
     :initarg       :fixed-size
     :initform      nil
-    :reader        box-client-fixed-size
+    :accessor      box-client-fixed-size
     :documentation "Possible fixed size of a child.")
    (proportion
     :initarg       :proportion
     :initform      nil
-    :reader        box-client-proportion
+    :accessor      box-client-proportion
     :documentation "Proportion child should get of excess space.")
    (pane
     :initarg       :pane
@@ -1155,7 +1222,7 @@ order to produce a double-click")
      (with-slots (major-spacing) box
        (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr*** box c major))
                                    (box-layout-mixin-clients box)))
-              (allot       (mapcar #'ceiling (mapcar #'space-requirement-major content-srs)))
+              (allot       (mapcar #'space-requirement-major content-srs))
               (wanted      (reduce #'+ allot))
               (excess      (- major wanted
                               (* (1- (length children)) major-spacing))))
@@ -1192,7 +1259,7 @@ order to produce a double-click")
                  (setf allot
                        (mapcar (lambda (allot q)
                                  (let ((q (elt q j)))
-                                   (let ((delta (ceiling (if (zerop sum) 0 (/ (* excess q) sum)))))
+                                   (let ((delta (if (zerop sum) 0 (/ (* excess q) sum))))
                                      (decf excess delta)
                                      (decf sum q)
                                      (+ allot delta))))
@@ -1205,7 +1272,7 @@ order to produce a double-click")
 	     (format *trace-output* "~&;;   new allotment = ~S.~%" allot))
 
            (values allot
-                   (mapcar #'ceiling (mapcar #'space-requirement-minor content-srs))) )))))
+                   (mapcar #'space-requirement-minor content-srs))) ))))
 
  (defmethod box-layout-mixin/xically-allocate-space-aux* :around ((box rack-layout-mixin) width height)
    (declare (ignorable width height))
@@ -1219,7 +1286,7 @@ order to produce a double-click")
  ;; box pane would just align the child according to the
  ;; alignment option. We do the same with the minor dimension.
  ;;
- 
+
  (defgeneric box-layout-mixin/xically-allocate-space (pane real-width real-height))
 
  (defmethod box-layout-mixin/xically-allocate-space ((pane box-layout-mixin) real-width real-height)
@@ -1306,15 +1373,15 @@ order to produce a double-click")
   (frob horizontally hbox-pane hrack-pane equalize-height)
   (frob vertically vbox-pane vrack-pane equalize-width))
 
-(defclass box-pane (box-layout-mixin
-		    composite-pane
-		    permanent-medium-sheet-output-mixin ;arg!
-		    )
+(defclass box-pane (box-layout-mixin multiple-child-composite-pane)
   ()
   (:documentation "Superclass for hbox-pane and vbox-pane that provides the
 		    initialization common to both."))
 
 (defmethod initialize-instance :after ((pane box-pane) &key contents)
+  (setf (%pane-contents pane) contents))
+
+(defmethod (setf %pane-contents) (contents (pane box-pane))
   (labels ((parse-box-content (content)
 	     "Parses a box/rack content and returns a BOX-CLIENT instance."
 	     ;; ### we need to parse more
@@ -1365,10 +1432,12 @@ order to produce a double-click")
 	       (t
 		(error "~S is not a valid element in the ~S option of ~S."
 		       content :contents pane)) )))
+    ;; remove old children, if any
+    (dolist (child (sheet-children pane))
+      (sheet-disown-child pane child))
 
     (let* ((clients  (mapcar #'parse-box-content contents))
 	   (children (remove nil (mapcar #'box-client-pane clients))))
-      ;;
       (setf (box-layout-mixin-clients pane) clients)
       (mapc (curry #'sheet-adopt-child pane) children))))
 
@@ -1393,7 +1462,7 @@ order to produce a double-click")
 ;;; TODO: The table and grid panes should respect the :x-spacing,
 ;;; :y-spacing, and :spacing initargs.
 
-(defclass table-pane (composite-pane)
+(defclass table-pane (multiple-child-composite-pane)
   ((array
     :documentation "Two-dimensional array holding the child panes as they are to be arranged."))
   ;;
@@ -1463,7 +1532,7 @@ order to produce a double-click")
                    (let ((n (length qs)))
                      (setf allot
                        (mapcar (lambda (allot q)
-                                 (let ((delta (floor excess n)))
+                                 (let ((delta (/ excess n)))
                                    (decf n)
                                    (decf excess delta)
                                    (decf sum q)
@@ -1472,7 +1541,7 @@ order to produce a double-click")
                   (t
                    (setf allot
                      (mapcar (lambda (allot q)
-                               (let ((delta (ceiling (if (zerop sum) 0 (/ (* excess q) sum)))))
+                               (let ((delta (if (zerop sum) 0 (/ (* excess q) sum))))
                                  (decf excess delta)
                                  (decf sum q)
                                  (+ allot delta)))
@@ -1500,9 +1569,9 @@ order to produce a double-click")
   (with-slots (array x-spacing y-spacing) pane
     ;; ---v our problem is here.
     ;; Which problem? --GB
-    (let ((rsrs (loop for i from 0 below (array-dimension array 0) 
+    (let ((rsrs (loop for i from 0 below (array-dimension array 0)
                     collect (table-pane-row-space-requirement pane i)))
-          (csrs (loop for j from 0 below (array-dimension array 1) 
+          (csrs (loop for j from 0 below (array-dimension array 1)
                     collect (table-pane-col-space-requirement pane j)))
           (xs (* x-spacing (1- (array-dimension array 1))))
           (ys (* y-spacing (1- (array-dimension array 0)))))
@@ -1579,8 +1648,8 @@ order to produce a double-click")
           for child in (sheet-children grid)
           and width = 0 then (max width (sr-width child))
           and height = 0 then (max height (sr-height child))
-          and max-width = 5000000 then (min max-width (sr-min-width child))
-          and max-height = 5000000 then (min max-height (sr-max-height child))
+          and max-width = 5000000 then (max width (min max-width (sr-min-width child)))
+          and max-height = 5000000 then (max height (min max-height (sr-max-height child)))
           and min-width = 0 then (max min-width (sr-min-width child))
           and min-height = 0 then (max min-height (sr-min-height child))
           finally (return
@@ -1603,19 +1672,18 @@ order to produce a double-click")
           for y = 0 then (+ y new-height)
           do (loop
                 for col-index from 0 by 1
-                for l from nb-kids-p-l downto 1                  
+                for l from nb-kids-p-l downto 1
                 for child = (aref array row-index col-index)
                 for tmp-width = width then (decf tmp-width new-width)
                 for new-width = (/ tmp-width l)
                 for x = 0 then (+ x new-width)
-                do (move-sheet child x y)                  
-                  (allocate-space child (round new-width) (round new-height))))))
+                do (move-sheet child x y)
+		  (allocate-space child new-width new-height)))))
 
 ;;; SPACING PANE
 
 (defclass spacing-pane (;;standard-space-requirement-options-mixin
-			single-child-composite-pane
-                        permanent-medium-sheet-output-mixin)
+			single-child-composite-pane)
   ((border-width :initarg :thickness
                  :initform 1))
   (:documentation "Never trust a random documentation string."))
@@ -1646,7 +1714,7 @@ order to produce a double-click")
 
 (defmethod allocate-space ((pane spacing-pane) width height)
   (with-slots (border-width) pane
-    (let ((child (first (sheet-children pane)))
+    (let ((child (sheet-child pane))
 	  (new-width  (- width border-width border-width))
 	  (new-height (- height border-width border-width)))
       (layout-child child (pane-align-x pane) (pane-align-y pane)
@@ -1677,7 +1745,7 @@ order to produce a double-click")
 (defmacro bordering ((&rest options) &body contents)
   `(make-pane 'border-pane ,@options :contents (list ,@contents)))
 
-;;; This generic function appears to be nowhere used. 
+;;; This generic function appears to be nowhere used.
 (defgeneric pane-border (pane))
 
 (defmethod pane-border ((pane basic-pane))
@@ -1687,7 +1755,7 @@ order to produce a double-click")
 
 ;;; RAISED PANE
 
-(defclass raised-pane (border-pane permanent-medium-sheet-output-mixin)
+(defclass raised-pane (border-pane)
   ()
   (:default-initargs
    :border-width 2))
@@ -1704,7 +1772,7 @@ order to produce a double-click")
 
 ;;; LOWERED PANE
 
-(defclass lowered-pane (border-pane permanent-medium-sheet-output-mixin)
+(defclass lowered-pane (border-pane)
   ()
   (:default-initargs
    :border-width 2))
@@ -1734,11 +1802,14 @@ order to produce a double-click")
 
 ;;; BBOARD PANE
 
-(defclass bboard-pane (composite-pane) ())
+(defclass bboard-pane (multiple-child-composite-pane) ())
 
-(defmethod compose-space ((bboard bboard-pane) &key width height)
-  (declare (ignore width height))
-  (make-space-requirement :width 300 :height 300))
+(defmethod initialize-instance :after ((sheet bboard-pane) &key contents)
+  (dolist (child (alexandria:ensure-list contents))
+    (sheet-adopt-child sheet child)))
+
+(defmethod compose-space ((bboard bboard-pane) &key (width 100) (height 100))
+  (make-space-requirement :width width :height height))
 
 ;;; VIEWPORT
 
@@ -1750,7 +1821,7 @@ order to produce a double-click")
   ;; requirements of the child, apart from the max sizes. If the child
   ;; does not want to go bigger than a specific size, we should not
   ;; force it to do so.
-  (let ((child-sr (compose-space (first (sheet-children pane)))))
+  (let ((child-sr (compose-space (sheet-child pane))))
     (if child-sr
         (make-space-requirement :max-width (space-requirement-max-width child-sr)
                                 :max-height (space-requirement-max-height child-sr))
@@ -1764,17 +1835,17 @@ order to produce a double-click")
            (child-min-width  (space-requirement-min-width child-space))
            (child-height     (space-requirement-height child-space))
            (child-min-height (space-requirement-min-height child-space)))
-        (move-and-resize-sheet child
-             (if hscrollbar (- (gadget-value hscrollbar)) 0)
-             (if vscrollbar (- (gadget-value vscrollbar)) 0)
-             (max child-width  width)
-             (max child-height height))
+      (move-and-resize-sheet child
+                             (if hscrollbar (- (gadget-value hscrollbar)) 0)
+                             (if vscrollbar (- (gadget-value vscrollbar)) 0)
+                             (max child-width  width)
+                             (max child-height height))
         ; move-and-resize-sheet does not allocate space for the sheet...
         ; so we do it manually for this case, which may be wrong - CHECKME
         ; if this is the right place, reusing the above calculation might be a good idea
-        (allocate-space child
-             (max child-min-width child-width  width)
-             (max child-min-height child-height height)))))
+      (allocate-space child
+                      (max child-min-width child-width  width)
+                      (max child-min-height child-height height)))))
 
 (defmethod note-input-focus-changed ((pane viewport-pane) state)
   (note-input-focus-changed (sheet-child pane) state))
@@ -1799,16 +1870,31 @@ order to produce a double-click")
 
       ;; It's not a bug, it's a feature. This requires further thought. -Hefner
       (move-sheet child
-                  (round (- (if (> (+ horizontal-scroll viewport-width)
-                                   child-width)
-                                (- child-width viewport-width)
-                                horizontal-scroll)))
-                  (round (- (if (> (+ vertical-scroll viewport-height)
-                                   child-height)
-                                (- child-height viewport-height)
-                                vertical-scroll))))
+		  (- (if (> (+ horizontal-scroll viewport-width)
+			    child-width)
+			 (- child-width viewport-width)
+			 horizontal-scroll))
+                  (- (if (> (+ vertical-scroll viewport-height)
+			    child-height)
+			 (- child-height viewport-height)
+			 vertical-scroll)))
       (scroller-pane/update-scroll-bars (sheet-parent pane)))))
 
+;;; Accounting for changed space requirements
+
+(defmethod change-space-requirements ((pane viewport-pane) &rest options)
+  (declare (ignore options))
+  (let* ((client (sheet-child pane))
+	 (sr (compose-space client))
+	 (width  (max (bounding-rectangle-width pane)
+		      (space-requirement-width sr)))
+	 (height (max (bounding-rectangle-height pane)
+		      (space-requirement-height sr))))
+    (resize-sheet client width height)
+    (allocate-space client width height)
+    (scroller-pane/update-scroll-bars (sheet-parent pane))))
+
+
 ;;; SCROLLER PANE
 
 ;;; How scrolling is done
@@ -1830,27 +1916,28 @@ order to produce a double-click")
 (defvar clim-extensions:*default-vertical-scroll-bar-position*
   :right
   "Default for the :VERTICAL-SCROLL-BAR-POSITION init arg of a
-   SCROLLER-PANE. Set it to :LEFT to have the vertical scroll bar of a
-   SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
-   :RIGHT to have it on the distant right hand side of the scroller.")
+SCROLLER-PANE. Set it to :LEFT to have the vertical scroll bar of a
+SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
+:RIGHT to have it on the distant right hand side of the scroller.")
 
-(defclass scroller-pane (composite-pane)
+(defclass scroller-pane (multiple-child-composite-pane)
   ((scroll-bar :type scroll-bar-spec ; (member t :vertical :horizontal nil)
                ;; ### Note: I added NIL here, so that the application
-               ;; programmer can switch off scroll bars alltogether. 
+               ;; programmer can switch off scroll bars alltogether.
                ;; The spec though has it neither in the description of
                ;; SCROLLER-PANE, nor in the description of
                ;; MAKE-CLIM-STREAM-PANE, but in OPEN-WINDOW-STREAM.
                ;;
                ;; One might argue that in case of no scroll-bars the
                ;; application programmer can just skip the scroller
-               ;; pane altogether. Bu I think that the then needed
+               ;; pane altogether. But I think that the then needed
                ;; special casing on having a scroller pane or a bare
                ;; viewport at hand is an extra burden, that can be
                ;; avoided.
                ;; --GB 2005-11-29
                :initform t
                :initarg :scroll-bar
+               :initarg :scroll-bars
                :accessor scroller-pane-scroll-bar)
    (viewport   :initform nil)
    (vscrollbar :initform nil)
@@ -1892,7 +1979,7 @@ order to produce a double-click")
                 :width suggested-width :height suggested-height :max-width +fill+ :max-height +fill+
                 :min-width  (max (* 2 x-spacing) (if (null scroll-bar) 0 30))
                 :min-height (max (* 2 y-spacing) (if (null scroll-bar) 0 30))))
-              (viewport-child (first (sheet-children viewport))))
+              (viewport-child (sheet-child viewport)))
           (when vscrollbar
             (setq req (space-requirement+*
                        (space-requirement-combine #'max
@@ -1934,7 +2021,7 @@ order to produce a double-click")
                                         max-height)
                        :max-width max-width
                        :max-height max-height)))
-          
+
           req)
         (make-space-requirement))))
 
@@ -1966,7 +2053,7 @@ order to produce a double-click")
       ;; Recalculate the gadget-values of the scrollbars
       ;;
       (when vscrollbar
-        (let* ((scrollee (first (sheet-children viewport)))
+        (let* ((scrollee (sheet-child viewport))
                (min 0)
                (max (- (max (space-requirement-height (compose-space scrollee))
                             viewport-height)
@@ -1978,7 +2065,7 @@ order to produce a double-click")
                            max))))
 	  (setf (scroll-bar-values vscrollbar) (values min max ts val))))
       (when hscrollbar
-        (let* ((scrollee (first (sheet-children viewport)))
+        (let* ((scrollee (sheet-child viewport))
                (min 0)
                (max (- (max (space-requirement-width (compose-space scrollee))
                             viewport-width)
@@ -2003,62 +2090,92 @@ order to produce a double-click")
 
 ;;; Initialization
 
-(defgeneric scroller-pane/vertical-drag-callback (pane new-value))
+(defun align-subpixel (pos ref)
+  (+ (truncate pos) (nth-value 1 (truncate ref))))
 
-(defmethod scroller-pane/vertical-drag-callback ((pane scroller-pane) new-value)
+(defun scroller-pane/vertical-drag-callback (pane new-value)
   "Callback for the vertical scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
-    (let ((scrollee (first (sheet-children viewport))))
+    (let ((scrollee (sheet-child viewport)))
       (when (pane-viewport scrollee)
-	(move-sheet scrollee
-		    (round (if hscrollbar
-			       (- (gadget-value hscrollbar))
-			       0))
-		    (round (- new-value)))))))
+        (let ((transform (sheet-transformation scrollee)))
+          (multiple-value-bind (t1 t2 t3 t4 old-x old-y)
+              (get-transformation transform)
+            (declare (ignore t1 t2 t3 t4))
+            ;; The call to ALIGN-SUBPIXEL ensures that the subpixel
+            ;; position remains the same before and after a scrollbar
+            ;; drag.
+            ;;
+            ;; When scrolling a viewport, if the decimal portion of
+            ;; any corrdinate changes, the rounding will change. This
+            ;; causes rounding effects on things that are drawn. Such
+            ;; effects are not a problem for static views, but when
+            ;; scrolling, the effect is that graphics sightly change
+            ;; appearance.
+            ;;
+            ;; In addition, when using optimised scrolling (the
+            ;; content of the pane is copied and only the newly
+            ;; exposed area is repainted), it is important that the
+            ;; rounding remains consistent in order to avoid artifacts
+            ;; between the area that was copied and the part that has
+            ;; been newly updated. Fir this reason, optimised
+            ;; scrolling only takes effect when the decimal portion of
+            ;; the translation remains constant.
+            ;;
+            ;; Because of this, this function ensures that the
+            ;; subpixel positioning (i.e. the decimal part) is
+            ;; preserved after the scrollbar is moved.
+	    (move-sheet scrollee
+		        (if hscrollbar
+			    (align-subpixel (- (gadget-value hscrollbar)) old-x)
+			    0)
+		        (align-subpixel (- new-value) old-y))))))))
 
-(defgeneric scroller-pane/horizontal-drag-callback (pane new-value))
-
-(defmethod scroller-pane/horizontal-drag-callback ((pane scroller-pane) new-value)
+(defun scroller-pane/horizontal-drag-callback (pane new-value)
   "Callback for the horizontal scroll-bar of a scroller-pane."
   (with-slots (viewport hscrollbar vscrollbar) pane
-    (let ((scrollee (first (sheet-children viewport))))
+    (let ((scrollee (sheet-child viewport)))
       (when (pane-viewport scrollee)
-	(move-sheet scrollee
-		    (round (- new-value))
-		    (round (if vscrollbar
-			       (- (gadget-value vscrollbar))
-			       0)))))))
-    
-(defgeneric scroller-pane/update-scroll-bars (pane))
+        (let ((transform (sheet-transformation scrollee)))
+          (multiple-value-bind (t1 t2 t3 t4 old-x old-y)
+              (get-transformation transform)
+            (declare (ignore t1 t2 t3 t4))
+	    (move-sheet scrollee
+		        (align-subpixel (- new-value) old-x)
+		        (if vscrollbar
+			    (align-subpixel (- (gadget-value vscrollbar)) old-y)
+			    0))))))))
 
-(defmethod scroller-pane/update-scroll-bars ((pane scroller-pane))
+(defun scroller-pane/update-scroll-bars (pane)
+  (check-type pane scroller-pane)
   (with-slots (viewport hscrollbar vscrollbar) pane
-    (let* ((scrollee (first (sheet-children viewport)))
+    (let* ((scrollee (sheet-child viewport))
            (scrollee-sr (sheet-region scrollee))
            (viewport-sr (sheet-region viewport)))
       ;;
       (when hscrollbar
-	(setf (scroll-bar-values hscrollbar)
-	      (values (bounding-rectangle-min-x scrollee-sr)
-		      (max (- (bounding-rectangle-max-x scrollee-sr)
-			      (bounding-rectangle-width viewport-sr))
-			   (bounding-rectangle-min-x scrollee-sr))
-		      (bounding-rectangle-width viewport-sr)
-		      (- (nth-value 0 (transform-position
-				       (sheet-transformation scrollee) 0 0))))))
+        (let* ((min-value (bounding-rectangle-min-x scrollee-sr))
+               (max-value (max (- (bounding-rectangle-max-x scrollee-sr)
+                                  (bounding-rectangle-width viewport-sr))
+                               (bounding-rectangle-min-x scrollee-sr)))
+               (thumb-size (bounding-rectangle-width viewport-sr))
+               (value (min (- (nth-value 0 (transform-position
+                                            (sheet-transformation scrollee) 0 0)))
+                           max-value)))
+          (setf (scroll-bar-values hscrollbar)
+                (values min-value max-value thumb-size value))))
       ;;
       (when vscrollbar
-	(setf (scroll-bar-values vscrollbar)
-	      (values (bounding-rectangle-min-y scrollee-sr)
-		      (max (- (bounding-rectangle-max-y scrollee-sr)
-			      (bounding-rectangle-height viewport-sr))
-			   (bounding-rectangle-min-y scrollee-sr))
-		      (bounding-rectangle-height viewport-sr)
-		      (- (nth-value 1 (transform-position
-				       (sheet-transformation scrollee)
-				       0
-				       0)))))))))
-
+        (let* ((min-value (bounding-rectangle-min-y scrollee-sr))
+               (max-value (max (- (bounding-rectangle-max-y scrollee-sr)
+                                  (bounding-rectangle-height viewport-sr))
+                               (bounding-rectangle-min-y scrollee-sr)))
+               (thumb-size (bounding-rectangle-height viewport-sr))
+               (value (min (- (nth-value 1 (transform-position
+                                            (sheet-transformation scrollee) 0 0)))
+                           max-value)))
+          (setf (scroll-bar-values vscrollbar)
+                (values min-value max-value thumb-size value)))))))
 
 (defmethod initialize-instance :after ((pane scroller-pane) &key contents &allow-other-keys)
   (sheet-adopt-child pane (first contents))
@@ -2068,16 +2185,16 @@ order to produce a double-click")
     ;; things scrolled.
     ;; This doesn't appear to work, hence the "gray space" bugs. Actually
     ;; handy for observing when the space requirements get messed up.. -Hefner
-    (when (first (sheet-children viewport))
+    (alexandria:when-let ((child (sheet-child viewport)))
       (setf (slot-value pane 'background)  ;### hmm ...
-            (pane-background (first (sheet-children viewport)))))
+            (pane-background child)))
     ;; make sure that we have ok options for the scroll-bar argument...
     (check-type scroll-bar scroll-bar-spec) ; (member :vertical :horizontal :both t nil))
     (when (member scroll-bar '(:vertical :both t))
       (setq vscrollbar
             (make-pane 'scroll-bar
                        :orientation :vertical
-                       :client (first (sheet-children viewport))
+                       :client (sheet-child viewport)
                        :drag-callback (lambda (gadget new-value)
                                         (declare (ignore gadget))
                                         (scroller-pane/vertical-drag-callback pane new-value))
@@ -2103,7 +2220,7 @@ order to produce a double-click")
       (setq hscrollbar
             (make-pane 'scroll-bar
                        :orientation :horizontal
-                       :client (first (sheet-children viewport))
+                       :client (sheet-child viewport)
                        :drag-callback (lambda (gadget new-value)
                                         (declare (ignore gadget))
                                         (scroller-pane/horizontal-drag-callback pane new-value))
@@ -2119,28 +2236,15 @@ order to produce a double-click")
                        :scroll-down-line-callback
                        #'(lambda (scroll-bar)
                            (scroll-line-callback scroll-bar -1))
-                       :value-changed-callback (lambda (gadget new-value)
-                                                 (declare (ignore gadget))
-                                                 (scroller-pane/horizontal-drag-callback pane new-value))
+                       :value-changed-callback
+                       #'(lambda (gadget new-value)
+                           (declare (ignore gadget))
+                           (scroller-pane/horizontal-drag-callback pane new-value))
                        :min-value 0
                        :max-value 1))
       (sheet-adopt-child pane hscrollbar))))
 
 ;;; Scrolling itself
-
-;;; Accounting for changed space requirements
-
-(defmethod change-space-requirements ((pane clim-extensions:viewport-pane) &rest ignore)
-  (declare (ignore ignore))
-  (let* ((client (first (sheet-children pane)))
-	 (sr (compose-space client))
-	 (width  (max (bounding-rectangle-width pane)
-		      (space-requirement-width sr)))
-	 (height (max (bounding-rectangle-height pane)
-		      (space-requirement-height sr))))
-    (resize-sheet client width height)
-    (allocate-space client width height)
-    (scroller-pane/update-scroll-bars (sheet-parent pane))))
 
 (defun scroll-page-callback (scroll-bar direction)
   (let ((client (gadget-client scroll-bar)))
@@ -2168,9 +2272,9 @@ order to produce a double-click")
            (gadget-max-value scroll-bar)))))
 
 (defmethod pane-viewport ((pane basic-pane))
-  (let ((parent (sheet-parent pane)))
-    (when (and parent (typep parent 'viewport-pane))
-	parent)))
+  (when-let ((parent (sheet-parent pane)))
+    (when (typep parent 'viewport-pane)
+      parent)))
 
 ;;; Default for streams that aren't even panes.
 
@@ -2178,29 +2282,27 @@ order to produce a double-click")
   nil)
 
 (defmethod pane-viewport-region ((pane basic-pane))
-  (let ((viewport (pane-viewport pane)))
-    (and viewport
-         (untransform-region
-          (sheet-delta-transformation pane viewport)
-          (sheet-region viewport)))))
+  (when-let ((viewport (pane-viewport pane)))
+    (untransform-region (sheet-delta-transformation pane viewport)
+                        (sheet-region viewport))))
 
 (defmethod pane-scroller ((pane basic-pane))
-  (let ((viewport (pane-viewport pane)))
-    (when viewport
-	(sheet-parent viewport))))
+  (when-let ((viewport (pane-viewport pane)))
+    (sheet-parent viewport)))
 
 (defmethod scroll-extent ((pane basic-pane) x y)
   (when (pane-viewport pane)
-    (move-sheet pane (round (- x)) (round (- y)))
-    (when (pane-scroller pane)
-      (scroller-pane/update-scroll-bars (pane-scroller pane)))))
+    (move-sheet pane (- x) (- y))
+    (when-let  ((scroller (pane-scroller pane)))
+      (scroller-pane/update-scroll-bars scroller))))
 
+
 ;;; LABEL PANE
 
-(defclass label-pane (composite-pane  permanent-medium-sheet-output-mixin)
+(defclass label-pane (multiple-child-composite-pane)
   ((label :type string
           :initarg :label
-          :accessor label-pane-label
+          :accessor clime:label-pane-label
           :initform "")
    (alignment :type (member :bottom :top)
               :initform :top
@@ -2211,6 +2313,9 @@ order to produce a double-click")
    :align-y    :center
    :text-style (make-text-style :sans-serif nil nil))
   (:documentation ""))
+
+(defmethod (setf clime:label-pane-label) :after (new-value (pane label-pane))
+  (repaint-sheet pane (sheet-region pane)))
 
 (defmacro labelling ((&rest options) &body contents)
   `(make-pane 'label-pane ,@options :contents (list ,@contents)))
@@ -2240,7 +2345,7 @@ order to produce a double-click")
 
 (defmethod compose-space ((pane label-pane) &key width height)
   (declare (ignore width height))
-  (let* ((w (text-size pane (label-pane-label pane)))
+  (let* ((w (text-size pane (clime:label-pane-label pane)))
          (a (text-style-ascent (pane-text-style pane) pane))
          (d (text-style-descent (pane-text-style pane) pane))
          (m0 2)
@@ -2279,11 +2384,10 @@ order to produce a double-click")
 
 (defmethod allocate-space ((pane label-pane) width height)
   (multiple-value-bind (right top left bottom) (label-pane-margins pane)
-    (when (sheet-children pane)
+    (alexandria:when-let ((child (first (sheet-children pane))))
       (multiple-value-bind (x1 y1 x2 y2) (values 0 0 width height)
-        (move-sheet (first (sheet-children pane))
-                    (+ x1 left) (+ y1 top))
-        (allocate-space (first (sheet-children pane))
+        (move-sheet child (+ x1 left) (+ y1 top))
+        (allocate-space child
                         (- (- x2 right) (+ x1 left))
                         (- (- y2 bottom) (+ y1 top)))))))
 
@@ -2292,7 +2396,7 @@ order to produce a double-click")
   (let ((m0 2)
         (a (text-style-ascent (pane-text-style pane) pane))
         (d (text-style-descent (pane-text-style pane) pane))
-        (tw (text-size pane (label-pane-label pane))))
+        (tw (text-size pane (clime:label-pane-label pane))))
     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
       (multiple-value-bind (iright itop ileft ibottom
                                    bright btop bleft bbottom)
@@ -2311,7 +2415,8 @@ order to produce a double-click")
                     (ecase (label-pane-label-alignment pane)
                       (:top (+ y1 m0 a))
                       (:bottom (- y2 m0 d))))
-          (draw-text* pane (label-pane-label pane)
+	  (draw-rectangle* pane x1 (- ty a) x2 (+ ty d) :ink (pane-background pane))
+          (draw-text* pane (clime:label-pane-label pane)
                       tx ty)
           ;;;
           (when (sheet-children pane)
@@ -2320,7 +2425,7 @@ order to produce a double-click")
                                    (region-difference
                                     (sheet-region pane)
                                     (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d))))
-              (draw-bordered-rectangle* pane (+ x1 bleft) (+ y1 btop) (- x2 bright) (- y2 bbottom) 
+              (draw-bordered-rectangle* pane (+ x1 bleft) (+ y1 btop) (- x2 bright) (- y2 bbottom)
                                         :style :groove))))))))
 
 
@@ -2349,36 +2454,28 @@ order to produce a double-click")
 	((pane-viewport pane) (values (pane-viewport pane) pane))
 	(t (find-viewport-for-scroll (sheet-parent pane)))))
 
-(defun scroll-sheet (sheet vertical horizontal)
-  (multiple-value-bind (viewport sheet)
-      (find-viewport-for-scroll sheet)
-    (declare (ignore viewport))
-    (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
-      (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
-	(let ((viewport-height (- vy1 vy0))
-	      (viewport-width  (- vx1 vx0))
-	      (delta (* *mouse-scroll-distance*
-			(scroll-quantum sheet))))
-	  ;; The coordinates (x,y) of the new upper-left corner of the viewport
-	  ;; must be "sx0 < x < sx1 - viewport-width"  and
-	  ;;         "sy0 < y < sy1 - viewport-height"
-	  (scroll-extent sheet
-			 (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
-			 (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical))))))))))
+(defun scroll-sheet (sheet horizontal vertical)
+  (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
+    (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
+      (let ((viewport-width  (- vx1 vx0))
+            (viewport-height (- vy1 vy0))
+            (delta (* *mouse-scroll-distance*
+                      (scroll-quantum sheet))))
+        ;; The coordinates (x,y) of the new upper-left corner of the viewport
+        ;; must be "sx0 < x < sx1 - viewport-width"  and
+        ;;         "sy0 < y < sy1 - viewport-height"
+        (scroll-extent sheet
+                       (max sx0 (min (- sx1 viewport-width)  (+ vx0 (* delta horizontal))))
+                       (max sy0 (min (- sy1 viewport-height) (+ vy0 (* delta vertical)))))))))
 
-;;; Note that handling this from dispatch-event is evil, and we
-;;; shouldn't.
-(defmethod dispatch-event :around ((sheet mouse-wheel-scroll-mixin)
-                                   (event pointer-button-press-event))
-  (if (find-viewport-for-scroll sheet)
-      (let ((button (pointer-event-button event)))
-	(cond
-	 ((eq button +pointer-wheel-up+)    (scroll-sheet sheet -1  0))
-	 ((eq button +pointer-wheel-down+)  (scroll-sheet sheet  1  0))
-	 ((eq button +pointer-wheel-left+)  (scroll-sheet sheet  0 -1))
-	 ((eq button +pointer-wheel-right+) (scroll-sheet sheet  0  1))
-	 (t (call-next-method))))      ; not a scroll wheel button
-    (call-next-method)))               ; no viewport
+(defmethod handle-event ((sheet mouse-wheel-scroll-mixin)
+                         (event pointer-scroll-event))
+  (multiple-value-bind (viewport sheet) (find-viewport-for-scroll sheet)
+    (when viewport
+      (scroll-sheet sheet
+                    (pointer-event-delta-x event)
+                    (pointer-event-delta-y event)))))
+
 
 ;;;
 ;;; 29.4 CLIM Stream Panes
@@ -2397,25 +2494,24 @@ order to produce a double-click")
 				 (pane pane-display-mixin)
 				 &key force-p)
   (declare (ignore force-p))
-  (invoke-display-function frame pane)
-  (change-space-requirements pane))
+  (invoke-display-function frame pane))
 
 (defclass clim-stream-pane (updating-output-stream-mixin
 			    pane-display-mixin
-			    permanent-medium-sheet-output-mixin
                             #-clim-mp standard-repainting-mixin
+                            standard-output-recording-stream
                             standard-extended-input-stream
                             standard-extended-output-stream
-                            standard-output-recording-stream
                             ;; sheet-leaf-mixin
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane)
-  ((redisplay-needed :initarg :display-time) 
+  ((redisplay-needed :initarg :display-time)
    (scroll-bars :type scroll-bar-spec ; (member t :vertical :horizontal nil)
 		:initform nil
+                :initarg :scroll-bar
 		:initarg :scroll-bars
 		:accessor pane-scroll-bars)
-  
+
    ; Should inherit from label-pane for this one ??
    (label :type string
           :initform ""
@@ -2431,21 +2527,35 @@ order to produce a double-click")
    (end-of-page-action :initform :scroll
 		       :initarg :end-of-page-action
 		       :reader pane-end-of-page-action)
-   ;; Slots of space-requirement-options-mixin defined with accessors for our
-   ;; convenience
-   (user-width :accessor pane-user-width)
-   (user-min-width :accessor pane-user-min-width)
-   (user-max-width :accessor pane-user-max-width)
-   (user-height :accessor pane-user-height)
-   (user-min-height :accessor pane-user-min-height)
-   (user-max-height :accessor pane-user-max-height))
-  
+   ;; Slots of space-requirement-options-mixin defined with private accessors for our
+   ;; convenience; They are used by the :compute protocol.
+   (user-width :accessor %pane-user-width)
+   (user-min-width :accessor %pane-user-min-width)
+   (user-max-width :accessor %pane-user-max-width)
+   (user-height :accessor %pane-user-height)
+   (user-min-height :accessor %pane-user-min-height)
+   (user-max-height :accessor %pane-user-max-height)
+   ;; size required by the stream
+   (stream-width :initform 100 :accessor stream-width)
+   (stream-height :initform 100 :accessor stream-height))
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
 
 (defmethod interactive-stream-p ((stream clim-stream-pane))
   t)
+
+(defmethod redisplay-frame-pane :after ((frame application-frame)
+				 (pane clim-stream-pane)
+				 &key force-p)
+  (declare (ignore frame force-p))
+  (unless (or (eql :compute (pane-user-width pane))
+              (eql :compute (pane-user-min-width pane))
+              (eql :compute (pane-user-max-width pane))
+              (eql :compute (pane-user-height pane))
+              (eql :compute (pane-user-min-height pane))
+              (eql :compute (pane-user-max-height pane)))
+    (change-space-requirements pane)))
 
 (defun invoke-display-function (frame pane)
   (let ((display-function (pane-display-function pane)))
@@ -2454,52 +2564,72 @@ order to produce a double-click")
 		  frame pane (cdr display-function)))
 	  (display-function
 	   (funcall display-function frame pane))
-	  (t nil))))
+	  (t nil))
+    (finish-output pane)))
 
-;;; Handle :compute in the space requirement options
-;;; XXX This should be expanded to handle all the options, not just
-;;; height and width.
-(defmethod compose-space :around ((pane clim-stream-pane)
-                                  &key width height)
+(defun change-stream-space-requirements (pane &key width height)
+  (check-type pane clim-stream-pane)
+  (when width
+    (setf (stream-width pane) width))
+  (when height
+    (setf (stream-height pane) height))
+  (change-space-requirements pane))
+
+(defmethod compose-space :around ((pane clim-stream-pane) &key width height)
   (declare (ignore width height))
   (flet ((compute (val default)
 	   (if (eq val :compute) default val)))
-    (if (or (eq (pane-user-width pane) :compute)
-            (eq (pane-user-height pane) :compute))
-	(progn
-	  (with-output-recording-options (pane :record t :draw nil)
-	    ;; multiple-value-letf anyone?
-	    (multiple-value-bind (x y)
-		(stream-cursor-position pane)
-	      (unwind-protect
-		   (invoke-display-function *application-frame* pane)
-		(setf (stream-cursor-position pane) (values x y)))))
-	  (with-bounding-rectangle* (x1 y1 x2 y2)
-	    (stream-output-history pane)
-	    ;; Should we now get rid of the output history?
-            ;; Why should we? --GB 2003-03-16
-            (reset-output-history pane)
-	    (let ((width (- x2 x1))
-		  (height (- y2 y1)))
-              ;; I don't want this letf here --GB 2003-01-23
-	      (letf (((pane-user-width pane) (compute (pane-user-width pane)
-						      width))
-		     ((pane-user-height pane) (compute (pane-user-height pane)
-						       height)))
-		(prog1
-		    (call-next-method))))))
-	(call-next-method))))
+    (if (or (eql :compute (pane-user-width pane))
+            (eql :compute (pane-user-min-width pane))
+            (eql :compute (pane-user-max-width pane))
+            (eql :compute (pane-user-height pane))
+            (eql :compute (pane-user-min-height pane))
+            (eql :compute (pane-user-max-height pane)))
+	(multiple-value-bind (width height)
+            (let ((record
+                   (if (slot-value pane 'incremental-redisplay)
+                       (stream-output-history pane)
+                       (with-output-to-output-record (pane)
+                         (invoke-display-function *application-frame* pane)))))
+              (with-bounding-rectangle* (x1 y1 x2 y2) record
+                (values (- x2 (min 0 x1)) (- y2 (min y1)))))
+          (unless (> width 0) (setf width 1))
+          (unless (> height 0) (setf height 1))
+          (setf (stream-width pane) width)
+          (setf (stream-height pane) height)
+          ;; overwrite the user preferences which value is :compute
+          (letf (((%pane-user-width pane)
+                  (compute (pane-user-width pane) width))
+                 ((%pane-user-min-width pane)
+                  (compute (pane-user-min-width pane) width))
+                 ((%pane-user-max-width pane)
+                  (compute (pane-user-max-width pane) width))
+                 ((%pane-user-height pane)
+                  (compute (pane-user-height pane) height))
+                 ((%pane-user-min-height pane)
+                  (compute (pane-user-min-height pane) height))
+                 ((%pane-user-max-height pane)
+                  (compute (pane-user-max-height pane) height)))
+            (call-next-method)))
+        (call-next-method))))
 
+;;; XXX if we decide to handle sheets starting from position different than
+;;; [0,0] in the future we should take here bounding-rectangle-width/height and
+;;; set sheet region to bounding-rectangle-min-x/y. Such approach may require
+;;; change in more places.
 (defmethod compose-space ((pane clim-stream-pane) &key width height)
   (declare (ignorable width height))
-  (let ((w (bounding-rectangle-width (stream-output-history pane)))
-        (h (bounding-rectangle-height (stream-output-history pane))))
-    (make-space-requirement :width  w :min-width  w :max-width +fill+
-                            :height h :min-height h :max-height +fill+)))
-
-(defmethod stream-add-output-record :after ((pane clim-stream-pane) record)
-  (unless (region-contains-region-p (sheet-region pane) (stream-output-history pane))
-    (change-space-requirements pane)))
+  (let* ((w (bounding-rectangle-max-x (stream-output-history pane)))
+         (h (bounding-rectangle-max-y (stream-output-history pane)))
+         (width (max w (stream-width pane)))
+         (height (max h (stream-height pane))))
+    (make-space-requirement
+     :min-width (clamp w 0 width)
+     :width width
+     :max-width +fill+
+     :min-height (clamp h 0 height)
+     :height height
+     :max-height +fill+)))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
@@ -2509,15 +2639,16 @@ order to produce a double-click")
 	(medium-clear-area (sheet-medium pane) left top right bottom)))
     (clear-output-record output-history))
   (window-erase-viewport pane)
-  (let ((cursor (stream-text-cursor pane)))
-    (when cursor
-      (setf (cursor-position cursor) (values 0 0))))
-  (scroll-extent pane 0 0)  
-  (change-space-requirements pane :width 0 :height 0))
-
+  (when-let ((cursor (stream-text-cursor pane)))
+    (setf (cursor-position cursor)
+          (stream-cursor-initial-position pane)))
+  (setf (stream-width pane) 0)
+  (setf (stream-height pane) 0)
+  (scroll-extent pane 0 0)
+  (change-space-requirements pane))
 
 (defmethod window-refresh ((pane clim-stream-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
   (stream-replay pane))
 
@@ -2542,11 +2673,6 @@ order to produce a double-click")
   (scroll-extent pane x y)
   (values x y))
 
-(defmethod stream-set-input-focus ((stream clim-stream-pane))
-  (with-slots (port) stream
-    (prog1 (port-keyboard-input-focus port)
-      (setf (port-keyboard-input-focus port) stream))))
-
 ;;; output any buffered stuff before input
 
 (defmethod stream-read-gesture :before ((stream clim-stream-pane)
@@ -2556,8 +2682,14 @@ order to produce a double-click")
 					pointer-button-press-handler)
   (declare (ignore timeout peek-p input-wait-test input-wait-handler
 		   pointer-button-press-handler))
-  (force-output stream))
-
+  (force-output stream)
+  ;; make the output visible
+  (let ((w (bounding-rectangle-max-x (stream-output-history stream)))
+        (h (bounding-rectangle-max-y (stream-output-history stream))))
+    (unless (region-contains-region-p (sheet-region stream)
+                                      (make-rectangle* 0 0 w h))
+      (change-space-requirements stream)
+      (redisplay-frame-pane *application-frame* stream))))
 
 (defmethod redisplay-frame-pane ((frame application-frame)
 				 (pane symbol)
@@ -2570,20 +2702,20 @@ order to produce a double-click")
     ((type t) (stream clim-stream-pane))
   (funcall-presentation-generic-function presentation-type-history type))
 
-(defmethod change-space-requirements :around ((pane clim-stream-pane)
-                                              &key (width nil)  (max-width nil)
-                                                   (height nil) (max-height nil)
-                                                   &allow-other-keys)  
-  (with-slots (seos-current-width seos-current-height) pane
-    (setf seos-current-width (or max-width width seos-current-width))
-    (setf seos-current-height (or max-height height seos-current-height)))
-  (call-next-method))
+(defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
+  (when (stream-drawing-p stream)
+    (change-stream-space-requirements stream :height new-height)
+    (unless (eq :allow (stream-end-of-page-action stream))
+      (scroll-extent stream
+                     0
+                     (max 0 (- new-height
+                               (bounding-rectangle-height
+                                (or (pane-viewport stream)
+                                    stream))))))))
 
 ;;; INTERACTOR PANES
 
-(defclass interactor-pane (cut-and-paste-mixin
-                           mouse-wheel-scroll-mixin
-                           clim-stream-pane)
+(defclass interactor-pane (clim-stream-pane)
   ()
   (:default-initargs :display-time nil
                      :end-of-line-action :scroll
@@ -2598,8 +2730,8 @@ order to produce a double-click")
 ;;; analogous to the mouse-wheel / select-and-paste handling in
 ;;; DISPATCH-EVENT, just in a slightly different place.
 (defmethod frame-input-context-button-press-handler :before
-    ((frame standard-application-frame) 
-     (stream interactor-pane) 
+    ((frame standard-application-frame)
+     (stream interactor-pane)
      button-press-event)
   (let ((previous (stream-set-input-focus stream)))
     (when (and previous (typep previous 'gadget))
@@ -2609,9 +2741,7 @@ order to produce a double-click")
 
 ;;; APPLICATION PANES
 
-(defclass application-pane (cut-and-paste-mixin
-                            mouse-wheel-scroll-mixin
-                            clim-stream-pane)
+(defclass application-pane (clim-stream-pane)
   ()
   (:default-initargs :display-time :command-loop
                      :scroll-bars t))
@@ -2628,10 +2758,25 @@ order to produce a double-click")
 ;;; TITLE PANE
 
 (defclass title-pane (clim-stream-pane)
-  ()
+  ((title :initarg :title-string
+	  :accessor title-string))
   (:default-initargs :display-time t
+		     :title-string "Default Title"
                      :scroll-bars nil
+		     :text-style (make-text-style :serif :bold :very-large)
                      :display-function 'display-title))
+
+(defmethod display-title (frame (pane title-pane))
+  (declare (ignore frame))
+  (let* ((title-string (title-string pane))
+	 (a (text-style-ascent (pane-text-style pane) pane))
+	 (tw (text-size pane title-string)))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (declare (ignore y2))
+      (multiple-value-bind (tx ty)
+	  (values (- (/ (- x2 x1) 2) (/ tw 2))
+		  (+ y1 2 a))
+	(draw-text* pane title-string tx ty)))))
 
 ;;; Pointer Documentation Pane
 
@@ -2647,7 +2792,7 @@ be shown when there is no pointer documentation to show.")
                             :accessor background-message-time
                             :documentation "The universal time at which the
 current background message was set."))
-  (:default-initargs 
+  (:default-initargs
    :display-time nil
    :scroll-bars nil
    :default-view +pointer-documentation-view+
@@ -2684,10 +2829,11 @@ current background message was set."))
 
 (defun make-clim-stream-pane (&rest options
                               &key (type 'clim-stream-pane)
-                                (scroll-bars :vertical)
+                                (scroll-bar :vertical)
+                                (scroll-bars scroll-bar)
                                 (borders t)
                                 &allow-other-keys)
-  (with-keywords-removed (options (:type :scroll-bars :borders))
+  (with-keywords-removed (options (:type :scroll-bar :scroll-bars :borders))
     ;; The user space requirement options belong to the scroller ..
     (let* ((space-keys '(:width :height :max-width :max-height
 			 :min-width :min-height))
@@ -2733,15 +2879,16 @@ current background message was set."))
 (defun make-clim-pointer-documentation-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'pointer-documentation-pane options))
 
+(defun make-clim-command-menu-pane (&rest options)
+  (apply #'make-clim-stream-pane :type 'command-menu-pane options))
+
 
 ;;;
 ;;; 29.4.5 Creating a Standalone CLIM Window
 ;;; WINDOW STREAM
 ;;;
 
-(defclass window-stream (cut-and-paste-mixin
-                         mouse-wheel-scroll-mixin
-                         clim-stream-pane)
+(defclass window-stream (clim-stream-pane)
   ())
 
 (define-application-frame a-window-stream (standard-encapsulating-stream
@@ -2826,8 +2973,8 @@ current background message was set."))
       (stream-set-input-focus (encapsulating-stream-stream frame)))
     #+clim-mp
     (unless input-buffer
+      (redisplay-frame-panes frame :force-p t)
       (clim-sys:make-process (lambda () (let ((*application-frame* frame))
-					  (redisplay-frame-panes frame :force-p t)
                                           (standalone-event-loop)))))
     (encapsulating-stream-stream frame)))
 
@@ -2835,7 +2982,7 @@ current background message was set."))
   "An simple event loop for applications that want all events to be handled by
  handle-event methods, which also handles FRAME-EXIT."
   (let ((frame *application-frame*))
-    (handler-case 
+    (handler-case
         (let ((queue (frame-event-queue frame)))
           (loop for event = (event-queue-read queue)
             ;; EVENT-QUEUE-READ in single-process mode calls PROCESS-NEXT-EVENT itself.

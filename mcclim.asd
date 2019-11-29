@@ -1,6 +1,5 @@
-
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000, 2014 by 
+;;;  (c) copyright 2000, 2014 by
 ;;;           Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2005 by
 ;;;           Andreas Fuchs (asf@boinkor.net)
@@ -16,38 +15,44 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
-(defsystem :mcclim
-  :author "Alexey Dejneka
-Andreas Fuchs
-Andy Hefner
-Arnaud Rouanet
-Brian Mastenbrook
-Brian Spilsbury
-Christophe Rhodes
-Clemens Fruhwirth
-Daniel Barlow
-Duncan Rose
-Edena Pixel
-Frank Buss
-Gilbert Baumann
-Iban Hatchondo
-Julien Boninfan
-Lionel Salabartan
-Max-Gerd Retzlaff
-Mike McDonald
-Peter Mechleborg
-Rainer Joswig
-Robert Goldman
-Robert Strandh
-Rudi Schlatte
-Timothy Moore
-Daniel Kochmański"
+(in-package #:asdf-user)
+
+(defsystem "mcclim"
+  :author ("Alessandro Serra"
+           "Alexey Dejneka"
+           "Andreas Fuchs"
+           "Andy Hefner"
+           "Arnaud Rouanet"
+           "Brian Mastenbrook"
+           "Brian Spilsbury"
+           "Christophe Rhodes"
+           "Clemens Fruhwirth"
+           "Cyrus Harmon"
+           "Daniel Barlow"
+           "Daniel Kochmański"
+           "Duncan Rose"
+           "Edena Pixel"
+           "Elias Mårtenson"
+           "Frank Buss"
+           "Gilbert Baumann"
+           "Iban Hatchondo"
+           "Julien Boninfan"
+           "Lionel Salabartan"
+           "Max-Gerd Retzlaff"
+           "Mike McDonald"
+           "Nisar Ahmad"
+           "Peter Mechleborg"
+           "Rainer Joswig"
+           "Robert Goldman"
+           "Robert Strandh"
+           "Rudi Schlatte"
+           "Timothy Moore")
   :license "LGPL-2.1+"
   :version "0.9.7"
   :description "McCLIM is an implementation of the CLIM 2.0 specification."
@@ -55,16 +60,17 @@ Daniel Kochmański"
 
 CLIM (Common Lisp Interface Manager) is an advanced graphical user
 interface management system."
-  :depends-on (#:mcclim/looks #:mcclim/extensions))
+  :depends-on ("mcclim/looks" "mcclim/extensions")
+  :in-order-to ((test-op (test-op "mcclim/test"))))
 
 ;;; A system that loads the appropriate backend for the current
 ;;; platform.
 (defsystem #:mcclim/looks
   :depends-on (#:clim
-               #-(or mcclim-beagle mcclim-ugly)
-                                #:mcclim-clx/pretty  #| adds truetype        |#
-               #+mcclim-ugly    #:mcclim-clx         #| raw clim-clx backend |#
-               #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure) |#
+               #:mcclim-clx                                 #| raw clim-clx backend |#
+               #:mcclim-clx/truetype                        #| adds truetype        |#
+               #+mcclim-ffi-freetype #:mcclim-clx/freetype  #| adds freetype        |#
+               #:mcclim-clx-fb                              #| experimental backend |#
 
                ;; null backend
                #:mcclim-null))
@@ -73,12 +79,44 @@ interface management system."
   :depends-on (#:mcclim-bitmaps
                #:conditional-commands
                #:mcclim-layouts/tab
-               #:mcclim-bezier))
+               #:mcclim-bezier
+               #:mcclim-image
+               #:clim-pdf
+               #:clim-postscript
+               #:mcclim-franz))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
-  (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.
+  (pushnew :clim *features*)) ; The fact that CLIM itself is available is true when all is loaded.
 
-;; The fact that our CLIM implementation is McCLIM is already true now.
-;; This feature is notably used by ESA and DREI, in cases where they need to
-;; know whether they are compiled with McCLIM or another CLIM implementation.
-(pushnew :mcclim *features*) 
+(defsystem "mcclim/test"
+  :depends-on ("mcclim"
+               "fiveam")
+  :components ((:module "Tests"
+                :serial t
+                :components ((:file "package")
+                             (:file "utils")
+                             (:file "input-editing")
+                             (:file "commands")
+                             (:file "presentations")
+                             (:file "text-selection")
+                             (:file "text-formatting")
+                             (:module "geometry"
+                              :depends-on ("package")
+                              :serial t
+                              :components ((:file "transforms")
+                                           (:file "regions")
+                                           (:file "bounding-rectangles"))))))
+  :perform (test-op (operation component)
+             (uiop:symbol-call '#:clim-tests '#:run-tests)))
+
+(defsystem "mcclim/test-util"
+  :depends-on ("mcclim")
+  :components ((:module "Tests/util"
+                :serial t
+                :components ((:file "package")
+                             (:file "test-page")))))
+
+;;; The fact that our CLIM implementation is McCLIM is already true now.
+;;; This feature is notably used by ESA and DREI, in cases where they need to
+;;; know whether they are compiled with McCLIM or another CLIM implementation.
+(pushnew :mcclim *features*)

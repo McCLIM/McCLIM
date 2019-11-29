@@ -362,7 +362,7 @@ NIL."
       (do-displayed-line-strokes (stroke line)
         (when (and (<= (stroke-start-offset stroke) offset
                        (end-offset (stroke-end-offset stroke))))
-          (return stroke))))))
+          (return-from find-stroke-containing-offset stroke))))))
 
 (defun index-of-displayed-line-containing-offset (view offset)
   "Return the index of the `displayed-line' object containing
@@ -517,8 +517,7 @@ of the stroke."
                (vector-push-extend width widths))
               (object
                (multiple-value-bind (w)
-                   (text-size stream object
-                    :text-style text-style)
+                   (text-size stream object :text-style text-style)
                  (incf width w)
                  (vector-push-extend width widths)))
               (t
@@ -568,23 +567,24 @@ any actual output takes place."
 		(calculate-stroke-width stroke-string merged-text-style stream cursor-x)
 		(values (- x2 x1) parts widths))
           (when draw
-            (loop for (start end object) in stroke-parts
-               for width across part-widths
-               do (cond ((eql object #\Tab)
-                         nil)
-                        (object
-                         (draw-text* stream object (+ cursor-x width)
-                                     cursor-y
-                                     :text-style merged-text-style
-                                     :ink +darkblue+
-                                     :align-y :baseline))
-                        (t
-                         (draw-text* stream stroke-string (+ cursor-x width)
-                                     cursor-y
-                                     :start start :end end
-                                     :text-style merged-text-style
-                                     :ink (face-ink (drawing-options-face drawing-options))
-                                     :align-y :baseline)))))
+            (loop
+              for (start end object) in stroke-parts
+              for width across part-widths
+              do (cond ((eql object #\Tab)
+                        nil)
+                       (object
+                        (draw-text* stream object (+ cursor-x width)
+                                    cursor-y
+                                    :text-style merged-text-style
+                                    :ink +darkblue+
+                                    :align-y :baseline))
+                       (t
+                        (draw-text* stream stroke-string (+ cursor-x width)
+                                    cursor-y
+                                    :start start :end end
+                                    :text-style merged-text-style
+                                    :ink (face-ink (drawing-options-face drawing-options))
+                                    :align-y :baseline)))))
 	  (record-stroke stroke stroke-parts part-widths
                          cursor-x (- cursor-y text-style-ascent)
 			 (+ width cursor-x) (+ cursor-y text-style-descent)
@@ -625,9 +625,9 @@ information. Nothing will be done unless `stroke' is dirty."
     (with-accessors ((x1 x1) (y1 y1) (x2 x2) (y2 y2)
                      (center center)) (stroke-dimensions stroke)
       (when (> x2 (bounding-rectangle-width pane))
-        (change-space-requirements pane :width x2))
+        (change-stream-space-requirements pane :width x2))
       (when (> y2 (bounding-rectangle-height pane))
-        (change-space-requirements pane :height y2))
+        (change-stream-space-requirements pane :height y2))
       (funcall (drawing-options-function (stroke-drawing-options stroke))
                pane view stroke cursor-x cursor-y #'stroke-drawing-fn t)
       (when *highlight-strokes*
@@ -786,7 +786,8 @@ type (found via `presentation-type-of') to generate output."
            (old-height (- y2 y1))
            (start-offset (offset (beginning-of-line (top view))))
            (pump-state (pump-state-for-offset view start-offset))
-           (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane))))
+           (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane)))
+           (current-line-height 0))
       ;; For invalidation of the parts of the display that have
       ;; changed.
       (synchronize-view view :begin (offset (top view)) :end (max (offset (bot view))
@@ -796,18 +797,19 @@ type (found via `presentation-type-of') to generate output."
       (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
         (with-output-recording-options (pane :record nil :draw t)
           (loop for line = (line-information view (displayed-lines-count view))
-                do (multiple-value-bind (new-pump-state line-height)
-                       (draw-line-strokes pane view pump-state start-offset
-                                          cursor-x cursor-y old-width)
-                     (setf pump-state new-pump-state
-                           start-offset (1+ (line-end-offset line)))
-                     (incf cursor-y (+ line-height (stream-vertical-spacing pane))))
-                when (or (and (not (extend-pane-bottom view))
-                              (>= (y2 (line-dimensions line)) pane-height))
-                         (= (line-end-offset line) (size (buffer view))))
-                return (progn
-                         (setf (offset (bot view)) (line-end-offset line))
-                         (clear-stale-lines pane view old-width old-height))))))))
+             do (multiple-value-bind (new-pump-state line-height)
+                    (draw-line-strokes pane view pump-state start-offset
+                                       cursor-x cursor-y old-width)
+                  (setf pump-state new-pump-state
+                        start-offset (1+ (line-end-offset line))
+                        current-line-height line-height)
+                  (incf cursor-y (+ line-height (stream-vertical-spacing pane))))
+             when (or (and (not (extend-pane-bottom view))
+                           (>= (y2 (line-dimensions line)) (- pane-height current-line-height)))
+                      (= (line-end-offset line) (size (buffer view))))
+             return (progn
+                      (setf (offset (bot view)) (line-end-offset line))
+                      (clear-stale-lines pane view old-width old-height))))))))
 
 ;;; A default redisplay implementation that should work for subclasses
 ;;; of `drei-buffer-view'. Syntaxes that don't want to implement their
@@ -939,13 +941,13 @@ is an absolute offset into the buffer of `view',"
 	  when (<= start pos end)
 	    do (return (+ width
 			  (text-size stream string
-				     :start start
-				     :end pos
-				     :text-style (merge-text-styles
-						  (face-style
-						   (drawing-options-face
-						    (stroke-drawing-options stroke)))
-						  (medium-merged-text-style (sheet-medium stream)))))))))
+                                     :start start
+                                     :end pos
+                                     :text-style (merge-text-styles
+                                                  (face-style
+                                                   (drawing-options-face
+                                                    (stroke-drawing-options stroke)))
+                                                  (medium-merged-text-style (sheet-medium stream)))))))))
 
 (defgeneric offset-to-screen-position (pane view offset)
   (:documentation "Returns the position of offset as a screen
@@ -1023,7 +1025,7 @@ the end of the buffer."))
                         0)
                     (bounding-rectangle-max-y pane))))
     ;; Embiggen the sheet.
-    (change-space-requirements pane
+    (change-stream-space-requirements pane
      :width (max (bounding-rectangle-max-x cursor)
                  (bounding-rectangle-max-x pane))
      :height (max (if (extend-pane-bottom view)
@@ -1068,7 +1070,7 @@ the end of the buffer."))
       (unless (zerop (* object-width stroke-height))
         (draw-rectangle* stream
                          cursor-x cursor-y
-                         (+ cursor-x object-width) (+ cursor-y stroke-height)
+                         (+ cursor-x 3) (+ cursor-y stroke-height)
                          :ink (ink cursor))))))
 
 (defmethod bounding-rectangle* ((view drei-buffer-view))
@@ -1176,8 +1178,8 @@ half a pane-size up."
     (with-accessors ((top top) (point point)) view
       (setf (offset top) (offset point))
       (beginning-of-line top)
-      (loop do (beginning-of-line top)
-         repeat (floor nb-lines-in-pane 2)
+      (loop repeat (floor nb-lines-in-pane 2)
+         do (beginning-of-line top)
          until (beginning-of-buffer-p top)
          do (decf (offset top))
          (beginning-of-line top))
@@ -1225,7 +1227,7 @@ has `view'."))
     (when (and viewport
                (> pane-width viewport-width)
                (>= viewport-width output-width))
-      (change-space-requirements pane :width output-width))))
+      (change-stream-space-requirements pane :width output-width))))
 
 (defmethod fix-pane-viewport :after ((pane drei-pane) (view point-mark-view))
   (when (and (pane-viewport pane) (active pane))

@@ -1,6 +1,5 @@
 @anchor{Class clim-tab-layout:tab-page}
-@deftp {Class} {clim-tab-layout:tab-page}
-@tindex clim-tab-layout:tab-page
+@deftp {Class} {@symbol{tab-page,clim-tab-layout}}
 Class precedence list: @code{@w{tab-page}, @w{standard-object}, @w{slot-object}, @w{t}}
 
 Instances of @code{tab-page} represent the pages in a @code{tab-layout}.

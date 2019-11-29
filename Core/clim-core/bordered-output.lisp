@@ -2,6 +2,7 @@
 
 ;;;  (c) copyright 2002 by Alexey Dejneka (adejneka@comail.ru)
 ;;;  (c) copyright 2007 by Andy Hefner (ahefner@gmail.com)
+;;;  (c) copyright 2017 by Daniel Kochmański (daniel@turtleware.eu)
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
 ;;; License as published by the Free Software Foundation; either
@@ -16,7 +17,6 @@
 ;;; License along with this library; if not, write to the
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
-
 
 ;;; TODO:
 ;;;  - Define a protocol which the graph formatter can utilize to determine
@@ -34,17 +34,34 @@
 ;;;    simply blend against the pane-background.
 ;;;  - Using padding to control the rounded rectangles might be the wrong thing.
 
-;;; ???
-;;; - Would it make more sense to draw borders as part of replay (with recording
+;;; Question
+;;;  Would it make more sense to draw borders as part of replay (with recording
 ;;;  off, like a displayed record), and letting them effortlessly accomodate
 ;;;  changes in the bounding rectangle of the contents? This would only benefit
 ;;;  people doing unusual things with output records. How would be determine
 ;;;  bounds of the border?
+;;;
+;;; Answer
+;;;  After hours of trial and error we know, that only drawing borders doesn't
+;;;  work well. Determining bounding rectangle is not overly hard, but not
+;;;  having border as output record doesn't play well with recomputing extent
+;;;  etc. Accomodating changes in the bounding rectangle of the contents makes a
+;;;  lot of sense also for usual things, like setf-ing inner record position or
+;;;  adjusting table elements. As a solution we take a third path –
+;;;  border-output-record is cleaned on each replay and border output records
+;;;  are recreated then. Thanks to that we have output records *and* we follow
+;;;  inner-record when it changes. --jd
 
 (in-package :clim-internals)
 
 (defclass bordered-output-record (standard-sequence-output-record)
-  (under record over))
+  ((stream :reader border-stream :initarg :stream)
+   (shape :reader shape :initarg :shape)
+   (record :reader inner-record :initarg :inner-record)
+   (drawing-options :accessor drawing-options
+                    :initarg :drawing-options
+                    :initform nil)
+   under over))
 
 (defgeneric make-bordered-output-record
     (stream shape record &key &allow-other-keys)
@@ -97,38 +114,42 @@
                          drawing-options
                          body))
 
-(defun %prepare-bordered-output-record
-    (stream shape border inner-record drawing-options)
-  (with-sheet-medium (medium stream)
-    (macrolet ((capture (&body body)
-                   `(multiple-value-bind (cx cy) (stream-cursor-position stream)
-                     (with-output-to-output-record (stream)
-                       (setf (stream-cursor-position stream) (values cx cy))
-                       ,@body))))
-      (let* ((border-under
-              (with-identity-transformation (medium)
-                (capture
-                 (apply #'draw-output-border-under
-                        shape stream inner-record drawing-options))))
-             (border-over
-              (with-identity-transformation (medium)
-                (capture
-                 (apply #'draw-output-border-over
-                        shape stream inner-record drawing-options)))))
+(defmethod recompute-extent-for-changed-child
+    ((record bordered-output-record) child x1 y1 x2 y2)
+  (declare (ignore x1 y1 x2 y2))
+  (with-bounding-rectangle* (ox1 oy1 ox2 oy2) record
+    (clear-output-record record)
+    (%prepare-bordered-output-record record)
+    (when-let ((parent (output-record-parent record)))
+      (with-bounding-rectangle* (nx1 ny1 nx2 ny2) record
+        (when (or (/= ox1 nx1) (/= oy1 ny1) (/= ox2 nx2) (/= oy2 ny2))
+          (recompute-extent-for-changed-child parent record ox1 oy1 ox2 oy2))))))
+
+(defun %prepare-bordered-output-record (border)
+  (with-slots (under record over stream shape drawing-options) border
+    (with-sheet-medium (medium stream)
+      (flet ((capture-border (cont)
+               (with-identity-transformation (medium)
+                 (multiple-value-bind (cx cy) (output-record-position record)
+                   (with-output-to-output-record (stream)
+                     (setf (stream-cursor-position stream) (values cx cy))
+                     (apply cont shape stream record drawing-options))))))
         (with-slots (under record over) border
-          (setf under  border-under
-                record inner-record
-                over   border-over)
+          (setf under (capture-border #'draw-output-border-under)
+                over  (capture-border #'draw-output-border-over))
           (add-output-record under  border)
           (add-output-record record border)
-          (add-output-record over   border))
-        border))))
+          (add-output-record over   border)))
+      border)))
 
 (defmethod make-bordered-output-record
     (stream shape inner-record &rest drawing-options)
-  (%prepare-bordered-output-record stream shape
-                                   (make-instance 'bordered-output-record)
-                                   inner-record drawing-options))
+  (let ((border (make-instance 'bordered-output-record
+                               :stream stream
+                               :shape shape
+                               :inner-record inner-record
+                               :drawing-options drawing-options)))
+    (%prepare-bordered-output-record border)))
 
 ;;; This should have been exported by the CLIM package, otherwise you
 ;;; can't apply a computed list of drawing options.
@@ -142,16 +163,19 @@
       (let ((border (apply #'make-bordered-output-record
                            stream
                            shape
-                           (with-output-to-output-record (stream)
+                           (with-output-to-output-record
+                               (stream 'standard-sequence-output-record
+                                       foo
+                                       :x-position cx
+                                       :y-position cy)
                              ;; w-o-t-o-r moved the cursor to the origin.
-                             (setf (stream-cursor-position stream)
-                                   (values cx cy))
+                             (setf (stream-cursor-position stream) (values cx cy))
                              (funcall cont stream)
-                             (setf (values cx cy)
-                                   (stream-cursor-position stream)))
+                             (setf (values cx cy) (stream-cursor-position stream)))
                            drawing-options)))
 
-        (stream-add-output-record stream border)
+        (when (stream-recording-p stream)
+          (stream-add-output-record stream border))
 
         (when (stream-drawing-p stream)
           (with-output-recording-options (stream :record nil)
@@ -432,8 +456,29 @@
                           (draw-line* stream left bottom right bottom
                                       :ink ink
                                       :line-style line-style)))
-                       (updating-output-record  nil)
-                       (compound-output-record  (fn child))))))
+                       (updating-output-record nil)
+                       (compound-output-record (fn child))))))
+      (fn record))))
+
+(define-border-type :crossout (stream record
+                                       (ink (medium-ink stream))
+                                       line-style
+                                       line-unit
+                                       line-thickness
+                                       line-cap-shape
+                                       line-dashes)
+  (let ((line-style (%%line-style-for-method)))
+    (labels ((fn (record)
+               (loop for child across (output-record-children record) do
+                     (typecase child
+                       (text-displayed-output-record
+                        (with-bounding-rectangle* (left top right bottom) child
+                          (let ((middle (/ (+ bottom top) 2)))
+                            (draw-line* stream left middle right middle
+                                        :ink ink
+                                        :line-style line-style))))
+                       (updating-output-record nil)
+                       (compound-output-record (fn child))))))
       (fn record))))
 
 (define-border-type :inset (stream left top right bottom
@@ -645,10 +690,9 @@
 
 ;;;; Highlighting of bordered output records
 (defclass highlighting-bordered-output-record (bordered-output-record)
-  ((shape :reader shape :initarg :shape)
-   (drawing-options :reader drawing-options
-                    :initarg :drawing-options
-                    :initform nil)))
+  ((original-drawing-options :initarg :drawing-options
+                             :reader original-drawing-options
+                             :documentation "Preserves unmodified drawing-options which may be changed during highlight.")))
 
 (defmethod highlight-output-record-tree
     ((record highlighting-bordered-output-record)
@@ -659,7 +703,6 @@
                (getf (drawing-options record) :highlight-outline)))
       (highlight-output-record record stream state)
       (call-next-method)))
-
 
 (defmethod highlight-output-record
     ((record highlighting-bordered-output-record) stream state)
@@ -673,10 +716,9 @@
       (if (and (member state '(:highlight :unhighlight))
                (or highlight-background highlight-outline))
           (flet ((redraw (new-drawing-options)
+                   (setf (drawing-options record) new-drawing-options)
                    (clear-output-record record)
-                   (%prepare-bordered-output-record stream (shape record) record
-                                                    (slot-value record 'record)
-                                                    new-drawing-options)
+                   (%prepare-bordered-output-record record)
                    ;; Great, this again..
                    (queue-repaint stream
                       (make-instance 'window-repaint-event
@@ -686,8 +728,7 @@
                                             record)))))
             (ecase state
               (:highlight
-               (with-keywords-removed
-                   (drawing-options (:background :outline-ink))
+               (with-keywords-removed (drawing-options (:background :outline-ink))
                  (redraw
                   (list* :background
                          (or (and (eql t highlight-background)
@@ -695,28 +736,29 @@
                                    (or background
                                        (getf drawing-options :ink)
                                        +background-ink+)))
-                                    highlight-background
-                                    background)
+                             highlight-background
+                             background)
                          :outline-ink
                          (or (and (eql t highlight-outline)
                                   (highlight-shade
                                    (or outline-ink
                                        (getf drawing-options :ink)
                                        +foreground-ink+)))
-                                    highlight-outline
-                                    outline-ink)
-                                drawing-options))))
-              (:unhighlight (redraw drawing-options))))
+                             highlight-outline
+                             outline-ink)
+                         drawing-options))))
+              (:unhighlight (redraw (original-drawing-options record)))))
           (call-next-method)))))
 
 (defmacro define-default-highlighting-method (shape)
   `(defmethod make-bordered-output-record
        (stream (shape (eql ,shape)) inner-record &rest drawing-options)
-    (%prepare-bordered-output-record stream shape
-     (make-instance 'highlighting-bordered-output-record
-      :shape shape
-      :drawing-options drawing-options)
-     inner-record drawing-options)))
+     (let ((border (make-instance 'highlighting-bordered-output-record
+                                  :stream stream
+                                  :shape shape
+                                  :drawing-options drawing-options
+                                  :inner-record inner-record)))
+       (%prepare-bordered-output-record border))))
 
 (define-default-highlighting-method :rectangle)
 (define-default-highlighting-method :oval)
