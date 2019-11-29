@@ -446,7 +446,7 @@ highlighting, etc." ))
     ()
   (signal 'av-exit))
 
-(add-keystroke-to-command-table 'accept-values '(#\Return :meta) :command #'com-query-exit)
+(add-keystroke-to-command-table 'accept-values '(#\Return :meta) :command 'com-query-exit :errorp nil)
 
 (define-command (com-query-abort :command-table accept-values
                                  :keystroke (#\] :control)
@@ -456,7 +456,7 @@ highlighting, etc." ))
   (and (find-restart 'abort)
        (invoke-restart 'abort)))
 
-(add-keystroke-to-command-table 'accept-values '(#\g :control) :command #'com-query-abort)
+(add-keystroke-to-command-table 'accept-values '(#\g :control) :command 'com-query-abort :errorp nil)
 
 (define-command (com-change-query :command-table accept-values
                                   :name nil
