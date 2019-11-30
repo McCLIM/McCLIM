@@ -37,7 +37,7 @@ manager. Assuming that Quicklisp has already been set up, trying out the
 demos is straightforward:
 
 @lisp
-(ql:quickload 'clim-examples)
+(ql:quickload :clim-examples)
 (clim-demo:demodemo)
 @end lisp
 
@@ -46,7 +46,7 @@ downloading dependencies and setting a local repository), @t{asdf}
 also works well starting from the @mcclim{} source code directory.
 
 @lisp
-(asdf:load-system 'clim-examples)
+(asdf:load-system "clim-examples")
 (clim-demo:demodemo)
 @end lisp
 
@@ -74,7 +74,7 @@ Additionally @mcclim{} has a few bundled applications:
 @t{clouseau}.  @xref{Inspector} for more information.
 
 @lisp
-(asdf:load-system 'clouseau)
+(asdf:load-system "clouseau")
 (clouseau:inspect clim:+indian-red+)
 @end lisp
 
@@ -85,7 +85,7 @@ debugger interface for @t{sldb} (part of Slime project).  System name is
 @t{clim-debugger}.  @xref{Debugger} for more information.
 
 @lisp
-(asdf:load-system 'clim-debugger)
+(asdf:load-system "clim-debugger")
 (clim-debugger:with-debugger
  (break "simple-break"))
 @end lisp
