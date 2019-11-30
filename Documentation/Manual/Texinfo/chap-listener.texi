@@ -19,7 +19,7 @@ Ability to run external programs, through the @command{Run} command or
 @t{#!} macro
 
 @item
-Commands for inspecting CLOS classes (superclasses/subclasses, slots, etc.)
+Commands for inspecting classes (superclasses/subclasses, slots, etc.)
 
 @item
 Navigation of the filesystem, including a directory stack
@@ -31,22 +31,23 @@ Launching of external programs sensitive to file type (determined by
 @end itemize
 
 @menu
-* Listener Usage::
-* The #! Macro Character::
-* Calling Commands from Lisp::
-* Command Output Destinations::
+* Listener usage::
+* The #! macro character::
+* Calling commands from lisp::
+* Command output destinations::
+* Debugger integration::
 @end menu
 
-@node Listener Usage
+@node Listener usage
 @subsection Usage
 
 @menu
-* Listener Quick Start::
+* Listener quick start::
 * Commands::
 @end menu
 
-@node Listener Quick Start
-@subsubsection Quick Start
+@node Listener quick start
+@subsubsection Quick start
 
 To get up and running quickly with the Listener:
 
@@ -154,8 +155,8 @@ As above, but don't wait for program to complete
 
 @end table
 
-@node The #! Macro Character
-@subsection The #! Macro Character
+@node The #! macro character
+@subsection The #! macro character
 
 Although there are commands for running external programs, the #! macro
 character tries to provide a nicer interface. It allows you to run external
@@ -182,8 +183,8 @@ Wild pathnames are expanded (currently subject to brokenness in the
 My apologies to anyone doing something more useful with this macro character
 if I have clobbered your readtable.
 
-@node Calling Commands from Lisp
-@subsection Calling Commands from Lisp
+@node Calling commands from lisp
+@subsection Calling commands from lisp
 
 Calling @clim{} commands from Lisp is straightforward.  By convention,
 the pretty names used at the interactor map to a function name which
@@ -191,15 +192,16 @@ implements the command body by upcasing the name, replacing spaces with
 hyphens, and prepending @t{COM-} (e.g., @command{Show Directory} becomes
 @t{COM-SHOW-DIRECTORY}).
 
-@node Command Output Destinations
-@subsection Command Output Destinations
+@node Command output destinations
+@subsection Command output destinations
 
-@clim{}'s implementation of the @fmacro{clim:define-command} macro
+@mcclim{}'s implementation of the @fmacro{clim:define-command} macro
 accepts a @cl{:provide-output-destination-keyword} keyword argument
-which allows redirecting the commands output from @cl{*standard-output*}
-to some other destination.  The Listener code supplies this argument for
-many of the defined commands.  As a result, many Listener commands can
-be invoked with the @cl{:output-destination} keyword, for example
+which allows redirecting the output of the command from
+@cl{*standard-output*} to some other destination.  The Listener code
+supplies this argument for many of the defined commands.  As a result,
+many Listener commands can be invoked with the @cl{:output-destination}
+keyword, for example
 
 @lisp
 CLIM-USER> ,Show Class Superclasses (class) standard-class
@@ -209,3 +211,12 @@ CLIM-USER> ,Show Class Superclasses (class) standard-class
 @end lisp
 
 will redirect the command's output to the file @file{/tmp/output.ps}.
+
+@node Debugger integration
+@subsection Debugger integration
+
+When a command executed in the Listener signals an error, the default
+behavior consists in invoking the @mcclim{} Debugger (@pxref{Debugger}).
+This behavior can be controlled by supplying a Boolean value for the
+@cl{:debugger} keyword argument when calling the
+@cl{clim-listener:run-listener} function.

@@ -60,11 +60,11 @@ Additionally @mcclim{} has a few bundled applications:
 @table @file
 @item Apps/Listener
 
-@clim{}-enabled Lisp listener.  System name is @t{clim-listener}.  See
-instructions in @file{Apps/Listener/README} for more information.
+@clim{}-enabled Lisp listener.  System name is @t{clim-listener}.
+@xref{Listener} for more information.
 
 @lisp
-(asdf:load-system 'clim-listener)
+(asdf:load-system "clim-listener")
 (clim-listener:run-listener)
 @end lisp
 
