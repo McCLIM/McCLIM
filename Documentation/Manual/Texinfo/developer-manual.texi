@@ -3,7 +3,7 @@
 
 @menu
 * Writing backends::
-* PostScript Backend::
+* PostScript backend::
 @end menu
 
 @node Writing backends
@@ -20,7 +20,7 @@
 * Frame manager::
 * Pointer protocol (events?)::
 * Text size::
-* Additional Output Destinations::
+* Additional output destinations::
 * Miscellaneous::
 * Obsolete::
 @end menu
@@ -38,7 +38,7 @@ There are three types of backends:
 @item Draw-only backend
 
 This type doesn't implement any kind of events and allows only drawing
-on it. A good example of it is the @xref{PostScript Backend} which is
+on it. A good example of it is the @xref{PostScript backend} which is
 part of @emph{@clim{} II} specification.
 
 @item Basic backend
@@ -206,8 +206,8 @@ text-style-mapping
 text-style-width
 @end verbatim
 
-@node Additional Output Destinations
-@subsection Additional Output Destinations
+@node Additional output destinations
+@subsection Additional output destinations
 
 A backend implementation may register additional output destination
 types for the @cl{:output-destination} keyword parameter accepted by
@@ -257,16 +257,16 @@ medium-clipping-                ; moved to clim-basic
 mirror-transformation           ; never used
 @end verbatim
 
-@node PostScript Backend
-@section PostScript Backend
+@node PostScript backend
+@section PostScript backend
 
 @menu
-* Postscript Fonts::
+* Postscript fonts::
 * Additional functions::
 @end menu
 
-@node Postscript Fonts
-@subsection Postscript Fonts
+@node Postscript fonts
+@subsection Postscript fonts
 
 Font mapping is a cons, the car of which is the name of the font
 (FontName field in the AFM file), and the cdr is the size in points.

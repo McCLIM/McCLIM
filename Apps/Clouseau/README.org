@@ -17,7 +17,7 @@
   but only SBCL and CCL have been tested) and load the system:
 
   #+BEGIN_SRC lisp :exports both :results silent
-    (asdf:load-system :clouseau)
+    (asdf:load-system "clouseau")
   #+END_SRC
 
   Then inspect an object:
