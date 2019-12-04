@@ -82,6 +82,7 @@
    (max-xvals :initform 50 :initarg :max-xvals :accessor max-xvals)
    (last-yval :initform 20 :accessor last-yval)
    (draw-values :initform t :initarg :draw-values :accessor draw-values))
+  (:menu-bar nil)
   (:default-initargs
     :width 800
     :height 600)

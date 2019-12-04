@@ -131,6 +131,7 @@
                                     :outline-ink +red+ :background +white+
                                     :shadow +gray80+)))
 	   :reader shapes-of))
+  (:menu-bar nil)
   (:pane
    (scrolling (:width 600 :height 700)
      (make-pane :application-pane
