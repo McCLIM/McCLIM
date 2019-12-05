@@ -118,6 +118,7 @@
 (define-application-frame traffic-lights ()
   ((radio-box :initform nil)
    (light :initform nil))
+  (:menu-bar nil)
   (:panes
    (light light-pane
 	  :width 30)

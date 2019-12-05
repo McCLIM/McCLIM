@@ -2,6 +2,7 @@
 
 (define-application-frame text-transformations-test ()
   ()
+  (:menu-bar nil)
   (:pane :application :display-function #'display :scroll-bars nil))
 
 (defmethod display ((frame text-transformations-test) pane)

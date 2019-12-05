@@ -40,6 +40,7 @@
    (current-selection :initform nil)
    (application-frame-backend :initform :clx-ttf)
    (frames :initform (make-hash-table)))
+  (:menu-bar nil)
   (:panes
    (category-test-pane
     (horizontally (:equalize-height t)

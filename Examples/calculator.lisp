@@ -105,6 +105,7 @@
 (define-application-frame calculator-app ()
   ((text-field :initform nil)
    (calc-state :initform (list 0)))
+  (:menu-bar nil)
   (:panes
    (plus     (make-button "+" (queue-operator #'+)))
    (dash     (make-button "-" (queue-operator #'-)))

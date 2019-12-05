@@ -26,6 +26,7 @@ all clauses "active" in this test.
    (repaintp :initform t :accessor repaintp)
    (tracked-sheet :initform 'pane :accessor tracked-sheet)
    (context-type :initform 'foo  :accessor context-type))
+  (:menu-bar nil)
   (:geometry :width 800 :height 600)
   (:panes (pane :basic-pane)
           (app1 :application :display-function #'display :scroll-bars nil)

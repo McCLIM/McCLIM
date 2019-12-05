@@ -2,6 +2,7 @@
 
 (define-application-frame text-multiline-positioning ()
   ()
+  (:menu-bar nil)
   (:pane :application :display-function #'display :scroll-bars nil))
 
 (defun draw-lazy (pane align-x align-y)

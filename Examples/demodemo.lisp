@@ -138,6 +138,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame hbox-test
     () ()
+    (:menu-bar nil)
     (:layouts
      (default
          (horizontally ()
@@ -153,6 +154,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame table-test
     () ()
+    (:menu-bar nil)
     (:layouts
      (default
          (tabling (:background +red+)
@@ -189,6 +191,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame label-test
     () ()
+    (:menu-bar nil)
     (:layouts
      (default
                                         ;  (scrolling (:width 400 :height 200
@@ -245,6 +248,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame scroll-test
     () ()
+    (:menu-bar nil)
     (:layouts
      (defaults
          (scrolling (:width 400 :height 400)
@@ -254,6 +258,7 @@ argument to avoid creating too many functions with similar name."))
 ;;; Scroll test 2
 (define-application-frame scroll-test-2 ()
   ()
+  (:menu-bar nil)
   (:geometry :width 1200 :height 400)
   (:panes (out :application-pane :display-function #'scroll-test-display)
           (bam :application-pane :display-function #'scroll-test-display)
@@ -284,6 +289,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame list-test
     () ()
+    (:menu-bar nil)
     (:panes
      (substring :text-field :value "INTER"
                 :value-changed-callback
@@ -330,6 +336,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame option-test
     () ()
+    (:menu-bar nil)
   (:panes (option-pane-1 :option-pane
                          :value 1
                          :items '(1 2 3 4 6 7)

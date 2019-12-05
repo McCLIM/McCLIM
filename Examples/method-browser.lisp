@@ -198,6 +198,7 @@ specialized on, removing duplicates"
 (define-application-frame method-browser ()
   ((gf :accessor gf :initarg :gf :initform nil)
    (arg-types :accessor arg-types :initarg :arg-types :initform nil))
+  (:menu-bar nil)
   (:panes
    ;; Text box for the user to enter a function name
     (gf-name-input :text-field

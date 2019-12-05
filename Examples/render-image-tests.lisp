@@ -28,6 +28,7 @@
 (define-application-frame render-image-tests ()
   ((signal-condition-p :initform nil)
    (current-selection :initform nil))
+  (:menu-bar nil)
   (:panes
    (output :application-pane
            :min-width *render-image-width*

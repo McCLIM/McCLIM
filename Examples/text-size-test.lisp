@@ -39,6 +39,7 @@
                                     :text-face   nil
                                     :text-size   60
                                     :rectangle   :text-size)))
+  (:menu-bar nil)
   (:panes
    (canvas (make-pane 'canvas :state      (state *application-frame*)
                               :min-width  700

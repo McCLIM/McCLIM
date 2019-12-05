@@ -22,6 +22,7 @@
 
 (define-application-frame summation ()
   ((total :accessor summation-total :initarg :total :initform 0))
+  (:menu-bar nil)
   (:panes
    (tester :interactor))
   (:layouts

@@ -23,6 +23,7 @@
 ;;; Demo of draggable graph nodes
 
 (define-application-frame draggable-graph-demo () ()
+  (:menu-bar nil)
   (:pane (make-pane 'application-pane
                     :width :compute
                     :height :compute
