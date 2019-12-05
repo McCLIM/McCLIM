@@ -555,8 +555,9 @@ and must never be nil.")
 (defgeneric radio-box-selections (radio-box))
 
 (defmethod radio-box-selections ((pane radio-box))
-  (let ((v (radio-box-current-selection pane)))
-    (and v (list v))))
+  (loop for child in (sheet-children pane)
+        when (typep child 'toggle-button)
+        collect child))
 
 (defmethod value-changed-callback :before (value-gadget (client radio-box) gadget-id value)
   (declare (ignorable value-gadget gadget-id value))
@@ -591,6 +592,11 @@ and must never be nil.")
 
 (defmethod (setf check-box-current-selection) (new-value (check-box check-box))
   (setf (gadget-value check-box) new-value))
+
+(defmethod check-box-selections ((pane check-box))
+  (loop for child in (sheet-children pane)
+        when (typep child 'toggle-button)
+        collect child))
 
 (defmethod value-changed-callback :before (value-gadget (client check-box) gadget-id value)
   (declare (ignorable gadget-id))
