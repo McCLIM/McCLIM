@@ -24,6 +24,7 @@
 
 (define-application-frame dragndrop ()
   ()
+  (:menu-bar nil)
   (:pointer-documentation t)
   (:panes
    (interactor :interactor)

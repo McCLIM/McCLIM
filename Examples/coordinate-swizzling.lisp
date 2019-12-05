@@ -4,6 +4,7 @@
 
 (clim:define-application-frame coordinate-swizzling ()
   ()
+  (:menu-bar nil)
   (:panes (app :application
                :scroll-bars nil
                :display-time nil)

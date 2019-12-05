@@ -91,6 +91,7 @@ Space: redisplay application")
 
 (define-application-frame pattern-design-test ()
   ()
+  (:menu-bar nil)
   (:geometry :width 1440 :height 635)
   (:panes (info1 :application
                  :display-function #'(lambda (frame pane)

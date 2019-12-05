@@ -2,6 +2,7 @@
 
 (define-application-frame patterns-overlap ()
   ()
+  (:menu-bar nil)
   (:pane :application :display-function #'display :width 125 :height 125 :scroll-bars nil))
 
 (defparameter *pat*

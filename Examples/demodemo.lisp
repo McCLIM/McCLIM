@@ -258,6 +258,7 @@ argument to avoid creating too many functions with similar name."))
 ;;; Scroll test 2
 (define-application-frame scroll-test-2 ()
   ()
+  (:menu-bar nil)
   (:geometry :width 1200 :height 400)
   (:panes (out :application-pane :display-function #'scroll-test-display)
           (bam :application-pane :display-function #'scroll-test-display)
