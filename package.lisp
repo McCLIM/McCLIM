@@ -732,7 +732,7 @@
    #:frame-manager-frames               ;generic function
    #:frame-manager-menu-choose          ;generic function
    #:frame-manager-notify-user          ;generic function
-   #:frame-mananger-p                   ;predicate
+   #:frame-manager-p                    ;predicate
    #:frame-name                         ;generic function
    #:frame-panes                        ;generic function
    #:frame-parent                       ;generic function
