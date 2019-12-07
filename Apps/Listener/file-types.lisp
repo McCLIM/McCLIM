@@ -551,9 +551,18 @@
                     (t (format *trace-output* "Ignoring unknown syntax ~W" d))))
             (write-char c out))))))
 
+(defun mime-type-wildcard (mime-type)
+  "From a MIME-TYPE as type/subtype returns a wildcard version type/*"
+  (when mime-type
+    (intern (concatenate
+             'string
+             (car (cl-ppcre:split "/"  (symbol-name mime-type))) "/*")
+            'clim-listener)))
+
 (defun find-viewspec (pathname)
   (let* ((type (pathname-mime-type pathname))
-         (def  (gethash type *view-command-mapping*)))
+         (def  (or (gethash type *view-command-mapping*)
+                   (gethash (mime-type-wildcard type) *view-command-mapping*))))
     (when (and def
                (probe-file pathname)
                (gethash :view-command def)
@@ -567,7 +576,8 @@
 
 (defun run-view-command (pathname)
   (let* ((type (pathname-mime-type pathname))
-         (def  (gethash type *view-command-mapping*)))
+         (def (or (gethash type *view-command-mapping*)
+                  (gethash (mime-type-wildcard type) *view-command-mapping*))))
     (when def
       (let* ((view-command (gethash :view-command def))
              (test (gethash :test def))
