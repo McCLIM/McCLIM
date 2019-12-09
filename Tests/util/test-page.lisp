@@ -134,7 +134,8 @@
    (formatting-table (stream :x-spacing 50
                              :y-spacing 20)
      (formatting-row (stream)
-       (formatting-cell (stream))
+       (formatting-cell (stream)
+         (declare (ignore stream)))
        (formatting-cell (stream :align-x :center
                                 :align-y :bottom
                                 :min-height 100)
@@ -212,7 +213,7 @@
 
 (defun print-test-page-9 (stream)
    (formatting-table (stream)
-     (flet ((draw (angle line-joint-shape)
+     (flet ((draw (stream angle line-joint-shape)
               (let ((record
                       (with-output-to-output-record (stream)
                         (draw-polygon* stream (list 20 0 100 0 50 (* 50 (tan angle)))
@@ -239,9 +240,9 @@
              unless (= i 0)
              do (formatting-row (stream)
                   (formatting-cell (stream) (print (* i dag) stream))
-                  (formatting-cell (stream) (draw a :miter))
-                  (formatting-cell (stream) (draw a :bevel))
-                  (formatting-cell (stream) (draw a :round)))))))
+                  (formatting-cell (stream) (draw stream a :miter))
+                  (formatting-cell (stream) (draw stream a :bevel))
+                  (formatting-cell (stream) (draw stream a :round)))))))
 
 (defvar *all-test-pages* '(print-test-page-1
                            print-test-page-2
