@@ -2327,35 +2327,34 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 (defun label-pane-margins (pane)
   (let* ((alignment (label-pane-label-alignment pane))
+         (label (clime:label-pane-label pane))
          (text-style (pane-text-style pane))
-         (a (text-style-ascent text-style pane))
-         (d (text-style-descent text-style pane))
+         (line-height (text-style-ascent text-style pane))
          (m0 2)
          (2m0 (* 2 m0)))
-    (values
-     ;; Margins of inner sheet region.
-     (+ a 2m0)
-     (+ a (if (eq alignment :top) d 0) 2m0)
-     (+ a 2m0)
-     (+ a (if (eq alignment :bottom) d 0) 2m0)
-     ;; Dimensions of label text.
-     (+ m0 (if (sheet-children pane)
-               (+ a 2m0 d)
-               0))
-     (+ m0 a)
-     ;; Margin of surrounding border.
-     (+ m0 (/ a 2)))))
+    (multiple-value-bind (text-width text-height)
+        (text-size pane label :text-style text-style)
+      (let ((horizontal-inner-margin (if (sheet-child pane)
+                                         (+ line-height 2m0)
+                                         0)))
+        (values
+         ;; Margins of inner sheet region.
+         horizontal-inner-margin
+         (+ (if (eq alignment :top) text-height line-height) 2m0)
+         horizontal-inner-margin
+         (+ (if (eq alignment :bottom) text-height line-height) 2m0)
+         ;; Offsets and dimensions of label text.
+         m0 text-width text-height
+         ;; Margin of surrounding border.
+         (+ m0 (/ line-height 2)))))))
 
 (defmethod compose-space ((pane label-pane) &key width height)
   (declare (ignore width height))
-  (multiple-value-bind (left top right bottom) (label-pane-margins pane)
-    (let* ((text-width (text-size pane (clime:label-pane-label pane)))
-           (a (text-style-ascent (pane-text-style pane) pane))
-           (d (text-style-descent (pane-text-style pane) pane))
-           (m0 2)
-           (2m0 (* 2 m0))
-           (padded-width (+ text-width 2m0))
-           (padded-height (+ a d 2m0)))
+  (multiple-value-bind (right top left bottom
+                        text-offset text-width text-height)
+      (label-pane-margins pane)
+    (let* ((padded-width (+ text-width (* 2 text-offset)))
+           (padded-height (+ text-height (* 2 text-offset))))
       (if-let ((child (sheet-child pane)))
         (let ((sr2 (compose-space child)))
           (make-space-requirement
@@ -2380,33 +2379,40 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmethod handle-repaint ((pane label-pane) region)
   (declare (ignore region))
   (let* ((region (sheet-region pane))
-         (label (clime:label-pane-label pane))
-         (m0 2)
-         (a (text-style-ascent (pane-text-style pane) pane))
-         (d (text-style-descent (pane-text-style pane) pane))
-         (text-width (text-size pane label)))
+         (align-x (pane-align-x pane))
+         (label (clime:label-pane-label pane)))
     (with-bounding-rectangle* (x1 y1 x2 y2) region
       (multiple-value-bind (ileft itop iright ibottom
-                            text-x-offset text-y-offset
+                            text-offset text-width text-height
                             border-margin)
           (label-pane-margins pane)
-        (declare (ignore ileft itop iright ibottom))
-        (multiple-value-bind (tx ty)
-            (values (ecase (pane-align-x pane)
-                      (:left (+ x1 text-x-offset))
-                      (:right (- x2 text-x-offset text-width))
-                      (:center (- (/ (- x2 x1) 2) (/ text-width 2))))
+        (declare (ignore itop ibottom))
+        (multiple-value-bind (text-pivot-x text-pivot-y dx)
+            (values (ecase align-x
+                      (:left (+ x1 ileft text-offset))
+                      (:right (- x2 iright text-offset))
+                      (:center (/ (- x2 x1) 2)))
                     (ecase (label-pane-label-alignment pane)
-                      (:top (+ y1 text-y-offset))
-                      (:bottom (- y2 m0 d))))
+                      (:top    (+ y1 text-offset))
+                      (:bottom (- y2 text-offset text-height)))
+                    (ecase align-x
+                      (:left 0)
+                      (:right (- text-width))
+                      (:center (- (/ text-width 2)))))
           ;; Draw label.
-          (draw-rectangle* pane x1 (- ty a) x2 (+ ty d) :ink (pane-background pane))
-          (draw-text* pane label tx ty)
+          (draw-rectangle* pane x1 text-pivot-y x2 (+ text-pivot-y text-height)
+                           :ink (pane-background pane))
+          (draw-text* pane label text-pivot-x text-pivot-y
+                      :align-x align-x :align-y :top)
           ;; Draw border around child without drawing over the label text.
           (when (sheet-child pane)
-            (let ((text-region (make-rectangle* (- tx m0) (- ty a) (+ tx text-width m0) (+ ty d))))
-              (with-drawing-options (pane :clipping-region (region-difference
-                                                            region text-region))
+            (let* ((text-x (+ text-pivot-x dx))
+                   (text-region (make-rectangle* text-x
+                                                 text-pivot-y
+                                                 (+ text-x text-width)
+                                                 (+ text-pivot-y text-height))))
+              (with-drawing-options
+                  (pane :clipping-region (region-difference region text-region))
                 (draw-bordered-rectangle* pane
                                           (+ x1 border-margin) (+ y1 border-margin)
                                           (- x2 border-margin) (- y2 border-margin)
