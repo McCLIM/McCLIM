@@ -756,9 +756,8 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod change-space-requirements ((pane layout-protocol-mixin)
                                       &key resize-frame &allow-other-keys)
-  (when (sheet-parent pane)
-    (change-space-requirements (sheet-parent pane)
-			       :resize-frame resize-frame)))
+  (when-let ((parent (sheet-parent pane)))
+    (change-space-requirements parent :resize-frame resize-frame)))
 
 (defmethod change-space-requirements :after ((pane layout-protocol-mixin)
                                              &key resize-frame &allow-other-keys)
@@ -2314,7 +2313,13 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    :text-style (make-text-style :sans-serif nil nil))
   (:documentation ""))
 
+(defmethod reinitialize-instance :after ((instance label-pane)
+                                         &key (label nil label-supplied-p))
+  (when label-supplied-p
+    (setf (clime:label-pane-label instance) label)))
+
 (defmethod (setf clime:label-pane-label) :after (new-value (pane label-pane))
+  (change-space-requirements pane)
   (repaint-sheet pane (sheet-region pane)))
 
 (defmacro labelling ((&rest options) &body contents)
