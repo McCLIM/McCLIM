@@ -916,13 +916,13 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 (defmethod compose-space ((pane single-child-composite-pane)
                           &rest args &key width height)
   (declare (ignore width height))
-  (if (sheet-child pane)
-      (apply #'compose-space (sheet-child pane) args)
+  (if-let ((child (sheet-child pane)))
+      (apply #'compose-space child args)
       (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
-  (when (sheet-child pane)
-    (allocate-space (sheet-child pane) width height)))
+  (when-let ((child (sheet-child pane)))
+    (allocate-space child width height)))
 
 ;;; TOP-LEVEL-SHEET
 
@@ -2299,7 +2299,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 ;;; LABEL PANE
 
-(defclass label-pane (multiple-child-composite-pane)
+(defclass label-pane (single-child-composite-pane)
   ((label :type string
           :initarg :label
           :accessor clime:label-pane-label
@@ -2354,7 +2354,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                 ;; ### this other test below seems to be neccessary since
                 ;;     somebody decided that (NIL) is a valid return value
                 ;;     from sheet-children. --GB 2002-11-10
-                (first (sheet-children pane)))
+                (sheet-child pane))
            (let ((sr2 (compose-space (first (sheet-children pane)))))
              (multiple-value-bind (right top left bottom) (label-pane-margins pane)
                (make-space-requirement
@@ -2384,7 +2384,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 (defmethod allocate-space ((pane label-pane) width height)
   (multiple-value-bind (right top left bottom) (label-pane-margins pane)
-    (alexandria:when-let ((child (first (sheet-children pane))))
+    (alexandria:when-let ((child (sheet-child pane)))
       (multiple-value-bind (x1 y1 x2 y2) (values 0 0 width height)
         (move-sheet child (+ x1 left) (+ y1 top))
         (allocate-space child
@@ -2419,7 +2419,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
           (draw-text* pane (clime:label-pane-label pane)
                       tx ty)
           ;;;
-          (when (sheet-children pane)
+          (when (sheet-child pane)
             (with-drawing-options (pane
                                    :clipping-region
                                    (region-difference
@@ -2427,11 +2427,6 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                                     (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d))))
               (draw-bordered-rectangle* pane (+ x1 bleft) (+ y1 btop) (- x2 bright) (- y2 bbottom)
                                         :style :groove))))))))
-
-
-(defmethod initialize-instance :after ((pane label-pane) &key contents &allow-other-keys)
-  (when contents
-    (sheet-adopt-child pane (first contents))))
 
 ;;; GENERIC FUNCTIONS
 
