@@ -2320,113 +2320,92 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmacro labelling ((&rest options) &body contents)
   `(make-pane 'label-pane ,@options :contents (list ,@contents)))
 
-(defgeneric label-pane-margins (pane))
-
-(defmethod label-pane-margins ((pane label-pane))
-  (let ((m0 2)
-        (a (text-style-ascent (pane-text-style pane) pane))
-        (d (text-style-descent (pane-text-style pane) pane)))
+(defun label-pane-margins (pane)
+  (let* ((alignment (label-pane-label-alignment pane))
+         (text-style (pane-text-style pane))
+         (a (text-style-ascent text-style pane))
+         (d (text-style-descent text-style pane))
+         (m0 2)
+         (2m0 (* 2 m0)))
     (values
-     ;; margins of inner sheet region
-     (+ a (* 2 m0))
-     (+ a (if (eq (label-pane-label-alignment pane) :top) d 0) (* 2 m0))
-     (+ a (* 2 m0))
-     (+ a (if (eq (label-pane-label-alignment pane) :top) 0 d) (* 2 m0))
-     ;; margins of surrounding border
-     (+ m0 (/ a 2))
-     (+ m0 (/ a 2))
-     (+ m0 (/ a 2))
-     (+ m0 (if (eq (label-pane-label-alignment pane) :top) 0 d) (/ a 2))
-     ;; position of text
+     ;; Margins of inner sheet region.
+     (+ a 2m0)
+     (+ a (if (eq alignment :top) d 0) 2m0)
+     (+ a 2m0)
+     (+ a (if (eq alignment :bottom) d 0) 2m0)
+     ;; Dimensions of label text.
      (+ m0 (if (sheet-children pane)
-               (+ a m0 m0 d)
-             0))
-     (+ m0 a))))
+               (+ a 2m0 d)
+               0))
+     (+ m0 a)
+     ;; Margin of surrounding border.
+     (+ m0 (/ a 2)))))
 
 (defmethod compose-space ((pane label-pane) &key width height)
   (declare (ignore width height))
-  (let* ((w (text-size pane (clime:label-pane-label pane)))
-         (a (text-style-ascent (pane-text-style pane) pane))
-         (d (text-style-descent (pane-text-style pane) pane))
-         (m0 2)
-         (h (+ a d m0 m0)))
-    (cond ((and (sheet-children pane)
-                ;; ### this other test below seems to be neccessary since
-                ;;     somebody decided that (NIL) is a valid return value
-                ;;     from sheet-children. --GB 2002-11-10
-                (sheet-child pane))
-           (let ((sr2 (compose-space (first (sheet-children pane)))))
-             (multiple-value-bind (right top left bottom) (label-pane-margins pane)
-               (make-space-requirement
-                ;; label!
-                :width      (+ left right (max (+ w m0 m0) (space-requirement-width sr2)))
-                :min-width  (+ left right (max (+ w m0 m0) (space-requirement-min-width sr2)))
-                :max-width  (+ left right (max (+ w m0 m0) (space-requirement-max-width sr2)))
-                :height     (+ top bottom (space-requirement-height sr2))
-                :min-height (+ top bottom (space-requirement-min-height sr2))
-                :max-height (+ top bottom (space-requirement-max-height sr2))))))
-          (t
-           (incf w m0)
-           (incf w m0)
-           (let ((sr1 (make-space-requirement :width w :min-width w
-                                              :height h :min-height h :max-height h)))
-             (when (sheet-children pane)
-               (let ((sr2 (compose-space (first (sheet-children pane)))))
-                 (setf sr1
-                   (make-space-requirement
-                    :width      (max (space-requirement-width sr1) (space-requirement-width sr2))
-                    :min-width  (max (space-requirement-min-width sr1) (space-requirement-min-width sr2))
-                    :max-width  (max (space-requirement-max-width sr1) (space-requirement-max-width sr2))
-                    :height     (+ (space-requirement-height sr1) (space-requirement-height sr2))
-                    :min-height (+ (space-requirement-min-height sr1) (space-requirement-min-height sr2))
-                    :max-height (+ (space-requirement-max-height sr1) (space-requirement-max-height sr2))))))
-             sr1)))))
+  (multiple-value-bind (left top right bottom) (label-pane-margins pane)
+    (let* ((text-width (text-size pane (clime:label-pane-label pane)))
+           (a (text-style-ascent (pane-text-style pane) pane))
+           (d (text-style-descent (pane-text-style pane) pane))
+           (m0 2)
+           (2m0 (* 2 m0))
+           (padded-width (+ text-width 2m0))
+           (padded-height (+ a d 2m0)))
+      (if-let ((child (sheet-child pane)))
+        (let ((sr2 (compose-space child)))
+          (make-space-requirement
+           :width      (+ left right (max padded-width (space-requirement-width sr2)))
+           :min-width  (+ left right (max padded-width (space-requirement-min-width sr2)))
+           :max-width  (+ left right (max padded-width (space-requirement-max-width sr2)))
+           :height     (+ top bottom (space-requirement-height sr2))
+           :min-height (+ top bottom (space-requirement-min-height sr2))
+           :max-height (+ top bottom (space-requirement-max-height sr2))))
+        (make-space-requirement :width padded-width
+                                :min-width padded-width
+                                :height padded-height
+                                :min-height padded-height
+                                :max-height padded-height)))))
 
 (defmethod allocate-space ((pane label-pane) width height)
-  (multiple-value-bind (right top left bottom) (label-pane-margins pane)
-    (alexandria:when-let ((child (sheet-child pane)))
-      (multiple-value-bind (x1 y1 x2 y2) (values 0 0 width height)
-        (move-sheet child (+ x1 left) (+ y1 top))
-        (allocate-space child
-                        (- (- x2 right) (+ x1 left))
-                        (- (- y2 bottom) (+ y1 top)))))))
+  (when-let ((child (sheet-child pane)))
+    (multiple-value-bind (left top right bottom) (label-pane-margins pane)
+      (move-sheet child left top)
+      (allocate-space child (- (- width right) left) (- (- height bottom) top)))))
 
 (defmethod handle-repaint ((pane label-pane) region)
   (declare (ignore region))
-  (let ((m0 2)
-        (a (text-style-ascent (pane-text-style pane) pane))
-        (d (text-style-descent (pane-text-style pane) pane))
-        (tw (text-size pane (clime:label-pane-label pane))))
-    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-      (multiple-value-bind (iright itop ileft ibottom
-                                   bright btop bleft bbottom)
+  (let* ((region (sheet-region pane))
+         (label (clime:label-pane-label pane))
+         (m0 2)
+         (a (text-style-ascent (pane-text-style pane) pane))
+         (d (text-style-descent (pane-text-style pane) pane))
+         (text-width (text-size pane label)))
+    (with-bounding-rectangle* (x1 y1 x2 y2) region
+      (multiple-value-bind (ileft itop iright ibottom
+                            text-x-offset text-y-offset
+                            border-margin)
           (label-pane-margins pane)
-        (declare (ignorable iright itop ileft ibottom))
+        (declare (ignore ileft itop iright ibottom))
         (multiple-value-bind (tx ty)
             (values (ecase (pane-align-x pane)
-                      (:left (+ x1 m0 (if (sheet-children pane)
-                                          (+ a m0 m0 d)
-                                          0)))
-                      (:right (- x2 m0 (if (sheet-children pane)
-                                           (+ a m0 m0 d)
-                                           0)
-                               tw))
-                      (:center (- (/ (- x2 x1) 2) (/ tw 2))))
+                      (:left (+ x1 text-x-offset))
+                      (:right (- x2 text-x-offset text-width))
+                      (:center (- (/ (- x2 x1) 2) (/ text-width 2))))
                     (ecase (label-pane-label-alignment pane)
-                      (:top (+ y1 m0 a))
+                      (:top (+ y1 text-y-offset))
                       (:bottom (- y2 m0 d))))
-	  (draw-rectangle* pane x1 (- ty a) x2 (+ ty d) :ink (pane-background pane))
-          (draw-text* pane (clime:label-pane-label pane)
-                      tx ty)
-          ;;;
+          ;; Draw label.
+          (draw-rectangle* pane x1 (- ty a) x2 (+ ty d) :ink (pane-background pane))
+          (draw-text* pane label tx ty)
+          ;; Draw border around child without drawing over the label text.
           (when (sheet-child pane)
-            (with-drawing-options (pane
-                                   :clipping-region
-                                   (region-difference
-                                    (sheet-region pane)
-                                    (make-rectangle* (- tx m0) (- ty a) (+ tx tw m0) (+ ty d))))
-              (draw-bordered-rectangle* pane (+ x1 bleft) (+ y1 btop) (- x2 bright) (- y2 bbottom)
-                                        :style :groove))))))))
+            (let ((text-region (make-rectangle* (- tx m0) (- ty a) (+ tx text-width m0) (+ ty d))))
+              (with-drawing-options (pane :clipping-region (region-difference
+                                                            region text-region))
+                (draw-bordered-rectangle* pane
+                                          (+ x1 border-margin) (+ y1 border-margin)
+                                          (- x2 border-margin) (- y2 border-margin)
+                                          :style :groove)))))))))
 
 ;;; GENERIC FUNCTIONS
 
