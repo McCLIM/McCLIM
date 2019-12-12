@@ -165,16 +165,18 @@ argument to avoid creating too many functions with similar name."))
            ) )))
 
 (defun make-test-label (ax ay)
-  (labelling (:label "Some Label"
-                     :align-x ax
-                     :label-alignment ay
-                     :foreground +WHITE+
-                     :background +PALETURQUOISE4+
-                     :text-style (make-text-style :sans-serif :roman :normal))
+  ;; Please keep the silly "good" so the label text goes below the
+  ;; baseline. -- jm 2019-12-14
+  (labelling (:label "Some good Label"
+              :align-x ax
+              :label-alignment ay
+              :foreground +WHITE+
+              :background +PALETURQUOISE4+
+              :text-style (make-text-style :sans-serif :roman :normal))
     (make-pane 'push-button :label (format nil "~S" (list ax ay))
-               :text-style (make-text-style :sans-serif :roman :normal)
-               :max-width 1000
-               :max-height 1000)))
+                            :text-style (make-text-style :sans-serif :roman :normal)
+                            :max-width 1000
+                            :max-height 1000)))
 
 (defun make-test-label2 (ax ay)
   (labelling (:label (format nil "~(~S~)" (list ax ay))
