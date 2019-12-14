@@ -490,7 +490,7 @@
 ;; seem to open any file with quotes in the name. (how embarassing!)
 
 (defun quote-shell-characters (string)
-  (let ((shell-chars '(#\` #\$ #\\ #\" #\')))
+  (let ((shell-chars '(#\` #\$ #\\ #\" #\' #\Space)))
   (with-output-to-string (out)
     (with-input-from-string (in string)
       (loop for c = (read-char in nil) while c do
