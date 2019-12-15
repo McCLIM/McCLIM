@@ -1385,19 +1385,17 @@ have a `pointer-documentation-pane' as pointer documentation,
     ((frame standard-application-frame) (input-context null) stream state event)
   (unless state
     (return-from frame-print-pointer-documentation nil))
-  (destructuring-bind (current-modifier new-translators)
-      state
-    (let ((pstream *pointer-documentation-output*))
-      (when (and (background-message pstream)
-                     (not (record-on-display pstream (background-message pstream))))
-            (cond ((> (get-universal-time)
-                      (+ (background-message-time pstream)
-                         *background-message-minimum-lifetime*))
-                   (setf (background-message pstream) nil))
-                  (t
-                   (setf (output-record-parent (background-message pstream)) nil)
-                   (stream-add-output-record pstream (background-message pstream))
-                   (replay (background-message pstream) pstream)))))))
+  (let ((pstream *pointer-documentation-output*))
+    (when-let ((message (background-message pstream)))
+      (cond ((record-on-display pstream message))
+            ((> (get-universal-time)
+                (+ (background-message-time pstream)
+                   *background-message-minimum-lifetime*))
+             (setf (background-message pstream) nil))
+            (t
+             (setf (output-record-parent message) nil)
+             (stream-add-output-record pstream message)
+             (replay message pstream))))))
 
 (defgeneric frame-input-context-track-pointer
     (frame input-context stream event))
