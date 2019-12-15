@@ -751,7 +751,7 @@ documentation produced by presentations.")
   (setf (slot-value pane 'name) name)
   pane)
 
-(defun do-pane-creation-form (name form)
+(defun generate-pane-creation-form (name form)
   (destructuring-bind (pane &rest options) form
     (cond ((and (null options) (listp pane)) ; Single form which is a function call
            `(coerce-pane-name ,pane ',name))
@@ -766,8 +766,8 @@ documentation produced by presentations.")
           (t ; Non-standard pane designator fed to the `make-pane'
            `(make-pane ',pane :name ',name ,@options)))))
 
-(defun make-panes-generate-panes-form (class-name menu-bar panes layouts
-                                       pointer-documentation)
+(defun generate-generate-panes-form (class-name menu-bar panes layouts
+                                 pointer-documentation)
   (when pointer-documentation
     (setf panes (append panes
                         '((%pointer-documentation%
@@ -778,45 +778,38 @@ documentation produced by presentations.")
          (unless (frame-panes-for-layout frame)
            (setf (frame-panes-for-layout frame)
                  (list
-                  ,@(loop
-                       for (name . form) in panes
-                       collect
-                         `(cons ',name ,(do-pane-creation-form name form))))))
-         (let ,(loop
-                  for (name . form) in panes
-                  collect `(,name (alexandria:assoc-value
-                                   (frame-panes-for-layout frame)
-                                   ',name :test #'eq)))
+                  ,@(loop for (name . form) in panes
+                          collect `(cons ',name ,(generate-pane-creation-form
+                                                  name form))))))
+         (let ,(loop for (name . form) in panes
+                     collect `(,name (alexandria:assoc-value
+                                      (frame-panes-for-layout frame)
+                                      ',name :test #'eq)))
            ;; [BTS] added this, but is not sure that this is correct for
            ;; adding a menu-bar transparently, should also only be done
            ;; where the exterior window system does not support menus
-           ,(if (or menu-bar pointer-documentation)
-                `(setf (frame-panes frame)
-                       (ecase (frame-current-layout frame)
-                         ,@(mapcar (lambda (layout)
-                                     `(,(first layout)
-                                        (vertically ()
-                                          ,@(cond
-                                              ((eq menu-bar t)
-                                               `((setf (frame-menu-bar-pane frame)
-                                                       (clim-internals::make-menu-bar
-                                                        ',class-name))))
-                                              ((consp menu-bar)
-                                               `((clim-internals::make-menu-bar
-                                                  (make-command-table
-                                                   nil
-                                                   :menu ',menu-bar))))
-                                              (menu-bar
-                                               `((clim-internals::make-menu-bar
-                                                  ',menu-bar)))
-                                              (t nil))
-                                          ,@(rest layout)
-                                          ,@(when pointer-documentation
-                                              '(%pointer-documentation%)))))
-                                   layouts)))
-                `(setf (frame-panes frame)
-                       (ecase (frame-current-layout frame)
-                         ,@layouts)))))
+           (setf (frame-panes frame)
+                 (ecase (frame-current-layout frame)
+                   ,@(if (or menu-bar pointer-documentation)
+                         (mapcar (lambda (layout)
+                                   `(,(first layout)
+                                     (vertically ()
+                                       ,@(cond
+                                           ((eq menu-bar t)
+                                            `((setf (frame-menu-bar-pane frame)
+                                                    (make-menu-bar ',class-name))))
+                                           ((consp menu-bar)
+                                            `((make-menu-bar
+                                               (make-command-table
+                                                nil :menu ',menu-bar))))
+                                           (menu-bar
+                                            `((make-menu-bar ',menu-bar)))
+                                           (t nil))
+                                       ,@(rest layout)
+                                       ,@(when pointer-documentation
+                                           '(%pointer-documentation%)))))
+                                 layouts)
+                         layouts)))))
        ;; Update frame-current-panes and the special pane slots.
        (update-frame-pane-lists frame))))
 
@@ -930,7 +923,7 @@ documentation produced by presentations.")
           ,@user-default-initargs)
          ,@other-options)
 
-       ,(make-panes-generate-panes-form
+       ,(generate-generate-panes-form
          name menu-bar panes layouts pointer-documentation)
 
        ,@(when command-table
