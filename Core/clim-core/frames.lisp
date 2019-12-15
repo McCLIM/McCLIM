@@ -252,6 +252,9 @@ documentation produced by presentations.")
   ;; Let client code know.
   (clime:note-frame-pretty-name-changed (frame-manager frame) frame new-value))
 
+(defmethod frame-all-layouts ((frame application-frame))
+  (mapcar #'car (frame-layouts frame)))
+
 (define-condition frame-layout-changed (condition)
   ((frame :initarg :frame :reader frame-layout-changed-frame)))
 
@@ -725,6 +728,25 @@ documentation produced by presentations.")
 ;
 ; FIXME
 
+(defun update-frame-pane-lists (frame)
+  (let ((all-panes     (frame-panes frame))
+        (named-panes   (mapcar #'cdr (frame-panes-for-layout frame)))
+        (current-panes '()))
+    ;; Find intersection of named panes and current layout panes.
+    (map-over-sheets (lambda (sheet)
+                       (when-let ((index (position sheet named-panes)))
+                         (push (cons sheet index) current-panes)))
+                     all-panes)
+    (setf current-panes (mapcar #'car (sort current-panes #'< :key #'cdr)))
+    ;; Populate current-pane list and special pane slots.
+    (let ((interactor            (find-pane-of-type current-panes 'interactor-pane))
+          (application           (find-pane-of-type current-panes 'application-pane))
+          (pointer-documentation (find-pane-of-type all-panes 'pointer-documentation-pane)))
+      (setf (frame-current-panes frame) current-panes
+            (frame-standard-output frame) (or application interactor)
+            (frame-standard-input frame) (or interactor (frame-standard-output frame))
+            (frame-pointer-documentation-output frame) pointer-documentation))))
+
 (defun coerce-pane-name (pane name)
   (setf (slot-value pane 'name) name)
   pane)
@@ -795,37 +817,8 @@ documentation produced by presentations.")
                 `(setf (frame-panes frame)
                        (ecase (frame-current-layout frame)
                          ,@layouts)))))
-
-       ;; XXX: this computation may be cached for each layout!
-       (let ((named-panes (mapcar #'cdr (frame-panes-for-layout frame)))
-             (panes nil))
-
-         ;; Find intersection of named panes and current layout panes
-         (map-over-sheets #'(lambda (p)
-                              (when (member p named-panes)
-                                (push p panes)))
-                          (frame-panes frame))
-
-         (setf (frame-current-panes frame)
-               (uiop:while-collecting (sorted-panes)
-                 (mapc #'(lambda (pane)
-                           (when (member pane panes)
-                             ;; collect pane
-                             (sorted-panes pane)
-                             ;; reduce search time
-                             (setf panes (delete pane panes))))
-                       named-panes)))
-
-         (setf (frame-standard-output frame)
-               (or (find-pane-of-type (frame-current-panes frame) 'application-pane)
-                   (find-pane-of-type (frame-current-panes frame) 'interactor-pane))
-
-               (frame-standard-input frame)
-               (or (find-pane-of-type (frame-current-panes frame) 'interactor-pane)
-                   (frame-standard-output frame))
-
-               (frame-pointer-documentation-output frame)
-               (find-pane-of-type (frame-panes frame) 'pointer-documentation-pane))))))
+       ;; Update frame-current-panes and the special pane slots.
+       (update-frame-pane-lists frame))))
 
 (defmacro define-application-frame (name superclasses slots &rest options)
   (when (null superclasses)
@@ -899,9 +892,6 @@ documentation produced by presentations.")
          ,@geometry
          ,@user-default-initargs)
         ,@others)
-
-      (defmethod frame-all-layouts ((frame ,name))
-        ',(mapcar #'car layouts))
 
       ,(make-panes-generate-panes-form name menu-bar panes layouts
                                        pointer-documentation)
