@@ -742,8 +742,7 @@ documentation produced by presentations.")
                        :name ',name
                        ,@(cdr form)))
        (:interactor `(make-clim-interactor-pane
-                      :name ',name ,@(cdr form)
-                      ,@(cdr form)))
+                      :name ',name ,@(cdr form)))
        (:pointer-documentation `(make-clim-pointer-documentation-pane
                                  :name ',name
                                  ,@(cdr form)))
