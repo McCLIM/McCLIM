@@ -820,96 +820,129 @@ documentation produced by presentations.")
        ;; Update frame-current-panes and the special pane slots.
        (update-frame-pane-lists frame))))
 
+(defun parse-define-application-frame-options (options)
+  (let ((infos '(;; CLIM
+                 (:pane                  * :conflicts (:panes :layouts))
+                 (:panes                 * :conflicts (:pane))
+                 (:layouts               * :conflicts (:pane))
+                 (:command-table         1)
+                 (:command-definer       1)
+                 (:menu-bar              ensure-1)
+                 (:disabled-commands     *)
+                 (:top-level             1)
+                 ;; :icon is the CLIM specification but we don't support it
+                 (:geometry              *)
+                 ;; :resize-frame is mentioned in a spec annotation but we don't support it
+                 ;; McCLIM extensions
+                 (:pointer-documentation 1)
+                 ;; Default initargs
+                 (:pretty-name           1)
+                 ;; Common Lisp
+                 (:default-initargs      *)))
+        (all-values '()))
+    (labels ((definedp (key)
+               (not (eq (getf all-values key 'undefined) 'undefined)))
+             (parse-option (key values)
+               (when-let ((info (find key infos :key #'first)))
+                 (destructuring-bind (name value-count &key conflicts) info
+                   (declare (ignore name))
+                   (cond ((when-let ((other (find-if #'definedp conflicts)))
+                            (error "~@<The options ~S and ~S are mutually ~
+                                    exclusive.~@:>"
+                                   key other)))
+                         ((definedp key)
+                          (error "~@<The option ~S cannot be supplied ~
+                                  multiple times.~@:>"
+                                 key))
+                         ;; Canonicalize :pane, :panes and :layouts to
+                         ;; just :panes and :layouts.
+                         ((eq key :pane)
+                          (setf (getf all-values :pane)
+                                t
+                                (getf all-values :panes)
+                                `((single-pane ,@values))
+                                (getf all-values :layouts)
+                                `((:default single-pane))))
+                         ((eq key :default-initargs)
+                          (destructuring-bind
+                              (&key ((:pretty-name user-pretty-name) nil pretty-name-p)
+                               &allow-other-keys)
+                              values
+                            (when pretty-name-p
+                              (parse-option :pretty-name (list user-pretty-name))))
+                          (setf (getf all-values :user-default-initargs)
+                                (alexandria:remove-from-plist values :pretty-name)))
+                         (t
+                          (setf (getf all-values key)
+                                (ecase value-count
+                                  (1        (first values))
+                                  (ensure-1 (alexandria:ensure-car values))
+                                  (*        values))))))
+                 t)))
+      (loop :for option :in options
+            :for (key . values) = option
+            :do (with-current-source-form (option)
+                  (when (not (parse-option key values))
+                    (push option (getf all-values :other-options)))))
+      (alexandria:remove-from-plist all-values :pane))))
+
 (defmacro define-application-frame (name superclasses slots &rest options)
   (when (null superclasses)
     (setq superclasses '(standard-application-frame)))
-  (let ((pretty-name (string-capitalize name))
-        (pane nil)
-        (panes nil)
-        (layouts nil)
-        (current-layout nil)
-        (command-table (list name))
-        (menu-bar t)
-        (disabled-commands nil)
-        (command-definer t)
-        (top-level '(default-frame-top-level))
-        (others nil)
-        (pointer-documentation nil)
-        (geometry nil)
-        (user-default-initargs nil)
-        (frame-arg (gensym "FRAME-ARG")))
-    (loop for (prop . values) in options
-        do (case prop
-             (:pane (setq pane values))
-             (:panes (setq panes values))
-             (:layouts (setq layouts values))
-             (:command-table (setq command-table (first values)))
-             (:menu-bar (setq menu-bar (if (listp values)
-                                           (first values)
-                                           values)))
-             (:disabled-commands (setq disabled-commands values))
-             (:command-definer (setq command-definer (first values)))
-             (:top-level (setq top-level (first values)))
-             (:pointer-documentation (setq pointer-documentation (car values)))
-             (:geometry (setq geometry values))
-             (:default-initargs
-              (destructuring-bind
-                  (&key ((:pretty-name user-pretty-name) nil pretty-name-p)
-                   &allow-other-keys)
-                  values
-                (when pretty-name-p
-                  (setf pretty-name user-pretty-name)))
-              (setf user-default-initargs
-                    (alexandria:remove-from-plist values :pretty-name)))
-             (t (push (cons prop values) others))))
+  (destructuring-bind (&key panes
+                            layouts
+                            (command-table (list name))
+                            (command-definer t)
+                            (menu-bar t)
+                            disabled-commands
+                            (top-level '(default-frame-top-level))
+                            geometry
+                            ;; McCLIM extensions
+                            pointer-documentation
+                            ;; Default initargs
+                            (pretty-name (string-capitalize name))
+                            ;; Common Lisp
+                            user-default-initargs
+                            other-options
+                            ;; Helpers
+                            (current-layout (first (first layouts)))
+                            (frame-arg (gensym "FRAME-ARG")))
+      (parse-define-application-frame-options options)
     (when (eq command-definer t)
       (setf command-definer
             (alexandria:symbolicate '#:define- name '#:-command)))
-    (when (or (and pane panes)
-              (and pane layouts))
-      (error ":pane cannot be specified along with either :panes or :layouts"))
-
-    (when pane
-      (setq panes `((single-pane ,@pane))
-            layouts `((:default single-pane))))
-
-    (setq current-layout (first (first layouts)))
     `(progn
-      (defclass ,name ,superclasses
-        ,slots
-        (:default-initargs
-         :name ',name
-         :pretty-name ,pretty-name
-         :command-table (find-command-table ',(first command-table))
-         :disabled-commands ',disabled-commands
-         :menu-bar ',menu-bar
-         :current-layout ',current-layout
-         :layouts ',layouts
-         :top-level (list ',(car top-level) ,@(cdr top-level))
-         :top-level-lambda (lambda (,frame-arg)
-                             (,(car top-level) ,frame-arg
-                               ,@(cdr top-level)))
-         ,@geometry
-         ,@user-default-initargs)
-        ,@others)
+       (defclass ,name ,superclasses
+         ,slots
+         (:default-initargs
+          :name              ',name
+          :pretty-name       ,pretty-name
+          :command-table     (find-command-table ',(first command-table))
+          :disabled-commands ',disabled-commands
+          :menu-bar          ',menu-bar
+          :current-layout    ',current-layout
+          :layouts           ',layouts
+          :top-level         (list ',(car top-level) ,@(cdr top-level))
+          :top-level-lambda  (lambda (,frame-arg)
+                               (,(car top-level) ,frame-arg
+                                ,@(cdr top-level)))
+          ,@geometry
+          ,@user-default-initargs)
+         ,@other-options)
 
-      ,(make-panes-generate-panes-form name menu-bar panes layouts
-                                       pointer-documentation)
+       ,(make-panes-generate-panes-form
+         name menu-bar panes layouts pointer-documentation)
 
-      ,@(when command-table
-          `((define-command-table ,@command-table)))
+       ,@(when command-table
+           `((define-command-table ,@command-table)))
 
-      ,@(when command-definer
-          `((defmacro ,command-definer (name-and-options arguments &rest body)
-              (let ((name (if (listp name-and-options)
-                              (first name-and-options)
-                              name-and-options))
-                    (options (if (listp name-and-options)
-                                 (cdr name-and-options)
-                                 nil))
-                    (command-table ',(first command-table)))
-                `(define-command (,name :command-table ,command-table ,@options)
-                     ,arguments ,@body))))))))
+       ,@(when command-definer
+           `((defmacro ,command-definer (name-and-options arguments &rest body)
+               (destructuring-bind (name &rest options)
+                   (alexandria:ensure-list name-and-options)
+                 `(define-command (,name :command-table ,',(first command-table)
+                                         ,@options)
+                      ,arguments ,@body))))))))
 
 (defun make-application-frame (frame-name
                                &rest options
