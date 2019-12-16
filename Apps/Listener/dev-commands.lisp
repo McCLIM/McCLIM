@@ -416,6 +416,15 @@
     (object))
 
 
+(define-presentation-to-command-translator com-show-class-documentation-translator
+    (class-name com-show-class-documentation lisp-commands
+                :menu t
+                :tester ((object) (not (eq t object)))
+                :documentation "Show Class Documentation"
+                :pointer-documentation "Show Class Documentation")
+    (object)
+  (list object))
+
 (define-presentation-to-command-translator com-show-class-subclasses-translator
   (class-name com-show-class-subclasses lisp-commands
               :menu t
@@ -490,6 +499,17 @@
   (if (typep spec 'class)
       spec
     (find-class spec nil)))
+
+(define-command (com-show-class-documentation :name "Show Class Documentation"
+                                              :command-table show-commands
+                                              :menu "Class Documentation"
+                                              :provide-output-destination-keyword t)
+    ((class-spec 'class-name :prompt "class"))
+  (let ((class (frob-to-class class-spec)))
+    (cond
+      ((null class) (note "~A is not a defined class." class-spec))
+      ((null (documentation class t)) (note "~A has no documentation." class-spec))
+      (t (format t "~a" (documentation class t))))))
 
 (define-command (com-show-class-superclasses :name "Show Class Superclasses"
                                              :command-table show-commands
