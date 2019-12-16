@@ -650,6 +650,7 @@
     ;; y-range [y_i, y_(i+1)].
     ;;
     :initarg :bands
+    :type    list
     :reader  standard-rectangle-set-bands)
    ;;
    (bounding-rectangle
@@ -659,20 +660,22 @@
 
 (defmethod map-over-region-set-regions
     (fun (region standard-rectangle-set) &key normalize)
-  (with-slots (bands) region
-    (cond ((or (null normalize) (eql normalize :x-banding))
-           (map-over-bands-rectangles
-            (lambda (x1 y1 x2 y2)
-              (funcall fun (make-rectangle* x1 y1 x2 y2)))
-            bands))
-          ((eql normalize :y-banding)
-           (map-over-bands-rectangles
-            (lambda (y1 x1 y2 x2)
-              (funcall fun (make-rectangle* x1 y1 x2 y2)))
-            (xy-bands->yx-bands bands)))
-          (t
-           (error "Bad ~S argument to ~S: ~S"
-                  :normalize 'map-over-region-set-regions normalize)))))
+  (let ((fun (alexandria:ensure-function fun)))
+    (with-slots (bands) region
+      (case normalize
+        ((nil :x-banding)
+         (map-over-bands-rectangles
+          (lambda (x1 y1 x2 y2)
+            (funcall fun (make-rectangle* x1 y1 x2 y2))) ; TODO don't cons rectangle
+          bands))
+        (:y-banding
+         (map-over-bands-rectangles
+          (lambda (y1 x1 y2 x2)
+            (funcall fun (make-rectangle* x1 y1 x2 y2)))
+          (xy-bands->yx-bands bands)))
+        (t
+         (error "Bad ~S argument to ~S: ~S"
+                :normalize 'map-over-region-set-regions normalize))))))
 
 (defmethod region-set-regions ((region standard-rectangle-set) &key normalize)
   (let ((res nil))

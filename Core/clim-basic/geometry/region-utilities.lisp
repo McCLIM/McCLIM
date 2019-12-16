@@ -194,10 +194,8 @@ y2."
   x1 y1 x2 y2 extra)
 
 (defstruct pg-splitter
-  links                                 ; "links" means "left"
-                                        ;list of points
-  rechts)                               ; "rechts" means "right"
-                                        ; from the top down
+  links   ; "links" means "left" list of points
+  rechts) ; "rechts" means "right" from the top down
 
 (defun make-pg-edge (p1 p2 extra)
   (multiple-value-bind (x1 y1) (point-position p1)
@@ -238,11 +236,11 @@ y2."
                             (labels
                                 ((add (lo lu ro ru)
                                    (dolist (s sps
-                                             ;; otherwise
-                                             (push (make-pg-splitter
-                                                    :links  (list lu lo)
-                                                    :rechts (list ru ro))
-                                                   sps))
+                                              ;; otherwise
+                                              (push (make-pg-splitter
+                                                     :links  (list lu lo)
+                                                     :rechts (list ru ro))
+                                                    sps))
                                      (when (and (region-equal
                                                  lo (car (pg-splitter-links s)))
                                                 (region-equal
@@ -300,22 +298,21 @@ y2."
           (cur (cdr pts))
           (next (cddr pts)))
       (loop
-        (nest
-         (multiple-value-bind (cur-x cur-y)   (point-position (car cur)))
-         (multiple-value-bind (next-x next-y) (point-position (car next)))
-         (multiple-value-bind (prev-x prev-y) (point-position (car prev))
-           (when (or (> next-y cur-y)
-                     (and (= next-y cur-y)
-                          (> next-x cur-x)))
-             (push (make-pg-edge (car cur) (car next) extra) res))
-           (when (or (> prev-y cur-y)
-                     (and (= prev-y cur-y)
-                          (> prev-x cur-x)))
-             (push (make-pg-edge (car cur) (car prev) extra) res))
-           (when (not (or (> next-y cur-y)
-                          (and (= next-y cur-y)
-                               (> next-x cur-x))))
-             (push (make-pg-edge (car cur) (car cur) extra) res))))
+        (when (or (> (point-y (car next)) (point-y (car cur)))
+                  (and (= (point-y (car next)) (point-y (car cur)))
+                       (> (point-x (car next)) (point-x (car cur)))))
+          (push (make-pg-edge (car cur) (car next) extra) res))
+        (when (or (> (point-y (car prev)) (point-y (car cur)))
+                  (and (= (point-y (car prev)) (point-y (car cur)))
+                       (> (point-x (car prev)) (point-x (car cur)))))
+          (push (make-pg-edge (car cur) (car prev) extra) res))
+        (when (not (or (> (point-y (car next)) (point-y (car cur)))
+                       (and (= (point-y (car next)) (point-y (car cur)))
+                            (> (point-x (car next)) (point-x (car cur))))
+                       (> (point-y (car next)) (point-y (car cur)))
+                       (and (= (point-y (car next)) (point-y (car cur)))
+                            (> (point-x (car next)) (point-x (car cur))))))
+          (push (make-pg-edge (car cur) (car cur) extra) res))
         (psetq prev cur
                cur next
                next (or (cdr next) pts))
@@ -475,52 +472,98 @@ y2."
 
 ;;; -- interval sums ---------------------------------------------------------
 
-(defun isum-union* (xs ys)        (isum-op xs ys boole-ior   0 0 nil))
-(defun isum-difference* (xs ys)   (isum-op xs ys boole-andc2 0 0 nil))
-(defun isum-intersection* (xs ys) (isum-op xs ys boole-and   0 0 nil))
-
 ;;; You could optimize all this like hell, but I better let the code
 ;;; alone.
 ;;; BTW this is the first time I make use of boole-xyz
 
-(defun isum-op (as bs boole-op in-a in-b x0)
-  (let (x)
-    (cond ((and (null as) (null bs))
-           nil)
-          (t
-           (cond ((null bs)
-                  (setq in-a (- 1 in-a))
-                  (setq x (pop as)))
+(defun isum-union* (xs ys)        (isum-op xs ys boole-ior))
+(defun isum-difference* (xs ys)   (isum-op xs ys boole-andc2))
+(defun isum-intersection* (xs ys) (isum-op xs ys boole-and))
 
-                 ((null as)
-                  (setq in-b (- 1 in-b))
-                  (setq x (pop bs)))
+(defun isum-op (as bs boole-op)
+  (labels ((rec (as bs in-a in-b x0)
+             (let (x)
+               (cond ((and (null as) (null bs))
+                      nil)
+                     (t
+                      (cond ((null bs)
+                             (setq in-a (- 1 in-a))
+                             (setq x (pop as)))
 
-                 ((< (first as) (first bs))
-                  (setq in-a (- 1 in-a))
-                  (setq x (pop as)))
+                            ((null as)
+                             (setq in-b (- 1 in-b))
+                             (setq x (pop bs)))
 
-                 ((< (first bs) (first as))
-                  (setq in-b (- 1 in-b))
-                  (setq x (pop bs)))
+                            ((< (first as) (first bs))
+                             (setq in-a (- 1 in-a))
+                             (setq x (pop as)))
 
-                 (t
-                  (setq in-a (- 1 in-a)
-                        in-b (- 1 in-b))
-                  (setq x (pop as))
-                  (pop bs)))
+                            ((< (first bs) (first as))
+                             (setq in-b (- 1 in-b))
+                             (setq x (pop bs)))
 
-           (cond ((zerop (boole boole-op in-a in-b))
-                  (if x0
-                      (list* x0 x (isum-op as bs boole-op in-a in-b nil))
-                    (isum-op as bs boole-op in-a in-b x0)))
-                 (t
-                  (if (null x0)
-                      (isum-op as bs boole-op in-a in-b x)
-                    (isum-op as bs boole-op in-a in-b x0))))))))
+                            (t
+                             (setq in-a (- 1 in-a)
+                                   in-b (- 1 in-b))
+                             (setq x (pop as))
+                             (pop bs)))
+
+                      (cond ((zerop (boole boole-op in-a in-b))
+                             (if x0
+                                 (list* x0 x (rec as bs in-a in-b nil))
+                                 (rec as bs in-a in-b x0)))
+                            (t
+                             (if (null x0)
+                                 (rec as bs in-a in-b x)
+                                 (rec as bs in-a in-b x0)))))))))
+    (rec as bs 0 0 nil)))
+
+(macrolet
+    ((define-isum-op (name operation)
+       `(defun ,name (as bs)
+          (declare (optimize speed))
+          (labels ((rec (x0 in-a as in-b bs)
+                     (declare (type bit in-a in-b))
+                     (let (x)
+                       (cond ((and (null as) (null bs))
+                              nil)
+                             (t
+                              (cond ((null bs)
+                                     (setq in-a (- 1 in-a))
+                                     (setq x (pop as)))
+
+                                    ((null as)
+                                     (setq in-b (- 1 in-b))
+                                     (setq x (pop bs)))
+
+                                    ((< (first as) (first bs))
+                                     (setq in-a (- 1 in-a))
+                                     (setq x (pop as)))
+
+                                    ((< (first bs) (first as))
+                                     (setq in-b (- 1 in-b))
+                                     (setq x (pop bs)))
+
+                                    (t
+                                     (setq in-a (- 1 in-a)
+                                           in-b (- 1 in-b))
+                                     (setq x (pop as))
+                                     (pop bs)))
+
+                              (cond ((zerop (,operation in-a in-b))
+                                     (if x0
+                                         (list* x0 x (rec nil in-a as in-b bs))
+                                         (rec x0 in-a as in-b bs)))
+                                    (t
+                                     (if (null x0)
+                                         (rec x in-a as in-b bs)
+                                         (rec x0 in-a as in-b bs)))))))))
+            (rec nil 0 as 0 bs)))))
+  (define-isum-op new-isum-union*        logior)
+  (define-isum-op new-isum-difference*   logandc2)
+  (define-isum-op new-isum-intersection* logand))
 
 ;;; -- Bands -----------------------------------------------------------------
-
 
 ;;; A band list is represented by
 
@@ -530,7 +573,7 @@ y2."
 
 ;;; The empty band could have been representated as
 ;;;  ((x . nil))  x arbitrary
-;;; But to get a canonic representation, I'll choose simply NIL.
+;;; But to get a cononic representation, I'll choose simply NIL.
 
 ;;; A better representation would be
 ;;;  (x_0 a_0 x_1 a_1 ... x_n)
@@ -539,51 +582,58 @@ y2."
 ;;; interval sums also. But I let the representation as it is, since
 ;;; this version is well tested.
 
-(defun bands-op (as bs isum-op z0 a b)
-  (let (z1)
-    (cond ((and (null as) (null bs))
-           (if z0
-               (list (cons z0 nil))
-             nil))
-          (t
-           (setq z1 (cond ((null as) (caar bs))
-                          ((null bs) (caar as))
-                          (t (min (caar as) (caar bs)))))
-           (let ((rest (bands-op (if (and as (= z1 (caar as))) (cdr as) as)
-                                 (if (and bs (= z1 (caar bs))) (cdr bs) bs)
-                                 isum-op
-                                 z1
-                                 (if (and as (= z1 (caar as))) (cdar as) a)
-                                 (if (and bs (= z1 (caar bs))) (cdar bs) b)))
-                 (isum (funcall isum-op a b)))
-             (if z0
-                 (if (and rest (equal isum (cdar rest)))
-                     (cons (cons z0 isum)
-                           (cdr rest))
-                   (cons (cons z0 isum)
-                         rest))
-               rest))))))
+(defun bands-op (isum-op as bs)
+  (declare (optimize speed))
+  (let ((isum-op (alexandria:ensure-function isum-op)))
+    (labels ((rec (a as b bs z0)
+               (let (z1)
+                 (cond ((not (and (null as) (null bs)))
+                        (setq z1 (cond ((null as) (caar bs))
+                                       ((null bs) (caar as))
+                                       (t (min (caar as) (caar bs)))))
+                        (multiple-value-bind (new-a new-as)
+                            (if (and as (= z1 (caar as)))
+                                (values (cdar as) (cdr as))
+                                (values a         as))
+                          (multiple-value-bind (new-b new-bs)
+                              (if (and bs (= z1 (caar bs)))
+                                  (values (cdar bs) (cdr bs))
+                                  (values b         bs))
+                            (let ((rest (rec new-a new-as new-b new-bs z1))
+                                  (isum (funcall isum-op a b)))
+                              (cond ((null z0)
+                                     rest)
+                                    ((and rest (equal isum (cdar rest)))
+                                     (cons (cons z0 isum) (cdr rest)))
+                                    (t
+                                     (cons (cons z0 isum) rest)))))))
+                       (z0
+                        (list (cons z0 nil)))
+                       (t
+                        nil)))))
+      (rec nil as nil bs nil))))
 
 (defun canon-empty-bands (x)
   (cond ((null (cdr x)) nil)
         (t x)))
 
 (defun bands-union (as bs)
-  (canon-empty-bands (bands-op as bs #'isum-union* nil nil nil)))
+  #+no (assert (equal (canon-empty-bands (bands-op #'isum-union* as bs))
+                      (canon-empty-bands (bands-op #'new-isum-union* as bs))))
+  (canon-empty-bands (bands-op #'new-isum-union* as bs)))
 
 (defun bands-intersection (as bs)
-  (canon-empty-bands (bands-op as bs #'isum-intersection* nil nil nil)))
+  (canon-empty-bands (bands-op #'isum-intersection* as bs)))
 
 (defun bands-difference (as bs)
-  (canon-empty-bands (bands-op as bs #'isum-difference* nil nil nil)))
-
+  (canon-empty-bands (bands-op #'isum-difference* as bs)))
 
 (defun rectangle->xy-bands* (x1 y1 x2 y2)
-  (list (list y1 x1 x2)
+  (list (cons y1 (list x1 x2))
         (cons y2 nil)))
 
 (defun rectangle->yx-bands* (x1 y1 x2 y2)
-  (list (list x1 y1 y2)
+  (list (cons x1 (list y1 y2))
         (cons x2 nil)))
 
 (defun xy-bands->yx-bands (bands)
