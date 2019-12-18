@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: MCCLIM-TRUETYPE; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Font matrics, caching, and XRender text support 
+;;;     Title: Font matrics, caching, and XRender text support
 ;;;   Created: 2003-05-25 16:32
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: LGPL (See file COPYING for details).
@@ -185,14 +185,14 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
 
 (defun gcontext-picture (drawable gcontext)
   (flet ((update-foreground (picture)
-           ;; FIXME! This makes assumptions about pixel format, and breaks 
+           ;; FIXME! This makes assumptions about pixel format, and breaks
            ;; on e.g. 16 bpp displays.
            ;; It would be better to store xrender-friendly color values in
-           ;; medium-gcontext, at the same time we set the gcontext 
+           ;; medium-gcontext, at the same time we set the gcontext
            ;; foreground. That way we don't need to know the pixel format.
            (let ((fg (the xlib:card32 (xlib:gcontext-foreground gcontext))))
              (xlib::render-fill-rectangle picture
-                                          :src                                          
+                                          :src
                                           (list (ash (ldb (byte 8 16) fg) 8)
                                                 (ash (ldb (byte 8 8) fg) 8)
                                                 (ash (ldb (byte 8 0) fg) 8)
@@ -202,7 +202,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
            (picture-info
             (or (getf (xlib:gcontext-plist gcontext) 'picture)
                 (setf (getf (xlib:gcontext-plist gcontext) 'picture)
-                      (let* ((pixmap (xlib:create-pixmap 
+                      (let* ((pixmap (xlib:create-pixmap
                                       :drawable drawable
                                       :depth (xlib:drawable-depth drawable)
                                       :width 1 :height 1))
@@ -230,7 +230,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                   align-x align-y
                                   translate direction
                                   transformation transform-glyphs
-                                &aux (font (climb:text-style-to-font
+                                &aux (font (text-style-mapping
                                             (port medium) (medium-text-style medium))))
   (declare (optimize (speed 3))
            (ignore translate direction)
@@ -330,6 +330,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
 ;;; Transforming glyphs is very inefficient because we don't cache them.
 (defun %render-transformed-glyphs (font string x y align-x align-y tr mirror gc
                                    &aux (end (length string)))
+  (declare (ignore align-x align-y))
   ;; Sync the picture-clip-mask with that of the gcontext.
   (when-let ((clip (xlib::gcontext-clip-mask gc)))
     (unless (eq (xlib::picture-clip-mask (drawable-picture mirror)) clip))
@@ -424,7 +425,8 @@ The following files should exist:~&~{  ~A~^~%~}"
                      *truetype-font-path*
                      (mapcar #'cdr *families/faces*)))))
 
-(defmethod climb:text-style-to-font ((port clx-ttf-port) (text-style climi::device-font-text-style))
+(defmethod text-style-mapping ((port clx-ttf-port) (text-style climi::device-font-text-style) &optional character-set)
+  (declare (ignore character-set))
   (let ((font-name (climi::device-font-name text-style)))
     (when (stringp font-name)
       (setf (climi::device-font-name text-style)
@@ -437,13 +439,13 @@ The following files should exist:~&~{  ~A~^~%~}"
                            (namestring (truetype-device-font-name-font-file font-name))
                            (truetype-device-font-name-size font-name)))
       (fontconfig-font-name
-       (climb:text-style-to-font
+       (text-style-mapping
         port
         (or (fontconfig-font-name-device-name font-name)
             (setf (fontconfig-font-name-device-name font-name)
                   (make-device-font-text-style
                    port
-                   (make-truetype-device-font-name 
+                   (make-truetype-device-font-name
                     :font-file (find-fontconfig-font
                                 (format nil "~A-~A~{:~A~}"
                                         (namestring (fontconfig-font-name-string font-name))
@@ -451,8 +453,10 @@ The following files should exist:~&~{  ~A~^~%~}"
                                         (fontconfig-font-name-options font-name)))
                     :size (fontconfig-font-name-size font-name))))))))))
 
-(defmethod climb:text-style-to-font ((port clx-ttf-port) (text-style standard-text-style)
-                                     &aux (text-style (climb:parse-text-style* text-style)))
+(defmethod text-style-mapping ((port clx-ttf-port) (text-style standard-text-style)
+                               &optional character-set
+                               &aux (text-style (climb:parse-text-style* text-style)))
+  (declare (ignore character-set))
   (labels
       ((find-and-make-truetype-font (family face size)
          (let* ((font-path-maybe-relative
@@ -468,17 +472,11 @@ The following files should exist:~&~{  ~A~^~%~}"
                                     (or *truetype-font-path* "")))))))
            (if (and font-path (probe-file font-path))
                (make-truetype-font port font-path size)
-               ;; We could error here, but we want to fallback to
-               ;; fonts provided by CLX server. Its better to have
-               ;; ugly fonts than none at all.
-               (or (call-next-method)
-                   (error 'missing-font
-                          :filename font-path
-                          :text-style text-style)))))
+               (error 'missing-font
+                      :filename font-path
+                      :text-style text-style))))
        (find-font ()
          (multiple-value-call #'find-and-make-truetype-font
            (clim:text-style-components text-style))))
-    (or (text-style-mapping port text-style)
-        (setf (climi::text-style-mapping port text-style)
-              (or (find-truetype-font port text-style)
-                  (invoke-with-truetype-path-restart #'find-font))))))
+    (or (find-truetype-font port text-style)
+                  (invoke-with-truetype-path-restart #'find-font))))

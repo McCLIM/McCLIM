@@ -58,6 +58,7 @@
   ((shape1 :accessor shape1 :initform (make-instance 'rect :x 10 :y 10))
    (shape2 :accessor shape2 :initform (make-instance 'rect :x 100 :y 10)))
   (:pointer-documentation t)
+  (:menu-bar nil)
   (:panes
    (interactor :interactor)
    (scribble :application :width 200 :display-function 'display-shapes))

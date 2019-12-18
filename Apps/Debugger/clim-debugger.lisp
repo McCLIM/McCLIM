@@ -168,7 +168,7 @@
 (define-clim-debugger-command (com-invoke-inspector
                                :name "Invoke inspector")
     ((obj inspect))
-  (clouseau:inspector obj :new-process t))
+  (clouseau:inspect obj :new-process t))
 
 (define-clim-debugger-command (com-refresh :name "Refresh" :menu t
                                            :keystroke #\r) ()

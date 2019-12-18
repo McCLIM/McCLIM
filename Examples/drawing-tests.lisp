@@ -40,6 +40,7 @@
    (current-selection :initform nil)
    (application-frame-backend :initform :clx-ttf)
    (frames :initform (make-hash-table)))
+  (:menu-bar nil)
   (:panes
    (category-test-pane
     (horizontally (:equalize-height t)
@@ -1452,6 +1453,27 @@ outside the clipping area should be grey.")
     (format stream "~&We all live in a yellow subroutine.~%")
     (format stream "~&We all live in a yellow subroutine.~%")))
 
+(define-drawing-test "Text" "Crossing out" (frame stream)
+    ""
+  (declare (ignore frame))
+  (with-text-family (stream :sans-serif)
+    (format stream "~&We all live in a yellow subroutine.~%")
+    (format stream "~&We ")
+    (surrounding-output-with-border (stream :shape :crossout
+                                            :line-thickness 2
+                                            :move-cursor nil)
+      (format stream "all live"))
+    (format stream " in a yellow subroutine.~%")
+    (format stream "~&We ")
+    (surrounding-output-with-border (stream :shape :crossout
+                                            :ink +red+
+                                            :line-dashes t
+                                            :move-cursor nil)
+      (format stream "all live"))
+    (format stream " in a yellow subroutine.~%")
+    (format stream "~&We all live in a yellow subroutine.~%")
+    (format stream "~&We all live in a yellow subroutine.~%")))
+
 (define-drawing-test "Text" "Fonts" (frame stream)
     ""
   (declare (ignore frame))
@@ -1779,7 +1801,7 @@ outside the clipping area should be grey.")
                    :text-family :sans-serif
                    :text-face :bold)
   (clim:formatting-table (stream)
-    (flet ((draw (angle line-joint-shape)
+    (flet ((draw (stream angle line-joint-shape)
              (let ((record
                     (clim:with-output-to-output-record (stream)
                       (let ((v (* 50 (tan angle))))
@@ -1809,9 +1831,9 @@ outside the clipping area should be grey.")
          unless (= i 0)
          do (clim:formatting-row (stream)
               (clim:formatting-cell (stream) (print (* i dag) stream))
-              (clim:formatting-cell (stream) (draw a :miter))
-              (clim:formatting-cell (stream) (draw a :bevel))
-              (clim:formatting-cell (stream) (draw a :round)))))))
+              (clim:formatting-cell (stream) (draw stream a :miter))
+              (clim:formatting-cell (stream) (draw stream a :bevel))
+              (clim:formatting-cell (stream) (draw stream a :round)))))))
 
 (define-drawing-test "Table" "dashes" (frame stream)
     ""
@@ -1819,7 +1841,8 @@ outside the clipping area should be grey.")
   (clim:formatting-table (stream :x-spacing 50
                                  :y-spacing 20)
     (clim:formatting-row (stream)
-      (clim:formatting-cell (stream))
+      (clim:formatting-cell (stream)
+        (declare (ignore stream)))
       (clim:formatting-cell (stream :align-x :center
                                     :align-y :bottom
                                     :min-height 100)
@@ -2283,7 +2306,8 @@ outside the clipping area should be grey.")
   (declare (ignore frame))
   (formatting-table (stream :x-spacing 20 :y-spacing 20)
     (formatting-row (stream)
-      (formatting-cell (stream :min-height 80)))
+      (formatting-cell (stream :min-height 80)
+        (declare (ignore stream))))
     (formatting-row (stream)
       (formatting-cell (stream :align-x :left
                                :align-y :top)

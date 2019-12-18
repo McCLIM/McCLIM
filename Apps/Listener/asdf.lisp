@@ -13,8 +13,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-listener)
@@ -38,13 +38,7 @@
 
 (defun asdf-loaded-systems ()
   "Retrieve a list of loaded systems from ASDF"
-  (let (systems)
-    (maphash
-     (lambda (name foo.system)
-       (declare (ignore name))
-       (push (cdr foo.system) systems))
-     asdf::*defined-systems*)
-    systems))
+  (map 'list #'asdf:find-system (asdf:already-loaded-systems)))
 
 (defun asdf-get-central-registry ()
   asdf::*central-registry*)
@@ -57,9 +51,6 @@
 	      (when (string-equal (pathname-type path) "asd")
 		(systems (truename path))))
 	    (cl-fad:list-directory (eval reg))))))
-
-(defun asdf-system-name (system)
-  (slot-value system 'asdf::name))
 
 (defun asdf-operation-pretty-name (op)
   (case op
@@ -83,25 +74,25 @@
                                             (view textual-view)
                                             &key acceptably)
   (if acceptably
-      (princ (asdf-system-name object) stream )
+      (princ (asdf:coerce-name object) stream)
       (let* ((history (asdf-system-history object))
              (loaded-p (find 'asdf:load-op history))
              (eff-history (set-difference history (ignorable-attributes view))))
         (when (and (note-unloaded view) (not loaded-p))
           (push :unloaded eff-history))
         (format stream "~A~A"
-                (asdf-system-name object)
+                (asdf:coerce-name object)
                 (if (null eff-history)
                     (default-attr-label view)
                     (format nil " (~{~a~^, ~})"
                             (mapcar 'asdf-operation-pretty-name eff-history)))))))
-  
+
 (define-presentation-method accept ((type asdf-system) stream
                                     (view textual-view) &key)
   (multiple-value-bind (object success)
       (completing-from-suggestions (stream)
         (dolist (system (asdf-loaded-systems))
-          (suggest (asdf-system-name system) system)))
+          (suggest (asdf:coerce-name system) system)))
     (if success
         object
         (simple-parse-error "Unknown system"))))
@@ -110,7 +101,7 @@
                                   :command-table asdf-commands
                                   :menu t)
     ()
-  (format-items 
+  (format-items
    (asdf-loaded-systems)
    :printer (lambda (item stream)
               (present item 'asdf-system
@@ -124,7 +115,7 @@
                                             :command-table asdf-commands
                                             :menu t)
     ()
-  (format-items (asdf-registry-system-files)                
+  (format-items (asdf-registry-system-files)
                 :presentation-type 'asdf-system-definition))
 
 (define-command (com-operate-on-system :name "Operate On System"
@@ -143,7 +134,7 @@
   (asdf:oos 'asdf:compile-op system)
   (asdf:oos 'asdf:load-op system))
 
-(defmethod mime-type-to-command ((mime-type text/x-lisp-system) pathname)  
+(defmethod mime-type-to-command ((mime-type text/x-lisp-system) pathname)
   (values `(com-load-system ,pathname)
           "Load System"
           (format nil "Load System ~A" pathname)))

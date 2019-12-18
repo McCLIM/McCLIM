@@ -7,6 +7,7 @@
 (clim:define-application-frame image-transform-demo ()
   ((image :initarg :image
           :accessor image-transform-demo/image))
+  (:menu-bar nil)
   (:panes (image-demo :application
                       :display-function 'display-image-demo
                       :scroll-bars :both

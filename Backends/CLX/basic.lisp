@@ -24,7 +24,7 @@
 
 (in-package :clim-clx)
 
-(defclass clx-basic-port (standard-event-port-mixin standard-port)
+(defclass clx-basic-port (standard-port)
   ((display :initform nil
 	    :accessor clx-port-display)
    (screen :initform nil
@@ -110,31 +110,26 @@
 
 (defmethod pointer-position ((pointer clx-basic-pointer))
   (let* ((port (port pointer))
-	 (sheet (port-pointer-sheet port)))
-    (when sheet
-      (multiple-value-bind (x y same-screen-p)
-	  (xlib:query-pointer (sheet-xmirror sheet))
-	(when same-screen-p
-	  (untransform-position (sheet-native-transformation sheet) x y))))))
+         (graft (graft port))
+         (xmirror (sheet-xmirror graft)))
+    (multiple-value-bind (x y same-screen-p)
+        (xlib:query-pointer xmirror)
+      (when same-screen-p
+        (untransform-position (sheet-native-transformation graft) x y)))))
 
-(defmethod clim-internals::sheet-pointer-position (sheet (pointer clx-basic-pointer))
-  (if (sheet-direct-mirror sheet)
-      (multiple-value-bind (native-x native-y) (xlib:query-pointer (sheet-xmirror sheet))
-	(untransform-position (sheet-device-transformation sheet) native-x native-y))
-      (let* ((mirrored-ancestor (sheet-mirrored-ancestor sheet))
-	     (mirror (sheet-direct-xmirror mirrored-ancestor)))
-	(multiple-value-bind (native-x native-y) (xlib:query-pointer mirror)
-	  (multiple-value-bind (parent-x parent-y)
-	      (untransform-position (sheet-device-transformation mirrored-ancestor) native-x native-y)
-	    (untransform-position (sheet-delta-transformation sheet mirrored-ancestor) parent-x parent-y)
-	    )))))
+(clim-sys:defmethod* (setf pointer-position) (x y (pointer clx-basic-pointer))
+  (let* ((port (port pointer))
+         (graft (graft port))
+         (xmirror (sheet-xmirror graft)))
+    (multiple-value-bind (x y)
+        (transform-position (sheet-native-transformation graft) x y)
+      (xlib:warp-pointer xmirror (round x) (round y)))))
 
 (defmethod set-sheet-pointer-cursor ((port clx-basic-port) (sheet mirrored-sheet-mixin) cursor)
   (let ((cursor (gethash (or cursor :default) (clx-port-cursor-table port)))
 	(mirror (sheet-direct-xmirror sheet)))
-    (when (and cursor
-	       (typep mirror 'xlib:window))
-      (setf (xlib:window-cursor (sheet-direct-xmirror sheet)) cursor))))
+    (when (and cursor (typep mirror 'xlib:window))
+      (setf (xlib:window-cursor mirror) cursor))))
 ;;;
 ;;;
 ;;;

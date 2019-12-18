@@ -110,6 +110,7 @@
             :activate-callback (queue-integer ,number))))
 
 (define-application-frame sliderdemo () ()
+  (:menu-bar nil)
   (:panes #.(make-operator-button-form 'plus "+" '+)
           #.(make-operator-button-form 'dash "-" '-)
           #.(make-operator-button-form 'multiply "*" '*)

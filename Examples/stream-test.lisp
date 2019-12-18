@@ -45,6 +45,7 @@
 
 (define-application-frame stream-test ()
   ()
+  (:menu-bar nil)
   (:panes
    (tester (make-clim-stream-pane :type 'echo-interactor-pane)))
   (:layouts

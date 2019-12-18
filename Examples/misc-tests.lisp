@@ -39,6 +39,7 @@
 
 (define-application-frame misc-tests ()
   ()
+  (:menu-bar nil)
   (:panes
    (output :application-pane)
    (description :application-pane :end-of-line-action :wrap*)

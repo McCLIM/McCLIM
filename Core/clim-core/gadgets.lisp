@@ -555,8 +555,9 @@ and must never be nil.")
 (defgeneric radio-box-selections (radio-box))
 
 (defmethod radio-box-selections ((pane radio-box))
-  (let ((v (radio-box-current-selection pane)))
-    (and v (list v))))
+  (loop for child in (sheet-children pane)
+        when (typep child 'toggle-button)
+        collect child))
 
 (defmethod value-changed-callback :before (value-gadget (client radio-box) gadget-id value)
   (declare (ignorable value-gadget gadget-id value))
@@ -591,6 +592,11 @@ and must never be nil.")
 
 (defmethod (setf check-box-current-selection) (new-value (check-box check-box))
   (setf (gadget-value check-box) new-value))
+
+(defmethod check-box-selections ((pane check-box))
+  (loop for child in (sheet-children pane)
+        when (typep child 'toggle-button)
+        collect child))
 
 (defmethod value-changed-callback :before (value-gadget (client check-box) gadget-id value)
   (declare (ignorable gadget-id))
@@ -1164,10 +1170,10 @@ and must never be nil.")
 
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-release-event))
   (with-slots (armed pressedp) pane
-    (setf pressedp nil)
-    (when armed
-      (activate-callback pane (gadget-client pane) (gadget-id pane))
+    (when pressedp
       (setf pressedp nil)
+      (when armed
+        (activate-callback pane (gadget-client pane) (gadget-id pane)))
       (dispatch-repaint pane +everywhere+))))
 
 (defmethod handle-repaint ((pane push-button-pane) region)
@@ -1763,7 +1769,7 @@ and must never be nil.")
 
 (defmethod handle-event ((pane slider-pane) (event pointer-button-release-event))
   (with-slots (armed) pane
-    (when armed
+    (when (eq armed ':button-press)
       (setf armed t
             (gadget-value pane :invoke-callback t)
             (convert-position-to-value pane event))

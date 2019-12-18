@@ -63,6 +63,7 @@
 
 (define-application-frame colorslider
     () ()
+    (:menu-bar nil)
     (:panes
      (text :text-field :value "Pick a color")
      (slider-r :slider

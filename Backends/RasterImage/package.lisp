@@ -13,9 +13,8 @@
 		  #:port-lookup-sheet
 		  #:destroy-mirror
 		  #:realize-mirror
-		  #:unmanaged-top-level-sheet-pane
-		  #:vbox-pane
-		  )
+                  #:unmanaged-top-level-sheet-pane
+		  #:vbox-pane)
     (:import-from :mcclim-render-internals
 		  #:render-medium-mixin
 		  #:render-port-mixin
@@ -35,16 +34,15 @@
 		  #:*truetype-font-path*
 		  #:*family-names*
 		  #:zpb-ttf-font-loader
-		  #:*zpb-font-lock* 
+		  #:*zpb-font-lock*
 		  #:*fontconfig-faces*
 		  #:*families/faces*
-		  #:truetype-device-font-name 
+		  #:truetype-device-font-name
 		  #:fontconfig-font-name
-		  #:make-truetype-device-font-name 
+		  #:make-truetype-device-font-name
 		  #:make-fontconfig-font-name)
     (:export
      #:with-output-to-raster-image-stream
      #:with-output-to-raster-image-file
      #:with-output-to-rgba-pattern
      #:with-output-to-image-stream))
-

@@ -109,10 +109,12 @@
       record
     (let ((dx (- nx x1))
           (dy (- ny y1)))
-      (let ((tr (make-instance 'climi::standard-translation :dx dx :dy dy)))
-        (multiple-value-prog1
-            (call-next-method))
-        (setf (output-record-translation record) tr))))
+      (let ((current-translation (or (output-record-translation record)
+                                     (make-instance 'climi::standard-translation :dx 0 :dy 0)))
+            (tr (make-instance 'climi::standard-translation :dx dx :dy dy)))
+        (call-next-method)
+        (setf (output-record-translation record)
+              (compose-transformations current-translation tr)))))
   (values nx ny))
 
 (defmethod replay-output-record :around ((record draw-bezier-design-output-record) stream

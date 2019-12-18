@@ -15,8 +15,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-internals)
@@ -270,7 +270,7 @@ designator) inherits menu items."
     (if (null item)
 	(when errorp
 	  (error 'command-not-present :command-table-name (command-table-name command-table)))
-	(progn 
+	(progn
 	  (when (typep item '%menu-item)
 	    (remove-menu-item-from-command-table table
 						 (command-menu-item-name item)
@@ -285,7 +285,7 @@ designator) inherits menu items."
 				     &key name menu keystroke (errorp t)
 				     (menu-command (and menu
 							`(,command-name))))
-  
+
   (let ((table (find-command-table command-table))
 	(name (cond ((stringp name)
 		     name)
@@ -325,7 +325,7 @@ designator) inherits menu items."
 	  (setf (gethash name (command-line-names table)) command-name))
 	(when menu
 	  (%add-menu-item table item after))))))
-						  
+
 
 (defun apply-with-command-table-inheritance (fun command-table)
   (funcall fun command-table)
@@ -654,7 +654,7 @@ examine the type of the command menu item to see if it is
                           (declare (ignore foo))
                           *unsupplied-argument-marker*)
                       (required-args parser))))))
-  
+
 ;;; XXX The spec says that GESTURE may be a gesture name, but also that the
 ;;; default test is event-matches-gesture-name-p.  Uh...
 
@@ -697,7 +697,7 @@ examine the type of the command menu item to see if it is
 		      :initarg :argument-unparser)
    (required-args :accessor required-args :initarg :required-args)
    (keyword-args :accessor keyword-args :initarg :keyword-args))
-  
+
   (:documentation "A container for a command's parsing functions and
   data for unparsing"))
 
@@ -778,7 +778,7 @@ examine the type of the command menu item to see if it is
     (return-from make-key-acceptors nil))
   (setq keyword-args (mapcar #'(lambda (arg)
 				 (cons (make-keyword (car arg)) (cdr arg)))
-			     keyword-args))  
+			     keyword-args))
   (let ((key-possibilities (gensym "KEY-POSSIBILITIES"))
 	(member-ptype (gensym "MEMBER-PTYPE"))
 	(key-result (gensym "KEY-RESULT"))
@@ -818,9 +818,9 @@ examine the type of the command menu item to see if it is
 			  keyword-args))))
 	       (setq ,key-results (list* ,key-result
 					 ,val-result
-					 ,key-results)))	     
+					 ,key-results)))
 	     (eat-delimiter-or-activator))))
-       
+
        ,key-results)))
 
 (defun make-argument-accept-fun (name required-args keyword-args)
@@ -921,7 +921,7 @@ examine the type of the command menu item to see if it is
 	 for (arg ptype-form) in key-args
 	 for arg-key = (make-keyword arg)
 	 collect `(,arg-key
-		   
+
 		   (format ,stream "~C:~A~C"
 			   ,seperator
 			   ,(keyword-arg-name-from-symbol arg)
@@ -955,6 +955,7 @@ examine the type of the command menu item to see if it is
 		 (destructuring-bind (name ptype
 				      &key gesture &allow-other-keys)
 		     arg
+                   (declare (ignore name))
 		   (let ((command-args (loop for a in args
 					     for i from 0
 					     if (eql i arg-index)
@@ -966,7 +967,7 @@ examine the type of the command menu item to see if it is
 							  ".~A-ARG~D."
 							  command-name
 							  arg-index)
-						  (symbol-package name))))
+						  (symbol-package command-name))))
 		     (multiple-value-bind (gesture translator-options)
 			 (if (listp gesture)
 			     (values (car gesture) (cdr gesture))
@@ -1056,89 +1057,42 @@ examine the type of the command menu item to see if it is
 			       :argument-unparser #',arg-unparser-fun-name))
 	  ',func)))))
 
-;;; define-command with output destination extension
-
-(defclass output-destination ()
-  ())
-
-(defgeneric invoke-with-standard-output (continuation destination)
-  (:documentation "Invokes `continuation' (with no arguments) with
-  *standard-output* rebound according to `destination'"))
-
-(defclass standard-output-destination (output-destination)
-  ())
-
-(defmethod invoke-with-standard-output (continuation (destination null))
-  "Calls `continuation' without rebinding *standard-output* at all."
-  (funcall continuation))
-
-(defclass stream-destination (output-destination)
-  ((destination-stream :accessor destination-stream
-		       :initarg :destination-stream)))
-
-(defmethod invoke-with-standard-output
-    (continuation (destination stream-destination))
-  (let ((*standard-output* (destination-stream destination)))
-    (funcall continuation)))
+;;; Output destination extension for DEFINE-COMMAND
+;;;
+;;; The backend part, i.e. INVOKE-WITH-STANDARD-OUTPUT and the
+;;; destination classes, is defined in clim-basic/stream-output.lisp.
 
 (define-presentation-method accept
     ((type stream-destination) stream (view textual-view)
-     &key)
-  (let ((dest (eval (accept 'form
-			    :stream stream
-			    :view view
-			    :default *standard-output*))))
+                               &key
+                               (default '*standard-output*)
+                               (prompt "stream form"))
+  (let ((dest (eval (accept 'form :stream stream :view view
+                                  :default default :prompt prompt))))
     (if (and (streamp dest)
-	     (output-stream-p dest))
-	(make-instance 'stream-destination :destination-stream dest)
-	(input-not-of-required-type dest type))))
-
-(defclass file-destination (output-destination)
-  ((file :accessor file :initarg :file)))
-
-(defmethod invoke-with-standard-output
-    (continuation (destination file-destination))
-  (with-open-file (*standard-output* (file destination)
-				     :direction :output :if-exists :supersede)
-    (funcall continuation)))
+             (output-stream-p dest))
+        (make-instance 'stream-destination :destination-stream dest)
+        (input-not-of-required-type dest type))))
 
 (define-presentation-method accept
     ((type file-destination) stream (view textual-view)
-     &key)
-  (let ((path (accept 'pathname :stream stream :prompt nil)))
+                             &key (prompt "destination file"))
+  (let ((path (accept 'pathname :stream stream :view view :prompt prompt)))
     ;; Give subclasses a shot
-    (with-presentation-type-decoded (type-name)
-        type
-	(format *debug-io* "file destination type = ~S~%" type)
-	(make-instance type-name :file path))))
-
-(defclass postscript-destination (file-destination)
-  ())
-
-(defmethod invoke-with-standard-output
-    (continuation (destination postscript-destination))
-  (call-next-method #'(lambda ()
-			(with-output-to-postscript-stream
-			    (ps-stream *standard-output*)
-			  (let ((*standard-output* ps-stream))
-			    (funcall continuation))))
-		    destination))
-
-(defparameter *output-destination-types*
-  '(("File" file-destination)
-    ("Postscript File" postscript-destination)
-    ("Stream" stream-destination)))
+    (with-presentation-type-decoded (type-name) type
+      (make-instance type-name :file path))))
 
 (define-presentation-method accept
     ((type output-destination) stream (view textual-view)
-     &key)
+                               &key
+                               (default "Stream")
+                               (prompt nil))
   (let ((type (accept `(member-alist ,*output-destination-types*)
-		      :stream stream
-		      :view view
-		      :default 'stream-destination
-		      :additional-delimiter-gestures '(#\space))))
+                      :stream stream :view view
+                      :default default :prompt prompt
+                      :additional-delimiter-gestures '(#\space))))
     (read-char stream)
-    (accept type :stream stream :view view)))
+    (accept type :stream stream :view view :prompt nil)))
 
 ;;; The default for :provide-output-destination-keyword is nil until we fix
 ;;; some unfortunate problems with completion, defaulting, and keyword
@@ -1159,10 +1113,10 @@ examine the type of the command menu item to see if it is
           (unless (eq argument-description '&key)
             ;; Ensure correct structure and valid keywords.
             (destructuring-bind (parameter type &key
-                                default default-type display-default mentioned-default
-                                prompt documentation when gesture
-                                ;; These two are not standard, but ESA uses them.
-                                prompt-mode insert-default)
+                                 default default-type display-default mentioned-default
+                                 prompt documentation when gesture
+                                 ;; These two are not standard, but ESA uses them.
+                                 prompt-mode insert-default)
                 argument-description
               (declare (ignore parameter default default-type display-default mentioned-default
                                prompt documentation when gesture
@@ -1172,30 +1126,30 @@ examine the type of the command menu item to see if it is
                 (setf (second argument-description) `(quote ,type))))))
         args)
   (destructuring-bind (func &rest options
-		       &key (provide-output-destination-keyword nil)
-		       &allow-other-keys)
+                       &key (provide-output-destination-keyword nil)
+                       &allow-other-keys)
       name-and-options
     (with-keywords-removed (options (:provide-output-destination-keyword))
       (if provide-output-destination-keyword
-          (let ((key-supplied (find '&key args)))
-            (let* ((destination-arg '(output-destination 'output-destination
-                                      :default nil))
-                   (new-args (if key-supplied
-                                 `(,@args ,destination-arg)
-                                 `(,@args &key ,destination-arg))))
-              (multiple-value-bind (decls new-body)
-                  (get-body-declarations body)
-                (with-gensyms (destination-continuation)
-                  `(%define-command (,func ,@options) ,new-args
-                     ,@decls
-                     (flet ((,destination-continuation ()
-                              ,@new-body))
-                       (declare (dynamic-extent #',destination-continuation))
-                       (invoke-with-standard-output #',destination-continuation
-                                                    output-destination)))))))
-	  `(%define-command (,func ,@options)
-			    ,args
-	     ,@body)))))
+          (let* ((key-supplied (find '&key args))
+                 (destination-arg '(output-destination 'output-destination
+                                    :default nil :display-default nil))
+                 (new-args (if key-supplied
+                               `(,@args ,destination-arg)
+                               `(,@args &key ,destination-arg))))
+            (multiple-value-bind (decls new-body)
+                (get-body-declarations body)
+              (with-gensyms (destination-continuation)
+                `(%define-command (,func ,@options) ,new-args
+                   ,@decls
+                   (flet ((,destination-continuation ()
+                            ,@new-body))
+                     (declare (dynamic-extent #',destination-continuation))
+                     (invoke-with-standard-output #',destination-continuation
+                                                  output-destination))))))
+          `(%define-command (,func ,@options)
+                            ,args
+             ,@body)))))
 
 ;;; Note that command table inheritance is the opposite of Common Lisp
 ;;; subclassing / subtyping: the inheriting table defines a superset
@@ -1257,7 +1211,7 @@ examine the type of the command menu item to see if it is
     ;; commands to work ] works really badly if (frame-command-table
     ;; *application-frame*) is set/bound to the dispatching
     ;; command-table itself.
-    ;; 
+    ;;
     ;; Instead we now use the knowledge of how disabled commands are
     ;; implemented to satisfy the constraint that only enabeled
     ;; commands are acceptable (with the "accessible" constraint being
@@ -1396,49 +1350,6 @@ examine the type of the command menu item to see if it is
 
 (defparameter +null-command+ '(com-null-command))
 
-(defclass presentation-command-translator (presentation-translator)
-  ()
-  (:documentation "Wraps the tester function with a test that
-  determines if the command is enabled."))
-
-(defmethod initialize-instance :after ((obj presentation-command-translator)
-				       &key tester command-name)
-  (setf (slot-value obj 'tester)
-	#'(lambda (&rest args)
-	    (if (command-enabled command-name *application-frame*)
-		(when tester
-		  (apply tester args))
-		nil))))
-
-(defmacro define-presentation-to-command-translator 
-    (name (from-type command-name command-table &key
-	   (gesture :select)
-	   (tester 'default-translator-tester)
-	   (documentation nil documentationp)
-	   (pointer-documentation (command-name-from-symbol command-name))
-	   (menu t)
-	   (priority 0)
-	   (echo t))
-     arglist
-     &body body)
-  (let ((command-args (gensym "COMMAND-ARGS")))
-    `(define-presentation-translator ,name
-	 (,from-type (command :command-table ,command-table) ,command-table
-		     :gesture ,gesture
-		     :tester ,tester
-		     :tester-definitive t
-		     ,@(and documentationp `(:documentation ,documentation))
-		     :pointer-documentation ,pointer-documentation
-		     :menu ,menu
-		     :priority ,priority
-		     :translator-class presentation-command-translator
-		     :command-name ',command-name)
-       ,arglist
-       (let ((,command-args (let () ,@body)))
-	 (values (cons ',command-name ,command-args)
-		 '(command :command-table ,command-table)
-		 '(:echo ,echo))))))
-
 (defun command-name (command)
   (first command))
 
@@ -1571,4 +1482,3 @@ examine the type of the command menu item to see if it is
 	      (accept 'form :stream stream :view view :prompt nil :history 'command-or-form)))
       (t
        (funcall (cdar *input-context*) object type event options)))))
-

@@ -271,7 +271,9 @@ advised of the possiblity of such damages.
                (format stream "~A" window)))
    :description "a window")
 
-(clim:define-presentation-type-abbreviation alist-member (&key alist (test 'eql))
+(clim:define-presentation-type-abbreviation alist-member
+    (&key (alist (error "The :ALIST keyword argument is required"))
+          (test 'eql))
   `(clim:member-alist ,alist :test ,test))
 
 (defun menu-execute-no-side-effects (item)
@@ -282,7 +284,7 @@ advised of the possiblity of such damages.
 
 (defun token-element-string (element)
   (typecase element
-    (null (symbol-name element))		
+    (null (symbol-name element))
     (cons (string (first element)))
     (symbol (string-capitalize (symbol-name element)))
     (string element)
@@ -364,7 +366,8 @@ advised of the possiblity of such damages.
                     :x-spacing '(2 :character))
 	 (draw-all sequence stream))))))
 
-(define-presentation-type alist-subset (&key alist)
+(define-presentation-type alist-subset
+    (&key (alist (error "The :ALIST keyword argument is required")))
   ;; Yes, I know clim 1.0 has one of these, but it doesn't work in avv mode!.
   :parser ((stream)
 	   (accept `(sequence (alist-member :alist ,alist))

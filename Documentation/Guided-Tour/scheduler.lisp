@@ -1,14 +1,13 @@
-(eval-when (:compile-toplevel)
-  (asdf:oos 'asdf:load-op :clim)
-  (asdf:oos 'asdf:load-op :clim-clx))
+(cl:eval-when (:compile-toplevel :load-toplevel :execute)
+  (ql:quickload :mcclim))
 
-(in-package :clim-user)
+(cl:in-package #:clim-user)
 
 ; LTAG-start:scheduler-part1
 (defvar *days* #("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat"))
 
 ;; Alist of day number and appointment strings
-(defvar *test-data* 
+(defvar *test-data*
   '((0) (1 "Dentist") (2 "Staff meeting") (3 "Performance Evaluation" "Bowling")
     (4 "Interview at ACME" "The Simpsons") (5 "TGIF") (6 "Sailing")))
 
@@ -29,16 +28,16 @@
   ((appointments :initarg :appointments :initform *test-data*)
    (current-day :initform nil))
   (:panes (scheduler-display :application
-			     :display-function '(display-appointments))
-	  (interactor :interactor))
+                             :display-function '(display-appointments))
+          (interactor :interactor))
   (:layouts (default-layout
-	      (vertically ()
-			  scheduler-display
-			  interactor))
-	    (alternative-layout
-	     (horizontally ()
-			   interactor
-			   scheduler-display)))
+             (vertically ()
+               scheduler-display
+               interactor))
+            (alternative-layout
+             (horizontally ()
+               interactor
+               scheduler-display)))
   (:menu-bar t))
 
 ;;; Chooses which day to see in detail,
@@ -55,8 +54,8 @@
 (define-scheduler-command (com-toggle-layout :name t :menu t) ()
   (with-accessors ((layout frame-current-layout)) *application-frame*
     (setf layout (if (eq layout 'default-layout)
-		     'alternative-layout
-		   'default-layout))))
+                     'alternative-layout
+                     'default-layout))))
 ; LTAG-end
 ; LTAG-start:scheduler-part2
 ;;; Complex display function, shows two completely different displays.
@@ -64,28 +63,29 @@
   (clear-output-record (stream-output-history pane))
   (with-slots (current-day appointments) frame
     (if (null current-day)
-	(show-weekly-summary pane appointments)
-      (show-appointments pane
-			 current-day
-			 (rest (assoc current-day appointments))))))
+        (show-weekly-summary pane appointments)
+        (show-appointments pane
+                           current-day
+                           (rest (assoc current-day appointments))))))
 
 ;;; Show a summary of the week, with an appointment count for each
 ;;; day. You can see the appointments for a specific day by clicking on
 ;;; the day name.
 (defun show-weekly-summary (pane appointments)
-  (formatting-table (pane) ;; Table headings
-		    (formatting-row (pane)
-		       (formatting-cell (pane)
-			  (write-string "Day of week  " pane))
-		       (formatting-cell (pane)
-			  (write-string "number of appointments" pane)))
-		    (dolist (day appointments)
-		      (formatting-row (pane)
-			 (formatting-cell (pane)
-			    (present (first day) 'weekday :stream pane))
-			 (formatting-cell (pane)
-			    (format pane "~D appointment ~&"
-				    (length (rest day))))))))
+  (formatting-table (pane)              ; Table headings
+    (formatting-row (pane)
+      (with-drawing-options (pane :text-face :bold)
+        (formatting-cell (pane)
+          (write-string "Day of week" pane))
+        (formatting-cell (pane)
+          (write-string "number of appointments" pane))))
+    (dolist (day appointments)
+      (formatting-row (pane)
+        (formatting-cell (pane)
+          (present (first day) 'weekday :stream pane))
+        (formatting-cell (pane)
+          (format pane "~D appointment~:P"
+                  (length (rest day))))))))
 
 ;;; Show detailed appointment list for day
 (defun show-appointments (pane current-day current-day-appointments)

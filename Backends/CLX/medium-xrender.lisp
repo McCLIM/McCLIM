@@ -131,7 +131,7 @@
     (return-from text-size (values 0 0 0 0 (text-style-ascent text-style medium))))
   (let* ((text-style (merge-text-styles text-style
                                         (medium-merged-text-style medium)))
-         (font (text-style-to-font (port medium) text-style))
+         (font (text-style-mapping (port medium) text-style))
          (text (subseq (string string) start end))
          (ascent (climb:font-ascent font))
          (line-height (+ ascent (climb:font-descent font)))
@@ -179,12 +179,6 @@
                                :transformation (sheet-device-transformation (medium-sheet medium))
                                :transform-glyphs transform-glyphs))))
 
-(defmethod clime:medium-draw-glyph ((medium clx-render-medium) element x y
-                                    align-x align-y toward-x toward-y
-                                    transform-glyphs)
-  (clim:medium-draw-text* medium (string element) x y 0 1
-                          align-x align-y toward-x toward-y
-                          transform-glyphs))
 
 
 (defmethod clim:medium-buffering-output-p ((medium clx-render-medium))

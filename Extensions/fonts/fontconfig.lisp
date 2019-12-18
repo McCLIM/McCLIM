@@ -30,8 +30,11 @@
              #p"/usr/share/fonts/"
              #p"/usr/local/share/fonts/dejavu/"
              #p"/usr/X11R6/lib/X11/fonts/TTF/"
+             #p"/usr/X11R7/lib/X11/fonts/TTF/"
              #p"/opt/X11/share/fonts/TTF/"
              #p"/opt/X11/share/fonts/"
+             #p"~/.guix-profile/share/fonts/truetype/"
+             #p"/Library/Fonts/"
              #p"C:/Windows/Fonts/")))
 
 ;;; Here are mappings for the DejaVu family of fonts, which are a
@@ -157,10 +160,13 @@
 ;;; configure fonts
 
 (defun autoconfigure-fonts ()
-  (if-let ((map (or (support-map-p (default-font/family-map))
-                    (support-map-p (build-font/family-map)))))
-    (setf *families/faces* map)
-    (warn-about-unset-font-path)))
+  (invoke-with-truetype-path-restart
+   (lambda ()
+     (check-type *truetype-font-path* pathname)
+     (if-let ((map (or (support-map-p (default-font/family-map))
+                       (support-map-p (build-font/family-map)))))
+       (setf *families/faces* map)
+       (warn-about-unset-font-path)))))
 
 (defun support-map-p (font-map)
   (handler-case

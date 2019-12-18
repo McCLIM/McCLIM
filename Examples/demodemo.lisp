@@ -95,7 +95,9 @@ argument to avoid creating too many functions with similar name."))
                    (make-demo-button "German Towns" 'town-example:town-example)
                    (make-demo-button "Data Graph Toy" 'graph-toy)
                    (make-demo-button "Traffic lights" 'traffic-lights)
-                   (make-demo-button "Image Transform" 'image-transform-demo:image-transform-demo)))
+                   (make-demo-button "Image Transform" 'image-transform-demo:image-transform-demo)
+                   (make-demo-button "Selection (clipboard)" 'selection-demo)
+                   (make-demo-button "DND various" 'drag-and-drop-example:dnd-commented)))
                (labelling (:label "Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Stream test" 'stream-test)
@@ -110,8 +112,10 @@ argument to avoid creating too many functions with similar name."))
                    (make-demo-button "Border Styles Test" 'bordered-output)
                    (make-demo-button "Misc. Tests" 'misc-tests)
                    (make-demo-button "Render Image Tests" 'render-image-tests)
-		   (make-demo-button "Drawing Tests" 'drawing-tests)
-                   (make-demo-button "Accepting Values Test"  'av-test)))
+                   (make-demo-button "Drawing Tests" 'drawing-tests)
+                   (make-demo-button "Accepting Values Test"  'av-test)
+                   (make-demo-button "Frame and Sheet Names Test" 'frame-sheet-name-test)
+                   (make-demo-button "Tracking Pointer test" 'tracking-pointer-test)))
                (labelling (:label "Regression Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Image viewer" 'image-viewer)
@@ -134,6 +138,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame hbox-test
     () ()
+    (:menu-bar nil)
     (:layouts
      (default
          (horizontally ()
@@ -149,6 +154,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame table-test
     () ()
+    (:menu-bar nil)
     (:layouts
      (default
          (tabling (:background +red+)
@@ -158,70 +164,59 @@ argument to avoid creating too many functions with similar name."))
                  (make-pane 'push-button :label "C 1 1"))
            ) )))
 
-(defun make-test-label (ax ay)
-  (labelling (:label "Some Label"
-                     :align-x ax
-                     :label-alignment ay
-                     :foreground +WHITE+
-                     :background +PALETURQUOISE4+
-                     :text-style (make-text-style :sans-serif :roman :normal))
-    (make-pane 'push-button :label (format nil "~S" (list ax ay))
-               :text-style (make-text-style :sans-serif :roman :normal)
-               :max-width 1000
-               :max-height 1000)))
+(defun make-label-test-column (title label content)
+  (flet ((make-label (align-x align-y)
+           (let ((alignment-text (format nil "~S" (list align-x align-y)))
+                 (text-style (make-text-style :sans-serif :roman :normal)))
+             (macrolet ((frob (label &body contents)
+                          `(labelling (:label ,label
+                                       :align-x align-x
+                                       :label-alignment align-y
+                                       :foreground +white+
+                                       :background +paleturquoise4+
+                                       :text-style text-style)
+                             ,@contents)))
+               (ecase content
+                 (:child (frob label
+                           (make-pane 'push-button :label alignment-text
+                                                   :text-style text-style
+                                                   :max-width 1000
+                                                   :max-height 1000)))
+                 (:alignment (frob alignment-text))
+                 (:label (frob label)))))))
+    (labelling (:label title)
+      (vertically (:spacing 5 :equalize-width t)
+        (make-label :left :top)
+        (make-label :center :top)
+        (make-label :right :top)
+        (make-label :left :bottom)
+        (make-label :center :bottom)
+        (make-label :right :bottom)))))
 
-(defun make-test-label2 (ax ay)
-  (labelling (:label (format nil "~(~S~)" (list ax ay))
-                     :align-x ax
-                     :label-alignment ay
-                     :foreground +WHITE+
-                     :background +PALETURQUOISE4+
-                     :text-style (make-text-style :sans-serif :roman :normal))
-    #+nil
-    (make-pane 'push-button :label
-               :text-style (make-text-style :sans-serif :roman :normal)
-               :max-width 1000
-               :max-height 1000)))
-
-(define-application-frame label-test
-    () ()
-    (:layouts
-     (default
-                                        ;  (scrolling (:width 400 :height 200
-                                        ; :max-width 1000 :max-height 2000)
-         (vertically (:equalize-width t
-                                      ;;:width 400 ;;:height 800
-                                      :max-width 2000 :max-height 2000)
-           10
-           (labelling (:label "CLIM Label Tests"
-                              :align-x :center
-                              :text-style (make-text-style :sans-serif :roman :huge)))
-           10
-           (9/10
-            (horizontally (:equalize-height t)
-              (1/2
-               (labelling (:label "Labels with content")
-                 (vertically (:equalize-width t)
-                   (make-test-label :left :top)
-                   5 (make-test-label :center :top)
-                   5 (make-test-label :right :top)
-                   5 (make-test-label :left :bottom)
-                   5 (make-test-label :center :bottom)
-                   5 (make-test-label :right :bottom))))
-              (1/2
-               (labelling (:label "Labels w/o content")
-                 (vertically (:equalize-width t)
-                   (make-test-label2 :left :top)
-                   5
-                   (make-test-label2 :center :top)
-                   5
-                   (make-test-label2 :right :top)
-                   5
-                   (make-test-label2 :left :bottom)
-                   5
-                   (make-test-label2 :center :bottom)
-                   5
-                   (make-test-label2 :right :bottom))))))))))
+(define-application-frame label-test ()
+  ()
+  (:menu-bar nil)
+  (:layouts
+   (default
+    (vertically (:equalize-width t)
+      10
+      (labelling (:label "CLIM Label Tests"
+                  :align-x :center
+                  :text-style (make-text-style :sans-serif :roman :huge)))
+      10
+      (9/10 (horizontally (:equalize-height t)
+              ;; Please keep the silly "good" so the label text goes
+              ;; below the baseline. -- jm 2019-12-14
+              (1/4 (make-label-test-column
+                    "Labels with content" #1="Some good label" :child))
+              (1/4 (make-label-test-column
+                    "Labels without content" #1# :alignment))
+              (1/4 (make-label-test-column
+                    "Multi-line w/ content"
+                    #2=#.(format nil "Multi-line~%label")
+                    :child))
+              (1/4 (make-label-test-column
+                    "Multi-line w/o content" #2# :label))))))))
 
 (defclass foo-pane (basic-pane clime:always-repaint-background-mixin)
   ())
@@ -241,6 +236,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame scroll-test
     () ()
+    (:menu-bar nil)
     (:layouts
      (defaults
          (scrolling (:width 400 :height 400)
@@ -250,6 +246,7 @@ argument to avoid creating too many functions with similar name."))
 ;;; Scroll test 2
 (define-application-frame scroll-test-2 ()
   ()
+  (:menu-bar nil)
   (:geometry :width 1200 :height 400)
   (:panes (out :application-pane :display-function #'scroll-test-display)
           (bam :application-pane :display-function #'scroll-test-display)
@@ -280,6 +277,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame list-test
     () ()
+    (:menu-bar nil)
     (:panes
      (substring :text-field :value "INTER"
                 :value-changed-callback
@@ -326,6 +324,7 @@ argument to avoid creating too many functions with similar name."))
 
 (define-application-frame option-test
     () ()
+    (:menu-bar nil)
   (:panes (option-pane-1 :option-pane
                          :value 1
                          :items '(1 2 3 4 6 7)

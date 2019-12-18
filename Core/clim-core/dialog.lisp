@@ -14,8 +14,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 #| Random notes:
@@ -86,18 +86,35 @@ method might be interrupted at any time if the user selects another field.
    (changedp :accessor changedp :initform nil)
    (record :accessor record :initarg :record)
    (activation-gestures :accessor activation-gestures
-			:initform *activation-gestures*
-			:documentation "Binding of *activation-gestures* on
-entry to this accept") 
+                        :initform *activation-gestures*
+                        :documentation "Binding of *activation-gestures* on
+entry to this accept")
    (delimeter-gestures :accessor delimiter-gestures
-		       :initform *delimiter-gestures*
-		       :documentation "Binding of *delimeter-gestures* on entry
+                       :initform *delimiter-gestures*
+                       :documentation "Binding of *delimeter-gestures* on entry
 to this accept")
    (accept-arguments :accessor accept-arguments :initarg :accept-arguments)
    (accept-condition :accessor accept-condition :initarg :accept-condition
-		     :initform nil
-		     :documentation "Condition signalled, if any, during
+                     :initform nil
+                     :documentation "Condition signalled, if any, during
 accept of this query")))
+
+(defgeneric select-query (stream query record)
+  (:documentation "Does whatever is needed for input (e.g., calls accept) when
+a query is selected for input. It is responsible for updating the
+  query object when a new value is entered in the query field." ))
+
+(defgeneric deselect-query (stream query record)
+  (:documentation "Deselect a query field: turn the cursor off, turn off
+highlighting, etc." ))
+
+(defmethod select-query (stream query record)
+  (declare (ignore stream query record))
+  nil)
+
+(defmethod deselect-query (stream query record)
+  (declare (ignore stream query record))
+  nil)
 
 (defclass accepting-values-record (standard-updating-output-record)
   ()
@@ -114,9 +131,9 @@ accept of this query")))
   ((queries :accessor queries :initform nil)
    (selected-query :accessor selected-query :initform nil)
    (align-prompts :accessor align-prompts :initarg :align-prompts
-		  :initform nil)
+                  :initform nil)
    (last-pass :accessor last-pass :initform nil
-	      :documentation "Flag that indicates the last pass through the
+              :documentation "Flag that indicates the last pass through the
   body of ACCEPTING-VALUES, after the user has chosen to exit. This controls
   when conditions will be signalled from calls to ACCEPT.")))
 
@@ -127,7 +144,7 @@ accept of this query")))
   ())
 
 ;;; The accepting-values state machine is controlled by commands. Each
-;;; action (e.g., "select a text field") terminates 
+;;; action (e.g., "select a text field") terminates
 
 (define-command-table accept-values)    ; :inherit-from nil???
 
@@ -258,11 +275,11 @@ accept of this query")))
            (current-command (if initially-select-p
                                 `(com-select-query
                                   ,initially-select-query-identifier)
-				`(com-select-query
-				  ,(query-identifier 
-				    (first
-				     (queries *accepting-values-stream*))))))
-	   (*accelerator-gestures* (compute-inherited-keystrokes command-table)))
+                                `(com-select-query
+                                  ,(query-identifier
+                                    (first
+                                     (queries *accepting-values-stream*))))))
+           (*accelerator-gestures* (compute-inherited-keystrokes command-table)))
       (letf (((frame-command-table *application-frame*)
               (find-command-table command-table)))
         (unwind-protect
@@ -278,36 +295,36 @@ accept of this query")))
                       (progn
                         (when (and select-first-query
                                    (not initially-select-p))
-                          (setf current-command 
+                          (setf current-command
                                 `(com-select-query
-                                  ,(query-identifier 
+                                  ,(query-identifier
                                     (first
                                      (queries *accepting-values-stream*))))
                                 select-first-query nil))
-			(handler-case
-			    (progn
-			      (apply (command-name current-command)
-				     (command-arguments current-command))
-			      ;; If current command returns without throwing a
-			      ;; command, go back to the default command
-			      (setq current-command *default-command*))
-			  (accelerator-gesture (c)
-			    (let ((command (lookup-keystroke-command-item
-					    (accelerator-gesture-event c) command-table)))
-			      (if (listp command)
-				  (setq current-command
-					(if (clim:partial-command-p command)
-					    (funcall clim:*partial-command-parser*
-						     command-table stream command
-						     (position clim:*unsupplied-argument-marker* command))
-					    command))
-				  ;; may be it is a gesture of the frame's command-table
-				  (signal c))))))
+                        (handler-case
+                            (progn
+                              (apply (command-name current-command)
+                                     (command-arguments current-command))
+                              ;; If current command returns without throwing a
+                              ;; command, go back to the default command
+                              (setq current-command *default-command*))
+                          (accelerator-gesture (c)
+                            (let ((command (lookup-keystroke-command-item
+                                            (accelerator-gesture-event c) command-table)))
+                              (if (listp command)
+                                  (setq current-command
+                                        (if (clim:partial-command-p command)
+                                            (funcall clim:*partial-command-parser*
+                                                     command-table stream command
+                                                     (position clim:*unsupplied-argument-marker* command))
+                                            command))
+                                  ;; may be it is a gesture of the frame's command-table
+                                  (signal c))))))
                       (t (setq current-command object)))
                     (redisplay arecord stream))
                (av-exit ()
                  (finalize-query-records *accepting-values-stream*)
-		 (setf (last-pass *accepting-values-stream*) t)
+                 (setf (last-pass *accepting-values-stream*) t)
                  (redisplay arecord stream)))
           (dolist (query (queries *accepting-values-stream*))
             (finalize (editing-stream (record query)) nil))
@@ -334,199 +351,203 @@ accept of this query")))
           (with-output-as-presentation
               (stream nil 'abort-button)
             (surrounding-output-with-border
-	     (stream :shape :rounded :radius 6
-		     :background +gray80+ :highlight-background +gray90+)
-	     (format stream "Cancel"))))))
+             (stream :shape :rounded :radius 6
+                     :background +gray80+ :highlight-background +gray90+)
+             (format stream "Cancel"))))))
     (terpri stream)))
 
 (defmethod stream-accept ((stream accepting-values-stream) type
-			  &rest rest-args
-			  &key
-			  (view (stream-default-view stream))
-			  (default nil default-supplied-p)
-			  default-type
-			  provide-default
-			  insert-default
-			  replace-input
-			  history
-			  active-p
-			  prompt
-			  prompt-mode
-			  display-default
-			  (query-identifier prompt)
-			  activation-gestures
-			  additional-activation-gestures
-			  delimiter-gestures
-			  additional-delimiter-gestures)
+                          &rest rest-args
+                          &key
+                          (view (stream-default-view stream))
+                          (default nil default-supplied-p)
+                          default-type
+                          provide-default
+                          insert-default
+                          replace-input
+                          history
+                          active-p
+                          prompt
+                          prompt-mode
+                          display-default
+                          (query-identifier prompt)
+                          activation-gestures
+                          additional-activation-gestures
+                          delimiter-gestures
+                          additional-delimiter-gestures)
   (declare (ignore default-type provide-default insert-default replace-input
-		   history active-p prompt-mode display-default
-		   activation-gestures additional-activation-gestures
-		   delimiter-gestures additional-delimiter-gestures))
+                   history active-p prompt-mode display-default
+                   activation-gestures additional-activation-gestures
+                   delimiter-gestures additional-delimiter-gestures))
   (let ((query (find query-identifier (queries stream)
-		     :key #'query-identifier :test #'equal))
-	(align (align-prompts stream)))
+                     :key #'query-identifier :test #'equal))
+        (align (align-prompts stream)))
     (unless query
       ;; If there's no default but empty input could return a sensible value,
       ;; use that as a default.
       (unless default-supplied-p
-	(setq default
-	      (ignore-errors (accept-from-string type
-						 ""
-						 :view +textual-view+ ))))
+        (setq default
+              (ignore-errors (accept-from-string type
+                                                 ""
+                                                 :view +textual-view+ ))))
       (setq query (make-instance 'query
-				 :query-identifier query-identifier
-				 :ptype type
-				 :view view
-				 :default default
-				 :default-supplied-p default-supplied-p
-				 :value default))
+                                 :query-identifier query-identifier
+                                 :ptype type
+                                 :view view
+                                 :default default
+                                 :default-supplied-p default-supplied-p
+                                 :value default))
       (setf (queries stream) (nconc (queries stream) (list query)))
       (when default-supplied-p
         (setf (changedp query) t)))
     (setf (accept-arguments query) rest-args)
     ;; If the program changes the default, that becomes the value.
-    (unless (equal default (default query)) 
+    (unless (equal default (default query))
       (setf (default query) default)
       (setf (value query) default))
-    (flet ((do-prompt ()
-	     (apply #'prompt-for-accept stream type view rest-args))
-	   (do-accept-present-default ()
-	     (funcall-presentation-generic-function
-	      accept-present-default
-	      type (encapsulating-stream-stream stream) view
-	      (value query)
-	      default-supplied-p nil query-identifier)))
+    (flet ((do-prompt (stream)
+             (apply #'prompt-for-accept stream type view rest-args))
+           (do-accept-present-default (stream)
+             (funcall-presentation-generic-function
+              accept-present-default
+              type (encapsulating-stream-stream stream) view
+              (value query)
+              default-supplied-p nil query-identifier)))
       (let ((query-record nil))
-	(if align
-	    (formatting-row (stream)
-	      (formatting-cell (stream :align-x align :align-y :center)
-		(do-prompt))
-	      (formatting-cell (stream)
-		(setq query-record (do-accept-present-default))))
-	    (progn
-	      (do-prompt)
-	      (setq query-record (do-accept-present-default))))
-	(setf (record query) query-record)
-	(when (and (last-pass stream) (accept-condition query))
-	  (signal (accept-condition query)))
-	(multiple-value-prog1
-	    (values (value query) (ptype query) (changedp query))
-	  (setf (default query) default)
-	  (setf (ptype query) type)
-	  #+nil (setf (changedp query) nil))))))
+        (if align
+            (formatting-row (stream)
+              (formatting-cell (stream :align-x align :align-y :center)
+                (do-prompt stream))
+              (formatting-cell (stream)
+                (setq query-record (do-accept-present-default stream))))
+            (progn
+              (do-prompt stream)
+              (setq query-record (do-accept-present-default stream))))
+        (setf (record query) query-record)
+        (when (and (last-pass stream) (accept-condition query))
+          (signal (accept-condition query)))
+        (multiple-value-prog1
+            (values (value query) (ptype query) (changedp query))
+          (setf (default query) default)
+          (setf (ptype query) type)
+          #+nil (setf (changedp query) nil))))))
 
 
 (defmethod prompt-for-accept ((stream accepting-values-stream)
-			      type view
-			      &rest args)
+                              type view
+                              &rest args)
   (declare (ignore view))
   (apply #'prompt-for-accept-1 stream type :display-default nil args))
 
 (define-command (com-query-exit :command-table accept-values
-				:keystroke (#\] :control)
-				:name nil
-				:provide-output-destination-keyword nil)
+                                :keystroke (#\[ :control)
+                                :name nil
+                                :provide-output-destination-keyword nil)
     ()
   (signal 'av-exit))
 
+(add-keystroke-to-command-table 'accept-values '(#\Return :meta) :command 'com-query-exit :errorp nil)
+
 (define-command (com-query-abort :command-table accept-values
-				 :keystroke (#\z :control)
-				 :name nil
-				 :provide-output-destination-keyword nil)
+                                 :keystroke (#\] :control)
+                                 :name nil
+                                 :provide-output-destination-keyword nil)
     ()
   (and (find-restart 'abort)
        (invoke-restart 'abort)))
 
+(add-keystroke-to-command-table 'accept-values '(#\g :control) :command 'com-query-abort :errorp nil)
+
 (define-command (com-change-query :command-table accept-values
-				  :name nil
-				  :provide-output-destination-keyword nil)
+                                  :name nil
+                                  :provide-output-destination-keyword nil)
     ((query-identifier t)
      (value t))
   (when *accepting-values-stream*
     (let ((query (find query-identifier (queries *accepting-values-stream*)
-		       :key #'query-identifier :test #'equal)))
+                       :key #'query-identifier :test #'equal)))
       (when query
-	(setf (value query) value)
-	(setf (changedp query) t)))))
+        (setf (value query) value)
+        (setf (changedp query) t)))))
 
 (define-command (com-select-query :command-table accept-values
-				  :name nil
-				  :provide-output-destination-keyword nil)
+                                  :name nil
+                                  :provide-output-destination-keyword nil)
     ((query-identifier t))
   (when *accepting-values-stream*
     (with-accessors ((selected-query selected-query))
-	*accepting-values-stream*
+        *accepting-values-stream*
       (let* ((query-list (member query-identifier
-				 (queries *accepting-values-stream*)
-				 :key #'query-identifier :test #'equal))
-	     (query (car query-list)))
-	(when selected-query
+                                 (queries *accepting-values-stream*)
+                                 :key #'query-identifier :test #'equal))
+             (query (car query-list)))
+        (when selected-query
 
-	  (unless (equal query-identifier (query-identifier selected-query)) 
-	    (deselect-query *accepting-values-stream*
-			    selected-query
-			    (record selected-query))))
-	(when query
-	  (setf selected-query query)
-	  (select-query *accepting-values-stream* query (record query))
-	  (let ((command-ptype '(command :command-table accept-values)))
-	    (if (cdr query-list)
-		(throw-object-ptype `(com-select-query ,(query-identifier
-							 (cadr query-list)))
-				    command-ptype)
-		(throw-object-ptype '(com-deselect-query) command-ptype))))))))
+          (unless (equal query-identifier (query-identifier selected-query))
+            (deselect-query *accepting-values-stream*
+                            selected-query
+                            (record selected-query))))
+        (when query
+          (setf selected-query query)
+          (select-query *accepting-values-stream* query (record query))
+          (let ((command-ptype '(command :command-table accept-values)))
+            (if (cdr query-list)
+                (throw-object-ptype `(com-select-query ,(query-identifier
+                                                         (cadr query-list)))
+                                    command-ptype)
+                (throw-object-ptype '(com-deselect-query) command-ptype))))))))
 
 (define-command (com-deselect-query :command-table accept-values
-				    :name nil
-				    :provide-output-destination-keyword nil)
+                                    :name nil
+                                    :provide-output-destination-keyword nil)
     ()
   (when *accepting-values-stream*
     (with-accessors ((selected-query selected-query))
-	*accepting-values-stream*
+        *accepting-values-stream*
       (when selected-query
-	(deselect-query *accepting-values-stream*
-			selected-query
-			(record selected-query))
-	(setf selected-query nil)))))
+        (deselect-query *accepting-values-stream*
+                        selected-query
+                        (record selected-query))
+        (setf selected-query nil)))))
 
 (define-command (com-next-query :command-table accept-values
-				:keystroke (#\n :meta)
-				:name nil
-				:provide-output-destination-keyword nil)
+                                :keystroke (#\n :meta)
+                                :name nil
+                                :provide-output-destination-keyword nil)
     ()
   (when *accepting-values-stream*
     (let ((queries (queries *accepting-values-stream*)))
       (with-accessors ((selected-query selected-query))
-	  *accepting-values-stream*
-	(let ((query-pos (position selected-query queries)))
-	  (if query-pos
-	      (setq query-pos (1+ query-pos))
-	      (setq query-pos 0))
-	  (when (>= query-pos (length queries))
-	    (setq query-pos 0))
-	  (com-select-query (query-identifier (elt queries query-pos))))))))
+          *accepting-values-stream*
+        (let ((query-pos (position selected-query queries)))
+          (if query-pos
+              (setq query-pos (1+ query-pos))
+              (setq query-pos 0))
+          (when (>= query-pos (length queries))
+            (setq query-pos 0))
+          (com-select-query (query-identifier (elt queries query-pos))))))))
 
 (define-command (com-prev-query :command-table accept-values
-				:keystroke (#\p :meta)
-				:name nil
-				:provide-output-destination-keyword nil)
+                                :keystroke (#\p :meta)
+                                :name nil
+                                :provide-output-destination-keyword nil)
     ()
   (when *accepting-values-stream*
     (let ((queries (queries *accepting-values-stream*)))
       (with-accessors ((selected-query selected-query))
-	  *accepting-values-stream*
-	(let ((query-pos (position selected-query queries)))
-	  (if query-pos
-	      (setq query-pos (1- query-pos))
-	      (setq query-pos (1- (length queries))))
-	  (when (< query-pos 0)
-	    (setq query-pos (1- (length queries))))
-	  (com-select-query (query-identifier (elt queries query-pos))))))))
+          *accepting-values-stream*
+        (let ((query-pos (position selected-query queries)))
+          (if query-pos
+              (setq query-pos (1- query-pos))
+              (setq query-pos (1- (length queries))))
+          (when (< query-pos 0)
+            (setq query-pos (1- (length queries))))
+          (com-select-query (query-identifier (elt queries query-pos))))))))
 
 (defclass av-text-record (accepting-values-record)
   ((editing-stream :accessor editing-stream)
    (snapshot :accessor snapshot :initarg :snapshot :initform nil
-	     :documentation "A copy of the stream buffer before accept
+             :documentation "A copy of the stream buffer before accept
 is called. Used to determine if any editing has been done by user")))
 
 (defparameter *no-default-cache-value* (cons nil nil))
@@ -536,7 +557,7 @@ is called. Used to determine if any editing has been done by user")))
      present-p query-identifier)
   (declare (ignore present-p))
   (let* ((editing-stream nil)
-	 (record (updating-output (stream :unique-id query-identifier
+         (record (updating-output (stream :unique-id query-identifier
                                           :cache-value (if default-supplied-p
                                                            default
                                                            *no-default-cache-value*)
@@ -573,19 +594,19 @@ is called. Used to determine if any editing has been done by user")))
 
 (defun av-do-accept (query record interactive)
   (let* ((estream (editing-stream record))
-	 (ptype (ptype query))
-	 (view (view query))
-	 (default (default query))
-	 (default-supplied-p (default-supplied-p query))
-	 (accept-args (accept-arguments query))
-	 (*activation-gestures* (apply #'make-activation-gestures
-				       :existing-activation-gestures
-				       (activation-gestures query)
-				       accept-args))
-	 (*delimiter-gestures* (apply #'make-delimiter-gestures
-				      :existing-delimiter-args
-				      (delimiter-gestures query)
-				      accept-args)))
+         (ptype (ptype query))
+         (view (view query))
+         (default (default query))
+         (default-supplied-p (default-supplied-p query))
+         (accept-args (accept-arguments query))
+         (*activation-gestures* (apply #'make-activation-gestures
+                                       :existing-activation-gestures
+                                       (activation-gestures query)
+                                       accept-args))
+         (*delimiter-gestures* (apply #'make-delimiter-gestures
+                                      :existing-delimiter-args
+                                      (delimiter-gestures query)
+                                      accept-args)))
     ;; If there was an error on a previous pass, set the insertion pointer to
     ;; 0 so the user has a chance to edit the field without causing another
     ;; error. Otherwise the insertion pointer should already be at the end of
@@ -599,16 +620,16 @@ is called. Used to determine if any editing has been done by user")))
     (block accept-condition-handler
       (setf (changedp query) nil)
       (setf (values (value query) (ptype query))
-	    (input-editing-rescan-loop
-	     estream
-	     #'(lambda (s)
-		 (handler-bind
-		     ((error
-		       #'(lambda (c)
-			   (format *trace-output*
+            (input-editing-rescan-loop
+             estream
+             #'(lambda (s)
+                 (handler-bind
+                     ((error
+                       #'(lambda (c)
+                           (format *trace-output*
                                    "accepting-values accept condition: ~A~%"
                                    c)
-			   (if interactive
+                           (if interactive
                                (progn
                                  (beep)
                                  (setf (stream-insertion-pointer estream)
@@ -619,24 +640,24 @@ is called. Used to determine if any editing has been done by user")))
                                  (setf (accept-condition query) c)
                                  (return-from accept-condition-handler
                                    c))))))
-		   (if default-supplied-p
-		       (accept ptype :stream s
-			       :view view :prompt nil :default default)
-		       (accept ptype :stream s :view view :prompt nil))))))
+                   (if default-supplied-p
+                       (accept ptype :stream s
+                               :view view :prompt nil :default default)
+                       (accept ptype :stream s :view view :prompt nil))))))
       (setf (changedp query) t))))
 
 
 
 
-;;; The desired 
+;;; The desired
 (defmethod select-query (stream query (record av-text-record))
   (declare (ignore stream))
   (let ((estream (editing-stream record))
-	(ptype (ptype query))
-	(view (view query)))
+        (ptype (ptype query))
+        (view (view query)))
     (declare (ignore ptype view))	;for now
     (with-accessors ((stream-input-buffer stream-input-buffer))
-	estream
+        estream
       (setf (cursor-visibility estream) t)
       (setf (snapshot record) (copy-seq stream-input-buffer))
       (av-do-accept query record t))))
@@ -668,23 +689,23 @@ is run for the last time"))
 (defmethod finalize-query-record (query (record av-text-record))
   (let ((estream (editing-stream record)))
     (when (and (not (changedp query))
-	       (snapshot record)
-	       (not (equalp (snapshot record)
-			    (stream-input-buffer estream))))
+               (snapshot record)
+               (not (equalp (snapshot record)
+                            (stream-input-buffer estream))))
       (let* ((activation-gestures (apply #'make-activation-gestures
-					 :existing-activation-gestures
-					 (activation-gestures query)
-					 (accept-arguments query)))
-	     (gesture (car activation-gestures)))
-	(when gesture
-	  (let ((c (character-gesture-name gesture)))
-	    (activate-stream estream c)
-	    (reset-scan-pointer estream)
-	    (av-do-accept query record nil)))))))
+                                         :existing-activation-gestures
+                                         (activation-gestures query)
+                                         (accept-arguments query)))
+             (gesture (car activation-gestures)))
+        (when gesture
+          (let ((c (character-gesture-name gesture)))
+            (activate-stream estream c)
+            (reset-scan-pointer estream)
+            (av-do-accept query record nil)))))))
 
 (defun finalize-query-records (av-stream)
   (loop for query in (queries av-stream)
-	do (finalize-query-record query (record query))))
+        do (finalize-query-record query (record query))))
 
 
 (define-presentation-to-command-translator com-select-field
@@ -694,9 +715,9 @@ is run for the last time"))
      :pointer-documentation "Select field for input"
      :echo nil
      :tester ((object)
-	      (let ((selected (selected-query *accepting-values-stream*)))
-		(or (null selected)
-		    (not (eq (query-identifier selected) object))))))
+              (let ((selected (selected-query *accepting-values-stream*)))
+                (or (null selected)
+                    (not (eq (query-identifier selected) object))))))
   (object)
   `(,object))
 
@@ -740,10 +761,10 @@ is run for the last time"))
 
 (defmethod notify-user (frame message &rest args)
   (apply #'frame-manager-notify-user
-	 (if frame (frame-manager frame) (find-frame-manager))
-	 message
-	 :frame frame
-	 args))
+         (if frame (frame-manager frame) (find-frame-manager))
+         message
+         :frame frame
+         args))
 
 (define-application-frame generic-notify-user-frame ()
   ((message-string :initarg :message-string)
@@ -774,14 +795,14 @@ is run for the last time"))
                 :activate-callback
                 (lambda (gadget)
                   (declare (ignore gadget))
-                  ;; This is fboundp business is weird, and only implied by a 
+                  ;; This is fboundp business is weird, and only implied by a
                   ;; random message on the old CLIM list. Does the user function
                   ;; take arguments?
                   (when (or (typep action 'function) (fboundp action))
                     (funcall action))
                   (setf (slot-value *application-frame* 'return-value) action)
                   ;; This doesn't work:
-                  #+NIL 
+                  #+NIL
                   (when (eql action :abort)
                     (and (find-restart 'abort)
                          (invoke-restart 'abort)))
@@ -789,18 +810,18 @@ is run for the last time"))
                 args))))
    specs))
 
-		  
-(defmethod frame-manager-notify-user 
+
+(defmethod frame-manager-notify-user
     (frame-manager message-string &key frame associated-window
-		   (title "")
-		   documentation
-		   (exit-boxes '((:exit "OK")))
-		   ; The 'name' arg is in the spec but absent from the Lispworks
-		   ; manual, and I can't imagine what it would do differently
-		   ; than 'title'.
-		   name
-		   style
-		   (text-style (make-text-style :sans-serif :roman :small)))
+                   (title "")
+                   documentation
+                   (exit-boxes '((:exit "OK")))
+                   ; The 'name' arg is in the spec but absent from the Lispworks
+                   ; manual, and I can't imagine what it would do differently
+                   ; than 'title'.
+                   name
+                   style
+                   (text-style (make-text-style :sans-serif :roman :small)))
   (declare (ignore associated-window documentation))
   ;; Keywords from notify-user:
   ;; associated-window title documentation exit-boxes name style text-style
@@ -893,9 +914,9 @@ is run for the last time"))
   (funcall continuation)
   (when *accepting-values-stream*
     (let ((query (find query-identifier (queries *accepting-values-stream*)
-		       :key #'query-identifier :test #'equal)))
+                       :key #'query-identifier :test #'equal)))
       (when query
-	(setf (changedp query) t)))))
+        (setf (changedp query) t)))))
 
 (define-presentation-to-command-translator com-command-button
     (command-button-state com-do-command-button accept-values

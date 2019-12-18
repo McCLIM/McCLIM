@@ -45,9 +45,10 @@
   (clim-pdf-stream-file-stream (medium-sheet medium)))
 
 ;;;; Stream
-(defvar *default-pdf-title* "")
 
-(defvar *default-pdf-for*
+(defvar *default-title* "")
+
+(defvar *default-author*
   (or #+unix (get-environment-variable "USER")
       "Unknown"))
 
@@ -67,7 +68,8 @@
      standard-extended-output-stream standard-output-recording-stream)
   ((file-stream :initarg :file-stream :reader clim-pdf-stream-file-stream)
    (title :initarg :title)
-   (for :initarg :for)
+   (author :initarg :author)
+   (subject :initarg :subject)
    (orientation :initarg :orientation :accessor orientation)
    (paper :initarg :paper)
    (transformation :initarg :transformation
@@ -79,15 +81,11 @@
    (pages  :initform nil :accessor pdf-pages)))
 
 (defun make-clim-pdf-stream (file-stream port device-type
-                               multi-page scale-to-fit
-                               orientation header-comments)
+                             multi-page scale-to-fit
+                             orientation header-comments)
   (declare (ignore multi-page scale-to-fit))
   (unless device-type (setq device-type :a4))
-  (let ((title (or (getf header-comments :title)
-                   *default-pdf-title*))
-        (for (or (getf header-comments :for)
-                 *default-pdf-for*))
-        (region (etypecase device-type
+  (let ((region (etypecase device-type
                   (keyword (paper-region device-type))
                   (list (destructuring-bind (width height)
                             device-type
@@ -95,7 +93,9 @@
     (make-instance 'clim-pdf-stream
                    :file-stream file-stream
                    :port port
-                   :title title :for for
+                   :title (getf header-comments :title *default-title*)
+                   :author (getf header-comments :author *default-author*)
+                   :subject (getf header-comments :subject)
                    :orientation orientation
                    :paper device-type
                    :native-region region
@@ -105,4 +105,3 @@
 
 (defclass pdf-port (clim-postscript-font:postscript-font-port)
   ((stream :reader pdf-port-stream)))
-

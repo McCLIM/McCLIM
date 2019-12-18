@@ -319,50 +319,33 @@ COMPLETION presentation type as a pop-up menu."))
   (unless default-supplied-p
     (setq default (funcall value-key (elt sequence 0))))
   (let ((record (updating-output (stream :unique-id query-identifier
-				  :cache-value default
-				  :record-type 'av-pop-up-menu-record)
-		  (with-output-as-presentation
-		      (stream query-identifier 'selectable-query)
-		    (surrounding-output-with-border
-			(stream :shape :inset :move-cursor t)
-		      (write-string (funcall name-key default) stream))))))
+                                  :cache-value default
+                                  :record-type 'av-pop-up-menu-record)
+                  (with-output-as-presentation
+                      (stream query-identifier 'selectable-query)
+                    (surrounding-output-with-border
+                        (stream :shape :inset :move-cursor t)
+                      (write-string (funcall name-key default) stream))))))
     (setf (pop-up-sequence record) sequence)
     (setf (pop-up-test record) test)
     (setf (pop-up-value-key record) value-key)
     (setf (pop-up-name-key record) name-key)
     record))
 
-(defgeneric select-query (stream query record)
-  (:documentation "Does whatever is needed for input (e.g., calls accept) when
-a query is selected for input. It is responsible for updating the
-  query object when a new value is entered in the query field." ))
-
-(defgeneric deselect-query (stream query record)
-  (:documentation "Deselect a query field: turn the cursor off, turn off
-highlighting, etc." ))
-
-(defmethod select-query (stream query record)
-  (declare (ignore stream query record))
-  nil)
-
-(defmethod deselect-query (stream query record)
-  (declare (ignore stream query record))
-  nil)
-
 (defmethod select-query (stream query (record av-pop-up-menu-record))
   (declare (ignore stream))
   (let* ((value-key (pop-up-value-key record))
-	 (name-key (pop-up-name-key record)))
+         (name-key (pop-up-name-key record)))
     (multiple-value-bind (new-value item event)
-	(menu-choose (map 'list
-			  #'(lambda (item)
-			      `(,(funcall name-key item)
-				 :value ,(funcall value-key item)))
-			  (pop-up-sequence record)))
+        (menu-choose (map 'list
+                          #'(lambda (item)
+                              `(,(funcall name-key item)
+                                 :value ,(funcall value-key item)))
+                          (pop-up-sequence record)))
       (declare (ignore item))
       (when event
-	(setf (value query) new-value)
-	(setf (changedp query) t)))))
+        (setf (value query) new-value)
+        (setf (changedp query) t)))))
 
 (defmethod deselect-query (stream query (record av-pop-up-menu-record))
   (declare (ignore stream query))

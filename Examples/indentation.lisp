@@ -2,6 +2,7 @@
 
 (define-application-frame indentation ()
   ()
+  (:menu-bar nil)
   (:pane :application
    :width 350
    :height 400

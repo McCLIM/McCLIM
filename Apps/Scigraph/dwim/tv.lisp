@@ -99,10 +99,6 @@ advised of the possiblity of such damages.
       (clim:stream-pointer-position stream)
     (values (truncate x) (truncate y))))
 
-(defun pointer-input-rectangle* (&key (stream *standard-input*) left top right bottom)
-  ;;(declare (values left top right bottom))
-  (declare (ignore stream left top right bottom)))
-
 ;;;
 ;;; Frame stuff
 ;;;
