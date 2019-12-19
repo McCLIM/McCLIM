@@ -31,8 +31,8 @@
   (check-type mirror image-mirror-mixin)
   (with-slots (image resize-image-p) mirror
     (with-bounding-rectangle* (min-x min-y max-x max-y) region
-      (let ((width (1+ (ceiling (- max-x min-x))))
-            (height (1+ (ceiling (- max-y min-y)))))
+      (let ((width (ceiling (- max-x min-x)))
+            (height (ceiling (- max-y min-y))))
         (if (and resize-image-p
                  (or (null image)
                      (/= width (pattern-width image))
