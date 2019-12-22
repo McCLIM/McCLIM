@@ -1047,7 +1047,7 @@ if you are interested in fixing this."))
   (terpri stream))
 
 (defun actual-name (pathname)
-  (if (cl-fad:directory-pathname-p pathname)
+  (if (uiop:directory-pathname-p pathname)
       (if (stringp (car (last (pathname-directory pathname))))
           (car (last (pathname-directory pathname)))
           (directory-namestring pathname))
@@ -1062,8 +1062,8 @@ if you are interested in fixing this."))
   (mapcar (lambda (x) (sort-pathnames x sort-by))
           (multiple-value-list
            (if (not group-dirs) (values list)
-             (values (remove-if-not #'cl-fad:directory-pathname-p list)
-                     (remove-if #'cl-fad:directory-pathname-p list))))))
+             (values (remove-if-not #'uiop:directory-pathname-p list)
+                     (remove-if #'uiop:directory-pathname-p list))))))
 
 (defun garbage-name-p (name)
   (when (> (length name) 2)
@@ -1099,7 +1099,7 @@ if you are interested in fixing this."))
      (list-all-direct-subdirectories 'boolean :default nil :prompt "list all direct subdirectories?"))
 
   (let* ((pathname (probe-file pathname))
-         (base-pathname (cl-fad:pathname-directory-pathname pathname))
+         (base-pathname (uiop:pathname-directory-pathname pathname))
          (query-pathname (make-pathname :name (or (pathname-name pathname) :wild)
                                         :type (or (pathname-type pathname) :wild)
                                         :directory :wild
@@ -1108,10 +1108,11 @@ if you are interested in fixing this."))
 		(mapc (lambda (path)
 			(when (or (pathname-match-p path query-pathname)
 				  (and list-all-direct-subdirectories
-				       (cl-fad:directory-pathname-p path)))
+				       (uiop:directory-pathname-p path)))
 			  ;; files is a collector defined above
 			  (files (truename path))))
-		      (cl-fad:list-directory base-pathname)))))
+              (append (uiop:subdirectories base-pathname)
+                      (uiop:directory-files base-pathname))))))
     (with-text-family (t :sans-serif)
       (invoke-as-heading
        (lambda ()
@@ -1163,7 +1164,7 @@ if you are interested in fixing this."))
   ((pathname 'pathname :prompt "pathname"))
   (let ((pathname (merge-pathnames
                    ;; helpfully fix things if trailing slash wasn't entered
-                   (cl-fad:pathname-as-directory pathname))))
+                   (uiop:ensure-directory-pathname pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
         (progn
@@ -1194,7 +1195,7 @@ if you are interested in fixing this."))
                                  (format stream "Change to this directory"))
 
 		 :tester ((object)
-			  (cl-fad:directory-pathname-p object)))
+			  (uiop:directory-pathname-p object)))
   (object)
   (list object))
 
@@ -1246,7 +1247,7 @@ if you are interested in fixing this."))
                  (format nil "Show Files Matching ~A" pathname)))
         ((not (probe-file pathname))
          (values nil nil nil))
-        ((cl-fad:directory-pathname-p pathname)
+        ((uiop:directory-pathname-p pathname)
          (values `(com-show-directory ,pathname)
                  "Show Directory"
                  (format nil "Show Directory ~A" pathname)))
@@ -1297,7 +1298,7 @@ if you are interested in fixing this."))
                                     :menu t
                                     :command-table directory-stack-commands)
   ((pathname 'pathname :prompt "directory"))
-  (let ((pathname (merge-pathnames (cl-fad:pathname-as-directory pathname))))
+  (let ((pathname (merge-pathnames (uiop:ensure-directory-pathname pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
         (progn (push *default-pathname-defaults* *directory-stack*)

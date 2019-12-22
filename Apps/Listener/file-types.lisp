@@ -135,7 +135,7 @@
   (cond ((wild-pathname-p pathname) (standard-icon "wild.xpm"))
         ((not (probe-file pathname)) (standard-icon "invalid.xpm"))
         ;; FIXME: use inode mime types
-        ((cl-fad:directory-pathname-p pathname) *folder-icon*)
+        ((uiop:directory-pathname-p pathname) *folder-icon*)
         (t (let ((mime-class (find-class (pathname-mime-type pathname) nil)))
              (if mime-class
                  (or (gethash (class-name mime-class) *icon-mapping*)

@@ -66,9 +66,8 @@
       (stream-increment-cursor-position stream (+ (pattern-width pattern) extra-spacing) 0))))
 
 (defun precache-icons ()
-  (let ((pathnames (remove-if #'cl-fad:directory-pathname-p
-                              (cl-fad:list-directory
-                               (cl-fad:pathname-directory-pathname *icon-path*)))))
+  (let ((pathnames (uiop:directory-files
+                    (uiop:pathname-directory-pathname *icon-path*))))
     (dolist (pn pathnames)
       (standard-icon (namestring (make-pathname :name (pathname-name pn)
                                                 :type (pathname-type pn)))))))

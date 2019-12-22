@@ -50,7 +50,8 @@
       (mapc (lambda (path)
 	      (when (string-equal (pathname-type path) "asd")
 		(systems (truename path))))
-	    (cl-fad:list-directory (eval reg))))))
+            (uiop:directory-files
+             (uiop:ensure-directory-pathname (eval reg)))))))
 
 (defun asdf-operation-pretty-name (op)
   (case op
