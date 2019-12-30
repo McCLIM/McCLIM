@@ -730,28 +730,19 @@ documentation produced by presentations.")
   pane)
 
 (defun do-pane-creation-form (name form)
-  (cond
-    ;; Single form which is a function call
-    ((and (= (length form) 1)
-          (listp (first form)))
-     `(coerce-pane-name ,(first form) ',name))
-    ;; Standard pane denoted by a keyword (i.e `:application')
-    ((keywordp (first form))
-     (case (first form)
-       (:application `(make-clim-application-pane
-                       :name ',name
-                       ,@(cdr form)))
-       (:interactor `(make-clim-interactor-pane
-                      :name ',name ,@(cdr form)))
-       (:pointer-documentation `(make-clim-pointer-documentation-pane
-                                 :name ',name
-                                 ,@(cdr form)))
-       (:command-menu `(make-clim-command-menu-pane
-                                :name ',name
-                                ,@(cdr form)))
-       (otherwise `(make-pane ,(first form) :name ',name ,@(cdr form)))))
-    ;; Non-standard pane designator fed to the `make-pane'
-    (t `(make-pane ',(first form) :name ',name ,@(cdr form)))))
+  (destructuring-bind (pane &rest options) form
+    (cond ((and (null options) (listp pane)) ; Single form which is a function call
+           `(coerce-pane-name ,pane ',name))
+          ((eq pane :application) ; Standard pane denoted by a keyword (i.e `:application')
+           `(make-clim-application-pane :name ',name ,@options))
+          ((eq pane :interactor)
+           `(make-clim-interactor-pane :name ',name ,@options))
+          ((eq pane :pointer-documentation)
+           `(make-clim-pointer-documentation-pane :name ',name ,@options))
+          ((eq pane :command-menu)
+           `(make-clim-command-menu-pane :name ',name ,@options))
+          (t ; Non-standard pane designator fed to the `make-pane'
+           `(make-pane ',pane :name ',name ,@options)))))
 
 (defun make-panes-generate-panes-form (class-name menu-bar panes layouts
                                        pointer-documentation)
