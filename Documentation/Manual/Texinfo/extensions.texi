@@ -321,3 +321,58 @@ image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
 An image describing the output to the @code{stream-var} stream will be
 returned as an rgba pattern (of class @code{clime:image-pattern}).
 @end defmac
+
+@section Updating frame instances after frame class redefinition
+
+Each application frame is an instance of a subclasses of
+@code{clim:application-frame} which is usually defined using
+@code{clim:define-application-frame}.  As such, the application frame
+will immediately reflect changes to slots, superclasses and specialized
+methods made by redefining its class.  In contrast, changes to panes,
+layouts and command tables which also occur when a class is redefined,
+for example as a result of changing and re-evaluating the
+@code{clim:define-application-frame} form, are not reflected in already
+existing instances by default.
+
+@mcclim provides an alternative behavior in which the latter aspects are
+also updated in already exiting application frames.  This behavior is
+selected if the @code{(:update-instances-on-redefinition t)} option is
+supplied in the @code{clim:define-application-frame} form in
+question@footnote{Note that it is currently not possible to add or
+remove this option after the initial definition of an application frame
+class}.  When an application frame class which has been defined with
+this option is redefined by re-evaluating the
+@code{clim:define-application-frame} form or reinitializing the class in
+some other way, the following changes are applied to each existing
+instance of that class:
+
+@itemize @bullet
+@item
+If the @code{:command-table} option has changed, the new command table
+is installed in the frame.
+@item
+The layout list of the frame is updated according to the new definition.
+@item
+Panes are regenerated according to the new definition.  Panes that exist
+in the old definition and the new definition are reinitialized instead
+of recreated if possible.
+@item
+The current layout of the frame is reset to the first layout in the
+updated layout list of the frame.  @code{clim:layout-frame} is called in
+a way that preserves the current geometry of the frame if possible.
+@end itemize
+
+These changes are immediately reflected in all existing instances of the
+frame class.
+
+Concretely, if for example, a @code{:background +red+} initarg is added
+to a @code{:push-button} declaration in the @code{:panes} option, the
+background of the corresponding button in each existing frame instance
+turns red when the @code{clim:define-application-frame} form is
+re-evaluated.  Note that removing the initarg again will not restore the
+default background since panes are reinitialized with the provided
+initargs, not completely reinitialized, in order to preserve a
+reasonable amount of state across redefinitions.  Similarly, changing
+the order of layouts in the @code{:layouts} option and re-evaluating the
+@code{clim:define-application-frame} form immediately changes current
+layout of existing frame instance.
