@@ -82,13 +82,13 @@ argument to avoid creating too many functions with similar name."))
                    (make-demo-button "Gadget Test"  'gadget-test)
                    (make-demo-button "D&D Translator" 'drag-test)
                    (make-demo-button "Draggable Graph" 'draggable-graph-demo)
-		   (make-pane 'push-button
-			      :label "Font Selector"
-			      :activate-callback
-			      (lambda (&rest ignore)
-				(declare (ignore ignore))
-				(format *trace-output* "~&You chose: ~A~%"
-					(select-font))))
+                   (make-pane 'push-button
+                              :label "Font Selector"
+                              :activate-callback
+                              (lambda (&rest ignore)
+                                (declare (ignore ignore))
+                                (format *trace-output* "~&You chose: ~A~%"
+                                        (select-font))))
                    (make-demo-button "Tab Layout" 'tabdemo:tabdemo)
                    (make-demo-button "Summation" 'summation)
                    (make-demo-button "Slider demo" 'sliderdemo:sliderdemo)
@@ -97,7 +97,8 @@ argument to avoid creating too many functions with similar name."))
                    (make-demo-button "Traffic lights" 'traffic-lights)
                    (make-demo-button "Image Transform" 'image-transform-demo:image-transform-demo)
                    (make-demo-button "Selection (clipboard)" 'selection-demo)
-                   (make-demo-button "DND various" 'drag-and-drop-example:dnd-commented)))
+                   (make-demo-button "DND various" 'drag-and-drop-example:dnd-commented)
+                   (make-demo-button "Frame class redefinition" 'frame-class-redefinition)))
                (labelling (:label "Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Stream test" 'stream-test)
@@ -149,8 +150,7 @@ argument to avoid creating too many functions with similar name."))
            (make-pane 'push-button :label "Cancel")
            '+fill+
            (make-pane 'push-button :label "Help")
-           5
-           ) )))
+           5))))
 
 (define-application-frame table-test
     () ()
@@ -161,8 +161,7 @@ argument to avoid creating too many functions with similar name."))
            (list (make-pane 'push-button :label "Last Name" :max-height +fill+)
                  (make-pane 'push-button :label "First Name" #||:max-height +fill+||#))
            (list (make-pane 'push-button :label "C 1 0")
-                 (make-pane 'push-button :label "C 1 1"))
-           ) )))
+                 (make-pane 'push-button :label "C 1 1"))))))
 
 (defun make-label-test-column (title label content)
   (flet ((make-label (align-x align-y)

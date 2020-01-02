@@ -53,6 +53,7 @@
      (:file "frame-sheet-name-test")
      (:file "dnd-commented")
      (:file "tracking-pointer")
+     (:file "frame-class-redefinition")
      (:file "demodemo")))
 
 (defsystem #:clim-examples/superapp
