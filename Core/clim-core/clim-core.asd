@@ -10,6 +10,7 @@
    (:file "input-editing" :depends-on ("presentations" "bordered-output" "table-formatting"))
    (:file "graph-formatting")
    (:file "frames" :depends-on ("commands" "presentations" "presentation-defs" "incremental-redisplay"))
+   (:file "redefinition" :depends-on ("frames"))
    (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay"
                                       "bordered-output" "presentation-defs" "gadgets" "dialog"))
    (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
