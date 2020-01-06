@@ -283,6 +283,11 @@
                            :initform nil
                            :reader gadget-value-changed-callback)))
 
+(defmethod reinitialize-instance :after ((instance value-gadget)
+                                         &key (value nil value-supplied-p))
+  (when value-supplied-p
+    (setf (gadget-value instance) value)))
+
 (defmethod (setf gadget-value) (value (gadget value-gadget) &key invoke-callback)
   (declare (ignore invoke-callback))
   (setf (slot-value gadget 'value) value))
