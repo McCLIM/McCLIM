@@ -22,22 +22,9 @@
 (defclass null-frame-manager (frame-manager)
   ())
 
-;;; FIXME: maybe this or something like it belongs in CLIMI?
-(defun generic-concrete-pane-class (name)
-  (let* ((concrete-name (get name 'climi::concrete-pane-class-name))
-         (maybe-name (concatenate 'string (symbol-name name) 
-                                  (symbol-name '#:-pane)))
-         (maybe-symbol (find-symbol maybe-name :climi))
-         (maybe-class (find-class maybe-symbol nil)))
-    (or maybe-class
-        (find-class concrete-name nil)
-        (find-class (if (keywordp name) 
-                        (intern (symbol-name name) :climi)
-                        name) nil))))
-
 (defmethod make-pane-1
     ((fm null-frame-manager) (frame application-frame) type &rest initargs)
-  (apply #'make-instance (generic-concrete-pane-class type)
+  (apply #'make-instance (find-concrete-pane-class fm type)
 	 :frame frame :manager fm :port (port frame)
 	 initargs))
 

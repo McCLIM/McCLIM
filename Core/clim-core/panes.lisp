@@ -363,11 +363,47 @@ order to produce a double-click")
   (print-unreadable-object (pane sink :type t :identity t)
     (prin1 (pane-name pane) sink)))
 
+(defgeneric find-concrete-pane-class (pane-realizer pane-type &optional errorp)
+  (:documentation "Resolves abstract pane type PANE-TYPE to a concrete
+pane class. Methods defined in backends should specialize on the
+PANE-REALIZER argument. When the PANE-TYPE can't be resolved NIL is
+returned or error is signaled depending on the argument ERRORP.")
+  (:method ((realizer t) pane-type &optional (errorp t))
+    ;; Default method tries to resolve the abstract pane type
+    ;; PANE-TYPE as specified by a convention mentioned in the
+    ;; spec. Function is a little complicated because we preserve old
+    ;; semantics adding rules to the class name resolution. Resolution
+    ;; works as follows:
+    ;;
+    ;; 1. Abstract mapping always takes a priority. When it exists we
+    ;;    don't look further.
+    ;; 2. When the symbol is in clim/climi/keyword package:
+    ;;    - look for a class `climi::{SYMBOL-NAME}-pane'
+    ;;    - look for a class `climi::{SYMBOL-NAME}'
+    ;; 3. Otherwise find a class named by the symbol.
+    (check-type pane-type symbol)
+    (flet ((try-mapped (symbol)
+             (when-let ((mapped (get symbol 'concrete-pane-class-name)))
+               (return-from find-concrete-pane-class
+                 (find-class mapped errorp)))))
+      (try-mapped pane-type)
+      (if (let ((symbol-package (symbol-package pane-type)))
+            (or (eql symbol-package (find-package '#:clim))
+                (eql symbol-package (find-package '#:climi))
+                (eql symbol-package (find-package '#:keyword))))
+          (let* ((symbol-name (symbol-name pane-type))
+                 (clim-symbol (find-symbol symbol-name '#:climi)))
+            (try-mapped clim-symbol)
+            (let* ((proper-name   (concatenate 'string symbol-name (string '#:-pane)))
+                   (proper-symbol (find-symbol proper-name '#:climi)))
+              (try-mapped proper-symbol)
+              (or (and proper-symbol (find-class proper-symbol nil))
+                  (and clim-symbol   (find-class clim-symbol   nil))
+                  (when errorp
+                    (error "Concrete class for a pane ~s not found." pane-type)))))
+          (find-class pane-type errorp)))))
+
 (defun make-pane (type &rest args)
-  (when (eql (symbol-package type)
-             (symbol-package :foo))
-    (setf type (or (find-symbol (symbol-name type) (find-package :clim))
-                   type)))
   (apply #'make-pane-1 (or *pane-realizer*
 			   (frame-manager *application-frame*))
 	 *application-frame* type args))

@@ -58,56 +58,20 @@
 
 ;; Abstract pane lookup logic
 
-(defun find-first-defined-class (types)
-  (first
-   (remove-if #'null
-              (mapcar (lambda (class-name)
-                        (find-class class-name nil))
-                      types))))
+(defmethod find-concrete-pane-class ((fm clx-frame-manager)
+                                     pane-type &optional errorp)
+  ;; This backend doesn't have any specialized pane implementations
+  ;; but depending on circumstances it may add optional mirroring to
+  ;; the class. Such automatically defined concrete class has the same
+  ;; name but with a gensym prefix and symbol in the backend package.
+  (declare (ignore errorp))
+  (maybe-mirroring fm (call-next-method)))
 
-(defun find-symbol-from-spec (package-spec name-components)
-  (flet ((coerce-name-element (name-elt)
-           (typecase name-elt
-             (symbol (symbol-name name-elt))
-             (sequence (coerce name-elt 'string))
-             (t (princ-to-string name-elt)))))
-  (find-symbol
-   (apply #'concatenate 'string (mapcar #'coerce-name-element name-components))
-   package-spec)))
-
-(defun find-symbols (name-specs)
-  (remove-if #'null (mapcar #'(lambda (x) (find-symbol-from-spec (first x) (rest x))) name-specs)))
-
-(defun generate-standard-pane-specs (type)
-  (let ((mapping (get type 'climi::concrete-pane-class-name)))
-    `((,(symbol-package mapping) ,mapping)
-      (:climi ,mapping)
-      (:climi ,type #:-pane)
-      (:climi ,type))))
-
-(defun generate-clx-pane-specs (type)
-  (append
-   `((:clim-clx #:clx- ,type #:-pane)
-     (:clim-clx #:clx- ,type)
-     (:climi #:clx- ,type #:-pane)
-     (:climi #:clx- ,type))
-   (generate-standard-pane-specs type)))
-
-(defun find-concrete-pane-class (type)
-  (if (or (eql (symbol-package type)
-               (find-package '#:clim))
-          (eql (symbol-package type)
-               (find-package '#:climi))
-          (eql (symbol-package type)
-               (find-package '#:keyword))
-	  (get type 'climi::concrete-pane-class-name))
-      (find-first-defined-class (find-symbols (generate-clx-pane-specs type)))
-      type))
-
-;;; This is an example of how make-pane-1 might create specialized instances of
-;;; the generic pane types based upon the type of the frame-manager. However, in
-;;; the CLX case, we don't expect there to be any CLX specific panes. CLX uses
-;;; the default generic panes instead.
+;;; This is an example of how make-pane-1 might create specialized
+;;; instances of the generic pane types based upon the type of the
+;;; frame-manager. However, in the CLX case, we don't expect there to
+;;; be any CLX specific panes. CLX uses the default generic panes
+;;; instead.
 (defun maybe-mirroring (fm concrete-pane-class)
   (when (funcall (mirroring-p fm) concrete-pane-class)
     (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
@@ -115,7 +79,8 @@
                                           concrete-pane-class)))
       (multiple-value-bind (class-symbol foundp)
           (alexandria:ensure-symbol
-           (alexandria:symbolicate (class-gensym fm) "-" (symbol-name concrete-pane-class-symbol))
+           (alexandria:symbolicate (class-gensym fm) "-"
+                                   (symbol-name concrete-pane-class-symbol))
            :clim-clx)
         (unless foundp
           (eval
@@ -126,17 +91,13 @@
                  ,concrete-pane-class-symbol)
               ()
               (:metaclass ,(type-of (find-class concrete-pane-class-symbol))))))
-        ;; (format *debug-io* "dummy class mirror ~A: ~A~%" concrete-pane-class-symbol class-symbol)
         (setf concrete-pane-class (find-class class-symbol)))))
   concrete-pane-class)
 
 (defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
-  (apply #'make-instance
-	 (maybe-mirroring fm (find-concrete-pane-class type))
-	 :frame frame
-	 :manager fm
-	 :port (port frame)
-	 args))
+  (apply #'make-instance (find-concrete-pane-class fm type)
+	 :frame frame :manager fm :port (port frame)
+         args))
 
 
 (defmethod adopt-frame :before ((fm clx-frame-manager) (frame menu-frame))

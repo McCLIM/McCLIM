@@ -1990,7 +1990,7 @@
   (:nicknames :climb)
   (:use :clim :clim-extensions)
   (:export
-   ;; Originally in CLIM-INTERNALS
+   ;; CLIM-INTERNALS
    #:make-graft
    #:medium-draw-circle*
    #:mirror-transformation
@@ -2012,6 +2012,7 @@
    #:window-manager-focus-event
    #:with-port
    #:invoke-with-port
+   #:find-concrete-pane-class
    ;; Text-style
    #:text-style-character-width
    #:text-bounding-rectangle*

@@ -37,10 +37,10 @@
         (setf concrete-pane-class (find-class class-symbol)))))
   concrete-pane-class)
 
-(defmethod make-pane-1 ((fm clx-fb-frame-manager) (frame application-frame) type &rest args)
-  (apply #'make-instance
-	 (maybe-mirroring fm (clim-clx::find-concrete-pane-class type))
-	 :frame frame
-	 :manager fm
-	 :port (port frame)
-	 args))
+(defmethod find-concrete-pane-class ((fm clx-fb-frame-manager)
+                                     pane-type &optional (errorp t))
+  ;; This backend doesn't have any specialized pane implementations
+  ;; but depending on circumstances it may add optional mirroring to
+  ;; the class. Such automatically defined concrete class has the same
+  ;; name but with a gensym prefix and symbol in the backend package.
+  (maybe-mirroring fm (find-concrete-pane-class t pane-type errorp)))
