@@ -94,12 +94,6 @@
         (setf concrete-pane-class (find-class class-symbol)))))
   concrete-pane-class)
 
-(defmethod make-pane-1 ((fm clx-frame-manager) (frame application-frame) type &rest args)
-  (apply #'make-instance (find-concrete-pane-class fm type)
-	 :frame frame :manager fm :port (port frame)
-         args))
-
-
 (defmethod adopt-frame :before ((fm clx-frame-manager) (frame menu-frame))
   ;; Temporary kludge.
   (when (eq (slot-value frame 'climi::top) nil)

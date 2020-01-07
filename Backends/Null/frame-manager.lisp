@@ -22,12 +22,6 @@
 (defclass null-frame-manager (frame-manager)
   ())
 
-(defmethod make-pane-1
-    ((fm null-frame-manager) (frame application-frame) type &rest initargs)
-  (apply #'make-instance (find-concrete-pane-class fm type)
-	 :frame frame :manager fm :port (port frame)
-	 initargs))
-
 (defmethod adopt-frame :after
     ((fm null-frame-manager) (frame application-frame))
   ())
