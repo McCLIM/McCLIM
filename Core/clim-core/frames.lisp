@@ -107,7 +107,8 @@ input focus. This is a McCLIM extension."))
    (panes-for-layout :initform nil :accessor frame-panes-for-layout
                      :documentation "alist of names and panes
                                      (as returned by make-pane)")
-
+   (types-for-layout :initform nil :accessor frame-types-for-layout
+                     :documentation "alist of names and pane types")
    (output-pane :initform nil
                 :accessor frame-standard-output
                 :accessor frame-error-output)
@@ -751,20 +752,19 @@ documentation produced by presentations.")
   (setf (slot-value pane 'name) name)
   pane)
 
-(defun generate-pane-creation-form (name form)
-  (destructuring-bind (pane &rest options) form
-    (cond ((and (null options) (listp pane)) ; Single form which is a function call
-           `(coerce-pane-name ,pane ',name))
-          ((eq pane :application) ; Standard pane denoted by a keyword (i.e `:application')
-           `(make-clim-application-pane :name ',name ,@options))
-          ((eq pane :interactor)
-           `(make-clim-interactor-pane :name ',name ,@options))
-          ((eq pane :pointer-documentation)
-           `(make-clim-pointer-documentation-pane :name ',name ,@options))
-          ((eq pane :command-menu)
-           `(make-clim-command-menu-pane :name ',name ,@options))
-          (t ; Non-standard pane designator fed to the `make-pane'
-           `(make-pane ',pane :name ',name ,@options)))))
+(defun generate-pane-creation-form (name pane options)
+  (cond ((and (null options) (listp pane)) ; Single form which is a function call
+         `(coerce-pane-name ,pane ',name))
+        ((eq pane :application) ; Standard pane denoted by a keyword (i.e `:application')
+         `(make-clim-application-pane :name ',name ,@options))
+        ((eq pane :interactor)
+         `(make-clim-interactor-pane :name ',name ,@options))
+        ((eq pane :pointer-documentation)
+         `(make-clim-pointer-documentation-pane :name ',name ,@options))
+        ((eq pane :command-menu)
+         `(make-clim-command-menu-pane :name ',name ,@options))
+        (t ; Non-standard pane designator fed to the `make-pane'
+         `(make-pane ',pane :name ',name ,@options))))
 
 (defun generate-generate-panes-form (class-name menu-bar panes layouts
                                  pointer-documentation)
@@ -776,11 +776,14 @@ documentation produced by presentations.")
      (let ((*application-frame* frame))
        (with-look-and-feel-realization (fm frame)
          (unless (frame-panes-for-layout frame)
-           (setf (frame-panes-for-layout frame)
-                 (list
-                  ,@(loop for (name . form) in panes
-                          collect `(cons ',name ,(generate-pane-creation-form
-                                                  name form))))))
+           ,@(collect (types forms)
+               (mapc (lambda (pane)
+                       (destructuring-bind (name pane &rest options) pane
+                         (types `(cons ',name ',(if (atom pane) pane nil)))
+                         (forms `(cons ',name ,(generate-pane-creation-form name pane options)))))
+                     panes)
+               `((setf (frame-panes-for-layout frame) (list ,@(forms)))
+                 (setf (frame-types-for-layout frame) (list ,@(types))))))
          (let ,(loop for (name . form) in panes
                      collect `(,name (alexandria:assoc-value
                                       (frame-panes-for-layout frame)
