@@ -865,12 +865,10 @@ documentation produced by presentations.")
                  ;; :resize-frame is mentioned in a spec annotation but we don't support it
                  ;; McCLIM extensions
                  (:pointer-documentation            1)
-                 (:update-instances-on-redefinition 1 :conflicts (:metaclass))
                  ;; Default initargs
                  (:pretty-name                      1)
                  ;; Common Lisp
-                 (:default-initargs                 *)
-                 (:metaclass                        1 :conflicts (:update-instances-on-redefinition))))
+                 (:default-initargs                 *)))
         (all-values '()))
     (labels ((definedp (key)
                (not (eq (getf all-values key 'undefined) 'undefined)))
@@ -936,7 +934,6 @@ documentation produced by presentations.")
                             (pretty-name (string-capitalize name))
                             ;; Common Lisp
                             user-default-initargs
-                            metaclass
                             other-options
                             ;; Helpers
                             (current-layout (first (first layouts)))
@@ -948,9 +945,7 @@ documentation produced by presentations.")
     ;; If the frame class is being (re)defined with instance updating,
     ;; delay the redefinition notification until after all forms have
     ;; executed.
-    `(,@(if update-instances-on-redefinition
-            '(with-delayed-redefinition-notifications ())
-            '(progn))
+    `(progn
        (defclass ,name ,superclasses
          ,slots
          (:default-initargs
@@ -967,10 +962,6 @@ documentation produced by presentations.")
                                 ,@(cdr top-level)))
           ,@geometry
           ,@user-default-initargs)
-         ,@(cond (metaclass
-                  `((:metaclass ,metaclass)))
-                 (update-instances-on-redefinition
-                  `((:metaclass redefinition-updates-instances-class))))
          ,@other-options)
 
        ,(generate-generate-panes-form
@@ -986,7 +977,9 @@ documentation produced by presentations.")
                    (alexandria:ensure-list name-and-options)
                  `(define-command (,name :command-table ,',(first command-table)
                                          ,@options)
-                      ,arguments ,@body))))))))
+                      ,arguments ,@body)))))
+       ,@(when update-instances-on-redefinition
+           `((note-frame-class-redefined (find-class ',name)))))))
 
 (defun make-application-frame (frame-name
                                &rest options
@@ -1000,7 +993,12 @@ documentation produced by presentations.")
                                    :save-under :frame-class))
     (let ((frame (apply #'make-instance frame-class
                         :name frame-name
-                        options)))
+                        options))
+          (class (if (symbolp frame-class)
+                     frame-class
+                     (class-name frame-class))))
+      (push (tg:make-weak-pointer frame)
+            (get class 'instances))
       (when frame-manager-p
         (adopt-frame frame-manager frame))
       (cond ((or enable (eq state :enabled))
