@@ -198,8 +198,22 @@
                         ;; immediate-repainting-mixin
                         basic-pane
                         gadget)
-  ()
-  (:default-initargs :text-style (make-text-style :sans-serif nil nil)))
+  ((id                :initarg :id                :accessor gadget-id)
+   (client            :initarg :client            :accessor gadget-client)
+   (armed-callback    :initarg :armed-callback    :reader gadget-armed-callback)
+   (disarmed-callback :initarg :disarmed-callback :reader gadget-disarmed-callback)
+   ;; I'm not so sure about the value for :initform. Maybe T is
+   ;; better? Or maybe we should call ACTIVATE-GADGET after creating a
+   ;; gadget? -- AL
+   ;;
+   ;; I think, T is correct here --GB
+   (active-p          :initform t                 :reader gadget-active-p)
+   (armed             :initform nil               :reader gadget-armed-p))
+  (:default-initargs :text-style (make-text-style :sans-serif nil nil)
+                     :id (gensym "GADGET")
+                     :client *application-frame*
+                     :armed-callback nil
+                     :disarmed-callback nil))
 
 (defgeneric armed-callback (gadget client gadget-id)
   (:argument-precedence-order client gadget-id gadget))

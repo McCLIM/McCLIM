@@ -237,31 +237,7 @@
 ;;; 30.3 Basic Gadget Classes
 ;;; XXX Slots definitions should be banished.
 (define-protocol-class gadget (pane)
-  ((id                :initarg :id
-                      :initform (gensym "GADGET")
-                      :accessor gadget-id)
-   (client            :initarg :client
-                      :initform *application-frame*
-                      :accessor gadget-client)
-   (armed-callback    :initarg :armed-callback
-                      :initform nil
-                      :reader gadget-armed-callback)
-   (disarmed-callback :initarg :disarmed-callback
-                      :initform nil
-                      :reader gadget-disarmed-callback)
-   ;; [Arthur] I'm not so sure about the value for :initform.
-   ;; Maybe T is better? Or maybe we should call
-   ;; ACTIVATE-GADGET after creating a gadget?
-   ;;
-   ;; I think, T is correct here --GB
-
-   (active-p            :initform t :initarg :active
-                        :reader gadget-active-p)
-   ;;
-   ;; I am not so lucky with the armed slot in GADGET --GB
-   (armed               :initform nil)
-
-   ))
+  ())
 
 
 ;;;; Part VIII: Appendices
