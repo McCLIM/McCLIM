@@ -2130,7 +2130,7 @@ outside the clipping area should be grey.")
 ;;;
 
 (define-drawing-test "Pixmap" "Pixmap 1" (frame stream)
-    ""
+    "Pixmaps are not visible when output recording."
   (declare (ignore frame))
   (let ((pixmap (with-output-to-pixmap (m stream :width 200 :height 200)
                   (draw-rectangle* m 0 0 200 200 :ink +green+)
@@ -2149,7 +2149,7 @@ outside the clipping area should be grey.")
 
 
 (define-drawing-test "Pixmap" "Pixmap 2" (frame stream)
-    ""
+    "Pixmaps are not visible when output recording."
   (declare (ignore frame))
   (let ((pixmap (with-output-to-pixmap (m stream :width 200 :height 200)
                   (draw-rectangle* m 0 0 200 200 :ink +red+)
@@ -2160,7 +2160,7 @@ outside the clipping area should be grey.")
     (copy-from-pixmap pixmap 50 50 100 100 stream 150 250)))
 
 (define-drawing-test "Pixmap" "Pixmap 3" (frame stream)
-    ""
+    "Pixmaps are not visible when output recording."
   (declare (ignore frame))
   (let ((pixmap (with-output-to-pixmap (m stream :width 200 :height 200)
                   (draw-rectangle* m 0 0 200 200 :ink +red+)
