@@ -123,6 +123,11 @@
     (let ((*application-frame* (pane-frame pane)))
       (apply callback pane more-arguments))))
 
+;;; Internal protocols
+(defgeneric gadget-armed-p (gadget))
+(defgeneric arm-gadget (gadget &optional value))
+(defgeneric disarm-gadget (gadget))
+
 ;;
 ;; gadget subclasses
 ;;
@@ -219,17 +224,13 @@
 ;; gadget-armed-callback or gadget-disarmed-callback with one
 ;; argument, the gadget."
 
-(defgeneric armed-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget)
-  (:method ((gadget basic-gadget) client gadget-id)
-    (declare (ignore client gadget-id))
-    (invoke-callback gadget (gadget-armed-callback gadget))))
+(defmethod armed-callback ((gadget basic-gadget) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback gadget (gadget-armed-callback gadget)))
 
-(defgeneric disarmed-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget)
-  (:method  ((gadget basic-gadget) client gadget-id)
-    (declare (ignore client gadget-id))
-    (invoke-callback gadget (gadget-disarmed-callback gadget))))
+(defmethod disarmed-callback ((gadget basic-gadget) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback gadget (gadget-disarmed-callback gadget)))
 
 ;;
 ;; arming and disarming gadgets
@@ -238,46 +239,40 @@
 ;; Redrawing is supposed to be handled on an :AFTER method on arm- and
 ;; disarm-callback.
 
-(defgeneric arm-gadget (gadget &optional value)
-  (:method ((gadget basic-gadget) &optional (value t))
-    (with-slots (armed) gadget
-      (unless (eql armed value)
-        (setf armed value)
-        (if value
-            (armed-callback gadget (gadget-client gadget) (gadget-id gadget))
-            (disarmed-callback gadget (gadget-client gadget) (gadget-id gadget)))))))
+(defmethod arm-gadget ((gadget basic-gadget) &optional (value t))
+  (with-slots (armed) gadget
+    (unless (eql armed value)
+      (setf armed value)
+      (if value
+          (armed-callback gadget (gadget-client gadget) (gadget-id gadget))
+          (disarmed-callback gadget (gadget-client gadget) (gadget-id gadget))))))
 
-(defgeneric disarm-gadget (gadget)
-  (:method ((gadget basic-gadget))
-    (arm-gadget gadget nil)))
+(defmethod disarm-gadget ((gadget basic-gadget))(gadget)
+  (arm-gadget gadget nil))
 
 ;;;
 ;;; Activation
 ;;;
 
-(defgeneric activate-gadget (gadget)
-  (:method ((gadget basic-gadget))
-    (with-slots (active-p) gadget
-      (unless active-p
-        (setf active-p t)
-        (note-gadget-activated (gadget-client gadget) gadget)))))
+(defmethod activate-gadget ((gadget basic-gadget))
+  (with-slots (active-p) gadget
+    (unless active-p
+      (setf active-p t)
+      (note-gadget-activated (gadget-client gadget) gadget))))
 
-(defgeneric deactivate-gadget (gadget)
-  (:method ((gadget basic-gadget))
-    (with-slots (active-p) gadget
-      (when active-p
-        (setf active-p nil)
-        (note-gadget-deactivated (gadget-client gadget) gadget)))))
+(defmethod deactivate-gadget ((gadget basic-gadget))
+  (with-slots (active-p) gadget
+    (when active-p
+      (setf active-p nil)
+      (note-gadget-deactivated (gadget-client gadget) gadget))))
 
-(defgeneric note-gadget-activated (client gadget)
+(defmethod note-gadget-activated (client gadget)
   ;; Default: do nothing
-  (:method (client gadget)
-    (declare (ignore client gadget))))
+  (declare (ignore client gadget)))
 
-(defgeneric note-gadget-deactivated (client gadget)
+(defmethod note-gadget-deactivated (client gadget)
   ;; Default: do nothing
-  (:method (client gadget)
-    (declare (ignore client gadget))))
+  (declare (ignore client gadget)))
 
 
 ;;;
@@ -311,11 +306,9 @@
                               (gadget-id gadget)
                               value))))
 
-(defgeneric value-changed-callback (gadget client gadget-id value)
-  (:argument-precedence-order client gadget-id value gadget)
-  (:method  ((gadget value-gadget) client gadget-id value)
-    (declare (ignore client gadget-id))
-    (invoke-callback gadget (gadget-value-changed-callback gadget) value)))
+(defmethod value-changed-callback ((gadget value-gadget) client gadget-id value)
+  (declare (ignore client gadget-id))
+  (invoke-callback gadget (gadget-value-changed-callback gadget) value))
 
 ;;;
 ;;; Action-gadget
@@ -326,11 +319,9 @@
                       :reader gadget-activate-callback))
   (:default-initargs :activate-callback nil))
 
-(defgeneric activate-callback (action-gadget client gadget-id)
-  (:argument-precedence-order client gadget-id action-gadget)
-  (:method  ((gadget action-gadget) client gadget-id)
-    (declare (ignore client gadget-id))
-    (invoke-callback gadget (gadget-activate-callback gadget))))
+(defmethod activate-callback ((gadget action-gadget) client gadget-id)
+  (declare (ignore client gadget-id))
+  (invoke-callback gadget (gadget-activate-callback gadget)))
 
 ;;;
 ;;; Oriented-gadget
@@ -386,16 +377,10 @@
   ;; Try to be compatible with Lispworks' CLIM.
   ())
 
-(defgeneric gadget-range (range-gadget)
-  (:documentation
-   "Returns the difference of the maximum and minimum value of RANGE-GADGET.")
-  (:method ((gadget range-gadget))
-    (- (gadget-max-value gadget)
-       (gadget-min-value gadget))))
+(defmethod gadget-range ((gadget range-gadget))
+  (- (gadget-max-value gadget)
+     (gadget-min-value gadget)))
 
-(defgeneric gadget-range* (range-gadget)
-  (:documentation
-   "Returns the minimum and maximum value of RANGE-GADGET as two values.")
-  (:method ((gadget range-gadget))
-    (values (gadget-min-value gadget)
-            (gadget-max-value gadget))))
+(defmethod gadget-range* ((gadget range-gadget))
+  (values (gadget-min-value gadget)
+          (gadget-max-value gadget)))
