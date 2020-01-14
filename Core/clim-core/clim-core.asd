@@ -1,5 +1,7 @@
-(defsystem #:clim-core
-  :depends-on (#:clim-basic #+sbcl (:require #:sb-introspect))
+(in-package #:asdf-user)
+
+(defsystem "clim-core"
+  :depends-on ("clim-basic" #+sbcl (:require "sb-introspect"))
   :components
   ((:file "defresource")
    (:file "presentations")
@@ -13,8 +15,14 @@
    (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay"
                                       "bordered-output" "presentation-defs" "gadgets" "dialog"))
    (:file "presentation-defs" :depends-on ("input-editing" "presentations"))
-   (:file "gadgets" :depends-on ("commands" "input-editing"
-                                 "frames" "incremental-redisplay" "panes"))
+   (:module "gadgets"
+    :depends-on ("commands" "input-editing" "frames" "incremental-redisplay" "panes")
+    :serial t
+    :components ((:file "base")
+                 (:file "abstract")
+                 (:file "mixins")
+                 (:file "drawing-utilities")
+                 (:file "concrete")))
    (:file "describe" :depends-on ("presentations" "presentation-translators" "presentation-defs" "table-formatting"))
    (:file "commands" :depends-on ("input-editing" "presentations"
                                   "presentation-defs"))
