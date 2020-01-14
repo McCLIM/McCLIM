@@ -125,7 +125,7 @@
 
 ;;; Internal protocols
 (defgeneric gadget-armed-p (gadget))
-(defgeneric arm-gadget (gadget &optional value))
+(defgeneric arm-gadget (gadget))
 (defgeneric disarm-gadget (gadget))
 
 ;;
@@ -239,16 +239,17 @@
 ;; Redrawing is supposed to be handled on an :AFTER method on arm- and
 ;; disarm-callback.
 
-(defmethod arm-gadget ((gadget basic-gadget) &optional (value t))
+(defmethod arm-gadget ((gadget basic-gadget))
   (with-slots (armed) gadget
-    (unless (eql armed value)
-      (setf armed value)
-      (if value
-          (armed-callback gadget (gadget-client gadget) (gadget-id gadget))
-          (disarmed-callback gadget (gadget-client gadget) (gadget-id gadget))))))
+    (unless armed
+      (setf armed t)
+      (armed-callback gadget (gadget-client gadget) (gadget-id gadget)))))
 
-(defmethod disarm-gadget ((gadget basic-gadget))(gadget)
-  (arm-gadget gadget nil))
+(defmethod disarm-gadget ((gadget basic-gadget))
+  (with-slots (armed) gadget
+    (when armed
+      (setf armed nil)
+      (disarmed-callback gadget (gadget-client gadget) (gadget-id gadget)))))
 
 ;;;
 ;;; Activation
