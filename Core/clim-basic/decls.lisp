@@ -1091,6 +1091,84 @@ Returns a SPACE-REQUIREMENT object."))
 ;; (defgeneric (setf* window-viewport-position) (x y window))
 
 
+;;; 30.3 Basic gadgets
+
+(defgeneric gadget-id (gadget))
+(defgeneric (setf gadget-id) (value gadget))
+(defgeneric gadget-client (gadget))
+(defgeneric (setf gadget-client) (value gadget))
+(defgeneric gadget-armed-callback (gadget))
+(defgeneric gadget-disarmed-callback (gadget))
+(defgeneric armed-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric disarmed-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric gadget-active-p (gadget))
+(defgeneric activate-gadget (gadget))
+(defgeneric deactivate-gadget (gadget))
+(defgeneric note-gadget-activated (client gadget))
+(defgeneric note-gadget-deactivated (client gadget))
+(defgeneric gadget-value (gadget))
+(defgeneric (setf gadget-value) (value value-gadget &key invoke-callback))
+(defgeneric gadget-value-changed-callback (gadget))
+(defgeneric value-changed-callback (gadget client gadget-id value)
+  (:argument-precedence-order client gadget-id gadget value))
+(defgeneric gadget-activate-callback (gadget))
+(defgeneric activate-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric gadget-orientation (gadget))
+(defgeneric gadget-label (gadget))
+(defgeneric (setf gadget-label) (value gadget))
+(defgeneric gadget-label-align-x (gadget))
+(defgeneric (setf gadget-label-align-x) (value gadget))
+(defgeneric gadget-label-align-y (gadget))
+(defgeneric (setf gadget-label-align-y) (value gadget))
+(defgeneric gadget-min-value (gadget))
+(defgeneric (setf gadget-min-value) (value gadget))
+(defgeneric gadget-max-value (gadget))
+(defgeneric (setf gadget-max-value) (value gadget))
+(defgeneric gadget-range (gadget)
+  (:documentation
+   "Returns the difference of the maximum and minimum value of RANGE-GADGET."))
+(defgeneric gadget-range* (gadget)
+  (:documentation
+   "Returns the minimum and maximum value of RANGE-GADGET as two values."))
+
+;;; 30.4 Abstract gadgets
+
+(defgeneric push-button-show-as-default (gadget))
+(defgeneric toggle-button-indicator-type (gadget))
+(defgeneric scroll-bar-drag-callback (gadget))
+(defgeneric scroll-bar-scroll-to-top-callback (gadget))
+(defgeneric scroll-bar-scroll-to-bottom-callback (gadget))
+(defgeneric scroll-bar-scroll-up-line-callback (gadget))
+(defgeneric scroll-bar-scroll-up-page-callback (gadget))
+(defgeneric scroll-bar-scroll-down-line-callback (gadget))
+(defgeneric scroll-bar-scroll-down-page-callback (gadget))
+(defgeneric scroll-to-top-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric scroll-to-bottom-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric scroll-up-line-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric scroll-up-page-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric scroll-down-line-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric scroll-down-page-callback (gadget client gadget-id)
+  (:argument-precedence-order client gadget-id gadget))
+(defgeneric gadget-show-value-p (gadget))
+(defgeneric slider-drag-callback (slider))
+(defgeneric drag-callback (gadget client gadget-id value)
+  (:argument-precedence-order client gadget-id gadget value))
+(defgeneric radio-box-current-selection (gadget))
+(defgeneric (setf radio-box-current-selection) (value gadget))
+(defgeneric radio-box-selections (gadget))
+(defgeneric check-box-current-selection (gadget))
+(defgeneric (setf check-box-current-selection) (value gadget))
+(defgeneric check-box-selections (gadget))
+
+
 ;;; D.2 Basic Stream Functions
 
 ;;; Gray Streamoid functions, but not part of any Gray proposal.
@@ -1100,17 +1178,6 @@ Returns a SPACE-REQUIREMENT object."))
 ;; E.1
 
 (defgeneric new-page (stream))
-
-;;;;
-(defgeneric gadget-value (gadget))
-(defgeneric (setf gadget-value) (new-value gadget &key invoke-callback))
-(defgeneric gadget-min-value (gadget))
-(defgeneric gadget-max-value (gadget))
-(defgeneric (setf gadget-max-value) (new-value gadget))
-(defgeneric (setf gadget-min-value) (new-value gadget))
-(defgeneric (setf scroll-bar-thumb-size) (new-value scroll-bar))
-(defgeneric gadget-orientation (gadget))
-(defgeneric gadget-client (gadget))
 
 ;;;
 (defgeneric text-style-mapping (port text-style &optional character-set))

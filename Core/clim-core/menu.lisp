@@ -44,7 +44,7 @@
     (unless armed
       (arm-menu client)
       (mapc #'disarm-menu (menu-children client))
-      (arm-gadget button t))
+      (arm-gadget button))
     (dispatch-repaint button (sheet-region button))))
 
 (defmethod disarm-menu ((button menu-button-pane))

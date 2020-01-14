@@ -24,27 +24,6 @@
 
 ;;; 30.4.4 The abstract scroll-bar Gadget
 
-(defgeneric drag-callback (pane client gadget-id value)
-  (:argument-precedence-order client gadget-id value pane))
-
-(defgeneric scroll-to-top-callback (scroll-bar client gadget-id)
-  (:argument-precedence-order client gadget-id scroll-bar))
-
-(defgeneric scroll-to-bottom-callback (scroll-bar client gadget-id)
-  (:argument-precedence-order client gadget-id scroll-bar))
-
-(defgeneric scroll-up-line-callback (scroll-bar client gadget-id)
-  (:argument-precedence-order client gadget-id scroll-bar))
-
-(defgeneric scroll-up-page-callback (scroll-bar client gadget-id)
-  (:argument-precedence-order client gadget-id scroll-bar))
-
-(defgeneric scroll-down-line-callback (scroll-bar client gadget-id)
-  (:argument-precedence-order client gadget-id scroll-bar))
-
-(defgeneric scroll-down-page-callback (scroll-bar client gadget-id)
-  (:argument-precedence-order client gadget-id scroll-bar))
-
 (defclass scroll-bar (value-gadget oriented-gadget-mixin range-gadget-mixin)
   ((drag-callback :initarg :drag-callback
                   :initform nil
@@ -147,17 +126,11 @@ and must never be nil.")
 
 ;; RADIO-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
 
-(defgeneric radio-box-current-selection (radio-box))
-
 (defmethod radio-box-current-selection ((radio-box radio-box))
   (gadget-value radio-box))
 
-(defgeneric (setf radio-box-current-selection) (new-value radio-box))
-
 (defmethod (setf radio-box-current-selection) (new-value (radio-box radio-box))
   (setf (gadget-value radio-box) new-value))
-
-(defgeneric radio-box-selections (radio-box))
 
 (defmethod radio-box-selections ((pane radio-box))
   (loop for child in (sheet-children pane)
@@ -187,13 +160,8 @@ and must never be nil.")
    :orientation :vertical))
 
 ;; CHECK-BOX-CURRENT-SELECTION is just a synonym for GADGET-VALUE:
-
-(defgeneric check-box-current-selection (check-box))
-
 (defmethod check-box-current-selection ((check-box check-box))
   (gadget-value check-box))
-
-(defgeneric (setf check-box-current-selection) (new-value check-box))
 
 (defmethod (setf check-box-current-selection) (new-value (check-box check-box))
   (setf (gadget-value check-box) new-value))
