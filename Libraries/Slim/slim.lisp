@@ -44,6 +44,7 @@ Examples:
          (clim:define-application-frame ,name ()
            ((,display-fn :initarg :display-function
                          :reader display-function))
+           (:menu-bar nil)
            (:pane :application
             :display-function (display-function clim:*application-frame*)
             ,@pane-options))
