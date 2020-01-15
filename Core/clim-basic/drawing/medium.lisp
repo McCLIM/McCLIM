@@ -204,24 +204,33 @@
   (typep s 'device-font-text-style))
 
 
-(defmethod text-style-mapping :around ((port basic-port) text-style
-                                       &optional character-set
-                                       &aux (text-style (parse-text-style text-style)))
-  (declare (ignore character-set))
-  ;; If the /parsed/ TEXT-STYLE is a `standard-text-style', cache the
-  ;; font association.
-  (if (typep text-style 'standard-text-style)
-      (ensure-gethash text-style (port-text-style-mappings port)
-                      (call-next-method))
-      (call-next-method)))
+(defmethod text-style-mapping ((port basic-port)
+                               (text-style text-style)
+                               &optional character-set)
+  (declare (ignore port character-set))
+  ;; INV the around method looks up the cache for the mapping. If we
+  ;; end up here it is a game over. For consistency we return the
+  ;; text-style like other methods. -- jd 2020-01-15
+  text-style)
 
-(defmethod (setf text-style-mapping) (mapping (port basic-port)
+(defmethod text-style-mapping :around ((port basic-port)
+                                       (text-style text-style)
+                                       &optional character-set)
+  (declare (ignore character-set))
+  ;; Cache mappings.
+  (ensure-gethash (parse-text-style text-style)
+                  (port-text-style-mappings port)
+                  (call-next-method)))
+
+(defmethod (setf text-style-mapping) (mapping
+                                      (port basic-port)
                                       text-style
                                       &optional character-set)
   (declare (ignore character-set))
   (setf (text-style-mapping port (parse-text-style text-style)) mapping))
 
-(defmethod (setf text-style-mapping) (mapping (port basic-port)
+(defmethod (setf text-style-mapping) (mapping
+                                      (port basic-port)
                                       (text-style text-style)
                                       &optional character-set)
   (declare (ignore character-set))
