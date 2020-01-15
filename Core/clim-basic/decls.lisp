@@ -443,6 +443,13 @@ window associated with it."))
 
 (defgeneric invoke-with-text-style (medium continuation text-style))
 
+;;; 11.3 Controling Text Style Mappings
+
+(defgeneric text-style-mapping (port text-style &optional character-set))
+(defgeneric (setf text-style-mapping)
+    (mapping port text-style &optional character-set))
+(defgeneric make-device-font-text-style (port font-name))
+
 
 ;;; 12.7.3 Other Medium-specific Output Functions
 
@@ -1180,10 +1187,6 @@ Returns a SPACE-REQUIREMENT object."))
 (defgeneric new-page (stream))
 
 ;;;
-(defgeneric text-style-mapping (port text-style &optional character-set))
-
-(defgeneric (setf text-style-mapping)
-    (mapping port text-style &optional character-set))
 
 (defgeneric medium-miter-limit (medium)
   (:documentation
