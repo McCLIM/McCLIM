@@ -68,8 +68,9 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-(defgeneric text-style-equalp (style1 style2))
-(defmethod text-style-equalp ((style1 text-style) (style2 text-style)) nil)
+(defgeneric text-style-equalp (style1 style2)
+  (:method ((style1 text-style) (style2 text-style))
+    (eq style1 style2)))
 
 (defclass standard-text-style (text-style)
   ((family   :initarg :text-family
@@ -202,9 +203,6 @@
 (defun device-font-text-style-p (s)
   (typep s 'device-font-text-style))
 
-(defmethod text-style-equalp ((style1 device-font-text-style)
-                              (style2 device-font-text-style))
-  (eq style1 style2))
 
 (defmethod text-style-mapping :around ((port basic-port) text-style
                                        &optional character-set
