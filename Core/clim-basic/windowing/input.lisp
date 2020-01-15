@@ -26,18 +26,20 @@
 
 ;; Event queues
 
-(defstruct schedule-entry
-  time event)
+(defstruct (schedule-entry
+            (:constructor make-schedule-entry (time event))
+            (:predicate nil)
+            (:copier nil))
+  (time  0   :type (real 0) :read-only t)
+  (event nil                :read-only t))
 
 (defclass schedule-mixin ()
-  ((schedule-time
-    :initform nil
-    :accessor event-schedule-time
-    :documentation "The next time an event should be scheduled.")
-   (schedule
-    :initform nil
-    :accessor event-queue-schedule
-    :documentation "Time ordered queue of events to schedule."))
+  ((schedule-time :initform nil
+                  :accessor event-schedule-time
+                  :documentation "The next time an event should be scheduled.")
+   (schedule :initform nil
+             :accessor event-queue-schedule
+             :documentation "Time ordered queue of events to schedule."))
   (:documentation "Experimental timer event extension."))
 
 (declaim (inline now compute-decay))
@@ -51,7 +53,7 @@
   (cond ((and time-1 time-2) (max 0 (- (min time-1 time-2) (now))))
         (time-1              (max 0 (- time-1 (now))))
         (time-2              (max 0 (- time-2 (now))))
-        (T                   NIL)))
+        (t                   nil)))
 
 ;; See if it's time to inject a scheduled event into the queue.
 (defgeneric check-schedule (queue)
@@ -59,30 +61,30 @@
     (alexandria:when-let* ((schedule-time (event-schedule-time queue))
                            (execute-p (>= (now) schedule-time))
                            (entry (pop (event-queue-schedule queue))))
-      (if-let ((next-entry (first (event-queue-schedule queue))))
-        (setf (event-schedule-time queue) (schedule-entry-time next-entry))
-        (setf (event-schedule-time queue) nil))
+      (setf (event-schedule-time queue)
+            (if-let ((next-entry (first (event-queue-schedule queue))))
+              (schedule-entry-time next-entry)
+              nil))
       (event-queue-append queue (schedule-entry-event entry)))))
 
 (defgeneric schedule-event-queue (queue event delay)
   (:method ((queue schedule-mixin) event delay)
     (with-slots (schedule) queue
-      (let ((alarm (+ (now) delay)))
-        (cond
-          ((null schedule)
-           (push (make-schedule-entry :time alarm :event event) schedule)
-           (setf (event-schedule-time queue) alarm))
-          ((< alarm (event-schedule-time queue))
-           (push (make-schedule-entry :time alarm :event event) schedule)
-           (setf (event-schedule-time queue) alarm))
-          (t
-           (do* ((previous schedule (rest previous))
-                 (current  (rest schedule) (rest current))
-                 (entry #1=(first current) #1#))
-                ((or (null current)
-                     (< alarm (schedule-entry-time entry)))
-                 (setf (cdr previous)
-                       (list* (make-schedule-entry :time alarm :event event) (cdr previous)))))))))))
+      (let* ((alarm (+ (now) delay))
+             (entry (make-schedule-entry alarm event)))
+        (cond ((null schedule) ; no other events scheduled
+               (push entry schedule)
+               (setf (event-schedule-time queue) alarm))
+              ((< alarm (event-schedule-time queue)) ; EVENT is new earliest
+               (push entry schedule)
+               (setf (event-schedule-time queue) alarm))
+              (t ; EVENT goes somewhere after the earliest event
+               (do* ((previous schedule (rest previous))
+                     (rest  (rest schedule) (rest rest))
+                     (current #1=(first rest) #1#))
+                    ((or (null rest)
+                         (< alarm (schedule-entry-time current)))
+                     (setf (cdr previous) (list* entry (cdr previous)))))))))))
 
 ;;; EVENT-QUEUE protocol (not exported)
 
@@ -346,10 +348,12 @@ use condition-variables nor locks."))
 (defclass concurrent-event-queue (simple-event-queue)
   ((lock :initform (make-lock "Event queue")
          :reader event-queue-lock)
-   (processes
-    :initform (make-condition-variable)
-    :accessor event-queue-processes
-    :documentation "Condition variable for waiting processes")))
+   (processes :initform (make-condition-variable)
+              :accessor event-queue-processes
+              :documentation "Condition variable for waiting processes")
+   (schedule-lock :initform (make-lock "Event queue schedule")
+                  :reader event-queue-schedule-lock
+                  :documentation "Protects SCHEDULE-TIME and SCHEDULE slots.")))
 
 (defmethod event-queue-read ((queue concurrent-event-queue))
   (do-port-force-output queue)
@@ -444,6 +448,14 @@ use condition-variables nor locks."))
                 (let ((decay (compute-decay timeout-time
                                             (event-schedule-time queue))))
                   (condition-wait cv lock decay)))))))
+
+(defmethod check-schedule :around ((queue concurrent-event-queue))
+  (with-lock-held ((event-queue-schedule-lock queue))
+    (call-next-method)))
+
+(defmethod schedule-event-queue :around ((queue concurrent-event-queue) event delay)
+  (with-lock-held ((event-queue-schedule-lock queue))
+    (call-next-method)))
 
 
 ;;; STANDARD-SHEET-INPUT-MIXIN

@@ -3045,5 +3045,4 @@ current background message was set."))
 ; timer-event convenience
 
 (defmethod schedule-timer-event ((pane pane) token delay)
-  (warn "Are you sure you want to use schedule-timer-event? It probably doesn't work.")
   (schedule-event pane (make-instance 'timer-event :token token :sheet pane) delay))
