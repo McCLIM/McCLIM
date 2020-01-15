@@ -68,89 +68,89 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-(defgeneric text-style-equalp (style1 style2)
-  (:method ((style1 text-style) (style2 text-style))
-    (eq style1 style2)))
+  (defgeneric text-style-equalp (style1 style2)
+    (:method ((style1 text-style) (style2 text-style))
+      (eq style1 style2)))
 
-(defclass standard-text-style (text-style)
-  ((family   :initarg :text-family
-	     :initform :fix
-	     :reader text-style-family)
-   (face     :initarg :text-face
-	     :initform :roman
-	     :reader text-style-face)
-   (size     :initarg :text-size
-	     :initform :normal
-	     :reader text-style-size)))
+  (defclass standard-text-style (text-style)
+    ((family   :initarg :text-family
+	       :initform :fix
+	       :reader text-style-family)
+     (face     :initarg :text-face
+	       :initform :roman
+	       :reader text-style-face)
+     (size     :initarg :text-size
+	       :initform :normal
+	       :reader text-style-size)))
 
-(defmethod make-load-form ((obj standard-text-style) &optional env)
-  (declare (ignore env))
-  (with-slots (family face size) obj
-    `(make-text-style ',family ',face ',size)))
+  (defmethod make-load-form ((obj standard-text-style) &optional env)
+    (declare (ignore env))
+    (with-slots (family face size) obj
+      `(make-text-style ',family ',face ',size)))
 
-(defun family-key (family)
-  (ecase family
-    ((nil) 0)
-    ((:fix) 1)
-    ((:serif) 2)
-    ((:sans-serif) 3)))
+  (defun family-key (family)
+    (ecase family
+      ((nil) 0)
+      ((:fix) 1)
+      ((:serif) 2)
+      ((:sans-serif) 3)))
 
-(defun face-key (face)
-  (if (equal face '(:bold :italic))
-      4
-      (ecase face
-	((nil) 0)
-	((:roman) 1)
-	((:bold) 2)
-	((:italic) 3))))
+  (defun face-key (face)
+    (if (equal face '(:bold :italic))
+        4
+        (ecase face
+	  ((nil) 0)
+	  ((:roman) 1)
+	  ((:bold) 2)
+	  ((:italic) 3))))
 
-(defun size-key (size)
-  (if (numberp size)
-      (+ 10 (round (* 256 size)))
-      (ecase size
-	((nil)         0)
-	((:tiny)       1)
-	((:very-small) 2)
-	((:small)      3)
-	((:normal)     4)
-	((:large)      5)
-	((:very-large) 6)
-	((:huge)       7)
-	((:smaller)    8)
-	((:larger)     9))))
+  (defun size-key (size)
+    (if (numberp size)
+        (+ 10 (round (* 256 size)))
+        (ecase size
+	  ((nil)         0)
+	  ((:tiny)       1)
+	  ((:very-small) 2)
+	  ((:small)      3)
+	  ((:normal)     4)
+	  ((:large)      5)
+	  ((:very-large) 6)
+	  ((:huge)       7)
+	  ((:smaller)    8)
+	  ((:larger)     9))))
 
-(defun text-style-key (family face size)
-  (+ (* 256 (size-key size))
-     (* 16 (face-key face))
-     (family-key family)))
+  (defun text-style-key (family face size)
+    (+ (* 256 (size-key size))
+       (* 16 (face-key face))
+       (family-key family)))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defvar *text-style-hash-table* (make-hash-table :test #'eql))
-  (defvar *extended-text-style-hash-table* (make-hash-table :test #'equal)))
+  (eval-when (:compile-toplevel :load-toplevel :execute)
+    (defvar *text-style-hash-table* (make-hash-table :test #'eql))
+    (defvar *extended-text-style-hash-table* (make-hash-table :test #'equal)))
 
-(defun make-text-style (family face size)
-  (if (and (symbolp family)
-	   (or (symbolp face)
-	       (and (listp face) (every #'symbolp face))))
-      ;; Portable text styles have always been cached in McCLIM like this:
-      ;; (as permitted by the CLIM spec for immutable objects, section 2.4)
-      (let ((key (text-style-key family face size)))
-	(declare (type fixnum key))
-        (ensure-gethash key *text-style-hash-table*
-                        (make-text-style-1 family face size)))
-      ;; Extended text styles using custom components is cached using
-      ;; an appropriate hash table to ensure `EQL' of the same
-      ;; extended text styles
-      (ensure-gethash (list family face size) *extended-text-style-hash-table*
-                      (make-text-style-1 family face size))))
+  (defun make-text-style (family face size)
+    (if (and (symbolp family)
+	     (or (symbolp face)
+	         (and (listp face) (every #'symbolp face))))
+        ;; Portable text styles have always been cached in McCLIM like this:
+        ;; (as permitted by the CLIM spec for immutable objects, section 2.4)
+        (let ((key (text-style-key family face size)))
+	  (declare (type fixnum key))
+          (ensure-gethash key *text-style-hash-table*
+                          (make-text-style-1 family face size)))
+        ;; Extended text styles using custom components is cached using
+        ;; an appropriate hash table to ensure `EQL' of the same
+        ;; extended text styles
+        (ensure-gethash (list family face size) *extended-text-style-hash-table*
+                        (make-text-style-1 family face size))))
 
-(defun make-text-style-1 (family face size)
-  (make-instance 'standard-text-style
-    :text-family family
-    :text-face face
-    :text-size size))
+  (defun make-text-style-1 (family face size)
+    (make-instance 'standard-text-style
+                   :text-family family
+                   :text-face face
+                   :text-size size))
 
-) ; end eval-when
+  ) ; end eval-when
 
 (defmethod print-object ((self standard-text-style) stream)
   (print-unreadable-object (self stream :type t :identity nil)
@@ -162,15 +162,16 @@
        (equal (text-style-face style1) (text-style-face style2))
        (eql (text-style-size style1) (text-style-size style2))))
 
-(defconstant *default-text-style* (make-text-style :sans-serif :roman :normal))
-(defconstant *undefined-text-style* *default-text-style*)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant *default-text-style* (make-text-style :sans-serif :roman :normal))
+  (defconstant *undefined-text-style* *default-text-style*)
 
-(defconstant *smaller-sizes* '(:huge :very-large :large :normal
-			       :small :very-small :tiny :tiny))
+  (defconstant *smaller-sizes* '(:huge :very-large :large :normal
+			         :small :very-small :tiny :tiny))
 
-(defconstant *font-scaling-factor* 4/3)
-(defconstant *font-min-size* 6)
-(defconstant *font-max-size* 48)
+  (defconstant *font-scaling-factor* 4/3)
+  (defconstant *font-min-size* 6)
+  (defconstant *font-max-size* 48))
 
 (defun find-smaller-size (size)
   (if (numberp size)
