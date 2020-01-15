@@ -123,9 +123,6 @@
 (defmethod sheet-children ((sheet basic-sheet))
   nil)
 
-(defmethod sheet-adopt-child ((sheet basic-sheet) (child sheet))
-  (error "~S attempting to adopt ~S" sheet child))
-
 (defmethod sheet-adopt-child :after ((sheet basic-sheet) (child sheet))
   (note-sheet-adopted child)
   (when (sheet-grafted-p sheet)

@@ -68,20 +68,30 @@
   (:documentation
    "Mixin class for gadgets, which want invoke the layout protocol, if the label changes."))
 
-;;;; Common behavior on `basic-gadget'
+;;; Multiple children
 
-;;
-;; When a gadget is not activated, it receives no device events.
-;;
+(defclass activate/deactivate-children-mixin ()
+  ()
+  (:documentation
+   "Mixin class for composite gadgets which (de)activate their children."))
+
+(defmethod activate-gadget :after ((gadget activate/deactivate-children-mixin))
+  (mapc #'activate-gadget (sheet-children gadget)))
+
+(defmethod deactivate-gadget :after ((gadget activate/deactivate-children-mixin))
+  (mapc #'deactivate-gadget (sheet-children gadget)))
+
+;;; Common behavior on `basic-gadget'
+
 (defmethod handle-event :around ((pane basic-gadget) (event device-event))
+  ;; When a gadget is not activated, it receives no device events.
   (when (gadget-active-p pane)
     (call-next-method)))
 
-;; When a gadget is deactivated, it cannot be armed.
-
-;; Glitch: upon re-activation the mouse might happen to be in the
-;; gadget and thus re-arm it immediately, that is not implemented.
-
 (defmethod note-gadget-deactivated :after (client (gadget basic-gadget))
-  (declare (ignorable client))
+  (declare (ignore client))
+  ;; When a gadget is deactivated, it cannot be armed.
+
+  ;; Glitch: upon re-activation the mouse might happen to be in the
+  ;; gadget and thus re-arm it immediately, that is not implemented.
   (disarm-gadget gadget))
