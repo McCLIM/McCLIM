@@ -27,24 +27,16 @@
   (run-frame-top-level
    (if frame-manager-name
        (make-application-frame
-	'gadget-test
-	:frame-manager (make-instance frame-manager-name :port (find-port)))
+        'gadget-test
+        :frame-manager (make-instance frame-manager-name :port (find-port)))
        (make-application-frame 'gadget-test))))
-
-(defun run-pixie-test (name)
-  (when name
-    (run-frame-top-level
-     (make-application-frame
-      name
-      :frame-manager (make-instance 'clim-internals::pixie/clx-look
-		       :port (find-port))))))
 
 (defmethod gadget-test-frame-top-level
     ((frame application-frame)
      &key (command-parser 'command-line-command-parser)
        (command-unparser 'command-line-command-unparser)
        (partial-command-parser
-	'command-line-read-remaining-arguments-for-partial-command)
+        'command-line-read-remaining-arguments-for-partial-command)
        (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (catch 'exit
@@ -81,10 +73,6 @@
                             ("Search" :command test)
                             ("Search" :command test)))
 
-(define-command test ()
-  (format *error-output* "That was just a test~%")
-  (finish-output *error-output*))
-
 (macrolet ((make-pane-constructor (class-name)
              `(defmacro ,class-name (&rest options)
                 `(make-pane ',',class-name ,@options))))
@@ -102,8 +90,6 @@
       ("View"   :menu view-menu)
       ("Search" :menu search-menu)))
     (:panes
-;    (raised     (raising (:border-width 3 :background +Gray83+)
-;                  (make-pane 'check-box :choices '("First" "Second" "Third"))))
      (tf1        :push-button
                  :text-style (make-text-style :fix :roman 24)
                  :label "Text Field")
@@ -126,13 +112,7 @@
                  :orientation :horizontal)
      (slider-v   :slider
                  :min-value 0
-		 :show-value-p t
-                 :max-value 100
-                 :orientation :vertical
-                 :value 0)
-     #+(or)
-     (slider-v1  :slider
-                 :min-value 0
+                 :show-value-p t
                  :max-value 100
                  :orientation :vertical
                  :value 0)
@@ -144,7 +124,7 @@
      (slider-v3  :slider
                  :min-value 0
                  :max-value 100
-		 :show-value-p t
+                 :show-value-p t
                  :orientation :vertical
                  :value 0)
      #+(or)
@@ -199,28 +179,32 @@
      (default
        (raising (:border-width 5 :background +Gray83+)
          (horizontally ()
-	   (vertically ()
-	     (horizontally ()
-	       (horizontally ()
-		 (vertically ()
-		   slider-v
-		   slider-v2)
-		 slider-v3)
-	       (vertically ()
-		 tf1 tf2 tf3 tf4
-		 slider-h))
-	     ;; FIXME: the radar doesn't seem to do anything except take
-	     ;; up vast amounts of space.
-	     #+(or) radar
-	     text-edit)
-	   (vertically ()
-	     push-btn
-	     table
-	     toggle-btn
-	     scroll
-	     radio-box
-	     check-box)))))
+           (vertically ()
+             (horizontally ()
+               (horizontally ()
+                 (vertically ()
+                   slider-v
+                   slider-v2)
+                 slider-v3)
+               (vertically ()
+                 tf1 tf2 tf3 tf4
+                 slider-h))
+             ;; FIXME: the radar doesn't seem to do anything except take
+             ;; up vast amounts of space.
+             #+(or) radar
+             text-edit)
+           (vertically ()
+             push-btn
+             table
+             toggle-btn
+             scroll
+             radio-box
+             check-box)))))
     (:top-level (gadget-test-frame-top-level . nil)))
+
+(define-command (test :command-table gadget-test) ()
+  (format *trace-output* "That was just a test~%")
+  (finish-output *trace-output*))
 
 (defmethod run-frame-top-level :around ((frame gadget-test) &key &allow-other-keys)
   ;; FIXME: Timer events appear to have rotted.
@@ -234,14 +218,14 @@
 
 (defclass radar-pane (basic-gadget)
   ((points :initform '((0.01 0.01 0.10 0.10)
-		       (0.10 0.02 0.70 0.40)
-		       (0.20 0.03 0.60 0.30)
-		       (0.20 0.04 0.20 0.50)
-		       (0.20 0.05 0.60 0.20)
-		       (0.20 0.06 0.30 0.40)
-		       (0.20 0.07 0.60 0.90)
-		       (0.20 0.08 0.80 0.30)
-		       (0.20 0.09 0.60 0.20)))))
+                       (0.10 0.02 0.70 0.40)
+                       (0.20 0.03 0.60 0.30)
+                       (0.20 0.04 0.20 0.50)
+                       (0.20 0.05 0.60 0.20)
+                       (0.20 0.06 0.30 0.40)
+                       (0.20 0.07 0.60 0.90)
+                       (0.20 0.08 0.80 0.30)
+                       (0.20 0.09 0.60 0.20)))))
 
 (defmethod handle-event ((pane radar-pane) (event timer-event))
   (with-slots (points) pane
