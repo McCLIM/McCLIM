@@ -74,14 +74,14 @@
 
   (defclass standard-text-style (text-style)
     ((family   :initarg :text-family
-	       :initform :fix
-	       :reader text-style-family)
+               :initform :fix
+               :reader text-style-family)
      (face     :initarg :text-face
-	       :initform :roman
-	       :reader text-style-face)
+               :initform :roman
+               :reader text-style-face)
      (size     :initarg :text-size
-	       :initform :normal
-	       :reader text-style-size)))
+               :initform :normal
+               :reader text-style-size)))
 
   (defmethod make-load-form ((obj standard-text-style) &optional env)
     (declare (ignore env))
@@ -99,25 +99,25 @@
     (if (equal face '(:bold :italic))
         4
         (ecase face
-	  ((nil) 0)
-	  ((:roman) 1)
-	  ((:bold) 2)
-	  ((:italic) 3))))
+          ((nil) 0)
+          ((:roman) 1)
+          ((:bold) 2)
+          ((:italic) 3))))
 
   (defun size-key (size)
     (if (numberp size)
         (+ 10 (round (* 256 size)))
         (ecase size
-	  ((nil)         0)
-	  ((:tiny)       1)
-	  ((:very-small) 2)
-	  ((:small)      3)
-	  ((:normal)     4)
-	  ((:large)      5)
-	  ((:very-large) 6)
-	  ((:huge)       7)
-	  ((:smaller)    8)
-	  ((:larger)     9))))
+          ((nil)         0)
+          ((:tiny)       1)
+          ((:very-small) 2)
+          ((:small)      3)
+          ((:normal)     4)
+          ((:large)      5)
+          ((:very-large) 6)
+          ((:huge)       7)
+          ((:smaller)    8)
+          ((:larger)     9))))
 
   (defun text-style-key (family face size)
     (+ (* 256 (size-key size))
@@ -130,12 +130,12 @@
 
   (defun make-text-style (family face size)
     (if (and (symbolp family)
-	     (or (symbolp face)
-	         (and (listp face) (every #'symbolp face))))
+             (or (symbolp face)
+                 (and (listp face) (every #'symbolp face))))
         ;; Portable text styles have always been cached in McCLIM like this:
         ;; (as permitted by the CLIM spec for immutable objects, section 2.4)
         (let ((key (text-style-key family face size)))
-	  (declare (type fixnum key))
+          (declare (type fixnum key))
           (ensure-gethash key *text-style-hash-table*
                           (make-text-style-1 family face size)))
         ;; Extended text styles using custom components is cached using
@@ -148,16 +148,14 @@
     (make-instance 'standard-text-style
                    :text-family family
                    :text-face face
-                   :text-size size))
-
-  ) ; end eval-when
+                   :text-size size)))
 
 (defmethod print-object ((self standard-text-style) stream)
   (print-unreadable-object (self stream :type t :identity nil)
     (format stream "~{~S~^ ~}" (multiple-value-list (text-style-components self)))))
 
 (defmethod text-style-equalp ((style1 standard-text-style)
-			      (style2 standard-text-style))
+                              (style2 standard-text-style))
   (and (equal (text-style-family style1) (text-style-family style2))
        (equal (text-style-face style1) (text-style-face style2))
        (eql (text-style-size style1) (text-style-size style2))))
@@ -167,7 +165,7 @@
   (defconstant *undefined-text-style* *default-text-style*)
 
   (defconstant *smaller-sizes* '(:huge :very-large :large :normal
-			         :small :very-small :tiny :tiny))
+                                 :small :very-small :tiny :tiny))
 
   (defconstant *font-scaling-factor* 4/3)
   (defconstant *font-min-size* 6)
@@ -176,15 +174,15 @@
 (defun find-smaller-size (size)
   (if (numberp size)
       (max (round (/ size *font-scaling-factor*)) *font-min-size*)
-    (cadr (member size *smaller-sizes*))))
+      (cadr (member size *smaller-sizes*))))
 
 (defconstant *larger-sizes* '(:tiny :very-small :small :normal
-			      :large :very-large :huge :huge))
+                              :large :very-large :huge :huge))
 
 (defun find-larger-size (size)
   (if (numberp size)
       (min (round (* size *font-scaling-factor*)) *font-max-size*)
-    (cadr (member size *larger-sizes*))))
+      (cadr (member size *larger-sizes*))))
 
 (defmethod text-style-components ((text-style standard-text-style))
   (values (text-style-family   text-style)
@@ -242,8 +240,8 @@
 
 (defmethod make-device-font-text-style (port font-name)
   (let ((text-style (make-instance 'device-font-text-style
-				   :display-device port
-				   :device-font-name font-name)))
+                                   :display-device port
+                                   :device-font-name font-name)))
     (setf (text-style-mapping port text-style) font-name)
     text-style))
 
@@ -414,7 +412,7 @@
 (defgeneric graphics-state-line-style-border (record medium)
   (:method ((record gs-line-style-mixin) medium)
     (/ (line-style-effective-thickness (graphics-state-line-style record)
-                                        medium)
+                                       medium)
        2)))
 
 (defclass gs-text-style-mixin (graphics-state)
@@ -487,8 +485,8 @@
                :initform *default-text-style*
                :accessor medium-text-style)
    (default-text-style :initarg :default-text-style
-     :initform *default-text-style*
-     :accessor medium-default-text-style)
+                       :initform *default-text-style*
+                       :accessor medium-default-text-style)
    (sheet :initarg :sheet
           :initform nil                 ; this means that medium is not linked to a sheet
           :reader medium-sheet
@@ -507,12 +505,12 @@
 
 (defmethod medium-clipping-region ((medium medium))
   (untransform-region (medium-transformation medium)
-                    (slot-value medium 'clipping-region)))
+                      (slot-value medium 'clipping-region)))
 
 (defmethod (setf medium-clipping-region) (region (medium medium))
   (setf (slot-value medium 'clipping-region)
         (transform-region (medium-transformation medium)
-                            region)))
+                          region)))
 
 (defmethod (setf medium-clipping-region) :after (region (medium medium))
   (declare (ignore region))
@@ -534,17 +532,17 @@
 
 (defmacro with-pixmap-medium ((medium pixmap) &body body)
   (let ((old-medium (gensym))
-	(old-pixmap (gensym)))
+        (old-pixmap (gensym)))
     `(let* ((,old-medium (pixmap-medium ,pixmap))
-	    (,medium (or ,old-medium (make-medium (port ,pixmap) ,pixmap)))
-	    (,old-pixmap (medium-sheet ,medium)))
+            (,medium (or ,old-medium (make-medium (port ,pixmap) ,pixmap)))
+            (,old-pixmap (medium-sheet ,medium)))
        (setf (pixmap-medium ,pixmap) ,medium)
        (setf (%medium-sheet ,medium) ,pixmap) ;is medium a basic medium? --GB
        (unwind-protect
-	   (progn
-	     ,@body)
-	 (setf (pixmap-medium ,pixmap) ,old-medium)
-	 (setf (%medium-sheet ,medium) ,old-pixmap)))))
+            (progn
+              ,@body)
+         (setf (pixmap-medium ,pixmap) ,old-medium)
+         (setf (%medium-sheet ,medium) ,old-pixmap)))))
 
 ;;; Medium Device functions
 
@@ -565,36 +563,36 @@
 
 (defclass standard-line-style (line-style)
   ((unit        :initarg :line-unit
-	        :initform :normal
-	        :reader line-style-unit
+                :initform :normal
+                :reader line-style-unit
                 :type (member :normal :point :coordinate))
    (thickness   :initarg :line-thickness
-	        :initform 1
-	        :reader line-style-thickness
+                :initform 1
+                :reader line-style-thickness
                 :type real)
    (joint-shape :initarg :line-joint-shape
-		:initform :miter
-		:reader line-style-joint-shape
+                :initform :miter
+                :reader line-style-joint-shape
                 :type (member :miter :bevel :round :none))
    (cap-shape   :initarg :line-cap-shape
-	        :initform :butt
-	        :reader line-style-cap-shape
+                :initform :butt
+                :reader line-style-cap-shape
                 :type (member :butt :square :round :no-end-point))
    (dashes      :initarg :line-dashes
-	        :initform nil
-	        :reader line-style-dashes
+                :initform nil
+                :reader line-style-dashes
                 :type (or (member t nil)
                           sequence))))
 
 (defun make-line-style (&key (unit :normal) (thickness 1)
-			     (joint-shape :miter) (cap-shape :butt)
-			     (dashes nil))
+                          (joint-shape :miter) (cap-shape :butt)
+                          (dashes nil))
   (make-instance 'standard-line-style
-    :line-unit unit
-    :line-thickness thickness
-    :line-joint-shape joint-shape
-    :line-cap-shape cap-shape
-    :line-dashes dashes))
+                 :line-unit unit
+                 :line-thickness thickness
+                 :line-joint-shape joint-shape
+                 :line-cap-shape cap-shape
+                 :line-dashes dashes))
 
 (defmethod print-object ((self standard-line-style) stream)
   (print-unreadable-object (self stream :type t :identity nil)
@@ -615,7 +613,7 @@
   #.(* 2 single-float-epsilon))
 
 (defmethod line-style-equalp ((style1 standard-line-style)
-			      (style2 standard-line-style))
+                              (style2 standard-line-style))
   (and (eql (line-style-unit style1) (line-style-unit style2))
        (eql (line-style-thickness style1) (line-style-thickness style2))
        (eql (line-style-joint-shape style1) (line-style-joint-shape style2))
@@ -632,10 +630,8 @@
   (let ((old-buffer (gensym)))
     `(let ((,old-buffer (medium-buffering-output-p ,medium)))
        (setf (medium-buffering-output-p ,medium) ,buffer-p)
-       (unwind-protect
-	   (progn
-	     ,@body)
-	 (setf (medium-buffering-output-p ,medium) ,old-buffer)))))
+       (unwind-protect (progn ,@body)
+         (setf (medium-buffering-output-p ,medium) ,old-buffer)))))
 
 
 ;;; BASIC-MEDIUM class
@@ -755,7 +751,7 @@
   (call-next-method))
 
 (defmethod medium-draw-circle* :around ((medium transform-coordinates-mixin) center-x center-y
-                                         radius start-angle end-angle filled)
+                                        radius start-angle end-angle filled)
   (let* ((ellipse (make-elliptical-arc* center-x center-y
                                         radius 0
                                         0 radius
@@ -790,19 +786,19 @@
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr coord-seq)
       (do-sequence ((x y) coord-seq)
-	(medium-draw-point* medium x y)))))
+        (medium-draw-point* medium x y)))))
 
 (defmethod medium-draw-lines* ((medium transform-coordinates-mixin) position-seq)
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr position-seq)
       (do-sequence ((x1 y1 x2 y2) position-seq)
-	(medium-draw-line* medium x1 y1 x2 y2)))))
+        (medium-draw-line* medium x1 y1 x2 y2)))))
 
 (defmethod medium-draw-rectangles* ((medium transform-coordinates-mixin) coord-seq filled)
   (let ((tr (invert-transformation (medium-transformation medium))))
     (with-transformed-positions (tr coord-seq)
       (do-sequence ((x1 y1 x2 y2) coord-seq)
-	(medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
+        (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
 
 
 ;;; Other Medium-specific Output Functions
