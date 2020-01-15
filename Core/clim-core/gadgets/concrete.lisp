@@ -667,8 +667,7 @@
 (defun format-value (value decimal-places)
   (if (<= decimal-places 0)
       (format nil "~D" (round value))
-      (let ((control-string (format nil "~~,~DF" decimal-places)))
-        (format nil control-string value))))
+      (format nil "~,VF" decimal-places value)))
 
 (defmethod handle-repaint ((pane slider-pane) region)
   (declare (ignore region))
