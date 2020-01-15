@@ -232,8 +232,6 @@
   (setf (gethash text-style (port-text-style-mappings port))
         mapping))
 
-(defgeneric make-device-font-text-style (port font-name))
-
 (defmethod make-device-font-text-style (port font-name)
   (let ((text-style (make-instance 'device-font-text-style
 				   :display-device port
