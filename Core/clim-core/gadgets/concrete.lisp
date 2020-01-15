@@ -826,9 +826,10 @@
 ;; radio-box
 
 (defclass radio-box-pane (radio-box
-                          activate/deactivate-repaint-mixin
                           rack-layout-mixin
-                          sheet-multiple-child-mixin)
+                          activate/deactivate-repaint-mixin
+                          sheet-multiple-child-mixin
+                          activate/deactivate-children-mixin)
   ()
   (:default-initargs :background *3d-normal-color*))
 
@@ -856,22 +857,13 @@
                 (not (null (gadget-value c))))
       (setf (gadget-value c :invoke-callback invoke-callback) (eq c button)) )))
 
-
-(defmethod deactivate-gadget :after ((box radio-box-pane))
-  (dolist (c (sheet-children box))
-    (deactivate-gadget c)))
-
-(defmethod activate-gadget :after ((box radio-box-pane))
-  (dolist (c (sheet-children box))
-    (activate-gadget c)))
-
-
 ;; check-box
 
 (defclass check-box-pane (check-box
                           rack-layout-mixin
                           activate/deactivate-repaint-mixin
-                          sheet-multiple-child-mixin)
+                          sheet-multiple-child-mixin
+                          activate/deactivate-children-mixin)
   ()
   (:default-initargs :background *3d-normal-color*))
 
@@ -891,14 +883,6 @@
     (mapc (curry #'sheet-adopt-child pane) children))
   (unless active
     (deactivate-gadget pane)))
-
-(defmethod deactivate-gadget :after ((box check-box-pane))
-  (dolist (c (sheet-children box))
-    (deactivate-gadget c)))
-
-(defmethod activate-gadget :after ((box check-box-pane))
-  (dolist (c (sheet-children box))
-    (activate-gadget c)))
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.7 The concrete list-pane and option-pane Gadgets
