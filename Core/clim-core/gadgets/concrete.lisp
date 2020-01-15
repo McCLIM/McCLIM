@@ -596,8 +596,7 @@
 (defclass slider-pane (slider
                        gadget-color-mixin
                        value-changed-repaint-mixin
-                       activate/deactivate-repaint-mixin
-                       basic-pane)
+                       activate/deactivate-repaint-mixin)
   ())
 
 (defmethod compose-space ((pane slider-pane) &key width height)
@@ -829,8 +828,7 @@
 (defclass radio-box-pane (radio-box
                           activate/deactivate-repaint-mixin
                           rack-layout-mixin
-                          sheet-multiple-child-mixin
-                          basic-pane)
+                          sheet-multiple-child-mixin)
   ()
   (:default-initargs :background *3d-normal-color*))
 
@@ -873,8 +871,7 @@
 (defclass check-box-pane (check-box
                           rack-layout-mixin
                           activate/deactivate-repaint-mixin
-                          sheet-multiple-child-mixin
-                          basic-pane)
+                          sheet-multiple-child-mixin)
   ()
   (:default-initargs :background *3d-normal-color*))
 
