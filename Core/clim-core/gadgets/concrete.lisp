@@ -732,64 +732,6 @@
                (draw-value (+ x1 slider-button-short-dim)
                            (- middle 10.0))))))))))
 
-#+ (or)
-(defmethod handle-repaint ((pane slider-pane) region)
-  (declare (ignore region))
-  (let ((position (convert-value-to-position pane))
-        (slider-button-half-short-dim (ash slider-button-short-dim -1))
-        (slider-button-half-long-dim (ash slider-button-long-dim -1)))
-    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
-      (display-gadget-background pane (gadget-current-color pane) 0 0 (- x2 x1) (- y2 y1))
-      (if (eq (gadget-orientation pane) :vertical)
-          ;; vertical case
-          (let ((middle (round (- x2 x1) 2)))
-            (draw-line* pane
-                        middle (+ y1 slider-button-half-short-dim)
-                        middle (- y2 slider-button-half-short-dim)
-                        :ink +black+
-                        (draw-rectangle* pane
-                                         (- middle slider-button-half-long-dim)
-                                         (- position slider-button-half-short-dim)
-                                         (+ middle slider-button-half-long-dim)
-                                         (+ position slider-button-half-short-dim)
-                                         :ink +gray85+ :filled t)
-                        (draw-edges-lines* pane
-                                           +white+
-                                           (- middle slider-button-half-long-dim)
-                                           (- position slider-button-half-short-dim)
-                                           +black+
-                                           (+ middle slider-button-half-long-dim)
-                                           (+ position slider-button-half-short-dim))
-                        (when (gadget-show-value-p pane)
-                          (draw-text* pane (format-value (gadget-value pane)
-                                                         (slider-decimal-places pane))
-                                      5 ;(- middle slider-button-half-short-dim)
-                                      10))) ;(- position slider-button-half-long-dim)
-            ;; horizontal case
-            (let ((middle (round (- y2 y1) 2)))
-              (draw-line* pane
-                          (+ x1 slider-button-half-short-dim) middle
-                          (- x2 slider-button-half-short-dim) middle
-                          :ink +black+)
-              (draw-rectangle* pane
-                               (- position slider-button-half-short-dim)
-                               (- middle slider-button-half-long-dim)
-                               (+ position slider-button-half-short-dim)
-                               (+ middle slider-button-half-long-dim)
-                               :ink +gray85+ :filled t)
-              (draw-edges-lines* pane
-                                 +white+
-                                 (- position slider-button-half-short-dim)
-                                 (- middle slider-button-half-long-dim)
-                                 +black+
-                                 (+ position slider-button-half-short-dim)
-                                 (+ middle slider-button-half-long-dim))
-              (when (gadget-show-value-p pane)
-                (draw-text* pane (format-value (gadget-value pane)
-                                               (slider-decimal-places pane))
-                            5 ;; (- position slider-button-half-short-dim)
-                            (- middle slider-button-half-long-dim)))))))))
-
 (flet ((compute-dims (slider)
          (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region slider))
            ;; Offset is the distance from the bounding region to the
