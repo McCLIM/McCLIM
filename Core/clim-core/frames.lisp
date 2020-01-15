@@ -282,11 +282,10 @@ documentation produced by presentations.")
              (eq (sheet-parent (frame-panes frame))
                  (frame-top-level-sheet frame)))
     (sheet-disown-child (frame-top-level-sheet frame) (frame-panes frame)))
-  (loop
-     for (nil . pane) in (frame-panes-for-layout frame)
-     for parent = (sheet-parent pane)
-     if  parent
-     do (sheet-disown-child parent pane)))
+  (loop for (nil . pane) in (frame-panes-for-layout frame)
+        for parent = (sheet-parent pane)
+        if  parent
+          do (sheet-disown-child parent pane)))
 
 (defmethod generate-panes :after (fm (frame application-frame))
   (declare (ignore fm))
@@ -645,11 +644,7 @@ documentation produced by presentations.")
   (let ((*application-frame* frame)
         (event-queue (frame-event-queue frame)))
     (setf (slot-value frame 'top-level-sheet)
-          (make-pane-1 fm frame 'top-level-sheet-pane
-                       :name (frame-name frame)
-                       :pretty-name (frame-pretty-name frame)
-                       ;; sheet is enabled from enable-frame
-                       :enabled-p nil))
+          (find-pane-for-frame fm frame))
     (generate-panes fm frame)
     (setf (slot-value frame 'state) :disabled)
     (when (typep event-queue 'event-queue)
@@ -719,14 +714,14 @@ documentation produced by presentations.")
      (locally
          ,@body)))
 
-; The menu-bar code in the following function is incorrect.  it needs
-; to be moved to somewhere after the backend, since it depends on the
-; backend chosen.
-;
-; This hack slaps a menu-bar into the start of the application-frame,
-; in such a way that it is hard to find.
-;
-; FIXME
+;; The menu-bar code in the following function is incorrect.  it needs
+;; to be moved to somewhere after the backend, since it depends on the
+;; backend chosen.
+;;
+;; This hack slaps a menu-bar into the start of the application-frame,
+;; in such a way that it is hard to find.
+;;
+;; FIXME
 
 (defun update-frame-pane-lists (frame)
   (let ((all-panes     (frame-panes frame))
@@ -773,45 +768,44 @@ documentation produced by presentations.")
                         '((%pointer-documentation%
                            pointer-documentation-pane)))))
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
-     (let ((*application-frame* frame))
-       (with-look-and-feel-realization (fm frame)
-         (unless (frame-panes-for-layout frame)
-           (setf (frame-panes-for-layout frame)
-                 (list
-                  ,@(loop for (name . form) in panes
-                          collect `(cons ',name ,(generate-pane-creation-form
-                                                  name form))))))
-         (let ,(loop for (name . form) in panes
-                     collect `(,name (alexandria:assoc-value
-                                      (frame-panes-for-layout frame)
-                                      ',name :test #'eq)))
-           ;; [BTS] added this, but is not sure that this is correct for
-           ;; adding a menu-bar transparently, should also only be done
-           ;; where the exterior window system does not support menus
-           (setf (frame-panes frame)
-                 (ecase (frame-current-layout frame)
-                   ,@(if (or menu-bar pointer-documentation)
-                         (mapcar (lambda (layout)
-                                   `(,(first layout)
-                                     (vertically ()
-                                       ,@(cond
-                                           ((eq menu-bar t)
-                                            `((setf (frame-menu-bar-pane frame)
-                                                    (make-menu-bar ',class-name))))
-                                           ((consp menu-bar)
-                                            `((make-menu-bar
-                                               (make-command-table
-                                                nil :menu ',menu-bar))))
-                                           (menu-bar
-                                            `((make-menu-bar ',menu-bar)))
-                                           (t nil))
-                                       ,@(rest layout)
-                                       ,@(when pointer-documentation
-                                           '(%pointer-documentation%)))))
-                                 layouts)
-                         layouts)))))
-       ;; Update frame-current-panes and the special pane slots.
-       (update-frame-pane-lists frame))))
+     (with-look-and-feel-realization (fm frame)
+       (unless (frame-panes-for-layout frame)
+         (setf (frame-panes-for-layout frame)
+               (list
+                ,@(loop for (name . form) in panes
+                        collect `(cons ',name ,(generate-pane-creation-form
+                                                name form))))))
+       (let ,(loop for (name . form) in panes
+                   collect `(,name (alexandria:assoc-value
+                                    (frame-panes-for-layout frame)
+                                    ',name :test #'eq)))
+         ;; [BTS] added this, but is not sure that this is correct for
+         ;; adding a menu-bar transparently, should also only be done
+         ;; where the exterior window system does not support menus
+         (setf (frame-panes frame)
+               (ecase (frame-current-layout frame)
+                 ,@(if (or menu-bar pointer-documentation)
+                       (mapcar (lambda (layout)
+                                 `(,(first layout)
+                                   (vertically ()
+                                     ,@(cond
+                                         ((eq menu-bar t)
+                                          `((setf (frame-menu-bar-pane frame)
+                                                  (make-menu-bar ',class-name))))
+                                         ((consp menu-bar)
+                                          `((make-menu-bar
+                                             (make-command-table
+                                              nil :menu ',menu-bar))))
+                                         (menu-bar
+                                          `((make-menu-bar ',menu-bar)))
+                                         (t nil))
+                                     ,@(rest layout)
+                                     ,@(when pointer-documentation
+                                         '(%pointer-documentation%)))))
+                               layouts)
+                       layouts)))))
+     ;; Update frame-current-panes and the special pane slots.
+     (update-frame-pane-lists frame)))
 
 (defun parse-define-application-frame-options (options)
   (let ((infos '(;; CLIM
@@ -879,6 +873,24 @@ documentation produced by presentations.")
                     (push option (getf all-values :other-options)))))
       (alexandria:remove-from-plist all-values :pane))))
 
+(defmethod find-pane-for-frame ((fm frame-manager) (frame application-frame))
+  (make-pane-1 fm frame 'top-level-sheet-pane
+               :name (frame-name frame)
+               :pretty-name (frame-pretty-name frame)
+               ;; sheet is enabled from enable-frame
+               :enabled-p nil))
+
+(defmethod generate-panes (fm (frame application-frame))
+  (with-look-and-feel-realization (fm frame)
+    (unless (frame-panes-for-layout frame)
+      (setf (frame-panes-for-layout frame)
+            `((single-pane . ,(make-clim-interactor-pane :name 'single-pane)))))
+    (let ((single-pane
+            (alexandria:assoc-value (frame-panes-for-layout frame)
+                                    'single-pane :test #'eq)))
+      (setf (frame-panes frame) single-pane)))
+  (update-frame-pane-lists frame))
+
 (defmacro define-application-frame (name superclasses slots &rest options)
   (when (null superclasses)
     (setq superclasses '(standard-application-frame)))
@@ -923,8 +935,9 @@ documentation produced by presentations.")
           ,@user-default-initargs)
          ,@other-options)
 
-       ,(generate-generate-panes-form
-         name menu-bar panes layouts pointer-documentation)
+       ,@(when (or panes layouts)
+           `(,(generate-generate-panes-form
+               name menu-bar panes layouts pointer-documentation)))
 
        ,@(when command-table
            `((define-command-table ,@command-table)))
