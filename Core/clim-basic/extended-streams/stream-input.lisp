@@ -1,9 +1,9 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000, 2014 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
+;;;  (c) copyright 2000,2014 by Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2001,2002 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2019,2020 by Daniel Kochmański (daniel@turtleware.eu)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -20,56 +20,50 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :clim-internals)
+;;; Part VI: Extended Stream Input Facilities
+;;; Chapter 22: Extended Stream Input
 
-;;; X11 returns #\Return and #\Backspace where we want to see
-;;; #\Newline and #\Delete at the stream-read-char level.  Dunno if
-;;; this is the right place to do the transformation...
+(in-package #:climi)
 
-;;;  Why exactly do we want to see #\Delete instead of #\Backspace?
-;;;  There is a separate Delete key, unless your keyboard is
-;;;  strange. --Hefner
-
-(defconstant +read-char-map+ '((#\Return . #\Newline)
-                               #+nil (#\Backspace . #\Delete)))
-
-(defvar *abort-gestures* '(:abort))
-
-(defvar *accelerator-gestures* nil)
+;; Input gesture object may be a character or event. Keywords are
+;; returned to indicate the failure to obtain a gesture. We could extend
+;; this list with a string (look up noise strings). -- jd
+(deftype input-gesture-object ()
+  `(or character event keyword))
 
 (defvar *input-wait-test* nil)
 (defvar *input-wait-handler* nil)
 (defvar *pointer-button-press-handler* nil)
 
-(define-condition abort-gesture (condition)
-  ((event :reader %abort-gesture-event :initarg :event)))
-
-(defmethod abort-gesture-event ((condition abort-gesture))
-  (%abort-gesture-event condition))
-
-(define-condition accelerator-gesture (condition)
-  ((event :reader %accelerator-gesture-event :initarg :event)
-   (numeric-argument :reader %accelerator-gesture-numeric-argument
-                     :initarg :numeric-argument
-                     :initform 1)))
-
-(defmethod accelerator-gesture-event ((condition accelerator-gesture))
-  (%accelerator-gesture-event condition))
-
-(defmethod accelerator-gesture-numeric-argument
-    ((condition accelerator-gesture))
-  (%accelerator-gesture-numeric-argument condition))
-
-(defun char-for-read (char)
-  (let ((new-char (cdr (assoc char +read-char-map+))))
-    (or new-char char)))
-
-(defun unmap-char-for-read (char)
-  (let ((new-char (car (rassoc char +read-char-map+))))
-    (or new-char char)))
-
 (defclass input-kernel-mixin ()
   ((input-buffer :initarg :input-buffer :accessor stream-input-buffer :type vector)))
+
+;;; Intentionally not specialized to allow sheets.
+(defmethod stream-set-input-focus (stream)
+  (let ((port (or (port stream)
+                  (port *application-frame*))))
+    (prog1 (port-keyboard-input-focus port)
+      (setf (port-keyboard-input-focus port) stream))))
+
+(defmacro with-input-focus ((stream) &body body)
+  (when (eq stream t)
+    (setq stream '*standard-input*))
+  (let ((old-stream (gensym "OLD-STREAM")))
+    `(let ((,old-stream (stream-set-input-focus ,stream)))
+       (unwind-protect (locally ,@body)
+         ;; XXX Should we set the port-keyboard-input-focus to NIL
+         ;; when there was no old-stream?
+         (when ,old-stream
+           (stream-set-input-focus ,old-stream))))))
+
+;;; X11 returns #\Return where we want to see #\Newline at the
+;;; stream-read-char level.  Dunno if this is the right place to do
+;;; the transformation... --moore
+(defun char-for-read (char)
+  (check-type char (or character null))
+  (case char
+    (#\return #\newline)
+    (otherwise char)))
 
 ;;; Streams are subclasses of standard-sheet-input-mixin regardless of whether
 ;;; or not we are multiprocessing.  In single-process mode the blocking calls to
@@ -122,6 +116,23 @@
         do (handle-event (event-sheet event) event))
   nil)
 
+
+;;; 22.2 Extended Input Streams
+
+;;; 22.2.2 Extended Input Stream Conditions
+(defvar *abort-gestures* '(:abort))
+(defvar *accelerator-gestures* nil)
+
+(define-condition abort-gesture (condition)
+  ((event :reader abort-gesture-event :initarg :event)))
+
+(define-condition accelerator-gesture (condition)
+  ((event :reader accelerator-gesture-event :initarg :event)
+   (numeric-argument :reader accelerator-gesture-numeric-argument
+                     :initarg :numeric-argument
+                     :initform 1)))
+
+;;;
 (defclass dead-key-merging-mixin ()
   ((state :initform *dead-key-table*)
    ;; Avoid name clash with standard-extended-input-stream.
@@ -172,6 +183,12 @@ keys read."))
         (call-next-method stream last-deadie-gesture))
       (call-next-method)))
 
+;;; Extended input streams are more versatile than basic input
+;;; streams. They allow manipulating arbitrary user gestures (not
+;;; necessarily characters), i.e pointer button presses. This class is
+;;; disjoint from STANDARD-INPUT-STREAM and does not implement the
+;;; fundamental-character-input-stream protocol (read-char etc).
+
 (defclass standard-extended-input-stream (input-kernel-mixin
                                           extended-input-stream
                                           dead-key-merging-mixin
@@ -179,23 +196,8 @@ keys read."))
   ((pointer)
    (cursor :initarg :text-cursor)
    (last-gesture :accessor last-gesture :initform nil
-    :documentation "Holds the last gesture returned by stream-read-gesture
+                 :documentation "Holds the last gesture returned by stream-read-gesture
 (not peek-p), untransformed, so it can easily be unread.")))
-
-(defmethod stream-set-input-focus ((stream standard-extended-input-stream))
-  (let ((port (or (port stream)
-                  (port *application-frame*))))
-    (prog1 (port-keyboard-input-focus port)
-      (setf (port-keyboard-input-focus port) stream))))
-
-(defmacro with-input-focus ((stream) &body body)
-  (when (eq stream t)
-    (setq stream '*standard-input*))
-  (let ((old-stream (gensym "OLD-STREAM")))
-    `(let ((,old-stream (stream-set-input-focus ,stream)))
-       (unwind-protect (locally ,@body)
-         (when ,old-stream
-           (stream-set-input-focus ,old-stream))))))
 
 (defun read-gesture (&key
                      (stream *standard-input*)
@@ -380,7 +382,7 @@ keys read."))
 (defmethod stream-unread-char ((stream standard-extended-input-stream)
                                char)
   (with-encapsulating-stream (estream stream)
-    (stream-unread-gesture estream (unmap-char-for-read char))))
+    (stream-unread-gesture estream char)))
 
 (defmethod stream-peek-char ((stream standard-extended-input-stream))
   (with-encapsulating-stream (estream stream)
@@ -523,60 +525,53 @@ known gestures."
               nil))
         nil)))
 
-(defgeneric %event-matches-gesture (event type device-name modifier-state))
-
-(defmethod %event-matches-gesture (event type device-name modifier-state)
-  (declare (ignore event type device-name modifier-state))
-  nil)
-
-(defmethod %event-matches-gesture ((event key-press-event)
-                                   (type (eql :keyboard))
-                                   device-name
-                                   modifier-state)
-  (let ((character (keyboard-event-character event))
-        (name      (keyboard-event-key-name event)))
-    (and (if character
-             (eql character device-name)
-             (eql name device-name))
-         (eql (event-modifier-state event) modifier-state))))
-
-(defmethod %event-matches-gesture ((event pointer-button-press-event)
-                                   type
-                                   device-name
-                                   modifier-state)
-  (and (or (eql type :pointer-button-press)
-           (eql type :pointer-button))
-       (eql (pointer-event-button event) device-name)
-       (eql (event-modifier-state event) modifier-state)))
-
-(defmethod %event-matches-gesture ((event pointer-button-release-event)
-                                   type
-                                   device-name
-                                   modifier-state)
-  (and (or (eql type :pointer-button-release)
-           (eql type :pointer-button))
-       (eql (pointer-event-button event) device-name)
-       (eql (event-modifier-state event) modifier-state)))
-
-(defmethod %event-matches-gesture ((event pointer-button-event)
-                                   type
-                                   device-name
-                                   modifier-state)
-  (and (or (eql type :pointer-button-press)
-           (eql type :pointer-button-release)
-           (eql type :pointer-button))
-       (eql (pointer-event-button event) device-name)
-       (eql (event-modifier-state event) modifier-state)))
-
-;;; Because gesture objects are either characters or event objects, support
-;;; characters here too.
-
-(defmethod %event-matches-gesture ((event character)
-                                   (type (eql :keyboard))
-                                   device-name
-                                   modifier-state)
-  (and (eql event device-name)
-       (eql modifier-state 0)))
+(defgeneric %event-matches-gesture (event type device-name modifier-state)
+  (:method (event type device-name modifier-state)
+    (declare (ignore event type device-name modifier-state))
+    nil)
+  (:method ((event key-press-event)
+            (type (eql :keyboard))
+            device-name
+            modifier-state)
+    (let ((character (keyboard-event-character event))
+          (name      (keyboard-event-key-name event)))
+      (and (if character
+               (eql character device-name)
+               (eql name device-name))
+           (eql (event-modifier-state event) modifier-state))))
+  (:method ((event pointer-button-press-event)
+            type
+            device-name
+            modifier-state)
+    (and (or (eql type :pointer-button-press)
+             (eql type :pointer-button))
+         (eql (pointer-event-button event) device-name)
+         (eql (event-modifier-state event) modifier-state)))
+  (:method ((event pointer-button-release-event)
+            type
+            device-name
+            modifier-state)
+    (and (or (eql type :pointer-button-release)
+             (eql type :pointer-button))
+         (eql (pointer-event-button event) device-name)
+         (eql (event-modifier-state event) modifier-state)))
+  (:method ((event pointer-button-event)
+            type
+            device-name
+            modifier-state)
+    (and (or (eql type :pointer-button-press)
+             (eql type :pointer-button-release)
+             (eql type :pointer-button))
+         (eql (pointer-event-button event) device-name)
+         (eql (event-modifier-state event) modifier-state)))
+  (:method ((event character)
+            (type (eql :keyboard))
+            device-name
+            modifier-state)
+    ;; Because gesture objects are either characters or event objects,
+    ;; support characters here too.
+    (and (eql event device-name)
+         (eql modifier-state 0))))
 
 (defun event-matches-gesture-name-p (event gesture-name)
   ;; Just to be nice, we special-case literal characters here.  We also
