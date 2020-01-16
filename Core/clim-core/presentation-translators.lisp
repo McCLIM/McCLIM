@@ -721,24 +721,16 @@ a presentation"
 
 (defun highlight-applicable-presentation (frame stream input-context
                                           &optional (prefer-pointer-window t))
-  (let* ((queue (stream-input-buffer stream))
-         (event (event-queue-peek queue))
-         (sheet (and event (event-sheet event))))
-    (when (and event
-               (or (and (typep event 'pointer-event)
-                        (or prefer-pointer-window
-                            (eq stream sheet)))
-                   (typep event 'keyboard-event)))
-      (frame-input-context-track-pointer frame input-context sheet event)
-      ;; Stream only needs to see button press events.
-      ;; XXX Need to think about this more.  Should any pointer events be
-      ;; passed through?  If there's no presentation, maybe?
-      ;;
-      ;; If we don't pass through other pointer events we let stream eat
-      ;; scrolling events and similar - nacceptable. -- jd, 2017-11-26
-      (when (typep event 'pointer-button-press-event)
-        (event-queue-read queue)
-        (funcall *pointer-button-press-handler* stream event)))))
+  (when-let ((event (event-peek stream)))
+    (let ((sheet (event-sheet event)))
+      (when (or (and (typep event 'pointer-event)
+		     (or prefer-pointer-window
+			 (eq stream sheet)))
+		(typep event 'keyboard-event))
+	(frame-input-context-track-pointer frame input-context sheet event)
+	(when (typep event 'pointer-button-press-event)
+          (event-read stream)
+          (funcall *pointer-button-press-handler* stream event))))))
 
 ;;; FIXME missing functions
 ;;;

@@ -489,17 +489,10 @@ use condition-variables nor locks."))
                         (make-instance 'concurrent-event-queue)
                         (make-instance 'simple-event-queue))
           :reader sheet-event-queue
-          :initarg :input-buffer)
+          :initarg :event-queue)
    (port :initform nil
          :initarg :port
          :reader port)))
-
-(defmethod stream-input-buffer ((stream standard-sheet-input-mixin))
-  (sheet-event-queue stream))
-
-(defmethod (setf stream-input-buffer) (new-val
-                                       (stream standard-sheet-input-mixin))
-  (setf (slot-value stream 'queue) new-val))
 
 (defmethod dispatch-event ((sheet standard-sheet-input-mixin) event)
   (queue-event sheet event))
@@ -527,12 +520,10 @@ use condition-variables nor locks."))
 
 (defmethod event-peek ((sheet standard-sheet-input-mixin) &optional event-type)
   (with-slots (queue) sheet
-    (if event-type
-        (event-queue-peek-if (lambda (x)
-                               (typep x event-type))
-                             queue)
-        (event-queue-peek-if (lambda (x) (declare (ignore x)) t)
-                             queue))))
+    (let ((predicate (if event-type
+                         (lambda (x) (typep x event-type))
+                         (lambda (x) (declare (ignore x)) t))))
+      (event-queue-peek-if predicate queue))))
 
 (defmethod event-unread ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
@@ -542,18 +533,8 @@ use condition-variables nor locks."))
   (with-slots (queue) sheet
     (event-queue-listen queue)))
 
-;;; Support for callers that want to set an event queue for every pane.
-
 (defclass no-event-queue-mixin ()
   ())
-
-(defmethod initialize-instance :after ((obj no-event-queue-mixin)
-                                       &key input-buffer)
-  (declare (ignore input-buffer))
-  nil)
-
-(defmethod (setf stream-input-buffer) (new-val (stream no-event-queue-mixin))
-  new-val)
 
 (defclass immediate-sheet-input-mixin (no-event-queue-mixin)
   ())
@@ -562,7 +543,7 @@ use condition-variables nor locks."))
   (handle-event sheet event))
 
 (defmethod handle-event ((sheet immediate-sheet-input-mixin) event)
-  (declare (ignore event))
+  (declare (ignore sheet event))
   nil)
 
 (define-condition sheet-is-mute-for-input (error)
@@ -609,21 +590,7 @@ use condition-variables nor locks."))
 (defclass delegate-sheet-input-mixin ()
   ((delegate :initform nil
              :initarg :delegate
-             :accessor delegate-sheet-delegate) ))
-
-;;; Don't know if this event queue stuff is completely right, or if it
-;;; matters much...
-
-(defmethod initialize-instance :after ((obj delegate-sheet-input-mixin)
-                                       &key input-buffer)
-  (declare (ignore input-buffer)))
-
-(defmethod stream-input-buffer ((stream delegate-sheet-input-mixin))
-  (sheet-event-queue (delegate-sheet-delegate stream)))
-
-(defmethod (setf stream-input-buffer) (new-val
-                                       (stream delegate-sheet-input-mixin))
-  (setf (stream-input-buffer (delegate-sheet-delegate stream)) new-val))
+             :accessor delegate-sheet-delegate)))
 
 (defmethod dispatch-event ((sheet delegate-sheet-input-mixin) event)
   (dispatch-event (delegate-sheet-delegate sheet) event))

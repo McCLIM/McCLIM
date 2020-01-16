@@ -195,16 +195,17 @@
 
 ;;;; Part VI: Extended Stream Input Facilities
 
+;;; This class is only hinted in hte spec (hence it will remain in the
+;;; internals).
+(define-protocol-class input-stream (fundamental-input-stream))
+
 ;;; 22.2 Extended Input Streams
 
-(define-protocol-class extended-input-stream
-    (fundamental-character-input-stream)
-  ())
+(define-protocol-class extended-input-stream (input-stream))
 
 ;;; 22.4 The Pointer Protocol
 
-(define-protocol-class pointer ()
-  ())
+(define-protocol-class pointer ())
 
 ;;; 23.2 Presentations
 (define-protocol-class presentation ())
@@ -219,12 +220,10 @@
 ;;;; Part VII: Building Applications
 
 ;;; 27.2 Command Tables
-(define-protocol-class command-table ()
-  ())
+(define-protocol-class command-table ())
 
 ;;; 28.2 Application Frames
-(define-protocol-class application-frame ()
-  ())
+(define-protocol-class application-frame ())
 
 ;;; 28.5 Frame Managers
 ;;; XXX The slot definitions shouldn't be here, but there is no
@@ -236,12 +235,10 @@
 
 ;;; 30.3 Basic Gadget Classes
 ;;; XXX Slots definitions should be banished.
-(define-protocol-class gadget (pane)
-  ())
+(define-protocol-class gadget (pane))
 
 
 ;;;; Part VIII: Appendices
 
 ;;; C.1 Encapsulating Streams
-(define-protocol-class encapsulating-stream ()
-  ())
+(define-protocol-class encapsulating-stream ())

@@ -142,7 +142,6 @@ input focus. This is a McCLIM extension."))
    (process :accessor frame-process :initform nil)
    (client-settings :accessor client-settings :initform nil)
    (event-queue :initarg :frame-event-queue
-                :initarg :input-buffer
                 :initform nil
                 :accessor frame-event-queue
                 :documentation "The event queue that, by default, will be
@@ -625,17 +624,14 @@ documentation produced by presentations.")
 
 (defmethod make-pane-1 :around (fm (frame standard-application-frame) type
                                 &rest args
-                                &key (input-buffer nil input-buffer-p)
-                                     name
+                                &key (event-queue nil evq-p)
                                 &allow-other-keys)
-  (declare (ignore name input-buffer))
-  "Default input-buffer to the frame event queue."
-  (let ((pane (if input-buffer-p
-                  (call-next-method)
-                  (apply #'call-next-method fm frame type
-                         :input-buffer (frame-event-queue frame)
-                         args))))
-    pane))
+  "Default event-queue to be shared with the frame."
+  (declare (ignore event-queue))
+  (if (null evq-p)
+      (let ((evq (frame-event-queue frame)))
+        (apply #'call-next-method fm frame type :event-queue evq args))
+      (call-next-method)))
 
 (defmethod adopt-frame ((fm frame-manager) (frame application-frame))
   (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
