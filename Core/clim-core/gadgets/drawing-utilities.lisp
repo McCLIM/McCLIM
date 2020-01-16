@@ -30,7 +30,7 @@
                       ((:left) x1)
                       ((:right) (- x2 w))
                       ((:center) (/ (+ x1 x2 (- w)) 2))
-                      (otherwise x1))  ;defensive programming
+                      (otherwise x1)) ; defensive programming
                     (case align-y
                       ((:top) (+ y1 as))
                       ((:center) (/ (+ y1 y2 (- as ds)) 2))
@@ -260,6 +260,8 @@
 ;;
 ;; --GB
 
+(defparameter *3d-border-thickness* 2)
+
 (defclass 3D-border-mixin ()
   ((border-width :initarg :border-width :initform 2)
    (border-style :initarg :border-style :initform :outset)
@@ -278,38 +280,6 @@
     (draw-bordered-polygon pane (polygon-points (bounding-rectangle (sheet-region pane)))
                            :border-width border-width
                            :style border-style)))
-
-(defparameter *3d-border-thickness* 2)
-
-;;; Common colors:
-
-(defgeneric gadget-highlight-background (gadget)
-  (:method ((gadget basic-gadget))
-    (compose-over (compose-in #|+paleturquoise+|# +white+ (make-opacity .5))
-                  (pane-background gadget))))
-
-(defgeneric effective-gadget-foreground (gadget)
-  (:method  ((gadget basic-gadget))
-    (if (gadget-active-p gadget)
-        +foreground-ink+
-        (compose-over (compose-in (pane-foreground gadget)
-                                  (make-opacity .5))
-                      (pane-background gadget)))))
-
-(defgeneric effective-gadget-background (gadget)
-  (:method  ((gadget basic-gadget))
-    (if (slot-value gadget 'armed)
-        (gadget-highlight-background gadget)
-        (pane-background gadget))))
-
-(defgeneric effective-gadget-input-area-color (gadget)
-  (:method  ((gadget basic-gadget))
-    (if (gadget-active-p gadget)
-        +lemonchiffon+
-        (compose-over (compose-in +lemonchiffon+ (make-opacity .5))
-                      (pane-background gadget)))))
-
-(defparameter *3d-border-thickness* 2)
 
 ;;; Common colors:
 
