@@ -201,10 +201,6 @@
 (defun unread-gesture (gesture &key (stream *standard-input*))
   (stream-unread-gesture stream gesture))
 
-
-(defclass input-kernel-mixin ()
-  ((input-buffer :initarg :input-buffer :accessor stream-input-buffer :type vector)))
-
 ;;; Intentionally not specialized to allow sheets.
 (defmethod stream-set-input-focus (stream)
   (let ((port (or (port stream)
@@ -223,57 +219,59 @@
          (when ,old-stream
            (stream-set-input-focus ,old-stream))))))
 
+
+;;; 22.1 Basic Input Streams
 
-;;; Streams are subclasses of standard-sheet-input-mixin regardless of whether
-;;; or not we are multiprocessing.  In single-process mode the blocking calls to
-;;; stream-read-char, stream-read-gesture are what cause process-next-event to
-;;; be called.  It's most convenient to let process-next-event queue up events
-;;; for the stream and then see what we've got after it returns.
+;;; Basic input streams are character streams. It should not happen
+;;; that input-buffer contains anything else than characters. This
+;;; class is disjoint to the extended-input-stream protocol.
+;;;
+;;; Part of the extended input stream protocol is mixed in thanks to
+;;; the input-stream-kernel (STREAM-INPUT-BUFFER, STREAM-SCAN-POINTER
+;;; and STREAM-INSERTION-POINTER accessors and :INPUT-BUFFER
+;;; initarg). It is good because these parts makes sense here.
 
-(defclass standard-input-stream (input-kernel-mixin
-                                 standard-sheet-input-mixin)
-  ((unread-chars :initform nil :accessor stream-unread-chars)))
+(defclass standard-input-stream (input-stream-kernel
+                                 input-stream
+                                 fundamental-character-input-stream)
+  ())
 
-;;; XXX: fixing stream shisophrenia is a subject of the next input-refactor pass.
-;;; 1. What about EOF?
-;;; 2. GESTURE-OBJECT should be already coerced to a character!
-;;;   2a. We don't handle modifiers here, so it is double wrong, see stream-process-gesture.
-;;; 3. HANDLE-EVENT should have been invoked on a completely different level. -- jd 2018-12-20
-(defmethod stream-read-char ((pane standard-input-stream))
-  (if (stream-unread-chars pane)
-      (pop (stream-unread-chars pane))
-      (let ((event (event-read pane)))  ; (1)
-        (if (and (typep event 'key-press-event)  ; (2)
-                 (keyboard-event-character event)) ; (2a)
-            (let ((char (char-for-read (keyboard-event-character event))))
-              (stream-write-char pane char)
-              (return-from stream-read-char char))
-            ;; (3)
-            (handle-event (event-sheet event) event)))))
+(defmethod stream-append-gesture :before ((stream standard-input-stream) gesture)
+  (check-type gesture character))
 
-(defmethod stream-unread-char ((pane standard-input-stream) char)
-  (push char (stream-unread-chars pane)))
+(defmethod handle-event ((client standard-input-stream)
+                         (event key-press-event))
+  (when-let ((ch (event-char event)))
+    (stream-append-gesture client ch)))
 
-(defmethod stream-read-char-no-hang ((pane standard-input-stream))
-  (if (stream-unread-chars pane)
-      (pop (stream-unread-chars pane))
-    (loop for event = (event-read-no-hang pane)
-        if (null event)
-           return nil
-        if (and (typep event 'key-press-event)
-                (keyboard-event-character event))
-          return (char-for-read (keyboard-event-character event))
-        else
-          do (handle-event (event-sheet event) event))))
+(defmethod stream-read-char ((stream standard-input-stream))
+  (stream-read-gesture stream
+                       :input-wait-test nil
+                       :input-wait-handler nil
+                       :pointer-button-press-handler nil))
 
-(defmethod stream-clear-input ((pane standard-input-stream))
-  (setf (stream-unread-chars pane) nil)
-  (loop for event = (event-read-no-hang pane)
-        if (null event)
-           return nil
-        else
-        do (handle-event (event-sheet event) event))
-  nil)
+(defmethod stream-read-char-no-hang ((stream standard-input-stream))
+  (stream-read-gesture stream
+                       :timeout 0
+                       :input-wait-test nil
+                       :input-wait-handler nil
+                       :pointer-button-press-handler nil))
+
+(defmethod stream-unread-char ((stream standard-input-stream) char)
+  (check-type char character)
+  (stream-unread-gesture stream char))
+
+(defmethod stream-peek-char ((stream standard-input-stream))
+  (stream-read-gesture stream :peek-p t))
+
+(defmethod stream-read-line ((stream standard-input-stream))
+  (with-slots (sp buffer) stream
+    (assert (<= 0 sp (length buffer)))
+    (let ((end (position #\newline buffer :start sp :test #'char=)))
+      (multiple-value-prog1 (values (subseq buffer sp) (not end))
+        (if (null end)
+            (setf sp (length buffer))
+            (setf sp (1+ end)))))))
 
 
 ;;; 22.2 Extended Input Streams
@@ -341,6 +339,9 @@ keys read."))
         (setf state last-state)
         (call-next-method stream last-deadie-gesture))
       (call-next-method)))
+
+(defclass input-kernel-mixin ()
+  ((input-buffer :initarg :input-buffer :accessor stream-input-buffer :type vector)))
 
 ;;; Extended input streams are more versatile than basic input
 ;;; streams. They allow manipulating arbitrary user gestures (not
