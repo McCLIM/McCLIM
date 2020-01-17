@@ -212,13 +212,14 @@
    ;; gadget? -- AL
    ;;
    ;; I think, T is correct here --GB
-   (active-p          :initform t                 :reader gadget-active-p)
+   (active-p          :initarg :active            :reader gadget-active-p)
    (armed             :initform nil               :reader gadget-armed-p))
   (:default-initargs :text-style (make-text-style :sans-serif nil nil)
                      :id (gensym "GADGET")
                      :client *application-frame*
                      :armed-callback nil
-                     :disarmed-callback nil))
+                     :disarmed-callback nil
+                     :active t))
 
 ;; "The default methods (on basic-gadget) call the function stored in
 ;; gadget-armed-callback or gadget-disarmed-callback with one
