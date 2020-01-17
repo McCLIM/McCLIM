@@ -25,16 +25,201 @@
 
 (in-package #:climi)
 
-;; Input gesture object may be a character or event. Keywords are
-;; returned to indicate the failure to obtain a gesture. We could extend
-;; this list with a string (look up noise strings). -- jd
+;;; Input gesture object may be a character or event. Keywords are
+;;; returned to indicate the failure to obtain a gesture. There are
+;;; also mentions of "noise strings" and "accept results" in the input
+;;; editing protocol as potential input-buffer contents.
+;;;
+;;; "Noise strings" are used to represent some in-line prompt and
+;;; should be ignored by `stream-read-gesture'. they are inserted into
+;;; the buffer by `prompt-for-accept'.
+;;;
+;;; "Accept results" are used to represent unreadable objects returned
+;;; by `accept' (list of the object and its type). They are inserted
+;;; in the buffer by `presentation-replace-input'. -- jd 2020-01-17
+(deftype noise-string         () 'string)
+(deftype accept-results       () '(cons t (cons t null)))
 (deftype input-gesture-object ()
-  `(or character event keyword))
+  `(or character event keyword noise-string accept-results))
 
 (defvar *input-wait-test* nil)
 (defvar *input-wait-handler* nil)
 (defvar *pointer-button-press-handler* nil)
 
+;;; X11 returns #\Return where we want to see #\Newline at the
+;;; stream-read-char level.  Dunno if this is the right place to do
+;;; the transformation... --moore
+(defun char-for-read (char)
+  (check-type char (or character null))
+  (case char
+    (#\return #\newline)
+    (otherwise char)))
+
+(defun event-char (event)
+  (let ((modifiers (event-modifier-state event)))
+    (when (or (zerop modifiers)
+              (eql modifiers +shift-key+))
+      (keyboard-event-character event))))
+
+
+;;; CLIM's input kernel is only hinted in the CLIM II Specification. -- jd 2019-06-24
+(defclass input-stream-kernel (standard-sheet-input-mixin)
+  ((buffer :initarg :input-buffer :accessor stream-input-buffer
+           :type (vector input-gesture-object))
+   (sp :accessor stream-scan-pointer
+       :type integer :documentation "Scan pointer.")
+   (ip :accessor stream-insertion-pointer
+       :type integer :documentation "Insertion pointer.")
+   (rescan :initform nil :accessor stream-rescanning-p)))
+
+(defmethod slot-unbound (class (instance input-stream-kernel) (slot-name (eql 'buffer)))
+  (setf (slot-value instance 'buffer)
+        (make-array 0 :adjustable t :fill-pointer 0)))
+
+(defmethod slot-unbound (class (instance input-stream-kernel) (slot-name (eql 'sp)))
+  (setf (slot-value instance 'sp) 0))
+
+(defmethod slot-unbound (class (instance input-stream-kernel) (slot-name (eql 'ip)))
+  (setf (slot-value instance 'ip)
+        (length (stream-input-buffer instance))))
+
+(defmethod (setf stream-input-buffer) :after (buf (stream input-stream-kernel))
+  (setf (stream-scan-pointer stream) 0
+        (stream-insertion-pointer stream) (length buf)))
+
+(defmethod (setf stream-scan-pointer) :before (sp (stream input-stream-kernel))
+  (let ((ip (stream-insertion-pointer stream)))
+    (unless (<= 0 sp ip)
+      (error "STREAM-SCAN-POINTER ~s is not in range [0; ~s]." sp ip))))
+
+(defmethod (setf stream-insertion-pointer) :before (ip (stream input-stream-kernel))
+  (let ((sp (stream-scan-pointer stream))
+        (fp (length (stream-input-buffer stream))))
+    (unless (<= sp ip fp)
+      (error "STREAM-INSERTION-POINTER ~s is not in range [~s; ~s]." ip sp fp))))
+
+(defgeneric stream-append-gesture (stream gesture)
+  (:method ((stream input-stream-kernel) gesture)
+    (with-slots (buffer ip) stream
+      (vector-push-extend gesture buffer)
+      (incf ip))))
+
+;;; This function is like "peek-no-hang" but only locally in the
+;;; buffer, i.e it does not trigger wait on event-queue.
+(defgeneric stream-gesture-available-p (stream)
+  (:method ((stream input-stream-kernel))
+    (with-slots (ip sp buffer) stream
+      (if (< sp ip)
+          (aref buffer sp)
+          nil))))
+
+;;; Default input-stream-kernel methods.
+
+;;; Event queue is accessed by streams only in STREAM-INPUT-WAIT.
+;;; INPUT-BUFFER is filled by handle-event methods. -- jd 2019-06-26
+(defmethod stream-input-wait ((stream input-stream-kernel) &key timeout input-wait-test)
+  (loop
+    with wait-fun = (and input-wait-test (curry input-wait-test stream))
+    with timeout-time = (and timeout (+ timeout (now)))
+    until (stream-gesture-available-p stream)
+     do (multiple-value-bind (available reason)
+            (event-listen-or-wait stream :timeout timeout :wait-function wait-fun)
+          (when (null available)
+            (return-from stream-input-wait (values nil reason)))
+          ;; Defensive programming: we could do without when-let if we
+          ;; assume that nobody asynchronously reads from the queue,
+          ;; what ostensively is true. -- jd 2020-01-17
+          (when-let ((event (event-read-no-hang stream)))
+            (handle-event (event-sheet event) event))
+          (when timeout
+            (setf timeout (compute-decay timeout-time nil))))
+     finally (return t)))
+
+(defmethod stream-listen ((stream input-stream-kernel))
+  (stream-input-wait stream))
+
+(defmethod stream-process-gesture ((stream input-stream-kernel) gesture type)
+  (declare (ignore type))
+  (etypecase gesture
+    (key-press-event
+     (if-let ((character (event-char gesture)))
+       (values character 'standard-character)
+       (values gesture (type-of gesture))))
+    (input-gesture-object
+     (values gesture (type-of gesture)))))
+
+(defmethod stream-read-gesture ((stream input-stream-kernel)
+                                &key timeout peek-p
+                                  (input-wait-test *input-wait-test*)
+                                  (input-wait-handler *input-wait-handler*)
+                                  (pointer-button-press-handler
+                                   *pointer-button-press-handler*))
+  (let ((*input-wait-test* input-wait-test)
+        (*input-wait-handler* input-wait-handler)
+        (*pointer-button-press-handler* pointer-button-press-handler))
+    ;; Check for available input.
+    (multiple-value-bind (available reason)
+        (stream-input-wait stream :timeout timeout :input-wait-test input-wait-test)
+      (when (null available)
+        (maybe-funcall input-wait-handler stream)
+        (return-from stream-read-gesture (values nil reason))))
+    ;; Input is available (or the stream is exhausted).
+    (with-slots (sp ip buffer) stream
+      (loop
+        (assert (<= 0 sp ip (length buffer)))
+        (when (= sp ip)
+          (return-from stream-read-gesture (values nil :eof)))
+        ;; stream-process-gesture may return NIL when the
+        ;; input-editing-stream edited the buffer.
+        (when-let ((gesture (stream-process-gesture stream (aref buffer sp) t)))
+          (if (typep gesture 'noise-string)
+              (incf sp)
+              (return-from stream-read-gesture
+                (prog1 gesture
+                  (unless peek-p (incf sp))))))))))
+
+(defmethod stream-unread-gesture ((stream input-stream-kernel) gesture)
+  (declare (ignore gesture))
+  (with-slots (sp ip buffer) stream
+    (loop with scan   = sp
+          with insert = ip
+          with buf    = buffer
+          do (assert (<= 1 scan insert (length buf)))
+             (decf scan)
+          while (typep (aref buf scan) 'noise-string)
+          finally
+             (setf sp scan)))
+  nil)
+
+(defmethod stream-clear-input ((stream input-stream-kernel))
+  (with-slots (sp ip buffer) stream
+    (setf sp 0
+          ip 0)
+    ;; XXX in principle input buffer should have a fill-pointer but in
+    ;; practice supporting strings as input buffers is profitable.
+    ;; Such buffers will break if anyone tries to append to them. When
+    ;; cleared we swap the buffer with a fresh one. --jd 2019-06-26
+    (if (array-has-fill-pointer-p buffer)
+        (setf (fill-pointer buffer) 0)
+        (slot-makunbound stream 'buffer)))
+  nil)
+
+;;; Trampolines for stream-read-gesture and stream-unread-gesture.
+(defun read-gesture (&key (stream *standard-input*) timeout peek-p
+                       (input-wait-test *input-wait-test*)
+                       (input-wait-handler *input-wait-handler*)
+                       (pointer-button-press-handler *pointer-button-press-handler*))
+  (stream-read-gesture stream
+                       :timeout timeout
+                       :peek-p peek-p
+                       :input-wait-test input-wait-test
+                       :input-wait-handler input-wait-handler
+                       :pointer-button-press-handler pointer-button-press-handler))
+
+(defun unread-gesture (gesture &key (stream *standard-input*))
+  (stream-unread-gesture stream gesture))
+
+
 (defclass input-kernel-mixin ()
   ((input-buffer :initarg :input-buffer :accessor stream-input-buffer :type vector)))
 
@@ -56,14 +241,6 @@
          (when ,old-stream
            (stream-set-input-focus ,old-stream))))))
 
-;;; X11 returns #\Return where we want to see #\Newline at the
-;;; stream-read-char level.  Dunno if this is the right place to do
-;;; the transformation... --moore
-(defun char-for-read (char)
-  (check-type char (or character null))
-  (case char
-    (#\return #\newline)
-    (otherwise char)))
 
 ;;; Streams are subclasses of standard-sheet-input-mixin regardless of whether
 ;;; or not we are multiprocessing.  In single-process mode the blocking calls to
@@ -199,23 +376,6 @@ keys read."))
                  :documentation "Holds the last gesture returned by stream-read-gesture
 (not peek-p), untransformed, so it can easily be unread.")))
 
-(defun read-gesture (&key
-                     (stream *standard-input*)
-                     timeout
-                     peek-p
-                     (input-wait-test *input-wait-test*)
-                     (input-wait-handler *input-wait-handler*)
-                     (pointer-button-press-handler
-                      *pointer-button-press-handler*))
-  (stream-read-gesture stream
-                       :timeout timeout
-                       :peek-p peek-p
-                       :input-wait-test input-wait-test
-                       :input-wait-handler input-wait-handler
-                       :pointer-button-press-handler
-                       pointer-button-press-handler))
-
-
 ;;; Do streams care about any other events?
 (defun handle-non-stream-event (buffer)
   (let* ((event (event-queue-peek buffer))
@@ -338,9 +498,6 @@ keys read."))
          (unless (event-queue-listen-or-wait buffer :timeout timeout)
            (return-from exit (values nil :timeout)))
          (go check-buffer)))))
-
-(defun unread-gesture (gesture &key (stream *standard-input*))
-  (stream-unread-gesture stream gesture))
 
 ;;; XXX method should use the stream-input-buffer (not the queue)
 (defmethod stream-unread-gesture ((stream standard-extended-input-stream)
