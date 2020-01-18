@@ -89,6 +89,7 @@
 (defmethod initialize-instance :after
     ((instance tracking-pointer-state)
      &key
+       pointer
        (presentation nil p-p)
        (presentation-button-press nil pbp-p)
        (presentation-button-release nil pbr-p)
@@ -97,6 +98,9 @@
                    presentation-button-press
                    presentation-button-release
                    highlight))
+  (unless pointer
+    (setf (slot-value instance 'tracked-pointer)
+          (port-pointer (port (tracked-sheet instance)))))
   (unless h-p
     (setf (slot-value instance 'highlight)
           (or p-p pbp-p pbr-p))))
@@ -143,28 +147,43 @@
   (frob pointer-button-press-event   presentation-button-press-handler   button-press-handler)
   (frob pointer-button-release-event presentation-button-release-handler button-release-handler))
 
-(defun invoke-tracking-pointer (state
-                                &aux
-                                  (sheet (tracked-sheet state))
-                                  (multiple-window (multiple-window state))
-                                  (transformp (transformp state)))
-  (flet ((pointer-event-position (event)
-           (let ((sheet (event-sheet event)))
-             (get-pointer-position (sheet event)
-               (if (not transformp)
-                   (values x y)
-                   (with-sheet-medium (medium sheet)
-                     (transform-position (medium-transformation medium) x y)))))))
-    (loop
-       for event = (event-read sheet)
-       do (if (and (not multiple-window)
-                   (not (eql sheet (event-sheet event))))
-              ;; Event is not intercepted.
-              (handle-event (event-sheet event) event)
-              (multiple-value-bind (x y)
-                  (when (typep event 'pointer-event)
-                    (pointer-event-position event))
-                (track-event state event x y))))))
+(defun invoke-tracking-pointer (state)
+  (let ((tracked-sheet   (tracked-sheet   state))
+        (tracked-pointer (tracked-pointer state))
+        (multiple-window (multiple-window state))
+        (transformp      (transformp      state)))
+    (labels ((pointer-event-position (event)
+               (let ((sheet (event-sheet event)))
+                 (get-pointer-position (sheet event)
+                   (if (not transformp)
+                       (values x y)
+                       (with-sheet-medium (medium sheet)
+                         (transform-position (medium-transformation medium) x y))))))
+             (wiggle-pointer ()
+               ;; Synthesize a pointer motion event for the current
+               ;; pointer position and modifiers so that appropriate
+               ;; handlers are called. This ensures, for example, that
+               ;; feedback and/or pointer documentation are updated.
+               (let ((event (synthesize-pointer-motion-event tracked-pointer)))
+                 (multiple-value-bind (x y) (pointer-event-position event)
+                   (track-event state event x y)
+                   (values x y)))))
+      ;; Ensure feedback even when the queue is empty.
+      (wiggle-pointer)
+      (loop for event = (event-read tracked-sheet)
+            do (cond ((and (not multiple-window)
+                           (not (eql tracked-sheet (event-sheet event))))
+                      ;; Event is not intercepted.
+                      (handle-event (event-sheet event) event))
+                     ((typep event 'pointer-event)
+                      (multiple-value-bind (x y)
+                          (pointer-event-position event)
+                        (track-event state event x y)))
+                     (t
+                      (track-event state event nil nil)))
+               ;; Keyboard event could have changed a modifier state.
+               (when (typep event 'keyboard-event)
+                 (wiggle-pointer))))))
 
 (defmacro tracking-pointer
     ((sheet &rest args &key pointer multiple-window transformp context-type highlight)
