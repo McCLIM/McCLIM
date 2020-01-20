@@ -123,6 +123,12 @@
 (defmethod sheet-children ((sheet basic-sheet))
   nil)
 
+;;; This method is a canary which signals, that something is wrong
+;;; with the inheritance in the sheet class, i.e that basic-sheet is
+;;; before the sheet-multiple-child-mixin in the cpl. -- jd 2020-01-20
+(defmethod sheet-adopt-child ((sheet basic-sheet) (child sheet))
+  (error "~S attempting to adopt ~S." sheet child))
+
 (defmethod sheet-adopt-child :after ((sheet basic-sheet) (child sheet))
   (note-sheet-adopted child)
   (when (sheet-grafted-p sheet)
