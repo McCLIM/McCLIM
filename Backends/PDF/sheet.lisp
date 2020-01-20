@@ -129,7 +129,7 @@
 
 ;;; PDF-GRAFT
 
-(defclass pdf-graft (basic-sheet sheet-leaf-mixin)
+(defclass pdf-graft (sheet-leaf-mixin basic-sheet)
   ((width  :initform 210 :reader pdf-graft-width)
    (height :initform 297 :reader pdf-graft-height)))
 
