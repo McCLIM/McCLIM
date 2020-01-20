@@ -53,21 +53,23 @@
              "Unknown")
   #-unix "")
 
-(defclass postscript-stream
-    (basic-sheet
-     sheet-leaf-mixin sheet-mute-input-mixin
-     sheet-mute-repainting-mixin
-     ;; ?
-     mirrored-sheet-mixin
-     ;; FIXME: Tim Moore suggested (2006-02-06, mcclim-devel) that
-     ;; this might better be a superclass of
-     ;; STANDARD-OUTPUT-RECORDING-STREAM.  This should be revisited
-     ;; when we grow another non-interactive backend (maybe a cl-pdf
-     ;; backend?).  -- CSR.
-     climi::updating-output-stream-mixin
-     standard-extended-output-stream
-     standard-output-recording-stream
-     permanent-medium-sheet-output-mixin)
+(defclass postscript-stream (sheet-leaf-mixin
+                             sheet-mute-input-mixin
+                             sheet-mute-repainting-mixin
+                             ;; ?
+                             mirrored-sheet-mixin
+                             ;; FIXME: Tim Moore suggested
+                             ;; (2006-02-06, mcclim-devel) that this
+                             ;; might better be a superclass of
+                             ;; STANDARD-OUTPUT-RECORDING-STREAM.
+                             ;; This should be revisited when we grow
+                             ;; another non-interactive backend (maybe
+                             ;; a cl-pdf backend?).  -- CSR.
+                             climi::updating-output-stream-mixin
+                             permanent-medium-sheet-output-mixin
+                             basic-sheet
+                             standard-extended-output-stream
+                             standard-output-recording-stream)
   ((file-stream :initarg :file-stream :reader postscript-stream-file-stream)
    (title :initarg :title)
    (for :initarg :for)

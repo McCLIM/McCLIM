@@ -7,11 +7,11 @@
 ;;; ------------------------------------------------------------------------------------------
 ;;; 30.4.1 The concrete push-button Gadget
 
-(defclass push-button-pane  (push-button
-                             arm/disarm-repaint-mixin
-                             activate/deactivate-repaint-mixin
-                             enter/exit-arms/disarms-mixin
-                             sheet-leaf-mixin)
+(defclass push-button-pane (sheet-leaf-mixin
+                            arm/disarm-repaint-mixin
+                            activate/deactivate-repaint-mixin
+                            enter/exit-arms/disarms-mixin
+                            push-button)
   ((pressedp          :initform nil)
    (show-as-default-p :type boolean
                       :initform nil
@@ -78,15 +78,15 @@
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.2 The concrete toggle-button Gadget
 
-(defclass toggle-button-pane (toggle-button
+(defclass toggle-button-pane (sheet-leaf-mixin
                               ;; repaint behavior:
                               arm/disarm-repaint-mixin
                               activate/deactivate-repaint-mixin
                               value-changed-repaint-mixin
                               ;; event handling:
                               enter/exit-arms/disarms-mixin
-                              ;; other
-                              sheet-leaf-mixin)
+                              ;; abstract gadget:
+                              toggle-button)
   ((indicator-type :type (member :one-of :some-of)
                    :initarg :indicator-type
                    :reader toggle-button-indicator-type
@@ -172,9 +172,9 @@
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.3 The concrete menu-button Gadget
 
-(defclass menu-button-pane (menu-button
+(defclass menu-button-pane (sheet-leaf-mixin
                             activate/deactivate-repaint-mixin
-                            sheet-leaf-mixin)
+                            menu-button)
   ()
   (:default-initargs :background *3d-normal-color*
                      :x-spacing 3
@@ -217,7 +217,8 @@
 ;;; ------------------------------------------------------------------------------------------
 ;;;  30.4.4 The concrete scroll-bar Gadget
 
-(defclass scroll-bar-pane (3D-border-mixin
+(defclass scroll-bar-pane (sheet-leaf-mixin
+                           3D-border-mixin
                            scroll-bar)
   ((event-state :initform nil)
    (drag-dy :initform nil)
@@ -589,10 +590,10 @@
 ;; why they are parameters, and not constants.
 (defparameter slider-button-short-dim 10)
 
-(defclass slider-pane (slider
-                       gadget-color-mixin
+(defclass slider-pane (sheet-leaf-mixin
                        value-changed-repaint-mixin
-                       activate/deactivate-repaint-mixin)
+                       activate/deactivate-repaint-mixin
+                       slider)
   ())
 
 (defmethod compose-space ((pane slider-pane) &key width height)
@@ -762,11 +763,11 @@
 
 ;; radio-box
 
-(defclass radio-box-pane (radio-box
+(defclass radio-box-pane (sheet-multiple-child-mixin
                           rack-layout-mixin
                           activate/deactivate-repaint-mixin
-                          sheet-multiple-child-mixin
-                          activate/deactivate-children-mixin)
+                          activate/deactivate-children-mixin
+                          radio-box)
   ()
   (:default-initargs :background *3d-normal-color*))
 
@@ -796,11 +797,11 @@
 
 ;; check-box
 
-(defclass check-box-pane (check-box
+(defclass check-box-pane (sheet-multiple-child-mixin
                           rack-layout-mixin
                           activate/deactivate-repaint-mixin
-                          sheet-multiple-child-mixin
-                          activate/deactivate-children-mixin)
+                          activate/deactivate-children-mixin
+                          check-box)
   ()
   (:default-initargs :background *3d-normal-color*))
 
@@ -861,12 +862,10 @@
 
 (define-abstract-pane-mapping 'list-pane 'generic-list-pane)
 
-
-
-(defclass generic-list-pane (list-pane
-                             standard-sheet-input-mixin ;; Hmm..
+(defclass generic-list-pane (sheet-leaf-mixin
                              activate/deactivate-repaint-mixin
-                             value-changed-repaint-mixin)
+                             value-changed-repaint-mixin
+                             list-pane)
   ((highlight-ink :initform +royalblue4+
                   :initarg :highlight-ink
                   :reader list-pane-highlight-ink)
@@ -1265,12 +1264,13 @@ if INVOKE-CALLBACK is given."))
 
 (define-abstract-pane-mapping 'option-pane 'generic-option-pane)
 
-(defclass generic-option-pane (option-pane
+(defclass generic-option-pane (sheet-leaf-mixin
                                value-changed-repaint-mixin
-                               3d-border-mixin
                                activate/deactivate-repaint-mixin
                                arm/disarm-repaint-mixin
-                               enter/exit-arms/disarms-mixin)
+                               enter/exit-arms/disarms-mixin
+                               3d-border-mixin
+                               option-pane)
   ((current-label :initform "" :accessor generic-option-pane-label)))
 
 (defun option-pane-evil-backward-map (pane value)
@@ -1699,12 +1699,11 @@ if INVOKE-CALLBACK is given."))
 
 (defclass orientation-from-parent-mixin () ())
 
-(defgeneric orientation (gadget))
-
-(defmethod orientation ((gadget orientation-from-parent-mixin))
-  (etypecase (sheet-parent gadget)
-    ((or hbox-pane hrack-pane) :vertical)
-    ((or vbox-pane vrack-pane) :horizontal)))
+(defgeneric orientation (gadget)
+  (:method ((gadget orientation-from-parent-mixin))
+    (etypecase (sheet-parent gadget)
+      ((or hbox-pane hrack-pane) :vertical)
+      ((or vbox-pane vrack-pane) :horizontal))))
 
 (cl:defconstant +box-adjuster-gadget-major-size+ 6)
 (cl:defconstant +box-adjuster-gadget-minor-size+ 1)
@@ -1719,8 +1718,10 @@ if INVOKE-CALLBACK is given."))
    (%total-size   :initarg :total-size
                   :reader  dragging-state-total-size)))
 
-(defclass clim-extensions::box-adjuster-gadget
-    (basic-gadget 3d-border-mixin orientation-from-parent-mixin)
+(defclass box-adjuster-gadget (sheet-leaf-mixin
+                               3d-border-mixin
+                               orientation-from-parent-mixin
+                               basic-gadget)
   ((dragging-state :initform nil
                    :accessor dragging-state))
   (:default-initargs :background *3d-inner-color*)
@@ -1745,10 +1746,10 @@ it in a layout between two panes that are to be resizeable.  E.g.:
        (make-space-requirement :min-height major-size :height major-size :max-height major-size
                                :min-width minor-size :width minor-size)))))
 
-(defmethod note-sheet-grafted ((sheet clim-extensions:box-adjuster-gadget))
+(defmethod note-sheet-grafted ((sheet box-adjuster-gadget))
   (setf (sheet-pointer-cursor sheet) :move))
 
-(defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
+(defmethod handle-event ((gadget box-adjuster-gadget)
                          (event pointer-button-press-event))
   (let ((orientation (orientation gadget))
         (parent (sheet-parent gadget)))
@@ -1770,11 +1771,11 @@ it in a layout between two panes that are to be resizeable.  E.g.:
                                :clients-size clients-size
                                :total-size   total-size)))))))
 
-(defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
+(defmethod handle-event ((gadget box-adjuster-gadget)
                          (event pointer-button-release-event))
   (setf (dragging-state gadget) nil))
 
-(defmethod handle-event ((gadget clim-extensions:box-adjuster-gadget)
+(defmethod handle-event ((gadget box-adjuster-gadget)
                          (event pointer-motion-event))
   (when-let ((state (dragging-state gadget)))
     (let ((orientation (orientation gadget))

@@ -187,7 +187,7 @@
 
 ;;; POSTSCRIPT-GRAFT
 
-(defclass postscript-graft (basic-sheet sheet-leaf-mixin)
+(defclass postscript-graft (sheet-leaf-mixin basic-sheet)
   ((width  :initform 210 :reader postscript-graft-width)
    (height :initform 297 :reader postscript-graft-height)))
 
