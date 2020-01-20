@@ -61,13 +61,6 @@
   (declare (ignorable event))
   (disarm-gadget pane))
 
-;;;; changing-label-invokes-layout-protocol-mixin
-
-(defclass changing-label-invokes-layout-protocol-mixin ()
-  ()
-  (:documentation
-   "Mixin class for gadgets, which want invoke the layout protocol, if the label changes."))
-
 ;;; Multiple children
 
 (defclass activate/deactivate-children-mixin ()
