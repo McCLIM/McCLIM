@@ -8,7 +8,6 @@
 ;;; 30.4.1 The concrete push-button Gadget
 
 (defclass push-button-pane  (push-button
-                             labelled-gadget-mixin
                              arm/disarm-repaint-mixin
                              activate/deactivate-repaint-mixin
                              enter/exit-arms/disarms-mixin
