@@ -9,7 +9,6 @@
 
 (defclass push-button-pane  (push-button
                              labelled-gadget-mixin
-                             changing-label-invokes-layout-protocol-mixin
                              arm/disarm-repaint-mixin
                              activate/deactivate-repaint-mixin
                              enter/exit-arms/disarms-mixin
@@ -85,8 +84,6 @@
                               arm/disarm-repaint-mixin
                               activate/deactivate-repaint-mixin
                               value-changed-repaint-mixin
-                              ;; callback behavior:
-                              changing-label-invokes-layout-protocol-mixin
                               ;; event handling:
                               enter/exit-arms/disarms-mixin
                               ;; other
