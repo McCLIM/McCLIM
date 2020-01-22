@@ -582,26 +582,36 @@ queue.  The exact representation of an event queue is explicitly unspecified.
 \Defgeneric {process-next-event} {port \key wait-function timeout}
 
 This function provides a standard interface for one pass through a
-port's event processing loop. \arg{wait-function} is either \cl{nil}
-or a function of no arguments that acts as a predicate; it has dynamic
-extent. \cl{process-next-event} should wait until one of three
-conditions occurs:
+port's event processing loop. The function should wait until one of
+three conditions occurs:
 
 \begin{itemize}
-\item If an event was received and processed, the predicate should return \term{true}.
-\item If a timeout occurs, the function should return the two values \term{false} and \cl{:timeout}.
-\item If the wait function returns \term{true}, the function should return the two values \term{false} and \cl{:wait-function}.
+\item If an event is received and processed it should return \term{true}.
+\item If \arg{wait-function} returns \term{true},
+  \cl{process-next-event} should return the two values \term{false}
+  and \cl{:wait-function}.
+\item If a timeout occurs, \cl{process-next-event} should return the
+  two values \term{false} and \cl{:timeout}.
 \end{itemize}
+
+\arg{wait-function} is either nil or a function with no arguments that
+acts as a predicate; it has dynamic extent and it doesn't block.  It
+should return \term{true} if there is no further need for processing
+the next event. The predicate is invoked by the port-specific method
+on this generic function at least before trying to read an event and
+again, after the timeout, if it has been reached. \arg{wait-function}
+may be called multiple times while the \cl{process-next-event} method
+tries to read the next event.
+
+\arg{timeout} is either \cl{nil} (then \cl{process-next-event} waits
+indefinetely for the next event) or a time delay specified in seconds
+after which the function gives up. In that case if \arg{wait-function}
+returns true the second value returned is \cl{:wait-function},
+otherwise it is \cl{:timeout}.
 
 A port implementation must provide a method for this function that
 reads the next window server-specific device event, blocking if
 necessary, and then invokes the event distributor.
-
-\issue {DK} {When \arg{wait-function} should be called? Either we busy
-  wait for the predicate returning true (and compute timeout decay on
-  our own) or call wait-function after some input for port has been
-  processed (then wait-function won't be able to notice asynchronous
-  changes to the state it tries to monitor).}
 
 \defgeneric {port-keyboard-input-focus} {port}
 \Defgeneric {(setf port-keyboard-input-focus)} {focus port}
