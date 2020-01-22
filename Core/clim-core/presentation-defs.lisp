@@ -548,7 +548,9 @@ a specific type."))
                        (gethash name history-table)
                        history-object))
                history-object))
-            (nil
+	    ;; This used to be just nil, which in SBCL and Allegro (at least)
+	    ;; never matches.  You have to put it inside parens
+            ((nil)
              nil)
             (otherwise
              (funcall-presentation-generic-function presentation-type-history
