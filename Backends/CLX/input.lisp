@@ -325,16 +325,24 @@
 (defmethod process-next-event ((port clx-basic-port) &key wait-function (timeout nil))
   (let ((*clx-port* port)
         (*wait-function* wait-function))
+    (when (maybe-funcall wait-function)
+      (return-from process-next-event
+        (values nil :wait-function)))
     (let ((event (xlib:process-event (clx-port-display port)
                                      :timeout timeout
 				     :handler #'event-handler
                                      :discard-p t
                                      :force-output-p t)))
       (case event
-        ((nil) (values nil :timeout))
-        ((t)   (values nil :wait-function))
+        ((nil)
+         (if (maybe-funcall wait-function)
+             (values nil :wait-function)
+             (values nil :timeout)))
+        ((t)
+         (values nil :wait-function))
         (otherwise
-         (prog1 t (distribute-event port event)))))))
+         (prog1 t
+           (distribute-event port event)))))))
 
 ;;; pointer button bits in the state mask
 
