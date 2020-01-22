@@ -234,7 +234,7 @@
            (native-sheet-region (effective-repaint-region parent sheet region)))
       (with-sheet-medium (medium parent)
         (letf (((medium-clipping-region medium) native-sheet-region)
-               ((medium-background medium) (pane-background parent))
+               ((medium-background medium) (pane-background sheet))
                ((medium-transformation medium) +identity-transformation+))
           (with-bounding-rectangle* (left top right bottom)
               native-sheet-region
