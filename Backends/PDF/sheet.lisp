@@ -49,10 +49,12 @@
         (funcall continuation stream)
         (new-page stream))
       (with-slots (file-stream title author subject) stream
-        (let ((flexi-stream
-                (flexi-streams:make-flexi-stream
-                 file-stream
-                 :external-format :latin-1))
+        (let ((output
+               (typecase file-stream
+                 (stream (flexi-streams:make-flexi-stream
+                          file-stream
+                          :external-format :latin-1))
+                 (t file-stream)))
               (pdf:*compress-streams* nil))
           (with-output-recording-options (stream :draw t :record nil)
             (pdf:with-document (:title title :author author :subject subject)
@@ -73,7 +75,7 @@
                           (replay page stream)))))
                   (unless (eql page last-page)
                     (emit-new-page stream))))
-              (pdf:write-document flexi-stream))))))))
+              (pdf:write-document output))))))))
 
 ;; FIXME! Not yet implemented.
 (defun start-page (stream)
