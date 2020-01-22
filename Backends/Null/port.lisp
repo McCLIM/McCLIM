@@ -76,8 +76,19 @@
   nil)
 
 (defmethod process-next-event ((port null-port) &key wait-function (timeout nil))
-  (declare (ignore wait-function timeout))
-  (values nil :null-backend))
+  (cond ((maybe-funcall wait-function)
+         (values nil :wait-function))
+        ((not (null timeout))
+         (sleep timeout)
+         (if (maybe-funcall wait-function)
+             (values nil :wait-function)
+             (values nil :timeout)))
+        ((not (null wait-function))
+         (loop do (sleep 0.1)
+               until (funcall wait-function)
+               finally (return (values nil :wait-function))))
+        (t
+         (error "Game over. Listening for an event on Null backend."))))
 
 (defmethod make-graft
     ((port null-port) &key (orientation :default) (units :device))
