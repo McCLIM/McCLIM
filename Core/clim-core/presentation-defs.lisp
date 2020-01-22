@@ -548,8 +548,6 @@ a specific type."))
                        (gethash name history-table)
                        history-object))
                history-object))
-	    ;; This used to be just nil, which in SBCL and Allegro (at least)
-	    ;; never matches.  You have to put it inside parens
             ((nil)
              nil)
             (otherwise
