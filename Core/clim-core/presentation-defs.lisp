@@ -548,7 +548,7 @@ a specific type."))
                        (gethash name history-table)
                        history-object))
                history-object))
-            (nil
+            ((nil)
              nil)
             (otherwise
              (funcall-presentation-generic-function presentation-type-history
