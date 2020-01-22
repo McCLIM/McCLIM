@@ -99,8 +99,12 @@ until here is one."))
 return NIL."))
 
 (defgeneric event-queue-read-with-timeout (event-queue timeout wait-function)
-  (:documentation "Reads one event from the queue, if there is no event before
-timeout returns NIL."))
+  (:documentation "Waits until wait-function returns true, event queue
+is not empty or none of the above happened before a timeout.
+
+- Returns (values nil :wait-function) if wait-function returns true
+- Reads and returns one event from the queue if it is not empty
+- Returns (values nil :timeout) otherwise."))
 
 (defgeneric event-queue-append (event-queue item)
   (:documentation "Append the item at the end of the queue. Does event compression."))
@@ -122,10 +126,12 @@ is no such event."))
 returns NIL."))
 
 (defgeneric event-queue-listen-or-wait (event-queue &key timeout wait-function)
-  (:documentation "Returns true if wait-function returns true. If
-wait-function is not supplied it returns true if there are any events
-in the queue. Function blocks until condition is met or timeout is
-reached. If timeout occurs function returns NIL."))
+  (:documentation "Waits until wait-function returns true, event queue
+is not empty or none of the above happened before a timeout.
+
+- Returns (values nil :wait-function) when wait-function returns true
+- Returns true when there are events in the queue before a timeout
+- Returns (values nil :timeout) otherwise."))
 
 
 (defclass simple-event-queue (event-queue schedule-mixin)
@@ -177,26 +183,37 @@ use condition-variables nor locks."))
 
 (defmethod event-queue-read-with-timeout ((queue simple-event-queue) timeout wait-function)
   (do-port-force-output queue)
-  ;; Preemptive check (timeout may be past due). -- jd 2018-12-30
+  ;; Preemptive check (timeout may be past due or wait-function may
+  ;; already return true). -- jd 2020-01-22
   (check-schedule queue)
-  (process-next-event (event-queue-port queue) :timeout 0)
-  (loop
-     with port = (event-queue-port queue)
-     with timeout-time = (and timeout (+ timeout (now)))
-     do
-       (cond ((event-queue-head queue)
-              (return (%event-queue-read queue)))
-             ((and timeout-time (> (now) timeout-time))
-              (return (values nil :timeout)))
-             ((multiple-value-bind (available reason)
-                  (let* ((schedule-time (event-schedule-time queue))
-                         (decay (compute-decay timeout-time schedule-time)))
-                    (process-next-event port
-                                        :timeout decay
-                                        :wait-function wait-function))
-                (and (null available) (eql reason :wait-function)))
-              (return (values nil :wait-function)))
-             (t (check-schedule queue)))))
+  (let ((port (event-queue-port queue)))
+    (multiple-value-bind (available reason)
+        (process-next-event port :timeout 0
+                                 :wait-function wait-function)
+      (declare (ignore available))
+      (cond ((eq reason :wait-function)
+             (return-from event-queue-read-with-timeout
+               (values nil :wait-function)))
+            ((event-queue-head queue)
+             (return-from event-queue-read-with-timeout
+               (%event-queue-read queue)))))
+    (loop
+      with timeout-time = (and timeout (+ timeout (now)))
+      do (cond ((maybe-funcall wait-function)
+                (return (values nil :wait-function)))
+               ((event-queue-head queue)
+                (return (%event-queue-read queue)))
+               ((and timeout-time (> (now) timeout-time))
+                (return (values nil :timeout)))
+               ((multiple-value-bind (available reason)
+                    (let* ((schedule-time (event-schedule-time queue))
+                           (decay (compute-decay timeout-time schedule-time)))
+                      (process-next-event port
+                                          :timeout decay
+                                          :wait-function wait-function))
+                  (when (null available)
+                    (return (values nil reason)))))
+               (t (check-schedule queue))))))
 
 (defmethod event-queue-append ((queue simple-event-queue) item)
   (labels ((append-event ()
@@ -317,25 +334,34 @@ use condition-variables nor locks."))
                                        &key timeout wait-function)
   (do-port-force-output queue)
   (check-schedule queue)
-  (process-next-event (event-queue-port queue) :timeout 0)
-  (loop
-     with port = (event-queue-port queue)
-     with timeout-time = (and timeout (+ timeout (now)))
-     do
-       (cond ((event-queue-head queue)
-              (return t))
-             ((and timeout-time (> (now) timeout-time))
-              (return (values nil :timeout)))
-             ((multiple-value-bind (available reason)
-                  (let* ((schedule-time (event-schedule-time queue))
-                         (decay (compute-decay timeout-time schedule-time)))
-                    (process-next-event port
-                                        :timeout decay
-                                        :wait-function wait-function))
-                (and (null available)
-                     (eql reason :wait-function)))
-              (return (values nil :wait-function)))
-             (t (check-schedule queue)))))
+  (let ((port (event-queue-port queue)))
+   (multiple-value-bind (available reason)
+       (process-next-event port :timeout 0
+                                :wait-function wait-function)
+     (declare (ignore available))
+     (cond ((eq reason :wait-function)
+            (return-from event-queue-listen-or-wait
+              (values nil :wait-function)))
+           ((event-queue-head queue)
+            (return-from event-queue-listen-or-wait
+              t))))
+    (loop
+      with timeout-time = (and timeout (+ timeout (now)))
+      do (cond ((maybe-funcall wait-function)
+                (return (values nil :wait-function)))
+               ((event-queue-head queue)
+                (return t))
+               ((and timeout-time (> (now) timeout-time))
+                (return (values nil :timeout)))
+               ((multiple-value-bind (available reason)
+                    (let* ((schedule-time (event-schedule-time queue))
+                           (decay (compute-decay timeout-time schedule-time)))
+                      (process-next-event port
+                                          :timeout decay
+                                          :wait-function wait-function))
+                  (when (null available)
+                    (return (values nil reason)))))
+               (t (check-schedule queue))))))
 
 (defmethod event-queue-listen ((queue simple-event-queue))
   (event-queue-listen-or-wait queue :timeout 0))
@@ -382,19 +408,19 @@ use condition-variables nor locks."))
      with lock = (event-queue-lock queue)
      with cv = (event-queue-processes queue)
      with timeout-time = (and timeout (+ timeout (now)))
+     with event = nil
      do
        (check-schedule queue)
        (with-lock-held (lock)
-         (if-let ((event (%event-queue-read queue)))
-           (return event)
-           (cond ((maybe-funcall wait-function)
-                  (return (values nil :wait-function)))
-                 ((and timeout-time (> (now) timeout-time))
-                  (return (values nil :timeout)))
-                 (t
-                  (let* ((schedule-time (event-schedule-time queue))
-                         (decay (compute-decay timeout-time schedule-time)))
-                    (condition-wait cv lock decay))))))))
+         (cond ((maybe-funcall wait-function)
+                (return (values nil :wait-function)))
+               ((setf event (%event-queue-read queue))
+                (return event))
+               ((and timeout-time (> (now) timeout-time))
+                (return (values nil :timeout))))
+         (let* ((schedule-time (event-schedule-time queue))
+                (decay (compute-decay timeout-time schedule-time)))
+           (condition-wait cv lock decay)))))
 
 (defmethod event-queue-append ((queue concurrent-event-queue) item)
   (with-lock-held ((event-queue-lock queue))
@@ -429,10 +455,10 @@ use condition-variables nor locks."))
      do
        (check-schedule queue)
        (with-lock-held (lock)
-         (cond ((event-queue-head queue)
-                (return t))
-               ((maybe-funcall wait-function)
+         (cond ((maybe-funcall wait-function)
                 (return (values nil :wait-function)))
+               ((event-queue-head queue)
+                (return t))
                ((and timeout-time (> (now) timeout-time))
                 (return (values nil :timeout)))
                (wait-function
