@@ -85,6 +85,11 @@
 ;;; Event queue is accessed by streams only in STREAM-INPUT-WAIT.
 ;;; INPUT-BUFFER is filled by handle-event methods. -- jd 2019-06-26
 (defmethod stream-input-wait ((stream input-stream-kernel) &key timeout input-wait-test)
+  ;; INPUT-WAIT-TEST shouldn't be blocking, so we call it before we
+  ;; enter the loop. Thanks to that we may check for a gesture in the
+  ;; input buffer before we call EVENT-LISTEN-OR-WAIT which may block.
+  (when (maybe-funcall input-wait-test stream)
+    (return-from stream-input-wait (values nil :input-wait-test)))
   (loop
     with wait-fun = (and input-wait-test (curry input-wait-test stream))
     with timeout-time = (and timeout (+ timeout (now)))
@@ -92,7 +97,10 @@
     do (multiple-value-bind (available reason)
            (event-listen-or-wait stream :timeout timeout :wait-function wait-fun)
          (when (null available)
-           (return-from stream-input-wait (values nil reason)))
+           (return-from stream-input-wait
+             (values nil (ecase reason
+                           (:wait-function :input-wait-test)
+                           (:timeout       :timeout)))))
          ;; Defensive programming: we could do without when-let if we
          ;; assume that nobody asynchronously reads from the queue,
          ;; what ostensively is true. -- jd 2020-01-17
@@ -124,24 +132,40 @@
   (let ((*input-wait-test* input-wait-test)
         (*input-wait-handler* input-wait-handler)
         (*pointer-button-press-handler* pointer-button-press-handler))
-    ;; Check for available input.
-    (multiple-value-bind (available reason)
-        (stream-input-wait stream :timeout timeout :input-wait-test input-wait-test)
-      (when (null available)
-        (maybe-funcall input-wait-handler stream)
-        (return-from stream-read-gesture (values nil reason))))
-    ;; Input is available (or the stream is exhausted).
     (with-slots (sp buffer) stream
-      (loop
-        with fill-pointer = (fill-pointer buffer)
-        do (when (= sp fill-pointer)
-             (return-from stream-read-gesture (values nil :eof)))
-           ;; stream-process-gesture may return NIL when the
-           ;; input-editing-stream edited the buffer.
-           (when-let ((gesture (stream-process-gesture stream (aref buffer sp) t)))
-             (return-from stream-read-gesture
-               (prog1 gesture
-                 (unless peek-p (incf sp)))))))))
+      (flet ((process-one-gesture (&aux (raw-gesture (aref buffer sp)))
+               (when (and pointer-button-press-handler
+                          (typep raw-gesture 'pointer-button-press-event))
+		 ;; Eat up the gesture to avoid an infinite loop.
+		 (incf sp)
+                 (funcall pointer-button-press-handler stream raw-gesture)
+                 (return-from process-one-gesture))
+               ;; STREAM-PROCESS-GESTURE may return NIL if the buffer
+               ;; or the scan pointer has been edited. In that case we
+               ;; need to re-read the gesture.
+               (when-let ((gesture (stream-process-gesture stream raw-gesture t)))
+                 (return-from stream-read-gesture
+                   (prog1 gesture
+                     (unless peek-p (incf sp)))))))
+        (loop
+          (multiple-value-bind (available reason)
+              (stream-input-wait stream :timeout timeout :input-wait-test input-wait-test)
+            (if available
+                (process-one-gesture)
+                (case reason
+                  (:input-wait-test
+                   (maybe-funcall input-wait-handler stream))
+                  (:timeout
+                   (return-from stream-read-gesture (values nil :timeout)))
+                  #+ (or)
+                  ;; EOF may be returned by input streams backed by a
+                  ;; string (see the "XXX Evil hack" below), but that
+                  ;; should not happen for input-stream-kernel.
+                  (:eof
+                   (return-from stream-read-gesture (values nil :eof)))
+                  (otherwise
+                   ;; Invalid reason for no input.
+                   (error "STREAM-INPUT-WAIT: Game over (~s)." reason))))))))))
 
 (defmethod stream-unread-gesture ((stream input-stream-kernel) gesture)
   (declare (ignore gesture))
