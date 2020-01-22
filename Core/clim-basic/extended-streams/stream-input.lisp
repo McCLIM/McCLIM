@@ -25,22 +25,8 @@
 
 (in-package #:climi)
 
-;;; Input gesture object may be a character or event. Keywords are
-;;; returned to indicate the failure to obtain a gesture. There are
-;;; also mentions of "noise strings" and "accept results" in the input
-;;; editing protocol as potential input-buffer contents.
-;;;
-;;; "Noise strings" are used to represent some in-line prompt and
-;;; should be ignored by `stream-read-gesture'. they are inserted into
-;;; the buffer by `prompt-for-accept'.
-;;;
-;;; "Accept results" are used to represent unreadable objects returned
-;;; by `accept' (list of the object and its type). They are inserted
-;;; in the buffer by `presentation-replace-input'. -- jd 2020-01-17
-(deftype noise-string         () 'string)
-(deftype accept-results       () '(cons t (cons t null)))
 (deftype input-gesture-object ()
-  `(or character event keyword noise-string accept-results))
+  '(or character event))
 
 (defvar *input-wait-test* nil)
 (defvar *input-wait-handler* nil)
@@ -66,50 +52,31 @@
 (defclass input-stream-kernel (standard-sheet-input-mixin)
   ((buffer :initarg :input-buffer :accessor stream-input-buffer
            :type (vector input-gesture-object))
-   (sp :accessor stream-scan-pointer
-       :type integer :documentation "Scan pointer.")
-   (ip :accessor stream-insertion-pointer
-       :type integer :documentation "Insertion pointer.")
-   (rescan :initform nil :accessor stream-rescanning-p)))
+   (sp :accessor stream-scan-pointer :type (integer 0))))
+
+(defmethod stream-rescanning-p ((stream input-stream-kernel))
+  nil)
 
 (defmethod slot-unbound (class (instance input-stream-kernel) (slot-name (eql 'buffer)))
   (setf (slot-value instance 'buffer)
         (make-array 0 :adjustable t :fill-pointer 0)))
 
 (defmethod slot-unbound (class (instance input-stream-kernel) (slot-name (eql 'sp)))
-  (setf (slot-value instance 'sp) 0))
-
-(defmethod slot-unbound (class (instance input-stream-kernel) (slot-name (eql 'ip)))
-  (setf (slot-value instance 'ip)
-        (length (stream-input-buffer instance))))
+  (setf (stream-scan-pointer instance) 0))
 
 (defmethod (setf stream-input-buffer) :after (buf (stream input-stream-kernel))
-  (setf (stream-scan-pointer stream) 0
-        (stream-insertion-pointer stream) (length buf)))
-
-(defmethod (setf stream-scan-pointer) :before (sp (stream input-stream-kernel))
-  (let ((ip (stream-insertion-pointer stream)))
-    (unless (<= 0 sp ip)
-      (error "STREAM-SCAN-POINTER ~s is not in range [0; ~s]." sp ip))))
-
-(defmethod (setf stream-insertion-pointer) :before (ip (stream input-stream-kernel))
-  (let ((sp (stream-scan-pointer stream))
-        (fp (length (stream-input-buffer stream))))
-    (unless (<= sp ip fp)
-      (error "STREAM-INSERTION-POINTER ~s is not in range [~s; ~s]." ip sp fp))))
+  (setf (stream-scan-pointer stream) 0))
 
 (defgeneric stream-append-gesture (stream gesture)
   (:method ((stream input-stream-kernel) gesture)
-    (with-slots (buffer ip) stream
-      (vector-push-extend gesture buffer)
-      (incf ip))))
+    (vector-push-extend gesture (stream-input-buffer stream))))
 
 ;;; This function is like "peek-no-hang" but only locally in the
 ;;; buffer, i.e it does not trigger wait on event-queue.
 (defgeneric stream-gesture-available-p (stream)
   (:method ((stream input-stream-kernel))
-    (with-slots (ip sp buffer) stream
-      (if (< sp ip)
+    (with-slots (sp buffer) stream
+      (if (< sp (fill-pointer buffer))
           (aref buffer sp)
           nil))))
 
@@ -122,18 +89,18 @@
     with wait-fun = (and input-wait-test (curry input-wait-test stream))
     with timeout-time = (and timeout (+ timeout (now)))
     until (stream-gesture-available-p stream)
-     do (multiple-value-bind (available reason)
-            (event-listen-or-wait stream :timeout timeout :wait-function wait-fun)
-          (when (null available)
-            (return-from stream-input-wait (values nil reason)))
-          ;; Defensive programming: we could do without when-let if we
-          ;; assume that nobody asynchronously reads from the queue,
-          ;; what ostensively is true. -- jd 2020-01-17
-          (when-let ((event (event-read-no-hang stream)))
-            (handle-event (event-sheet event) event))
-          (when timeout
-            (setf timeout (compute-decay timeout-time nil))))
-     finally (return t)))
+    do (multiple-value-bind (available reason)
+           (event-listen-or-wait stream :timeout timeout :wait-function wait-fun)
+         (when (null available)
+           (return-from stream-input-wait (values nil reason)))
+         ;; Defensive programming: we could do without when-let if we
+         ;; assume that nobody asynchronously reads from the queue,
+         ;; what ostensively is true. -- jd 2020-01-17
+         (when-let ((event (event-read-no-hang stream)))
+           (handle-event (event-sheet event) event))
+         (when timeout
+           (setf timeout (compute-decay timeout-time nil))))
+    finally (return t)))
 
 (defmethod stream-listen ((stream input-stream-kernel))
   (stream-input-wait stream))
@@ -164,37 +131,28 @@
         (maybe-funcall input-wait-handler stream)
         (return-from stream-read-gesture (values nil reason))))
     ;; Input is available (or the stream is exhausted).
-    (with-slots (sp ip buffer) stream
+    (with-slots (sp buffer) stream
       (loop
-        (assert (<= 0 sp ip (length buffer)))
-        (when (= sp ip)
-          (return-from stream-read-gesture (values nil :eof)))
-        ;; stream-process-gesture may return NIL when the
-        ;; input-editing-stream edited the buffer.
-        (when-let ((gesture (stream-process-gesture stream (aref buffer sp) t)))
-          (if (typep gesture 'noise-string)
-              (incf sp)
-              (return-from stream-read-gesture
-                (prog1 gesture
-                  (unless peek-p (incf sp))))))))))
+        with fill-pointer = (fill-pointer buffer)
+        do (when (= sp fill-pointer)
+             (return-from stream-read-gesture (values nil :eof)))
+           ;; stream-process-gesture may return NIL when the
+           ;; input-editing-stream edited the buffer.
+           (when-let ((gesture (stream-process-gesture stream (aref buffer sp) t)))
+             (return-from stream-read-gesture
+               (prog1 gesture
+                 (unless peek-p (incf sp)))))))))
 
 (defmethod stream-unread-gesture ((stream input-stream-kernel) gesture)
   (declare (ignore gesture))
-  (with-slots (sp ip buffer) stream
-    (loop with scan   = sp
-          with insert = ip
-          with buf    = buffer
-          do (assert (<= 1 scan insert (length buf)))
-             (decf scan)
-          while (typep (aref buf scan) 'noise-string)
-          finally
-             (setf sp scan)))
+  (with-slots (sp buffer) stream
+    (assert (<= 1 sp (length buffer)))
+    (decf sp))
   nil)
 
 (defmethod stream-clear-input ((stream input-stream-kernel))
-  (with-slots (sp ip buffer) stream
-    (setf sp 0
-          ip 0)
+  (with-slots (sp buffer) stream
+    (setf sp 0)
     ;; XXX in principle input buffer should have a fill-pointer but in
     ;; practice supporting strings as input buffers is profitable.
     ;; Such buffers will break if anyone tries to append to them. When
