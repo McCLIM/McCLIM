@@ -1623,12 +1623,12 @@ protocol retrieving gestures from a provided string."))
 		(new-directory (cons
 				(first his-directory)
 				(append home (rest (rest his-directory))))))
-	     (make-pathname :host (pathname-host pathname)
-			    :device (pathname-device pathname)
-			    :name (pathname-name pathname)
-			    :version (pathname-version pathname)
-			    :type (pathname-type pathname)
-			    :directory new-directory))))
+	   (make-pathname :host (pathname-host pathname)
+			  :device (pathname-device pathname)
+			  :name (pathname-name pathname)
+			  :version (pathname-version pathname)
+			  :type (pathname-type pathname)
+			  :directory new-directory))))
     ;; Slow but accurate
     (let* ((raw-pathname (pathname string))
 	   (raw-directory (pathname-directory raw-pathname))
@@ -1657,32 +1657,51 @@ protocol retrieving gestures from a provided string."))
       ;; Now prune out all completions that don't start with the string
       (let ((type (pathname-type actual-pathname)))
 	(when (null type)
-	  ;; If the user didn't supply a file type, don't burden him with all
-	  ;; sorts of version numbers right now.
-	  (let ((new-completions nil))
-	    (dolist (pathname completions)
-	      (cond
-		;; meaning this is actually a directory
-		((and (null (pathname-name pathname))
-		      (null (pathname-type pathname)))
-		 (pushnew (make-pathname :host (pathname-host original-pathname)
-					 :device (pathname-device original-pathname)
-					 :directory (butlast (pathname-directory pathname))
-					 :name (first (last (pathname-directory pathname)))
-					 :type nil)
-			  new-completions))
-		(t
-		 (pushnew (make-pathname :host (pathname-host original-pathname)
-					 :device (pathname-device original-pathname)
-					 :directory (pathname-directory original-pathname)
-					 :name (pathname-name pathname)
-					 :type (pathname-type pathname))
-			  new-completions))))
-	    (setq completions (nreverse new-completions))))
+	  (flet ((legitimate-logical-pathname (name)
+		   (let ((word (string name)))
+		     (dotimes (i (length word))
+		       (let ((ch (schar word i)))
+			 (unless (and (typep ch 'standard-char)
+				      (or (alpha-char-p ch) (digit-char-p ch) (char= ch #\-)))
+			   (return-from legitimate-logical-pathname nil))))
+		     t)))
+	    ;; If the user didn't supply a file type, don't burden him with all
+	    ;; sorts of version numbers right now.
+	    (let ((new-completions nil))
+	      (dolist (pathname completions)
+		(cond
+		  ;; meaning this is actually a directory
+		  ((and (null (pathname-name pathname))
+			(null (pathname-type pathname)))
+		   (when (and (loop for word in  (butlast (pathname-directory pathname))
+				 always (legitimate-logical-pathname word))
+			      (legitimate-logical-pathname (first (last (pathname-directory pathname)))))
+		     (pushnew (if (typep original-pathname 'logical-pathname)
+				  (make-pathname :host (pathname-host original-pathname)
+						 :device (pathname-device original-pathname)
+						 :directory (first (last (pathname-directory pathname)))
+						 :name nil
+						 :type nil)
+				  (make-pathname :host (pathname-host original-pathname)
+						 :device (pathname-device original-pathname)
+						 :directory (butlast (pathname-directory pathname))
+						 :name (first (last (pathname-directory pathname)))
+						 :type nil))
+			      new-completions)))
+		  (t
+		   (when (and (legitimate-logical-pathname (pathname-name pathname))
+			      (legitimate-logical-pathname (pathname-type pathname)))
+		     (pushnew (make-pathname :host (pathname-host original-pathname)
+					     :device (pathname-device original-pathname)
+					     :directory (pathname-directory original-pathname)
+					     :name (pathname-name pathname)
+					     :type (pathname-type pathname))
+			      new-completions)))))
+	      (setq completions (nreverse new-completions)))))
 	(complete-from-possibilities original-string completions '(#\space)
-						    :action action
-						    :name-key #'namestring
-						    :value-key #'identity)))))
+				     :action action
+				     :name-key #'namestring
+				     :value-key #'identity))))) 
 
 (define-presentation-method accept ((type pathname) stream (view textual-view)
                                     &key (default *default-pathname-defaults* defaultp)
