@@ -409,18 +409,17 @@ use condition-variables nor locks."))
      with cv = (event-queue-processes queue)
      with timeout-time = (and timeout (+ timeout (now)))
      with event = nil
-     do
-       (check-schedule queue)
-       (with-lock-held (lock)
-         (cond ((maybe-funcall wait-function)
-                (return (values nil :wait-function)))
-               ((setf event (%event-queue-read queue))
-                (return event))
-               ((and timeout-time (> (now) timeout-time))
-                (return (values nil :timeout))))
-         (let* ((schedule-time (event-schedule-time queue))
-                (decay (compute-decay timeout-time schedule-time)))
-           (condition-wait cv lock decay)))))
+     do (check-schedule queue)
+        (when (maybe-funcall wait-function)
+          (return (values nil :wait-function)))
+        (with-lock-held (lock)
+          (cond ((setf event (%event-queue-read queue))
+                 (return event))
+                ((and timeout-time (> (now) timeout-time))
+                 (return (values nil :timeout))))
+          (let* ((schedule-time (event-schedule-time queue))
+                 (decay (compute-decay timeout-time schedule-time)))
+            (condition-wait cv lock decay)))))
 
 (defmethod event-queue-append ((queue concurrent-event-queue) item)
   (with-lock-held ((event-queue-lock queue))
@@ -452,28 +451,27 @@ use condition-variables nor locks."))
      with lock = (event-queue-lock queue)
      with cv = (event-queue-processes queue)
      with timeout-time = (and timeout (+ timeout (now)))
-     do
-       (check-schedule queue)
-       (with-lock-held (lock)
-         (cond ((maybe-funcall wait-function)
-                (return (values nil :wait-function)))
-               ((event-queue-head queue)
-                (return t))
-               ((and timeout-time (> (now) timeout-time))
-                (return (values nil :timeout)))
-               (wait-function
-                ;; We CLAMP decay when wait-function is present to
-                ;; ensure that we don't get stuck until next event
-                ;; arrives (or the timeout happens). It is busy wait
-                ;; with a lousy grain. -- jd 2019-06-06
-                (if-let ((decay (compute-decay timeout-time
-                                               (event-schedule-time queue))))
-                  (condition-wait cv lock (min 0.01 decay))
-                  (condition-wait cv lock 0.01)))
-               (t
-                (let ((decay (compute-decay timeout-time
-                                            (event-schedule-time queue))))
-                  (condition-wait cv lock decay)))))))
+     do (check-schedule queue)
+        (when (maybe-funcall wait-function)
+          (return (values nil :wait-function)))
+        (with-lock-held (lock)
+          (cond ((event-queue-head queue)
+                 (return t))
+                ((and timeout-time (> (now) timeout-time))
+                 (return (values nil :timeout)))
+                (wait-function
+                 ;; We CLAMP decay when wait-function is present to
+                 ;; ensure that we don't get stuck until next event
+                 ;; arrives (or the timeout happens). It is busy wait
+                 ;; with a lousy grain. -- jd 2019-06-06
+                 (if-let ((decay (compute-decay timeout-time
+                                                (event-schedule-time queue))))
+                   (condition-wait cv lock (min 0.01 decay))
+                   (condition-wait cv lock 0.01)))
+                (t
+                 (let ((decay (compute-decay timeout-time
+                                             (event-schedule-time queue))))
+                   (condition-wait cv lock decay)))))))
 
 (defmethod check-schedule :around ((queue concurrent-event-queue))
   (with-lock-held ((event-queue-schedule-lock queue))
