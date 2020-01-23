@@ -448,7 +448,7 @@
   ;; on medium-draw-xyz. It is mixed into basic-medium. We should document it
   ;; and mix it in the appropriate downstream backend-specific medium.  Mixing
   ;; in basic-medium makes hardware-based transformations hard. -- jd 2018-03-06
-  ())
+  ((zoom :initform +identity-transformation+ :accessor medium-zoom)))
 
 (defclass basic-medium (transform-coordinates-mixin complete-medium-state medium)
   ((foreground :initarg :foreground
@@ -662,29 +662,36 @@
 
 ;;; Medium-specific Drawing Functions
 
+;;; XXX: what about medium-draw-text?
+
 (defmethod medium-draw-point* :around ((medium transform-coordinates-mixin) x y)
-  (let ((tr (medium-transformation medium)))
+  (let ((tr (compose-transformations (medium-transformation medium)
+                                     (medium-zoom medium))))
     (with-transformed-position (tr x y)
       (call-next-method medium x y))))
 
 (defmethod medium-draw-points* :around ((medium transform-coordinates-mixin) coord-seq)
-  (let ((tr (medium-transformation medium)))
+  (let ((tr (compose-transformations (medium-transformation medium)
+                                     (medium-zoom medium))))
     (with-transformed-positions (tr coord-seq)
       (call-next-method medium coord-seq))))
 
 (defmethod medium-draw-line* :around ((medium transform-coordinates-mixin) x1 y1 x2 y2)
-  (let ((tr (medium-transformation medium)))
+  (let ((tr (compose-transformations (medium-transformation medium)
+                                     (medium-zoom medium))))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
         (call-next-method medium x1 y1 x2 y2)))))
 
 (defmethod medium-draw-lines* :around ((medium transform-coordinates-mixin) coord-seq)
-  (let ((tr (medium-transformation medium)))
+  (let ((tr (compose-transformations (medium-transformation medium)
+                                     (medium-zoom medium))))
     (with-transformed-positions (tr coord-seq)
       (call-next-method medium coord-seq))))
 
 (defmethod medium-draw-polygon* :around ((medium transform-coordinates-mixin) coord-seq closed filled)
-  (let ((tr (medium-transformation medium)))
+  (let ((tr (compose-transformations (medium-transformation medium)
+                                     (medium-zoom medium))))
     (with-transformed-positions (tr coord-seq)
       (call-next-method medium coord-seq closed filled))))
 
@@ -693,7 +700,8 @@
   (vector left top right top right bottom left bottom))
 
 (defmethod medium-draw-rectangle* :around ((medium transform-coordinates-mixin) left top right bottom filled)
-  (let ((tr (medium-transformation medium)))
+  (let ((tr (compose-transformations (medium-transformation medium)
+                                     (medium-zoom medium))))
     (if (rectilinear-transformation-p tr)
         (multiple-value-bind (left top right bottom)
             (transform-rectangle* tr left top right bottom)
@@ -704,7 +712,8 @@
 (defgeneric medium-draw-rectangles* (medium coord-seq filled))
 
 (defmethod medium-draw-rectangles* :around ((medium transform-coordinates-mixin) position-seq filled)
-  (let ((tr (medium-transformation medium)))
+  (let ((tr (compose-transformations (medium-transformation medium)
+                                     (medium-zoom medium))))
     (if (rectilinear-transformation-p tr)
         (call-next-method medium (transform-positions tr position-seq) filled)
         (do-sequence ((left top right bottom) position-seq)
@@ -725,13 +734,14 @@
 (defmethod medium-draw-ellipse* :around ((medium transform-coordinates-mixin) center-x center-y
                                          radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                                          start-angle end-angle filled)
-  (let* ((ellipse (make-elliptical-arc* center-x center-y
+  (let* ((tr (compose-transformations (medium-transformation medium)
+                                      (medium-zoom medium)))
+         (ellipse (make-elliptical-arc* center-x center-y
                                         radius-1-dx radius-1-dy
                                         radius-2-dx radius-2-dy
                                         :start-angle start-angle
                                         :end-angle end-angle))
-         (transformed-ellipse (transform-region (medium-transformation medium)
-                                                ellipse))
+         (transformed-ellipse (transform-region tr ellipse))
          (start-angle (ellipse-start-angle transformed-ellipse))
          (end-angle (ellipse-end-angle transformed-ellipse)))
     (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
@@ -750,13 +760,14 @@
 
 (defmethod medium-draw-circle* :around ((medium transform-coordinates-mixin) center-x center-y
                                          radius start-angle end-angle filled)
-  (let* ((ellipse (make-elliptical-arc* center-x center-y
+  (let* ((tr (compose-transformations (medium-transformation medium)
+                                      (medium-zoom medium)))
+         (ellipse (make-elliptical-arc* center-x center-y
                                         radius 0
                                         0 radius
                                         :start-angle start-angle
                                         :end-angle end-angle))
-         (transformed-ellipse (transform-region (medium-transformation medium)
-                                                ellipse))
+         (transformed-ellipse (transform-region tr ellipse))
          (start-angle (ellipse-start-angle transformed-ellipse))
          (end-angle (ellipse-end-angle transformed-ellipse)))
     (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
@@ -781,19 +792,22 @@
 ;;; Fall-through Methods For Multiple Objects Drawing Functions
 
 (defmethod medium-draw-points* ((medium transform-coordinates-mixin) coord-seq)
-  (let ((tr (invert-transformation (medium-transformation medium))))
+  (let ((tr (invert-transformation (compose-transformations (medium-transformation medium)
+                                                            (medium-zoom medium)))))
     (with-transformed-positions (tr coord-seq)
       (do-sequence ((x y) coord-seq)
 	(medium-draw-point* medium x y)))))
 
 (defmethod medium-draw-lines* ((medium transform-coordinates-mixin) position-seq)
-  (let ((tr (invert-transformation (medium-transformation medium))))
+  (let ((tr (invert-transformation (compose-transformations (medium-transformation medium)
+                                                            (medium-zoom medium)))))
     (with-transformed-positions (tr position-seq)
       (do-sequence ((x1 y1 x2 y2) position-seq)
 	(medium-draw-line* medium x1 y1 x2 y2)))))
 
 (defmethod medium-draw-rectangles* ((medium transform-coordinates-mixin) coord-seq filled)
-  (let ((tr (invert-transformation (medium-transformation medium))))
+  (let ((tr (invert-transformation (compose-transformations (medium-transformation medium)
+                                                            (medium-zoom medium)))))
     (with-transformed-positions (tr coord-seq)
       (do-sequence ((x1 y1 x2 y2) coord-seq)
 	(medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
