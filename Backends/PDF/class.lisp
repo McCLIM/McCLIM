@@ -88,11 +88,7 @@
                              orientation header-comments)
   (declare (ignore multi-page scale-to-fit))
   (unless device-type (setq device-type :a4))
-  (let ((region (etypecase device-type
-                  (keyword (paper-region device-type))
-                  (list (destructuring-bind (width height)
-                            device-type
-                          (make-rectangle* 0 0 width height))))))
+  (let ((region (paper-region device-type orientation)))
     (make-instance 'clim-pdf-stream
                    :file-stream file-stream
                    :port port
