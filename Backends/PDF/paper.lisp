@@ -27,8 +27,12 @@
     (values (car size) (cdr size))
     (error "Unknown paper size: ~S." name)))
 
-(defun paper-region (paper-size-name)
-  (multiple-value-bind (width height) (paper-size paper-size-name)
+(defun paper-region (device-type orientation)
+  (multiple-value-bind (width height)
+      (etypecase device-type
+        (keyword (paper-size device-type))
+        (list (values-list device-type)))
+    (when (eq orientation :landscape) (rotatef width height))
     (make-rectangle* 0 0 width height)))
 
 (defparameter *pdf-top-margin* 0)
@@ -36,20 +40,10 @@
 (defparameter *pdf-bottom-margin* 0)
 (defparameter *pdf-right-margin* 0)
 
-(defun make-pdf-transformation (region orientation)
+(defun make-pdf-transformation (region)
   (with-bounding-rectangle* (left top right bottom) region
-    (flet ((make-it (&rest image-coordinates)
-             (apply #'make-3-point-transformation*
-                    left top left bottom right top
-                    image-coordinates)))
-      (case orientation
-        (:portrait
-         (make-it *pdf-left-margin* (- bottom *pdf-top-margin*)
-                  *pdf-left-margin* *pdf-bottom-margin*
-                  (- right *pdf-right-margin*) (- bottom *pdf-top-margin*)))
-
-        (:landscape
-         (make-it *pdf-left-margin* (- right *pdf-top-margin*)
-                  (- bottom *pdf-top-margin*) (- right *pdf-right-margin*)
-                  *pdf-left-margin* *pdf-bottom-margin*))
-        (t (error "Unknown orientation"))))))
+    (make-3-point-transformation*
+     left top left bottom right top
+     *pdf-left-margin* (- bottom *pdf-top-margin*)
+     *pdf-left-margin* *pdf-bottom-margin*
+     (- right *pdf-right-margin*) (- bottom *pdf-top-margin*))))

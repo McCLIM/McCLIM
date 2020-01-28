@@ -64,12 +64,9 @@
                                           page
                                           (sheet-region stream)))
                          (transform (make-pdf-transformation
-                                     page-region (orientation stream))))
+                                     page-region)))
                     (with-bounding-rectangle* (left top right bottom) page-region
-                      (pdf:with-page (:bounds
-                                      (if (eq orientation :landscape)
-                                          (vector top left bottom right)
-                                          (vector left top right bottom)))
+                      (pdf:with-page (:bounds (vector left top right bottom))
                         (climi::letf (((sheet-native-transformation stream)
                                        transform))
                           (replay page stream)))))
