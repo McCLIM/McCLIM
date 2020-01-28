@@ -69,15 +69,8 @@
                       (pdf:with-page (:bounds (vector left top right bottom))
                         (climi::letf (((sheet-native-transformation stream)
                                        transform))
-                          (replay page stream)))))
-                  (unless (eql page last-page)
-                    (emit-new-page stream))))
+                          (replay page stream)))))))
               (pdf:write-document output))))))))
-
-;; FIXME! Not yet implemented.
-(defun start-page (stream)
-  (with-slots (file-stream current-page transformation) stream
-    ))
 
 (defmethod new-page ((stream clim-pdf-stream))
   (push (stream-output-history stream) (pdf-pages stream))
@@ -86,9 +79,6 @@
           (stream-current-output-record stream) history))
   (setf (stream-cursor-position stream)
         (stream-cursor-initial-position stream)))
-
-(defun emit-new-page (stream)
-  (error "not yet! ~S" stream))
 
 ;;; Output Protocol
 
