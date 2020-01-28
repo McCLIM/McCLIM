@@ -40,10 +40,24 @@
 (defparameter *pdf-bottom-margin* 0)
 (defparameter *pdf-right-margin* 0)
 
-(defun make-pdf-transformation (region)
-  (with-bounding-rectangle* (left top right bottom) region
-    (make-3-point-transformation*
-     left top left bottom right top
-     *pdf-left-margin* (- bottom *pdf-top-margin*)
-     *pdf-left-margin* *pdf-bottom-margin*
-     (- right *pdf-right-margin*) (- bottom *pdf-top-margin*))))
+(defun make-pdf-transformation (page output scale-to-fit)
+  (with-bounding-rectangle* (left top right bottom) page
+    (declare (ignore left top))
+    (let ((drawing-region (make-rectangle*
+                            *pdf-left-margin* *pdf-top-margin*
+                            (- right *pdf-right-margin*) (- bottom *pdf-bottom-margin*))))
+      (if scale-to-fit
+          (let ((scale (min (/ (bounding-rectangle-width drawing-region)
+                               (bounding-rectangle-width output))
+                            (/ (bounding-rectangle-height drawing-region)
+                               (bounding-rectangle-height output)))))
+            (compose-transformations
+             (make-translation-transformation *pdf-left-margin* (- *pdf-top-margin*))
+             (compose-transformations
+              (compose-transformations (make-translation-transformation 0 bottom)
+                                       (make-reflection-transformation* 0 0 1 0))
+              (make-scaling-transformation* scale scale))))
+          (compose-transformations
+           (make-translation-transformation *pdf-left-margin* (- *pdf-top-margin*))
+           (compose-transformations (make-translation-transformation 0 bottom)
+                                    (make-reflection-transformation* 0 0 1 0)))))))
