@@ -37,4 +37,10 @@
           for title = (format nil "Test Page ~D" i)
           for page in clim-test-util:*all-test-pages*
           do (finishes
-               (invoke-with-pdf-stream page :filename filename :title title)))))
+               (invoke-with-pdf-stream page :filename filename :title title)))
+    (finishes
+      (clim-pdf:with-output-to-pdf-stream
+          (stream "pdf-test-all.pdf" :header-comments `(:title "All test pages in one document"))
+        (loop for page in clim-test-util:*all-test-pages* do
+             (funcall page stream)
+             (clim:new-page stream))))))
