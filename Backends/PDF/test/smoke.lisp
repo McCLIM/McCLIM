@@ -41,6 +41,22 @@
     (finishes
       (clim-pdf:with-output-to-pdf-stream
           (stream "pdf-test-all.pdf" :header-comments `(:title "All test pages in one document"))
-        (loop for page in clim-test-util:*all-test-pages* do
-             (funcall page stream)
-             (clim:new-page stream))))))
+        (loop for page in clim-test-util:*all-test-pages*
+           do (funcall page stream)
+             (clim:new-page stream))))
+    (finishes
+      (let ((clim-pdf::*pdf-left-margin* 10)
+            (clim-pdf::*pdf-top-margin* 10)
+            (clim-pdf::*pdf-right-margin* 10)
+            (clim-pdf::*pdf-bottom-margin* 10))
+        (clim-pdf:with-output-to-pdf-stream
+            (stream "pdf-test-trim.pdf" :header-comments `(:title "Trim to output size") :trim-page-to-output-size t)
+          (clim-test-util:print-test-page-1 stream))))
+    (finishes
+      (let ((clim-pdf::*pdf-left-margin* 10)
+            (clim-pdf::*pdf-top-margin* 10)
+            (clim-pdf::*pdf-right-margin* 10)
+            (clim-pdf::*pdf-bottom-margin* 10))
+        (clim-pdf:with-output-to-pdf-stream
+            (stream "pdf-test-scale.pdf" :header-comments `(:title "Scale to fit") :scale-to-fit t :orientation :landscape)
+          (clim-test-util:print-test-page-1 stream))))))

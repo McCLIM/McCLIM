@@ -61,10 +61,14 @@
               (let ((last-page (first (pdf-pages stream))))
                 (dolist (page (reverse (pdf-pages stream)))
                   (let* ((page-region (if trim-page-to-output-size
-                                          page
+                                          (make-rectangle* 0 0
+                                                          (+ (bounding-rectangle-width page) *pdf-left-margin* *pdf-right-margin*)
+                                                          (+ (bounding-rectangle-height page) *pdf-top-margin* *pdf-bottom-margin*))
                                           (sheet-region stream)))
                          (transform (make-pdf-transformation
-                                     page-region)))
+                                     page-region
+                                     page
+                                     scale-to-fit)))
                     (with-bounding-rectangle* (left top right bottom) page-region
                       (pdf:with-page (:bounds (vector left top right bottom))
                         (climi::letf (((sheet-native-transformation stream)
