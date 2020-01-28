@@ -421,7 +421,9 @@ account, and create a list of menu buttons."
 	       (with-presentation-type-parameters (command context-type)
 		 (present (list command-name) `command :stream stream)))))))
     (object)
-  (command-menu-item-value object))
+  (values (command-menu-item-value object)
+	  `(command :command-table ,(frame-command-table *application-frame*))
+  	  ))
 
 
 

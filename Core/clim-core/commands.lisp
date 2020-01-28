@@ -1309,6 +1309,48 @@ examine the type of the command menu item to see if it is
             (position *unsupplied-argument-marker* command)))
 	  (t (values command type)))))
 
+(define-presentation-method accept ((type command) stream
+				    (view textual-view)
+				    &key)
+  (setq command-table (find-command-table command-table))
+  (let ((start-position (and (input-editing-stream-p stream)
+                             (stream-scan-pointer stream)))
+        ;; this also requires some thought, but I suspect that
+        ;; we can just kludge it this way in this presentation type,
+        ;; because we can't think of any other presentation types
+        ;; that would establish a shadowing context within the one
+        ;; established by ACCEPT-1.
+        (replace-input-p nil))
+    (multiple-value-bind (object new-type)
+        ;; We establish a new input context so that clicks throw to us
+        ;; rather than to the input context established in ACCEPT-1.
+        ;; This will let's us handle "partial commands" below.
+        ;; The "partial" notion could be extended to apply to all
+        ;; presentation-types, but there are so few which need this
+        ;; treatment, that it does not seem worthwhile.
+        (with-input-context (type :override nil)
+	    (object presentation-type event options)
+	    (funcall *command-parser* command-table stream)
+	  (t 
+	     (when (getf options :echo t)
+	       (setq replace-input-p t))
+	     (values object type)))
+      (declare (ignore new-type))
+      (cond ((partial-command-p object)
+	     ;; (command-table stream partial-command start-position)
+             (values (funcall *partial-command-parser*
+                              command-table stream object start-position)
+                     type))
+            (t (when replace-input-p
+                 (presentation-replace-input stream object type view
+                                             :buffer-start start-position
+                                             ;;--- We really need to pass the
+                                             ;;--- query-identifier to the parser.
+					; :query-identifier query-identifier
+                                             ))
+               (values object type))))))
+
+
 ;;; A presentation type for empty input at the command line; something for
 ;;; read-command to supply as a default.  The command is defined in
 ;;; builtin-commands.lisp.
