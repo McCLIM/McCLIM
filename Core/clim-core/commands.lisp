@@ -49,7 +49,7 @@
   ((menu-name :reader command-menu-item-name :initarg :menu-name)
    (type :initarg :type :reader command-menu-item-type)
    (value :initarg :value :reader command-menu-item-value)
-   (documentation :initarg :documentation)
+   (documentation :initarg :documentation :initform nil)
    (text-style :initarg :text-style :initform nil)
    (keystroke :initarg :keystroke)))
 

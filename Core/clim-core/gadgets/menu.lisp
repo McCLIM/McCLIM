@@ -394,6 +394,37 @@ account, and create a list of menu buttons."
                (incf x width)
                (incf x x-spacing)))))
 
+(define-presentation-type command-menu-item ())
+
+(define-presentation-translator command-menu-item-to-command
+    (command-menu-item command global-command-table
+    :tester
+    ((object event)
+     (declare (ignore event))
+     (let* ((menu-item (command-menu-item-value object))
+	    (command-name (first menu-item))
+	    (type (command-menu-item-type object)))
+       (and (or (eq type ':command)
+		(eq type ':function))
+	    (command-enabled
+	     command-name
+	     *application-frame*))))
+      :tester-definitive t
+      ;; The pointer-documentation uses this, too
+      :documentation
+      ((object presentation context-type frame event window x y stream)
+       (declare (ignore presentation frame x y event window))
+       (let ((documentation (getf (command-menu-item-options object) :documentation)))
+	 (if documentation
+	     (write-string documentation stream)
+	     (let ((command-name (first (command-menu-item-value object))))
+	       (with-presentation-type-parameters (command context-type)
+		 (present (list command-name) `command :stream stream)))))))
+    (object)
+  (command-menu-item-value object))
+
+
+
 (defmethod display-command-table-menu ((command-table standard-command-table)
                                        (stream fundamental-output-stream)
                                        &rest args
@@ -419,7 +450,7 @@ account, and create a list of menu buttons."
                            stream args)))
                  ((eq (command-menu-item-type item) :command)
                   (let ((name (command-menu-item-name item)))
-                    (with-output-as-presentation (stream (command-menu-item-value item) 'command)
+                    (with-output-as-presentation (stream item 'command-menu-item)
                       (write-string name stream)))))))
      command-table)))
 
