@@ -103,4 +103,20 @@
 ;;;; Port
 
 (defclass pdf-port (clim-postscript-font:postscript-font-port)
-  ((stream :reader pdf-port-stream)))
+  ((stream :accessor pdf-port-stream
+           :initform nil)))
+
+(defmethod make-graft
+    ((port pdf-port) &key (orientation :default) (units :device))
+  (let ((graft (make-instance 'pdf-graft :port port
+                                         :mirror (pdf-port-stream port)
+                                         :orientation orientation
+                                         :units units)))
+    (push graft (port-grafts port))
+    graft))
+
+(defmethod initialize-instance :after ((port pdf-port) &key)
+  (let* ((options (cdr (port-server-path port)))
+         (stream (getf options :stream)))
+    (setf (pdf-port-stream port) stream))
+  (make-graft port))
