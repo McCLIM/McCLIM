@@ -21,7 +21,7 @@
 (in-package :cl-user)
 
 (defpackage #:clim-pdf
-  (:use #:clim #:clim-extensions #:clim-lisp)
+  (:use #:clim #:clim-extensions #:clim-lisp #:clim-backend)
   (:export #:with-output-to-pdf-stream)
   (:import-from #:clim-internals
                 #:map-repeated-sequence
@@ -31,5 +31,6 @@
                 ;; ellipses
                 #:reparameterize-ellipse
                 #:ellipse-cubic-bezier-points
-                #:transform-angle))
+                #:transform-angle
+                #:port-grafts))
 
