@@ -41,9 +41,6 @@
 (defmacro pdf-medium-graphics-state (medium)
   `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
 
-(defun pdf-medium-file-stream (medium)
-  (clim-pdf-stream-file-stream (medium-sheet medium)))
-
 ;;;; Stream
 
 (defvar *default-title* "")
@@ -53,23 +50,15 @@
       "Unknown"))
 
 (defclass clim-pdf-stream (sheet-leaf-mixin
+                           sheet-parent-mixin
                            sheet-mute-input-mixin
                            permanent-medium-sheet-output-mixin
                            sheet-mute-repainting-mixin
-                           ;; ?
-                           mirrored-sheet-mixin
-                           ;; FIXME: Tim Moore suggested (2006-02-06,
-                           ;; mcclim-devel) that this might better be
-                           ;; a superclass of
-                           ;; STANDARD-OUTPUT-RECORDING-STREAM.  This
-                           ;; should be revisited when we grow another
-                           ;; non-interactive backend (maybe a cl-pdf
-                           ;; backend?).  -- CSR.
                            climi::updating-output-stream-mixin
                            basic-sheet
                            standard-extended-output-stream
                            standard-output-recording-stream)
-  ((file-stream :initarg :file-stream :reader clim-pdf-stream-file-stream)
+  ((port :initform nil :initarg :port :accessor port)
    (title :initarg :title)
    (author :initarg :author)
    (subject :initarg :subject)
@@ -83,14 +72,13 @@
    (graphics-state-stack :initform '())
    (pages  :initform nil :accessor pdf-pages)))
 
-(defun make-clim-pdf-stream (file-stream port device-type
+(defun make-clim-pdf-stream (port device-type
                              multi-page scale-to-fit
                              orientation header-comments)
   (declare (ignore multi-page scale-to-fit))
   (unless device-type (setq device-type :a4))
   (let ((region (paper-region device-type orientation)))
     (make-instance 'clim-pdf-stream
-                   :file-stream file-stream
                    :port port
                    :title (getf header-comments :title *default-title*)
                    :author (getf header-comments :author *default-author*)

@@ -42,13 +42,14 @@
                                               (orientation :portrait)
                                               header-comments)
   (climb:with-port (port :pdf :stream file-stream)
-    (let* ((stream (make-clim-pdf-stream file-stream port device-type
+    (let* ((stream (make-clim-pdf-stream port device-type
                                          multi-page scale-to-fit
                                          orientation header-comments)))
+      (sheet-adopt-child (find-graft :port port) stream)
       (with-output-recording-options (stream :record t :draw nil)
         (funcall continuation stream)
         (new-page stream))
-      (with-slots (file-stream title author subject) stream
+      (with-slots (title author subject) stream
         (let ((output
                (typecase file-stream
                  (stream (flexi-streams:make-flexi-stream
@@ -87,29 +88,13 @@
 ;;; Output Protocol
 
 (defmethod medium-drawable ((medium pdf-medium))
-  (pdf-medium-file-stream medium))
+  (sheet-mirror (medium-sheet medium)))
 
 (defmethod make-medium ((port pdf-port) (sheet clim-pdf-stream))
   (make-instance 'pdf-medium :sheet sheet))
 
 (defmethod medium-miter-limit ((medium pdf-medium))
   #.(* pi (/ 11 180))) ; ?
-
-
-(defmethod sheet-direct-mirror ((sheet clim-pdf-stream))
-  (clim-pdf-stream-file-stream sheet))
-
-(defmethod sheet-mirrored-ancestor ((sheet clim-pdf-stream))
-  sheet)
-
-(defmethod sheet-mirror ((sheet clim-pdf-stream))
-  (sheet-direct-mirror sheet))
-
-(defmethod realize-mirror ((port pdf-port) (sheet clim-pdf-stream))
-  (sheet-direct-mirror sheet))
-
-(defmethod destroy-mirror ((port pdf-port) (sheet clim-pdf-stream))
-  (error "Can't destroy mirror for the pdf stream ~S." sheet))
 
 ;;; Some strange functions
 
