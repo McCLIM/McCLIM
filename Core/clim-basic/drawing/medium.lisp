@@ -178,6 +178,18 @@
     '(:normal 14 :tiny 8 :very-small 10 :small 12 :large 18 :very-large 20 :huge 24)
     "Mapping between keyword and a font size."))
 
+(defun text-style-components-fully-specified-p (family face size)
+  (and family
+       face
+       size
+       (or (realp size)
+           (member size (load-time-value
+                         (remove-if-not #'keywordp +font-sizes+) t)))))
+
+(defun text-style-fully-specified-p (text-style)
+  (multiple-value-bind (family face size) (text-style-components text-style)
+    (text-style-components-fully-specified-p family face size)))
+
 (defun find-smaller-size (size)
   (if (numberp size)
       (max (round (/ size *font-scaling-factor*)) *font-min-size*)
@@ -206,6 +218,8 @@
 (defun device-font-text-style-p (s)
   (typep s 'device-font-text-style))
 
+(defmethod text-style-components ((text-style device-font-text-style))
+  (values :device :device :device))
 
 (defmethod text-style-mapping ((port basic-port)
                                (text-style text-style)
@@ -220,10 +234,12 @@
                                        (text-style text-style)
                                        &optional character-set)
   (declare (ignore character-set))
-  ;; Cache mappings.
-  (ensure-gethash (parse-text-style text-style)
-                  (port-text-style-mappings port)
-                  (call-next-method)))
+  ;; Cache mappings only for fully specified text styles.
+  (let ((mappings (port-text-style-mappings port)))
+    (if (or (device-font-text-style-p text-style)
+            (text-style-fully-specified-p text-style))
+        (ensure-gethash text-style mappings (call-next-method))
+        (or (gethash text-style mappings) (call-next-method)))))
 
 (defmethod (setf text-style-mapping) (mapping
                                       (port basic-port)
