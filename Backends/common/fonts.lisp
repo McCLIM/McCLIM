@@ -179,10 +179,6 @@ of letters specified in a separate kerning-table."))
 
 
 ;; clim:make-device-font-text-style
-(defvar +font-sizes+
-  '(:normal 14 :tiny 8 :very-small 10 :small 12 :large 18 :very-large 20 :huge 24)
-  "Mapping between keyword and a font size.")
-
 (declaim (inline climb:normalize-font-size))
 (defun climb:normalize-font-size (size)
   (cond ((numberp size)
