@@ -167,17 +167,21 @@
   (defconstant *smaller-sizes* '(:huge :very-large :large :normal
                                  :small :very-small :tiny :tiny))
 
+  (defconstant *larger-sizes* '(:tiny :very-small :small :normal
+                                :large :very-large :huge :huge))
+
   (defconstant *font-scaling-factor* 4/3)
   (defconstant *font-min-size* 6)
-  (defconstant *font-max-size* 48))
+  (defconstant *font-max-size* 48)
+
+  (defconstant +font-sizes+
+    '(:normal 14 :tiny 8 :very-small 10 :small 12 :large 18 :very-large 20 :huge 24)
+    "Mapping between keyword and a font size."))
 
 (defun find-smaller-size (size)
   (if (numberp size)
       (max (round (/ size *font-scaling-factor*)) *font-min-size*)
       (cadr (member size *smaller-sizes*))))
-
-(defconstant *larger-sizes* '(:tiny :very-small :small :normal
-                              :large :very-large :huge :huge))
 
 (defun find-larger-size (size)
   (if (numberp size)
