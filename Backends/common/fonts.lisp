@@ -177,36 +177,46 @@ of letters specified in a separate kerning-table."))
 (defgeneric climb:font-glyph-dx (font code))
 (defgeneric climb:font-glyph-dy (font code))
 
-
-;; clim:make-device-font-text-style
 (declaim (inline climb:normalize-font-size))
 (defun climb:normalize-font-size (size)
-  (cond ((numberp size)
-         (round (max size 2)))
-        ((null size)
+  (cond ((null size)
          (let ((size* (text-style-size *default-text-style*)))
            (etypecase size*
              (number size*)
-             (symbol (getf +font-sizes+ size*)))))
-        (T
-         (or (getf +font-sizes+ size nil)
-             (error "~s is not a valid text style size!" size)))))
+             (symbol (getf +font-sizes+ size* nil)))))
+        ((eq size :smaller)
+         (getf +font-sizes+ (text-style-size *default-text-style*) nil))
+        ((eq size :larger)
+         (getf +font-sizes+ (text-style-size *default-text-style*) nil))
+        ((realp size)
+         (round (max size 2)))
+        ((getf +font-sizes+ size nil))
+        (t
+         (error "~s is not a valid text style size!" size))))
 
 (defun parse-text-style* (style)
   "Returns complete text-style without NIL components and with numeric size."
-  (cond ((text-style-p style)
-         (multiple-value-bind (family face size)
-             (clim:text-style-components style)
-           (if (and family face size (numberp size))
-               style
-               (make-text-style (or family (text-style-family *default-text-style*))
-                                (or face (text-style-face *default-text-style*))
-                                (climb:normalize-font-size size)))))
-        ((null style)
-         (parse-text-style* *default-text-style*))
-        ((and (listp style) (<= 3 (length style) 4))
-         (parse-text-style* (apply #'make-text-style style)))
-        (t (error "Invalid text style specification ~S." style))))
+  (flet ((new-text-style (family face size)
+           (let ((default *default-text-style*))
+             (make-text-style (or family (text-style-family default))
+                              (or face   (text-style-face   default))
+                              (climb:normalize-font-size size)))))
+    (cond ((device-font-text-style-p style)
+           style)
+          ((text-style-p style)
+           (multiple-value-bind (family face size)
+               (text-style-components style)
+             (if (and (realp size)
+                      (text-style-components-fully-specified-p
+                       family face size))
+                 style
+                 (new-text-style family face size))))
+          ((null style)
+           (parse-text-style* *default-text-style*))
+          ((and (listp style) (alexandria:length= 3 style))
+           (destructuring-bind (family face size) style
+             (new-text-style family face size)))
+          (t (error "Invalid text style specification ~S." style)))))
 
 (defmethod text-style-ascent (text-style medium)
   (let ((font (text-style-mapping (port medium) text-style)))
