@@ -51,22 +51,18 @@
 
 (defclass clim-pdf-stream (sheet-leaf-mixin
                            sheet-parent-mixin
+                           sheet-transformation-mixin
                            sheet-mute-input-mixin
-                           permanent-medium-sheet-output-mixin
                            sheet-mute-repainting-mixin
                            climi::updating-output-stream-mixin
                            basic-sheet
                            standard-extended-output-stream
+                           permanent-medium-sheet-output-mixin
                            standard-output-recording-stream)
   ((port :initform nil :initarg :port :accessor port)
    (title :initarg :title)
    (author :initarg :author)
    (subject :initarg :subject)
-   (orientation :initarg :orientation :accessor orientation)
-   (paper :initarg :paper)
-   (transformation :initarg :transformation
-                   :initform nil
-                   :accessor sheet-native-transformation)
    (current-page :initform 0)
    (document-fonts :initform '())
    (graphics-state-stack :initform '())
@@ -83,16 +79,21 @@
                    :title (getf header-comments :title *default-title*)
                    :author (getf header-comments :author *default-author*)
                    :subject (getf header-comments :subject)
-                   :orientation orientation
-                   :paper device-type
-                   :native-region region
                    :region region)))
 
 ;;;; Port
 
 (defclass pdf-port (clim-postscript-font:postscript-font-port)
   ((stream :accessor pdf-port-stream
-           :initform nil)))
+           :initform nil)
+   (device-type :initform :a4 :initarg :device-type
+                :accessor device-type
+                :type (or keyword
+                          (cons alexandria:positive-real
+                                        (cons alexandria:positive-real null))))
+   (page-orientation :initform :portrait :initarg :page-orientation
+                     :accessor page-orientation
+                     :type (member :landscape :portrait))))
 
 (defmethod make-graft
     ((port pdf-port) &key (orientation :default) (units :device))
@@ -105,6 +106,10 @@
 
 (defmethod initialize-instance :after ((port pdf-port) &key)
   (let* ((options (cdr (port-server-path port)))
-         (stream (getf options :stream)))
-    (setf (pdf-port-stream port) stream))
+         (stream (getf options :stream))
+         (device-type (getf options :device-type :a4))
+         (page-orientation (getf options :page-orientation :portrait)))
+    (setf (pdf-port-stream port) stream
+          (device-type port) device-type
+          (page-orientation port) page-orientation))
   (make-graft port))

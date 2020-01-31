@@ -36,12 +36,14 @@
 
 (defun invoke-with-output-to-pdf-stream (continuation
                                          file-stream
-                                         &key device-type
+                                         &key (device-type :a4)
                                               multi-page scale-to-fit
                                               trim-page-to-output-size
                                               (orientation :portrait)
                                               header-comments)
-  (climb:with-port (port :pdf :stream file-stream)
+  (climb:with-port (port :pdf :stream file-stream
+                         :device-type device-type
+                         :page-orientation orientation)
     (let* ((stream (make-clim-pdf-stream port device-type
                                          multi-page scale-to-fit
                                          orientation header-comments)))
@@ -59,22 +61,28 @@
               (pdf:*compress-streams* nil))
           (with-output-recording-options (stream :draw t :record nil)
             (pdf:with-document (:title title :author author :subject subject)
-              (let ((last-page (first (pdf-pages stream))))
-                (dolist (page (reverse (pdf-pages stream)))
-                  (let* ((page-region (if trim-page-to-output-size
-                                          (make-rectangle* 0 0
-                                                          (+ (bounding-rectangle-width page) *pdf-left-margin* *pdf-right-margin*)
-                                                          (+ (bounding-rectangle-height page) *pdf-top-margin* *pdf-bottom-margin*))
-                                          (sheet-region stream)))
-                         (transform (make-pdf-transformation
-                                     page-region
-                                     page
-                                     scale-to-fit)))
-                    (with-bounding-rectangle* (left top right bottom) page-region
-                      (pdf:with-page (:bounds (vector left top right bottom))
-                        (climi::letf (((sheet-native-transformation stream)
-                                       transform))
-                          (replay page stream)))))))
+              (dolist (page (reverse (pdf-pages stream)))
+                (when trim-page-to-output-size
+                  (change-page-dimensions port
+                                          (+ (bounding-rectangle-width page) *pdf-left-margin* *pdf-right-margin*)
+                                          (+ (bounding-rectangle-height page) *pdf-top-margin* *pdf-bottom-margin*)))
+                (let* ((page-region (sheet-native-region (graft stream)))
+                       (transform (make-pdf-transformation
+                                   page-region
+                                   page
+                                   scale-to-fit
+                                   trim-page-to-output-size)))
+                  (with-bounding-rectangle* (left top right bottom) page-region
+                    (pdf:with-page (:bounds (vector left top right bottom))
+                      (climi::letf (((sheet-transformation stream)
+                                     transform))
+                        (replay page stream
+                                (if (or scale-to-fit trim-page-to-output-size)
+                                    nil
+                                    (make-rectangle*
+                                     0 0
+                                     (- right *pdf-left-margin* *pdf-right-margin*)
+                                     (- bottom *pdf-top-margin* *pdf-bottom-margin*)))))))))
               (pdf:write-document output))))))))
 
 (defmethod new-page ((stream clim-pdf-stream))
@@ -107,31 +115,32 @@
 
 ;;; PDF-GRAFT
 
-(defclass pdf-graft (graft)
-  ((width  :initform 210 :reader pdf-graft-width)
-   (height :initform 297 :reader pdf-graft-height)))
+(defclass pdf-graft (sheet-transformation-mixin
+                     graft)
+  ())
+
+(defmethod initialize-instance :after ((graft pdf-graft) &key)
+  (setf (slot-value graft 'native-transformation) nil)
+  (setf (slot-value graft 'native-region) nil))
 
 (defmethod graft-orientation ((graft pdf-graft))
-  :graphics)
+  :default)
 
 (defmethod graft-units ((graft pdf-graft))
   :device)
 
 (defun graft-length (length units)
   (* length (ecase units
-              (:device       (/ 720 254))
-              (:inches       (/ 10 254))
-              (:millimeters  1)
+              (:device       1)
+              (:inches       (/ 72))
+              (:millimeters  (/ 254 720))
               (:screen-sized (/ length)))))
 
 (defmethod graft-width ((graft pdf-graft) &key (units :device))
-  (graft-length (pdf-graft-width graft) units))
+  (graft-length (bounding-rectangle-width (sheet-native-region graft)) units))
 
 (defmethod graft-height ((graft pdf-graft) &key (units :device))
-  (graft-length (pdf-graft-height graft) units))
-
-(defun make-pdf-graft ()
-  (make-instance 'pdf-graft))
+  (graft-length (bounding-rectangle-height (sheet-native-region graft)) units))
 
 (defmethod sheet-region ((sheet pdf-graft))
   (let ((units (graft-units sheet)))
@@ -139,8 +148,45 @@
                      (graft-width sheet :units units)
                      (graft-height sheet :units units))))
 
+
+(defmethod sheet-native-region ((sheet pdf-graft))
+  (with-slots (native-region) sheet
+    (unless native-region
+      (setf native-region
+            (paper-region (device-type (port sheet))
+                          (page-orientation (port sheet)))))
+    native-region))
+
+;; This is necessary because McCLIM didn't reset the
+;; native-transformation for basic-sheet. -- admich 2020-01-30
+(defmethod invalidate-cached-transformations ((sheet pdf-graft))
+  (with-slots (native-transformation device-transformation) sheet
+    (setf native-transformation nil
+     device-transformation nil))
+  (loop for child in (sheet-children sheet)
+     do (invalidate-cached-transformations child)))
+
+(defmethod sheet-native-transformation ((sheet pdf-graft))
+  (with-slots (native-transformation) sheet
+    (unless native-transformation
+      (setf native-transformation
+            (compose-transformations
+             (compose-transformations
+              (make-translation-transformation
+               0
+               (bounding-rectangle-height (sheet-native-region sheet)))
+              (make-reflection-transformation* 0 0 1 0))
+             (sheet-transformation sheet))))
+    native-transformation))
+
 (defmethod graft ((sheet pdf-graft))
   sheet)
+
+(defun change-page-dimensions (port width height)
+  (setf (device-type port) (list width height)
+        (page-orientation port) :portrait)
+  (mapc #'invalidate-cached-regions (port-grafts port))
+  (mapc #'invalidate-cached-transformations (port-grafts port)))
 
 ;;; Port
 
