@@ -32,5 +32,9 @@
                 #:reparameterize-ellipse
                 #:ellipse-cubic-bezier-points
                 #:transform-angle
+                #:native-transformation
+                #:device-transformation
+                #:native-region
+                #:device-region
                 #:port-grafts))
 

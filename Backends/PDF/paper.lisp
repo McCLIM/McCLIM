@@ -40,24 +40,27 @@
 (defparameter *pdf-bottom-margin* 0)
 (defparameter *pdf-right-margin* 0)
 
-(defun make-pdf-transformation (page output scale-to-fit)
+(defun make-pdf-transformation (page output scale-to-fit trim-page-to-output-size)
   (with-bounding-rectangle* (left top right bottom) page
     (declare (ignore left top))
     (let ((drawing-region (make-rectangle*
                             *pdf-left-margin* *pdf-top-margin*
                             (- right *pdf-right-margin*) (- bottom *pdf-bottom-margin*))))
-      (if scale-to-fit
-          (let ((scale (min (/ (bounding-rectangle-width drawing-region)
-                               (bounding-rectangle-width output))
-                            (/ (bounding-rectangle-height drawing-region)
-                               (bounding-rectangle-height output)))))
-            (compose-transformations
-             (make-translation-transformation *pdf-left-margin* (- *pdf-top-margin*))
-             (compose-transformations
-              (compose-transformations (make-translation-transformation 0 bottom)
-                                       (make-reflection-transformation* 0 0 1 0))
-              (make-scaling-transformation* scale scale))))
-          (compose-transformations
-           (make-translation-transformation *pdf-left-margin* (- *pdf-top-margin*))
-           (compose-transformations (make-translation-transformation 0 bottom)
-                                    (make-reflection-transformation* 0 0 1 0)))))))
+      (cond
+        (scale-to-fit
+         (let ((scale (min (/ (bounding-rectangle-width drawing-region)
+                              (bounding-rectangle-width output))
+                           (/ (bounding-rectangle-height drawing-region)
+                              (bounding-rectangle-height output)))))
+           (compose-transformations
+            (make-translation-transformation
+             (- *pdf-left-margin* (* scale (bounding-rectangle-min-x output)))
+             (- *pdf-top-margin* (* scale (bounding-rectangle-min-y output))))
+            (make-scaling-transformation* scale scale))))
+        (trim-page-to-output-size
+         (make-translation-transformation
+          (- *pdf-left-margin* (bounding-rectangle-min-x output))
+          (- *pdf-top-margin* (bounding-rectangle-min-y output))))
+        (t (make-translation-transformation
+            *pdf-left-margin*
+            *pdf-top-margin*))))))
