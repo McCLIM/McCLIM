@@ -39,15 +39,16 @@
                                          &key (device-type :a4)
                                               multi-page scale-to-fit
                                               trim-page-to-output-size
-                                              (orientation :portrait)
-                                              header-comments)
+                                           (orientation :portrait)
+                                           (units :device)
+                                           header-comments)
   (climb:with-port (port :pdf :stream file-stream
                          :device-type device-type
                          :page-orientation orientation)
     (let* ((stream (make-clim-pdf-stream port device-type
                                          multi-page scale-to-fit
                                          orientation header-comments)))
-      (sheet-adopt-child (find-graft :port port) stream)
+      (sheet-adopt-child (find-graft :port port :units units) stream)
       (with-output-recording-options (stream :record t :draw nil)
         (funcall continuation stream)
         (new-page stream))
@@ -115,19 +116,12 @@
 
 ;;; PDF-GRAFT
 
-(defclass pdf-graft (sheet-transformation-mixin
-                     graft)
+(defclass pdf-graft (graft)
   ())
 
 (defmethod initialize-instance :after ((graft pdf-graft) &key)
   (setf (slot-value graft 'native-transformation) nil)
   (setf (slot-value graft 'native-region) nil))
-
-(defmethod graft-orientation ((graft pdf-graft))
-  :default)
-
-(defmethod graft-units ((graft pdf-graft))
-  :device)
 
 (defun graft-length (length units)
   (* length (ecase units
@@ -166,21 +160,30 @@
   (loop for child in (sheet-children sheet)
      do (invalidate-cached-transformations child)))
 
+(defun graft-units-transformation (graft)
+  (ecase (graft-units graft)
+    (:device +identity-transformation+)
+    (:inches (make-scaling-transformation* 72 72))
+    (:millimeters (make-scaling-transformation* (/ 720 254) (/ 720 254)))
+    (:screen-sized (make-scaling-transformation* (graft-width graft) (graft-height graft)))))
+
+(defun graft-orientation-transformation (graft)
+  (ecase (graft-orientation graft)
+    (:graphics +identity-transformation+)
+    (:default (compose-transformations
+               (make-translation-transformation
+                0
+                (bounding-rectangle-height (sheet-native-region graft)))
+               (make-reflection-transformation* 0 0 1 0)))))
+
 (defmethod sheet-native-transformation ((sheet pdf-graft))
   (with-slots (native-transformation) sheet
     (unless native-transformation
       (setf native-transformation
             (compose-transformations
-             (compose-transformations
-              (make-translation-transformation
-               0
-               (bounding-rectangle-height (sheet-native-region sheet)))
-              (make-reflection-transformation* 0 0 1 0))
-             (sheet-transformation sheet))))
+             (graft-orientation-transformation sheet)
+             (graft-units-transformation sheet))))
     native-transformation))
-
-(defmethod graft ((sheet pdf-graft))
-  sheet)
 
 (defun change-page-dimensions (port width height)
   (setf (device-type port) (list width height)
