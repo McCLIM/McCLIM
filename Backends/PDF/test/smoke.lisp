@@ -60,3 +60,24 @@
         (clim-pdf:with-output-to-pdf-stream
             (stream "pdf-test-scale.pdf" :header-comments `(:title "Scale to fit") :scale-to-fit t :orientation :landscape)
           (clim-test-util:print-test-page-1 stream))))))
+
+(test units.smoke
+  "Smoke test for the PDF backend with different graft units."
+  (finishes
+   (clim-pdf:with-output-to-pdf-stream
+       (stream "pdf-test-screen-sized.pdf" :units :screen-sized :header-comments `(:title "PDF with screen sized units"))
+     (clim:draw-line* stream 0.5 0 0.5 1)
+     (clim:draw-line* stream 0 0.5 1 0.5)
+     (clim:draw-circle* stream 0.5 0.5 0.5 :filled nil)))
+  (finishes
+   (clim-pdf:with-output-to-pdf-stream
+       (stream "pdf-test-millimeters.pdf" :units :millimeters :header-comments `(:title "PDF with millimeters units"))
+     (loop for i from 10 to 200 do
+          (clim:draw-line* stream i 10 i 200 :ink clim:+light-blue+)
+          (clim:draw-line* stream 10 i 200 i :ink clim:+light-blue+))
+     (loop for i from 10 to 200 by 5 do
+          (clim:draw-line* stream i 10 i 200 :ink clim:+cadetblue+)
+          (clim:draw-line* stream 10 i 200 i :ink clim:+cadetblue+))
+     (loop for i from 10 to 200 by 10 do
+          (clim:draw-line* stream i 10 i 200 :ink clim:+blue+)
+          (clim:draw-line* stream 10 i 200 i :ink clim:+blue+)))))
