@@ -16,7 +16,6 @@
 
   (:import-from #:clim-postscript
                 #:postscript-medium
-                #:postscript-medium-file-stream
                 #:postscript-actualize-graphics-state
                 #:write-coordinates
                 #:with-graphics-state)

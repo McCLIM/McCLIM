@@ -45,7 +45,7 @@
 		   :external-format :latin-1)
     (let ((font (make-string (file-length font-stream))))
       (read-sequence font font-stream)
-      (write-string font (postscript-medium-file-stream stream)))))
+      (write-string font (medium-drawable stream)))))
 
 (defmacro with-output-to-postscript-stream ((stream-var file-stream
                                              &rest options)
@@ -58,50 +58,50 @@
                                                 ,file-stream ,@options))))
 
 (defun invoke-with-output-to-postscript-stream (continuation
-                                                file-stream &key device-type
+                                                file-stream &key (device-type :a4)
                                                               multi-page scale-to-fit
                                                               (orientation :portrait)
                                                               header-comments)
   (flet ((make-it (file-stream)
-           (climb:with-port (port :ps :stream file-stream)
-             (let ((stream (make-postscript-stream file-stream port device-type
+           (climb:with-port (port :ps :stream file-stream
+                                  :device-type device-type
+                                  :page-orientation orientation)
+             (let ((stream (make-postscript-stream port device-type
                                                    multi-page scale-to-fit
                                                    orientation header-comments))
+                   (trim-page-to-output-size (eql device-type :eps))
                    translate-x translate-y)
+               (sheet-adopt-child (find-graft :port port) stream)
                (unwind-protect
-                    (with-slots (file-stream title for orientation paper) stream
+                    (with-slots (title for) stream
                       (with-output-recording-options (stream :record t :draw nil)
                         (with-graphics-state (stream)
                           ;; we need at least one level of saving -- APD, 2002-02-11
                           (funcall continuation stream)
-                          (unless (eql paper :eps)
+                          (unless trim-page-to-output-size
                             (new-page stream)))) ; Close final page.
                       (format file-stream "%!PS-Adobe-3.0~@[ EPSF-3.0~*~]~@
                                            %%Creator: McCLIM~@
                                            %%Title: ~A~@
                                            %%For: ~A~@
                                            %%LanguageLevel: 2~%"
-                              (eq device-type :eps) title for)
-                      (case paper
-                        ((:eps)
-                         (let ((record (stream-output-history stream)))
-                           (with-bounding-rectangle* (lx ly ux uy) record
-                                                     (setf translate-x (- (floor lx))
-                                                           translate-y (ceiling uy))
-                                                     (format file-stream "%%BoundingBox: ~A ~A ~A ~A~%"
-                                                             0 0
-                                                             (+ translate-x (ceiling ux))
-                                                             (- translate-y (floor ly))))))
-                        (t
-                         (multiple-value-bind (width height) (paper-size paper)
-                           (format file-stream "%%BoundingBox: 0 0 ~A ~A~@
-                                                %%DocumentMedia: ~A ~A ~A 0 () ()~@
-                                                %%Orientation: ~A~@
-                                                %%Pages: (atend)~%"
-                                   width height paper width height
-                                   (ecase orientation
-                                     (:portrait "Portrait")
-                                     (:landscape "Landscape"))))))
+                              trim-page-to-output-size title for)
+                      (if trim-page-to-output-size
+                          (let ((record (stream-output-history stream)))
+                            (with-bounding-rectangle* (lx ly ux uy) record
+                              (setf translate-x (- (floor lx))
+                                    translate-y (ceiling uy))
+                              (format file-stream "%%BoundingBox: ~A ~A ~A ~A~%"
+                                      0 0
+                                      (+ translate-x (ceiling ux))
+                                      (- translate-y (floor ly)))))
+                          (let ((width (graft-width (graft stream)))
+                                (height (graft-height (graft stream)))
+                                (paper (device-type port)))
+                            (format file-stream "%%BoundingBox: 0 0 ~A ~A~@
+                                               %%DocumentMedia: ~A ~A ~A 0 () ()~@
+                                               %%Pages: (atend)~%"
+                                    width height paper width height)))
                       (format file-stream "%%DocumentNeededResources: (atend)~@
                                            %%EndComments~%~%")
                       (write-postscript-dictionary file-stream)
@@ -112,15 +112,20 @@
 
                       (with-output-recording-options (stream :draw t :record nil)
                         (with-graphics-state (stream)
-                          (case paper
-                            ((:eps) (replay (stream-output-history stream) stream))
-                            (t (let ((last-page (first (postscript-pages stream))))
-                                 (dolist (page (reverse (postscript-pages stream)))
-                                   (replay page stream)
-                                   (unless (eql page last-page)
-                                     (emit-new-page stream)))))))))
+                          (if trim-page-to-output-size
+                              (replay (stream-output-history stream) stream)
+                              (let ((last-page (first (postscript-pages stream))))
+                                (dolist (page (reverse (postscript-pages stream)))
+                                  (climi::letf (((sheet-transformation stream)
+                                                 (make-postscript-transformation
+                                                  (sheet-native-region (graft stream))
+                                                  page
+                                                  scale-to-fit)))
+                                    (replay page stream))
+                                  (unless (eql page last-page)
+                                    (emit-new-page stream))))))))
 
-                 (with-slots (file-stream current-page document-fonts) stream
+                 (with-slots (current-page document-fonts) stream
                    (format file-stream "end~%showpage~%~@
                                         %%Trailer~@
                                         %%Pages: ~D~@
@@ -137,9 +142,10 @@
       (t (make-it file-stream)))))
 
 (defun start-page (stream)
-  (with-slots (file-stream current-page transformation) stream
-    (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))
-    (format file-stream "~A begin~%" *dictionary-name*)))
+  (with-slots (current-page transformation) stream
+    (let ((file-stream (sheet-mirror stream)))
+      (format file-stream "%%Page: ~D ~:*~D~%" (incf current-page))
+      (format file-stream "~A begin~%" *dictionary-name*))))
 
 (defmethod new-page ((stream postscript-stream))
   (push (stream-output-history stream) (postscript-pages stream))
@@ -153,7 +159,7 @@
   ;; FIXME: it is necessary to do smth with GS -- APD, 2002-02-11
   ;; FIXME^2:  what do you mean by that? -- TPD, 2005-12-23
   (postscript-restore-graphics-state stream)
-  (format (postscript-stream-file-stream stream) "end~%showpage~%")
+  (format (sheet-mirror stream) "end~%showpage~%")
   (start-page stream)
   (postscript-save-graphics-state stream))
 
@@ -161,28 +167,13 @@
 ;;; Output Protocol
 
 (defmethod medium-drawable ((medium postscript-medium))
-  (postscript-medium-file-stream medium))
+  (sheet-mirror (medium-sheet medium)))
 
 (defmethod make-medium ((port postscript-port) (sheet postscript-stream))
   (make-instance 'postscript-medium :sheet sheet))
 
 (defmethod medium-miter-limit ((medium postscript-medium))
   #.(* pi (/ 11 180))) ; ?
-
-(defmethod sheet-direct-mirror ((sheet postscript-stream))
-  (postscript-stream-file-stream sheet))
-
-(defmethod sheet-mirrored-ancestor ((sheet postscript-stream))
-  sheet)
-
-(defmethod sheet-mirror ((sheet postscript-stream))
-  (sheet-direct-mirror sheet))
-
-(defmethod realize-mirror ((port postscript-port) (sheet postscript-stream))
-  (sheet-direct-mirror sheet))
-
-(defmethod destroy-mirror ((port postscript-port) (sheet postscript-stream))
-  (error "Can't destroy mirror for the postscript stream ~S." sheet))
 
 ;;; Some strange functions
 
@@ -195,31 +186,27 @@
 
 ;;; POSTSCRIPT-GRAFT
 
-(defclass postscript-graft (sheet-leaf-mixin basic-sheet)
-  ((width  :initform 210 :reader postscript-graft-width)
-   (height :initform 297 :reader postscript-graft-height)))
+(defclass postscript-graft (graft)
+  ())
 
-(defmethod graft-orientation ((graft postscript-graft))
-  :graphics)
-
-(defmethod graft-units ((graft postscript-graft))
-  :device)
+(defmethod initialize-instance :after ((graft postscript-graft) &key)
+  (setf (slot-value graft 'native-transformation) nil)
+  (setf (slot-value graft 'native-region) nil))
 
 (defun graft-length (length units)
   (* length (ecase units
-              (:device       (/ 720 254))
-              (:inches       (/ 10 254))
-              (:millimeters  1)
+              (:device       1)
+              (:inches       (/ 72))
+              (:millimeters  (/ 254 720))
               (:screen-sized (/ length)))))
 
 (defmethod graft-width ((graft postscript-graft) &key (units :device))
-  (graft-length (postscript-graft-width graft) units))
+  (unless (eql (sheet-native-region graft) +everywhere+)
+    (graft-length (bounding-rectangle-width (sheet-native-region graft)) units)))
 
 (defmethod graft-height ((graft postscript-graft) &key (units :device))
-  (graft-length (postscript-graft-height graft) units))
-
-(defun make-postscript-graft ()
-  (make-instance 'postscript-graft))
+  (unless (eql (sheet-native-region graft) +everywhere+)
+    (graft-length (bounding-rectangle-height (sheet-native-region graft)) units)))
 
 (defmethod sheet-region ((sheet postscript-graft))
   (let ((units (graft-units sheet)))
@@ -227,8 +214,49 @@
                      (graft-width sheet :units units)
                      (graft-height sheet :units units))))
 
-(defmethod graft ((sheet postscript-graft))
-  sheet)
+(defmethod sheet-native-region ((sheet postscript-graft))
+  (with-slots (native-region) sheet
+    (unless native-region
+      (setf native-region
+            (paper-region (device-type (port sheet))
+                          (page-orientation (port sheet)))))
+    native-region))
+
+;; This is necessary because McCLIM didn't reset the
+;; native-transformation for basic-sheet. -- admich 2020-01-30
+(defmethod invalidate-cached-transformations ((sheet postscript-graft))
+  (with-slots (native-transformation device-transformation) sheet
+    (setf native-transformation nil
+     device-transformation nil))
+  (loop for child in (sheet-children sheet)
+     do (invalidate-cached-transformations child)))
+
+(defun graft-units-transformation (graft)
+  (ecase (graft-units graft)
+    (:device +identity-transformation+)
+    (:inches (make-scaling-transformation* 72 72))
+    (:millimeters (make-scaling-transformation* (/ 720 254) (/ 720 254)))
+    (:screen-sized (make-scaling-transformation* (graft-width graft) (graft-height graft)))))
+
+(defun graft-orientation-transformation (graft)
+  (ecase (graft-orientation graft)
+    (:graphics +identity-transformation+)
+    (:default (if (eql (sheet-native-region graft) +everywhere+)
+                  (make-reflection-transformation* 0 0 1 0)
+                  (compose-transformations
+                   (make-translation-transformation
+                    0
+                    (bounding-rectangle-height (sheet-native-region graft)))
+                   (make-reflection-transformation* 0 0 1 0))))))
+
+(defmethod sheet-native-transformation ((sheet postscript-graft))
+  (with-slots (native-transformation) sheet
+    (unless native-transformation
+      (setf native-transformation
+            (compose-transformations
+             (graft-orientation-transformation sheet)
+             (graft-units-transformation sheet))))
+    native-transformation))
 
 ;;; Port
 
