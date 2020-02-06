@@ -41,10 +41,6 @@
 (defmacro postscript-medium-graphics-state (medium)
   `(first (slot-value (medium-sheet ,medium) 'graphics-state-stack)))
 
-(defun postscript-medium-file-stream (medium)
-  (postscript-stream-file-stream (medium-sheet medium)))
-
-
 ;;;; Stream
 (defvar *default-postscript-title* "")
 
@@ -54,35 +50,24 @@
   #-unix "")
 
 (defclass postscript-stream (sheet-leaf-mixin
+                             sheet-parent-mixin
+                             sheet-transformation-mixin
                              sheet-mute-input-mixin
                              sheet-mute-repainting-mixin
-                             ;; ?
-                             mirrored-sheet-mixin
-                             ;; FIXME: Tim Moore suggested
-                             ;; (2006-02-06, mcclim-devel) that this
-                             ;; might better be a superclass of
-                             ;; STANDARD-OUTPUT-RECORDING-STREAM.
-                             ;; This should be revisited when we grow
-                             ;; another non-interactive backend (maybe
-                             ;; a cl-pdf backend?).  -- CSR.
                              climi::updating-output-stream-mixin
-                             permanent-medium-sheet-output-mixin
                              basic-sheet
                              standard-extended-output-stream
+                             permanent-medium-sheet-output-mixin
                              standard-output-recording-stream)
-  ((file-stream :initarg :file-stream :reader postscript-stream-file-stream)
+  ((port :initform nil :initarg :port :accessor port)
    (title :initarg :title)
    (for :initarg :for)
-   (orientation :initarg :orientation)
-   (paper :initarg :paper)
-   (transformation :initarg :transformation
-                   :reader sheet-native-transformation)
    (current-page :initform 0)
    (document-fonts :initform '())
    (graphics-state-stack :initform '())
    (pages  :initform nil :accessor postscript-pages)))
 
-(defun make-postscript-stream (file-stream port device-type
+(defun make-postscript-stream (port device-type
                                multi-page scale-to-fit
                                orientation header-comments)
   (declare (ignore multi-page scale-to-fit))
@@ -91,37 +76,43 @@
                    *default-postscript-title*))
         (for (or (getf header-comments :for)
                  *default-postscript-for*))
-        (region (case device-type
-                  ((:eps) +everywhere+)
-                  (t (paper-region device-type orientation))))
-        (transform (make-postscript-transformation device-type orientation)))
+        (region (paper-region device-type orientation)))
     (make-instance 'postscript-stream
-                   :file-stream file-stream
                    :port port
                    :title title :for for
-                   :orientation orientation
-                   :paper device-type
-                   :native-region region
-                   :region region
-                   :transformation transform)))
+                   :region region)))
 
 
 ;;;; Port
 
 (defclass postscript-port (postscript-font-port)
-  ((stream #| :initarg :stream |#
-           #| :initform (error "Unspecified stream.") |#
-           ;; I think this is right, but BASIC-PORT accepts only
-           ;; :SERVER-PATH initarg. -- APD, 2002-06-06
+  ((stream
+    :initarg :stream
+    :initform nil
+    :accessor postscript-port-stream)
+   (device-type :initform :a4 :initarg :device-type
+                :accessor device-type
+                :type keyword)
+   (page-orientation :initform :portrait :initarg :page-orientation
+                     :accessor page-orientation
+                     :type (member :landscape :portrait))))
 
-           :reader postscript-port-stream)))
+(defmethod make-graft
+    ((port postscript-port) &key (orientation :default) (units :device))
+  (let ((graft (make-instance 'postscript-graft
+                              :port port :mirror (postscript-port-stream port)
+                              :orientation orientation :units units)))
+    (push graft (port-grafts port))
+    graft))
 
-;;; FIXME!!! The following method should be removed. -- APD, 2002-06-06
-(defmethod initialize-instance :after ((port postscript-port)
-                                       &rest initargs
-                                       &key server-path)
-  (declare (ignore initargs))
-  (destructuring-bind (ps &key stream) server-path
-    (assert (eq ps :ps))
-    (check-type stream stream)
-    (setf (slot-value port 'stream) stream)))
+(defmethod initialize-instance :after ((port postscript-port) &key)
+  (let* ((options (cdr (port-server-path port)))
+         (stream (getf options :stream))
+         (device-type (getf options :device-type :a4))
+         (page-orientation (getf options :page-orientation :portrait)))
+    (setf (postscript-port-stream port) stream
+          (device-type port) device-type
+          (page-orientation port) page-orientation))
+  (make-graft port))
+
+

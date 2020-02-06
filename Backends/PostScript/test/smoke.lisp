@@ -37,7 +37,24 @@
           for page in clim-test-util:*all-test-pages*
           do (finishes
                (invoke-with-postscript-stream
-                page :filename filename :title title)))))
+                page :filename filename :title title)))
+    (finishes
+      (clim-postscript:with-output-to-postscript-stream
+          (stream "postscript-test-all.ps"
+                  :header-comments `(:title "All test pages in one document"))
+        (loop for page in clim-test-util:*all-test-pages*
+           do (funcall page stream)
+             (clim:new-page stream))))
+    (finishes
+      (clim-postscript:with-output-to-postscript-stream
+          (stream "postscript-test-trim.eps" :device-type :eps
+                  :header-comments `(:title "Trim to output size"))
+        (clim-test-util:print-test-page-1 stream)))
+    (finishes
+      (clim-postscript:with-output-to-postscript-stream
+          (stream "postscript-test-scale.ps" :header-comments `(:title "Scale to fit")
+                  :scale-to-fit t :orientation :landscape)
+        (clim-test-util:print-test-page-1 stream)))))
 
 (defun invoke-with-output-file (write-continuation read-continuation filename)
   (unwind-protect

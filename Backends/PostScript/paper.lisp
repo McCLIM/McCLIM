@@ -49,21 +49,21 @@
     (values (car size) (cdr size))))
 
 (defun paper-region (paper-size-name orientation)
-  (multiple-value-bind (width height) (paper-size paper-size-name)
-    (when (eq orientation :landscape)
-      (rotatef width height))
-    (make-rectangle* 0 0 width height)))
+  (if (eq :eps paper-size-name) +everywhere+
+      (multiple-value-bind (width height) (paper-size paper-size-name)
+        (when (eq orientation :landscape)
+          (rotatef width height))
+        (make-rectangle* 0 0 width height))))
 
-(defun make-postscript-transformation (paper-size-name orientation)
-  (when (eq paper-size-name :eps)
-    (return-from make-postscript-transformation
-      (make-reflection-transformation* 0 0 1 0)))
-  (multiple-value-bind (width height) (paper-size paper-size-name)
-    (case orientation
-        (:portrait (make-3-point-transformation*
-                    0 0  0 height  width 0
-                    0 height  0 0  width height))
-        (:landscape (make-3-point-transformation*
-                     0 0  0 width  height 0
-                     width height  0 height  width 0))
-        (t (error "Unknown orientation")))))
+(defun make-postscript-transformation (page output scale-to-fit)
+  (with-bounding-rectangle* (left top right bottom) page
+    (declare (ignore left top))
+    (let ((drawing-region (make-rectangle* 0 0 right bottom)))
+      (cond
+        (scale-to-fit
+         (let ((scale (min (/ (bounding-rectangle-width drawing-region)
+                              (bounding-rectangle-width output))
+                           (/ (bounding-rectangle-height drawing-region)
+                              (bounding-rectangle-height output)))))
+           (make-scaling-transformation* scale scale)))
+        (t +identity-transformation+)))))

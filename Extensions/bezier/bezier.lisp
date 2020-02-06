@@ -1028,21 +1028,21 @@ second curve point, yielding (200 50)."
 
 (defmethod medium-draw-bezier-design*
     ((medium postscript-medium) (design bezier-curve))
-  (let ((stream (postscript-medium-file-stream medium)))
+  (let ((stream (medium-drawable medium)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :color :line-style)
       (%ps-draw-bezier-curve stream medium design))))
 
 (defmethod medium-draw-bezier-design*
     ((medium postscript-medium) (design bezier-area))
-  (let ((stream (postscript-medium-file-stream medium)))
+  (let ((stream (medium-drawable medium)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :color :line-style)
       (%ps-draw-bezier-area stream medium design))))
 
 (defmethod medium-draw-bezier-design*
     ((medium postscript-medium) (design bezier-union))
-  (let ((stream (postscript-medium-file-stream medium)))
+  (let ((stream (medium-drawable medium)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :color :line-style)
       (dolist (area (areas design))
@@ -1050,7 +1050,7 @@ second curve point, yielding (200 50)."
 
 (defmethod medium-draw-bezier-design*
     ((medium postscript-medium) (design bezier-difference))
-  (let ((stream (postscript-medium-file-stream medium)))
+  (let ((stream (medium-drawable medium)))
     (postscript-actualize-graphics-state stream medium :color :line-style)
     (dolist (area (positive-areas design))
       (%ps-draw-bezier-area stream medium area))

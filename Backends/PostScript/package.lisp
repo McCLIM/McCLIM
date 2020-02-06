@@ -33,6 +33,11 @@
 
                 #:maxf
 
-                #:port-text-style-mappings)
+                #:port-text-style-mappings
+                #:native-transformation
+                #:device-transformation
+                #:native-region
+                #:device-region
+                #:port-grafts)
   (:export #:load-afm-file
            #:with-output-to-postscript-stream))
