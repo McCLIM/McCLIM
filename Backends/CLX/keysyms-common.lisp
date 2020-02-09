@@ -89,13 +89,15 @@
 ;;; reflect the post event state.
 
 (defun x-keysym-to-clim-modifiers (port event-key keychar keysym-name state)
-  "Return modifiers for PORT with STATE. If KEYCHAR is a special key(like shift, caps-lock, etc.), update the modifiers cache. EVENT-KEY is :key-press or :key-release"
+  "Return modifiers for PORT with STATE.
+   If KEYCHAR is a special key(like shift, caps-lock, etc.), update
+   the modifiers cache. EVENT-KEY is :key-press or :key-release"
   (multiple-value-bind (clim-modifiers caps-lock? mode-switch?)
       (x-event-state-modifiers port state)
     (declare (ignore caps-lock? mode-switch?))
     (if (characterp keychar)
-	clim-modifiers
-	(modify-modifiers event-key keysym-name clim-modifiers))))
+        clim-modifiers
+        (modify-modifiers event-key keysym-name clim-modifiers))))
 
 ;;; Modifier cache
 ;;;
@@ -121,11 +123,16 @@
 ;;; This dictionary maps CLX keysym names to the power-of-two
 ;;; constants that the CLIM II specification requires.
 (defconstant +clim-modifiers+
-  '(((:meta-left :meta-right) #.+meta-key+)
-    ((:hyper-left :hyper-right) #.+hyper-key+)
-    ((:super-left :super-right) #.+super-key+)
-    ((:shift-left :shift-right) #.+shift-key+)
-    ((:control-left :control-right) #.+control-key+)))
+  ;; TODO We treat both alt keys as +META-KEY+ (instead of +ALT-KEY+)
+  ;; because
+  ;; 1) +ALT-KEY+ is non-standard
+  ;; 2) +ALT-KEY+ is not exported
+  ;; 3) The gesture infrastructure does not accept :alt as a modifier
+  '(((:meta-left :meta-right :alt-left :alt-right) #.+meta-key+)
+    ((:hyper-left :hyper-right)                    #.+hyper-key+)
+    ((:super-left :super-right)                    #.+super-key+)
+    ((:shift-left :shift-right)                    #.+shift-key+)
+    ((:control-left :control-right)                #.+control-key+)))
 
 ;;; This dictionary maps CLX keysym names to the power-of-two
 ;;; constants that are not required by the CLIM II specification, but
@@ -251,31 +258,31 @@
 ;;; bit positions.
 ;; (defun make-modifier-cache (port)
 ;;   (let* ((modifier-mapping (modifier-mapping port))
-;; 	 ;; This variable holds the number of different possible
-;; 	 ;; modifiers, and the X11 specification says that it will
-;; 	 ;; always be 8.
-;; 	 (modifier-count (length modifier-mapping))
-;; 	 ;; This variable holds the number of different possible
-;; 	 ;; modifier masks, and the X11 specification says that it
-;; 	 ;; will always be 256.
-;; 	 (modifier-mask-count (ash 1 modifier-count))
-;; 	 (cache (make-array modifier-mask-count)))
+;;       ;; This variable holds the number of different possible
+;;       ;; modifiers, and the X11 specification says that it will
+;;       ;; always be 8.
+;;       (modifier-count (length modifier-mapping))
+;;       ;; This variable holds the number of different possible
+;;       ;; modifier masks, and the X11 specification says that it
+;;       ;; will always be 256.
+;;       (modifier-mask-count (ash 1 modifier-count))
+;;       (cache (make-array modifier-mask-count)))
 ;;     (loop for x-modifier-mask from 0 below modifier-mask-count
-;; 	  for clim-modifier = 0
-;; 	  for other-modifier = 0
-;; 	  do (loop for bit from 0 below modifier-count
-;; 		   for modifier-names = (aref modifier-mapping bit)
-;; 		   when (logbitp bit x-modifier-mask)
-;; 		     do (loop for (syms val) in +clim-modifiers+
-;; 			      when (intersection syms modifier-names)
-;; 				do (setf clim-modifier
-;; 					 (logior clim-modifier val)))
-;; 			(loop for (sym val) in +other-modifiers+
-;; 			      when (member sym modifier-names)
-;; 				do (setf other-modifier
-;; 					 (logior other-modifier val)))
-;; 		   finally (setf (aref cache x-modifier-mask)
-;; 				 (cons clim-modifier other-modifier))))
+;;        for clim-modifier = 0
+;;        for other-modifier = 0
+;;        do (loop for bit from 0 below modifier-count
+;;                 for modifier-names = (aref modifier-mapping bit)
+;;                 when (logbitp bit x-modifier-mask)
+;;                   do (loop for (syms val) in +clim-modifiers+
+;;                            when (intersection syms modifier-names)
+;;                              do (setf clim-modifier
+;;                                       (logior clim-modifier val)))
+;;                      (loop for (sym val) in +other-modifiers+
+;;                            when (member sym modifier-names)
+;;                              do (setf other-modifier
+;;                                       (logior other-modifier val)))
+;;                 finally (setf (aref cache x-modifier-mask)
+;;                               (cons clim-modifier other-modifier))))
 ;;     (setf (modifier-cache port) cache)))
 
 (defun make-modifier-cache (port)
