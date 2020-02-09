@@ -12,7 +12,7 @@
    (width      :initform 0)
    (height     :initform 0)
    (dx         :initform 0)
-   (dy         :initfomr 0)
+   (dy         :initform 0)
    (mez-pixels :initform nil)
    (mez-window :initform nil)
    (mez-frame  :initform nil)
@@ -57,51 +57,59 @@
     ;;  dy
     ;;  width
     ;;  height)
-    (map-over-region-set-regions
-     #'(lambda (region)
-         (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-             (region-intersection region (make-rectangle* 0 0 width height))
-           (let ((width (round (- max-x min-x)))
-                 (height (round (- max-y min-y))))
-             ;; (debug-format "image-mirror-put ~S ~S ~S ~S ~S"
-             ;;               mez-window
-             ;;               (max 0 min-x)
-             ;;               (max 0 min-y)
-             ;;               width height)
-             (mos:damage-window
-              mez-window
-              (+ dx (round (max 0 min-x)))
-              (+ dy (round (max 0 min-y)))
-              width
-              height))))
-     dirty-r)
-    ))
-
-(declaim (inline mez-pixels-data-set-pixel))
-(defun mez-pixels-data-set-pixel (data x y red green blue)
-  (declare (type (simple-array (unsigned-byte 32) (* *)) data)
-           (type fixnum x y red green blue))
-  (setf (aref data y x) (logior #xFF000000
-                                (the fixnum (ash red 16))
-                                (the fixnum (ash green 8))
-                                blue)))
+    (let ((result +nowhere+))
+      (map-over-region-set-regions
+       (lambda (region)
+	 (setf result (region-union result region)))
+       dirty-r)
+      (setf result (region-intersection result (make-rectangle* 0 0 width height)))
+      (clim:with-bounding-rectangle* (min-x min-y max-x max-y) result
+	(let ((width (round (- max-x min-x)))
+              (height (round (- max-y min-y))))
+          (mos:damage-window
+	   mez-window
+	   (+ dx (round (max 0 min-x)))
+	   (+ dy (round (max 0 min-y)))
+	   width
+	   height))))
+    #+no (let ((clip (make-rectangle* 0 0 width height)))
+	   (map-over-region-set-regions
+	    #'(lambda (region)
+		(clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+		    (region-intersection region clip)
+		  (let ((width (round (- max-x min-x)))
+			(height (round (- max-y min-y))))
+		    ;; (debug-format "image-mirror-put ~S ~S ~S ~S ~S"
+		    ;;               mez-window
+		    ;;               (max 0 min-x)
+		    ;;               (max 0 min-y)
+		    ;;               width height)
+		    (mos:damage-window
+		     mez-window
+		     (+ dx (round (max 0 min-x)))
+		     (+ dy (round (max 0 min-y)))
+		     width
+		     height))))
+	    dirty-r))))
 
 (defun image-mirror-pre-put (mirror mez-pixels dx dy width height dirty-r)
-  (let ((pixels (image-pixels (image-mirror-image mirror))))
-    (declare (type opticl-rgb-image-pixels pixels)
-             (optimize speed (safety 0) (debug 0)))
-    (map-over-region-set-regions
-     #'(lambda (region)
-         (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-           (region-intersection region (make-rectangle* 0 0
-                                                        (1- width) (1- height)))
-           (when mez-pixels
-             (opticl:do-region-pixels (y x min-y min-x (1+ max-y) (1+ max-x))
-               pixels
-               (multiple-value-bind (red green blue)
-                   (opticl:pixel pixels y x)
-                 (mez-pixels-data-set-pixel mez-pixels (+ dx x) (+ dy y) red green blue))))))
-     dirty-r)))
+  (declare (type fixnum dx dy))
+  (when mez-pixels
+     (let ((pixels (climi::pattern-array (image-mirror-image mirror)))
+	  (clip   (make-rectangle* 0 0 (1- width) (1- height))))
+      (declare (type (simple-array (unsigned-byte 32) 2) pixels)
+	       (type (simple-array (unsigned-byte 32) 2) mez-pixels)
+               (optimize speed (safety 0) (debug 0)))
+      (map-over-region-set-regions
+       #'(lambda (region)
+           (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+               (region-intersection region clip)
+	     (declare (type fixnum min-x min-y max-x max-y))
+	     (loop :for y :of-type fixnum :from min-y :to max-y
+		   :do (loop :for x :of-type fixnum :from min-x :to max-x
+			     :do (setf (aref mez-pixels (+ dy y) (+ dx x))
+				       (logior #xff000000 (ash (aref pixels y x) -8)))))))
+       dirty-r))))
 
 (defmethod image-mirror-to-mezzano ((sheet mezzano-mirror))
   (declare (optimize speed))
@@ -119,6 +127,9 @@
           (setf reg mez-dirty-region)
           (setf mez-dirty-region +nowhere+))
         (image-mirror-put mez-window dx dy width height reg)))))
+
+(defmethod climb:port-set-mirror-name ((port mezzano-port) (mirror mezzano-mirror) (name t))
+  (setf (mos:frame-title (slot-value mirror 'mez-frame)) name))
 
 (defmethod port-set-mirror-region
     ((port mezzano-port) (mirror mezzano-mirror) mirror-region)

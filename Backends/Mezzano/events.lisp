@@ -22,12 +22,13 @@
 ;;;
 ;;;======================================================================
 
-(defgeneric mez-event->mcclim-event (mcclim-fifo event))
+(defgeneric mez-event->mcclim-event (event))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo event)
+(defmethod mez-event->mcclim-event (event)
   ;; Default case - log event and ignore
   (debug-format "mcclim backend unexpected event")
-  (debug-format "    ~S" event))
+  (debug-format "    ~S" event)
+  nil)
 
 ;;;======================================================================
 ;;; Keyboard Events
@@ -54,7 +55,7 @@
             (debug-format "Unknown modifier key ~S" key))))
     (setf *last-modifier-state* modifier)))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:key-event))
+(defmethod mez-event->mcclim-event ((event mos:key-event))
   (let* ((releasep (mos:key-releasep event))
          (char (mos:key-key event))
          (name (get-name char))
@@ -62,19 +63,16 @@
          (mez-window (mos:window event))
          (sheet (port-lookup-sheet *port* mez-window)))
     (when sheet
-      (mos:fifo-push
-       (make-instance (if releasep 'key-release-event 'key-press-event)
-                      :key-name name
-                      :key-character char
-                      :x *last-mouse-x*
-                      :y *last-mouse-y*
-                      :graft-x *last-graft-x*
-                      :graft-y *last-graft-y*
-                      :sheet (or (frame-properties (pane-frame sheet) 'focus)
-                                 sheet)
-                      :modifier-state modifier-state)
-       mcclim-fifo
-       nil))))
+      (make-instance (if releasep 'key-release-event 'key-press-event)
+                     :key-name name
+                     :key-character char
+                     :x *last-mouse-x*
+                     :y *last-mouse-y*
+                     :graft-x *last-graft-x*
+                     :graft-y *last-graft-y*
+                     :sheet (or (frame-properties (pane-frame sheet) 'focus)
+                                sheet)
+                     :modifier-state modifier-state))))
 
 ;;;======================================================================
 ;;; Pointer Events
@@ -97,44 +95,54 @@
         (setf result (logior result (cdr tr)))))
     result))
 
-(defun pointer-motion-event (mcclim-fifo sheet event)
+(defun pointer-motion-event (sheet event)
   (let ((time 0))
-    (mos:fifo-push
-     (make-instance 'pointer-motion-event
-                    :pointer 0
-                    :x *last-mouse-x*
-                    :y *last-mouse-y*
-                    :graft-x *last-graft-x*
-                    :graft-y *last-graft-y*
-                    :sheet sheet
-                    :modifier-state *last-modifier-state*
-                    :timestamp time)
-     mcclim-fifo
-     nil)))
+    (make-instance 'pointer-motion-event
+                   :pointer 0
+                   :x *last-mouse-x*
+                   :y *last-mouse-y*
+                   :graft-x *last-graft-x*
+                   :graft-y *last-graft-y*
+                   :sheet sheet
+                   :modifier-state *last-modifier-state*
+                   :timestamp time)))
 
-(defun pointer-button-event (mcclim-fifo sheet event)
+(defun pointer-button-event (sheet event)
   (let* ((buttons (compute-mouse-buttons (mos:mouse-button-state event)))
          (change (compute-mouse-buttons (mos:mouse-button-change event)))
          (time 0))
-    (mos:fifo-push
-     (make-instance (if (= (logand buttons change) 0)
-                        'pointer-button-release-event
-                        'pointer-button-press-event)
-                    :pointer 0
-                    :button change
-                    :x *last-mouse-x*
-                    :y *last-mouse-y*
-                    :graft-x *last-graft-x*
-                    :graft-y *last-graft-y*
-                    :sheet sheet
-                    :modifier-state *last-modifier-state*
-                    :timestamp time)
-     mcclim-fifo
-     nil)))
+    (make-instance (if (= (logand buttons change) 0)
+                       'pointer-button-release-event
+                       'pointer-button-press-event)
+                   :pointer 0
+                   :button change
+                   :x *last-mouse-x*
+                   :y *last-mouse-y*
+                   :graft-x *last-graft-x*
+                   :graft-y *last-graft-y*
+                   :sheet sheet
+                   :modifier-state *last-modifier-state*
+                   :timestamp time)))
 
-(defun mouse-exit-event (mcclim-fifo sheet event)
+(defun pointer-scroll-event (sheet event)
+  (let* ((buttons (compute-mouse-buttons (mos:mouse-button-state event)))
+         (change (compute-mouse-buttons (mos:mouse-button-change event)))
+         (time 0))
+    (make-instance 'climi::pointer-scroll-event
+                   :pointer 0
+                   :delta-y (case change
+			      (8   2)
+			      (16 -2))
+                   :x *last-mouse-x*
+                   :y *last-mouse-y*
+                   :graft-x *last-graft-x*
+                   :graft-y *last-graft-y*
+                   :sheet sheet
+                   :modifier-state *last-modifier-state*
+                   :timestamp time)))
+
+(defun mouse-exit-event (sheet event)
   (let ((time 0))
-    (mos:fifo-push
     (make-instance 'pointer-exit-event
                    :pointer 0
                    :x *last-mouse-x*
@@ -143,107 +151,95 @@
                    :graft-y *last-graft-y*
                    :sheet sheet
                    :modifier-state *last-modifier-state*
-                   :timestamp time)
-    mcclim-fifo
-    nil)))
+                   :timestamp time)))
 
-(defun mouse-enter-event (mcclim-fifo sheet event)
+(defun mouse-enter-event (sheet event)
   (let ((time 0))
-    (mos:fifo-push
-     (make-instance 'pointer-enter-event
-                    :pointer 0
-                    :x *last-mouse-x*
-                    :y *last-mouse-y*
-                    :graft-x *last-graft-x*
-                    :graft-y *last-graft-y*
-                    :sheet sheet
-                    :modifier-state *last-modifier-state*
-                    :timestamp time)
-     mcclim-fifo
-     nil)))
+    (make-instance 'pointer-enter-event
+                   :pointer 0
+                   :x *last-mouse-x*
+                   :y *last-mouse-y*
+                   :graft-x *last-graft-x*
+                   :graft-y *last-graft-y*
+                   :sheet sheet
+                   :modifier-state *last-modifier-state*
+                   :timestamp time)))
 
-(defun frame-mouse-event (mcclim-fifo sheet mez-frame event)
+(defun frame-mouse-event (sheet mez-frame event)
   (handler-case
       (mos:frame-mouse-event mez-frame event)
+    (:no-error (&rest values)
+      (declare (ignore values))
+      nil)
     (mos:close-button-clicked ()
-      (mos:fifo-push
-       (make-instance 'window-manager-delete-event :sheet sheet)
-       mcclim-fifo
-       nil))))
+      (make-instance 'window-manager-delete-event :sheet sheet))))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:mouse-event))
+(defmethod mez-event->mcclim-event ((event mos:mouse-event))
   (let* ((mez-window (mos:window event))
          (mouse-x    (mos:mouse-x-position event))
          (mouse-y    (mos:mouse-y-position event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (sheet      (port-lookup-sheet *port* mez-window)))
+
     (when mez-mirror
       (with-slots (mez-frame dx dy width height) mez-mirror
-        (setf *last-mouse-x* (- mouse-x dx)
-              *last-mouse-y* (- mouse-y dy)
+        (setf *last-mouse-x* mouse-x
+              *last-mouse-y* mouse-y
               *last-graft-x* (+ mouse-x (mos:window-x mez-window))
               *last-graft-y* (+ mouse-y (mos:window-y mez-window)))
         (cond ((and mez-frame
                     (or (mos:in-frame-header-p mez-frame mouse-x mouse-y)
                         (mos:in-frame-border-p mez-frame mouse-x mouse-y)))
-               (when *last-mouse-sheet*
-                 (mouse-exit-event mcclim-fifo *last-mouse-sheet* event)
-                 (setf *last-mouse-sheet* nil))
-               (frame-mouse-event mcclim-fifo sheet mez-frame event))
+               (or (frame-mouse-event sheet mez-frame event)
+		   (when (plusp (mos:mouse-button-change event))
+		     (make-instance 'window-configuration-event
+				    :sheet sheet
+				    :region nil
+				    :width (mos:width mez-window)
+				    :height (mos:height mez-window)
+				    :x (mos:window-x mez-window)
+				    :y (mos:window-y mez-window)))))
 
               ((= (mos:mouse-button-change event) 0)
                (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
                         :default)
-               (cond ((eq sheet *last-mouse-sheet*)
-                      (pointer-motion-event mcclim-fifo sheet event))
-                     (T
-                      (when *last-mouse-sheet*
-                        (mouse-exit-event mcclim-fifo *last-mouse-sheet* event))
-                      (mouse-enter-event mcclim-fifo sheet event)
-                      (setf *last-mouse-sheet* sheet))))
-              (T
-               (unless (eq sheet *last-mouse-sheet*)
-                 (when *last-mouse-sheet*
-                   (mouse-exit-event mcclim-fifo *last-mouse-sheet* event))
-                 (mouse-enter-event mcclim-fifo sheet event)
-                 (setf *last-mouse-sheet* sheet))
-               (pointer-button-event mcclim-fifo sheet event)))))))
+               (pointer-motion-event sheet event))
+
+	      ((member (compute-mouse-buttons (mos:mouse-button-change event)) '(8 16))
+	       (pointer-scroll-event sheet event))
+
+              (t
+               (pointer-button-event sheet event)))))))
 
 ;;;======================================================================
 ;;; Activation Events
 ;;;======================================================================
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:window-activation-event))
+(defmethod mez-event->mcclim-event ((event mos:window-activation-event))
   (let* ((mez-window (mos:window event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
          (sheet (port-lookup-sheet *port* mez-window))
          (focus (and sheet (frame-query-io (pane-frame sheet)))))
     (when mez-frame
-      (setf (mos:activep mez-frame)
-            (mos:state event))
+      (setf (mos:activep mez-frame) (mos:state event))
       (mos:draw-frame mez-frame)
       ;; HACK: This "fixes" the initial rendering issue in the listener.
       (sleep 0.1)
-      (mos:fifo-push
-       (with-slots (width height) mez-mirror
-         (make-instance 'window-repaint-event
-                        :timestamp 0
-                        :sheet sheet
-                        :region (make-rectangle* 0 0 width height)))
-       mcclim-fifo))))
+      (with-slots (width height) mez-mirror
+        (make-instance 'window-repaint-event
+                       :timestamp 0
+                       :sheet sheet
+                       :region (make-rectangle* 0 0 width height))))))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:quit-event))
+(defmethod mez-event->mcclim-event ((event mos:quit-event))
   (let* ((mez-window (mos:window event))
          (sheet (port-lookup-sheet *port* mez-window)))
     (when sheet
-      (mos:fifo-push
-       (make-instance 'window-manager-delete-event
-                      :sheet sheet)
-       mcclim-fifo
-       nil))))
+      (make-instance 'window-manager-delete-event
+                     :sheet sheet))))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:window-close-event))
+(defmethod mez-event->mcclim-event ((event mos:window-close-event))
   ;;; TODO - what needs to happen here anything?
   )
 
@@ -251,7 +247,7 @@
 ;;; Resize events
 ;;;======================================================================
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:resize-request-event))
+(defmethod mez-event->mcclim-event ((event mos:resize-request-event))
   (let* ((mez-window (mos:window event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
@@ -267,27 +263,21 @@
                (width (- fwidth dw))
                (height(- fheight dh)))
           (mos:resize-frame mez-frame surface)
-          (mos:resize-window
-           mez-window surface
-           :origin (mos:resize-origin event))
+          (mos:resize-window mez-window surface :origin (mos:resize-origin event))
 
           (setf (slot-value mez-mirror 'mez-pixels) pixels
                 (slot-value mez-mirror 'fwidth) fwidth
                 (slot-value mez-mirror 'fheight) fheight
                 (slot-value mez-mirror 'width) width
                 (slot-value mez-mirror 'height) height)
-          (mos:fifo-push
-           (make-instance 'window-configuration-event
-                          :sheet sheet
-                          :region nil
-                          :width width
-                          :height height
-                          :x (mos:window-x mez-window)
-                          :y (mos:window-y mez-window))
-           mcclim-fifo
-           nil)
-          )))))
+          (make-instance 'window-configuration-event
+                         :sheet sheet
+                         :region nil
+                         :width width
+                         :height height
+                         :x (mos:window-x mez-window)
+                         :y (mos:window-y mez-window)))))))
 
-(defmethod mez-event->mcclim-event (mcclim-fifo (event mos:resize-event))
+(defmethod mez-event->mcclim-event ((event mos:resize-event))
   ;;; TODO - what needs to happen here anything?
 )

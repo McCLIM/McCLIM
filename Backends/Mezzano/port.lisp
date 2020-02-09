@@ -33,7 +33,7 @@
 ;;
 
 (defclass mezzano-port (render-port-mixin
-                        standard-event-port-mixin
+                        ; standard-event-port-mixin
                         standard-port)
   ((pointer            :reader   port-pointer)
    (window             :accessor mezzano-port-window)
@@ -95,14 +95,17 @@
                  (process-next-event port))))))
      :name "McCLIM Events")))
 
-(defmethod initialize-instance :after ((port mezzano-port) &rest args)
+(defmethod initialize-instance :after ((port mezzano-port) &rest args &key host display-id screen-id protocol)
   (declare (ignore args))
+  ;; TODO why are these initargs passed?
+  (declare (ignore host display-id screen-id protocol))
   (setf *port* port
         (slot-value port 'pointer) (make-instance 'mezzano-pointer :port port)
         (mezzano-port-window port) (mos:current-framebuffer))
   (push (apply #'make-instance 'mezzano-frame-manager
                :port port
-               (cdr (port-server-path port)))
+               ; TODO (cdr (port-server-path port))
+	       '())
 	(slot-value port 'frame-managers))
   (make-graft port)
   (clim-extensions:port-all-font-families port)
@@ -163,8 +166,7 @@
 
 (defmethod realize-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
   (%realize-mirror port sheet)
-  (port-lookup-mirror port sheet)
-  )
+  (port-lookup-mirror port sheet))
 
 (defmethod realize-mirror ((port mezzano-port) (pixmap pixmap))
   )
@@ -172,8 +174,7 @@
 (defmethod %realize-mirror ((port mezzano-port) (sheet basic-sheet))
   (debug-format "%realize-mirror ((port mezzano-port) (sheet basic-sheet))")
   (debug-format "    ~S ~S" port sheet)
-  (break)
-  )
+  (break))
 
 (defmethod %realize-mirror ((port mezzano-port) (sheet top-level-sheet-pane))
   (let* ((q (compose-space sheet))
@@ -194,10 +195,9 @@
 
 (defmethod make-medium ((port mezzano-port) sheet)
   (make-instance 'mezzano-medium
-		 ;; :port port
-		 ;; :graft (find-graft :port port)
-		 :sheet sheet))
-
+                 ;; :port port
+                 ;; :graft (find-graft :port port)
+                 :sheet sheet))
 
 (defmethod make-graft ((port mezzano-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'mezzano-graft
@@ -231,10 +231,9 @@
 
 ;; return :timeout on timeout
 ;;
-(defmethod get-next-event ((port mezzano-port) &key wait-function (timeout nil))
+(defmethod process-next-event ((port mezzano-port) &key wait-function (timeout nil))
   (declare (ignore wait-function))
-  (let ((mez-fifo (mezzano-mez-fifo port))
-        (mcclim-fifo (mezzano-mcclim-fifo port)))
+  (let ((mez-fifo (mezzano-mez-fifo port)))
     (if (null timeout)
         ;; check for a mcclim event - if one is available return
         ;; it. If none available wait for a mezzano event, which may
@@ -250,17 +249,18 @@
         ;; event. It works accidently because the only mcclim event it
         ;; ignores is a keyboard-event which only occurs singlely in
         ;; the mcclim-fifo.
-        (loop
-           (multiple-value-bind (event validp)
-               (mos:fifo-pop mcclim-fifo nil)
-             (when validp
+        (loop (multiple-value-bind (event validp)
+		  (mos:fifo-pop mez-fifo t)
+		(when validp
                ;; ignore keyboard events if there's no event sheet to
                ;; handle them
-               (unless (and (typep event 'keyboard-event)
-                            (null (event-sheet event)))
-                 (return event))))
-           (mez-event->mcclim-event
-            mcclim-fifo (mos:fifo-pop mez-fifo t)))
+		  (unless (and (typep event 'keyboard-event)
+                               (null (event-sheet event)))
+		    (alexandria:when-let ((event (mez-event->mcclim-event event)))
+		      (when (typep event 'pointer-event)
+			(setf (port-pointer-sheet port) (event-sheet event)))
+                      (distribute-event port event)
+		      (return))))))
         (mos:panic "timeout not supported")
         ;; (loop
         ;;    (multiple-value-bind (event validp)
@@ -308,7 +308,7 @@
     (break))
   )
 
-(defmethod mcclim-render-internals::%set-image-region (mirror region)
+#+no (defmethod mcclim-render-internals::%set-image-region (mirror region)
   (debug-format "mcclim-render-internals::%set-image-region (mirror region)")
   (debug-format "    ~S ~S" mirror region))
 

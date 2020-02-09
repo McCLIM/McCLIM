@@ -44,13 +44,13 @@
                 #:coordinate=
                 #:get-transformation
                 ;;
-                #:invoke-with-special-choices
+                ; #:invoke-with-special-choices
                 #:medium-miter-limit
                 ;; classes:
                 #:mirrored-pixmap
                 #:window-destroy-event
-                #:pointer-ungrab-event
-		#:pointer-motion-hint-event
+                ; #:pointer-ungrab-event
+		; #:pointer-motion-hint-event
                 #:device-font-text-style
                 ;;
 		#:make-medium
@@ -62,13 +62,12 @@
 		  #:image-mirror-image
 		  #:image-sheet-mixin
 		  #:image-pixmap-mixin
-                  #:image-pixels
                   #:image-pixmap-mixin
                   #:image-mirror-mixin
                   #:opticl-rgb-image-pixels
 		  )
-  (:import-from :clim-standard
-                #:standard-event-port-mixin
+  (:import-from :clim-internals
+                ; #:standard-event-port-mixin
 		#:standard-port
 		)
   )
