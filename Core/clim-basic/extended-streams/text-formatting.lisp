@@ -20,7 +20,7 @@
 
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))
-   (margins :accessor stream-text-margins :type margin-spec))
+   (margins :accessor stream-text-margins :writer (setf %text-margins) :type margin-spec))
   (:default-initargs :text-margins '(:left   (:relative 0)
                                      :top    (:relative 0)
                                      :right  (:relative 0)
@@ -31,7 +31,8 @@
   (let ((right-margin (if text-margin
                           `(:absolute ,text-margin)
                           `(:relative 0))))
-    (setf (slot-value instance 'margins)
+    ;; Using slot-value 'margins here sets the %page-region slot instead
+    (setf (%text-margins instance)
           (normalize-margin-spec text-margins `(:left   (:relative 0)
                                                 :top    (:relative 0)
                                                 :right  ,right-margin
@@ -41,7 +42,7 @@
   (:documentation "Returns two values: x and y initial position for a cursor on page.")
   (:method ((stream standard-page-layout))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
-        (stream-page-region stream)
+        (progn (stream-page-region stream) (stream-page-region stream))
       (declare (ignore max-x max-y))
       (values min-x min-y))))
 
@@ -49,7 +50,7 @@
   (:documentation "Returns two values: x and y final position for a cursor on page.")
   (:method ((stream standard-page-layout))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
-        (stream-page-region stream)
+        (progn (stream-page-region stream) (stream-page-region stream))
       (declare (ignore min-x min-y))
       (values max-x max-y))))
 
@@ -63,14 +64,14 @@
   (with-bounding-rectangle* (x1 y1 x2 y2) sheet-region
     (macrolet ((thunk (margin edge sign orientation)
                  `(if (eql (first ,margin) :absolute)
-                      (parse-space stream (second ,margin) ,orientation)
-                      (,sign ,edge (parse-space stream (second ,margin) ,orientation)))))
+		      (parse-space stream (second ,margin) ,orientation)
+		      (,sign ,edge (parse-space stream (second ,margin) ,orientation)))))
       (destructuring-bind (&key left top right bottom) (stream-text-margins stream)
         (setf (%page-region stream)
-              (make-rectangle* (thunk left   x1 + :horizontal)
-                               (thunk top    y1 + :vertical)
-                               (thunk right  x2 - :horizontal)
-                               (thunk bottom y2 - :vertical)))))))
+	      (make-rectangle* (thunk left   x1 + :horizontal)
+			       (thunk top    y1 + :vertical)
+			       (thunk right  x2 - :horizontal)
+			       (thunk bottom y2 - :vertical)))))))
 
 (defmethod (setf sheet-region) :before (sheet-region (stream standard-page-layout))
   (unless (region-equal sheet-region (sheet-region stream))
@@ -82,7 +83,8 @@
   (setf new-margins (normalize-margin-spec new-margins old-margins))
   (unless (equal new-margins old-margins)
     (call-next-method new-margins stream)
-    (slot-unbound (class-of stream) stream '%page-region)))
+    (slot-unbound (class-of stream) stream '%page-region))
+  new-margins)
 
 (defgeneric invoke-with-temporary-page (stream continuation &key margins move-cursor)
   (:method ((stream standard-page-layout) continuation &key margins (move-cursor t))

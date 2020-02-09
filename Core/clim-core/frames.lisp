@@ -117,7 +117,8 @@ input focus. This is a McCLIM extension."))
                        :accessor frame-pointer-documentation-output)
 
    (top-level-sheet :initform nil
-                    :reader frame-top-level-sheet)
+                    :reader frame-top-level-sheet
+		    :writer (setf %top-level-sheet))
    (menu-bar :initarg :menu-bar
              :initform nil)
    (menu-bar-pane :initform nil
@@ -646,7 +647,7 @@ documentation produced by presentations.")
   (setf (graft frame) (find-graft :port (port frame)))
   (let ((*application-frame* frame)
         (event-queue (frame-event-queue frame)))
-    (setf (slot-value frame 'top-level-sheet)
+    (setf (%top-level-sheet frame) ; (slot-value frame 'top-level-sheet)
           (find-pane-for-frame fm frame))
     (generate-panes fm frame)
     (setf (slot-value frame 'state) :disabled)
