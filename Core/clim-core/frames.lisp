@@ -1514,10 +1514,13 @@ have a `pointer-documentation-pane' as pointer documentation,
              (draw-rectangle* stream highlite-x1 highlite-y1 highlite-x2 highlite-y2
                               :filled nil :line-dashes #(4 4))))
           (:unhighlight
-           (with-double-buffering
-               ((stream highlite-x1 highlite-y1 (1+ highlite-x2) (1+ highlite-y2))
-                (buffer-rectangle))
-             (stream-replay stream buffer-rectangle))))))))
+           (with-output-recording-options (stream :record nil)
+             (draw-rectangle* stream
+                              highlite-x1 highlite-y1
+                              (1+ highlite-x2) (1+ highlite-y2)
+                              :ink (medium-background (sheet-medium stream))))
+           (stream-replay stream (make-rectangle* highlite-x1 highlite-y1
+                                                  (1+ highlite-x2) (1+ highlite-y2)))))))))
 
 (defmethod frame-drag-and-drop-highlighting
     ((frame standard-application-frame) to-presentation stream state)
