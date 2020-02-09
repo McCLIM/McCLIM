@@ -1,8 +1,6 @@
-
 (defsystem #:mcclim-mezzano
     :depends-on (#:mcclim-backend-common
-                 #:mcclim-render
-                 #:mcclim-render/backend)
+                 #:mcclim-render)
     :serial t
     :components
     ((:file "package")

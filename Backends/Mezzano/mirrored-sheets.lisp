@@ -31,5 +31,5 @@
   ;; set mez-pixels mez-window mez-frame to NIL - do I need handle to surface?
   )
 
-(defclass mezzano-pixmap (image-pixmap-mixin permanent-medium-sheet-output-mixin basic-pane)
+(defclass mezzano-pixmap (image-pixmap-mixin permanent-medium-sheet-output-mixin)
   ())
