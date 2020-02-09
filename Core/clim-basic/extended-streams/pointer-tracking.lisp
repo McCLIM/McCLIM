@@ -88,15 +88,18 @@
 
 (defmethod initialize-instance :after
     ((instance tracking-pointer-state)
-     &key
-       (presentation nil p-p)
-       (presentation-button-press nil pbp-p)
-       (presentation-button-release nil pbr-p)
-       (highlight nil h-p))
+     &key pointer
+          (presentation nil p-p)
+          (presentation-button-press nil pbp-p)
+          (presentation-button-release nil pbr-p)
+          (highlight nil h-p))
   (declare (ignore presentation
                    presentation-button-press
                    presentation-button-release
                    highlight))
+  (unless pointer
+    (setf (slot-value instance 'tracked-pointer)
+          (port-pointer (port (tracked-sheet instance)))))
   (unless h-p
     (setf (slot-value instance 'highlight)
           (or p-p pbp-p pbr-p))))
@@ -143,28 +146,45 @@
   (frob pointer-button-press-event   presentation-button-press-handler   button-press-handler)
   (frob pointer-button-release-event presentation-button-release-handler button-release-handler))
 
-(defun invoke-tracking-pointer (state
-                                &aux
-                                  (sheet (tracked-sheet state))
-                                  (multiple-window (multiple-window state))
-                                  (transformp (transformp state)))
-  (flet ((pointer-event-position (event)
-           (let ((sheet (event-sheet event)))
-             (get-pointer-position (sheet event)
-               (if (not transformp)
-                   (values x y)
-                   (with-sheet-medium (medium sheet)
-                     (transform-position (medium-transformation medium) x y)))))))
-    (loop
-       for event = (event-read sheet)
-       do (if (and (not multiple-window)
-                   (not (eql sheet (event-sheet event))))
-              ;; Event is not intercepted.
-              (handle-event (event-sheet event) event)
-              (multiple-value-bind (x y)
-                  (when (typep event 'pointer-event)
-                    (pointer-event-position event))
-                (track-event state event x y))))))
+(defun invoke-tracking-pointer (state)
+  (let* ((tracked-sheet (tracked-sheet state))
+         (pointer (tracked-pointer state))
+         (multiple-window (multiple-window state))
+         (transformp (transformp state)))
+    (flet ((track-pointer-event (event)
+             (multiple-value-call #'track-event state event
+               (let ((sheet (event-sheet event)))
+                 (get-pointer-position (sheet event)
+                   (if (not transformp)
+                       (values x y)
+                       (with-sheet-medium (medium sheet)
+                         (transform-position (medium-transformation medium) x y))))))))
+      ;; Synthesize a pointer motion event for the current pointer
+      ;; position so that appropriate handlers are called even if no
+      ;; event immediately follows the INVOKE-TRACKING-POINTER call.
+      ;; This ensures, for example, that feedback and/or pointer
+      ;; documentation are initialized right away in the context of
+      ;; presentation drag and drop.
+      ;;
+      ;; However, to prevent things like drag and drop feedback being
+      ;; drawn to the wrong sheet, discard the synthesized event if
+      ;; its sheet is not a tracked sheet. This can happen if
+      ;; MULTIPLE-WINDOW is false, INVOKE-TRACKING-POINTER is invoked
+      ;; via, say, a keyboard gesture or programmatically and the
+      ;; pointer is not over TRACKED-SHEET.
+      (let ((event (synthesize-pointer-motion-event pointer)))
+        (when (or multiple-window
+                  (eql tracked-sheet (event-sheet event)))
+          (track-pointer-event event)))
+      (loop for event = (event-read tracked-sheet)
+            do (cond ((and (not multiple-window)
+                           (not (eql tracked-sheet (event-sheet event))))
+                      ;; Event is not intercepted.
+                      (handle-event (event-sheet event) event))
+                     ((typep event 'pointer-event)
+                      (track-pointer-event event))
+                     (t
+                      (track-event state event nil nil)))))))
 
 (defmacro tracking-pointer
     ((sheet &rest args &key pointer multiple-window transformp context-type highlight)
