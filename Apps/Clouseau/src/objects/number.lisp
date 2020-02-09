@@ -170,7 +170,17 @@
                                  (when rest (write-string " × " stream)))))
                  (if (find 1 factors :test #'/= :key #'cdr)
                      (call-with-superscript #'print-factors stream)
-                     (print-factors)))))))))))
+                     (print-factors)))))))))
+
+    ;; Interpretation as RGB color.
+    (when-let ((color (number-color object)))
+      (formatting-row (stream)
+        (with-style (stream :slot-like)
+          (formatting-cell (stream) (write-string "Color" stream))
+          (formatting-cell (stream) (declare (ignore stream))))
+        (formatting-cell (stream)
+          (with-room-for-graphics (stream)
+            (draw-design-sample stream color)))))))
 
 (defmethod inspect-object-using-state ((object ratio)
                                        (state  inspected-object)

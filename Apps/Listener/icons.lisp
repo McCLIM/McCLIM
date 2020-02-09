@@ -40,7 +40,7 @@
                             pathname
                             :defaults *icon-path*)
                            *icon-path*)
-                         :format :xpm :port nil))))
+                         :format :xpm))))
 
 (defvar *icon-cache* (make-hash-table  :test #'equal))
 

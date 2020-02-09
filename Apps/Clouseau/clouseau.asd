@@ -48,6 +48,17 @@
                               ;; Inspector state, pane mixin and pane
                               (:file       "state")
                               (:file       "pane")))
+                ;; Generic and implementation-specific disassembly
+                ;; display
+                (:module     "disassembly"
+                 :pathname   "src/disassembly"
+                 :depends-on ("base")
+                 :serial     t
+                 :components ((:file       "presentations")
+                              (:file       "generic"
+                               :if-feature (:not :sbcl))
+                              (:file       "sbcl"
+                               :if-feature :sbcl)))
                 ;; Display functions and commands
                 (:module     "objects"
                  :pathname   "src/objects"
@@ -68,8 +79,13 @@
                               (:file       "function")
                               (:file       "class")
                               (:file       "extended-sequence")
-                              ;; Generic disassembly display
-                              (:file       "disassembly")))
+                              (:file       "stream")
+                              ;; CLIM-specific objects
+                              (:module     "clim"
+                               :serial     t
+                               :components ((:file       "color")
+                                            (:file       "sheet")
+                                            (:file       "command-table")))))
                 ;; History of inspected objects
                 (:module     "navigation"
                  :pathname   "src/navigation"
@@ -80,7 +96,12 @@
                 (:module     "application"
                  :pathname   "src"
                  :depends-on ("base" "navigation")
-                 :components ((:file       "application"))))
+                 :components ((:file       "application")))
+                ;; Compatibility with old inspector implementation
+                (:module     "compatibility"
+                 :pathname   "src"
+                 :depends-on ("application")
+                 :components ((:file       "compatibility"))))
 
   :in-order-to ((test-op (test-op "clouseau/test"))))
 

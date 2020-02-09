@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -86,7 +86,22 @@
    #:object-state-class
    #:make-object-state
 
-   #:inspected-object)
+   #:inspected-object
+   #:inspected-integer
+   #:inspected-list
+   #:inspected-proper-list
+   #:inspected-plist
+   #:inspected-alist
+   #:inspected-improper-list
+   #:inspected-array
+   #:inspected-vector
+   #:inspected-instance
+   #:inspected-hash-table
+   #:inspected-function
+   #:inspected-class
+   #:inspected-method
+   #:inspected-generic-function
+   #:inspected-sequence)
 
   ;; Object inspection protocol
   (:export

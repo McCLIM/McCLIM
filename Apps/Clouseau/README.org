@@ -11,6 +11,10 @@
   it?]]) for Common Lisp objects. It can be used as a standalone
   application or embedded into CLIM applications.
 
+  Compared to the [[https://common-lisp.net/project/slime/][SLIME]] inspector, it has the following advantages:
+
+  +
+
 * Quick Start
 
   Start your Lisp system (the ~clouseau~ system should be portable,
@@ -37,7 +41,29 @@
   A window containing the following should open (in the screenshot,
   the array elements have been expanded by left-clicking them):
 
-  [[file:../../Documentation/Manual/Texinfo/figures/clouseau-startup-screenshot.png]]
+  #+BEGIN_SRC lisp :exports results :results output file
+    (mcclim-raster-image::with-raster-image-port (port :rgb-image 1000 1000)
+      (let* ((tls (mcclim-raster-image::make-raster-top-level-sheet port :png))
+             (ins (make-instance 'clouseau::inspector-pane
+                                 :port port
+                                 :root (find-class 'class))))
+        (clim:sheet-adopt-child tls ins)
+        (clim:realize-mirror port tls)
+        (setf (clim:sheet-region tls) (make-rectangle* 0 0 1000 1000))
+        (clim:with-output-recording-options (ins :record nil :draw nil)
+          (clouseau::present-inspected-object-graph (clouseau::state ins) ins)
+          (setf (clouseau::slot-style (clouseau::state (clouseau::root-place (clouseau::state ins)))) :by-class))
+        (clim:with-output-recording-options (ins :record nil :draw t)
+          (setf (clim:stream-cursor-position ins) (values 0 0))
+          (clouseau::present-inspected-object-graph (clouseau::state ins) ins))
+        (climi::write-bitmap-file
+         (mcclim-raster-image::image-mirror-image (clim:sheet-mirror tls))
+         "screenshot.png" :format :png)))
+    (princ "screenshot.png")
+  #+END_SRC
+
+  #+RESULTS:
+  [[file:images/screenshot.png]]
 
   + Left-click an object to expand or collapse it.
 

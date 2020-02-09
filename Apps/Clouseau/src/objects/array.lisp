@@ -188,6 +188,14 @@
   (with-output-as-presentation (stream state 'sequence-range)
     (print-sequence-header stream (array-total-size object) (start state) (end state)))) ; TODO if inspect-sequence could take length from state, we wouldn't need this
 
+#+sbcl
+(defmethod inspect-object-using-state ((object string)
+                                       (state  inspected-vector)
+                                       (style  (eql :badges))
+                                       (stream t))
+  (when (sb-unicode:normalized-p object :nfd)
+    (badge stream "nfd")))
+
 ;; TODO displacement
 (defmethod inspect-object-using-state ((object vector)
                                        (state  inspected-vector)
@@ -203,7 +211,6 @@
         (when fill-pointer
           (format-place-row stream object 'vector-fill-pointer-place nil
                             :label "Fill pointer"))))
-
     (with-section (stream) "Elements"
       (with-placeholder-if-empty (stream)
         ((zerop length)
@@ -263,9 +270,9 @@
             (destructuring-bind (row-count column-count)
                 (array-dimensions object)
               (formatting-table (stream)
-                (loop :for row :from 0 :below row-count
+                (loop :for row :from 0 :below (min 20 row-count)
                       :do (formatting-row (stream)
-                            (loop :for column :from 0 :below column-count
+                            (loop :for column :from 0 :below (min 20 column-count)
                                   :for i = (array-row-major-index object row column)
                                   :do (formatting-cell (stream)
                                         (formatting-place

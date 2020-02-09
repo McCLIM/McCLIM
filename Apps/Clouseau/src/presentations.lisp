@@ -132,6 +132,8 @@
          (draw-arc-arrow (stream from to ink)
            (multiple-value-bind (x1 y1) (bounding-rectangle-position from)
              (multiple-value-bind (x2 y2) (bounding-rectangle-position to)
+               (when (and (= x1 x2) (= y1 y2))
+                 (break "~A and ~A have identical positions" from to))
                (let ((design (mcclim-bezier:make-bezier-curve*
                               (list x1              y1
                                     (lerp .3 x1 x2) y1

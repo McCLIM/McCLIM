@@ -17,6 +17,11 @@
 
 (cl:in-package #:clouseau)
 
+(defun print-character (stream character)
+  (format stream "~C (~:*~@C)" character))
+; (printing)
+; (print-character t #\→)
+
 ;;; Object inspection methods
 
 (defmethod inspect-object-using-state ((object character)
@@ -41,7 +46,6 @@
     (attribute alphanumericp  "alphanumeric")
     (attribute upper-case-p   "upper-case")
     (attribute lower-case-p   "lower-case")))
-
 (defmethod inspect-object-using-state ((object character)
                                        (state  inspected-object)
                                        (style  (eql :expanded-body))

@@ -83,3 +83,30 @@ avoid being picked up for vagrancy."
   (setf (gethash 'foo ht) 42
         (gethash 'bar ht) 666)
   (inspect ht))
+
+;;;
+
+(defclass foo ()
+  ((%slot :type list :initarg :slot)))
+
+(let ((lists (list '()
+                   '(1)
+
+                   '(:foo . 1)
+                   '(1 . 2)
+                   '(1 2)
+                   '(:foo 1)
+                   '((:foo . 1))
+
+                   '(1 2 . 3)
+                   '(1 2 3)
+
+                   '(1 2 3 . 4)
+                   '(1 2 3 4)
+                   '(:foo 1 :bar 2)
+                   '((:foo . 1) (:bar . 2)))))
+  (clouseau:inspect
+   (apply #'vector (append lists
+                           (map 'list (lambda (list)
+                                        (make-instance 'foo :slot list))
+                                lists)))))

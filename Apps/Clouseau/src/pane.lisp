@@ -42,43 +42,52 @@
 ;;; Mixin for managing inspector presentations on a pane
 
 (defclass inspector-pane-mixin ()
-  ((%state :reader   state
-           :writer   (setf %state))))
+  ((%state          :reader   state
+                    :writer   (setf %state)
+                    :initform nil)
+   (%change-handler :accessor %change-handler
+                    :initform nil)))
 
 (defmethod shared-initialize :before ((instance   inspector-pane-mixin)
                                       (slot-names t)
-                                      &key
-                                      (state nil state-supplied-p)
-                                      (root  nil root-supplied-p))
+                                      &key (state nil state-supplied-p)
+                                           (root  nil root-supplied-p))
   (declare (ignore state root))
   (when (and state-supplied-p root-supplied-p)
     (error "~@<The initargs ~S and ~S are mutually exclusive.~@:>"
            :state :root)))
 
-(defmethod initialize-instance :after ((instance inspector-pane-mixin)
-                                        &key
-                                        (state nil state-supplied-p)
-                                        (root  nil root-supplied-p))
-  (declare (ignore state root))
-  (unless (or state-supplied-p root-supplied-p)
-    (setf (%state instance) (make-instance 'inspector-state))))
-
 (defmethod shared-initialize :after ((instance   inspector-pane-mixin)
                                      (slot-names t)
-                                     &key
-                                     (state nil state-supplied-p)
-                                     (root  nil root-supplied-p))
+                                     &key (state nil state-supplied-p)
+                                          (root  nil root-supplied-p))
+  (unless (%change-handler instance)
+    (setf (%change-handler instance)
+          (lambda (old-root-place new-root-place)
+            (declare (ignore old-root-place new-root-place))
+            (queue-redisplay instance))))
   (cond (state-supplied-p
          (setf (%state instance) state))
         (root-supplied-p
          (setf (%state instance) (make-instance 'inspector-state
                                                 :root-object root)))))
 
-(defmethod (setf %state) :after ((new-value t) (object inspector-pane-mixin))
-  (push (lambda (old-root-place new-root-place)
-          (declare (ignore old-root-place new-root-place))
-          (queue-redisplay object))
-        (change-hook new-value)))
+(defmethod initialize-instance :after ((instance inspector-pane-mixin)
+                                        &key (state nil state-supplied-p)
+                                             (root  nil root-supplied-p))
+  (declare (ignore state root))
+  (unless (or state-supplied-p root-supplied-p)
+    (setf (%state instance) (make-instance 'inspector-state))))
+
+(defmethod (setf %state) :around ((new-value t) (object inspector-pane-mixin))
+  (let ((old-value (state object)))
+    (prog1
+        (call-next-method)
+      (unless (eq new-value old-value)
+        (let ((handler (%change-handler object)))
+          (when old-value
+            (removef (change-hook old-value) handler))
+          (push handler (change-hook new-value)))))))
 
 (defmethod root-place ((inspector-state inspector-pane-mixin)
                        &key run-hook-p)
@@ -126,7 +135,9 @@
 ;;; Commands
 
 (define-command-table inspector-pane-command-table
-  :inherit-from (inspector-command-table))
+  :inherit-from (inspector-command-table)
+  :inherit-menu t
+  :menu         (("Inspect" :menu inspector-command-table)))
 
 (defun inspector-state ()
   (map-over-sheets (lambda (sheet)

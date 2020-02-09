@@ -217,24 +217,68 @@
   (call-next-method)
 
   ;; Symbols
-  (with-section (stream) "Symbols"
-    (with-drawing-options (stream :text-size :smaller)
-      (formatting-table (stream)
-        (formatting-header (stream) "Symbol" "Value" "Function" "Type")
+  (let ((cell (list nil nil nil nil nil)))
+    (with-section (stream)
+        (setf (third cell)
+              (updating-output (stream :unique-id :symbol-count)
+                (format stream "Symbols (~:D total, ~:D shown)" (fourth cell) (fifth cell))))
+      (with-preserved-cursor-x (stream) ; TODO should not be needed
+        ;; (write-string "Sort by" stream)
+        (with-preserved-cursor-y (stream)
+          (with-output-as-gadget (stream)
+            (make-pane 'toggle-button :background +white+ :label "External")))
+        (with-preserved-cursor-y (stream)
+          (with-output-as-gadget (stream)
+            (make-pane 'toggle-button :background +white+ :label "Documented")))
+        (with-preserved-cursor-y (stream)
+          (with-output-as-gadget (stream)
+            (make-pane 'toggle-button :background +white+ :label "Function")))
+        (with-preserved-cursor-y (stream)
+          (with-output-as-gadget (stream)
+            (make-pane 'toggle-button :background +white+ :label "Value")))
+        (write-string "Filter " stream)
+        (with-output-as-gadget (stream)
+          (make-pane 'text-field
+                     :width 200
+                     :background +beige+
+                     :value-changed-callback (lambda (gadget value)
+                                               (declare (ignore gadget))
+                                               (let ((string (string-upcase value)))
+                                                 (setf (symbol-filter state)
+                                                       (lambda (symbol)
+                                                         (search string (symbol-name symbol)))))
+                                               (when (first cell)
+                                                 (let ((*parent-place* (first cell)))
+                                                   (redisplay (second cell) stream)))
+                                               (when (third cell)
+                                                 (redisplay (third cell) stream))))))
 
-        (flet ((symbol-row (symbol)
-                 (formatting-row (stream)
-                   (formatting-place (object 'pseudo-place symbol nil inspect* :place-var place)
-                     (formatting-cell (stream) (inspect* stream))
-                     ;; Value slot
-                     (formatting-place (symbol 'symbol-value-place nil present inspect)
-                       (formatting-cell (stream) (present stream) (inspect stream)))
-                     ;; Function slot
-                     (formatting-place (symbol 'symbol-function-place nil present inspect)
-                       (formatting-cell (stream) (present stream) (inspect stream)))
-                     ;; Type slot
-                     (formatting-place (symbol 'symbol-type-place nil present inspect)
-                       (formatting-cell (stream) (present stream) (inspect stream)))))))
-          (map nil #'symbol-row (package-symbols object :filter (symbol-filter state))))))))
+      (setf (first cell) *parent-place*
+            (second cell)
+            (updating-output (stream :unique-id :symbol-table)
+
+              (with-drawing-options (stream :text-size :smaller)
+                (formatting-table (stream)
+                  (formatting-header (stream) "Symbol" "Value" "Function" "Type")
+
+                  ;; TODO should be able to use updating-output here
+                  (setf (fifth cell) 0)
+                  (flet ((symbol-row (symbol)
+                           (incf (fifth cell))
+                           (formatting-row (stream)
+                             (formatting-place (object 'pseudo-place symbol nil inspect* :place-var place)
+                               (formatting-cell (stream) (inspect* stream))
+
+                               (let ((*parent-place* place)) ; TODO this is not good
+                                 ;; Value slot
+                                 (formatting-place (symbol 'symbol-value-place nil present inspect)
+                                   (formatting-cell (stream) (present stream) (inspect stream)))
+                                 ;; Function slot
+                                 (formatting-place (symbol 'symbol-function-place nil present inspect)
+                                   (formatting-cell (stream) (present stream) (inspect stream)))
+                                 ;; Type slot
+                                 (formatting-place (symbol 'symbol-type-place nil present inspect)
+                                   (formatting-cell (stream) (present stream) (inspect stream))))))))
+                    (map nil #'symbol-row (package-symbols object :filter (symbol-filter state)))))))))))
 
 ;; TODO command: trace all symbols

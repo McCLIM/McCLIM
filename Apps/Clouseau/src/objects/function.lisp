@@ -419,3 +419,48 @@
                                      (object object))))
     (object)
   (list object))
+
+;;; Calling
+
+;; TODO could also accept expressions. would not evaluate those
+;; TODO should use inspected object -> expression presentation translator
+(defun eval-form-or-inspected-object (thing)
+  (typecase thing
+    (inspected-object (object thing))
+    (t                (eval thing))))
+
+(define-command (com-call-function :command-table inspector-command-table
+                                   :name          t)
+    ((object 'inspected-function))
+  (with-command-error-handling ("Could not call function")
+      (let ((function (object object)))
+        (multiple-value-bind (lambda-list lambda-list-p)
+            (function-lambda-list function)
+          (unless lambda-list-p
+            (error "Could not obtain lambda-list"))
+          (let* ((required  (parse-ordinary-lambda-list lambda-list))
+                 (arguments (loop :for parameter :in required
+                                  :for prompt    =   (string-downcase parameter)
+                                  :for argument  =   (accept '(or ((form) :subform-read t)
+                                                                  inspected-object)
+                                                             :prompt prompt)
+                                  :collect (eval-form-or-inspected-object
+                                            argument)))
+                 (values      (multiple-value-list (apply function arguments))))
+            (loop :for value :in values
+                  :do (present value 'expression)))))))
+
+(define-presentation-to-command-translator inspected-function->com-call-function
+    (inspected-function com-call-function inspector-command-table
+     :tester ((object)
+              (and (safe-valuep (place object))
+                   (nth-value 1 (function-lambda-list (object object)))))
+     :priority -1
+     :documentation "Call function"
+     :pointer-documentation ((object stream)
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "Call function ~A"
+                                         (object object))))))
+    (object)
+  (list object))

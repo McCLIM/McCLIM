@@ -75,7 +75,23 @@
 
 (define-command-table inspector-command-table)
 
+(define-command (com-refresh :command-table inspector-command-table
+                             :name          t
+                             :keystroke     :f5)
+    (#+no (place place :gesture (:select :priority -1)
+                  :default (root-place (inspector-state))))
+  ; (note-changed place)
+  )
+
 ;;; Commands on all inspected objects
+
+(define-presentation-translator inspected-object->expression
+    (inspected-object expression inspector-command-table
+     :tester ((object) (safe-valuep object)))
+    (object)
+  (object object))
+
+;;; Expanding
 
 (defun toggle-expand-documentation (which object stream)
   (format stream "~A " which)
@@ -335,3 +351,51 @@
                              (format stream "Decrement ~A by 1" object)))
     (object)
   (list object))
+
+(define-command (com-adjust-number :command-table inspector-command-table
+                                   :name          "Adjust Number")
+    ((place 'place))
+  (with-command-error-handling ("Could not adjust value of ~A" place)
+      (let ((stream    *standard-output*)
+            (old-value (value place))
+            old-x old-y)
+        (block nil
+          (tracking-pointer (stream :transformp t)
+            (:pointer-button-press (x y)
+              (setf old-x x old-y y))
+            (:pointer-motion (x y)
+              (unless old-x
+                (setf old-x x old-y y))
+              (let ((delta-x (- x old-x))
+                    (delta-y (- y old-y)))
+                (flet ((new-scalar (old-value delta)
+                         (typecase old-value
+                           (integer (+ old-value (round delta)))
+                           (float   (+ old-value (float delta old-value)))
+                           (t       (+ old-value (round delta))))))
+                  (setf (value place)
+                        (typecase old-value
+                          (real    (new-scalar old-value delta-x))
+                          (complex (complex (new-scalar (realpart old-value) delta-x)
+                                            (new-scalar (imagpart old-value) (- delta-y))))))))
+              (note-changed place))
+            (:pointer-button-release ()
+              (when old-x
+                (return))))))))
+
+(define-gesture-name :adjust :pointer-button-press (:right :control))
+
+(define-presentation-to-command-translator place->com-adjust-number
+    (place com-adjust-number inspector-command-table
+     :gesture :select
+     :priority 1
+     :tester ((object)
+              (and (supportsp object 'setf)
+                   (safe-valuep object)
+                   (let ((value (value object)))
+                     (typep value 'number))))
+     :documentation "Adjust value by dragging the pointer"
+                                        ; :pointer-documentation
+     )
+    (object)
+    (list object))
