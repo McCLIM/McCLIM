@@ -150,7 +150,8 @@
   (let* ((tracked-sheet (tracked-sheet state))
          (pointer (tracked-pointer state))
          (multiple-window (multiple-window state))
-         (transformp (transformp state)))
+         (transformp (transformp state))
+         (modifier-state))
     (flet ((track-pointer-event (event)
              (multiple-value-call #'track-event state event
                (let ((sheet (event-sheet event)))
@@ -173,18 +174,33 @@
       ;; via, say, a keyboard gesture or programmatically and the
       ;; pointer is not over TRACKED-SHEET.
       (let ((event (synthesize-pointer-motion-event pointer)))
+        (setf modifier-state (event-modifier-state event))
         (when (or multiple-window
                   (eql tracked-sheet (event-sheet event)))
           (track-pointer-event event)))
       (loop for event = (event-read tracked-sheet)
-            do (cond ((and (not multiple-window)
-                           (not (eql tracked-sheet (event-sheet event))))
+            ;; We let HANDLE-EVENT take care of events that are not
+            ;; for TRACKED-SHEET (unless MULTIPLE-WINDOW is true). On
+            ;; the other hand, we pass events for TRACKED-SHEET (or
+            ;; all events if MULTIPLE-WINDOW is true) to TRACK-EVENT.
+            do (cond ((not (or multiple-window
+                               (eql tracked-sheet (event-sheet event))))
                       ;; Event is not intercepted.
                       (handle-event (event-sheet event) event))
                      ((typep event 'pointer-event)
                       (track-pointer-event event))
                      (t
-                      (track-event state event nil nil)))))))
+                      (track-event state event nil nil)))
+            ;; As a special exception, whenever a device event changes
+            ;; the modifier state, we synthesize an event, so that
+            ;; mouse-only and non-MULTIPLE-WINDOW handling can still
+            ;; react to changed keyboard modifiers.
+            when (typep event 'device-event)
+            do (let ((new-state (event-modifier-state event)))
+                 (when (not (eql modifier-state new-state))
+                   (track-pointer-event
+                    (synthesize-pointer-motion-event pointer)))
+                 (setf modifier-state new-state))))))
 
 (defmacro tracking-pointer
     ((sheet &rest args &key pointer multiple-window transformp context-type highlight)
