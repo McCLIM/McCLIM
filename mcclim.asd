@@ -100,6 +100,7 @@ interface management system."
                              (:file "presentations")
                              (:file "text-selection")
                              (:file "text-formatting")
+                             (:file "text-styles")
                              (:module "geometry"
                               :depends-on ("package")
                               :serial t
