@@ -20,11 +20,11 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage :calculator-demo
-  (:use :clim :clim-lisp)
-  (:export :calculator-app))
+(defpackage #:clim-demo.calculator
+  (:use #:clim #:clim-lisp)
+  (:export #:calculator-app))
 
-(in-package :calculator-demo)
+(in-package #:clim-demo.calculator)
 
 (defparameter *calculator-text-style*
   (make-text-style :sans-serif :roman :large))

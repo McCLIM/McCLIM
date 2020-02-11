@@ -1,8 +1,8 @@
-(defpackage :image-transform-demo
-  (:use :cl)
-  (:export :image-transform-demo))
+(defpackage #:clim-demo.image-transform-demo
+  (:use #:clim-lisp)
+  (:export #:image-transform-demo))
 
-(in-package :image-transform-demo)
+(in-package #:clim-demo.image-transform-demo)
 
 (clim:define-application-frame image-transform-demo ()
   ((image :initarg :image

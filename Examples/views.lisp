@@ -22,11 +22,11 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage :views-example
-            (:use :clim-lisp :clim)
+(defpackage #:clim-demo.views-example
+            (:use #:clim-lisp #:clim)
             (:export #:views-example))
 
-(in-package :views-example)
+(in-package #:clim-demo.views-example)
 
 ;;; part of application "business logic"
 (defclass person ()

@@ -16,11 +16,11 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage #:menutest
-  (:use :clim :clim-extensions :clim-lisp)
+(defpackage #:clim-demo.menutest
+  (:use #:clim #:clim-extensions #:clim-lisp)
   (:export #:menutest))
 
-(in-package #:menutest)
+(in-package #:clim-demo.menutest)
 
 (define-application-frame menutest ()
   ()

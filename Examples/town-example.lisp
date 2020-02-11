@@ -14,13 +14,11 @@
 
 ;;; define the package
 
-(in-package :cl-user)
-
-(defpackage :town-example
+(defpackage #:clim-demo.town-example
   (:use #:clim #:clim-lisp)
   (:export #:run #:town-example))
 
-(in-package :town-example)
+(in-package #:clim-demo.town-example)
 
 ;;; view class for graphical presentations
 

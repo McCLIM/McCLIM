@@ -29,11 +29,11 @@
 ;;; we :USE the CLIM-LISP package rather than the COMMON-LISP package.
 ;;; Notice also that we do not :USE the CLIM package.  Instead we use
 ;;; explicit package prefixes for all CLIM symbols.
-(defpackage #:output-record-example-1
+(defpackage #:clim-demo.output-record-example-1
   (:use #:clim-lisp)
   (:export #:output-record-example-1))
 
-(in-package #:output-record-example-1)
+(in-package #:clim-demo.output-record-example-1)
 
 ;;; This is the class that we are going to use for the output history
 ;;; of our pane.  It has a simple list of CHILDREN which are going to
