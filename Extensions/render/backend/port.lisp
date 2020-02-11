@@ -55,10 +55,6 @@
     (or (find-truetype-font port text-style)
         (invoke-with-truetype-path-restart #'find-font))))
 
-(defmethod text-style-mapping ((port render-port-mixin) (gs-text-style cons) &optional character-set)
-  (declare (ignore character-set))
-  (text-style-mapping port (apply #'make-text-style gs-text-style)))
-
 (defmethod clim-internals::text-style-size ((gs-text-style cons))
   (caddr gs-text-style))
 

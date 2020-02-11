@@ -100,13 +100,14 @@
   (make-instance 'null-medium :sheet sheet))
 
 (defmethod text-style-mapping
-    ((port null-port) text-style &optional character-set)
-  (declare (ignore text-style character-set))
+    ((port null-port) (text-style text-style) &optional character-set)
+  (declare (ignore port text-style character-set))
   nil)
 
-(defmethod (setf text-style-mapping)
-    (font-name (port null-port)
-    (text-style text-style) &optional character-set)
+(defmethod (setf text-style-mapping) (font-name
+                                      (port null-port)
+                                      (text-style text-style)
+                                      &optional character-set)
   (declare (ignore font-name text-style character-set))
   nil)
 

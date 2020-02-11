@@ -230,6 +230,11 @@
   ;; text-style like other methods. -- jd 2020-01-15
   text-style)
 
+(defmethod text-style-mapping ((port basic-port)
+                               text-style
+                               &optional character-set)
+  (text-style-mapping port (parse-text-style text-style) character-set))
+
 (defmethod text-style-mapping :around ((port basic-port)
                                        (text-style text-style)
                                        &optional character-set)
