@@ -113,4 +113,4 @@ McCLIM [homepage](https://common-lisp.net/project/mcclim/).
  - [Homepage](https://common-lisp.net/project/mcclim/)
  - [Mailing List](https://mailman.common-lisp.net/listinfo/mcclim-devel)
  - [IRC](http://webchat.freenode.net/?channels=clim)
- - [Wiki](https://github.com/robert-strandh/McCLIM/wiki)
+ - [Wiki](https://github.com/McCLIM/McCLIM/wiki)
