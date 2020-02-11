@@ -41,7 +41,7 @@
     (when fonts
       (xlib:open-font display (first fonts)))))
 
-(defmethod text-style-mapping ((port clx-port) text-style &optional character-set
+(defmethod text-style-mapping ((port clx-port) (text-style text-style) &optional character-set
                                &aux (text-style (climb:parse-text-style* text-style)))
   (declare (ignore character-set))
   (labels

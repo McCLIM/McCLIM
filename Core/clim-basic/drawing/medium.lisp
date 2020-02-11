@@ -230,6 +230,11 @@
   ;; text-style like other methods. -- jd 2020-01-15
   text-style)
 
+(defmethod text-style-mapping ((port basic-port)
+                               text-style
+                               &optional character-set)
+  (text-style-mapping port (parse-text-style text-style) character-set))
+
 (defmethod text-style-mapping :around ((port basic-port)
                                        (text-style text-style)
                                        &optional character-set)
@@ -295,8 +300,9 @@
 (defun parse-text-style (style)
   (cond ((text-style-p style) style)
         ((null style) (make-text-style nil nil nil)) ; ?
-        ((and (listp style) (<= 3 (length style) 4))
-         (apply #'make-text-style style))
+        ((and (listp style) (alexandria:length= 3 style))
+         (destructuring-bind (family face size) style
+           (make-text-style family face size)))
         (t (error "Invalid text style specification ~S." style))))
 
 (defmacro with-text-style ((medium text-style) &body body)
