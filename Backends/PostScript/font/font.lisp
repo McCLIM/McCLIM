@@ -131,7 +131,8 @@
                  (:italic . "Helvetica-Oblique")
                  ((:bold :italic) . "Helvetica-BoldOblique"))))
 
-(defmethod text-style-mapping ((port postscript-font-port) text-style
+(defmethod text-style-mapping ((port postscript-font-port)
+                               (text-style text-style)
                                &optional character-set)
   (declare (ignore character-set))
   (multiple-value-bind (family face size) (text-style-components text-style)
