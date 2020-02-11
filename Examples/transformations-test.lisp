@@ -18,10 +18,10 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage "CLIM-TRANSFORMATIONS-TEST"
-  (:use :clim :clim-lisp))
+(defpackage #:clim-demo.transformations-test
+  (:use #:clim #:clim-lisp))
 
-(in-package :clim-transformations-test)
+(in-package #:clim-demo.transformations-test)
 
 (defparameter *transformations-test-file* #p"transformations-test.ps")
 

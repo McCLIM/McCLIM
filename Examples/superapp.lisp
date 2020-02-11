@@ -1,10 +1,9 @@
-(in-package :common-lisp-user)
 
-(defpackage "APP"
-  (:use :clim :clim-lisp)
-  (:export "APP-MAIN"))
+(defpackage #:clim-demo.app
+  (:use #:clim #:clim-lisp)
+  (:export #:app-main))
 
-(in-package :app)
+(in-package #:clim-demo.app)
 
 (define-application-frame superapp ()
   ()

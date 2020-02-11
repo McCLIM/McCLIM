@@ -6,10 +6,10 @@
 ;;;  behavior could be added to the application.
 
 
-(defpackage #:drag-and-drop-example
+(defpackage #:clim-demo.drag-and-drop-example
   (:use #:clim-lisp #:clim)
   (:export #:dnd-commented))
-(in-package #:drag-and-drop-example)
+(in-package #:clim-demo.drag-and-drop-example)
 
 
 ;;;  CUSTOM-PANE is built outside of CLIM abstractions which are

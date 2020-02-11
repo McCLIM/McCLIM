@@ -1,10 +1,10 @@
 (in-package :cl-user)
 
-(defpackage :tabdemo
-  (:use :clim :clim-lisp :clim-tab-layout)
-  (:export :tabdemo))
+(defpackage #:clim-demo.tabdemo
+  (:use #:clim #:clim-lisp #:clim-tab-layout)
+  (:export #:tabdemo))
 
-(in-package :tabdemo)
+(in-package #:clim-demo.tabdemo)
 
 ;;; example and testing code
 

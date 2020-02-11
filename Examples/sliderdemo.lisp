@@ -19,11 +19,11 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage :sliderdemo
-  (:use :clim :clim-lisp :clim-tab-layout)
-  (:export :sliderdemo))
+(defpackage #:clim-demo.slider
+  (:use #:clim #:clim-lisp #:clim-tab-layout)
+  (:export #:sliderdemo))
 
-(in-package :sliderdemo)
+(in-package #:clim-demo.slider)
 
 (defparameter *calc* '(0))
 (defvar *text-field* nil)
