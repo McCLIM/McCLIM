@@ -22,8 +22,12 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :clim-demo)
+(defpackage #:clim-demo.misc
+  (:use #:clim-lisp #:clim)
+  (:export #:misc-tests))
+(in-package #:clim-demo.misc)
 
+(define-presentation-type border-style ())
 
 (defvar *misc-tests* (make-hash-table :test 'equal))
 

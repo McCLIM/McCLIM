@@ -2,7 +2,10 @@
 
 ;; $fiHeader: address-book.lisp,v 1.20 1993/07/27 01:45:06 colin Exp $
 
-(in-package :clim-demo)
+(defpackage #:clim-demo.address-book
+  (:use #:clim-lisp #:clim)
+  (:export #:address-book))
+(in-package #:clim-demo.address-book)
 
 "Copyright (c) 1990 International Lisp Associates.  All rights reserved."
 

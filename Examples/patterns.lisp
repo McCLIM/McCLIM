@@ -377,7 +377,7 @@ right-trimmed for spaces."
                   reversal. Likely failures: position is translated as in [5],
                   same as test [5].")))
 
-(define-pattern-design-test-command (refresh :keystroke #\space) ()
+(define-pattern-design-test-command (refresh-pattern-design :keystroke #\space) ()
   (format *debug-io* "."))
 
 (progn (define-pattern-design-test-command (dpattern :keystroke #\1) ()
