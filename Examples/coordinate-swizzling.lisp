@@ -1,6 +1,10 @@
 ;;; ------------------------------------
 ;;; coordinate-swizzling.lisp
-(cl:in-package #:clim-demo)
+
+(defpackage #:clim-demo.coord-swizzling
+  (:use #:clim-lisp #:clim)
+  (:export #:run #:coordinate-swizzling))
+(in-package #:clim-demo.coord-swizzling)
 
 (clim:define-application-frame coordinate-swizzling ()
   ()
@@ -15,7 +19,7 @@
                (clim:scrolling (:height 400 :scroll-bars t) app)
                (clim:scrolling (:height 50 :scroll-bars t) int)))))
 
-(defun coordinate-swizzling ()
+(defun run ()
   (clim:run-frame-top-level
    (clim:make-application-frame 'coordinate-swizzling)))
 

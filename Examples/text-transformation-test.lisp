@@ -130,4 +130,4 @@
                              :toward-x dx
                              :toward-y dy)))))))
 
-(define-text-transformations-test-command (com-refresh :keystroke #\space) ())
+(define-text-transformations-test-command (com-refresh-text-transform :keystroke #\space) ())

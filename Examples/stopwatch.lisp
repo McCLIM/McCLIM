@@ -31,7 +31,10 @@
 ;;; Based on an idea described by Paul Werkowski in the mcclim-devel mailing
 ;;; list.
 
-(in-package :clim-demo)
+(defpackage #:clim-demo.stopwatch
+  (:use #:clim #:clim-lisp)
+  (:export #:stopwatch #:run-stopwatch))
+(in-package #:clim-demo.stopwatch)
 
 (define-application-frame stopwatch ()
   (;; state of the timer

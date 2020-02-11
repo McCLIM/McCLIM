@@ -63,7 +63,7 @@
     (present '(com-accepting-with-gadgets) 'command :stream pane)
     (fresh-line pane)))
 
-(define-av-test-command (com-refresh
+(define-av-test-command (com-refresh-av-test
 			 :name t
 			 :menu t)
     ()

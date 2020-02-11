@@ -2,7 +2,10 @@
 ;;;;
 ;;;;    License: BSD-2-Clause.
 
-(in-package #:clim-demo)
+(defpackage #:clim-demo.hierarchy
+  (:use #:clim-lisp #:clim)
+  (:export #:hierarchy))
+(in-package #:clim-demo.hierarchy)
 
 (defun repaint (&key (name "Unnamed pane"))
   (lambda (pane region)

@@ -34,5 +34,5 @@
                                      *pat*)
                    75 250)))
 
-(define-patterns-overlap-command (refresh :keystroke #\space) ()
+(define-patterns-overlap-command (refresh-patterns-overlap :keystroke #\space) ()
   (format *debug-io* "."))

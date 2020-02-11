@@ -57,4 +57,4 @@
           (with-drawing-options (pane :transformation (fifth axy))
            (draw-lazy pane (first axy) (second axy))))))))
 
-(define-text-multiline-positioning-command (com-refresh :keystroke #\space) ())
+(define-text-multiline-positioning-command (com-refresh-multiline :keystroke #\space) ())
