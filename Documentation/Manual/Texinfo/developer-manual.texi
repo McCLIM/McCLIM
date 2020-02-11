@@ -2,9 +2,44 @@
 @chapter Developer manual
 
 @menu
+* Coding conventions::
 * Writing backends::
 * PostScript backend::
 @end menu
+
+@node Coding conventions
+@section Coding conventions
+
+In the @mcclim{} codebase, we try to follow certain coding conventions
+for consistency and better maintainability.  We default to conventions
+mentioned in the @url{http://bauhh.dyndns.org:8000/clim-spec/2.html,
+specification} and to the
+@url{http://www.cs.umd.edu/~nau/cmsc421/norvig-lisp-style.pdf, usual
+conventions}.  The conventions described in the following sections cover
+aspects not discussed in these documents.
+
+@subsection Packages
+
+In addition to the packages mentioned in the specification, @mcclim{}
+defines the packages @code{clim-extensions} and @code{clim-backend}.
+Both are used by the @code{clim-internals} package to avoid conflicts.
+
+@code{clim-extensions} (which has the nickname @code{clime}) exports all
+extensions provided by @mcclim. While each extension may define its own
+package for implementation purposes, application programmers should
+access symbols only via the @code{clim-extensions} package.
+
+@code{clim-backend} (which has the nickname @code{climb}) exports
+symbols which are intended for use by backend writers.  It uses the
+packages @code{clim} and @code{clim-extensions}.
+
+@subsection Examples
+
+Examples and demos which are distributed with @mcclim{} are loaded from
+a separate system named @code{clim-examples}.  Each example should be
+put either directly in the package @code{clim-demo} or live in its own
+package the name of which should be start with @code{clim-demo.}, for
+instance @code{clim-demo.foobar-example}.
 
 @node Writing backends
 @section Writing backends
