@@ -75,32 +75,6 @@ activated with GESTURE"))
 (defmethod activate-stream ((stream standard-input-editing-stream) gesture)
   (setf (drei::activation-gesture stream) gesture))
 
-;;; These helper functions take the arguments of ACCEPT so that they
-;;; can be used directly by ACCEPT.
-
-(defun make-activation-gestures
-    (&key (activation-gestures nil activation-gestures-p)
-     (additional-activation-gestures nil additional-activations-p)
-     (existing-activation-gestures *activation-gestures*)
-     &allow-other-keys)
-  (cond (additional-activations-p
-	 (append additional-activation-gestures existing-activation-gestures))
-	(activation-gestures-p
-	 activation-gestures)
-	(t (or existing-activation-gestures
-	       *standard-activation-gestures*))))
-
-(defun make-delimiter-gestures
-    (&key (delimiter-gestures nil delimiter-gestures-p)
-     (additional-delimiter-gestures nil additional-delimiters-p)
-     (existing-delimiter-gestures *delimiter-gestures*)
-     &allow-other-keys)
-  (cond (additional-delimiters-p
-	 (append additional-delimiter-gestures existing-delimiter-gestures))
-	(delimiter-gestures-p
-	 delimiter-gestures)
-	(t existing-delimiter-gestures)))
-
 (define-condition rescan-condition (condition)
   ())
 
