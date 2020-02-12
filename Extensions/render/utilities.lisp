@@ -23,6 +23,45 @@ top-left. Useful when we iterate over the same array and mutate its state."
                 for ,dest-i fixnum from ,x2 downto ,x1d
                 do (progn ,@body)))))
 
+(defmacro do-region-pixels ((&rest clauses) &body body)
+  (let ((outer-clauses '())
+        (inner-clauses '()))
+    (flet ((do-clause (clause)
+             (climi::with-current-source-form (clause)
+               (destructuring-bind (width pixel-and-coordinates
+                                    &key (x1 0) x2 (x-step 1)
+                                         (y1 0) y2 (y-step 1))
+                   clause
+                 (destructuring-bind (index-var &optional (x-var (gensym "X"))
+                                                          (y-var (gensym "Y")))
+                     (alexandria:ensure-list pixel-and-coordinates)
+                   (alexandria:with-unique-names (width-var base)
+                     (when index-var
+                       (push `(with ,width-var :of-type (unsigned-byte 20) = ,width)
+                             outer-clauses))
+                     (push `(for ,y-var :of-type (or (eql -1) (unsigned-byte 20))
+                                 from ,y1
+                                 ,@(when y2 `(to ,y2))
+                                 by ,y-step)
+                           outer-clauses)
+                     (when index-var
+                       (push `(with ,base :of-type alexandria:array-index
+                                    = (* ,y-var ,width-var))
+                             inner-clauses))
+                     (push `(for ,x-var :of-type (or (eql -1) alexandria:array-index)
+                                 from ,x1
+                                 ,@(when x2 `(to ,x2))
+                                 by ,x-step)
+                           inner-clauses)
+                     (when index-var
+                       (push `(for ,index-var :of-type (or (eql -1) alexandria:array-index)
+                                   from (+ ,base ,x1) by ,x-step)
+                             inner-clauses))))))))
+      (map nil #'do-clause clauses)
+      `(loop ,@(reduce #'append (reverse outer-clauses))
+             do (loop ,@(reduce #'append (reverse inner-clauses))
+                      do (progn ,@body))))))
+
 (declaim (inline %check-coords))
 
 ;;; Returns T for valid arguments, NIL for malformed width/height and signals an

@@ -95,28 +95,41 @@
 (defun image-mirror-pre-put (mirror mez-pixels dx dy width height dirty-r)
   (declare (type fixnum dx dy))
   (when mez-pixels
-     (let ((pixels (climi::pattern-array (image-mirror-image mirror)))
-	  (clip   (make-rectangle* 0 0 (1- width) (1- height))))
+    (let* ((pixels    (climi::pattern-array (image-mirror-image mirror)))
+	   (s-width   (array-dimension pixels 1))
+	   (d-width   (array-dimension mez-pixels 1))
+           (clip      (make-rectangle* 0 0 (1- width) (1- height))))
       (declare (type (simple-array (unsigned-byte 32) 2) pixels)
-	       (type (simple-array (unsigned-byte 32) 2) mez-pixels)
-               (optimize speed (safety 0) (debug 0)))
+               (type (simple-array (unsigned-byte 32) 2) mez-pixels)
+               (optimize (speed 3) (safety 0) (debug 0)))
       (map-over-region-set-regions
-       #'(lambda (region)
-           (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-               (region-intersection region clip)
-	     (declare (type fixnum min-x min-y max-x max-y))
-	     (loop :for y :of-type fixnum :from min-y :to max-y
-		   :do (loop :for x :of-type fixnum :from min-x :to max-x
-			     :do (setf (aref mez-pixels (+ dy y) (+ dx x))
-				       (logior #xff000000 (ash (aref pixels y x) -8)))))))
+       (lambda (region)
+         (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+             (region-intersection region clip)
+           (declare (type fixnum min-x min-y max-x max-y))
+	   (mcclim-render-internals::do-region-pixels ((s-width si :x1 min-x :x2 max-x
+								   :y1 min-y :y2 max-y)
+						       (d-width di :x1 (+ dx min-x)
+								   :y1 (+ dy min-y)))
+	     (setf (row-major-aref mez-pixels di)
+		   (logior #xff000000
+                           (the (unsigned-byte 32)
+                                (ash (the (unsigned-byte 32) (row-major-aref pixels si)) -8)))))
+           #+no (loop :for y :of-type fixnum :from min-y :to max-y
+                 :do (loop :repeat (- max-x min-x)
+			   :for i :of-type fixnum :from (array-row-major-index pixels y min-x)
+			   :for j :of-type fixnum :from (array-row-major-index mez-pixels (+ dy y) (+ dx min-x))
+                           :do (setf (row-major-aref mez-pixels j)
+                                     (the (unsigned-byte 32)
+                                          (logior #xff000000
+                                                  (the (unsigned-byte 32)
+                                                       (ash (the (unsigned-byte 32) (row-major-aref pixels i)) -8)))))))))
        dirty-r))))
 
 (defmethod image-mirror-to-mezzano ((sheet mezzano-mirror))
   (declare (optimize speed))
   (with-slots (mcclim-render-internals::image-lock
                mcclim-render-internals::dirty-region
-               mcclim-render-internals::finished-output
-               MCCLIM-RENDER-INTERNALS::updating-p
                dx dy
                width height
                mez-window
