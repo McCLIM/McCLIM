@@ -1,4 +1,4 @@
-(in-package :clim-mezzano)
+(in-package #:clim-mezzano)
 
 ;; (defmethod clim-backend:bind-selection
 ;;     ((port mezzano-port) (sheet basic-sheet) &optional time)

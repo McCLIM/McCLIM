@@ -1,5 +1,3 @@
-;;; -*- Mode: Lisp; Package: CLIM-MEZZANO -*-
-
 ;;;  (c) copyright 2005 Christophe Rhodes (c.rhodes@gold.ac.uk)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -17,14 +15,17 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :clim-mezzano)
+(in-package #:clim-mezzano)
 
-(defparameter +width-dots-per-inch+ 96)
-(defparameter +height-dots-per-inch+ 96)
+(defconstant +dots-per-inch+ 96)
 
 (defclass mezzano-graft (graft)
-  (width
-   height))
+  ((%width :initarg :width
+           :type (real (0))
+           :accessor %graft-width)
+   (%height :initarg :height
+            :type (real (0))
+            :accessor %graft-height)))
 
 (defmethod sheet-direct-mirror ((sheet mezzano-graft))
   (port-lookup-mirror (port sheet) sheet))
@@ -34,21 +35,19 @@
 
 (defmethod initialize-instance :after ((graft mezzano-graft) &rest args)
   (declare (ignore args))
-  (debug-format "make-instance mezzano-graft")
   (let ((framebuffer (mos:current-framebuffer)))
-    (setf (slot-value graft 'width) (mos:framebuffer-width framebuffer)
-          (slot-value graft 'height) (mos:framebuffer-height framebuffer))))
+    (setf (%graft-width graft) (mos:framebuffer-width framebuffer)
+          (%graft-height graft) (mos:framebuffer-height framebuffer))))
 
-(defmethod graft-width ((graft mezzano-graft) &key (units :device))
-  (ecase units
-    (:device (slot-value graft 'width))
-    (:inches (/ (slot-value graft 'width) +width-dots-per-inch+))
-    (:millimeters (/ (slot-value graft 'width) +width-dots-per-inch+ 2.54))
-    (:screen-sized 1)))
+(flet ((convert (value units)
+         (ecase units
+           (:device value)
+           (:inches (/ value +dots-per-inch+))
+           (:millimeters (/ value +dots-per-inch+ 2.54))
+           (:screen-sized 1))))
 
-(defmethod graft-height ((graft mezzano-graft) &key (units :device))
-  (ecase units
-    (:device (slot-value graft 'height))
-    (:inches (/ (slot-value graft 'height) +width-dots-per-inch+))
-    (:millimeters (/ (slot-value graft 'height) +width-dots-per-inch+ 2.54))
-    (:screen-sized 1)))
+  (defmethod graft-width ((graft mezzano-graft) &key (units :device))
+    (convert (%graft-width graft) units))
+
+  (defmethod graft-height ((graft mezzano-graft) &key (units :device))
+    (convert (%graft-height graft) units)))

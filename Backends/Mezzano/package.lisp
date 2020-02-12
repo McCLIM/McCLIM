@@ -1,29 +1,21 @@
 ;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
 
-(in-package :common-lisp-user)
-
-(defpackage :clim-mezzano
-    (:use :clim :clim-lisp :clim-backend :mcclim-render-extensions)
-  (:import-from :climi
-                #:+alt-key+
-                ;;
-                #:port-text-style-mappings
+(defpackage #:clim-mezzano
+    (:use #:clim-lisp #:clim #:clim-backend #:mcclim-render-extensions)
+  (:import-from #:climi
                 #:port-lookup-mirror
                 #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
-		#:%%sheet-native-transformation
-		#:%%set-sheet-native-transformation
+                #:%%sheet-native-transformation
+                #:%%set-sheet-native-transformation
                 ;;
-                #:clamp
                 #:get-environment-variable
                 #:pixmap-sheet
                 #:port-lookup-sheet
                 #:port-unregister-mirror
-		#:port-pointer-sheet
-                #:map-repeated-sequence
+                #:port-pointer-sheet
                 #:pixmap-mirror
-		#:do-sequence
                 #:with-double-buffering
                 #:with-transformed-position
                 #:with-transformed-positions
@@ -39,8 +31,6 @@
                 #:top-level-sheet       ;used as slot
                 #:medium-device-region
                 #:draw-image
-                #:height                ;this seems bogus
-                #:width                 ;dito
                 #:coordinate=
                 #:get-transformation
                 ;;
@@ -50,27 +40,23 @@
                 #:mirrored-pixmap
                 #:window-destroy-event
                 ; #:pointer-ungrab-event
-		; #:pointer-motion-hint-event
+                ; #:pointer-motion-hint-event
                 #:device-font-text-style
                 ;;
-		#:make-medium
-                )
-  (:import-from :mcclim-render-internals
-                  #:%create-mirror-image
-		  #:render-medium-mixin
-		  #:render-port-mixin
-		  #:image-mirror-image
-		  #:image-sheet-mixin
-		  #:image-pixmap-mixin
-                  #:image-pixmap-mixin
-                  #:image-mirror-mixin
-                  #:opticl-rgb-image-pixels
-		  )
-  (:import-from :clim-internals
-                ; #:standard-event-port-mixin
-		#:standard-port
-		)
-  )
+                #:make-medium)
+
+  (:import-from #:mcclim-render-internals
+                #:%create-mirror-image
+                #:render-medium-mixin
+                #:render-port-mixin
+                #:image-mirror-image
+                #:image-sheet-mixin
+                #:image-pixmap-mixin
+                #:image-pixmap-mixin
+                #:image-mirror-mixin)
+
+  (:import-from #:clim-internals
+                #:standard-port))
 
 ;; Mezzano OS interface package. All of the Mezzano symbols used by
 ;; the mezzano backend are in this package and all the symbols are
@@ -78,17 +64,15 @@
 ;; mos:<symbol>. This keeps the symbols separate from any imported
 ;; clim/mcclim symbols and makes it easy to identify mezzano symbols
 ;; when reading the code.
-
-(defpackage :clim-mezzano-os
+(defpackage #:clim-mezzano-os
   (:nicknames #:mos)
-  (:use :mezzano.supervisor
-        :mezzano.gui
-        :mezzano.gui.compositor
-        :mezzano.gui.widgets)
+  (:use #:mezzano.supervisor
+        #:mezzano.gui
+        #:mezzano.gui.compositor
+        #:mezzano.gui.widgets)
 
   ;; from mezzano.gui
-  (:export #:clamp
-           #:rectangle
+  (:export #:rectangle
            #:make-rectangle
            #:rectangle-x
            #:rectangle-y
@@ -122,10 +106,9 @@
            #:surface-pixels
            #:surface-width
            #:surface-height
-           #:surface-pixel
-           )
+           #:surface-pixel)
 
-    ;; from mezzano.gui.compositor
+  ;; from mezzano.gui.compositor
   (:export #:window
            #:window-buffer
            #:width
@@ -171,8 +154,7 @@
            #:screen-geometry-update
            #:force-redisplay
            #:window-x
-           #:window-y
-           )
+           #:window-y)
 
   ;; from mezzano.gui.widgets
   (:export #:default-damage-function
@@ -193,8 +175,7 @@
            #:cursor-visible
            #:in-frame-header-p
            #:in-frame-border-p
-           #:set-cursor-function
-           )
+           #:set-cursor-function)
 
   ;; select exports from mezzano.supervisor
   (:export #:make-thread
@@ -215,6 +196,4 @@
            #:current-framebuffer
            #:framebuffer-blit
            #:framebuffer-width
-           #:framebuffer-height
-           )
-  )
+           #:framebuffer-height))

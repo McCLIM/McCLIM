@@ -54,32 +54,13 @@
   (gethash mez-window (slot-value port 'mez-window->mirror)))
 
 (defun parse-mezzano-server-path (path)
-  (let ((mirroring (mirror-factory (getf path :mirroring)))
-        (result (list :mezzano
-                      :host       :mezzano
-                      :display-id 0
-                      :screen-id  0
-                      :protocol   :native)))
-    (if mirroring
-        (nconc result (list :mirroring  mirroring))
-        result)))
+  (list :mezzano :host       :mezzano
+		 :display-id 0
+		 :screen-id  0
+		 :protocol   :native))
 
 (setf (get :mezzano :port-type) 'mezzano-port)
 (setf (get :mezzano :server-path-parser) 'parse-mezzano-server-path)
-
-(defun initialize-display-thread (port)
-  (mos:make-thread
-   (lambda ()
-     (loop
-        (handler-case
-            (maphash #'(lambda (key val)
-                         (when (typep key 'mezzano-mirrored-sheet-mixin)
-                           (image-mirror-to-mezzano (sheet-mirror key))))
-                     (slot-value port 'climi::sheet->mirror))
-          (condition (condition)
-            (format *debug-io* "~A~%" condition)))
-        (sleep 0.01)))
-   :name "McCLIM Display"))
 
 (defun initialize-event-thread (port)
   (when clim-sys:*multiprocessing-p*
@@ -87,13 +68,32 @@
      (lambda ()
        (let ((*terminal-io* (make-instance 'mezzano.gui.popup-io-stream:popup-io-stream
                                            :title "McCLIM event loop console")))
-         (loop
-            (with-simple-restart
-                (restart-event-loop
-                 "Restart CLIM's event loop.")
-              (loop
-                 (process-next-event port))))))
+         (loop (with-simple-restart
+		   (restart-event-loop "Restart CLIM's event loop.")
+		 (loop with last-time = nil
+		       for now = (get-internal-real-time)
+		       do (setf last-time (step-event-loop port now last-time)))))))
      :name "McCLIM Events")))
+
+(defun step-event-loop (port now last-time)
+  (let* ((deadline (+ (or last-time now)
+		      (floor internal-time-units-per-second 2)))
+	 (timeout  (max 0 (- deadline now))))
+    ; (format *terminal-io* "next frame: ~D (in ~D)~%" deadline timeout)
+    (process-next-event port :timeout (/ timeout internal-time-units-per-second))
+
+    (let ((now (get-internal-real-time)))
+      (if (>= now deadline)
+	  (progn
+	    (swap-buffers port)
+	    now)
+	  last-time))))
+
+(defun swap-buffers (port)
+  (maphash (lambda (key val)
+             (when (typep key 'mezzano-mirrored-sheet-mixin)
+               (image-mirror-to-mezzano (sheet-mirror key))))
+           (slot-value port 'climi::sheet->mirror)))
 
 (defmethod initialize-instance :after ((port mezzano-port) &rest args &key host display-id screen-id protocol)
   (declare (ignore args))
@@ -104,19 +104,17 @@
         (mezzano-port-window port) (mos:current-framebuffer))
   (push (apply #'make-instance 'mezzano-frame-manager
                :port port
-               ; TODO (cdr (port-server-path port))
+					; TODO (cdr (port-server-path port))
 	       '())
 	(slot-value port 'frame-managers))
   (make-graft port)
   (clim-extensions:port-all-font-families port)
-  (setf (mezzano-display-thread port) (initialize-display-thread port)
-        (mezzano-event-thread port) (initialize-event-thread port)))
+  (setf (mezzano-event-thread port) (initialize-event-thread port)))
 
 (defmethod destroy-port :before ((port mezzano-port))
   ;; TODO - there's more to clean up here:
   ;; close any mez-windows/mez-frames
   ;; destroy the associated frame-manager
-  (bt:destroy-thread (mezzano-display-thread port))
   (bt:destroy-thread (mezzano-event-thread port)))
 
 (defmethod port-enable-sheet ((port mezzano-port) (mirror mirrored-sheet-mixin))
@@ -216,7 +214,7 @@
 
 
 (defmethod port-force-output ((port mezzano-port))
-  (maphash
+  #+no (maphash
    #'(lambda (key val)
        (when (typep key 'mezzano-mirrored-sheet-mixin)
          (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
@@ -233,43 +231,38 @@
 ;;
 (defmethod process-next-event ((port mezzano-port) &key wait-function (timeout nil))
   (declare (ignore wait-function))
-  (let ((mez-fifo (mezzano-mez-fifo port)))
-    (if (null timeout)
-        ;; check for a mcclim event - if one is available return
-        ;; it. If none available wait for a mezzano event, which may
-        ;; or may not generate a mcclim event, so check for a mcclim
-        ;; event again.  Don't have to worry about a race condition of
-        ;; a mcclim event arriving after checking while waiting on a
-        ;; mezzano event because only this thread puts events in the
-        ;; mcclim event fifo.
+  ;; check for a mcclim event - if one is available return
+  ;; it. If none available wait for a mezzano event, which may
+  ;; or may not generate a mcclim event, so check for a mcclim
+  ;; event again.  Don't have to worry about a race condition of
+  ;; a mcclim event arriving after checking while waiting on a
+  ;; mezzano event because only this thread puts events in the
+  ;; mcclim event fifo.
 
-        ;; TODO - this loop needs to read from the mcclim-fifo until
-        ;; it's empty before going to the mezzano-fifo. This doesn't
-        ;; happen anymore because it sometimes ignores a mcclim
-        ;; event. It works accidently because the only mcclim event it
-        ;; ignores is a keyboard-event which only occurs singlely in
-        ;; the mcclim-fifo.
-        (loop (multiple-value-bind (event validp)
-		  (mos:fifo-pop mez-fifo t)
-		(when validp
-               ;; ignore keyboard events if there's no event sheet to
-               ;; handle them
-		  (unless (and (typep event 'keyboard-event)
-                               (null (event-sheet event)))
-		    (alexandria:when-let ((event (mez-event->mcclim-event event)))
-		      (when (typep event 'pointer-event)
-			(setf (port-pointer-sheet port) (event-sheet event)))
-                      (distribute-event port event)
-		      (return))))))
-        (mos:panic "timeout not supported")
-        ;; (loop
-        ;;    (multiple-value-bind (event validp)
-        ;;        (mos:fifo-pop fifo NIL)
-        ;;      (cond (validp (return (convert-event event)))
-        ;;            ((< timeout 0.005) (return :timeout))
-        ;;            (T (sleep 0.01)
-        ;;               (decf timeout 0.01)))))
-        )))
+  ;; TODO - this loop needs to read from the mcclim-fifo until
+  ;; it's empty before going to the mezzano-fifo. This doesn't
+  ;; happen anymore because it sometimes ignores a mcclim
+  ;; event. It works accidently because the only mcclim event it
+  ;; ignores is a keyboard-event which only occurs singlely in
+  ;; the mcclim-fifo.
+  (let ((mez-fifo (mezzano-mez-fifo port)))
+    (loop (unless (mezzano.supervisor:event-wait-for
+		      ((mezzano.sync::mailbox-receive-possible-event mez-fifo)
+		       :timeout timeout)
+		    (not (mezzano.sync:mailbox-empty-p mez-fifo)))
+	    (return))
+	  (multiple-value-bind (event validp)
+	      (mezzano.sync:mailbox-receive mez-fifo :wait-p t)
+	    (assert validp)
+	    ;; ignore keyboard events if there's no event sheet
+	    ;; to handle them
+	    (unless (and (typep event 'keyboard-event)
+			 (null (event-sheet event)))
+	      (alexandria:when-let ((event (mez-event->mcclim-event event)))
+		(when (typep event 'pointer-event)
+		  (setf (port-pointer-sheet port) (event-sheet event)))
+                (distribute-event port event)
+		(return)))))))
 
 ;;; Pixmap
 
