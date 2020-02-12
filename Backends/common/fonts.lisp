@@ -1,5 +1,10 @@
 (in-package #:climi)
 
+(defclass font-rendering-medium-mixin ()
+  ()
+  (:documentation "Mixed in when the medium text-style-mapping returns
+a font implementing the protocol defined below."))
+
 (defgeneric open-font (port font-designator)
   (:documentation "Opens font for a port"))
 
@@ -218,19 +223,19 @@ of letters specified in a separate kerning-table."))
              (new-text-style family face size)))
           (t (error "Invalid text style specification ~S." style)))))
 
-(defmethod text-style-ascent (text-style medium)
+(defmethod text-style-ascent (text-style (medium font-rendering-medium-mixin))
   (let ((font (text-style-mapping (port medium) text-style)))
     (climb:font-ascent font)))
 
-(defmethod text-style-descent (text-style medium)
+(defmethod text-style-descent (text-style (medium font-rendering-medium-mixin))
   (let ((font (text-style-mapping (port medium) text-style)))
     (climb:font-descent font)))
 
-(defmethod text-style-height (text-style medium)
+(defmethod text-style-height (text-style (medium font-rendering-medium-mixin))
   (let ((font (text-style-mapping (port medium) text-style)))
     (+ (climb:font-ascent font) (climb:font-descent font))))
 
-(defmethod text-style-character-width (text-style medium char)
+(defmethod text-style-character-width (text-style (medium font-rendering-medium-mixin) char)
   (climb:font-character-width (text-style-mapping (port medium) text-style) char))
 
 (defmethod text-style-width (text-style medium)
@@ -253,12 +258,13 @@ direction (member :ltr :rtl)
 Returned values:
 xmin ymin xmax ymax."))
 
-(defmethod climb:text-bounding-rectangle* (medium string
-                                           &key
-                                             text-style
-                                             (start 0) end
-                                             (align-x :left) (align-y :baseline) (direction :ltr)
-                                           &aux (end (or end (length string))))
+(defmethod climb:text-bounding-rectangle*
+    ((medium font-rendering-medium-mixin) string
+     &key
+       text-style
+       (start 0) end
+       (align-x :left) (align-y :baseline) (direction :ltr)
+     &aux (end (or end (length string))))
   (when (= start end)
     (return-from climb:text-bounding-rectangle* (values 0 0 0 0)))
   (let ((text (string string))
@@ -270,12 +276,14 @@ xmin ymin xmax ymax."))
                                  :align-x align-x :align-y align-y :direction direction)
       (values xmin ymin xmax ymax))))
 
-(defmethod climb:text-size (medium string &key text-style (start 0) end
-                            &aux
-                              (string (string string))
-                              (end (or end (length string)))
-                              (text-style (clim:merge-text-styles text-style
-                                                                  (clim:medium-merged-text-style medium))))
+(defmethod climb:text-size
+    ((medium font-rendering-medium-mixin) string
+     &key text-style (start 0) end
+     &aux
+       (string (string string))
+       (end (or end (length string)))
+       (text-style (clim:merge-text-styles text-style
+                                           (clim:medium-merged-text-style medium))))
   (when (= start end)
     (return-from climb:text-size (values 0 0 0 0 (clim:text-style-ascent text-style medium))))
   (let ((text (string string))

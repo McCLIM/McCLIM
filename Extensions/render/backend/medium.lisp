@@ -1,6 +1,8 @@
 (in-package :mcclim-render-internals)
 
-(defclass render-medium-mixin (basic-medium climb:multiline-text-medium-mixin)
+(defclass render-medium-mixin (basic-medium
+                               climb:multiline-text-medium-mixin
+                               climb:font-rendering-medium-mixin)
   ())
 
 (defun %medium-stroke-paths (medium paths)
