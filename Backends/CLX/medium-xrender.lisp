@@ -6,7 +6,8 @@
 (in-package #:clim-clx)
 
 (defclass clx-render-medium (clx-medium
-                             climb:multiline-text-medium-mixin)
+                             climb:multiline-text-medium-mixin
+                             climb:font-rendering-medium-mixin)
   ((picture :initform nil)))
 
 (defun clx-render-medium-picture (medium)

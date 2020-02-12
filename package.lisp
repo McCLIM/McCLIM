@@ -2042,6 +2042,7 @@
    #:font-glyph-dy
    ;; Mixins available for backends
    #:multiline-text-medium-mixin
+   #:font-rendering-medium-mixin
    #:approx-bbox-medium-mixin
    #:transform-coordinates-mixin
    ;; From CLIM (mentioned in the spec)
