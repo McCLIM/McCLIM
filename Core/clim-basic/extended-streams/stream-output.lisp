@@ -203,9 +203,8 @@
     (x y (stream standard-extended-output-stream))
   (setf (cursor-position (stream-text-cursor stream)) (values x y)))
 
-(defgeneric stream-set-cursor-position (stream x y)
-  (:method ((stream standard-extended-output-stream) x y)
-    (setf (stream-cursor-position stream) (values x y))))
+(defmethod stream-set-cursor-position ((stream standard-extended-output-stream) x y)
+  (setf (stream-cursor-position stream) (values x y)))
 
 (defmethod stream-increment-cursor-position
     ((stream standard-extended-output-stream) dx dy)
