@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -47,6 +47,10 @@
 #+sbcl (defmethod stream-content ((stream sb-impl::string-input-stream))
          (let ((string (sb-impl::string-input-stream-string stream)))
            (values string (length string))))
+
+#+mezzano (defmethod stream-content ((stream mezzano.internals::string-input-stream))
+            (let ((string (slot-value stream 'string)))
+              (values string (slot-value stream 'mezzano.internals::end))))
 
 ;;; `file-stream'
 
