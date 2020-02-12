@@ -134,12 +134,11 @@ syntax should be run.")
         (with-text-face (stream :italic)
           (princ package-name stream)))))
 
-(defgeneric default-image ()
-  (:documentation "The default image for when the current syntax
-  does not mandate anything itself (for example if it is not a
-  Lisp syntax).")
-  (:method ()
-    t))
+#+clim-without-swank
+(defun default-image ()
+  "The default image for when the current syntax does not mandate
+anything itself (for example if it is not a Lisp syntax)."
+  t)
 
 (defgeneric get-usable-image (syntax)
   (:documentation "Get usable image object from `syntax'.")

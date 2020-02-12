@@ -44,7 +44,10 @@
   (declare (ignore slot-names))
   (setf (image obj) (make-instance 'swank-local-image)))
 
-(defmethod default-image ()
+#-clim-without-swank
+(defun default-image ()
+  "The default image for when the current syntax does not mandate
+anything itself (for example if it is not a Lisp syntax)."
   (make-instance 'swank-local-image))
 
 (define-command (com-enable-swank-for-view :name t :command-table lisp-table)
