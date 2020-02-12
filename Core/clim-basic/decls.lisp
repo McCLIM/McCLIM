@@ -439,6 +439,10 @@ window associated with it."))
 (defgeneric text-style-fixed-width-p (text-style medium))
 (defgeneric text-size (medium string &key text-style start end))
 
+(defgeneric text-style-character-width (text-style medium char)
+  (:method (text-style medium char)
+    (text-size medium char :text-style text-style)))
+
 ;;; 11.2 Text Style Binding Forms
 
 (defgeneric invoke-with-text-style (medium continuation text-style))
@@ -1200,11 +1204,6 @@ Returns a SPACE-REQUIREMENT object."))
 rendered on MEDIUM with the style LINE-STYLE."))
 
 ;;;
-
-(defgeneric text-style-character-width (text-style medium char))
-;; fall back, where to put this?
-(defmethod text-style-character-width (text-style medium char)
-  (text-size medium char :text-style text-style))
 
 (declfun draw-rectangle (sheet point1 point2
                                &rest args
