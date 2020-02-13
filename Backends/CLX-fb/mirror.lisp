@@ -94,6 +94,7 @@
                       (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
                           (region-intersection region mirror-region)
                         (locally (declare (type (unsigned-byte 32) min-x min-y max-x max-y))
+                          ; TODO (do-region-pixels
                           (loop :for y :of-type alexandria:array-index :from min-y :below max-y
                                 :do (loop :for x :of-type alexandria:array-index :from min-x :below max-x
                                           :do (setf (aref x-pixels y x) (logand (logior #xc0c0c0 (random #xffffff)) (aref pixels y x)))))))))))))

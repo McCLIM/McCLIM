@@ -8,20 +8,55 @@ is T iteration starts from the bottom-right corner, otherwise from the
 top-left. Useful when we iterate over the same array and mutate its state."
   (check-type backward (member t nil))
   (if (null backward)
-      `(loop
-          for ,src-j fixnum from ,y1s
-          for ,dest-j fixnum from ,y1d to ,y2
-          do (loop
-                for ,src-i fixnum from ,x1s
-                for ,dest-i fixnum from ,x1d to ,x2
-                do (progn ,@body)))
-      `(loop
-          for ,src-j fixnum from (+ ,y1s (- ,y2 ,y1d)) downto ,y1s
-          for ,dest-j fixnum from ,y2 downto ,y1d
-          do (loop
-                for ,src-i fixnum from (+ ,x1s (- ,x2 ,x1d)) downto ,x1s
-                for ,dest-i fixnum from ,x2 downto ,x1d
-                do (progn ,@body)))))
+      `(loop for ,src-j fixnum from ,y1s
+             for ,dest-j fixnum from ,y1d to ,y2
+             do (loop for ,src-i fixnum from ,x1s
+                      for ,dest-i fixnum from ,x1d to ,x2
+                      do (progn ,@body)))
+      `(loop for ,src-j fixnum from (+ ,y1s (- ,y2 ,y1d)) downto ,y1s
+             for ,dest-j fixnum from ,y2 downto ,y1d
+             do (loop for ,src-i fixnum from (+ ,x1s (- ,x2 ,x1d)) downto ,x1s
+                      for ,dest-i fixnum from ,x2 downto ,x1d
+                      do (progn ,@body)))))
+
+(defmacro do-region-pixels ((&rest clauses) &body body)
+  (let ((outer-clauses '())
+        (inner-clauses '()))
+    (flet ((do-clause (clause)
+             (climi::with-current-source-form (clause)
+               (destructuring-bind (width pixel-and-coordinates
+                                    &key (x1 0) x2 (x-step 1)
+                                         (y1 0) y2 (y-step 1))
+                   clause
+                 (destructuring-bind (index-var &optional (x-var (gensym "X"))
+                                                          (y-var (gensym "Y")))
+                     (alexandria:ensure-list pixel-and-coordinates)
+                   (alexandria:with-unique-names (width-var base)
+                     (when index-var
+                       (push `(with ,width-var :of-type (unsigned-byte 20) = ,width)
+                             outer-clauses))
+                     (push `(for ,y-var :of-type (or (eql -1) (unsigned-byte 20))
+                                 from ,y1
+                                 ,@(when y2 `(to ,y2))
+                                 by ,y-step)
+                           outer-clauses)
+                     (when index-var
+                       (push `(with ,base :of-type alexandria:array-index
+                                    = (* ,y-var ,width-var))
+                             inner-clauses))
+                     (push `(for ,x-var :of-type (or (eql -1) alexandria:array-index)
+                                 from ,x1
+                                 ,@(when x2 `(to ,x2))
+                                 by ,x-step)
+                           inner-clauses)
+                     (when index-var
+                       (push `(for ,index-var :of-type (or (eql -1) alexandria:array-index)
+                                   from (+ ,base ,x1) by ,x-step)
+                             inner-clauses))))))))
+      (map nil #'do-clause clauses)
+      `(loop ,@(reduce #'append (reverse outer-clauses))
+             do (loop ,@(reduce #'append (reverse inner-clauses))
+                      do (progn ,@body))))))
 
 (declaim (inline %check-coords))
 
