@@ -81,23 +81,24 @@
 (defvar *screenshots* '())
 
 (defun image-mirror-pre-put (width height x-mirror sheet x-image x-pixels dirty-r)
-  (declare (type (simple-array (unsigned-byte 32) 2) x-pixels)
-           (optimize speed))
+  (declare (type (simple-array (unsigned-byte 32) 2) x-pixels) ; TODO we have typedefs for this
+           (optimize (speed 3) (debug 0) (safety 0)))
   ;; TODO can check whether dirty-r is completely within mirror-region
   (when (and x-mirror x-image)
-    (let* ((pixels (climi::pattern-array (image-mirror-image sheet)))
+    (let* ((pixels        (climi::pattern-array (image-mirror-image sheet)))
+           (x-width       (array-dimension x-pixels 1))
            (mirror-region (make-rectangle* 0 0 width height))
            (fn (etypecase pixels
                  ((simple-array (unsigned-byte 32) 2)
                   (lambda (region)
                     (locally (declare (type (simple-array (unsigned-byte 32) 2) pixels))
-                      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-                          (region-intersection region mirror-region)
-                        (locally (declare (type (unsigned-byte 32) min-x min-y max-x max-y))
-                          ; TODO (do-region-pixels
-                          (loop :for y :of-type alexandria:array-index :from min-y :below max-y
-                                :do (loop :for x :of-type alexandria:array-index :from min-x :below max-x
-                                          :do (setf (aref x-pixels y x) (logand (logior #xc0c0c0 (random #xffffff)) (aref pixels y x)))))))))))))
+                      (let ((pixels-width (array-dimension pixels 1)))
+                        (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+                            (region-intersection region mirror-region)
+                          (locally (declare (type (unsigned-byte 32) min-x min-y max-x max-y))
+                            (mcclim-render-internals::do-region-pixels ((pixels-width si :x1 min-x :x2 max-x :y1 min-y :y2 max-y)
+                                                                        (x-width      di :x1 min-x           :y1 min-y))
+                              (setf (row-major-aref x-pixels di) (row-major-aref pixels si))))))))))))
       (map-over-region-set-regions fn dirty-r))))
 
 (defmethod image-mirror-to-x ((sheet clx-fb-mirror))

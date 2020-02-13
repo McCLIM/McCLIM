@@ -135,7 +135,7 @@
                                      stencil (stencil-dx 0) (stencil-dy 0)
                                      clip-region)
   "Blends DESIGN onto IMAGE with STENCIL and a CLIP-REGION."
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0) (debug 0))
            (type image-index x y width height)
            (type (signed-byte 33) stencil-dx stencil-dy))
   ;; Disregard CLIP-REGION if x,y,width,height is entirely contained.

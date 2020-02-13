@@ -102,11 +102,21 @@ top-left. Useful when we iterate over the same array and mutate its state."
 (defun color-octet-xor (d1 d2)
   (logxor d1 d2))
 
+(declaim (type (simple-array (integer -255 255) (#.(* 256 (+ 256 256)))) +octet-mult-table+))
+(sb-ext:defglobal +octet-mult-table+
+    (loop :with result = '()
+          :for a :from 0 :to 255
+          :do (loop :for b :from -256 :to 255
+                    :do (push (truncate (* a (+ b (logxor #x1 (ldb (byte 1 8) b)))) 256)
+                              result))
+          :finally (return (coerce (reverse result)
+                                   `(simple-array (integer -255 255) (,(* 256 (+ 256 256))))))))
 (declaim (inline octet-mult)
          (ftype (function (octet (integer -255 255)) (integer -255 255)) octet-mult))
 (defun octet-mult (a b)
   (declare (optimize speed))
-  (truncate (* a (+ b (logxor #x1 (ldb (byte 1 8) b)))) 256))
+  #+no (truncate (* a (+ b (logxor #x1 (ldb (byte 1 8) b)))) 256)
+  (aref +octet-mult-table+ (+ (ash a 9) b 256)))
 
 ;;; blend functions
 
@@ -121,15 +131,28 @@ top-left. Useful when we iterate over the same array and mutate its state."
 (defun %prelerp (p q a)
   (logand #xFF (- (+ p q) (octet-mult a p))))
 
+(declaim (type (simple-array (integer 0 65535) (#. (* 256 256))) +byte-blend-value-table+))
+(sb-ext:defglobal +byte-blend-value-table+
+    (loop :with result = '()
+          :for value :from 0 :to 255
+          :do (loop :for gamma :from 0 :to 255
+                    :do (push (if (<= gamma 1)
+                                  (* 255 value)
+                                  (truncate (* 255 value) gamma))
+                              result))
+          :finally (return (coerce (reverse result)
+                                   `(simple-array (integer 0 65535) (,(* 256 256)))))))
+
 (declaim (inline %byte-blend-value)
          (ftype (function (octet octet octet octet) octet) %byte-blend-value))
 (defun %byte-blend-value (fg bg a.fg a.bg)
   (declare (optimize speed))
   (let ((gamma (%prelerp a.fg a.bg a.bg))
         (value (%lerp (octet-mult bg a.bg) fg a.fg)))
-    (if (<= gamma 1)
+    #+no (if (<= gamma 1) ; TODO values are not octets
         (* 255 value)
-        (values (truncate (* 255 value) gamma)))))
+        (truncate (* 255 value) gamma))
+    (aref +byte-blend-value-table+ (+ (ash value 8) gamma))))
 
 (declaim (inline octet-blend-function octet-blend-function*)
          (ftype (function #1=(octet octet octet octet octet octet octet octet)
