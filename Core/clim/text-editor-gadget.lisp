@@ -173,6 +173,7 @@
                         :documentation "A list of gestures that
 cause the activate callback to be called."))
   (:default-initargs
+   :value ""
    :activation-gestures *standard-activation-gestures*))
 
 (defmethod initialize-instance :after ((object text-field-pane)
