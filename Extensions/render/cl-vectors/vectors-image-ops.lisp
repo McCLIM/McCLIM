@@ -9,7 +9,7 @@
             (lambda (x y alpha)
               (declare (type fixnum x y)
                        (type fixnum #+bad-range (integer -512 512) #+why-not octet alpha)
-                       (optimize speed))
+                       (optimize (speed 3) (safety 0) (debug 0)))
               (setf alpha (min (abs alpha) 255)) ; TODO why is this not [0,255]?
               (unless (or (zerop alpha)
                           (and clip-region
