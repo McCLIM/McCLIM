@@ -8,15 +8,21 @@
 
 (defclass mezzano-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)
-   (x :initform 0)
-   (y :initform 0)))
-
-(defmethod synthesize-pointer-motion-event ((pointer mezzano-pointer))
-  ;; TODO - write this function
-  )
+   (x :initform 0 :accessor pointer-x)
+   (y :initform 0 :accessor pointer-y)))
 
 (defmethod pointer-position ((pointer mezzano-pointer))
-  (values *last-mouse-x* *last-mouse-y*))
+  (values (pointer-x pointer) (pointer-y pointer)))
+
+(defmethod synthesize-pointer-motion-event ((pointer mezzano-pointer))
+  (let ((port (port pointer)))
+    (make-instance 'pointer-motion-event
+                   :sheet (port-pointer-sheet port)
+                   :pointer pointer
+                   :graft-x (pointer-x pointer)
+                   :graft-y (pointer-y pointer)
+                   :button 0
+                   :modifier-state 0)))
 
 ;;======================================================================
 ;; Define port class
