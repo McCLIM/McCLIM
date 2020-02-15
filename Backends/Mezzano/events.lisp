@@ -8,8 +8,6 @@
 ;; always apply to the *last-mouse-sheet*, not the mezzano frame
 (defvar *last-mouse-x* 0)
 (defvar *last-mouse-y* 0)
-(defvar *last-graft-x* 0)
-(defvar *last-graft-y* 0)
 (defvar *last-mouse-sheet* nil)
 
 (defvar *last-modifier-state* 0)
@@ -56,22 +54,24 @@
     (setf *last-modifier-state* modifier)))
 
 (defmethod mez-event->mcclim-event ((event mos:key-event))
-  (let* ((releasep (mos:key-releasep event))
-         (char (mos:key-key event))
-         (name (get-name char))
+  (let* ((releasep       (mos:key-releasep event))
+         (char           (mos:key-key event))
+         (name           (get-name char))
          (modifier-state (compute-modifier-state (mos:key-modifier-state event)))
-         (mez-window (mos:window event))
-         (sheet (port-lookup-sheet *port* mez-window)))
+         (mez-window     (mos:window event))
+         (port           *port*)
+         (pointer        (port-pointer port))
+         (sheet          (port-lookup-sheet port mez-window)))
     (when sheet
       (make-instance (if releasep 'key-release-event 'key-press-event)
+                     :sheet (or (frame-properties (pane-frame sheet) 'focus)
+                                sheet)
                      :key-name name
                      :key-character char
                      :x *last-mouse-x*
                      :y *last-mouse-y*
-                     :graft-x *last-graft-x*
-                     :graft-y *last-graft-y*
-                     :sheet (or (frame-properties (pane-frame sheet) 'focus)
-                                sheet)
+                     :graft-x (pointer-x pointer)
+                     :graft-y (pointer-y pointer)
                      :modifier-state modifier-state))))
 
 ;;;======================================================================
@@ -92,75 +92,47 @@
         (setf result (logior result (cdr tr)))))
     result))
 
-(defun pointer-motion-event (sheet event)
-  (let ((time 0))
-    (make-instance 'pointer-motion-event
-                   :pointer 0
-                   :x *last-mouse-x*
-                   :y *last-mouse-y*
-                   :graft-x *last-graft-x*
-                   :graft-y *last-graft-y*
-                   :sheet sheet
-                   :modifier-state *last-modifier-state*
-                   :timestamp time)))
+(defun pointer-event (port sheet class &rest initargs)
+  (let ((time 0)
+        (pointer (port-pointer port)))
+    (apply #'make-instance class
+           :timestamp time
+           :sheet sheet
+           :pointer pointer
+           :x *last-mouse-x*
+           :y *last-mouse-y*
+           :graft-x (pointer-x pointer)
+           :graft-y (pointer-y pointer)
+           :modifier-state *last-modifier-state*
+           initargs)))
 
-(defun pointer-button-event (sheet event)
-  (let* ((buttons (compute-mouse-buttons (mos:mouse-button-state event)))
-         (change (compute-mouse-buttons (mos:mouse-button-change event)))
-         (time 0))
-    (make-instance (if (= (logand buttons change) 0)
+(defun pointer-motion-event (port sheet event)
+  (declare (ignore event))
+  (pointer-event port sheet 'pointer-motion-event))
+
+(defun pointer-button-event (port sheet event)
+  (let ((buttons (compute-mouse-buttons (mos:mouse-button-state event)))
+        (change (compute-mouse-buttons (mos:mouse-button-change event))))
+    (pointer-event port sheet
+                   (if (= (logand buttons change) 0)
                        'pointer-button-release-event
                        'pointer-button-press-event)
-                   :pointer 0
-                   :button change
-                   :x *last-mouse-x*
-                   :y *last-mouse-y*
-                   :graft-x *last-graft-x*
-                   :graft-y *last-graft-y*
-                   :sheet sheet
-                   :modifier-state *last-modifier-state*
-                   :timestamp time)))
+                   :button change)))
 
-(defun pointer-scroll-event (sheet event)
-  (let* ((buttons (compute-mouse-buttons (mos:mouse-button-state event)))
-         (change (compute-mouse-buttons (mos:mouse-button-change event)))
-         (time 0))
-    (make-instance 'climi::pointer-scroll-event
-                   :pointer 0
+(defun pointer-scroll-event (port sheet event)
+  (let ((change (compute-mouse-buttons (mos:mouse-button-change event))))
+    (pointer-event port sheet 'climi::pointer-scroll-event
                    :delta-y (case change
                               (8   2)
-                              (16 -2))
-                   :x *last-mouse-x*
-                   :y *last-mouse-y*
-                   :graft-x *last-graft-x*
-                   :graft-y *last-graft-y*
-                   :sheet sheet
-                   :modifier-state *last-modifier-state*
-                   :timestamp time)))
+                              (16 -2)))))
 
-(defun mouse-exit-event (sheet event)
-  (let ((time 0))
-    (make-instance 'pointer-exit-event
-                   :pointer 0
-                   :x *last-mouse-x*
-                   :y *last-mouse-y*
-                   :graft-x *last-graft-x*
-                   :graft-y *last-graft-y*
-                   :sheet sheet
-                   :modifier-state *last-modifier-state*
-                   :timestamp time)))
+(defun mouse-exit-event (port sheet event)
+  (declare (ignore event))
+  (pointer-event port sheet 'pointer-exit-event))
 
-(defun mouse-enter-event (sheet event)
-  (let ((time 0))
-    (make-instance 'pointer-enter-event
-                   :pointer 0
-                   :x *last-mouse-x*
-                   :y *last-mouse-y*
-                   :graft-x *last-graft-x*
-                   :graft-y *last-graft-y*
-                   :sheet sheet
-                   :modifier-state *last-modifier-state*
-                   :timestamp time)))
+(defun mouse-enter-event (port sheet event)
+  (declare (ignore event))
+  (pointer-event port sheet 'pointer-enter-event))
 
 (defun frame-mouse-event (sheet mez-frame event)
   (handler-case
@@ -172,18 +144,20 @@
       (make-instance 'window-manager-delete-event :sheet sheet))))
 
 (defmethod mez-event->mcclim-event ((event mos:mouse-event))
-  (let* ((mez-window (mos:window event))
+  (let* ((port       *port*)
+         (pointer    (port-pointer port))
+         (mez-window (mos:window event))
          (mouse-x    (mos:mouse-x-position event))
          (mouse-y    (mos:mouse-y-position event))
-         (mez-mirror (port-lookup-mirror *port* mez-window))
-         (sheet      (port-lookup-sheet *port* mez-window)))
+         (mez-mirror (port-lookup-mirror port mez-window))
+         (sheet      (port-lookup-sheet port mez-window)))
 
     (when mez-mirror
       (with-slots (mez-frame dx dy width height) mez-mirror
         (setf *last-mouse-x* mouse-x
               *last-mouse-y* mouse-y
-              *last-graft-x* (+ mouse-x (mos:window-x mez-window))
-              *last-graft-y* (+ mouse-y (mos:window-y mez-window)))
+              (pointer-x pointer) (+ mouse-x (mos:window-x mez-window))
+              (pointer-y pointer) (+ mouse-y (mos:window-y mez-window)))
         (cond ((and mez-frame
                     (or (mos:in-frame-header-p mez-frame mouse-x mouse-y)
                         (mos:in-frame-border-p mez-frame mouse-x mouse-y)))
@@ -200,13 +174,13 @@
               ((= (mos:mouse-button-change event) 0)
                (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
                         :default)
-               (pointer-motion-event sheet event))
+               (pointer-motion-event port sheet event))
 
               ((member (compute-mouse-buttons (mos:mouse-button-change event)) '(8 16))
-               (pointer-scroll-event sheet event))
+               (pointer-scroll-event port sheet event))
 
               (t
-               (pointer-button-event sheet event)))))))
+               (pointer-button-event port sheet event)))))))
 
 ;;;======================================================================
 ;;; Activation Events
