@@ -262,10 +262,10 @@
              (setf (row-major-aref dst-array di) source-rgba))
             (:blend
              (let-rgba ((r.bg g.bg b.bg a.bg) (row-major-aref dst-array di))
-                       (setf (row-major-aref dst-array di)
-                             (octet-blend-function*
-                              source-r source-g source-b source-a
-                              r.bg     g.bg     b.bg     a.bg)))))))))
+               (setf (row-major-aref dst-array di)
+                     (octet-blend-function*
+                      source-r source-g source-b source-a
+                      r.bg     g.bg     b.bg     a.bg)))))))))
   ;; XXX These #'1- are fishy. We don't capture correct region (rounding
   ;; issue?). This problem is visible when scrolling.
   (make-rectangle* (1- x) (1- y) (+ x width) (+ y height)))

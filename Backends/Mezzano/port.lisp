@@ -77,7 +77,7 @@
 
 (defun step-event-loop (port now last-time)
   (let* ((deadline (+ (or last-time now)
-		      (floor internal-time-units-per-second 2)))
+		      (floor internal-time-units-per-second 20)))
 	 (timeout  (max 0 (- deadline now))))
     ; (format *terminal-io* "next frame: ~D (in ~D)~%" deadline timeout)
     (process-next-event port :timeout (/ timeout internal-time-units-per-second))
@@ -214,12 +214,10 @@
 
 
 (defmethod port-force-output ((port mezzano-port))
-  #+no (maphash
-   #'(lambda (key val)
-       (when (typep key 'mezzano-mirrored-sheet-mixin)
-         (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
-   (slot-value port 'climi::sheet->mirror))
-  )
+  (maphash (lambda (key val)
+	     (when (typep key 'mezzano-mirrored-sheet-mixin)
+	       (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
+	   (slot-value port 'climi::sheet->mirror)))
 
 ;;
 ;; Polling for events every 10ms
@@ -246,23 +244,25 @@
   ;; ignores is a keyboard-event which only occurs singlely in
   ;; the mcclim-fifo.
   (let ((mez-fifo (mezzano-mez-fifo port)))
-    (loop (unless (mezzano.supervisor:event-wait-for
-		      ((mezzano.sync::mailbox-receive-possible-event mez-fifo)
-		       :timeout timeout)
-		    (not (mezzano.sync:mailbox-empty-p mez-fifo)))
-	    (return))
-	  (multiple-value-bind (event validp)
-	      (mezzano.sync:mailbox-receive mez-fifo :wait-p t)
-	    (assert validp)
-	    ;; ignore keyboard events if there's no event sheet
-	    ;; to handle them
-	    (unless (and (typep event 'keyboard-event)
-			 (null (event-sheet event)))
-	      (alexandria:when-let ((event (mez-event->mcclim-event event)))
-		(when (typep event 'pointer-event)
-		  (setf (port-pointer-sheet port) (event-sheet event)))
-                (distribute-event port event)
-		(return)))))))
+    (loop for i :from 0
+	  while (mezzano.supervisor:event-wait-for
+		    ((mezzano.sync::mailbox-receive-possible-event mez-fifo)
+		     :timeout timeout)
+		  (not (mezzano.sync:mailbox-empty-p mez-fifo)))
+	  do (multiple-value-bind (event validp)
+		 (mezzano.sync:mailbox-receive mez-fifo :wait-p t)
+	       (assert validp)
+	       ;; ignore keyboard events if there's no event sheet
+	       ;; to handle them
+	       (unless (and (typep event 'keyboard-event)
+			    (null (event-sheet event)))
+		 (alexandria:when-let ((event (mez-event->mcclim-event event)))
+		   (when (typep event 'pointer-event)
+		     (setf (port-pointer-sheet port) (event-sheet event)))
+                   (distribute-event port event)
+		   (return))))
+	  ; finally (format *terminal-io* "processed ~D event~:P~%" i)
+	  )))
 
 ;;; Pixmap
 
