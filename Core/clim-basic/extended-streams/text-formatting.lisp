@@ -127,7 +127,9 @@
 (defgeneric invoke-with-filling-output (stream continuation fresh-line-fn
                                         &key fill-width break-characters)
   (:method ((stream filling-output-mixin) continuation fresh-line-fn
-            &key (fill-width '(80 :character)) break-characters)
+            &key
+              (fill-width (bounding-rectangle-max-x (stream-page-region stream)))
+              break-characters)
     (with-temporary-margins (stream :right `(:absolute ,fill-width))
       (letf (((stream-end-of-line-action stream) :wrap*)
              ((line-break-strategy stream) break-characters)
