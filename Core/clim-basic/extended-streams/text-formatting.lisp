@@ -179,10 +179,10 @@
                             (etypecase ,after-line-break
                               (string   (write-string ,after-line-break ,stream))
                               (function (funcall ,after-line-break ,stream soft-newline-p))))))
-                      ;; When after-line-break goes beyond the previous
-                      ;; position we advance the cursor.
-                      (maxf cx (stream-cursor-position ,stream))
-                      (setf (stream-cursor-position ,stream) (values cx cy)))))
+                      ;; When after-line-break goes beyond the
+                      ;; previous position we advance the cursor.
+                      (multiple-value-bind (nx ny) (stream-cursor-position ,stream)
+                        (stream-set-cursor-position ,stream (max cx nx) (max cy ny))))))
              (declare (dynamic-extent #',continuation #',fresh-line-fn))
              (invoke-with-filling-output ,stream #',continuation #',fresh-line-fn ,@args)))))))
 
