@@ -1607,82 +1607,110 @@ protocol retrieving gestures from a provided string."))
 (defmethod presentation-type-of ((object pathname))
   'pathname)
 
-(defun filename-completer (string action)
+(defun filename-completer-get-directory (string)
   (flet
       ((deal-with-home (pathname his-directory)
-	 ;; SBCL (and maybe others) treat "~/xxx" specially, returning a pathname
-	 ;; whose directory is (:ABSOLUTE :HOME xxx)
-	 ;; But if you call Directory on that pathname the returned list
-	 ;; are all complete pathnames without the :Home part!.
-	 ;; So this replaces the :HOME with what it actually means
-	 (let* ((home-env-variable (get-environment-variable "HOME"))
-		(home (loop for pos = 1 then (1+ next-pos)
-			 for next-pos = (position #\/ home-env-variable :start pos)
-			 collect (subseq home-env-variable pos next-pos)
-			 until (null next-pos)))
-		(new-directory (cons
-				(first his-directory)
-				(append home (rest (rest his-directory))))))
-	     (make-pathname :host (pathname-host pathname)
-			    :device (pathname-device pathname)
-			    :name (pathname-name pathname)
-			    :version (pathname-version pathname)
-			    :type (pathname-type pathname)
-			    :directory new-directory))))
-    ;; Slow but accurate
+         ;; SBCL (and maybe others) treat "~/xxx" specially, returning a pathname
+         ;; whose directory is (:ABSOLUTE :HOME xxx)
+         ;; But if you call Directory on that pathname the returned list
+         ;; are all complete pathnames without the :Home part!.
+         ;; So this replaces the :HOME with what it actually means
+         (let* ((home-env-variable (get-environment-variable "HOME"))
+                (home (loop for pos = 1 then (1+ next-pos)
+                         for next-pos = (position #\/ home-env-variable :start pos)
+                         collect (subseq home-env-variable pos next-pos)
+                         until (null next-pos)))
+                (new-directory (cons
+                                (first his-directory)
+                                (append home (rest (rest his-directory))))))
+           (make-pathname :host (pathname-host pathname)
+                          :device (pathname-device pathname)
+                          :name (pathname-name pathname)
+                          :version (pathname-version pathname)
+                          :type (pathname-type pathname)
+                          :directory new-directory))))
     (let* ((raw-pathname (pathname string))
-	   (raw-directory (pathname-directory raw-pathname))
-	   (original-pathname (if (and (listp raw-directory)
-				       (eql (first raw-directory) :absolute)
-				       (eql (second raw-directory) :Home))
-				  (deal-with-home raw-pathname raw-directory)
-				  raw-pathname))
-	   (original-string (namestring original-pathname))
-	   ;; Complete logical pathnames as well as regular pathnames
-	   ;; strategy is to keep track of both original string provided and translated string
-	   ;; but to return pathname built from original components except for the name.
-	   (logical-pathname-p (typep original-pathname 'logical-pathname))
-	   (actual-pathname (if logical-pathname-p
-				(translate-logical-pathname original-pathname)
-				original-pathname))
-	   (merged-pathname (merge-pathnames actual-pathname))
-	   completions)
-      (let ((search-pathname (make-pathname :host (pathname-host merged-pathname)
-					    :device (pathname-device merged-pathname)
-					    :directory (pathname-directory merged-pathname)
-					    :version :unspecific
-					    :type :wild
-					    :name :wild)))
-	(setq completions (directory search-pathname #+sbcl :resolve-symlinks #+sbcl nil)))
-      ;; Now prune out all completions that don't start with the string
-      (let ((type (pathname-type actual-pathname)))
-	(when (null type)
-	  ;; If the user didn't supply a file type, don't burden him with all
-	  ;; sorts of version numbers right now.
-	  (let ((new-completions nil))
-	    (dolist (pathname completions)
-	      (cond
-		;; meaning this is actually a directory
-		((and (null (pathname-name pathname))
-		      (null (pathname-type pathname)))
-		 (pushnew (make-pathname :host (pathname-host original-pathname)
-					 :device (pathname-device original-pathname)
-					 :directory (butlast (pathname-directory pathname))
-					 :name (first (last (pathname-directory pathname)))
-					 :type nil)
-			  new-completions))
-		(t
-		 (pushnew (make-pathname :host (pathname-host original-pathname)
-					 :device (pathname-device original-pathname)
-					 :directory (pathname-directory original-pathname)
-					 :name (pathname-name pathname)
-					 :type (pathname-type pathname))
-			  new-completions))))
-	    (setq completions (nreverse new-completions))))
-	(complete-from-possibilities original-string completions '(#\space)
-						    :action action
-						    :name-key #'namestring
-						    :value-key #'identity)))))
+           (raw-directory (pathname-directory raw-pathname))
+           (original-pathname (if (and (listp raw-directory)
+                                       (eql (first raw-directory) :absolute)
+                                       (eql (second raw-directory) :Home))
+                                  (deal-with-home raw-pathname raw-directory)
+                                  raw-pathname))
+           ;; Complete logical pathnames as well as regular pathnames
+           ;; strategy is to keep track of both original string provided and translated string
+           ;; but to return pathname built from original components except for the name.
+           (logical-pathname-p (typep original-pathname 'logical-pathname))
+           (actual-pathname (if logical-pathname-p
+                                (translate-logical-pathname original-pathname)
+                                original-pathname))
+           ;; merge in *default-pathname-defaults*
+           (merged-pathname (merge-pathnames actual-pathname))
+           (search-pathname  (make-pathname :host (pathname-host merged-pathname)
+                                            :device (pathname-device merged-pathname)
+                                            :directory (pathname-directory merged-pathname)
+                                            :version :unspecific
+                                            :type :wild
+                             :name :wild)))
+      (values search-pathname (pathname-type actual-pathname) original-pathname))))
+
+(defun filename-completer-get-candidates (search-pathname pathname-type original-pathname)
+  (let ((orginal-is-logical-pathname (typep original-pathname 'logical-pathname))
+        (completions (directory search-pathname #+sbcl :resolve-symlinks #+sbcl nil)))
+    ;; Now prune out all completions that don't start with the string
+    (when (null pathname-type)
+      (flet ((legitimate-logical-pathname (name)
+               (let ((word (string name)))
+                 (loop for i below (length word)
+                       for ch = (schar word i)
+                       always (and (standard-char-p ch)
+                                   (or (alphanumericp ch) (char= ch #\-)))))))
+        (let ((new-completions nil))
+          (loop for pathname in completions
+                for pathname-name = (pathname-name pathname)
+                for pathname-type = (pathname-type pathname)
+                for pathname-directory = (pathname-directory pathname)
+                for pathname-host = (pathname-host original-pathname)
+                for pathname-device = (pathname-device original-pathname)
+                do (cond
+                     ;; meaning this is actually a directory
+                     ((and (null pathname-name)
+                           (null pathname-type))
+                      (when (and (loop for word in  (butlast pathname-directory)
+                                       always (legitimate-logical-pathname word))
+                                 (legitimate-logical-pathname (first (last pathname-directory))))
+                        (pushnew (if orginal-is-logical-pathname
+                                     (make-pathname :host pathname-host
+                                                    :device pathname-device
+                                                    :directory (first (last pathname-directory))
+                                                    :name nil
+                                                    :type nil)
+                                     (make-pathname :host pathname-host
+                                                    :device pathname-device
+                                                    :directory (butlast pathname-directory)
+                                                    :name (first (last pathname-directory))
+                                                    :type nil))
+                                 new-completions)))
+                     (t
+                      (when (or (not orginal-is-logical-pathname)
+                                (and (legitimate-logical-pathname pathname-name)
+                                     (legitimate-logical-pathname pathname-type)))
+                        (pushnew (make-pathname :host pathname-host
+                                                :device pathname-device
+                                                :directory (pathname-directory original-pathname)
+                                                :name pathname-name
+                                                :type pathname-type)
+                                 new-completions)))))
+          (nreverse new-completions))))))
+
+
+(defun filename-completer (string action)
+  (multiple-value-bind (search-pathname pathname-type original-pathname)
+      (filename-completer-get-directory string)
+    (let ((candidates (filename-completer-get-candidates search-pathname pathname-type original-pathname)))
+        (complete-from-possibilities (namestring original-pathname) candidates '(#\Space)
+                                     :action action
+                                     :name-key #'namestring
+                                     :value-key #'identity))))
 
 (define-presentation-method accept ((type pathname) stream (view textual-view)
                                     &key (default *default-pathname-defaults* defaultp)
