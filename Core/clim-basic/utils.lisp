@@ -808,160 +808,80 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
 
 
 
-;;; Function returns a sequence with indexes where the string should be
-;;; broken. Line breaks are computed disregarding the newlines (we
-;;; assume that line may be broken at any place). If a single character
-;;; doesn't fit in an empty line we assume the break *after* this
-;;; character to avoid infinite recursion.
-(defun %line-breaks-1 (string width initial-offset margin start end)
-  (collect (break-line)
-    (macrolet ((split (step-form)
-                 `(let* ((current-margin (- margin initial-offset))
-                         (split start)
-                         (initial-break ,step-form))
-                    (maxf initial-break split)
-                    (when (and (= initial-break split)
-                               (<= initial-offset 0))
-                      (setf initial-break (1+ split)))
-                    (setf current-margin margin)
-                    (do ((split initial-break
-                                (max ,step-form (1+ split))))
-                        ((>= split end)
-                         (when (null (break-line))
-                           (break-line initial-break)))
-                      (if-let ((pos (position #\space string
-                                              :start (min split end)
-                                              :end end
-                                              :test-not #'char=)))
-                        (break-line (setf split pos))
-                        (return-from %line-breaks-1 (break-line)))))))
-      (etypecase width
-        (number   (split (+ split (floor current-margin width))))
-        (function (split (bisect split (1+ end) ; we split *after* the string
-                                 (lambda (index)
-                                   (<= (funcall width string split index)
-                                       current-margin)))))))
-    (break-line)))
+;;; Returns an index of the character _before_ which we should break
+;;; the line (may be used as END argument in SUBSEQ). When FROM-END is
+;;; T, then we return the rightmost opportunity which does not violate
+;;; hard line breaks. Second value indicates the kind of a line break.
+(defun line-end (string break-fn start limit from-end)
+  (loop with opportunity = nil
+        for i from start below limit
+        do (ecase (funcall break-fn string start i)
+             (:hard (return (values (1+ i) :hard)))
+             (:soft (if from-end
+                        (setf opportunity (1+ i))
+                        (return (values (1+ i) :soft))))
+             ((nil) #| do nothing |#))
+        finally
+           (if (null opportunity)
+               (return (values limit :emergency))
+               (return (values opportunity :soft)))))
 
-;;; Break greedily on the break opportunity. If a single word doesn't fit in the
-;;; line and that line is shorter than an empty line then we break it right
-;;; away. If the line is longer or equal to an empty one then we break this word
-;;; by a character. If there are multiple #\space characters at the line
-;;; beginning they are kept in the previous line.
-(defun %line-breaks-2 (string width initial-offset margin start end opportunities
-                       &aux (width-fn (etypecase width
-                                        (function width)
-                                        (number (lambda (string start end)
-                                                  (declare (ignore string))
-                                                  (* width (- end start)))))))
-  (labels ((skip-whitespace (string index)
-             (and index (position #\space string :start index :test-not #'char=)))
-           (breaks-rec (offset start end next-opportunity-index
-                        &aux (current-margin (max (- margin offset) 1)))
-             (cond ((<= (funcall width-fn string start end) current-margin)
-                    (return-from breaks-rec
-                      nil))
-                   ((= next-opportunity-index (length opportunities))
-                    (return-from breaks-rec
-                      (if (<= offset 0)
-                          (%line-breaks-1 string width offset margin start end)
-                          '(0))))
-                   ((>= start (aref opportunities next-opportunity-index))
-                    (return-from breaks-rec
-                      (breaks-rec offset start end (1+ next-opportunity-index)))))
-             (loop
-                with best-break = nil
-                for i from next-opportunity-index below (length opportunities)
-                for opportunity = (aref opportunities i)
-                for current-width = (funcall width-fn string start opportunity)
-                do
-                  (cond ((<= current-width current-margin)
-                         (if-let ((pos (skip-whitespace string opportunity)))
-                           (setf best-break pos)
-                           (return-from breaks-rec nil)))
-                        ((null best-break)
-                         (return-from breaks-rec
-                           (if (> offset 0)
-                               (list* start (breaks-rec 0 start end i))
-                               (let* ((char-breaks (%line-breaks-1 string width
-                                                                   offset margin
-                                                                   start opportunity))
-                                      (new-start (alexandria:last-elt char-breaks)))
-                                 (append char-breaks (breaks-rec 0 new-start end i))))))
-                        (t #1=(return-from breaks-rec
-                                (list* best-break (breaks-rec 0 best-break end i)))))
-                finally #1#)))
-    (breaks-rec initial-offset start end 0)))
+(defun make-break-function (break-strategy)
+  (etypecase break-strategy
+    (function
+     break-strategy)
+    ;; break everywhere
+    ((eql nil)
+     (lambda (string start index)
+       (declare (ignore start))
+       (case (char string index)
+         (#\newline :hard)
+         (otherwise :soft))))
+    ;; default strategy
+    ((eql t)
+     (lambda (string start index)
+       (declare (ignore start))
+       (case (char string index)
+         (#\newline :hard)
+         (#\space   :soft)
+         (otherwise nil))))
+    ;; In case of sequences we assume
+    ;; that the string is a single line
+    ;; without any hard line breaks
+    (list
+     (lambda (string start index)
+       (declare (ignore start))
+       (when (member (char string index)
+                     break-strategy)
+         :soft)))
+    (vector
+     (lambda (string start index)
+       (declare (ignore start string))
+       (when (find index break-strategy)
+         :soft)))))
 
-;;; This is super-slow and barely tested. Function implements word wrap with a
-;;; minimum raggedness. I'm leaving the code for someone eager to optimize and
-;;; test it. -- jd 2018-12-26
-#+ (or)
-(defun %line-breaks-3 (string width initial-offset margin start end opportunities
-                       &aux (width-fn (etypecase width
-                                        (function width)
-                                        (number (lambda (string start end)
-                                                  (declare (ignore string))
-                                                  (* width (- end start)))))))
-  (labels ((skip-whitespace (string index)
-             (and index (position #\space string :start index :test-not #'char=)))
-           (breaks-rec (offset start end next-opportunity-index
-                               &aux (current-margin (max (- margin offset) 1)))
-             (cond ((<= (funcall width-fn string start end) current-margin)
-                    (return-from breaks-rec
-                      (values nil 0)))
-                   ((= next-opportunity-index (length opportunities))
-                    (return-from breaks-rec
-                      (values (%line-breaks-1 string width offset margin start end) 0)))
-                   ((>= start (aref opportunities next-opportunity-index))
-                    (return-from breaks-rec
-                      (breaks-rec offset start end (1+ next-opportunity-index)))))
-             (loop
-                with best-breaks = nil
-                with best-cost = nil
-                for i from next-opportunity-index below (length opportunities)
-                for opportunity = (aref opportunities i)
-                for current-width = (funcall width-fn string start opportunity)
-                do
-                  (cond ((<= current-width current-margin)
-                         (let ((current-cost (expt (- current-margin current-width) 2))
-                               (current-break (if-let ((pos (skip-whitespace string opportunity)))
-                                                pos
-                                                (return-from breaks-rec nil))))
-                           (multiple-value-bind (breaks remaining-cost)
-                               (breaks-rec 0 current-break end (1+ i))
-                             (when (or (null best-cost)
-                                       (< (+ current-cost remaining-cost) best-cost))
-                               (setf best-breaks (list* current-break breaks)
-                                     best-cost (+ current-cost remaining-cost))))))
-                        ((null best-cost)
-                         (return-from breaks-rec
-                           (if (> offset 0)
-                               (multiple-value-bind (breaks remaining-cost)
-                                   (breaks-rec 0 start end i)
-                                 (return-from breaks-rec
-                                   (values (list* start breaks)
-                                           (+ remaining-cost current-margin))))
-                               (let* ((char-breaks (%line-breaks-1 string width
-                                                                   offset margin
-                                                                   start opportunity))
-                                      (new-start (alexandria:last-elt char-breaks)))
-                                 (multiple-value-bind (breaks remaining-cost)
-                                     (breaks-rec 0 new-start end i)
-                                   (values (append char-breaks breaks) remaining-cost))))))
-                        (t #1=(return-from breaks-rec
-                                (values best-breaks best-cost))))
-                finally #1#)))
-    (breaks-rec initial-offset start end 0)))
-
-;;; Implementing line breaking as defined in Unicode[1] is left as an
-;;; excercise for the reader. When implemented it should be wired to
-;;; the strategy designated by T. Current approach break on space, but
-;;; in "real" languages lines may /need to/ or /must to/ be split under
-;;; various conditions - hyphen, hard space, infix numeric separators
-;;; etc. Optimally this should be implemented in cl-unicode and used
-;;; from there.  [1] https://unicode.org/reports/tr14/ -- jd 2019-01-08
-(defun line-breaks (string width &key (break-strategy t) initial-offset margin (start 0) end)
+(defun line-breaks (string width
+                    &key
+                      (break-strategy t)
+                      initial-offset
+                      (margin nil margin-p)
+                      (start 0) end count
+                    &aux
+                      (width-fn (etypecase width
+                                  (function width)
+                                  (number (lambda (string start end)
+                                            (declare (ignore string))
+                                            (* width (- end start))))))
+                      (width (etypecase width
+                               (function nil)
+                               (number width)))
+                      (break-fn (make-break-function break-strategy))
+                      (initial-offset (or initial-offset 0))
+                      (margin (if margin-p
+                                  margin
+                                  (* 80 (funcall width-fn "m" 0 1))))
+                      (start (or start 0))
+                      (end (or end (length string))))
   "Function takes a string and returns a list of indexes where it should be split.
 
 WIDTH is a function accepting STRING, START and END arguments which should
@@ -972,7 +892,9 @@ INITIAL-OFFSET is an initial position for the first line (may be negative). All
 remaining lines will start from the line beginning. Default is line beginning.
 
 MARGIN is a maximum width at which line should break. Defaults to 80
-characters (width of a character m is taken as a reference value).
+characters (width of a character m is taken as a reference
+value). When explicitly specified as NIL then only hard line breaks
+are returned.
 
 BREAK-STRATEGY may be:
 - symbol T implementing a default line breaking by word strategy,
@@ -983,36 +905,59 @@ BREAK-STRATEGY may be:
 
 START/END designate the sub-sequence of STRING beginning and ending
 offset. The sub-sequence may contain newline characters and it is up
-to the BREAK-STRATEGY whenever it assigns any meaning to to them."
-  (unless start (setq start 0))
-  (unless end (setq end (length string)))
-  (unless margin (setq margin (* 80 (etypecase width
-                                      (function (funcall width "m" 0 1))
-                                      (number width)))))
-  (unless initial-offset (setq initial-offset 0))
-  (assert (< start end))
-  (when (null break-strategy)
-    (return-from line-breaks
-      (%line-breaks-1 string width initial-offset margin start end)))
-  (let ((opportunities (etypecase break-strategy
-                         (function
-                          (coerce (loop for i from start below end
-                                     when (funcall break-strategy i)
-                                     collect i)
-                                  'vector))
-                         ((eql t)
-                          (coerce (loop for i from start below end
-                                     when (char= (char string i) #\space)
-                                     collect i)
-                                  'vector))
-                         (list
-                          (coerce (loop for i from start below end
-                                     when (member (char string i) break-strategy)
-                                     collect i)
-                                  'vector))
-                         (vector
-                          break-strategy))))
-    (%line-breaks-2 string width initial-offset margin start end opportunities)))
+to the BREAK-STRATEGY whenever it assigns any meaning to to them.
+
+COUNT specifies how many breaks we want to collect."
+  (assert (and (array-in-bounds-p string start)
+               (array-in-bounds-p string (1- end))
+               (< start end)))
+  (check-type count (or null (integer 0)))
+  (when (and count (zerop count))
+    (return-from line-breaks))
+  ;; Margin explicitly specified as NIL (break only on hard breaks).
+  (when (null margin)
+    (collect (break-line)
+      (loop (multiple-value-bind (index break)
+                (line-end string break-fn start end t)
+              (when (= index end)
+                (when (eq break :hard)
+                  (break-line index))
+                (return))
+              (break-line index)
+              (when (and count (zerop (decf count)))
+                (return))))
+      (return-from line-breaks (break-line))))
+  ;; Before each call to next-line we want to narrow the break
+  ;; opportunity boundaries.
+  (flet ((narrow-end (start end line-width)
+           (if width
+               (min end (+ start (floor line-width width)))
+               (bisect start (1+ end)
+                       (lambda (index)
+                         (<= (funcall width-fn string start index)
+                             line-width))))))
+    (collect (break-line)
+      (when (>= initial-offset margin)
+        (break-line start)
+        (setf initial-offset 0))
+      (loop for offset = initial-offset then 0
+            for new-end = (narrow-end start end (- margin offset))
+            do (multiple-value-bind (index break)
+                   (line-end string break-fn start new-end t)
+                 (when (and (= end new-end)
+                            (not (eq break :hard)))
+                   (break-line end)
+                   (return-from line-breaks (break-line)))
+                 ;; Degenerate case (ditto).
+                 (when (and (= index start)
+                            (<= offset 0))
+                   (incf index))
+                 (break-line index)
+                 (setf start index)
+                 (when (= index end)
+                   (return)))
+            until (and count (zerop (decf count))))
+      (break-line))))
 
 ;;; curbed from uiop
 (defmacro nest (&rest things)
