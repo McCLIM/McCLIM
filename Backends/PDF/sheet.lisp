@@ -96,9 +96,6 @@
 
 ;;; Output Protocol
 
-(defmethod medium-drawable ((medium pdf-medium))
-  (sheet-mirror (medium-sheet medium)))
-
 (defmethod make-medium ((port pdf-port) (sheet clim-pdf-stream))
   (make-instance 'pdf-medium :sheet sheet))
 

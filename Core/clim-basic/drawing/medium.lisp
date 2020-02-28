@@ -519,6 +519,10 @@
           :writer (setf %medium-sheet) ))
   (:documentation "The basic class, on which all CLIM mediums are built."))
 
+(defmethod medium-drawable ((medium basic-medium))
+  (when-let ((sheet (medium-sheet medium)))
+    (sheet-mirror sheet)))
+
 (defclass ungrafted-medium (basic-medium) ())
 
 (defmethod initialize-instance :after ((medium basic-medium) &rest args)
