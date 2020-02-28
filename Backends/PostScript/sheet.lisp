@@ -166,9 +166,6 @@
 
 ;;; Output Protocol
 
-(defmethod medium-drawable ((medium postscript-medium))
-  (sheet-mirror (medium-sheet medium)))
-
 (defmethod make-medium ((port postscript-port) (sheet postscript-stream))
   (make-instance 'postscript-medium :sheet sheet))
 
