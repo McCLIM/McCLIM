@@ -315,7 +315,7 @@
              (eol-action (stream-end-of-line-action stream))
              (eol-p (> (+ cx width) right-margin)))
         (when (or (null eol-p) (member eol-action '(:allow :scroll)))
-          (stream-write-output stream string nil start end)
+          (stream-write-output stream string start end)
           (incf cx width)
           (setf (cursor-position (stream-text-cursor stream)) (values cx cy))
           (when (and (> cx right-margin)
@@ -328,50 +328,48 @@
         ;; closing the text-output-record and have multiline records to
         ;; allow gimmics like a dynamic reflow). Also text-style doesn't
         ;; change until the end of this function. -- jd 2019-01-10
-        (let* ((width (if (text-style-fixed-width-p text-style medium)
-                          (text-style-width text-style medium)
-                          (lambda (string start end)
-                            (text-size medium string
-                                       :text-style text-style
-                                       :start start :end end))))
-               (splits (line-breaks string width
-                                    :initial-offset (- cx left-margin)
-                                    :margin (- right-margin left-margin)
-                                    :break-strategy (ecase eol-action
-                                                      (:wrap NIL)
-                                                      (:wrap* T))
-                                    :start start :end end)))
-          (do ((start start (car split))
-               (split splits (rest split)))
-              ((null split)
-               (stream-write-output stream string nil start end)
-               (setf (cursor-position (stream-text-cursor stream))
-                     (values (+ left-margin
-                                (stream-string-width stream string
-                                                     :start start :end split
-                                                     :text-style text-style))
-                             (nth-value 1 (stream-cursor-position stream)))))
-            (ecase eol-action
-              (:wrap  (stream-write-output stream string nil start (car split)))
-              (:wrap* (let ((pos (position #\space string
-                                           :from-end t :start start :end (car split)
-                                           :test-not #'char=)))
-                        (when pos (incf pos))
-                        (stream-write-output stream string nil start (or pos (car split))))))
-            ;; print a soft newline
-            (seos-write-newline stream t)))))))
+        ;;
+        ;; Writing a newline may cause the cursor increment, so we
+        ;; need to compute split for each line after the soft newline
+        ;; has been written. -- jd 2020-03-01
+        (loop with width = (if (text-style-fixed-width-p text-style medium)
+                               (text-style-width text-style medium)
+                               (lambda (string start end)
+                                 (text-size medium string
+                                            :text-style text-style
+                                            :start start :end end)))
+              with margin = (- right-margin left-margin)
+              with cursor = (stream-text-cursor stream)
+              with break  = (ecase eol-action
+                              (:wrap nil)
+                              (:wrap* t))
+              for offset = (- (cursor-position cursor) left-margin)
+              for split  = (car (line-breaks string width
+                                             :count 1
+                                             :initial-offset offset
+                                             :margin margin
+                                             :break-strategy break
+                                             :start start :end end))
+              do (stream-write-output stream string start split)
+                 (when (= split end)
+                   (setf (cursor-position cursor)
+                         (values (+ left-margin
+                                    (stream-string-width stream string
+                                                         :start start :end split
+                                                         :text-style text-style))
+                                 (nth-value 1 (cursor-position cursor))))
+                   (return))
+                 (seos-write-newline stream t)
+                 (setf start split))))))
 
-(defgeneric stream-write-output (stream line string-width &optional start end)
+(defgeneric stream-write-output (stream line &optional start end)
   (:documentation
-   "Writes the character or string LINE to STREAM. This function produces no more
-than one line of output i.e., doesn't wrap. If STRING-WIDTH is non-nil, that is
-used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
+   "Writes the character or string LINE to STREAM. This function
+produces no more than one line of output i.e., doesn't wrap."))
 
 ;;; The cursor is in stream coordinates.
-(defmethod stream-write-output ((stream standard-extended-output-stream)
-                                line string-width
+(defmethod stream-write-output ((stream standard-extended-output-stream) line
                                 &optional (start 0) end)
-  (declare (ignore string-width))
   ;; Do not capture medium transformation - this is a stream operation and we
   ;; draw at the current cursor position. -- jd 2019-01-04
   (with-identity-transformation (stream)
@@ -391,11 +389,11 @@ used as the width where needed; otherwise STREAM-STRING-WIDTH will be called."))
         (end (or end (length string))))
     (with-cursor-off stream
       (loop for i from start below end do
-           (when (char= #\Newline
-                        (char string i))
-             (seos-write-string stream string seg-start i)
-             (seos-write-newline stream)
-             (setq seg-start (1+ i))))
+        (when (char= #\Newline
+                     (char string i))
+          (seos-write-string stream string seg-start i)
+          (seos-write-newline stream)
+          (setq seg-start (1+ i))))
       (seos-write-string stream string seg-start end))))
 
 (defmethod stream-character-width ((stream standard-extended-output-stream) char

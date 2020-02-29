@@ -1938,8 +1938,7 @@ add output recording facilities. It is not instantiable."))
                                     width height baseline))
 
 ;;; Text output catching methods
-(defmethod stream-write-output ((stream standard-output-recording-stream)
-                                line string-width
+(defmethod stream-write-output ((stream standard-output-recording-stream) line
                                 &optional (start 0) end)
   (unless (stream-recording-p stream)
     (return-from stream-write-output
@@ -1959,10 +1958,9 @@ add output recording facilities. It is not instantiable."))
                                      height
                                      ascent)
         (stream-add-string-output stream line start end text-style
-                                  (or string-width
-                                      (stream-string-width stream line
-                                                           :start start :end end
-                                                           :text-style text-style))
+                                  (stream-string-width stream line
+                                                       :start start :end end
+                                                       :text-style text-style)
                                   height
                                   ascent))))
 
