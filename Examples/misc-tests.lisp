@@ -383,7 +383,8 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed venenatis volutpat 
 Second case uses FILLING-OUTPUT,
 Third case uses INDENTING-OUTPUT over FILLING-OUTPUT,
 Fourth case FILLING-OUTPUT over INDENTING-OUTPUT,
-Fifth case is a nested mix of two above."
+Fifth case is a nested mix of two above,
+Sixth case exhibits vertical gap between paragraphs and margins."
   (indenting-output (stream 20)
     (fresh-line stream)
     (format stream *lorem-ipsum*))
@@ -431,15 +432,15 @@ Fifth case is a nested mix of two above."
           (format stream *lorem-ipsum*))
         (indenting-output (stream 20)
           (with-drawing-options (stream :ink +dark-red+)
-           (filling-output (stream :fill-width '(80 :character)
-                                   :break-characters '(#\space)
-                                   :after-line-break "| "
-                                   :after-line-break-composed nil
-                                   :after-line-break-initially t
-                                   :after-line-break-subsequent t)
-             (fresh-line stream)
-             (with-drawing-options (stream :text-style *default-text-style* :ink +dark-blue+)
-               (format stream *lorem-ipsum*)))))
+            (filling-output (stream :fill-width '(80 :character)
+                                    :break-characters '(#\space)
+                                    :after-line-break "| "
+                                    :after-line-break-composed nil
+                                    :after-line-break-initially t
+                                    :after-line-break-subsequent t)
+              (fresh-line stream)
+              (with-drawing-options (stream :text-style *default-text-style* :ink +dark-blue+)
+                (format stream *lorem-ipsum*)))))
         (fresh-line stream)
         (with-drawing-options (stream :text-style *default-text-style* :ink +black+)
           (format stream *lorem-ipsum*))
@@ -455,7 +456,29 @@ Fifth case is a nested mix of two above."
               (with-drawing-options (stream :text-style *default-text-style* :ink +dark-blue+)
                 (format stream *lorem-ipsum*)))))
         (with-drawing-options (stream :text-style *default-text-style* :ink +black+)
-          (format stream *lorem-ipsum*))))))
+          (format stream *lorem-ipsum*)))))
+  (terpri stream)
+  (clime:with-temporary-margins (stream :left 50 :right 50)
+    (terpri stream)
+    (clim:with-bounding-rectangle* (x1 y1 x2 y2)
+        (clime:stream-page-region *standard-output*)
+      (declare (ignore y1 y2))
+      (let ((cy (nth-value 1 (stream-cursor-position stream))))
+        (clim:draw-rectangle* *standard-output* x1 cy x2 (+ cy 100)
+                              :filled nil
+                              :ink clim:+grey+)))
+    (filling-output (stream
+                     :after-line-break
+                     (lambda (stream soft-p)
+                       (if (null soft-p)
+                           (with-drawing-options (stream :ink +red+)
+                             (stream-increment-cursor-position stream 40 10)
+                             (format stream "hard: "))
+                           (with-drawing-options (stream :ink +blue+)
+                             (stream-increment-cursor-position stream 20 0)
+                             (format stream "soft newline: "))))
+                     :after-line-break-initially t)
+      (format stream *lorem-ipsum*))))
 
 (defun misc-tests ()
   (let ((frame (make-application-frame 'misc-tests)))
