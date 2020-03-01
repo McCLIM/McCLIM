@@ -323,11 +323,14 @@
 
 (define-misc-test "Line centering" (stream)
     "Test focuses on a fact that line should be centered around its underlying coordinate (so if it has big thickness it extends in both directions) for regions composed of lines."
+  #+ (or)
+  ;; We are not ready for rectangular-tile background yet
+  ;; (medium-clear-area in CLX backend assumes acolor).
   (let ((array (make-array '(10 10) :initial-element 0)))
     (dotimes (i 10) (setf (aref array 0 i) 1
                           (aref array i 0) 1))
-    (setf (pane-background stream) (make-rectangular-tile
-                                      (make-pattern array (list +white+ +gray+)) 10 10))
+    (setf (pane-background stream)
+          (make-rectangular-tile (make-pattern array (list +white+ +gray+)) 10 10))
     (repaint-sheet stream +everywhere+))
   (flet ((single-lines ()
            (draw-line* stream 20 0 100 0)
