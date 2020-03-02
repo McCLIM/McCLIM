@@ -25,11 +25,16 @@
          (line))
       (line (subseq string start (car breaks))))))
 
-(defun lines (string &key (start 0) end margin (offset 0))
+(defun lines (string &rest args &key (start 0) end margin (offset 0) count break-strategy)
+  (declare (ignore margin count break-strategy))
   (list-lines string start end
-              (climi::line-breaks string 1 :margin margin :initial-offset offset :start start :end end)))
+              (apply #'climi::line-breaks string 1 :start start :initial-offset offset
+                     (alexandria:remove-from-plist args :start :offset))))
 
 (test line-breaks.smoke
+  ;; Does not work on empty strings.
+  (signals error (lines ""))
+  ;; Some cases.
   (let* ((string "ala ma kota a kot ma alę")
          (prefix "XXX XXX ")
          (suffix "XXX XXX ")
@@ -52,6 +57,87 @@
       (check 1 -2 '("ala" " " "m" "a" " " "k" "o" "t" "a" " " "a" " " "k" "o" "t" " " "m" "a" " " "a" "l" "ę"))
       ;; Usual case where each word may fit in a line.
       (check 5  1 '("ala " "ma " "kota " "a " "kot " "ma " "alę")))))
+
+(defun gen-word ()
+  (gen-one-element "lorem" "ipsum"))
+
+(defun gen-text-element ()
+  (let ((word (gen-word)))
+    (lambda ()
+      (case (random 10)
+        (9 #\Newline)
+        (t (funcall word))))))
+
+(defun gen-text (&key (length (gen-integer :min 1 :max 20))
+                      (element (gen-text-element)))
+  (let ((elements (gen-list :length length :elements element)))
+    (lambda ()
+      (with-output-to-string (stream)
+        (loop for previous = nil then element
+              for element in (funcall elements)
+              do (cond ((and previous (not (eql previous #\Newline)) (not (eql element #\Newline)))
+                        (write-char #\Space stream)
+                        (write-string element stream))
+                       (t ; (and (eql previous #\Newline) (not (eql element #\Newline)))
+                        (princ element stream))))))))
+
+(defun gen-offset (&key (integer (gen-integer :min -10 :max 10)))
+  (lambda ()
+    (case (random 10)
+      ((8 9 10) nil)
+      (t        (funcall integer)))))
+
+(defun gen-margin (&key (integer (gen-integer :min 1 :max 10)))
+  (lambda ()
+    (case (random 10)
+      ((8 9 10) nil)
+      (t        (funcall integer)))))
+
+(defun gen-count (&key (integer (gen-integer :min 1 :max 10)))
+  (lambda ()
+    (case (random 10)
+      ((8 9 10) nil)
+      (t        (funcall integer)))))
+
+(test line-breaks.random
+  (for-all ((text     (gen-text))
+            (offset   (gen-offset))
+            (margin   (gen-margin))
+            (count    (gen-count))
+            (strategy (gen-one-element nil t)))
+
+    (block nil
+      (let* ((lines (handler-case
+                        (apply #'lines text
+                               :break-strategy strategy
+                               (append (when offset (list :offset offset))
+                                       (when margin (list :margin margin))
+                                       (when count (list :count count))))
+                      (error (condition)
+                        (fail "For input~@
+                               ~2@T~S~@
+                               ~S ~S ~S ~S ~S ~S ~S ~S, signaled ~A."
+                              text :offset offset :margin margin :count count :break-strategy strategy
+                              condition)
+                        (return))))
+             (string (apply #'concatenate 'string lines)))
+        (is-false (null lines)
+                  "For input~@
+                   ~2@T~S~@
+                   ~S ~S ~S ~S ~S ~S ~S ~S, no lines were returned."
+                  text :offset offset :margin margin :count count :break-strategy strategy)
+        (if count
+            (is-true (alexandria:starts-with-subseq string text))
+            (is (string= text string)))
+        (loop for line in lines
+              do (is (null (find #\Newline line))
+                     "For input~@
+                      ~2@T~S~@
+                      ~S ~S ~S ~S ~S ~S ~S ~S, breaking into~@
+                      ~2@T~S~@
+                      contains a hard newline in ~S."
+                     text :offset offset :margin margin :count count :break-strategy strategy
+                     lines line))))))
 
 ;;; for interactive testing
 (defun print-lines (string start margin &optional (offset 0) bstr
