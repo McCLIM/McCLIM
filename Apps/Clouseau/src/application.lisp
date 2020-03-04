@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -49,14 +49,14 @@
   (:layouts
    (with-interactor
     (vertically ()
-      (scrolling (:scroll-bars :horizontal :suggested-height 40)
+      (scrolling (:scroll-bars :horizontal :suggested-height 48)
         history)
       (:fill (scrolling (:width 920 :height 480) inspector))
       (make-pane 'clime:box-adjuster-gadget)
       (1/16 interactor :height 200)))
    (without-interactor
     (vertically ()
-      (scrolling (:scroll-bars :horizontal :suggested-height 40)
+      (scrolling (:scroll-bars :horizontal :suggested-height 48)
         history)
       (:fill (scrolling (:width 920 :height 800) inspector)))))
   (:command-table (application :inherit-from (inspector-pane-command-table

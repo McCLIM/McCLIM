@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -40,20 +40,33 @@
 (define-presentation-type element (&key (selectedp nil)))
 (define-presentation-type history (&key selected))
 
-(define-presentation-method present ((object t)
-                                     (type   element)
-                                     (stream t)
-                                     (view   t)
-                                     &key)
-  (flet ((print-it (stream)
-           (with-print-error-handling (stream)
-             (with-safe-and-terse-printing (stream)
-               (let ((string (prin1-to-string (value object))))
-                 (print-string-compactly string stream :delimitersp nil))))))
-    (if selectedp
-        (with-drawing-options (stream :text-face :bold)
-          (print-it stream))
-        (print-it stream))))
+(flet ((print-it (object stream)
+         (with-print-error-handling (stream)
+           (with-safe-and-terse-printing (stream)
+             (let ((string (prin1-to-string (value object))))
+               (print-string-compactly string stream :delimitersp nil))))))
+
+  (define-presentation-method present ((object t)
+                                       (type   element)
+                                       (stream t)
+                                       (view   t)
+                                       &key)
+    (print-it object stream))
+
+  (define-presentation-method present ((object t)
+                                       (type   element)
+                                       (stream extended-output-stream)
+                                       (view   t)
+                                       &key)
+    (with-preserved-cursor-y (stream)
+      (surrounding-output-with-border (stream :shape   :rounded
+                                              :radius  3
+                                              :padding 3
+                                              :outline-ink +gray70+
+                                              :background (if selectedp +gray90+ +background-ink+))
+        (with-drawing-options (stream :text-face (if selectedp :bold nil)
+                                      :text-size :smaller)
+          (print-it object stream))))))
 
 (define-presentation-method present ((object t)
                                      (type   history)
@@ -114,7 +127,7 @@
                                  (pane  history-pane)
                                  &key force-p)
   (declare (ignore force-p))
-  (stream-increment-cursor-position pane 4 4)
+  (stream-increment-cursor-position pane 8 8)
   (let* ((history      (history pane))
          (selected     (root-place (state pane)))
          (presentation (present history `(history :selected ,selected)
