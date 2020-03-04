@@ -38,7 +38,10 @@
 ;;; Application frame
 
 (define-application-frame inspector ()
-  ((%state :accessor %state))
+  ((%state          :accessor %state
+                    :initform nil)
+   (%change-handler :accessor %change-handler
+                    :initform nil))
   (:panes
    (history    history-pane   :state (%state *application-frame*))
    (inspector  inspector-pane :state (%state *application-frame*))
@@ -67,16 +70,24 @@
 (defmethod initialize-instance :after ((instance inspector)
                                        &key object
                                             (handle-errors t))
-  (setf (%state instance) (make-instance 'inspector-state
+  (setf (%change-handler instance)
+        (lambda (old-root-place new-root-place)
+          (declare (ignore old-root-place))
+          (setf (clim:frame-pretty-name instance)
+                (inspector-name (value new-root-place))))
+        (%state instance) (make-instance 'inspector-state
                                          :root-object   object
                                          :handle-errors handle-errors)))
 
-(defmethod (setf %state) :after ((new-value t) (inspector inspector))
-  (push (lambda (old-root-place new-root-place)
-          (declare (ignore old-root-place))
-          (setf (clim:frame-pretty-name inspector)
-                (inspector-name (value new-root-place))))
-        (change-hook new-value)))
+(defmethod (setf %state) :around ((new-value t) (object inspector))
+  (let ((old-value (%state object)))
+    (prog1
+        (call-next-method)
+      (unless (eq new-value old-value)
+        (let ((handler (%change-handler object)))
+          (when old-value
+            (removef (change-hook old-value) handler))
+          (push handler (change-hook new-value)))))))
 
 (defmethod root-place ((inspector-state inspector) &key run-hook-p)
   (declare (ignore run-hook-p))

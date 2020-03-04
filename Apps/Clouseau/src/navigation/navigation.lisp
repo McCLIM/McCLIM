@@ -74,25 +74,41 @@
 
 (defclass history-pane (application-pane)
   (;; The inspector state this history should observe and manipulate.
-   (%state   :initarg  :state
-             :reader   state)
-   (%history :initarg  :history
-             :reader   history
-             :initform (make-instance 'history)))
+   (%state          :reader   state
+                    :writer   (setf %state)
+                    :initform nil)
+   (%history        :reader   history
+                    :initform (make-instance 'history))
+   (%change-handler :accessor %change-handler
+                    :initform nil))
   (:default-initargs
    :end-of-line-action :allow
    :state              (error "Missing required initarg :state")))
 
-(defmethod initialize-instance :after ((instance history-pane) &key)
+(defmethod shared-initialize :after ((instance history-pane) (slot-names t)
+                                     &key (state nil state-supplied-p))
   ;; Observe the inspector state, extending or at least redisplaying
   ;; the history when the root object changes.
-  (let ((history (history instance)))
-    (push (lambda (old-root-place new-root-place)
-            (unless (or (eq old-root-place new-root-place)
-                        (find old-root-place (elements history) :test #'eq))
-              (push-element old-root-place history)
-              (redisplay-frame-pane (pane-frame instance) instance)))
-          (change-hook (state instance)))))
+  (unless (%change-handler instance)
+    (let* ((history (history instance))
+           (handler (lambda (old-root-place new-root-place)
+                      (unless (or (eq old-root-place new-root-place)
+                                  (find old-root-place (elements history) :test #'eq))
+                        (push-element old-root-place history)
+                        (redisplay-frame-pane (pane-frame instance) instance)))))
+      (setf (%change-handler instance) handler)))
+  (when state-supplied-p
+    (setf (%state instance) state)))
+
+(defmethod (setf %state) :around ((new-value t) (object history-pane))
+  (let ((old-value (state object)))
+    (prog1
+        (call-next-method)
+      (unless (eq new-value old-value)
+        (let ((handler (%change-handler object)))
+          (when old-value
+            (removef (change-hook old-value) handler))
+          (push handler (change-hook new-value)))))))
 
 (defmethod redisplay-frame-pane ((frame application-frame)
                                  (pane  history-pane)
