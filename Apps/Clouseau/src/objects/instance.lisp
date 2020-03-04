@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -95,8 +95,10 @@
   ())
 
 (defmethod make-object-state ((object t) (place slot-definition-of-place))
-  (make-instance (object-state-class object place) :place place
-                                                   :style :name-only))
+  (make-instance (object-state-class object place)
+                 :place place
+                 :class (class-of (container place))
+                 :style :name-only))
 
 (defun inspect-as-slot-name (instance slot-definition stream)
   ;; This presents the name of SLOT-DEFINITION as a collapsed
