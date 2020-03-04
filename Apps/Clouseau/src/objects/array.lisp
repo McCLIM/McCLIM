@@ -203,7 +203,6 @@
         (when fill-pointer
           (format-place-row stream object 'vector-fill-pointer-place nil
                             :label "Fill pointer"))))
-
     (with-section (stream) "Elements"
       (with-placeholder-if-empty (stream)
         ((zerop length)

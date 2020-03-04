@@ -22,7 +22,7 @@
 
 ;;; `slot-place'
 
-(defclass slot-place (key-value-place)
+(defclass slot-place (key-value-place) ; read-only-place
   ())
 
 (defmethod object-state-class ((object null) (place slot-place))
@@ -143,7 +143,7 @@
             (write-char #\Space stream)
             (badge stream "~A-allocated" allocation)))
         (formatting-cell (stream :align-x :center :align-y :center)
-          (present stream))
+          (with-style (stream :slot-like) (present stream)))
         (formatting-cell (stream :align-y :center)
           (with-error-handling (stream "Error accessing slot")
             (inspect stream)))))))
