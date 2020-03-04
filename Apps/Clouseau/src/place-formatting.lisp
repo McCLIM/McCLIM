@@ -17,14 +17,15 @@
 
 (cl:in-package #:clouseau)
 
-(defun ensure-place (container place-class cell)
+(defun ensure-place (container cell place-class)
   (let ((parent *parent-place*))
-    (ensure-child container cell place-class parent
-                  (lambda ()
-                    (make-instance place-class
-                                   :parent    parent
-                                   :container container
-                                   :cell      cell)))))
+    (labels ((make-place ()
+               (make-instance place-class
+                              :parent    parent
+                              :container container
+                              :cell      cell)))
+      (declare (dynamic-extent #'make-place))
+      (ensure-child container cell place-class parent #'make-place))))
 
 (defun make-place-formatters (container place-class cell)
   (let ((place (ensure-place container place-class cell)))
@@ -69,22 +70,14 @@ outputs the name of SYMBOL as an immutable place to STREAM like this:
   Symbol name → <value>
   ^ Label       ^ Value presentation
               ^ Place presentation"
-  (once-only (container place-class)
-    (with-gensyms (parent)
-      `(let* ((,parent    *parent-place*)
-              (,place-var (ensure-child ,container ,cell ,place-class ,parent
-                                        (lambda ()
-                                          (make-instance ,place-class
-                                                         :parent    ,parent
-                                                         :container ,container
-                                                         :cell      ,cell)))))
-         (flet (,@(when present-place
-                    `((,present-place (stream)
-                        (present ,place-var 'place :stream stream))))
-                ,@(when present-object
-                    `((,present-object (stream)
-                        (inspect-place ,place-var stream)))))
-           ,@body)))))
+  `(let ((,place-var (ensure-place ,container ,cell ,place-class)))
+     (flet (,@(when present-place
+                `((,present-place (stream)
+                    (present ,place-var 'place :stream stream))))
+            ,@(when present-object
+                `((,present-object (stream)
+                    (inspect-place ,place-var stream)))))
+       ,@body)))
 
 (defun format-place-cells (stream object place-class cell
                            &key (label nil labelp)
