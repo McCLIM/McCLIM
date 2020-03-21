@@ -65,11 +65,11 @@
 (defclass standard-event (event)
   ((timestamp :initarg :timestamp
               :initform nil
-	      :reader event-timestamp)
+              :reader event-timestamp)
    ;; This slot is pretty much required in order to call handle-event. Some
    ;; events have something other than a sheet in this slot, which is gross.
    (sheet :initarg :sheet
-	  :reader event-sheet)))
+          :reader event-sheet)))
 
 (defmethod initialize-instance :after ((event standard-event) &rest initargs)
   (declare (ignore initargs))
@@ -86,25 +86,25 @@
 ;;; the "-event" suffix stripped off.
 (defmacro define-event-class (name superclasses slots &rest options)
   (let* ((event-tag (string '#:-event))
-	 (name-string (string name))
-	 (pos (search event-tag name-string :from-end t)))
+         (name-string (string name))
+         (pos (search event-tag name-string :from-end t)))
     ;; Check that the name of the class ends with "-EVENT".
     (when (or (null pos)
-	      (not (eql (+ pos (length event-tag)) (length name-string))))
+              (not (eql (+ pos (length event-tag)) (length name-string))))
       (error "~S does not end in ~A and is not a valid event name for ~
   define-event-class."
-	     name event-tag))
+             name event-tag))
     (let ((type (intern (subseq name-string 0 pos) :keyword)))
       `(progn
-	 (defclass ,name ,superclasses
-	   ,slots
-	   ,@options)
-	 (defmethod event-type ((event ,name))
-	   ',type)))))
+         (defclass ,name ,superclasses
+           ,slots
+           ,@options)
+         (defmethod event-type ((event ,name))
+           ',type)))))
 
 (define-event-class device-event (standard-event)
   ((modifier-state :initarg :modifier-state
-		   :reader event-modifier-state)
+                   :reader event-modifier-state)
    (x :initarg :x
       :reader device-event-native-x)
    (y :initarg :y
@@ -116,9 +116,9 @@
 
 (define-event-class keyboard-event (device-event)
   ((key-name :initarg :key-name
-	     :reader keyboard-event-key-name)
+             :reader keyboard-event-key-name)
    (key-character :initarg :key-character :reader keyboard-event-character
-		  :initform nil)))
+                  :initform nil)))
 
 (define-event-class key-press-event (keyboard-event)
   ())
@@ -128,7 +128,7 @@
 
 (define-event-class pointer-event (device-event)
   ((pointer :initarg :pointer
-	    :reader pointer-event-pointer)
+            :reader pointer-event-pointer)
    (x :reader pointer-event-native-x)
    (y :reader pointer-event-native-y)
    (graft-x :reader pointer-event-native-graft-x)
@@ -197,7 +197,7 @@
 
 (define-event-class window-event (standard-event)
   ((region :initarg :region
-	   :reader window-event-native-region)))
+           :reader window-event-native-region)))
 
 (defmethod window-event-region ((event window-event))
   (untransform-region (sheet-native-transformation (event-sheet event))
@@ -278,28 +278,28 @@
                         (:right      . +pointer-right-button+)
                         (:wheel-up   . +pointer-wheel-up+)
                         (:wheel-down . +pointer-wheel-down+)))
-	(modifier-names '((:shift . +shift-key+)
-			  (:control . +control-key+)
-			  (:meta . +meta-key+)
-			  (:super . +super-key+)
-			  (:hyper . +hyper-key+)))
-	(b (gensym))
-	(m (gensym)))
+        (modifier-names '((:shift . +shift-key+)
+                          (:control . +control-key+)
+                          (:meta . +meta-key+)
+                          (:super . +super-key+)
+                          (:hyper . +hyper-key+)))
+        (b (gensym))
+        (m (gensym)))
     (labels ((do-substitutes (c)
-	     (cond
-	      ((null c)
-	       nil)
-	      ((consp c)
-	       (cons (do-substitutes (car c)) (do-substitutes (cdr c))))
-	      ((assoc c button-names)
-	       (list 'check-button (cdr (assoc c button-names))))
-	      ((assoc c modifier-names)
-	       (list 'check-modifier (cdr (assoc c modifier-names))))
-	      (t
-	       c))))
+               (cond
+                 ((null c)
+                  nil)
+                 ((consp c)
+                  (cons (do-substitutes (car c)) (do-substitutes (cdr c))))
+                 ((assoc c button-names)
+                  (list 'check-button (cdr (assoc c button-names))))
+                 ((assoc c modifier-names)
+                  (list 'check-modifier (cdr (assoc c modifier-names))))
+                 (t
+                  c))))
       `(flet ((check-button (,b) (= ,button ,b))
-	      (check-modifier (,m) (not (zerop (logand ,m ,modifier-state)))))
-	 (and ,@(do-substitutes clauses))))))
+              (check-modifier (,m) (not (zerop (logand ,m ,modifier-state)))))
+         (and ,@(do-substitutes clauses))))))
 
 ;; Key names are a symbol whose value is port-specific. Key names
 ;; corresponding to the set of standard characters (such as the
