@@ -35,6 +35,10 @@
    :parent (error "missing required initarg ~S for class ~S"
                   :parent 'basic-place)))
 
+(defmethod print-object ((object basic-place) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (ignore-errors (princ (cell object) stream))))
+
 (defmethod ensure-child ((container t)
                          (cell      t)
                          (class     t)

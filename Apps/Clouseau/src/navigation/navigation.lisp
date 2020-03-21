@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -40,20 +40,33 @@
 (define-presentation-type element (&key (selectedp nil)))
 (define-presentation-type history (&key selected))
 
-(define-presentation-method present ((object t)
-                                     (type   element)
-                                     (stream t)
-                                     (view   t)
-                                     &key)
-  (flet ((print-it (stream)
-           (with-print-error-handling (stream)
-             (with-safe-and-terse-printing (stream)
-               (let ((string (prin1-to-string (value object))))
-                 (print-string-compactly string stream :delimitersp nil))))))
-    (if selectedp
-        (with-drawing-options (stream :text-face :bold)
-          (print-it stream))
-        (print-it stream))))
+(flet ((print-it (object stream)
+         (with-print-error-handling (stream)
+           (with-safe-and-terse-printing (stream)
+             (let ((string (prin1-to-string (value object))))
+               (print-string-compactly string stream :delimitersp nil))))))
+
+  (define-presentation-method present ((object t)
+                                       (type   element)
+                                       (stream t)
+                                       (view   t)
+                                       &key)
+    (print-it object stream))
+
+  (define-presentation-method present ((object t)
+                                       (type   element)
+                                       (stream extended-output-stream)
+                                       (view   t)
+                                       &key)
+    (with-preserved-cursor-y (stream)
+      (surrounding-output-with-border (stream :shape   :rounded
+                                              :radius  3
+                                              :padding 3
+                                              :outline-ink +gray70+
+                                              :background (if selectedp +gray90+ +background-ink+))
+        (with-drawing-options (stream :text-face (if selectedp :bold nil)
+                                      :text-size :smaller)
+          (print-it object stream))))))
 
 (define-presentation-method present ((object t)
                                      (type   history)
@@ -74,31 +87,47 @@
 
 (defclass history-pane (application-pane)
   (;; The inspector state this history should observe and manipulate.
-   (%state   :initarg  :state
-             :reader   state)
-   (%history :initarg  :history
-             :reader   history
-             :initform (make-instance 'history)))
+   (%state          :reader   state
+                    :writer   (setf %state)
+                    :initform nil)
+   (%history        :reader   history
+                    :initform (make-instance 'history))
+   (%change-handler :accessor %change-handler
+                    :initform nil))
   (:default-initargs
    :end-of-line-action :allow
    :state              (error "Missing required initarg :state")))
 
-(defmethod initialize-instance :after ((instance history-pane) &key)
+(defmethod shared-initialize :after ((instance history-pane) (slot-names t)
+                                     &key (state nil state-supplied-p))
   ;; Observe the inspector state, extending or at least redisplaying
   ;; the history when the root object changes.
-  (let ((history (history instance)))
-    (push (lambda (old-root-place new-root-place)
-            (unless (or (eq old-root-place new-root-place)
-                        (find old-root-place (elements history) :test #'eq))
-              (push-element old-root-place history)
-              (redisplay-frame-pane (pane-frame instance) instance)))
-          (change-hook (state instance)))))
+  (unless (%change-handler instance)
+    (let* ((history (history instance))
+           (handler (lambda (old-root-place new-root-place)
+                      (unless (or (eq old-root-place new-root-place)
+                                  (find old-root-place (elements history) :test #'eq))
+                        (push-element old-root-place history)
+                        (redisplay-frame-pane (pane-frame instance) instance)))))
+      (setf (%change-handler instance) handler)))
+  (when state-supplied-p
+    (setf (%state instance) state)))
+
+(defmethod (setf %state) :around ((new-value t) (object history-pane))
+  (let ((old-value (state object)))
+    (prog1
+        (call-next-method)
+      (unless (eq new-value old-value)
+        (let ((handler (%change-handler object)))
+          (when old-value
+            (removef (change-hook old-value) handler))
+          (push handler (change-hook new-value)))))))
 
 (defmethod redisplay-frame-pane ((frame application-frame)
                                  (pane  history-pane)
                                  &key force-p)
   (declare (ignore force-p))
-  (stream-increment-cursor-position pane 4 4)
+  (stream-increment-cursor-position pane 8 8)
   (let* ((history      (history pane))
          (selected     (root-place (state pane)))
          (presentation (present history `(history :selected ,selected)

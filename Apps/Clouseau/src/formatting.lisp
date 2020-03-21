@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -76,6 +76,8 @@
        (:error                       . (:ink ,+dark-red+                                    :text-face :italic))
 
        (:identity                    . (:ink ,+dark-slate-blue+                                                :text-size :smaller))
+
+       (:package-note                . (:ink ,+dark-gray+                                                      :text-size :smaller))
 
        (:float-sign                  . (:ink ,(make-contrasting-inks 8 0)))
        (:float-significand           . (:ink ,(make-contrasting-inks 8 1)))
@@ -255,6 +257,16 @@ the :UNBOUND style."
   (when delimitersp
     (write-char #\" stream))
   string)
+
+;;; Symbols
+
+(defun print-symbol-in-context (symbol context-package stream)
+  (write-string (symbol-name symbol) stream)
+  (let ((symbol-package (symbol-package symbol)))
+    (unless (eq context-package symbol-package)
+      (write-char #\Space stream)
+      (with-style (stream :package-note)
+        (write-string (or (package-name symbol-package) "unnamed") stream)))))
 
 ;;; Safety
 

@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -40,6 +40,11 @@
 (defmethod remove-value ((place slot-definition-place))
   (error "not implemented"))
 
+(defmethod make-object-state ((object t) (place slot-definition-place))
+  (make-instance (object-state-class object place) :place place
+                                                   :class (container place)
+                                                   :style :name-only))
+
 ;;; `class-list-place'
 ;;;
 ;;; Places of this kind contain a list of classes among which a
@@ -78,14 +83,11 @@
 
 (defclass inspected-slot-definition (inspected-instance
                                      remembered-collapsed-style-mixin)
-  ())
+  ((%context-class :initarg :class
+                   :reader  context-class)))
 
 (defmethod object-state-class ((object c2mop:slot-definition) (place t))
   'inspected-slot-definition)
-
-(defmethod make-object-state ((object t) (place slot-definition-place))
-  (make-instance (object-state-class object place) :place place
-                                                   :style :name-only))
 
 ;;; `inspected-class-list'
 
@@ -125,7 +127,9 @@
                                        (state  inspected-slot-definition)
                                        (style  (eql :name-only))
                                        (stream t))
-  (prin1 (c2mop:slot-definition-name object) stream))
+  (let ((class-name (class-name (context-class state)))
+        (slot-name  (c2mop:slot-definition-name object)))
+    (print-symbol-in-context slot-name (symbol-package class-name) stream)))
 
 ;;; `inspected-class-list'
 
@@ -229,58 +233,63 @@
 
 (defvar *hack-cache* (make-hash-table :test #'equal))
 
+(defun inspect-effective-slot (class slot stream)
+  (let* ((name (c2mop:slot-definition-name slot))
+         (context-package (symbol-package (class-name class)))
+         (contributing (ensure-gethash
+                        (cons class name) *hack-cache*
+                        (loop :for super :in (c2mop:class-precedence-list class)
+                              :for super-slot = (find name (c2mop:class-direct-slots super)
+                                                      :key #'c2mop:slot-definition-name)
+                              :when super-slot :collect (cons super super-slot)))))
+    (formatting-row (stream)
+      (formatting-cell (stream)
+        (print-symbol-in-context name context-package stream)
+        (unless (alexandria:length= 1 contributing)
+          (write-char #\Space stream)
+          (badge stream "overwritten")))
+      (formatting-cell (stream)
+        (princ (c2mop:slot-definition-allocation slot) stream))
+      (formatting-cell (stream)
+        (princ (c2mop:slot-definition-type slot) stream))
+      (formatting-cell (stream)
+        (when-let ((initargs (c2mop:slot-definition-initargs slot)))
+          (prin1 initargs stream)))
+      (formatting-cell (stream)
+        (when-let ((readers (mappend (compose #'c2mop:slot-definition-readers
+                                              #'cdr)
+                                     contributing)))
+          (princ readers stream)))
+      (formatting-cell (stream)
+        (when-let ((writers (mappend (compose #'c2mop:slot-definition-writers
+                                              #'cdr)
+                                     contributing)))
+          (princ writers stream)))
+      (formatting-cell (stream)
+        (princ (c2mop:slot-definition-initform slot) stream))
+      (formatting-cell (stream)
+        (loop :for firstp = t :then nil
+              :for (class . slot) :in contributing
+              :unless firstp :do (write-string ", " stream)
+              :do (formatting-place
+                      (class 'slot-definition-place slot nil present-object
+                             :place-var place)
+                    (present-object stream))
+                  (write-string " in " stream)
+                  (inspect-class-as-name class stream)))
+      (formatting-cell (stream)
+        (formatting-place
+            (class 'slot-definition-place slot present-place present-object)
+          (present-place stream)
+          (present-object stream))))))
+
 (defun inspect-effective-slot-list (object slots stream)
   (formatting-table (stream)
     (formatting-header (stream) "Name" "Allocation" "Type" "Initargs"
                                 "Readers" "Writers" "Initform"
                                 "Computed from direct slots")
     (map nil (lambda (slot)
-               (let* ((name (c2mop:slot-definition-name slot))
-                      (contributing (ensure-gethash
-                                     (cons object name) *hack-cache*
-                                     (loop :for super :in (c2mop:class-precedence-list object)
-                                           :for super-slot = (find name (c2mop:class-direct-slots super)
-                                                                   :key #'c2mop:slot-definition-name)
-                                           :when super-slot :collect (cons super super-slot)))))
-                 (formatting-row (stream)
-                   (formatting-cell (stream)
-                     (prin1 name stream)
-                     (unless (alexandria:length= 1 contributing)
-                       (write-char #\Space stream)
-                       (badge stream "overwritten")))
-                   (formatting-cell (stream)
-                     (princ (c2mop:slot-definition-allocation slot) stream))
-                   (formatting-cell (stream)
-                     (princ (c2mop:slot-definition-type slot) stream))
-                   (formatting-cell (stream)
-                     (when-let ((initargs (c2mop:slot-definition-initargs slot)))
-                       (prin1 initargs stream)))
-                   (formatting-cell (stream)
-                     (when-let ((readers (mappend (compose #'c2mop:slot-definition-readers
-                                                      #'cdr)
-                                             contributing)))
-                       (princ readers stream)))
-                   (formatting-cell (stream)
-                     (when-let ((writers (mappend (compose #'c2mop:slot-definition-writers
-                                                      #'cdr)
-                                             contributing)))
-                       (princ writers stream)))
-                   (formatting-cell (stream)
-                     (princ (c2mop:slot-definition-initform slot) stream))
-                   (formatting-cell (stream)
-                     (loop :for firstp = t :then nil
-                           :for (class . slot) :in contributing
-                           :unless firstp :do (write-string ", " stream)
-                           :do (formatting-place (object 'pseudo-place slot nil nil
-                                                  :place-var place)
-                                 (clim:with-output-as-presentation (stream place 'place)
-                                   (princ (c2mop:slot-definition-name slot) stream))) ; TODO how to print the symbol?
-                               (write-string " in " stream)
-                               (inspect-class-as-name class stream)))
-                   (formatting-cell (stream)
-                     (formatting-place (object 'slot-definition-place slot present inspect)
-                       (present stream)
-                       (inspect stream))))))
+               (inspect-effective-slot object slot stream))
          slots)))
 
 (defmethod inspect-object-using-state ((object class)
