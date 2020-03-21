@@ -223,7 +223,8 @@
                                   'window-configuration-event-native-height)))
                `(nth-value
                  ,which (,transform (sheet-native-transformation
-                                     (sheet-parent (event-sheet ,event)))
+                                     (let ((sheet (event-sheet ,event)))
+                                       (or (sheet-parent sheet) sheet)))
                                     (,x ,event) (,y ,event))))))
 
   (defgeneric window-configuration-event-x (event)
