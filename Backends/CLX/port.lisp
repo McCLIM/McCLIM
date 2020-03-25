@@ -72,13 +72,11 @@
 	    :protocol protocol))))
 
 (defun helpfully-automagic-clx-server-path (port-type)
-  #+windows
-  (parse-clx-server-path '(:clx :host "localhost" :protocol :internet))
-  #-windows
   (restart-case (automagic-clx-server-path port-type)
     (use-localhost ()
-      :report "Use local unix display"
-      (parse-clx-server-path `(,port-type :host "" :protocol :unix)))))
+      :report "Use local display"
+      #+windows (parse-clx-server-path `(,port-type :host "localhost" :protocol :internet))
+      #-windows (parse-clx-server-path `(,port-type :host "" :protocol :unix)))))
 
 (defun parse-clx-server-path (path)
   (let* ((port-type (pop path))
