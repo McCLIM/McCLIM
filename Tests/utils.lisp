@@ -18,6 +18,7 @@
 ;;; Line splitting utility
 ;;; ============================================================================
 (defun list-lines (string start end breaks)
+  (declare (ignore end))
   (climi::collect (line)
     (do ((start start (car breaks))
          (breaks breaks (rest breaks)))
@@ -130,7 +131,7 @@
             (is-true (alexandria:starts-with-subseq string text))
             (is (string= text string)))
         (loop for line in lines
-              do (is (null (find #\Newline line))
+              do (is (null (find #\Newline (string-right-trim '(#\newline #\Linefeed #\return) line)))
                      "For input~@
                       ~2@T~S~@
                       ~S ~S ~S ~S ~S ~S ~S ~S, breaking into~@
