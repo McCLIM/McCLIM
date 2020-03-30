@@ -97,12 +97,10 @@
 
 (defmethod make-graft
     ((port pdf-port) &key (orientation :default) (units :device))
-  (let ((graft (make-instance 'pdf-graft :port port
-                                         :mirror (pdf-port-stream port)
-                                         :orientation orientation
-                                         :units units)))
-    (push graft (port-grafts port))
-    graft))
+  (make-instance 'pdf-graft :port port
+                            :mirror (pdf-port-stream port)
+                            :orientation orientation
+                            :units units))
 
 (defmethod initialize-instance :after ((port pdf-port) &key)
   (let* ((options (cdr (port-server-path port)))

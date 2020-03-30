@@ -228,9 +228,8 @@
 		 :orientation orientation :units units))
         (width (xlib:screen-width (clx-port-screen port)))
         (height (xlib:screen-height (clx-port-screen port))))
-    (climi::%%set-sheet-region (make-bounding-rectangle 0 0 width height)
-                               graft)
-    (push graft (port-grafts port))
+    (let ((region (make-bounding-rectangle 0 0 width height)))
+      (climi::%%set-sheet-region region graft))
     graft))
 
 (defmethod make-medium ((port clx-port) sheet)
