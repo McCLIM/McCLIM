@@ -97,13 +97,11 @@
 
 (defmethod climb:make-graft
     ((port postscript-port) &key (orientation :default) (units :device))
-  (let ((graft (make-instance 'postscript-graft
-                              :port port
-                              :mirror (postscript-port-stream port)
-                              :orientation orientation
-                              :units units)))
-    (push graft (port-grafts port))
-    graft))
+  (make-instance 'postscript-graft
+                 :port port
+                 :mirror (postscript-port-stream port)
+                 :orientation orientation
+                 :units units))
 
 (defmethod initialize-instance :after ((port postscript-port) &key)
   (let* ((options (cdr (port-server-path port)))

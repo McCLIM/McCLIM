@@ -354,7 +354,9 @@ window associated with it."))
                           (orientation :default)
                           (units :device)))
 (defgeneric graft (object))
-(declfun map-over-grafts (function port))
+;; XXX In CLIM II map-over-grafts is a (not generic) function.
+(defgeneric map-over-grafts (function port)
+  (:argument-precedence-order port function))
 ;; with-graft-locked (graft) &body body [macro]
 (defgeneric graft-orientation (graft))
 (defgeneric graft-units (graft))
@@ -362,6 +364,9 @@ window associated with it."))
 (defgeneric graft-height (graft &key units))
 (declfun graft-pixels-per-millimeter (graft))
 (declfun graft-pixels-per-inch (graft))
+
+;;; Not in the spec, clearly needed.
+(defgeneric make-graft (port &key orientation units))
 
 ;; 9.4.1 Mirror Functions
 

@@ -50,23 +50,11 @@
 (defmethod sheet-viewable-p ((graft graft))
   (sheet-enabled-p graft))
 
-(defun find-graft (&key (port nil)
-			(server-path *default-server-path*)
-			(orientation :default)
-			(units :device))
-  (if (null port)
-      (setq port (find-port :server-path server-path)))
-  (block find-graft
-    (map-over-grafts #'(lambda (graft)
-			 (if (and (eq orientation (graft-orientation graft))
-				  (eq units (graft-units graft)))
-			     (return-from find-graft graft)))
-		     port)
-    (return-from find-graft
-      (make-graft port :orientation orientation :units units))))
+(defmethod sheet-native-transformation ((sheet graft))
+  +identity-transformation+)
 
-(defun map-over-grafts (function port)
-  (mapc function (port-grafts port)))
+(defmethod sheet-native-region ((sheet graft))
+  +everywhere+)
 
 (defmacro with-graft-locked (graft &body body)
   `(let ((graft ,graft))
@@ -82,8 +70,3 @@
   (/ (graft-width graft :units :device)
      (graft-width graft :units :inches)))
 
-(defmethod sheet-native-transformation ((sheet graft))
-  +identity-transformation+)
-
-(defmethod sheet-native-region ((sheet graft))
-  +everywhere+)

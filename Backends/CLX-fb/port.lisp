@@ -92,13 +92,12 @@
 
 (defmethod make-graft ((port clx-fb-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'clx-graft
-		 :port port :mirror (clx-port-window port)
-		 :orientation orientation :units units))
+		              :port port :mirror (clx-port-window port)
+		              :orientation orientation :units units))
         (width (xlib:screen-width (clx-port-screen port)))
         (height (xlib:screen-height (clx-port-screen port))))
-    (climi::%%set-sheet-region (make-bounding-rectangle 0 0 width height)
-                               graft)
-    (push graft (port-grafts port))
+    (let ((region (make-bounding-rectangle 0 0 width height)))
+      (climi::%%set-sheet-region region graft))
     graft))
 
 (defmethod graft ((port clx-fb-port))
