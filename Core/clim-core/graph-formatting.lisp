@@ -279,7 +279,8 @@
 					   (with-output-to-output-record
 					       (stream 'standard-graph-node-output-record new-node
 						       :object child)
-					     (funcall object-printer child stream))))
+                                             (with-end-of-line-action (stream :allow)
+                                               (funcall object-printer child stream)))))
 				      (when merge-duplicates
 					(setf (previous-node key) child-node)
 					;; (setf (gethash key hash-table) child-node)
