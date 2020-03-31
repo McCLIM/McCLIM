@@ -2617,8 +2617,9 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                        (stream-output-history pane)
                        (with-output-to-output-record (pane)
                          (invoke-display-function *application-frame* pane)))))
-              (with-bounding-rectangle* (x1 y1 x2 y2) record
-                (values (- x2 (min 0 x1)) (- y2 (min y1)))))
+              (with-bounding-rectangle* (min-x min-y max-x max-y) record
+                (declare (ignore min-x min-y))
+                (values max-x max-y)))
           (unless (> width 0) (setf width 1))
           (unless (> height 0) (setf height 1))
           (setf (stream-width pane) width)
