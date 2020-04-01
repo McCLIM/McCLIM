@@ -80,16 +80,6 @@
             (close-path path)
             (%medium-stroke-paths medium (list path)))))))
 
-(defmethod medium-draw-rectangles* ((medium render-medium-mixin) position-seq filled)
-  (assert (evenp (length position-seq)))
-  (do ((v 0 (+ 4 v)))
-      ((>= v (length position-seq)))
-    (let ((x1 (elt position-seq (+ 0 v)))
-          (y1 (elt position-seq (+ 1 v)))
-          (x2 (elt position-seq (+ 2 v)))
-          (y2 (elt position-seq (+ 3 v))))
-      (medium-draw-rectangle* medium x1 y1 x2 y2 filled))))
-
 (defmethod medium-draw-polygon* ((medium render-medium-mixin) coord-seq closed filled)
   (let ((x (elt coord-seq 0))
         (y (elt coord-seq 1)))
