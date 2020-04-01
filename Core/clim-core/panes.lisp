@@ -338,31 +338,6 @@ order to produce a double-click")
    (current-height    :accessor pane-current-height
                       :initform nil) ))
 
-;;; XXX Move to protocol-classes.lisp. Should this really have all these
-;;; superclasses?
-(define-protocol-class pane (clim-repainting-mixin
-			     clim-sheet-input-mixin
-			     sheet-transformation-mixin
-			     layout-protocol-mixin
-			     basic-sheet)
-  (
-   (text-style :initarg :text-style :initform nil :reader pane-text-style)
-   (name :initarg :name :initform nil :reader pane-name)
-   (manager :initarg :manager)
-   (port :initarg :port)
-   (frame :initarg :frame :initform *application-frame* :reader pane-frame)
-   (space-requirement :initform nil :accessor pane-space-requirement)
-   ;; New sizes, for allocating protocol
-   (new-width :initform nil)
-   (new-height :initform nil)
-   (redisplay-needed :accessor pane-redisplay-needed
-		     :initarg :redisplay-needed :initform nil))
-  (:documentation ""))
-
-(defmethod print-object ((pane pane) sink)
-  (print-unreadable-object (pane sink :type t :identity t)
-    (prin1 (pane-name pane) sink)))
-
 (defgeneric find-concrete-pane-class (pane-realizer pane-type &optional errorp)
   (:documentation "Resolves abstract pane type PANE-TYPE to a concrete
 pane class. Methods defined in backends should specialize on the
@@ -864,22 +839,45 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
                       ;; UX mixins
                       mouse-wheel-scroll-mixin
                       permanent-medium-sheet-output-mixin
-                      ;; protocol class with million mixins goes last
-                      pane)
-  ((foreground       :initarg :foreground
-                     :reader pane-foreground
-                     :reader foreground)
-   (background       :initarg :background
-                     :accessor pane-background
-                     :reader background)
-   (text-style       :initarg :text-style
-                     :reader pane-text-style)
-   (align-x          :initarg :align-x
-                     :type (member :left :center :right)
-                     :reader pane-align-x)
-   (align-y          :initarg :align-y
-                     :type (member :top :center :bottom)
-                     :reader pane-align-y))
+                      clim-repainting-mixin
+                      clim-sheet-input-mixin
+                      sheet-transformation-mixin
+                      layout-protocol-mixin
+                      pane
+                      basic-sheet)
+  ((name              :initarg :name
+                      :reader pane-name
+                      :initform nil)
+   ;; Context
+   (port              :initarg :port)
+   (manager           :initarg :manager)
+   (frame             :initarg :frame
+                      :initform *application-frame*
+                      :reader pane-frame)
+   ;; Layout
+   (space-requirement :initform nil :accessor pane-space-requirement)
+   ;; New sizes, for allocating protocol
+   (new-width         :initform nil)
+   (new-height        :initform nil)
+   ;; Drawing defaults
+   (foreground        :initarg :foreground
+                      :reader pane-foreground
+                      :reader foreground)
+   (background        :initarg :background
+                      :accessor pane-background
+                      :reader background)
+   (text-style        :initarg :text-style
+                      :reader pane-text-style
+                      :initform nil)
+   (align-x           :initarg :align-x
+                      :type (member :left :center :right)
+                      :reader pane-align-x)
+   (align-y           :initarg :align-y
+                      :type (member :top :center :bottom)
+                      :reader pane-align-y)
+   ;; Display state
+   (redisplay-needed  :accessor pane-redisplay-needed
+                      :initarg :redisplay-needed :initform nil))
   (:default-initargs
    :foreground +black+
    :background *3d-normal-color*
@@ -890,6 +888,10 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 (defmethod initialize-instance :after ((obj basic-pane) &key text-style)
   (when (consp text-style)
     (setf (slot-value obj 'text-style) (apply #'make-text-style text-style))))
+
+(defmethod print-object ((object basic-pane) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (prin1 (pane-name object) stream)))
 
 (defmethod engraft-medium :after (medium port (pane basic-pane))
   (declare (ignore port))
