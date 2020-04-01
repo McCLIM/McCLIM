@@ -234,6 +234,11 @@
   ((port :initarg :port :reader port)
    (frames :initform nil :reader frame-manager-frames)))
 
+;;; 29.2 Basic Pane Construction
+
+(define-protocol-class pane (sheet)
+  ())
+
 ;;; 30.3 Basic Gadget Classes
 ;;; XXX Slots definitions should be banished.
 (define-protocol-class gadget (pane)
