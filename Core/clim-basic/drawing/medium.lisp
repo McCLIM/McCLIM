@@ -89,25 +89,25 @@
       `(make-text-style ',family ',face ',size)))
 
   (defun family-key (family)
-    (ecase family
+    (case family
       ((nil) 0)
       ((:fix) 1)
       ((:serif) 2)
       ((:sans-serif) 3)))
 
   (defun face-key (face)
-    (if (equal face '(:bold :italic))
-        4
-        (ecase face
-          ((nil) 0)
-          ((:roman) 1)
-          ((:bold) 2)
-          ((:italic) 3))))
+    (typecase face
+      (null 0)
+      ((eql :roman) 1)
+      ((eql :bold) 2)
+      ((eql :italic) 3)
+      ((cons (eql :bold) (cons (eql :italic))) 4)
+      ((cons (eql :italic) (cons (eql :bold))) 4)))
 
   (defun size-key (size)
     (if (numberp size)
         (+ 10 (round (* 256 size)))
-        (ecase size
+        (case size
           ((nil)         0)
           ((:tiny)       1)
           ((:very-small) 2)
@@ -120,29 +120,32 @@
           ((:larger)     9))))
 
   (defun text-style-key (family face size)
-    (+ (* 256 (size-key size))
-       (* 16 (face-key face))
-       (family-key family)))
+    (when-let ((size-key (size-key size))
+               (face-key (face-key face))
+               (family-key (family-key family)))
+      (logior (ash size-key   8)
+              (ash face-key   4)
+              (ash family-key 0))))
 
   (eval-when (:compile-toplevel :load-toplevel :execute)
     (defvar *text-style-hash-table* (make-hash-table :test #'eql))
     (defvar *extended-text-style-hash-table* (make-hash-table :test #'equal)))
 
   (defun make-text-style (family face size)
-    (if (and (symbolp family)
-             (or (symbolp face)
-                 (and (listp face) (every #'symbolp face))))
-        ;; Portable text styles have always been cached in McCLIM like this:
-        ;; (as permitted by the CLIM spec for immutable objects, section 2.4)
-        (let ((key (text-style-key family face size)))
-          (declare (type fixnum key))
-          (ensure-gethash key *text-style-hash-table*
-                          (make-text-style-1 family face size)))
-        ;; Extended text styles using custom components is cached using
-        ;; an appropriate hash table to ensure `EQL' of the same
-        ;; extended text styles
-        (ensure-gethash (list family face size) *extended-text-style-hash-table*
-                        (make-text-style-1 family face size))))
+    (if-let ((key (text-style-key family face size)))
+      ;; Portable text styles have always been cached in McCLIM like
+      ;; this: (as permitted by the CLIM spec for immutable objects,
+      ;; section 2.4)
+      ;; A 32-bit key has 24-bit for the output of `size-key'. That's
+      ;; around font size 100000.
+      (locally (declare (type (unsigned-byte 32) key))
+        (ensure-gethash key *text-style-hash-table*
+                        (make-text-style-1 family face size)))
+      ;; Extended text styles using custom components is cached using
+      ;; an appropriate hash table to ensure `EQL' of the same
+      ;; extended text styles
+      (ensure-gethash (list family face size) *extended-text-style-hash-table*
+                      (make-text-style-1 family face size))))
 
   (defun make-text-style-1 (family face size)
     (make-instance 'standard-text-style
