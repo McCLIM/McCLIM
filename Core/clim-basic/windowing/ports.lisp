@@ -458,15 +458,14 @@
 
 (defmethod make-graft
     ((port basic-port) &key (orientation :default) (units :device))
-  (let ((graft (make-instance 'graft
-		              :port port :mirror nil
-		              :orientation orientation :units units)))
+  (make-instance 'graft :port port :mirror nil
+                        :orientation orientation :units units))
+
+(defmethod make-graft :around ((port basic-port) &key orientation units)
+  (declare (ignore orientation units))
+  (let ((graft (call-next-method)))
     (push graft (port-grafts port))
     graft))
-
-(defmethod make-graft :around
-    ((port basic-port) &key (orientation :default) (units :device))
-  (first (push (call-next-method) (port-grafts port))))
 
 (defmethod map-over-grafts (function (port basic-port))
   (mapc function (port-grafts port)))
