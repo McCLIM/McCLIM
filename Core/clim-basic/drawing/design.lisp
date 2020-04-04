@@ -144,6 +144,9 @@
           :initform 0
           :type (real 0 1))))
 
+(defmethod opacity-value ((ink standard-color))
+  1.0)
+
 (defmethod color-rgb ((color standard-color))
   (with-slots (red green blue) color
     (values red green blue)))
@@ -300,6 +303,18 @@
         (symbol-value dynamic-variable-symbol)
         default-ink)))
 
+(defmethod opacity-value ((ink indirect-ink))
+  (let ((ink (indirect-ink-ink ink)))
+    (opacity-value ink)))
+
+(defmethod color-rgb ((ink indirect-ink))
+  (let ((ink (indirect-ink-ink ink)))
+    (color-rgb ink)))
+
+(defmethod color-rgba ((ink indirect-ink))
+  (let ((ink (indirect-ink-ink ink)))
+    (color-rgba ink)))
+
 (defmethod design-ink ((ink indirect-ink) x y)
   (let ((ink (indirect-ink-ink ink)))
     (design-ink ink x y)))
@@ -359,6 +374,12 @@
   (multiple-value-call #'values
     (color-rgb (indirect-ink-ink +foreground-ink+))
     (opacity-value color)))
+
+;;; Regions
+(defmethod design-ink ((design region) x y)
+  (if (region-contains-position-p design x y)
+      (design-ink +foreground-ink+ x y)
+      +transparent-ink+))
 
 ;;;;
 ;;;; 13.7 Flipping Ink
