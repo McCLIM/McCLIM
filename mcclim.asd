@@ -101,6 +101,7 @@ interface management system."
                              (:file "text-selection")
                              (:file "text-formatting")
                              (:file "text-styles")
+                             (:file "setf-star")
                              (:module "geometry"
                               :depends-on ("package")
                               :serial t

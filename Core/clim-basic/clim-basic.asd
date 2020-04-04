@@ -2,6 +2,7 @@
 
 (defsystem #:clim-basic
   :depends-on ("clim-lisp"
+               "alexandria"
                "spatial-trees"
                (:version "flexichain" "1.5.1")
                "bordeaux-threads"
