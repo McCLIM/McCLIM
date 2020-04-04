@@ -11,9 +11,9 @@
   ((:module "basic" :pathname "" :components
             ((:file "package")
              (:file "clipboard")
-             (:file "port" :depends-on ("package" "graft"))
-             (:file "frame-manager" :depends-on ("port"))
              (:file "basic" :depends-on ("package"))
+             (:file "port" :depends-on ("package" "graft" "basic"))
+             (:file "frame-manager" :depends-on ("port"))
              (:file "keysyms-common" :depends-on ("basic" "package"))
              (:file "keysyms" :depends-on ("keysyms-common"))
              (:file "keysymdef" :depends-on ("keysyms-common"))

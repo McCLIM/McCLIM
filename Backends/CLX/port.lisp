@@ -98,8 +98,6 @@
 (setf (get :clx :port-type) 'clx-port)
 (setf (get :clx :server-path-parser) 'parse-clx-server-path)
 
-(defgeneric initialize-clx (port))
-
 (defmethod initialize-instance :after ((port clx-port) &key)
   (let ((options (cdr (port-server-path port))))
     (push (apply #'make-instance 'clx-frame-manager :port port options)

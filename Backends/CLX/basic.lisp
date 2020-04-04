@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: CLIM-CLX; -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000,2001 by 
+;;;  (c) copyright 2000,2001 by
 ;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000, 2001, 2014, 2016 by
@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-clx)
@@ -46,7 +46,7 @@
   ;; even number, when in doubt.
   ;;
   ;; Reason: As the CLIM drawing model is specified, you quite often
-  ;; want to operate with coordinates, which are multiples of 1/2. 
+  ;; want to operate with coordinates, which are multiples of 1/2.
   ;; Using CL:ROUND gives you "random" results. Using "mercantile
   ;; rounding" gives you consistent results.
   ;;
@@ -69,26 +69,27 @@
                    (eq error-name 'xlib:match-error)))
     (apply #'xlib:default-error-handler display error-name args)))
 
+(defgeneric initialize-clx (port))
 
 (defmethod initialize-clx ((port clx-basic-port))
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
-	  (xlib:open-display (getf options :host) 
-			     :display (getf options :display-id) 
+	  (xlib:open-display (getf options :host)
+			     :display (getf options :display-id)
 			     :protocol (getf options :protocol)))
     (progn
       (setf (xlib:display-error-handler (clx-port-display port))
 	    #'clx-error-handler)
       ;; Uncomment this when debugging CLX backend if asynchronous
       ;; errors become troublesome.
-      #+nil 
+      #+nil
       (setf (xlib:display-after-function (clx-port-display port))
 	    #'xlib:display-finish-output))
     (setf (clx-port-screen port)
 	  (nth (getf options :screen-id)
 	       (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
-    (make-cursor-table port)    
+    (make-cursor-table port)
     (make-graft port)
     (when clim-sys:*multiprocessing-p*
       (setf (port-event-process port)
