@@ -72,18 +72,28 @@
                 (text-style-mapping (port medium) (medium-text-style medium))))))))
 
 ;;; Translate from CLIM styles to CLX styles.
-(defconstant +cap-shape-map+ '((:butt . :butt)
-                               (:square . :projecting)
-                               (:round . :round)
-                               (:no-end-point . :not-last)))
-
 (defun translate-cap-shape (clim-shape)
-  (let ((clx-shape (cdr (assoc clim-shape +cap-shape-map+))))
-    (if clx-shape
-        clx-shape
-        (progn
-          (warn "Unknown cap style ~S, using :round" clim-shape)
-          :round))))
+  (case clim-shape
+    (:butt         :butt)
+    (:square       :projecting)
+    (:round        :round)
+    (:no-end-point :not-last)
+    (otherwise
+     (prog1 :round
+       (warn "Unknown cap style ~S, using :round." clim-shape)))))
+
+(defun translate-join-shape (clim-shape)
+  (case clim-shape
+    (:miter :miter)
+    (:bevel :bevel)
+    (:round :round)
+    (:none
+     (prog1 :miter
+       (warn "Unsupported join style :NONE, using :MITER.")))
+    (otherwise
+     (prog1 :miter
+       (warn "Unknown join style ~s, using :MITER." clim-shape)))))
+
 
 ;;; XXX: this should be refactored into a reusable protocol in clim-backend
 ;;; with specialization on medium. -- jd 2018-10-31
@@ -99,13 +109,15 @@
                      (sqrt (+ (expt x 2) (expt y 2))))))))
 
 (defun line-style-effective-thickness (line-style medium)
-  (round (* (line-style-thickness line-style)
-            (line-style-scale line-style medium))))
+  (* (line-style-thickness line-style)
+     (line-style-scale line-style medium)))
 
 (defun line-style-effective-dashes (line-style medium)
-  (let ((scale (line-style-scale line-style medium)))
-    (map 'list #'(lambda (dash) (round (* dash scale)))
-         (line-style-dashes line-style))))
+  (when-let ((dashes (line-style-dashes line-style)))
+    (let ((scale (line-style-scale line-style medium)))
+      (if (eq dashes t)
+          (* scale 3)
+          (map 'list (lambda (d) (* scale d)) dashes)))))
 
 (defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
   (with-slots (gc) medium
@@ -116,7 +128,7 @@
                      (eq (line-style-unit line-style)
                          (line-style-unit old-line-style)))
           (setf (xlib:gcontext-line-width gc)
-                (line-style-effective-thickness line-style medium)))
+                (round (line-style-effective-thickness line-style medium))))
         (unless (eq (line-style-cap-shape line-style)
                     (line-style-cap-shape old-line-style))
           (setf (xlib:gcontext-cap-style gc)
@@ -124,19 +136,36 @@
         (unless (eq (line-style-joint-shape line-style)
                     (line-style-joint-shape old-line-style))
           (setf (xlib:gcontext-join-style gc)
-                (line-style-joint-shape line-style)))
+                (translate-join-shape (line-style-joint-shape line-style))))
         ;; we could do better here by comparing elements of the vector
         ;; -RS 2001-08-24
         (unless (and (eq (line-style-dashes line-style)
                          (line-style-dashes old-line-style))
                      (eq (line-style-unit line-style)
                          (line-style-unit old-line-style)))
-          (setf (xlib:gcontext-line-style gc)
-                (if (line-style-dashes line-style) :dash :solid)
-                (xlib:gcontext-dashes gc)
-                (case (line-style-dashes line-style)
-                  ((t nil) (round (* (line-style-scale line-style medium) 3)))
-                  (otherwise (line-style-effective-dashes line-style medium)))))))))
+          (if-let ((dash-pattern (line-style-effective-dashes line-style medium)))
+            (setf (xlib:gcontext-line-style gc) :dash
+                  (xlib:gcontext-dashes gc) (if (atom dash-pattern)
+                                                (round dash-pattern)
+                                                (mapcar #'round dash-pattern)))
+            (setf (xlib:gcontext-line-style gc) :solid)))))))
+
+(defmethod (setf medium-transformation) :around (transformation (medium clx-medium))
+  (let ((old-tr     (medium-transformation medium))
+        (line-style (medium-line-style medium))
+        (new-tr     (call-next-method)))
+    (unless (and (eq :coordinate (line-style-unit line-style))
+                 (not (transformation-equal old-tr new-tr)))
+      (when-let ((gc (slot-value medium 'gc)))
+        (setf (xlib:gcontext-line-width gc)
+              (round (line-style-effective-thickness line-style medium)))
+        (if-let ((dash-pattern (line-style-effective-dashes line-style medium)))
+          (setf (xlib:gcontext-line-style gc) :dash
+                (xlib:gcontext-dashes gc) (if (atom dash-pattern)
+                                              (round dash-pattern)
+                                              (mapcar #'round dash-pattern)))
+          (setf (xlib:gcontext-line-style gc) :solid))))
+    new-tr))
 
 (defun %clip-region-pixmap (medium mask mask-gc clipping-region x1 y1 width height)
   (typecase clipping-region
@@ -577,23 +606,22 @@ translated, so they begin at different position than [0,0])."))
                                (medium-sheet medium))
                               x y)
     (with-clx-graphics () medium
-      (cond ((< (line-style-thickness line-style) 2)
-             (let ((x (round-coordinate x))
-                   (y (round-coordinate y)))
-               (when (and (typep x '(signed-byte 16))
-                          (typep y '(signed-byte 16)))
-                 (xlib:draw-point mirror gc x y))))
-            (t
-             (let* ((radius (/ (line-style-thickness line-style) 2))
-                    (min-x (round-coordinate (- x radius)))
-                    (min-y (round-coordinate (- y radius)))
-                    (max-x (round-coordinate (+ x radius)))
-                    (max-y (round-coordinate (+ y radius))))
-               (when (and (typep min-x '(signed-byte 16))
-                          (typep min-y '(signed-byte 16)))
-                   (xlib:draw-arc mirror gc min-x min-y
-                                  (- max-x min-x) (- max-y min-y)
-                                  0 (* 2 pi) t))))))))
+      (let ((diameter (line-style-effective-thickness line-style medium)))
+        (if (< diameter 2)
+            (let ((x (round-coordinate x))
+                  (y (round-coordinate y)))
+              (when (and (typep x '(signed-byte 16))
+                         (typep y '(signed-byte 16)))
+                (xlib:draw-point mirror gc x y)))
+            (let* ((radius   (round diameter 2))
+                   (diameter (round diameter))
+                   (min-x    (round-coordinate (- x radius)))
+                   (min-y    (round-coordinate (- y radius))))
+              (when (and (typep min-x '(signed-byte 16))
+                         (typep min-y '(signed-byte 16)))
+                (xlib:draw-arc mirror gc min-x min-y
+                               diameter diameter
+                               0 (* 2 pi) t))))))))
 
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
@@ -601,25 +629,24 @@ translated, so they begin at different position than [0,0])."))
                                 (medium-sheet medium))
                                coord-seq)
     (with-clx-graphics () medium
-      (cond ((< (line-style-thickness line-style) 2)
-             (do-sequence ((x y) coord-seq)
-               (let ((x (round-coordinate x))
-                     (y (round-coordinate y)))
-                 (when (and (typep x '(signed-byte 16))
-                            (typep y '(signed-byte 16)))
-                   (xlib:draw-point mirror gc x y)))))
-            (t
-             (let ((radius (/ (line-style-thickness line-style) 2)))
-               (do-sequence ((x y) coord-seq)
-                 (let ((min-x (round-coordinate (- x radius)))
-                       (min-y (round-coordinate (- y radius)))
-                       (max-x (round-coordinate (+ x radius)))
-                       (max-y (round-coordinate (+ y radius))))
-                   (when (and (typep min-x '(signed-byte 16))
-                              (typep min-y '(signed-byte 16)))
-                     (xlib:draw-arc mirror gc min-x min-y
-                                    (- max-x min-x) (- max-y min-y)
-                                    0 (* 2 pi) t))))))))))
+      (let ((diameter (line-style-effective-thickness line-style medium)))
+        (if (< diameter 2)
+            (do-sequence ((x y) coord-seq)
+              (let ((x (round-coordinate x))
+                    (y (round-coordinate y)))
+                (when (and (typep x '(signed-byte 16))
+                           (typep y '(signed-byte 16)))
+                  (xlib:draw-point mirror gc x y))))
+            (let ((radius   (round diameter 2))
+                  (diameter (round diameter)))
+              (do-sequence ((x y) coord-seq)
+                (let ((min-x (round-coordinate (- x radius)))
+                      (min-y (round-coordinate (- y radius))))
+                  (when (and (typep min-x '(signed-byte 16))
+                             (typep min-y '(signed-byte 16)))
+                    (xlib:draw-arc mirror gc min-x min-y
+                                   diameter diameter
+                                   0 (* 2 pi) t))))))))))
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
