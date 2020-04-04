@@ -135,7 +135,7 @@
     (let* ((desired-color (typecase sheet
                             (permanent-medium-sheet-output-mixin ;; sheet-with-medium-mixin
                               (medium-background sheet))
-                            (basic-pane ; CHECKME [is this sensible?] seems to be
+                            (pane ; CHECKME [is this sensible?] seems to be
                               (let ((background (pane-background sheet)))
                                 (if (typep background 'color)
                                     background
