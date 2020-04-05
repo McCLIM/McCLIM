@@ -9,7 +9,7 @@
      (:file "seos-baseline")
      (:file "calculator")
      (:file "colorslider")
-     (:file "menutest")                 ; extra
+     (:file "menu-test")                 ; extra
      (:file "address-book")
      (:file "traffic-lights")
      (:file "clim-fig")
