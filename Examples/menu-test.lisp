@@ -43,14 +43,22 @@
   (format *standard-output* "You pressed the Konichiwa button.~%")
   (finish-output *standard-output*))
 
+(define-menu-test-command com-get-in-the-robot ()
+  (format *standard-output* "You pressed the Get in the robot button.~%")
+  (finish-output *standard-output*))
+
 (define-menu-test-command com-hi ()
   (format *standard-output* "You pressed the Hi button.~%")
   (finish-output *standard-output*))
 
 (make-command-table 'kenobi-command-table
                     :errorp nil
-                    :menu '(("General Kenobi" :command com-kenobi)
-                            ("Konichiwa"      :command com-konichiwa)))
+                    :menu '(("General Kenobi"   :command com-kenobi
+                                                :text-style (nil :bold nil))
+                            ("Konichiwa"        :command com-konichiwa
+                                                :text-style (nil :italic nil))
+                            ("Get in the robot" :command com-get-in-the-robot
+                                                :text-style (:fix nil :large))))
 
 (make-command-table 'buffer-command-table
                     :errorp nil

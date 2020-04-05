@@ -257,11 +257,13 @@ account, and create a list of menu buttons."
   (let* ((name (command-menu-item-name item))
          (type (command-menu-item-type item))
          (value (command-menu-item-value item))
+         (text-style (command-menu-item-text-style item))
          (frame (pane-frame client))
          (manager (frame-manager frame)))
     (flet ((make-sub-pane (class &rest initargs &key &allow-other-keys)
              (apply #'make-pane-1 manager frame class
-                    :label name :client client initargs)))
+                    :label name :client client :text-style text-style
+                    initargs)))
       (case type
         (:command
          (let ((command-name (if (consp value) (car value) value)))

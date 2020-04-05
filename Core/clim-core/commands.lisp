@@ -50,7 +50,7 @@
    (type :initarg :type :reader command-menu-item-type)
    (value :initarg :value :reader command-menu-item-value)
    (documentation :initarg :documentation)
-   (text-style :initarg :text-style :initform nil)
+   (text-style :initarg :text-style :reader command-menu-item-text-style :initform nil)
    (keystroke :initarg :keystroke)))
 
 (defmethod print-object ((item %menu-item) stream)
@@ -64,7 +64,7 @@
 
 (defun command-menu-item-options (menu-item)
   (with-slots (documentation text-style) menu-item
-    (list ':documentation documentation ':text-style text-style)))
+    (list :documentation documentation :text-style text-style)))
 
 (defclass standard-command-table (command-table)
   ((name :initarg :name :reader command-table-name)
