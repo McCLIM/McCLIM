@@ -1,5 +1,4 @@
-;;;  (c) copyright 2000 by 
-;;;	      Robert Strandh (robert.strandh@gmail.com)
+;;;  (c) copyright 2000 Robert Strandh (robert.strandh@gmail.com)
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -16,13 +15,13 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage #:clim-demo.menutest
+(defpackage #:clim-demo.menu-test
   (:use #:clim #:clim-extensions #:clim-lisp)
-  (:export #:menutest))
+  (:export #:menu-test))
 
-(in-package #:clim-demo.menutest)
+(in-package #:clim-demo.menu-test)
 
-(define-application-frame menutest ()
+(define-application-frame menu-test ()
   ()
   (:menu-bar menubar-command-table)
   (:panes
@@ -32,19 +31,19 @@
   (:layouts
    (defaults (vertically () screen))))
 
-(define-menutest-command com-file ()
+(define-menu-test-command com-file ()
   (format *standard-output* "You pressed the File button.~%")
   (finish-output *standard-output*))
 
-(define-menutest-command com-kenobi ()
+(define-menu-test-command com-kenobi ()
   (format *standard-output* "You pressed the General Kenobi button.~%")
   (finish-output *standard-output*))
 
-(define-menutest-command com-konichiwa ()
+(define-menu-test-command com-konichiwa ()
   (format *standard-output* "You pressed the Konichiwa button.~%")
   (finish-output *standard-output*))
 
-(define-menutest-command com-hi ()
+(define-menu-test-command com-hi ()
   (format *standard-output* "You pressed the Hi button.~%")
   (finish-output *standard-output*))
 
@@ -54,11 +53,11 @@
                             ("Konichiwa"      :command com-konichiwa)))
 
 (make-command-table 'buffer-command-table
-		    :errorp nil
-		    :menu '(("Hello there" :menu kenobi-command-table)
-			    ("Hi there"    :command com-hi)))
+                    :errorp nil
+                    :menu '(("Hello there" :menu kenobi-command-table)
+                            ("Hi there"    :command com-hi)))
 
 (make-command-table 'menubar-command-table
-		    :errorp nil
-		    :menu '(("Buffer" :menu buffer-command-table)
-			    ("File"   :command com-file)))
+                    :errorp nil
+                    :menu '(("Buffer" :menu buffer-command-table)
+                            ("File"   :command com-file)))
