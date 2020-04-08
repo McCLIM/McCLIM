@@ -436,10 +436,13 @@
     (setf (slot-value obj 'line-style) (graphics-state-line-style medium))))
 
 (defgeneric graphics-state-line-style-border (record medium)
-  (:method ((record gs-line-style-mixin) medium)
+  (:method ((record gs-line-style-mixin) (medium medium))
     (/ (line-style-effective-thickness (graphics-state-line-style record)
                                        medium)
-       2)))
+       2))
+  (:method ((record gs-line-style-mixin) (sheet sheet))
+    (with-sheet-medium (medium sheet)
+      (graphics-state-line-style-border record medium))))
 
 (defclass gs-text-style-mixin (graphics-state)
   ((text-style :initarg :text-style :accessor graphics-state-text-style)))
@@ -458,7 +461,7 @@
 
 (defgeneric (setf graphics-state) (new-gs gs)
   (:method ((new-gs graphics-state) (gs graphics-state))
-    #+(or) "This is a no-op, so :after methods have primary method")
+    #+(or) "This is a no-op, but :after methods don't work without a primary method.")
   (:method :after ((new-gs gs-ink-mixin) (gs gs-ink-mixin))
     (setf (graphics-state-ink gs) (graphics-state-ink new-gs)))
   (:method :after ((new-gs gs-clip-mixin) (gs gs-clip-mixin))
