@@ -361,22 +361,21 @@
     (declare (ignore x y same-screen-p child))
     (ldb (byte 5 8) mask)))
 
-;;; In button events we don't want to see more than one button, according to
-;;; the spec, so pick a canonical ordering. :P The mask is that state mask
-;;; from an X event.
-
 (defun button-from-state (mask)
+  ;; In button events we don't want to see more than one button,
+  ;; according to the spec, so pick a canonical ordering. :P The mask
+  ;; is that state mask from an X event.
   (cond ((logtest +right-button-mask+ mask)
-	   +pointer-right-button+)
-	  ((logtest +middle-button-mask+ mask)
-	   +pointer-middle-button+)
-	  ((logtest +left-button-mask+ mask)
-	   +pointer-left-button+)
-	  ((logtest +wheel-up-mask+ mask)
-	   +pointer-wheel-up+)
-	  ((logtest +wheel-down-mask+ mask)
-	   +pointer-wheel-down+)
-	  (t 0)))
+         +pointer-right-button+)
+        ((logtest +middle-button-mask+ mask)
+         +pointer-middle-button+)
+        ((logtest +left-button-mask+ mask)
+         +pointer-left-button+)
+        ((logtest +wheel-up-mask+ mask)
+         +pointer-wheel-up+)
+        ((logtest +wheel-down-mask+ mask)
+         +pointer-wheel-down+)
+        (t 0)))
 
 (defmethod port-modifier-state ((port clx-basic-port))
   (multiple-value-bind (x y same-screen-p child mask)
@@ -384,28 +383,26 @@
     (declare (ignore x y same-screen-p child))
     (clim-xcommon:x-event-state-modifiers port mask)))
 
-;;; XXX Should we rely on port-pointer-sheet being correct? -- moore
 (defmethod synthesize-pointer-motion-event ((pointer clx-basic-pointer))
-  (let* ((port (port pointer))
-	 (sheet (port-pointer-sheet port)))
-    (when sheet
-      (let ((mirror (sheet-direct-xmirror sheet)))
-	(when mirror
-	  (multiple-value-bind (x y same-screen-p child mask root-x root-y)
-	      (xlib:query-pointer mirror)
-	    (declare (ignore child))
-	    (when same-screen-p
-	      (make-instance
-	       'pointer-motion-event
-	       :pointer 0 :button (button-from-state mask)
-	       :x x :y y
-	       :graft-x root-x
-	       :graft-y root-y
-	       :sheet sheet
-	       :modifier-state (clim-xcommon:x-event-state-modifiers port mask)
-	       ;; The event initialization code will give us a
-	       ;; reasonable timestamp.
-	       :timestamp 0))))))))
+  (when-let* ((port (port pointer))
+              ;; XXX Should we rely on port-pointer-sheet being correct? -- moore
+              (sheet (port-pointer-sheet port))
+              (ancestor (sheet-mirrored-ancestor sheet))
+              (mirror (sheet-direct-xmirror ancestor)))
+    (multiple-value-bind (x y same-screen-p child mask root-x root-y)
+        (xlib:query-pointer mirror)
+      (declare (ignore child))
+      (when same-screen-p
+        (multiple-value-bind (x y)
+            (if (eq sheet ancestor)
+                (values x y)
+                (untransform-position (sheet-native-transformation sheet) x y))
+          (make-instance 'pointer-motion-event
+                         :pointer 0 :button (button-from-state mask)
+                         :x x :y y :graft-x root-x :graft-y root-y
+                         :sheet sheet
+                         :modifier-state (clim-xcommon:x-event-state-modifiers
+                                          port mask)))))))
 
 (defmethod port-frame-keyboard-input-focus ((port clx-basic-port) frame)
   (frame-properties frame 'focus))
