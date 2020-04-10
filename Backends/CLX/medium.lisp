@@ -672,15 +672,6 @@ translated, so they begin at different position than [0,0])."))
                                            (min #x7FFF (max #x-8000 (round-coordinate x2)))
                                            (min #x7FFF (max #x-8000 (round-coordinate y2))))))))))))))))
 
-(defmethod medium-draw-lines* ((medium clx-medium) coord-seq)
-  ;; Invert the transformation and apply it here, as the :around
-  ;; methods on transform-coordinates-mixin will cause it to be
-  ;; applied twice, and we need to undo one of those.
-  (let ((tr (invert-transformation (medium-transformation medium))))
-    (with-transformed-positions (tr coord-seq)
-      (do-sequence ((x1 y1 x2 y2) coord-seq)
-        (medium-draw-line* medium x1 y1 x2 y2)))))
-
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
   ;; TODO:
   ;; . cons less
