@@ -109,7 +109,8 @@ interface management system."
                                            (:file "bounding-rectangles")))
                              (:module "drawing"
                               :depends-on ("package")
-                              :components ((:file "medium"))))))
+                              :components ((:file "medium")
+                                           (:file "design"))))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
 
