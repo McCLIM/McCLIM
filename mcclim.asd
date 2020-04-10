@@ -106,7 +106,10 @@ interface management system."
                               :serial t
                               :components ((:file "transforms")
                                            (:file "regions")
-                                           (:file "bounding-rectangles"))))))
+                                           (:file "bounding-rectangles")))
+                             (:module "drawing"
+                              :depends-on ("package")
+                              :components ((:file "medium"))))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
 
