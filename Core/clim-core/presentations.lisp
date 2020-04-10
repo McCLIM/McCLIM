@@ -1050,27 +1050,28 @@ suitable for SUPER-NAME"))
                                                 presentation-function-name
                                                 lambda-list
                                                 &rest options)
-    (let ((type-key-arg (car lambda-list))
-          (parameters-arg (cadr lambda-list))
-          (options-arg (caddr lambda-list)))
-      (unless (or (eq type-key-arg 'type-key) (eq type-key-arg 'type-class))
-        (error "The first argument in a presentation generic function must be
-type-key or type-class"))
+  (destructuring-bind (type-key-arg &optional parameters-arg options-arg &rest rest)
+      lambda-list
+    (with-current-source-form (lambda-list)
+      (unless (member type-key-arg '(type-key type-class))
+        (error "The first argument in a presentation generic function ~
+                must be type-key or type-class"))
       (unless (eq parameters-arg 'parameters)
         (setq parameters-arg nil))
       (unless (eq options-arg 'options)
         (setq options-arg nil))
       (let* ((gf-lambda-list (cons type-key-arg
                                    (cond (options-arg
-                                          (cdddr lambda-list))
+                                          rest)
                                          (parameters-arg
                                           (cddr lambda-list))
-                                         (t (cdr lambda-list)))))
+                                         (t
+                                          (cdr lambda-list)))))
              ;; XXX should check that it's required
              (type-arg-pos (position 'type gf-lambda-list)))
         (unless type-arg-pos
-          (error "type must appear as an argument in a presentation generic
-function lambda list"))
+          (error "type must appear as an argument in a presentation ~
+                  generic function lambda list"))
         `(progn
            (eval-when (:compile-toplevel :load-toplevel :execute)
              (setf
@@ -1084,7 +1085,7 @@ function lambda list"))
                              :type-arg-position ,type-arg-pos)))
            (defgeneric ,generic-function-name ,gf-lambda-list
              (:generic-function-class presentation-generic-function)
-             ,@options)))))
+             ,@options))))))
 
 (defun parse-method-body (args)
   (loop for arglist on args
@@ -1117,11 +1118,13 @@ function lambda list"))
       (multiple-value-bind (qualifiers lambda-list decls body)
           (parse-method-body args)
         (let ((type-arg (nth (1- (type-arg-position gf)) lambda-list)))
-          (unless (consp type-arg)
-            (error "Type argument in presentation method must be specialized"))
-          (unless (eq (car type-arg)  'type)
-            (error "Type argument mismatch with presentation generic function
- definition"))
+          (with-current-source-form (type-arg)
+            (unless (consp type-arg)
+              (error "Type argument in presentation method must be ~
+                      specialized"))
+            (unless (eq (car type-arg)  'type)
+              (error "Type argument mismatch with presentation generic ~
+                      function definition")))
           (destructuring-bind (type-var type-name) type-arg
             (let* ((method-ll `((,(type-key-arg gf)
                                  ,(ptype-specializer type-name))
@@ -1157,8 +1160,6 @@ function lambda list"))
                      (list decls))
                  (block ,name
                    ,@real-body)))))))))
-
-
 
 (defmacro define-default-presentation-method (name &rest args)
   (let ((gf (gethash name *presentation-gf-table*)))
@@ -1221,7 +1222,6 @@ function lambda list"))
             #',(generic-function-name gf)
             ,(type-arg-position gf)
             ,@args)))
-
 
 ;;; Used by map-over-presentation-type-supertypes as well
 
