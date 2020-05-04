@@ -21,7 +21,7 @@
 (in-package :clim-internals)
 
 (defun setf-name-p (name)
-  (and (listp name) (eq (car name) 'setf)))
+  (typep name '(cons (eql setf) (cons symbol null))))
 
 ;;; Many implementations complain if a defsetf definition and a setf function
 ;;; exist for the same place. Time to stop fighting that...
@@ -33,11 +33,6 @@
 			    (symbol-name '#:star))
 		    (symbol-package name-sym)))))
 
-(defun make-arglist (args)
-  "Convert the list ARGS to a list of arguments in the form (var
-init-form supplied-p-parameter)."
-  (mapcar (lambda (a) `(,a nil ,(gensym))) args))
-
 (defmacro defgeneric* (fun-name lambda-list &body options)
   "Defines a SETF* generic function.  FUN-NAME is a SETF function
 name.  The last required argument is the single argument to the function in a
@@ -45,26 +40,40 @@ SETF place form; the other arguments are values collected from the
 SETF new value form."
   (unless (setf-name-p fun-name)
     (error "~S is not a valid name for a SETF* generic function." fun-name))
-  (let ((setf-name (cadr fun-name))
-        (gf (make-setf*-gfn-name fun-name)))
-    (multiple-value-bind (required optional rest keys allow-other-keys aux keyp)
-        (alexandria:parse-ordinary-lambda-list lambda-list)
-      (when aux
-        (error "The use of &aux is not allowed in generic function lambda list."))
-      (let ((optional (make-arglist (mapcar #'car optional)))
-            (keys (make-arglist (mapcar #'cadar keys))))
-        `(progn
-           (defsetf ,setf-name
-               (,(car (last required))
-                ,@(and optional `(&optional ,@optional))
-                ,@(and rest `(&rest ,rest))
-                ,@(and keyp `(&key ,@keys))
-                ,@(and allow-other-keys `(&allow-other-keys)))
-               ,(butlast required)
-             `(funcall #',',gf ,,@required
-                ,,@(mapcar (lambda (x) `(and ,(third x) ,(car x))) optional)
-                ,@,@(mapcar (lambda (x) `(and ,(third x) `(,,(make-keyword (car x)) ,,(car x)))) keys)))
-           (defgeneric ,gf ,lambda-list ,@options))))))
+  (multiple-value-bind (required optional rest keys allow-other-keys aux keyp)
+      (alexandria:parse-ordinary-lambda-list lambda-list)
+    (when aux
+      (error "The use of &aux is not allowed in generic function lambda list."))
+    (let ((setf-name (second fun-name))
+          (gf (make-setf*-gfn-name fun-name))
+          (args (butlast required))
+          (place (alexandria:lastcar required))
+          (fun-opts (gensym "FUN-OPTS"))
+          (fun-keys (gensym "FUN-KEYS")))
+      (multiple-value-bind (opt-args call-opt)
+          (loop for (opt) in optional
+                for suppliedp = (gensym)
+                collect `(,opt nil ,suppliedp) into opt-args
+                collect `(and ,suppliedp `(,,opt)) into call-opt
+                finally (return (values opt-args call-opt)))
+        (multiple-value-bind (key-args call-key)
+            (loop for ((key arg)) in keys
+                  for suppliedp = (gensym)
+                  collect `((,key ,arg) nil ,suppliedp) into key-args
+                  collect `(and ,suppliedp `(,,key ,,arg)) into call-key
+                  finally (return (values key-args call-key)))
+          `(progn
+             (defsetf ,setf-name
+                 (,place
+                  ,@(and opt-args `(&optional ,@opt-args))
+                  ,@(and rest `(&rest ,rest))
+                  ,@(and keyp `(&key ,@key-args))
+                  ,@(and allow-other-keys `(&allow-other-keys)))
+                 ,args
+               (let ((,fun-opts (append ,@call-opt))
+                     (,fun-keys (append ,@call-key)))
+                 `(funcall (function ,',gf) ,,@args ,,place ,@,fun-opts ,@,fun-keys)))
+             (defgeneric ,gf ,lambda-list ,@options)))))))
 
 (defmacro defmethod* (name lambda-list &body body)
   "Defines a SETF* method.  NAME is a SETF function name.  Otherwise,
@@ -72,4 +81,3 @@ like DEFMETHOD except there must exist a corresponding DEFGENERIC* form."
   (unless (setf-name-p name)
     (error "~S is not a valid name for a SETF* generic function." name))
   `(defmethod ,(make-setf*-gfn-name name) ,lambda-list ,@body))
-
