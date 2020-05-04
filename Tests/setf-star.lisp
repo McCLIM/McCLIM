@@ -74,5 +74,32 @@ RETURN-POLAR is true then return the polar coordinates."
     ;; Error is signalled because :angular is not a valid coordinates
     ;; type
     (signals error
-      (setf (my-point-position point :coordinates :angular) (values 1 pi)))))
+      (setf (my-point-position point nil :coordinates :angular) (values 1 pi)))))
 
+
+(climi::defgeneric* (setf optional-arguments) (arg1 arg2
+                                               &optional
+                                               kaboom1
+                                               kaboom2
+                                               &key
+                                               ((:duf uno))
+                                               ((:qux duo))))
+
+(climi::defmethod* (setf optional-arguments) (arg1 arg2
+                                                   &optional
+                                                   (kaboom1 nil kaboom1-p)
+                                                   (kaboom2 6 kaboom2-p)
+                                                   &key
+                                                   ((:duf one) nil duf-p)
+                                                   ((:qux two) 7 qux-p))
+  (list arg1 arg2
+        kaboom1 kaboom1-p kaboom2 kaboom2-p
+        one duf-p two qux-p))
+
+(test optional-arguments-test
+  (macrolet ((test-case (arguments new-value expected)
+               `(let ((result (setf (optional-arguments ,@arguments) ,new-value)))
+                  (is (equal (list ,@expected) result)))))
+    (test-case (:arg2)                   5 (5 :arg2 nil nil 6 nil nil nil 7 nil))
+    (test-case (:arg2 1 2 :qux 4)        5 (5 :arg2 1   t   2 t   nil nil 4 t))
+    (test-case (:arg2 1 2 :duf 3 :qux 4) 5 (5 :arg2 1   t   2 t   3   t   4 t))))
