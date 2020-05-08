@@ -74,6 +74,8 @@
 ;;; predefined paths (registers all found ttf fonts)
 
 (defun default-font/family-map ()
+  (when (null *truetype-font-path*)
+    (return-from default-font/family-map nil))
   (flet ((try-ttf (name)
            ;; probe for files existance - if they do not exist our
            ;; mapping is futile and we must try `fc-match'.
