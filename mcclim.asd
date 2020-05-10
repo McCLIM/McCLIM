@@ -80,7 +80,6 @@ interface management system."
                #:conditional-commands
                #:mcclim-layouts/tab
                #:mcclim-bezier
-               #:mcclim-image
                #:clim-pdf
                #:clim-postscript
                #:mcclim-franz))

@@ -16,7 +16,6 @@
 
 (defsystem "mcclim-raster-image/test"
   :depends-on ("mcclim-raster-image"
-               "mcclim-image" ; for raster image format support
                "fiveam"
                "mcclim/test-util")
   :components ((:module "test"
