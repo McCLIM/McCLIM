@@ -616,6 +616,7 @@
    #:displayed-output-record-p          ;predicate
    #:distribute-event                   ;generic function
    #:do-command-table-inheritance       ;macro
+   #:documentation-key                  ;presentation type option
    #:document-presentation-translator   ;function
    #:drag-callback                      ;callback
    #:drag-callback                      ;callback
@@ -808,6 +809,7 @@
    #:highlight-applicable-presentation  ;function
    #:highlight-output-record            ;generic function
    #:highlight-presentation             ;presentation method
+   #:highlighter                        ;presentation type option
    #:horizontally                       ;macro
    #:hrack-pane                         ;pane
    #:identity-transformation-p          ;generic function
@@ -1000,6 +1002,7 @@
    #:modifier-state-matches-gesture-name-p ;function
    #:move-and-resize-sheet              ;generic function
    #:move-sheet                         ;generic function
+   #:name-key                           ;presentation type option
    #:new-page                           ;function
    #:nil                                ;presentation type
    #:note-command-disabled              ;generic function
@@ -1065,6 +1068,7 @@
    #:panep                              ;predicate
    #:parse-text-style                   ;function
    #:partial-command-p                  ;function
+   #:partial-completers                 ;presentation type option
    #:path                               ;protocol class
    #:pathname                           ;presentation type
    #:pathp                              ;predicate
@@ -1146,6 +1150,7 @@
    #:presentation-typep                 ;function
    #:presentationp                      ;predicate
    #:print-menu-item                    ;function
+   #:printer                            ;presentation type option
    #:process-next-event                 ;generic function
    #:prompt-for-accept                  ;generic function
    #:prompt-for-accept-1                ;function
@@ -1444,6 +1449,7 @@
    #:table-pane                         ;pane
    #:tabling                            ;macro
    #:temporary-medium-sheet-output-mixin ;class
+   #:test                               ;presentation type parameter
    #:test-presentation-translator       ;function
    #:text-displayed-output-record       ;protocol class
    #:text-displayed-output-record-p     ;predicate
@@ -1500,6 +1506,7 @@
    #:user-command-table                 ;command table
    #:value-changed-callback             ;callback
    #:value-gadget                       ;class
+   #:value-key                          ;presentation type parameter
    #:vbox-pane                          ;pane
    #:vertically                         ;macro
    #:view                               ;protocol class
