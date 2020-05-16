@@ -511,12 +511,7 @@ examine the type of the command menu item to see if it is
       (error 'command-not-present :command-table-name command-table))
     translator))
 
-;(defun add-presentation-translator-to-command-table
-;    (command-table translator-name &key (errorp t)))
-; - fixme; spec says this fun is given a translator name, but that
-; find-presentation-translator needs a translator name and a command
-; table designator
-(defun add-actual-presentation-translator-to-command-table
+(defun add-presentation-translator-to-command-table
     (command-table translator &key (errorp t))
   (let ((translators (presentation-translators
                       (find-command-table command-table))))

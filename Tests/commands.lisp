@@ -98,3 +98,20 @@
                         (princ-to-string object))))
       (is (eq translator
               (find-presentation-translator 'dummy-translator 'test))))))
+
+(test commands.add-presentation-translator-to-command-table.smoke
+  (with-command-table (table1 'test1)
+    (let ((translator (define-presentation-translator dummy-translator
+                          (integer string test1)
+                          (object)
+                        (princ-to-string object))))
+      (with-command-table (table2 'test2)
+        ;; Not present
+        (add-presentation-translator-to-command-table table2 translator)
+        (is-true (find-presentation-translator 'dummy-translator 'test2))
+        ;; Already present - should signal.
+        (signals command-already-present
+          (add-presentation-translator-to-command-table table2 translator))
+        ;; Already present, but with ERRORP being NIL - should not signal.
+        (finishes (add-presentation-translator-to-command-table
+                   table2 translator :errorp nil))))))
