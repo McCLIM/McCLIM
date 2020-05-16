@@ -501,6 +501,16 @@ examine the type of the command menu item to see if it is
           (apply-with-command-table-inheritance #'map-func command-table)
           (map-func command-table)))))
 
+(defun find-presentation-translator
+    (translator-name command-table &key (errorp t))
+  (let* ((table (find-command-table command-table))
+         (translators (presentation-translators table))
+         (translator (gethash translator-name
+                              (slot-value translators 'translators))))
+    (when (and errorp (null translator))
+      (error 'command-not-present :command-table-name command-table))
+    translator))
+
 ;(defun add-presentation-translator-to-command-table
 ;    (command-table translator-name &key (errorp t)))
 ; - fixme; spec says this fun is given a translator name, but that
