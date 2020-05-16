@@ -46,22 +46,24 @@
 (defun clim-find-symbol-url (string)
   (let ((syminfo (clim-find-symbol string)))
     (when syminfo
-      (concat (or clim-url-base-override 
+      (concat (or clim-url-base-override
                   (clim-get-url-base))
               (cdr syminfo)))))
 
 ;;; HYPERCLIM-LOOKUP command
 ;;    Look up a symbol in MikeMac's CLIM documentation.
 ;;    By default it looks up the symbol under the point, but if it isn't over
-;;    something resembling a symbol, it will prompt you. 
+;;    something resembling a symbol, it will prompt you.
 ;;    Also, you can use a prefix arg to force prompting.
+
 (defun clim-lookup (p)
-  (interactive "p")  
+  (interactive "p")
   (let ((symbol-name (thing-at-point 'symbol)))
     (unless (and (= 1 p) (stringp symbol-name))
-      (setq symbol-name (read-from-minibuffer "Symbol name: " "" nil nil 'clim-history)))
+      (setq symbol-name (let ((symbols (mapcar #'car (rest clim-gilberth-spec))))
+                          (completing-read "Symbol name: " symbols nil t symbol-name 'clim-history))))
     (let ((url (clim-find-symbol-url (downcase symbol-name))))
-      (if url 
+      (if url
           (browse-url url)
           (message "Symbol %s not found." symbol-name)))))
 
