@@ -115,3 +115,23 @@
         ;; Already present, but with ERRORP being NIL - should not signal.
         (finishes (add-presentation-translator-to-command-table
                    table2 translator :errorp nil))))))
+
+(test commands.remove-presentation-translator-from-command-table.smoke
+  (with-command-table (table 'test)
+    ;; Not present - should signal.
+    (signals command-not-present
+      (remove-presentation-translator-from-command-table
+       'test 'dummy-translator))
+    ;; Not present, but with ERRORP being NIL - should do nothing.
+    (remove-presentation-translator-from-command-table
+     'test 'dummy-translator :errorp nil)
+    ;; Present - should be removed.
+    (define-presentation-translator dummy-translator
+        (integer string test)
+        (object)
+      (princ-to-string object))
+    (is-true (find-presentation-translator
+              'dummy-translator 'test :errorp nil))
+    (remove-presentation-translator-from-command-table 'test 'dummy-translator)
+    (is-false (find-presentation-translator
+               'dummy-translator 'test :errorp nil))))

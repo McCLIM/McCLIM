@@ -522,6 +522,18 @@ examine the type of the command menu item to see if it is
       (error 'command-already-present :command-table-name command-table))
     (add-translator translators translator)))
 
+(defun remove-presentation-translator-from-command-table
+    (command-table translator-name &key (errorp t))
+  (let* ((translators (presentation-translators
+                       (find-command-table command-table)))
+         (translator (gethash translator-name
+                              (slot-value translators 'translators))))
+
+    (cond ((not (null translator))
+           (remove-translator translators translator))
+          (errorp
+           (error 'command-not-present :command-table-name command-table)))))
+
 ;; At this point we should still see the gesture name as supplied by the
 ;; programmer in 'gesture'
 (defun %add-keystroke-item (command-table gesture item errorp)
