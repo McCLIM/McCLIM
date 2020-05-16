@@ -492,12 +492,10 @@ examine the type of the command menu item to see if it is
 (defun map-over-command-table-translators
     (function command-table &key (inherited t))
   (flet ((map-func (table)
-           (maphash #'(lambda (k v)
-                        (declare (ignore k))
-                        (funcall function v))
-                    (slot-value
-                     (presentation-translators table)
-                     'translators))))
+           (alexandria:maphash-values
+            (lambda (translator)
+              (funcall function translator))
+            (slot-value (presentation-translators table) 'translators))))
     (let ((command-table (find-command-table command-table)))
       (if inherited
           (apply-with-command-table-inheritance #'map-func command-table)
@@ -510,16 +508,13 @@ examine the type of the command menu item to see if it is
 ; table designator
 (defun add-actual-presentation-translator-to-command-table
     (command-table translator &key (errorp t))
-  (let ((translators
-         (presentation-translators
-          (find-command-table command-table))))
+  (let ((translators (presentation-translators
+                      (find-command-table command-table))))
     (when (and errorp
-               (second
-                (multiple-value-list
-                 (gethash (name translator)
-                          (slot-value translators 'translators)))))
-      (error 'command-already-present
-       :command-table-name command-table))
+               (nth-value
+                1 (gethash (name translator)
+                           (slot-value translators 'translators))))
+      (error 'command-already-present :command-table-name command-table))
     (add-translator translators translator)))
 
 ;; At this point we should still see the gesture name as supplied by the
