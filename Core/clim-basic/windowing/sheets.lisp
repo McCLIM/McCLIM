@@ -619,17 +619,18 @@
 
 (defclass sheet-transformation-mixin ()
   ((transformation :initform +identity-transformation+
-		   :initarg :transformation
-		   :accessor sheet-transformation)))
+                   :initarg :transformation
+                   :accessor sheet-transformation)))
 
-(defclass sheet-translation-transformation-mixin (sheet-transformation-mixin)
+(defclass sheet-translation-mixin (sheet-transformation-mixin)
   ())
 
 (defmethod (setf sheet-transformation) :before
-    ((transformation transformation)
-     (sheet sheet-translation-transformation-mixin))
+    ((transformation transformation) (sheet sheet-translation-mixin))
   (unless (translation-transformation-p transformation)
-    (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-TRANSLATION-TRANSFORMATION-MIXIN to a non translation transformation")))
+    (error "Attempting to set the SHEET-TRANSFORMATION of a ~
+            SHEET-TRANSLATION-TRANSFORMATION-MIXIN to a non ~
+            translation transformation")))
 
 (defclass sheet-y-inverting-transformation-mixin (sheet-transformation-mixin)
   ()
@@ -639,7 +640,9 @@
     ((transformation transformation)
      (sheet sheet-y-inverting-transformation-mixin))
   (unless (y-inverting-transformation-p transformation)
-    (error "Attempting to set the SHEET-TRANSFORMATION of a SHEET-Y-INVERTING-TRANSFORMATION-MIXIN to a non Y inverting transformation")))
+    (error "Attempting to set the SHEET-TRANSFORMATION of a ~
+            SHEET-Y-INVERTING-TRANSFORMATION-MIXIN to a non Y ~
+            inverting transformation")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
