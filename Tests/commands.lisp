@@ -3,6 +3,16 @@
 (def-suite* :mcclim.commands
   :in :mcclim)
 
+;;; Utilities
+
+(defmacro with-command-table ((var name) &body body)
+  (alexandria:once-only (name)
+    `(let ((,var (make-command-table ,name)))
+       (declare (ignorable ,var))
+       (unwind-protect
+            (progn ,@body)
+         (remhash ,name climi::*command-tables*)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; command tables
 (define-command-table no-menu-test-table)
@@ -70,3 +80,21 @@
 (test commands.command-no-present.print
   (let ((condition (make-condition 'command-not-present)))
     (is-true (stringp (format nil "~A" condition)))))
+
+;;; Presentation translators
+
+(test commands.find-presentation-translator.smoke
+  (with-command-table (table 'test)
+    ;; Not present - should signal
+    (signals command-not-present
+      (find-presentation-translator 'dummy-translator 'test))
+    ;; Not present, but with ERRORP being NIL - should not signal
+    (is (eq nil (find-presentation-translator
+                 'dummy-translator 'test :errorp nil)))
+    ;; Present - should be found.
+    (let ((translator (define-presentation-translator dummy-translator
+                          (integer string test)
+                          (object)
+                        (princ-to-string object))))
+      (is (eq translator
+              (find-presentation-translator 'dummy-translator 'test))))))
