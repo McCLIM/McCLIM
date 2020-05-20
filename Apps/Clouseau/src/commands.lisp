@@ -115,7 +115,8 @@
 
 (define-command (com-eval-with-context :command-table inspector-command-table
                                        :name          t)
-    ((object 'inspected-object :prompt "context object")
+    ((object 'inspected-object :prompt  "context object"
+                               :default (state (root-place *application-frame*)))
      (form   'clim:form))
   (with-command-error-handling ("Error evaluating form")
       (let ((result (eval-with-bindings form :object-state object)))
