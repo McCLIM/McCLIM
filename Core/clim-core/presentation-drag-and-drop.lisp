@@ -249,4 +249,5 @@
                    :window window
                    :x x
                    :y y
-                   :stream stream))))))
+                   :stream stream)))
+      (force-output stream))))
