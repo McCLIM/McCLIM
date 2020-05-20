@@ -261,6 +261,7 @@
                    (accepts-value-p object t)
                    (safe-valuep object)
                    (eq (value object) t)))
+     :priority 2
      :documentation "Set to false"
      :pointer-documentation
      ((object stream)
@@ -281,6 +282,7 @@
                    (accepts-value-p object t)
                    (safe-valuep object)
                    (eq (value object) nil)))
+     :priority 2
      :documentation "Set to true"
      :pointer-documentation
      ((object stream)
