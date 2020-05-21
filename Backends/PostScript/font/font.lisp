@@ -163,7 +163,7 @@
                         (error "Unknown font ~S." font-name)))
          (size (font-name-size font-name)))
     (* (/ size 1000) (font-info-ascent font-info))))
-	 
+
 
 (defmethod text-style-descent (text-style (medium postscript-font-medium))
   (let* ((font-name (text-style-mapping (port medium)
@@ -196,21 +196,21 @@
   (unless end (setf end (length string)))
   (unless text-style (setf text-style (medium-text-style medium)))
   (let* ((font-name
-          (text-style-mapping (port medium)
-                              (merge-text-styles 
-                               text-style
-                               (medium-merged-text-style medium))))
+           (text-style-mapping (port medium)
+                               (merge-text-styles
+                                text-style
+                                (medium-merged-text-style medium))))
          (metrics-key (font-name-metrics-key font-name))
          (size (font-name-size font-name)))
-    (let ((scale (/ size 1000)))
+    (let ((scale (float (/ size 1000))))
       (cond ((>= start end)
              (values 0 0 0 0))
             (t
              (let ((position-newline (position #\newline string :start start)))
                (cond ((not (null position-newline))
                       (multiple-value-bind (width ascent descent left right
-                                                  font-ascent font-descent
-                                                  direction first-not-done)
+                                            font-ascent font-descent
+                                            direction first-not-done)
                           (psfont-text-extents metrics-key string
                                                :start start :end position-newline)
 			(declare (ignore width font-ascent font-descent direction first-not-done))
@@ -219,21 +219,27 @@
                              medium string :text-style text-style
                              :start (1+ position-newline) :end end)
 			  (declare (ignore miny))
-                          (values (* scale (min minx left))
-                                  (* scale (- ascent))
-                                  (* scale (max maxx right))
-                                  (* scale (+ descent maxy))))))
+                          (let ((y1 ascent)
+                                (y2 (+ descent maxy)))
+                            (when (> y1 y2) (rotatef y1 y2))
+                            (values (* scale (min minx left))
+                                    (* scale y1)
+                                    (* scale (max maxx right))
+                                    (* scale y2))))))
                      (t
-                      (multiple-value-bind (width ascent descent left right
-                                                  font-ascent font-descent
-                                                  direction first-not-done)
+                      (multiple-value-bind (width DESCENT ASCENT left right
+                                            font-ascent font-descent
+                                            direction first-not-done)
                           (psfont-text-extents metrics-key string
                                                :start start :end end)
 			(declare (ignore width font-ascent font-descent direction first-not-done))
-                        (values (* scale left)
-                                (* scale (- ascent))
-                                (* scale right)
-                                (* scale descent)))))))))))
+                        (let ((y1 (* scale descent))
+                              (y2 (* scale ascent)))
+                          (when (> y1 y2) (rotatef y1 y2))
+                          (values (* scale left)
+                                  y1
+                                  (* scale right)
+                                  y2)))))))))))
 
 (defun psfont-text-extents (metrics-key string &key (start 0) (end (length string)))
   (let* ((font-info (or (gethash metrics-key *font-metrics*)
