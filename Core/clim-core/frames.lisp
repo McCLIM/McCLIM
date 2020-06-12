@@ -535,7 +535,14 @@ documentation produced by presentations.")
                          (write-string prompt frame-query-io)
                          (funcall prompt frame-query-io frame))
                      (force-output frame-query-io))))
-               (execute-command)
+               (unwind-protect (execute-command)
+                 ;; The command may have set the frame's query I/O, in
+                 ;; which case the values of FRAME-QUERY-IO and
+                 ;; INTERACTORP would be outdated; the other stream
+                 ;; variables could be outdated as well, but they are
+                 ;; not used after executing the command
+                 (setf frame-query-io (frame-query-io frame)
+                       interactorp (typep frame-query-io 'interactor-pane)))
                (when interactorp
                  (fresh-line frame-query-io)))
            (abort ()
