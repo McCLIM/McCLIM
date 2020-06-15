@@ -55,9 +55,26 @@
     (has-valid-bounding-rectangle rectangle 0 0 5 5)))
 
 (test bounding-rectangle.ellipse
+  ;; Non-degenerate cases.
   (let ((ellipse1 (make-ellipse* 0 0 10 0 0 15))
         (ellipse2 (make-ellipse* 0 0 10 0 0 15
                                  :start-angle 0
                                  :end-angle (/ pi 2))))
     (has-valid-bounding-rectangle ellipse1 -10 -15 10 15)
-    (has-valid-bounding-rectangle ellipse2 0 -15 10 0)))
+    (has-valid-bounding-rectangle ellipse2 0 -15 10 0))
+
+  ;; Degenerate cases: horizontal and vertical lines.
+  (let ((ellipse1 (make-ellipse* 0 0 10 0 0 0))
+        (ellipse2 (make-ellipse* 0 0 0 0 0 10))
+        (ellipse3 (make-ellipse* 0 0 10 0 0 0
+                                 :end-angle (/ pi 4)))
+        (ellipse4 (make-ellipse* 0 0 0 0 0 10
+                                 :start-angle (/ pi 4))))
+    (has-valid-bounding-rectangle ellipse1 -10 0 10 0)
+    (has-valid-bounding-rectangle ellipse2 0 -10 0 10)
+    (has-valid-bounding-rectangle ellipse3 -10 0 0 0)
+    (has-valid-bounding-rectangle ellipse4 0 0 0 10))
+
+  ;; Degenerate case: point
+  (let ((ellipse (make-ellipse* 0 0 0 0 0 0)))
+    (has-valid-bounding-rectangle ellipse 0 0 0 0)))
