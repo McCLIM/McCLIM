@@ -115,9 +115,13 @@
 (defun line-style-effective-dashes (line-style medium)
   (when-let ((dashes (line-style-dashes line-style)))
     (let ((scale (line-style-scale line-style medium)))
-      (if (eq dashes t)
-          (* scale 3)
-          (map 'list (lambda (d) (* scale d)) dashes)))))
+      ;; X limits individual dash lengths to the range [0,255].
+      (flet ((scale-and-clamp (length)
+               (min (* scale length) 255)))
+        (declare (dynamic-extent #'scale-and-clamp))
+        (if (eq dashes t)
+            (scale-and-clamp 3)
+            (map 'list #'scale-and-clamp dashes))))))
 
 (defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
   (with-slots (gc) medium
