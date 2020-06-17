@@ -69,7 +69,8 @@
   (:use #:mezzano.supervisor
         #:mezzano.gui
         #:mezzano.gui.compositor
-        #:mezzano.gui.widgets)
+        #:mezzano.gui.widgets
+        #:mezzano.sync)
 
   ;; from mezzano.gui
   (:export #:rectangle
@@ -184,16 +185,14 @@
 
            #:panic
 
-           #:fifo
-           #:fifo-p
-           #:make-fifo
-           #:fifo-push
-           #:fifo-pop
-           #:fifo-reset
-           #:fifo-size
-           #:fifo-element-type
-
            #:current-framebuffer
            #:framebuffer-blit
            #:framebuffer-width
-           #:framebuffer-height))
+           #:framebuffer-height)
+
+  ;; select exports from mezzano.sync
+  (:export #:mailbox
+           #:make-mailbox
+           #:mailbox-send
+           #:mailbox-recieve
+           #:mailbox-flush))

@@ -48,10 +48,8 @@
    (cursor-table       :accessor mezzano-cursor-table)
    (mez-window->sheet  :initform (make-hash-table :test #'eq))
    (mez-window->mirror :initform (make-hash-table :test #'eq))
-   (mez-fifo           :initform (mos:make-fifo 50)
-                       :reader   mezzano-mez-fifo)
-   (mcclim-fifo        :initform (mos:make-fifo 10)
-                       :reader   mezzano-mcclim-fifo)))
+   (mez-fifo           :reader   mezzano-mez-fifo)
+   (mcclim-fifo        :reader   mezzano-mcclim-fifo)))
 
 (defmethod port-lookup-sheet ((port mezzano-port) (mez-window mos:window))
   (gethash mez-window (slot-value port 'mez-window->sheet)))
@@ -105,6 +103,10 @@
   (declare (ignore args))
   ;; TODO why are these initargs passed?
   (declare (ignore host display-id screen-id protocol))
+  (setf (slot-value port 'mez-fifo) (mos:make-mailbox :name `(mez-fifo ,port)
+                                                      :capacity 50))
+  (setf (slot-value port 'mcclim-fifo) (mos:make-mailbox :name `(mcclim-fifo ,port)
+                                                         :capacity 10))
   (setf *port* port
         (slot-value port 'pointer) (make-instance 'mezzano-pointer :port port)
         (mezzano-port-window port) (mos:current-framebuffer))
