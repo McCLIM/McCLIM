@@ -2,6 +2,15 @@
 
 (defvar *port* NIL)
 
+(defmacro with-port-lock ((port) &body body)
+  (let ((thunk (gensym "PORT-LOCK-THUNK"))
+        (lock (gensym)))
+    `(flet ((,thunk () ,@body))
+       (let ((,lock (mezzano-port-lock ,port)))
+         (if (mezzano.supervisor:mutex-held-p ,lock)
+             (,thunk)
+             (mezzano.supervisor:with-mutex (,lock) (,thunk)))))))
+
 ;;======================================================================
 ;; Define pointer class
 ;;======================================================================
@@ -16,13 +25,14 @@
 
 (defmethod synthesize-pointer-motion-event ((pointer mezzano-pointer))
   (let ((port (port pointer)))
-    (make-instance 'pointer-motion-event
-                   :sheet (port-pointer-sheet port)
-                   :pointer pointer
-                   :graft-x (pointer-x pointer)
-                   :graft-y (pointer-y pointer)
-                   :button 0
-                   :modifier-state 0)))
+    (with-port-lock (port)
+      (make-instance 'pointer-motion-event
+                     :sheet (port-pointer-sheet port)
+                     :pointer pointer
+                     :graft-x (pointer-x pointer)
+                     :graft-y (pointer-y pointer)
+                     :button 0
+                     :modifier-state 0))))
 
 ;;======================================================================
 ;; Define port class
@@ -30,12 +40,11 @@
 
 ;;
 ;; All mezzano events are piped through a single fifo (mez-fifo) which
-;; is read by get-next-event. get-next-event translates mezzano events
-;; to mcclim events using mez-window->sheet to figure out which mcclim
-;; sheet corresponds to the mezzano window which received the
-;; event. The mcclim events are placed in mcclim-fifo because a single
-;; mezzano event can generate multiple mcclim events. get-next-event
-;; then returns the events from mcclim-fifo one at a time.
+;; is read by the event thread (initialize-event-thread). step-event-loop
+;; translates mezzano events to mcclim events using mez-event->mcclim-event,
+;; which in turn uses mez-window->sheet to figure out which mcclim sheet
+;; corresponds to the mezzano window which received the  event. The mcclim
+;; events are sent to the appropriate sheet using distribute-event
 ;;
 
 (defclass mezzano-port (render-port-mixin
@@ -49,13 +58,15 @@
    (mez-window->sheet  :initform (make-hash-table :test #'eq))
    (mez-window->mirror :initform (make-hash-table :test #'eq))
    (mez-fifo           :reader   mezzano-mez-fifo)
-   (mcclim-fifo        :reader   mezzano-mcclim-fifo)))
+   (lock               :reader   mezzano-port-lock)))
 
 (defmethod port-lookup-sheet ((port mezzano-port) (mez-window mos:window))
-  (gethash mez-window (slot-value port 'mez-window->sheet)))
+  (with-port-lock (port)
+    (gethash mez-window (slot-value port 'mez-window->sheet))))
 
 (defmethod port-lookup-mirror ((port mezzano-port) (mez-window mos:window))
-  (gethash mez-window (slot-value port 'mez-window->mirror)))
+  (with-port-lock (port)
+    (gethash mez-window (slot-value port 'mez-window->mirror))))
 
 (defun parse-mezzano-server-path (path)
   (list :mezzano :host       :mezzano
@@ -83,15 +94,14 @@
   (let* ((deadline (+ (or last-time now)
 		      (floor internal-time-units-per-second 20)))
 	 (timeout  (max 0 (- deadline now))))
-    ; (format *terminal-io* "next frame: ~D (in ~D)~%" deadline timeout)
+    ;; (format *terminal-io* "next frame: ~D (in ~D)~%" deadline timeout)
     (process-next-event port :timeout (/ timeout internal-time-units-per-second))
-
     (let ((now (get-internal-real-time)))
-      (if (>= now deadline)
-	  (progn
-	    (swap-buffers port)
-	    now)
-	  last-time))))
+      (cond ((>= now deadline)
+             (swap-buffers port)
+             now)
+            (t
+             last-time)))))
 
 (defun swap-buffers (port)
   (maphash (lambda (key val)
@@ -105,8 +115,7 @@
   (declare (ignore host display-id screen-id protocol))
   (setf (slot-value port 'mez-fifo) (mos:make-mailbox :name `(mez-fifo ,port)
                                                       :capacity 50))
-  (setf (slot-value port 'mcclim-fifo) (mos:make-mailbox :name `(mcclim-fifo ,port)
-                                                         :capacity 10))
+  (setf (slot-value port 'lock) (mezzano.supervisor:make-mutex port))
   (setf *port* port
         (slot-value port 'pointer) (make-instance 'mezzano-pointer :port port)
         (mezzano-port-window port) (mos:current-framebuffer))
@@ -183,21 +192,23 @@
   (break))
 
 (defmethod %realize-mirror ((port mezzano-port) (sheet top-level-sheet-pane))
-  (let* ((q (compose-space sheet))
-         (frame (pane-frame sheet))
-         (mirror (create-mezzano-mirror
-                  port sheet
-                  (frame-pretty-name frame)
-                  (round-coordinate (space-requirement-width q))
-                  (round-coordinate (space-requirement-height q))
-                  19)))
-    (setf (slot-value mirror 'top-levelp) t)
-    mirror))
+  (with-port-lock (port)
+    (let* ((q (compose-space sheet))
+           (frame (pane-frame sheet))
+           (mirror (create-mezzano-mirror
+                    port sheet
+                    (frame-pretty-name frame)
+                    (round-coordinate (space-requirement-width q))
+                    (round-coordinate (space-requirement-height q))
+                    19)))
+      (setf (slot-value mirror 'top-levelp) t)
+      mirror)))
 
 (defmethod %realize-mirror ((port mezzano-port) (sheet unmanaged-top-level-sheet-pane))
-  (create-mezzano-mirror port sheet "" 300 300 2
-                         :close-button-p NIL
-                         :resizablep NIL))
+  (with-port-lock (port)
+    (create-mezzano-mirror port sheet "" 300 300 2
+                           :close-button-p NIL
+                           :resizablep NIL)))
 
 (defmethod make-medium ((port mezzano-port) sheet)
   (make-instance 'mezzano-medium
@@ -206,71 +217,59 @@
                  :sheet sheet))
 
 (defmethod make-graft ((port mezzano-port) &key (orientation :default) (units :device))
-  (let ((graft (make-instance 'mezzano-graft
-                              :port port
-                              :mirror (mezzano-port-window port)
-                              :orientation orientation
-                              :units units)))
-    (climi::%%set-sheet-region
-     (make-bounding-rectangle 0 0 (graft-width graft) (graft-height graft))
-     graft)
-    (push graft (port-grafts port))
-    graft))
+  (with-port-lock (port)
+    (let ((graft (make-instance 'mezzano-graft
+                                :port port
+                                :mirror (mezzano-port-window port)
+                                :orientation orientation
+                                :units units)))
+      (climi::%%set-sheet-region
+       (make-bounding-rectangle 0 0 (graft-width graft) (graft-height graft))
+       graft)
+      graft)))
 
 (defmethod graft ((port mezzano-port))
-  (first (port-grafts port)))
-
+  (with-port-lock (port)
+    (first (port-grafts port))))
 
 (defmethod port-force-output ((port mezzano-port))
-  (maphash (lambda (key val)
-	     (when (typep key 'mezzano-mirrored-sheet-mixin)
-	       (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
-	   (slot-value port 'climi::sheet->mirror)))
+  (with-port-lock (port)
+    (maphash (lambda (key val)
+               (when (typep key 'mezzano-mirrored-sheet-mixin)
+                 (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
+             (slot-value port 'climi::sheet->mirror))))
 
-;;
-;; Polling for events every 10ms
-;; TODO would be better if we could set a timer and wait on the timer
-;; or a new fifo entry instead.
-;;
-
-;; return :timeout on timeout
-;;
+;; TODO: Implement WAIT-FUNCTION.
 (defmethod process-next-event ((port mezzano-port) &key wait-function (timeout nil))
   (declare (ignore wait-function))
-  ;; check for a mcclim event - if one is available return
-  ;; it. If none available wait for a mezzano event, which may
-  ;; or may not generate a mcclim event, so check for a mcclim
-  ;; event again.  Don't have to worry about a race condition of
-  ;; a mcclim event arriving after checking while waiting on a
-  ;; mezzano event because only this thread puts events in the
-  ;; mcclim event fifo.
-
-  ;; TODO - this loop needs to read from the mcclim-fifo until
-  ;; it's empty before going to the mezzano-fifo. This doesn't
-  ;; happen anymore because it sometimes ignores a mcclim
-  ;; event. It works accidently because the only mcclim event it
-  ;; ignores is a keyboard-event which only occurs singlely in
-  ;; the mcclim-fifo.
-  (let ((mez-fifo (mezzano-mez-fifo port)))
-    (loop for i :from 0
-	  while (mezzano.supervisor:event-wait-for
-		    ((mezzano.sync::mailbox-receive-possible-event mez-fifo)
-		     :timeout timeout)
-		  (not (mezzano.sync:mailbox-empty-p mez-fifo)))
-	  do (multiple-value-bind (event validp)
-		 (mezzano.sync:mailbox-receive mez-fifo :wait-p t)
-	       (assert validp)
-	       ;; ignore keyboard events if there's no event sheet
-	       ;; to handle them
-	       (unless (and (typep event 'keyboard-event)
-			    (null (event-sheet event)))
-		 (alexandria:when-let ((event (mez-event->mcclim-event event)))
-		   (when (typep event 'pointer-event)
-		     (setf (port-pointer-sheet port) (event-sheet event)))
-                   (distribute-event port event)
-		   (return))))
-	  ; finally (format *terminal-io* "processed ~D event~:P~%" i)
-	  )))
+  (flet ((pop-event ()
+           (let ((mez-fifo (mezzano-mez-fifo port)))
+             (mezzano.supervisor:event-wait-for
+                 ((mezzano.sync:mailbox-receive-possible-event mez-fifo)
+                  :timeout timeout)
+               ;; Converting the event can ultimately produce no mcclim events,
+               ;; so it gets done in the event-wait-for predicate to keep
+               ;; the timeout working properly.
+               (multiple-value-bind (event validp)
+                   (mezzano.sync:mailbox-receive mez-fifo :wait-p nil)
+                 (and validp
+                      ;; The lock is held for exactly this form to synchronize
+                      ;; with %REALIZE-MIRROR. Mezzano windows can be created
+                      ;; in one thread, triggering an activation event, but
+                      ;; the event thread could receive that event *before*
+                      ;; the associated sheet was registered with the port!
+                      ;; The activation event would then be dropped and the
+                      ;; thing wouldn't be drawn initially.
+                      (with-port-lock (port)
+                        (mez-event->mcclim-event event))))))))
+    (let ((event (pop-event)))
+      (cond (event
+             (when (typep event 'pointer-event)
+               (setf (port-pointer-sheet port) (event-sheet event)))
+             (distribute-event port event)
+             t)
+            (t
+             (values nil :timeout))))))
 
 ;;; Pixmap
 

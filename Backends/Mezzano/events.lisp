@@ -126,14 +126,6 @@
                               (8   2)
                               (16 -2)))))
 
-(defun mouse-exit-event (port sheet event)
-  (declare (ignore event))
-  (pointer-event port sheet 'pointer-exit-event))
-
-(defun mouse-enter-event (port sheet event)
-  (declare (ignore event))
-  (pointer-event port sheet 'pointer-enter-event))
-
 (defun frame-mouse-event (sheet mez-frame event)
   (handler-case
       (mos:frame-mouse-event mez-frame event)
@@ -195,8 +187,6 @@
     (when mez-frame
       (setf (mos:activep mez-frame) (mos:state event))
       (mos:draw-frame mez-frame)
-      ;; HACK: This "fixes" the initial rendering issue in the listener.
-      (sleep 0.1)
       (with-slots (width height) mez-mirror
         (make-instance 'window-repaint-event
                        :timestamp 0
