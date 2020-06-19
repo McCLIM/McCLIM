@@ -85,29 +85,12 @@
                                            :title "McCLIM event loop console")))
          (loop (with-simple-restart
 		   (restart-event-loop "Restart CLIM's event loop.")
-		 (loop with last-time = nil
-		       for now = (get-internal-real-time)
-		       do (setf last-time (step-event-loop port now last-time)))))))
+                 (loop
+                    (step-event-loop port))))))
      :name "McCLIM Events")))
 
-(defun step-event-loop (port now last-time)
-  (let* ((deadline (+ (or last-time now)
-		      (floor internal-time-units-per-second 20)))
-	 (timeout  (max 0 (- deadline now))))
-    ;; (format *terminal-io* "next frame: ~D (in ~D)~%" deadline timeout)
-    (process-next-event port :timeout (/ timeout internal-time-units-per-second))
-    (let ((now (get-internal-real-time)))
-      (cond ((>= now deadline)
-             (swap-buffers port)
-             now)
-            (t
-             last-time)))))
-
-(defun swap-buffers (port)
-  (maphash (lambda (key val)
-             (when (typep key 'mezzano-mirrored-sheet-mixin)
-               (image-mirror-to-mezzano (sheet-mirror key))))
-           (slot-value port 'climi::sheet->mirror)))
+(defun step-event-loop (port)
+  (process-next-event port))
 
 (defmethod initialize-instance :after ((port mezzano-port) &rest args &key host display-id screen-id protocol)
   (declare (ignore args))
@@ -234,9 +217,10 @@
 
 (defmethod port-force-output ((port mezzano-port))
   (with-port-lock (port)
-    (maphash (lambda (key val)
-               (when (typep key 'mezzano-mirrored-sheet-mixin)
-                 (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
+    (maphash (lambda (sheet mirror)
+               (when (typep sheet 'mezzano-mirrored-sheet-mixin)
+                 (mcclim-render-internals::%mirror-force-output mirror)
+                 (image-mirror-to-mezzano mirror)))
              (slot-value port 'climi::sheet->mirror))))
 
 ;; TODO: Implement WAIT-FUNCTION.
