@@ -135,6 +135,25 @@
     (mos:close-button-clicked ()
       (make-instance 'window-manager-delete-event :sheet sheet))))
 
+(defun generate-window-configuration-event (sheet mez-window mez-frame)
+  (multiple-value-bind (fl fr ft fb)
+      (mos:frame-size mez-frame)
+    (make-instance 'window-configuration-event
+                   :sheet sheet
+                   :region nil
+                   ;; FIXME: These are one smaller than they should be.
+                   ;; This is something to do with the window being created too small
+                   ;; and getting adjusted by one pixel.
+                   :width (- (mos:width mez-window) fl fr 1)
+                   :height (- (mos:height mez-window) ft fb 1)
+                   ;; FIXME: Window position updates aren't sent by the compositor
+                   ;; when the window moves as windows are supposed to be
+                   ;; position-independent, but mcclim is using absolute
+                   ;; screen-relative coordinates for the mouse cursor and needs
+                   ;; these to always be up to date.
+                   :x (+ (mos:window-x mez-window) fl)
+                   :y (+ (mos:window-y mez-window) ft))))
+
 (defmethod mez-event->mcclim-event ((event mos:mouse-event))
   (let* ((port       *port*)
          (pointer    (port-pointer port))
@@ -155,14 +174,7 @@
                         (mos:in-frame-border-p mez-frame mouse-x mouse-y)))
                (or (frame-mouse-event sheet mez-frame event)
                    (when (plusp (mos:mouse-button-change event))
-                     (make-instance 'window-configuration-event
-                                    :sheet sheet
-                                    :region nil
-                                    :width (mos:width mez-window)
-                                    :height (mos:height mez-window)
-                                    :x (mos:window-x mez-window)
-                                    :y (mos:window-y mez-window)))))
-
+                     (generate-window-configuration-event sheet mez-window mez-frame))))
               ((= (mos:mouse-button-change event) 0)
                (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
                         :default)
@@ -183,26 +195,19 @@
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (sheet (port-lookup-sheet *port* mez-window)))
     (when mez-mirror
-      (with-slots (width height) mez-mirror
-        (make-instance 'window-repaint-event
-                       :timestamp 0
-                       :sheet sheet
-                       :region (make-rectangle* 0 0 width height))))))
+      (generate-window-configuration-event sheet mez-window (slot-value mez-mirror 'mez-frame)))))
 
 (defmethod mez-event->mcclim-event ((event mos:window-activation-event))
   (let* ((mez-window (mos:window event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
-         (sheet (port-lookup-sheet *port* mez-window))
-         (focus (and sheet (frame-query-io (pane-frame sheet)))))
+         (sheet (port-lookup-sheet *port* mez-window)))
     (when mez-frame
       (setf (mos:activep mez-frame) (mos:state event))
       (mos:draw-frame mez-frame)
-      (with-slots (width height) mez-mirror
-        (make-instance 'window-repaint-event
-                       :timestamp 0
-                       :sheet sheet
-                       :region (make-rectangle* 0 0 width height))))))
+      ;; Is there a lose focus event?
+      (when (mos:state event)
+        (make-instance 'window-manager-focus-event :sheet sheet)))))
 
 (defmethod mez-event->mcclim-event ((event mos:quit-event))
   (let* ((mez-window (mos:window event))
