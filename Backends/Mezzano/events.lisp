@@ -195,7 +195,38 @@
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (sheet (port-lookup-sheet *port* mez-window)))
     (when mez-mirror
-      (generate-window-configuration-event sheet mez-window (slot-value mez-mirror 'mez-frame)))))
+      ;; FIXME: Figure out what exactly is going on here. Two events seem to be needed to
+      ;; get frames to actually do their initial paint properly.
+      ;; The window configuration event sets the size & location of the frame appropriately
+      ;; and can in some cases (coordinate issues?) trigger the initial draw properly.
+      ;; Other times it doesn't trigger the draw and the frame remains undrawn!
+      ;; Hence the second event to actually force a redraw.
+      ;; This can lead to the frame being drawn twice, once per event, which causes flickering
+      ;; and is lame.
+      ;;
+      ;; window-configuration-event only success:
+      ;; 0: Enter HANDLE-EVENT (#<Mezzano-473929-Top-Level-Sheet-Pane CALCULATOR-APP 500025A6A289> #<Window-Configuration-Event 500025AACFD9>)
+      ;; 1: Enter %SET-SHEET-REGION-AND-TRANSFORMATION (#<Mezzano-473929-Top-Level-Sheet-Pane CALCULATOR-APP 500025A6A289> #<Standard-Bounding-Rectangle X 0:80 Y 0:237> #<Standard-Translation :DX 472 :DY 274>)
+      ;; 2: Enter (SETF SHEET-REGION) (#<Standard-Bounding-Rectangle X 0:80 Y 0:237> #<Mezzano-473929-Top-Level-Sheet-Pane CALCULATOR-APP 500025A6A289>)
+      ;; new-region: #<Standard-Bounding-Rectangle X 0:80 Y 0:237>  old-region: #<Standard-Bounding-Rectangle X 0:81 Y 0:7607/32>
+      ;; 3: Enter (SETF SHEET-REGION) (#<Standard-Bounding-Rectangle X 0:81 Y 0:237> #<Vrack-Pane NIL 500025A8A169>)
+      ;; new-region: #<Standard-Bounding-Rectangle X 0:81 Y 0:237>  old-region: #<Standard-Bounding-Rectangle X 0:81 Y 0:7607/32>
+      ;; Regions differ by a small fraction and trigger a repaint!
+      ;;
+      ;; Failure:
+      ;; 0: Enter HANDLE-EVENT (#<Mezzano-473929-Top-Level-Sheet-Pane DEMODEMO 50002047EF69> #<Window-Configuration-Event 5000206C08D9>)
+      ;; 1: Enter %SET-SHEET-REGION-AND-TRANSFORMATION (#<Mezzano-473929-Top-Level-Sheet-Pane DEMODEMO 50002047EF69> #<Standard-Bounding-Rectangle X 0:692 Y 0:662> #<Standard-Translation :DX 166 :DY 62>)
+      ;; 2: Enter (SETF SHEET-REGION) (#<Standard-Bounding-Rectangle X 0:692 Y 0:662> #<Mezzano-473929-Top-Level-Sheet-Pane DEMODEMO 50002047EF69>)
+      ;; new-region: #<Standard-Bounding-Rectangle X 0:692 Y 0:662>  old-region: #<Standard-Bounding-Rectangle X 0:354801/512 Y 0:679387/1024>
+      ;; 3: Enter (SETF SHEET-REGION) (#<Standard-Bounding-Rectangle X 0:354801/512 Y 0:679387/1024> #<Vrack-Pane NIL 5000204A5909>)
+      ;; new-region: #<Standard-Bounding-Rectangle X 0:354801/512 Y 0:679387/1024>  old-region: #<Standard-Bounding-Rectangle X 0:354801/512 Y 0:679387/1024>
+      ;; 3: Leave (SETF SHEET-REGION) (NIL)
+      (list
+       (generate-window-configuration-event sheet mez-window (slot-value mez-mirror 'mez-frame))
+       (with-slots (width height) mez-mirror
+         (make-instance 'window-repaint-event
+                        :sheet sheet
+                        :region (make-rectangle* 0 0 width height)))))))
 
 (defmethod mez-event->mcclim-event ((event mos:window-activation-event))
   (let* ((mez-window (mos:window event))

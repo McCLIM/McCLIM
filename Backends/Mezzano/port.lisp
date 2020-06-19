@@ -77,6 +77,9 @@
 (setf (get :mezzano :port-type) 'mezzano-port)
 (setf (get :mezzano :server-path-parser) 'parse-mezzano-server-path)
 
+;; this sucks! required because some mezzano events generate multiple mcclim events.
+(defvar *outstanding-events* nil)
+
 (defun initialize-event-thread (port)
   (when clim-sys:*multiprocessing-p*
     (mos:make-thread
@@ -85,8 +88,9 @@
                                            :title "McCLIM event loop console")))
          (loop (with-simple-restart
 		   (restart-event-loop "Restart CLIM's event loop.")
-                 (loop
-                    (step-event-loop port))))))
+                 (let ((*outstanding-events* '()))
+                   (loop
+                      (step-event-loop port)))))))
      :name "McCLIM Events")))
 
 (defun step-event-loop (port)
@@ -227,6 +231,8 @@
 (defmethod process-next-event ((port mezzano-port) &key wait-function (timeout nil))
   (declare (ignore wait-function))
   (flet ((pop-event ()
+           (when *outstanding-events*
+             (return-from pop-event (pop *outstanding-events*)))
            (let ((mez-fifo (mezzano-mez-fifo port)))
              (mezzano.supervisor:event-wait-for
                  ((mezzano.sync:mailbox-receive-possible-event mez-fifo)
@@ -245,7 +251,11 @@
                       ;; The activation event would then be dropped and the
                       ;; thing wouldn't be drawn initially.
                       (with-port-lock (port)
-                        (mez-event->mcclim-event event))))))))
+                        (let ((mcclim-events (mez-event->mcclim-event event)))
+                          (cond ((listp mcclim-events)
+                                 (setf *outstanding-events* (rest mcclim-events))
+                                 (first mcclim-events))
+                                (mcclim-events))))))))))
     (let ((event (pop-event)))
       (cond (event
              (when (typep event 'pointer-event)
