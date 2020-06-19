@@ -123,8 +123,8 @@
   (let ((change (compute-mouse-buttons (mos:mouse-button-change event))))
     (pointer-event port sheet 'climi::pointer-scroll-event
                    :delta-y (case change
-                              (8   2)
-                              (16 -2)))))
+                              (#.+pointer-wheel-up+    2)
+                              (#.+pointer-wheel-down+ -2)))))
 
 (defun frame-mouse-event (sheet mez-frame event)
   (handler-case
@@ -168,7 +168,7 @@
                         :default)
                (pointer-motion-event port sheet event))
 
-              ((member (compute-mouse-buttons (mos:mouse-button-change event)) '(8 16))
+              ((member (compute-mouse-buttons (mos:mouse-button-change event)) '(#.+pointer-wheel-up+ #.+pointer-wheel-down+))
                (pointer-scroll-event port sheet event))
 
               (t
@@ -177,6 +177,17 @@
 ;;;======================================================================
 ;;; Activation Events
 ;;;======================================================================
+
+(defmethod mez-event->mcclim-event ((event mezzano.gui.compositor:window-create-event))
+  (let* ((mez-window (mos:window event))
+         (mez-mirror (port-lookup-mirror *port* mez-window))
+         (sheet (port-lookup-sheet *port* mez-window)))
+    (when mez-mirror
+      (with-slots (width height) mez-mirror
+        (make-instance 'window-repaint-event
+                       :timestamp 0
+                       :sheet sheet
+                       :region (make-rectangle* 0 0 width height))))))
 
 (defmethod mez-event->mcclim-event ((event mos:window-activation-event))
   (let* ((mez-window (mos:window event))
