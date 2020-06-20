@@ -258,7 +258,11 @@
                                 (mcclim-events))))))))))
     (let ((event (pop-event)))
       (cond (event
-             (when (typep event 'pointer-event)
+             ;; Not sure if this is correct. SYNTHESIZE-BOUNDARY-EVENTS
+             ;; seems to maintain PORT-POINTER-SHEET except when it is NIL, in
+             ;; which case it doesn't do anything and breaks all mouse input!
+             (when (and (typep event 'pointer-event)
+                        (not (port-pointer-sheet port)))
                (setf (port-pointer-sheet port) (event-sheet event)))
              (distribute-event port event)
              t)
