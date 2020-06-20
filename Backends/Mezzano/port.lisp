@@ -276,7 +276,6 @@
     (port-unregister-mirror port pixmap (port-lookup-mirror port pixmap))))
 
 (defmethod realize-mirror ((port mezzano-port) (pixmap image-pixmap-mixin))
-  (setf (sheet-parent pixmap) (graft port))
   (let ((mirror (make-instance 'image-mirror-mixin)))
     (port-register-mirror port pixmap mirror)
     (mcclim-render-internals::%make-image mirror pixmap)))
