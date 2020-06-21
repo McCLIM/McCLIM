@@ -251,7 +251,7 @@
                       ;; The activation event would then be dropped and the
                       ;; thing wouldn't be drawn initially.
                       (with-port-lock (port)
-                        (let ((mcclim-events (mez-event->mcclim-event event)))
+                        (let ((mcclim-events (mez-event->mcclim-event port event)))
                           (cond ((listp mcclim-events)
                                  (setf *outstanding-events* (rest mcclim-events))
                                  (first mcclim-events))
