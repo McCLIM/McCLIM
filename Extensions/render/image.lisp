@@ -133,13 +133,117 @@
 (deftype argb-pixel () '(unsigned-byte 32))
 (deftype argb-pixel-array () '(simple-array argb-pixel 2))
 (deftype stencil-array () '(simple-array bit 2))
+
+(defun ink-rgba (ink)
+  "Return an ARGB-PIXEL for INK"
+  (typecase ink
+    (standard-flipping-ink
+     (let ((d1 (slot-value ink 'climi::design1))
+           (d2 (slot-value ink 'climi::design2)))
+       (logior (logxor (climi::%rgba-value d1)
+                       (climi::%rgba-value d2))
+               #xff)))
+    (t
+     (climi::%rgba-value ink))))
+
+(defun ink-blend-details (ink alpha)
+  "Return the blend mode and alpha-adjusted pixel value for INK"
+  (let ((ink-rgba (ink-rgba ink)))
+    (cond ((typep ink 'standard-flipping-ink)
+           ;; TODO this can be cached
+           (let-rgba ((r.fg g.fg b.fg a.fg) ink-rgba)
+             (if alpha
+                 (values :flipping/blend (%vals->rgba r.fg g.fg b.fg (octet-mult a.fg alpha)))
+                 (values :flipping (%vals->rgba r.fg g.fg b.fg #xff)))))
+          ((not alpha)
+           (values (if (eql #xff (ldb (byte 8 24) ink-rgba)) :copy :blend)
+                   ink-rgba))
+          (t
+           (let-rgba ((r.fg g.fg b.fg a.fg) ink-rgba)
+             (let ((a (octet-mult a.fg alpha)))
+               (case a
+                 (0 (values nil 0))
+                 (255 (values :copy ink-rgba))
+                 (t (values :blend (%vals->rgba r.fg g.fg b.fg a))))))))))
+
+(defun %fill-image-static-ink-flipping/blend (dst-array dst-width source-rgba x x2 y y2)
+  (declare (optimize (speed 3) (safety 0) (debug 1))
+           (type argb-pixel-array dst-array)
+           (type image-index dst-width x x2 y y2)
+           (type argb-pixel source-rgba))
+  (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
+                     (nil       (nil sx sy) :x1 x        :y1 y))
+      (setf (row-major-aref dst-array di)
+            (logxor source-rgba (row-major-aref dst-array di)))))
+
+(defun %fill-image-static-ink-flipping/blend (dst-array dst-width source-rgba x x2 y y2)
+  (declare (optimize (speed 3) (safety 0) (debug 1))
+           (type argb-pixel-array dst-array)
+           (type image-index dst-width x x2 y y2)
+           (type argb-pixel source-rgba))
+  (let-rgba ((source-r source-g source-b source-a) source-rgba)
+    (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
+                       (nil       (nil sx sy) :x1 x        :y1 y))
+        (let-rgba ((r.bg g.bg b.bg a.bg) (row-major-aref dst-array di))
+          (setf (row-major-aref dst-array di)
+                (octet-blend-function*
+                 (color-octet-xor source-r r.bg)
+                 (color-octet-xor source-g b.bg)
+                 (color-octet-xor source-b g.bg)
+                 source-a
+                 r.bg g.bg b.bg a.bg))))))
+
+(defun %fill-image-static-ink-copy (dst-array dst-width source-rgba x x2 y y2)
+  (declare (optimize (speed 3) (safety 0) (debug 1))
+           (type argb-pixel-array dst-array)
+           (type image-index dst-width x x2 y y2)
+           (type argb-pixel source-rgba))
+  (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
+                     (nil       (nil sx sy) :x1 x        :y1 y))
+      (setf (row-major-aref dst-array di) source-rgba)))
+
+(defun %fill-image-static-ink-blend (dst-array dst-width source-rgba x x2 y y2)
+  (declare (optimize (speed 3) (safety 0) (debug 1))
+           (type argb-pixel-array dst-array)
+           (type image-index dst-width x x2 y y2)
+           (type argb-pixel source-rgba))
+  (let-rgba ((source-r source-g source-b source-a) source-rgba)
+    (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
+                       (nil       (nil sx sy) :x1 x        :y1 y))
+        (let-rgba ((r.bg g.bg b.bg a.bg) (row-major-aref dst-array di))
+          (setf (row-major-aref dst-array di)
+                (octet-blend-function*
+                 source-r source-g source-b source-a
+                 r.bg     g.bg     b.bg     a.bg))))))
+
+(defun %fill-image-static-ink (image ink x y width height)
+  (multiple-value-bind (mode source-rgba)
+      (ink-blend-details ink nil)
+    (let* ((dst-array (climi::pattern-array image))
+           (dst-width (array-dimension dst-array 1))
+           (x2 (+ x width -1))
+           (y2 (+ y height -1)))
+      (ecase mode
+        (:flipping/blend
+         (%fill-image-static-ink-flipping/blend dst-array dst-width source-rgba x x2 y y2))
+        (:flipping
+         (%fill-image-static-ink-flipping dst-array dst-width source-rgba x x2 y y2))
+        (:copy
+         (%fill-image-static-ink-copy dst-array dst-width source-rgba x x2 y y2))
+        (:blend
+         (%fill-image-static-ink-blend dst-array dst-width source-rgba x x2 y y2))
+        ((nil)))))
+  ;; XXX These #'1- are fishy. We don't capture correct region (rounding
+  ;; issue?). This problem is visible when scrolling.
+  (make-rectangle* (1- x) (1- y) (+ x width) (+ y height)))
+
 (defun fill-image (image design &key (x 0) (y 0)
                                      (width (pattern-width image))
                                      (height (pattern-height image))
                                      stencil (stencil-dx 0) (stencil-dy 0)
                                      clip-region)
   "Blends DESIGN onto IMAGE with STENCIL and a CLIP-REGION."
-  (declare (optimize (speed 3) (safety 0) (debug 0))
+  (declare (optimize (speed 3) (safety 0) (debug 1))
            (type image-index x y width height)
            (type (signed-byte 33) stencil-dx stencil-dy))
   ;; Disregard CLIP-REGION if x,y,width,height is entirely contained.
@@ -168,6 +272,13 @@
          source-rgba source-r source-g source-b source-a)
     (declare (type argb-pixel-array dst-array)
              (type argb-pixel       ink-rgba))
+    (when (and static-ink-p
+               (not stencil)
+               (not clip-region))
+      ;; Fast path for simple fills.
+      (return-from fill-image
+        (%fill-image-static-ink image (clime:design-ink design x y)
+                                x y width height)))
     (flet ((update-alpha (x y)
              ;; Set ALPHA according to STENCIL-ARRAY. Set to NIL
              ;; (transparent) if x,y is outside STENCIL-ARRAY or the
@@ -187,54 +298,19 @@
            (update-ink (i j)
              (when (or (not ink) (not static-ink-p))
                (setf ink      (clime:design-ink design i j)
-                     ink-rgba (typecase ink
-                                (standard-flipping-ink
-                                 (let ((d1 (slot-value ink 'climi::design1))
-                                       (d2 (slot-value ink 'climi::design2)))
-                                   (logior (logxor (climi::%rgba-value d1)
-                                                   (climi::%rgba-value d2))
-                                           #xff)))
-                                (t
-                                 (climi::%rgba-value ink)))))
+                     ink-rgba (ink-rgba ink)))
              (when (and (eq old-ink ink) (eql old-alpha alpha))
                (return-from update-ink))
 
-             (cond ((typep ink 'standard-flipping-ink)
-                    ;; TODO this can be cached
-                    (let-rgba ((r.fg g.fg b.fg a.fg) ink-rgba)
-                      (setf source-r r.fg
-                            source-g g.fg
-                            source-b b.fg)
-                      (if alpha
-                          (setf source-a (octet-mult a.fg alpha)
-                                mode     :flipping/blend)
-                          (setf source-a    #x00
-                                source-rgba (%vals->rgba source-r source-g source-b #xff)
-                                mode        :flipping))))
-                   ((not alpha)
-                    (if (= #xff (logand #xff ink-rgba))
-                        (setf source-rgba ink-rgba
-                              mode        :copy)
-                        (let-rgba ((r g b a) ink-rgba)
-                          (setf source-r r
-                                source-g g
-                                source-b b
-                                source-a a
-                                mode     :blend))))
-                   (t
-                    (let-rgba ((r.fg g.fg b.fg a.fg) ink-rgba)
-                      (setf source-r r.fg
-                            source-g g.fg
-                            source-b b.fg
-                            source-a (octet-mult a.fg alpha)
-                            mode     (case source-a
-                                       (0
-                                        nil)
-                                       (255
-                                        (setf source-rgba ink-rgba)
-                                        :copy)
-                                       (t
-                                        :blend))))))))
+             (multiple-value-bind (new-mode new-source-rgba)
+                 (ink-blend-details ink alpha)
+               (let-rgba ((r.fg g.fg b.fg a.fg) new-source-rgba)
+                 (setf mode new-mode
+                       source-rgba new-source-rgba
+                       source-r r.fg
+                       source-g g.fg
+                       source-b b.fg
+                       source-a a.fg)))))
       (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
                          (nil       (nil sx sy) :x1 x        :y1 y))
         (when (or (null clip-region)
