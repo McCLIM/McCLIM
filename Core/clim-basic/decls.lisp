@@ -897,6 +897,11 @@ considered a single gesture. These accept result objects have no
 standardised form."))
 
 
+;;; 26 Dialog Facilities
+(defgeneric display-exit-boxes (frame stream view))
+(defgeneric accept-values-resynchronize (stream))
+
+
 ;;; 27.3 Command Menus
 
 (defgeneric display-command-table-menu (command-table stream

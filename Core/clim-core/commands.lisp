@@ -1018,15 +1018,16 @@ examine the type of the command menu item to see if it is
 	  (defun ,func ,command-func-args
 	    ,@body)
 	  ,(when command-table
-                 `(add-command-to-command-table ',func ',command-table
-		 :name ,name :menu ',menu
-		 :keystroke ',keystroke :errorp nil
-		 ,@(and menu
-			`(:menu-command
-			  (list ',func
-			        ,@(make-list (length required-args)
-					     :initial-element
-					     '*unsupplied-argument-marker*))))))
+             `(add-command-to-command-table
+               ',func ',command-table
+               :name ,name :menu ',menu
+               :keystroke ',keystroke :errorp nil
+               ,@(and menu
+                      `(:menu-command
+                        (list ',func
+                              ,@(make-list (length required-args)
+                                           :initial-element
+                                           '*unsupplied-argument-marker*))))))
 	  ,(make-argument-accept-fun accept-fun-name
 				     required-args
 				     keyword-args)
