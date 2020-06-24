@@ -48,6 +48,10 @@
 (defvar *null-presentation*)
 (defvar *print-presentation-verbose* nil)
 
+(defmethod initialize-instance :after ((instance presentation-mixin) &key)
+  (unless (presentation-type instance)
+    (error "A presentation can't have a type NIL.")))
+
 (defmethod print-object ((self standard-presentation) stream)
   (print-unreadable-object (self stream :type t :identity t)
     (with-bounding-rectangle* (x1 y1 x2 y2)

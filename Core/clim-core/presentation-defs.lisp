@@ -834,7 +834,7 @@ history will be unchanged."
   (unless (or activationsp additional-activations-p *activation-gestures*)
     (setq activation-gestures *standard-activation-gestures*))
   (let ((sensitizer-object nil)
-        (sensitizer-type nil))
+        (sensitizer-type 'null))
     (with-input-editing
         (stream
          :input-sensitizer #'(lambda (stream cont)
