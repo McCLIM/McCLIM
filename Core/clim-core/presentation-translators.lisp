@@ -211,50 +211,51 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defmacro define-presentation-action
     (name (from-type to-type command-table &key
-           (gesture :select)
-           (tester 'default-translator-tester)
-           (documentation nil documentationp)
-           (pointer-documentation nil pointer-documentation-p)
-           (menu t)
-           (priority 0))
+                                             (gesture :select)
+                                             (tester 'default-translator-tester)
+                                             (documentation nil documentationp)
+                                             (pointer-documentation nil pointer-documentation-p)
+                                             (menu t)
+                                             (priority 0))
      arglist
      &body body)
   (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
          (real-to-type (expand-presentation-type-abbreviation to-type)))
-    `(add-translator (presentation-translators (find-command-table ',command-table))
-      (make-instance
-       'presentation-action
-       :name ',name
-       :from-type ',real-from-type
-       :to-type ',real-to-type
-       :gesture ,(if (eq gesture t)
-                     t
-                     `(gethash ',gesture *gesture-names*))
-       :tester ,(if (symbolp tester)
-                    `',tester
-                    `#',(make-translator-fun (car tester)
-                                             (cdr tester)))
-       :tester-definitive t
-       :documentation #',(make-documentation-fun (if documentationp
-                                                     documentation
-                                                     (command-name-from-symbol
-                                                      name)))
-       ,@(when pointer-documentation-p
-               `(:pointer-documentation
-                 #',(make-documentation-fun pointer-documentation)))
-       :menu ',menu
-       :priority ,priority
-       :translator-function #',(make-translator-fun arglist body)))))
+    `(add-translator
+      (presentation-translators (find-command-table ',command-table))
+      (make-instance 'presentation-action
+                     :name ',name
+                     :from-type ',real-from-type
+                     :to-type ',real-to-type
+                     :gesture ,(if (eq gesture t)
+                                   t
+                                   `(gethash ',gesture *gesture-names*))
+                     :tester ,(if (symbolp tester)
+                                  `',tester
+                                  `#',(make-translator-fun (car tester)
+                                                           (cdr tester)))
+                     :tester-definitive t
+                     :documentation #',(make-documentation-fun
+                                        (if documentationp
+                                            documentation
+                                            (command-name-from-symbol name)))
+                     ,@(when pointer-documentation-p
+                         `(:pointer-documentation
+                           #',(make-documentation-fun pointer-documentation)))
+                     :menu ',menu
+                     :priority ,priority
+                     :translator-function #',(make-translator-fun arglist body)))))
 
 (defmacro define-presentation-to-command-translator
-    (name (from-type command-name command-table &key
-           (gesture :select)
-           (tester 'default-translator-tester)
-           (documentation nil documentationp)
-           (pointer-documentation (command-name-from-symbol command-name))
-           (menu t)
-           (priority 0)
-           (echo t))
+    (name (from-type command-name command-table
+           &key
+             (gesture :select)
+             (tester 'default-translator-tester)
+             (documentation nil documentationp)
+             (pointer-documentation (command-name-from-symbol command-name))
+             (menu t)
+             (priority 0)
+             (echo t))
      arglist
      &body body)
   (let ((command-args (gensym "COMMAND-ARGS")))
@@ -269,7 +270,7 @@ and used to ensure that presentation-translators-caches are up to date.")
                      :priority ,priority
                      :translator-class presentation-command-translator
                      :command-name ',command-name)
-       ,arglist
+         ,arglist
        (let ((,command-args (let () ,@body)))
          (values (cons ',command-name ,command-args)
                  '(command :command-table ,command-table)
@@ -358,10 +359,10 @@ and used to ensure that presentation-translators-caches are up to date.")
                                (presentation-translators table))))
           (flet ((get-translators (super)
                    (loop
-                      for translator in (gethash (type-name super) translator-map)
-                      if (stupid-subtypep (to-type translator) to-type)
-                      do (vector-push-extend (cons translator table-counter)
-                                             translator-vector))))
+                     for translator in (gethash (type-name super) translator-map)
+                     if (stupid-subtypep (to-type translator) to-type)
+                       do (vector-push-extend (cons translator table-counter)
+                                              translator-vector))))
             (map-over-ptype-superclasses #'get-translators from-name)))
         (incf table-counter))
       (let ((from-super-names nil))
@@ -412,17 +413,17 @@ and used to ensure that presentation-translators-caches are up to date.")
            (or (eq gesture t)
                for-menu
                (loop
-                  with modifiers = (if event
-                                       (event-modifier-state event)
-                                       modifier-state)
-                  for g in gesture
-                  thereis (and (eql modifiers (caddr g))
-                               (or (and button (eql button (cadr g)))
-                                   (and (null button)
-                                        (or (null event)
-                                            (eql (pointer-event-button
-                                                  event)
-                                                 (cadr g))))))))))
+                 with modifiers = (if event
+                                      (event-modifier-state event)
+                                      modifier-state)
+                 for g in gesture
+                   thereis (and (eql modifiers (caddr g))
+                                (or (and button (eql button (cadr g)))
+                                    (and (null button)
+                                         (or (null event)
+                                             (eql (pointer-event-button
+                                                   event)
+                                                  (cadr g))))))))))
     (and (match-gesture (gesture translator) event modifier-state)
          (or (null (decode-parameters from-type))
              (presentation-typep (presentation-object presentation) from-type))
@@ -443,17 +444,17 @@ and used to ensure that presentation-translators-caches are up to date.")
   (labels ((process-presentation (context presentation)
              (let* ((context-ptype (first context))
                     (maybe-translators
-                     (find-presentation-translators (presentation-type presentation)
-                                                    context-ptype
-                                                    (frame-command-table frame))))
+                      (find-presentation-translators (presentation-type presentation)
+                                                     context-ptype
+                                                     (frame-command-table frame))))
                (loop for translator in maybe-translators
-                  when (and (or (not for-menu) (eql for-menu (menu translator)))
-                            (test-presentation-translator
-                             translator presentation context-ptype
-                             frame window x y
-                             :event event :modifier-state modifier-state
-                             :for-menu for-menu :button button))
-                  do (funcall func translator presentation context))))
+                     when (and (or (not for-menu) (eql for-menu (menu translator)))
+                               (test-presentation-translator
+                                translator presentation context-ptype
+                                frame window x y
+                                :event event :modifier-state modifier-state
+                                :for-menu for-menu :button button))
+                       do (funcall func translator presentation context))))
            (mopscp (context record)
              "maps recursively over all presentations in record, including record."
              (if (and x y)
@@ -468,11 +469,11 @@ and used to ensure that presentation-translators-caches are up to date.")
     (if (and (presentationp presentation)
              (presentation-subtypep (presentation-type presentation) 'blank-area))
         (loop
-           for context in input-context
-           do (process-presentation context presentation))
+          for context in input-context
+          do (process-presentation context presentation))
         (loop
-           for context in input-context
-           do (mopscp context presentation)))))
+          for context in input-context
+          do (mopscp context presentation)))))
 
 (defun window-modifier-state (window)
   "Provides default modifier state for presentation translator functions."
@@ -537,7 +538,7 @@ and used to ensure that presentation-translators-caches are up to date.")
                                          window
                                          x y
                                          &key (stream *standard-output*)
-                                         (documentation-type :normal))
+                                           (documentation-type :normal))
   (funcall (if (eq documentation-type :normal)
                (translator-documentation translator)
                (pointer-documentation translator))
@@ -568,13 +569,13 @@ and used to ensure that presentation-translators-caches are up to date.")
           `(,(make-presentation-translator-menu-item :translator translator
                                                      :presentation presentation
                                                      :context context)
-             :documentation ,(with-output-to-string (stream)
-                               (document-presentation-translator
-                                translator
-                                presentation
-                                input-context
-                                frame nil window x y
-                                :stream stream)))
+            :documentation ,(with-output-to-string (stream)
+                              (document-presentation-translator
+                               translator
+                               presentation
+                               input-context
+                               frame nil window x y
+                               :stream stream)))
           items)))
    presentation input-context frame window x y :for-menu for-menu)
   (unless items
@@ -662,8 +663,8 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defun find-innermost-applicable-presentation
     (input-context window x y
      &key (frame *application-frame*)
-     (modifier-state (window-modifier-state window))
-     event)
+       (modifier-state (window-modifier-state window))
+       event)
   (values (find-innermost-presentation-match input-context
                                              (stream-output-history window)
                                              frame
@@ -676,10 +677,10 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defun find-innermost-presentation-context
     (input-context window x y
      &key (top-record (stream-output-history window))
-     (frame *application-frame*)
-     event
-     (modifier-state (window-modifier-state window))
-     button)
+       (frame *application-frame*)
+       event
+       (modifier-state (window-modifier-state window))
+       button)
   (find-innermost-presentation-match input-context
                                      top-record
                                      frame
@@ -718,15 +719,15 @@ and used to ensure that presentation-translators-caches are up to date.")
   "Throw an object and presentation type within input-context without
 a presentation"
   (throw-highlighted-presentation
-                          (make-instance 'standard-presentation
-                                         :object object :type type
-                                         :single-box t)
-                          input-context
-                          (make-instance 'pointer-button-press-event
-                                         :sheet sheet
-                                         :x 0 :y 0
-                                         :modifier-state 0
-                                         :button +pointer-left-button+)))
+   (make-instance 'standard-presentation
+                  :object object :type type
+                  :single-box t)
+   input-context
+   (make-instance 'pointer-button-press-event
+                  :sheet sheet
+                  :x 0 :y 0
+                  :modifier-state 0
+                  :button +pointer-left-button+)))
 
 (defun highlight-applicable-presentation (frame stream input-context
                                           &optional (prefer-pointer-window t))
