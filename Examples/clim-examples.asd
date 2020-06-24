@@ -54,6 +54,7 @@
      (:file "dnd-commented")
      (:file "tracking-pointer")
      (:file "file-manager")
+     (:file "presentation-translators-test")
      (:file "demodemo")))
 
 (defsystem #:clim-examples/superapp
