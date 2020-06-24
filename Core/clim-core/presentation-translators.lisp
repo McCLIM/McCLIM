@@ -70,33 +70,34 @@
 and used to ensure that presentation-translators-caches are up to date.")
 
 (defclass translator-table ()
-  ((translators :accessor translators :initarg :translators
-                :initform (make-hash-table :test #'eq)
-                :documentation "Translators keyed by name.")
+  ((translators
+    :accessor translators :initarg :translators
+    :initform (make-hash-table :test #'eq)
+    :documentation "Translators keyed by name.")
    (simple-type-translators :accessor simple-type-translators
                             :initarg :simple-type-translators
                             :initform (make-hash-table :test #'eq)
                             :documentation "Holds transators with a simple
   from-type (i.e. doesn't contain \"or\" or \"and\").")
-   (translator-cache-generation :accessor translator-cache-generation
-                                :initform 0)
-   (presentation-translators-cache
-    :writer (setf presentation-translators-cache)
-    :initform (make-hash-table :test #'equal))))
+   (cache-generation
+    :initform 0
+    :accessor translator-table-cache-generation)
+   (cache
+    :initform (make-hash-table :test #'equal)
+    :reader translator-table-cache)))
 
 (defun invalidate-translator-caches ()
   (incf *current-translator-cache-generation*))
 
-(defgeneric presentation-translators-cache (table))
-
-(defmethod presentation-translators-cache ((table translator-table))
-  (with-slots ((cache presentation-translators-cache)
-               (generation translator-cache-generation))
-      table
-    (unless (or (= generation *current-translator-cache-generation*)
+(defun presentation-translators-cache (table)
+  (check-type table translator-table)
+  (let ((cache (translator-table-cache table))
+        (cache-generation (translator-table-cache-generation table)))
+    (unless (or (= cache-generation *current-translator-cache-generation*)
                 (zerop (hash-table-size cache)))
       (clrhash cache))
-    (setf generation *current-translator-cache-generation*)
+    (setf (translator-table-cache-generation table)
+          *current-translator-cache-generation*)
     cache))
 
 (defun default-translator-tester (object-arg &key &allow-other-keys)
