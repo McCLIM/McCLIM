@@ -105,21 +105,11 @@ and used to ensure that presentation-translators-caches are up to date.")
   t)
 
 (defun add-translator (table translator)
-  ;; Remove old one.
-  (when-let ((old (gethash (name translator) (translators table))))
-    (alexandria:removef (gethash (presentation-type-name (from-type old))
-                                 (simple-type-translators table))
-                        old))
   (invalidate-translator-caches)
   (setf (gethash (name translator) (translators table)) translator)
-  (push translator (gethash (presentation-type-name (from-type translator))
-                            (simple-type-translators table)))
   translator)
 
 (defun remove-translator (table translator)
-  (alexandria:removef (gethash (presentation-type-name (from-type translator))
-                               (simple-type-translators table))
-                      translator)
   (remhash (name translator) (translators table))
   (invalidate-translator-caches)
   translator)
@@ -344,26 +334,26 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun find-presentation-translators (from-type to-type command-table)
   (let* ((command-table (find-command-table command-table))
-         (from-name (presentation-type-name from-type))
-         (to-name (presentation-type-name to-type))
-         (cache-key (cons from-name to-name))
-         (cache-table (presentation-translators-cache
-                       (presentation-translators command-table)))
-         (cached-translators (gethash cache-key cache-table)))
-    (when cached-translators
+         (from-name     (presentation-type-name from-type))
+         (to-name       (presentation-type-name to-type))
+         (cache-key     (cons from-type to-name))
+         (cache-table   (presentation-translators-cache
+                         (presentation-translators command-table))))
+    (when-let ((cached-translators (gethash cache-key cache-table)))
       (return-from find-presentation-translators cached-translators))
     (let ((translator-vector (make-array 8 :adjustable t :fill-pointer 0))
           (table-counter 0))
       (do-command-table-inheritance (table command-table)
-        (let ((translator-map (simple-type-translators
-                               (presentation-translators table))))
-          (flet ((get-translators (super)
-                   (loop
-                     for translator in (gethash (type-name super) translator-map)
-                     if (stupid-subtypep (to-type translator) to-type)
-                       do (vector-push-extend (cons translator table-counter)
-                                              translator-vector))))
-            (map-over-ptype-superclasses #'get-translators from-name)))
+        ;; We need to go over each translator in all tables, because
+        ;; the FROM-TYPE may be a subtype of a translator FROM-TYPE
+        ;; despite not having the same presentation metaclass, like
+        ;; "meta" presentation types OR, AND etc. -- jd 2020-06-24
+        (loop with translators = (translators (presentation-translators table))
+              for tr being the hash-value of translators
+              if (and (stupid-subtypep from-type (from-type tr))
+                      (stupid-subtypep (to-type tr) to-type))
+                do (vector-push-extend (cons tr table-counter)
+                                       translator-vector))
         (incf table-counter))
       (let ((from-super-names nil))
         (map-over-ptype-superclasses #'(lambda (super)
@@ -377,28 +367,37 @@ and used to ensure that presentation-translators-caches are up to date.")
         ;; priority is (mod priority 10) That's pretty wacked...
         (flet ((translator-lessp (a b)
                  (nest
-                  (destructuring-bind (translator-a . table-num-a) a)
-                  (destructuring-bind (translator-b . table-num-b) b)
-                  (multiple-value-bind (hi-a low-a) (floor (priority translator-a) 10))
-                  (multiple-value-bind (hi-b low-b) (floor (priority translator-b) 10))
-                  (let* ((a-name (presentation-type-name (from-type translator-a)))
-                         (b-name (presentation-type-name (from-type translator-b)))
-                         (a-precedence (position a-name from-super-names))
-                         (b-precedence (position b-name from-super-names)))
+                  (destructuring-bind (tr-a . table-num-a) a)
+                  (destructuring-bind (tr-b . table-num-b) b)
+                  (multiple-value-bind (hi-a low-a) (floor (priority tr-a) 10))
+                  (multiple-value-bind (hi-b low-b) (floor (priority tr-b) 10))
+                  (let* ((a-name (presentation-type-name (from-type tr-a)))
+                         (b-name (presentation-type-name (from-type tr-b)))
+                         ;; FROM-TYPE of a translator may be a "meta"
+                         ;; presentation type like OR and AND. in this
+                         ;; case POSITION will yield NIL. We give them
+                         ;; the lowest precedence because they are not
+                         ;; in the presentation class precedence list.
+                         ;; -- jd 2020-06-24
+                         (a-prec (or (position a-name from-super-names)
+                                     (length from-super-names)))
+                         (b-prec (or (position b-name from-super-names)
+                                     (length from-super-names))))
                     (cond
                       ;; 1. High order priority
                       ((> hi-a hi-b) (return-from translator-lessp t))
                       ((< hi-a hi-b) (return-from translator-lessp nil))
                       ;; 2. More specific "from type"
-                      ((< a-precedence b-precedence) (return-from translator-lessp t))
-                      ((> a-precedence b-precedence) (return-from translator-lessp nil))
+                      ((< a-prec b-prec) (return-from translator-lessp t))
+                      ((> a-prec b-prec) (return-from translator-lessp nil))
                       ;; 3. Low order priority
                       ((> low-a low-b) (return-from translator-lessp t))
                       ((< low-a low-b) (return-from translator-lessp nil))
                       ;; 4. Command table inheritance
                       (t (< table-num-a table-num-b)))))))
           ;; Add translators to their caches.
-          (let ((translators (map 'list #'car (sort translator-vector #'translator-lessp))))
+          (let* ((sorted (sort translator-vector #'translator-lessp))
+                 (translators (map 'list #'car sorted)))
             (setf (gethash cache-key cache-table)
                   (remove-duplicates translators))))))))
 
