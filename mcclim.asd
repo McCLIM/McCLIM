@@ -97,6 +97,7 @@ interface management system."
                              (:file "input-editing")
                              (:file "commands")
                              (:file "presentations")
+                             (:file "presentation-translators")
                              (:file "text-selection")
                              (:file "text-formatting")
                              (:file "text-styles")
