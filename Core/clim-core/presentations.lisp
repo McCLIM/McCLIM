@@ -479,15 +479,22 @@ filled in."
 
 (setf (gethash t *presentation-type-table*) (find-class t))
 
+;;; The presentation type specifier may be in one of these forms:
+;;;
+;;;     name
+;;;    (name &rest params)
+;;;   ((name &rest params) &rest options)
+;;;
+;;; GET-PTYPE-METACLASS accepts either the presentation type or its
+;;; specifier and returns the presentation type metaclass.
 (defgeneric get-ptype-metaclass (type))
 
 (defmethod get-ptype-metaclass ((type symbol))
-  (let ((maybe-meta (gethash type *presentation-type-table*)))
-    (if maybe-meta
-        (get-ptype-metaclass maybe-meta)
-        (let ((system-meta (find-class type nil)))
-          (and (typep system-meta 'standard-class)
-               system-meta)))))
+  (if-let ((maybe-meta (gethash type *presentation-type-table*)))
+    (get-ptype-metaclass maybe-meta)
+    (let ((system-meta (find-class type nil)))
+      (and (typep system-meta 'standard-class)
+           system-meta))))
 
 (defmethod get-ptype-metaclass ((type presentation-type-class))
   type)
@@ -500,6 +507,15 @@ filled in."
 
 (defmethod get-ptype-metaclass ((type class))
   type)
+
+(defmethod get-ptype-metaclass ((type cons))
+  (let ((ptype-name (first type)))
+    (if (atom ptype-name)
+        (get-ptype-metaclass ptype-name)
+        (let ((ptype-name (first ptype-name)))
+          (if (atom ptype-name)
+              (get-ptype-metaclass ptype-name)
+              (call-next-method))))))
 
 (defmethod get-ptype-metaclass (type)
   (error "~A is not the name of a presentation type" type))
