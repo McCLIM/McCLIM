@@ -112,7 +112,7 @@ and used to ensure that presentation-translators-caches are up to date.")
                         old))
   (invalidate-translator-caches)
   (setf (gethash (name translator) (translators table)) translator)
-  (push translator (gethash (from-type translator)
+  (push translator (gethash (presentation-type-name (from-type translator))
                             (simple-type-translators table)))
   translator)
 
