@@ -7,8 +7,10 @@
    (:file "theming")
    (:module "presentations"
     :serial t
-    :components ((:file "presentations")
+    :components ((:file "presentation-types")
                  (:file "presentation-functions")
+                 (:file "typed-output")
+                 (:file "typed-input")
                  (:file "translators")
                  (:file "drag-and-drop")))
    (:file "bordered-output" :depends-on ("presentations" "theming"))
