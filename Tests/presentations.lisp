@@ -105,8 +105,8 @@
   (expect-t-t '(or integer symbol) '(or symbol integer))
 
   (expect-t-t '(or real complex) 'number)
-  (expect-t-t 'number '(or real complex)))
+  (fails (expect-t-t 'number '(or real complex))))
 
 (test presentations.type-relations.5
   (let ((type (expand-presentation-type-abbreviation '(member "a" 3))))
-    (expect-t-t type '(or string integer))))
+    (fails (expect-t-t type '(or string integer)))))
