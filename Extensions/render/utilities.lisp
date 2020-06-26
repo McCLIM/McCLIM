@@ -112,14 +112,15 @@ top-left. Useful when we iterate over the same array and mutate its state."
   (logxor d1 d2))
 
 (declaim (type (simple-array (integer -255 255) (#.(* 256 (+ 256 256)))) +octet-mult-table+))
-(defvar +octet-mult-table+
+(alexandria:define-constant +octet-mult-table+
     (loop :with result = '()
           :for a :from 0 :to 255
           :do (loop :for b :from -256 :to 255
                     :do (push (truncate (* a (+ b (logxor #x1 (ldb (byte 1 8) b)))) 256)
                               result))
           :finally (return (coerce (reverse result)
-                                   `(simple-array (integer -255 255) (,(* 256 (+ 256 256))))))))
+                                   `(simple-array (integer -255 255) (,(* 256 (+ 256 256)))))))
+  :test 'equalp)
 (declaim (inline octet-mult)
          (ftype (function (octet (integer -255 255)) (integer -255 255)) octet-mult))
 (defun octet-mult (a b)
@@ -141,7 +142,7 @@ top-left. Useful when we iterate over the same array and mutate its state."
   (logand #xFF (- (+ p q) (octet-mult a p))))
 
 (declaim (type (simple-array (integer 0 65535) (#. (* 256 256))) +byte-blend-value-table+))
-(defvar +byte-blend-value-table+
+(alexandria:define-constant +byte-blend-value-table+
     (loop :with result = '()
           :for value :from 0 :to 255
           :do (loop :for gamma :from 0 :to 255
@@ -150,7 +151,8 @@ top-left. Useful when we iterate over the same array and mutate its state."
                                   (truncate (* 255 value) gamma))
                               result))
           :finally (return (coerce (reverse result)
-                                   `(simple-array (integer 0 65535) (,(* 256 256)))))))
+                                   `(simple-array (integer 0 65535) (,(* 256 256))))))
+  :test 'equalp)
 
 (declaim (inline %byte-blend-value)
          (ftype (function (octet octet octet octet) octet) %byte-blend-value))
