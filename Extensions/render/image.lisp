@@ -132,7 +132,7 @@
 (deftype image-index () 'alexandria:array-index)
 (deftype argb-pixel () '(unsigned-byte 32))
 (deftype argb-pixel-array () '(simple-array argb-pixel 2))
-(deftype stencil-array () '(simple-array bit 2))
+(deftype stencil-array () '(simple-array octet 2))
 
 (defun ink-rgba (ink)
   "Return an ARGB-PIXEL for INK"
