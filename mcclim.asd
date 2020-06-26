@@ -89,7 +89,8 @@ interface management system."
 
 (defsystem "mcclim/test"
   :depends-on ("mcclim"
-               "fiveam")
+               "fiveam"
+               "mcclim/test-util")
   :components ((:module "Tests"
                 :serial t
                 :components ((:file "package")
