@@ -8,6 +8,7 @@
    (:module "presentations"
     :serial t
     :components ((:file "presentations")
+                 (:file "presentation-functions")
                  (:file "translators")
                  (:file "drag-and-drop")))
    (:file "bordered-output" :depends-on ("presentations" "theming"))
