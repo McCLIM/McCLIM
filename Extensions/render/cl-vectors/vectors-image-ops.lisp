@@ -35,7 +35,7 @@
                          (and clip-region
                               (not (region-contains-position-p clip-region x y))))
                (let* ((value (climi::%rgba-value (clime:design-ink design x y)))
-                      (a.fg (ldb (byte 8 24) value))
+                      (a.fg (ldb-a value))
                       (a.fg*alpha (octet-mult a.fg alpha)))
                  (if (> a.fg*alpha 250)
                      (setf (aref pixels y x) value)

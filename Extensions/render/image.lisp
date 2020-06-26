@@ -156,7 +156,7 @@
                  (values :flipping/blend (%vals->rgba r.fg g.fg b.fg (if (eql alpha 't) a.fg (octet-mult a.fg alpha))))
                  (values :flipping (%vals->rgba r.fg g.fg b.fg #xff)))))
           ((not alpha)
-           (values (if (eql #xff (ldb (byte 8 24) ink-rgba)) :copy :blend)
+           (values (if (eql #xff (ldb-a ink-rgba)) :copy :blend)
                    ink-rgba))
           (t
            (let-rgba ((r.fg g.fg b.fg a.fg) ink-rgba)
