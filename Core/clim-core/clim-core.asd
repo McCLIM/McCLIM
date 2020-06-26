@@ -10,6 +10,7 @@
     :components ((:file "presentation-types")
                  (:file "presentation-functions")
                  (:file "presentation-type-functions")
+                 (:file "presentation-histories")
                  (:file "typed-output")
                  (:file "typed-input")
                  (:file "translators")
