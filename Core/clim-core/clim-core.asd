@@ -34,7 +34,7 @@
    (:file "describe" :depends-on ("presentations" "presentation-defs" "table-formatting"))
    (:file "commands" :depends-on ("input-editing" "presentations" "presentation-defs"))
    (:file "incremental-redisplay" :depends-on ("presentation-defs"))
-   (:file "menu-choose" :depends-on ("commands" "table-formatting" "presentation-defs" "panes" "frames" "presentations"))
+   (:file "menu-choose" :depends-on ("commands" "table-formatting"  "panes" "frames" "presentations"))
    (:file "panes" :depends-on ("incremental-redisplay" "presentations" "presentation-defs" "input-editing" "frames" "theming"))
    (:file "dialog" :depends-on ("panes" "frames" "incremental-redisplay" "table-formatting" "presentations" "bordered-output" "presentation-defs" "input-editing" "commands" "gadgets"))
    (:file "builtin-commands" :depends-on ("table-formatting" "commands" "presentations" "dialog" "presentation-defs" "input-editing"))))

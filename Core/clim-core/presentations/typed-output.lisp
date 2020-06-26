@@ -30,8 +30,7 @@
   (multiple-value-bind (decls with-body)
       (get-body-declarations body)
     (with-gensyms (record-arg continuation)
-      (with-keywords-removed (key-args (:record-type
-                                        :allow-sensitive-inferiors))
+      (with-keywords-removed (key-args (:record-type :allow-sensitive-inferiors))
         `(flet ((,continuation ()
                   ,@decls
                   ,@with-body))
@@ -41,8 +40,7 @@
                (with-new-output-record
                    (,stream ,record-type ,record-arg
                             :object ,object
-                            :type (expand-presentation-type-abbreviation
-                                   ,type)
+                            :type (expand-presentation-type-abbreviation ,type)
                             ,@key-args)
                  (let ((*allow-sensitive-inferiors*
                          ,allow-sensitive-inferiors))
