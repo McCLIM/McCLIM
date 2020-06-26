@@ -47,12 +47,45 @@
       (values (- cx x) (- cy y) (+ cx x) (+ cy y)))))
 
 (defmethod bounding-rectangle* ((region elliptical-thing))
-  (with-slots (tr start-angle end-angle) region
-    (multiple-value-bind (cx cy) (ellipse-center-point* region)
-      (if (every #'zerop (multiple-value-list (ellipse-radii region)))
-          (values cx cy cx cy)
-          (ellipse-bounding-rectangle region)))))
-
+  (let ((transform (polar->screen region))
+        dx dy)
+    (cond ;; If TRANSFORM is invertible, REGION is not degenerate
+          ;; (i.e. a line or a point).
+          ((invertible-transformation-p transform)
+           (ellipse-bounding-rectangle region))
+          ;; If TRANSFORM is not invertible, the REGION is either a
+          ;; line or a point. If at least one of the radii is
+          ;; non-zero, REGION is a line.
+          ((multiple-value-bind (dx1 dy1 dx2 dy2) (ellipse-radii region)
+             (let ((r1 (+ (expt dx1 2) (expt dy1 2)))
+                   (r2 (+ (expt dx2 2) (expt dy2 2))))
+               (cond ((> r1 r2) ; implies r1 > 0
+                      (setf dx dx1 dy dy1)
+                      t)
+                     ((> r2 0)
+                      (setf dx dx2 dy dy2)
+                      t))))
+           (multiple-value-bind (cx cy) (ellipse-center-point* region)
+             (let ((start-angle (slot-value region 'start-angle))
+                   (end-angle (slot-value region 'end-angle))
+                   (dx (abs dx))
+                   (dy (abs dy)))
+               (multiple-value-bind (dx- dy-)
+                   (if (and (or (null start-angle) (<= start-angle 0))
+                            (or (null end-angle) (<= 0 end-angle)))
+                       (values dx dy)
+                       (values 0 0))
+                 (multiple-value-bind (dx+ dy+)
+                     (if (and (or (null start-angle) (<= start-angle (/ pi 2)))
+                              (or (null end-angle) (<= (/ pi 2) end-angle)))
+                         (values dx dy)
+                         (values 0 0))
+                   (values (- cx dx-) (- cy dy-) (+ cx dx+) (+ cy dy+)))))))
+          ;; If TRANSFORM is not invertible and both radii are zero,
+          ;; REGION is a point.
+          (t
+           (multiple-value-bind (cx cy) (ellipse-center-point* region)
+             (values cx cy cx cy))))))
 
 (defmethod bounding-rectangle* ((a standard-line))
   (with-slots (x1 y1 x2 y2) a
