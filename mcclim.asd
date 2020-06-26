@@ -117,7 +117,8 @@ interface management system."
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
 
 (defsystem "mcclim/test-util"
-  :depends-on ("mcclim")
+  :depends-on ("mcclim"
+               "fiveam")
   :components ((:module "Tests/util"
                 :serial t
                 :components ((:file "package")
