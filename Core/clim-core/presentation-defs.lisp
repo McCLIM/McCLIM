@@ -49,11 +49,9 @@
   (let ((result (present-to-string object type
                                    :view view :acceptably nil
                                    :for-context-type for-context-type)))
-    (apply #'replace-input stream result `(,@(and buffer-start-supplied-p
-                                                  `(:buffer-start
-                                                    ,buffer-start))
-                                           ,@(and rescan-supplied-p
-                                                  `(:rescan ,rescan))))))
+    (apply #'replace-input stream result
+           `(,@(and buffer-start-supplied-p `(:buffer-start ,buffer-start))
+             ,@(and rescan-supplied-p `(:rescan ,rescan))))))
 
 (define-presentation-generic-function %accept accept
     (type-key parameters options type stream view

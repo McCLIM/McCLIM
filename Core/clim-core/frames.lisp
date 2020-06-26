@@ -1415,9 +1415,6 @@ have a `pointer-documentation-pane' as pointer documentation,
              (stream-add-output-record pstream message)
              (replay message pstream))))))
 
-(defgeneric frame-input-context-track-pointer
-    (frame input-context stream event))
-
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)
      input-context

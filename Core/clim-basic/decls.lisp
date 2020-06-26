@@ -769,6 +769,10 @@ unspecified. "))
      delimiter-gestures additional-delimiter-gestures))
 (defgeneric prompt-for-accept (stream type view &rest accept-args &key))
 
+;;; 23.7 Presentation Translators
+(declfun highlight-applicable-presentation
+    (frame stream input-context &optional prefer-pointer-window))
+
 
 ;;; 24.1 The Input Editor
 
@@ -988,6 +992,8 @@ panes."))
     (frame input-context stream x y &key event))
 (defgeneric frame-input-context-button-press-handler
     (frame stream button-press-event))
+(defgeneric frame-input-context-track-pointer
+    (frame input-context stream event))
 (defgeneric frame-document-highlighted-presentation
     (frame presentation input-context window-context x y stream))
 (defgeneric frame-drag-and-drop-feedback

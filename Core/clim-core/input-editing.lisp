@@ -421,21 +421,20 @@ layout and to implement a general with-input-editor-typeout."))
 		   (pointer-button-press-handler
 		    *pointer-button-press-handler*)
 		   click-only)
-  "Reads characters from the interactive stream `stream' until it
+  "Reads characters from the interactive stream STREAM until it
 encounters a delimiter or activation gesture, or a pointer
 gesture. Returns the accumulated string that was delimited by the
-delimiter or activation gesture, leaving the delimiter
-unread.
+delimiter or activation gesture, leaving the delimiter unread.
 
-If the first character of typed input is a quotation mark (#\"),
-then `read-token' will ignore delimiter gestures until another
-quotation mark is seen. When the closing quotation mark is seen,
-`read-token' will proceed as above.
+If the first character of typed input is a quotation mark (#\"), then
+READ-TOKEN will ignore delimiter gestures until another quotation mark
+is seen. When the closing quotation mark is seen, READ-TOKEN will
+proceed as above.
 
-`Click-only' is ignored for now.
+CLICK-ONLY is ignored for now. -- ha ha, what a joke!
 
-`Input-wait-handler' and `pointer-button-press-handler' are as
-for 34stream-read-gesture"
+INPUT-WAIT-HANDLER and POINTER-BUTTON-PRESS-HANDLER are as for
+STREAM-READ-GESTURE."
   (declare (ignore click-only))		;XXX For now
   (let ((result (make-array 1
 			    :adjustable t
@@ -475,11 +474,10 @@ for 34stream-read-gesture"
 
 (defun write-token (token stream &key acceptably)
   "This function is the opposite of `read-token' given the string
-token, it writes it to the interactive stream stream. If
-`acceptably' is true and there are any characters in the token
-that are delimiter gestures (see the macro
-`with-delimiter-gestures'), then `write-token' will surround the
-token with quotation marks (#\").
+token, it writes it to the interactive stream stream. If `acceptably'
+is true and there are any characters in the token that are delimiter
+gestures (see the macro `with-delimiter-gestures'), then `write-token'
+will surround the token with quotation marks (#\").
 
 Typically, `present' methods will use `write-token' instead of
 `write-string'."
