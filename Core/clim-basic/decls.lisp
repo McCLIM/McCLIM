@@ -752,6 +752,13 @@ unspecified. "))
     (stream output &key repaint erase feedback finish-on-release multiple-window))
 
 
+;;; 23.4 Typed output
+
+(defgeneric stream-present
+    (stream object type
+     &key view modifier acceptably for-context-type single-box
+       allow-sensitive-inferiors sensitive record-type))
+
 ;;; 23.5 Context-dependent (Typed) Input
 
 (defgeneric stream-accept

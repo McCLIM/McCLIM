@@ -9,6 +9,7 @@
     :serial t
     :components ((:file "presentation-types")
                  (:file "presentation-functions")
+                 (:file "presentation-type-functions")
                  (:file "typed-output")
                  (:file "typed-input")
                  (:file "translators")

@@ -1,5 +1,5 @@
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Typed output
+;;;     Title: Defining presentation types
 ;;;   Created: 2020-06-26 15:00
 ;;;    Author: Daniel Kochmański <daniel@turtleware.eu>
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
@@ -11,7 +11,7 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Implementation of the presentation type system.
+;;; Defining presentation types and abbreviations.
 ;;;
 
 (in-package #:clim-internals)
@@ -773,6 +773,7 @@ suitable for SUPER-NAME"))
         `(let ()
            ,@body))))
 
+
 (defmacro with-presentation-type-options ((type-name type) &body body)
   (let ((ptype (get-ptype type-name)))
     (unless (or ptype (compile-time-clos-p type-name))
@@ -883,28 +884,3 @@ suitable for SUPER-NAME"))
               finally (return (if needed-options
                                   `(,name-and-params ,@needed-options)
                                   name-and-params)))))))
-
-;;; Used by map-over-presentation-type-supertypes as well
-
-(defun map-over-ptype-superclasses (function type)
-  (let* ((type-name (presentation-type-name type))
-         (type-meta (get-ptype-metaclass type-name))
-         (type-is-ptype (typep type-meta 'presentation-type-class)))
-    (unless type-meta
-      (return-from map-over-ptype-superclasses nil))
-    (loop
-      for super-meta in (safe-cpl type-meta)
-      ;; structure classes?
-      when (and (or (typep super-meta 'standard-class)
-                    (eq super-meta *builtin-t-class*))
-                (not (and type-is-ptype
-                          (eq super-meta *standard-object-class*))))
-        do (funcall function super-meta))))
-
-#+nil
-(defmethod highlight-output-record ((record standard-presentation)
-                                    stream state)
-  (map-over-output-records
-   (lambda (child)
-     (highlight-output-record child stream state))
-   record))

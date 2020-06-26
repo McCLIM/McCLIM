@@ -10,357 +10,23 @@
 ;;; established by hand in presentations.lisp.
 ;(define-presentation-type t ())
 
-;;; auto-activate is described in the Franz user guide; it controls whether an
+;;; AUTO-ACTIVATE is described in the Franz user guide; it controls whether an
 ;;; accepting an expression returns immediately after typing the closing
 ;;; delimiter -- a la Genera et Mac Lisp -- or if an activation gesture is
 ;;; required.
-;;; preserve-whitespace controls whether the accept method uses read or
-;;; read-preserving-whitespace. This is used in our redefinitions of read and
-;;; read-preserving-whitespace that accept forms.
+;;; PRESERVE-WHITESPACE controls whether the accept method uses read or
+;;; READ-PRESERVING-WHITESPACE. This is used in our redefinitions of read and
+;;; READ-PRESERVING-WHITESPACE that accept forms.
 
 (define-presentation-type expression ()
   :options (auto-activate (preserve-whitespace t) (subform-read nil))
   :inherit-from t)
-
 
 (define-presentation-type form ()
   :options (auto-activate (preserve-whitespace t) (subform-read nil))
   :inherit-from `((expression) :auto-activate ,auto-activate
                   :preserve-whitespace ,preserve-whitespace
                   :subform-read ,subform-read ))
-
-;;; Actual definitions of presentation methods and types.  They've
-;;; been separated from the macro and presentation class definitions and
-;;; helper functions in order to avoid putting all of presentations.lisp
-;;; inside a (eval-when (compile) ...).
-
-(define-presentation-generic-function %presentation-typep presentation-typep
-  (type-key parameters object type))
-
-(define-default-presentation-method presentation-typep (object type)
-  (declare (ignore object type))
-  nil)
-
-(defun presentation-typep (object type)
-  (with-presentation-type-decoded (name parameters)
-    type
-    (when (null parameters)
-      (let ((clos-class (find-class name nil))) ; Don't error out.
-        (when (and clos-class (typep clos-class 'standard-class))
-          (return-from presentation-typep (typep object name)))))
-    (funcall-presentation-generic-function presentation-typep object type)))
-
-;;; Not defined as a generic function, but what the hell.
-
-(defgeneric presentation-type-of (object))
-
-(defmethod presentation-type-of (object)
-  (declare (ignore object))
-  'expression)
-
-(defun get-ptype-from-class-of (object)
-  (let* ((name (class-name (class-of object)))
-         (ptype-entry (gethash name *presentation-type-table*)))
-    (unless ptype-entry
-      (return-from get-ptype-from-class-of nil))
-    ;; Does the type have required parameters?  If so, we can't use it...
-    (let ((parameter-ll (parameters-lambda-list ptype-entry)))
-      (values name
-              (if (eq (car parameter-ll) '&whole)
-                  (cddr parameter-ll)
-                  parameter-ll)))))
-
-(defmethod presentation-type-of ((object standard-object))
-  (multiple-value-bind (name lambda-list)
-      (get-ptype-from-class-of object)
-    (cond ((and name
-                (or (null lambda-list)
-                    (member (first lambda-list) lambda-list-keywords)))
-           name)
-          (name
-           'standard-object)
-          (t (let* ((class (class-of object))
-                    (class-name (class-name class)))
-               (or class-name class))))))
-
-(defmethod presentation-type-of ((object structure-object))
-  (multiple-value-bind (name lambda-list)
-      (get-ptype-from-class-of object)
-    (if (and name
-             (or (null lambda-list)
-                 (member lambda-list lambda-list-keywords)))
-        name
-        (call-next-method))))
-
-(define-presentation-generic-function
-    %map-over-presentation-type-supertypes
-    map-over-presentation-type-supertypes
-  (type-key function type))
-
-;;; Define the method for presentation and clos types
-(define-default-presentation-method map-over-presentation-type-supertypes
-    (function type)
-  (let ((type-name (presentation-type-name type)))
-    (map-over-ptype-superclasses
-     #'(lambda (super)
-         (let ((super-name (type-name super)))
-           (funcall function
-                    super-name
-                    (funcall (expansion-function super)
-                             (translate-specifier-for-type type-name
-                                                           super-name
-                                                           type)))))
-     type-name)))
-
-(defun map-over-presentation-type-supertypes (function type)
-  (funcall-presentation-generic-function map-over-presentation-type-supertypes
-                                         function
-                                         type))
-
-(define-presentation-generic-function
-    %presentation-subtypep
-    presentation-subtypep
-  (type-key type putative-supertype))
-
-;;; The semantics of the presentation method presentation-subtypep are truly
-;;; weird; method combination is in effect disabled.  So, the methods have to
-;;; be eql methods.
-
-(defmacro define-subtypep-method (&rest args)
-  (let ((gf (gethash 'presentation-subtypep *presentation-gf-table*)))
-    (multiple-value-bind (qualifiers lambda-list decls body)
-        (parse-method-body args)
-      (let ((type-arg (nth (1- (type-arg-position gf)) lambda-list)))
-
-        (unless (consp type-arg)
-          (error "Type argument in presentation method must be specialized"))
-        (unless (eq (car type-arg)  'type)
-          (error "Type argument mismatch with presentation generic function
- definition"))
-        (destructuring-bind (type-var type-name) type-arg
-          (let ((method-ll `((,(type-key-arg gf)
-                              (eql (prototype-or-error ',type-name)))
-                             ,@(copy-list lambda-list))))
-            (setf (nth (type-arg-position gf) method-ll) type-var)
-            `(defmethod %presentation-subtypep ,@qualifiers ,method-ll
-               (declare (ignorable ,(type-key-arg gf))
-                        ,@(cdr decls))
-               (block presentation-subtypep
-                 ,@body))))))))
-
-;;; PRESENTATION-SUBTYPEP suffers from some of the same problems as
-;;; CL:SUBTYPEP, most (but sadly not all) of which were solved in
-;;; H. Baker "A Decision Procedure for SUBTYPEP"; additionally, it
-;;; suffers from the behaviour being underspecified, as CLIM
-;;; documentation did not have the years of polish that CLtS did.
-;;;
-;;; So you might wonder why, instead of copying or using directly some
-;;; decent Public Domain subtype code (such as that found in SBCL,
-;;; implementing CL:SUBTYPEP), there's this slightly wonky
-;;; implementation here.  Well, some of the answer lies in the fact
-;;; that the subtype relationships answered by this predicate are not
-;;; in fact analogous to CL's type system.  The major use of
-;;; PRESENTATION-SUBTYPEP seems to be for determining whether a
-;;; presentation is applicable as input to a translator (including the
-;;; default translator, transforming an object to itself); actually,
-;;; the first step is taken by STUPID-SUBTYPEP, but that I believe is
-;;; simply intended to be a short-circuiting conservative version of
-;;; PRESENTATION-SUBTYPEP.
-;;;
-;;; Most presentation types in CLIM are hierarchically arranged by
-;;; single-inheritance, and SUBTYPEP relations on the hierarchy are
-;;; easy to determine: simply walk up the hierarchy until you find the
-;;; putative supertype (in which case the answer is T, T unless the
-;;; type's parameters are wrong) or you find the universal supertype
-;;; (in which case the answer is NIL, T.  There are numerous wrinkles,
-;;; however...
-;;;
-;;; (1) the NIL presentation type is the universal subtype, breaking
-;;;     the single-inheritance of the hierarchy.  This isn't too bad,
-;;;     because it can be special-cased.
-;;;
-;;; (2) union types can be constructed, destroying the
-;;;     single-inheritance hierarchy (when used as a subtype).
-;;;
-;;; (3) union types can give rise to ambiguity.  For example, is the
-;;;     NUMBER presentation type subtypep (OR REAL COMPLEX)?  What
-;;;     about (INTEGER 3 6) subtypep (OR (INTEGER 3 4) (INTEGER 5 6))?
-;;;     Is (OR A B) subtypep (OR B A)?  The answer to this last
-;;;     question is not obvious, as the two types have different
-;;;     ACCEPT behaviour if A and B have any Lisp objects in common,
-;;;     even if the presentation types are hierarchically unrelated...
-;;;
-;;; (4) intersection types can be constructed, destroying the
-;;;     single-inheritance hierarchy (when used as a supertype).  This
-;;;     is partially mitigated by the explicit documentation that the
-;;;     first type in the AND type's parameters is privileged and
-;;;     treated specially by ACCEPT.
-;;;
-;;; Given these difficulties, I'm aiming for roughly expected
-;;; behaviour from STUPID- and PRESENTATION-SUBTYPEP, rather than
-;;; something which has a comprehensive understanding of presentation
-;;; types and the Lisp object universe (as this would be unachievable
-;;; anyway: the user can write arbitrary PRESENTATION-TYPEP
-;;; functions); PRESENTATION-SUBTYPEP should not be thought of as a
-;;; predicate over sets of Lisp objects, but simply a formal predicate
-;;; over a graph of names.  This gives rise to the implementation
-;;; below for OR and AND types, and the hierarchical walk for all
-;;; other types.  CSR, 2007-01-10
-(defun presentation-subtypep (type maybe-supertype)
-  ;; special shortcuts: the universal subtype is privileged (and
-  ;; doesn't in fact fit into a hierarchical lattice); the universal
-  ;; supertype is easy to identify.
-  (when (or (eql type nil) (eql maybe-supertype t))
-    (return-from presentation-subtypep (values t t)))
-  (when (eql type maybe-supertype)
-    (return-from presentation-subtypep (values t t)))
-  (with-presentation-type-decoded (super-name super-parameters)
-      maybe-supertype
-    (with-presentation-type-decoded (type-name type-parameters)
-        type
-      (cond
-        ;; DO NOT BE TEMPTED TO REARRANGE THESE CLAUSES
-        ((eq type-name 'or)
-         (dolist (or-type type-parameters
-                  (return-from presentation-subtypep (values t t)))
-           (multiple-value-bind (yesp surep)
-               (presentation-subtypep or-type maybe-supertype)
-             (unless yesp
-               (return-from presentation-subtypep (values yesp surep))))))
-        ((eq super-name 'and)
-         (let ((result t))
-           (dolist (and-type super-parameters
-                    (return-from presentation-subtypep (values result result)))
-             (cond
-               ((and (consp and-type) (eq (car and-type) 'satisfies))
-                (setq result nil))
-               ((and (consp and-type) (eq (car and-type) 'not))
-                (multiple-value-bind (yp sp)
-                    (presentation-subtypep type (cadr and-type))
-                  (declare (ignore sp))
-                  (if yp
-                      (return-from presentation-subtypep (values nil t))
-                      (setq result nil))))
-               (t (multiple-value-bind (yp sp)
-                      (presentation-subtypep type and-type)
-                    (unless yp
-                      (if sp
-                          (return-from presentation-subtypep (values nil t))
-                          (setq result nil)))))))))
-        ((eq super-name 'or)
-         (assert (not (eq type-name 'or)))
-         ;; FIXME: this would be the right method were it not for the
-         ;; fact that there can be unions 'in disguise' in the
-         ;; subtype; examples:
-         ;;   (PRESENTATION-SUBTYPEP 'NUMBER '(OR REAL COMPLEX))
-         ;;   (PRESENTATION-SUBTYPEP '(INTEGER 3 6)
-         ;;                          '(OR (INTEGER 2 5) (INTEGER 4 7)))
-         ;; Sorry about that.
-         (let ((surep t))
-           (dolist (or-type super-parameters
-                    (return-from presentation-subtypep (values nil surep)))
-             (multiple-value-bind (yp sp)
-                 (presentation-subtypep type or-type)
-               (cond
-                 (yp (return-from presentation-subtypep (values t t)))
-                 ((not sp) (setq surep nil)))))))
-        ((eq type-name 'and)
-         (assert (not (eq super-name 'and)))
-         (multiple-value-bind (yp sp)
-             (presentation-subtypep (car type-parameters) maybe-supertype)
-           (declare (ignore sp))
-           (return-from presentation-subtypep (values yp yp))))))
-    (map-over-presentation-type-supertypes
-     #'(lambda (name massaged)
-         (when (eq name super-name)
-           (return-from presentation-subtypep
-             (funcall-presentation-generic-function presentation-subtypep
-                                                    massaged
-                                                    maybe-supertype))))
-     type))
-  (values nil t))
-
-(define-default-presentation-method presentation-subtypep
-    (type maybe-supertype)
-  (with-presentation-type-decoded (name params)
-    type
-    (declare (ignore name))
-    (with-presentation-type-decoded (super-name super-params)
-      maybe-supertype
-      (declare (ignore super-name))
-      (if (equal params super-params)
-          (values t t)
-          (values nil nil)))))
-
-(define-presentation-generic-function
-    %presentation-type-specifier-p
-    presentation-type-specifier-p
-  (type-class type))
-
-(define-default-presentation-method presentation-type-specifier-p (type)
-  t)
-
-(defun presentation-type-specifier-p (object)
-  "Return true if `object' is a valid presentation type specifier,
-otherwise return false."
-  ;; Apparently, this funtion has to handle arbitrary objects.
-  (let ((name (presentation-type-name object)))
-    (when (and (typep name '(or symbol class))
-               (get-ptype-metaclass name))
-      (funcall-presentation-generic-function presentation-type-specifier-p object))))
-
-(defun default-describe-presentation-type (description stream plural-count)
-  (if (symbolp description)
-      (setq description (make-default-description (symbol-name description))))
-  (cond ((eql 1 plural-count)
-         (format stream "~:[a~;an~] ~A"
-                   (find (char description 0) "aeiouAEIOU")
-                   description))
-        ((numberp plural-count)
-         (format stream "~D ~A~P" plural-count description plural-count))
-        (plural-count
-         (format stream "~As" description))
-        (t (write-string description stream))))
-
-(define-presentation-generic-function %describe-presentation-type
-    describe-presentation-type
-  (type-key parameters options type stream plural-count ))
-
-;;; Support for the default method on describe-presentation-type: if a CLOS
-;;; class has been defined as a presentation type, get description out of the
-;;; presentation type.
-
-(defmethod description ((class standard-class))
-  (let* ((name (class-name class))
-         (ptype-entry (gethash name *presentation-type-table*)))
-    (if ptype-entry
-        (description ptype-entry)
-        (make-default-description name))))
-
-(define-default-presentation-method describe-presentation-type
-    (type stream plural-count)
-  (with-presentation-type-decoded (name parameters options)
-    type
-    (declare (ignore name parameters))
-    (let ((description (or (getf options :description)
-                           (description (class-of type-key)))))
-      (default-describe-presentation-type description
-                                          stream
-                                          plural-count))))
-
-(defun describe-presentation-type (type
-                                   &optional
-                                   (stream *standard-output*)
-                                   (plural-count 1))
-  (flet ((describe-it (stream)
-           (funcall-presentation-generic-function describe-presentation-type
-                                                  type
-                                                  stream
-                                                  plural-count)))
-    (if stream
-        (describe-it stream)
-        (with-output-to-string (s)
-          (describe-it s)))))
 
 (define-presentation-generic-function %presentation-default-processor
     presentation-default-processor
@@ -371,112 +37,6 @@ otherwise return false."
   (values default (if default-type-p
                       default-type
                       type)))
-
-;;; XXX The spec calls out that the presentation generic function has keyword
-;;; arguments acceptably and for-context-type, but the examples I've seen don't
-;;; mention them at all in the methods defined for present.  So, leave them out
-;;; of the generic function lambda list...
-(define-presentation-generic-function %present present
-    (type-key parameters options object type stream view
-     &key &allow-other-keys))
-
-(defun present (object &optional (type (presentation-type-of object))
-                &key
-                  (stream *standard-output*)
-                  (view (stream-default-view stream))
-                  modifier
-                  acceptably
-                  (for-context-type type)
-                  single-box
-                  (allow-sensitive-inferiors t)
-                  (sensitive t)
-                  (record-type 'standard-presentation))
-  (let* ((real-type (expand-presentation-type-abbreviation type))
-         (context-type (if (eq for-context-type type)
-                           real-type
-                           (expand-presentation-type-abbreviation
-                            for-context-type))))
-    (stream-present stream object real-type
-                    :view view :modifier modifier :acceptably acceptably
-                    :for-context-type context-type :single-box single-box
-                    :allow-sensitive-inferiors allow-sensitive-inferiors
-                    :sensitive sensitive
-                    :record-type record-type)))
-
-(defgeneric stream-present (stream object type
-                            &key view modifier acceptably for-context-type
-                            single-box allow-sensitive-inferiors sensitive
-                            record-type))
-
-(defmethod stream-present ((stream output-recording-stream) object type
-                           &key
-                           (view (stream-default-view stream))
-                           modifier
-                           acceptably
-                           (for-context-type type)
-                           single-box
-                           (allow-sensitive-inferiors t)
-                           (sensitive t)
-                           (record-type 'standard-presentation))
-  ;; *allow-sensitive-inferiors* controls whether or not
-  ;; with-output-as-presentation will emit a presentation
-  (let ((*allow-sensitive-inferiors* (and *allow-sensitive-inferiors*
-                                          sensitive)))
-    (with-output-as-presentation (stream object type
-                                  :view view
-                                  :modifier modifier
-                                  :single-box single-box
-                                  :allow-sensitive-inferiors
-                                  allow-sensitive-inferiors
-                                  :record-type record-type)
-      (funcall-presentation-generic-function
-       present object type stream view
-       :acceptably acceptably :for-context-type for-context-type))))
-
-;;; Should work well enough on non-CLIM streams...
-(defmethod stream-present (stream object type
-                           &key
-                           (view +textual-view+)
-                           modifier
-                           acceptably
-                           (for-context-type type)
-                           single-box
-                           (allow-sensitive-inferiors t)
-                           (sensitive t)
-                           (record-type 'standard-presentation))
-  (declare (ignore modifier single-box allow-sensitive-inferiors sensitive
-                   record-type))
-  (funcall-presentation-generic-function
-   present object type stream view
-   :acceptably acceptably :for-context-type for-context-type)
-  nil)
-
-(defun present-to-string (object &optional (type (presentation-type-of object))
-                          &key (view +textual-view+)
-                            acceptably
-                            (for-context-type type)
-                            (string nil stringp)
-                            (index 0 indexp))
-  (let* ((real-type (expand-presentation-type-abbreviation type))
-         (context-type (if (eq for-context-type type)
-                           real-type
-                           (expand-presentation-type-abbreviation
-                            for-context-type))))
-    (when (and stringp indexp)
-      (setf (fill-pointer string) index))
-    (flet ((do-present (s)
-             (stream-present s object real-type
-                             :view view :acceptably acceptably
-                             :for-context-type context-type)))
-      (declare (dynamic-extent #'do-present))
-      (let ((result (if stringp
-                        (with-output-to-string (stream string)
-                          (do-present stream))
-                        (with-output-to-string (stream)
-                          (do-present stream)))))
-        (if stringp
-            (values string (fill-pointer string))
-            result)))))
 
 ;;; I believe this obsolete... --moore
 (defmethod presentation-replace-input
@@ -1123,50 +683,6 @@ protocol retrieving gestures from a provided string."))
               t)
           nil))))
 
-(define-presentation-generic-function %highlight-presentation
-    highlight-presentation
-  (type-key parameters options type record stream state))
-
-;;; Internal function to highlight just one presentation
-
-(defun highlight-presentation-1 (presentation stream state)
-  (with-output-recording-options (stream :record nil)
-    (funcall-presentation-generic-function highlight-presentation
-                                           (presentation-type presentation)
-                                           presentation
-                                           stream
-                                           state)))
-
-(defmethod highlight-output-record-tree (record stream state)
-  (declare (ignore record stream state))
-  (values))
-
-(defmethod highlight-output-record-tree ((record compound-output-record) stream state)
-  (map-over-output-records
-   (lambda (record)
-     (highlight-output-record-tree record stream state))
-   record))
-
-(defmethod highlight-output-record-tree ((record displayed-output-record) stream state)
-  (highlight-output-record record stream state))
-
-(define-default-presentation-method highlight-presentation
-    (type record stream state)
-  (declare (ignore type))
-  (if (or (eq (presentation-single-box record) t)
-          (eq (presentation-single-box record) :highlighting))
-      (highlight-output-record record stream state)
-      (highlight-output-record-tree record stream state)))
-
-(define-default-presentation-method present
-    (object type stream (view textual-view) &key acceptably for-context-type)
-  (declare (ignore for-context-type type))
-  (if acceptably
-      (let ((*print-readably* t))
-        (prin1 object stream))
-      (princ object stream)))
-
-
 (defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil))
   (let* ((token (read-token stream)))
     (if (string= "" token)
@@ -1305,11 +821,6 @@ protocol retrieving gestures from a provided string."))
   (declare (ignore acceptably for-context-type))
   (prin1 object stream))
 
-(defmethod presentation-type-of ((object symbol))
-  (if (eq (symbol-package object) (find-package :keyword))
-      'keyword
-      'symbol))
-
 (define-presentation-type blank-area ()
   :inherit-from t)
 
@@ -1333,8 +844,7 @@ protocol retrieving gestures from a provided string."))
 (define-presentation-method presentation-typep (object (type number))
   (numberp object))
 
-(defmethod presentation-type-of ((object number))
-  'number)
+
 
 (define-presentation-type complex (&optional (type 'real))
   :inherit-from 'number)
@@ -1351,10 +861,6 @@ protocol retrieving gestures from a provided string."))
       (with-presentation-type-parameters (complex maybe-supertype)
         (let ((super-component-type type))
           (presentation-subtypep component-type super-component-type))))))
-
-
-(defmethod presentation-type-of ((object complex))
-  'complex)
 
 (define-presentation-method present (object (type complex) stream
                                      (view textual-view)
@@ -1375,9 +881,6 @@ protocol retrieving gestures from a provided string."))
            (<= low object))
        (or (eq high '*)
            (<= object high))))
-
-(defmethod presentation-type-of ((object real))
-  'real)
 
 (define-presentation-method present (object (type real) stream
                                      (view textual-view)
@@ -1424,9 +927,6 @@ protocol retrieving gestures from a provided string."))
        (or (eq high '*)
            (<= object high))))
 
-(defmethod presentation-type-of ((object rational))
-  'rational)
-
 (define-presentation-method present (object (type rational) stream
                                      (view textual-view)
                                      &key acceptably for-context-type)
@@ -1445,9 +945,6 @@ protocol retrieving gestures from a provided string."))
            (<= low object))
        (or (eq high '*)
            (<= object high))))
-
-(defmethod presentation-type-of ((object integer))
-  'integer)
 
 (define-presentation-method present (object (type integer) stream
                                      (view textual-view)
@@ -1469,9 +966,6 @@ protocol retrieving gestures from a provided string."))
        (or (eq high '*)
            (<= object high))))
 
-(defmethod presentation-type-of ((object ratio))
-  'ratio)
-
 (define-presentation-method present (object (type ratio) stream
                                      (view textual-view)
                                      &key acceptably for-context-type)
@@ -1490,9 +984,6 @@ protocol retrieving gestures from a provided string."))
            (<= low object))
        (or (eq high '*)
            (<= object high))))
-
-(defmethod presentation-type-of ((object float))
-  'float)
 
 (define-presentation-method present (object (type float) stream
                                      (view textual-view)
@@ -1524,9 +1015,6 @@ protocol retrieving gestures from a provided string."))
 (define-presentation-method presentation-typep (object (type character))
   (characterp object))
 
-(defmethod presentation-type-of ((object character))
-  'character)
-
 (define-presentation-method present (object (type character) stream
                                      (view textual-view)
                                      &key acceptably for-context-type)
@@ -1548,12 +1036,6 @@ protocol retrieving gestures from a provided string."))
         (values (or (eq super-length '*)
                     (eql length super-length))
                 t)))))
-
-;;; `(string ,length) would be more specific, but is not "likely to be useful
-;;; to the programmer."
-
-(defmethod presentation-type-of ((object string))
-  'string)
 
 (define-presentation-method present (object (type string) stream
                                      (view textual-view)
@@ -1604,9 +1086,6 @@ protocol retrieving gestures from a provided string."))
                                      &rest args &key)
   (apply-presentation-generic-function
    present (pathname object) type stream view args))
-
-(defmethod presentation-type-of ((object pathname))
-  'pathname)
 
 (defun filename-completer-get-directory (string)
   (flet
@@ -2045,13 +1524,6 @@ protocol retrieving gestures from a provided string."))
       (with-presentation-type-parameters (sequence maybe-supertype)
         (let ((real-super-type (expand-presentation-type-abbreviation type)))
           (presentation-subtypep real-type real-super-type))))))
-
-(defmethod presentation-type-of ((object cons))
-  '(sequence t))
-
-;;; Do something interesting with the array-element-type
-(defmethod presentation-type-of ((object vector))
-  '(sequence t))
 
 (define-presentation-method present ((object list) (type sequence)
                                      stream
