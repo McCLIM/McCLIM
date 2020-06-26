@@ -153,28 +153,22 @@
            ;; TODO this can be cached
            (let-rgba ((r.fg g.fg b.fg a.fg) ink-rgba)
              (if alpha
-                 (values :flipping/blend (%vals->rgba r.fg g.fg b.fg (octet-mult a.fg alpha)))
+                 (values :flipping/blend (%vals->rgba r.fg g.fg b.fg (if (eql alpha 't) a.fg (octet-mult a.fg alpha))))
                  (values :flipping (%vals->rgba r.fg g.fg b.fg #xff)))))
           ((not alpha)
            (values (if (eql #xff (ldb (byte 8 24) ink-rgba)) :copy :blend)
                    ink-rgba))
           (t
            (let-rgba ((r.fg g.fg b.fg a.fg) ink-rgba)
-             (let ((a (octet-mult a.fg alpha)))
-               (case a
-                 (0 (values nil 0))
-                 (255 (values :copy ink-rgba))
-                 (t (values :blend (%vals->rgba r.fg g.fg b.fg a))))))))))
-
-(defun %fill-image-static-ink-flipping/blend (dst-array dst-width source-rgba x x2 y y2)
-  (declare (optimize (speed 3) (safety 0) (debug 1))
-           (type argb-pixel-array dst-array)
-           (type image-index dst-width x x2 y y2)
-           (type argb-pixel source-rgba))
-  (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
-                     (nil       (nil sx sy) :x1 x        :y1 y))
-      (setf (row-major-aref dst-array di)
-            (logxor source-rgba (row-major-aref dst-array di)))))
+             (if (eql alpha 't)
+                 (if (eql a.fg 0)
+                     (values nil 0)
+                     (values :blend ink-rgba))
+                 (let ((a (octet-mult a.fg alpha)))
+                   (case a
+                     (0 (values nil 0))
+                     (255 (values :copy ink-rgba))
+                     (t (values :blend (%vals->rgba r.fg g.fg b.fg a)))))))))))
 
 (defun %fill-image-static-ink-flipping/blend (dst-array dst-width source-rgba x x2 y y2)
   (declare (optimize (speed 3) (safety 0) (debug 1))
@@ -192,6 +186,16 @@
                  (color-octet-xor source-b g.bg)
                  source-a
                  r.bg g.bg b.bg a.bg))))))
+
+(defun %fill-image-static-ink-flipping (dst-array dst-width source-rgba x x2 y y2)
+  (declare (optimize (speed 3) (safety 0) (debug 1))
+           (type argb-pixel-array dst-array)
+           (type image-index dst-width x x2 y y2)
+           (type argb-pixel source-rgba))
+  (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
+                     (nil       (nil sx sy) :x1 x        :y1 y))
+      (setf (row-major-aref dst-array di)
+            (logxor source-rgba (row-major-aref dst-array di)))))
 
 (defun %fill-image-static-ink-copy (dst-array dst-width source-rgba x x2 y y2)
   (declare (optimize (speed 3) (safety 0) (debug 1))
@@ -232,10 +236,69 @@
          (%fill-image-static-ink-copy dst-array dst-width source-rgba x x2 y y2))
         (:blend
          (%fill-image-static-ink-blend dst-array dst-width source-rgba x x2 y y2))
-        ((nil)))))
-  ;; XXX These #'1- are fishy. We don't capture correct region (rounding
-  ;; issue?). This problem is visible when scrolling.
-  (make-rectangle* (1- x) (1- y) (+ x width) (+ y height)))
+        ((nil))))))
+
+(defmacro with-stencil-alpha ((alpha x y) &body body)
+  `(let* ((stencil-x (+ stencil-dx ,x))
+          (stencil-y (+ stencil-dy ,y))
+          (,alpha (if (and (<= 0 stencil-y stencil-height)
+                           (<= 0 stencil-x stencil-width))
+                      (aref stencil-array
+                            (the fixnum stencil-y)
+                            (the fixnum stencil-x))
+                      #xff)))
+     ,@body))
+
+(defun %fill-image-stenciled-static-ink-flipping/blend (dst-array dst-width source-rgba x x2 y y2 stencil-array stencil-dx stencil-dy stencil-width stencil-height)
+  (declare (optimize (speed 3) (safety 0) (debug 1))
+           (type argb-pixel-array dst-array)
+           (type image-index dst-width x x2 y y2)
+           (type argb-pixel source-rgba)
+           (type stencil-array stencil-array)
+           (type fixnum stencil-width stencil-height))
+  (let-rgba ((source-r source-g source-b source-a) source-rgba)
+    (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
+                       (nil       (nil sx sy) :x1 x        :y1 y))
+      (with-stencil-alpha (alpha sx sy)
+        (let-rgba ((r.bg g.bg b.bg a.bg) (row-major-aref dst-array di))
+          (setf (row-major-aref dst-array di)
+                (octet-blend-function*
+                 (color-octet-xor source-r r.bg)
+                 (color-octet-xor source-g b.bg)
+                 (color-octet-xor source-b g.bg)
+                 (octet-mult alpha source-a)
+                 r.bg g.bg b.bg a.bg)))))))
+
+(defun %fill-image-stenciled-static-ink-blend (dst-array dst-width source-rgba x x2 y y2 stencil-array stencil-dx stencil-dy stencil-width stencil-height)
+  (declare (optimize (speed 3) (safety 0) (debug 1))
+           (type argb-pixel-array dst-array)
+           (type image-index dst-width x x2 y y2)
+           (type argb-pixel source-rgba)
+           (type stencil-array stencil-array)
+           (type fixnum stencil-width stencil-height))
+  (let-rgba ((source-r source-g source-b source-a) source-rgba)
+    (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
+                       (nil       (nil sx sy) :x1 x        :y1 y))
+        (with-stencil-alpha (alpha sx sy)
+          (let-rgba ((r.bg g.bg b.bg a.bg) (row-major-aref dst-array di))
+            (setf (row-major-aref dst-array di)
+                  (octet-blend-function*
+                   source-r source-g source-b (octet-mult alpha source-a)
+                   r.bg     g.bg     b.bg     a.bg)))))))
+
+(defun %fill-image-stenciled-static-ink (image ink x y width height stencil-array stencil-dx stencil-dy stencil-width stencil-height)
+  (multiple-value-bind (mode source-rgba)
+      (ink-blend-details ink t)
+    (let* ((dst-array (climi::pattern-array image))
+           (dst-width (array-dimension dst-array 1))
+           (x2 (+ x width -1))
+           (y2 (+ y height -1)))
+      (ecase mode
+        (:flipping/blend
+         (%fill-image-stenciled-static-ink-flipping/blend dst-array dst-width source-rgba x x2 y y2 stencil-array stencil-dx stencil-dy stencil-width stencil-height))
+        (:blend
+         (%fill-image-stenciled-static-ink-blend dst-array dst-width source-rgba x x2 y y2 stencil-array stencil-dx stencil-dy stencil-width stencil-height))
+        ((nil))))))
 
 (defgeneric static-ink-p (design)
   (:documentation "Returns true if DESIGN's ink is unchanging across the entire design.
@@ -287,12 +350,21 @@ the x/y arguments are."))
     (declare (type argb-pixel-array dst-array)
              (type argb-pixel       ink-rgba))
     (when (and static-ink-p
-               (not stencil)
                (not clip-region))
       ;; Fast path for simple fills.
+      (if stencil
+          (%fill-image-stenciled-static-ink
+           image (clime:design-ink design x y)
+           x y width height
+           stencil-array stencil-dx stencil-dy
+           stencil-width stencil-height)
+          (%fill-image-static-ink
+           image (clime:design-ink design x y)
+           x y width height))
       (return-from fill-image
-        (%fill-image-static-ink image (clime:design-ink design x y)
-                                x y width height)))
+        ;; XXX These #'1- are fishy. We don't capture correct region (rounding
+        ;; issue?). This problem is visible when scrolling.
+        (make-rectangle* (1- x) (1- y) (+ x width) (+ y height))))
     (flet ((update-alpha (x y)
              ;; Set ALPHA according to STENCIL-ARRAY. Set to NIL
              ;; (transparent) if x,y is outside STENCIL-ARRAY or the
