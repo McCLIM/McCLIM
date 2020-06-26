@@ -237,6 +237,20 @@
   ;; issue?). This problem is visible when scrolling.
   (make-rectangle* (1- x) (1- y) (+ x width) (+ y height)))
 
+(defgeneric static-ink-p (design)
+  (:documentation "Returns true if DESIGN's ink is unchanging across the entire design.
+In other words, when DESIGN-INK returns the same value no matter what
+the x/y arguments are."))
+
+(defmethod static-ink-p (design)
+  nil)
+
+(defmethod static-ink-p ((design standard-color))
+  t)
+
+(defmethod static-ink-p ((design climi::indirect-ink))
+  (static-ink-p (climi::indirect-ink-ink design)))
+
 (defun fill-image (image design &key (x 0) (y 0)
                                      (width (pattern-width image))
                                      (height (pattern-height image))
@@ -267,7 +281,7 @@
          (y2 (+ y height -1))
          old-alpha alpha
          old-ink ink (ink-rgba 0)
-         (static-ink-p t #+TODO (static-ink-p design))
+         (static-ink-p (static-ink-p design))
          mode
          source-rgba source-r source-g source-b source-a)
     (declare (type argb-pixel-array dst-array)
