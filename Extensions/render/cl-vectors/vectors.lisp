@@ -103,14 +103,6 @@
   (aa-update-state state paths transformation)
   (aa-cells-sweep/rectangle image design state clip-region))
 
-(defun aa-fill-alpha-paths (image design paths state transformation clip-region)
-  (vectors::state-reset state)
-  (dolist (path paths)
-    (setf (paths::path-type path) :closed-polyline))
-  (aa-update-state state paths transformation)
-  (aa-cells-alpha-sweep/rectangle image design state clip-region))
-
-
 (defun %aa-scanline-sweep (scanline function &key start end)
   "Call FUNCTION for each pixel on the polygon covered by
 SCANLINE. The pixels are scanned in increasing X. The sweep can
