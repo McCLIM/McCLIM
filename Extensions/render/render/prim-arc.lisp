@@ -25,7 +25,8 @@
 ;;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(in-package :mcclim-render-internals)
+(in-package #:mcclim-render-internals)
+
 ;;; Adapted from Ben Deane's com.elbeno.curve 0.1 library, with
 ;;; permission. See http://www.elbeno.com/lisp/ for the original.
 
@@ -58,13 +59,12 @@
 ;;; between angles eta1 and eta2
 
 (defun calc-c-term (i b/a etasum arr)
-  (loop
-     for j from 0 to 3
-     sum (* (/ (+ (* (aref arr i j 0) b/a b/a)
-                  (* (aref arr i j 1) b/a)
-                  (aref arr i j 2))
-               (+ (aref arr i j 3) b/a))
-            (cos (* j etasum)))))
+  (loop for j from 0 to 3
+        sum (* (/ (+ (* (aref arr i j 0) b/a b/a)
+                     (* (aref arr i j 1) b/a)
+                     (aref arr i j 2))
+                  (+ (aref arr i j 3) b/a))
+               (cos (* j etasum)))))
 
 (defun bezier-error (a b eta1 eta2)
   (let* ((b/a (/ b a))
@@ -80,20 +80,18 @@
                (* (calc-c-term 1 b/a etasum arr) etadiff))))))
 
 (defun ellipse-val (cx cy a b theta eta)
-  (values
-   (+ cx
-      (* a (cos theta) (cos eta))
-      (* (- b) (sin theta) (sin eta)))
-   (+ cy
-      (* a (sin theta) (cos eta))
-      (* b (cos theta) (sin eta)))))
+  (values (+ cx
+             (* a (cos theta) (cos eta))
+             (* (- b) (sin theta) (sin eta)))
+          (+ cy
+             (* a (sin theta) (cos eta))
+             (* b (cos theta) (sin eta)))))
 
 (defun ellipse-deriv-val (a b theta eta)
-  (values
-   (+ (* (- a) (cos theta) (sin eta))
-      (* (- b) (sin theta) (cos eta)))
-   (+ (* (- a) (sin theta) (sin eta))
-      (* b (cos theta) (cos eta)))))
+  (values (+ (* (- a) (cos theta) (sin eta))
+             (* (- b) (sin theta) (cos eta)))
+          (+ (* (- a) (sin theta) (sin eta))
+             (* b (cos theta) (cos eta)))))
 
 (defun curve-to (path cx1 cy1 cx2 cy2 x y)
   (%curve-to path cx1 cy1 cx2 cy2 x y))
@@ -137,11 +135,12 @@ through two control points."
          (let ((etamid (+ eta1 (/ pi 2) (* eta2 long-float-epsilon))))
            (approximate-arc path cx cy a b theta eta1 etamid err)
            (approximate-arc path cx cy a b theta etamid eta2 err)))
-        (t (if (> err (bezier-error a b eta1 eta2))
-               (approximate-arc-single path cx cy a b theta eta1 eta2)
-               (let ((etamid (/ (+ eta1 eta2) 2)))
-                 (approximate-arc path cx cy a b theta eta1 etamid err)
-                 (approximate-arc path cx cy a b theta etamid eta2 err))))))
+        ((> err (bezier-error a b eta1 eta2))
+         (approximate-arc-single path cx cy a b theta eta1 eta2))
+        (t
+         (let ((etamid (/ (+ eta1 eta2) 2)))
+           (approximate-arc path cx cy a b theta eta1 etamid err)
+           (approximate-arc path cx cy a b theta etamid eta2 err)))))
 
 (defun approximate-elliptical-arc (path cx cy a b theta eta1 eta2
                                    &optional (err 0.5))
