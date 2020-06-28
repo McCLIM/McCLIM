@@ -47,6 +47,9 @@
 
 (defpackage :mcclim-render-internals
   (:use #:clim #:clim-lisp #:mcclim-render #:mcclim-render-extensions)
+  (:import-from #:alexandria
+                #:minf
+                #:maxf)
   (:import-from :clim-internals
                 #:standard-color
                 #:named-color
