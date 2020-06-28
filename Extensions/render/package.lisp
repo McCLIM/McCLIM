@@ -5,20 +5,13 @@
    ;; colors
    #:color->octets
    ;; image
-   #:image
    #:draw-image*
-   #:medium-draw-image*
    ;; image ops
    #:make-image
    #:clone-image
    #:copy-image
    #:blend-image
-   #:crop-image
-   #:fill-image
-   ;; two dimensional array image
-   #:two-dim-array-image
-   #:rgba-image
-   #:gray-image))
+   #:fill-image))
 
 (defpackage #:mcclim-render-extensions
   (:use)
