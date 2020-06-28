@@ -279,8 +279,3 @@ top-left. Useful when we iterate over the same array and mutate its state."
                       (byte 8 0)
                       0)))))
 
-(declaim (inline %octet-mult))
-(declaim (ftype (function (octet octet) octet) %octet-mult))
-(defun %octet-mult (a b)
-  (let ((temp (+ (* a b) #x80)))
-    (logand #xFF (ash (+ (ash temp -8) temp) -8))))
