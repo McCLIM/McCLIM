@@ -17,9 +17,7 @@
   "Create an empty transparent image of size WIDTH x HEIGHT."
   ;; XXX: something in text rendering depends image being transparent by
   ;; default. This should be fixed.
-  (make-instance 'clime:image-pattern :array (make-array (list height width)
-                                                         :element-type '(unsigned-byte 32)
-                                                         :initial-element #xFFFFFF00)))
+  (make-instance 'clime:image-pattern :array (make-argb-pixel-array width height)))
 
 ;;; Unsafe versions of COPY-IMAGE. Caller must ensure that all arguments are
 ;;; valid and arrays are of proper type.
@@ -28,8 +26,8 @@
        `(progn
           (declaim (inline ,name))
           (defun ,name (src-array dst-array x1s y1s x1d y1d x2 y2)
-            (declare (type fixnum x1s y1s x1d y1d x2 y2)
-                     (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
+            (declare (type image-index x1s y1s x1d y1d x2 y2)
+                     (type argb-pixel-array src-array dst-array)
                      (optimize (speed 3) (safety 0)))
             (do-regions ((src-j dest-j y1s y1d y2)
                          (src-i dest-i x1s x1d x2) ,@(when backwardp
@@ -71,8 +69,8 @@
        `(progn
           (declaim (inline ,name))
           (defun ,name (src-array dst-array x1s y1s x1d y1d x2 y2)
-            (declare (type fixnum x1s y1s x1d y1d x2 y2)
-                     (type (simple-array (unsigned-byte 32) 2) src-array dst-array)
+            (declare (type image-index x1s y1s x1d y1d x2 y2)
+                     (type argb-pixel-array src-array dst-array)
                      (optimize (speed 3) (safety 0)))
             (do-regions ((src-j dest-j y1s y1d y2)
                          (src-i dest-i x1s x1d x2) ,@(when backwardp
@@ -111,7 +109,7 @@
 
 (defun clone-image (image)
   (let ((src-array (climi::pattern-array image)))
-    (declare (type (simple-array (unsigned-byte 32) 2) src-array))
+    (declare (type argb-pixel-array src-array))
     (make-instance 'climi::%rgba-pattern :array (alexandria:copy-array src-array))))
 
 (defun fill-image (image design &key (x 0) (y 0)
