@@ -164,12 +164,12 @@
                         (octet-blend-function* (color-octet-xor r.fg r.bg)
                                                (color-octet-xor g.fg g.bg)
                                                (color-octet-xor b.fg b.bg)
-                                               (%octet-mult a.fg alpha)
+                                               (octet-mult a.fg alpha)
                                                r.bg g.bg b.bg a.bg))))
               (let-rgba ((r.fg g.fg b.fg a.fg) (climi::%rgba-value ink))
                 (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
                   (setf (aref dst-array j i)
-                        (octet-blend-function* r.fg g.fg b.fg (%octet-mult a.fg alpha)
+                        (octet-blend-function* r.fg g.fg b.fg (octet-mult a.fg alpha)
                                                r.bg g.bg b.bg a.bg)))))))))
   ;; XXX These #'1- are fishy. We don't capture correct region (rounding
   ;; issue?). This problem is visible when scrolling.
