@@ -850,3 +850,90 @@ suitable for SUPER-NAME"))
                                   `(,name-and-params ,@needed-options)
                                   name-and-params))))
       name-and-params)))
+
+;;; This function is used to determine the CLIM presentation name from
+;;; the Common Lisp object.
+;;;
+;;; Not defined as a generic function, but what the hell.
+(defgeneric presentation-type-of (object))
+
+(defmethod presentation-type-of (object)
+  (declare (ignore object))
+  'expression)
+
+(flet ((get-ptype-from-class-of (object)
+         (let ((name (class-name (class-of object))))
+           (when-let ((ptype (find-presentation-type name nil)))
+             ;; Does the type have required parameters?
+             ;; If so, we can't use it...
+             (let ((parameter-ll (parameters-lambda-list ptype)))
+               (values name
+                       (if (eq (car parameter-ll) '&whole)
+                           (cddr parameter-ll)
+                           parameter-ll)))))))
+
+  (defmethod presentation-type-of ((object standard-object))
+    (multiple-value-bind (name lambda-list)
+        (get-ptype-from-class-of object)
+      (cond ((and name
+                  (or (null lambda-list)
+                      (member (first lambda-list) lambda-list-keywords)))
+             name)
+            (name
+             'standard-object)
+            (t (let* ((class (class-of object))
+                      (class-name (class-name class)))
+                 (or class-name class))))))
+
+  (defmethod presentation-type-of ((object structure-object))
+    (multiple-value-bind (name lambda-list)
+        (get-ptype-from-class-of object)
+      (if (and name
+               (or (null lambda-list)
+                   (member lambda-list lambda-list-keywords)))
+          name
+          (call-next-method)))))
+
+(defmethod presentation-type-of ((object symbol))
+  (if (eq (symbol-package object) (find-package :keyword))
+      'keyword
+      'symbol))
+
+(defmethod presentation-type-of ((object number))
+  'number)
+
+(defmethod presentation-type-of ((object complex))
+  'complex)
+
+(defmethod presentation-type-of ((object real))
+  'real)
+
+(defmethod presentation-type-of ((object rational))
+  'rational)
+
+(defmethod presentation-type-of ((object integer))
+  'integer)
+
+(defmethod presentation-type-of ((object ratio))
+  'ratio)
+
+(defmethod presentation-type-of ((object float))
+  'float)
+
+(defmethod presentation-type-of ((object character))
+  'character)
+
+;;; `(string ,length) would be more specific, but is not "likely to be useful
+;;; to the programmer."
+(defmethod presentation-type-of ((object string))
+  'string)
+
+(defmethod presentation-type-of ((object pathname))
+  'pathname)
+
+(defmethod presentation-type-of ((object cons))
+  '(sequence t))
+
+;;; Do something interesting with the array-element-type
+(defmethod presentation-type-of ((object vector))
+  '(sequence t))
