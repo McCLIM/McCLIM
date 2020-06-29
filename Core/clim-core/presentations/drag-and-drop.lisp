@@ -1,12 +1,18 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2001-2002 by Tim Moore <moore@bricoworks.com>
+;;;  (c) copyright 2019 by Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Implementation of the presentation drag-and-drop translators as
+;;; defined in 23.7.
+;;;
 
-;;;  (c) copyright 1998-2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2001-2002 by Tim Moore (moore@bricoworks.com)
-;;;  (c) copyright 2019 by Daniel Kochmański (daniel@turtleware.eu)
-
-;;; Implementation of drag-and-drop translators as defined in 23.7.
-
-(in-package #:climi)
+(in-package #:clim-internals)
 
 (defvar *dragged-presentation* nil
   "Bound to the presentation dragged in a drag-and-drop context")

@@ -1,7 +1,4 @@
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Presentation generic functions and methods
-;;;   Created: 2020-06-26 15:00
-;;;    Author: Daniel Kochmański <daniel@turtleware.eu>
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;

@@ -1,12 +1,17 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998-2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2001-2002 by Tim Moore (moore@bricoworks.com)
-;;;  (c) copyright 2019 by Daniel Kochmański (daniel@turtleware.eu)
-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2001-2002 by Tim Moore <moore@bricoworks.com>
+;;;  (c) copyright 2019 by Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Implementation of presentation translators as defined in 23.7.
+;;;
 
-(in-package #:climi)
+(in-package #:clim-internals)
 
 
 ;;; 23.7.1 Defining Presentation Translators
