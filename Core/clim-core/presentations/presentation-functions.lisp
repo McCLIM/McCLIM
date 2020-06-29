@@ -218,9 +218,9 @@
             (unless (eq (car type-arg)  'type)
               (error "Type argument mismatch with presentation generic ~
                       function definition")))
-          (destructuring-bind (type-var type-name) type-arg
+          (destructure-type-arg (type-var type-spec type-name) type-arg
             (let* ((method-ll `((,(type-key-arg gf)
-                                 ,(ptype-specializer type-name))
+                                 ,(ptype-specializer type-spec))
                                 ,@(copy-list lambda-list)))
                    (real-body body)
                    (massaged-type (gensym "MASSAGED-TYPE")))

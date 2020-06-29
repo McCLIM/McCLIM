@@ -115,7 +115,8 @@ otherwise return false."
         (unless (eq (car type-arg)  'type)
           (error "Type argument mismatch with presentation generic function
  definition"))
-        (destructuring-bind (type-var type-name) type-arg
+        (destructure-type-arg (type-var type-spec type-name) type-arg
+          (declare (ignore type-spec))
           (let ((method-ll `((,(type-key-arg gf)
                               (eql (prototype-or-error ',type-name)))
                              ,@(copy-list lambda-list))))
