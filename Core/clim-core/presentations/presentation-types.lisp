@@ -57,6 +57,32 @@
   (:documentation "The specializer to use for this type in a presentation
 method lambda list"))
 
+(defmethod ptype-specializer ((type symbol))
+  (if-let ((ptype (or (find-presentation-type type nil)
+                      (find-class type nil))))
+    (ptype-specializer ptype)
+    ;; Assume it's a forward referenced CLOS class.
+    type))
+
+(defmethod ptype-specializer ((type standard-class))
+  (class-name type))
+
+(defmethod ptype-specializer ((type cons))
+  (if (typep type '(cons (eql eql)
+                    (cons t null)))
+      type
+      (error "~s is not a valid presentation method specializer." type)))
+
+(defmacro destructure-type-arg
+    ((type-var type-spec type-name) type-arg &body body)
+  `(destructuring-bind (,type-var ,type-spec) ,type-arg
+     (let ((,type-var ,type-var)
+           (,type-spec ,type-spec)
+           (,type-name (if (atom ,type-spec)
+                           ,type-spec
+                           (presentation-type-of (second ,type-spec)))))
+       ,@body)))
+
 ;;; Metaclass for presentation types.  For presentation types not associated
 ;;; with CLOS classes, objects with this metaclass are used as a proxy for the
 ;;; type during presentation method dispatch. We don't prevent these
@@ -66,7 +92,6 @@ method lambda list"))
 ;;; presentation type metaclass for T is the builtin object T instead
 ;;; of a presentation-type-class; in this way we can avoid weirdness
 ;;; with T being a subtype of standard-object!
-;;;
 
 (defclass presentation-type ()
   ((type-name :accessor type-name :initarg :type-name
@@ -548,16 +573,6 @@ supertypes of TYPE that are presentation types"))
       type
     (let ((supers (presentation-ptype-supers name)))
       (mapcar #'class-presentation-type-name supers))))
-
-(defmethod ptype-specializer ((type symbol))
-  (if-let ((ptype (or (find-presentation-type type nil)
-                      (find-class type nil))))
-    (ptype-specializer ptype)
-    ;; Assume it's a forward referenced CLOS class.
-    type))
-
-(defmethod ptype-specializer ((type standard-class))
-  (class-name type))
 
 ;;; We need to patch defclass in every implementation to record a CLOS
 ;;; class at compile time. On the other hand, I think we can assume
