@@ -116,8 +116,7 @@
 
 (defmethod presentation-ptype-supers ((type standard-class))
   (mapcan #'(lambda (class)
-              (let ((ptype (gethash (class-name class)
-                                    *presentation-type-table*)))
+              (let ((ptype (find-presentation-type (class-name class) nil)))
                 (and ptype (list ptype))))
           (c2mop:class-direct-superclasses type)))
 
