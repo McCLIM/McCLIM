@@ -47,6 +47,11 @@
 
 (defvar *presentation-gf-table* (make-hash-table :test #'eq))
 
+(defun find-presentation-gf (name &optional (errorp t))
+  (or (gethash name *presentation-gf-table*)
+      (when errorp
+        (error "~S is not the name of a presentation generic function" name))))
+
 (defclass presentation-generic-function (standard-generic-function)
   ()
   (:metaclass c2mop:funcallable-standard-class))
@@ -200,9 +205,7 @@
     ;; I feel so unclean!
     (return-from define-presentation-method
       `(define-subtypep-method ,@args)))
-  (let ((gf (gethash name *presentation-gf-table*)))
-    (unless gf
-      (error "~S is not a presentation generic function" name))
+  (let ((gf (find-presentation-gf name)))
     (with-accessors ((parameters-arg parameters-arg)
                      (options-arg options-arg))
         gf
@@ -253,9 +256,7 @@
                    ,@real-body)))))))))
 
 (defmacro define-default-presentation-method (name &rest args)
-  (let ((gf (gethash name *presentation-gf-table*)))
-    (unless gf
-      (error "~S is not a presentation generic function" name))
+  (let ((gf (find-presentation-gf name)))
     (multiple-value-bind (qualifiers lambda-list decls body)
         (parse-method-body args)
       `(defmethod ,(generic-function-name gf) ,@qualifiers (,(type-key-arg gf)
@@ -278,9 +279,7 @@
 ;;; has a more general use...
 
 (defmacro funcall-presentation-generic-function (name &rest args)
-  (let ((gf (gethash name *presentation-gf-table*)))
-    (unless gf
-      (error "~S is not a presentation generic function" name))
+  (let ((gf (find-presentation-gf name)))
     (let* ((rebound-args (loop for arg in args
                                unless (symbolp arg)
                                  collect (list (gensym "ARG") arg)))
@@ -306,9 +305,7 @@
                              args))))))
 
 (defmacro apply-presentation-generic-function (name &rest args)
-  (let ((gf (gethash name *presentation-gf-table*)))
-    (unless gf
-      (error "~S is not a presentation generic function" name))
+  (let ((gf (find-presentation-gf name)))
     `(apply #'%funcall-presentation-generic-function ',name
             #',(generic-function-name gf)
             ,(type-arg-position gf)

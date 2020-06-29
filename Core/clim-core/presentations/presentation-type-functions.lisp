@@ -191,7 +191,7 @@ otherwise return false."
 ;;; be eql methods.
 
 (defmacro define-subtypep-method (&rest args)
-  (let ((gf (gethash 'presentation-subtypep *presentation-gf-table*)))
+  (let ((gf (find-presentation-gf 'presentation-subtypep)))
     (multiple-value-bind (qualifiers lambda-list decls body)
         (parse-method-body args)
       (let ((type-arg (nth (1- (type-arg-position gf)) lambda-list)))
