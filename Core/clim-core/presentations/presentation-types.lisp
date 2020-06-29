@@ -87,9 +87,6 @@ altered for use in destructuring bind")
    (inherit-from :accessor inherit-from
                  :initarg :inherit-from
                  :documentation "Inherit-from form with dummys substituted")
-   (inherit-from-function :accessor inherit-from-function
-                          :initarg :inherit-from-function
-                          :documentation "Function that returns the inherit-from form")
    (description :accessor description :initarg :description)
    (history :accessor history :initarg :history :initform nil
             :documentation "Who knows?")
@@ -154,11 +151,6 @@ presentation types."
 
 (defmethod inherit-from ((class (eql *builtin-t-class*)))
   nil)
-
-(defmethod inherit-from-function ((class (eql *builtin-t-class*)))
-  #'(lambda (type)
-      (declare (ignore type))
-      nil))
 
 (defmethod description ((class (eql *builtin-t-class*)))
   "The supertype of all presentation types.")
@@ -593,8 +585,10 @@ supertypes of TYPE that are presentation types"))
                                               downcase-name))
       (string-trim " " downcase-name)))
 
-  (defun record-presentation-type (name parameters params-ll options options-ll
-                                   inherit-from-func description history
+  (defun record-presentation-type (name
+                                   parameters params-ll
+                                   options options-ll
+                                   description history
                                    parameters-are-types
                                    compile-time-p
                                    supers expansion-func)
@@ -604,7 +598,6 @@ supertypes of TYPE that are presentation types"))
                                    :parameters-lambda-list params-ll
                                    :options options
                                    :options-lambda-list options-ll
-                                   :inherit-from-function inherit-from-func
                                    :description description
                                    :history history
                                    :parameters-are-types parameters-are-types
@@ -616,25 +609,24 @@ supertypes of TYPE that are presentation types"))
                             'clos-presentation-type
                             'presentation-type)
                         ptype-class-args)
-                 (let* ((clos-meta (find-class name nil))
-                        (closp (typep clos-meta 'standard-class)))
-                   (if closp
-                       (apply #'make-instance 'clos-presentation-type
-                              :clos-class clos-meta
-                              ptype-class-args)
-                       (let ((directs (mapcan
-                                       #'(lambda (super)
-                                           (if (eq super t)
-                                               nil
-                                               (list (or (get-ptype-metaclass
-                                                          super)
-                                                         super))))
-                                       supers)))
-                         (apply #'c2mop:ensure-class fake-name
-                                :name fake-name
-                                :metaclass 'presentation-type-class
-                                :direct-superclasses directs
-                                ptype-class-args)))))))
+                 (let ((clos-meta (find-class name nil)))
+                   (if-let ((closp (typep clos-meta 'standard-class)))
+                     (apply #'make-instance 'clos-presentation-type
+                            :clos-class clos-meta
+                            ptype-class-args)
+                     (let ((directs (mapcan
+                                     #'(lambda (super)
+                                         (if (eq super t)
+                                             nil
+                                             (list (or (get-ptype-metaclass
+                                                        super)
+                                                       super))))
+                                     supers)))
+                       (apply #'c2mop:ensure-class fake-name
+                              :name fake-name
+                              :metaclass 'presentation-type-class
+                              :direct-superclasses directs
+                              ptype-class-args)))))))
       (setf (gethash name *presentation-type-table*) ptype-meta)
       ptype-meta)))
 
@@ -651,11 +643,9 @@ suitable for SUPER-NAME"))
 ;;; Load-time actions for define-presentation-type
 (defmacro %define-presentation-type (name parameters params-ll
                                      options options-ll
-                                     inherit-from inherit-from-lambda
+                                     inherit-from-lambda
                                      description history parameters-are-types)
-  (declare (ignore inherit-from))
-  (let* ((inherit-from-func (coerce inherit-from-lambda 'function))
-         (inherit-typespec (funcall inherit-from-func
+  (let* ((inherit-typespec (funcall (coerce inherit-from-lambda 'function)
                                     (cons name (fake-params-args params-ll))))
          (superclasses (if inherit-typespec
                            (with-presentation-type-decoded
@@ -668,7 +658,7 @@ suitable for SUPER-NAME"))
          (expansion-lambda (make-expansion-lambda params-ll options-ll)))
     `(progn
        (record-presentation-type ',name ',parameters ',params-ll ',options
-                                 ',options-ll #',inherit-from-lambda
+                                 ',options-ll
                                  ',description ',history
                                  ',parameters-are-types
                                  nil ',superclasses
@@ -708,15 +698,15 @@ suitable for SUPER-NAME"))
                                                       inherit-from)))
     `(progn
        (eval-when (:compile-toplevel)
-         (record-presentation-type ',name ',parameters ',params-ll ',options
-                                   ',options-ll #',inherit-from-func
+         (record-presentation-type ',name ',parameters ',params-ll
+                                   ',options ',options-ll
                                    ',description ',history
                                    ',parameters-are-types
                                    t nil nil))
        (eval-when (:load-toplevel :execute)
          (%define-presentation-type ,name ,parameters ,params-ll
                                     ,options ,options-ll
-                                    ,inherit-from ,inherit-from-func
+                                    ,inherit-from-func
                                     ,description ,history
                                     ,parameters-are-types)))))
 
