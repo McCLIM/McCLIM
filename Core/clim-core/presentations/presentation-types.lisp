@@ -724,16 +724,6 @@ suitable for SUPER-NAME"))
                                     ,description ,history
                                     ,parameters-are-types)))))
 
-;;; These are used by the presentation method MOP code, but are
-;;; actually defined in presentation-defs.lisp after the forms for these
-;;; types are executed.
-
-(defvar *ptype-t-class*)
-
-(defvar *ptype-expression-class*)
-
-(defvar *ptype-form-class*)
-
 (defun presentation-type-parameters (type-name &optional env)
   (declare (ignore env))
   (let ((ptype (gethash type-name *presentation-type-table*)))
