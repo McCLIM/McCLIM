@@ -97,8 +97,6 @@ interface management system."
                              (:file "utils")
                              (:file "input-editing")
                              (:file "commands")
-                             (:file "presentations")
-                             (:file "presentation-translators")
                              (:file "text-selection")
                              (:file "text-formatting")
                              (:file "text-styles")
@@ -112,7 +110,12 @@ interface management system."
                              (:module "drawing"
                               :depends-on ("package")
                               :components ((:file "medium")
-                                           (:file "design"))))))
+                                           (:file "design")))
+                             (:module "presentations"
+                              :depends-on ("package")
+                              :components ((:file "presentation-types")
+                                           (:file "presentation-functions")
+                                           (:file "translators"))))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
 
