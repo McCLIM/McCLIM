@@ -35,9 +35,10 @@
       (is (= (coordinate (min y1 y2)) yy1))
       (is (= (coordinate (max x1 x2)) xx2))
       (is (= (coordinate (max y1 y2)) yy2)))
-    ;; test failed.  b-r-p returns two values instead of a point
-    ;;  (is (region-equal (bounding-rectangle-position l)
-    ;;                    (make-point (min x1 x2) (min y1 y2))))
+    (is (region-equal
+         (multiple-value-call #'make-point
+           (bounding-rectangle-position l))
+         (make-point (min x1 x2) (min y1 y2))))
     (is (= (bounding-rectangle-min-x l) (coordinate (min x1 x2))))
     (is (= (bounding-rectangle-min-y l) (coordinate (min y1 y2))))
     (is (= (bounding-rectangle-max-x l) (coordinate (max x1 x2))))
@@ -275,7 +276,7 @@
     (is (typep e1 'standard-ellipse))
     (is-true (ellipsep e1))
     ;; this test fails
-    ;;  (is (region-equal e1 e2))
+    (fails (is (region-equal e1 e2)))
     (multiple-value-bind (x y) (ellipse-center-point* e1)
       (is (= (coordinate xc) x))
       (is (= (coordinate yc) y))
@@ -313,7 +314,7 @@
       (rcpt (+ xc 100) yc     all-el)
       ;; FIXME this test may fail because we add an additional epsilon
       ;; for sake of CLX rendering of rotated ellipses. -- jd 2019-11-19
-      (rcpn (+ xc 1) (- yc 50) all-el)
+      (fails (rcpn (+ xc 1) (- yc 50) all-el))
       (rcpn (+ xc 3) (- yc 50) all-el)
       ;; less trivial cases (we accept only 1st quadrent in el1-el4)
       ;; point between 4th and 1st quadrent (on the start-angle)
@@ -358,7 +359,8 @@
               ;;
               ;; FIXME this test may fail because we add an additional epsilon
               ;; for sake of CLX rendering of rotated ellipses. -- jd 2019-11-19
-              (is-false (region-contains-position-p el 301 101)) ; too far away
+              (fails
+                (is-false (region-contains-position-p el 301 101))) ; too far away
               (is-false (region-contains-position-p el 303 103)) ; too far away
               (is-false (region-contains-position-p el 200 100)) ; y-aligned tip
               (is-false (region-contains-position-p el 300 200)) ; x-aligned tip
@@ -377,8 +379,7 @@
          (ea3 (make-elliptical-arc pc xdr1 ydr1 xdr2 ydr2)))
     (is (typep ea1 'standard-elliptical-arc))
     (is-true (elliptical-arc-p ea1))
-    ;; this test fails
-    ;;  (is (region-equal ea1 ea2))
+    (fails (is (region-equal ea1 ea2)))
     (multiple-value-bind (x y) (ellipse-center-point* ea1)
       (is (= (coordinate xc) x))
       (is (= (coordinate yc) y))
