@@ -16,6 +16,7 @@
 ;;; The presentation type for T is the built-in type T. The correspondence is
 ;;; established by hand in presentations.lisp.
 #+ (or) (define-presentation-type t ())
+(define-presentation-type nil ())
 
 ;;; AUTO-ACTIVATE is described in the Franz user guide; it controls whether an
 ;;; accepting an expression returns immediately after typing the closing
@@ -39,26 +40,6 @@
                   :subform-read ,subform-read ))
 
 ;;; The presentation types
-
-(define-presentation-method presentation-typep (object (type t))
-  (declare (ignore object))
-  t)
-
-(define-presentation-method present (object (type t)
-                                            stream
-                                            (view textual-view)
-                                            &key acceptably for-context-type)
-  (declare (ignore for-context-type))
-  (let ((*print-readably* acceptably))
-    (if acceptably
-        (prin1 object stream)
-        (princ object stream))))
-
-(define-presentation-type nil ())
-
-(define-presentation-method presentation-typep (object (type nil))
-  (declare (ignore object))
-  nil)
 
 (define-presentation-type null ()
   :inherit-from t)
@@ -109,6 +90,14 @@
 
 (define-presentation-method presentation-typep (object (type symbol))
   (symbolp object))
+
+(define-presentation-method presentation-typep (object (type (eql t)))
+  (declare (ignore object))
+  t)
+
+(define-presentation-method presentation-typep (object (type (eql nil)))
+  (declare (ignore object))
+  nil)
 
 (define-presentation-method present (object (type symbol) stream
                                      (view textual-view)
