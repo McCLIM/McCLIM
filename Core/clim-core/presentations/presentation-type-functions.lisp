@@ -23,11 +23,10 @@
 ;;; presentation type.
 
 (defmethod description ((class standard-class))
-  (let* ((name (class-name class))
-         (ptype-entry (gethash name *presentation-type-table*)))
-    (if ptype-entry
-        (description ptype-entry)
-        (make-default-description name))))
+  (let ((name (class-name class)))
+    (if-let ((ptype (find-presentation-type name nil)))
+      (description ptype)
+      (make-default-description name))))
 
 (defun default-describe-presentation-type (description stream plural-count)
   (if (symbolp description)
@@ -104,17 +103,15 @@ otherwise return false."
   'expression)
 
 (flet ((get-ptype-from-class-of (object)
-         (let* ((name (class-name (class-of object)))
-                (ptype-entry (gethash name *presentation-type-table*)))
-           (unless ptype-entry
-             (return-from get-ptype-from-class-of nil))
-           ;; Does the type have required parameters?
-           ;; If so, we can't use it...
-           (let ((parameter-ll (parameters-lambda-list ptype-entry)))
-             (values name
-                     (if (eq (car parameter-ll) '&whole)
-                         (cddr parameter-ll)
-                         parameter-ll))))))
+         (let ((name (class-name (class-of object))))
+           (when-let ((ptype (find-presentation-type name nil)))
+             ;; Does the type have required parameters?
+             ;; If so, we can't use it...
+             (let ((parameter-ll (parameters-lambda-list ptype)))
+               (values name
+                       (if (eq (car parameter-ll) '&whole)
+                           (cddr parameter-ll)
+                           parameter-ll)))))))
   (defmethod presentation-type-of ((object standard-object))
     (multiple-value-bind (name lambda-list)
         (get-ptype-from-class-of object)

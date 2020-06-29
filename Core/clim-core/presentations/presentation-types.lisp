@@ -13,6 +13,13 @@
 
 (in-package #:clim-internals)
 
+(defvar *presentation-type-table* (make-hash-table :test #'eq))
+
+(defun find-presentation-type (name &optional (errorp t))
+  (or (gethash name *presentation-type-table*)
+      (when errorp
+        (error "~S is not the name of a presentation type" name))))
+
 ;;; PRESENTATION class
 
 (defvar *allow-sensitive-inferiors* t)
@@ -26,7 +33,6 @@
    (modifier :reader presentation-modifier :initarg :modifier :initform nil)
    (is-sensitive :reader is-sensitive :initarg :is-sensitive
                  :initform *allow-sensitive-inferiors*)))
-
 
 (defclass standard-presentation
     (presentation-mixin standard-sequence-output-record)
@@ -47,10 +53,9 @@
       (when *print-presentation-verbose*
         (format stream " ~S" (presentation-object self))))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defgeneric ptype-specializer (type)
-    (:documentation "The specializer to use for this type in a presentation
-method lambda list")))
+(defgeneric ptype-specializer (type)
+  (:documentation "The specializer to use for this type in a presentation
+method lambda list"))
 
 ;;; Metaclass for presentation types.  For presentation types not associated
 ;;; with CLOS classes, objects with this metaclass are used as a proxy for the
@@ -433,8 +438,6 @@ filled in."
                                ,options
                              ,options-form)))))))
 
-(defvar *presentation-type-table* (make-hash-table :test #'eq))
-
 (setf (gethash t *presentation-type-table*) (find-class t))
 
 ;;; The presentation type specifier may be in one of these forms:
@@ -448,7 +451,7 @@ filled in."
 (defgeneric get-ptype-metaclass (type))
 
 (defmethod get-ptype-metaclass ((type symbol))
-  (if-let ((maybe-meta (gethash type *presentation-type-table*)))
+  (if-let ((maybe-meta (find-presentation-type type nil)))
     (get-ptype-metaclass maybe-meta)
     (let ((system-meta (find-class type nil)))
       (and (typep system-meta 'standard-class)
@@ -516,7 +519,7 @@ filled in."
   (c2mop:class-precedence-list class))
 
 (defun get-ptype (name)
-  (or (gethash name *presentation-type-table*)
+  (or (find-presentation-type name nil)
       (let ((meta (find-class name nil)))
         (and (typep meta 'standard-class)
              meta))))
@@ -526,10 +529,9 @@ filled in."
 supertypes of TYPE that are presentation types"))
 
 (defmethod presentation-ptype-supers ((type symbol))
-  (let ((ptype (gethash type *presentation-type-table*)))
-    (if ptype
-        (presentation-ptype-supers ptype)
-        nil)))
+  (if-let ((ptype (find-presentation-type type nil)))
+    (presentation-ptype-supers ptype)
+    nil))
 
 (defmethod presentation-ptype-supers ((type presentation-type-class))
   (mapcan #'(lambda (class)
@@ -537,11 +539,9 @@ supertypes of TYPE that are presentation types"))
                 (presentation-type
                  (list class))
                 (standard-class
-                 (let ((clos-ptype (gethash (class-name class)
-                                            *presentation-type-table*)))
-                   (if clos-ptype
-                       (list clos-ptype)
-                       nil)))
+                 (if-let ((clos-ptype (find-presentation-type (class-name class) nil)))
+                   (list clos-ptype)
+                   nil))
                 (t
                  nil)))
           (c2mop:class-direct-superclasses type)))
@@ -557,21 +557,18 @@ supertypes of TYPE that are presentation types"))
     (let ((supers (presentation-ptype-supers name)))
       (mapcar #'class-presentation-type-name supers))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmethod ptype-specializer ((type symbol))
-    (let ((ptype (gethash type *presentation-type-table*)))
-      (cond (ptype
-             (ptype-specializer ptype))
-            ((find-class type nil)
-             (ptype-specializer (find-class type)))
-            ;; Assume it's a forward referenced CLOS class.
-            (t type))))
+(defmethod ptype-specializer ((type symbol))
+  (if-let ((ptype (or (find-presentation-type type nil)
+                      (find-class type nil))))
+    (ptype-specializer ptype)
+    ;; Assume it's a forward referenced CLOS class.
+    type))
 
-  (defmethod ptype-specializer ((type standard-class))
-    (class-name type)))
+(defmethod ptype-specializer ((type standard-class))
+  (class-name type))
 
 ;;; We need to patch defclass in every implementation to record a CLOS
-;;; class at compiletime.  On the other hand, I think we can assume
+;;; class at compile time. On the other hand, I think we can assume
 ;;; that if a CLOS class exists at compile time, it will exist at
 ;;; load/run time too.
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -639,8 +636,7 @@ supertypes of TYPE that are presentation types"))
                                 :direct-superclasses directs
                                 ptype-class-args)))))))
       (setf (gethash name *presentation-type-table*) ptype-meta)
-      ptype-meta))
-  ); eval-when
+      ptype-meta)))
 
 (defgeneric massage-type-for-super (type-name super-name type-spec)
   (:documentation "translate TYPE-SPEC from that of TYPE-NAME to one
@@ -726,17 +722,11 @@ suitable for SUPER-NAME"))
 
 (defun presentation-type-parameters (type-name &optional env)
   (declare (ignore env))
-  (let ((ptype (gethash type-name *presentation-type-table*)))
-    (unless ptype
-      (error "~S is not the name of a presentation type" type-name))
-    (parameters ptype)))
+  (parameters (find-presentation-type type-name)))
 
 (defun presentation-type-options (type-name &optional env)
   (declare (ignore env))
-  (let ((ptype (gethash type-name *presentation-type-table*)))
-    (unless ptype
-      (error "~S is not the name of a presentation type" type-name))
-    (options ptype)))
+  (options (find-presentation-type type-name)))
 
 (defmacro with-presentation-type-parameters ((type-name type) &body body)
   (let ((ptype (get-ptype type-name)))
@@ -858,9 +848,7 @@ suitable for SUPER-NAME"))
 (defun make-presentation-type-specifier (name-and-params &rest options)
   (with-presentation-type-decoded (name)
       name-and-params
-    (let ((ptype (gethash name *presentation-type-table*)))
-      (unless ptype
-        (return-from make-presentation-type-specifier name-and-params))
+    (if-let ((ptype (find-presentation-type name nil)))
       (with-presentation-type-decoded (name parameters defaults)
           (funcall (expansion-function ptype) name-and-params)
         (declare (ignore name parameters))
@@ -870,4 +858,5 @@ suitable for SUPER-NAME"))
                 nconc (list key val) into needed-options
               finally (return (if needed-options
                                   `(,name-and-params ,@needed-options)
-                                  name-and-params)))))))
+                                  name-and-params))))
+      name-and-params)))
