@@ -86,20 +86,6 @@
                   t
                   non-class-positions)))))
 
-(defun method-applicable (method arguments)
-  (loop for arg in arguments
-        for specializer in (c2mop:method-specializers method)
-        always (cond ((typep specializer 'c2mop:eql-specializer)
-                      (eql arg (c2mop:eql-specializer-object specializer)))
-                     ((typep arg specializer)
-                      t)
-                     ((and (not (typep (class-of arg)
-                                       'presentation-type-class))
-                           (or (eq specializer *ptype-form-class*)
-                               (eq specializer *ptype-expression-class*)))
-                      t)
-                     (t nil))))
-
 (defmethod compute-applicable-methods :around
     ((gf presentation-generic-function) arguments)
   (let ((methods (call-next-method)))
