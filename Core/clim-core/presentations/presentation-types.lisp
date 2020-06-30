@@ -746,6 +746,8 @@ suitable for SUPER-NAME"))
   (declare (ignore env))
   (options (find-presentation-type type-name)))
 
+;;; XXX specification states, that the type-name must be a
+;;; presentation type specifier. Should we error otherwise?
 (defmacro with-presentation-type-parameters ((type-name type) &body body)
   (let ((ptype (get-ptype type-name)))
     (unless (or ptype (compile-time-clos-p type-name))
@@ -761,14 +763,14 @@ suitable for SUPER-NAME"))
                       ,type-var
                       ',type-name))
              (let ((,params (decode-parameters ,type-var)))
-               (declare (ignorable ,params))
                (destructuring-bind ,params-ll ,params
                  (declare (ignorable ,@ignorable-vars))
                  ,@body))))
         `(let ()
            ,@body))))
 
-
+;;; XXX specification states, that the TYPE-NAME must be a
+;;; presentation type specifier. Should we error otherwise?
 (defmacro with-presentation-type-options ((type-name type) &body body)
   (let ((ptype (get-ptype type-name)))
     (unless (or ptype (compile-time-clos-p type-name))
@@ -784,7 +786,6 @@ suitable for SUPER-NAME"))
                       ,type-var
                       ',type-name))
              (let ((,options (decode-options ,type-var)))
-               (declare (ignorable ,options))
                (destructuring-bind ,options-ll ,options
                  (declare (ignorable ,@ignorable-vars))
                  ,@body))))
