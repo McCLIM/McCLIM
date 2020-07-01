@@ -214,61 +214,82 @@
 (defmacro define-presentation-method (name &rest args)
   (multiple-value-bind (qualifiers lambda-list decls body)
       (parse-method-body args)
-   (let* ((gf (find-presentation-gf name))
-          (par-arg (parameters-arg gf))
-          (opt-arg (options-arg gf))
-          (real-body body)
-          (massaged-type (gensym "MASSAGED-TYPE"))
-          (type-arg-pos (type-arg-position gf))
-          (type-arg (nth (1- type-arg-pos) lambda-list))
-          (type-key-arg (type-key-arg gf)))
-     (with-current-source-form (type-arg)
-       (unless (consp type-arg)
-         (error "Type argument in presentation method must be ~
+    (let* ((gf (find-presentation-gf name))
+           (par-arg (parameters-arg gf))
+           (opt-arg (options-arg gf))
+           (real-body body)
+           (massaged-type (gensym "MASSAGED-TYPE"))
+           (type-arg-pos (type-arg-position gf))
+           (type-arg (nth (1- type-arg-pos) lambda-list))
+           (type-key-arg (type-key-arg gf)))
+      (with-current-source-form (type-arg)
+        (unless (consp type-arg)
+          (error "Type argument in presentation method must be ~
                  specialized"))
-       (unless (eq (car type-arg) 'type)
-         (error "Type argument mismatch with presentation generic ~
+        (unless (eq (car type-arg) 'type)
+          (error "Type argument mismatch with presentation generic ~
                  function definition")))
-     (destructure-type-arg (type-var type-spec type-name) type-arg
-       ;; The semantics of the presentation method
-       ;; PRESENTATION-SUBTYPEP are truly weird; method combination is
-       ;; in effect disabled.  So, the methods have to be eql methods.
-       (let ((method-ll `((,type-key-arg
-                           ,(if (eq name 'presentation-subtypep)
-                                `(eql (prototype-or-error ',type-name))
-                                (ptype-specializer type-spec)))
-                          ,@(copy-list lambda-list))))
-         ;; In reality the presentation type is specialized on the
-         ;; method's first argument. Replace the (TYPE-VAR TYPE-SPEC)
-         ;; argument with the unspecialized argument TYPE-VAR.
-         (setf (nth type-arg-pos method-ll) type-var)
-         (when opt-arg
-           (setq real-body
-                 `((let ((,opt-arg (decode-options ,massaged-type)))
-                     (declare (ignorable ,opt-arg))
-                     (with-presentation-type-options
-                         (,type-name ,massaged-type)
-                       ,@real-body)))))
-         (when par-arg
-           (setq real-body
-                 `((let ((,par-arg (decode-parameters ,massaged-type)))
-                     (declare (ignorable ,par-arg))
-                     (with-presentation-type-parameters
-                         (,type-name ,massaged-type)
-                       ,@real-body)))))
-         (when (or par-arg opt-arg)
-           (setq real-body
-                 `((let ((,massaged-type (translate-specifier-for-type
-                                          (type-name-from-type-key
-                                           ,type-key-arg)
-                                          ',type-name
-                                          ,type-var)))
-                     ,@real-body))))
-         `(defmethod ,(generic-function-name gf) ,@qualifiers ,method-ll
-            ,@(when decls
-                (list decls))
-            (block ,name
-              ,@real-body)))))))
+      (destructure-type-arg (type-var type-spec type-name) type-arg
+        ;; The semantics of the presentation method
+        ;; PRESENTATION-SUBTYPEP are truly weird; method combination is
+        ;; in effect disabled.  So, the methods have to be eql methods.
+        (let ((method-ll `((,type-key-arg
+                            ,(if (eq name 'presentation-subtypep)
+                                 `(eql (prototype-or-error ',type-name))
+                                 (ptype-specializer type-spec)))
+                           ,@(copy-list lambda-list))))
+          ;; In reality the presentation type is specialized on the
+          ;; method's first argument. Replace the (TYPE-VAR TYPE-SPEC)
+          ;; argument with the unspecialized argument TYPE-VAR.
+          (setf (nth type-arg-pos method-ll) type-var)
+          (when-let ((ptype (find-presentation-type type-name nil)))
+            (let (opt-vars par-vars)
+              (when opt-arg
+                (let ((options-ll (options-lambda-list ptype)))
+                  (setf opt-vars (get-all-params options-ll))
+                  (setf real-body
+                        `((let ((,opt-arg (decode-options ,massaged-type)))
+                            (destructuring-bind ,options-ll ,opt-arg
+                              (declare (ignorable ,@opt-vars))
+                              ,@real-body))))))
+              (when par-arg
+                (let ((params-ll (parameters-lambda-list ptype)))
+                  (setf par-vars (get-all-params params-ll))
+                  (setf real-body
+                        `((let ((,par-arg (decode-parameters ,massaged-type)))
+                            (destructuring-bind ,params-ll ,par-arg
+                              (declare (ignorable ,@par-vars))
+                              ,@real-body))))))
+              (when (or par-arg opt-arg)
+                (let* ((mth-vars (get-all-params lambda-list))
+                       (par-mth  (intersection   mth-vars par-vars))
+                       (mth/par  (set-difference mth-vars par-vars))
+                       (opt-mth  (intersection   mth/par  opt-vars))
+                       (opt-par  (intersection   opt-vars par-vars)))
+                  (when par-mth
+                    (alexandria:simple-style-warning
+                     "Method arguments ~s are shadowed by the ~
+                     presentation type parameters." par-mth))
+                  (when opt-mth
+                    (alexandria:simple-style-warning
+                     "Method arguments ~s are shadowed by the ~
+                     presentation type options." opt-mth))
+                  (when opt-par
+                    (alexandria:simple-style-warning
+                     "Presentation type parameters ~s are shadowed by ~
+                     the presentation type options." opt-par)))
+                (setf real-body
+                      `((let ((,massaged-type (translate-specifier-for-type
+                                               (type-name-from-type-key
+                                                ,type-key-arg)
+                                               ',type-name
+                                               ,type-var)))
+                          ,@real-body))))))
+          `(defmethod ,(generic-function-name gf) ,@qualifiers ,method-ll
+             ,@(when decls
+                 (list decls))
+             (block ,name
+               ,@real-body)))))))
 
 (defmacro define-default-presentation-method (name &rest args)
   (let ((gf (find-presentation-gf name)))
