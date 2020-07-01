@@ -29,8 +29,8 @@
       (make-default-description name))))
 
 (defun default-describe-presentation-type (description stream plural-count)
-  (if (symbolp description)
-      (setq description (make-default-description (symbol-name description))))
+  (when (symbolp description)
+    (setq description (make-default-description (symbol-name description))))
   (cond ((eql 1 plural-count)
          (format stream "~:[a~;an~] ~A"
                    (find (char description 0) "aeiouAEIOU")
