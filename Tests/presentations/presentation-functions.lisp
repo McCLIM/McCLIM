@@ -86,3 +86,18 @@
     (signals-style-warning
      t (define-presentation-method pgf-warning.fn3
            ((type pgf-warning.type4))))))
+
+(define-presentation-generic-function
+    pgf-regression-test.1 pgf-regression-test.1
+  (climi::type-key climi::parameters  type))
+
+(define-presentation-method pgf-regression-test.1 ((type (eql t)))
+  (list :eql-t type))
+
+;;; This call triggered a no-applicable-method error on a function
+;;; PRESENTATION-PTYPE-SUPERS, because there was no definition for the
+;;; presentation type T. This is because MASSAGED-TYPE was not fixed
+;;; to the PRESENTATION-TYPE-OF of the object (MASSAGED-TYPE is bound
+;;; only when the generic function has specified PARAMETERS/OPTIONS.
+(test pgf-regression-test.1
+  (finishes (funcall-presentation-generic-function pgf-regression-test.1 t)))
