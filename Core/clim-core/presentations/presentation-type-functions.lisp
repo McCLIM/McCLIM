@@ -82,9 +82,11 @@ otherwise return false."
 (define-presentation-generic-function %presentation-typep presentation-typep
   (type-key parameters object type))
 
+;;; FIXME this method should return NIL. There is a problem with
+;;; MENU-ITEM translators which doesn't work without this kludge.
 (define-default-presentation-method presentation-typep (object type)
   (declare (ignore object type))
-  nil)
+  t)
 
 (defun presentation-typep (object type)
   (with-presentation-type-decoded (name parameters)
