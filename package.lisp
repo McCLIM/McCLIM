@@ -649,6 +649,8 @@
    #:draw-standard-menu                 ;function
    #:draw-text                          ;function
    #:draw-text*                         ;function
+   #:echo-space                         ;presentation type option
+   #:element-type                       ;presentation type parameter
    #:ellipse                            ;protocol class
    #:ellipse-center-point               ;generic function
    #:ellipse-center-point*              ;generic function
@@ -1067,6 +1069,7 @@
    #:pane-viewport-region               ;generic function
    #:panep                              ;predicate
    #:parse-text-style                   ;function
+   #:part-type                          ;presentation type parameter
    #:partial-command-p                  ;function
    #:partial-completers                 ;presentation type option
    #:path                               ;protocol class
@@ -1255,6 +1258,7 @@
    #:scroll-up-page-callback            ;callback
    #:scroller-pane                      ;pane
    #:scrolling                          ;macro
+   #:separator                          ;presentation type option
    #:sequence                           ;presentation type
    #:sequence-enumerated                ;presentation type
    #:set-highlighted-presentation       ;function
