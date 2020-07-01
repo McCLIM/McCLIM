@@ -558,6 +558,9 @@ filled in."
   (:documentation "Gets a list of the presentation type objects for those
 supertypes of TYPE that are presentation types"))
 
+(defmethod presentation-ptype-supers ((type (eql *builtin-t-class*)))
+  nil)
+
 (defmethod presentation-ptype-supers ((type symbol))
   (if-let ((ptype (find-presentation-type type nil)))
     (presentation-ptype-supers ptype)
