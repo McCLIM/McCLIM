@@ -614,52 +614,52 @@ supertypes of TYPE that are presentation types"))
       (setq downcase-name (nsubstitute-if-not #\Space
                                               #'alphanumericp
                                               downcase-name))
-      (string-trim " " downcase-name)))
+      (string-trim " " downcase-name))))
 
-  (defun record-presentation-type (name
-                                   parameters params-ll
-                                   options options-ll
-                                   description history
-                                   parameters-are-types
-                                   compile-time-p
-                                   supers expansion-func)
-    (let* ((fake-name (make-presentation-type-name name))
-           (ptype-class-args (list :type-name name
-                                   :parameters parameters
-                                   :parameters-lambda-list params-ll
-                                   :options options
-                                   :options-lambda-list options-ll
-                                   :description description
-                                   :history history
-                                   :parameters-are-types parameters-are-types
-                                   :expansion-function expansion-func))
-           (ptype-meta
-             (if compile-time-p
-                 (apply #'make-instance
-                        (if (compile-time-clos-p name)
-                            'clos-presentation-type
-                            'presentation-type)
-                        ptype-class-args)
-                 (let ((clos-meta (find-class name nil)))
-                   (if-let ((closp (typep clos-meta 'standard-class)))
-                     (apply #'make-instance 'clos-presentation-type
-                            :clos-class clos-meta
-                            ptype-class-args)
-                     (let ((directs (mapcan
-                                     #'(lambda (super)
-                                         (if (eq super t)
-                                             nil
-                                             (list (or (get-ptype-metaclass
-                                                        super)
-                                                       super))))
-                                     supers)))
-                       (apply #'c2mop:ensure-class fake-name
-                              :name fake-name
-                              :metaclass 'presentation-type-class
-                              :direct-superclasses directs
-                              ptype-class-args)))))))
-      (setf (gethash name *presentation-type-table*) ptype-meta)
-      ptype-meta)))
+(defun record-presentation-type (name
+                                 parameters params-ll
+                                 options options-ll
+                                 description history
+                                 parameters-are-types
+                                 compile-time-p
+                                 supers expansion-func)
+  (let* ((fake-name (make-presentation-type-name name))
+         (ptype-class-args (list :type-name name
+                                 :parameters parameters
+                                 :parameters-lambda-list params-ll
+                                 :options options
+                                 :options-lambda-list options-ll
+                                 :description description
+                                 :history history
+                                 :parameters-are-types parameters-are-types
+                                 :expansion-function expansion-func))
+         (ptype-meta
+           (if compile-time-p
+               (apply #'make-instance
+                      (if (compile-time-clos-p name)
+                          'clos-presentation-type
+                          'presentation-type)
+                      ptype-class-args)
+               (let ((clos-meta (find-class name nil)))
+                 (if-let ((closp (typep clos-meta 'standard-class)))
+                   (apply #'make-instance 'clos-presentation-type
+                          :clos-class clos-meta
+                          ptype-class-args)
+                   (let ((directs (mapcan
+                                   #'(lambda (super)
+                                       (if (eq super t)
+                                           nil
+                                           (list (or (get-ptype-metaclass
+                                                      super)
+                                                     super))))
+                                   supers)))
+                     (apply #'c2mop:ensure-class fake-name
+                            :name fake-name
+                            :metaclass 'presentation-type-class
+                            :direct-superclasses directs
+                            ptype-class-args)))))))
+    (setf (gethash name *presentation-type-table*) ptype-meta)
+    ptype-meta))
 
 (defgeneric massage-type-for-super (type-name super-name type-spec)
   (:documentation "translate TYPE-SPEC from that of TYPE-NAME to one
@@ -693,7 +693,7 @@ suitable for SUPER-NAME"))
                                  ',description ',history
                                  ',parameters-are-types
                                  nil ',superclasses
-                                 #',expansion-lambda)
+                                 (function ,expansion-lambda))
        ,@(cond ((eq (presentation-type-name inherit-typespec) 'and)
                 (loop for super in superclasses
                       for i from 0
