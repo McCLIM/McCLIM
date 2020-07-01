@@ -24,12 +24,16 @@
 (cl:in-package #:clim-test-util)
 
 (defun call-as-fails (thunk)
-  (handler-case
-      (funcall thunk)
-    (fiveam::check-failure (condition)
-      (declare (ignore condition))
-      ;; A proper solution would signal expected-failure instead.
-      (write-char #\e fiveam::*test-dribble*))))
+  (let ((failed nil))
+    (handler-case (funcall thunk)
+      (fiveam::check-failure (condition)
+        (declare (ignore condition))
+        (setf failed t)
+        ;; A proper solution would signal expected-failure instead.
+        (write-char #\e fiveam::*test-dribble*)))
+    (unless failed
+      (write-char #\? fiveam::*test-dribble*)
+      (5am:fail "Unexpected success."))))
 
 (defmacro fails (&body body)
   `(call-as-fails (lambda () ,@body)))
