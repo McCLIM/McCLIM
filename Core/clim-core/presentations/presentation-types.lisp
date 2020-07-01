@@ -671,6 +671,26 @@ suitable for SUPER-NAME"))
   (declare (ignore type-spec))
   (values nil nil))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; Function returns superclasses of the defined presentation.
+  (defun parse-inheritance (inherit-typespec)
+    (with-presentation-type-decoded (super-name super-params)
+        inherit-typespec
+      (case super-name
+        ((nil))
+        ((or not satisfies)
+         (error "~S is not supported in :INHERIT-FROM." super-name))
+        (and
+         (loop for super in super-params
+               for sname = (presentation-type-name super)
+               if (member sname '(and or not satisfies))
+                 do (error "AND in :INHERIT-FROM only supports classes, not ~S."
+                           super-name)
+               else
+                 collect sname))
+        (otherwise
+         (list super-name))))))
+
 ;;; Load-time actions for define-presentation-type
 (defmacro %define-presentation-type (name parameters params-ll
                                      options options-ll
@@ -678,14 +698,7 @@ suitable for SUPER-NAME"))
                                      description history parameters-are-types)
   (let* ((inherit-typespec (funcall (coerce inherit-from-lambda 'function)
                                     (cons name (fake-params-args params-ll))))
-         (superclasses (if inherit-typespec
-                           (with-presentation-type-decoded
-                               (super-name super-params)
-                               inherit-typespec
-                             (if (eq super-name 'and)
-                                 (mapcar #'presentation-type-name super-params)
-                                 (list super-name)))
-                           nil))
+         (superclasses (parse-inheritance inherit-typespec))
          (expansion-lambda (make-expansion-lambda params-ll options-ll)))
     `(progn
        (record-presentation-type ',name ',parameters ',params-ll ',options
@@ -697,17 +710,13 @@ suitable for SUPER-NAME"))
        ,@(cond ((eq (presentation-type-name inherit-typespec) 'and)
                 (loop for super in superclasses
                       for i from 0
-                      append (unless (or (not (atom super))
-                                         (eq super 'satisfies)
-                                         (eq super 'not))
-                               `((defmethod massage-type-for-super
-                                     ((type-name (eql ',name))
-                                      (super-name (eql ',super))
-                                      type)
-                                   (values (nth ,i
-                                                (cdr (,inherit-from-lambda
-                                                      type)))
-                                           t))))))
+                      collect `(defmethod massage-type-for-super
+                                   ((type-name (eql ',name))
+                                    (super-name (eql ',super))
+                                    type)
+                                 (values
+                                  (nth ,i (cdr (,inherit-from-lambda type)))
+                                  t))))
                (superclasses
                 `((defmethod massage-type-for-super
                       ((type-name (eql ',name))
