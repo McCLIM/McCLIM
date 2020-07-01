@@ -156,20 +156,20 @@
 (define-presentation-method presentation-typep (object (type number))
   (numberp object))
 
-(define-presentation-type complex (&optional (type 'real))
+(define-presentation-type complex (&optional (part-type 'real))
   :inherit-from 'number)
 
 (define-presentation-method presentation-typep (object (type complex))
   (and (complexp object)
-       (typep (realpart object) type)
-       (typep (imagpart object) type)))
+       (typep (realpart object) part-type)
+       (typep (imagpart object) part-type)))
 
 (define-presentation-method presentation-subtypep ((type complex)
                                                    maybe-supertype)
   (with-presentation-type-parameters (complex type)
-    (let ((component-type type))        ;i.e., the parameter named "type"
+    (let ((component-type part-type)) ;i.e., the parameter named "type"
       (with-presentation-type-parameters (complex maybe-supertype)
-        (let ((super-component-type type))
+        (let ((super-component-type part-type))
           (presentation-subtypep component-type super-component-type))))))
 
 (define-presentation-method present (object (type complex) stream
@@ -805,7 +805,7 @@
             (printer #'write-token)
             (highlighter #'highlight-completion-choice)))
 
-(define-presentation-type sequence (type)
+(define-presentation-type sequence (element-type)
   :options ((separator #\,) (echo-space t))
   :inherit-from 't
   :parameters-are-types t)
@@ -819,7 +819,7 @@
   ;; XXX TYPE here is the sequence element type, not the whole type specifier
   (unless (or (listp object) (vectorp object))
     (return-from presentation-typep nil))
-  (let ((real-type (expand-presentation-type-abbreviation type)))
+  (let ((real-type (expand-presentation-type-abbreviation element-type)))
     (map nil #'(lambda (obj)
                  (unless (presentation-typep obj real-type)
                    (return-from presentation-typep nil)))
@@ -830,9 +830,9 @@
                                                    maybe-supertype)
   (with-presentation-type-parameters (sequence type)
     ;; now TYPE is bound to the parameter TYPE
-    (let ((real-type (expand-presentation-type-abbreviation type)))
+    (let ((real-type (expand-presentation-type-abbreviation element-type)))
       (with-presentation-type-parameters (sequence maybe-supertype)
-        (let ((real-super-type (expand-presentation-type-abbreviation type)))
+        (let ((real-super-type (expand-presentation-type-abbreviation element-type)))
           (presentation-subtypep real-type real-super-type))))))
 
 (define-presentation-method present ((object list) (type sequence)
@@ -872,7 +872,7 @@
                                     &key)
   (loop
      with separators = (list separator)
-     for element = (accept type         ; i.e., the type parameter
+     for element = (accept element-type ; i.e., the type parameter
                            :stream stream
                            :view view
                            :prompt nil

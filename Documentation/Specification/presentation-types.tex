@@ -2037,12 +2037,12 @@ no applicable presentations.  This will have a presentation type of \cl{blank-ar
 The type that represents a general number.  It is the supertype of all the
 number types.
 
-\Defptype {complex} {\optional type}
+\Defptype {complex} {\optional part-type}
 
 The type that represents a complex number.  It is a subtype of \cl{number}.
 
-The components of the complex number are of type \arg{type}, which must be
-\cl{real} or a subtype of \cl{real}.
+The components of the complex number are of type \arg{part-type}, which must
+be \cl{real} or a subtype of \cl{real}.
 
 \Defptype {real} {\optional low high}
 
@@ -2214,12 +2214,12 @@ options are as for \cl{member-alist}.
 
 \subsection {Sequence Presentation Types}
 
-\Defptype {sequence} {type}
+\Defptype {sequence} {element-type}
 
-The type that represents a sequence of elements of type \arg{type}.  \arg{type}
-can be a presentation type abbreviation.  The printed representation of a
-\cl{sequence} type is the elements separated by commas.  It is unspecified
-whether \cl{accept} returns a list or a vector.
+The type that represents a sequence of elements of type \arg{element-type}.
+\arg{element-type} can be a presentation type abbreviation.  The printed
+representation of a \cl{sequence} type is the elements separated by commas.
+It is unspecified whether \cl{accept} returns a list or a vector.
 
 The options to this type are \arg{separator} and \arg{echo-space}.
 \arg{separator} is used to specify a character that will act as the separator
