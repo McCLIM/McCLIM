@@ -129,6 +129,13 @@
 (define-presentation-type blank-area ()
   :inherit-from t)
 
+;;; Do other slots of this have to be bound in order for this to be
+;;; useful?  Guess we'll see.
+(defvar *null-presentation* (make-instance 'standard-presentation
+                                           :object nil
+                                           :type 'blank-area
+                                           :view +textual-view+))
+
 (define-presentation-method highlight-presentation ((type blank-area)
                                                     record
                                                     stream
@@ -136,20 +143,14 @@
   (declare (ignore record stream state))
   nil)
 
-;;; Do other slots of this have to be bound in order for this to be useful?
-;;; Guess we'll see.
-(defparameter *null-presentation* (make-instance 'standard-presentation
-                                                 :object nil
-                                                 :type 'blank-area
-                                                 :view +textual-view+))
+(define-presentation-method presentation-typep (object (type blank-area))
+  (eq object *null-presentation*))
 
 (define-presentation-type number ()
   :inherit-from 't)
 
 (define-presentation-method presentation-typep (object (type number))
   (numberp object))
-
-
 
 (define-presentation-type complex (&optional (type 'real))
   :inherit-from 'number)
