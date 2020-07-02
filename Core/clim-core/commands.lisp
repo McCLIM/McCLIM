@@ -492,35 +492,47 @@ examine the type of the command menu item to see if it is
 (defun map-over-command-table-translators
     (function command-table &key (inherited t))
   (flet ((map-func (table)
-           (maphash #'(lambda (k v)
-                        (declare (ignore k))
-                        (funcall function v))
-                    (slot-value
-                     (presentation-translators table)
-                     'translators))))
+           (alexandria:maphash-values
+            (lambda (translator)
+              (funcall function translator))
+            (slot-value (presentation-translators table) 'translators))))
     (let ((command-table (find-command-table command-table)))
       (if inherited
           (apply-with-command-table-inheritance #'map-func command-table)
           (map-func command-table)))))
 
-;(defun add-presentation-translator-to-command-table
-;    (command-table translator-name &key (errorp t)))
-; - fixme; spec says this fun is given a translator name, but that
-; find-presentation-translator needs a translator name and a command
-; table designator
-(defun add-actual-presentation-translator-to-command-table
+(defun find-presentation-translator
+    (translator-name command-table &key (errorp t))
+  (let* ((table (find-command-table command-table))
+         (translators (presentation-translators table))
+         (translator (gethash translator-name
+                              (slot-value translators 'translators))))
+    (when (and errorp (null translator))
+      (error 'command-not-present :command-table-name command-table))
+    translator))
+
+(defun add-presentation-translator-to-command-table
     (command-table translator &key (errorp t))
-  (let ((translators
-         (presentation-translators
-          (find-command-table command-table))))
+  (let ((translators (presentation-translators
+                      (find-command-table command-table))))
     (when (and errorp
-               (second
-                (multiple-value-list
-                 (gethash (name translator)
-                          (slot-value translators 'translators)))))
-      (error 'command-already-present
-       :command-table-name command-table))
+               (nth-value
+                1 (gethash (name translator)
+                           (slot-value translators 'translators))))
+      (error 'command-already-present :command-table-name command-table))
     (add-translator translators translator)))
+
+(defun remove-presentation-translator-from-command-table
+    (command-table translator-name &key (errorp t))
+  (let* ((translators (presentation-translators
+                       (find-command-table command-table)))
+         (translator (gethash translator-name
+                              (slot-value translators 'translators))))
+
+    (cond ((not (null translator))
+           (remove-translator translators translator))
+          (errorp
+           (error 'command-not-present :command-table-name command-table)))))
 
 ;; At this point we should still see the gesture name as supplied by the
 ;; programmer in 'gesture'
@@ -982,52 +994,53 @@ examine the type of the command menu item to see if it is
               collect arg into required
               finally (return (values required (cdr arg-tail))))
       (let* ((command-func-args
-              `(,@(mapcar #'car required-args)
-                ,@(and
-                   keyword-args
-                   `(&key ,@(mapcar #'(lambda (arg-clause)
-                                        (destructuring-bind (arg-name ptype
-                                                             &key default
-                                                             &allow-other-keys)
-                                            arg-clause
-                                          (declare (ignore ptype))
-                                          `(,arg-name ,default)))
-                                    keyword-args)))))
-             (accept-fun-name (gentemp (format nil "~A%ACCEPTOR%"
-                                               (symbol-name func))
-                                       (symbol-package func)))
-             (partial-parser-fun-name (gentemp (format nil "~A%PARTIAL%"
-                                                       (symbol-name func))
-                                               (symbol-package func)))
-             (arg-unparser-fun-name (gentemp (format nil "~A%unparser%"
-                                                     (symbol-name func))
-                                             (symbol-package func))))
-        `(progn
-          (defun ,func ,command-func-args
-            ,@body)
-          ,(when command-table
-                 `(add-command-to-command-table ',func ',command-table
-                 :name ,name :menu ',menu
-                 :keystroke ',keystroke :errorp nil
-                 ,@(and menu
-                        `(:menu-command
-                          (list ',func
-                                ,@(make-list (length required-args)
-                                             :initial-element
-                                             '*unsupplied-argument-marker*))))))
-          ,(make-argument-accept-fun accept-fun-name
-                                     required-args
-                                     keyword-args)
-          ,(make-partial-parser-fun partial-parser-fun-name required-args)
-          ,(make-unprocessor-fun arg-unparser-fun-name
-                                 required-args
-                                 keyword-args)
-          ,(and command-table
-                (make-command-translators func command-table required-args))
-          (setf (gethash ',func *command-parser-table*)
-                (make-instance 'command-parsers
-                               :parser #',accept-fun-name
-                               :partial-parser #',partial-parser-fun-name
+	      `(,@(mapcar #'car required-args)
+		,@(and
+		   keyword-args
+		   `(&key ,@(mapcar #'(lambda (arg-clause)
+					(destructuring-bind (arg-name ptype
+							     &key default
+							     &allow-other-keys)
+					    arg-clause
+					  (declare (ignore ptype))
+					  `(,arg-name ,default)))
+				    keyword-args)))))
+	     (accept-fun-name (gentemp (format nil "~A%ACCEPTOR%"
+					       (symbol-name func))
+				       (symbol-package func)))
+	     (partial-parser-fun-name (gentemp (format nil "~A%PARTIAL%"
+						       (symbol-name func))
+					       (symbol-package func)))
+	     (arg-unparser-fun-name (gentemp (format nil "~A%unparser%"
+						     (symbol-name func))
+					     (symbol-package func))))
+	`(progn
+	  (defun ,func ,command-func-args
+	    ,@body)
+	  ,(when command-table
+             `(add-command-to-command-table
+               ',func ',command-table
+               :name ,name :menu ',menu
+               :keystroke ',keystroke :errorp nil
+               ,@(and menu
+                      `(:menu-command
+                        (list ',func
+                              ,@(make-list (length required-args)
+                                           :initial-element
+                                           '*unsupplied-argument-marker*))))))
+	  ,(make-argument-accept-fun accept-fun-name
+				     required-args
+				     keyword-args)
+	  ,(make-partial-parser-fun partial-parser-fun-name required-args)
+	  ,(make-unprocessor-fun arg-unparser-fun-name
+				 required-args
+				 keyword-args)
+	  ,(and command-table
+		(make-command-translators func command-table required-args))
+	  (setf (gethash ',func *command-parser-table*)
+	        (make-instance 'command-parsers
+		               :parser #',accept-fun-name
+		               :partial-parser #',partial-parser-fun-name
                                :required-args ',required-args
                                :keyword-args  ',keyword-args
                                :argument-unparser #',arg-unparser-fun-name))

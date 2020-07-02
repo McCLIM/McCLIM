@@ -752,6 +752,13 @@ unspecified. "))
     (stream output &key repaint erase feedback finish-on-release multiple-window))
 
 
+;;; 23.4 Typed output
+
+(defgeneric stream-present
+    (stream object type
+     &key view modifier acceptably for-context-type single-box
+       allow-sensitive-inferiors sensitive record-type))
+
 ;;; 23.5 Context-dependent (Typed) Input
 
 (defgeneric stream-accept
@@ -761,6 +768,10 @@ unspecified. "))
      query-identifier activation-gestures additional-activation-gestures
      delimiter-gestures additional-delimiter-gestures))
 (defgeneric prompt-for-accept (stream type view &rest accept-args &key))
+
+;;; 23.7 Presentation Translators
+(declfun highlight-applicable-presentation
+    (frame stream input-context &optional prefer-pointer-window))
 
 
 ;;; 24.1 The Input Editor
@@ -897,6 +908,11 @@ considered a single gesture. These accept result objects have no
 standardised form."))
 
 
+;;; 26 Dialog Facilities
+(defgeneric display-exit-boxes (frame stream view))
+(defgeneric accept-values-resynchronize (stream))
+
+
 ;;; 27.3 Command Menus
 
 (defgeneric display-command-table-menu (command-table stream
@@ -976,6 +992,8 @@ panes."))
     (frame input-context stream x y &key event))
 (defgeneric frame-input-context-button-press-handler
     (frame stream button-press-event))
+(defgeneric frame-input-context-track-pointer
+    (frame input-context stream event))
 (defgeneric frame-document-highlighted-presentation
     (frame presentation input-context window-context x y stream))
 (defgeneric frame-drag-and-drop-feedback

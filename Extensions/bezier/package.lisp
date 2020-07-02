@@ -1,6 +1,8 @@
-
 (defpackage :mcclim-bezier
   (:use #:clim #:clim-lisp)
+
+  (:import-from #:clim-internals
+                #:with-transformed-position)
 
   (:import-from #:clim-null
                 #:null-medium)
@@ -8,11 +10,9 @@
   (:import-from #:mcclim-render-internals
                 #:render-medium-mixin
                 #:make-path
-                #:line-to
                 #:curve-to
                 #:%medium-fill-paths
-                #:%medium-stroke-paths
-                #:with-transformed-position)
+                #:%medium-stroke-paths)
 
   (:import-from #:clim-postscript
                 #:postscript-medium
@@ -28,7 +28,7 @@
 
            #:polygonalize
            #:polygon-points
-           
+
            #:transformation
            #:areas
            #:positive-areas

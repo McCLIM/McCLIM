@@ -21,6 +21,9 @@
    #:clim
    #:fiveam)
 
+  (:shadowing-import-from #:fiveam
+   #:test)
+
   (:export
    #:run-tests))
 

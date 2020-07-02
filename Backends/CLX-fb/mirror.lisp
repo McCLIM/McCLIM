@@ -4,7 +4,7 @@
   ((width :initform 0)
    (height :initform 0)
    (xmirror :initform nil
-	    :initarg :xmirror)
+            :initarg :xmirror)
    (xlib-image :initform nil)
    (dirty-xr :initform +nowhere+)
    (clx-image :initform nil)

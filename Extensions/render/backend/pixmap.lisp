@@ -1,4 +1,4 @@
-(in-package :mcclim-render-internals)
+(in-package #:mcclim-render-internals)
 
 (defclass image-pixmap-mixin (image-sheet-mixin
                               mirrored-sheet-mixin
