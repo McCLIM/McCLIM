@@ -105,4 +105,15 @@
   (expect-t-t '(or integer symbol) '(or symbol integer))
 
   (expect-t-t '(or real complex) 'number)
-  #+nil (expect-t-t 'number '(or real complex)))
+  (fails (expect-t-t 'number '(or real complex))))
+
+(test presentations.type-relations.5
+  (let ((type (expand-presentation-type-abbreviation '(member "a" 3))))
+    (fails (expect-t-t type '(or string integer)))))
+
+;;; This is a test for an issue, where a default method for
+;;; PRESENTATION-TYPEP was overwritten by a method specialized on the
+;;; type T (and returned incorrectly truth for unknown relations).
+(test presentations.typep.1
+  (define-presentation-type foo ())
+  (is (null (presentation-typep 3 'foo))))

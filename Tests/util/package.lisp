@@ -17,4 +17,19 @@
    #:print-test-page-8
    #:print-test-page-9
 
-   #:*all-test-pages*))
+   #:*all-test-pages*
+
+   #:fails))
+
+(cl:in-package #:clim-test-util)
+
+(defun call-as-fails (thunk)
+  (handler-case
+      (funcall thunk)
+    (fiveam::check-failure (condition)
+      (declare (ignore condition))
+      ;; A proper solution would signal expected-failure instead.
+      (write-char #\e fiveam::*test-dribble*))))
+
+(defmacro fails (&body body)
+  `(call-as-fails (lambda () ,@body)))

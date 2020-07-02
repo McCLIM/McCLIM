@@ -377,20 +377,8 @@ documentation produced by presentations.")
 (define-condition frame-exit (condition)
   ((frame :initarg :frame :reader %frame-exit-frame)))
 
-;; I make the assumption here that the contents of *application-frame* is
-;; the frame the top-level loop is running. With the introduction of
-;; window-stream frames that may be sharing the event queue with the main
-;; application frame, we need to discriminate between them here to avoid
-;; shutting down the application at the wrong time.
-;; ...
-;; A better way to do this would be to make the handler bound in
-;; run-frame-top-level check whether the frame signalled is the one
-;; it was invoked on..                    -- Hefner
-
 (defmethod frame-exit ((frame standard-application-frame))
-  (if (eq *application-frame* frame)
-      (signal 'frame-exit :frame frame)
-      (disown-frame (frame-manager frame) frame)))
+  (signal 'frame-exit :frame frame))
 
 (defmethod frame-exit-frame ((c frame-exit))
   (%frame-exit-frame c))
@@ -470,15 +458,26 @@ documentation produced by presentations.")
       (enable-frame frame))
     (unwind-protect
          (loop
-            for query-io = (frame-query-io frame)
-            for *default-frame-manager* = (frame-manager frame)
-            do (handler-case
-                   (return (if query-io
-                               (with-input-focus (query-io)
-                                 (call-next-method))
-                               (call-next-method)))
-                 (frame-layout-changed () nil)
-                 (frame-exit ()	(return))))
+           named run-frame-loop
+           for query-io = (frame-query-io frame)
+           for *default-frame-manager* = (frame-manager frame)
+           do (block run-frame-iter
+                (handler-bind
+                    ((frame-layout-changed
+                       (lambda (c)
+                         (declare (ignore c))
+                         (return-from run-frame-iter)))
+                     (frame-exit
+                       (lambda (c)
+                         (let ((exiting-frame (frame-exit-frame c)))
+                           (if (eq exiting-frame frame)
+                               (return-from run-frame-loop)
+                               (disown-frame (frame-manager exiting-frame) exiting-frame))))))
+                  (return-from run-frame-loop
+                    (if query-io
+                        (with-input-focus (query-io)
+                          (call-next-method))
+                        (call-next-method))))))
       (case original-state
         (:disabled
          (disable-frame frame))
@@ -1415,9 +1414,6 @@ have a `pointer-documentation-pane' as pointer documentation,
              (setf (output-record-parent message) nil)
              (stream-add-output-record pstream message)
              (replay message pstream))))))
-
-(defgeneric frame-input-context-track-pointer
-    (frame input-context stream event))
 
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)

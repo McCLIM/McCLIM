@@ -46,22 +46,24 @@
 (defun clim-find-symbol-url (string)
   (let ((syminfo (clim-find-symbol string)))
     (when syminfo
-      (concat (or clim-url-base-override 
+      (concat (or clim-url-base-override
                   (clim-get-url-base))
               (cdr syminfo)))))
 
 ;;; HYPERCLIM-LOOKUP command
 ;;    Look up a symbol in MikeMac's CLIM documentation.
 ;;    By default it looks up the symbol under the point, but if it isn't over
-;;    something resembling a symbol, it will prompt you. 
+;;    something resembling a symbol, it will prompt you.
 ;;    Also, you can use a prefix arg to force prompting.
+
 (defun clim-lookup (p)
-  (interactive "p")  
+  (interactive "p")
   (let ((symbol-name (thing-at-point 'symbol)))
     (unless (and (= 1 p) (stringp symbol-name))
-      (setq symbol-name (read-from-minibuffer "Symbol name: " "" nil nil 'clim-history)))
+      (setq symbol-name (let ((symbols (mapcar #'car (rest clim-gilberth-spec))))
+                          (completing-read "Symbol name: " symbols nil t symbol-name 'clim-history))))
     (let ((url (clim-find-symbol-url (downcase symbol-name))))
-      (if url 
+      (if url
           (browse-url url)
           (message "Symbol %s not found." symbol-name)))))
 
@@ -69,7 +71,7 @@
 ;;; CLIM spec datasets
 
 ;; Gilbert Baumann one
-(setq clim-gilberth-spec 
+(setq clim-gilberth-spec
  '("http://bauhh.dyndns.org:8000/clim-spec/"
    ("+yellow+" . "13-3.html#_700") ("+white+" . "13-3.html#_702")
    ("+transparent-ink+" . "13-4.html#_710")
@@ -249,7 +251,9 @@
    ("temporary-medium-sheet-output-mixin" . "8-3.html#_412")
    ("tabling" . "29-3.html#_1625") ("table-pane" . "29-3.html#_1624")
    ("table-output-record-p" . "17-3.html#_931")
-   ("table-output-record" . "17-3.html#_930") ("symbol" . "23-8.html#_1257")
+   ("table-output-record" . "17-3.html#_930")
+   ("t" . "23-8.html#_1253")
+   ("symbol" . "23-8.html#_1257")
    ("surrounding-output-with-border" . "19.html#_1006")
    ("suggest" . "24-5.html#_1349")
    ("substitute-numeric-argument-marker" . "27-4.html#_1430")
@@ -450,6 +454,7 @@
    ("scroll-bar-pane" . "30-4.html#_1804")
    ("scroll-bar-drag-callback" . "30-4.html#_1789")
    ("scroll-bar" . "30-4.html#_1781") ("run-frame-top-level" . "28-4.html#_1532")
+   ("scaling-transformation-p" . "5-3.html#_200")
    ("run-frame-top-level" . "28-4.html#_1533") (":row-wise" . "17-3.html#_967")
    ("row-output-record-p" . "17-3.html#_942")
    ("row-output-record" . "17-3.html#_941")
@@ -506,6 +511,7 @@
    ("radio-box-selections" . "30-4.html#_1825")
    ("radio-box-pane" . "30-4.html#_1827")
    ("radio-box-current-selection" . "30-4.html#_1823")
+   ("radio-box" . "30-4.html#_1821")
    ("queue-rescan" . "24-1.html#_1314") ("queue-repaint" . "8-4.html#_428")
    ("queue-event" . "8-1.html#_308")
    ("push-button-show-as-default" . "30-4.html#_1769")
@@ -776,6 +782,7 @@
    ("make-clim-application-pane" . "29-4.html#_1688")
    ("make-bounding-rectangle" . "4-1.html#_155")
    ("make-application-frame" . "28-2.html#_1481")
+   ("make-3-point-transformation*" . "5-2.html#_190")
    ("make-3-point-transformation" . "5-2.html#_189")
    ("lookup-keystroke-item" . "27-4.html#_1428")
    ("lookup-keystroke-command-item" . "27-4.html#_1429")
@@ -842,6 +849,7 @@
    ("highlight-applicable-presentation" . "23-7.html#_1247")
    (":height" . "29-3.html#_1608") ("hbox-pane" . "29-3.html#_1618")
    (":hash-table" . "18-2.html#_989") ("handle-repaint" . "8-4.html#_429")
+   ("handle-event" . "8-1.html#_309")
    ("grid-pane" . "29-3.html#_1626")
    ("graphics-displayed-output-record-p" . "16-3.html#_876")
    ("graphics-displayed-output-record" . "16-3.html#_875")
@@ -950,6 +958,7 @@
    ("find-child-output-record" . "21-3.html#_1043")
    ("find-cached-output-record" . "21-3.html#_1048")
    ("find-applicable-translators" . "23-7.html#_1239")
+   ("filling-output" . "20-3.html#_1014")
    ("extended-output-stream-p" . "15-2.html#_772")
    ("extended-output-stream" . "15-2.html#_771")
    ("extended-input-stream-p" . "22-2.html#_1066")
@@ -1055,7 +1064,9 @@
    ("decache-child-output-record" . "21-3.html#_1047")
    ("deallocate-resource" . "B-1.html#_1875")
    ("deallocate-pixmap" . "12-6.html#_646")
-   ("deallocate-medium" . "8-3.html#_422") (":cutoff-depth" . "18-2.html#_985")
+   ("deallocate-medium" . "8-3.html#_422")
+   ("deactivate-gadget" . "30-3.html#_1728")
+   (":cutoff-depth" . "18-2.html#_985")
    ("cursorp" . "15-3.html#_787") ("cursor-visibility" . "15-3.html#_798")
    ("cursor-state" . "15-3.html#_795") ("cursor-sheet" . "15-3.html#_790")
    ("cursor-position" . "15-3.html#_791") ("cursor-focus" . "15-3.html#_797")
@@ -1145,7 +1156,9 @@
    (":calling-frame" . "28-2.html#_1476")
    ("call-presentation-translator" . "23-7.html#_1241")
    ("call-presentation-menu" . "23-7.html#_1243")
-   (":cache-value" . "21-3.html#_1028") (":cache-test" . "21-3.html#_1029")
+   (":cache-value" . "21-3.html#_1028")
+   (":cache-test" . "21-3.html#_1029")
+   ("cache-output-record" . "21-3.html#_1046")
    (":button" . "8-2.html#_343") ("bury-sheet" . "7-2.html#_257")
    ("bury-mirror" . "9-4.html#_495") ("bury-frame" . "28-2.html#_1487")
    ("bounding-rectangle-width" . "4-1.html#_166")
@@ -1210,4 +1223,5 @@
    ("accelerator-gesture-event" . "22-2.html#_1092")
    ("accelerator-gesture" . "22-2.html#_1091")
    ("abort-gesture-event" . "22-2.html#_1089")
-   ("abort-gesture" . "22-2.html#_1088")))
+   ("abort-gesture" . "22-2.html#_1088")
+   ("*abort-gestures*" . "22-2.html#_1087")))

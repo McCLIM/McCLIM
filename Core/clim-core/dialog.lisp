@@ -152,8 +152,7 @@ highlighting, etc." ))
 
 ;;; The fields of the query have presentation type query.  Fields that
 ;;; are "selectable", like the default text editor field, have type
-;;; selectable-query.  The presentation object is the query
-;;; identifier.
+;;; selectable-query. The presentation object is the query identifier.
 
 (define-presentation-type query () :inherit-from t)
 
@@ -332,8 +331,6 @@ highlighting, etc." ))
           (setf (stream-cursor-position stream)
                 (values cx cy))))
       (apply 'values return-values))))
-
-(defgeneric display-exit-boxes (frame stream view))
 
 (defmethod display-exit-boxes (frame stream (view textual-dialog-view))
   (declare (ignore frame))

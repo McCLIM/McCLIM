@@ -421,21 +421,20 @@ layout and to implement a general with-input-editor-typeout."))
 		   (pointer-button-press-handler
 		    *pointer-button-press-handler*)
 		   click-only)
-  "Reads characters from the interactive stream `stream' until it
+  "Reads characters from the interactive stream STREAM until it
 encounters a delimiter or activation gesture, or a pointer
 gesture. Returns the accumulated string that was delimited by the
-delimiter or activation gesture, leaving the delimiter
-unread.
+delimiter or activation gesture, leaving the delimiter unread.
 
-If the first character of typed input is a quotation mark (#\"),
-then `read-token' will ignore delimiter gestures until another
-quotation mark is seen. When the closing quotation mark is seen,
-`read-token' will proceed as above.
+If the first character of typed input is a quotation mark (#\"), then
+READ-TOKEN will ignore delimiter gestures until another quotation mark
+is seen. When the closing quotation mark is seen, READ-TOKEN will
+proceed as above.
 
-`Click-only' is ignored for now.
+CLICK-ONLY is ignored for now. -- ha ha, what a joke!
 
-`Input-wait-handler' and `pointer-button-press-handler' are as
-for 34stream-read-gesture"
+INPUT-WAIT-HANDLER and POINTER-BUTTON-PRESS-HANDLER are as for
+STREAM-READ-GESTURE."
   (declare (ignore click-only))		;XXX For now
   (let ((result (make-array 1
 			    :adjustable t
@@ -475,11 +474,10 @@ for 34stream-read-gesture"
 
 (defun write-token (token stream &key acceptably)
   "This function is the opposite of `read-token' given the string
-token, it writes it to the interactive stream stream. If
-`acceptably' is true and there are any characters in the token
-that are delimiter gestures (see the macro
-`with-delimiter-gestures'), then `write-token' will surround the
-token with quotation marks (#\").
+token, it writes it to the interactive stream stream. If `acceptably'
+is true and there are any characters in the token that are delimiter
+gestures (see the macro `with-delimiter-gestures'), then `write-token'
+will surround the token with quotation marks (#\").
 
 Typically, `present' methods will use `write-token' instead of
 `write-string'."
@@ -1040,3 +1038,379 @@ implement this."
 			    (return-from empty-input nil)))))
 	(return-from invoke-handle-empty-input (funcall input-continuation))))
     (funcall handler-continuation)))
+
+
+;;; I believe this obsolete... --moore
+(defmethod presentation-replace-input
+    ((stream input-editing-stream) object type view
+     &key (buffer-start nil buffer-start-supplied-p)
+       (rescan nil rescan-supplied-p)
+       query-identifier
+       (for-context-type type))
+  (declare (ignore query-identifier))
+  (let ((result (present-to-string object type
+                                   :view view :acceptably nil
+                                   :for-context-type for-context-type)))
+    (apply #'replace-input stream result
+           `(,@(and buffer-start-supplied-p `(:buffer-start ,buffer-start))
+             ,@(and rescan-supplied-p `(:rescan ,rescan))))))
+
+;;; For ACCEPT-FROM-STRING, use this barebones input-editing-stream.
+(defclass string-input-editing-stream (input-editing-stream fundamental-character-input-stream)
+  ((input-buffer :accessor stream-input-buffer)
+   (insertion-pointer :accessor stream-insertion-pointer
+                      :initform 0
+                      :documentation "This is not used for anything at any point.")
+   (scan-pointer :accessor stream-scan-pointer
+                 :initform 0
+                 :documentation "This is not used for anything at any point."))
+  (:documentation "An implementation of the input-editing stream
+protocol retrieving gestures from a provided string."))
+
+(defmethod initialize-instance :after ((stream string-input-editing-stream)
+                                       &key (string (error "A string must be provided"))
+                                       (start 0) (end (length string))
+                                       &allow-other-keys)
+  (setf (stream-input-buffer stream)
+        (replace (make-array (- end start) :fill-pointer (- end start))
+                 string :start2 start :end2 end)))
+
+(defmethod stream-element-type ((stream string-input-editing-stream))
+  'character)
+
+(defmethod close ((stream string-input-editing-stream) &key abort)
+  (declare (ignore abort)))
+
+(defmethod stream-peek-char ((stream string-input-editing-stream))
+  (or (stream-read-gesture stream :peek-p t)
+      :eof))
+
+(defmethod stream-read-char-no-hang ((stream string-input-editing-stream))
+  (if (> (stream-scan-pointer stream) (length (stream-input-buffer stream)))
+   :eof
+   (stream-read-gesture stream)))
+
+(defmethod stream-read-char ((stream string-input-editing-stream))
+  (stream-read-gesture stream))
+
+(defmethod stream-listen ((stream string-input-editing-stream))
+  (< (stream-scan-pointer stream) (length (stream-input-buffer stream))))
+
+(defmethod stream-unread-char ((stream string-input-editing-stream) char)
+  (stream-unread-gesture stream char))
+
+(defmethod invoke-with-input-editor-typeout ((stream string-input-editing-stream) continuation
+                                             &key erase)
+  (declare (ignore erase)))
+
+(defmethod input-editor-format ((stream string-input-editing-stream) format-string
+                                &rest args)
+  (declare (ignore args)))
+
+(defmethod stream-rescanning-p ((stream string-input-editing-stream))
+  t)
+
+(defmethod reset-scan-pointer ((stream string-input-editing-stream)
+                               &optional scan-pointer)
+  (declare (ignore scan-pointer)))
+
+(defmethod immediate-rescan ((stream string-input-editing-stream)))
+
+(defmethod queue-rescan ((stream string-input-editing-stream)))
+
+(defmethod rescan-if-necessary ((stream string-input-editing-stream)
+                                &optional inhibit-activation)
+  (declare (ignore inhibit-activation)))
+
+(defmethod erase-input-buffer ((stream string-input-editing-stream)
+                                &optional start-position)
+  (declare (ignore start-position)))
+
+(defmethod redraw-input-buffer ((stream string-input-editing-stream)
+                                &optional start-position)
+  (declare (ignore start-position)))
+
+(defmethod stream-process-gesture ((stream string-input-editing-stream) gesture type)
+  (when (characterp gesture)
+    (values gesture type)))
+
+(defmethod stream-read-gesture ((stream string-input-editing-stream)
+                                &key peek-p &allow-other-keys)
+  (unless (> (stream-scan-pointer stream) (length (stream-input-buffer stream)))
+    (prog1 (if (= (stream-scan-pointer stream) (length (stream-input-buffer stream)))
+               (second (first (gethash (first *activation-gestures*)
+                                       climi::*gesture-names*))) ; XXX - will always be non-NIL?
+               (aref (stream-input-buffer stream) (stream-scan-pointer stream)))
+      (unless peek-p
+        (incf (stream-scan-pointer stream))))))
+
+(defmethod stream-unread-gesture ((stream string-input-editing-stream) gesture)
+  (decf (stream-scan-pointer stream)))
+
+(defun accept-1 (stream type
+                 &key
+                   (view (stream-default-view stream))
+                   (default nil defaultp)
+                   (default-type nil default-type-p)
+                   provide-default
+                   insert-default
+                   (replace-input t)
+                   history
+                   active-p
+                   prompt
+                   prompt-mode
+                   display-default
+                   query-identifier
+                   (activation-gestures nil activationsp)
+                   (additional-activation-gestures nil additional-activations-p)
+                   (delimiter-gestures nil delimitersp)
+                   (additional-delimiter-gestures nil  additional-delimiters-p))
+  (declare (ignore provide-default history active-p
+                   prompt prompt-mode
+                   display-default query-identifier))
+  (when (and defaultp (not default-type-p))
+    (error ":default specified without :default-type"))
+  (when (and activationsp additional-activations-p)
+    (error "only one of :activation-gestures or ~
+            :additional-activation-gestures may be passed to accept."))
+  (unless (or activationsp additional-activations-p *activation-gestures*)
+    (setq activation-gestures *standard-activation-gestures*))
+  (let ((sensitizer-object nil)
+        (sensitizer-type 'null))
+    (with-input-editing
+        (stream
+         :input-sensitizer #'(lambda (stream cont)
+                               (with-output-as-presentation
+                                   (stream sensitizer-object sensitizer-type)
+                                 (funcall cont))))
+      (with-input-position (stream) ; support for calls to replace-input
+        (when (and insert-default
+                   (not (stream-rescanning-p stream)))
+          ;; Insert the default value to the input stream. It should
+          ;; become fully keyboard-editable. We do not want to insert
+          ;; the default if we're rescanning, only during initial
+          ;; setup.
+          (presentation-replace-input stream default default-type view))
+        (setf (values sensitizer-object sensitizer-type)
+              (with-input-context (type)
+                  (object object-type event options)
+                  (with-activation-gestures ((if additional-activations-p
+                                                 additional-activation-gestures
+                                                 activation-gestures)
+                                             :override activationsp)
+                    (with-delimiter-gestures ((if additional-delimiters-p
+                                                  additional-delimiter-gestures
+                                                  delimiter-gestures)
+                                              :override delimitersp)
+                      (let ((accept-results nil))
+                        (handle-empty-input (stream)
+                            (setq accept-results
+                                  (multiple-value-list
+                                   (if defaultp
+                                       (funcall-presentation-generic-function
+                                        accept type stream view
+                                        :default default
+                                        :default-type default-type)
+                                       (funcall-presentation-generic-function
+                                        accept type stream view))))
+                          ;; User entered activation or delimiter
+                          ;; gesture without any input.
+                          (if defaultp
+                              (progn
+                                (presentation-replace-input
+                                 stream default default-type view :rescan nil))
+                              (simple-parse-error
+                               "Empty input for type ~S with no supplied default"
+                               type))
+                          (setq accept-results (list default default-type)))
+                        ;; Eat trailing activation gesture
+                        ;; XXX what about pointer gestures?
+                        ;; XXX and delimiter gestures?
+                        (unless *recursive-accept-p*
+                          (let ((ag (read-char-no-hang stream nil stream t)))
+                            (unless (or (null ag) (eq ag stream))
+                              (unless (activation-gesture-p ag)
+                                (unread-char ag stream)))))
+                        (values (car accept-results) (if (cdr accept-results)
+                                                         (cadr accept-results)
+                                                         type)))))
+                ;; A presentation was clicked on, or something
+                (t
+                 (when (and replace-input
+                            (getf options :echo t)
+                            (not (stream-rescanning-p stream)))
+                   (presentation-replace-input stream object object-type view
+                                               :rescan nil))
+                 (values object object-type))))
+        ;; Just to make it clear that we're returning values
+        (values sensitizer-object sensitizer-type)))))
+
+;;; XXX This needs work! It needs to do everything that accept does for
+;;; expanding ptypes and setting up recursive call procesusing
+(defun accept-from-string (type string
+                           &rest args
+                           &key view
+                             (default nil defaultp)
+                             (default-type nil default-type-p)
+                             (activation-gestures nil activationsp)
+                             (additional-activation-gestures
+                              nil
+                              additional-activations-p)
+                             (delimiter-gestures nil delimitersp)
+                             (additional-delimiter-gestures
+                              nil
+                              additional-delimiters-p)
+                             (start 0)
+                             (end (length string)))
+  (declare (ignore view))
+  ;; XXX work in progress here.
+  (with-activation-gestures ((if additional-activations-p
+                                 additional-activation-gestures
+                                 activation-gestures)
+                             :override activationsp)
+    (with-delimiter-gestures ((if additional-delimiters-p
+                                  additional-delimiter-gestures
+                                  delimiter-gestures)
+                              :override delimitersp)))
+  (when (zerop (- end start))
+    (if defaultp
+        (return-from accept-from-string (values default
+                                                (if default-type-p
+                                                    default-type
+                                                    type)
+                                                0))
+        (simple-parse-error "Empty string")))
+  (let ((stream (make-instance 'string-input-editing-stream
+                               :string string :start start :end end)))
+    (multiple-value-bind (val ptype)
+        (with-keywords-removed (args (:start :end))
+          (apply #'stream-accept stream type :history nil :view +textual-view+ args))
+      (values val ptype (+ (stream-scan-pointer stream) start)))))
+
+(defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil))
+  (let* ((token (read-token stream)))
+    (if (string= "" token)
+	(values nil ptype)
+	(let ((result (handler-case (read-from-string token)
+                        (error (c)
+                          (declare (ignore c))
+                          (simple-parse-error "Error parsing ~S for presentation type ~S"
+                                              token
+                                              ptype)))))
+          (if (presentation-typep result ptype)
+              (values result ptype)
+              (input-not-of-required-type result ptype))))))
+
+(defun accept-using-completion (type stream func
+                                &rest complete-with-input-key-args)
+  "A wrapper around complete-with-input that returns the presentation type with
+  the completed object."
+  (multiple-value-bind (object success input)
+      (apply #'complete-input stream func complete-with-input-key-args)
+    (if success
+        (values object type)
+        (simple-parse-error "Error parsing ~S for presentation type ~S"
+                            input
+                            type))))
+
+(defmethod stream-accept ((stream #.*string-input-stream-class*) type
+                          &key (view (stream-default-view stream))
+                            (default nil defaultp)
+                            (default-type nil default-type-p)
+                            (activation-gestures nil activationsp)
+                            (additional-activation-gestures
+                             nil additional-activations-p)
+                            (delimiter-gestures nil delimitersp)
+                            (additional-delimiter-gestures
+                             nil additional-delimiters-p)
+                          &allow-other-keys)
+  (with-activation-gestures ((if additional-activations-p
+                                 additional-activation-gestures
+                                 activation-gestures)
+                             :override activationsp)
+    (with-delimiter-gestures ((if additional-delimiters-p
+                                  additional-delimiter-gestures
+                                  delimiter-gestures)
+                              :override delimitersp)
+      (multiple-value-bind (object object-type)
+          (apply-presentation-generic-function
+           accept
+           type stream view
+           `(,@(and defaultp `(:default ,default))
+             ,@(and default-type-p `(:default-type ,default-type))))
+        (values object (or object-type type))))))
+
+(defmethod stream-accept ((stream standard-extended-input-stream) type
+                          &rest args
+                          &key (view (stream-default-view stream))
+                          &allow-other-keys)
+  (apply #'prompt-for-accept stream type view args)
+  (apply #'accept-1 stream type args))
+
+(defmethod stream-accept ((stream string-input-editing-stream) type &rest args)
+  (apply #'accept-1 stream type args))
+
+;;; KLUDGE: ACCEPT-1 is called WITH-EDITING-INPUT while the input
+;;; editing depends on presentations. Function is defined in the file
+;;; input-editing.lisp.
+
+(defmethod prompt-for-accept ((stream t)
+                              type view
+                              &rest accept-args
+                              &key &allow-other-keys)
+  (declare (ignore view))
+  (apply #'prompt-for-accept-1 stream type accept-args))
+
+(defun prompt-for-accept-1 (stream type
+                            &key
+                              (default nil defaultp)
+                              (default-type type)
+                              (insert-default nil)
+                              (prompt t)
+                              (prompt-mode :normal)
+                              (display-default prompt)
+                            &allow-other-keys)
+  (flet ((display-using-mode (stream prompt default)
+           (ecase prompt-mode
+             (:normal
+              (if *recursive-accept-p*
+                  (input-editor-format stream "(~A~@[[~A]~]) " prompt default)
+                  (input-editor-format stream "~A~@[[~A]~]: " prompt default)))
+             (:raw
+              (input-editor-format stream "~A" prompt)))))
+    (let ((prompt-string (if (eq prompt t)
+                             (format nil "~:[Enter ~;~]~A"
+                                     *recursive-accept-p*
+                                     (describe-presentation-type type nil nil))
+                             prompt))
+          ;; Don't display the default in the prompt if it is to be
+          ;; inserted into the input stream.
+          (default-string (and defaultp
+                               (not insert-default)
+                               display-default
+                               (present-to-string default default-type))))
+      (cond ((null prompt)
+             nil)
+            (t
+             (display-using-mode stream prompt-string default-string))))))
+
+(defmethod prompt-for-accept ((stream #.*string-input-stream-class*)
+                              type view
+                              &rest other-args
+                              &key &allow-other-keys)
+
+  (declare (ignore type view other-args))
+  nil)
+
+;;; When no accept method has been defined for a type, allow some kind of
+;;; input.  The accept can be satisfied with pointer input, of course, and this
+;;; allows the clever user a way to input the type at the keyboard, using #. or
+;;; some other printed representation.
+;;;
+;;; XXX Once we "go live" we probably want to disable this, probably with a
+;;; beep and warning that input must be clicked on.
+
+(define-default-presentation-method accept
+    (type stream (view textual-view) &key default default-type)
+  (declare (ignore default default-type))
+  (accept-using-read stream type :read-eval t))

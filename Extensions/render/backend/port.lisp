@@ -1,8 +1,6 @@
-(in-package :mcclim-render-internals)
+(in-package #:mcclim-render-internals)
 
-;;;
 ;;; Port
-;;;
 
 (defclass render-port-mixin (basic-port)
   ((all-font-families :initform nil :accessor all-font-families)))
@@ -20,9 +18,7 @@
 ;;; realize/destroy mirrors
 (defmethod realize-mirror ((port render-port-mixin) (sheet image-sheet-mixin)))
 
-;;;
 ;;; Fonts
-;;;
 
 (defmethod text-style-mapping ((port render-port-mixin) (text-style standard-text-style)
                                &optional character-set
@@ -69,6 +65,7 @@
       (font-faces        (make-hash-table :test #'equal))
       (font-cache        (make-hash-table :test #'equal))
       (text-style-cache  (make-hash-table :test #'equal)))
+
   (defun make-truetype-font (port filename size)
     (clim-sys:with-lock-held (*zpb-font-lock*)
       (let* ((loader (ensure-gethash filename font-loader-cache
@@ -95,6 +92,7 @@
          (list port (make-text-style family-name face-name size))
          text-style-cache
          font))))
+
   (defun find-truetype-font (port text-style)
     (gethash (list port text-style) text-style-cache)))
 

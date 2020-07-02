@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -115,7 +115,8 @@
 
 (define-command (com-eval-with-context :command-table inspector-command-table
                                        :name          t)
-    ((object 'inspected-object :prompt "context object")
+    ((object 'inspected-object :prompt  "context object"
+                               :default (state (root-place *application-frame*)))
      (form   'clim:form))
   (with-command-error-handling ("Error evaluating form")
       (let ((result (eval-with-bindings form :object-state object)))
@@ -173,9 +174,11 @@
         (setf (value to-place) new-value
               (state to-place) (make-object-state new-value to-place)))))
 
+(define-gesture-name :copy :pointer-button-press (:left :control))
+
 (define-drag-and-drop-translator drag-copy-place-value
     (place command place inspector-command-table
-     :gesture :select
+     :gesture :copy
      :tester ((object from-object)
               (cond ((not from-object)
                      (safe-valuep object)) ; TODO should work for unbound?
@@ -216,11 +219,9 @@
       (setf (value place-1) old-value-1
             (value place-2) old-value-2))))
 
-(define-gesture-name :swap :pointer-button-press (:left :control))
-
 (define-drag-and-drop-translator drag-swap-place-values
     (place command place inspector-command-table
-     :gesture :swap
+     :gesture :select
      :tester ((object from-object)
               (cond ((not from-object)
                      (safe-valuep object)) ; TODO should work for unbound?
@@ -261,6 +262,7 @@
                    (accepts-value-p object t)
                    (safe-valuep object)
                    (eq (value object) t)))
+     :priority 2
      :documentation "Set to false"
      :pointer-documentation
      ((object stream)
@@ -281,6 +283,7 @@
                    (accepts-value-p object t)
                    (safe-valuep object)
                    (eq (value object) nil)))
+     :priority 2
      :documentation "Set to true"
      :pointer-documentation
      ((object stream)
