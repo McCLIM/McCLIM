@@ -82,18 +82,29 @@ otherwise return false."
 (define-presentation-generic-function %presentation-typep presentation-typep
   (type-key parameters object type))
 
+;;; The default behavior is implemented in the function below. If we
+;;; end up here that means that the presentation parameters were
+;;; specified or that the presentation type does not correspond to a
+;;; class. In that case the method PRESENTATION-TYPEP must be
+;;; implemented by the programmer. -- jd 2020-07-02
 (define-default-presentation-method presentation-typep (object type)
-  (declare (ignore object type))
-  nil)
+  (declare (ignore object))
+  (error "The presentation type ~s doesn't implement a ~s method."
+         type 'presentation-typep))
 
 (defun presentation-typep (object type)
-  (with-presentation-type-decoded (name parameters)
-      type
-    (when (null parameters)
-      (let ((clos-class (find-class name nil))) ; Don't error out.
-        (when (and clos-class (typep clos-class 'standard-class))
-          (return-from presentation-typep (typep object name)))))
-    (funcall-presentation-generic-function presentation-typep object type)))
+  (with-presentation-type-decoded (name parameters) type
+    (case name
+      ((t) t)                           ; super type
+      ((nil) nil)                       ; empty type
+      (otherwise
+       (let ((clos-class (find-class name nil))) ; Don't error out.
+         (when (and clos-class (typep clos-class 'standard-class))
+           (unless (typep object name)
+             (return-from presentation-typep nil))
+           (when (null parameters)
+             (return-from presentation-typep t))))
+       (funcall-presentation-generic-function presentation-typep object type)))))
 
 (define-presentation-generic-function
     %presentation-subtypep
