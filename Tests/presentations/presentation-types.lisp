@@ -116,4 +116,4 @@
 ;;; type T (and returned incorrectly truth for unknown relations).
 (test presentations.typep.1
   (define-presentation-type foo ())
-  (is (null (presentation-typep 3 'foo))))
+  (signals error (presentation-typep 3 'foo)))
