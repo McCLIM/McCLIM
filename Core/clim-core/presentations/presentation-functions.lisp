@@ -279,11 +279,19 @@
                      "Presentation type parameters ~s are shadowed by ~
                      the presentation type options." opt-par)))
                 (setf real-body
-                      `((let ((,massaged-type (translate-specifier-for-type
-                                               (type-name-from-type-key
-                                                ,type-key-arg)
-                                               ',type-name
-                                               ,type-var)))
+                      `((let ((,massaged-type
+                                ;; Different TYPE-SPEC and TYPE-NAME
+                                ;; implies EQL specializer. In that
+                                ;; case we fix the massaged type to
+                                ;; TYPE-NAME which is the result of
+                                ;; calling PRESENTATION-TYPE-OF on the
+                                ;; object. -- jd 2020-07-02
+                                ,(if (not (eq type-name type-spec))
+                                     `(quote ,type-name)
+                                     `(translate-specifier-for-type
+                                       (type-name-from-type-key ,type-key-arg)
+                                       (quote ,type-name)
+                                       ,type-var))))
                           ,@real-body))))))
           `(defmethod ,(generic-function-name gf) ,@qualifiers ,method-ll
              ,@(when decls
