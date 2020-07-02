@@ -211,14 +211,66 @@
       't
       (type-name (class-of type-key))))
 
+(defun bind-parameters-and-options (gf lambda-list body
+                                    type-key-arg type-var type-spec type-name)
+  (let ((par-arg (parameters-arg gf))
+        (opt-arg (options-arg gf))
+        (ptype (find-presentation-type type-name nil)))
+    (unless (and ptype (or par-arg opt-arg))
+      (return-from bind-parameters-and-options body))
+    (let* ((opt-ll (and opt-arg (options-lambda-list ptype)))
+           (par-ll (and par-arg (parameters-lambda-list ptype)))
+           (mth-vars (get-all-params lambda-list))
+           (opt-vars (get-all-params opt-ll))
+           (par-vars (get-all-params par-ll))
+           (massaged-type (gensym "MASSAGED-TYPE")))
+      (let ((par-mth (intersection mth-vars par-vars))
+            (opt-mth (intersection (set-difference mth-vars par-vars) opt-vars))
+            (opt-par (intersection opt-vars par-vars)))
+        (when par-mth
+          (alexandria:simple-style-warning
+           "Method arguments ~s are shadowed by the presentation type ~
+            parameters." par-mth))
+        (when opt-mth
+          (alexandria:simple-style-warning
+           "Method arguments ~s are shadowed by the presentation type ~
+            options." opt-mth))
+        (when opt-par
+          (alexandria:simple-style-warning
+           "Presentation type parameters ~s are shadowed by the ~
+            presentation type options." opt-par)))
+      (when opt-arg
+        (setf body
+              `((let ((,opt-arg (decode-options ,massaged-type)))
+                  (destructuring-bind ,opt-ll ,opt-arg
+                    (declare (ignorable ,@opt-vars))
+                    ,@body)))))
+      (when par-arg
+        (setf body
+              `((let ((,par-arg (decode-parameters ,massaged-type)))
+                  (destructuring-bind ,par-ll ,par-arg
+                    (declare (ignorable ,@par-vars))
+                    ,@body)))))
+      (setf body
+            `((let ((,massaged-type
+                      ;; Different TYPE-SPEC and TYPE-NAME implies EQL
+                      ;; specializer. In that case we fix the massaged
+                      ;; type to TYPE-NAME which is the result of
+                      ;; calling PRESENTATION-TYPE-OF on the object.
+                      ;; -- jd 2020-07-02
+                      ,(if (not (eq type-name type-spec))
+                           `(quote ,type-name)
+                           `(translate-specifier-for-type
+                             (type-name-from-type-key ,type-key-arg)
+                             (quote ,type-name)
+                             ,type-var))))
+                ,@body))))
+    body))
+
 (defmacro define-presentation-method (name &rest args)
   (multiple-value-bind (qualifiers lambda-list decls body)
       (parse-method-body args)
     (let* ((gf (find-presentation-gf name))
-           (par-arg (parameters-arg gf))
-           (opt-arg (options-arg gf))
-           (real-body body)
-           (massaged-type (gensym "MASSAGED-TYPE"))
            (type-arg-pos (type-arg-position gf))
            (type-arg (nth (1- type-arg-pos) lambda-list))
            (type-key-arg (type-key-arg gf)))
@@ -242,62 +294,13 @@
           ;; method's first argument. Replace the (TYPE-VAR TYPE-SPEC)
           ;; argument with the unspecialized argument TYPE-VAR.
           (setf (nth type-arg-pos method-ll) type-var)
-          (when-let ((ptype (find-presentation-type type-name nil)))
-            (let (opt-vars par-vars)
-              (when opt-arg
-                (let ((options-ll (options-lambda-list ptype)))
-                  (setf opt-vars (get-all-params options-ll))
-                  (setf real-body
-                        `((let ((,opt-arg (decode-options ,massaged-type)))
-                            (destructuring-bind ,options-ll ,opt-arg
-                              (declare (ignorable ,@opt-vars))
-                              ,@real-body))))))
-              (when par-arg
-                (let ((params-ll (parameters-lambda-list ptype)))
-                  (setf par-vars (get-all-params params-ll))
-                  (setf real-body
-                        `((let ((,par-arg (decode-parameters ,massaged-type)))
-                            (destructuring-bind ,params-ll ,par-arg
-                              (declare (ignorable ,@par-vars))
-                              ,@real-body))))))
-              (when (or par-arg opt-arg)
-                (let* ((mth-vars (get-all-params lambda-list))
-                       (par-mth  (intersection   mth-vars par-vars))
-                       (mth/par  (set-difference mth-vars par-vars))
-                       (opt-mth  (intersection   mth/par  opt-vars))
-                       (opt-par  (intersection   opt-vars par-vars)))
-                  (when par-mth
-                    (alexandria:simple-style-warning
-                     "Method arguments ~s are shadowed by the ~
-                     presentation type parameters." par-mth))
-                  (when opt-mth
-                    (alexandria:simple-style-warning
-                     "Method arguments ~s are shadowed by the ~
-                     presentation type options." opt-mth))
-                  (when opt-par
-                    (alexandria:simple-style-warning
-                     "Presentation type parameters ~s are shadowed by ~
-                     the presentation type options." opt-par)))
-                (setf real-body
-                      `((let ((,massaged-type
-                                ;; Different TYPE-SPEC and TYPE-NAME
-                                ;; implies EQL specializer. In that
-                                ;; case we fix the massaged type to
-                                ;; TYPE-NAME which is the result of
-                                ;; calling PRESENTATION-TYPE-OF on the
-                                ;; object. -- jd 2020-07-02
-                                ,(if (not (eq type-name type-spec))
-                                     `(quote ,type-name)
-                                     `(translate-specifier-for-type
-                                       (type-name-from-type-key ,type-key-arg)
-                                       (quote ,type-name)
-                                       ,type-var))))
-                          ,@real-body))))))
           `(defmethod ,(generic-function-name gf) ,@qualifiers ,method-ll
              ,@(when decls
                  (list decls))
              (block ,name
-               ,@real-body)))))))
+               ,@(bind-parameters-and-options
+                  gf lambda-list body
+                  type-key-arg type-var type-spec type-name))))))))
 
 (defmacro define-default-presentation-method (name &rest args)
   (let ((gf (find-presentation-gf name)))
