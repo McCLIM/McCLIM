@@ -82,12 +82,17 @@ otherwise return false."
 (define-presentation-generic-function %presentation-typep presentation-typep
   (type-key parameters object type))
 
-;;; The default behavior is implemented in the function below. If we
-;;; end up here that means that the presentation parameters were
-;;; specified or that the presentation type does not correspond to a
-;;; class. In that case the method PRESENTATION-TYPEP must be
-;;; implemented by the programmer. -- jd 2020-07-02
-(define-default-presentation-method presentation-typep (object type)
+;;; The following two methods are defined for inheritance and combined
+;;; implement a default behavior of the presentation method
+;;; PRESENTATION-TYPEP. "basic" presentation types include all objects
+;;; and "clos" presentation types error, because the method must be
+;;; implemented for parametrized standard classes. -- jd 2020-07-09
+
+(define-presentation-method presentation-typep (object (type t))
+  (declare (ignore object type))
+  t)
+
+(define-presentation-method presentation-typep (object (type standard-object))
   (declare (ignore object))
   (error "The presentation type ~s doesn't implement a ~s method."
          type 'presentation-typep))
