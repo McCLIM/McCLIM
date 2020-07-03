@@ -91,14 +91,6 @@
 (define-presentation-method presentation-typep (object (type symbol))
   (symbolp object))
 
-(define-presentation-method presentation-typep (object (type (eql t)))
-  (declare (ignore object))
-  t)
-
-(define-presentation-method presentation-typep (object (type (eql nil)))
-  (declare (ignore object))
-  nil)
-
 (define-presentation-method present (object (type symbol) stream
                                      (view textual-view)
                                      &key acceptably for-context-type)
