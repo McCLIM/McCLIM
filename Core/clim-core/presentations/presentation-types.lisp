@@ -42,8 +42,21 @@
 (defvar *print-presentation-verbose* nil)
 
 (defmethod initialize-instance :after ((instance presentation-mixin) &key)
-  (unless (presentation-type instance)
-    (error "A presentation can't have a type NIL.")))
+  (let ((type (presentation-type instance))
+        (object (presentation-object instance)))
+    (cond ((null type)
+           (error "A presentation can't have a type NIL."))
+          ;; Enforcing the object to be presentation-typep to its
+          ;; presentation type is (imo) the right thing to do and
+          ;; avoids multiple problems down the road when used with
+          ;; translators and in presentation methods. That said
+          ;; currently we work hard on improving the presentation type
+          ;; inheritance and we don't want to introduce too many
+          ;; breaking changes at once. -- jd 2020-07-07
+          #+ (or)
+          ((not (presentation-typep object type))
+           (error "The presentation object ~s isn't of the ~
+                   presentation type ~s." object type)))))
 
 (defmethod print-object ((self standard-presentation) stream)
   (print-unreadable-object (self stream :type t :identity t)
