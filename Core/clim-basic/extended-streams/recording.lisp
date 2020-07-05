@@ -1121,7 +1121,7 @@ were added."
 
 (defmacro generate-medium-recording-body (class-name args)
   (let ((arg-list (loop for arg in args
-                     nconc `(,(intern (symbol-name arg) :keyword) ,arg))))
+                        appending `(,(alexandria:make-keyword arg) ,arg))))
     `(progn
        (when (stream-recording-p stream)
          (let ((record
