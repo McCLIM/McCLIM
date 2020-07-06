@@ -292,51 +292,6 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 ;;; 23.7.2 Presentation Translator Functions
 
-;;; This is to implement the requirement on presentation translators
-;;; for doing subtype calculations without reference to type
-;;; parameters.  We are generous in that we return T when we are
-;;; unsure, to give translator testers a chance to accept or reject
-;;; the translator.  This is essentially
-;;;   (multiple-value-bind (yesp surep)
-;;;       (presentation-subtypep maybe-subtype type)
-;;;     (or yesp (not surep)))
-;;; except faster.
-(defun stupid-subtypep (maybe-subtype type)
-  "Return t if maybe-subtype is a presentation subtype of type, regardless of
-  parameters."
-  (when (or (eq maybe-subtype nil) (eq type t))
-    (return-from stupid-subtypep t))
-  (when (eql maybe-subtype type)
-    (return-from stupid-subtypep t))
-  (let ((maybe-subtype-name (presentation-type-name maybe-subtype))
-        (type-name (presentation-type-name type)))
-    (cond
-      ;; see DEFUN PRESENTATION-SUBTYPEP for some caveats
-      ((eq maybe-subtype-name 'or)
-       (let ((or-types (decode-parameters maybe-subtype)))
-         (every (lambda (x) (stupid-subtypep x type)) or-types)))
-      ((eq type-name 'and)
-       (stupid-subtypep maybe-subtype (car (decode-parameters type))))
-      ((eq type-name 'or)
-       (let ((or-types (decode-parameters type)))
-         (some (lambda (x) (stupid-subtypep maybe-subtype x)) or-types)))
-      ((eq maybe-subtype-name 'and)
-       ;; this clause is actually not conservative, but probably in a
-       ;; way that no-one will complain about too much.  Basically, we
-       ;; will only return T if the first type in the AND (which is
-       ;; treated specially by CLIM) is subtypep the maybe-supertype
-       (stupid-subtypep (car (decode-parameters maybe-subtype)) type))
-      (t
-       (let ((subtype-meta (get-ptype-metaclass maybe-subtype-name))
-             (type-meta (get-ptype-metaclass type-name)))
-         (unless (and subtype-meta type-meta)
-           (return-from stupid-subtypep nil))
-         (map-over-ptype-superclasses #'(lambda (super)
-                                          (when (eq type-meta super)
-                                            (return-from stupid-subtypep t)))
-                                      maybe-subtype-name)
-         nil)))))
-
 (defun find-presentation-translators (from-type to-type command-table)
   (let* ((command-table (find-command-table command-table))
          (from-name     (presentation-type-name from-type))
