@@ -35,9 +35,9 @@
   (first (clim-get-dataset)))
 
 (defun clim-remove-package-name (string)
-  (car
-   (last
-    (split-string string ":+" t nil))))
+  (if (string-match-p "^:.*" string)
+      string
+    (car (last (split-string string ":+" t nil)))))
 
 (defun clim-find-symbol (string)
   (assoc (clim-remove-package-name (downcase string))
@@ -186,9 +186,12 @@
    ("vrack-pane" . "29-3.html#_1623") ("volatile" . "2-4.html#_16")
    ("viewport" . "29-3.html#_1639") ("viewp" . "23-6.html#_1210")
    ("view" . "23-6.html#_1209") (":view" . "23-2.html#_1134")
-   ("vertically" . "29-3.html#_1621") (":vertical-spacing" . "29-4.html#_1672")
-   (":vertical-spacing" . "15-2.html#_776") ("vbox-pane" . "29-3.html#_1620")
-   (":value-key" . "30-4.html#_1841") (":value-key" . "30-4.html#_1849")
+   ("vertically" . "29-3.html#_1621")
+   (":vertical-spacing" . "29-4.html#_1672")
+   (":vertical-spacing" . "15-2.html#_776")
+   ("vbox-pane" . "29-3.html#_1620")
+   (":value-key" . "30-4.html#_1841")
+   (":value-key" . "30-4.html#_1849")
    ("value-gadget" . "30-3.html#_1732")
    (":value-changed-callback" . "30-3.html#_1734")
    ("value-changed-callback" . "30-3.html#_1738")
