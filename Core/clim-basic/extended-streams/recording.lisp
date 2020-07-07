@@ -1577,7 +1577,10 @@ were added."
     finally (return (values min-x min-y max-x max-y))))
 
 (def-grecording (draw-text :replay-fn nil) (gs-text-style-mixin gs-transformation-mixin)
-    (string start end point-x point-y align-x align-y
+    ((string (subseq string (or start 0) (or end (length string))))
+     (start  nil nil)
+     (end    nil nil)
+     point-x point-y align-x align-y
      toward-x toward-y transform-glyphs)
   ;; FIXME!!! Text direction.
   (let* ((transformation (medium-transformation medium))
@@ -1586,7 +1589,6 @@ were added."
     (multiple-value-bind (left top right bottom)
         (text-bounding-rectangle* medium string
                                   :align-x align-x :align-y align-y
-                                  :start start :end end
                                   :text-style text-style)
       (if transform-glyphs
           (enclosing-transform-polygon transformation (list (+ point-x left)  (+ point-y top)
@@ -1611,11 +1613,11 @@ were added."
     ((record draw-text-output-record) stream
      &optional (region +everywhere+) (x-offset 0) (y-offset 0))
   (declare (ignore x-offset y-offset region))
-  (with-slots (string point-x point-y start end align-x align-y toward-x
+  (with-slots (string point-x point-y align-x align-y toward-x
                toward-y transform-glyphs transformation)
       record
     (let ((medium (sheet-medium stream)))
-      (medium-draw-text* medium string point-x point-y start end align-x
+      (medium-draw-text* medium string point-x point-y 0 nil align-x
                          align-y toward-x toward-y transform-glyphs))))
 
 (defrecord-predicate draw-text-output-record
