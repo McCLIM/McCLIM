@@ -602,6 +602,11 @@ STREAM in the direction DIRECTION."
 	       (values (cdr tail) t)))
     finally (return (values list nil))))
 
+(defun copy-sequence-into-vector (sequence)
+  (typecase sequence
+    (vector (copy-seq sequence))
+    (t (coerce sequence 'vector))))
+
 (defun rebind-arguments (arg-list)
   "Create temporary variables for non keywords in a list of
   arguments. Returns two values: a binding list for let, and a new

@@ -1120,19 +1120,20 @@ were added."
         (sequence= my-coord-seq coord-seq #'coordinate=))))
 
 (defmacro generate-medium-recording-body (class-name args)
-  (let ((arg-list (loop for arg in args
-                        appending `(,(alexandria:make-keyword arg) ,arg))))
+  (let ((arg-list (alexandria:mappend
+                   (lambda (arg)
+                     (destructuring-bind (name &optional (recording-form nil formp)
+                                                         (storep t))
+                         (alexandria:ensure-list arg)
+                       (when storep
+                         `(,(alexandria:make-keyword name)
+                           ,(if formp
+                                recording-form
+                                name)))))
+                   args)))
     `(progn
        (when (stream-recording-p stream)
-         (let ((record
-                ;; initialize the output record with a copy of coord-seq, as the
-                ;; replaying code will modify it to be positioned relative to
-                ;; the output-record's position and making a temporary is
-                ;; (arguably) less bad than untrasnforming the coords back to
-                ;; how they were.
-                (let (,@(when (member 'coord-seq args)
-                          `((coord-seq (copy-seq coord-seq)))))
-                  (make-instance ',class-name :stream stream ,@arg-list))))
+         (let ((record (make-instance ',class-name :stream stream ,@arg-list)))
            (stream-add-output-record stream record)))
        (when (stream-drawing-p stream)
          (call-next-method)))))
@@ -1155,32 +1156,44 @@ were added."
 ;;; * The name can either be just a symbol or a list of a symbol
 ;;;   followed by keyword arguments which control what aspects should
 ;;;   be generated: class, medium-fn and replay-fn.
-;;; * Instead of slot specifications, a list of argument names is
-;;;   supplied which is used to defined slots as well as arguments.
+;;; * Instead of slot specifications, a list of argument descriptions
+;;;   is supplied which is used to defined slots as well as arguments.
+;;;   An argument is either a symbol or a list of the form
+;;;   (NAME INITFORM STOREP) where INITFORM computes the value to
+;;;   store in the output record and STOREP controls whether a slot
+;;;   for the argument should be present in the output record at all.
 ;;; * DEFCLASS options are not accepted, but a body is, as described
 ;;;   above.
 (defmacro def-grecording (name-and-options (&rest mixins) (&rest args)
                           &body body)
   (destructuring-bind (name &key (class t) (medium-fn t) (replay-fn t))
       (alexandria:ensure-list name-and-options)
-    (let ((method-name (symbol-concat '#:medium- name '*))
-          (class-name (symbol-concat name '#:-output-record))
-          (medium (gensym "MEDIUM"))
-          (class-vars `((stream :initarg :stream)
-                        ,@(loop for slot-name in args
-                                for initarg = (alexandria:make-keyword slot-name)
-                                collect `(,slot-name :initarg ,initarg)))))
+    (let* ((method-name (symbol-concat '#:medium- name '*))
+           (class-name (symbol-concat name '#:-output-record))
+           (medium (gensym "MEDIUM"))
+           (arg-names (mapcar #'alexandria:ensure-car args))
+           (slot-names (alexandria:mappend
+                        (lambda (arg)
+                          (destructuring-bind (name &optional form (storep t))
+                              (alexandria:ensure-list arg)
+                            (declare (ignore form))
+                            (when storep `(,name))))
+                        args))
+           (slots `((stream :initarg :stream)
+                    ,@(loop for slot-name in slot-names
+                            for initarg = (alexandria:make-keyword slot-name)
+                            collect `(,slot-name :initarg ,initarg)))))
       `(progn
          ,@(when class
              `((defclass ,class-name (,@mixins standard-graphics-displayed-output-record)
-                 ,class-vars)
+                 ,slots)
                (defmethod initialize-instance :after ((graphic ,class-name) &key)
-                 (with-slots (stream ink clipping-region line-style text-style ,@args)
+                 (with-slots (stream ink clipping-region line-style text-style ,@slot-names)
                      graphic
                    (let ((medium (sheet-medium stream)))
                      (setf (rectangle-edges* graphic) (progn ,@body)))))))
          ,@(when medium-fn
-             `((defmethod ,method-name :around ((stream output-recording-stream) ,@args)
+             `((defmethod ,method-name :around ((stream output-recording-stream) ,@arg-names)
                  ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
                  (generate-medium-recording-body ,class-name ,args))))
          ,@(when replay-fn
@@ -1188,10 +1201,10 @@ were added."
                                                 &optional (region +everywhere+)
                                                           (x-offset 0) (y-offset 0))
                  (declare (ignore x-offset y-offset region))
-                 (with-slots (,@args) record
+                 (with-slots (,@slot-names) record
                    (let ((,medium (sheet-medium stream)))
                      ;; Graphics state is set up in :around method.
-                     (,method-name ,medium ,@args))))))))))
+                     (,method-name ,medium ,@arg-names))))))))))
 
 (def-grecording draw-point (gs-line-style-mixin)
     (point-x point-y)
@@ -1222,8 +1235,12 @@ were added."
        (if-supplied (point-y coordinate)
          (coordinate= (slot-value record 'point-y) point-y))))
 
+;;; Initialize the output record with a copy of COORD-SEQ, as the
+;;; replaying code will modify it to be positioned relative to the
+;;; output-record's position and making a temporary is (arguably) less
+;;; bad than untransforming the coords back to how they were.
 (def-grecording draw-points (coord-seq-mixin gs-line-style-mixin)
-    (coord-seq)
+    ((coord-seq (copy-sequence-into-vector coord-seq)))
   (let ((transformed-coord-seq (transform-positions (medium-transformation medium) coord-seq))
         (border (graphics-state-line-style-border graphic medium)))
     (setf (slot-value graphic 'coord-seq) transformed-coord-seq)
@@ -1269,8 +1286,9 @@ were added."
        (if-supplied (point-y2 coordinate)
          (coordinate= (slot-value record 'point-y2) point-y2))))
 
+;;; Regarding COORD-SEQ, see comment for DRAW-POINTS.
 (def-grecording draw-lines (coord-seq-mixin gs-line-style-mixin)
-    (coord-seq)
+    ((coord-seq (copy-sequence-into-vector coord-seq)))
   (let* ((transformation (medium-transformation medium))
          (transformed-coord-seq (transform-positions transformation coord-seq))
          (border (graphics-state-line-style-border graphic medium)))
@@ -1392,8 +1410,10 @@ were added."
                    (maxf max-y (+ y border)))))
              (values min-x min-y max-x max-y)))))
 
+;;; Regarding COORD-SEQ, see comment for DRAW-POINTS.
 (def-grecording draw-polygon (coord-seq-mixin gs-line-style-mixin)
-    (coord-seq closed filled)
+    ((coord-seq (copy-sequence-into-vector coord-seq))
+     closed filled)
   (let ((transformed-coord-seq (transform-positions (medium-transformation medium) coord-seq))
         (border (graphics-state-line-style-border graphic medium)))
     (setf coord-seq transformed-coord-seq)
@@ -1418,7 +1438,8 @@ were added."
     (polygon-record-bounding-rectangle coords t filled line-style border
                                        (medium-miter-limit medium))))
 
-(defmethod medium-draw-rectangle* :around ((stream output-recording-stream) left top right bottom filled)
+(defmethod medium-draw-rectangle* :around ((stream output-recording-stream)
+                                           left top right bottom filled)
   (let ((tr (medium-transformation stream)))
     (if (rectilinear-transformation-p tr)
         (generate-medium-recording-body draw-rectangle-output-record
@@ -1442,11 +1463,13 @@ were added."
                                          t filled line-style border
                                          (medium-miter-limit medium)))))
 
-(defmethod medium-draw-rectangles* :around ((stream output-recording-stream) coord-seq filled)
+(defmethod medium-draw-rectangles* :around ((stream output-recording-stream)
+                                            coord-seq filled)
   (let ((tr (medium-transformation stream)))
     (if (rectilinear-transformation-p tr)
-        (generate-medium-recording-body draw-rectangles-output-record
-                                        (coord-seq filled))
+        (generate-medium-recording-body
+         draw-rectangles-output-record
+         ((coord-seq (copy-sequence-into-vector coord-seq)) filled))
         (do-sequence ((left top right bottom) coord-seq)
           (medium-draw-polygon* stream (vector left top
                                                left bottom
