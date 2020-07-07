@@ -72,7 +72,7 @@
 	       (values)))
 	  (t
 	   (values (+ -a1/2 (sqrt r)) (- -a1/2 (sqrt r)))))))
-  
+
 (defun dist (v z)
   #.(format nil "Compute the distance between a point and a vector~@
                  represented as a complex number.")
@@ -95,10 +95,11 @@
 (defclass translatable-record-mixin ()
   ((output-record-translation :accessor output-record-translation :initform nil)))
 
-(climi::def-grecording draw-bezier-design ((climi::gs-line-style-mixin translatable-record-mixin)
-                                           design) ()
+(climi::def-grecording draw-bezier-design
+    (climi::gs-line-style-mixin translatable-record-mixin)
+    (design)
   (let ((transformed-design (transform-region (medium-transformation medium) design))
-	(border (climi::graphics-state-line-style-border climi::graphic medium)))
+        (border (climi::graphics-state-line-style-border climi::graphic medium)))
     (declare (ignore border))
     (setf design transformed-design)
     (bounding-rectangle* design)))
@@ -412,7 +413,7 @@ second curve point, yielding (200 50)."
 ;;;
 ;;; Converting a path to a polyline or an area to a polygon
 
-;;; convert a cubic bezier segment to a list of 
+;;; convert a cubic bezier segment to a list of
 ;;; line segments
 (defun %polygonalize (p0 p1 p2 p3 &key (precision 0.01))
   (if (< (- (+ (distance p0 p1)
@@ -607,7 +608,7 @@ second curve point, yielding (200 50)."
 	   (left (reduce (lambda (a b) (if (< (dist a m) (dist b m)) a b))
 			 polygon)))
       (make-instance 'bezier-area
-        :segments 
+        :segments
 	(list (make-bezier-segment (add-points p0 right) (add-points p1 right)
 				   (add-points p2 right) (add-points p3 right))
 	      (make-line-segment (add-points p3 right) (add-points p3 left))
@@ -616,7 +617,7 @@ second curve point, yielding (200 50)."
 	      (make-line-segment (add-points p0 left) (add-points p0 right)))))))
 
 (defun area-at-point (area point)
-  (let ((transformation 
+  (let ((transformation
 	 (make-translation-transformation (point-x point) (point-y point))))
     (transform-region transformation area)))
 
@@ -629,7 +630,7 @@ second curve point, yielding (200 50)."
 	 (segments (split-segment segment split-points)))
     (loop for segment in (coerce segments 'list)
 	  if first collect (area-at-point area (slot-value segment 'p0))
-	  collect (convert-primitive-segment-to-bezier-area 
+	  collect (convert-primitive-segment-to-bezier-area
 		   (polygon-points polygon) segment)
 	  collect (area-at-point area (slot-value segment 'p3)))))
 
@@ -638,7 +639,7 @@ second curve point, yielding (200 50)."
 (defmethod convolve-regions ((area bezier-area) (path bezier-curve))
   (let ((polygon (polygonalize area)))
     (make-instance 'bezier-union
-      :areas 
+      :areas
       (loop for segment in (coerce (%segments path) 'list)
 	    for first = t then nil
 	    append (convolve-polygon-and-segment area polygon segment first)))))
@@ -1058,4 +1059,3 @@ second curve point, yielding (200 50)."
       (postscript-actualize-graphics-state stream medium :color :line-style)
       (dolist (area (negative-areas design))
         (%ps-draw-bezier-area stream medium area)))))
-
