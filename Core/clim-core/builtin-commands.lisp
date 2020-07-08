@@ -222,8 +222,22 @@
   (frob string)
   (frob pathname)
   (frob-form symbol)
-  (frob-form sequence)
   (frob standard-object))
+
+(define-presentation-translator sequence-to-expression
+    ((sequence t) expression global-command-table
+     :gesture :select :menu nil)
+    (object)
+  object)
+
+(define-presentation-translator sequence-to-form
+    ((sequence t) form global-command-table
+     :gesture :select :menu nil
+     :documentation document-form-translator)
+    (object)
+  (if (constantp object)
+      object
+      `',object))
 
 (define-presentation-translator expression-to-form
     (expression form global-command-table
