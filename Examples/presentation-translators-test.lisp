@@ -30,8 +30,14 @@
   (define-presentation-type foo ())
   (define-presentation-type bar ())
   (define-presentation-type qux ())
-  (define-presentation-type qux* () :inherit-from '(qux))
+  (define-presentation-type qux* () :inherit-from 'qux)
   (define-presentation-type sen ())
+
+;;; FIXME method inheritance doesn't work right under certain
+;;; conditions and QUX doesn't inherit the default behavior of the
+;;; function PRESENTATION-TYPEP from the presentation type QUX.
+  (define-presentation-method presentation-typep (object (type qux*))
+    (typep object 'qux))
 
   (define-presentation-type-abbreviation foobar ()
     `(or foo bar))
