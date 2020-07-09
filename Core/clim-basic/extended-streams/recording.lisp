@@ -1578,9 +1578,10 @@ were added."
 
 (def-grecording (draw-text :replay-fn nil) (gs-text-style-mixin gs-transformation-mixin)
     ((string (subseq string (or start 0) (or end (length string))))
+     point-x point-y
      (start  nil nil)
      (end    nil nil)
-     point-x point-y align-x align-y
+     align-x align-y
      toward-x toward-y transform-glyphs)
   ;; FIXME!!! Text direction.
   (let* ((transformation (medium-transformation medium))
