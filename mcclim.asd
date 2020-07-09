@@ -115,6 +115,7 @@ interface management system."
                               :depends-on ("package")
                               :components ((:file "presentation-types")
                                            (:file "presentation-functions")
+                                           (:file "presentation-inheritance")
                                            (:file "translators"))))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
