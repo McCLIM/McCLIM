@@ -41,7 +41,7 @@
 	  command))))
 
 (define-presentation-type puzzle-cell ()
-  :inherit-from '(integer 1 15))
+  :inherit-from '(integer 0 15))
 
 (define-presentation-method highlight-presentation ((type puzzle-cell) record stream state)
   (with-bounding-rectangle* (left top right bottom) record
