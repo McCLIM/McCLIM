@@ -20,6 +20,3 @@
     (is (equal '(:eql-t                    t) (call-spec                  t)))
     (is (equal '(:symbol              symbol) (call-spec             symbol)))
     (is (equal '(:seq-int (sequence integer)) (call-spec (sequence integer))))))
-
-
-
