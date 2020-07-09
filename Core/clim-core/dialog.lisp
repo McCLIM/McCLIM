@@ -150,13 +150,13 @@ highlighting, etc." ))
 
 (defvar *default-command* '(accepting-values-default-command))
 
-;;; The fields of the query have presentation type query.  Fields that
-;;; are "selectable", like the default text editor field, have type
-;;; selectable-query. The presentation object is the query identifier.
+;;; The fields of the query have presentation type QUERY-IDENTIFIER.
+;;; Fields that are "selectable", like the default text editor field,
+;;; have type SELECTABLE-QUERY. The presentation object is the query
+;;; identifier.
 
-(define-presentation-type query () :inherit-from t)
-
-(define-presentation-type selectable-query () :inherit-from 'query)
+(define-presentation-type query-identifier () :inherit-from t)
+(define-presentation-type selectable-query () :inherit-from 'query-identifier)
 
 (define-presentation-type exit-button () :inherit-from t)
 
