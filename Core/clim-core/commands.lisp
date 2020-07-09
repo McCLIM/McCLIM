@@ -1293,8 +1293,7 @@ examine the type of the command menu item to see if it is
 
 (define-presentation-method presentation-typep (object (type command))
   (and (consp object)
-       (presentation-typep (car object)
-			   `(command-name :command-table ,command-table))))
+       (command-accessible-in-command-table-p (car object) command-table)))
 
 (define-presentation-method presentation-subtypep ((type command)
 						   maybe-supertype)
