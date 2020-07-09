@@ -111,9 +111,10 @@
   (let ((type (expand-presentation-type-abbreviation '(member "a" 3))))
     (fails (expect-t-t type '(or string integer)))))
 
-;;; This is a test for an issue, where a default method for
-;;; PRESENTATION-TYPEP was overwritten by a method specialized on the
-;;; type T (and returned incorrectly truth for unknown relations).
+;;; This is a test for an issue where a parametrized class without
+;;; defined PRESENTATION-TYPEP method doesn't error.
 (test presentations.typep.1
-  (define-presentation-type foo ())
-  (signals error (presentation-typep 3 'foo)))
+  (defclass foo () ())
+  (define-presentation-type foo (a))
+  (is (not (presentation-typep 3 '(foo 3))))
+  (signals error (presentation-typep (make-instance 'foo) '(foo 3))))
