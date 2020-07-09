@@ -173,31 +173,32 @@ otherwise return false."
 ;;; predicate over sets of Lisp objects, but simply a formal predicate
 ;;; over a graph of names.  This gives rise to the implementation
 ;;; below for OR and AND types, and the hierarchical walk for all
-;;; other types.  CSR, 2007-01-10
-(defun presentation-subtypep (type maybe-supertype)
+;;; other types.  -- CSR, 2007-01-10
+;;;
+(defun presentation-subtypep (maybe-subtype maybe-supertype)
   ;; special shortcuts: the universal subtype is privileged (and
   ;; doesn't in fact fit into a hierarchical lattice); the universal
   ;; supertype is easy to identify.
-  (when (or (eql type nil) (eql maybe-supertype t))
+  (when (or (eql maybe-subtype nil) (eql maybe-supertype t))
     (return-from presentation-subtypep (values t t)))
-  (when (eql type maybe-supertype)
+  (when (eql maybe-subtype maybe-supertype)
     (return-from presentation-subtypep (values t t)))
-  (with-presentation-type-decoded (super-name super-parameters)
+  (with-presentation-type-decoded (maybe-supertype-name maybe-supertype-parameters)
       maybe-supertype
-    (with-presentation-type-decoded (type-name type-parameters)
-        type
+    (with-presentation-type-decoded (maybe-subtype-name maybe-subtype-parameters)
+        maybe-subtype
       (cond
         ;; DO NOT BE TEMPTED TO REARRANGE THESE CLAUSES
-        ((eq type-name 'or)
-         (dolist (or-type type-parameters
+        ((eq maybe-subtype-name 'or)
+         (dolist (or-type maybe-subtype-parameters
                           (return-from presentation-subtypep (values t t)))
            (multiple-value-bind (yesp surep)
                (presentation-subtypep or-type maybe-supertype)
              (unless yesp
                (return-from presentation-subtypep (values yesp surep))))))
-        ((eq super-name 'and)
+        ((eq maybe-supertype-name 'and)
          (let ((result t))
-           (dolist (and-type super-parameters
+           (dolist (and-type maybe-supertype-parameters
                              (return-from presentation-subtypep
                                (values result result)))
              (cond
@@ -205,48 +206,49 @@ otherwise return false."
                 (setq result nil))
                ((and (consp and-type) (eq (car and-type) 'not))
                 (multiple-value-bind (yp sp)
-                    (presentation-subtypep type (cadr and-type))
+                    (presentation-subtypep maybe-subtype (cadr and-type))
                   (declare (ignore sp))
                   (if yp
                       (return-from presentation-subtypep (values nil t))
                       (setq result nil))))
                (t (multiple-value-bind (yp sp)
-                      (presentation-subtypep type and-type)
+                      (presentation-subtypep maybe-subtype and-type)
                     (unless yp
                       (if sp
                           (return-from presentation-subtypep (values nil t))
                           (setq result nil)))))))))
-        ((eq super-name 'or)
-         (assert (not (eq type-name 'or)))
+        ((eq maybe-supertype-name 'or)
+         (assert (not (eq maybe-subtype-name 'or)))
          ;; FIXME: this would be the right method were it not for the
          ;; fact that there can be unions 'in disguise' in the
          ;; subtype; examples:
+         ;;
          ;;   (PRESENTATION-SUBTYPEP 'NUMBER '(OR REAL COMPLEX))
          ;;   (PRESENTATION-SUBTYPEP '(INTEGER 3 6)
          ;;                          '(OR (INTEGER 2 5) (INTEGER 4 7)))
          ;; Sorry about that.
          (let ((surep t))
-           (dolist (or-type super-parameters
+           (dolist (or-type maybe-supertype-parameters
                             (return-from presentation-subtypep (values nil surep)))
              (multiple-value-bind (yp sp)
-                 (presentation-subtypep type or-type)
+                 (presentation-subtypep maybe-subtype or-type)
                (cond
                  (yp (return-from presentation-subtypep (values t t)))
                  ((not sp) (setq surep nil)))))))
-        ((eq type-name 'and)
-         (assert (not (eq super-name 'and)))
+        ((eq maybe-subtype-name 'and)
+         (assert (not (eq maybe-supertype-name 'and)))
          (multiple-value-bind (yp sp)
-             (presentation-subtypep (car type-parameters) maybe-supertype)
+             (presentation-subtypep (car maybe-subtype-parameters) maybe-supertype)
            (declare (ignore sp))
            (return-from presentation-subtypep (values yp yp))))))
     (map-over-presentation-type-supertypes
      #'(lambda (name massaged)
-         (when (eq name super-name)
+         (when (eq name maybe-supertype-name)
            (return-from presentation-subtypep
              (funcall-presentation-generic-function presentation-subtypep
                                                     massaged
                                                     maybe-supertype))))
-     type))
+     maybe-subtype))
   (values nil t))
 
 ;;; This is to implement the requirement on presentation translators
@@ -254,42 +256,44 @@ otherwise return false."
 ;;; parameters.  We are generous in that we return T when we are
 ;;; unsure, to give translator testers a chance to accept or reject
 ;;; the translator.  This is essentially
-;;;   (multiple-value-bind (yesp surep)
-;;;       (presentation-subtypep maybe-subtype type)
-;;;     (or yesp (not surep)))
+;;;
+;;;    (multiple-value-bind (yesp surep)
+;;;        (presentation-subtypep maybe-subtype maybe-supertype)
+;;;      (or yesp (not surep)))
+;;;
 ;;; except faster.
-(defun stupid-subtypep (maybe-subtype type)
-  "Return t if maybe-subtype is a presentation subtype of type, regardless of
-  parameters."
-  (when (or (eq maybe-subtype nil) (eq type t))
+(defun stupid-subtypep (maybe-subtype maybe-supertype)
+  "Return T if MAYBE-SUBTYPE is a presentation subtype of
+MAYBE-SUPERTYPE, regardless of parameters."
+  (when (or (eq maybe-subtype nil) (eq maybe-supertype t))
     (return-from stupid-subtypep t))
-  (when (eql maybe-subtype type)
+  (when (eql maybe-subtype maybe-supertype)
     (return-from stupid-subtypep t))
   (let ((maybe-subtype-name (presentation-type-name maybe-subtype))
-        (type-name (presentation-type-name type)))
+        (maybe-supertype-name (presentation-type-name maybe-supertype)))
+    ;; See DEFUN PRESENTATION-SUBTYPEP for some caveats.
     (cond
-      ;; see DEFUN PRESENTATION-SUBTYPEP for some caveats
       ((eq maybe-subtype-name 'or)
        (let ((or-types (decode-parameters maybe-subtype)))
-         (every (lambda (x) (stupid-subtypep x type)) or-types)))
-      ((eq type-name 'and)
-       (stupid-subtypep maybe-subtype (car (decode-parameters type))))
-      ((eq type-name 'or)
-       (let ((or-types (decode-parameters type)))
+         (every (lambda (x) (stupid-subtypep x maybe-supertype)) or-types)))
+      ((eq maybe-supertype-name 'and)
+       (stupid-subtypep maybe-subtype (car (decode-parameters maybe-supertype))))
+      ((eq maybe-supertype-name 'or)
+       (let ((or-types (decode-parameters maybe-supertype)))
          (some (lambda (x) (stupid-subtypep maybe-subtype x)) or-types)))
       ((eq maybe-subtype-name 'and)
-       ;; this clause is actually not conservative, but probably in a
-       ;; way that no-one will complain about too much.  Basically, we
-       ;; will only return T if the first type in the AND (which is
-       ;; treated specially by CLIM) is subtypep the maybe-supertype
-       (stupid-subtypep (car (decode-parameters maybe-subtype)) type))
+       ;; This clause is actually not conservative, but probably in a way that
+       ;; no-one will complain about too much. Basically, we will only return
+       ;; T if the first type in the AND (which is treated specially by CLIM)
+       ;; is a subtypep of the MAYBE-SUPERTYPE.
+       (stupid-subtypep (car (decode-parameters maybe-subtype)) maybe-supertype))
       (t
        (let ((subtype-meta (get-ptype-metaclass maybe-subtype-name))
-             (type-meta (get-ptype-metaclass type-name)))
-         (unless (and subtype-meta type-meta)
+             (maybe-supertype-meta (get-ptype-metaclass maybe-supertype-name)))
+         (unless (and subtype-meta maybe-supertype-meta)
            (return-from stupid-subtypep nil))
          (map-over-ptype-superclasses #'(lambda (super)
-                                          (when (eq type-meta super)
+                                          (when (eq maybe-supertype-meta super)
                                             (return-from stupid-subtypep t)))
                                       maybe-subtype-name)
          nil)))))
