@@ -13,19 +13,21 @@
   (defclass qux () ())
   (defclass sen (foo bar) ())
 
-  ;; For the MEMBER presentationt type abbreviation.
-  (defmethod make-load-form ((object qux) &optional env)
-    (declare (ignore env))
-    `(make-instance 'qux))
-
-  (defmethod make-load-form ((object sen) &optional env)
-    (declare (ignore env))
-    `(make-instance 'sen))
-
   (defvar *foo* (make-instance 'foo))
   (defvar *bar* (make-instance 'bar))
   (defvar *qux* (make-instance 'qux))
   (defvar *sen* (make-instance 'sen))
+
+  ;; MAKE-LOAD-FORM methods are necessary, because COMPLETION
+  ;; externalizes its elements to FASL.
+
+  (defmethod make-load-form ((object (eql *qux*)) &optional env)
+    (declare (ignore object env))
+    `*qux*)
+
+  (defmethod make-load-form ((object (eql *sen*)) &optional env)
+    (declare (ignore object env))
+    `*sen*)
 
   (define-presentation-type foo ())
   (define-presentation-type bar ())
@@ -33,9 +35,9 @@
   (define-presentation-type qux* () :inherit-from 'qux)
   (define-presentation-type sen ())
 
-;;; FIXME method inheritance doesn't work right under certain
-;;; conditions and QUX doesn't inherit the default behavior of the
-;;; function PRESENTATION-TYPEP from the presentation type QUX.
+  ;; FIXME method inheritance doesn't work right under certain
+  ;; conditions and QUX doesn't inherit the default behavior of the
+  ;; function PRESENTATION-TYPEP from the presentation type QUX.
   (define-presentation-method presentation-typep (object (type qux*))
     (typep object 'qux))
 
