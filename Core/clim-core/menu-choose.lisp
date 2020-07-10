@@ -223,7 +223,7 @@
 (define-presentation-type menu-item ())
 
 (define-presentation-method presentation-typep (object (type menu-item))
-  (declare (ignore object type))
+  (declare (ignore object))
   t)
 
 (defmethod menu-choose
@@ -379,7 +379,7 @@ maximum size according to `frame')."
                    id-test cache-value cache-test default-presentation))
   (with-room-for-graphics (menu :first-quadrant nil)
     (funcall drawer menu presentation-type))
-  
+
   (adjust-menu-size-and-position
    menu
    :x-position x-position
@@ -390,7 +390,7 @@ maximum size according to `frame')."
     (let ((*pointer-documentation-output* pointer-documentation))
       (handler-case
           (with-input-context (`(or ,presentation-type blank-area) :override t)
-              (object type event) 
+              (object type event)
               (prog1 nil (loop (read-gesture :stream menu)))
             (blank-area nil)
             (t (values object event)))
