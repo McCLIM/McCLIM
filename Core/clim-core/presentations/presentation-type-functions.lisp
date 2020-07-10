@@ -251,17 +251,28 @@ otherwise return false."
      maybe-subtype))
   (values nil t))
 
-;;; This is to implement the requirement on presentation translators
-;;; for doing subtype calculations without reference to type
-;;; parameters.  We are generous in that we return T when we are
-;;; unsure, to give translator testers a chance to accept or reject
-;;; the translator.  This is essentially
+;;; This is to implement the requirement on presentation translators for doing
+;;; subtype calculations without reference to type parameters. We are generous
+;;; in that we return T when we are unsure, to give translator testers a
+;;; chance to accept or reject the translator. This is essentially
 ;;;
-;;;    (multiple-value-bind (yesp surep)
-;;;        (presentation-subtypep maybe-subtype maybe-supertype)
-;;;      (or yesp (not surep)))
+;;;   (multiple-value-bind (yesp surep)
+;;;       (presentation-subtypep maybe-subtype maybe-supertype)
+;;;     (or yesp (not surep)))
 ;;;
-;;; except faster.
+;;; except faster. The above relation should not be taken literally. The
+;;; actual relation between predicates is
+;;;
+;;;   (unless (stupid-subtypep maybe-subtype maybe-supertype)
+;;;     (multiple-value-bind (yesp surep)
+;;;         (presentation-subtypep maybe-subtype maybe-supertype)
+;;;       (assert (and (null yesp) surep))))
+;;;
+;;; for example the first relation is not preserved with
+;;;
+;;;   (presentation-subtypep '(integer 1 2) '(integer 2 4)) ; -> (nil t)
+;;;   (stupid-subtypep       '(integer 1 2) '(integer 2 4)) ; -> t
+;;;
 (defun stupid-subtypep (maybe-subtype maybe-supertype)
   "Return T if MAYBE-SUBTYPE is a presentation subtype of
 MAYBE-SUPERTYPE, regardless of parameters."
