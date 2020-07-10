@@ -1,21 +1,14 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
 ;;;  (c) copyright 2002 by Alexey Dejneka (adejneka@comail.ru)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; Implementation of the MENU-CHOOSE function and surrounding
+;;; machinery.
+;;;
 
 ;;; Long time TODO (if someone wants to implement them - you are welcome):
 ;;;
@@ -35,7 +28,7 @@
 ;;;
 ;;; - :DIVIDER type menu items.
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;; Spec function.
 (defgeneric menu-choose
@@ -187,7 +180,7 @@
                          ,scroll-bars))))
 
 (defun invoke-with-menu (continuation associated-window deexpose
-			 label scroll-bars)
+                         label scroll-bars)
   (let* ((associated-frame (if associated-window
                                (pane-frame associated-window)
                                *application-frame*))
@@ -196,17 +189,17 @@
       (let* ((menu-stream (make-pane-1 fm associated-frame 'menu-pane))
              (container (scrolling (:scroll-bar scroll-bars)
                           menu-stream))
-	     (frame (make-menu-frame (raising ()
-				       (if label
-					   (labelling (:label label
-						       :name 'label
-						       :label-alignment :top)
-					     container)
-					   container))
-				     :left nil
-				     :top nil)))
+             (frame (make-menu-frame (raising ()
+                                       (if label
+                                           (labelling (:label label
+                                                       :name 'label
+                                                       :label-alignment :top)
+                                             container)
+                                           container))
+                                     :left nil
+                                     :top nil)))
         (adopt-frame fm frame)
-	(setf (slot-value menu-stream 'menu-frame) frame)
+        (setf (slot-value menu-stream 'menu-frame) frame)
         (unwind-protect
              (progn
                (setf (stream-end-of-line-action menu-stream) :allow
@@ -296,8 +289,7 @@ padding.)"
 (defun menu-size (menu frame)
   "Return two values, the height and width of MENU (adjusted for
 maximum size according to `frame')."
-  (multiple-value-bind (max-width max-height)
-      (max-x-y frame)
+  (multiple-value-bind (max-width max-height) (max-x-y frame)
     (with-bounding-rectangle* (x1 y1 x2 y2) menu
       (declare (ignore x1 y1))
       (values (min x2 max-width)
@@ -309,33 +301,34 @@ maximum size according to `frame')."
   (multiple-value-bind (menu-width menu-height)
       (menu-size (stream-output-history menu) *application-frame*)
     (change-space-requirements menu
-			       :width menu-width
-			       :height menu-height
+                               :width menu-width
+                               :height menu-height
                                :resize-frame t)
 
     ;; If we have scroll-bars, we need to do some calibration of the
     ;; size of the viewport.
-    (when (pane-viewport menu)
-     (multiple-value-bind (viewport-width viewport-height)
-         (menu-size (pane-viewport menu) *application-frame*)
-       (change-space-requirements (pane-scroller menu)
-                                  ;; HACK: How are you supposed to
-                                  ;; change the size of the viewport?
-                                  ;; I could only find this way, where
-                                  ;; I calculate the size difference
-                                  ;; between the viewport and the
-                                  ;; scroller pane, and set the
-                                  ;; scroller pane to the desired size
-                                  ;; of the viewport, plus the
-                                  ;; difference (to make room for
-                                  ;; scroll bars).
-                                  :width (+ menu-width
-                                            (- (pane-current-width (pane-scroller menu))
-                                               viewport-width))
-                                  :height (+ menu-height
-                                             (- (pane-current-height (pane-scroller menu))
-                                                viewport-height))
-                                  :resize-frame t)))
+    (when-let ((viewport (pane-viewport menu)))
+      (multiple-value-bind (viewport-width viewport-height)
+          (menu-size viewport *application-frame*)
+        (let ((scroller (pane-scroller menu)))
+          (change-space-requirements scroller
+                                     ;; HACK: How are you supposed to
+                                     ;; change the size of the viewport?
+                                     ;; I could only find this way, where
+                                     ;; I calculate the size difference
+                                     ;; between the viewport and the
+                                     ;; scroller pane, and set the
+                                     ;; scroller pane to the desired size
+                                     ;; of the viewport, plus the
+                                     ;; difference (to make room for
+                                     ;; scroll bars).
+                                     :width (+ menu-width
+                                               (- (pane-current-width scroller)
+                                                  viewport-width))
+                                     :height (+ menu-height
+                                                (- (pane-current-height scroller)
+                                                   viewport-height))
+                                     :resize-frame t))))
 
     ;; Modify the size and location of the frame as well.
     (let ((top-level-pane (get-top-level-sheet menu)))
@@ -357,12 +350,10 @@ maximum size according to `frame')."
                 (setf top y-position))
               ;; Adjust for maximum position if the programmer has not
               ;; explicitly provided coordinates.
-              (if (null x-position)
-               (when (> left max-left)
-                 (setf left max-left)))
-              (if (null y-position)
-               (when (> top max-top)
-                 (setf top max-top)))
+              (when (and (null x-position) (> left max-left))
+                (setf left max-left))
+              (when (and (null y-position) (> top max-top))
+                (setf top max-top))
               (move-sheet top-level-pane
                           (max left 0) (max top 0)))))))))
 
@@ -380,18 +371,15 @@ maximum size according to `frame')."
   (with-room-for-graphics (menu :first-quadrant nil)
     (funcall drawer menu presentation-type))
 
-  (adjust-menu-size-and-position
-   menu
-   :x-position x-position
-   :y-position y-position)
+  (adjust-menu-size-and-position menu :x-position x-position
+                                      :y-position y-position)
   ;; The menu is enabled (make visible) after the size is adjusted.
   (enable-menu menu)
   (let ((*pointer-documentation-output* pointer-documentation))
-    (let ((*pointer-documentation-output* pointer-documentation))
-      (handler-case
-          (with-input-context (`(or ,presentation-type blank-area) :override t)
-              (object type event)
-              (prog1 nil (loop (read-gesture :stream menu)))
-            (blank-area nil)
-            (t (values object event)))
-        (abort-gesture () nil)))))
+    (handler-case
+        (with-input-context (`(or ,presentation-type blank-area) :override t)
+            (object type event)
+            (prog1 nil (loop (read-gesture :stream menu)))
+          (blank-area nil)
+          (t (values object event)))
+      (abort-gesture () nil))))
