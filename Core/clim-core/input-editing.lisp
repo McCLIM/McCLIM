@@ -431,11 +431,8 @@ READ-TOKEN will ignore delimiter gestures until another quotation mark
 is seen. When the closing quotation mark is seen, READ-TOKEN will
 proceed as above.
 
-CLICK-ONLY is ignored for now. -- ha ha, what a joke!
-
 INPUT-WAIT-HANDLER and POINTER-BUTTON-PRESS-HANDLER are as for
 STREAM-READ-GESTURE."
-  (declare (ignore click-only))		;XXX For now
   (let ((result (make-array 1
 			    :adjustable t
 			    :fill-pointer 0
@@ -456,7 +453,7 @@ STREAM-READ-GESTURE."
 			(and (not in-quotes)
 			     (delimiter-gesture-p gesture)))
 		    (loop-finish))
-		   ((characterp gesture)
+		   ((and (not click-only) (characterp gesture))
 		    (if (eql gesture #\")
 			(cond (first-char
 			       (setq in-quotes t))
