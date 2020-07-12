@@ -89,7 +89,7 @@ otherwise return false."
 ;;; for parametrized standard classes. -- jd 2020-07-09
 
 (define-presentation-method presentation-typep (object (type t))
-  (declare (ignore object type))
+  (declare (ignore object))
   t)
 
 (define-presentation-method presentation-typep (object (type standard-object))

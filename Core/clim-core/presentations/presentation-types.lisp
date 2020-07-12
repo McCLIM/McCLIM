@@ -43,7 +43,7 @@
 
 (defmethod initialize-instance :after ((instance presentation-mixin) &key)
   (let ((type (presentation-type instance))
-        (object (presentation-object instance)))
+        #+(or) (object (presentation-object instance)))
     (cond ((null type)
            (error "A presentation can't have a type NIL."))
           ;; Enforcing the object to be presentation-typep to its
