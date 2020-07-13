@@ -143,37 +143,41 @@ all of FUNCTION-ARGS as APPLY arguments."
 ;;; the similarities, it's necessary to treat the slots of the second
 ;;; record like variables, so for convenience the macro will use
 ;;; WITH-SLOTS on the second record.
-(defmacro defrecord-predicate (record-type slot-names &body body)
-  "Each element of SLOT-NAMES is a symbol naming a slot."
-  (let* ((supplied-vars (mapcar (lambda (name)
-                                  (gensym (format nil "~A-~A" name '#:p)))
-                                slot-names))
-         (key-args (mapcar (lambda (name supplied)
-                             `(,name nil ,supplied))
-                           slot-names supplied-vars))
-         (key-arg-alist (mapcar #'cons slot-names supplied-vars)))
+(defmacro defrecord-predicate (record-type slots &body body)
+  "Each element of SLOTS is either a symbol naming a slot
+or (SLOT-NAME SLOT-P)."
+  (multiple-value-bind (slot-names key-args key-arg-alist)
+      (loop for slot-spec in slots
+            for (name slot-p) = (if (atom slot-spec)
+                                    (list slot-spec t)
+                                    slot-spec)
+            for suppliedp = (gensym (format nil "~A-~A" name '#:p))
+            when slot-p collect name into slot-names
+            collect `(,name nil ,suppliedp) into key-args
+            collect (cons name suppliedp) into key-arg-alist
+            finally (return (values slot-names key-args key-arg-alist)))
     `(progn
        (defmethod output-record-equal and ((record ,record-type)
                                            (record2 ,record-type))
          (macrolet ((if-supplied ((var &optional (type t)) &body supplied-body)
-                      (declare (ignore var type))
-                      `(progn ,@supplied-body)))
+                      (declare (ignore type))
+                      (when (find var ',slot-names :test #'eq)
+                        `(progn ,@supplied-body))))
            (with-slots ,slot-names record2
              ,@body)))
        (defmethod match-output-records-1 and ((record ,record-type)
                                               &key ,@key-args)
          (macrolet ((if-supplied ((var &optional (type t)) &body supplied-body)
-                      (let ((supplied-var (cdr (assoc var ',key-arg-alist))))
-                        (unless supplied-var
-                          (error "Unknown slot ~S" var))
+                      (let ((supplied-var (or (cdr (assoc var ',key-arg-alist))
+                                              (error "Unknown argument ~S" var))))
                         `(or (null ,supplied-var)
-                             ,@(if (eq type t)
-                                   `((progn ,@supplied-body))
-                                   `((if (typep ,var ',type)
-                                         (progn ,@supplied-body)
-                                         (error 'type-error
-                                                :datum ,var
-                                                :expected-type ',type))))))))
+                             ,(if (eq type t)
+                                  `(progn ,@supplied-body)
+                                  `(if (typep ,var ',type)
+                                       (progn ,@supplied-body)
+                                       (error 'type-error
+                                              :datum ,var
+                                              :expected-type ',type)))))))
            ,@body)))))
 
 (defmacro with-output-recording-options ((stream
@@ -1570,7 +1574,7 @@ were added."
     finally (return (values min-x min-y max-x max-y))))
 
 (def-grecording (draw-text :replay-fn nil) (gs-text-style-mixin gs-transformation-mixin)
-    ((string (subseq string (or start 0) (or end (length string))))
+    ((string (subseq string (or start 0) end))
      point-x point-y
      (start  nil nil)
      (end    nil nil)
@@ -1615,17 +1619,26 @@ were added."
                          align-y toward-x toward-y transform-glyphs))))
 
 (defrecord-predicate draw-text-output-record
-    (string start end point-x point-y align-x align-y toward-x toward-y transform-glyphs)
-  (and (if-supplied (string)
-         (string= (slot-value record 'string) string))
-       (if-supplied (start)
-         (eql (slot-value record 'start) start))
-       (if-supplied (end)
-         (eql (slot-value record 'end) end))
-       (if-supplied (point-x coordinate)
+    (string (start nil) (end nil) ; START, END are keyword arguments but not slots
+     point-x point-y align-x align-y toward-x toward-y transform-glyphs)
+  ;; Compare position first because it is cheap and an update is most
+  ;; likely to change the position.
+  (and (if-supplied (point-x coordinate)
          (coordinate= (slot-value record 'point-x) point-x))
        (if-supplied (point-y coordinate)
          (coordinate= (slot-value record 'point-y) point-y))
+       ;; START and END can be supplied as keyword arguments, but the
+       ;; output record does not store them in slots. For
+       ;; MATCH-OUTPUT-RECORDS-1, compare the designated subsequence
+       ;; of the STRING keyword argument to the entire string stored
+       ;; in the output record.
+       (if-supplied (string)
+         (let ((start2 0)
+               (end2 nil))
+           (if-supplied (start) (setf start2 start))
+           (if-supplied (end) (setf end2 end))
+           (string= (slot-value record 'string) string
+                    :start2 start2 :end2 end2)))
        (if-supplied (align-x)
          (eq (slot-value record 'align-x) align-x))
        (if-supplied (align-y)
