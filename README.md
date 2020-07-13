@@ -1,6 +1,6 @@
 # ![logo](https://common-lisp.net/project/mcclim/img/mcclim.png)
 
-## [McCLIM](https://common-lisp.net/project/mcclim/) Version 0.9.8-dev post-"Imbolc"
+## [McCLIM](https://common-lisp.net/project/mcclim/) Version 0.9.8-dev post-"Imbolc" ![CI](https://github.com/McCLIM/McCLIM/workflows/CI/badge.svg?branch=master)
 
 McCLIM, an implementation of the "[Common Lisp Interface Manager CLIM
 II Specification](http://bauhh.dyndns.org:8000/clim-spec/index.html)",
