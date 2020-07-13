@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: setup roswell
+      env:
+        LISP: sbcl.bin
+      run: curl -L https://raw.githubusercontent.com/3b/roswell/master/scripts/install-for-ci.sh | sh
+    
+    - name: run McCLIM Tests
+      shell: bash
+      run: ros -e '(ql:quickload :mcclim/test)' -e '(if (clim-tests:run-tests) (uiop:quit 0) (uiop:quit 123))'
