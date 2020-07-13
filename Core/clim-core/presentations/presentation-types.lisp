@@ -480,12 +480,22 @@ filled in."
 ;;; specifier and returns the presentation type metaclass.
 (defgeneric get-ptype-metaclass (type))
 
+(defmethod get-ptype-metaclass (type)
+  (declare (ignore type))
+  nil)
+
 (defmethod get-ptype-metaclass ((type symbol))
   (if-let ((maybe-meta (find-presentation-type type nil)))
     (get-ptype-metaclass maybe-meta)
     (let ((system-meta (find-class type nil)))
       (and (typep system-meta 'standard-class)
            system-meta))))
+
+;;; An instance of PRESENTATION-TYPE may be created at compilation time by the
+;;; function RECORD-PRESENTATION-TYPE. This class is a superclass of both
+;;; PRESENTATION-TYPE-CLASS (metaclass) and CLOS-PRESENTATION-TYPE (class).
+(defmethod get-ptype-metaclass ((type presentation-type))
+  (find-class 'standard-class))
 
 (defmethod get-ptype-metaclass ((type presentation-type-class))
   type)
@@ -496,20 +506,20 @@ filled in."
 (defmethod get-ptype-metaclass ((type (eql *builtin-t-class*)))
   type)
 
-(defmethod get-ptype-metaclass ((type class))
+(defmethod get-ptype-metaclass ((type standard-class))
   type)
 
 (defmethod get-ptype-metaclass ((type cons))
-  (let ((ptype-name (first type)))
-    (if (atom ptype-name)
-        (get-ptype-metaclass ptype-name)
-        (let ((ptype-name (first ptype-name)))
-          (if (atom ptype-name)
-              (get-ptype-metaclass ptype-name)
-              (call-next-method))))))
+  (if-let ((name (presentation-type-name type)))
+    (get-ptype-metaclass name)
+    (call-next-method)))
 
-(defmethod get-ptype-metaclass (type)
-  (error "~A is not the name of a presentation type" type))
+(defun get-ptype (type)
+  (let ((name (presentation-type-name type)))
+    (or (find-presentation-type name nil)
+        (let ((meta (find-class name nil)))
+          (and (typep meta 'standard-class)
+               meta)))))
 
 ;;; external functions
 (defun find-presentation-type-class (name &optional (errorp t) environment)
@@ -547,12 +557,6 @@ filled in."
   (unless (c2mop:class-finalized-p class)
     (c2mop:finalize-inheritance class))
   (c2mop:class-precedence-list class))
-
-(defun get-ptype (name)
-  (or (find-presentation-type name nil)
-      (let ((meta (find-class name nil)))
-        (and (typep meta 'standard-class)
-             meta))))
 
 (defgeneric presentation-ptype-supers (type)
   (:documentation "Gets a list of the presentation type objects for those
