@@ -167,10 +167,10 @@ and used to ensure that presentation-translators-caches are up to date.")
          (real-to-type (expand-presentation-type-abbreviation to-type)))
     ;; I did not investigate yet to decide what is the right thing. Let's issue
     ;; a warning for a time being. See #778. -- jd 2019-06-11
-    (cond ((not (ignore-errors (get-ptype-metaclass real-from-type)))
+    (cond ((not (get-ptype-metaclass real-from-type))
            (alexandria:simple-style-warning "~s does not have a presentation metaclass. Translator may not work." real-from-type))
           #+ (or)
-          ((not (ignore-errors (get-ptype-metaclass real-to-type)))
+          ((not (get-ptype-metaclass real-to-type))
            (alexandria:simple-style-warning "~s does not have a presentation metaclass. Translator may not work." real-to-type)))
     (with-keywords-removed (translator-options
                             (:gesture :tester :tester-definitive :documentation
