@@ -30,11 +30,15 @@
    (translator-function :reader translator-function
                         :initarg :translator-function)))
 
-(defmethod initialize-instance :after ((obj presentation-translator)
-                                       &key &allow-other-keys)
+(defmethod initialize-instance :after
+    ((obj presentation-translator) &key from-type to-type &allow-other-keys)
   (unless (slot-boundp obj 'pointer-documentation)
     (setf (slot-value obj 'pointer-documentation)
-          (translator-documentation obj))))
+          (translator-documentation obj)))
+  (unless (get-ptype from-type)
+    (error "~s is not a presentation type." from-type))
+  (unless (get-ptype to-type)
+    (error "~s is not a presentation type." to-type)))
 
 (defmethod print-object ((obj presentation-translator) stream)
   (print-unreadable-object (obj stream :identity t)
@@ -165,13 +169,6 @@ and used to ensure that presentation-translators-caches are up to date.")
     (setq tester-definitive t))
   (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
          (real-to-type (expand-presentation-type-abbreviation to-type)))
-    ;; I did not investigate yet to decide what is the right thing. Let's issue
-    ;; a warning for a time being. See #778. -- jd 2019-06-11
-    (cond ((not (get-ptype-metaclass real-from-type))
-           (alexandria:simple-style-warning "~s does not have a presentation metaclass. Translator may not work." real-from-type))
-          #+ (or)
-          ((not (get-ptype-metaclass real-to-type))
-           (alexandria:simple-style-warning "~s does not have a presentation metaclass. Translator may not work." real-to-type)))
     (with-keywords-removed (translator-options
                             (:gesture :tester :tester-definitive :documentation
                              :pointer-documentation :menu :priority
