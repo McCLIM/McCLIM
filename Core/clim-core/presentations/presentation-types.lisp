@@ -639,24 +639,22 @@ supertypes of TYPE that are presentation types"))
                                  :expansion-function expansion-func))
          (ptype-meta
            (if compile-time-p
-               (apply #'make-instance
-                      (if (compile-time-clos-p name)
-                          'clos-presentation-type
-                          'presentation-type)
-                      ptype-class-args)
+               (if (compile-time-clos-p name)
+                   (apply #'make-instance 'clos-presentation-type
+                          :clos-class (find-class 'standard-class)
+                          ptype-class-args)
+                   (apply #'make-instance 'presentation-type
+                          ptype-class-args))
                (let ((clos-meta (find-class name nil)))
                  (if-let ((closp (typep clos-meta 'standard-class)))
                    (apply #'make-instance 'clos-presentation-type
                           :clos-class clos-meta
                           ptype-class-args)
-                   (let ((directs (mapcan
-                                   #'(lambda (super)
-                                       (if (eq super t)
-                                           nil
-                                           (list (or (get-ptype-metaclass
-                                                      super)
-                                                     super))))
-                                   supers)))
+                   (let ((directs
+                           (loop for super in supers
+                                 unless (eq super t)
+                                   collect (or (get-ptype-metaclass super)
+                                               super))))
                      (apply #'c2mop:ensure-class fake-name
                             :name fake-name
                             :metaclass 'presentation-type-class
