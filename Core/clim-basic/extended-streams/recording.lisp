@@ -142,22 +142,15 @@ all of FUNCTION-ARGS as APPLY arguments."
 ;;; methods are very similar, hence this macro.  In order to exploit
 ;;; the similarities, it's necessary to treat the slots of the second
 ;;; record like variables, so for convenience the macro will use
-;;; SLOT-VALUE on both records.
-
-(defmacro defrecord-predicate (record-type slots &body body)
-  "Each element of SLOTS is either a symbol or (:initarg-name slot-name)."
-  (let* ((slot-names (mapcar #'(lambda (slot-spec)
-                                 (if (consp slot-spec)
-                                     (cadr slot-spec)
-                                     slot-spec))
-                             slots))
-         (supplied-vars (mapcar #'(lambda (slot)
-                                    (gensym (symbol-name
-                                             (symbol-concat slot '#:-p))))
+;;; WITH-SLOTS on the second record.
+(defmacro defrecord-predicate (record-type slot-names &body body)
+  "Each element of SLOT-NAMES is a symbol naming a slot."
+  (let* ((supplied-vars (mapcar (lambda (name)
+                                  (gensym (format nil "~A-~A" name '#:p)))
                                 slot-names))
-         (key-args (mapcar #'(lambda (slot-spec supplied)
-                               `(,slot-spec nil ,supplied))
-                           slots supplied-vars))
+         (key-args (mapcar (lambda (name supplied)
+                             `(,name nil ,supplied))
+                           slot-names supplied-vars))
          (key-arg-alist (mapcar #'cons slot-names supplied-vars)))
     `(progn
        (defmethod output-record-equal and ((record ,record-type)
@@ -991,9 +984,9 @@ were added."
         (with-drawing-options (stream :clipping-region (graphics-state-clip record))
           (call-next-method)))))
 
-(defrecord-predicate gs-clip-mixin ((:clipping-region clipping-region))
+(defrecord-predicate gs-clip-mixin (clipping-region)
   (if-supplied (clipping-region)
-    (region-equal (graphics-state-clip record) clipping-region)))
+    (region-equal (slot-value record 'clipping-region) clipping-region)))
 
 ;;; 16.3.2. Graphics Displayed Output Records
 (defclass standard-displayed-output-record (gs-clip-mixin gs-ink-mixin
