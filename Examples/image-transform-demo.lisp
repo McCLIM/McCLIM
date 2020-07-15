@@ -100,6 +100,8 @@
 (defun display-image-demo (frame stream)
   (clim:updating-output (stream)
     (let* ((image (image-transform-demo/image frame))
+           (width (clim:pattern-width image))
+           (height (clim:pattern-height image))
            (rotation (clim:gadget-value (clim:find-pane-named frame 'rot-slider)))
            (x-translation (clim:gadget-value (clim:find-pane-named frame 'x-slider)))
            (y-translation (clim:gadget-value (clim:find-pane-named frame 'y-slider)))
@@ -111,19 +113,14 @@
                 (clim:compose-transformations
                  (clim:make-scaling-transformation scale scale)
                  (clim:compose-transformations
-                  (clim:make-rotation-transformation* rotation
-                                                      (/ (clim:pattern-width image) 2)
-                                                      (/ (clim:pattern-height image) 2))
+                  (clim:make-rotation-transformation* rotation (/ width 2) (/ height 2))
                   (make-skew-transformation x-skew y-skew))))))
       (clim:with-drawing-options (stream :transformation tr)
         (clim:draw-design stream image)
-        (clim:draw-rectangle* stream 0 0 (clim:pattern-width image) (clim:pattern-height image) :filled nil :ink clim:+blue+)
-        ;; We don't display text here if using the Truetype font
-        ;; renderer, since other font renderers doesn't support text
-        ;; transform.
-        #+mcclim-ffi-freetype
+        (clim:draw-rectangle* stream 0 0 width height :filled nil :ink clim:+blue+)
         (clim:with-text-size (stream 60)
-          (clim:draw-text* stream "Foo abcdefgh" 100 100))))))
+          (clim:draw-text* stream "Can transform text, too" 100 100
+                           :transform-glyphs t))))))
 
 (defun image-transform-demo ()
   (let ((frame (clim:make-application-frame 'image-transform-demo)))
