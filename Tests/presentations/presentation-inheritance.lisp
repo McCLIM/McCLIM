@@ -28,34 +28,34 @@
     (is (not (presentation-typep foo 'pti.0002.other)))))
 
 (test pti.0003.inheritance-validity
-  (define-presentation-type pti.0003.foo ())
-  (define-presentation-type pti.0003.bar ())
+  (define-presentation-type pti.0003.super1 ())
+  (define-presentation-type pti.0003.super2 ())
   (finishes
-    (define-presentation-type pti.0003.qux ()
-      :inherit-from 'pti.0003.foo))
+    (define-presentation-type pti.0003.sub1 ()
+      :inherit-from 'pti.0003.super1))
   (finishes
-    (define-presentation-type pti.0003.qux ()
-      :inherit-from '(and pti.0003.foo
-                          pti.0003.bar)))
-  (signals error
-    (define-presentation-type pti.0003.qux ()
-      :inherit-from '(and pti.0003.foo
-                          (and pti.0003.bar pti.0003.foo))))
-  (signals error
-    (define-presentation-type pti.0003.qux ()
+    (define-presentation-type pti.0003.sub2 ()
+      :inherit-from '(and pti.0003.super1
+                          pti.0003.super2)))
+  (compilation-signals error
+    (define-presentation-type pti.0003.sub3 ()
+      :inherit-from '(and pti.0003.super1
+                      (and pti.0003.super2 pti.0003.super1))))
+  (compilation-signals error
+    (define-presentation-type pti.0003.sub4 ()
       :inherit-from '(not string)))
-  (signals error
-    (define-presentation-type pti.0003.qux ()
+  (compilation-signals error
+    (define-presentation-type pti.0003.sub5 ()
       :inherit-from '(satisfies list)))
-  (signals error
-    (define-presentation-type pti.0003.qux ()
-      :inherit-from '(or pti.0003.foo pti.0003.bar)))
-  (signals error
-    (define-presentation-type pti.0003.qux ()
-      :inherit-from '(and (or pti.0003.foo pti.0003.bar))))
-  (signals error
-    (define-presentation-type presentations.invalid-inheritance.qux ()
-      :inherit-from '(and pti.0003.foo pti.0003.bar (satisfies (list)))))
-  (signals error
-    (define-presentation-type presentations.invalid-inheritance.qux ()
-      :inherit-from '(and pti.0003.foo (not pti.0003.bar)))))
+  (compilation-signals error
+    (define-presentation-type pti.0003.sub6 ()
+      :inherit-from '(or pti.0003.super1 pti.0003.suyper2)))
+  (compilation-signals error
+    (define-presentation-type pti.0003.sub7 ()
+      :inherit-from '(and (or pti.0003.super1 pti.0003.super2))))
+  (compilation-signals error
+    (define-presentation-type pti.0003.sub8 ()
+      :inherit-from '(and pti.0003.super1 pti.0003.super2 (satisfies (list)))))
+  (compilation-signals error
+    (define-presentation-type pti.0003.sub9 ()
+      :inherit-from '(and pti.0003.super1 (not pti.0003.super2)))))

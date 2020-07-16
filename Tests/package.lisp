@@ -2,7 +2,7 @@
   (:use #:clim-lisp #:clim #:clime #:fiveam)
   (:shadowing-import-from #:fiveam #:test)
   (:import-from #:climi #:coordinate=)
-  (:import-from #:clim-test-util #:fails)
+  (:import-from #:clim-test-util #:fails #:compilation-signals)
   (:export #:run-tests))
 
 (cl:in-package #:clim-tests)

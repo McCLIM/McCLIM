@@ -19,9 +19,13 @@
 
    #:*all-test-pages*
 
-   #:fails))
+   #:fails
+
+   #:compilation-signals))
 
 (cl:in-package #:clim-test-util)
+
+;;; Expected failures
 
 (defun call-as-fails (thunk)
   (let ((failed nil))
@@ -37,3 +41,27 @@
 
 (defmacro fails (&body body)
   `(call-as-fails (lambda () ,@body)))
+
+;;; Checking compile-time conditions
+
+(defun %compilation-signals (condition-type body)
+  (multiple-value-bind (function warnings-p failure-p)
+      (let* ((discard (make-broadcast-stream))
+             (*trace-output* discard)
+             (*error-output* discard))
+        (with-compilation-unit (:override t)
+          (compile nil `(lambda () ,@body))))
+    (declare (ignore warnings-p))
+    (5am:is-true failure-p)
+    (handler-bind
+        ((condition (lambda (condition)
+                      (when (typep condition condition-type)
+                        (5am::add-result 'it.bese.fiveam::test-passed
+                                         :test-expr condition-type)
+                        (return-from %compilation-signals)))))
+      (funcall function)
+      (5am:fail "~S failed to signal a ~S condition"
+                Body condition-type))))
+
+(defmacro compilation-signals (condition &body body)
+  `(%compilation-signals ',condition ',body))
