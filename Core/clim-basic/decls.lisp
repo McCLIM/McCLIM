@@ -721,7 +721,7 @@ unspecified. "))
 ;;;; 21.2
 (defgeneric invoke-updating-output
     (stream continuation record-type unique-id id-test cache-value cache-test
-	    &key fixed-position all-new parent-cache))
+            &key fixed-position all-new parent-cache))
 
 
 ;;; 22.2.1 The Extended Stream Input Protocol
@@ -754,7 +754,6 @@ unspecified. "))
 
 ;;; 23.2 Presentations
 
-(defgeneric presentationp (object))
 (defgeneric presentation-object (presentation))
 (defgeneric (setf presentation-object) (object presentation))
 (defgeneric presentation-type (presentation))
