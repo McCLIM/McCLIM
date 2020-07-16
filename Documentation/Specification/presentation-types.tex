@@ -72,8 +72,9 @@ Returns \term{true} if \arg{object} is a \term{presentation}, otherwise returns
 
 \Defclass {standard-presentation}
 
-The instantiable output record class that represents presentations.
-\cl{present} normally creates output records of this class.
+The instantiable output record class inheriting from the protocol class
+\term{presentation} that represents presentations.  \cl{present} normally
+creates output records of this class.
 \Mutable
 
 \definitarg {:object}
@@ -109,8 +110,18 @@ Returns the presentation type associated with the \term{presentation}
 
 \Defgeneric {(setf presentation-type)} {type presentation}
 
-Changes the object associated with the \term{presentation} \arg{presentation} to
-\arg{object}.
+Changes the type associated with the \term{presentation} \arg{presentation} to
+\arg{type}.
+
+\Defgeneric {presentation-view} {presentation}
+
+Returns the presentation view associated with the \term{presentation}
+\arg{presentation}.
+
+\Defgeneric {(setf presentation-view)} {view presentation}
+
+Changes the view associated with the \term{presentation} \arg{presentation} to
+\arg{view}.
 
 \Defgeneric {presentation-single-box} {presentation}
 

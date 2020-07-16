@@ -1148,6 +1148,7 @@
    #:presentation-type-specifier-p      ;function
    #:presentation-typep                 ;presentation method
    #:presentation-typep                 ;function
+   #:presentation-view                  ;generic function
    #:presentationp                      ;predicate
    #:print-menu-item                    ;function
    #:printer                            ;presentation type option

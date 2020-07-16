@@ -752,6 +752,19 @@ unspecified. "))
     (stream output &key repaint erase feedback finish-on-release multiple-window))
 
 
+;;; 23.2 Presentations
+
+(defgeneric presentationp (object))
+(defgeneric presentation-object (presentation))
+(defgeneric (setf presentation-object) (object presentation))
+(defgeneric presentation-type (presentation))
+(defgeneric (setf presentation-type) (type presentation))
+(defgeneric presentation-view (presentation))
+(defgeneric (setf presentation-view) (view presentation))
+(defgeneric presentation-single-box (presentation))
+(defgeneric (setf presentation-single-box) (single-box presentation))
+(defgeneric presentation-modifier (presentation))
+
 ;;; 23.4 Typed output
 
 (defgeneric stream-present
