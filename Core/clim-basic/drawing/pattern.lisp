@@ -5,7 +5,7 @@
 ;;;;
 ;;;;    License:  LGPL-2.1-or-later
 
-;;; Patterns are a bounded rectangular arrangements of desings, like a
+;;; Patterns are a bounded rectangular arrangements of designs, like a
 ;;; checkboard. Pattern may be transformed and composed with other designs.
 ;;;
 ;;; Extensions:
@@ -36,9 +36,9 @@
 ;;;
 ;;;      Internal class. Its purpose is to hold cached precomputed RGBA array
 ;;;      for other patterns (so we collapse designs used as inks and opacities
-;;;      into their final values). Computing such array is not necessarily
+;;;      into their final values). Computing such an array is not necessarily
 ;;;      trivial, for instance an INDEXED-PATTERN may have a RECTANGULAR-TILE as
-;;;      one of its designs, in which case we "blit" retangular tile instead of
+;;;      one of its designs, in which case we "blit" rectangular tile instead of
 ;;;      simple color to all original array elements pointing at the tile. In
 ;;;      case of transformations this pattern should contain final (possibly
 ;;;      interpolated) values. This instance may be computed lazily and cached.
@@ -66,7 +66,7 @@
 ;;;    implement bounding-rectangle protocol. In case of rectangular-tile it
 ;;;    should work on its base design size (and a transformation).
 ;;;
-;;; A: This is implied by the fact that it is adviced to use transform-region on
+;;; A: This is implied by the fact that it is advised to use TRANSFORM-REGION on
 ;;;    a pattern in order to transform it. See 14.5.
 ;;;
 ;;; Q: Should a pattern which is not transformed have a starting position?
@@ -99,42 +99,51 @@ pattern, stencil, image etc)."))
   ((array :type (simple-array (unsigned-byte 32) 2)))
   (:documentation "Helper class of RGBA result of another pattern."))
 
+(declaim (ftype (function (t) (values (unsigned-byte 32) &optional nil))
+                %rgba-value))
 (defun %rgba-value (element)
   "Helper function collapsing uniform design into 4-byte RGBA value."
   (flet ((transform (parameter)
-           (logand (logand (truncate (* parameter 255)) 255))))
+           (logand (truncate (* parameter 255)) 255)))
     (etypecase element
       ((unsigned-byte 32) element)
       ;; Uniform-compositium is a masked-compositum rgb + opacity
       ((or color opacity uniform-compositum)
        (multiple-value-bind (red green blue opacity)
            (color-rgba element)
-         (logior (ash (transform red)   24)
-                 (ash (transform green) 16)
-                 (ash (transform blue)   8)
-                 (transform opacity))))
+         (logior (ash (transform red)    24)
+                 (ash (transform green)  16)
+                 (ash (transform blue)    8)
+                 (ash (transform opacity) 0))))
       (indirect-ink (%rgba-value (indirect-ink-ink element))))))
 
 (defgeneric %pattern-rgba-value (pattern x y)
   (:documentation "Returns a collapsed RGBA value for position [X, Y].")
   (:method ((pattern %rgba-pattern) (x fixnum) (y fixnum))
     (let ((array (pattern-array pattern)))
+      (declare (type (array (unsigned-byte 32) 2) array))
       (if (array-in-bounds-p array y x)
-          (aref (pattern-array pattern) y x)
+          (aref array y x)
           #x00000000)))
   (:method ((pattern indirect-ink) x y)
     (%rgba-value (design-ink pattern x y)))
-  (:method (design x y) ;; fallback method
+  (:method (design x y) ; fallback method
     (%rgba-value (design-ink design x y))))
 
 (defmethod design-ink ((pattern %rgba-pattern) x y)
   (let ((array (pattern-array pattern)))
+    (declare (type (array (unsigned-byte 32) 2) array))
     (if (array-in-bounds-p array y x)
-        (let ((elt (aref (pattern-array pattern) y x)))
-          (make-uniform-compositum (make-rgb-color (float (/ (ldb (byte 8 24) elt) 255))
-                                                   (float (/ (ldb (byte 8 16) elt) 255))
-                                                   (float (/ (ldb (byte 8 08) elt) 255)))
-                                   (float (/ (ldb (byte 8 00) elt) 255))))
+        (let* ((rgba-value (aref array y x))
+               (alpha (ldb (byte 8 0) rgba-value)))
+          (flet ((color ()
+                   (make-rgb-color (/ (ldb (byte 8 24) rgba-value) 255.0)
+                                   (/ (ldb (byte 8 16) rgba-value) 255.0)
+                                   (/ (ldb (byte 8  8) rgba-value) 255.0))))
+            (case alpha
+              (0 +transparent-ink+)
+              (255 (color))
+              (t (make-uniform-compositum (color) (/ alpha 255.0))))))
         +transparent-ink+)))
 
 (defgeneric %collapse-pattern (pattern)
@@ -165,8 +174,7 @@ pattern, stencil, image etc)."))
          ;; indexed-pattern may be used as a design in the rectangular-tile. If
          ;; it is bigger than our pattern we return +transparent-ink+.
          (element (if (array-in-bounds-p array y x)
-                      (elt (pattern-designs pattern)
-                           (aref (pattern-array pattern) y x))
+                      (elt (pattern-designs pattern) (aref array y x))
                       +transparent-ink+)))
     (if (patternp element)
         ;; If design is a pattern we delegate the question
@@ -178,8 +186,7 @@ pattern, stencil, image etc)."))
          ;; indexed-pattern may be used as a design in the rectangular-tile. If
          ;; it is bigger than our pattern we return +transparent-ink+.
          (element (if (array-in-bounds-p array y x)
-                      (elt (pattern-designs pattern)
-                           (aref (pattern-array pattern) y x))
+                      (elt (pattern-designs pattern) (aref array y x))
                       +transparent-ink+)))
     (if (patternp element)
         ;; If design is a pattern we delegate the question
@@ -196,7 +203,7 @@ pattern, stencil, image etc)."))
 (defmethod design-ink ((pattern stencil) x y)
   (let* ((array (pattern-array pattern)))
     (if (array-in-bounds-p array y x)
-        (make-opacity (aref (pattern-array pattern) y x))
+        (make-opacity (aref array y x))
         +transparent-ink+)))
 
 ;;; If we had wanted to convert stencil to indexed array these functions would
