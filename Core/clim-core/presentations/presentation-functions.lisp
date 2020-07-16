@@ -251,21 +251,19 @@
                   (destructuring-bind ,par-ll ,par-arg
                     (declare (ignorable ,@par-vars))
                     ,@body)))))
-      (setf body
-            `((let ((,massaged-type
-                      ;; Different TYPE-SPEC and TYPE-NAME implies EQL
-                      ;; specializer. In that case we fix the massaged
-                      ;; type to TYPE-NAME which is the result of
-                      ;; calling PRESENTATION-TYPE-OF on the object.
-                      ;; -- jd 2020-07-02
-                      ,(if (not (eq type-name type-spec))
-                           `(quote ,type-name)
-                           `(translate-specifier-for-type
-                             (type-name-from-type-key ,type-key-arg)
-                             (quote ,type-name)
-                             ,type-var))))
-                ,@body))))
-    body))
+      `((let ((,massaged-type
+                ;; Different TYPE-SPEC and TYPE-NAME implies EQL
+                ;; specializer. In that case we fix the massaged
+                ;; type to TYPE-NAME which is the result of
+                ;; calling PRESENTATION-TYPE-OF on the object.
+                ;; -- jd 2020-07-02
+                ,(if (not (eq type-name type-spec))
+                     `(quote ,type-name)
+                     `(translate-specifier-for-type
+                       (type-name-from-type-key ,type-key-arg)
+                       (quote ,type-name)
+                       ,type-var))))
+          ,@body)))))
 
 (defmacro define-presentation-method (name &rest args)
   (multiple-value-bind (qualifiers lambda-list decls body)
