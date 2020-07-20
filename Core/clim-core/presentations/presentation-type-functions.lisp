@@ -116,6 +116,21 @@ otherwise return false."
     presentation-subtypep
   (type-key type putative-supertype))
 
+(defun map-completion-items (function completion-type-parameters)
+  (destructuring-bind (sequence &key (value-key 'identity)
+                                &allow-other-keys)
+      completion-type-parameters
+    (map nil (lambda (element)
+               (funcall function (funcall value-key element)))
+         sequence)))
+
+(defun every-completion-item (function completion-type-parameters)
+  (map-completion-items (lambda (element)
+                          (when (not (funcall function element))
+                            (return-from every-completion-item nil)))
+                        completion-type-parameters)
+  t)
+
 ;;; PRESENTATION-SUBTYPEP suffers from some of the same problems as
 ;;; CL:SUBTYPEP, most (but sadly not all) of which were solved in H. Baker "A
 ;;; Decision Procedure for SUBTYPEP"; additionally, it suffers from the
@@ -198,6 +213,12 @@ otherwise return false."
     (with-presentation-type-decoded (maybe-subtype-name maybe-subtype-parameters)
         maybe-subtype
       (cond
+        ((eq maybe-subtype-name 'completion)
+         (return-from presentation-subtypep
+           (values (every-completion-item
+                    (alexandria:rcurry #'presentation-typep maybe-supertype)
+                    maybe-subtype-parameters)
+                   t)))
         ;; DO NOT BE TEMPTED TO REARRANGE THESE CLAUSES
         ((eq maybe-subtype-name 'or)
          (dolist (or-type maybe-subtype-parameters
@@ -211,20 +232,10 @@ otherwise return false."
            (dolist (and-type maybe-supertype-parameters
                              (return-from presentation-subtypep
                                (values result result)))
-             (cond
-               ((and (consp and-type) (eq (car and-type) 'satisfies))
-                (if (eq maybe-subtype-name 'completion)
-                    (let ((pred (second and-type)))
-                      (destructuring-bind (sequence
-                                           &key (value-key 'identity)
-                                           &allow-other-keys)
-                          maybe-subtype-parameters
-                        (unless (every (lambda (elt)
-                                         (funcall pred (funcall value-key elt)))
-                                       sequence)
-                          (return-from presentation-subtypep (values nil t)))))
-                    (setq result nil)))
-               ((and (consp and-type) (eq (car and-type) 'not))
+             (typecase and-type
+               ((cons (eql satisfies))
+                (setq result nil))
+               ((cons (eql not))
                 (multiple-value-bind (yp sp)
                     (presentation-subtypep maybe-subtype (cadr and-type))
                   (declare (ignore sp))
@@ -252,47 +263,28 @@ otherwise return false."
                             (return-from presentation-subtypep (values nil surep)))
              (multiple-value-bind (yp sp)
                  (presentation-subtypep maybe-subtype or-type)
-               (cond
-                 (yp (return-from presentation-subtypep (values t t)))
-                 ((not sp) (setq surep nil)))))))
+               (cond (yp (return-from presentation-subtypep (values t t)))
+                     ((not sp) (setq surep nil)))))))
         ((eq maybe-subtype-name 'and)
          (assert (not (eq maybe-supertype-name 'and)))
-         (multiple-value-bind (yp sp)
-             (presentation-subtypep (car maybe-subtype-parameters) maybe-supertype)
-           (declare (ignore sp))
+         (let  ((yp (presentation-subtypep
+                     (first maybe-subtype-parameters) maybe-supertype)))
            (return-from presentation-subtypep (values yp yp))))
-        ((and (eq maybe-subtype-name 'completion)
-              (not (eq maybe-supertype-name 'completion)))
-         (destructuring-bind (sequence
-                              &key (value-key 'identity)
-                              &allow-other-keys)
-             maybe-subtype-parameters
-           (return-from presentation-subtypep
-             (values
-              (every (lambda (elt)
-                       (presentation-typep (funcall value-key elt) maybe-supertype))
-                     sequence)
-              t))))
         ((and (eq maybe-subtype-name 'subset-completion)
               (eq maybe-supertype-name 'sequence))
-         (destructuring-bind (sequence
-                              &key (value-key 'identity)
-                              &allow-other-keys)
-             maybe-subtype-parameters
-           (let ((element-type (first maybe-supertype-parameters)))
-             (return-from presentation-subtypep
-               (values
-                (every (lambda (elt)
-                         (presentation-typep (funcall value-key elt) element-type))
-                       sequence)
-                t)))))))
-    (map-over-presentation-type-supertypes
-     #'(lambda (name massaged)
-         (when (eq name maybe-supertype-name)
+         (let ((element-type (first maybe-supertype-parameters)))
            (return-from presentation-subtypep
-             (funcall-presentation-generic-function presentation-subtypep
-                                                    massaged
-                                                    maybe-supertype))))
+             (values (every-completion-item
+                      (alexandria:rcurry #'presentation-typep element-type)
+                      maybe-subtype-parameters)
+                     t))))))
+    (map-over-presentation-type-supertypes
+     (lambda (name massaged)
+       (when (eq name maybe-supertype-name)
+         (return-from presentation-subtypep
+           (funcall-presentation-generic-function presentation-subtypep
+                                                  massaged
+                                                  maybe-supertype))))
      maybe-subtype))
   (values nil t))
 
@@ -325,69 +317,52 @@ MAYBE-SUPERTYPE, regardless of parameters."
     (return-from stupid-subtypep t))
   (when (eql maybe-subtype maybe-supertype)
     (return-from stupid-subtypep t))
-  (let ((maybe-subtype-name (presentation-type-name maybe-subtype))
-        (maybe-supertype-name (presentation-type-name maybe-supertype)))
-    ;; See DEFUN PRESENTATION-SUBTYPEP for some caveats.
-    (cond
-      ((eq maybe-subtype-name 'or)
-       (let ((or-types (decode-parameters maybe-subtype)))
-         (every (lambda (x) (stupid-subtypep x maybe-supertype)) or-types)))
-      ((eq maybe-supertype-name 'and)
-       (let* ((super-* (decode-parameters maybe-supertype))
-              (super-1 (car super-*)))
-         (if (consp super-1)
-             (case (car super-1)
-               (satisfies (if (eq maybe-subtype-name 'completion)
-                              (let ((pred (second super-1)))
-                                (destructuring-bind (sequence
-                                                     &key (value-key 'identity)
-                                                     &allow-other-keys)
-                                    (decode-parameters maybe-subtype)
-                                  (every (lambda (elt)
-                                           (funcall pred (funcall value-key elt)))
-                                         sequence)))
-                              t))
-               (not (not (stupid-subtypep maybe-subtype (second super-1))))
-               (otherwise (stupid-subtypep maybe-subtype super-1)))
-             (stupid-subtypep maybe-subtype super-1))))
-      ((eq maybe-supertype-name 'or)
-       (let ((or-types (decode-parameters maybe-supertype)))
-         (some (lambda (x) (stupid-subtypep maybe-subtype x)) or-types)))
-      ((eq maybe-subtype-name 'and)
-       ;; This clause is actually not conservative, but probably in a way that
-       ;; no-one will complain about too much. Basically, we will only return
-       ;; T if the first type in the AND (which is treated specially by CLIM)
-       ;; is a subtypep of the MAYBE-SUPERTYPE.
-       (stupid-subtypep (car (decode-parameters maybe-subtype)) maybe-supertype))
-      ((and (eq maybe-subtype-name 'completion)
-            (not (eq maybe-supertype-name 'completion)))
-       (destructuring-bind (sequence
-                            &key (value-key 'identity)
-                            &allow-other-keys)
-           (decode-parameters maybe-subtype)
-         (every (lambda (elt)
-                  (presentation-typep (funcall value-key elt) maybe-supertype))
-                sequence)))
-      ((and (eq maybe-subtype-name 'subset-completion)
-            (eq maybe-supertype-name 'sequence))
-       (destructuring-bind (sequence
-                            &key (value-key 'identity)
-                            &allow-other-keys)
-           (decode-parameters maybe-subtype)
-         (let ((element-type (car (decode-parameters maybe-supertype))))
-           (every (lambda (elt)
-                    (presentation-typep (funcall value-key elt) element-type))
-                  sequence))))
-      (t
-       (let ((subtype-meta (get-ptype-metaclass maybe-subtype-name))
-             (maybe-supertype-meta (get-ptype-metaclass maybe-supertype-name)))
-         (unless (and subtype-meta maybe-supertype-meta)
-           (return-from stupid-subtypep nil))
-         (map-over-ptype-superclasses #'(lambda (super)
-                                          (when (eq maybe-supertype-meta super)
-                                            (return-from stupid-subtypep t)))
-                                      maybe-subtype-name)
-         nil)))))
+  (with-presentation-type-decoded (maybe-subtype-name maybe-subtype-parameters)
+      maybe-subtype
+    (with-presentation-type-decoded (maybe-supertype-name maybe-supertype-parameters)
+        maybe-supertype
+      ;; See DEFUN PRESENTATION-SUBTYPEP for some caveats.
+      (cond ((eq maybe-subtype-name 'completion)
+             (every-completion-item
+              (alexandria:rcurry #'presentation-typep maybe-supertype)
+              maybe-subtype-parameters))
+            ((eq maybe-subtype-name 'or)
+             (let ((or-types maybe-subtype-parameters))
+               (every (lambda (x) (stupid-subtypep x maybe-supertype)) or-types)))
+            ((eq maybe-supertype-name 'and)
+             (let* ((super-* maybe-supertype-parameters)
+                    (super-1 (car super-*)))
+               (if (consp super-1)
+                   (case (car super-1)
+                     (satisfies t)
+                     (not (not (stupid-subtypep maybe-subtype (second super-1))))
+                     (otherwise (stupid-subtypep maybe-subtype super-1)))
+                   (stupid-subtypep maybe-subtype super-1))))
+            ((eq maybe-supertype-name 'or)
+             (let ((or-types maybe-supertype-parameters))
+               (some (lambda (x) (stupid-subtypep maybe-subtype x)) or-types)))
+            ((eq maybe-subtype-name 'and)
+             ;; This clause is actually not conservative, but probably in a way that
+             ;; no-one will complain about too much. Basically, we will only return
+             ;; T if the first type in the AND (which is treated specially by CLIM)
+             ;; is a subtypep of the MAYBE-SUPERTYPE.
+             (stupid-subtypep (first maybe-subtype-parameters) maybe-supertype))
+            ((and (eq maybe-subtype-name 'subset-completion)
+                  (eq maybe-supertype-name 'sequence))
+             (let ((element-type (first maybe-supertype-parameters)))
+               (every-completion-item
+                (alexandria:rcurry #'presentation-typep element-type)
+                maybe-subtype-parameters)))
+            (t
+             (let ((subtype-meta (get-ptype-metaclass maybe-subtype-name))
+                   (maybe-supertype-meta (get-ptype-metaclass maybe-supertype-name)))
+               (unless (and subtype-meta maybe-supertype-meta)
+                 (return-from stupid-subtypep nil))
+               (map-over-ptype-superclasses (lambda (super)
+                                              (when (eq maybe-supertype-meta super)
+                                                (return-from stupid-subtypep t)))
+                                            maybe-subtype-name)
+               nil))))))
 
 (define-default-presentation-method presentation-subtypep
     (type maybe-supertype)
