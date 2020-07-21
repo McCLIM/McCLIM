@@ -53,13 +53,13 @@
          (width (array-dimension array 1))
          (dest (make-array (list height width 4)
                            :element-type '(unsigned-byte 8))))
-    (loop for y from 0 to (1- height) do
-         (loop for x from 0 to (1- width) do
-              (let ((pixel (aref array y x)))
-                (setf (aref dest y x 0) (ldb (byte 8 24) pixel)
-                      (aref dest y x 1) (ldb (byte 8 16) pixel)
-                      (aref dest y x 2) (ldb (byte 8 8) pixel)
-                      (aref dest y x 3) (ldb (byte 8 0) pixel)))))
+    (loop for y from 0 to (1- height)
+          do (loop for x from 0 to (1- width)
+                   for pixel = (aref array y x)
+                   do (setf (aref dest y x 0) (ldb (byte 8 16) pixel)
+                            (aref dest y x 1) (ldb (byte 8  8) pixel)
+                            (aref dest y x 2) (ldb (byte 8  0) pixel)
+                            (aref dest y x 3) (ldb (byte 8 24) pixel))))
     dest))
 
 (defun convert-opticl-img (img)
@@ -72,36 +72,33 @@
       (opticl:gray-image
        (opticl:do-pixels (y x) img
          (let ((v (aref img y x)))
-           (setf (aref array y x)
-                 (dpb v (byte 8 24)
-                      (dpb v (byte 8 16)
-                           (dpb v (byte 8 8)
-                                #xff)))))))
+           (setf (aref array y x) (logior (ash v     0)
+                                          (ash v     8)
+                                          (ash v    16)
+                                          (ash #xff 24))))))
 
       (opticl:gray-alpha-image
        (opticl:do-pixels (y x) img
-         (let ((v (aref img y x 0)))
-           (setf (aref array y x)
-                 (dpb v (byte 8 24)
-                      (dpb v (byte 8 16)
-                           (dpb v (byte 8 8)
-                                (aref img y x 1))))))))
+         (let ((v (aref img y x 0))
+               (a (aref img y x 1)))
+           (setf (aref array y x) (logior (ash v  0)
+                                          (ash v  8)
+                                          (ash v 16)
+                                          (ash a 24))))))
 
       (opticl:rgb-image
        (opticl:do-pixels (y x) img
-         (setf (aref array y x)
-               (dpb (aref img y x 0) (byte 8 24)
-                    (dpb (aref img y x 1) (byte 8 16)
-                         (dpb (aref img y x 2) (byte 8 8)
-                              #xff))))))
+         (setf (aref array y x) (logior (ash (aref img y x 2)  0)
+                                        (ash (aref img y x 1)  8)
+                                        (ash (aref img y x 0) 16)
+                                        (ash #xff             24)))))
 
       (opticl:rgba-image
        (opticl:do-pixels (y x) img
-         (setf (aref array y x)
-               (dpb (aref img y x 0) (byte 8 24)
-                    (dpb (aref img y x 1) (byte 8 16)
-                         (dpb (aref img y x 2) (byte 8 8)
-                              (aref img y x 3))))))))
+         (setf (aref array y x) (logior (ash (aref img y x 2)  0)
+                                        (ash (aref img y x 1)  8)
+                                        (ash (aref img y x 0) 16)
+                                        (ash (aref img y x 3) 24))))))
     array))
 
 

@@ -46,7 +46,7 @@
              :value-changed-callback #'render-image-update-selection)
    (condition-option
     (clim:with-radio-box (:orientation :vertical
-				       :value-changed-callback 'render-image-update-condition-option)
+                                       :value-changed-callback 'render-image-update-condition-option)
       (clim:radio-box-current-selection "message")
       "break")))
   (:layouts
@@ -129,24 +129,25 @@
   (flet ((draw-rect (color w h)
            (let ((image (render-image-test-make-rgba-image 90 70 color)))
              (clim-render:draw-image* stream image w h))))
-    (draw-rect #xFFFFFFFF 10 10)
-    (draw-rect #x000000FF 110 10)
-    (draw-rect #x0000F0FF 10 100)
-    (draw-rect #x00F000FF 110 100)
-    (draw-rect #xF00000FF 210 100)
-    (draw-rect #x800080FF 10 200)
-    (draw-rect #x808000FF 110 200)))
+    (draw-rect #xffffffff  10  10) ; white
+    (draw-rect #xff000000 110  10) ; black
+    (draw-rect #xfff00000  10 100) ; red
+    (draw-rect #xff00f000 110 100) ; green
+    (draw-rect #xff0000ff 210 100) ; blue
+    (draw-rect #xff800080  10 200) ; purple (not quite +purple+)
+    (draw-rect #xff808000 110 200) ; olive drab (not quite +olive-drab+)
+    ))
 
 (defun render-image-test-02 (stream)
   (flet ((draw-rect (color w h)
            (let ((image (render-image-test-make-rgba-image 90 70 color)))
              (clim-render:draw-image* stream image w h))))
-    (draw-rect +white+ 10 10)
-    (draw-rect +black+ 110 10)
-    (draw-rect +red+ 10 100)
-    (draw-rect +green+ 110 100)
-    (draw-rect +blue+ 210 100)
-    (draw-rect +purple+ 10 200)
+    (draw-rect +white+       10  10)
+    (draw-rect +black+      110  10)
+    (draw-rect +red+         10 100)
+    (draw-rect +green+      110 100)
+    (draw-rect +blue+       210 100)
+    (draw-rect +purple+      10 200)
     (draw-rect +olive-drab+ 110 200)))
 
 (defun render-image-test-03 (stream h)

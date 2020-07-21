@@ -16,19 +16,23 @@
   (with-slots (mcclim-render-internals::dirty-region) sheet
     (setf mcclim-render-internals::dirty-region nil))
   ;;(let ((data (climi::pattern-array (image-mirror-image sheet))))
-    (with-slots (width height clx-image xlib-image) sheet
-      (setf width w
-	    height h)
-      (setf xlib-image (make-array (list height width)
-                                   :element-type '(unsigned-byte 32)
-                                   :initial-element #x00FFFFFF))
-      (setf clx-image
-	    (xlib:create-image :bits-per-pixel 32
-			       :data xlib-image
-			       :depth 24
-			       :width width
-			       :height height
-			       :format :z-pixmap))))
+  (with-slots (width height clx-image xlib-image) sheet
+    (setf width w
+          height h)
+    ;; Fill the image with a recognizable color so that pixels in the
+    ;; mirror image which the backend never fills stand out. The
+    ;; highest byte should not be used by X, but in case something
+    ;; gets messed up in terms of e.g. the pixel format, the color
+    ;; will still be recognizable and it will never be transparent.
+    (setf xlib-image (make-array (list height width)
+                                 :element-type '(unsigned-byte 32)
+                                 :initial-element #xc080e0a0))
+    (setf clx-image (xlib:create-image :bits-per-pixel 32
+                                       :data xlib-image
+                                       :depth 24
+                                       :width width
+                                       :height height
+                                       :format :z-pixmap))))
 
 (defgeneric image-mirror-to-x (sheet))
 
@@ -74,7 +78,7 @@
                         (do ((x min-x)
                              (y min-y (1+ y)))
                             ((> x max-x))
-                          (setf (aref xlib-image y x) (ash (aref pixels y x) -8))
+                          (setf (aref xlib-image y x) (aref pixels y x))
                           (when (= y max-y)
                             (incf x)
                             (setf y min-y))))))))))
