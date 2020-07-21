@@ -416,30 +416,28 @@ translated, so they begin at different position than [0,0])."))
 (defun compute-rgb-mask (drawable image)
   (let* ((width (pattern-width image))
          (height (pattern-height image))
-         (idata (climi::pattern-array image)))
-    (let* ((mm (xlib:create-pixmap :drawable drawable
-                                   :width width
-                                   :height height
-                                   :depth 1))
-           (mm-gc (xlib:create-gcontext :drawable mm
-                                        :foreground 1
-                                        :background 0))
-           (mdata (make-array (list height width) :element-type '(unsigned-byte 1)))
-           (mm-image (xlib:create-image :width  width
-                                        :height height
-                                        :depth  1
-                                        :data   mdata)))
-      (declare (type (simple-array (unsigned-byte 32) (* *)) idata))
-      (loop for x fixnum from 0 below width do
-           (loop for y fixnum from 0 below height do
-                (let ((elt (aref idata y x)))
-                  (if (< (ldb (byte 8 0) elt) #x80)
-                      (setf (aref mdata y x) 0)
-                      (setf (aref mdata y x) 1)))))
-      (put-image-recursively mm mm-gc mm-image width height 0 0)
-      (xlib:free-gcontext mm-gc)
-      (push #'(lambda () (xlib:free-pixmap mm)) ^cleanup)
-      mm)))
+         (idata (climi::pattern-array image))
+         (mm (xlib:create-pixmap :drawable drawable
+                                 :width width
+                                 :height height
+                                 :depth 1))
+         (mm-gc (xlib:create-gcontext :drawable mm
+                                      :foreground 1
+                                      :background 0))
+         (mdata (make-array (list height width) :element-type 'bit))
+         (mm-image (xlib:create-image :width  width
+                                      :height height
+                                      :depth  1
+                                      :data   mdata)))
+    (declare (type (integer 0 #.(ash 1 30)) width height) ; this will be IMAGE-INDEX if we move that into the core
+             (type (simple-array (unsigned-byte 32) 2) idata))
+    (loop for i of-type alexandria:array-index below (* width height)
+          do (setf (row-major-aref mdata i)
+                   (if (< (ldb (byte 8 0) (row-major-aref idata i)) #x80) 0 1)))
+    (put-image-recursively mm mm-gc mm-image width height 0 0)
+    (xlib:free-gcontext mm-gc)
+    (push (lambda () (xlib:free-pixmap mm)) ^cleanup)
+    mm))
 
 
 ;;; The purpose of this is to reduce local network traffic for the case of many
@@ -454,27 +452,26 @@ translated, so they begin at different position than [0,0])."))
   (let* ((width (pattern-width image))
          (height (pattern-height image))
          (depth (cached-drawable-depth drawable))
-         (idata (climi::pattern-array image)))
-    (let* ((pm (xlib:create-pixmap :drawable drawable
-                                   :width width
-                                   :height height
-                                   :depth depth))
-           (pm-gc (xlib:create-gcontext :drawable pm))
-           (pdata (make-array (list height width) :element-type '(unsigned-byte 32)))
-           (pm-image (xlib:create-image :width  width
-                                        :height height
-                                        :depth  depth
-                                        :bits-per-pixel 32
-                                        :data   pdata)))
-      (declare (type (simple-array (unsigned-byte 32) (* *)) idata))
-      (loop for x fixnum from 0 below width do
-           (loop for y fixnum from 0 below height do
-                (let ((elt (aref idata y x)))
-                  (setf (aref pdata y x) (ash elt -8)))))
-      (put-image-recursively pm pm-gc pm-image width height 0 0)
-      (xlib:free-gcontext pm-gc)
-      (push #'(lambda () (xlib:free-pixmap pm)) ^cleanup)
-      pm)))
+         (idata (climi::pattern-array image))
+         (pm (xlib:create-pixmap :drawable drawable
+                                 :width width
+                                 :height height
+                                 :depth depth))
+         (pm-gc (xlib:create-gcontext :drawable pm))
+         (pdata (make-array (list height width) :element-type '(unsigned-byte 32)))
+         (pm-image (xlib:create-image :width  width
+                                      :height height
+                                      :depth  depth
+                                      :bits-per-pixel 32
+                                      :data   pdata)))
+    (declare (type (integer 0 #.(ash 1 30)) width height) ; this will be IMAGE-INDEX if we move that into the core
+             (type (simple-array (unsigned-byte 32) 2) idata))
+    (loop for i of-type alexandria:array-index below (* width height)
+          do (setf (row-major-aref pdata i) (ash (row-major-aref idata i) -8)))
+    (put-image-recursively pm pm-gc pm-image width height 0 0)
+    (xlib:free-gcontext pm-gc)
+    (push (lambda () (xlib:free-pixmap pm)) ^cleanup)
+    pm))
 
 (defmethod design-gcontext ((medium clx-medium) (ink clime:pattern)
                             &aux (ink* (climi::transformed-design-design
