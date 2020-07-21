@@ -203,10 +203,6 @@
   (format *trace-output* "That was just a test~%")
   (finish-output *trace-output*))
 
-(defmethod enable-frame :after ((frame gadget-test))
-  (clim-internals::schedule-timer-event
-   (find-pane-named frame 'radar) 'radiate 0.1))
-
 (defclass radar-pane (basic-gadget)
   ((points :initform (list (list 0.01 0.01 0.10 0.10)
                            (list 0.10 0.02 0.70 0.40)
@@ -217,6 +213,9 @@
                            (list 0.20 0.07 0.60 0.90)
                            (list 0.20 0.08 0.80 0.30)
                            (list 0.20 0.09 0.60 0.20)))))
+
+(defmethod note-sheet-grafted ((sheet radar-pane))
+  (clim-internals::schedule-timer-event sheet 'radiate 0.1))
 
 (defmethod handle-event ((pane radar-pane) (event timer-event))
   (with-slots (points) pane
@@ -235,7 +234,7 @@
                           (setf (fourth point) (random 1.0))
                           0.01)))
               (setf (first point) radius)
-              ; v- fix with a transform?
+              ;; v- fix with a transform?
               (let ((x (+ x1 (* x xf)))
                     (y (+ y1 (* y yf)))
                     (rx (* radius xf))
@@ -243,12 +242,13 @@
                     (orx (* old-radius xf))
                     (ory (* old-radius yf)))
                 (draw-ellipse* pane x y
-                                    0 ory
-                                    orx 0
-                                    :ink +background-ink+ :filled nil)
+                               0 ory
+                               orx 0
+                               :ink +background-ink+ :filled nil)
                 (when (> radius 0.01)
                   (draw-ellipse* pane x y
-                                      0 ry
-                                      rx 0
-                                      :ink +black+ :filled nil)))))))))
-  (clim-internals::schedule-timer-event pane 'radiate 0.1))
+                                 0 ry
+                                 rx 0
+                                 :ink +black+ :filled nil)))))))))
+  (when (sheet-grafted-p pane)
+    (clim-internals::schedule-timer-event pane 'radiate 0.1)))
