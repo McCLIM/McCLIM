@@ -527,12 +527,10 @@ use condition-variables nor locks."))
 
 (defmethod event-peek ((sheet standard-sheet-input-mixin) &optional event-type)
   (with-slots (queue) sheet
-    (if event-type
-        (event-queue-peek-if (lambda (x)
-                               (typep x event-type))
-                             queue)
-        (event-queue-peek-if (lambda (x) (declare (ignore x)) t)
-                             queue))))
+    (let ((predicate (if event-type
+                         (lambda (x) (typep x event-type))
+                         (lambda (x) (declare (ignore x)) t))))
+      (event-queue-peek-if predicate queue))))
 
 (defmethod event-unread ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
@@ -562,7 +560,7 @@ use condition-variables nor locks."))
   (handle-event sheet event))
 
 (defmethod handle-event ((sheet immediate-sheet-input-mixin) event)
-  (declare (ignore event))
+  (declare (ignore sheet event))
   nil)
 
 (define-condition sheet-is-mute-for-input (error)

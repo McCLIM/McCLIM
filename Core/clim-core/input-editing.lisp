@@ -1087,8 +1087,8 @@ protocol retrieving gestures from a provided string."))
 
 (defmethod stream-read-char-no-hang ((stream string-input-editing-stream))
   (if (> (stream-scan-pointer stream) (length (stream-input-buffer stream)))
-   :eof
-   (stream-read-gesture stream)))
+      :eof
+      (stream-read-gesture stream)))
 
 (defmethod stream-read-char ((stream string-input-editing-stream))
   (stream-read-gesture stream))
