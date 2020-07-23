@@ -23,23 +23,11 @@
 (defclass echo-interactor-pane (interactor-pane)
   ())
 
-(defvar *debug-echo* t)
-
-(defmethod handle-event :after ((stream echo-interactor-pane)
-				 (event key-press-event))
-  (let* ((buffer (stream-input-buffer stream))
-	 (fill (fill-pointer buffer)))
-    (when (> fill 0)	;Should always be true
-      (let ((gesture (aref buffer (1- fill))))
-	(when (characterp gesture)
-      (stream-write-char stream gesture))))))
-
 (defmethod stream-read-gesture :around ((stream echo-interactor-pane)
 				       &key &allow-other-keys)
   (let* ((results (multiple-value-list (call-next-method)))
 	 (gesture (car results)))
-    (when (and *debug-echo*
-	       gesture)
+    (when gesture
       (print gesture *trace-output*))
     (values-list results)))
 
