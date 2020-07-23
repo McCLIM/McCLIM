@@ -32,16 +32,12 @@
                          object type)))))
 
 (defun input-context-wait-test (stream)
-  (let* ((queue (stream-input-buffer stream))
-         (event (event-queue-peek queue)))
-    (when event
-      (let ((sheet (event-sheet event)))
-        (when (and (output-recording-stream-p sheet)
-                   (or (typep event 'pointer-event)
-                       (typep event 'keyboard-event))
-                   (not (gadgetp sheet)))
-          (return-from input-context-wait-test t))))
-    nil))
+  (when-let ((event (event-peek stream)))
+    (let ((sheet (event-sheet event)))
+      (and (output-recording-stream-p sheet)
+           (typep event '(or pointer-event keyboard-event))
+           ;; XXX this condition should be banished.
+           (not (gadgetp sheet))))))
 
 (defun input-context-event-handler (stream)
   (highlight-applicable-presentation *application-frame*

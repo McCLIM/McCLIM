@@ -2979,23 +2979,31 @@ current background message was set."))
                       borders
                       label))
   (setf port (or port (find-port)))
+  ;; Input buffers in the spec are not well defined for panes but at least we
+  ;; know that they are vectors while event queues are deliberately
+  ;; unspecified. OPEN-WINDOW-STREAM description is fudged in this regard by
+  ;; allowing to specify input-buffer as either. -- jd 2019-06-21
   (let* ((fm (find-frame-manager :port port))
-         (frame (make-application-frame 'a-window-stream
-                                        :frame-event-queue input-buffer
-                                        :frame-manager fm
-                                        :pretty-name (or label "")
-					:left left
-					:top top
-					:right right
-					:bottom bottom
-					:width width
-					:height height
-                                        :scroll-bars scroll-bars)))
+         (frame (apply #'make-application-frame
+                       'a-window-stream
+                       :frame-manager fm
+                       :pretty-name (or label "")
+                       :left left
+                       :top top
+                       :right right
+                       :bottom bottom
+                       :width width
+                       :height height
+                       :scroll-bars scroll-bars
+                       (typecase input-buffer
+                         (event-queue (list :event-queue input-buffer))
+                         (vector      (list :input-buffer input-buffer))
+                         (otherwise   nil)))))
     ;; Adopt and enable the pane
     (when (eq (frame-state frame) :disowned)
       (adopt-frame fm frame))
     (unless (or (eq (frame-state frame) :enabled)
-		(eq (frame-state frame) :shrunk))
+                (eq (frame-state frame) :shrunk))
       (enable-frame frame))
     ;; Start a new thread to run the event loop, if necessary.
     (let ((*application-frame* frame))
