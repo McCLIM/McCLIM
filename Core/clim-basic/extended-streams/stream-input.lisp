@@ -450,7 +450,7 @@ keys read."))
                                   gesture)
   (unread-char gesture stream))
 
-;;; Gestures
+;;; 22.3 Gestures and Gesture Names
 
 (defparameter *gesture-names* (make-hash-table))
 
