@@ -135,12 +135,17 @@
                               &key (close-button-p t) (resizablep t))
   ;; Assumes left, right and bottom borders are 1, which is the
   ;; default when creating a frame
+  (let ((mirror-region (climi::%sheet-mirror-region sheet)))
+    (when mirror-region
+      (setf width (round-coordinate (bounding-rectangle-width mirror-region))
+            height (round-coordinate (bounding-rectangle-height mirror-region)))))
   (setf width (max 5 width))
   (setf height (max 5 height))
   (let* ((fwidth (+ width 2))
          (fheight (+ height 1 top-border))
          (mirror (make-instance 'mezzano-mirror))
          (fifo (mezzano-mez-fifo port))
+         (mirror-transformation (climi::%sheet-mirror-transformation sheet))
          (window (mos:make-window fifo fwidth fheight))
          (surface (mos:window-buffer window))
          (frame (make-instance 'mos:frame
@@ -161,6 +166,13 @@
           (slot-value mirror 'mez-pixels) (mos:surface-pixels surface)
           (slot-value mirror 'mez-window) window
           (slot-value mirror 'mez-frame) frame)
+    (when mirror-transformation
+      (multiple-value-bind (x y)
+          (transform-position mirror-transformation 0 0)
+        (unless (and (zerop x) (zerop y))
+          (mos:move-window window
+                           (round-coordinate x)
+                           (round-coordinate y)))))
     (port-register-mirror port sheet mirror)
     (setf (gethash window (slot-value port 'mez-window->sheet)) sheet
           (gethash window (slot-value port 'mez-window->mirror)) mirror)

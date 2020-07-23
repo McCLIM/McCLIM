@@ -8,7 +8,6 @@
 ;; always apply to the *last-mouse-sheet*, not the mezzano frame
 (defvar *last-mouse-x* 0)
 (defvar *last-mouse-y* 0)
-(defvar *last-mouse-sheet* nil)
 
 (defvar *last-modifier-state* 0)
 
@@ -153,36 +152,51 @@
                    :x (+ (mos:window-x mez-window) fl)
                    :y (+ (mos:window-y mez-window) ft))))
 
+(defun mez-event->mcclim-event-mouse (port event mez-window sheet mez-frame mouse-x mouse-y)
+  (cond ((and mez-frame
+              (or (mos:in-frame-header-p mez-frame mouse-x mouse-y)
+                  (mos:in-frame-border-p mez-frame mouse-x mouse-y)))
+         (or (frame-mouse-event sheet mez-frame event)
+             (when (plusp (mos:mouse-button-change event))
+               (generate-window-configuration-event sheet mez-window mez-frame))))
+        ((= (mos:mouse-button-change event) 0)
+         (mezzano.gui.compositor:set-window-data mez-window :cursor :default)
+         (pointer-motion-event port sheet event))
+
+        ((member (compute-mouse-buttons (mos:mouse-button-change event)) '(#.+pointer-wheel-up+ #.+pointer-wheel-down+))
+         (pointer-scroll-event port sheet event))
+
+        (t
+         (pointer-button-event port sheet event))))
+
 (defmethod mez-event->mcclim-event (port (event mos:mouse-event))
   (let* ((pointer    (port-pointer port))
          (mez-window (mos:window event))
          (mouse-x    (mos:mouse-x-position event))
          (mouse-y    (mos:mouse-y-position event))
          (mez-mirror (port-lookup-mirror port mez-window))
-         (sheet      (port-lookup-sheet port mez-window)))
-
+         (sheet      (port-lookup-sheet port mez-window))
+         (config-event nil))
     (when mez-mirror
       (with-slots (mez-frame dx dy width height) mez-mirror
+        (when (or (not (eql (slot-value mez-mirror 'last-abs-x)
+                            (mos:window-x mez-window)))
+                  (not (eql (slot-value mez-mirror 'last-abs-y)
+                            (mos:window-y mez-window))))
+          ;; Window has moved, generate a window config event to put it in the right place.
+          (setf config-event (generate-window-configuration-event
+                              sheet mez-window mez-frame))
+          (setf (slot-value mez-mirror 'last-abs-x) (mos:window-x mez-window)
+                (slot-value mez-mirror 'last-abs-y) (mos:window-y mez-window)))
         (setf *last-mouse-x* mouse-x
               *last-mouse-y* mouse-y
               (pointer-x pointer) (+ mouse-x (mos:window-x mez-window))
               (pointer-y pointer) (+ mouse-y (mos:window-y mez-window)))
-        (cond ((and mez-frame
-                    (or (mos:in-frame-header-p mez-frame mouse-x mouse-y)
-                        (mos:in-frame-border-p mez-frame mouse-x mouse-y)))
-               (or (frame-mouse-event sheet mez-frame event)
-                   (when (plusp (mos:mouse-button-change event))
-                     (generate-window-configuration-event sheet mez-window mez-frame))))
-              ((= (mos:mouse-button-change event) 0)
-               (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
-                        :default)
-               (pointer-motion-event port sheet event))
-
-              ((member (compute-mouse-buttons (mos:mouse-button-change event)) '(#.+pointer-wheel-up+ #.+pointer-wheel-down+))
-               (pointer-scroll-event port sheet event))
-
-              (t
-               (pointer-button-event port sheet event)))))))
+        (let ((evt (mez-event->mcclim-event-mouse port event mez-window sheet mez-frame mouse-x mouse-y)))
+          (cond ((and config-event evt)
+                 (list config-event evt))
+                (config-event)
+                (evt)))))))
 
 ;;;======================================================================
 ;;; Activation Events
@@ -219,12 +233,20 @@
       ;; 3: Enter (SETF SHEET-REGION) (#<Standard-Bounding-Rectangle X 0:354801/512 Y 0:679387/1024> #<Vrack-Pane NIL 5000204A5909>)
       ;; new-region: #<Standard-Bounding-Rectangle X 0:354801/512 Y 0:679387/1024>  old-region: #<Standard-Bounding-Rectangle X 0:354801/512 Y 0:679387/1024>
       ;; 3: Leave (SETF SHEET-REGION) (NIL)
-      (list
-       (generate-window-configuration-event sheet mez-window (slot-value mez-mirror 'mez-frame))
-       (with-slots (width height) mez-mirror
-         (make-instance 'window-repaint-event
-                        :sheet sheet
-                        :region (make-rectangle* 0 0 width height)))))))
+      ;;
+      ;; Skip the config event for non-toplevel frames. They get resized and
+      ;; generate a new, more appropriate, config event for that.
+      (if (slot-value mez-mirror 'top-levelp)
+          (list
+           (generate-window-configuration-event sheet mez-window (slot-value mez-mirror 'mez-frame))
+           (with-slots (width height) mez-mirror
+             (make-instance 'window-repaint-event
+                            :sheet sheet
+                            :region (make-rectangle* 0 0 width height))))
+          (with-slots (width height) mez-mirror
+            (make-instance 'window-repaint-event
+                           :sheet sheet
+                           :region (make-rectangle* 0 0 width height)))))))
 
 (defmethod mez-event->mcclim-event (port (event mos:window-activation-event))
   (let* ((mez-window (mos:window event))
@@ -257,7 +279,6 @@
   (let* ((mez-window (mos:window event))
          (mez-mirror (port-lookup-mirror port mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
-         (sheet (port-lookup-sheet port mez-window))
          (fwidth (max *minimum-width* (mos:width event)))
          (fheight (max *minimum-height* (mos:height event))))
     (multiple-value-bind (dw dh) (size-deltas mez-mirror)
@@ -276,14 +297,17 @@
                 (slot-value mez-mirror 'fheight) fheight
                 (slot-value mez-mirror 'width) width
                 (slot-value mez-mirror 'height) height)
-          (make-instance 'window-configuration-event
-                         :sheet sheet
-                         :region nil
-                         :width width
-                         :height height
-                         :x (mos:window-x mez-window)
-                         :y (mos:window-y mez-window)))))))
+          nil)))))
 
 (defmethod mez-event->mcclim-event (port (event mos:resize-event))
-  ;;; TODO - what needs to happen here anything?
-)
+  (let* ((mez-window (mos:window event))
+         (mez-mirror (port-lookup-mirror port mez-window))
+         (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
+         (sheet (port-lookup-sheet port mez-window)))
+    (when mez-frame
+      (list
+       (generate-window-configuration-event sheet mez-window mez-frame)
+       (with-slots (width height) mez-mirror
+         (make-instance 'window-repaint-event
+                        :sheet sheet
+                        :region (make-rectangle* 0 0 width height)))))))

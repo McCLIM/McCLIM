@@ -13,6 +13,8 @@
    (height     :initform 0)
    (dx         :initform 0)
    (dy         :initform 0)
+   (last-abs-x :initform 0)
+   (last-abs-y :initform 0)
    (mez-pixels :initform nil)
    (mez-window :initform nil)
    (mez-frame  :initform nil)
@@ -35,7 +37,7 @@
       (let* ((surface (mos:make-surface fwidth fheight))
              (pixels (mos:surface-pixels surface)))
         (mos:resize-frame mez-frame surface)
-        (mos:resize-window mez-window surface)
+        (mos:resize-window mez-window surface :origin :midpoint)
         (setf (slot-value mirror 'mez-pixels) pixels)
         (mos:draw-frame mez-frame)))))
 
@@ -115,9 +117,10 @@
 (defmethod port-set-mirror-region
     ((port mezzano-port) (mirror mezzano-mirror) mirror-region)
   (with-bounding-rectangle* (min-x min-y max-x max-y) mirror-region
-    (resize-mirror mirror
-                   (1+ (ceiling (- max-x min-x)))
-                   (1+ (ceiling (- max-y min-y)))))
+    (with-port-lock (port)
+      (resize-mirror mirror
+                     (1+ (ceiling (- max-x min-x)))
+                     (1+ (ceiling (- max-y min-y))))))
   (mos:draw-frame (slot-value mirror 'mez-frame)))
 
 (defmethod port-set-mirror-transformation
@@ -130,8 +133,9 @@
   (let ((mirror (sheet-mirror sheet)))
     (when (typep mirror 'mezzano-mirror)
       (let ((mez-window (slot-value mirror 'mez-window)))
-        (remhash mez-window (slot-value port 'mez-window->sheet))
-        (remhash mez-window (slot-value port 'mez-window->mirror))
+        (with-port-lock (port)
+          (remhash mez-window (slot-value port 'mez-window->sheet))
+          (remhash mez-window (slot-value port 'mez-window->mirror)))
         (mos:close-window mez-window)))
     (when (port-lookup-mirror port sheet)
       (port-unregister-mirror port sheet (sheet-mirror sheet)))))
@@ -142,8 +146,9 @@
                (eq sheet (port-lookup-sheet port mirror)))
       ;; disabling a top level sheet - close the window and delete mappings
       (let ((mez-window (slot-value mirror 'mez-window)))
-        (remhash mez-window (slot-value port 'mez-window->sheet))
-        (remhash mez-window (slot-value port 'mez-window->mirror))
+        (with-port-lock (port)
+          (remhash mez-window (slot-value port 'mez-window->sheet))
+          (remhash mez-window (slot-value port 'mez-window->mirror)))
         (mos:close-window mez-window)))))
 
 (defmethod mcclim-render-internals::%mirror-force-output ((mirror mezzano-mirror))
