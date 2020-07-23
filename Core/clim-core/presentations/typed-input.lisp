@@ -35,9 +35,7 @@
   (when-let ((event (event-peek stream)))
     (let ((sheet (event-sheet event)))
       (and (output-recording-stream-p sheet)
-           (typep event '(or pointer-event keyboard-event))
-           ;; XXX this condition should be banished.
-           (not (gadgetp sheet))))))
+           (typep event '(or pointer-event keyboard-event))))))
 
 (defun input-context-event-handler (stream)
   (highlight-applicable-presentation *application-frame*
