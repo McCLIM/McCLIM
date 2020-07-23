@@ -56,14 +56,14 @@
     (vertically ()
       (scrolling (:scroll-bars :horizontal :suggested-height 48)
         history)
-      (:fill (scrolling (:width 920 :height 480) inspector))
+      (:fill (scrolling (:width 920 :height 240) inspector))
       (make-pane 'clime:box-adjuster-gadget)
       (1/16 interactor :height 200)))
    (without-interactor
     (vertically ()
       (scrolling (:scroll-bars :horizontal :suggested-height 48)
         history)
-      (:fill (scrolling (:width 920 :height 800) inspector)))))
+      (:fill (scrolling (:width 920 :height 480) inspector)))))
   (:command-table (application :inherit-from (inspector-pane-command-table
                                               navigation-command-table)))
   (:command-definer nil)
