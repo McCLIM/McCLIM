@@ -32,15 +32,12 @@
                          object type)))))
 
 (defun input-context-wait-test (stream)
-  (when-let ((event (event-peek stream)))
-    (let ((sheet (event-sheet event)))
-      (and (output-recording-stream-p sheet)
-           (typep event '(or pointer-event keyboard-event))))))
+  (when-let ((gesture (stream-gesture-available-p stream)))
+    (when (eventp gesture)
+      (output-recording-stream-p (event-sheet gesture)))))
 
 (defun input-context-event-handler (stream)
-  (highlight-applicable-presentation *application-frame*
-                                     stream
-                                     *input-context*))
+  (highlight-applicable-presentation *application-frame* stream *input-context*))
 
 (defun input-context-button-press-handler (stream button-event)
   (declare (ignore stream))

@@ -145,7 +145,12 @@ input focus. This is a McCLIM extension."))
                 :initform nil
                 :accessor frame-event-queue
                 :documentation "The event queue that, by default, will be
-  shared by all panes in the stream")
+                                shared by all panes in the frame")
+   (input-buffer :initarg :frame-input-buffer
+                 :initform (make-instance 'concurrent-event-queue :port nil)
+                 :accessor frame-input-buffer
+                 :documentation "The input buffer queue that, by default, will
+                                 be shared by all input streams in the frame")
    (documentation-state :accessor frame-documentation-state
                         :initform nil
                         :documentation "Used to keep of track of what
@@ -626,7 +631,8 @@ documentation produced by presentations.")
   ;; Default event-queue to the frame event queue.
   (declare (ignore event-queue))
   (if (null evq-p)
-      (let ((evq (frame-event-queue frame)))
+      (let ((evq (frame-event-queue frame))
+            (*input-buffer* (frame-input-buffer frame)))
         (apply #'call-next-method fm frame type :event-queue evq args))
       (call-next-method)))
 
