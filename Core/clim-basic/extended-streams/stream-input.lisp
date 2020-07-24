@@ -29,6 +29,11 @@
 (defvar *input-wait-handler* nil)
 (defvar *pointer-button-press-handler* nil)
 
+;;; This variable is a default input buffer for newly created input stream
+;;; instances which are based on the INPUT-STREAM-KERNEL. This variable is
+;;; here to allow sharing the input buffer between different streams.
+(defvar *input-buffer* nil)
+
 ;;; X11 returns #\Return where we want to see #\Newline at the stream-read-char
 ;;; level.  Dunno if this is the right place to do the transformation... --moore
 (defun char-for-read (char)
@@ -43,6 +48,117 @@
               (eql modifiers +shift-key+))
       (keyboard-event-character event))))
 
+
+(deftype input-gesture-object ()
+  '(or character event))
+
+;;; CLIM's input kernel is only hinted in the specification. This class makes
+;;; that concept explicit. Classes STANDARD-BASIC-INPUT-STREAM and
+;;; STANDARD-EXTENDED-INPUT-STREAM are based on this class. -- jd 2019-06-24
+(defclass input-stream-kernel (standard-sheet-input-mixin)
+  (;; The input-buffer representation is CONCURRENT-EVENT-QUEUE (not a vector)
+   ;; because it is a suitable implementation to hold gestures. Vector is not
+   ;; suitable because it is not clear when it should be emptied.
+   (input-buffer :initarg :input-buffer :accessor stream-input-buffer))
+  (:default-initargs
+   :input-buffer (or *input-buffer* (make-instance 'concurrent-event-queue))))
+
+(defgeneric stream-append-gesture (stream gesture)
+  (:method ((stream input-stream-kernel) gesture)
+    (check-type gesture input-gesture-object)
+    (event-queue-append (stream-input-buffer stream) gesture)))
+
+;;; This function is like (a fictional) PEEK-NO-HANG but only locally in the
+;;; buffer, i.e it does not trigger wait on the event queue.
+(defgeneric stream-gesture-available-p (stream)
+  (:method ((stream input-stream-kernel))
+    (event-queue-peek (stream-input-buffer stream))))
+
+;;; Default input-stream-kernel methods.
+
+;;; The input buffer is expected to be filled from HANDLE-EVENT methods. All
+;;; tests operate on the stream's input buffer. -- jd 2020-07-28
+(defmethod stream-input-wait ((stream input-stream-kernel) &key timeout input-wait-test)
+  (loop
+    with wait-fun = (and input-wait-test (curry input-wait-test stream))
+    with timeout-time = (and timeout (+ timeout (now)))
+    when (stream-gesture-available-p stream)
+      do (return-from stream-input-wait t)
+    do (multiple-value-bind (available reason)
+           (event-listen-or-wait stream :timeout timeout
+                                        :wait-function wait-fun)
+         (when (and (null available) (eq reason :timeout))
+           (return-from stream-input-wait (values nil :timeout)))
+         (when-let ((event (event-read-no-hang stream)))
+           (handle-event (event-sheet event) event))
+         (when timeout
+           (setf timeout (compute-decay timeout-time nil)))
+         (when (funcall input-wait-test stream)
+           (return-from stream-input-wait
+             (values nil :input-wait-test))))))
+
+(defmethod stream-listen ((stream input-stream-kernel))
+  (stream-input-wait stream))
+
+(defmethod stream-process-gesture ((stream input-stream-kernel) gesture type)
+  (declare (ignore stream))
+  (values gesture type))
+
+(defmethod stream-read-gesture ((stream input-stream-kernel)
+                                &key timeout peek-p
+                                  (input-wait-test *input-wait-test*)
+                                  (input-wait-handler *input-wait-handler*)
+                                  (pointer-button-press-handler
+                                   *pointer-button-press-handler*))
+  (when peek-p
+    (return-from stream-read-gesture
+      (stream-gesture-available-p stream)))
+  (let ((*input-wait-test* input-wait-test)
+        (*input-wait-handler* input-wait-handler)
+        (*pointer-button-press-handler* pointer-button-press-handler)
+        (input-buffer (stream-input-buffer stream)))
+    (flet ((process-gesture (raw-gesture)
+             (when (and pointer-button-press-handler
+                        (typep raw-gesture 'pointer-button-press-event))
+               (funcall pointer-button-press-handler stream raw-gesture))
+             (when-let ((gesture (stream-process-gesture stream raw-gesture t)))
+               (return-from stream-read-gesture gesture))))
+      (loop
+        (multiple-value-bind (available reason)
+            (stream-input-wait stream :timeout timeout
+                                      :input-wait-test input-wait-test)
+          (if available
+              (process-gesture (event-queue-read input-buffer))
+              ;; STREAM-READ-GESTURE specialized on the string input stream
+              ;; may return (values nil :eof) (see "XXX Evil hack" below),
+              ;; however that should not happen for INPUT-STREAM-KERNEL,
+              ;; unless STREAM-INPUT-WAIT returns :EOF and it is not specified
+              ;; to do so.
+              ;;
+              ;; In principle the specification could be extended so
+              ;; PROCESS-NEXT-EVENT could return :EOF when the port is
+              ;; destroyed. Then that value would be propagated to
+              ;; STREAM-INPUT-WAIT and this CASE would be extended with:
+              ;;
+              ;;   (:eof (return-from stream-read-gesture (values nil :eof))
+              (case reason
+                (:input-wait-test
+                 (maybe-funcall input-wait-handler stream))
+                (:timeout
+                 (return-from stream-read-gesture (values nil :timeout)))
+                (otherwise
+                 ;; Invalid reason for no input.
+                 (error "STREAM-INPUT-WAIT: Game over (~s)." reason)))))))))
+
+(defmethod stream-unread-gesture ((stream input-stream-kernel) gesture)
+  (check-type gesture input-gesture-object)
+  (event-queue-prepend (stream-input-buffer stream) gesture)
+  nil)
+
+(defmethod stream-clear-input ((stream input-stream-kernel))
+  (let ((queue (stream-input-buffer stream)))
+    (setf (event-queue-head queue) nil
+          (event-queue-tail queue) nil)))
 
 ;;; Trampolines for stream-read-gesture and stream-unread-gesture.
 (defun read-gesture (&key (stream *standard-input*) timeout peek-p
