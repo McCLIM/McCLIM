@@ -520,10 +520,9 @@ use condition-variables nor locks."))
 
 (defmethod event-peek ((sheet standard-sheet-input-mixin) &optional event-type)
   (with-slots (queue) sheet
-    (let ((predicate (if event-type
-                         (lambda (x) (typep x event-type))
-                         (lambda (x) (declare (ignore x)) t))))
-      (event-queue-peek-if predicate queue))))
+    (if event-type
+        (event-queue-peek-if (lambda (x) (typep x event-type)) queue)
+        (event-queue-peek queue))))
 
 (defmethod event-unread ((sheet standard-sheet-input-mixin) event)
   (with-slots (queue) sheet
