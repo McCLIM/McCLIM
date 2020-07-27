@@ -91,6 +91,7 @@
 (defclass menu-button-submenu-pane (menu-button-pane)
   ((frame-manager :initform nil :initarg :frame-manager)
    (submenu-frame :initform nil)
+   (submenu-open :initform nil)
    (bottomp :initform nil :initarg :bottomp)
    (command-table :initform nil :initarg :command-table)))
 
@@ -143,12 +144,13 @@ account, and create a list of menu buttons."
               (medium-force-output medium))))))))
 
 (defmethod destroy-substructure ((sub-menu menu-button-submenu-pane))
-  (with-slots (frame-manager submenu-frame) sub-menu
+  (with-slots (frame-manager submenu-frame submenu-open) sub-menu
     (when submenu-frame
       (mapc #'destroy-substructure (menu-children sub-menu))
       (disown-frame frame-manager submenu-frame)
       (disarm-gadget sub-menu)
       (dispatch-repaint sub-menu +everywhere+)
+      (setf submenu-open nil)
       (setf submenu-frame nil))))
 
 (defmethod arm-branch ((sub-menu menu-button-submenu-pane))
@@ -163,12 +165,10 @@ account, and create a list of menu buttons."
     (arm-menu sub-menu)))
 
 (defmethod handle-event ((pane menu-button-submenu-pane) (event pointer-button-release-event))
-  (let ((pointer-sheet (port-pointer-sheet (port pane))))
-    (unless (and (not (eq pane pointer-sheet))
-                 (typep pointer-sheet 'menu-button-pane)
-                 (gadget-active-p pointer-sheet)
-                 (eq (menu-root pointer-sheet) (menu-root pane)))
-      (destroy-substructure (menu-root pane)))))
+  (with-slots (bottomp submenu-open) pane
+    (if (and bottomp submenu-open)
+        (destroy-substructure (menu-root pane))
+        (setf submenu-open t))))
 
 ;;; menu-button-vertical-submenu-pane
 (defclass menu-button-vertical-submenu-pane (menu-button-submenu-pane) ())
