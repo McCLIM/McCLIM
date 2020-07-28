@@ -1,73 +1,49 @@
-;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2016 Alessandro Serra <gas2serra@gmail.com>
+;;;  (c) copyright 2017-2020 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Package definition for the clx-fb module.
 
-(in-package :common-lisp-user)
-
-(defpackage :clim-clx-fb
-    (:use :clim :clim-lisp :clim-backend :clim-clx :mcclim-render-extensions)
-  (:import-from :climi
-                #:+alt-key+
-                ;;
-                #:port-text-style-mappings
+(defpackage #:clim-clx-fb
+  (:use #:clim
+        #:clim-lisp
+        #:clim-backend
+        #:clim-clx
+        #:mcclim-render-extensions)
+  (:import-from #:climi
                 #:port-lookup-mirror
                 #:port-register-mirror
-                #:port-event-process
                 #:port-grafts
-                #:%%sheet-native-transformation
-                #:%%set-sheet-native-transformation
-                ;;
-                #:clamp
-                #:get-environment-variable
-                #:pixmap-sheet
-                #:port-lookup-sheet
-                #:port-unregister-mirror
-                #:port-pointer-sheet
-                #:map-repeated-sequence
-                #:pixmap-mirror
-                #:do-sequence
-                #:with-double-buffering
-                #:with-transformed-position
-                #:with-transformed-positions
-                #:with-medium-options
                 ;;
                 #:pixmap
                 #:top-level-sheet-mixin
                 #:unmanaged-sheet-mixin
-                #:top-level-sheet-pane
-                #:unmanaged-top-level-sheet-pane
-                #:menu-frame
                 ;;
-                #:frame-managers        ;used as slot
-                #:top-level-sheet       ;used as slot
-                #:medium-device-region
-                #:draw-image
-                #:height                ;this seems bogus
-                #:width                 ;dito
-                #:coordinate=
-                #:get-transformation
-                ;;
-                #:medium-miter-limit
-                ;; classes:
-                #:mirrored-pixmap
-                #:window-destroy-event
-                #:device-font-text-style
+                #:frame-managers        ; used as slot
+                #:height                ; used to access a slot
+                #:width                 ; ditto
                 ;;
                 #:make-medium)
-   (:import-from :mcclim-render-internals
-                  #:render-medium-mixin
-                  #:render-port-mixin
-                  #:image-mirror-image
-                  #:image-sheet-mixin
-                  #:image-pixmap-mixin
-                  #:image-pixmap-mixin
-                  #:image-mirror-mixin)
-   (:import-from :clim-clx
-                 #:CLX-PORT-DISPLAY
-                 #:clx-medium
-                 #:initialize-clx
-                 #:clx-port-screen
+  (:import-from #:mcclim-render-internals
+                #:render-medium-mixin
+                #:render-port-mixin
+                #:image-mirror-image
+                #:image-sheet-mixin
+                #:image-pixmap-mixin
+                #:image-mirror-mixin)
+  (:import-from #:clim-clx
+                #:clx-port-display
+                #:initialize-clx
+                #:clx-port-screen
                 #:clx-graft
                 #:clx-port-window
                 #:sheet-xmirror
-                #:sheet-direct-xmirror
-                )
-  (:import-from :climi #:standard-port))
+                #:sheet-direct-xmirror)
+  (:import-from #:climi
+                #:standard-port))
