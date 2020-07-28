@@ -21,8 +21,15 @@
 
 (cl:defconstant +image-dimension-limit+ (ash 1 30))
 
+(deftype image-dimension ()
+  `(integer 0 ,+image-dimension-limit+))
+
 (deftype image-index ()
   `(integer 0 (,+image-dimension-limit+)))
+
+(deftype image-index-displacement ()
+  `(integer ,(- (floor +image-dimension-limit+ 2))
+            (,(floor +image-dimension-limit+ 2))))
 
 (deftype stencil-array ()
   `(simple-array octet 2))
