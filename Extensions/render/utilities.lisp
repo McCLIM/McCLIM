@@ -43,12 +43,14 @@ top-left. Useful when we iterate over the same array and mutate its state."
 
 ;;; color functions
 
-(defmacro let-rgba (((r g b a) elt) &body body)
-  (alexandria:once-only (elt)
-    `(let ((,a (ldb (byte 8 24) ,elt))
-           (,r (ldb (byte 8 16) ,elt))
-           (,g (ldb (byte 8  8) ,elt))
-           (,b (ldb (byte 8  0) ,elt)))
+(defmacro let-rgba (((r g b &optional (a nil a-supplied-p)) rgba-integer)
+                    &body body)
+  (alexandria:once-only (rgba-integer)
+    `(let (,@(when a-supplied-p
+               `((,a (ldb (byte 8 24) ,rgba-integer))))
+           (,r (ldb (byte 8 16) ,rgba-integer))
+           (,g (ldb (byte 8  8) ,rgba-integer))
+           (,b (ldb (byte 8  0) ,rgba-integer)))
        ,@body)))
 
 (declaim (inline color-value->octet)
