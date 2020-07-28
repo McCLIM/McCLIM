@@ -137,11 +137,9 @@
 ;;;; Part V: Extended Stream Output Facilities
 
 ;; CLIM Specification says that E-O-S is a subclass of OUTPUT-STREAM,
-;; but it does not says what is it. We infere it is a base class for
-;; all clim output streams (output-recording-stream included).
-(define-protocol-class output-stream
-    (fundamental-character-output-stream)
-  ())
+;; but it does not say what is it. We infer it is a base class for
+;; all CLIM output streams (output-recording-stream included).
+(defclass output-stream (fundamental-character-output-stream) ())
 
 ;;; 15.2 Extended Output Streams
 (define-protocol-class extended-output-stream
@@ -195,9 +193,10 @@
 
 ;;;; Part VI: Extended Stream Input Facilities
 
-
-;;; This class is only hinted in the specification.
-(define-protocol-class input-stream (fundamental-input-stream))
+;; CLIM Specification says that E-I-S is a subclass of INPUT-STREAM,
+;; but it does not say what is it. We infer it is a base class for
+;; all CLIM input streams (standard-input-stream included).
+(defclass input-stream (fundamental-input-stream) ())
 
 ;;; 22.2 Extended Input Streams
 
