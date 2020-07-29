@@ -2368,7 +2368,12 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
     (setf (clime:label-pane-label instance) label)))
 
 (defmethod (setf clime:label-pane-label) :after (new-value (pane label-pane))
-  (change-space-requirements pane)
+  (when (if-let ((requirements (pane-space-requirement pane)))
+          (progn
+            (setf (pane-space-requirement pane) nil)
+            (not (space-requirement-equal requirements (compose-space pane))))
+          t)
+    (change-space-requirements pane))
   (repaint-sheet pane (sheet-region pane)))
 
 (defmacro labelling ((&rest options) &body contents)
