@@ -327,7 +327,8 @@ use condition-variables nor locks."))
   (do-port-force-output queue)
   (check-schedule queue)
   ;; Slurp as many elements as available.
-  (loop until (null (process-next-event (event-queue-port queue) :timeout 0)))
+  (loop with port = (event-queue-port queue)
+        while (process-next-event port :timeout 0))
   (find-if predicate (event-queue-head queue)))
 
 (defmethod event-queue-listen-or-wait ((queue simple-event-queue)
