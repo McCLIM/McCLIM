@@ -264,8 +264,16 @@ order to produce a double-click")
   (with-slots (width min-width max-width height min-height max-height) space-req
     (values width min-width max-width height min-height max-height)))
 
+(defmethod space-requirement-equal ((sr1 space-requirement) (sr2 space-requirement))
+  (multiple-value-bind (width1 min-width1 max-width1 height1 min-height1 max-height1)
+      (space-requirement-components sr1)
+    (multiple-value-bind (width2 min-width2 max-width2 height2 min-height2 max-height2)
+        (space-requirement-components sr2)
+      (and (eql width1 width2) (eql min-width1 min-width2) (eql max-width1 max-width2)
+           (eql height1 height2) (eql min-height1 min-height2) (eql max-height1 max-height2)))))
+
 (defun space-requirement-combine* (function sr1 &key (width 0) (min-width 0) (max-width 0)
-                                                (height 0) (min-height 0) (max-height 0))
+                                                     (height 0) (min-height 0) (max-height 0))
   (apply #'make-space-requirement
          (mapcan #'(lambda (c1 c2 keyword)
                      (list keyword (funcall function c1 c2)))

@@ -1108,6 +1108,9 @@ the time of the change.")
 (defgeneric space-requirement-max-height (space-req))
 (defgeneric space-requirement-components (space-req))
 
+(defgeneric space-requirement-equal (sr1 sr2) ; McCLIM extension
+  (:documentation
+   "Return true if the components of SR1 and SR2 are EQL."))
 ;; space-requirement-combine function sr1 sr2 [Function]
 ;; space-requirement+ sr1 sr2 [Function]
 ;; space-requirement+* space-req &key width min-width max-width height min-height max-height [Function]
