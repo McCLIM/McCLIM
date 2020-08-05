@@ -766,6 +766,25 @@
                    (princ separator stream)
                    (terpri stream))))))
 
+(define-presentation-method accept ((type subset-completion) stream (view textual-view) &key)
+  (let ((element-type `(completion ,sequence :test ,test :value-key ,value-key)))
+    (loop
+      with separators = (list separator)
+      for element = (accept element-type ; i.e., the type parameter
+                            :stream stream
+                            :view view
+                            :prompt nil
+                            :additional-delimiter-gestures separators)
+      collect element
+      do (progn
+           (when (not (eql (peek-char nil stream nil nil) separator))
+             (loop-finish))
+           (read-char stream)
+           (when echo-space
+             ;; Make the space a noise string
+             (input-editor-format stream " "))))))
+
+
 ;;; XXX is it a typo in the spec that subset, subset-sequence and subset-alist
 ;;; have the same options as completion, and not subset-completion?
 
