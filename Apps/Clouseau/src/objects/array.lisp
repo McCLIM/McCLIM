@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -118,7 +118,8 @@
   (let* ((container (container place))
          (length    (array-total-size container))
          (index     (cell place)))
-    (minf (fill-pointer container) (1- length))
+    (when (array-has-fill-pointer-p container)
+      (minf (fill-pointer container) (1- length)))
     (when (> length 1)
       (loop :for i :from index :to (- length 2)
             :do (setf (aref container i) (aref container (1+ i)))))
