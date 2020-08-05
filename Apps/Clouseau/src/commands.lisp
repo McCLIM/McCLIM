@@ -191,12 +191,15 @@
                     (t
                      (supportsp object 'remove-value))))
      :pointer-documentation ((object destination-object stream)
-                             (if destination-object
-                                 (format stream "Copy value of ~A into ~A"
-                                         object destination-object)
-                                 (format stream "Drag onto place to ~
-                                                 copy value of ~A"
-                                         object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (if destination-object
+                                     (format stream "Copy value of ~A ~
+                                                     into ~A"
+                                             object destination-object)
+                                     (format stream "Drag onto place to ~
+                                                     copy value of ~A"
+                                             object))))))
     (object destination-object)
   (list 'com-copy-place-value object destination-object))
 
@@ -234,16 +237,20 @@
                     (t
                      (supportsp object 'remove-value))))
      :documentation ((object stream)
-                     (format stream "Drag ~A onto another slot to swap ~
-                                     their contents."
-                             object))
+                     (with-print-error-handling (stream)
+                       (with-safe-and-terse-printing (stream)
+                         (format stream "Drag ~A onto another slot to ~
+                                         swap their contents."
+                                 object))))
      :pointer-documentation ((object destination-object stream)
-                             (if destination-object
-                                 (format stream "Swap ~A and ~A"
-                                         object destination-object)
-                                 (format stream "Drag onto place to ~
-                                                 swap with ~A"
-                                         object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (if destination-object
+                                     (format stream "Swap ~A and ~A"
+                                             object destination-object)
+                                     (format stream "Drag onto place ~
+                                                     to swap with ~A"
+                                             object))))))
     (object destination-object)
   (list 'com-swap-place-values object destination-object))
 
@@ -266,7 +273,9 @@
      :documentation "Set to false"
      :pointer-documentation
      ((object stream)
-      (format stream "Set value of ~A to ~S" object nil)))
+      (with-print-error-handling (stream)
+        (with-safe-and-terse-printing (stream)
+          (format stream "Set value of ~A to ~S" object nil)))))
     (object)
   (list object))
 
@@ -287,7 +296,9 @@
      :documentation "Set to true"
      :pointer-documentation
      ((object stream)
-      (format stream "Set value of ~A to ~S" object t)))
+      (with-print-error-handling (stream)
+        (with-safe-and-terse-printing (stream)
+          (format stream "Set value of ~A to ~S" object t)))))
     (object)
   (list object))
 
@@ -312,7 +323,9 @@
                           (accepts-value-p object (1+ value))))))
      :documentation "Increment by 1"
      :pointer-documentation ((object stream)
-                             (format stream "Increment ~A by 1" object)))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "Increment ~A by 1" object)))))
     (object)
   (list object))
 
@@ -335,6 +348,8 @@
                           (accepts-value-p object (1- value))))))
      :documentation "Decrement by 1"
      :pointer-documentation ((object stream)
-                             (format stream "Decrement ~A by 1" object)))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "Decrement ~A by 1" object)))))
     (object)
   (list object))

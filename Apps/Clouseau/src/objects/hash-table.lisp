@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -152,7 +152,10 @@
      :priority -1
      :documentation "Clear hash-table entries"
      :pointer-documentation ((object stream)
-                             (format stream "~@<Clear all entries of ~A~@:>"
-                                     (object object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "~@<Clear all entries ~
+                                                 of ~A~@:>"
+                                         (object object))))))
     (object)
   (list object))

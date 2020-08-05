@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -326,9 +326,12 @@
      :priority -1
      :documentation "Remove all methods"
      :pointer-documentation ((object stream)
-                             (format stream "~@<Remove methods from ~
-                                             the generic function ~A~@:>"
-                                     (object object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "~@<Remove methods ~
+                                                 from the generic ~
+                                                 function ~A~@:>"
+                                        (object object))))))
     (object)
   (list object))
 
@@ -352,8 +355,10 @@
      :priority -1
      :documentation "Trace function"
      :pointer-documentation ((object stream)
-                             (format stream "~@<Trace the function ~A~@:>"
-                                     (object object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "~@<Trace the function ~A~@:>"
+                                         (object object))))))
     (object)
   (list object))
 
@@ -375,8 +380,10 @@
      :priority -1
      :documentation "Untrace function"
      :pointer-documentation ((object stream)
-                             (format stream "~@<Untrace the function ~A~@:>"
-                                     (object object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "~@<Untrace the function ~A~@:>"
+                                         (object object))))))
   (object)
   (list object))
 
@@ -395,9 +402,11 @@
      :priority -1
      :documentation "Show disassembly"
      :pointer-documentation ((object stream)
-                             (format stream "~@<Show disassembly for ~
-                                             function ~A~@:>"
-                                     (object object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "~@<Show disassembly ~
+                                                 for function ~A~@:>"
+                                         (object object))))))
     (object)
   (list object))
 
@@ -414,8 +423,10 @@
      :priority -1
      :documentation "Hide disassembly"
      :pointer-documentation ((object stream)
-                             (format stream "~@<Hide disassembly for ~
-                                             function ~A~@:>"
-                                     (object object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "~@<Hide disassembly ~
+                                                 for function ~A~@:>"
+                                         (object object))))))
     (object)
   (list object))

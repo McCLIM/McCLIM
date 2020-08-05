@@ -394,7 +394,9 @@
      :priority -1
      :documentation "Finalize class"
      :pointer-documentation ((object stream)
-                             (format stream "~@<Finalize ~A~@:>"
-                                     (object object))))
+                             (with-print-error-handling (stream)
+                               (with-safe-and-terse-printing (stream)
+                                 (format stream "~@<Finalize ~A~@:>"
+                                         (object object))))))
     (object)
   (list object))
