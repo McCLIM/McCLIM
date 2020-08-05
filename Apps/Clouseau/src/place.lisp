@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -37,7 +37,9 @@
 
 (defmethod print-object ((object basic-place) stream)
   (print-unreadable-object (object stream :type t :identity t)
-    (ignore-errors (princ (cell object) stream))))
+    (ignore-errors
+     (with-safe-and-terse-printing (stream)
+       (princ (cell object) stream)))))
 
 (defmethod ensure-child ((container t)
                          (cell      t)
