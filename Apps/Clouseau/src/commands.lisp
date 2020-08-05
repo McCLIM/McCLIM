@@ -131,6 +131,17 @@
 
 ;;; Commands on all places
 
+(defun valid-value-transfer-p (from-place to-place)
+  (if (safe-valuep from-place)
+      (and (supportsp to-place 'setf)
+           (accepts-value-p to-place (value from-place)))
+      (supportsp to-place 'remove-value)))
+
+(defun transfer-value (place value valuep)
+  (if valuep
+      (setf (value place) value)
+      (remove-value place)))
+
 (define-command (com-set-place :command-table inspector-command-table
                                :name          t)
     ((place 'place     :prompt "Place to set value of")
@@ -170,26 +181,26 @@
      (to-place   'place :prompt "To place"))
   (with-command-error-handling
       ("Could not copy value from ~A to ~A" from-place to-place)
-      (let ((new-value (value from-place)))
-        (setf (value to-place) new-value
-              (state to-place) (make-object-state new-value to-place)))))
+      (multiple-value-bind (value valuep)
+          (when (safe-valuep from-place)
+            (values (value from-place) t))
+        (transfer-value to-place value valuep)
+        (setf (state to-place) (if valuep
+                                   (make-object-state value to-place)
+                                   nil)))))
 
 (define-gesture-name :copy :pointer-button-press (:left :control))
 
 (define-drag-and-drop-translator drag-copy-place-value
     (place command place inspector-command-table
      :gesture :copy
-     :tester ((object from-object)
-              (cond ((not from-object)
-                     (safe-valuep object)) ; TODO should work for unbound?
-                    ((eq from-object object)
-                     nil)
-                    ((safe-valuep from-object)
-                     (ignore-errors ; TODO do this properly
-                      (and (supportsp object 'setf)
-                           (accepts-value-p object (value from-object)))))
-                    (t
-                     (supportsp object 'remove-value))))
+     :destination-tester ((object destination-object)
+                          ;; Cannot copy a place with itself and
+                          ;; otherwise "value" (including unbound)
+                          ;; transfer must be possible.
+                          (and (not (eq object destination-object))
+                               (valid-value-transfer-p
+                                object destination-object)))
      :pointer-documentation ((object destination-object stream)
                              (with-print-error-handling (stream)
                                (with-safe-and-terse-printing (stream)
@@ -205,37 +216,46 @@
 
 (define-command (com-swap-place-values :command-table inspector-command-table
                                        :name          t)
-    ((place-1 'place :prompt "First place")
-     (place-2 'place :prompt "Second place"))
+    ((place1 'place :prompt "First place")
+     (place2 'place :prompt "Second place"))
   ;; Attempt to change values (without children and states) first so
   ;; that fewer things need undoing if, for example, a slot type check
   ;; signals an error.
-  (let ((old-value-1 (value place-1))
-        (old-value-2 (value place-2)))
-    (with-command-error-handling
-        ("Could not swap ~A and ~A" place-1 place-2)
-        (progn
-          (setf (value place-1) old-value-2
-                (value place-2) old-value-1)
-          (rotatef (children place-1) (children place-2))
-          (rotatef (state place-1)    (state place-2)))
-      (setf (value place-1) old-value-1
-            (value place-2) old-value-2))))
+  (multiple-value-bind (old-value1 old-value1-p)
+      (when (safe-valuep place1)
+        (values (value place1) t))
+    (multiple-value-bind (old-value2 old-value2-p)
+        (when (safe-valuep place2)
+          (values (value place2) t))
+      (with-command-error-handling
+          ("Could not swap ~A and ~A" place1 place2)
+          (progn
+            (transfer-value place1 old-value2 old-value2-p)
+            (transfer-value place2 old-value1 old-value1-p)
+            (rotatef (children place1) (children place2))
+            (rotatef (state place1)    (state place2)))
+        (transfer-value place1 old-value1 old-value1-p)
+        (transfer-value place2 old-value2 old-value2-p)))))
 
 (define-drag-and-drop-translator drag-swap-place-values
     (place command place inspector-command-table
      :gesture :select
-     :tester ((object from-object)
-              (cond ((not from-object)
-                     (safe-valuep object)) ; TODO should work for unbound?
-                    ((eq from-object object)
-                     nil)
-                    ((safe-valuep from-object)
-                     (ignore-errors ; TODO do this properly
-                      (and (supportsp object 'setf)
-                           (accepts-value-p object (value from-object)))))
-                    (t
-                     (supportsp object 'remove-value))))
+     :tester ((object)
+              ;; Swapping must either write a new value into the place
+              ;; OBJECT or write the unbound "value" into the place
+              ;; OBJECT.
+              (or (supportsp object 'remove-value)
+                  (supportsp object 'setf)))
+     :destination-tester ((object destination-object)
+                          ;; Cannot swap a place with itself and
+                          ;; otherwise "value" (including unbound)
+                          ;; transfer must be possible in both
+                          ;; directions.
+                          (and (not (eq object destination-object))
+                               (valid-value-transfer-p
+                                object destination-object)
+                               (valid-value-transfer-p
+                                destination-object object)))
      :documentation ((object stream)
                      (with-print-error-handling (stream)
                        (with-safe-and-terse-printing (stream)
