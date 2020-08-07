@@ -195,7 +195,6 @@
                          :y-position y-start)))
   (setf (cursor-active (stream-text-cursor stream)) t))
 
-
 (defmethod stream-cursor-position ((stream standard-extended-output-stream))
   (cursor-position (stream-text-cursor stream)))
 
@@ -291,7 +290,9 @@
       (let* ((medium       (sheet-medium stream))
              (text-style   (medium-text-style medium))
              (new-baseline (text-style-ascent text-style medium))
-             (new-height   (text-style-height text-style medium)))
+             (new-height   0))
+        ;; For new lines we reset the char height to 0 in case of the text
+        ;; style change after the line break. -- jd 2020-08-07
         (maybe-end-of-page-action stream (+ updated-cy new-height))
         (setf (slot-value stream 'baseline) new-baseline
               (%stream-char-height stream)  new-height)))))
@@ -303,10 +304,11 @@
   (let* ((medium (sheet-medium stream))
          (text-style (medium-text-style medium))
          ;; fixme: remove assumption about the text direction (LTR).
-         (left-margin  (stream-cursor-initial-position stream))
-         (right-margin (stream-cursor-final-position stream)))
+         (left-margin (stream-cursor-initial-position stream))
+         (right-margin (stream-cursor-final-position stream))
+         (text-style-height (text-style-height text-style medium)))
     (maxf (slot-value stream 'baseline) (text-style-ascent text-style medium))
-    (maxf (%stream-char-height stream)  (text-style-height text-style medium))
+    (maxf (%stream-char-height stream) text-style-height)
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
       (maybe-end-of-page-action stream (+ cy (%stream-char-height stream)))
       (let* ((width (stream-string-width stream string
@@ -350,7 +352,8 @@
                                              :margin margin
                                              :break-strategy break
                                              :start start :end end))
-              do (stream-write-output stream string start split)
+              do (maxf (%stream-char-height stream) text-style-height)
+                 (stream-write-output stream string start split)
                  (when (= split end)
                    (setf (cursor-position cursor)
                          (values (+ left-margin
