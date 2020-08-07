@@ -73,7 +73,8 @@ interface management system."
                #:mcclim-clx-fb                              #| experimental backend |#
 
                ;; null backend
-               #:mcclim-null))
+               #:mcclim-null
+               #:mcclim-sdl))
 
 (defsystem #:mcclim/extensions
   :depends-on (#:mcclim-bitmaps
