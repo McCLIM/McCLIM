@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: CLIM-DEMO -*-
 
-;;;  (c) copyright 2005 by 
+;;;  (c) copyright 2005 by
 ;;;           Tim Moore (moore@bricoworks.com)
 
 ;;; This library is free software; you can redistribute it and/or
@@ -14,8 +14,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; This is an example of multiprocessing in which a thread -- running a
@@ -169,8 +169,8 @@
 	       (when (or (/= hours (hours frame))
 			 (/= minutes (minutes frame))
 			 (/= seconds (seconds frame)))
-		 (setf (hours frame) hours 
-		       (minutes frame) minutes 
+		 (setf (hours frame) hours
+		       (minutes frame) minutes
 		       (seconds frame) seconds)
 		 (queue-event tls (make-instance 'my-event :sheet client))))
 	     (clim-sys:condition-wait (condition-variable frame)
@@ -192,10 +192,10 @@
 (define-stopwatch-command (com-toggle-watch :name t)
     ()
   (setf (mode *application-frame*)
-	(if (eq (mode *application-frame*) :stopped)
-	    :running
-	    :stopped))
-  (clim-sys:with-lock-held ((clock-lock *application-frame*) "clock lock")
+        (if (eq (mode *application-frame*) :stopped)
+            :running
+            :stopped))
+  (clim-sys:with-lock-held ((clock-lock *application-frame*))
     (clim-sys:condition-notify (condition-variable *application-frame*))))
 
 (define-presentation-to-command-translator com-click-stopwatch

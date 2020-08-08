@@ -160,13 +160,12 @@ On systems that do not support locking, this will return a new list of
 one element, nil."
   (bt:make-lock name))
 
-(defmacro with-lock-held ((place &optional state) &body body)
-  "Evaluates body with the lock named by place. place is a reference
-to a lock created by make-lock.
+(defmacro with-lock-held ((place) &body body)
+  "Evaluates BODY with the lock in PLACE held. PLACE must contain a
+lock created by `make-lock'.
 
-On systems that do not support locking, with-lock-held is equivalent
-to progn."
-  (declare (ignore state))
+On systems that do not support locking, `with-lock-held' is equivalent
+to `progn'."
   `(bt:with-lock-held (,place) ,@body))
 
 (defun make-recursive-lock (&optional name)
@@ -189,7 +188,7 @@ equivalent to progn."
 
 
 ;;; O.0 Conditionals
-;;; 
+;;;
 ;;; These functions aren't in the CLIM specification but event queue uses them.
 
 (defun make-condition-variable ()
