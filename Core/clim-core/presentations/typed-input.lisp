@@ -46,9 +46,9 @@
                                             button-event))
 
 (defun highlight-current-presentation (frame input-context)
-  (alexandria:when-let* ((port-pointer (port-pointer (port *application-frame*)))
-                         (event (synthesize-pointer-motion-event port-pointer))
-                         (sheet (event-sheet event)))
+  (when-let* ((port-pointer (port-pointer (port *application-frame*)))
+              (event (synthesize-pointer-motion-event port-pointer))
+              (sheet (event-sheet event)))
     (frame-input-context-track-pointer frame input-context sheet event)))
 
 (defmacro with-input-context ((type &key override)

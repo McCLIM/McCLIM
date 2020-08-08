@@ -58,9 +58,9 @@
 ;; See if it's time to inject a scheduled event into the queue.
 (defgeneric check-schedule (queue)
   (:method ((queue schedule-mixin))
-    (alexandria:when-let* ((schedule-time (event-schedule-time queue))
-                           (execute-p (>= (now) schedule-time))
-                           (entry (pop (event-queue-schedule queue))))
+    (when-let* ((schedule-time (event-schedule-time queue))
+                (execute-p (>= (now) schedule-time))
+                (entry (pop (event-queue-schedule queue))))
       (setf (event-schedule-time queue)
             (if-let ((next-entry (first (event-queue-schedule queue))))
               (schedule-entry-time next-entry)

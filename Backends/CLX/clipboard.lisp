@@ -76,7 +76,7 @@
              `(defmethod climb:release-selection ((port clx-selection-mixin)
                                                   (selection (eql ,selection))
                                                   (object climb:selection-object))
-                (alexandria:when-let*
+                (when-let*
                     ((sheet (climb:selection-object-owner object))
                      (window (sheet-direct-xmirror sheet))
                      (display (xlib:window-display window)))
@@ -161,7 +161,7 @@
                                             (requested-object selection-object))
                 ;; Shortcut the request if the selection is owned by a window in the
                 ;; same image. This improves translations and overall responsiveness.
-                (alexandria:when-let*
+                (when-let*
                     ((object (climi::stored-object port selection))
                      (sheet (climb:selection-object-owner object))
                      (window (sheet-direct-xmirror sheet))
