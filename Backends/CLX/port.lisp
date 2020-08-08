@@ -117,31 +117,31 @@
 
 
 (defun realize-mirror-aux (port sheet
-				&key (width 100) (height 100) (x 0) (y 0)
-				(override-redirect :off)
-				(map t)
-				(backing-store :not-useful)
-                                (save-under :off)
-				(event-mask `(:exposure
-					      :key-press :key-release
-					      :button-press :button-release
-                                              :owner-grab-button
-					      :enter-window :leave-window
-					      :structure-notify
-					      :pointer-motion
-					      :button-motion)))
+			   &key (width 100) (height 100) (x 0) (y 0)
+			     (override-redirect :off)
+			     (map t)
+			     (backing-store :not-useful)
+                             (save-under :off)
+			     (event-mask `(:exposure
+					   :key-press :key-release
+					   :button-press :button-release
+                                           :owner-grab-button
+					   :enter-window :leave-window
+					   :structure-notify
+					   :pointer-motion
+					   :button-motion)))
   (when (null (port-lookup-mirror port sheet))
     ;;(update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
                             (permanent-medium-sheet-output-mixin ;; sheet-with-medium-mixin
-                              (medium-background sheet))
+                             (medium-background sheet))
                             (pane ; CHECKME [is this sensible?] seems to be
-                              (let ((background (pane-background sheet)))
-                                (if (typep background 'color)
-                                    background
-                                    +white+)))
+                             (let ((background (pane-background sheet)))
+                               (if (typep background 'color)
+                                   background
+                                   +white+)))
                             (t
-                              +white+)))
+                             +white+)))
            (color (multiple-value-bind (r g b)
                       (color-rgb desired-color)
                     (xlib:make-color :red r :green g :blue b)))
@@ -180,6 +180,14 @@
                     :background pixel
                     :event-mask (apply #'xlib:make-event-mask
                                        event-mask))))
+      (log:info "Window created with size: (~s,~s) mr:~s"
+                (if mirror-region
+                    (round-coordinate (bounding-rectangle-width mirror-region))
+                    width)
+                (if mirror-region
+		    (round-coordinate (bounding-rectangle-height mirror-region))
+		    height)
+                mirror-region)
       (port-register-mirror (port sheet) sheet window)
       (when map
         (xlib:map-window window)

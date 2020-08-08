@@ -51,7 +51,6 @@
   (print-unreadable-object (object stream :identity t :type t)
     (format stream "~S ~S" :id (slot-value object 'id))))
 
-#+nil
 (defclass sdl-renderer-sheet ()
   ((renderer      :initform nil
                   :accessor sdl-renderer-sheet/renderer)
@@ -62,27 +61,47 @@
    (cairo-context :initform nil
                   :accessor sdl-renderer-sheet/cairo-context)))
 
-(defclass sdl-top-level-sheet-pane (mirrored-sheet-mixin climi::top-level-sheet-pane #+nil sdl-renderer-sheet)
+(defclass sdl-top-level-sheet-pane (mirrored-sheet-mixin climi::top-level-sheet-pane sdl-renderer-sheet)
   ())
 
 (defmethod port-set-mirror-region ((port sdl-port) mirror mirror-region)
-  nil)
+  (multiple-value-bind (old-width old-height)
+      (sdl2:get-window-size mirror)
+    (with-bounding-rectangle* (x1 y1 x2 y2) mirror-region
+      (declare (ignore x1 y1))
+      (let ((new-width (round-coordinate x2))
+            (new-height (round-coordinate y2)))
+        (unless (and (= old-width new-width)
+                     (= old-height new-height))
+          (sdl2:set-window-size mirror new-width new-height))))))
                                    
 (defmethod port-set-mirror-transformation ((port sdl-port) mirror mirror-transformation)
   nil)
 
 (defmethod realize-mirror ((port sdl-port) (sheet mirrored-sheet-mixin))
   (let* ((q (compose-space sheet))
+         (mirror-region (climi::%sheet-mirror-region sheet))
          (win (sdl2:in-main-thread ()
-                (log:info "Creating window (~s,~s)" (climi::space-requirement-width q) (climi::space-requirement-height q))
+                (log:info "Creating window (~s,~s) mr:~s"
+                          (climi::space-requirement-width q) (climi::space-requirement-height q)
+                          mirror-region)
                 (sdl2:create-window :title (clime:sheet-pretty-name sheet)
-                                    :w (round-coordinate (climi::space-requirement-width q))
-                                    :h (round-coordinate (climi::space-requirement-height q))
+                                    :w (round-coordinate (if mirror-region
+                                                             (bounding-rectangle-width mirror-region)
+                                                             (climi::space-requirement-width q)))
+                                    :h (round-coordinate (if mirror-region
+                                                             (bounding-rectangle-height mirror-region)
+                                                             (climi::space-requirement-height q)))
                                     :flags (if (sheet-enabled-p sheet) '(:shown) nil)))))
     (climi::port-register-mirror port sheet win)))
 
 (defmethod destroy-mirror ((port sdl-port) (sheet mirrored-sheet-mixin))
-  nil)
+  (sdl2:in-main-thread ()
+    (when (sdl-renderer-sheet/renderer sheet)
+      (sdl2:destroy-texture (sdl-renderer-sheet/texture sheet))
+      (sdl2:destroy-renderer (sdl-renderer-sheet/renderer sheet)))
+    (let ((win (sheet-mirror sheet)))
+      (sdl2:destroy-window win))))
 
 (defmethod mirror-transformation ((port sdl-port) mirror)
   nil)

@@ -20,15 +20,7 @@
 (in-package :clim-sdl)
 
 (defclass sdl-medium (basic-medium)
-  ((buffering-output-p :accessor medium-buffering-output-p)
-   (renderer      :initform nil
-                  :accessor sdl-medium/renderer)
-   (texture       :initform nil
-                  :accessor sdl-medium/texture)
-   (surface       :initform nil
-                  :accessor sdl-medium/surface)
-   (cairo-context :initform nil
-                  :accessor sdl-medium/cairo-context)))
+  ((buffering-output-p :accessor medium-buffering-output-p)))
 
 (defmacro with-medium-mirror ((mirror-sym medium) &body body)
   (alexandria:once-only (medium)
@@ -61,33 +53,32 @@
             (setf (sdl-medium/cairo-context medium) context)
             (values renderer texture surface context))))))
 
-(defun %make-renderer (medium)
-  (if (sdl-medium/renderer medium)
-      (values (sdl-medium/renderer medium) (sdl-medium/texture medium))
+(defun %make-renderer (sheet)
+  (if (sdl-renderer-sheet/renderer sheet)
+      (values (sdl-renderer-sheet/renderer sheet) (sdl-renderer-sheet/texture sheet))
       ;; ELSE: We need to create the renderer and texture
-      (progn
-        (log:info "Creating renderer for mediu: ~s" medium)
-        (let* ((renderer (sdl2:create-renderer (sheet-mirror (medium-sheet medium)) nil '(:accelerated)))
-               (texture (sdl2:create-texture renderer :argb8888 :streaming 400 400)))
-          (setf (sdl-medium/renderer medium) renderer)
-          (setf (sdl-medium/texture medium) texture)
-          (values renderer texture)))))
+      (let* ((renderer (sdl2:create-renderer (sheet-mirror sheet) nil '(:accelerated)))
+             (texture (sdl2:create-texture renderer :argb8888 :streaming 400 400)))
+        (setf (sdl-renderer-sheet/renderer sheet) renderer)
+        (setf (sdl-renderer-sheet/texture sheet) texture)
+        (values renderer texture))))
 
 (defun find-context (medium)
-  (or (sdl-medium/cairo-context medium)
-      (multiple-value-bind (renderer texture)
-          (%make-renderer medium)
-        (declare (ignore renderer))
-        (multiple-value-bind (pixels pitch)
-            (sdl2:lock-texture texture)
-          (let* ((surface (cairo:create-image-surface-for-data pixels :argb32
-                                                               (sdl2:texture-width texture)
-                                                               (sdl2:texture-height texture)
-                                                               pitch))
-                 (context (cairo:create-context surface)))
-            (setf (sdl-medium/surface medium) surface)
-            (setf (sdl-medium/cairo-context medium) context)
-            context)))))
+  (let ((sheet (sheet-mirrored-ancestor (medium-sheet medium))))
+    (or (sdl-renderer-sheet/cairo-context sheet)
+        (multiple-value-bind (renderer texture)
+            (%make-renderer sheet)
+          (declare (ignore renderer))
+          (multiple-value-bind (pixels pitch)
+              (sdl2:lock-texture texture)
+            (let* ((surface (cairo:create-image-surface-for-data pixels :argb32
+                                                                 (sdl2:texture-width texture)
+                                                                 (sdl2:texture-height texture)
+                                                                 pitch))
+                   (context (cairo:create-context surface)))
+              (setf (sdl-renderer-sheet/surface sheet) surface)
+              (setf (sdl-renderer-sheet/cairo-context sheet) context)
+              context))))))
 
 #+nil
 (defun ensure-ubyte (n)
@@ -177,9 +168,9 @@
   nil)
 
 (defun update-attrs (medium)
-  (multiple-value-bind (red green blue)
+  (multiple-value-bind (red green blue alpha)
       (clime::color-rgba (medium-ink medium))
-    (cairo:set-source-rgb red green blue)
+    (cairo:set-source-rgba red green blue alpha)
     (cairo:set-line-width (line-style-thickness (medium-line-style medium)))))
 
 (defmacro with-cairo-context ((medium) &body body)
@@ -199,23 +190,29 @@
               (y1 (round-coordinate y1))
               (x2 (round-coordinate x2))
               (y2 (round-coordinate y2)))
-          (sdl2:in-main-thread ()
-            (let ((context (find-context medium)))
-              (cairo:with-context (context)
-                (update-attrs medium)
-                (cairo:move-to x1 y1)
-                (cairo:line-to x2 y2)
-                (cairo:stroke)))))))))
+          (with-cairo-context (medium)
+            (update-attrs medium)
+            (cairo:move-to x1 y1)
+            (cairo:line-to x2 y2)
+            (cairo:stroke)))))))
 
 ;; FIXME: Invert the transformation and apply it here, as the :around
 ;; methods on transform-coordinates-mixin will cause it to be applied
 ;; twice, and we need to undo one of those. The
 ;; transform-coordinates-mixin stuff needs to be eliminated.
 (defmethod medium-draw-lines* ((medium sdl-medium) coord-seq)
-  (let ((tr (invert-transformation (medium-transformation medium))))
-    (declare (ignore tr))
-    (log:info "not implemented")
-    nil))
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (with-cairo-context (medium)
+      (update-attrs medium)
+      (multiple-value-bind (x y)
+          (climi::transform-position tr (first coord-seq) (second coord-seq))
+        (cairo:move-to x y))
+      (loop
+        for (x y) on (cddr coord-seq) by #'cddr
+        do (multiple-value-bind (nx ny)
+               (climi::transform-position tr x y)
+             (cairo:line-to nx ny)))
+      (cairo:stroke))))
 
 (defmethod medium-draw-polygon* ((medium sdl-medium) coord-seq closed filled)
   (declare (ignore coord-seq closed filled))
@@ -233,15 +230,10 @@
               (right  (round-coordinate right))
               (bottom (round-coordinate bottom)))
           (with-cairo-context (medium)
-            (when filled
-              (cairo:fill-path))
-            (cairo:rectangle left top (- right left) (- bottom top)))
-          #+nil
-          (with-medium-renderer (medium :renderer renderer)
-            (let ((rect (sdl2:make-rect left top (- right left) (- bottom top))))
-              (if filled
-                  (sdl2:render-fill-rect renderer rect)
-                  (sdl2:render-draw-rect renderer rect)))))))))
+            (cairo:rectangle left top (- right left) (- bottom top))
+            (if filled
+                (cairo:fill-path)
+                (cairo:stroke))))))))
 
 (defmethod medium-draw-rectangles* ((medium sdl-medium) position-seq filled)
   (declare (ignore position-seq filled))
@@ -330,15 +322,16 @@
          (mirror (climi::port-lookup-mirror (port medium) sheet)))
     (log:info "Finishing output: ~s" medium)
     (when mirror
-      (let ((renderer (sdl-medium/renderer medium)))
+      (let* ((root (sheet-mirrored-ancestor sheet))
+             (renderer (sdl-renderer-sheet/renderer root)))
         (when renderer
           (sdl2:in-main-thread ()
-            (let ((texture (sdl-medium/texture medium)))
+            (let ((texture (sdl-renderer-sheet/texture root)))
               (sdl2:unlock-texture texture)
               (sdl2:render-copy renderer texture)
               (sdl2:render-present renderer)
-              (setf (sdl-medium/surface medium) nil)
-              (setf (sdl-medium/cairo-context medium) nil))))))))
+              (setf (sdl-renderer-sheet/surface root) nil)
+              (setf (sdl-renderer-sheet/cairo-context root) nil))))))))
 
 (defmethod medium-force-output ((medium sdl-medium))
   (log:info "Forcing output: ~s" medium))
