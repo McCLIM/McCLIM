@@ -1,6 +1,6 @@
 
 (defsystem #:mcclim-sdl
-  :depends-on ("clim" "sdl2")
+  :depends-on ("clim" "sdl2" "cl-cairo2")
   :components
   ((:file "package")
    (:file "basic" :depends-on ("package"))

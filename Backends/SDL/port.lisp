@@ -51,11 +51,18 @@
   (print-unreadable-object (object stream :identity t :type t)
     (format stream "~S ~S" :id (slot-value object 'id))))
 
+#+nil
 (defclass sdl-renderer-sheet ()
-  ((renderer :initform nil
-             :accessor sdl-renderer-sheet/renderer)))
+  ((renderer      :initform nil
+                  :accessor sdl-renderer-sheet/renderer)
+   (texture       :initform nil
+                  :accessor sdl-renderer-sheet/texture)
+   (surface       :initform nil
+                  :accessor sdl-renderer-sheet/surface)
+   (cairo-context :initform nil
+                  :accessor sdl-renderer-sheet/cairo-context)))
 
-(defclass sdl-top-level-sheet-pane (mirrored-sheet-mixin climi::top-level-sheet-pane sdl-renderer-sheet)
+(defclass sdl-top-level-sheet-pane (mirrored-sheet-mixin climi::top-level-sheet-pane #+nil sdl-renderer-sheet)
   ())
 
 (defmethod port-set-mirror-region ((port sdl-port) mirror mirror-region)
@@ -110,6 +117,7 @@
                  :orientation orientation :units units))
 
 (defmethod make-medium ((port sdl-port) sheet)
+  (log:info "Making medium for sheet=~s" sheet)
   (make-instance 'sdl-medium :sheet sheet))
 
 (defmethod text-style-mapping ((port sdl-port) (text-style text-style) &optional character-set)
