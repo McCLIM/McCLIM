@@ -2128,10 +2128,11 @@
                 #:clamp
                 #:make-keyword
                 #:ensure-gethash
-		#:last-elt
-		#:with-gensyms
+                #:last-elt
+                #:with-gensyms
                 #:if-let
-                #:when-let)
+                #:when-let
+                #:when-let*)
   (:intern #:letf))
 
 (defpackage :clim-user

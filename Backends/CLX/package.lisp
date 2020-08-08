@@ -13,8 +13,6 @@
 
 (defpackage :clim-clx
   (:use :clim :clim-lisp :clim-backend)
-  (:import-from :alexandria
-                #:when-let*)
   (:import-from :climi
                 #:+alt-key+
                 ;;
@@ -69,8 +67,9 @@
                 ;; utils
                 #:dolines
                 #:maybe-funcall
+                #:if-let
                 #:when-let
-                #:if-let)
+                #:when-let*)
   (:import-from #:climi
                 #:event-listen-or-wait
                 #:%sheet-mirror-region

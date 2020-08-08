@@ -12,8 +12,8 @@
 
 (defun clx-render-medium-picture (medium)
   (with-slots (picture) medium
-    (alexandria:when-let* ((mirror (port-lookup-mirror (port medium) (medium-sheet medium)))
-                           (format (xlib:find-window-picture-format (xlib:drawable-root mirror))))
+    (when-let* ((mirror (port-lookup-mirror (port medium) (medium-sheet medium)))
+                (format (xlib:find-window-picture-format (xlib:drawable-root mirror))))
       (cond
         ((null picture)
          (setf picture (xlib:render-create-picture mirror :format format)))

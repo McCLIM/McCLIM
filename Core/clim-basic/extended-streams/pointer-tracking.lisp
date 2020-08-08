@@ -130,7 +130,7 @@
                 (let ((window (event-sheet event)))
                   (when-let ((highlighted (%highlighted-presentation state)))
                     (highlight-output-record highlighted window :unhighlight))
-                  (alexandria:when-let*
+                  (when-let*
                       ((context-type (context-type state))
                        (handler (,presentation-handler state))
                        (presentation (sheet-find-presentation window context-type x y)))
