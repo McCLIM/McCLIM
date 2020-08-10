@@ -664,3 +664,9 @@ predicate yields true. Time of wait-function call depends on a port.")
 
 (defclass clim-sheet-input-mixin (standard-sheet-input-mixin)
   ())
+
+;;; Convenience function.
+
+(defun schedule-timer-event (sheet token delay)
+  (let ((event (make-instance 'timer-event :token token :sheet pane)))
+    (schedule-event pane event delay)))

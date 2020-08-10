@@ -1,4 +1,7 @@
-(in-package #:climi)
+(in-package #:clim-internals)
+
+(defparameter *double-click-delay* 0.25
+  "Maximum time in seconds between clicks in order to produce a double-click")
 
 ;;;;
 ;;;;  30.4a Concrete Gadget Classes

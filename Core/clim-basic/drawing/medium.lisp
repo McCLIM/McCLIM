@@ -372,6 +372,31 @@
        (invoke-with-text-style ,medium #',cont
                                (make-text-style nil nil ,size)))))
 
+;;; These below were just hot fixes, are there still needed? Are even
+;;; half-way correct? --GB
+;;;
+;;; These are needed, and are correct.  "Implementations should also
+;;; provide a ``trampoline'' for this generic function for output sheets; the
+;;; trampoline will simply call the method for the medium. -- moore
+;;;
+;;; Thanks! --GB
+
+(defmethod text-size ((sheet sheet) string &rest more)
+  (apply #'text-size (sheet-medium sheet) string more))
+
+(defmethod text-style-ascent (ts (sheet sheet))
+  (text-style-ascent ts (sheet-medium sheet)))
+
+(defmethod text-style-descent (ts (sheet sheet))
+  (text-style-descent ts (sheet-medium sheet)))
+
+(defmethod text-style-height (ts (sheet sheet))
+  (text-style-height ts (sheet-medium sheet)))
+
+(defmethod text-style-width (ts (sheet sheet))
+  (text-style-width ts (sheet-medium sheet)))
+
+
 
 ;;; GRAPHICS-STATE class
 
