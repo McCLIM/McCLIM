@@ -177,34 +177,6 @@
   (setf (get abstract-class-name 'concrete-pane-class-name)
         concrete-class-name))
 
-
-
-;;; Gadget "Feel"
-
-(defparameter *double-click-delay* 0.25
-  "Maximum time in seconds between clicks in order to produce a double-click")
-
-(defparameter *double-click-max-travel* 7
-  "Maximum distance in device units that the cursor may move between clicks in
-order to produce a double-click")
-
-;;;
-;;; gadgets look
-;;;
-
-;; Only used by some gadgets, I suggest using my more flexible and
-;; general DRAW-BORDERED-POLYGON.
-
-(defun display-gadget-background (gadget color x1 y1 x2 y2)
-  (draw-rectangle* gadget x1 y1 x2 y2 :ink color :filled t))
-
-(defun draw-edges-lines* (pane ink1 x1 y1 ink2 x2 y2)
-  (draw-line* pane x1 y1 x2 y1 :ink ink1)
-  (draw-line* pane x1 y1 x1 y2 :ink ink1)
-  (draw-line* pane x1 y2 x2 y2 :ink ink2)
-  (draw-line* pane x2 y1 x2 y2 :ink ink2))
-
-
 ;;; Space Requirements
 
 (defconstant +fill+ (expt 10 (floor (log most-positive-fixnum 10))))
@@ -3037,36 +3009,3 @@ current background message was set."))
             ;; EVENT-QUEUE-READ in single-process mode calls PROCESS-NEXT-EVENT itself.
             do (handle-event (event-sheet event) event)))
       (frame-exit () (disown-frame (frame-manager frame) frame)))))
-
-
-;;; These below were just hot fixes, are there still needed? Are even
-;;; half-way correct? --GB
-;;;
-;;; These are needed, and are correct.  "Implementations should also
-;;; provide a ``trampoline'' for this generic function for output sheets; the
-;;; trampoline will simply call the method for the medium. -- moore
-;;;
-;;; Thanks! --GB
-;;;
-;;; Why are they placed here? -- APD
-
-(defmethod text-size ((sheet sheet) string &rest more)
-  (apply #'text-size (sheet-medium sheet) string more))
-
-(defmethod text-style-ascent (ts (sheet sheet))
-  (text-style-ascent ts (sheet-medium sheet)))
-
-(defmethod text-style-descent (ts (sheet sheet))
-  (text-style-descent ts (sheet-medium sheet)))
-
-(defmethod text-style-height (ts (sheet sheet))
-  (text-style-height ts (sheet-medium sheet)))
-
-(defmethod text-style-width (ts (sheet sheet))
-  (text-style-width ts (sheet-medium sheet)))
-
-; timer-event convenience
-
-(defmethod schedule-timer-event ((pane pane) token delay)
-  (let ((event (make-instance 'timer-event :token token :sheet pane)))
-    (schedule-event pane event delay)))

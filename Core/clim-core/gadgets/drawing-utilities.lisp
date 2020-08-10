@@ -38,3 +38,6 @@
                   ;; Giving the text-style here shouldn't be neccessary --GB
                   :text-style text-style
                   :ink ink))))
+
+(defun display-gadget-background (gadget color x1 y1 x2 y2)
+  (draw-rectangle* gadget x1 y1 x2 y2 :ink color :filled t))
