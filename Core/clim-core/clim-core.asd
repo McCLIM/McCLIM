@@ -22,6 +22,13 @@
    (:file "graph-formatting")
    (:file "frames" :depends-on ("commands" "presentations" "standard-presentations" "incremental-redisplay"))
    (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay" "bordered-output" "standard-presentations" "gadgets" "dialog"))
+   (:module "panes"
+    :depends-on ("incremental-redisplay" "presentations" "standard-presentations" "input-editing" "frames" "theming")
+    :serial t
+    :components ((:file "construction")
+                 (:file "layout-protocol")
+                 (:file "composition")
+                 (:file "stream-panes")))
    (:module "gadgets"
     :depends-on ("commands" "input-editing" "frames" "incremental-redisplay" "panes" "presentations" "theming")
     :serial t
@@ -35,6 +42,5 @@
    (:file "commands" :depends-on ("input-editing" "presentations" "standard-presentations"))
    (:file "incremental-redisplay" :depends-on ("standard-presentations"))
    (:file "menu-choose" :depends-on ("commands" "table-formatting"  "panes" "frames" "presentations"))
-   (:file "panes" :depends-on ("incremental-redisplay" "presentations" "standard-presentations" "input-editing" "frames" "theming"))
    (:file "dialog" :depends-on ("panes" "frames" "incremental-redisplay" "table-formatting" "presentations" "bordered-output" "standard-presentations" "input-editing" "commands" "gadgets"))
    (:file "builtin-commands" :depends-on ("table-formatting" "commands" "presentations" "dialog" "standard-presentations" "input-editing"))))
