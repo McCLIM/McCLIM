@@ -668,5 +668,5 @@ predicate yields true. Time of wait-function call depends on a port.")
 ;;; Convenience function.
 
 (defun schedule-timer-event (sheet token delay)
-  (let ((event (make-instance 'timer-event :token token :sheet pane)))
-    (schedule-event pane event delay)))
+  (let ((event (make-instance 'timer-event :token token :sheet sheet)))
+    (schedule-event sheet event delay)))
