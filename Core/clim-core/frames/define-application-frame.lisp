@@ -34,6 +34,53 @@
           (t ; Non-standard pane designator fed to the `make-pane'
            `(make-pane ',pane :name ',name ,@options)))))
 
+(defun %generic-make-or-reinitialize-pane
+    (panes-for-layout constructor type name &rest initargs)
+  ;; If PANES-FOR-LAYOUT contains a pane for NAME, try to reinitialize
+  ;; it. Otherwise, make a new pane using CONSTRUCTOR.
+  (let ((pane-or-parent (alexandria:assoc-value
+                         panes-for-layout name :test #'eq)))
+    ;; For stream panes, NAME may be associated with an ancestor of
+    ;; the stream pane. It is also possible that the pane named NAME
+    ;; is now of a different type than before. In any case, use TYPE
+    ;; to find the descendant.
+    (if-let ((pane (when pane-or-parent
+                     (find-pane-of-type pane-or-parent type))))
+      (progn
+        (when-let ((parent (sheet-parent pane-or-parent)))
+          (sheet-disown-child parent pane-or-parent))
+        (apply #'reinitialize-instance pane initargs)
+        pane-or-parent)
+      (apply constructor :name name initargs))))
+
+(defun generate-ensure-pane-form (name form realizer-var
+                                  &optional panes-for-layout-var)
+  (destructuring-bind (pane &rest options) form
+    (flet ((generate (constructor type)
+             (if panes-for-layout-var
+                 `(%generic-make-or-reinitialize-pane
+                   ,panes-for-layout-var ,constructor ,type ',name ,@options)
+                 `(funcall ,constructor :name ',name ,@options))))
+      (cond ((and (null options) (listp pane)) ; Single form which is a function call
+             `(coerce-pane-name ,pane ',name))
+            ((eq pane :application) ; Standard pane (i.e `:application')
+             (generate ''make-clim-application-pane ''application-pane))
+            ((eq pane :interactor)
+             (generate ''make-clim-interactor-pane ''interactor-pane))
+            ((eq pane :pointer-documentation)
+             (generate ''make-clim-pointer-documentation-pane ''pointer-documentation-pane))
+            ((eq pane :command-menu)
+             (generate ''make-clim-command-menu-pane ''command-menu-pane))
+            ;; Non-standard pane designator fed to `make-pane'
+            (t
+             (alexandria:with-unique-names (pane-class-var)
+               `(let ((,pane-class-var
+                        (find-concrete-pane-class ,realizer-var ',pane)))
+                  ,(generate `(curry #'make-pane-1
+                                     ,realizer-var *application-frame*
+                                     (class-name ,pane-class-var))
+                             pane-class-var))))))))
+
 ;;; FIXME The menu-bar code in the following function is incorrect.  it
 ;;; needs to be moved to somewhere after the backend, since it depends
 ;;; on the backend chosen.
@@ -41,23 +88,27 @@
 ;;; This hack slaps a menu-bar into the start of the application-frame,
 ;;; in such a way that it is hard to find.
 (defun generate-generate-panes-form (class-name menu-bar panes layouts
-                                     pointer-documentation)
+                                     pointer-documentation reinitializep)
   (when pointer-documentation
     (setf panes (append panes
                         '((%pointer-documentation%
                            pointer-documentation-pane)))))
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (with-look-and-feel-realization (fm frame)
-       (unless (frame-panes-for-layout frame)
+       ;; Make (or reinitialize) pane instances and establish
+       ;; lexical variables so layout forms can use them.
+       (let* ,(if (and (not (null panes)) reinitializep)
+                  (alexandria:with-gensyms (old-panes-var)
+                    `((,old-panes-var (frame-panes-for-layout frame))
+                      ,@(loop for (name . form) in panes
+                              collect `(,name ,(generate-ensure-pane-form
+                                                name form 'fm old-panes-var)))))
+                  (loop for (name . form) in panes
+                        collect `(,name ,(generate-ensure-pane-form
+                                          name form 'fm))))
          (setf (frame-panes-for-layout frame)
-               (list
-                ,@(loop for (name . form) in panes
-                        collect `(cons ',name ,(generate-pane-creation-form
-                                                name form))))))
-       (let ,(loop for (name . form) in panes
-                   collect `(,name (alexandria:assoc-value
-                                    (frame-panes-for-layout frame)
-                                    ',name :test #'eq)))
+               (list ,@(loop for (name) in panes
+                             collect `(cons ',name ,name))))
          ;; [BTS] added this, but is not sure that this is correct for
          ;; adding a menu-bar transparently, should also only be done
          ;; where the exterior window system does not support menus
@@ -88,23 +139,25 @@
 
 (defun parse-define-application-frame-options (options)
   (let ((infos '(;; CLIM
-                 (:pane                  * :conflicts (:panes :layouts))
-                 (:panes                 * :conflicts (:pane))
-                 (:layouts               * :conflicts (:pane))
-                 (:command-table         1)
-                 (:command-definer       1)
-                 (:menu-bar              ensure-1)
-                 (:disabled-commands     *)
-                 (:top-level             1)
-                 ;; :icon is the CLIM specification but we don't support it
-                 (:geometry              *)
+                 (:pane                             * :conflicts (:panes :layouts))
+                 (:panes                            * :conflicts (:pane))
+                 (:layouts                          * :conflicts (:pane))
+                 (:command-table                    1)
+                 (:command-definer                  1)
+                 (:menu-bar                         ensure-1)
+                 (:disabled-commands                *)
+                 (:top-level                        1)
+                 ;; :icon is in the CLIM specification but we don't support it
+                 (:geometry                         *)
                  ;; :resize-frame is mentioned in a spec annotation but we don't support it
                  ;; McCLIM extensions
-                 (:pointer-documentation 1)
+                 (:pointer-documentation            1)
+                 (:update-instances-on-redefinition 1)
                  ;; Default initargs
-                 (:pretty-name           1)
+                 (:pretty-name                      1)
                  ;; Common Lisp
-                 (:default-initargs      *)))
+                 (:default-initargs                 *)
+                 (:metaclass                        1)))
         (all-values '()))
     (labels ((definedp (key)
                (not (eq (getf all-values key 'undefined) 'undefined)))
@@ -152,6 +205,21 @@
                     (push option (getf all-values :other-options)))))
       (alexandria:remove-from-plist all-values :pane))))
 
+(defun generate-metaclass-name-and-form
+    (name update-instances-on-redefinition metaclass)
+  (cond ((and update-instances-on-redefinition metaclass)
+         (let* ((name (let ((*package* (find-package '#:climi)))
+                        (alexandria:symbolicate
+                         (package-name (symbol-package name)) ":"
+                         name '#:-metaclass)))
+                (form `((defclass ,name (,metaclass
+                                         redefinition-updates-instances-class)
+                          ()))))
+           (values name form)))
+        (metaclass)
+        (update-instances-on-redefinition
+         'redefinition-updates-instances-class)))
+
 (defmacro define-application-frame (name superclasses slots &rest options)
   (when (null superclasses)
     (setq superclasses '(standard-application-frame)))
@@ -165,10 +233,12 @@
                             geometry
                             ;; McCLIM extensions
                             pointer-documentation
+                            update-instances-on-redefinition
                             ;; Default initargs
                             (pretty-name (string-capitalize name))
                             ;; Common Lisp
                             user-default-initargs
+                            metaclass
                             other-options
                             ;; Helpers
                             (current-layout (first (first layouts)))
@@ -177,36 +247,51 @@
     (when (eq command-definer t)
       (setf command-definer
             (alexandria:symbolicate '#:define- name '#:-command)))
-    `(progn
-       (defclass ,name ,superclasses
-         ,slots
-         (:default-initargs
-          :name              ',name
-          :pretty-name       ,pretty-name
-          :command-table     (find-command-table ',(first command-table))
-          :disabled-commands ',disabled-commands
-          :menu-bar          ',menu-bar
-          :current-layout    ',current-layout
-          :layouts           ',layouts
-          :top-level         (list ',(car top-level) ,@(cdr top-level))
-          :top-level-lambda  (lambda (,frame-arg)
-                               (,(car top-level) ,frame-arg
-                                ,@(cdr top-level)))
-          ,@geometry
-          ,@user-default-initargs)
-         ,@other-options)
+    ;; If the frame class is being (re)defined with instance updating,
+    ;; delay the redefinition notification until after all forms have
+    ;; executed.
+    (multiple-value-bind (metaclass-name define-metaclass-form)
+        (generate-metaclass-name-and-form
+         name update-instances-on-redefinition metaclass)
+      `(,@(if update-instances-on-redefinition
+              '(with-delayed-redefinition-notifications ())
+              '(progn))
 
-       ,@(when (or panes layouts)
-           `(,(generate-generate-panes-form
-               name menu-bar panes layouts pointer-documentation)))
+        ,@(when define-metaclass-form
+            `(,define-metaclass-form))
 
-       ,@(when command-table
-           `((define-command-table ,@command-table)))
+        (defclass ,name ,superclasses
+          ,slots
+          (:default-initargs
+           :name              ',name
+           :pretty-name       ,pretty-name
+           :command-table     (find-command-table ',(first command-table))
+           :disabled-commands ',disabled-commands
+           :menu-bar          ',menu-bar
+           :current-layout    ',current-layout
+           :layouts           ',layouts
+           :top-level         (list ',(car top-level) ,@(cdr top-level))
+           :top-level-lambda  (lambda (,frame-arg)
+                                (,(car top-level) ,frame-arg
+                                 ,@(cdr top-level)))
+           ,@geometry
+           ,@user-default-initargs)
+          ,@(when-let ((metaclass metaclass-name))
+              `((:metaclass ,metaclass)))
+          ,@other-options)
 
-       ,@(when command-definer
-           `((defmacro ,command-definer (name-and-options arguments &rest body)
-               (destructuring-bind (name &rest options)
-                   (alexandria:ensure-list name-and-options)
-                 `(define-command (,name :command-table ,',(first command-table)
-                                         ,@options)
-                      ,arguments ,@body))))))))
+        ,@(when (or panes layouts)
+            `(,(generate-generate-panes-form
+                name menu-bar panes layouts pointer-documentation
+                update-instances-on-redefinition)))
+
+        ,@(when command-table
+            `((define-command-table ,@command-table)))
+
+        ,@(when command-definer
+            `((defmacro ,command-definer (name-and-options arguments &rest body)
+                (destructuring-bind (name &rest options)
+                    (alexandria:ensure-list name-and-options)
+                  `(define-command (,name :command-table ,',(first command-table)
+                                          ,@options)
+                       ,arguments ,@body)))))))))

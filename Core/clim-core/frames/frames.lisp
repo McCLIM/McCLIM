@@ -114,7 +114,8 @@ input focus. This is a McCLIM extension."))
    (current-panes :initform nil :accessor frame-current-panes)
    (layouts :initform nil
             :initarg :layouts
-            :reader frame-layouts)
+            :reader frame-layouts
+            :writer (setf %frame-layouts))
    (current-layout :initform nil
                    :initarg :current-layout
                    :accessor frame-current-layout)
