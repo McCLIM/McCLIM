@@ -231,10 +231,12 @@
                                                       rest-args))))
                                     (t (do-accept rest-args))))
                          (unless *recursive-accept-p*
-                           (presentation-history-reset-pointer (get-history))))
-                       (do-accept rest-args))))
-                 (results-history (get-history)))
-            (when results-history
+                           ;; (get-history) can return NIL if, for
+                           ;; example, the frame layout changes.
+                           (when-let ((history (get-history)))
+                             (presentation-history-reset-pointer history))))
+                       (do-accept rest-args)))))
+            (when-let ((results-history (get-history)))
               (presentation-history-add results-history
                                         (car results)
                                         real-type))
