@@ -310,7 +310,8 @@ maximum size according to `frame')."
     (when-let ((viewport (pane-viewport menu)))
       (multiple-value-bind (viewport-width viewport-height)
           (menu-size viewport *application-frame*)
-        (let ((scroller (pane-scroller menu)))
+        (multiple-value-bind (scroller-width scroller-height)
+            (bounding-rectangle-size (pane-scroller menu))
           (change-space-requirements scroller
                                      ;; HACK: How are you supposed to
                                      ;; change the size of the viewport?
@@ -323,11 +324,9 @@ maximum size according to `frame')."
                                      ;; difference (to make room for
                                      ;; scroll bars).
                                      :width (+ menu-width
-                                               (- (pane-current-width scroller)
-                                                  viewport-width))
+                                               (- scroller-width viewport-width))
                                      :height (+ menu-height
-                                                (- (pane-current-height scroller)
-                                                   viewport-height))
+                                                (- scroller-height viewport-height))
                                      :resize-frame t))))
 
     ;; Modify the size and location of the frame as well.
