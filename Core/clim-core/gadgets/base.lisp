@@ -343,9 +343,25 @@
   (:default-initargs :min-value 0
                      :max-value 1))
 
+(defmethod reinitialize-instance :after ((instance range-gadget)
+                                         &key (min-value nil min-value-p)
+                                              (max-value nil max-value-p))
+  (when min-value-p
+    (setf (gadget-min-value instance) min-value))
+  (when max-value-p
+    (setf (gadget-max-value instance) max-value)))
+
 (defclass range-gadget-mixin (range-gadget)
   ;; Try to be compatible with Lispworks' CLIM.
   ())
+
+(defmethod (setf gadget-min-value) :after ((new-value t) (gadget range-gadget))
+  (when (< (gadget-value gadget) new-value)
+    (setf (gadget-value gadget :invoke-callback t) new-value)))
+
+(defmethod (setf gadget-max-value) :after ((new-value t) (gadget range-gadget))
+  (when (> (gadget-value gadget) new-value)
+    (setf (gadget-value gadget :invoke-callback t) new-value)))
 
 (defmethod gadget-range ((gadget range-gadget))
   (- (gadget-max-value gadget)
