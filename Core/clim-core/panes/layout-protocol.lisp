@@ -42,8 +42,7 @@
 ;;;
 ;;; NOTE-SPACE-REQUIREMENTS-CHANGED
 ;;;
-;;;   Called by CLIM when the space requirements of a pane have
-;;;   changed. Not called to layout a pane; This is only a kind of signal.
+;;;   Called by CLIM when the space requirements of a pane have changed.
 ;;;
 ;;; LAYOUT-FRAME
 ;;;
@@ -411,8 +410,6 @@
 ;;;   LAYOUT-FRAME then is then called when leaving
 ;;;   CHANGING-SPACE-REQUIREMENTS.
 ;;;
-;;; - NOTE-SPACE-REQUIREMENTS-CHANGED is solely for the user.
-;;;
 ;;; --GB 2003-03-16
 
 (defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
@@ -435,7 +432,6 @@
 ;;;
 ;;; change-space-requirements (pane) :=
 ;;;   clear space requirements cache
-;;;   call change-space-requirements on parent pane
 ;;;   call note-space-requirements-changed
 ;;;
 ;;; This is split into :before, primary and :after method to allow for
@@ -443,16 +439,13 @@
 ;;; know the details of the space requirement cache and the
 ;;; note-space-requirements-changed notifications.
 ;;;
-;;; The calls to change-space-requirements travel all the way up to
-;;; the top-level-sheet-pane which then invokes the layout protocol
-;;; calling layout-frame.
+;;; If :resize-frame t the calls to change-space-requirements travel
+;;; all the way up to the top-level-sheet-pane which then invokes the
+;;; layout protocol calling layout-frame.
 ;;;
 ;;; In case this happens within changing-space-requirements layout
 ;;; frame is not called but simply recorded and then called when
 ;;; changing-space-requirements is left.
-;;;
-;;; No action is taken in note-space-requirements-changed. We leave
-;;; that to the user.
 
 (defvar *changing-space-requirements* nil
   "Bound to non-NIL while within the execution of CHANGING-SPACE-REQUIREMENTS.")
@@ -473,13 +466,30 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod change-space-requirements ((pane layout-protocol-mixin)
                                       &key resize-frame &allow-other-keys)
-  (when-let ((parent (sheet-parent pane)))
-    (change-space-requirements parent :resize-frame resize-frame)))
+  ;; do nothing here
+  nil)
 
 (defmethod change-space-requirements :after ((pane layout-protocol-mixin)
                                              &key resize-frame &allow-other-keys)
-  (declare (ignore resize-frame))
-  (note-space-requirements-changed (sheet-parent pane) pane))
+  (when-let ((parent (sheet-parent pane)))
+    (if resize-frame
+        ;; From Spec 29.3.4: "If resize-frame is true, then
+        ;; layout-frame will be invoked on the frame". Here instead of
+        ;; call directly LAYOUT-FRAME, we call
+        ;; CHANGE-SPACE-REQUIREMENTS on the parent and it travels all
+        ;; the way up to the top-level-sheet-pane which then invokes
+        ;; the layout protocol calling LAYOUT-FRAME. The rationale of
+        ;; this is:
+        ;; 1. we can't call (LAYOUT-FRAME (PANE-FRAME pane)) on a
+        ;;   menu because with the actual implementation of menu it
+        ;;   will layout the main application and not the menu frame.
+        ;; 2. we automatically clear the cached values of
+        ;;    space-requirements for the involved panes.
+        ;; -- admich 2020-08-11
+        (if (top-level-sheet-pane-p pane)
+            (note-space-requirements-changed parent pane)
+            (change-space-requirements parent :resize-frame t))
+        (note-space-requirements-changed parent pane))))
 
 (defmethod note-space-requirements-changed (pane client)
   "Just a no-op fallback method."
