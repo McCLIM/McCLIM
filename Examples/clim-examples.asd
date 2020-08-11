@@ -55,6 +55,7 @@
      (:file "tracking-pointer")
      (:file "file-manager")
      (:file "presentation-translators-test")
+     (:file "frame-class-redefinition")
      (:file "demodemo")))
 
 (defsystem #:clim-examples/superapp

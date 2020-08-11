@@ -83,13 +83,13 @@ name."))
                    (make-demo-button "Gadget Test"  'gadget-test)
                    (make-demo-button "D&D Translator" 'drag-test)
                    (make-demo-button "Draggable Graph" 'draggable-graph-demo)
-		   (make-pane 'push-button
-			      :label "Font Selector"
-			      :activate-callback
-			      (lambda (&rest ignore)
-				(declare (ignore ignore))
-				(format *trace-output* "~&You chose: ~A~%"
-					(select-font))))
+                   (make-pane 'push-button
+                              :label "Font Selector"
+                              :activate-callback
+                              (lambda (&rest ignore)
+                                (declare (ignore ignore))
+                                (format *trace-output* "~&You chose: ~A~%"
+                                        (select-font))))
                    (make-demo-button "Tab Layout" 'clim-demo.tabdemo:tabdemo)
                    (make-demo-button "Summation" 'summation)
                    (make-demo-button "Slider demo" 'clim-demo.slider:sliderdemo)
@@ -100,7 +100,8 @@ name."))
                    (make-demo-button "Selection (clipboard)" 'selection-demo)
                    (make-demo-button "DND various" 'clim-demo.drag-and-drop-example:dnd-commented)
                    (make-demo-button "File manager" 'clim-demo.file-manager:file-manager)
-                   #+ (or) (make-demo-button "Stopwatch" 'clim-demo.stopwatch:stopwatch)))
+                   #+ (or) (make-demo-button "Stopwatch" 'clim-demo.stopwatch:stopwatch)
+                   (make-demo-button "Frame class redefinition" 'clim-demo.frame-class-redefinition:frame-class-redefinition)))
                (labelling (:label "Tests")
                  (vertically (:equalize-width t)
                    (make-demo-button "Stream test" 'stream-test)
@@ -154,8 +155,7 @@ name."))
            (make-pane 'push-button :label "Cancel")
            '+fill+
            (make-pane 'push-button :label "Help")
-           5
-           ) )))
+           5))))
 
 (define-application-frame table-test
     () ()
@@ -166,8 +166,7 @@ name."))
            (list (make-pane 'push-button :label "Last Name" :max-height +fill+)
                  (make-pane 'push-button :label "First Name" #||:max-height +fill+||#))
            (list (make-pane 'push-button :label "C 1 0")
-                 (make-pane 'push-button :label "C 1 1"))
-           ) )))
+                 (make-pane 'push-button :label "C 1 1"))))))
 
 (defun make-label-test-column (title label content)
   (flet ((make-label (align-x align-y)
