@@ -96,6 +96,7 @@ interface management system."
                 :components ((:file "package")
                              (:file "utils")
                              (:file "input-editing")
+                             (:file "input-streams")
                              (:file "commands")
                              (:file "text-selection")
                              (:file "text-formatting")
