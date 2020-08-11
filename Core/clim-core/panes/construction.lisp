@@ -139,11 +139,6 @@ returned or error is signaled depending on the argument ERRORP.")
    (frame             :initarg :frame
                       :initform *application-frame*
                       :reader pane-frame)
-   ;; Layout
-   (space-requirement :initform nil :accessor pane-space-requirement)
-   ;; New sizes, for allocating protocol
-   (new-width         :initform nil)
-   (new-height        :initform nil)
    ;; Drawing defaults
    (foreground        :initarg :foreground
                       :reader pane-foreground

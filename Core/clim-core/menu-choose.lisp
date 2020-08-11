@@ -304,32 +304,25 @@ maximum size according to `frame')."
                                :width menu-width
                                :height menu-height
                                :resize-frame t)
-
-    ;; If we have scroll-bars, we need to do some calibration of the
-    ;; size of the viewport.
-    (when-let ((viewport (pane-viewport menu)))
+    ;; If we have scroll-bars, we need to do some calibration of the size of
+    ;; the viewport.
+    (when-let ((viewport (pane-viewport menu))
+               (scroller (pane-scroller menu)))
       (multiple-value-bind (viewport-width viewport-height)
           (menu-size viewport *application-frame*)
-        (let ((scroller (pane-scroller menu)))
-          (change-space-requirements scroller
-                                     ;; HACK: How are you supposed to
-                                     ;; change the size of the viewport?
-                                     ;; I could only find this way, where
-                                     ;; I calculate the size difference
-                                     ;; between the viewport and the
-                                     ;; scroller pane, and set the
-                                     ;; scroller pane to the desired size
-                                     ;; of the viewport, plus the
-                                     ;; difference (to make room for
-                                     ;; scroll bars).
-                                     :width (+ menu-width
-                                               (- (pane-current-width scroller)
-                                                  viewport-width))
-                                     :height (+ menu-height
-                                                (- (pane-current-height scroller)
-                                                   viewport-height))
-                                     :resize-frame t))))
-
+        (multiple-value-bind (scroller-width scroller-height)
+            (bounding-rectangle-size scroller)
+          (let ((width (+ menu-width (- scroller-width viewport-width)))
+                (height (+ menu-height (- scroller-height viewport-height))))
+            ;; HACK: How are you supposed to change the size of the viewport?
+            ;; I could only find this way, where I calculate the size
+            ;; difference between the viewport and the scroller pane, and set
+            ;; the scroller pane to the desired size of the viewport, plus the
+            ;; difference (to make room for scroll bars).
+            (change-space-requirements scroller
+                                       :width width
+                                       :height height
+                                       :resize-frame t)))))
     ;; Modify the size and location of the frame as well.
     (let ((top-level-pane (get-top-level-sheet menu)))
       (multiple-value-bind (frame-width frame-height)

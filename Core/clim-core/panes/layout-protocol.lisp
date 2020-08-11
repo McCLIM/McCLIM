@@ -46,14 +46,12 @@
 ;;;
 ;;; LAYOUT-FRAME
 ;;;
-;;;   Maybe called by both CLIM and the application programmer to
-;;;   "invoke the space allocation protocol", that is CLIM calls
-;;;   ALLOCATE-SPACE on the top level sheet. This in turn will probably
-;;;   call COMPOSE-SPACE on its children and layout then accordingly by
-;;;   calling ALLOCATE-SPACE again.
+;;;   May be called by both CLIM and the application programmer to "invoke the
+;;;   space allocation protocol", that is CLIM calls ALLOCATE-SPACE on the top
+;;;   level sheet. This in turn will probably call COMPOSE-SPACE on its
+;;;   children and layout then accordingly by calling ALLOCATE-SPACE again.
 ;;;
-;;;   The effect is that ALLOCATE-SPACE propagate down the sheet
-;;;   hierarchy.
+;;;   The effect is that ALLOCATE-SPACE propagate down the sheet hierarchy.
 ;;;
 ;;; --GB 2003-08-06
 
@@ -385,13 +383,7 @@
   ((space-requirement
     :accessor pane-space-requirement
     :initform nil
-    :documentation "The cache of the space requirements of the pane. NIL means: need to recompute.")
-   (current-width
-    :accessor pane-current-width
-    :initform nil)
-   (current-height
-    :accessor pane-current-height
-    :initform nil) ))
+    :documentation "The cache of the space requirements of the pane. NIL means: need to recompute.") ))
 
 ;;; Note
 
@@ -413,8 +405,6 @@
 ;;; --GB 2003-03-16
 
 (defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
-  (setf (pane-current-width pane) width
-        (pane-current-height pane) height)
   (unless (top-level-sheet-pane-p pane)
     (resize-sheet pane width height))
   (call-next-method))
@@ -459,10 +449,8 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
                                               &rest space-req-keys
                                               &key resize-frame &allow-other-keys)
   (declare (ignore resize-frame space-req-keys))
-  ;; Clear current width and height.
-  (setf (pane-space-requirement pane) nil
-        (pane-current-width pane) nil
-        (pane-current-height pane) nil))
+  ;; Clear the cached value
+  (setf (pane-space-requirement pane) nil))
 
 (defmethod change-space-requirements ((pane layout-protocol-mixin)
                                       &key resize-frame &allow-other-keys)

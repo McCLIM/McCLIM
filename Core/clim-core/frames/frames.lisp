@@ -281,9 +281,8 @@ documentation produced by presentations.")
   (flet ((get-menu (x) (slot-value x 'menu)))
     (if (and (get-menu (frame-command-table frame))
              (get-menu new-command-table))
-        (prog1
-            (call-next-method)
-          (alexandria:when-let ((menu-bar-pane (frame-menu-bar-pane frame)))
+        (prog1 (call-next-method)
+          (when-let ((menu-bar-pane (frame-menu-bar-pane frame)))
             (update-menu-bar menu-bar-pane new-command-table)))
         (call-next-method))))
 
@@ -456,10 +455,11 @@ documentation produced by presentations.")
             (setq redisplayp (or redisplayp t)
                   clearp t))
           (when redisplayp
-            (let ((highlited (frame-highlited-presentation frame)))
-              (when highlited
-                (highlight-presentation-1 (car highlited) (cdr highlited) :unhighlight)
-                (setf (frame-highlited-presentation frame) nil)))
+            (when-let ((highlited (frame-highlited-presentation frame)))
+              (highlight-presentation-1 (car highlited)
+                                        (cdr highlited)
+                                        :unhighlight)
+              (setf (frame-highlited-presentation frame) nil))
             (with-possible-double-buffering (frame pane-object)
               (when clearp
                 (window-clear pane-object))
