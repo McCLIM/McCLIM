@@ -182,17 +182,6 @@
     (resize-sheet child child-width child-height)
     (allocate-space child child-width child-height)))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; User Space Requirements
-
-
-
-;;;; LAYOUT-PROTOCOL-MIXIN
-
-
-
 ;;;;
 ;;;; Composite Panes
 ;;;;
