@@ -20,7 +20,11 @@
    (:file "input-editing" :depends-on ("presentations" "bordered-output" "table-formatting"))
    (:file "standard-presentations" :depends-on ("input-editing" "presentations"))
    (:file "graph-formatting")
-   (:file "frames" :depends-on ("commands" "presentations" "standard-presentations" "incremental-redisplay"))
+   (:module "frames"
+    :depends-on ("commands" "presentations" "standard-presentations" "incremental-redisplay")
+    :serial t
+    :components ((:file "frames" )
+                 (:file "define-application-frame")))
    (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay" "bordered-output" "standard-presentations" "gadgets" "dialog"))
    (:module "panes"
     :depends-on ("incremental-redisplay" "presentations" "standard-presentations" "input-editing" "frames" "theming")
