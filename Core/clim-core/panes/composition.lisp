@@ -190,6 +190,14 @@
   ()
   (:documentation "protocol class"))
 
+;; When a composite-pane receives the note-space-requirements-changed
+;; from one of its children, the normal behaviour is to change its
+;; space-requirements. For the moment exception are restraining-pane
+;; and viewport-pane. -- admich 2020-08-11
+(defmethod note-space-requirements-changed ((pane composite-pane) client)
+  (declare (ignore client))
+  (change-space-requirements pane))
+
 (defmethod spacing-value-to-device-units ((pane extended-output-stream) x)
   (etypecase x
     (real x)
@@ -1127,72 +1135,33 @@
         (make-space-requirement))))
 
 (defmethod allocate-space ((pane viewport-pane) width height)
-  (with-slots (hscrollbar vscrollbar) (sheet-parent pane)
-    (let* ((child            (sheet-child pane))
-           (child-space      (compose-space child))
-           (child-width      (space-requirement-width child-space))
-           (child-min-width  (space-requirement-min-width child-space))
-           (child-height     (space-requirement-height child-space))
-           (child-min-height (space-requirement-min-height child-space)))
+  (let* ((parent           (sheet-parent pane))
+         (child            (sheet-child pane))
+         (child-space      (compose-space child))
+         (child-width      (space-requirement-width child-space))
+         (child-min-width  (space-requirement-min-width child-space))
+         (child-height     (space-requirement-height child-space))
+         (child-min-height (space-requirement-min-height child-space)))
+    (with-slots (hscrollbar vscrollbar) parent
       (move-and-resize-sheet child
                              (if hscrollbar (- (gadget-value hscrollbar)) 0)
                              (if vscrollbar (- (gadget-value vscrollbar)) 0)
                              (max child-width  width)
-                             (max child-height height))
-                                        ; move-and-resize-sheet does not allocate space for the sheet...
-                                        ; so we do it manually for this case, which may be wrong - CHECKME
-                                        ; if this is the right place, reusing the above calculation might be a good idea
-      (allocate-space child
-                      (max child-min-width child-width  width)
-                      (max child-min-height child-height height)))))
+                             (max child-height height)))
+    ;; move-and-resize-sheet does not allocate space for the sheet...  so we
+    ;; do it manually for this case, which may be wrong - CHECKME if this is
+    ;; the right place, reusing the above calculation might be a good idea
+    (allocate-space child
+                    (max child-min-width child-width  width)
+                    (max child-min-height child-height height))
+    (scroller-pane/update-scroll-bars parent)))
 
 (defmethod note-input-focus-changed ((pane viewport-pane) state)
   (note-input-focus-changed (sheet-child pane) state))
 
-;;; This method ensures that when the child changes size, the viewport
-;;; will move its focus so that it will not display a region outside
-;;; of `child' (if at all possible, this ideal can be circumvented by
-;;; creating a child sheet that is smaller than the viewport). I do
-;;; not believe having a viewport look at "empty" space is ever
-;;; useful.
 (defmethod note-space-requirements-changed ((pane viewport-pane) child)
-  (let ((viewport-width (bounding-rectangle-width pane))
-        (viewport-height (bounding-rectangle-height pane))
-        (child-width (bounding-rectangle-width child))
-        (child-height (bounding-rectangle-height child)))
-    (destructuring-bind (horizontal-scroll vertical-scroll)
-        (mapcar #'- (multiple-value-list
-                     (transform-position (sheet-transformation child) 0 0)))
-      ;; XXX: We cannot use `scroll-extent', because McCLIM ignores it
-      ;; unless the scrollee happens to be drawing. Very weird, should
-      ;; be fixed.
-
-      ;; It's not a bug, it's a feature. This requires further thought. -Hefner
-      (move-sheet child
-                  (- (if (> (+ horizontal-scroll viewport-width)
-                            child-width)
-                         (- child-width viewport-width)
-                         horizontal-scroll))
-                  (- (if (> (+ vertical-scroll viewport-height)
-                            child-height)
-                         (- child-height viewport-height)
-                         vertical-scroll)))
-      (scroller-pane/update-scroll-bars (sheet-parent pane)))))
-
-;;; Accounting for changed space requirements
-
-(defmethod change-space-requirements ((pane viewport-pane) &rest options)
-  (declare (ignore options))
-  (let* ((client (sheet-child pane))
-         (sr (compose-space client))
-         (width  (max (bounding-rectangle-width pane)
-                      (space-requirement-width sr)))
-         (height (max (bounding-rectangle-height pane)
-                      (space-requirement-height sr))))
-    (resize-sheet client width height)
-    (allocate-space client width height)
-    (scroller-pane/update-scroll-bars (sheet-parent pane))))
-
+  (multiple-value-bind (width height) (bounding-rectangle-size pane)
+    (allocate-space pane width height)))
 
 ;;; SCROLLER PANE
 
