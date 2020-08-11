@@ -279,13 +279,14 @@
                  *changed-space-requirements*)))
         (t
          (let ((frame (pane-frame pane)))
-           ;; ### we miss the :resize-frame option
            (cond (resize-frame
                   (layout-frame frame))
                  (t
-                  (layout-frame frame
-                                (bounding-rectangle-width pane)
-                                (bounding-rectangle-height pane))))))))
+                  (if (frame-resize-frame frame)
+                      (layout-frame frame)
+                      (multiple-value-bind (width height)
+                          (bounding-rectangle-size pane)
+                        (layout-frame frame width height)))))))))
 
 (defmethod compose-space ((pane top-level-sheet-pane) &key width height)
   (declare (ignore width height))

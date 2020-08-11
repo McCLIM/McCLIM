@@ -105,7 +105,9 @@
    (panes-for-layout :initform nil :accessor frame-panes-for-layout
                      :documentation "alist of names and panes
                                      (as returned by make-pane)")
-
+   (resize-frame :initarg :resize-frame
+                 :initform nil
+                 :accessor frame-resize-frame)
    (output-pane :initform nil
                 :accessor frame-standard-output
                 :accessor frame-error-output)
@@ -263,9 +265,16 @@ documentation produced by presentations.")
 (defmethod (setf frame-current-layout) :around (name (frame application-frame))
   (unless (eql name (frame-current-layout frame))
     (call-next-method)
-    (alexandria:when-let ((fm (frame-manager frame)))
-      (generate-panes fm frame)
-      (layout-frame frame)
+    (when-let ((fm (frame-manager frame)))
+      (if-let ((tls (and (frame-resize-frame frame)
+                         (frame-top-level-sheet frame))))
+        (multiple-value-bind (width height)
+            (bounding-rectangle-size tls)
+          (generate-panes fm frame)
+          (layout-frame frame width height))
+        (progn
+          (generate-panes fm frame)
+          (layout-frame frame)))
       (signal 'frame-layout-changed :frame frame))))
 
 (defmethod (setf frame-command-table) :around (new-command-table frame)
