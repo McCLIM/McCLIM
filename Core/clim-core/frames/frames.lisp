@@ -78,22 +78,6 @@
 ;;; XXX All these slots should move to a mixin or to standard-application-frame.
 ;;; -- moore
 
-; extension
-(defgeneric frame-schedule-timer-event (frame sheet delay token))
-
-(defgeneric note-input-focus-changed (pane state)
-  (:documentation "Called when a pane receives or loses the keyboard
-input focus. This is a McCLIM extension."))
-
-(defmethod (setf port-keyboard-input-focus) :around (focus port)
-  (let ((old-focus (port-keyboard-input-focus port))
-        (result (call-next-method))     ; clim-null cheats
-        (new-focus (port-keyboard-input-focus port)))
-    (prog1 result
-      (unless (eq old-focus new-focus)
-        (note-input-focus-changed old-focus nil)
-        (note-input-focus-changed new-focus t)))))
-
 (defclass standard-application-frame (application-frame
                                       presentation-history-mixin)
   ((port :initform nil
@@ -1269,9 +1253,6 @@ have a `pointer-documentation-pane' as pointer documentation,
 (defmacro with-application-frame ((frame) &body body)
   `(let ((,frame *application-frame*))
      ,@body))
-
-(defmethod note-input-focus-changed (pane state)
-  (declare (ignore pane state)))
 
 (defmethod (setf client-setting) (value frame setting)
   (setf (getf (client-settings frame) setting) value))

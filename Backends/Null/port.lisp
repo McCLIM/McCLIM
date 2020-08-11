@@ -137,13 +137,6 @@
 (defmethod synthesize-pointer-motion-event ((pointer null-pointer))
   nil)
 
-(defmethod port-frame-keyboard-input-focus ((port null-port) frame)
-  (frame-properties frame 'focus))
-
-(defmethod (setf port-frame-keyboard-input-focus) 
-    (focus (port null-port) frame)
-  (setf (frame-properties frame 'focus) focus))
-
 (defmethod (setf port-keyboard-input-focus) (focus (port null-port))
   focus)
 

@@ -176,7 +176,8 @@
   (stream-unread-gesture stream gesture))
 
 
-(defmethod stream-set-input-focus ((stream extended-input-stream))
+;;; This method is deliberately not specialized. -- jd 2019-08-23
+(defmethod stream-set-input-focus (stream)
   (let ((port (or (port stream)
                   (port *application-frame*))))
     (prog1 (port-keyboard-input-focus port)

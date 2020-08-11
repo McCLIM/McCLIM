@@ -110,6 +110,9 @@
     :accessor port-lock)
    (text-style-mappings :initform (make-hash-table :test #'eq)
                         :reader port-text-style-mappings)
+   (focused-sheet :initform nil :accessor port-focused-sheet
+                  :reader port-keyboard-input-focus
+                  :documentation "The sheet for the keyboard events, if any")
    (pointer-sheet :initform nil :accessor port-pointer-sheet
 		  :documentation "The sheet the pointer is over, if any")
    ;; The difference between grabbed-sheet and pressed-sheet is that
@@ -120,28 +123,31 @@
    (pressed-sheet :initform nil :accessor port-pressed-sheet
 		  :documentation "The sheet the pointer is pressed on, if any")))
 
-(defmethod port-keyboard-input-focus (port)
-  (when (null *application-frame*)
-    (error "~S called with null ~S"
-           'port-keyboard-input-focus '*application-frame*))
-  (port-frame-keyboard-input-focus port *application-frame*))
+(defgeneric note-input-focus-changed (sheet state)
+  (:documentation "Called when a sheet receives or loses the keyboard input
+focus. STATE argument is T when the sheet gains focus and NIL otherwise. This
+is a McCLIM extension.")
+  (:method (sheet state)
+    (declare (ignore sheet state))))
 
-(defmethod (setf port-keyboard-input-focus) (focus port)
-  (when (null *application-frame*)
-    (error "~S called with null ~S"
-           '(setf port-keyboard-input-focus) '*application-frame*))
-  ;; XXX: pane frame is not defined for all streams (for instance not for
-  ;; CLIM:STANDARD-EXTENDED-INPUT-STREAM), so this sanity check would lead to
-  ;; error on that.
-  ;; XXX: also should we allow reading objects from foreign application frames?
-  ;; This was the case on Genera and is requested by users from time to time...
-  #+ (or)
-  (unless (eq *application-frame* (pane-frame focus))
-    (error "frame mismatch in ~S" '(setf port-keyboard-input-focus)))
-  (setf (port-frame-keyboard-input-focus port *application-frame*) focus))
+(defmethod (setf port-keyboard-input-focus)
+    ((top-sheet top-level-sheet-mixin) (port basic-port))
+  (let ((new-sheet (focused-sheet top-sheet))
+        (old-sheet (port-keyboard-input-focus port)))
+    (unless (eq new-sheet old-sheet)
+      (setf (port-focused-sheet port) new-sheet)
+      (note-input-focus-changed old-sheet nil)
+      (note-input-focus-changed new-sheet t))))
 
-(defgeneric port-frame-keyboard-input-focus (port frame))
-(defgeneric (setf port-frame-keyboard-input-focus) (focus port frame))
+(defmethod (setf port-keyboard-input-focus)
+    ((new-sheet sheet) (port basic-port))
+  (let ((old-sheet (port-keyboard-input-focus port)))
+    (unless (eq new-sheet old-sheet)
+      (setf (port-focused-sheet port) new-sheet)
+      (when-let ((top-sheet (get-top-level-sheet new-sheet)))
+        (setf (focused-sheet top-sheet) new-sheet))
+      (note-input-focus-changed old-sheet nil)
+      (note-input-focus-changed new-sheet t))))
 
 (defmethod destroy-port :before ((port basic-port))
   (when (and *multiprocessing-p* (port-event-process port))
@@ -365,17 +371,25 @@
              (map nil #'synthesize-enter sheets))
           (when (should-synthesize-for-sheet-p sheet)
             (push sheet sheets)))))
-
     new-pointer-sheet))
 
 (defmethod distribute-event ((port basic-port) event)
   (dispatch-event (event-sheet event) event))
 
-;;; In the most general case we can't tell whether all sheets are
-;;; mirrored or not. So this default method for pointer-events
-;;; operates under the assumption that we must deliver events to
-;;; sheets which doesn't have a mirror and that the sheet grabbing and
-;;; pressing is implemented locally. -- jd 2019-08-21
+(defmethod distribute-event ((port basic-port) (event keyboard-event))
+  (when-let ((focused (port-keyboard-input-focus port)))
+    (dispatch-event-copy focused event)))
+
+;;; We focus a sheet in the CLIM thread.
+(defmethod handle-event ((sheet top-level-sheet-mixin)
+                         (event window-manager-focus-event))
+  (setf (port-keyboard-input-focus (port sheet)) sheet))
+
+;;; In the most general case we can't tell whether all sheets are mirrored or
+;;; not. So this default method for pointer-events operates under the
+;;; assumption that we must deliver events to sheets which doesn't have a
+;;; mirror and that the sheet grabbing, pressing and input focusing is
+;;; implemented locally. -- jd 2019-08-21
 (defmethod distribute-event ((port basic-port) (event pointer-event))
   ;; When we receive pointer event we need to take into account
   ;; unmirrored sheets and grabbed/pressed sheets.
@@ -403,13 +417,15 @@
           (set-sheet-pointer-cursor port event-sheet new-pointer-cursor))))
     ;; Handle some events specially.
     (typecase event
-      ;; Pressing pointer button over a sheet makes a sheet
-      ;; pressed. Pressed sheet is assigned only when there is
-      ;; currently none.
+      ;; Pressing the pointer button over a sheet makes a sheet pressed and
+      ;; focused. The pressed sheet is assigned only when there is currently
+      ;; none, while the event for focusing the sheet is always dispatched.
       (pointer-button-press-event
        (when (null pressed-sheet)
-         (setf (port-pressed-sheet port) new-pointer-sheet)))
-      ;; Releasing the button sets the pressed sheet to NIL.
+         (setf (port-pressed-sheet port) new-pointer-sheet))
+       (dispatch-event-copy new-pointer-sheet event 'window-manager-focus-event))
+      ;; Releasing the button sets the pressed sheet to NIL without changing
+      ;; the focus.
       (pointer-button-release-event
        (when pressed-sheet
          (unless (eql pressed-sheet new-pointer-sheet)
