@@ -136,7 +136,7 @@
                         :x x :y y
                         :graft-x root-x
                         :graft-y root-y
-                        :sheet (or (frame-properties (pane-frame sheet) 'focus) sheet)
+                        :sheet sheet
                         :modifier-state modifier-state :timestamp time)))
       ((:button-press :button-release)
        (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port* state))
@@ -403,11 +403,6 @@
                          :sheet sheet
                          :modifier-state (clim-xcommon:x-event-state-modifiers
                                           port mask)))))))
-
-(defmethod port-frame-keyboard-input-focus ((port clx-basic-port) frame)
-  (frame-properties frame 'focus))
-(defmethod (setf port-frame-keyboard-input-focus) (focus (port clx-basic-port) frame)
-  (setf (frame-properties frame 'focus) focus))
 
 (defmethod port-grab-pointer ((port clx-basic-port) pointer sheet)
   (let ((mirror (sheet-xmirror sheet))

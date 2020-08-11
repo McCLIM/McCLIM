@@ -1889,6 +1889,7 @@
    #:event-read-with-timeout
    #:event-listen-or-wait
    #:schedule-event
+   #:window-manager-focus-event
    ;; sheets
    #:top-level-sheet-mixin
    #:unmanaged-sheet-mixin
@@ -1976,7 +1977,8 @@
    #:unsupported-bitmap-format
    #:bitmap-format
    #:*default-vertical-scroll-bar-position*
-   ;; frame manager
+   ;; ports and frame managers
+   #:note-input-focus-changed
    #:find-frame-type
    #:note-frame-pretty-name-changed
    ;; images
