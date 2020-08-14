@@ -54,14 +54,19 @@
             (values renderer texture surface context))))))
 
 (defun %make-renderer (sheet)
-  (if (sdl-renderer-sheet/renderer sheet)
+  (if (sdl-renderer-sheet/texture sheet)
       (values (sdl-renderer-sheet/renderer sheet) (sdl-renderer-sheet/texture sheet))
       ;; ELSE: We need to create the renderer and texture
-      (let* ((renderer (sdl2:create-renderer (sheet-mirror sheet) nil '(:accelerated)))
-             (texture (sdl2:create-texture renderer :argb8888 :streaming 400 400)))
-        (setf (sdl-renderer-sheet/renderer sheet) renderer)
-        (setf (sdl-renderer-sheet/texture sheet) texture)
-        (values renderer texture))))
+      (let ((mirror (sheet-mirror sheet)))
+        (multiple-value-bind (width height)
+            (sdl2:get-window-size mirror)
+          (let* ((renderer (or (sdl-renderer-sheet/renderer sheet)
+                               (let ((v (sdl2:create-renderer mirror nil '(:accelerated))))
+                                 (setf (sdl-renderer-sheet/renderer sheet) v)
+                                 v)))
+                 (texture (sdl2:create-texture renderer :argb8888 :streaming width height)))
+            (setf (sdl-renderer-sheet/texture sheet) texture)
+            (values renderer texture))))))
 
 (defun find-context (medium)
   (let ((sheet (sheet-mirrored-ancestor (medium-sheet medium))))
@@ -79,6 +84,16 @@
               (setf (sdl-renderer-sheet/surface sheet) surface)
               (setf (sdl-renderer-sheet/cairo-context sheet) context)
               context))))))
+
+(defun invalidate-context (sheet)
+  (sdl2:in-main-thread ()
+    (alexandria:when-let ((texture (sdl-renderer-sheet/texture sheet)))
+      (alexandria:when-let ((surface (sdl-renderer-sheet/surface sheet)))
+        (sdl2:unlock-texture texture)
+        (setf (sdl-renderer-sheet/surface sheet) nil)
+        (setf (sdl-renderer-sheet/cairo-context sheet) nil))
+      (sdl2:destroy-texture (sdl-renderer-sheet/texture sheet))
+      (setf (sdl-renderer-sheet/texture sheet) nil))))
 
 #+nil
 (defun ensure-ubyte (n)
@@ -118,12 +133,12 @@
 
 (defmethod (setf medium-line-style) :before (line-style (medium sdl-medium))
   (declare (ignore line-style))
-  (log:info "not implemented")
+  (log:trace "not implemented")
   nil)
 
 (defmethod (setf medium-clipping-region) :after (region (medium sdl-medium))
   (declare (ignore region))
-  (log:info "not implemented")
+  (log:trace "not implemented")
   nil)
 
 (defmethod medium-copy-area ((from-drawable sdl-medium)
@@ -131,7 +146,7 @@
                              (to-drawable sdl-medium)
 			     to-x to-y)
   (declare (ignore from-x from-y width height to-x to-y))
-  (log:info "not implemented")
+  (log:trace "not implemented")
   nil)
 
 #+nil ; FIXME: PIXMAP class
@@ -159,12 +174,12 @@
 
 (defmethod medium-draw-point* ((medium sdl-medium) x y)
   (declare (ignore x y))
-  (log:info "not implemented")
+  (log:trace "not implemented")
   nil)
 
 (defmethod medium-draw-points* ((medium sdl-medium) coord-seq)
   (declare (ignore coord-seq))
-  (log:info "not implemented")
+  (log:trace "not implemented")
   nil)
 
 (defun update-attrs (medium)
@@ -219,7 +234,7 @@
   nil)
 
 (defmethod medium-draw-rectangle* ((medium sdl-medium) left top right bottom filled)
-  (log:info "Draw rect: medium=~s (~s,~s)-(~s,~s) filled=~s" medium left top right bottom filled)
+  (log:trace "Draw rect: medium=~s (~s,~s)-(~s,~s) filled=~s" medium left top right bottom filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (climi::with-transformed-position (tr left top)
       (climi::with-transformed-position (tr right bottom)
@@ -237,7 +252,7 @@
 
 (defmethod medium-draw-rectangles* ((medium sdl-medium) position-seq filled)
   (declare (ignore position-seq filled))
-  (log:info "not implemented")
+  (log:trace "not implemented")
   nil)
 
 (defmethod medium-draw-ellipse* ((medium sdl-medium) center-x center-y
@@ -248,6 +263,7 @@
 		   radius-1-dx radius-1-dy
 		   radius-2-dx radius-2-dy
 		   start-angle end-angle filled))
+  (log:trace "not implemented")
   nil)
 
 (defmethod medium-draw-circle* ((medium sdl-medium)
@@ -255,6 +271,7 @@
 				filled)
   (declare (ignore center-x center-y radius
 		   start-angle end-angle filled))
+  (log:trace "not implemented")
   nil)
 
 (defmethod text-style-ascent (text-style (medium sdl-medium))
@@ -320,11 +337,12 @@
 (defmethod medium-finish-output ((medium sdl-medium))
   (let* ((sheet (medium-sheet medium))
          (mirror (climi::port-lookup-mirror (port medium) sheet)))
-    (log:info "Finishing output: ~s" medium)
+    (log:trace "Finishing output: ~s" medium)
     (when mirror
       (let* ((root (sheet-mirrored-ancestor sheet))
-             (renderer (sdl-renderer-sheet/renderer root)))
-        (when renderer
+             (renderer (sdl-renderer-sheet/renderer root))
+             (texture (sdl-renderer-sheet/texture root)))
+        (when (and renderer texture)
           (sdl2:in-main-thread ()
             (let ((texture (sdl-renderer-sheet/texture root)))
               (sdl2:unlock-texture texture)
@@ -334,7 +352,7 @@
               (setf (sdl-renderer-sheet/cairo-context root) nil))))))))
 
 (defmethod medium-force-output ((medium sdl-medium))
-  (log:info "Forcing output: ~s" medium))
+  (log:trace "Forcing output: ~s" medium))
 
 (defmethod medium-clear-area ((medium sdl-medium) left top right bottom)
   (declare (ignore left top right bottom))

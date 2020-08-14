@@ -328,6 +328,7 @@
     (when (maybe-funcall wait-function)
       (return-from process-next-event
         (values nil :wait-function)))
+    (break)
     (let ((event (xlib:process-event (clx-port-display port)
                                      :timeout timeout
 				     :handler #'event-handler

@@ -27,8 +27,12 @@
 
 (defclass sdl-port (basic-port)
   ((id)
-   (pointer :accessor port-pointer :initform (make-instance 'sdl-pointer))
-   (window :initform nil :accessor sdl-port-window)))
+   (pointer            :accessor port-pointer :initform (make-instance 'sdl-pointer))
+   (window             :initform nil :accessor sdl-port-window)
+   (sheet-to-window-id :initform (make-hash-table :test 'eql)
+                       :reader sdl-port/sheet-to-window-id)
+   (window-id-to-sheet :initform (make-hash-table :test 'eql)
+                       :reader sdl-port/window-id-to-sheet)))
 
 (defun parse-sdl-server-path (path)
   path)
@@ -51,7 +55,7 @@
   (print-unreadable-object (object stream :identity t :type t)
     (format stream "~S ~S" :id (slot-value object 'id))))
 
-(defclass sdl-renderer-sheet ()
+(defclass sdl-renderer-sheet (mirrored-sheet-mixin)
   ((renderer      :initform nil
                   :accessor sdl-renderer-sheet/renderer)
    (texture       :initform nil
@@ -61,22 +65,41 @@
    (cairo-context :initform nil
                   :accessor sdl-renderer-sheet/cairo-context)))
 
-(defclass sdl-top-level-sheet-pane (mirrored-sheet-mixin climi::top-level-sheet-pane sdl-renderer-sheet)
+(defclass sdl-top-level-sheet-pane (sdl-renderer-sheet climi::top-level-sheet-pane)
   ())
 
 (defmethod port-set-mirror-region ((port sdl-port) mirror mirror-region)
   (multiple-value-bind (old-width old-height)
-      (sdl2:get-window-size mirror)
+      (sdl2:in-main-thread ()
+        (sdl2:get-window-size mirror))
     (with-bounding-rectangle* (x1 y1 x2 y2) mirror-region
       (declare (ignore x1 y1))
       (let ((new-width (round-coordinate x2))
             (new-height (round-coordinate y2)))
         (unless (and (= old-width new-width)
                      (= old-height new-height))
-          (sdl2:set-window-size mirror new-width new-height))))))
+          (sdl2:in-main-thread ()
+            (sdl2:set-window-size mirror new-width new-height)))))))
                                    
 (defmethod port-set-mirror-transformation ((port sdl-port) mirror mirror-transformation)
   nil)
+
+(defmethod climi::port-lookup-mirror ((port sdl-port) (sheet sdl-renderer-sheet))
+  (alexandria:if-let ((window-id (gethash sheet (sdl-port/sheet-to-window-id port))))
+    (sdl2-ffi.functions:sdl-get-window-from-id window-id)
+    nil))
+
+(defmethod climi::port-lookup-sheet ((port sdl-port) mirror)
+  (gethash (sdl2:get-window-id mirror) (sdl-port/window-id-to-sheet port)))
+
+(defmethod climi::port-register-mirror ((port sdl-port) (sheet sdl-renderer-sheet) mirror)
+  (let ((window-id (sdl2:get-window-id mirror)))
+    (setf (gethash window-id (sdl-port/window-id-to-sheet port)) sheet)
+    (setf (gethash sheet (sdl-port/sheet-to-window-id port)) window-id)))
+
+(defmethod climi::port-unregister-mirror ((port sdl-port) (sheet sdl-renderer-sheet) mirror)
+  (remhash (sdl2:get-window-id mirror) (sdl-port/window-id-to-sheet port))
+  (remhash sheet (sdl-port/sheet-to-window-id port)))
 
 (defmethod realize-mirror ((port sdl-port) (sheet mirrored-sheet-mixin))
   (let* ((q (compose-space sheet))
@@ -92,7 +115,10 @@
                                     :h (round-coordinate (if mirror-region
                                                              (bounding-rectangle-height mirror-region)
                                                              (climi::space-requirement-height q)))
-                                    :flags (if (sheet-enabled-p sheet) '(:shown) nil)))))
+                                    :flags (append
+                                            '(:resizable)
+                                            (if (sheet-enabled-p sheet) '((:shown)) nil))))))
+    (log:info "Registered win: ~s" win)
     (climi::port-register-mirror port sheet win)))
 
 (defmethod destroy-mirror ((port sdl-port) (sheet mirrored-sheet-mixin))
@@ -115,7 +141,59 @@
 (defmethod destroy-port :before ((port sdl-port))
   (quit-sdl port))
 
+(defvar *event-ts* 0)
+
+(defun process-sdl-event (port event)
+  (case (sdl2:get-event-type event)
+    (:windowevent
+     (let* ((window-id (plus-c:c-ref event sdl2-ffi:sdl-event :window :window-id))
+            (win (sdl2-ffi.functions:sdl-get-window-from-id window-id)))
+       (unless win
+         (error "Event from unknown window: ~s" window-id))
+       (let ((sheet (climi::port-lookup-sheet port win)))
+         (case (plus-c:c-ref event sdl2-ffi:sdl-event :window :event)
+           (#.sdl2-ffi:+sdl-windowevent-exposed+
+            (log:trace "Expose")
+            (make-instance 'window-repaint-event
+                           :timestamp (incf *event-ts*)
+                           :sheet sheet
+                           :region clim:+everywhere+))
+           (#.sdl2-ffi:+sdl-windowevent-resized+
+            (invalidate-context sheet)
+            (log:trace "Resized: new size: ~s×~s"
+                      (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1)
+                      (plus-c:c-ref event sdl2-ffi:sdl-event :window :data2))
+            (make-instance 'window-configuration-event
+                           :timestamp (incf *event-ts*)
+                           :sheet sheet
+                           :x 0
+                           :y 0
+                           :width (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1)
+                           :height (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1)))))))
+    (:mousemotion
+     (let* ((x (plus-c:c-ref event sdl2-ffi:sdl-event :motion :x))
+            (y (plus-c:c-ref event sdl2-ffi:sdl-event :motion :y))
+            (window-id (plus-c:c-ref event sdl2-ffi:sdl-event :motion :window-id))
+            (win (sdl2-ffi.functions:sdl-get-window-from-id window-id))
+            (sheet (climi::port-lookup-sheet port win)))
+       (multiple-value-bind (window-x window-y)
+           (sdl2:get-window-position win)
+         (let ((root-x (+ window-x x))
+               (root-y (+ window-y y)))
+           (log:trace "Mouse motion: (~s,~s) abs:(~s,~s) sheet:~s" x y root-x root-y sheet)
+           (make-instance 'pointer-motion-event
+                          :timestamp (incf *event-ts*)
+                          :sheet sheet
+                          :pointer 0
+                          :button 0
+                          :x x
+                          :y y
+                          :graft-x root-x
+                          :graft-y root-y
+                          :modifier-state 0)))))))
+
 (defmethod process-next-event ((port sdl-port) &key wait-function (timeout nil))
+  #+nil
   (cond ((maybe-funcall wait-function)
          (values nil :wait-function))
         ((not (null timeout))
@@ -128,7 +206,30 @@
                until (funcall wait-function)
                finally (return (values nil :wait-function))))
         (t
-         (error "Game over. Listening for an event on Sdl backend."))))
+         (error "Game over. Listening for an event on Sdl backend.")))
+
+  #+nil
+  (sdl2:with-event-loop (:method :wait :timeout (if timeout (truncate (* timeout 1000)) nil))
+    (:windowevent
+     (:event window-event-type)
+     (case window-event-type
+       (#.sdl2-ffi:+sdl-windowevent-resized+ (log:info "resized"))
+       (#.sdl2-ffi:+sdl-windowevent-exposed+ (log:info "expose")))))
+
+  (sdl2:in-main-thread ()
+    (sdl2:with-sdl-event (event)
+      (let ((result (sdl2:next-event event :wait (if timeout (truncate (* timeout 1000)) nil))))
+        (labels ((call-wait-function ()
+                   (if (maybe-funcall wait-function)
+                       (values nil :wait-funtion)
+                       (values nil :timeout))))
+          (if (zerop result)
+              (call-wait-function)
+              (let ((processed (process-sdl-event port event)))
+                (if processed
+                    (prog1 t
+                      (distribute-event port processed))
+                    (call-wait-function)))))))))
 
 (defmethod make-graft ((port sdl-port) &key (orientation :default) (units :device))
   (make-instance 'sdl-graft
@@ -136,7 +237,7 @@
                  :orientation orientation :units units))
 
 (defmethod make-medium ((port sdl-port) sheet)
-  (log:info "Making medium for sheet=~s" sheet)
+  (log:trace "Making medium for sheet=~s" sheet)
   (make-instance 'sdl-medium :sheet sheet))
 
 (defmethod text-style-mapping ((port sdl-port) (text-style text-style) &optional character-set)
@@ -192,6 +293,7 @@
 (defmethod port-force-output ((port sdl-port))
   nil)
 
+#+nil
 (defmethod distribute-event :around ((port sdl-port) event)
   (declare (ignore event))
   nil)
