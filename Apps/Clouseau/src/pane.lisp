@@ -1,4 +1,4 @@
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; This library is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Library General Public
@@ -59,8 +59,9 @@
 
 (defmethod shared-initialize :after ((instance   inspector-pane-mixin)
                                      (slot-names t)
-                                     &key (state nil state-supplied-p)
-                                          (root  nil root-supplied-p))
+                                     &key (state         nil state-supplied-p)
+                                          (root          nil root-supplied-p)
+                                          (handle-errors t))
   (unless (%change-handler instance)
     (setf (%change-handler instance)
           (lambda (old-root-place new-root-place)
@@ -70,7 +71,8 @@
          (setf (%state instance) state))
         (root-supplied-p
          (setf (%state instance) (make-instance 'inspector-state
-                                                :root-object root)))))
+                                                :root-object   root
+                                                :handle-errors handle-errors)))))
 
 (defmethod initialize-instance :after ((instance inspector-pane-mixin)
                                         &key (state nil state-supplied-p)
