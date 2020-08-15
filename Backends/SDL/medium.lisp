@@ -19,7 +19,7 @@
 
 (in-package :clim-sdl)
 
-(defclass sdl-medium (basic-medium)
+(defclass sdl-medium (font-rendering-medium-mixin basic-medium)
   ((buffering-output-p :accessor medium-buffering-output-p)))
 
 (defmacro with-medium-mirror ((mirror-sym medium) &body body)
@@ -182,7 +182,48 @@
   (log:trace "not implemented")
   nil)
 
+(defun region->clipping-values (region)
+  (with-bounding-rectangle* (min-x min-y max-x max-y) region
+    ;; We don't use here round-coordinate because clipping rectangle
+    ;; must cover the whole region. It is especially important when we
+    ;; draw arcs (ellipses without filling) which are not drawn if any
+    ;; part is outside the clipped area. -- jd 2019-06-17
+    (let ((clip-x (floor min-x))
+          (clip-y (floor min-y)))
+      (values clip-x
+              clip-y
+              (- (ceiling max-x) clip-x)
+              (- (ceiling max-y) clip-y)))))
+
+(defun clipping-region->rect-seq (clipping-region)
+  (typecase clipping-region
+    (area (multiple-value-list (region->clipping-values clipping-region)))
+    (t (loop
+          for region in (nreverse (mapcan
+                                   (lambda (v) (unless (eq v +nowhere+) (list v)))
+                                   (region-set-regions clipping-region
+                                                       :normalize :y-banding)))
+          nconcing (multiple-value-list (region->clipping-values region))))))
+
+(defun set-clipping-region (medium)
+  (cairo:reset-clip)
+  (let ((clipping-region (climi::medium-device-region medium)))
+    (typecase clipping-region
+      (climi::nowhere-region
+       (cairo:rectangle 0 0 1 1)
+       (cairo:clip))
+      (clim:standard-rectangle
+       (multiple-value-bind (x1 y1 width height)
+           (region->clipping-values clipping-region)
+         (cairo:rectangle x1 y1 width height)
+         (cairo:clip)))
+      (climi::standard-rectangle-set
+       (break))
+      (t
+       (break)))))
+
 (defun update-attrs (medium)
+  (set-clipping-region medium)
   (multiple-value-bind (red green blue alpha)
       (clime::color-rgba (medium-ink medium))
     (cairo:set-source-rgba red green blue alpha)
@@ -294,24 +335,24 @@
   (text-style-character-width text-style medium #\m))
 
 (defmethod text-size ((medium sdl-medium) string &key text-style (start 0) end)
-  (setf string (etypecase string
-		 (character (string string))
-		 (string string)))
-  (let ((width 0)
-	(height (text-style-height text-style medium))
-	(x (- (or end (length string)) start))
-	(y 0)
-	(baseline (text-style-ascent text-style medium)))
-    (do ((pos (position #\Newline string :start start :end end)
-	      (position #\Newline string :start (1+ pos) :end end)))
-	((null pos) (values width height x y baseline))
-      (let ((start start)
-	    (end pos))
-	(setf x (- end start))
-	(setf y (+ y (text-style-height text-style medium)))
-	(setf width (max width x))
-	(setf height (+ height (text-style-height text-style medium)))
-	(setf baseline (+ baseline (text-style-height text-style medium)))))))
+  (declare (ignore text-style))
+  (when (characterp string)
+    (setq string (make-string 1 :initial-element string)))
+  (let ((s (sheet-mirrored-ancestor (medium-sheet medium))))
+    (unless (sheet-mirror s)
+      (log:info "No mirror!? s:~s" s)
+      (return-from text-size (values 0 0 1 1))))
+  (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
+    ;; missing stuff
+    (destructuring-bind (width height x-advance y-advance)
+        (with-cairo-context (medium)
+          (cairo:select-font-face "Source Code Pro" :normal :normal)
+          (cairo:set-font-size 30)
+          (multiple-value-bind (x-bearing y-bearing width height x-advance y-advance)
+              (cairo:text-extents fixed-string)
+            (declare (ignore x-bearing y-bearing))
+            (list width height x-advance y-advance)))
+      (values width height x-advance y-advance))))
 
 (defmethod climb:text-bounding-rectangle* ((medium sdl-medium) string
                                            &key text-style (start 0) end align-x align-y direction)
@@ -325,8 +366,20 @@
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
-  (declare (ignore string x y start end align-x align-y toward-x toward-y transform-glyphs))
-  nil)
+  (declare (ignore toward-x toward-y transform-glyphs))
+  (let ((merged-transform (sheet-device-transformation (medium-sheet medium))))
+    (when (characterp string)
+      (setq string (make-string 1 :initial-element string)))
+    (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
+      ;; missing stuff
+      (multiple-value-bind (transformed-x transformed-y)
+          (transform-position merged-transform x y)
+        (log:info "Drawing string ~s at (~s,~s)" fixed-string transformed-x transformed-y)
+        (with-cairo-context (medium)
+          (cairo:select-font-face "Source Code Pro" :normal :normal)
+          (cairo:set-font-size 30)
+          (cairo:move-to transformed-x transformed-y)
+          (cairo:show-text fixed-string))))))
 
 (defmethod medium-buffering-output-p ((medium sdl-medium))
   t)
@@ -355,29 +408,22 @@
   (log:trace "Forcing output: ~s" medium))
 
 (defmethod medium-clear-area ((medium sdl-medium) left top right bottom)
-  (declare (ignore left top right bottom))
-  nil
-  #+nil
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (with-transformed-position (tr left top)
-      (with-transformed-position (tr right bottom)
+    (climi::with-transformed-position (tr left top)
+      (climi::with-transformed-position (tr right bottom)
         (let ((min-x (round-coordinate (min left right)))
               (min-y (round-coordinate (min top bottom)))
               (max-x (round-coordinate (max left right)))
               (max-y (round-coordinate (max top bottom))))
-          
-          (xlib:draw-rectangle (port-lookup-mirror (port medium)
-                                                   (medium-sheet medium))
-                               (medium-gcontext medium (medium-background medium))
-                               (clamp min-x           #x-8000 #x7fff)
-                               (clamp min-y           #x-8000 #x7fff)
-                               (clamp (- max-x min-x) 0       #xffff)
-                               (clamp (- max-y min-y) 0       #xffff)
-                               t))))))
+          (multiple-value-bind (red green blue alpha)
+              (clime:color-rgba (medium-background medium))
+            (with-cairo-context (medium)
+              (cairo:set-source-rgba red green blue alpha)
+              (cairo:rectangle min-x min-y (- max-x min-x) (- max-y min-y))
+              (cairo:fill-path))))))))
 
 (defmethod medium-beep ((medium sdl-medium))
   nil)
 
 (defmethod medium-miter-limit ((medium sdl-medium))
   0)
-

@@ -154,22 +154,26 @@
          (case (plus-c:c-ref event sdl2-ffi:sdl-event :window :event)
            (#.sdl2-ffi:+sdl-windowevent-exposed+
             (log:trace "Expose")
-            (make-instance 'window-repaint-event
-                           :timestamp (incf *event-ts*)
-                           :sheet sheet
-                           :region clim:+everywhere+))
+            (list (make-instance 'window-repaint-event
+                                 :timestamp (incf *event-ts*)
+                                 :sheet sheet
+                                 :region clim:+everywhere+)))
            (#.sdl2-ffi:+sdl-windowevent-resized+
             (invalidate-context sheet)
             (log:trace "Resized: new size: ~s×~s"
-                      (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1)
-                      (plus-c:c-ref event sdl2-ffi:sdl-event :window :data2))
-            (make-instance 'window-configuration-event
-                           :timestamp (incf *event-ts*)
-                           :sheet sheet
-                           :x 0
-                           :y 0
-                           :width (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1)
-                           :height (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1)))))))
+                       (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1)
+                       (plus-c:c-ref event sdl2-ffi:sdl-event :window :data2))
+            (list (make-instance 'window-configuration-event
+                                 :timestamp (incf *event-ts*)
+                                 :sheet sheet
+                                 :x 0
+                                 :y 0
+                                 :width (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1)
+                                 :height (plus-c:c-ref event sdl2-ffi:sdl-event :window :data1))
+                  (make-instance 'window-repaint-event
+                                 :timestamp (incf *event-ts*)
+                                 :sheet sheet
+                                 :region clim:+everywhere+)))))))
     (:mousemotion
      (let* ((x (plus-c:c-ref event sdl2-ffi:sdl-event :motion :x))
             (y (plus-c:c-ref event sdl2-ffi:sdl-event :motion :y))
@@ -181,16 +185,16 @@
          (let ((root-x (+ window-x x))
                (root-y (+ window-y y)))
            (log:trace "Mouse motion: (~s,~s) abs:(~s,~s) sheet:~s" x y root-x root-y sheet)
-           (make-instance 'pointer-motion-event
-                          :timestamp (incf *event-ts*)
-                          :sheet sheet
-                          :pointer 0
-                          :button 0
-                          :x x
-                          :y y
-                          :graft-x root-x
-                          :graft-y root-y
-                          :modifier-state 0)))))))
+           (list (make-instance 'pointer-motion-event
+                                :timestamp (incf *event-ts*)
+                                :sheet sheet
+                                :pointer 0
+                                :button 0
+                                :x x
+                                :y y
+                                :graft-x root-x
+                                :graft-y root-y
+                                :modifier-state 0))))))))
 
 (defmethod process-next-event ((port sdl-port) &key wait-function (timeout nil))
   #+nil
@@ -228,7 +232,7 @@
               (let ((processed (process-sdl-event port event)))
                 (if processed
                     (prog1 t
-                      (distribute-event port processed))
+                      (mapc (lambda (event) (distribute-event port event)) processed))
                     (call-wait-function)))))))))
 
 (defmethod make-graft ((port sdl-port) &key (orientation :default) (units :device))
