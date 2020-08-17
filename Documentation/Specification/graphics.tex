@@ -327,7 +327,7 @@ simpler to draw rectilinear borders around rectilinear areas.
 
 \begin{figure}
 \centerline{\includegraphics{horizontal-lines}}
-\caption{\label{horizontal-lines} Two possible definitions of horizontal lines. 
+\caption{\label{horizontal-lines} Two possible definitions of horizontal lines.
 Left figure is X11 definition.}
 \end{figure}
 
@@ -450,7 +450,7 @@ and
 
 \defun {draw-polygon}  {medium point-seq \key (filled \cl{t}) (closed \cl{t})
                         \DrawingOptions  \LineJointCapOptions}
-\Defun {draw-polygon*} {medium coord-seq \key (filled \cl{t}) (closed \cl{t}) 
+\Defun {draw-polygon*} {medium coord-seq \key (filled \cl{t}) (closed \cl{t})
                         \DrawingOptions \LineJointCapOptions}
 
 Draws a polygon or polyline on the \term{medium} \arg{medium}.  When
@@ -475,7 +475,7 @@ this case, \arg{closed} is assumed to be \term{true} as well.
 \defun {draw-rectangle} {medium point1 point2 \key (filled \cl{t})
                          \DrawingOptions \LineJointOptions}
 \Defun {draw-rectangle*} {medium x1 y1 x2 y2 \key (filled \cl{t})
-                          \DrawingOptions \LineJointOptions} 
+                          \DrawingOptions \LineJointOptions}
 
 Draws either a filled or unfilled rectangle on the \term{medium} \arg{medium} that
 has its sides aligned with the coordinate axes of the native coordinate system.
@@ -643,7 +643,7 @@ of the line portion of the arrow in the obvious way, except that the joint shape
 has no effect.  Dashed arrows start dashing at \arg{point1}.
 
 
-\defun {draw-oval}  {medium center-pt x-radius y-radius \key (filled \cl{t}) 
+\defun {draw-oval}  {medium center-pt x-radius y-radius \key (filled \cl{t})
                      \DrawingOptions \LineCapOptions}
 \Defun {draw-oval*} {medium center-x center-y x-radius y-radius \key (filled \cl{t})
                      \DrawingOptions \LineCapOptions}
@@ -716,7 +716,7 @@ user transformation.)  The copying must be done by \cl{medium-copy-area}.
 
 If \arg{pixmap} is not supplied, a new pixmap will be allocated.  Otherwise,
 \arg{pixmap} must be an object returned by \cl{allocate-pixmap} that has the
-appropriate characteristics for \arg{medium}. 
+appropriate characteristics for \arg{medium}.
 
 The returned value is the pixmap.
 
@@ -821,7 +821,7 @@ Using \cl{draw-line*} as an example, calling any of the drawing functions
 specified above results in the following series of function calls on a
 non-output recording sheet:
 
-\begin{itemize} 
+\begin{itemize}
 \item A program calls \cl{draw-line*} on either a sheet or a medium, additionally passing \arg{x1},
 \arg{y1}, \arg{x2}, and \arg{y2}, and perhaps some drawing options.
 
@@ -868,7 +868,7 @@ such functionality as creating output records and handling scrolling.
 
 \Defgeneric {medium-draw-point*} {medium x y}
 
-Draws a point on the \term{medium} \arg{medium}.  
+Draws a point on the \term{medium} \arg{medium}.
 
 \Defgeneric {medium-draw-points*} {medium coord-seq}
 
@@ -881,7 +881,7 @@ sequence of coordinate pairs, which are real numbers.  It is an error if
 Draws a line on the \term{medium} \arg{medium}.  The line is drawn from
 $(x1,y1)$ to $(x2,y2)$.
 
-\Defgeneric {medium-draw-lines*} {stream position-seq} 
+\Defgeneric {medium-draw-lines*} {medium position-seq}
 
 Draws a set of disconnected lines on the \term{medium} \arg{medium}.
 \arg{coord-seq} is a sequence of coordinate pairs, which are real numbers.  Each
@@ -908,8 +908,8 @@ a sequence of coordinate pairs, which are real numbers.  It is an error if
 pair of coordinate pairs is taken as the upper-left and lower-right corner of
 the rectangle.
 
-\Defgeneric {medium-draw-ellipse*} {medium center-x center-y 
-                                    radius-1-dx radius-1-dy radius-2-dx radius-2-dy  
+\Defgeneric {medium-draw-ellipse*} {medium center-x center-y
+                                    radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                                     start-angle end-angle}
 
 
@@ -960,4 +960,3 @@ than \cl{draw-rectangle*}.
 
 Causes an audible sound to be played on the medium.  The default method
 does nothing.
-
