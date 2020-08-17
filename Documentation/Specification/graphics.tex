@@ -922,10 +922,9 @@ vectors (\arg{radius-1-dx},\arg{radius-1-dy}) and
 rather than a complete ellipse.  Note that the medium and device transformations
 must be applied to the angles as well.
 
-\Defgeneric {medium-draw-text*} {medium text x y
-                                 (start \cl{0}) end
-                                 (align-x \cl{:left}) (align-y \cl{:baseline})
-                                 toward-x toward-y transform-glyphs}
+\Defgeneric {medium-draw-text*} {medium text x y start end
+                                 align-x align-y toward-x toward-y
+                                 transform-glyphs}
 
 Draws a character or a string on the \term{medium} \arg{medium}.  The text is
 drawn starting at $(x,y)$, and towards (\arg{toward-x},\arg{toward-y}).  In Some
