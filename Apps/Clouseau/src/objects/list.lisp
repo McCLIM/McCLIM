@@ -50,22 +50,28 @@
                (eq (value parent) list)
                (supportsp parent 'setf))))))
 
-(defmethod remove-value ((place list-element-place))
-  (let ((list (container place)))
-    (if (eq (cell place) list)
-        (setf (value (parent place)) (rest list))
+(defun delete-list-elemnt (element list-place)
+  (let ((list (container list-place)))
+    (if (eq element list)
+        (setf (value (parent list-place)) (rest list))
         (loop :for predecessor :on list
               :for middle = (rest predecessor)
               :for successor = (rest middle)
-              :when (eq middle (cell place))
+              :when (eq middle element)
               :do (setf (cdr predecessor) successor)
                   (return)))))
+
+(defmethod remove-value ((place list-element-place))
+  (delete-list-elemnt (cell place) place))
 
 (defclass alist-element-place (list-element-place)
   ())
 
 (defmethod remove-value ((place alist-element-place))
-  (delete (cell place) (container place)))
+  ;; Find the cons cell in the outer list that contains the cell in
+  ;; its car.
+  (let ((element (member (cell place) (container place))))
+    (delete-list-elemnt element place)))
 
 (defclass alist-key-place (key-place
                            alist-element-place)
