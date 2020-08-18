@@ -21,15 +21,15 @@
    '(()                      inspected-object)
 
    ;; Small lists
-   '((1 . 2)                 clouseau::inspected-improper-list)
-   '((1 2)                   clouseau::inspected-proper-list)
-   '((1 2 . 3)               clouseau::inspected-improper-list)
-   '((1 2 3)                 clouseau::inspected-proper-list)
+   '((1 . 2)                 clouseau:inspected-improper-list)
+   '((1 2)                   clouseau:inspected-proper-list)
+   '((1 2 . 3)               clouseau:inspected-improper-list)
+   '((1 2 3)                 clouseau:inspected-proper-list)
 
    ;; Plist
-   '((:foo 1)                clouseau::inspected-plist)
-   '((:foo 1 :bar 2)         clouseau::inspected-plist)
+   '((:foo 1)                clouseau:inspected-plist)
+   '((:foo 1 :bar 2)         clouseau:inspected-plist)
 
    ;; Alist
-   '(((:foo . 1))            clouseau::inspected-proper-list)
-   '(((:foo . 1) (:bar . 2)) clouseau::inspected-alist)))
+   '(((:foo . 1))            clouseau:inspected-proper-list)
+   '(((:foo . 1) (:bar . 2)) clouseau:inspected-alist)))
