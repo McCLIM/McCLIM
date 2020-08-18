@@ -105,7 +105,7 @@
   (setf (find-class (container place) nil) new-value))
 
 (defmethod remove-value ((place symbol-type-place))
-  (setf (find-class place nil) nil))
+  (setf (find-class (container place)) nil))
 
 (defmethod make-object-state ((object class)
                               (place  symbol-type-place))
