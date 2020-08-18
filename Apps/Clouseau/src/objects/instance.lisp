@@ -252,6 +252,10 @@
 
 (define-presentation-to-command-translator inspected-instance->com-change-class
     (inspected-instance com-change-class inspector-command-table
+     :tester ((object)
+              (let ((current-class (class-of (object object))))
+                (not (typep current-class '(or built-in-class
+                                               structure-class)))))
      :priority -1
      :documentation "Change the class of the object")
     (object)
