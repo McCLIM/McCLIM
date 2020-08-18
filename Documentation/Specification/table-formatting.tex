@@ -68,7 +68,7 @@ advises CLIM about extra space to put between rows or columns, for instance, but
 does not directly control the absolute positioning of a cell's contents.
 
 For purposes of understanding table formatting, the following model may
-be used. 
+be used.
 \begin{itemize}
 \item The code for a cell draws to a stream that has a ``private''  (local to
 that cell) drawing plane.
@@ -117,7 +117,7 @@ direction, and how to constrain them in the vertical direction.
 \Defmacro {formatting-table} {(\optional stream
                                \key x-spacing y-spacing
                                     multiple-columns multiple-columns-x-spacing
-                                    equalize-column-widths 
+                                    equalize-column-widths
                                     (move-cursor \cl{t}) record-type \allow)
                               \body body}
 
@@ -146,10 +146,10 @@ spacing of the stream.  Possible values for these two options option are:
 \item An integer---a size in the current units to be used for spacing.
 
 \item A string or character---the spacing is the width or height of the string
-or character in the current text style. 
+or character in the current text style.
 
 \item A function---the spacing is the amount of horizontal or vertical space the
-function would consume when called on the stream. 
+function would consume when called on the stream.
 
 \item A list---the list is of the form \cl{(\arg{number} \arg{unit})}, where
 \arg{unit} is one of \cl{:point}, \cl{:pixel}, \cl{:mm}, \cl{:character}, or
@@ -176,7 +176,7 @@ formatting protocol.
 
 
 \Defmacro {formatting-row} {(\optional stream \key record-type \allow)
-                            \body body} 
+                            \body body}
 
 Binds the local environment in such a way the output of \arg{body} will be
 grouped into a table row.  All of the output performed by \arg{body} becomes the
@@ -198,7 +198,7 @@ formatting protocol.
 
 
 \Defmacro {formatting-column} {(\optional stream \key record-type \allow)
-                               \body body} 
+                               \body body}
 
 Binds the local environment in such a way the output of \arg{body} will be
 grouped into a table column.  All of the output performed by \arg{body} becomes
@@ -220,7 +220,7 @@ column formatting protocol.
 
 
 \Defmacro {formatting-cell} {(\optional stream
-                              \key (align-x \cl{':left}) (align-y \cl{':baseline}) 
+                              \key (align-x \cl{':left}) (align-y \cl{':baseline})
                                    min-width min-height record-type \allow)
                              \body body}
 
@@ -260,10 +260,10 @@ formatting protocol.
 
 \Defmacro {formatting-item-list} {(\optional stream
                                    \key x-spacing y-spacing
-                                        n-columns n-rows 
+                                        n-columns n-rows
                                         stream-width stream-height max-width max-height
                                         initial-spacing (row-wise \cl{t})
-                                        (move-cursor \cl{t}) record-type \allow) 
+                                        (move-cursor \cl{t}) record-type \allow)
                                   \body body}
 
 Binds the local environment in such a way that the output of \arg{body} will be
@@ -504,7 +504,7 @@ intervening non-tabular records such as presentations) will be a table output
 record; presentation output records may intervene.  This is a subclass of
 \cl{column-output-record}.
 
-\Defgeneric {map-over-row-cells} {function column-record}
+\Defgeneric {map-over-column-cells} {function column-record}
 
 Applies \arg{function} to all the cells in the column \arg{column-record},
 skipping intervening non-table output record structure.  \arg{function} is a
@@ -601,4 +601,3 @@ before the record has been replayed.  The method on
 \cl{standard-item-list-output-record} implements the usual item list layout
 constraint solver.  \arg{item-list-record} is the item list output record, and
 \arg{stream} is the stream on which the item list is displayed.
-
