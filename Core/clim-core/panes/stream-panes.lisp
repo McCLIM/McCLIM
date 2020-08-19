@@ -411,13 +411,19 @@ current background message was set."))
 (defun make-clim-interactor-pane (&rest options)
   (apply #'make-clim-stream-pane :type 'interactor-pane options))
 
-(defun make-clim-application-pane (&rest options)
+(defun make-clim-application-pane (&rest options &key (scroll-bar t scroll-bar-p) (scroll-bars scroll-bar scroll-bars-p) &allow-other-keys)
+  (unless (or scroll-bar-p scroll-bars-p)
+    (setf (getf options :scroll-bars) t))
   (apply #'make-clim-stream-pane :type 'application-pane options))
 
-(defun make-clim-pointer-documentation-pane (&rest options)
+(defun make-clim-pointer-documentation-pane (&rest options &key (scroll-bar nil scroll-bar-p) (scroll-bars scroll-bar scroll-bars-p) &allow-other-keys)
+  (unless (or scroll-bar-p scroll-bars-p)
+    (setf (getf options :scroll-bars) nil))
   (apply #'make-clim-stream-pane :type 'pointer-documentation-pane options))
 
-(defun make-clim-command-menu-pane (&rest options)
+(defun make-clim-command-menu-pane (&rest options &key (scroll-bar t scroll-bar-p) (scroll-bars scroll-bar scroll-bars-p) &allow-other-keys)
+  (unless (or scroll-bar-p scroll-bars-p)
+    (setf (getf options :scroll-bars) t))
   (apply #'make-clim-stream-pane :type 'command-menu-pane options))
 
 
