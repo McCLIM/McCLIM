@@ -1029,12 +1029,6 @@
 (defun spacing-p (pane)
   (typep pane 'spacing-pane))
 
-(defmethod initialize-instance :after ((spacing spacing-pane) &key thickness contents &allow-other-keys)
-  (declare (ignorable thickness contents))
-  (with-slots (user-width user-min-width user-max-width
-               user-height user-min-height user-max-height)
-      spacing))
-
 (defmethod compose-space ((pane spacing-pane) &key width height)
   (declare (ignore width height))
   (with-slots (border-width) pane
