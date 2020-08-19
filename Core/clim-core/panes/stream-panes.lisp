@@ -433,17 +433,45 @@ current background message was set."))
                         user-sr)))
         (values pane stream)))))
 
-(defun make-clim-interactor-pane (&rest options)
-  (apply #'make-clim-stream-pane :type 'interactor-pane options))
+(defun make-clim-interactor-pane (&rest options
+                                  &key (scroll-bar t scroll-bar-p)
+                                       (scroll-bars scroll-bar scroll-bars-p)
+                                  &allow-other-keys)
+  (declare (ignore scroll-bars))
+  (apply #'make-clim-stream-pane :type 'interactor-pane
+         (if (or scroll-bar-p scroll-bars-p)
+             options
+             (list* :scroll-bars :vertical options))))
 
-(defun make-clim-application-pane (&rest options)
-  (apply #'make-clim-stream-pane :type 'application-pane options))
+(defun make-clim-application-pane (&rest options
+                                   &key (scroll-bar t scroll-bar-p)
+                                        (scroll-bars scroll-bar scroll-bars-p)
+                                   &allow-other-keys)
+  (declare (ignore scroll-bars))
+  (apply #'make-clim-stream-pane :type 'application-pane
+         (if (or scroll-bar-p scroll-bars-p)
+             options
+             (list* :scroll-bars t options))))
 
-(defun make-clim-pointer-documentation-pane (&rest options)
-  (apply #'make-clim-stream-pane :type 'pointer-documentation-pane options))
+(defun make-clim-pointer-documentation-pane (&rest options
+                                             &key (scroll-bar nil scroll-bar-p)
+                                                  (scroll-bars scroll-bar scroll-bars-p)
+                                             &allow-other-keys)
+  (declare (ignore scroll-bars))
+  (apply #'make-clim-stream-pane :type 'pointer-documentation-pane
+         (if (or scroll-bar-p scroll-bars-p)
+             options
+             (list* :scroll-bars nil options))))
 
-(defun make-clim-command-menu-pane (&rest options)
-  (apply #'make-clim-stream-pane :type 'command-menu-pane options))
+(defun make-clim-command-menu-pane (&rest options
+                                    &key (scroll-bar t scroll-bar-p)
+                                         (scroll-bars scroll-bar scroll-bars-p)
+                                    &allow-other-keys)
+  (declare (ignore scroll-bars))
+  (apply #'make-clim-stream-pane :type 'command-menu-pane
+         (if (or scroll-bar-p scroll-bars-p)
+             options
+             (list* :scroll-bars t options))))
 
 
 ;;;
