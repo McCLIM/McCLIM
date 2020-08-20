@@ -366,14 +366,22 @@ current background message was set."))
 ;;;
 ;;; CONSTRUCTORS
 ;;;
-
 (defun make-clim-stream-pane (&rest options
                               &key (type 'clim-stream-pane)
-                                (scroll-bar :vertical)
-                                (scroll-bars scroll-bar)
-                                (borders t)
+                                   label
+                                   (label-alignment nil label-alignment-p)
+                                   (display-after-commands nil display-after-commands-p)
+                                   (scroll-bar :vertical)
+                                   (scroll-bars scroll-bar)
+                                   (borders t)
                               &allow-other-keys)
-  (with-keywords-removed (options (:type :scroll-bar :scroll-bars :borders))
+  (when display-after-commands-p
+    (check-type display-after-commands (member nil t :no-clear))
+    (when (member :display-time options)
+      (error "MAKE-CLIM-STREAM-PANE can not be called with both
+    :DISPLAY-AFTER-COMMANDS and :DISPLAY-TIME keywords")))
+  (with-keywords-removed (options (:type :scroll-bar :scroll-bars :borders
+                                   :label :label-alignment :display-after-commands))
     ;; The user space requirement options belong to the scroller ..
     (let* ((space-keys '(:width :height :max-width :max-height
                          :min-width :min-height))
@@ -390,7 +398,13 @@ current background message was set."))
                        (setq user-sr space-options)
                        (setq pane-options other-options)))
       (let* ((pane (apply #'make-pane type (append pane-options
+                                                   (when display-after-commands-p
+                                                     (list :display-time
+                                                           (if (eq display-after-commands t)
+                                                               :command-loop
+                                                               display-after-commands)))
                                                    (unless (or scroll-bars
+                                                               label
                                                                borders)
                                                      user-sr))))
              (stream pane))
@@ -399,15 +413,24 @@ current background message was set."))
                             :scroll-bar scroll-bars
                             :contents (list (make-pane 'viewport-pane
                                                        :contents (list pane)))
-                            (unless borders
+                            (unless (or label borders)
                               user-sr))))
+        (when label
+          (setq pane (apply #'make-pane 'label-pane
+                        :label label
+                        :contents (list pane)
+                        (append
+                         (when label-alignment-p
+                           (list :label-alignment label-alignment))
+                         (unless borders
+                           user-sr)))))
         (when borders
-          (setq pane (apply #'make-pane 'border-pane
-                            :border-width (if (not (numberp borders))
-                                              1
-                                              borders)
-                            :contents (list pane)
-                            user-sr)))
+          (setq pane (apply #'make-pane 'outlined-pane
+                        :thickness (if (not (numberp borders))
+                                       1
+                                       borders)
+                        :contents (list pane)
+                        user-sr)))
         (values pane stream)))))
 
 (defun make-clim-interactor-pane (&rest options)
