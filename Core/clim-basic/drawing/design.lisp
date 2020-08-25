@@ -943,6 +943,13 @@ identity-transformation) then source design is returned."
 (defmethod design-equalp ((design1 t) (design2 t))
   nil)
 
+(defmethod design-equalp ((design1 transformed-design)
+                          (design2 transformed-design))
+  (and (transformation-equal (transformed-design-transformation design1)
+                             (transformed-design-transformation design2))
+       (design-equalp (transformed-design-design design1)
+                      (transformed-design-design design2))))
+
 (defmethod design-equalp ((design1 standard-color) (design2 standard-color))
   (multiple-value-bind (r1 g1 b1)
       (color-rgb design1)
