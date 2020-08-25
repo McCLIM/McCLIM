@@ -120,3 +120,15 @@
     (if (eq new-value collapsed-style)
         (call-next-method)
         (setf (style object) collapsed-style))))
+
+;;; Context class mixin
+
+(defclass context-class-mixin ()
+  ((%context-class :initarg  :context-class
+                   :reader   context-class
+                   :initform nil)))
+
+(defun context-package (state)
+  (when-let* ((context-class (context-class state))
+              (class-name    (class-name context-class)))
+    (symbol-package class-name)))

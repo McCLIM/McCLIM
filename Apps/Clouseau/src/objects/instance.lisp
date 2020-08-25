@@ -90,16 +90,16 @@
 
 (defmethod make-object-state ((object t) (place slot-definition-of-place))
   (make-instance (object-state-class object place)
-                 :place place
-                 :class (class-of (container place))
-                 :style :name-only))
+                 :place         place
+                 :context-class (class-of (container place))
+                 :style         :name-only))
 
 (defun inspect-as-slot-name (instance slot-definition stream)
   ;; This presents the name of SLOT-DEFINITION as a collapsed
   ;; inspectable object that expands into SLOT-DEFINITION.
   (formatting-place
-      (instance 'slot-definition-of-place slot-definition nil inspect)
-    (inspect stream)))
+      (instance 'slot-definition-of-place slot-definition nil present-value)
+    (present-value stream)))
 
 
 ;;;; Object states

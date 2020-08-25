@@ -35,9 +35,10 @@
   (error "not implemented"))
 
 (defmethod make-object-state ((object t) (place slot-definition-place))
-  (make-instance (object-state-class object place) :place place
-                                                   :class (container place)
-                                                   :style :name-only))
+  (make-instance (object-state-class object place)
+                 :place         place
+                 :context-class (container place)
+                 :style         :name-only))
 
 ;;; `class-list-place'
 ;;;
@@ -76,9 +77,9 @@
 ;;; `inspected-slot-definition'
 
 (defclass inspected-slot-definition (inspected-instance
-                                     remembered-collapsed-style-mixin)
-  ((%context-class :initarg :class
-                   :reader  context-class)))
+                                     remembered-collapsed-style-mixin
+                                     context-class-mixin)
+  ())
 
 (defmethod object-state-class ((object c2mop:slot-definition) (place t))
   'inspected-slot-definition)
@@ -92,9 +93,8 @@
 
 (defmethod initialize-instance :after
     ((instance inspected-class-list)
-     &key
-     place
-     (class-list-style (default-class-list-style place)))
+     &key place
+          (class-list-style (default-class-list-style place)))
   (setf (class-list-style instance) class-list-style))
 
 (defmethod object-state-class ((object cons)
@@ -121,9 +121,8 @@
                                        (state  inspected-slot-definition)
                                        (style  (eql :name-only))
                                        (stream t))
-  (let ((class-name (class-name (context-class state)))
-        (slot-name  (c2mop:slot-definition-name object)))
-    (print-symbol-in-context slot-name (symbol-package class-name) stream)))
+  (let ((slot-name (c2mop:slot-definition-name object)))
+    (print-symbol-in-context slot-name (context-package state) stream)))
 
 ;;; `inspected-class-list'
 
