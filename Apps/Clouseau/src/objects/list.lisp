@@ -258,7 +258,7 @@
                                        (state  inspected-improper-list)
                                        (style  (eql :element-list))
                                        (stream t))
-  (formatting-table (stream :background +red+)
+  (formatting-table (stream)
     (formatting-row (stream)
       (formatting-cell (stream)
         (princ "(" stream))
