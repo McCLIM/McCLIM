@@ -71,14 +71,16 @@
   ())
 
 (defmethod make-object-state ((object t) (place class-of-place))
-  (make-instance (object-state-class object place) :place place
-                                                   :style :name-only))
+  (make-instance (object-state-class object place)
+                 :place         place
+                 :context-class (class-of (container place))
+                 :style         :name-only))
 
-(defun inspect-class-as-name (class stream)
+(defun inspect-class-as-name (class stream &key context-instance)
   ;; This presents the name of CLASS as a collapsed inspectable object
   ;; that expands into CLASS.
-  (formatting-place (nil 'class-of-place class nil inspect)
-    (inspect stream)))
+  (formatting-place (context-instance 'class-of-place class nil present-value)
+    (present-value stream)))
 
 ;;; `slot-definition-of-place'
 ;;;
@@ -171,7 +173,8 @@
                            (write-string "Direct slots" stream))
                           (t
                            (write-string "Inherited from " stream)
-                           (inspect-class-as-name super stream))))
+                           (inspect-class-as-name
+                            super stream :context-instance object))))
                 (formatting-table (stream)
                   (map nil (rcurry #'inspect-slot object stream) super-slots))))
     (when (zerop (hash-table-count slots))

@@ -104,7 +104,8 @@
 ;;; `inspected-class'
 
 (defclass inspected-class (inspected-instance
-                           remembered-collapsed-style-mixin)
+                           remembered-collapsed-style-mixin
+                           context-class-mixin)
   ()
   (:default-initargs
    :slot-style nil))
@@ -169,12 +170,15 @@
   (let ((name (class-name class)))
     (values (not name) (not (eq (find-class name nil) class)))))
 
-(defun print-class-name (object stream)
+(defun print-class-name (object stream &key context-package)
   (multiple-value-bind (no-name-p not-global-p) (anonymous-class-p object)
     (cond (no-name-p
            (badge stream "anonymous"))
           (t
-           (prin1 (class-name object) stream)
+           (let ((name (class-name object)))
+             (if context-package
+                 (print-symbol-in-context name context-package stream)
+                 (prin1 name stream)))
            (when not-global-p
              (write-char #\Space stream)
              (badge stream "no global name"))))))
@@ -183,7 +187,7 @@
                                        (state  inspected-class)
                                        (style  (eql :name-only))
                                        (stream t))
-  (print-class-name object stream))
+  (print-class-name object stream :context-package (context-package state)))
 
 (defmethod inspect-object-using-state ((object class)
                                        (state  inspected-class)
