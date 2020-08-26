@@ -93,7 +93,7 @@
                  (:layouts               * :conflicts (:pane))
                  (:command-table         1)
                  (:command-definer       1)
-                 (:menu-bar              ensure-1)
+                 (:menu-bar              1)
                  (:disabled-commands     *)
                  (:top-level             1)
                  ;; :icon is the CLIM specification but we don't support it
@@ -141,9 +141,8 @@
                          (t
                           (setf (getf all-values key)
                                 (ecase value-count
-                                  (1        (first values))
-                                  (ensure-1 (alexandria:ensure-car values))
-                                  (*        values))))))
+                                  (1 (first values))
+                                  (* values))))))
                  t)))
       (loop :for option :in options
             :for (key . values) = option
