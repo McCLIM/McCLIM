@@ -27,7 +27,7 @@
 
 (defclass postscript-font-medium (basic-medium climb:approx-bbox-medium-mixin)
   ((device-fonts :initform nil
-		 :accessor device-fonts)))
+                 :accessor device-fonts)))
 
 (defclass postscript-font-port (basic-port) ())
 
@@ -84,8 +84,8 @@
                               :width width
                               :ascent ascent
                               :descent descent
-			      :xmin xmin
-			      :xmax xmax)))))
+                              :xmin xmin
+                              :xmax xmax)))))
 
 ;;;
 (defun text-size-in-font (font-name size string start end)
@@ -149,16 +149,16 @@
   (declare (ignore character-set))
   (when (not (gethash mapping *font-metrics*))
        (cerror "Ignore." "Mapping text style ~S to an unknown font ~S."
-	       text-style mapping))
+               text-style mapping))
      (setf (gethash text-style (port-text-style-mappings port)) mapping))
 
 ;; The following four functions should be rewritten: AFM contains all
 ;; needed information
 (defmethod text-style-ascent (text-style (medium postscript-font-medium))
   (let* ((font-name (text-style-mapping (port medium)
-					(merge-text-styles text-style
-							   (medium-merged-text-style medium))))
-	 (font-info (or (gethash (font-name-metrics-key font-name)
+                                        (merge-text-styles text-style
+                                                           (medium-merged-text-style medium))))
+         (font-info (or (gethash (font-name-metrics-key font-name)
                                  *font-metrics*)
                         (error "Unknown font ~S." font-name)))
          (size (font-name-size font-name)))
@@ -167,9 +167,9 @@
 
 (defmethod text-style-descent (text-style (medium postscript-font-medium))
   (let* ((font-name (text-style-mapping (port medium)
-					(merge-text-styles text-style
-							   (medium-merged-text-style medium))))
-	 (font-info (or (gethash (font-name-metrics-key font-name)
+                                        (merge-text-styles text-style
+                                                           (medium-merged-text-style medium))))
+         (font-info (or (gethash (font-name-metrics-key font-name)
                                  *font-metrics*)
                         (error "Unknown font ~S." font-name)))
          (size (font-name-size font-name)))
@@ -213,12 +213,12 @@
                                             direction first-not-done)
                           (psfont-text-extents metrics-key string
                                                :start start :end position-newline)
-			(declare (ignore width font-ascent font-descent direction first-not-done))
+                        (declare (ignore width font-ascent font-descent direction first-not-done))
                         (multiple-value-bind (minx miny maxx maxy)
                             (climb:text-bounding-rectangle*
                              medium string :text-style text-style
                              :start (1+ position-newline) :end end)
-			  (declare (ignore miny))
+                          (declare (ignore miny))
                           (let ((y1 ascent)
                                 (y2 (+ descent maxy)))
                             (when (> y1 y2) (rotatef y1 y2))
@@ -232,7 +232,7 @@
                                             direction first-not-done)
                           (psfont-text-extents metrics-key string
                                                :start start :end end)
-			(declare (ignore width font-ascent font-descent direction first-not-done))
+                        (declare (ignore width font-ascent font-descent direction first-not-done))
                         (let ((y1 (* scale descent))
                               (y2 (* scale ascent)))
                           (when (> y1 y2) (rotatef y1 y2))
@@ -243,12 +243,12 @@
 
 (defun psfont-text-extents (metrics-key string &key (start 0) (end (length string)))
   (let* ((font-info (or (gethash metrics-key *font-metrics*)
-			(error "Unknown font ~S." metrics-key)))
-	 (char-metrics (font-info-char-infos font-info))
-	 (width (loop for i from start below end
-		   sum (char-width (gethash (aref *iso-latin-1-symbolic-names*
+                        (error "Unknown font ~S." metrics-key)))
+         (char-metrics (font-info-char-infos font-info))
+         (width (loop for i from start below end
+                   sum (char-width (gethash (aref *iso-latin-1-symbolic-names*
                                                   (char-code (char string i)))
-					    char-metrics))))
+                                            char-metrics))))
          (ymin (loop for i from start below end
                   minimize (- (char-ascent (gethash (aref *iso-latin-1-symbolic-names*
                                                           (char-code (char string i)))
@@ -296,13 +296,13 @@
 (defmethod make-device-font-text-style ((port postscript-font-port) font-name)
   (check-type font-name postscript-device-font-name)
   (let ((text-style (make-instance 'clim-internals::device-font-text-style
-				   :display-device port
-				   :device-font-name font-name)))
+                                   :display-device port
+                                   :device-font-name font-name)))
     (multiple-value-bind (dict-name ascent descent angle char-infos)
-	(with-open-file (stream (postscript-device-font-name-metrics-file font-name)
+        (with-open-file (stream (postscript-device-font-name-metrics-file font-name)
                                 :direction :input
                                 :external-format :latin-1)
-	  (read-afm-stream stream))
+          (read-afm-stream stream))
       (define-font-metrics dict-name ascent descent angle char-infos font-name))
     (setf (text-style-mapping port text-style) font-name)
     text-style))
