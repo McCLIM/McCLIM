@@ -189,57 +189,51 @@
 
 (defmethod climb:text-bounding-rectangle*
     ((medium postscript-font-medium) string
-     &key text-style (start 0) end align-x align-y direction)
+     &key text-style (start 0) end align-x align-y direction
+     &aux (string (string string)))
   (declare (ignore align-x align-y direction))
-  (when (characterp string)
-    (setf string (make-string 1 :initial-element string)))
   (unless end (setf end (length string)))
-  (unless text-style (setf text-style (medium-text-style medium)))
-  (let* ((font-name
-           (text-style-mapping (port medium)
-                               (merge-text-styles
-                                text-style
-                                (medium-merged-text-style medium))))
+  (when (>= start end)
+    (return-from climb:text-bounding-rectangle*
+      (values 0 0 0 0)))
+  (setf text-style
+        (if text-style
+            (merge-text-styles text-style
+                               (medium-merged-text-style medium))
+            (medium-text-style medium)))
+  (let* ((font-name (text-style-mapping (port medium) text-style))
          (metrics-key (font-name-metrics-key font-name))
-         (size (font-name-size font-name)))
-    (let ((scale (float (/ size 1000))))
-      (cond ((>= start end)
-             (values 0 0 0 0))
-            (t
-             (let ((position-newline (position #\newline string :start start)))
-               (cond ((not (null position-newline))
-                      (multiple-value-bind (width ascent descent left right
-                                            font-ascent font-descent
-                                            direction first-not-done)
-                          (psfont-text-extents metrics-key string
-                                               :start start :end position-newline)
-                        (declare (ignore width font-ascent font-descent direction first-not-done))
-                        (multiple-value-bind (minx miny maxx maxy)
-                            (climb:text-bounding-rectangle*
-                             medium string :text-style text-style
-                             :start (1+ position-newline) :end end)
-                          (declare (ignore miny))
-                          (let ((y1 ascent)
-                                (y2 (+ descent maxy)))
-                            (when (> y1 y2) (rotatef y1 y2))
-                            (values (* scale (min minx left))
-                                    (* scale y1)
-                                    (* scale (max maxx right))
-                                    (* scale y2))))))
-                     (t
-                      (multiple-value-bind (width DESCENT ASCENT left right
-                                            font-ascent font-descent
-                                            direction first-not-done)
-                          (psfont-text-extents metrics-key string
-                                               :start start :end end)
-                        (declare (ignore width font-ascent font-descent direction first-not-done))
-                        (let ((y1 (* scale descent))
-                              (y2 (* scale ascent)))
-                          (when (> y1 y2) (rotatef y1 y2))
-                          (values (* scale left)
-                                  y1
-                                  (* scale right)
-                                  y2)))))))))))
+         (size (font-name-size font-name))
+         (scale (float (/ size 1000))))
+    (flet ((text-extents (start end)
+             (multiple-value-bind (width ascent descent left right
+                                   font-ascent font-descent
+                                   direction first-not-done)
+                 (psfont-text-extents metrics-key string
+                                      :start start :end end)
+               (declare (ignore width font-ascent font-descent direction
+                                first-not-done))
+               (if (< descent ascent)
+                   (values left descent right ascent)
+                   (values left ascent right descent)))))
+      (alexandria:if-let ((npos (position #\newline string :start start)))
+        (multiple-value-bind (minx miny maxx maxy)
+            (text-extents start npos)
+          (multiple-value-bind (minx* miny* maxx* maxy*)
+              (climb:text-bounding-rectangle*
+               medium string :text-style text-style
+               :start (1+ npos) :end end)
+            (declare (ignore miny*))
+            (values (* scale (min minx minx*))
+                    (* scale miny)
+                    (* scale (max maxx maxx*))
+                    (* scale (+ maxy maxy*)))))
+        (multiple-value-bind (minx miny maxx maxy)
+            (text-extents start end)
+          (values (* scale minx)
+                  (* scale miny)
+                  (* scale maxx)
+                  (* scale maxy)))))))
 
 (defun psfont-text-extents (metrics-key string &key (start 0) (end (length string)))
   (let* ((font-info (or (gethash metrics-key *font-metrics*)
