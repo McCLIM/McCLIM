@@ -66,38 +66,41 @@
   (:default-initargs
    :align-x :left :align-y :baseline :min-width 0 :min-height 0))
 
-(defgeneric invoke-formatting-cell
-    (stream cont &key align-x align-y min-width min-height record-type &allow-other-keys)
-  (:method (stream continuation &key
-                                  (align-x :left)
-                                  (align-y :baseline)
-                                  (min-width 0)
-                                  (min-height 0)
-                                  (record-type 'standard-cell-output-record)
-                                  &allow-other-keys)
-    (invoke-with-new-output-record
-     stream
-     (lambda (stream record)
-       (declare (ignore record))
-       (with-temporary-margins (stream :left '(:absolute 0))
-         (letf (((stream-cursor-position stream) (values 0 0)))
-           (funcall continuation stream))))
-     record-type
-     :align-x align-x
-     :align-y align-y
-     :min-width (parse-space stream min-width :horizontal)
-     :min-height (parse-space stream min-height :vertical))))
+(defun invoke-formatting-cell
+    (stream continuation &rest initargs
+                         &key (record-type 'standard-cell-output-record)
+                              (align-x :left)
+                              (align-y :baseline)
+                              (min-width 0)
+                              (min-height 0)
+                         &allow-other-keys)
+  (apply #'invoke-with-new-output-record
+         stream
+         (lambda (stream record)
+           (declare (ignore record))
+           (with-temporary-margins (stream :left '(:absolute 0))
+             (letf (((stream-cursor-position stream) (values 0 0)))
+               (funcall continuation stream))))
+         record-type
+         :align-x align-x
+         :align-y align-y
+         :min-width (parse-space stream min-width :horizontal)
+         :min-height (parse-space stream min-height :vertical)
+         (alexandria:remove-from-plist
+          initargs :record-type :align-x :align-y :min-width :min-height)))
 
 (defmacro formatting-cell ((&optional (stream t)
                             &rest args
-                            &key align-x align-y min-width min-height record-type)
+                            &key (record-type ''standard-cell-output-record)
+                                 align-x align-y min-width min-height
+                            &allow-other-keys)
                            &body body)
-  (declare (ignore align-x align-y min-width min-height record-type))
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (continuation)
-    `(flet ((,continuation (,stream) ,@body))
-       (declare (dynamic-extent #',continuation))
-       (invoke-formatting-cell ,stream #',continuation ,@args))))
+  (declare (ignore record-type align-x align-y min-width min-height))
+  (gen-invoke-trampoline
+   'invoke-formatting-cell
+   (list (stream-designator-symbol stream '*standard-output*))
+   args
+   body))
 
 
 ;;; Generic block formatting
@@ -155,24 +158,27 @@ to a table cell within the row."))
                                (row-record standard-row-output-record))
   (map-over-block-cells function row-record))
 
-(defmacro formatting-row ((&optional (stream t)
-                                     &rest more
-                                     &key (record-type ''standard-row-output-record))
-                          &body body)
-  (setf stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (record)
-    (with-keywords-removed (more (:record-type))
-      `(with-new-output-record (,stream ,record-type ,record ,@more)
-         ,@body))))
-
-(defgeneric invoke-formatting-row (stream cont record-type &rest initargs))
-
-(defmethod invoke-formatting-row (stream cont record-type &rest initargs)
+(defun invoke-formatting-row
+    (stream continuation &rest initargs
+                         &key (record-type 'standard-row-output-record)
+                         &allow-other-keys)
   (apply #'invoke-with-new-output-record stream
-         (lambda (s r)
-           (declare (ignore r))
-           (funcall cont s))
-         record-type initargs))
+         (lambda (stream record)
+           (declare (ignore record))
+           (funcall continuation stream))
+         record-type (alexandria:remove-from-plist initargs :record-type)))
+
+(defmacro formatting-row ((&optional (stream t)
+                           &rest args
+                           &key (record-type ''standard-row-output-record)
+                           &allow-other-keys)
+                          &body body)
+  (declare (ignore record-type))
+  (gen-invoke-trampoline
+   'invoke-formatting-row
+   (list (stream-designator-symbol stream '*standard-output*))
+   args
+   body))
 
 
 ;;; Column formatting
@@ -192,22 +198,27 @@ corresponding to a table cell within the column."))
 (defmethod map-over-column-cells (function (column-record standard-column-output-record))
   (map-over-block-cells function column-record))
 
+(defun invoke-formatting-column
+    (stream continuation &rest initargs
+                         &key (record-type 'standard-column-output-record)
+                         &allow-other-keys)
+  (apply #'invoke-with-new-output-record stream
+         (lambda (stream record)
+           (declare (ignore record))
+           (funcall continuation stream))
+         record-type (alexandria:remove-from-plist initargs :record-type)))
+
 (defmacro formatting-column ((&optional (stream t)
-                                        &rest more
-                                        &key (record-type
-                                              ''standard-column-output-record))
+                              &rest args
+                              &key (record-type ''standard-column-output-record)
+                              &allow-other-keys)
                              &body body)
-  (setf stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (record)
-    (with-keywords-removed (more (:record-type))
-      `(with-new-output-record (,stream ,record-type ,record ,@more)
-         ,@body))))
-
-(defgeneric invoke-formatting-column (stream cont record-type &rest initargs))
-
-(defmethod invoke-formatting-column (stream cont record-type &rest initargs)
-
-  (apply #'invoke-with-new-output-record stream (lambda (s r) r (funcall cont s)) record-type initargs))
+  (declare (ignore record-type))
+  (gen-invoke-trampoline
+   'invoke-formatting-column
+   (list (stream-designator-symbol stream '*standard-output*))
+   args
+   body))
 
 
 ;;; Table formatting
@@ -233,7 +244,11 @@ skips intervening non-table output record structures."))
    ;; adjust-multiple-columns
    (widths)
    (heights)                            ;needed?
-   (rows)))
+   (rows))
+  (:default-initargs
+   :multiple-columns nil
+   :multiple-columns-x-spacing nil
+   :equalize-column-widths nil))
 
 (defmethod initialize-instance :after ((table standard-table-output-record)
                                        &rest initargs)
@@ -259,33 +274,15 @@ skips intervening non-table output record structures."))
                 (replay-output-record record stream region x-offset y-offset))
             (nreverse other-records)))))
 
-(defmacro formatting-table ((&optional (stream t)
-                                       &rest args
-                                       &key x-spacing y-spacing
-                                       multiple-columns
-                                       multiple-columns-x-spacing
-                                       equalize-column-widths (move-cursor t)
-                                       (record-type ''standard-table-output-record)
-                                       &allow-other-keys)
-                            &body body)
-  (declare (ignore x-spacing y-spacing multiple-columns
-                   multiple-columns-x-spacing
-                   equalize-column-widths move-cursor record-type))
-  (gen-invoke-trampoline 'invoke-formatting-table
-                         (list (stream-designator-symbol stream
-                                                         '*standard-output*))
-                         args
-                         body))
-
 (defun invoke-formatting-table
-    (stream continuation
-     &key x-spacing y-spacing
-       multiple-columns
-       multiple-columns-x-spacing
-       equalize-column-widths
-       (move-cursor t)
-       (record-type 'standard-table-output-record)
-       &allow-other-keys)
+    (stream continuation &rest initargs
+                         &key (record-type 'standard-table-output-record)
+                              (move-cursor t)
+                              x-spacing y-spacing
+                              multiple-columns
+                              multiple-columns-x-spacing
+                              equalize-column-widths
+                         &allow-other-keys)
   (setq x-spacing (parse-space stream (or x-spacing #\Space) :horizontal))
   (setq y-spacing (parse-space stream (or y-spacing
                                           (stream-vertical-spacing stream))
@@ -294,31 +291,54 @@ skips intervening non-table output record structures."))
         (if multiple-columns-x-spacing
             (parse-space stream multiple-columns-x-spacing :horizontal)
             x-spacing))
-  (with-new-output-record
-      (stream record-type table
-              :x-spacing x-spacing
-              :y-spacing y-spacing
-              :multiple-columns multiple-columns
-              :multiple-columns-x-spacing multiple-columns-x-spacing
-              :equalize-column-widths equalize-column-widths)
-    (multiple-value-bind (cursor-old-x cursor-old-y)
-        (stream-cursor-position stream)
-      (with-output-recording-options (stream :record t :draw nil)
-        (funcall continuation stream)
-        (force-output stream))
-      (setf (stream-cursor-position stream)
-            (values cursor-old-x cursor-old-y))
-      (with-output-recording-options (stream :record nil :draw nil)
-        (adjust-table-cells table stream)
-        (when multiple-columns (adjust-multiple-columns table stream))
-        (tree-recompute-extent table))
-      (replay table stream)
-      (if move-cursor
-          (setf (stream-cursor-position stream)
-                (values (bounding-rectangle-max-x table)
-                        (bounding-rectangle-max-y table)))
-          (setf (stream-cursor-position stream)
-                (values cursor-old-x cursor-old-y))))))
+  (apply #'invoke-with-new-output-record stream
+         (lambda (stream table)
+           (multiple-value-bind (cursor-old-x cursor-old-y)
+               (stream-cursor-position stream)
+             (with-output-recording-options (stream :record t :draw nil)
+               (funcall continuation stream)
+               (force-output stream))
+             (setf (stream-cursor-position stream)
+                   (values cursor-old-x cursor-old-y))
+             (with-output-recording-options (stream :record nil :draw nil)
+               (adjust-table-cells table stream)
+               (when multiple-columns (adjust-multiple-columns table stream))
+               (tree-recompute-extent table))
+             (replay table stream)
+             (setf (stream-cursor-position stream)
+                   (if move-cursor
+                       (values (bounding-rectangle-max-x table)
+                               (bounding-rectangle-max-y table))
+                       (values cursor-old-x cursor-old-y)))))
+         record-type
+         :x-spacing x-spacing
+         :y-spacing y-spacing
+         :multiple-columns multiple-columns
+         :multiple-columns-x-spacing multiple-columns-x-spacing
+         :equalize-column-widths equalize-column-widths
+         (alexandria:remove-from-plist
+          initargs :record-type :move-cursor
+                   :x-spacing :y-spacing :multiple-columns
+                   :multiple-columns-x-spacing :equalize-column-widths)))
+
+(defmacro formatting-table ((&optional (stream t)
+                             &rest args
+                             &key (record-type ''standard-table-output-record)
+                                  (move-cursor t)
+                                  x-spacing y-spacing
+                                  multiple-columns
+                                  multiple-columns-x-spacing
+                                  equalize-column-widths
+                             &allow-other-keys)
+                            &body body)
+  (declare (ignore record-type move-cursor
+                   x-spacing y-spacing multiple-columns
+                   multiple-columns-x-spacing equalize-column-widths))
+  (gen-invoke-trampoline
+   'invoke-formatting-table
+   (list (stream-designator-symbol stream '*standard-output*))
+   args
+   body))
 
 ;;; Think about rewriting this using a common superclass for row and
 ;;; column records.
@@ -373,60 +393,68 @@ skips intervening non-table output record structures."))
                                             standard-sequence-output-record)
   ((x-spacing :initarg :x-spacing)
    (y-spacing :initarg :y-spacing)
-   (initial-spacing :initarg :initial-spacing)
-   (row-wise :initarg :row-wise)
-   (n-rows :initarg :n-rows)
    (n-columns :initarg :n-columns)
+   (n-rows :initarg :n-rows)
    (max-width :initarg :max-width)
-   (max-height :initarg :max-height)))
+   (max-height :initarg :max-height)
+   (initial-spacing :initarg :initial-spacing)
+   (row-wise :initarg :row-wise))
+  (:default-initargs
+   :n-columns nil :n-rows nil :max-width nil :max-height nil
+   :initial-spacing nil :row-wise t))
 
 (defmethod map-over-item-cells (function
                                 (item-list-record standard-item-list-output-record))
   (map-over-block-cells function item-list-record))
 
-(defun invoke-format-item-list (stream continuation
-                                &key x-spacing y-spacing n-columns n-rows
-                                  max-width max-height
-                                  initial-spacing (row-wise t) (move-cursor t)
-                                  (record-type
-                                   'standard-item-list-output-record))
+(defun invoke-format-item-list
+    (stream continuation &rest initargs
+                         &key (record-type 'standard-item-list-output-record)
+                              (move-cursor t)
+                              x-spacing y-spacing n-columns n-rows
+                              max-width max-height
+                              initial-spacing (row-wise t)
+                         &allow-other-keys)
   (setq x-spacing (parse-space stream (or x-spacing #\Space) :horizontal))
   (setq y-spacing (parse-space stream (or y-spacing
                                           (stream-vertical-spacing stream))
                                :vertical))
-  (with-new-output-record
-      (stream record-type item-list
-              :x-spacing x-spacing
-              :y-spacing y-spacing
-              :initial-spacing initial-spacing
-              :row-wise row-wise
-              :n-rows n-rows
-              :n-columns n-columns
-              :max-width max-width
-              :max-height max-height)
-    (multiple-value-bind (cursor-old-x cursor-old-y)
-        (stream-cursor-position stream)
-      (with-output-recording-options (stream :record t :draw nil)
-        (funcall continuation stream)
-        (force-output stream))
-      (adjust-item-list-cells item-list stream)
-      (setf (output-record-position item-list)
-            (stream-cursor-position stream))
-      (if move-cursor
-          (setf (stream-cursor-position stream)
-                (values (bounding-rectangle-max-x item-list)
-                        (bounding-rectangle-max-y item-list)))
-          (setf (stream-cursor-position stream)
-                (values cursor-old-x cursor-old-y)))
-      (replay item-list stream)
-      item-list)))
+  (apply 'invoke-with-new-output-record stream
+         (lambda (stream item-list)
+           (multiple-value-bind (cursor-old-x cursor-old-y)
+               (stream-cursor-position stream)
+             (with-output-recording-options (stream :record t :draw nil)
+               (funcall continuation stream)
+               (force-output stream))
+             (adjust-item-list-cells item-list stream)
+             (setf (output-record-position item-list)
+                   (stream-cursor-position stream))
+             (setf (stream-cursor-position stream)
+                   (if move-cursor
+                       (values (bounding-rectangle-max-x item-list)
+                               (bounding-rectangle-max-y item-list))
+                       (values cursor-old-x cursor-old-y)))
+             (replay item-list stream)
+             item-list))
+         record-type
+         :x-spacing x-spacing
+         :y-spacing y-spacing
+         :n-columns n-columns
+         :n-rows n-rows
+         :max-width max-width
+         :max-height max-height
+         :initial-spacing initial-spacing
+         :row-wise row-wise
+         (alexandria:remove-from-plist
+          initargs :record-type :move-cursor
+                   :x-spacing :y-spacing :n-columns :n-rows
+                   :max-width :max-height :initial-spacing :row-wise)))
 
-(defun format-items (items
-                     &rest args
-                     &key (stream *standard-output*)
-                       printer presentation-type
-                       cell-align-x cell-align-y
-                       &allow-other-keys)
+(defun format-items (items &rest args
+                           &key (stream *standard-output*)
+                                printer presentation-type
+                                cell-align-x cell-align-y
+                           &allow-other-keys)
   (let ((printer (if printer
                      (if presentation-type
                          #'(lambda (item stream)
@@ -438,7 +466,7 @@ skips intervening non-table output record structures."))
                              (present item presentation-type :stream stream))
                          #'prin1))))
     (with-keywords-removed (args (:stream :printer :presentation-type
-                                          :cell-align-x :cell-align-y))
+                                  :cell-align-x :cell-align-y))
       (apply #'invoke-format-item-list
              stream
              #'(lambda (stream)
@@ -451,23 +479,25 @@ skips intervening non-table output record structures."))
              args))))
 
 (defmacro formatting-item-list ((&optional (stream t)
-                                           &rest args
-                                           &key x-spacing y-spacing n-columns n-rows
-                                           stream-width stream-height
-                                           max-width max-height
-                                           initial-spacing (row-wise t) (move-cursor t)
-                                           record-type &allow-other-keys)
+                                 &rest args
+                                 &key record-type
+                                      (move-cursor t)
+                                      x-spacing y-spacing n-columns n-rows
+                                      stream-width stream-height
+                                      max-width max-height
+                                      initial-spacing (row-wise t)
+                                 &allow-other-keys)
                                 &body body)
-  (declare (ignore x-spacing y-spacing n-columns n-rows
+  (declare (ignore record-type move-cursor
+                   x-spacing y-spacing n-columns n-rows
                    stream-width stream-height
                    max-width max-height
-                   initial-spacing row-wise move-cursor
-                   record-type))
-  (setf stream (stream-designator-symbol stream '*standard-output*))
-  (gen-invoke-trampoline 'invoke-format-item-list
-                         (list stream)
-                         args
-                         body))
+                   initial-spacing row-wise))
+  (gen-invoke-trampoline
+   'invoke-format-item-list
+   (list (stream-designator-symbol stream '*standard-output*))
+   args
+   body))
 
 ;;; Helper function
 
