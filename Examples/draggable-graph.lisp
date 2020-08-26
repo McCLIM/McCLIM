@@ -51,7 +51,8 @@
           (alexandria:hash-table-values (slot-value node 'climi::edges-to))))
 
 (defun node-and-edges-region (node edges)
-  (stupid-copy-rectangle (reduce #'region-union edges :initial-value node)))
+  (reduce #'region-union edges :key #'copy-rectangle
+                               :initial-value (copy-rectangle node)))
 
 (defun redisplay-edges (graph edges)
   (dolist (edge edges)
@@ -68,10 +69,11 @@
 ;;; capturing the mutable output-record object, violating the
 ;;; immutability of regions and causing widespread panic and
 ;;; confusion.
-
-(defun stupid-copy-rectangle (region)
+(defun copy-rectangle (region)
   (with-bounding-rectangle* (x0 y0 x1 y1) region
-    (make-rectangle* x0 y0 x1 y1)))
+    ;; We use this rectangle to clear an area on the sheet which only
+    ;; makes sense for integer coordinates.
+    (make-rectangle* (floor x0) (floor y0) (ceiling x1) (ceiling y1))))
 
 (define-draggable-graph-demo-command (com-drag-node)
     ((record t) (offset-x real :default 0) (offset-y real :default 0))
@@ -81,24 +83,39 @@
          (graph-record (output-record-parent node-record))
          (erase-region))
     (assert (typep graph-record 'graph-output-record))
-    (drag-output-record stream node-record
-                        :feedback (lambda (record stream old-x old-y x y mode)
-                                    (declare (ignore old-x old-y))
-                                    (ecase mode
-                                      (:erase
-                                       (erase-output-record record stream)
-                                       (map nil #'clear-output-record edge-records)
-                                       (setf erase-region
-                                             (node-and-edges-region record edge-records)))
-                                      (:draw
-                                       (setf (output-record-position record)
-                                             (values (- x offset-x) (- y offset-y)))
-                                       (add-output-record record graph-record)
-                                       (redisplay-edges graph-record edge-records)
-                                       (repaint-sheet
-                                        stream (region-union (or erase-region +nowhere+)
-                                                             (node-and-edges-region record edge-records))))))
-                        :finish-on-release t :multiple-window nil)))
+    (drag-output-record
+     stream node-record
+     :feedback (lambda (record stream old-x old-y x y mode)
+                 (declare (ignore old-x old-y))
+                 (ecase mode
+                   (:erase
+                    ;; Capture current regions before modifying the
+                    ;; output records.
+                    (setf erase-region
+                          (node-and-edges-region record edge-records))
+                    ;; Remove contents (i.e. lines) of edge output
+                    ;; records. This does not repaint anything. To
+                    ;; account for that, we include ERASE-REGION in
+                    ;; the :DRAW clause.
+                    (map nil #'clear-output-record edge-records))
+                   (:draw
+                    ;; Reposition the node record (this does not
+                    ;; automatically replay the record).
+                    (setf (output-record-position record)
+                          (values (- x offset-x) (- y offset-y)))
+                    ;; Regenerate child records of the edge records
+                    ;; for the changed node position (without drawing
+                    ;; since we will draw everything at once as a
+                    ;; final step).
+                    (with-output-recording-options (stream :record t :draw nil)
+                      (redisplay-edges graph-record edge-records))
+                    ;; Repaint all affected areas. This also replays
+                    ;; the modified node and edge output records.
+                    (repaint-sheet
+                     stream (region-union (or erase-region +nowhere+)
+                                          (node-and-edges-region
+                                           record edge-records))))))
+     :finish-on-release t :multiple-window nil)))
 
 (define-presentation-to-command-translator record-dragging-translator
     (t com-drag-node draggable-graph-demo
