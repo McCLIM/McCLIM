@@ -415,11 +415,13 @@ returns \term{false}.
 
 \definitarg {:x-spacing}
 \definitarg {:y-spacing}
+\definitarg {:multiple-columns}
 \definitarg {:multiple-columns-x-spacing}
 \Definitarg {:equalize-column-widths}
 
-All subclasses of \cl{table-output-record} must handle these initargs, which are
-used to specify, respectively, the $x$ and $y$ spacing, the multiple column $x$
+All subclasses of \cl{table-output-record} must handle these initargs,
+which are used to specify, respectively, the $x$ and $y$ spacing, the
+presence and number of multiple columns, the multiple column $x$
 spacing, and equal-width columns attributes of the table.
 
 \Defclass {standard-table-output-record}
