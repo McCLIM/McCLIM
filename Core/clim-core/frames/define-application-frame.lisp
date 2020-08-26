@@ -91,11 +91,11 @@
                  (:pane                  * :conflicts (:panes :layouts))
                  (:panes                 * :conflicts (:pane))
                  (:layouts               * :conflicts (:pane))
-                 (:command-table         1)
-                 (:command-definer       1)
-                 (:menu-bar              1)
+                 (:command-table         1 :type (cons symbol list))
+                 (:command-definer       1 :type symbol)
+                 (:menu-bar              1 :type (or symbol list))
                  (:disabled-commands     *)
-                 (:top-level             1)
+                 (:top-level             1 :type (cons (or symbol cons) list))
                  ;; :icon is the CLIM specification but we don't support it
                  (:geometry              *)
                  ;; :resize-frame is mentioned in a spec annotation but we don't support it
@@ -108,9 +108,25 @@
         (all-values '()))
     (labels ((definedp (key)
                (not (eq (getf all-values key 'undefined) 'undefined)))
+             (maybe-check-type (key values type value-count)
+               (flet ((check-one-value (value)
+                        (when (and type (not (typep value type)))
+                          (error "~@<The value ~S for option ~S is ~
+                                  not of type ~A.~@:>"
+                                 value key type))
+                        value))
+                 (ecase value-count
+                   (1
+                    (unless (null (rest values))
+                      (error "~@<The option ~S takes a single ~
+                              argument (not ~{~S~^ ~} which are ~
+                              ~R).~@:>"
+                             key values (length values)))
+                    (check-one-value (first values)))
+                   (* (mapcar #'check-one-value values)))))
              (parse-option (key values)
                (when-let ((info (find key infos :key #'first)))
-                 (destructuring-bind (name value-count &key conflicts) info
+                 (destructuring-bind (name value-count &key conflicts type) info
                    (declare (ignore name))
                    (cond ((when-let ((other (find-if #'definedp conflicts)))
                             (error "~@<The options ~S and ~S are mutually ~
@@ -140,9 +156,7 @@
                                 (alexandria:remove-from-plist values :pretty-name)))
                          (t
                           (setf (getf all-values key)
-                                (ecase value-count
-                                  (1 (first values))
-                                  (* values))))))
+                                (maybe-check-type key values type value-count)))))
                  t)))
       (loop :for option :in options
             :for (key . values) = option
