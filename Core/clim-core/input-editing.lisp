@@ -613,6 +613,9 @@ used as value of `:possibility-printer' in calls to
   (with-output-as-presentation (stream possibility ptype)
     (write-string (first possibility) stream)))
 
+(define-presentation-type possibility ()
+  :inherit-from t)
+
 (defun print-possibilities (possibilities possibility-printer stream)
   "Write `possibitilies' to `stream', using
 `possibility-printer'. `Possibilities' must be a list of
@@ -621,14 +624,13 @@ stream. Output will be done to its typeout."
   (with-input-editor-typeout (stream :erase t)
     (surrounding-output-with-border (stream :shape :drop-shadow :background +cornsilk1+)
       (surrounding-output-with-border (stream :shape :rectangle)
-        (let ((ptype `(completion ,possibilities)))
-          (format-items possibilities
-                        :stream stream
-                        :printer #'(lambda (possibility stream)
-                                     (funcall possibility-printer
-                                              possibility
-                                              ptype
-                                              stream))))))))
+        (format-items possibilities
+                      :stream stream
+                      :printer #'(lambda (possibility stream)
+                                   (funcall possibility-printer
+                                            possibility
+                                            `((possibility) :description ,(first possibility))
+                                            stream)))))))
 
 ;;; Helper returns gesture (or nil if gesture shouldn't be part of the input)
 ;;; and completion mode, if any.
