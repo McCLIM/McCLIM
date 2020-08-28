@@ -1606,7 +1606,6 @@
   ;; draw-triangle
   ;; draw-triangle*
   ;; gadget-label-text-style
-  ;; key-modifier-state-match-p
   ;; pointer-button-click-and-hold-event
   ;; pointer-button-double-click-event
   ;; pointer-port

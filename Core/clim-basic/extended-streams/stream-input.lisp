@@ -119,7 +119,8 @@
         (input-buffer (stream-input-buffer stream)))
     (flet ((process-gesture (raw-gesture)
              (when (and pointer-button-press-handler
-                        (typep raw-gesture 'pointer-button-press-event))
+                        (typep raw-gesture '(or pointer-button-press-event
+                                                pointer-scroll-event)))
                (funcall pointer-button-press-handler stream raw-gesture))
              (when-let ((gesture (stream-process-gesture stream raw-gesture t)))
                (return-from stream-read-gesture gesture))))
@@ -429,17 +430,20 @@ known gestures."
                   (symbolp device-name))
              (setq device-name (or (cdr (assoc device-name +name-to-char+))
                                    device-name)))
-            ((and (member type '(:pointer-button
-                                 :pointer-button-press
-                                 :pointer-button-release)
-                          :test #'eq))
+            ((member type '(:pointer-button
+                            :pointer-button-press
+                            :pointer-button-release
+                            :pointer-scroll)
+                     :test #'eq)
              (let ((real-device-name
                      (case device-name
-                       (:left       +pointer-left-button+)
-                       (:middle     +pointer-middle-button+)
-                       (:right      +pointer-right-button+)
-                       (:wheel-up   +pointer-wheel-up+)
-                       (:wheel-down +pointer-wheel-down+)
+                       (:left        +pointer-left-button+)
+                       (:middle      +pointer-middle-button+)
+                       (:right       +pointer-right-button+)
+                       (:wheel-up    +pointer-wheel-up+)
+                       (:wheel-down  +pointer-wheel-down+)
+                       (:wheel-left  +pointer-wheel-left+)
+                       (:wheel-right +pointer-wheel-right+)
                        (t (error "~S is not a known button" device-name)))))
                (setq device-name real-device-name))))
       (values type device-name modifier-state))))
@@ -496,12 +500,21 @@ known gestures."
              (eql type :pointer-button))
          (eql (pointer-event-button event) device-name)
          (eql (event-modifier-state event) modifier-state)))
+  (:method ((event pointer-scroll-event)
+            type
+            device-name
+            modifier-state)
+    (and (or (eql type :pointer-scroll)
+             (eql type :pointer-button))
+         (eql (pointer-event-button event) device-name)
+         (eql (event-modifier-state event) modifier-state)))
   (:method ((event pointer-button-event)
             type
             device-name
             modifier-state)
     (and (or (eql type :pointer-button-press)
              (eql type :pointer-button-release)
+             (eql type :pointer-scroll)
              (eql type :pointer-button))
          (eql (pointer-event-button event) device-name)
          (eql (event-modifier-state event) modifier-state)))
@@ -563,6 +576,11 @@ known gestures."
 (define-gesture-name :menu :pointer-button-press (:right))
 (define-gesture-name :edit :pointer-button-press (:left :meta))
 (define-gesture-name :delete :pointer-button-press (:middle :shift))
+
+(define-gesture-name :scroll-up :pointer-scroll (:wheel-up))
+(define-gesture-name :scroll-down :pointer-scroll (:wheel-down))
+(define-gesture-name :scroll-left :pointer-scroll (:wheel-left))
+(define-gesture-name :scroll-right :pointer-scroll (:wheel-right))
 
 ;;; Define so we have a gesture for #\newline that we can use in
 ;;; *standard-activation-gestures*
