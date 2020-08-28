@@ -172,9 +172,16 @@ otherwise return false."
 ;;; all other types.  -- CSR, 2007-01-10
 ;;;
 ;;; (5) the COMPLETION presentation type ("one of") is equivalent to the
-;;;     Common Lisp type MEMBER. When it is used as MAYBE-SUBTYPE argument,
-;;;     then individual objects are used to determine its relation with
-;;;     MAYBE-SUPERTYPE. Otherwise "normal" rules apply.
+;;;     Common Lisp type MEMBER.
+;;;
+;;;     - when both types are COMPLETION then "normal" rules apply
+;;;
+;;;     - when MAYBE-SUBTYPE is COMPLETION then use individual objects to
+;;;       determine its relation with MAYBE-SUPERTYPE
+;;;
+;;;     - when MAYBE-SUPERTYPE is COMPLETION return (values t nil), because we
+;;;       can't tell whether the object presented with MAYBE-SUBTYPE is not
+;;;       one of the completion possibilities
 ;;;
 ;;; (6) the SUBSET-COMPLETION presentation type ("some of") doesn't have
 ;;;     equivalent Common Lisp type. When it is used as MAYBE-SUBTYPE and
@@ -273,6 +280,10 @@ otherwise return false."
                        (presentation-typep (funcall value-key elt) maybe-supertype))
                      sequence)
               t))))
+        ((and (not (eq maybe-subtype-name 'completion))
+              (eq maybe-supertype-name 'completion))
+         (return-from presentation-subtypep
+           (values t nil)))
         ((and (eq maybe-subtype-name 'subset-completion)
               (eq maybe-supertype-name 'sequence))
          (destructuring-bind (sequence
