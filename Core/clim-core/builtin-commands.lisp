@@ -89,6 +89,7 @@
 
 (define-presentation-translator default-translator
     (t nil global-command-table
+     :priority 100
      :gesture :select
      :tester ((object presentation context-type)
               ;; see the comments around DEFUN PRESENTATION-SUBTYPEP
