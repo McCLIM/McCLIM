@@ -17,11 +17,7 @@
 ;;;
 ;;; Command tables
 
-(defgeneric command-table-name (command-table))
-(defgeneric command-table-inherit-from (command-table))
-
 ;;; Container for info about a command
-
 (defclass command-item ()
   ((command-name :initarg :command-name :reader command-item-name
                       :initarg nil)
@@ -90,9 +86,6 @@
 (defmethod command-table-inherit-from :around
     ((command-table standard-command-table))
   (mapcar #'find-command-table (call-next-method)))
-
-;;; Franz user manual says that this slot is setf-able
-(defgeneric (setf command-table-inherit-from) (inherit-from table))
 
 (defmethod (setf command-table-inherit-from)
     (inherit (table standard-command-table))
@@ -666,6 +659,7 @@ examine the type of the command menu item to see if it is
               gesture))
         gesture)))
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Commands

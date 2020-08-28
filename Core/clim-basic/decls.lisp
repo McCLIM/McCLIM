@@ -925,6 +925,13 @@ standardised form."))
 (defgeneric accept-values-resynchronize (stream))
 
 
+;;; 27.2 Command Tables
+(defgeneric command-table-name (command-table))
+(defgeneric command-table-inherit-from (command-table))
+
+;;; Franz user manual says that this slot is setf-able
+(defgeneric (setf command-table-inherit-from) (inherit-from table))
+
 ;;; 27.3 Command Menus
 
 (defgeneric display-command-table-menu (command-table stream
