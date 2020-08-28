@@ -680,7 +680,17 @@ stream. Output will be done to its typeout."
                              :fill-pointer (length input))
                (replace so-far input)
                ;; XXX: Relies on non-specified behavior of :rescan.
-               (replace-input stream input :rescan nil)))
+               (replace-input stream input :rescan nil))
+             (read-possibility (stream possibilities)
+               (unwind-protect
+                    (handler-case
+                        (with-input-context
+                            (`(completion ,possibilities) :override nil)
+                            (object type event)
+                            (prog1 nil (read-gesture :stream stream :peek-p t))
+                          (t object))
+                      (abort-gesture () nil))
+                 (clear-typeout stream))))
         (multiple-value-bind (object success input)
             (complete-input-rescan stream func partial-completers
                                    so-far allow-any-input)
@@ -714,20 +724,13 @@ stream. Output will be done to its typeout."
                   (when (and (> nmatches 0) (eq mode :possibilities))
                     (print-possibilities possibilities possibility-printer stream)
                     (redraw-input-buffer stream)
-                    (let ((possibility
-                            (unwind-protect
-                                 (handler-case
-                                     (with-input-context (`(completion ,possibilities) :override nil)
-                                         (object type event)
-                                         (prog1 nil (read-gesture :stream stream :peek-p t))
-                                       (t object))
-                                   (abort-gesture () nil))
-                              (clear-typeout stream))))
-                      (if possibility
-                          (setf (values input success object nmatches)
-                                (values (first possibility) t (second possibility) 1))
-                          (setf success nil
-                                nmatches 0))))
+                    (if-let ((possibility (read-possibility stream possibilities)))
+                      (setf input (first possibility)
+                            object (second possibility)
+                            success t
+                            nmatches 1)
+                      (setf success nil
+                            nmatches 0)))
                   (unless (and (eq mode :complete) (not success))
                     (if (> nmatches 0)
                         (insert-input input)
