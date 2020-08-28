@@ -1,31 +1,16 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 2001 by 
-;;;           Tim Moore (moore@bricoworks.com)
-;;;  (c) copyright 2006-2008 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2001 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 2006-2008 by Troels Henriksen (athas@sigkill.dk)
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Implementation of the input editing protocol.
+;;;
 
-;;; This file provides definitions of every part of input-editing that
-;;; can be defined without actually having loaded the input
-;;; editor. This is so more input-editor using code can be loaded
-;;; before loading Drei.
-
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 (defvar *activation-gestures* nil
   "The set of currently active activation gestures. The global
@@ -67,10 +52,10 @@ behavior for input-editing streams."))
   ;; Can't do this in an initform, since we need to proper position...
   (or (call-next-method)
       (let ((record
-             (make-instance 'standard-sequence-output-record
-              :x-position 0
-              :y-position (bounding-rectangle-min-y
-                           (input-editing-stream-output-record stream)))))
+              (make-instance 'standard-sequence-output-record
+                             :x-position 0
+                             :y-position (bounding-rectangle-min-y
+                                          (input-editing-stream-output-record stream)))))
         (stream-add-output-record (encapsulating-stream-stream stream)
                                   record)
         (setf (typeout-record stream) record))))
@@ -80,26 +65,26 @@ behavior for input-editing streams."))
 
 (defun make-activation-gestures
     (&key (activation-gestures nil activation-gestures-p)
-     (additional-activation-gestures nil additional-activations-p)
-     (existing-activation-gestures *activation-gestures*)
+       (additional-activation-gestures nil additional-activations-p)
+       (existing-activation-gestures *activation-gestures*)
      &allow-other-keys)
   (cond (additional-activations-p
-	 (append additional-activation-gestures existing-activation-gestures))
-	(activation-gestures-p
-	 activation-gestures)
-	(t (or existing-activation-gestures
-	       *standard-activation-gestures*))))
+         (append additional-activation-gestures existing-activation-gestures))
+        (activation-gestures-p
+         activation-gestures)
+        (t (or existing-activation-gestures
+               *standard-activation-gestures*))))
 
 (defun make-delimiter-gestures
     (&key (delimiter-gestures nil delimiter-gestures-p)
-     (additional-delimiter-gestures nil additional-delimiters-p)
-     (existing-delimiter-gestures *delimiter-gestures*)
+       (additional-delimiter-gestures nil additional-delimiters-p)
+       (existing-delimiter-gestures *delimiter-gestures*)
      &allow-other-keys)
   (cond (additional-delimiters-p
-	 (append additional-delimiter-gestures existing-delimiter-gestures))
-	(delimiter-gestures-p
-	 delimiter-gestures)
-	(t existing-delimiter-gestures)))
+         (append additional-delimiter-gestures existing-delimiter-gestures))
+        (delimiter-gestures-p
+         delimiter-gestures)
+        (t existing-delimiter-gestures)))
 
 (defmacro with-activation-gestures ((gestures &key override) &body body)
   "Specifies a list of gestures that terminate input during the
@@ -123,11 +108,11 @@ See also the `:activation-gestures' and
                                  (characterp gestures))
                              `(list ',gestures))
                             (t gestures)))
-	(gestures (gensym))
-	(override-var (gensym)))
+        (gestures (gensym))
+        (override-var (gensym)))
     `(let* ((,gestures ,gesture-form)	;Preserve evaluation order of arguments
-	    (,override-var ,override)
-	    (*activation-gestures* (apply #'make-activation-gestures
+            (,override-var ,override)
+            (*activation-gestures* (apply #'make-activation-gestures
                                           (if ,override-var
                                               :activation-gestures
                                               :additional-activation-gestures)
@@ -158,11 +143,11 @@ See also the `:delimiter-gestures' and
                                  (characterp gestures))
                              `(list ',gestures))
                             (t gestures)))
-	(gestures (gensym))
-	(override-var (gensym)))
+        (gestures (gensym))
+        (override-var (gensym)))
     `(let* ((,gestures ,gesture-form) ;Preserve evaluation order of arguments
-	    (,override-var ,override)
-	    (*delimiter-gestures* (if ,override-var
+            (,override-var ,override)
+            (*delimiter-gestures* (if ,override-var
                                       (make-delimiter-gestures
                                        :delimiter-gestures
                                        ,gestures)
@@ -175,20 +160,20 @@ See also the `:delimiter-gestures' and
   "Returns true if the gesture object `gesture' is an activation
 gesture, otherwise returns false."
   (loop for gesture-name in *activation-gestures*
-	when (gesture-matches-spec-p gesture gesture-name)
-	do (return t)
-	finally (return nil)))
+        when (gesture-matches-spec-p gesture gesture-name)
+          do (return t)
+        finally (return nil)))
 
 (defun delimiter-gesture-p (gesture)
   "Returns true if the gesture object `gesture' is a delimiter
 gesture, otherwise returns false."
   (loop for gesture-name in *delimiter-gestures*
-	when (gesture-matches-spec-p gesture gesture-name)
-	do (return t)
-	finally (return nil)))
+        when (gesture-matches-spec-p gesture gesture-name)
+          do (return t)
+        finally (return nil)))
 
 (defmacro with-input-editor-typeout ((&optional (stream t) &rest args
-                                                &key erase)
+                                      &key erase)
                                      &body body)
   "Clear space above the input-editing stream `stream' and
 evaluate `body', capturing output done to `stream'. Place will be
@@ -280,9 +265,9 @@ defaulting to T for `*standard-output*'."
     (declare (ignore stream))))
 
 (defmacro with-input-editing ((&optional (stream t)
-                                         &rest args
-                                         &key input-sensitizer (initial-contents "")
-                                         (class ''standard-input-editing-stream))
+                               &rest args
+                               &key input-sensitizer (initial-contents "")
+                                 (class ''standard-input-editing-stream))
                               &body body)
   "Establishes a context in which the user can edit the input
 typed in on the interactive stream `stream'. `Body' is then
@@ -321,22 +306,22 @@ buffer using `presentation-replace-input'."
 (defmacro with-input-position ((stream) &body body)
   (let ((stream-var (gensym "STREAM")))
     `(let* ((,stream-var ,stream)
-	    (*current-input-stream* (and (typep ,stream-var
-						'input-editing-stream)
-					 ,stream-var))
-	    (*current-input-position* (and *current-input-stream*
-					   (stream-scan-pointer ,stream-var))))
+            (*current-input-stream* (and (typep ,stream-var
+                                                'input-editing-stream)
+                                         ,stream-var))
+            (*current-input-position* (and *current-input-stream*
+                                           (stream-scan-pointer ,stream-var))))
        ,@body)))
 
 (defun input-editing-rescan-loop (editing-stream continuation)
   (let ((start-scan-pointer (stream-scan-pointer editing-stream)))
     (loop (block rescan
             (handler-bind ((rescan-condition
-                            #'(lambda (c)
-                                (declare (ignore c))
-                                (reset-scan-pointer editing-stream start-scan-pointer)
-                                ;; Input-editing contexts above may be interested...
-                                (return-from rescan nil))))
+                             #'(lambda (c)
+                                 (declare (ignore c))
+                                 (reset-scan-pointer editing-stream start-scan-pointer)
+                                 ;; Input-editing contexts above may be interested...
+                                 (return-from rescan nil))))
               (return-from input-editing-rescan-loop
                 (funcall continuation editing-stream)))))))
 
@@ -375,19 +360,19 @@ the class of the input-editing stream to create, if necessary."))
   (call-next-method))
 
 (defmethod invoke-with-input-editing :around ((stream extended-output-stream)
-					      continuation
-					      input-sensitizer
-					      initial-contents
-					      class)
+                                              continuation
+                                              input-sensitizer
+                                              initial-contents
+                                              class)
   (declare (ignore continuation input-sensitizer initial-contents class))
   (letf (((cursor-visibility (stream-text-cursor stream)) nil))
     (call-next-method)))
 
 (defmethod invoke-with-input-editing :around (stream
-					      continuation
-					      input-sensitizer
-					      initial-contents
-					      class)
+                                              continuation
+                                              input-sensitizer
+                                              initial-contents
+                                              class)
   (declare (ignore continuation input-sensitizer initial-contents class))
   (with-activation-gestures (*standard-activation-gestures*)
     (call-next-method)))
@@ -406,7 +391,7 @@ layout and to implement a general with-input-editor-typeout."))
 (defun make-room (buffer pos n)
   (let ((fill (fill-pointer buffer)))
     (when (> (+ fill n)
-	     (array-dimension buffer 0))
+             (array-dimension buffer 0))
       (adjust-array buffer (list (+ fill n))))
     (incf (fill-pointer buffer) n)
     (replace buffer buffer :start1 (+ pos n) :start2 pos :end2 fill)))
@@ -417,10 +402,10 @@ layout and to implement a general with-input-editor-typeout."))
 (defvar *current-input-position* 0)
 
 (defun read-token (stream &key
-		   (input-wait-handler *input-wait-handler*)
-		   (pointer-button-press-handler
-		    *pointer-button-press-handler*)
-		   click-only)
+                            (input-wait-handler *input-wait-handler*)
+                            (pointer-button-press-handler
+                             *pointer-button-press-handler*)
+                            click-only)
   "Reads characters from the interactive stream STREAM until it
 encounters a delimiter or activation gesture, or a pointer
 gesture. Returns the accumulated string that was delimited by the
@@ -434,40 +419,40 @@ proceed as above.
 INPUT-WAIT-HANDLER and POINTER-BUTTON-PRESS-HANDLER are as for
 STREAM-READ-GESTURE."
   (let ((result (make-array 1
-			    :adjustable t
-			    :fill-pointer 0
-			    :element-type 'character))
-	(in-quotes nil))
+                            :adjustable t
+                            :fill-pointer 0
+                            :element-type 'character))
+        (in-quotes nil))
     ;; The spec says that read-token ignores delimiter gestures if the
     ;; first character is #\", until it sees another.  OK... what about
     ;; other occurences of #\"?  Guess we'll just accumulate them.
     (loop for first-char = t then nil
-	  for gesture = (read-gesture
-			 :stream stream
-			 :input-wait-handler input-wait-handler
-			 :pointer-button-press-handler
-			 pointer-button-press-handler)
-	  do (cond ((or (null gesture)
-			(activation-gesture-p gesture)
-			(typep gesture 'pointer-button-event)
-			(and (not in-quotes)
-			     (delimiter-gesture-p gesture)))
-		    (loop-finish))
-		   ((and (not click-only) (characterp gesture))
-		    (if (eql gesture #\")
-			(cond (first-char
-			       (setq in-quotes t))
-			      (in-quotes
-			       (setq in-quotes nil))
-			      (t (vector-push-extend gesture result)))
-			(vector-push-extend gesture result)))
-		   (t nil))
-	  finally (progn
-		    (when gesture
-		      (unread-gesture gesture :stream stream))
-		    ;; Return a simple string.  XXX Would returning an
-		    ;; adjustable string be so bad?
-		    (return (subseq result 0))))))
+          for gesture = (read-gesture
+                         :stream stream
+                         :input-wait-handler input-wait-handler
+                         :pointer-button-press-handler
+                         pointer-button-press-handler)
+          do (cond ((or (null gesture)
+                        (activation-gesture-p gesture)
+                        (typep gesture 'pointer-button-event)
+                        (and (not in-quotes)
+                             (delimiter-gesture-p gesture)))
+                    (loop-finish))
+                   ((and (not click-only) (characterp gesture))
+                    (if (eql gesture #\")
+                        (cond (first-char
+                               (setq in-quotes t))
+                              (in-quotes
+                               (setq in-quotes nil))
+                              (t (vector-push-extend gesture result)))
+                        (vector-push-extend gesture result)))
+                   (t nil))
+          finally (progn
+                    (when gesture
+                      (unread-gesture gesture :stream stream))
+                    ;; Return a simple string.  XXX Would returning an
+                    ;; adjustable string be so bad?
+                    (return (subseq result 0))))))
 
 (defun write-token (token stream &key acceptably)
   "This function is the opposite of `read-token' given the string
@@ -501,15 +486,15 @@ and arguments for a call to `format'."))
 token. Does not return. `Format-string' and `format-args' are as
 for format."
   (error 'simple-parse-error
-	 :format-control format-string :format-arguments format-args))
+         :format-control format-string :format-arguments format-args))
 
 (define-condition input-not-of-required-type (parse-error)
   ((string :reader not-required-type-string :initarg :string)
    (type :reader not-required-type-type :initarg :type))
   (:report (lambda (condition stream)
-	     (format stream "Input ~S is not of required type ~S."
-		     (not-required-type-string condition)
-		     (not-required-type-type condition))))
+             (format stream "Input ~S is not of required type ~S."
+                     (not-required-type-string condition)
+                     (not-required-type-type condition))))
   (:documentation "The error that is signalled by
 `input-not-of-required-type'. This is a subclass of
 `parse-error'.
@@ -549,7 +534,7 @@ name.")
 
 (define-condition simple-completion-error (simple-parse-error)
   ((input-so-far :reader completion-error-input-so-far
-		 :initarg :input-so-far))
+                 :initarg :input-so-far))
   (:documentation "The error that is signalled by
 `complete-input' when no completion is found. This is a subclass
 of `simple-parse-error'."))
@@ -572,8 +557,8 @@ of `simple-parse-error'."))
 (defun gesture-match (gesture list)
   "Returns t if gesture matches any gesture spec in list."
   (some #'(lambda (name)
-	    (gesture-matches-spec-p gesture name))
-	list))
+            (gesture-matches-spec-p gesture name))
+        list))
 
 ;;; Helpers for complete-input, which is just getting too long.
 
@@ -583,17 +568,17 @@ of `simple-parse-error'."))
 ;;; Break out rescanning case for complete-input.
 ;;;
 ;;; funky logic; we don't know if we're still rescanning until after the call
-;;; to read-gesture. 
+;;; to read-gesture.
 (defun complete-input-rescan (stream func partial-completers so-far
-			      allow-any-input)
+                              allow-any-input)
   (when (stream-rescanning-p stream)
     (loop for gesture = (read-gesture :stream stream :timeout 0)
-	  while (and gesture (stream-rescanning-p stream))
-	  if (complete-gesture-p gesture)
-	    do (let (input success object nmatches)
-		 (when (gesture-match gesture partial-completers)
-		   (setf (values input success object nmatches)
-			 (funcall func (subseq so-far 0) :complete-limited)))
+          while (and gesture (stream-rescanning-p stream))
+          if (complete-gesture-p gesture)
+            do (let (input success object nmatches)
+                 (when (gesture-match gesture partial-completers)
+                   (setf (values input success object nmatches)
+                         (funcall func (subseq so-far 0) :complete-limited)))
                  (unless (and (numberp nmatches) (> nmatches 0))
                    ;; Not a partial match; better be a total match
                    (setf (values input success object)
@@ -605,16 +590,16 @@ of `simple-parse-error'."))
                            (values object t input)))
                        ;; This used to be an error, but no one thought
                        ;; that was a really great idea.
-		       (signal 'simple-completion-error
-                              :format-control "complete-input: While rescanning,~
-                                             can't match ~A~A"
-                              :format-arguments (list so-far  gesture)
-			    
-                              :input-so-far so-far))))
-	  end
-	  do (vector-push-extend gesture so-far)
-	  finally (when gesture
-		    (unread-gesture gesture :stream stream))))
+                       (signal 'simple-completion-error
+                               :format-control "complete-input: While rescanning,~
+                                               can't match ~A~A"
+                               :format-arguments (list so-far  gesture)
+
+                               :input-so-far so-far))))
+          end
+          do (vector-push-extend gesture so-far)
+          finally (when gesture
+                    (unread-gesture gesture :stream stream))))
   nil)
 
 (defun possibilities-for-menu (possibilities)
@@ -638,12 +623,12 @@ stream. Output will be done to its typeout."
       (surrounding-output-with-border (stream :shape :rectangle)
         (let ((ptype `(completion ,possibilities)))
           (format-items possibilities
-           :stream stream
-           :printer #'(lambda (possibility stream)
-                        (funcall possibility-printer
-                                 possibility
-                                 ptype
-                                 stream))))))))
+                        :stream stream
+                        :printer #'(lambda (possibility stream)
+                                     (funcall possibility-printer
+                                              possibility
+                                              ptype
+                                              stream))))))))
 
 ;;; Helper returns gesture (or nil if gesture shouldn't be part of the input)
 ;;; and completion mode, if any.
@@ -651,44 +636,44 @@ stream. Output will be done to its typeout."
 (defvar *completion-possibilities-continuation* nil)
 
 (defun read-completion-gesture (stream
-				partial-completers
-				help-displays-possibilities)
+                                partial-completers
+                                help-displays-possibilities)
   (flet ((possibilitiesp (gesture)
-	   (or (gesture-match gesture *possibilities-gestures*)
-	       (and help-displays-possibilities
-		    (gesture-match gesture *help-gestures*)))))
+           (or (gesture-match gesture *possibilities-gestures*)
+               (and help-displays-possibilities
+                    (gesture-match gesture *help-gestures*)))))
     (let ((*completion-possibilities-continuation*
-	   #'(lambda ()
-	       (return-from read-completion-gesture
-		 (values nil :possibilities)))))
+            #'(lambda ()
+                (return-from read-completion-gesture
+                  (values nil :possibilities)))))
       (handler-bind ((accelerator-gesture
-		      #'(lambda (c)
-			  (let ((gesture (accelerator-gesture-event c)))
-			    (when (possibilitiesp gesture)
-				(return-from read-completion-gesture
-				  (values nil :possibilities)))))))
-	(let ((gesture (read-gesture :stream stream)))
-	  (values gesture
-		  (cond ((possibilitiesp gesture)
-			 :possibilities)
-			((gesture-match gesture partial-completers)
-			 :complete-limited)
-			((gesture-match gesture *completion-gestures*)
-			 :complete-maximal)
-			((complete-gesture-p gesture)
-			 :complete)
-			(t nil))))))))
+                       #'(lambda (c)
+                           (let ((gesture (accelerator-gesture-event c)))
+                             (when (possibilitiesp gesture)
+                               (return-from read-completion-gesture
+                                 (values nil :possibilities)))))))
+        (let ((gesture (read-gesture :stream stream)))
+          (values gesture
+                  (cond ((possibilitiesp gesture)
+                         :possibilities)
+                        ((gesture-match gesture partial-completers)
+                         :complete-limited)
+                        ((gesture-match gesture *completion-gestures*)
+                         :complete-maximal)
+                        ((complete-gesture-p gesture)
+                         :complete)
+                        (t nil))))))))
 
 (defparameter *trace-complete-input* nil)
 
 (defun complete-input (stream func &key
-		       partial-completers allow-any-input
-                       (possibility-printer #'possibility-printer)
-		       (help-displays-possibilities t))
+                                     partial-completers allow-any-input
+                                     (possibility-printer #'possibility-printer)
+                                     (help-displays-possibilities t))
   (let ((so-far (make-array 1 :element-type 'character :adjustable t :fill-pointer 0))
-	(*accelerator-gestures* (append *help-gestures*
-					*possibilities-gestures*
-					*accelerator-gestures*)))
+        (*accelerator-gestures* (append *help-gestures*
+                                        *possibilities-gestures*
+                                        *accelerator-gestures*)))
     (with-input-position (stream)
       (flet ((insert-input (input)
                (adjust-array so-far (length input)
@@ -702,35 +687,35 @@ stream. Output will be done to its typeout."
           (when success
             (return-from complete-input (values object success input))))
         (loop
-           (multiple-value-bind (gesture mode)
-               (read-completion-gesture stream
-                                        partial-completers
-                                        help-displays-possibilities)
-             (if mode
-                 (multiple-value-bind
-                       (input success object nmatches possibilities)
-                     (funcall func (subseq so-far 0) mode)
-                   (when (and (zerop nmatches)
-                              (eq mode :complete-limited)
-                              (complete-gesture-p gesture))
-                     ;; Gesture is both a partial completer and a
-                     ;; delimiter e.g., #\space.  If no partial match,
-                     ;; try again with a total match.
-                     (setf (values input success object nmatches possibilities)
-                           (funcall func (subseq so-far 0) :complete))
-                     (setf mode :complete))
-                   ;; Preserve the delimiter
-                   (when (and success (eq mode :complete))
-                     (unread-gesture gesture :stream stream))
-                   ;; Get completion from menu
-                   (when *trace-complete-input*
-                     (format *trace-output* "nmatches = ~A, mode = ~A~%"
-                             nmatches mode))
-                   (when (and (> nmatches 0) (eq mode :possibilities))
-                     (print-possibilities possibilities possibility-printer stream)
-                     (redraw-input-buffer stream)
-                     (let ((possibility
-                            (unwind-protect 
+          (multiple-value-bind (gesture mode)
+              (read-completion-gesture stream
+                                       partial-completers
+                                       help-displays-possibilities)
+            (if mode
+                (multiple-value-bind
+                      (input success object nmatches possibilities)
+                    (funcall func (subseq so-far 0) mode)
+                  (when (and (zerop nmatches)
+                             (eq mode :complete-limited)
+                             (complete-gesture-p gesture))
+                    ;; Gesture is both a partial completer and a
+                    ;; delimiter e.g., #\space.  If no partial match,
+                    ;; try again with a total match.
+                    (setf (values input success object nmatches possibilities)
+                          (funcall func (subseq so-far 0) :complete))
+                    (setf mode :complete))
+                  ;; Preserve the delimiter
+                  (when (and success (eq mode :complete))
+                    (unread-gesture gesture :stream stream))
+                  ;; Get completion from menu
+                  (when *trace-complete-input*
+                    (format *trace-output* "nmatches = ~A, mode = ~A~%"
+                            nmatches mode))
+                  (when (and (> nmatches 0) (eq mode :possibilities))
+                    (print-possibilities possibilities possibility-printer stream)
+                    (redraw-input-buffer stream)
+                    (let ((possibility
+                            (unwind-protect
                                  (handler-case
                                      (with-input-context (`(completion ,possibilities) :override nil)
                                          (object type event)
@@ -738,126 +723,126 @@ stream. Output will be done to its typeout."
                                        (t object))
                                    (abort-gesture () nil))
                               (clear-typeout stream))))
-                       (if possibility
-                           (setf (values input success object nmatches)
-                                 (values (first possibility) t (second possibility) 1))
-                           (setf success nil
-                                 nmatches 0))))
-                   (unless (and (eq mode :complete) (not success))
-                     (if (> nmatches 0)
-                         (insert-input input)
-                         (beep)))
-                   (cond ((and success (eq mode :complete))
-                          (return-from complete-input
-                            (values object success input)))
-                         ((activation-gesture-p gesture)
-                          (if allow-any-input
-                              (return-from complete-input
-                                (values nil t (subseq so-far 0)))
-                              (error 'simple-completion-error
-                                     :format-control "Input ~S does not match"
-                                     :format-arguments (list so-far)
-                                     :input-so-far so-far)))))
-                 (vector-push-extend gesture so-far))))))))
+                      (if possibility
+                          (setf (values input success object nmatches)
+                                (values (first possibility) t (second possibility) 1))
+                          (setf success nil
+                                nmatches 0))))
+                  (unless (and (eq mode :complete) (not success))
+                    (if (> nmatches 0)
+                        (insert-input input)
+                        (beep)))
+                  (cond ((and success (eq mode :complete))
+                         (return-from complete-input
+                           (values object success input)))
+                        ((activation-gesture-p gesture)
+                         (if allow-any-input
+                             (return-from complete-input
+                               (values nil t (subseq so-far 0)))
+                             (error 'simple-completion-error
+                                    :format-control "Input ~S does not match"
+                                    :format-arguments (list so-far)
+                                    :input-so-far so-far)))))
+                (vector-push-extend gesture so-far))))))))
 
 ;;; helper function
 
 (defun left-prefix (string1 string2 &key (end nil))
   "Returns the common prefix of string1 and string2, up to end"
   (let* ((end1 (if end
-		   (min (length string1) end)
-		   nil))
-	 (end2 (if end
-		   (min (length string2) end)
-		   nil))
-	 (mismatch (mismatch string1 string2 :test #'char-equal
-			     :end1 end1 :end2 end2)))
+                   (min (length string1) end)
+                   nil))
+         (end2 (if end
+                   (min (length string2) end)
+                   nil))
+         (mismatch (mismatch string1 string2 :test #'char-equal
+                                             :end1 end1 :end2 end2)))
     (cond (mismatch
-	   (subseq string1 0 mismatch))
-	  (end
-	   (subseq string1 0 end))
-	  (t string1))))
+           (subseq string1 0 mismatch))
+          (end
+           (subseq string1 0 end))
+          (t string1))))
 
 (defun complete-from-generator (initial-string generator delimiters &key
-				(action :complete)
-				(predicate (constantly t)))
+                                                                      (action :complete)
+                                                                      (predicate (constantly t)))
   (when (eq action :possibilities)
     (return-from complete-from-generator
       (complete-from-generator-possibilities initial-string
-					     generator
-					     predicate)))
+                                             generator
+                                             predicate)))
   (let ((initial-string-len (length initial-string))
-	(candidate-match nil)
-	(matches 0)
-	(object nil)
-	(identical nil)
-	(identical-match nil)
-	(identical-object nil)
-	(actual-match nil))
+        (candidate-match nil)
+        (matches 0)
+        (object nil)
+        (identical nil)
+        (identical-match nil)
+        (identical-object nil)
+        (actual-match nil))
     (flet ((suggester (str obj)
-	     (unless (funcall predicate obj)
-	       (return-from suggester nil))
-	     (let ((partial-match-end
-		    (and (eq action :complete-limited)
-			 (>= (length str) initial-string-len)
-			 (position-if #'(lambda (c) (member c delimiters))
-				      str
-				      :start initial-string-len))))
-	       (when (and (eq action :complete-limited)
-			  (null partial-match-end))
-		 (return-from suggester nil))
-	       (unless partial-match-end
-		 (setq partial-match-end (1- (length str))))
-	       (let ((mismatch-initial (mismatch initial-string str
-						 :test #'char-equal)))
-		 (cond ((and mismatch-initial
-			     (>= mismatch-initial (length initial-string)))
-			(incf matches)
-			(unless candidate-match
-			  (setq object obj))
-			(setf candidate-match
-			      (cond (candidate-match
-				     (left-prefix candidate-match
-						  str
-						  :end (1+ partial-match-end)))
-				    (partial-match-end
-				     (subseq str 0 (1+ partial-match-end)))
-				    (t str))
-			      actual-match str))
-		       ((null mismatch-initial)
-			(incf matches)
-			;; If there's a longer match we want to find it.
-			(if (eq action :complete-maximal)
-			    (progn
-			      (setf identical-match str)
-			      (setf identical-object obj))
-			    (progn
-			      (setf candidate-match str)
-			      (setf object obj)))
-			(setf identical t)))))))
+             (unless (funcall predicate obj)
+               (return-from suggester nil))
+             (let ((partial-match-end
+                     (and (eq action :complete-limited)
+                          (>= (length str) initial-string-len)
+                          (position-if #'(lambda (c) (member c delimiters))
+                                       str
+                                       :start initial-string-len))))
+               (when (and (eq action :complete-limited)
+                          (null partial-match-end))
+                 (return-from suggester nil))
+               (unless partial-match-end
+                 (setq partial-match-end (1- (length str))))
+               (let ((mismatch-initial (mismatch initial-string str
+                                                 :test #'char-equal)))
+                 (cond ((and mismatch-initial
+                             (>= mismatch-initial (length initial-string)))
+                        (incf matches)
+                        (unless candidate-match
+                          (setq object obj))
+                        (setf candidate-match
+                              (cond (candidate-match
+                                     (left-prefix candidate-match
+                                                  str
+                                                  :end (1+ partial-match-end)))
+                                    (partial-match-end
+                                     (subseq str 0 (1+ partial-match-end)))
+                                    (t str))
+                              actual-match str))
+                       ((null mismatch-initial)
+                        (incf matches)
+                        ;; If there's a longer match we want to find it.
+                        (if (eq action :complete-maximal)
+                            (progn
+                              (setf identical-match str)
+                              (setf identical-object obj))
+                            (progn
+                              (setf candidate-match str)
+                              (setf object obj)))
+                        (setf identical t)))))))
       (funcall generator initial-string #'suggester)
       (let ((partial-match-before-end (and (eq action :complete-limited)
-					   (eql matches 1)
-					   (< (length candidate-match)
-					      (length actual-match)))))
-	(values (or candidate-match identical-match initial-string)
-		(or (and identical
-			 (or (not (eq action :complete-maximal))
-			     (eql matches 1)))
-		    (and (eql matches 1)
-			 (not partial-match-before-end)))
-		(if (eq action :complete-maximal)
+                                           (eql matches 1)
+                                           (< (length candidate-match)
+                                              (length actual-match)))))
+        (values (or candidate-match identical-match initial-string)
+                (or (and identical
+                         (or (not (eq action :complete-maximal))
+                             (eql matches 1)))
+                    (and (eql matches 1)
+                         (not partial-match-before-end)))
+                (if (eq action :complete-maximal)
                     (cond ((and (eql matches 2) identical-match)
                            object)
                           ((and identical-match (eql matches 1))
                            identical-object)
                           ((eql matches 1)
                            object))
-		    (and (or identical (and (eql matches 1)
-					    (not partial-match-before-end)))
-			 object))
-		matches
-		nil)))))
+                    (and (or identical (and (eql matches 1)
+                                            (not partial-match-before-end)))
+                         object))
+                matches
+                nil)))))
 
 ;;; The possibilities action is different enough that I don't want to add to
 ;;; the spaghetti above...
@@ -865,41 +850,41 @@ stream. Output will be done to its typeout."
 (defun complete-from-generator-possibilities
     (initial-string generator predicate)
   (let ((possibilities nil)
-	(nmatches 0)
-	(initial-len (length initial-string)))
-    (flet ((suggester (str obj)	     
-	     (unless (funcall predicate obj)
-	       (return-from suggester nil))
-	     (when (>= (or (mismatch initial-string str :test #'char-equal)
-			   (length initial-string))
-		       initial-len)
-	       (incf nmatches)
-	       (push (list str obj) possibilities))))
+        (nmatches 0)
+        (initial-len (length initial-string)))
+    (flet ((suggester (str obj)
+             (unless (funcall predicate obj)
+               (return-from suggester nil))
+             (when (>= (or (mismatch initial-string str :test #'char-equal)
+                           (length initial-string))
+                       initial-len)
+               (incf nmatches)
+               (push (list str obj) possibilities))))
       (funcall generator initial-string #'suggester)
       (if (and (eql nmatches 1)
-	       (string-equal initial-string (caar possibilities)))
-	  ;; return values are as from complete-from-generator, qv.
-	  (values (caar possibilities)
-		  t
-		  (cdar possibilities)
-		  nmatches
-		  possibilities)
-	  (values initial-string nil nil nmatches (sort possibilities #'string-lessp :key #'car))))))
+               (string-equal initial-string (caar possibilities)))
+          ;; return values are as from complete-from-generator, qv.
+          (values (caar possibilities)
+                  t
+                  (cdar possibilities)
+                  nmatches
+                  possibilities)
+          (values initial-string nil nil nmatches (sort possibilities #'string-lessp :key #'car))))))
 
 (defun complete-from-possibilities (initial-string completions delimiters &key
-				    (action :complete)
-				    (predicate (constantly t))
-				    (name-key #'car)
-				    (value-key #'second))
+                                                                            (action :complete)
+                                                                            (predicate (constantly t))
+                                                                            (name-key #'car)
+                                                                            (value-key #'second))
   (flet ((generator (input-string suggester)
-	   (declare (ignore input-string))
-	   (do-sequence (possibility completions)
-	     (funcall suggester
-		      (funcall name-key possibility)
-		      (funcall value-key possibility)))))
+           (declare (ignore input-string))
+           (do-sequence (possibility completions)
+             (funcall suggester
+                      (funcall name-key possibility)
+                      (funcall value-key possibility)))))
     (complete-from-generator initial-string #'generator delimiters
-			     :action action
-			     :predicate predicate)))
+                             :action action
+                             :predicate predicate)))
 
 (defun suggest (completion object)
   "Specifies one possibility for
@@ -933,28 +918,28 @@ implement this."
   (when (eq stream t)
     (setq stream '*standard-input*))
   (let ((generator (gensym "GENERATOR"))
-	(input-string (gensym "INPUT-STRING"))
-	(suggester (gensym "SUGGESTER")))
-     `(flet ((,generator (,input-string ,suggester)
-	      (declare (ignore ,input-string))
-	      (flet ((suggest (completion object)
-		       (funcall ,suggester completion object)))
-		,@body)))
+        (input-string (gensym "INPUT-STRING"))
+        (suggester (gensym "SUGGESTER")))
+    `(flet ((,generator (,input-string ,suggester)
+              (declare (ignore ,input-string))
+              (flet ((suggest (completion object)
+                       (funcall ,suggester completion object)))
+                ,@body)))
        ;; This sucks, but we can't use args to the macro directly because
        ;; we want the partial-delimiters argument and we need to insure its
        ;; proper evaluation order with everything else.
        (let* ((complete-input-args (list ,@args))
-	      (partial-completers (getf complete-input-args
-					:partial-completers
-					nil)))
-	 (apply #'complete-input
-		,stream
-		#'(lambda (so-far mode)
-		    (complete-from-generator so-far
-					     #',generator
-					     partial-completers
-					     :action mode))
-		complete-input-args)))))
+              (partial-completers (getf complete-input-args
+                                        :partial-completers
+                                        nil)))
+         (apply #'complete-input
+                ,stream
+                #'(lambda (so-far mode)
+                    (complete-from-generator so-far
+                                             #',generator
+                                             partial-completers
+                                             :action mode))
+                complete-input-args)))))
 
 ;;; Infrasructure for detecting empty input, thus allowing accept-1
 ;;; to supply a default.
@@ -973,9 +958,9 @@ implement this."
   `accept' is generally not part of its own empty input context."
   (with-gensyms (input-cont handler-cont)
     `(flet ((,input-cont ()
-	      ,input-form)
-	    (,handler-cont ()
-	      ,@handler-forms))
+              ,input-form)
+            (,handler-cont ()
+              ,@handler-forms))
        (declare (dynamic-extent #',input-cont #',handler-cont))
        (invoke-handle-empty-input ,stream #',input-cont #',handler-cont))))
 
@@ -989,19 +974,19 @@ implement this."
 (defun empty-input-p
     (stream begin-scan-pointer activation-gestures delimiter-gestures)
   (let ((scan-pointer (stream-scan-pointer stream))
-	(fill-pointer (fill-pointer (stream-input-buffer stream))))
+        (fill-pointer (fill-pointer (stream-input-buffer stream))))
     ;; activated?
     (cond ((and (eql begin-scan-pointer scan-pointer)
-		(eql scan-pointer fill-pointer))
-	   t)
-	  ((or (eql begin-scan-pointer scan-pointer)
-	       (eql begin-scan-pointer (1- scan-pointer)))
-	   (let ((gesture (aref (stream-input-buffer stream)
-				begin-scan-pointer)))
-	     (and (characterp gesture)
-		  (or (gesture-match gesture activation-gestures)
-		      (gesture-match gesture delimiter-gestures)))))
-	  (t nil))))
+                (eql scan-pointer fill-pointer))
+           t)
+          ((or (eql begin-scan-pointer scan-pointer)
+               (eql begin-scan-pointer (1- scan-pointer)))
+           (let ((gesture (aref (stream-input-buffer stream)
+                                begin-scan-pointer)))
+             (and (characterp gesture)
+                  (or (gesture-match gesture activation-gestures)
+                      (gesture-match gesture delimiter-gestures)))))
+          (t nil))))
 
 ;;; The control flow in here might be a bit confusing. The handler catches
 ;;; parse errors from accept forms and checks if the input stream is empty. If
@@ -1019,21 +1004,21 @@ implement this."
   (unless (input-editing-stream-p stream)
     (return-from invoke-handle-empty-input (funcall input-continuation)))
   (let ((begin-scan-pointer (stream-scan-pointer stream))
-	(activation-gestures *activation-gestures*)
-	(delimiter-gestures *delimiter-gestures*))
+        (activation-gestures *activation-gestures*)
+        (delimiter-gestures *delimiter-gestures*))
     (block empty-input
       (handler-bind (((or simple-parse-error empty-input-condition)
-		      #'(lambda (c)
-			  (when (empty-input-p stream
-					       begin-scan-pointer
-					       activation-gestures
-					       delimiter-gestures)
-			    (if (typep c 'empty-input-condition)
-				(signal c)
-				(signal 'empty-input-condition :stream stream))
-			    ;; No one else wants to handle it, so we will
-			    (return-from empty-input nil)))))
-	(return-from invoke-handle-empty-input (funcall input-continuation))))
+                       #'(lambda (c)
+                           (when (empty-input-p stream
+                                                begin-scan-pointer
+                                                activation-gestures
+                                                delimiter-gestures)
+                             (if (typep c 'empty-input-condition)
+                                 (signal c)
+                                 (signal 'empty-input-condition :stream stream))
+                             ;; No one else wants to handle it, so we will
+                             (return-from empty-input nil)))))
+        (return-from invoke-handle-empty-input (funcall input-continuation))))
     (funcall handler-continuation)))
 
 
@@ -1066,7 +1051,7 @@ protocol retrieving gestures from a provided string."))
 
 (defmethod initialize-instance :after ((stream string-input-editing-stream)
                                        &key (string (error "A string must be provided"))
-                                       (start 0) (end (length string))
+                                         (start 0) (end (length string))
                                        &allow-other-keys)
   (setf (stream-input-buffer stream)
         (replace (make-array (- end start) :fill-pointer (- end start))
@@ -1120,7 +1105,7 @@ protocol retrieving gestures from a provided string."))
   (declare (ignore inhibit-activation)))
 
 (defmethod erase-input-buffer ((stream string-input-editing-stream)
-                                &optional start-position)
+                               &optional start-position)
   (declare (ignore start-position)))
 
 (defmethod redraw-input-buffer ((stream string-input-editing-stream)
@@ -1287,8 +1272,8 @@ protocol retrieving gestures from a provided string."))
 (defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil))
   (let* ((token (read-token stream)))
     (if (string= "" token)
-	(values nil ptype)
-	(let ((result (handler-case (read-from-string token)
+        (values nil ptype)
+        (let ((result (handler-case (read-from-string token)
                         (error (c)
                           (declare (ignore c))
                           (simple-parse-error "Error parsing ~S for presentation type ~S"
