@@ -19,9 +19,14 @@
 
 ;;; Container for info about a command
 (defclass command-item ()
-  ((command-name :initarg :command-name :reader command-item-name
-                      :initarg nil)
-   (command-line-name :initarg :command-line-name :reader command-line-name)))
+  ((command-name
+    :initarg :command-name
+    :reader command-item-name)
+   (command-line-name
+    :initarg :command-line-name
+    :reader command-line-name))
+  (:default-initargs :command-name nil
+                     :command-line-name nil))
 
 (defmethod print-object ((obj command-item) stream)
   (print-unreadable-object (obj stream :identity t :type t)
@@ -34,12 +39,28 @@
 ;;; According to the specification, command menu items are stored as
 ;;; lists.  This way seems better, and I hope nothing will break.
 (defclass %menu-item (command-item)
-  ((menu-name :reader command-menu-item-name :initarg :menu-name)
-   (type :initarg :type :reader command-menu-item-type)
-   (value :initarg :value :reader command-menu-item-value)
-   (documentation :initarg :documentation)
-   (text-style :initarg :text-style :reader command-menu-item-text-style :initform nil)
-   (keystroke :initarg :keystroke)))
+  ((menu-name
+    :initarg :menu-name
+    :reader command-menu-item-name)
+   (type
+    :initarg :type
+    :reader command-menu-item-type)
+   (value
+    :initarg :value
+    :reader command-menu-item-value)
+   (text-style
+    :initarg :text-style
+    :reader command-menu-item-text-style)
+   (keystroke
+    :initarg :keystroke)
+   (documentation
+    :initarg :documentation))
+  (:default-initargs :menu-name nil
+                     :type nil
+                     :value nil
+                     :text-style nil
+                     :keystroke nil
+                     :documentation nil))
 
 (defmethod print-object ((item %menu-item) stream)
   (print-unreadable-object (item stream :identity t :type t)
@@ -60,7 +81,8 @@
                  :initform '()
                  :reader command-table-inherit-from
                  :type list)
-   (commands  :accessor commands :initarg :commands
+   (commands :accessor commands
+             :initarg :commands
              :initform (make-hash-table :test #'eq))
    (command-line-names :accessor command-line-names
                        :initform (make-hash-table :test #'equal))
@@ -179,11 +201,8 @@ designator) inherits menu items."
 (defun menu-items-from-list (menu)
   (mapcar
    #'(lambda (item)
-       (destructuring-bind (name type value
-                                 &rest args)
-           item
-         (apply #'make-menu-item name type value
-                args)))
+       (destructuring-bind (name type value &rest args) item
+         (apply #'make-menu-item name type value args)))
    menu))
 
 (setf (gethash 'global-command-table *command-tables*)
@@ -384,26 +403,20 @@ designator) inherits menu items."
                              :test #'string-equal))))))
 
 (defun make-menu-item (name type value
-                       &key (documentation nil documentationp)
-                       (keystroke nil keystrokep)
-                       (text-style nil text-style-p)
-                       (command-name nil command-name-p)
-                       (command-line-name nil command-line-name-p)
+                       &key
+                         documentation
+                         keystroke
+                         text-style
+                         command-name
+                         command-line-name
                        &allow-other-keys)
-  ;; v-- this may be wrong, we do this to allow
-  ;; text-style to contain make-text-style calls
-  ;; so we use a very limited evaluator - FIXME
-  (when (and (consp text-style)
-           (eq (first text-style) 'make-text-style))
-    (setq text-style (apply #'make-text-style (rest text-style))))
-  (apply #'make-instance '%menu-item
-         :menu-name name :type type :value value
-         `(,@(and documentationp `(:documentation ,documentation))
-           ,@(and keystrokep `(:keystroke ,keystroke))
-           ,@(and text-style-p `(:text-style ,text-style))
-           ,@(and command-name-p `(:command-name ,command-name))
-           ,@(and command-line-name-p
-                  `(:command-line-name ,command-line-name)))))
+  (make-instance '%menu-item
+                 :menu-name name :type type :value value
+                 :documentation documentation
+                 :keystroke keystroke
+                 :text-style text-style
+                 :command-name command-name
+                 :command-line-name command-line-name))
 
 (defun %add-menu-item (command-table item after)
   (with-slots (menu)
