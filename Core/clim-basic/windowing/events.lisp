@@ -273,35 +273,6 @@
 (defconstant +hyper-key+             #x1000)
 (defconstant +alt-key+               #x2000)
 
-(defmacro key-modifier-state-match-p (button modifier-state &body clauses)
-  (let ((button-names '((:left       . +pointer-left-button+)
-                        (:middle     . +pointer-middle-button+)
-                        (:right      . +pointer-right-button+)
-                        (:wheel-up   . +pointer-wheel-up+)
-                        (:wheel-down . +pointer-wheel-down+)))
-        (modifier-names '((:shift . +shift-key+)
-                          (:control . +control-key+)
-                          (:meta . +meta-key+)
-                          (:super . +super-key+)
-                          (:hyper . +hyper-key+)))
-        (b (gensym))
-        (m (gensym)))
-    (labels ((do-substitutes (c)
-               (cond
-                 ((null c)
-                  nil)
-                 ((consp c)
-                  (cons (do-substitutes (car c)) (do-substitutes (cdr c))))
-                 ((assoc c button-names)
-                  (list 'check-button (cdr (assoc c button-names))))
-                 ((assoc c modifier-names)
-                  (list 'check-modifier (cdr (assoc c modifier-names))))
-                 (t
-                  c))))
-      `(flet ((check-button (,b) (= ,button ,b))
-              (check-modifier (,m) (not (zerop (logand ,m ,modifier-state)))))
-         (and ,@(do-substitutes clauses))))))
-
 ;; Key names are a symbol whose value is port-specific. Key names
 ;; corresponding to the set of standard characters (such as the
 ;; alphanumerics) will be a symbol in the keyword package.

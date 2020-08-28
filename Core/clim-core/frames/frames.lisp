@@ -931,7 +931,9 @@ frames and will not have focus.
                                       (#.+pointer-middle-button+ "M")
                                       (#.+pointer-right-button+ "R")
                                       (#.+pointer-wheel-up+ "WheelUp")
-                                      (#.+pointer-wheel-down+ "WheelDown")))
+                                      (#.+pointer-wheel-down+ "WheelDown")
+                                      (#.+pointer-wheel-left+ "WheelLeft")
+                                      (#.+pointer-wheel-right+ "WheelRight")))
 
 (defconstant +modifier-documentation+
   '((#.+shift-key+ "sh" "Shift")
