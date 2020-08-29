@@ -55,9 +55,9 @@
     :initarg :keystroke)
    (documentation
     :initarg :documentation))
-  (:default-initargs :menu-name nil
-                     :type nil
-                     :value nil
+  (:default-initargs :menu-name (alexandria:required-argument :menu-name)
+                     :type (alexandria:required-argument :type)
+                     :value (alexandria:required-argument :value)
                      :text-style nil
                      :keystroke nil
                      :documentation nil))
