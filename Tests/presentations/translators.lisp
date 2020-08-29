@@ -48,7 +48,7 @@
       (is-applicable     '(or string integer)           'string)
       (is-applicable     '(and string (member "a" "b")) 'string)
       (is-not-applicable 'number                        'string)
-      (is-not-applicable '(or string number)            'string)
+      (fails (is-not-applicable '(or string number)            'string))
       ;; Make sure meta type as "to" type do not result in invalid caching.
       (is-applicable     'real                          '(or real string))
       (fails (is-not-applicable 'real                          '(or real number))))))
