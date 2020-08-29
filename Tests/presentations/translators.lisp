@@ -50,7 +50,7 @@
       (is-applicable     '(completion ("a" "b"))              'string)
       (fails (is-applicable     '(completion ("dan" 3))              'string))
       (is-not-applicable 'number                              'string)
-      (is-not-applicable '(or string number)                  'string)
+      (fails (is-not-applicable '(or string number)                  'string))
       (is-not-applicable '(completion ("dan" :foo))           'string)
       ;; Make sure meta type as "to" type do not result in invalid caching.
       (is-applicable     'real                                '(or real string))
