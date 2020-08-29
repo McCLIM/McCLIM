@@ -93,6 +93,20 @@
                          (event window-manager-focus-event))
   (setf (port-keyboard-input-focus (port sheet)) sheet))
 
+;;; This method is defined to prevent the sheet scrolling defined for the
+;;; mouse-wheel-scroll-mixin when the event activates a command. In other
+;;; words, we scroll the clim-stream-pane only when scrolling does not match
+;;; the current input context. -- jd 2020-08-29
+(defmethod handle-event ((sheet clim-stream-pane) (event pointer-scroll-event))
+  (unless (find-innermost-applicable-presentation
+           *input-context*
+           sheet
+           (pointer-event-x event)
+           (pointer-event-y event)
+           :frame (pane-frame sheet)
+           :event event)
+    (call-next-method)))
+
 (defmethod interactive-stream-p ((stream clim-stream-pane))
   t)
 
