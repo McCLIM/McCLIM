@@ -24,9 +24,7 @@
     :reader command-item-name)
    (command-line-name
     :initarg :command-line-name
-    :reader command-line-name))
-  (:default-initargs :command-name nil
-                     :command-line-name nil))
+    :reader command-line-name)))
 
 (defmethod print-object ((obj command-item) stream)
   (print-unreadable-object (obj stream :identity t :type t)
@@ -55,7 +53,7 @@
     :initarg :keystroke)
    (documentation
     :initarg :documentation))
-  (:default-initargs :menu-name (alexandria:required-argument :menu-name)
+  (:default-initargs :menu-name nil
                      :type (alexandria:required-argument :type)
                      :value (alexandria:required-argument :value)
                      :text-style nil
@@ -64,12 +62,13 @@
 
 (defmethod print-object ((item %menu-item) stream)
   (print-unreadable-object (item stream :identity t :type t)
-    (when (slot-boundp item 'menu-name)
-      (format stream "~S" (command-menu-item-name item)))
-    (when (slot-boundp item 'keystroke)
-      (format stream "~:[~; ~]keystroke ~A"
-              (slot-boundp item 'menu-name)
-              (slot-value item 'keystroke)))))
+    (let ((menu-name (command-menu-item-name item))
+          (keystroke (slot-value item 'keystroke)))
+     (when menu-name
+       (format stream "~S" menu-name))
+     (when keystroke
+       (format stream "~:[~; ~]keystroke ~A"
+               menu-name keystroke)))))
 
 (defun command-menu-item-options (menu-item)
   (with-slots (documentation text-style) menu-item
@@ -433,9 +432,8 @@ designator) inherits menu items."
                (cdr (member after menu
                      :key #'command-menu-item-name
                      :test #'string-equal))))))
-  (when (and (slot-boundp item 'keystroke)
-             (slot-value item 'keystroke))
-    (%add-keystroke-item command-table (slot-value item 'keystroke) item nil)))
+  (when-let ((keystroke (slot-value item 'keystroke)))
+    (%add-keystroke-item command-table keystroke item nil)))
 
 
 (defun add-menu-item-to-command-table (command-table
@@ -478,7 +476,7 @@ examine the type of the command menu item to see if it is
                        (with-slots (menu-name keystroke) item
                          (funcall function
                                   menu-name
-                                  (and (slot-boundp item 'keystroke) keystroke)
+                                  keystroke
                                   item)))
                    (slot-value table 'menu))))
       (map-table-entries table-object)
@@ -592,8 +590,7 @@ examine the type of the command menu item to see if it is
       (loop for gesture in keystroke-accelerators
             for item in keystroke-items
             do (funcall function
-                        (and (slot-boundp item 'menu-name)
-                             (command-menu-item-name item))
+                        (command-menu-item-name item)
                         gesture
                         item)))))
 
