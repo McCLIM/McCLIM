@@ -261,7 +261,14 @@ the :UNBOUND style."
     (unless (eq context-package symbol-package)
       (write-char #\Space stream)
       (with-style (stream :package-note)
-        (write-string (or (package-name symbol-package) "unnamed") stream)))))
+        (cond ((not symbol-package)
+               (with-style (stream :unbound)
+                 (write-string "uninterned" stream)))
+              ((not (package-name symbol-package))
+               (with-style (stream :unbound)
+                 (write-string "unnamed package" stream)))
+              (t
+               (write-string (package-name symbol-package) stream)))))))
 
 ;;; Safety
 
