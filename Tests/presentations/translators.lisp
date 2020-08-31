@@ -14,29 +14,44 @@
 
 (test presentation-translators.meta
   (define-command-table pt.smoke-ct2)
-  (let ((tr (define-presentation-translator pt-smoke-tr2
+  (let ((translator (define-presentation-translator pt-smoke-tr2
                 ((or real string) string pt.smoke-ct2)
                 (object)
               (etypecase object
                 (real (format nil "~a" object))
-                (string object))))
-        (all-1 (find-presentation-translators 'real 'string 'pt.smoke-ct2))
-        (all-2 (find-presentation-translators 'string 'string 'pt.smoke-ct2))
-        (all-3 (find-presentation-translators '(or string real) 'string 'pt.smoke-ct2))
-        (all-4 (find-presentation-translators '(or string integer) 'string 'pt.smoke-ct2))
-        (all-5 (find-presentation-translators '(and string (member "a" "b")) 'string 'pt.smoke-ct2))
-        (all-6 (find-presentation-translators '(member "a" "b") 'string 'pt.smoke-ct2))
-        (all-7 (find-presentation-translators '(member "dan" 3) 'string 'pt.smoke-ct2))
-        (non-1 (find-presentation-translators 'number 'string 'pt.smoke-ct2))
-        (non-2 (find-presentation-translators '(or string number) 'string 'pt.smoke-ct2))
-        (non-3 (find-presentation-translators '(member "dan" :foo) 'string 'pt.smoke-ct2)))
-    (is (member tr all-1))
-    (is (member tr all-2))
-    (is (member tr all-3))
-    (is (member tr all-4))
-    (is (member tr all-5))
-    (fails (is (member tr all-6)))
-    (fails (is (member tr all-7)))
-    (is (not (member tr non-1)))
-    (is (not (member tr non-2)))
-    (is (not (member tr non-3)))))
+                (string object)))))
+    (labels ((find-translators (from to)
+               (find-presentation-translators from to 'pt.smoke-ct2))
+             (is-applicable (from to)
+               (is (member translator (find-translators from to))
+                   "~@<Expected ~A to be applicable when translating from ~
+                    ~S to ~S~@:>"
+                   translator from to)
+               ;; Run the same query again, so the cache is used.
+               (is (member translator (find-translators from to))
+                   "~@<Expected ~A to be applicable when translating WITH ~
+                    CACHE from ~S to ~S~@:>"
+                   translator from to))
+             (is-not-applicable (from to)
+               (is (not (member translator (find-translators from to)))
+                   "~@<Expected ~A to not be applicable when translating ~
+                    from ~S to ~S~@:>"
+                   translator from to)
+               ;; Run the same query again, so the cache is used.
+               (is (not (member translator (find-translators from to)))
+                   "~@<Expected ~A to not be applicable when translating ~
+                    WITH CACHE from ~S to ~S~@:>"
+                   translator from to)))
+      (is-applicable     'real                                'string)
+      (is-applicable     'string                              'string)
+      (is-applicable     '(or string real)                    'string)
+      (is-applicable     '(or string integer)                 'string)
+      (is-applicable     '(and string (completion ("a" "b"))) 'string)
+      (is-applicable     '(completion ("a" "b"))              'string)
+      (fails (is-applicable     '(completion ("dan" 3))              'string))
+      (is-not-applicable 'number                              'string)
+      (is-not-applicable '(or string number)                  'string)
+      (is-not-applicable '(completion ("dan" :foo))           'string)
+      ;; Make sure meta type as "to" type do not result in invalid caching.
+      (is-applicable     'real                                '(or real string))
+      (fails (is-not-applicable 'real                                '(or real number))))))
