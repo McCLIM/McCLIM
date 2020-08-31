@@ -188,7 +188,7 @@
 
 (define-drag-and-drop-translator drag-copy-place-value
     (place command place inspector-command-table
-     :gesture :copy
+     :gesture :copy :menu nil
      :destination-tester ((object destination-object)
                           ;; Cannot copy a place with itself and
                           ;; otherwise "value" (including unbound)
@@ -234,7 +234,7 @@
 
 (define-drag-and-drop-translator drag-swap-place-values
     (place command place inspector-command-table
-     :gesture :select
+     :gesture :select :menu nil
      :tester ((object)
               ;; Swapping must either write a new value into the place
               ;; OBJECT or write the unbound "value" into the place
