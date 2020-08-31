@@ -168,3 +168,40 @@
   (define-presentation-type foo (a))
   (is (not (presentation-typep 3 '(foo 3))))
   (signals error (presentation-typep (make-instance 'foo) '(foo 3))))
+
+;;; Presentation type specifiers, names, parameters and options
+
+(defclass class-presentation-type () ())
+
+(define-presentation-type simple-presentation-type ())
+
+(define-presentation-type presentation-type-with-parameters (foo bar))
+
+(define-presentation-type presentation-type-with-options ()
+  :options (baz fez))
+
+(test presentations.type-parameters.smoke
+  (flet ((expect (expected-parameters type-name)
+           (let ((result (presentation-type-parameters type-name)))
+             (is (equal expected-parameters result)
+                 "~@<Expected ~S to have parameters ~:S, but got ~
+                  ~:S.~@:>"
+                 type-name expected-parameters result))))
+    (expect '()        'class-presentation-type)
+    (expect '()        (find-class 'class-presentation-type))
+    (expect '()        'simple-presentation-type)
+    (expect '(foo bar) 'presentation-type-with-parameters)
+    (expect '()        'presentation-type-with-options)))
+
+(test presentations.type-options.smoke
+  (flet ((expect (expected-options type-name)
+           (let ((result (presentation-type-options type-name)))
+             (is (equal expected-options result)
+                 "~@<Expected ~S to have options ~:S, but got ~
+                  ~:S.~@:>"
+                 type-name expected-options result))))
+    (expect '()        'class-presentation-type)
+    (expect '()        (find-class 'class-presentation-type))
+    (expect '()        'simple-presentation-type)
+    (expect '()        'presentation-type-with-parameters)
+    (expect '(baz fez) 'presentation-type-with-options)))
