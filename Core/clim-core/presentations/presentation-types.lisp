@@ -514,10 +514,10 @@ filled in."
     (get-ptype-metaclass name)
     (call-next-method)))
 
-(defun get-ptype (type)
+(defun get-ptype (type &optional env)
   (let ((name (presentation-type-name type)))
     (or (find-presentation-type name nil)
-        (let ((meta (find-class name nil)))
+        (let ((meta (find-class name nil env)))
           (and (typep meta 'standard-class)
                meta)))))
 
@@ -753,12 +753,16 @@ suitable for SUPER-NAME"))
                                     ,parameters-are-types)))))
 
 (defun presentation-type-parameters (type-name &optional env)
-  (declare (ignore env))
-  (parameters (find-presentation-type type-name)))
+  (let ((maybe-type (get-ptype type-name env)))
+    (if (and maybe-type (typep maybe-type 'presentation-type))
+        (parameters maybe-type)
+        '())))
 
 (defun presentation-type-options (type-name &optional env)
-  (declare (ignore env))
-  (options (find-presentation-type type-name)))
+  (let ((maybe-type (get-ptype type-name env)))
+    (if (and maybe-type (typep maybe-type 'presentation-type))
+        (options maybe-type)
+        '())))
 
 ;;; XXX specification states, that the type-name must be a
 ;;; presentation type specifier. Should we error otherwise?
