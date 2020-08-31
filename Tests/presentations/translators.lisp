@@ -31,24 +31,14 @@
                (is (member tr (find-translators from to))
                    "~@<Expected ~A to be applicable when translating WITH ~
                     CACHE from ~S to ~S~@:>"
-                   tr from to))
-             (is-not-applicable (from to)
-               (is (not (member tr (find-translators from to)))
-                   "~@<Expected ~A to not be applicable when translating ~
-                    from ~S to ~S~@:>"
-                   tr from to)
-               ;; Run the same query again, so the cache is used.
-               (is (not (member tr (find-translators from to)))
-                   "~@<Expected ~A to not be applicable when translating ~
-                    WITH CACHE from ~S to ~S~@:>"
                    tr from to)))
-      (is-applicable     'real                          'string)
-      (is-applicable     'string                        'string)
-      (is-applicable     '(or string real)              'string)
-      (is-applicable     '(or string integer)           'string)
-      (is-applicable     '(and string (member "a" "b")) 'string)
-      (is-not-applicable 'number                        'string)
-      (fails (is-not-applicable '(or string number)            'string))
+      (is-applicable 'real                          'string)
+      (is-applicable 'string                        'string)
+      (is-applicable '(or string real)              'string)
+      (is-applicable '(or string integer)           'string)
+      (is-applicable '(and string (member "a" "b")) 'string)
+      (is-applicable 'number                        'string)
+      (is-applicable '(or string number)            'string)
       ;; Make sure meta type as "to" type do not result in invalid caching.
-      (is-applicable     'real                          '(or real string))
-      (fails (is-not-applicable 'real                          '(or real number))))))
+      (is-applicable 'real                          '(or real string))
+      (is-applicable 'real                          '(or real number)))))
