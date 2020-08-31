@@ -67,7 +67,9 @@
   #+mcclim
   ;; we can do this because *presentation-type-supertypes* doesn't do
   ;; clever things with type parameters
-  (is-true (climi::stupid-subtypep type supertype)))
+  (is-true (climi::stupid-subtypep type supertype)
+           "(~S ~S ~S) did not return a true value"
+           'climi::stupid-subtypep type supertype))
 
 (defun expect-nil-t (type supertype)
   (multiple-value-bind (yesp surep)
@@ -85,7 +87,9 @@
   ;; stupid-subtypep must be conservative in what it reports as possibly
   ;; acceptable.
   #+mcclim
-  (is-true (climi::stupid-subtypep type supertype)))
+  (is-true (climi::stupid-subtypep type supertype)
+           "(~S ~S ~S) did not return a true value"
+           'climi::stupid-subtypep type supertype))
 
 (defun constantly-t (object)
   (declare (ignore object))
