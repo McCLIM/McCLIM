@@ -363,8 +363,7 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
-     &key event (modifier-state 0) for-menu button
-     &aux (from-type (from-type translator)))
+     &key event (modifier-state 0) for-menu button)
   (flet ((match-gesture (gesture event modifier-state)
            (or (eq gesture t)
                for-menu
@@ -380,20 +379,26 @@ and used to ensure that presentation-translators-caches are up to date.")
                                              (eql (pointer-event-button
                                                    event)
                                                   (cadr g))))))))))
-    (and (match-gesture (gesture translator) event modifier-state)
-         (or (null (decode-parameters from-type))
-             (presentation-typep (presentation-object presentation) from-type))
-         (or (null (tester translator))
-             (funcall (tester translator) (presentation-object presentation)
-                      :presentation presentation :context-type context-type
-                      :frame frame :window window :x x :y y :event event))
-         (or (tester-definitive translator)
-             (null (decode-parameters context-type))
-             (presentation-typep
-              (call-presentation-translator translator presentation context-type
-                                            frame event window x y)
-              context-type))
-         t)))
+    (let ((from-type (from-type translator))
+          (to-type (to-type translator)))
+      (and (match-gesture (gesture translator) event modifier-state)
+           ;; We call presentation-subtypep because applicable translators are
+           ;; matched only by the presentation-type's name. -- jd 2020-09-01
+           (presentation-subtypep (presentation-type presentation) from-type)
+           (presentation-subtypep to-type context-type)
+           (or (null (decode-parameters from-type))
+               (presentation-typep (presentation-object presentation) from-type))
+           (or (null (tester translator))
+               (funcall (tester translator) (presentation-object presentation)
+                        :presentation presentation :context-type context-type
+                        :frame frame :window window :x x :y y :event event))
+           (or (tester-definitive translator)
+               (null (decode-parameters context-type))
+               (presentation-typep
+                (call-presentation-translator translator presentation context-type
+                                              frame event window x y)
+                context-type))
+           t))))
 
 (defun map-applicable-translators (func presentation input-context frame window x y
                                    &key event (modifier-state 0) for-menu button)
