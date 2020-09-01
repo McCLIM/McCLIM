@@ -129,7 +129,7 @@ Returns the ``single box'' attribute of the \term{presentation}
 \arg{presentation}, which controls how the presentation is highlighted and when
 it is sensitive.  This will be one of four values:
 
-\begin{itemize} 
+\begin{itemize}
 \item \cl{nil} (the default)---if the pointer is pointing at a visible piece of
 the output that was drawn as part of the presentation, then it is considered to
 be pointing at the presentation.  The presentation is highlighted by
@@ -229,7 +229,7 @@ for the supertype.
 
 \Defmacro {define-presentation-type} {name parameters
                                       \key options inherit-from description history
-                                           parameters-are-types} 
+                                           parameters-are-types}
 
 Defines a presentation type whose name is the symbol or class \arg{name} and
 whose parameters are specified by the lambda-list \arg{parameters}.  These
@@ -325,7 +325,7 @@ None of the arguments, except \arg{inherit-from}, is evaluated.
 
 \subsection {Presentation Type Abbreviations}
 
-\Defmacro {define-presentation-type-abbreviation} {name parameters equivalent-type 
+\Defmacro {define-presentation-type-abbreviation} {name parameters equivalent-type
                                                    \key options}
 
 \arg{name}, \arg{parameters}, and \arg{options} are as in
@@ -353,7 +353,7 @@ abbreviation.  If you need methods, use \cl{define-presentation-type} instead.
 cliche.  For example, a presentation type to read an octal integer might be
 defined as
 \begin{verbatim}
-(define-presentation-type-abbreviation octal-integer (&optional low high) 
+(define-presentation-type-abbreviation octal-integer (&optional low high)
     `((integer ,low ,high) :base 8 :description "octal integer"))
 \end{verbatim}
 
@@ -420,7 +420,7 @@ method for \cl{num}.  The value for \arg{type} will be or \cl{((int 1 5))} in
 each of the methods.
 
 
-\Defmacro {define-presentation-generic-function} {generic-function-name 
+\Defmacro {define-presentation-generic-function} {generic-function-name
                                                   presentation-function-name
                                                   lambda-list \rest options}
 
@@ -523,7 +523,7 @@ may specialize it as well.  The other arguments are not typically specialized.
 
 \def\Defpresmeth #1 #2 {\Dodocf {#1} {#2} {Presentation~Method}}
 
-\Defpresmeth {present} {object type stream view \key acceptably for-context-type} 
+\Defpresmeth {present} {object type stream view \key acceptably for-context-type}
 
 The \cl{present} presentation method is responsible for displaying the
 representation of \arg{object} having \term{presentation type} \arg{type} for a
@@ -546,11 +546,11 @@ programmer wants to allow objects of that type to be displayed textually.
 selected (an instance of the class that corresponds to the presentation type
 \arg{type}.).
 \arg{parameters} and \arg{options} are the parameters and
-options for the type on which the current method is specialized.  
+options for the type on which the current method is specialized.
 % except in the slow, non-metaobject-protocol-based implementation where
 % \arg{parameters} and \arg{options} are just decoded from \arg{type}
 % and code inserted in the method body develops the parameters and
-% options for the type on which the current method is specialized.  
+% options for the type on which the current method is specialized.
 The other arguments are gotten from the arguments of the same name in \cl{present}.
 
 
@@ -590,10 +590,10 @@ describing the \term{presentation type} \arg{type}.  \arg{stream} is a stream,
 and will not be \cl{nil} as it can be for the \cl{describe-presentation-type}
 function.
 
-{\bf Implementation note:} the actual argument list to the 
+{\bf Implementation note:} the actual argument list to the
 \cl{describe-presentation-type} method is
 \\
-\arg{(type-key parameters options type stream plural-count)} 
+\arg{(type-key parameters options type stream plural-count)}
 
 
 \Defpresmeth {presentation-type-specifier-p} {type}
@@ -771,7 +771,7 @@ them explicitly.  \arg{type-name} is a symbol or a class.  \arg{env} is a
 macro-expansion environment, as in \cl{find-class}.
 
 
-\Defmacro {with-presentation-type-decoded} {(name-var \optional parameters-var options-var) 
+\Defmacro {with-presentation-type-decoded} {(name-var \optional parameters-var options-var)
                                             type
                                             \body body}
 
@@ -785,7 +785,7 @@ non-\cl{nil}, is bound to a list of the options.  When supplied, \arg{name-var},
 
 The \arg{name-var}, \arg{parameters-var}, and \arg{options-var} arguments are
 not evaluated.  \arg{body} may have zero or more declarations as its first
-forms. 
+forms.
 
 \Defun {presentation-type-name} {type}
 
@@ -939,7 +939,7 @@ time.  The object can be any Lisp object.
 \Defmacro {with-output-as-presentation} {(stream object type
                                           \key modifier single-box allow-sensitive-inferiors
                                                parent record-type \allow)
-                                         \body body} 
+                                         \body body}
 
 The output of \arg{body} to the \term{extended output recording} \arg{stream} is
 used to generate a presentation whose underlying object is \arg{object} and
@@ -1011,7 +1011,7 @@ keyword arguments, which are described below.
 
 \Defgeneric {stream-present} {stream object type
                               \key view modifier acceptably for-context-type
-                                   single-box allow-sensitive-inferiors sensitive 
+                                   single-box allow-sensitive-inferiors sensitive
                                    record-type}
 
 \cl{stream-present} is the per-stream implementation of \cl{present}, analogous
@@ -1094,7 +1094,7 @@ presentation type of the context entry.
 \Defmacro {with-input-context} {(type \key override)
                                 (\optional object-var type-var event-var options-var)
                                 form
-                                \body pointer-cases} 
+                                \body pointer-cases}
 
 Establishes an input context of \term{presentation type} \arg{type}; this must
 be done by binding \cl{*input-context*} to reflect the new input context.  When
@@ -1140,7 +1140,7 @@ For example,
 
 \Defun {accept} {type
                  \key stream view
-                      default default-type provide-default 
+                      default default-type provide-default
                       insert-default replace-input history active-p
                       prompt prompt-mode display-default query-identifier
                       activation-gestures additional-activation-gestures
@@ -1160,8 +1160,8 @@ prompting the user by calling \cl{prompt-for-accept}, and then calling
 arguments.
 
 \Defgeneric {stream-accept} {stream type
-                             \key view 
-                                  default default-type provide-default 
+                             \key view
+                                  default default-type provide-default
                                   insert-default replace-input history active-p
                                   prompt prompt-mode display-default query-identifier
                                   activation-gestures additional-activation-gestures
@@ -1185,8 +1185,8 @@ convenient function for the \cl{stream-accept} methods to call when they require
 the default behavior.
 
 \Defun {accept-1} {stream type
-                   \key view 
-                        default default-type provide-default 
+                   \key view
+                        default default-type provide-default
                         insert-default replace-input history active-p
                         prompt prompt-mode display-default query-identifier
                         activation-gestures additional-activation-gestures
@@ -1415,11 +1415,11 @@ explicitly unspecified.
 
 \subsection {Defining Presentation Translators}
 
-\Defmacro {define-presentation-translator} {name 
+\Defmacro {define-presentation-translator} {name
                                             (from-type to-type command-table
                                              \key gesture
                                                   tester tester-definitive
-                                                  documentation pointer-documentation 
+                                                  documentation pointer-documentation
                                                   menu priority)
                                             arglist
                                             \body body}
@@ -1536,10 +1536,10 @@ echoed.
 None of \cl{define-presentation-translator}'s arguments are evaluated.
 
 
-\Defmacro {define-presentation-to-command-translator} {name 
+\Defmacro {define-presentation-to-command-translator} {name
                                                        (from-type command-name command-table
                                                         \key gesture tester
-                                                             documentation pointer-documentation 
+                                                             documentation pointer-documentation
                                                              menu priority echo)
                                                        arglist
                                                        \body body}
@@ -1569,8 +1569,8 @@ more declarations as its first forms.
 None of \cl{define-presentation-to-command-translator}'s arguments are evaluated.
 
 
-\Defmacro {define-presentation-action} {name 
-                                        (from-type to-type command-table 
+\Defmacro {define-presentation-action} {name
+                                        (from-type to-type command-table
                                          \key gesture tester
                                               documentation pointer-documentation
                                               menu priority)
@@ -1594,7 +1594,7 @@ None of \cl{define-presentation-action}'s arguments are evaluated.
 
 
 \Defmacro {define-drag-and-drop-translator} {name
-                                             (from-type to-type destination-type command-table 
+                                             (from-type to-type destination-type command-table
                                               \key gesture tester
                                                    documentation pointer-documentation
                                                    menu priority
@@ -1660,7 +1660,6 @@ Returns a list of all of the translators in the \term{command table}
 \arg{command-table} that translate from \arg{from-type} to \arg{to-type},
 without taking into account any type parameters or testers.  \arg{from-type} and
 \arg{to-type} are presentation type specifiers, and must not be abbreviations.
-\arg{frame} must be an application frame.
 
 {\bf Implementation note:} Because \cl{find-presentation-translators} is called
 during pointer sensitivity computations (that is, whenever the user mouses the
@@ -1681,6 +1680,7 @@ presentation \arg{presentation} in input context type \arg{context-type},
 otherwise returns \term{false}.  (There is no \arg{from-type} argument because
 it is derived from \arg{presentation}.)  \arg{x} and \arg{y} are the $x$ and $y$
 positions of the pointer within the window stream \arg{window}.
+\arg{frame} must be an application frame.
 
 \arg{event} and \arg{modifier-state} are a pointer button event and modifier
 state (see \cl{event-modifier-key-state}), and are compared against the
@@ -1720,12 +1720,12 @@ unspecified data reserved for internal use by CLIM.  \arg{translator},
 as \cl{call-presentation-translator} and \cl{document-presentation-translator}.
 
 Since input contexts can be nested, \cl{find-applicable-translators} must
-iterate over all the contexts in \arg{input-context}.  \arg{window}, \arg{x},
-and \arg{y} are as for \cl{test-presentation-translator}.  \arg{event} and
-\arg{modifier-state} (which default to \cl{nil} and the current modifier state
-for \arg{window}, respectively) are used to further restrict the set of
-applicable translators.  (Only one of \arg{event} or \arg{modifier-state} may be
-supplied; it is unspecified what will happen if both are supplied.)
+iterate over all the contexts in \arg{input-context}.  \arg{frame},
+\arg{window}, \arg{x}, and \arg{y} are as for \cl{test-presentation-translator}.
+\arg{event} and \arg{modifier-state} (which default to \cl{nil} and the current
+modifier state for \arg{window}, respectively) are used to further restrict the
+set of applicable translators.  (Only one of \arg{event} or \arg{modifier-state}
+may be supplied; it is unspecified what will happen if both are supplied.)
 
 Presentations can also be nested.  The ordering of the translators returned by
 \cl{find-applicable-translators} is that translators matching inner contexts
@@ -1804,7 +1804,7 @@ translator, namely, the translated object and the translated type.
 
 \Defun {document-presentation-translator} {translator presentation context-type
                                            frame event window x y
-                                           \key (stream \cl{*standard-output*}) documentation-type}  
+                                           \key (stream \cl{*standard-output*}) documentation-type}
 
 Computes the documentation string for the translator \arg{translator} and
 outputs it to the stream \arg{stream}.  \arg{presentation}, \arg{context-type},
@@ -1837,7 +1837,7 @@ those translators whose \cl{:menu} option matches \arg{menu} will be included.
 
 \subsection {Finding Applicable Presentations}
 
-\Defun {find-innermost-applicable-presentation} {input-context window x y 
+\Defun {find-innermost-applicable-presentation} {input-context window x y
                                                  \key frame modifier-state event}
 
 Given an input context \arg{input-context}, an output recording window stream
@@ -1929,7 +1929,7 @@ handler''.
 
 Given a presentation, an input context established by \cl{with-input-context},
 and an event corresponding to a user gesture, translator matching proceeds as
-follows. 
+follows.
 
 The set of candidate translators is initially those translators accessible in
 the command table in use by the current application.  A translator is said to
