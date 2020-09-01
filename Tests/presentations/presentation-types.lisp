@@ -169,13 +169,8 @@
   (expect-t-t '(completion (3)) '(completion (3 4 5)))
   (expect-nil-t '(completion (3 4)) '(completion (3 5)))
   ;; other presentation vs completion
-  (expect-t-nil 'integer '(completion (1 2 3 "foo")))
-  ;; FIXME currently we are not enforcing the presented object to be
-  ;; PRESENTATION-TYPEP to its PRESENTATION-TYPE, so it is possible to present
-  ;; "foo" with a presentation type integer. Because of that even if we can
-  ;; prove, that none of the supertype's completion object's type is a subtype
-  ;; of the subtype, we are still returning (nil t).
-  (fails (expect-nil-t 'integer '(completion ("foo" "bar")))))
+  (expect-nil-nil 'integer '(completion (1 2 3 "foo")))
+  (expect-nil-t 'integer '(completion ("foo" "bar"))))
 
 ;;; SUBSET-COMPLETION
 (test presentations.type-relations.7
