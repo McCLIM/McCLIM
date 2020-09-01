@@ -131,6 +131,13 @@ otherwise return false."
                         completion-type-parameters)
   t)
 
+(defun some-completion-item (function completion-type-parameters)
+  (map-completion-items (lambda (element)
+                          (when (funcall function element)
+                            (return-from some-completion-item t)))
+                        completion-type-parameters)
+  nil)
+
 ;;; PRESENTATION-SUBTYPEP suffers from some of the same problems as
 ;;; CL:SUBTYPEP, most (but sadly not all) of which were solved in H. Baker "A
 ;;; Decision Procedure for SUBTYPEP"; additionally, it suffers from the
@@ -287,7 +294,10 @@ otherwise return false."
         ((and (not (eq maybe-subtype-name 'completion))
               (eq maybe-supertype-name 'completion))
          (return-from presentation-subtypep
-           (values t nil)))
+           (values nil
+                   (not (some-completion-item
+                         (alexandria:rcurry #'presentation-typep maybe-subtype)
+                         maybe-supertype-parameters)))))
         ((and (eq maybe-subtype-name 'subset-completion)
               (eq maybe-supertype-name 'sequence))
          (let ((element-type (first maybe-supertype-parameters)))
