@@ -380,16 +380,31 @@ and used to ensure that presentation-translators-caches are up to date.")
                                                    event)
                                                   (cadr g))))))))))
     (let ((from-type (from-type translator))
-          (to-type (to-type translator)))
+          (to-type (to-type translator))
+          (ptype (presentation-type presentation))
+          (object (presentation-object presentation)))
       (and (match-gesture (gesture translator) event modifier-state)
-           ;; We call presentation-subtypep because applicable translators are
-           ;; matched only by the presentation-type's name. -- jd 2020-09-01
-           (presentation-subtypep (presentation-type presentation) from-type)
-           (presentation-subtypep to-type context-type)
+           ;; We call PRESENTATION-SUBTYPEP because applicable translators are
+           ;; matched only by the presentation type's name.
+           ;;
+           ;; - we are liberal with FROM-TYPE to allow translators from types
+           ;; like COMPLETION - it is correct because when the type has
+           ;; parameters we always call PRESENTATION-TYPEP
+           ;;
+           ;; - we are conservative with TO-TYPE, because the tester may be
+           ;; definitive and then we could succeed with a wrong translator
+           ;;
+           ;; -- jd 2020-09-01
+           (multiple-value-bind (yesp surep)
+               (presentation-subtypep ptype from-type)
+             (or yesp (not surep)))
+           (multiple-value-bind (yesp surep)
+               (presentation-subtypep to-type context-type)
+             (and yesp surep))
            (or (null (decode-parameters from-type))
-               (presentation-typep (presentation-object presentation) from-type))
+               (presentation-typep object from-type))
            (or (null (tester translator))
-               (funcall (tester translator) (presentation-object presentation)
+               (funcall (tester translator) object
                         :presentation presentation :context-type context-type
                         :frame frame :window window :x x :y y :event event))
            (or (tester-definitive translator)
