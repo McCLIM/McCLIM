@@ -62,7 +62,8 @@
   (multiple-value-bind (yesp surep)
       (presentation-subtypep type supertype)
     (is (and yesp surep)
-        "Expected (T T), got (~s ~s)~%for ~s~%and ~s"
+        "Expected (T T), got (~s ~s) for~%~
+         ~2@T~2@T(presentation-subtypep ~s ~s)"
         yesp surep type supertype))
   #+mcclim
   ;; we can do this because *presentation-type-supertypes* doesn't do
@@ -75,14 +76,16 @@
   (multiple-value-bind (yesp surep)
       (presentation-subtypep type supertype)
     (is (and (null yesp) surep)
-        "Expected (NIL T), got (~s ~s)~%for ~s~%and ~s"
+        "Expected (NIL T) but got (~s ~s) for~%~
+         ~2@T(presentation-subtypep ~s ~s)"
         yesp surep type supertype)))
 
 (defun expect-nil-nil (type supertype)
   (multiple-value-bind (yesp surep)
       (presentation-subtypep type supertype)
     (is (and (null yesp) (null surep))
-        "Expected (NIL NIL), got (~s ~s)~%for ~s~%and ~s"
+        "Expected (NIL NIL) but got (~s ~s) for~%~
+         ~2@T(presentation-typetypep ~s ~s)"
         yesp surep type supertype))
   ;; stupid-subtypep must be conservative in what it reports as possibly
   ;; acceptable.
@@ -164,6 +167,20 @@
   ;; subset-completion vs subset-completion
   (expect-t-t '(subset-completion (1 2)) '(subset-completion (1 2 3)))
   (expect-nil-t '(subset-completion (1 2)) '(subset-completion (1))))
+
+(test presentations.type-relations.sequence-enumerated
+  ;; vs SEQUENCE-ENUMERATED
+  (expect-t-t '(sequence-enumerated) '(sequence-enumerated))
+  (expect-t-t '(sequence-enumerated integer integer) '(sequence-enumerated integer real))
+  (expect-nil-t '(sequence-enumerated integer real) '(sequence-enumerated integer integer))
+  (expect-nil-t '(sequence-enumerated integer) '(sequence-enumerated integer integer))
+  (expect-nil-t '(sequence-enumerated integer integer) '(sequence-enumerated integer))
+  ;; vs SEQUENCE
+  (expect-t-t '(sequence-enumerated) '(sequence integer))
+  (expect-t-t '(sequence-enumerated integer integer) '(sequence integer))
+  (expect-nil-t '(sequence-enumerated real integer) '(sequence integer))
+  (expect-nil-t '(sequence integer) '(sequence-enumerated real integer))
+  (expect-nil-t '(sequence integer) '(sequence-enumerated integer integer)))
 
 ;;; This is a test for an issue where a parametrized class without
 ;;; defined PRESENTATION-TYPEP method doesn't error.
