@@ -285,7 +285,16 @@ otherwise return false."
                 (every (lambda (elt)
                          (presentation-typep (funcall value-key elt) element-type))
                        sequence)
-                t)))))))
+                t)))))
+        ((and (eq maybe-subtype-name 'sequence-enumerated)
+              (eq maybe-supertype-name 'sequence))
+         (let ((sub-element-types maybe-subtype-parameters)
+               (super-element-type (first maybe-supertype-parameters)))
+           (return-from presentation-subtypep
+             (values (every (alexandria:rcurry #'presentation-subtypep
+                                               super-element-type)
+                            sub-element-types)
+                     t))))))
     (map-over-presentation-type-supertypes
      #'(lambda (name massaged)
          (when (eq name maybe-supertype-name)
