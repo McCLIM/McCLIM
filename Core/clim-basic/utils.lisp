@@ -99,6 +99,9 @@
   `(progn
      ,@body))
 
+(deftype function-designator ()
+  `(or function symbol (cons (eql setf) (cons symbol null))))
+
 (defun 2+ (x)
   (+ x 2))
 
