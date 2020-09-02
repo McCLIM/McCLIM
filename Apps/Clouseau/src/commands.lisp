@@ -271,100 +271,72 @@
 
 ;;; Commands on Boolean-valued places
 
-(define-command (com-set-place-to-false :command-table inspector-command-table
-                                        :name          t)
-    ((place 'place))
-  (with-command-error-handling ("Could not set value of ~A to false" place)
-      (setf (value place) nil)))
+(macrolet
+    ((define (command-name value value-name)
+       (let ((translator-name (alexandria:symbolicate
+                               '#:place-> command-name)))
+         `(progn
+            (define-command (,command-name :command-table inspector-command-table
+                                           :name          t)
+                ((place 'place))
+              (with-command-error-handling ("Could not set value of ~A to ~A"
+                                            place ,value)
+                  (setf (value place) ,value)))
 
-(define-presentation-to-command-translator place->com-set-place-to-false
-    (place com-set-place-to-false inspector-command-table
-     :tester ((object)
-              (and (supportsp object 'setf)
-                   (accepts-value-p object nil)
-                   (safe-valuep object)
-                   (eq (value object) t)))
-     :priority 2
-     :documentation "Set to false"
-     :pointer-documentation
-     ((object stream)
-      (with-print-error-handling (stream)
-        (with-safe-and-terse-printing (stream)
-          (format stream "Set value of ~A to ~S" object nil)))))
-    (object)
-  (list object))
-
-(define-command (com-set-place-to-true :command-table inspector-command-table
-                                       :name          t)
-    ((place 'place))
-  (with-command-error-handling ("Could not set value of ~A to true" place)
-      (setf (value place) t)))
-
-(define-presentation-to-command-translator place->com-set-place-to-true
-    (place com-set-place-to-true inspector-command-table
-     :tester ((object)
-              (and (supportsp object 'setf)
-                   (accepts-value-p object t)
-                   (safe-valuep object)
-                   (eq (value object) nil)))
-     :priority 2
-     :documentation "Set to true"
-     :pointer-documentation
-     ((object stream)
-      (with-print-error-handling (stream)
-        (with-safe-and-terse-printing (stream)
-          (format stream "Set value of ~A to ~S" object t)))))
-    (object)
-  (list object))
+            (define-presentation-to-command-translator ,translator-name
+                (place ,command-name inspector-command-table
+                 :tester ((object)
+                          (and (supportsp object 'setf)
+                               (accepts-value-p object ,value)
+                               (safe-valuep object)
+                               (not (eq (value object) ,value))))
+                 :priority 2
+                 :documentation ,(format nil "Set to ~A" value-name)
+                 :pointer-documentation
+                 ((object stream)
+                  (with-print-error-handling (stream)
+                    (with-safe-and-terse-printing (stream)
+                      (format stream "Set value of ~A to ~S" object ,value)))))
+                (object)
+              (list object))))))
+  (define com-set-place-to-false nil "false")
+  (define com-set-place-to-true  t   "true"))
 
 ;;; Commands on real-valued places
 
-(define-command (com-increment-place :command-table inspector-command-table
-                                     :name          t)
-    ((place 'place))
-  (with-command-error-handling ("Could not increment the value of ~A" place)
-      (incf (value place))))
+(macrolet
+    ((define (command-name operator operator-name gesture pointer-button)
+       (let ((translator-name (alexandria:symbolicate
+                               '#:place-> command-name)))
+         `(progn
+            (define-command (,command-name :command-table inspector-command-table
+                                           :name          t)
+                ((place 'place))
+              (with-command-error-handling (,(format nil "Could not ~A the value of ~~A"
+                                                     operator-name)
+                                            place)
+                  (setf (value place) (,operator (value place)))))
 
-(clim:define-gesture-name :increment :pointer-scroll (:wheel-up :control))
+            (define-gesture-name ,gesture
+              :pointer-scroll (,pointer-button :control))
 
-(define-presentation-to-command-translator place->com-inrement-place
-    (place com-increment-place inspector-command-table
-     :gesture :increment
-     :tester ((object)
-              (and (supportsp object 'setf)
-                   (safe-valuep object)
-                   (let ((value (value object)))
-                     (and (typep value 'real)
-                          (accepts-value-p object (1+ value))))))
-     :documentation "Increment by 1"
-     :pointer-documentation ((object stream)
-                             (with-print-error-handling (stream)
-                               (with-safe-and-terse-printing (stream)
-                                 (format stream "Increment ~A by 1" object)))))
-    (object)
-  (list object))
-
-(define-command (com-decrement-place :command-table inspector-command-table
-                                     :name          t)
-    ((place 'place))
-  (with-command-error-handling ("Could not decrement the value of ~A" place)
-      (decf (value place))))
-
-(clim:define-gesture-name :decrement :pointer-scroll (:wheel-down :control))
-
-(define-presentation-to-command-translator place->com-decrement-place
-    (place com-decrement-place inspector-command-table
-     :gesture :decrement
-     :tester ((object)
-              (and (supportsp object 'setf)
-                   (safe-valuep object)
-                   (let ((value (value object)))
-                     (and (typep value 'real)
-                          (accepts-value-p object (1- value))))))
-     :documentation "Decrement by 1"
-     :pointer-documentation ((object stream)
-                             (with-print-error-handling (stream)
-                               (with-safe-and-terse-printing (stream)
-                                 (format stream "Decrement ~A by 1" object)))))
-    (object)
-  (list object))
+            (define-presentation-to-command-translator ,translator-name
+                (place ,command-name inspector-command-table
+                 :gesture ,gesture
+                 :tester ((object)
+                          (and (supportsp object 'setf)
+                               (safe-valuep object)
+                               (let ((value (value object)))
+                                 (and (typep value 'real)
+                                      (accepts-value-p object (1+ value))))))
+                 :documentation ,(format nil "~@(~A~) by 1" operator-name)
+                 :pointer-documentation ((object stream)
+                                         (with-print-error-handling (stream)
+                                           (with-safe-and-terse-printing (stream)
+                                             (format stream ,(format nil "~@(~A~) ~~A by 1"
+                                                                     operator-name)
+                                                     object)))))
+                (object)
+              (list object))))))
+  (define com-increment-place 1+ "increment" :increment :wheel-up)
+  (define com-decrement-place 1- "decrement" :decrement :wheel-down))
