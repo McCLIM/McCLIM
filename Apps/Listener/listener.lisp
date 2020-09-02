@@ -1,4 +1,3 @@
-
 ;;; This is a lisp listener.
 
 ;;; (C) Copyright 2003 by Andy Hefner (hefner1@umbc.edu)
@@ -14,8 +13,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 (in-package :clim-listener)
@@ -28,7 +27,7 @@
 ;;; them all.
 (defclass listener-view (textual-view) ())
 
-(defclass listener-pointer-documentation-view 
+(defclass listener-pointer-documentation-view
     (listener-view pointer-documentation-view)
   ())
 
@@ -45,21 +44,16 @@
 (define-presentation-method accept :around
   ((type sequence) stream (view listener-view) &key default default-type)
   (declare (ignorable default default-type))
-  ;; oh, my word.  although TYPE here might look like it's bound to
-  ;; the presentation type itself, in fact it is bound to the
-  ;; parameter of the SEQUENCE presentation type.  We need the
-  ;; presentation type itself, so we reconstruct it.
-  (let ((ptype (list 'sequence type)))
-    (let* ((token (read-token stream))
-	   (result (handler-case (read-from-string token)
-		     (error (c)
-		       (declare (ignore c))
-		       (simple-parse-error 
-			"Error parsing ~S for presentation type ~S"
-			token ptype)))))
-      (if (presentation-typep result ptype)
-	  (values result ptype)
-	  (input-not-of-required-type result ptype)))))
+  (let* ((token (read-token stream))
+         (result (handler-case (read-from-string token)
+                   (error (c)
+                     (declare (ignore c))
+                     (simple-parse-error
+                      "Error parsing ~S for presentation type ~S"
+                      token type)))))
+    (if (presentation-typep result type)
+        (values result type)
+        (input-not-of-required-type result type))))
 
 ;;; Listener interactor stream.  If only STREAM-PRESENT were
 ;;; specializable on the VIEW argument, this wouldn't be necessary.
@@ -68,14 +62,14 @@
 
 (defclass listener-interactor-pane (interactor-pane) ())
 
-(defmethod stream-present :around 
+(defmethod stream-present :around
     ((stream listener-interactor-pane) object type
      &rest args &key (single-box nil sbp) &allow-other-keys)
   (declare (ignore single-box sbp))
   (apply #'call-next-method stream object type :single-box t args)
   ;; we would do this, but CLIM:PRESENT calls STREAM-PRESENT with all
   ;; the keyword arguments explicitly.  *sigh*.
-  #+nil 
+  #+nil
   (if sbp
       (call-next-method)
       (apply #'call-next-method stream object type :single-box t args)))
@@ -139,7 +133,7 @@
 
 (define-presentation-type empty-input ())
 
-(define-presentation-method present 
+(define-presentation-method present
     (object (type empty-input) stream view &key &allow-other-keys)
   (princ "" stream))
 
@@ -148,12 +142,12 @@
 ;;; are invokved by the :around method on r-f-c, so if we bind
 ;;; the text style here in the primary method, we're okay.
 
-(defmethod read-frame-command ((frame listener) &key (stream *standard-input*))  
+(defmethod read-frame-command ((frame listener) &key (stream *standard-input*))
   "Specialized for the listener, read a lisp form to eval, or a command."
   (multiple-value-bind (object type)
       (let ((*command-dispatchers* '(#\,)))
         (with-text-style (stream (make-text-style :fix :roman :normal))
-          (accept 'command-or-form :stream stream :prompt nil 
+          (accept 'command-or-form :stream stream :prompt nil
                   :default "hello" :default-type 'empty-input)))
     (cond
       ((presentation-subtypep type 'empty-input)
@@ -187,7 +181,7 @@
                                        :frame-manager fm
                                        :width width
                                        :height height)))
-    (flet ((run () 
+    (flet ((run ()
              (let ((*package* (find-package package)))
                (unwind-protect
                     (if debugger
