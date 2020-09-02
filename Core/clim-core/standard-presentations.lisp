@@ -878,10 +878,10 @@
                            :prompt nil
                            :additional-delimiter-gestures separators)
      collect element
-     do (progn
-          (when (not (eql (peek-char nil stream nil nil) separator))
+     do (let ((gesture (stream-read-gesture stream :peek-p t)))
+          (when (not (eql gesture separator))
             (loop-finish))
-          (read-char stream)
+          (stream-read-gesture stream)
           (when echo-space
             ;; Make the space a noise string
             (input-editor-format stream " ")))))
@@ -982,10 +982,10 @@
                       :display-default nil
                       :additional-delimiter-gestures separators))
      collect element into sequence-val
-     do (progn
-          (when (not (eql (peek-char nil stream nil nil) separator))
+     do (let ((gesture (stream-read-gesture stream :peek-p t)))
+          (when (not (eql gesture separator))
             (loop-finish))
-          (read-char stream)
+          (stream-read-gesture stream)
           (when echo-space
             ;; Make the space a noise string
             (input-editor-format stream " ")))

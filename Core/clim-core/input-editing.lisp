@@ -1224,10 +1224,10 @@ protocol retrieving gestures from a provided string."))
                         ;; XXX what about pointer gestures?
                         ;; XXX and delimiter gestures?
                         (unless *recursive-accept-p*
-                          (let ((ag (read-char-no-hang stream nil stream t)))
+                          (let ((ag (read-gesture :stream stream :timeout 0)))
                             (unless (or (null ag) (eq ag stream))
                               (unless (activation-gesture-p ag)
-                                (unread-char ag stream)))))
+                                (unread-gesture ag :stream stream)))))
                         (values (car accept-results) (if (cdr accept-results)
                                                          (cadr accept-results)
                                                          type)))))
