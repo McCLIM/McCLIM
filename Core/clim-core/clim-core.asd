@@ -20,6 +20,13 @@
    (:file "input-editing" :depends-on ("presentations" "bordered-output" "table-formatting"))
    (:file "standard-presentations" :depends-on ("input-editing" "presentations"))
    (:file "graph-formatting")
+   (:module "commands"
+    :depends-on ("input-editing" "presentations" "standard-presentations")
+    :serial t
+    :components ((:file "parsers")
+                 (:file "commands")
+                 (:file "tables")
+                 (:file "processor")))
    (:module "frames"
     :depends-on ("commands" "presentations" "standard-presentations" "incremental-redisplay")
     :serial t
@@ -43,7 +50,6 @@
                  (:file "concrete")
                  (:file "menu")))
    (:file "describe" :depends-on ("presentations" "standard-presentations" "table-formatting"))
-   (:file "commands" :depends-on ("input-editing" "presentations" "standard-presentations"))
    (:file "incremental-redisplay" :depends-on ("standard-presentations"))
    (:file "menu-choose" :depends-on ("commands" "table-formatting"  "panes" "frames" "presentations"))
    (:file "dialog" :depends-on ("panes" "frames" "incremental-redisplay" "table-formatting" "presentations" "bordered-output" "standard-presentations" "input-editing" "commands" "gadgets"))
