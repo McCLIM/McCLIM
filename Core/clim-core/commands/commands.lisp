@@ -85,6 +85,25 @@
                          command-name
                          command-line-name
                        &allow-other-keys)
+  (ecase type
+    (:command
+     ;; This is specified to be a cons, but McCLIM is more permissive
+     ;; (and we don't want to break the backward compatibility).
+     (unless (consp value)
+       (setf value (list value))))
+    (:function
+     ;; A function of two arguments (funcalled).
+     (check-type value function-designator))
+    (:menu
+     ;; The value is specified to be either a command table designator.
+     ;; McCLIM extends that set to allow also lists which are verbatim
+     ;; sub-menus.
+     (check-type value (or command-table symbol cons))
+     (when (listp value)
+       (setf value (menu-items-from-list value))))
+    (:divider
+     ;; The value of a divider is ignored.
+     ))
   (make-instance '%menu-item
                  :menu-name name :type type :value value
                  :documentation documentation
