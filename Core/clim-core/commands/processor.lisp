@@ -176,6 +176,47 @@
               command))))))
 
 
+(defmethod display-command-table-menu ((command-table standard-command-table)
+                                       (stream fundamental-output-stream)
+                                       &rest args
+                                       &key max-width max-height n-rows n-columns
+                                       x-spacing y-spacing initial-spacing
+                                       row-wise (cell-align-x :left)
+                                       (cell-align-y :top) (move-cursor t))
+  (formatting-item-list (stream :max-width max-width
+                                :max-height max-height
+                                :n-rows n-rows
+                                :n-columns n-columns
+                                :x-spacing x-spacing
+                                :y-spacing y-spacing
+                                :initial-spacing initial-spacing
+                                :row-wise row-wise
+                                :move-cursor move-cursor)
+    (map-over-command-table-menu-items
+     #'(lambda (item-name accelerator item)
+         (declare (ignore accelerator))
+         (formatting-cell (stream :align-x cell-align-x :align-y cell-align-y)
+           (cond ((eq (command-menu-item-type item) :menu)
+                  (with-text-family (stream :serif)
+                    (with-text-face (stream '(:bold :italic))
+                      (write-string item-name stream))
+                    (terpri stream))
+                  (surrounding-output-with-border (stream)
+                    (apply #'display-command-table-menu
+                           (find-command-table (command-menu-item-value item))
+                           stream args)))
+                 ((eq (command-menu-item-type item) :command)
+                  (let ((name (command-menu-item-name item))
+                        (value (command-menu-item-value item)))
+                    (with-output-as-presentation (stream value 'command)
+                      (write-string name stream)))))))
+     command-table)))
+
+#+nyi ;; IMPLEMENTME
+(defun menu-choose-command-from-command-table
+    (command-table
+     &key associated-window default-style label
+          cache unique-id id-test cache-value cache-test))
 
 (define-presentation-type command-table ())
 
