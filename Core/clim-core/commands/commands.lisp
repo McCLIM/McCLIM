@@ -123,50 +123,48 @@
 
 (defun make-command-translators (command-name command-table args)
   "Helper function to create command presentation translators for a command."
-  (loop with readable-command-name = (command-name-from-symbol command-name) ; XXX or :NAME
-        for arg in args
-        for arg-index from 0
-        append (when (getf (cddr arg) :gesture)
-                 (destructuring-bind (name ptype
-                                      &key gesture &allow-other-keys)
-                     arg
-                   (declare (ignore name))
-                   (let ((command-args (loop for a in args
-                                             for i from 0
-                                             if (eql i arg-index)
-                                               collect 'object
-                                             else
-                                               collect (getf (cddr a) :default)
-                                             end))
-                         (translator-name (intern (format nil
-                                                          ".~A-ARG~D."
-                                                          command-name
-                                                          arg-index)
-                                                  (symbol-package command-name))))
-                     (multiple-value-bind (gesture translator-options)
-                         (if (listp gesture)
-                             (values (car gesture) (cdr gesture))
-                             (values gesture nil))
-                       (destructuring-bind (&key (documentation
-                                                  `((object stream)
-                                                    (orf stream *standard-output*)
-                                                    (format stream "~A "
-                                                            ,readable-command-name)
-                                                    (present object (presentation-type-of object) ; type?
-                                                             :stream stream
-                                                             :acceptably nil
-                                                             :sensitive nil))
-                                                  documentationp)
-                                            &allow-other-keys)
-                           translator-options
-                       `(define-presentation-to-command-translator
-                            ,translator-name
-                            (,(eval ptype) ,command-name ,command-table
-                             :gesture ,gesture
-                             ,@(unless documentationp `(:documentation ,documentation))
-                             ,@translator-options)
-                          (object)
-                          (list ,@command-args)))))))))
+  (let ((readable-command-name
+          ;; XXX or :NAME
+          (command-name-from-symbol command-name)))
+    (labels ((make-default-documentation ()
+               `((object stream)
+                 (orf stream *standard-output*)
+                 (format stream "~A " ,readable-command-name)
+                 (present object (presentation-type-of object) ; type?
+                          :stream stream
+                          :acceptably nil
+                          :sensitive nil)))
+             (make-define-gesture-translator (gesture ptype arg-index)
+               (let ((command-args (loop for a in args
+                                         for i from 0
+                                         if (eql i arg-index)
+                                           collect 'object
+                                         else
+                                           collect (getf (cddr a) :default)
+                                         end))
+                     (translator-name (intern (format nil
+                                                      ".~A-ARG~D."
+                                                      command-name
+                                                      arg-index)
+                                              (symbol-package command-name))))
+                 (multiple-value-bind (gesture translator-options)
+                     (if (listp gesture)
+                         (values (car gesture) (cdr gesture))
+                         (values gesture nil))
+                   `(define-presentation-to-command-translator
+                        ,translator-name
+                        (,(eval ptype) ,command-name ,command-table
+                         :gesture ,gesture
+                         ,@(unless (getf translator-options :documentation)
+                             `(:documentation ,(make-default-documentation)))
+                         ,@translator-options)
+                        (object)
+                      (list ,@command-args))))))
+      (loop for (name ptype . options) in args
+            for gesture = (getf options :gesture)
+            for arg-index from 0
+            when gesture
+              append (make-define-gesture-translator gesture ptype arg-index)))))
 
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
