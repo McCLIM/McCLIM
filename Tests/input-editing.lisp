@@ -28,3 +28,40 @@
 
   (signals input-not-of-required-type
     (input-not-of-required-type 3 'float)))
+
+;;; `accept' tests
+
+(defclass test-stream (clim:standard-extended-input-stream) ())
+
+;;; Discard any output written by the input editor.
+(defmethod climi::input-editor-format
+    ((stream test-stream) format-string &rest format-args))
+
+(test accept.smoke
+
+  (mapc
+   (lambda (case)
+     (destructuring-bind (input accept-type expected-value expected-type) case
+       (flet ((test-stream (stream)
+                (multiple-value-bind (value type)
+                    (accept accept-type :stream stream :prompt nil)
+                  (is (equal expected-value value)
+                      "~@<ACCEPTing ~S from a ~S with type ~S resulted ~
+                       in value ~S, not ~S~@:>"
+                      input (type-of stream) accept-type value expected-value)
+                  (is (equal expected-value value)
+                      "~@<ACCEPTing ~S from a ~S with type ~S resulted ~
+                       in type ~S, not ~S~@:>"
+                      input (type-of stream) accept-type type expected-type))))
+         ;; Test with extended input stream.
+         (let ((stream (make-instance 'test-stream)))
+           (map nil (alexandria:curry #'climi::stream-append-gesture stream)
+                input)
+           (climi::stream-append-gesture stream #\Return)
+           (test-stream stream))
+         ;; Test with string stream.
+         (let* ((string (format nil "~A~C" input #\Return))
+                (stream (make-string-input-stream string)))
+           (test-stream stream)))))
+   '(("1"       integer            1         integer)
+     ("1,2,3,4" (sequence integer) (1 2 3 4) (sequence integer)))))
