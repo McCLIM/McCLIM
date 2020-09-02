@@ -652,6 +652,17 @@ documentation produced by presentations.")
                                  command-name)
           nil))))
 
+(defmethod display-command-menu (frame (stream fundamental-output-stream)
+                                 &rest args &key
+                                 (command-table (frame-command-table frame))
+                                 initial-spacing row-wise max-width
+                                 max-height n-rows n-columns
+                                 (cell-align-x :left) (cell-align-y :top))
+  (declare (ignore initial-spacing row-wise max-width max-height
+                   n-rows n-columns cell-align-x cell-align-y))
+  (with-keywords-removed (args (:command-table))
+    (apply #'display-command-table-menu command-table stream args)))
+
 (defmethod make-pane-1 :around (fm (frame standard-application-frame) type
                                 &rest args
                                 &key (event-queue nil evq-p) &allow-other-keys)
